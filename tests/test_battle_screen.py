@@ -207,6 +207,9 @@ class BuildAndPaintTests(BattleScreenTestCase):
 
         self.assertTrue(orders._order_edge_move([ours], self.province))
         self.assertTrue(ours[combat_processor.EDGE_BATTLE_KEY]["retreat"])
+        self.assertEqual(ours[combat_processor.EDGE_BATTLE_KEY]["retreat_path"],
+                         [self.province["id"]])
+        orders.draw(self.surface)
         self.assertIn(combat_processor.EDGE_BATTLE_KEY,
                       queries.build_save_dict(self.map)["provinces"][self.province["json_key"]]["units"][0])
 

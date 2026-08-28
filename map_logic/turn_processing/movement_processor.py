@@ -194,9 +194,9 @@ def _resolve_step_swaps(map_screen, moving_units, step, get_eff_speed):
         dead_ids.update(id(m) for m in units1 + units2 if id(m) not in survivor_ids)
 
         # A surviving edge battle holds only the actual combatants.  Neutral
-        # fellow travellers keep walking, while a one-sided winner had its tag
-        # released by start_edge_battle and may still spend this sub-step moving
-        # into the enemy's origin.
+        # fellow travellers keep walking.  A decisive winner is placed directly
+        # onto the enemy endpoint by start_edge_battle with its remaining queue
+        # cleared, so it cannot continue farther this turn.
         for m in survivors:
             if id(m) in result.fought and combat_processor.is_edge_battle_unit(m):
                 m["_skip_remaining_steps"] = True

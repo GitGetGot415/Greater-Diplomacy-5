@@ -978,3 +978,43 @@ def draw_split_movement_path(surface, map_screen, start_prov, path, speed, base_
         bright_color = (min(255, base_color[0] + 150), min(255, base_color[1] + 150), min(255, base_color[2] + 150))
         q_start = map_screen.id_to_province.get(immediate_path[-1]) if immediate_path else start_prov
         draw_movement_path(surface, map_screen, q_start, queued_path, color=bright_color, alpha=120, force_visible=force_visible)
+
+
+def draw_edge_movement_path(surface, map_screen, tag, speed, base_color,
+                            preview_path=None, alpha=255, force_visible=False):
+    """Draw a midpoint withdrawal from the virtual edge to its real path.
+
+    ``retreat_path`` starts with the fighter's origin, which represents moving
+    from the midpoint back onto that tile.  A lightweight synthetic node lets
+    the regular path renderer draw that first half-edge and every later normal
+    province step without inventing a map province.
+    """
+    if not isinstance(tag, dict):
+        return
+    origin_id = tag.get("origin_id")
+    destination_id = tag.get("destination_id")
+    path = preview_path if preview_path is not None else tag.get("retreat_path", [])
+    if (origin_id not in map_screen.id_to_province
+            or destination_id not in map_screen.id_to_province
+            or not isinstance(path, list) or not path or path[0] != origin_id):
+        return
+
+    pair = combat_processor._edge_pair_key(origin_id, destination_id)
+    midpoint = combat_processor.edge_battle_midpoint(map_screen, {"pair": pair})
+    virtual_start = {"id": origin_id, "center": midpoint}
+    speed = max(1, int(speed))
+    immediate_path = path[:speed]
+    queued_path = path[speed:]
+    if immediate_path:
+        draw_movement_path(surface, map_screen, virtual_start, immediate_path,
+                           color=base_color, alpha=alpha,
+                           force_visible=force_visible)
+    if queued_path:
+        bright_color = (min(255, base_color[0] + 150),
+                        min(255, base_color[1] + 150),
+                        min(255, base_color[2] + 150))
+        queue_start = map_screen.id_to_province.get(immediate_path[-1])
+        if queue_start:
+            draw_movement_path(surface, map_screen, queue_start, queued_path,
+                               color=bright_color, alpha=min(alpha, 120),
+                               force_visible=force_visible)

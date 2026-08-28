@@ -116,7 +116,7 @@ class MidTurnSwapTests(unittest.TestCase):
         self.assertNotIn(unit_a, screen.id_to_province["p3"]["units"])
         self.assertNotIn(unit_b, screen.id_to_province["p2"]["units"])
 
-    def test_a_decisive_multi_speed_swap_keeps_the_winner_moving(self):
+    def test_a_decisive_multi_speed_swap_stops_the_winner_on_enemy_tile(self):
         screen = StubMapScreen()
         screen.add_nation("A", at_war_with=["B"])
         screen.add_nation("B", at_war_with=["A"])
@@ -132,8 +132,10 @@ class MidTurnSwapTests(unittest.TestCase):
 
         self.assertNotIn(unit_b, p4["units"])
         self.assertNotIn("_edge_battle", unit_a)
-        self.assertEqual(unit_a["_current_province_id"], "p4")
-        self.assertIn(unit_a, p4["units"])
+        self.assertEqual(unit_a["_current_province_id"], "p3")
+        self.assertIn(unit_a, screen.id_to_province["p3"]["units"])
+        self.assertNotIn(unit_a, p4["units"])
+        self.assertEqual(unit_a["order"]["path"], [])
 
 
 class FinishedMoverVisibilityTests(unittest.TestCase):
@@ -199,7 +201,7 @@ class PersistentEdgeBattleTests(unittest.TestCase):
         self.assertIn("_edge_battle", a[0])
         self.assertIn("_edge_battle", b)
 
-    def test_winner_resumes_its_original_movement_queue(self):
+    def test_winner_moves_only_onto_the_opposing_origin(self):
         screen, _p1, p2, a, b = self.build(a_attack=2000, b_attack=0)
         p3 = screen.add_province("p3", "B")
         a[0]["speed"] = 2
@@ -209,8 +211,8 @@ class PersistentEdgeBattleTests(unittest.TestCase):
 
         self.assertNotIn(b, p2["units"])
         self.assertNotIn("_edge_battle", a[0])
-        self.assertNotIn(a[0], p2["units"])
-        self.assertIn(a[0], p3["units"])
+        self.assertIn(a[0], p2["units"])
+        self.assertNotIn(a[0], p3["units"])
         self.assertEqual(a[0]["order"]["path"], [])
 
     def test_war_ending_releases_both_sides_to_their_existing_orders(self):
@@ -263,6 +265,20 @@ class PersistentEdgeBattleTests(unittest.TestCase):
         self.assertIn(a[0], p1["units"])
         self.assertIn(a[1], p1["units"])
         self.assertIn(b, p1["units"], "the advancing enemy should meet the retreating units at their origin")
+
+    def test_fast_retreat_uses_its_second_step_beyond_the_origin(self):
+        screen, p1, _p2, a, _b = self.build(a_units=2)
+        rear = screen.add_province("rear", "A")
+        a[0]["speed"] = 2
+        self.start(screen)
+
+        self.assertTrue(combat_processor.request_edge_retreat(a[0], ["p1", "rear"]))
+        self.start(screen)
+
+        self.assertNotIn("_edge_battle", a[0])
+        self.assertIn(a[0], rear["units"])
+        self.assertNotIn(a[0], p1["units"])
+        self.assertEqual(a[0]["order"]["path"], [])
 
 
 if __name__ == "__main__":

@@ -139,6 +139,29 @@ def draw_map_screen(map_screen, surface):
         for province in map_screen.map_data.values():
             for unit in province.get("units", []):
                 if queries.is_unit_in_edge_battle(unit):
+                    tag = unit.get("_edge_battle", {})
+                    path = tag.get("retreat_path", []) if isinstance(tag, dict) else []
+                    if not path:
+                        continue
+
+                    owner = unit.get("owner")
+                    is_current_player_unit = (owner == map_screen.player_country)
+                    is_spectator = map_screen.player_country == "Spectator"
+                    if (not is_current_player_unit and not is_spectator
+                            and not map_screen.viewing_ai_moves):
+                        continue
+
+                    is_tactical = map_screen.tactical_mode and map_screen.player_unit
+                    force_vis = (unit is map_screen.player_unit) if is_tactical else is_current_player_unit
+                    if map_screen.viewing_ai_moves:
+                        path = path[:unit.get("speed", 1)]
+                    if path:
+                        owner_color = map_screen.nation_colors.get(owner, (255, 255, 0))
+                        preview_tag = dict(tag)
+                        preview_tag["retreat_path"] = path
+                        overlay_renderer.draw_edge_movement_path(
+                            surface, map_screen, preview_tag, unit.get("speed", 1),
+                            owner_color, force_visible=force_vis)
                     continue
                 order = unit.get("order")
                 if not order:

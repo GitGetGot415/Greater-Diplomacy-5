@@ -188,21 +188,83 @@ def _resolve_meeting_exchange(prov1, prov2, units1, units2, nation_data):
 
 
 def _release_edge_battle(record):
-    """Places a settled edge battle's survivors back on their normal paths."""
+    """Return a non-hostile midpoint's survivors to their existing orders."""
     for unit in record["side1"] + record["side2"]:
         _clear_edge_tag(unit)
 
 
+def _advance_edge_winners(map_screen, record):
+    """Move a decisive midpoint winner onto the enemy endpoint and stop it.
+
+    Crossing the midpoint has already consumed the movement that created the
+    battle.  A victory therefore captures exactly the tile that the unit was
+    originally entering; it never silently continues any queued path beyond
+    that tile.  The helper also works during a later movement sub-step, where
+    units are temporarily outside their province lists but carry
+    ``_current_province_id`` instead.
+    """
+    sides = ((record["side1"], record["pair"][0], record["pair"][1]),
+             (record["side2"], record["pair"][1], record["pair"][0]))
+    for winners, origin_id, destination_id in sides:
+        if not winners:
+            continue
+
+        origin = map_screen.id_to_province[origin_id]
+        destination = map_screen.id_to_province[destination_id]
+        winner_ids = {id(unit) for unit in winners}
+        origin["units"] = [unit for unit in origin.get("units", [])
+                           if id(unit) not in winner_ids]
+
+        for unit in winners:
+            _clear_edge_tag(unit)
+            order = unit.get("order")
+            if not isinstance(order, dict):
+                unit["order"] = {"type": "MOVE", "path": []}
+            else:
+                order["type"] = "MOVE"
+                order["path"] = []
+            unit.pop("lane_target", None)
+            unit.pop("combat_stance", None)
+
+            # Mid-turn swaps keep their current position on the mover, rather
+            # than in a province list.  Update that temporary position too so
+            # the normal movement sync places the winner on this endpoint.
+            if "_current_province_id" in unit:
+                unit["_previous_province_id"] = origin_id
+                unit["_current_province_id"] = destination_id
+            if not any(existing is unit for existing in destination["units"]):
+                destination["units"].append(unit)
+
+
 def _settle_edge_battle(map_screen, record):
-    """Release survivors once an edge no longer contains a hostile lane."""
+    """Settle an edge with no hostile lane, advancing only a real winner."""
     current = find_edge_battle(map_screen, record["pair"])
     if current is None:
-        return True
+        # During a multi-speed swap movers are deliberately outside province
+        # lists until the sub-step ends.  Their saved tags still make this
+        # supplied record authoritative; a genuinely dissolved battle has no
+        # tagged units left and needs no further work.
+        current = {
+            "pair": record["pair"],
+            "side1": [unit for unit in record["side1"]
+                      if is_edge_battle_unit(unit) and unit.get("health", 0) > 0],
+            "side2": [unit for unit in record["side2"]
+                      if is_edge_battle_unit(unit) and unit.get("health", 0) > 0],
+        }
+        if not current["side1"] and not current["side2"]:
+            return True
     battle = combat_rules.build_battle(
         [current["side1"], current["side2"]], map_screen.nation_data)
     if battle.lanes:
         return False
-    _release_edge_battle(current)
+    if current["side1"] and not current["side2"]:
+        _advance_edge_winners(map_screen, current)
+    elif current["side2"] and not current["side1"]:
+        _advance_edge_winners(map_screen, current)
+    else:
+        # This was diplomacy, not a victory.  The original legal orders can
+        # continue from their departure tiles as before.
+        _release_edge_battle(current)
     return True
 
 
@@ -211,8 +273,7 @@ def start_edge_battle(prov1, prov2, units1, units2, nation_data, map_screen=None
 
     Only units in an actual lane are tagged.  Fellow travellers who are neutral
     to the enemy keep marching, exactly as before.  If the opening volley clears
-    a direction, its opponent is immediately released to finish its existing
-    movement order during this same turn.
+    a direction, its opponent advances once onto the enemy endpoint and stops.
     """
     result = _resolve_meeting_exchange(prov1, prov2, units1, units2, nation_data)
     _prune_dead((prov1, prov2))
@@ -226,24 +287,36 @@ def start_edge_battle(prov1, prov2, units1, units2, nation_data, map_screen=None
             # Mid-turn swaps happen while movers are temporarily outside their
             # province lists.  The derived record is therefore unavailable
             # until movement syncs them back at the end of this sub-step.  A
-            # decisive exchange must still release its winner immediately so
-            # it can spend any remaining speed right now.
-            temporary = {
-                "side1": [u for u in result.survivors1 if is_edge_battle_unit(u)],
-                "side2": [u for u in result.survivors2 if is_edge_battle_unit(u)],
-            }
-            if not combat_rules.build_battle(
-                    [temporary["side1"], temporary["side2"]], nation_data).lanes:
-                _release_edge_battle(temporary)
+            # decisive exchange must still place its winner on the opposing
+            # endpoint immediately, before movement syncs its temporary
+            # position back into province lists.
+            pair = _edge_pair_key(prov1["id"], prov2["id"])
+            temporary = {"pair": pair, "side1": [], "side2": []}
+            for unit in result.survivors1 + result.survivors2:
+                tag = unit.get(EDGE_BATTLE_KEY, {})
+                if not is_edge_battle_unit(unit):
+                    continue
+                if tag.get("origin_id") == pair[0]:
+                    temporary["side1"].append(unit)
+                elif tag.get("origin_id") == pair[1]:
+                    temporary["side2"].append(unit)
+            _settle_edge_battle(map_screen, temporary)
     return result
 
 
-def request_edge_retreat(unit):
-    """Queue one midpoint fighter's only legal withdrawal: back to its origin."""
+def request_edge_retreat(unit, path=None):
+    """Queue a midpoint withdrawal, whose first movement step is its origin."""
     tag = unit.get(EDGE_BATTLE_KEY)
     if not isinstance(tag, dict):
         return False
+    origin_id = tag.get("origin_id")
+    if path is None:
+        path = [origin_id]
+    if (not isinstance(path, list) or not path
+            or path[0] != origin_id):
+        return False
     tag["retreat"] = True
+    tag["retreat_path"] = list(path)
     return True
 
 
@@ -252,19 +325,26 @@ def process_edge_battles(map_screen):
 
     Retreats happen before that turn's exchange, matching ordinary province
     combat where a valid withdrawal moves away before the end-of-turn melee.
-    A retreat clears that unit's queue so two sides choosing to withdraw do not
-    instantly issue the same head-on order again next turn.
+    A withdrawal replaces the unit's old advance queue with the player-chosen
+    retreat path.  Its origin is deliberately the first path step, so leaving
+    the midpoint costs movement before a fast unit can continue farther away.
     """
     for record in edge_battles(map_screen):
         for unit in record["side1"] + record["side2"]:
             tag = unit.get(EDGE_BATTLE_KEY, {})
             if not tag.get("retreat"):
                 continue
+            retreat_path = tag.get("retreat_path")
+            if (not isinstance(retreat_path, list) or not retreat_path
+                    or retreat_path[0] != tag.get("origin_id")):
+                retreat_path = [tag.get("origin_id")]
             _clear_edge_tag(unit)
             order = unit.get("order")
-            if isinstance(order, dict):
+            if not isinstance(order, dict):
+                unit["order"] = {"type": "MOVE", "path": list(retreat_path)}
+            else:
                 order["type"] = "MOVE"
-                order["path"] = []
+                order["path"] = list(retreat_path)
             unit.pop("lane_target", None)
             unit.pop("combat_stance", None)
 

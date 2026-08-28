@@ -79,6 +79,7 @@ TARGET_MARKER_THICKNESS = 3
 MOVE_TARGET_COLOR = (0, 255, 0)
 BOMBARD_TARGET_COLOR = (255, 200, 50)
 BOMBARD_PREVIEW_ALPHA = 160
+MOVE_PREVIEW_ALPHA = 160
 
 WHEEL_SCROLL_STEP = 30
 UNIT_ICON_ZOOM = 1.5
@@ -323,19 +324,55 @@ class Orders_Screen(GameState):
         self.refresh_ui()
 
     def _order_edge_move(self, target_units, destination):
-        """Handle the regular move gesture for units at a virtual midpoint."""
+        """Build a normal movement queue that withdraws from a midpoint.
+
+        The temporary province has no neighbours of its own.  Its first legal
+        move is therefore the fighter's real origin; later clicks are ordinary
+        adjacent province steps and may use all of a fast unit's movement.
+        """
         origins = {
             unit.get(combat_processor.EDGE_BATTLE_KEY, {}).get("origin_id")
             for unit in target_units
         }
-        if destination["id"] not in origins or len(origins) != 1:
+        if len(origins) != 1 or None in origins:
             self.map_screen.show_feedback(
-                "Midpoint units can only move back to their own province.")
+                "Select units travelling from the same side of the midpoint.")
             return False
+
+        origin_id = next(iter(origins))
+        tags = [unit[combat_processor.EDGE_BATTLE_KEY] for unit in target_units]
+        paths = [tag.get("retreat_path", []) for tag in tags]
+        if any(not isinstance(path, list) for path in paths) or any(path != paths[0]
+                                                                    for path in paths[1:]):
+            self.map_screen.show_feedback(
+                "Selected midpoint units must share the same movement path.")
+            return False
+        current_path = paths[0]
+
+        if not current_path:
+            if destination["id"] != origin_id:
+                self.map_screen.show_feedback(
+                    "The first move must return to the unit's origin province.")
+                return False
+        else:
+            start_node = self.map_screen.id_to_province.get(current_path[-1])
+            if not start_node or destination["id"] not in start_node.get("neighbors", []):
+                self.map_screen.show_feedback("Move to an adjacent province.")
+                return False
+            if not all(self.can_unit_enter(unit, destination,
+                                           start_node=start_node,
+                                           current_path=current_path,
+                                           check_combat=False)
+                       for unit in target_units):
+                return False
+
+        new_path = current_path + [destination["id"]]
         for unit in target_units:
-            combat_processor.request_edge_retreat(unit)
+            combat_processor.request_edge_retreat(unit, new_path)
+        speed_limit = min(unit.get("speed", 1) for unit in target_units)
+        status_str = "Queued" if len(new_path) > speed_limit else "Added"
         self.map_screen.show_feedback(
-            f"Move order added: return to Province {destination['id']}.")
+            f"Path {status_str}: {len(new_path)} steps (Speed: {speed_limit})")
         self.refresh_ui()
         return True
 
@@ -902,6 +939,7 @@ class Orders_Screen(GameState):
             if self.edge_pair is not None:
                 tag = units[index].get(combat_processor.EDGE_BATTLE_KEY, {})
                 if tag.pop("retreat", None):
+                    tag.pop("retreat_path", None)
                     self.map_screen.show_feedback("Order Cancelled")
                     self.refresh_ui()
                 return
@@ -930,6 +968,7 @@ class Orders_Screen(GameState):
                 if self.edge_pair is not None:
                     tag = unit.get(combat_processor.EDGE_BATTLE_KEY, {})
                     if tag.pop("retreat", None):
+                        tag.pop("retreat_path", None)
                         cleared_any = True
                     continue
                 if "order" in unit:
@@ -1144,7 +1183,9 @@ class Orders_Screen(GameState):
                     self.map_screen.show_feedback(f"Path {status_str}: {len(new_path)} steps (Speed: {speed_limit})")
                     self.refresh_ui()
 
-    def can_unit_enter(self, unit, dest):
+    def can_unit_enter(self, unit, dest, *, start_node=None, current_path=None,
+                       check_combat=True):
+        """Whether ``unit`` may enter a destination from its queued endpoint."""
         dest_is_water = queries.is_water_province(dest)
         
         # Look up the actual unit stats using its type name
@@ -1171,11 +1212,13 @@ class Orders_Screen(GameState):
 
         # Convoy Movement Rules
         if is_convoy:
-            current_path = unit.get("order", {}).get("path", [])
-            if not current_path:
-                start_node = self.target_province
-            else:
-                start_node = self.map_screen.id_to_province.get(current_path[-1])
+            if current_path is None:
+                current_path = unit.get("order", {}).get("path", [])
+            if start_node is None:
+                if not current_path:
+                    start_node = self.target_province
+                else:
+                    start_node = self.map_screen.id_to_province.get(current_path[-1])
 
             if start_node and not queries.can_convoy_enter(start_node, dest):
                 self.map_screen.show_feedback("Convoys on land can only move to ocean!")
@@ -1189,8 +1232,9 @@ class Orders_Screen(GameState):
         dest_owner = dest.get("owner", "Unclaimed")
         
         # Combat Lock (Player UI Check)
-        current_path = unit.get("order", {}).get("path", [])
-        if not current_path: # First step of the move order
+        if current_path is None:
+            current_path = unit.get("order", {}).get("path", [])
+        if check_combat and not current_path: # First step of the move order
             in_combat = queries.is_nation_in_combat_here(unit["owner"], self.target_province, self.map_screen.nation_data)
             if in_combat and queries.is_hostile_territory(unit["owner"], dest_owner, self.map_screen.nation_data):
                 self.map_screen.show_feedback("Cannot advance into enemy territory while in combat! (Retreat only)")
@@ -1210,7 +1254,10 @@ class Orders_Screen(GameState):
         if self.edge_pair is not None:
             tag = unit.get(combat_processor.EDGE_BATTLE_KEY, {})
             if tag.get("retreat"):
-                return f"Move: return to P{tag.get('origin_id', '?')}", (255, 225, 80)
+                path = tag.get("retreat_path", [])
+                destination = path[-1] if path else tag.get("origin_id", "?")
+                step_word = "step" if len(path) == 1 else "steps"
+                return f"Move: {len(path)} {step_word} to P{destination}", (255, 225, 80)
             return "Fighting at midpoint", (255, 180, 80)
 
         order = unit.get("order", {})
@@ -1391,7 +1438,7 @@ class Orders_Screen(GameState):
             elif not player_units:
                 help_text = "No commandable units in this province"
             elif self.edge_pair is not None:
-                help_text = "Select a unit, then click its origin province to move it back"
+                help_text = "Select a unit, click its origin, then queue normal adjacent moves"
             else:
                 help_text = "Hover a command icon for details | click unit art/name to select"
 
@@ -1468,13 +1515,17 @@ class Orders_Screen(GameState):
         owner_color = self.map_screen.nation_colors.get(self.map_screen.player_country, (255, 255, 0))
         rows = self._visible_rows()
 
-        # Midpoint fighters retain their original queue for a victory, but it
-        # is not an active movement order while the battle is unresolved.
-        if self.edge_pair is None:
-            # Force the selected province's orders through fog-of-war before
-            # the opaque roster is painted, so arrows stay visible on the map
-            # without ever drawing across the panel itself.
-            for unit in player_units:
+        # Force the selected orders through fog-of-war before the opaque roster
+        # is painted, so arrows stay visible on the map without ever drawing
+        # across the panel itself.  A midpoint withdrawal begins at the marker;
+        # its saved retreat path supplies all later normal movement steps.
+        for unit in player_units:
+            if self.edge_pair is not None:
+                tag = unit.get(combat_processor.EDGE_BATTLE_KEY, {})
+                overlay_renderer.draw_edge_movement_path(
+                    surface, self.map_screen, tag,
+                    unit.get("speed", 1), owner_color, force_visible=True)
+            else:
                 order = unit.get("order", {})
                 if not isinstance(order, dict):
                     continue
@@ -1546,9 +1597,31 @@ class Orders_Screen(GameState):
                 active_unit = units[self.selected_unit_index]
                 
             if active_unit and self.edge_pair is not None:
-                origin_id = active_unit.get(combat_processor.EDGE_BATTLE_KEY, {}).get("origin_id")
-                if origin_id is not None:
-                    self.draw_target_markers(surface, self.target_province, [origin_id], MOVE_TARGET_COLOR)
+                tag = active_unit.get(combat_processor.EDGE_BATTLE_KEY, {})
+                origin_id = tag.get("origin_id")
+                active_path = tag.get("retreat_path", [])
+                origin = self.map_screen.id_to_province.get(origin_id)
+                if origin_id is not None and not active_path:
+                    if origin:
+                        self.draw_target_markers(surface, origin, [origin_id], MOVE_TARGET_COLOR)
+                    hovered = queries.get_clicked_province(pygame.mouse.get_pos(), self.map_screen)
+                    if hovered and hovered["id"] == origin_id:
+                        overlay_renderer.draw_edge_movement_path(
+                            surface, self.map_screen, tag,
+                            active_unit.get("speed", 1), owner_color,
+                            preview_path=[origin_id], alpha=MOVE_PREVIEW_ALPHA,
+                            force_visible=True)
+                elif active_path:
+                    last_node = self.map_screen.id_to_province.get(active_path[-1])
+                    if last_node:
+                        self.draw_target_markers(surface, last_node, last_node["neighbors"], MOVE_TARGET_COLOR)
+                        hovered = queries.get_clicked_province(pygame.mouse.get_pos(), self.map_screen)
+                        if hovered and hovered["id"] in last_node["neighbors"]:
+                            overlay_renderer.draw_edge_movement_path(
+                                surface, self.map_screen, tag,
+                                active_unit.get("speed", 1), owner_color,
+                                preview_path=active_path + [hovered["id"]],
+                                alpha=MOVE_PREVIEW_ALPHA, force_visible=True)
             elif active_unit:
                 active_path = active_unit.get("order", {}).get("path", [])
                 
