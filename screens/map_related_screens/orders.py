@@ -119,6 +119,8 @@ class Orders_Screen(GameState):
         self.unit_row_icons = {}
         self.action_icons = {}
         self.battle_screen = None
+        self.return_to_map_on_exit = False
+        self.open_battle_on_entry = False
         # ``None`` means this is the ordinary province Orders screen.  An
         # endpoint pair makes the same screen act on the units temporarily
         # fighting between those two provinces instead.
@@ -166,6 +168,12 @@ class Orders_Screen(GameState):
         self.target_province = province
         self.map_screen = map_ref
         self.edge_pair = edge_pair
+        entered_from_combat_bubble = bool(
+            getattr(map_ref, "_orders_entered_from_combat_bubble", False))
+        self.return_to_map_on_exit = entered_from_combat_bubble
+        self.open_battle_on_entry = entered_from_combat_bubble
+        if hasattr(map_ref, "_orders_entered_from_combat_bubble"):
+            delattr(map_ref, "_orders_entered_from_combat_bubble")
         self.battle_screen = None
         self.scroll_y = 0
         self.bombarding_unit_index = None
@@ -204,6 +212,8 @@ class Orders_Screen(GameState):
             self.selected_unit_index = None
 
         self.refresh_ui()
+        if self.open_battle_on_entry and self._in_battle():
+            self.open_battle_panel()
 
     def _edge_battle(self):
         if self.edge_pair is None or self.map_screen is None:
@@ -233,6 +243,12 @@ class Orders_Screen(GameState):
             camera_handler.center_camera_on_province(
                 self.map_screen.camera, self.target_province["center"], c.SCREEN_WIDTH, c.SCREEN_HEIGHT,
                 self.map_screen.total_ui_h)
+
+        if self.return_to_map_on_exit:
+            if self.map_screen:
+                self.map_screen.deselect_province()
+            self.go_to("MAP")
+            return
 
         if c.MAP_NAVIGATION_MODE == "CLASSIC":
             # Classic: Back lands on the plain province menu, tile still

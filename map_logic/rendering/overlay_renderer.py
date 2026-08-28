@@ -263,11 +263,19 @@ def _combat_bubble_symbol(record, zoom):
                                     color=record["color"], alpha=alpha)
 
 
-def _draw_combat_bubble_turns(surface, rect, bubble, record):
+def _draw_combat_bubble_turns(surface, rect, bubble, record, zoom):
     """Draw the estimated remaining turns at the bubble's visual center."""
     turns = record.get("estimated_turns")
     label = "?" if turns is None else str(max(0, int(turns)))
     text = fonts.get("tiny").render(label, True, (255, 255, 255))
+
+    # Render the label at the camera scale first. The subsequent fit is only a
+    # guard against multi-digit values spilling over the bubble, so zooming the
+    # map keeps the number proportional to the art behind it.
+    zoom = max(0.01, float(zoom))
+    text = pygame.transform.smoothscale(
+        text, (max(1, int(text.get_width() * zoom)),
+               max(1, int(text.get_height() * zoom))))
 
     # Bubble art is intentionally small. Scale the label to the central area so
     # two-digit estimates remain legible without spilling over the outline.
@@ -355,12 +363,14 @@ def _draw_combat_bubble(surface, map_screen, record):
             if _combat_bubble_is_hovered(map_screen, record):
                 bubble = _highlight_combat_bubble(bubble)
             surface.blit(bubble, rect)
-            _draw_combat_bubble_turns(surface, rect, bubble, record)
+            _draw_combat_bubble_turns(
+                surface, rect, bubble, record, map_screen.camera.zoom)
 
 
 def draw_combat_bubbles(map_screen, surface, records=None):
     """Draw asset-backed combat bubbles and return their shared records."""
-    if map_screen.viewing_ai_moves:
+    if (map_screen.viewing_ai_moves
+            or map_screen.secondary_mode != "UNITS"):
         return []
     records = combat_bubble_records(map_screen) if records is None else records
     for record in records:
@@ -375,7 +385,8 @@ def combat_bubble_at_screen_pos(map_screen, screen_pos):
     zoom and tilt transforms used for drawing.  In particular, transparent
     corners of the source PNG are not clickable.
     """
-    if map_screen.viewing_ai_moves:
+    if (map_screen.viewing_ai_moves
+            or map_screen.secondary_mode != "UNITS"):
         return None
     click_x, click_y = screen_pos
     for record in reversed(combat_bubble_records(map_screen)):

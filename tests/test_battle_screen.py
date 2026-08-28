@@ -144,6 +144,19 @@ class BuildAndPaintTests(BattleScreenTestCase):
         self.assertIs(self.map.selected_province, self.province)
         change_state.assert_called_once_with("ORDERS")
 
+    def test_combat_bubble_entry_opens_the_battle_panel(self):
+        from screens.map_related_screens.orders import Orders_Screen
+
+        self.map._orders_entered_from_combat_bubble = True
+        self.addCleanup(self.map.__dict__.pop,
+                        "_orders_entered_from_combat_bubble", None)
+
+        orders = Orders_Screen()
+        orders.start_with_province(self.province, self.map)
+
+        self.assertIsNotNone(orders.battle_screen)
+        self.assertTrue(orders.battle_screen.battle.lanes)
+
     def test_it_survives_an_idle_event_pump(self):
         screen = self.screen()
         screen.handle_events([pygame.event.Event(pygame.MOUSEMOTION, pos=(640, 360), rel=(0, 0),
@@ -220,6 +233,10 @@ class BuildAndPaintTests(BattleScreenTestCase):
 
     def test_midpoint_battle_marker_panel_and_retreat_are_available(self):
         """The virtual location has its own lane panel and saved retreat flag."""
+        previous_mode = self.map.secondary_mode
+        self.addCleanup(setattr, self.map, "secondary_mode", previous_mode)
+        self.map.secondary_mode = "UNITS"
+
         other = next(p for p in self.map.map_data.values()
                      if p is not self.province and not queries.is_water_province(p))
         original_here = self.province["units"]
@@ -271,6 +288,21 @@ class BuildAndPaintTests(BattleScreenTestCase):
         orders.draw(self.surface)
         self.assertIn(combat_processor.EDGE_BATTLE_KEY,
                       queries.build_save_dict(self.map)["provinces"][self.province["json_key"]]["units"][0])
+
+    def test_hidden_combat_bubble_cannot_be_clicked(self):
+        from map_logic.rendering import overlay_renderer
+
+        previous_mode = self.map.secondary_mode
+        self.addCleanup(setattr, self.map, "secondary_mode", previous_mode)
+        self.map.secondary_mode = "ECONOMY"
+
+        record = next(record for record in overlay_renderer.combat_bubble_records(self.map)
+                      if record["kind"] == "province"
+                      and record["province_id"] == self.province["id"])
+        position = queries.world_to_screen(record["center"], self.map)
+
+        self.assertIsNone(overlay_renderer.combat_bubble_at_screen_pos(
+            self.map, position))
 
 
 class LaneOrderTests(BattleScreenTestCase):

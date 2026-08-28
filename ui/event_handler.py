@@ -340,12 +340,14 @@ def handle_map_events(map_screen, event):
             and not map_screen.viewing_ai_moves):
         bubble = overlay_renderer.combat_bubble_at_screen_pos(map_screen, event.pos)
         if bubble is not None and bubble.get("edge_pair") is not None:
+            map_screen._orders_entered_from_combat_bubble = True
             map_screen.pending_edge_battle_pair = bubble["edge_pair"]
             map_screen.change_state("ORDERS")
             return
         if bubble is not None:
             province = map_screen.id_to_province.get(bubble["orders_province_id"])
             if province is not None:
+                map_screen._orders_entered_from_combat_bubble = True
                 map_screen.selected_province = province
                 map_screen.change_state("ORDERS")
                 return
