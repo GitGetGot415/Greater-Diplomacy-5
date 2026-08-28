@@ -950,6 +950,7 @@ class Map(GameState):
         self.map_mode = self.base_layer
 
         self.selected_province = self.hovered_province = self.last_hovered_id = None
+        self.hovered_combat_bubble = None
         self.hover_glow_surf = self.hover_glow_rect = None
         self.feedback_text = ""
         self.feedback_timer = 0
@@ -1228,6 +1229,7 @@ class Map(GameState):
                 self.mail_input_active = False
 
         self.selected_province = self.hovered_province = self.hover_glow_surf = self.last_hovered_id = None
+        self.hovered_combat_bubble = None
         self.show_feedback("Map Unlocked")
 
     def save_map_data(self):

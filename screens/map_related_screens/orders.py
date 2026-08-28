@@ -1513,6 +1513,8 @@ class Orders_Screen(GameState):
         read_only = getattr(self, "read_only", False)
         player_units = [u for u in units if u.get("owner") == self.map_screen.player_country]
         owner_color = self.map_screen.nation_colors.get(self.map_screen.player_country, (255, 255, 0))
+        combat_records = overlay_renderer.combat_bubble_records(self.map_screen)
+        combat_unit_colors = overlay_renderer.combat_bubble_unit_colors(combat_records)
         rows = self._visible_rows()
 
         # Force the selected orders through fog-of-war before the opaque roster
@@ -1520,11 +1522,12 @@ class Orders_Screen(GameState):
         # across the panel itself.  A midpoint withdrawal begins at the marker;
         # its saved retreat path supplies all later normal movement steps.
         for unit in player_units:
+            arrow_color = combat_unit_colors.get(id(unit), owner_color)
             if self.edge_pair is not None:
                 tag = unit.get(combat_processor.EDGE_BATTLE_KEY, {})
                 overlay_renderer.draw_edge_movement_path(
                     surface, self.map_screen, tag,
-                    unit.get("speed", 1), owner_color, force_visible=True)
+                    unit.get("speed", 1), arrow_color, force_visible=True)
             else:
                 order = unit.get("order", {})
                 if not isinstance(order, dict):
@@ -1533,13 +1536,19 @@ class Orders_Screen(GameState):
                 if path:
                     overlay_renderer.draw_split_movement_path(
                         surface, self.map_screen, self.target_province, path,
-                        unit.get("speed", 1), owner_color, force_visible=True)
+                        unit.get("speed", 1), arrow_color, force_visible=True)
                 elif order.get("type") == "BOMBARD":
                     target_id = order.get("target_id")
                     bomb_range = queries.get_bombardment_range(unit.get("type", ""))
                     overlay_renderer.draw_bombardment_arrow(
                         surface, self.map_screen, self.target_province, target_id,
-                        bomb_range, force_visible=True)
+                        bomb_range, force_visible=True, color=arrow_color)
+
+        # The clean map background already paints bubbles, but this screen adds
+        # its selected-unit arrows afterwards. Paint the bubbles once more so
+        # they remain the topmost map overlay here as well.
+        overlay_renderer.draw_combat_bubbles(
+            self.map_screen, surface, combat_records)
 
         ui_bars.draw_translucent_panel(
             surface, self.panel_rect, (*PANEL_BG_COLOR, self.PANEL_TRANSPARENCY),

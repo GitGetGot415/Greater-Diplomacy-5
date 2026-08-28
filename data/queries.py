@@ -1082,6 +1082,43 @@ def get_fort_level(province):
             level = max(level, int(match.group(1)))
     return level
 
+
+# Combat locations are always described from one nation's perspective.  These
+# names deliberately match the map bubbles, but are rules-facing categories so
+# future mechanics do not have to reimplement the fort-territory test.
+COMBAT_LOCATION_DEFENSE = "defense"
+COMBAT_LOCATION_OFFENSE = "offense"
+COMBAT_LOCATION_MIDPOINT = "midpoint"
+
+
+def is_fort_defended_territory(province, nation, nation_data):
+    """Whether ``nation`` would receive a fort's defense on this province.
+
+    This does not require a fort or active combat.  It answers the durable
+    territory rule shared by fort bonuses, combat presentation, and any future
+    defense-side mechanics: a province protects its owner and faction members.
+    """
+    owner = province.get("owner")
+    return bool(owner and nation and
+                (nation == owner or are_in_same_faction(owner, nation, nation_data)))
+
+
+def get_combat_location_category(province, perspective_nation, nation_data,
+                                 *, midpoint=False):
+    """Classify a battle as defensive, offensive, or a virtual midpoint.
+
+    ``perspective_nation`` is normally the local player.  With no nation (for
+    example a spectator), real province battles use the neutral defensive
+    shape; their outcome color still remains grey because the spectator is not
+    participating.
+    """
+    if midpoint:
+        return COMBAT_LOCATION_MIDPOINT
+    if (perspective_nation is None or perspective_nation in ("Spectator", "Editor")
+            or is_fort_defended_territory(province, perspective_nation, nation_data)):
+        return COMBAT_LOCATION_DEFENSE
+    return COMBAT_LOCATION_OFFENSE
+
 def damage_fort(province, nation_data, map_data=None):
     """Removes one fort level and cancels/refunds queued fort upgrades.
 
@@ -1138,11 +1175,7 @@ def get_fort_defense_bonus(province, unit, nation_data, combat_active=None):
     if not combat_active:
         return 0
 
-    tile_owner = province.get("owner")
-    unit_owner = unit.get("owner")
-    if (not tile_owner or
-            (unit_owner != tile_owner and
-             not are_in_same_faction(tile_owner, unit_owner, nation_data))):
+    if not is_fort_defended_territory(province, unit.get("owner"), nation_data):
         return 0
     return level * c.FORT_DEFENSE_PER_LEVEL
 
@@ -2903,9 +2936,14 @@ def get_combat_predictions(map_screen):
             return units
         return filter_visible_units(units, player_country, prov, nation_data)
 
+    meeting_unit_ids = set()
     for pair in combat_rules.find_meeting_pairs(map_data, nation_data, visible_to):
         prov_a, prov_b, side1, side2 = combat_rules.meeting_sides(
             map_screen.id_to_province, pair, visible_to)
+        # The midpoint is the sole location of this engagement.  Keeping its
+        # participants out of the ordinary incoming/static pass below prevents
+        # duplicate bubbles on both endpoint provinces.
+        meeting_unit_ids.update(id(unit) for unit in side1 + side2)
         predictions.append({
             "type": "meeting",
             "loc": pair,
@@ -2919,6 +2957,8 @@ def get_combat_predictions(map_screen):
         for u in prov.get("units", []):
             if is_unit_in_edge_battle(u):
                 continue
+            if id(u) in meeting_unit_ids:
+                continue
             order = u.get("order")
             if order and order.get("type") == "MOVE" and order.get("path"):
                 if visible_to is not None and u.get("owner") not in visible_to:
@@ -2930,7 +2970,8 @@ def get_combat_predictions(map_screen):
     # 3. Find Province Clashes (Static Defenders vs Incoming Attackers)
     for prov in map_data.values():
         prov_id = prov["id"]
-        defenders = sub_visible(units_on_province(prov), prov)
+        defenders = sub_visible([unit for unit in units_on_province(prov)
+                                 if id(unit) not in meeting_unit_ids], prov)
         attackers = [u for u, o in incoming.get(prov_id, [])]
         
         forces_by_owner = {}

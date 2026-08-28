@@ -92,6 +92,58 @@ class BuildAndPaintTests(BattleScreenTestCase):
         self.assertTrue(screen.battle.lanes)
         self.assertTrue(screen.elements)
 
+    def test_province_combat_uses_one_clickable_category_bubble_and_hides_its_stack(self):
+        from map_logic.rendering import overlay_renderer
+
+        previous_mode = self.map.secondary_mode
+        self.addCleanup(setattr, self.map, "secondary_mode", previous_mode)
+        self.map.secondary_mode = "UNITS"
+        records = overlay_renderer.combat_bubble_records(self.map)
+        record = next(record for record in records
+                      if record["kind"] == "province"
+                      and record["province_id"] == self.province["id"])
+
+        self.assertEqual(
+            record["category"],
+            queries.get_combat_location_category(
+                self.province, self.map.player_country, self.map.nation_data))
+        self.assertEqual(record["unit_ids"], {id(unit) for unit in self.province["units"]})
+
+        screen_pos = queries.world_to_screen(record["center"], self.map)
+        hit = overlay_renderer.combat_bubble_at_screen_pos(self.map, screen_pos)
+        self.assertEqual(hit["orders_province_id"], self.province["id"])
+
+        with mock.patch.object(overlay_renderer, "draw_unit_icon") as draw_unit_icon:
+            overlay_renderer.draw_overlay_content(self.map, self.surface)
+        self.assertFalse(any(call.args[4] is self.province
+                             for call in draw_unit_icon.call_args_list))
+
+    def test_clicking_a_province_combat_bubble_opens_its_orders_screen(self):
+        from map_logic.rendering import overlay_renderer
+        from ui import event_handler
+
+        previous_mode = self.map.secondary_mode
+        previous_selected = self.map.selected_province
+        previous_selection_mode = self.map.selection_mode
+        self.addCleanup(setattr, self.map, "secondary_mode", previous_mode)
+        self.addCleanup(setattr, self.map, "selected_province", previous_selected)
+        self.addCleanup(setattr, self.map, "selection_mode", previous_selection_mode)
+        self.map.secondary_mode = "UNITS"
+        self.map.selected_province = None
+        self.map.selection_mode = False
+        record = next(record for record in overlay_renderer.combat_bubble_records(self.map)
+                      if record["kind"] == "province"
+                      and record["province_id"] == self.province["id"])
+        position = tuple(map(int, queries.world_to_screen(record["center"], self.map)))
+        event = pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=position)
+
+        with mock.patch("pygame.mouse.get_pos", return_value=position), \
+                mock.patch.object(self.map, "change_state") as change_state:
+            event_handler.handle_map_events(self.map, event)
+
+        self.assertIs(self.map.selected_province, self.province)
+        change_state.assert_called_once_with("ORDERS")
+
     def test_it_survives_an_idle_event_pump(self):
         screen = self.screen()
         screen.handle_events([pygame.event.Event(pygame.MOUSEMOTION, pos=(640, 360), rel=(0, 0),
@@ -190,6 +242,13 @@ class BuildAndPaintTests(BattleScreenTestCase):
         midpoint = combat_processor.edge_battle_midpoint(self.map, record)
         marker_pos = queries.world_to_screen(midpoint, self.map)
         self.assertEqual(combat_processor.edge_battle_at_screen_pos(self.map, marker_pos)["pair"],
+                         record["pair"])
+
+        from map_logic.rendering import overlay_renderer
+        bubble = next(bubble for bubble in overlay_renderer.combat_bubble_records(self.map)
+                      if bubble["kind"] == "midpoint")
+        self.assertEqual(bubble["category"], queries.COMBAT_LOCATION_MIDPOINT)
+        self.assertEqual(overlay_renderer.combat_bubble_at_screen_pos(self.map, marker_pos)["edge_pair"],
                          record["pair"])
 
         from screens.map_related_screens.orders import Orders_Screen

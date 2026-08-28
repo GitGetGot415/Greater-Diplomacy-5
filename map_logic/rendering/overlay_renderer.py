@@ -12,6 +12,20 @@ from map_logic.turn_processing import combat_processor, combat_rules
 #: pixels tall, and cropping one at the screen edge would make it pop.
 CULL_MARGIN = 250
 
+# The images are deliberately separate from outcome color.  That leaves one
+# consistent location category for future combat rules while the renderer can
+# still say whether the local player's lanes look favourable.
+COMBAT_BUBBLE_ASSETS = {
+    queries.COMBAT_LOCATION_DEFENSE: "Defense Bubble",
+    queries.COMBAT_LOCATION_OFFENSE: "Offense Bubble",
+    queries.COMBAT_LOCATION_MIDPOINT: "Midpoint Bubble",
+}
+# Bubble art is intentionally compact so it does not hide the unit/order
+# information around the tile.  The hit test below uses the image alpha mask,
+# so there is no separate square padding to make the clickable area larger than
+# the painted bubble.
+COMBAT_BUBBLE_ICON_SCALE = 1.2
+
 
 def fort_horizontal_alignment(map_screen):
     """Returns the fort's screen-space centering correction for this zoom.
@@ -65,94 +79,203 @@ def combat_strengths(sides, nation_data, friendly_nations):
     return friendly_atk, enemy_atk, involved
 
 
-def draw_combat_bubbles(self_map, surface):
-    """Draws combat indicators on the map to visualize predicted battles."""
-    
-    # Hide combat bubbles during the AI moves screen to prevent leaking hotseat moves
-    if self_map.viewing_ai_moves:
+def combat_outlook_color(sides, nation_data, friendly_nations):
+    """Return the shared red/yellow/green/grey combat-outlook color."""
+    friendly_atk, enemy_atk, involved = combat_strengths(
+        sides, nation_data, friendly_nations)
+    if not involved:
+        return (150, 150, 150)
+    if friendly_atk > enemy_atk:
+        return (0, 255, 0)
+    if enemy_atk > friendly_atk:
+        return (255, 0, 0)
+    return (255, 255, 0)
+
+
+def _combat_friendly_nations(map_screen):
+    player = map_screen.player_country
+    if player in (None, "", "Spectator", "Editor") or getattr(map_screen, "is_editor", False):
+        return set()
+    return queries.get_all_friendly_nations(player, map_screen.nation_data)
+
+
+def _combat_is_visible(map_screen, province_ids, *, own_unit=False):
+    """One fog gate shared by predicted and persistent combat bubbles."""
+    visible = getattr(map_screen, "visible_provinces", None)
+    if visible is None:
+        return True
+    partial = getattr(map_screen, "partial_visible_provinces", set()) or set()
+    return own_unit or any(province_id in visible or province_id in partial
+                           for province_id in province_ids)
+
+
+def combat_bubble_records(map_screen):
+    """Describe every visible combat bubble and its Orders-screen destination.
+
+    The records are intentionally data-only: rendering, unit hiding and input
+    hit-testing all consume this same list so a combat category or click target
+    cannot drift away from the image actually painted on the map.
+    """
+    player = map_screen.player_country
+    friendly = _combat_friendly_nations(map_screen)
+    records = []
+
+    for prediction in queries.get_combat_predictions(map_screen):
+        if prediction["type"] == "meeting":
+            pair = prediction["loc"]
+            if not _combat_is_visible(map_screen, pair):
+                continue
+            sides = [prediction["side1"], prediction["side2"]]
+            midpoint = combat_processor.edge_battle_midpoint(map_screen, {"pair": pair})
+            own_side = next((side_index for side_index, side in enumerate(sides)
+                             if any(unit.get("owner") in friendly for unit in side)), 0)
+            records.append({
+                "kind": "predicted_midpoint",
+                "pair": pair,
+                "center": midpoint,
+                "category": queries.get_combat_location_category(
+                    None, player, map_screen.nation_data, midpoint=True),
+                "color": combat_outlook_color(sides, map_screen.nation_data, friendly),
+                "unit_ids": {id(unit) for side in sides for unit in side},
+                # A predicted meeting has no virtual roster yet.  Its nearest
+                # useful Orders screen is the endpoint the local side departed.
+                "orders_province_id": pair[own_side],
+            })
+            continue
+
+        province = map_screen.id_to_province[prediction["loc"]]
+        if not _combat_is_visible(map_screen, [province["id"]]):
+            continue
+        sides = [[unit for units in prediction["forces"].values() for unit in units]]
+        records.append({
+            "kind": "province",
+            "province_id": province["id"],
+            "center": province["center"],
+            "category": queries.get_combat_location_category(
+                province, player, map_screen.nation_data),
+            "color": combat_outlook_color(sides, map_screen.nation_data, friendly),
+            "unit_ids": {id(unit) for side in sides for unit in side},
+            "orders_province_id": province["id"],
+        })
+
+    # A persistent midpoint no longer appears in normal movement predictions,
+    # so add it here as the same record shape rather than retaining a separate
+    # marker renderer and input path.
+    for edge in combat_processor.edge_battles(map_screen):
+        units = edge["side1"] + edge["side2"]
+        own_unit = any(unit.get("owner") in friendly for unit in units)
+        if not _combat_is_visible(map_screen, edge["pair"], own_unit=own_unit):
+            continue
+        sides = [edge["side1"], edge["side2"]]
+        records.append({
+            "kind": "midpoint",
+            "pair": edge["pair"],
+            "center": combat_processor.edge_battle_midpoint(map_screen, edge),
+            "category": queries.get_combat_location_category(
+                None, player, map_screen.nation_data, midpoint=True),
+            "color": combat_outlook_color(sides, map_screen.nation_data, friendly),
+            "unit_ids": {id(unit) for unit in units},
+            "edge_pair": edge["pair"],
+        })
+
+    return records
+
+
+def _combat_bubble_symbol(record, zoom):
+    asset = COMBAT_BUBBLE_ASSETS[record["category"]]
+    return symbol_loader.get_symbol(asset, zoom * COMBAT_BUBBLE_ICON_SCALE,
+                                    color=record["color"])
+
+
+def _combat_bubble_key(record):
+    """Return the stable identity used to carry hover state between frames."""
+    if record["kind"] == "province":
+        return record["kind"], record["province_id"]
+    return record["kind"], tuple(record["pair"])
+
+
+def _combat_bubble_is_hovered(map_screen, record):
+    hovered = getattr(map_screen, "hovered_combat_bubble", None)
+    return hovered is not None and _combat_bubble_key(hovered) == _combat_bubble_key(record)
+
+
+def _highlight_combat_bubble(bubble):
+    """Add a bright, shape-matched hover treatment to a bubble surface."""
+    highlighted = bubble.copy()
+    mask = pygame.mask.from_surface(bubble)
+    overlay = mask.to_surface(setcolor=(255, 255, 255, 80),
+                              unsetcolor=(0, 0, 0, 0))
+    highlighted.blit(overlay, (0, 0))
+
+    # The outline follows the alpha mask rather than the image rectangle, which
+    # keeps the hover feedback consistent with the click target at the corners.
+    outline = mask.outline()
+    if len(outline) > 1:
+        pygame.draw.lines(highlighted, (255, 255, 255, 255), True, outline, 1)
+    return highlighted
+
+
+def _combat_bubble_instances(map_screen, record):
+    """Yield each wrapped, screen-space instance of one rendered bubble."""
+    bubble = _combat_bubble_symbol(record, map_screen.camera.zoom)
+    if bubble is None:
         return
-
-    predictions = queries.get_combat_predictions(self_map)
-    cam = self_map.camera
-    
-    # 1. Compile a list of friendly nations to track involvement
-    player_country = self_map.player_country
-    friendly_nations = {player_country}
-    
-    player_allies = self_map.nation_data.get(player_country, {}).get("allied_with", [])
-    friendly_nations.update(player_allies)
-    
-    player_faction = self_map.nation_data.get(player_country, {}).get("faction", "")
-    if player_faction:
-        friendly_nations.update(queries.get_faction_members(player_faction, self_map.nation_data))
-    
-    for pred in predictions:
-        # --- FOG OF WAR COMBAT VISIBILITY CHECK ---
-        if self_map.visible_provinces is not None:
-            partial = getattr(self_map, 'partial_visible_provinces', set()) or set()
-            allowed = self_map.visible_provinces.union(partial)
-            
-            if pred["type"] == "meeting":
-                if pred["loc"][0] not in allowed and pred["loc"][1] not in allowed:
-                    continue
-            else:
-                if pred["loc"] not in allowed:
-                    continue
-    
-        if pred["type"] == "meeting":
-            # Two sides, so a unit only fights across the divide.
-            sides = [pred["side1"], pred["side2"]]
-
-            p1 = self_map.id_to_province[pred["loc"][0]]["center"]
-            p2 = self_map.id_to_province[pred["loc"][1]]["center"]
-            cx = (p1[0] + p2[0]) / 2
-            cy = (p1[1] + p2[1]) / 2
-
-        else:
-            # One side: everyone standing on the tile can reach everyone else.
-            sides = [[u for units in pred["forces"].values() for u in units]]
-
-            prov = self_map.id_to_province[pred["loc"]]
-            cx, cy = prov["center"]
-
-        friendly_atk, enemy_atk, involved = combat_strengths(
-            sides, self_map.nation_data, friendly_nations)
+    bubble = map_utils.apply_tilt(bubble, map_screen.camera.tilt_factor,
+                                  c.APPLY_TILT_TO_OVERLAYS)
+    offsets = [0, -map_screen.map_w, map_screen.map_w] if map_screen.loop_map else [0]
+    for offset in offsets:
+        sx, sy = queries.world_to_screen(record["center"], map_screen, offset)
+        yield bubble, bubble.get_rect(center=(int(sx), int(sy)))
 
 
-        # Determine Color Based on Simulation
-        if not involved:
-            color = (150, 150, 150) # Grey (Unrelated Battle / Spectating)
-        elif friendly_atk > enemy_atk:
-            color = (0, 255, 0) # Green (Winning)
-        elif enemy_atk > friendly_atk:
-            color = (255, 0, 0) # Red (Losing)
-        else:
-            color = (255, 255, 0) # Yellow (Draw)
-            
-        offsets = [0, -self_map.map_w, self_map.map_w] if self_map.loop_map else [0]
-        for offset in offsets:
-            sx, sy = queries.world_to_screen((cx, cy), self_map, offset)
-            sx, sy = int(sx), int(sy)
-            
-            if -50 < sx < surface.get_width() + 50 and 0 < sy < surface.get_height():
-                radius_x = int(12 * cam.zoom) # Bubble size
-                radius_y = int(radius_x * cam.tilt_factor) if c.APPLY_TILT_TO_OVERLAYS else radius_x
-                
-                # Draw visual effect
-                if cam.tilt_factor < 0.99 and c.APPLY_TILT_TO_OVERLAYS:
-                    rect = pygame.Rect(int(sx) - radius_x, int(sy) - radius_y, radius_x * 2, radius_y * 2)
-                    pygame.draw.ellipse(surface, color, rect, max(1, int(3 * cam.zoom)))
-                else:
-                    pygame.draw.circle(surface, color, (int(sx), int(sy)), radius_x, max(1, int(3 * cam.zoom)))
-                
-                # Draw semi-transparent inner fill
-                inner = pygame.Surface((radius_x*2, radius_x*2), pygame.SRCALPHA)
-                pygame.draw.circle(inner, color + (80,), (radius_x, radius_x), radius_x)
-                
-                if cam.tilt_factor < 0.99 and c.APPLY_TILT_TO_OVERLAYS:
-                    inner = pygame.transform.scale(inner, (radius_x * 2, radius_y * 2))
-                    
-                surface.blit(inner, (int(sx) - radius_x, int(sy) - radius_y))
+def _draw_combat_bubble(surface, map_screen, record):
+    """Draw one image-backed bubble at all wrapped map positions."""
+    for bubble, rect in _combat_bubble_instances(map_screen, record):
+        if (-CULL_MARGIN < rect.centerx < surface.get_width() + CULL_MARGIN
+                and -CULL_MARGIN < rect.centery < surface.get_height() + CULL_MARGIN):
+            if _combat_bubble_is_hovered(map_screen, record):
+                bubble = _highlight_combat_bubble(bubble)
+            surface.blit(bubble, rect)
+
+
+def draw_combat_bubbles(map_screen, surface, records=None):
+    """Draw asset-backed combat bubbles and return their shared records."""
+    if map_screen.viewing_ai_moves:
+        return []
+    records = combat_bubble_records(map_screen) if records is None else records
+    for record in records:
+        _draw_combat_bubble(surface, map_screen, record)
+    return records
+
+
+def combat_bubble_at_screen_pos(map_screen, screen_pos):
+    """Return the rendered combat bubble hit by a map click or hover.
+
+    The hitbox is the bubble surface's non-transparent pixels, after the same
+    zoom and tilt transforms used for drawing.  In particular, transparent
+    corners of the source PNG are not clickable.
+    """
+    if map_screen.viewing_ai_moves:
+        return None
+    click_x, click_y = screen_pos
+    for record in reversed(combat_bubble_records(map_screen)):
+        for bubble, rect in _combat_bubble_instances(map_screen, record):
+            if not rect.collidepoint(click_x, click_y):
+                continue
+            local_x = click_x - rect.x
+            local_y = click_y - rect.y
+            if pygame.mask.from_surface(bubble).get_at((local_x, local_y)):
+                return record
+    return None
+
+
+def combat_bubble_unit_colors(records):
+    """Map units represented by bubbles to the bubble's outcome color."""
+    return {
+        unit_id: record["color"]
+        for record in records
+        for unit_id in record["unit_ids"]
+    }
 
 def status_icon(map_screen, name):
     """A faded, tilted overlay badge -- training, disbanding, converting, building.
@@ -192,7 +315,9 @@ def draw_map_highlight(surface, map_screen, pid, color, base_radius=10, inset=0,
             surface.blit(ellipse_surf, (int(sx) - radius_x, int(sy) - radius_y))
             pygame.draw.ellipse(surface, color, pygame.Rect(int(sx) - radius_x, int(sy) - radius_y, radius_x*2, radius_y*2), max(2, int(2*map_screen.camera.zoom)))
 
-def draw_bombardment_arrow(surface, map_screen, start_province, target_id, bomb_range=1, alpha=255, force_visible=False):
+def draw_bombardment_arrow(surface, map_screen, start_province, target_id,
+                           bomb_range=1, alpha=255, force_visible=False,
+                           color=None):
     """Draws a barrage sprite pointing from a gun's tile at the tile it is shelling.
 
     Movement uses a Line/Circle/Triangle chain because a path has many hops;
@@ -211,8 +336,10 @@ def draw_bombardment_arrow(surface, map_screen, start_province, target_id, bomb_
             return
 
     cam = map_screen.camera
+    arrow_color = color if color is not None else (255, 200, 0)
     icon_name = queries.get_bombardment_arrow_icon(bomb_range)
-    arrow_img = symbol_loader.get_symbol(icon_name, cam.zoom * c.BOMBARDMENT_ARROW_SCALE)
+    arrow_img = symbol_loader.get_symbol(
+        icon_name, cam.zoom * c.BOMBARDMENT_ARROW_SCALE, color=arrow_color)
 
     p1 = list(start_province["center"])
     p2 = list(target_prov["center"])
@@ -245,7 +372,8 @@ def draw_bombardment_arrow(surface, map_screen, start_province, target_id, bomb_
             surface.blit(rotated, rotated.get_rect(center=mid))
         else:
             # Fallback until the barrage sprite is present in assets/images
-            pygame.draw.line(surface, (255, 200, 0), start_pos, end_pos, max(2, int(3 * cam.zoom)))
+            pygame.draw.line(surface, arrow_color, start_pos, end_pos,
+                             max(2, int(3 * cam.zoom)))
 
 def draw_movement_path(surface, map_screen, start_province, path_ids, color=(255, 255, 0), alpha=255, force_visible=False):
     """Draws a multi-segment path with lines underneath circles and a triangle at the end."""
@@ -392,14 +520,21 @@ def draw_movement_path(surface, map_screen, start_province, path_ids, color=(255
                     radius_y = int(radius_x * cam.tilt_factor) if c.APPLY_TILT_TO_ARROWS else radius_x
                     pygame.draw.ellipse(surface, color, pygame.Rect(int(end_pos[0]) - radius_x, int(end_pos[1]) - radius_y, radius_x*2, radius_y*2))
 
-def draw_overlay_content(map_screen, surface):
+def draw_overlay_content(map_screen, surface, draw_combat=True):
     """Orchestrates what icons/symbols to draw over the map."""
     if map_screen.secondary_mode == "BLANK":
-        return
+        return []
 
     # --- Render Combat Prediction Bubbles ---
+    combat_records = []
+    combat_unit_ids = set()
+    combat_province_ids = set()
     if map_screen.secondary_mode == "UNITS":
-        draw_combat_bubbles(map_screen, surface)
+        combat_records = combat_bubble_records(map_screen)
+        combat_unit_ids = {unit_id for record in combat_records
+                           for unit_id in record["unit_ids"]}
+        combat_province_ids = {record["province_id"] for record in combat_records
+                               if record["kind"] == "province"}
     # ---------------------------------------------
 
     for color_key, province in map_screen.map_data.items():
@@ -440,6 +575,12 @@ def draw_overlay_content(map_screen, surface):
 
                 # --- UNIT VIEW ---
                 if map_screen.secondary_mode == "UNITS":
+                    # A province fight is represented by its combat bubble,
+                    # not a stack beneath it.  Meeting fighters are hidden by
+                    # identity instead, leaving uninvolved units on either
+                    # endpoint visible as normal.
+                    if province["id"] in combat_province_ids:
+                        continue
                     # .get, like every other read of this key below it. A
                     # province dict is not guaranteed to carry one -- the editor
                     # and the map tools both build provinces without it.
@@ -449,9 +590,10 @@ def draw_overlay_content(map_screen, surface):
                     # blip) even in an otherwise fully-visible province -- full
                     # province visibility and per-submarine visibility are
                     # separate layers.
-                    visible_units = queries.filter_visible_units(
+                    visible_units = [unit for unit in queries.filter_visible_units(
                         queries.units_on_province(province), map_screen.player_country,
                         province, map_screen.nation_data)
+                        if id(unit) not in combat_unit_ids]
 
                     if visible_units:
                         draw_unit_icon(map_screen, surface, sx, sy, province, is_partial)
@@ -654,8 +796,12 @@ def draw_overlay_content(map_screen, surface):
                                     pygame.draw.rect(surface, (255, 255, 255), rect, 1)
                                     current_x += w_scaled + icon_spacing
 
-    if map_screen.secondary_mode == "UNITS":
-        draw_edge_battles(map_screen, surface)
+    # Map rendering passes draw_combat=False and paints these after movement
+    # and bombardment arrows. Direct callers retain the old self-contained
+    # behavior by leaving draw_combat at its default.
+    if draw_combat and map_screen.secondary_mode == "UNITS":
+        draw_combat_bubbles(map_screen, surface, combat_records)
+    return combat_records
 
 #: Composed unit boxes, keyed by everything that is drawn into one. Building a
 #: box means a fresh surface, a colorized symbol, two font renders and a
@@ -897,72 +1043,14 @@ def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,
 
 
 def draw_edge_battles(map_screen, surface):
-    """Paint every persistent battle at its clickable midpoint marker."""
-    visible = getattr(map_screen, "visible_provinces", None)
-    partial = getattr(map_screen, "partial_visible_provinces", set()) or set()
-    player = map_screen.player_country
-    friendly = queries.get_all_friendly_nations(player, map_screen.nation_data)
-    radius = max(7, int(8 * map_screen.camera.zoom))
-    offsets = [0, -map_screen.map_w, map_screen.map_w] if map_screen.loop_map else [0]
+    """Compatibility helper for callers that specifically redraw edge fights.
 
-    for record in combat_processor.edge_battles(map_screen):
-        first_id, second_id = record["pair"]
-        full = visible is None or first_id in visible or second_id in visible
-        partly_seen = first_id in partial or second_id in partial
-        own_unit = any(u.get("owner") in friendly
-                       for u in record["side1"] + record["side2"])
-        if not (full or partly_seen or own_unit):
-            continue
-
-        first = map_screen.id_to_province[first_id]
-        second = map_screen.id_to_province[second_id]
-        shown = []
-        for units, province in ((record["side1"], first), (record["side2"], second)):
-            endpoint_seen = visible is None or province["id"] in visible
-            if endpoint_seen:
-                shown.extend(queries.filter_visible_units(
-                    units, player, province, map_screen.nation_data))
-            else:
-                # A player always sees their own forces even if their endpoint
-                # is otherwise fogged; enemy identities remain hidden.
-                shown.extend(u for u in units if u.get("owner") in friendly)
-
-        world = combat_processor.edge_battle_midpoint(map_screen, record)
-        friendly_atk, enemy_atk, involved = combat_strengths(
-            [record["side1"], record["side2"]], map_screen.nation_data, friendly)
-        color = ((150, 150, 150) if not involved else
-                 (0, 220, 90) if friendly_atk > enemy_atk else
-                 (220, 70, 70) if enemy_atk > friendly_atk else (235, 205, 60))
-
-        for offset in offsets:
-            sx, sy = queries.world_to_screen(world, map_screen, offset)
-            sx, sy = int(sx), int(sy)
-            if not (-CULL_MARGIN < sx < surface.get_width() + CULL_MARGIN
-                    and -CULL_MARGIN < sy < surface.get_height() + CULL_MARGIN):
-                continue
-            mouse_x, mouse_y = pygame.mouse.get_pos()
-            hovered = ((mouse_x - sx) ** 2 + (mouse_y - sy) ** 2
-                       <= (radius + 4) ** 2)
-            marker_size = 2 * (radius + 7)
-            marker = pygame.Surface((marker_size, marker_size), pygame.SRCALPHA)
-            marker_center = (marker_size // 2, marker_size // 2)
-            pygame.draw.circle(marker, (*color, 60), marker_center, radius)
-            pygame.draw.circle(marker, (*color, 205), marker_center, radius,
-                               max(1, int(map_screen.camera.zoom)))
-            if hovered:
-                pygame.draw.circle(marker, (255, 255, 255, 235), marker_center,
-                                   radius + 4, max(1, int(2 * map_screen.camera.zoom)))
-            surface.blit(marker, (sx - marker_center[0], sy - marker_center[1]))
-            symbol = symbol_loader.get_symbol("Attack", max(0.35, map_screen.camera.zoom * 0.5),
-                                              color=(255, 255, 255) if hovered else color)
-            if symbol:
-                symbol = map_utils.apply_tilt(symbol, map_screen.camera.tilt_factor,
-                                               c.APPLY_TILT_TO_OVERLAYS)
-                surface.blit(symbol, symbol.get_rect(center=(sx, sy)))
-            if shown:
-                draw_unit_icon(map_screen, surface, sx, sy - radius - 8, first,
-                               is_partial=not full and not own_unit,
-                               units=shown, units_are_visible=True)
+    Persistent midpoint battles now use exactly the same image-backed bubble
+    records as every other combat; no unit stack is painted at the midpoint.
+    """
+    for record in combat_bubble_records(map_screen):
+        if record["kind"] == "midpoint":
+            _draw_combat_bubble(surface, map_screen, record)
     
 def draw_split_movement_path(surface, map_screen, start_prov, path, speed, base_color, force_visible=False):
     """Standardized helper to draw multi-segment movement paths with queued opacity."""

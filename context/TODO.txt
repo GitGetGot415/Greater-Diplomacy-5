@@ -22,9 +22,6 @@ country has the highest combat width level researched, that's the increase that 
 
 - combat width depends on number of connecting tiles (hey wait a minute)
 
-- what's causing units to sometimes not engage in combat? (is it when they both move towards each other)
-- could it be made so a battle does happen but like in the space between them
-
 - ADD REAL FLAGS SUGGESTED BY KAISERIN
 
 - puppets should take territory that has their cores...

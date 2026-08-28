@@ -1,6 +1,6 @@
 import pygame
-from map_logic.rendering import map_utils
-from map_logic.turn_processing import combat_processor, edit_province_ownership
+from map_logic.rendering import map_utils, overlay_renderer
+from map_logic.turn_processing import edit_province_ownership
 import data.constants as c
 from map_logic.camera import camera_handler
 from map_logic.setup import player_setup
@@ -140,8 +140,19 @@ def handle_map_events(map_screen, event):
 
     # 3. HOVER LOGIC (CRITICAL: Must run before painting)
     if not on_ui:
+        # Combat bubbles sit above the map's province hit map.  Resolve them
+        # first so hovering one removes the tile glow underneath it and does
+        # not make the tile appear clickable at the same time.
+        map_screen.hovered_combat_bubble = None
+        if (map_screen.secondary_mode == "UNITS"
+                and not map_screen.viewing_ai_moves):
+            map_screen.hovered_combat_bubble = overlay_renderer.combat_bubble_at_screen_pos(
+                map_screen, (mx, my))
+
         # FIX: Pass the pre-calculated (mx, my) tuple instead of event.pos!
-        map_screen.hovered_province = queries.get_clicked_province((mx, my), map_screen)
+        map_screen.hovered_province = (
+            None if map_screen.hovered_combat_bubble
+            else queries.get_clicked_province((mx, my), map_screen))
         
         # Block interaction with extreme hidden tiles
         if map_screen.hovered_province and hasattr(map_screen, 'extreme_hidden_provinces'):
@@ -159,7 +170,8 @@ def handle_map_events(map_screen, event):
             map_screen.last_hovered_id = None
             map_screen.hover_glow_surf = None
     else: 
-        map_screen.hovered_province = map_screen.hover_glow_surf = None
+        map_screen.hovered_province = map_screen.hovered_combat_bubble = None
+        map_screen.hover_glow_surf = None
 
     # --- UNDO / REDO LOGIC (Ctrl + Z / Ctrl + Y) ---
     if event.type == pygame.KEYDOWN:
@@ -321,26 +333,22 @@ def handle_map_events(map_screen, event):
                     player_setup.select_player_country(map_screen, map_screen.hovered_province)
         return
 
-    # Midpoint battles are virtual map locations, so their marker must win the
-    # click before the id-map resolves the province underneath it.  The normal
-    # Orders screen receives the pair as a temporary UI context; it then shows
-    # the ordinary roster and lane manager rather than a bespoke battle panel.
+    # Combat bubbles are their own interaction layer.  They must win before
+    # the id-map resolves the province beneath them so every kind of battle
+    # consistently opens its Orders view from the visual marker.
     if (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1
             and not map_screen.viewing_ai_moves):
-        edge_battle = combat_processor.edge_battle_at_screen_pos(map_screen, event.pos)
-        if edge_battle is not None and map_screen.visible_provinces is not None:
-            visible_end = any(province_id in map_screen.visible_provinces
-                              for province_id in edge_battle["pair"])
-            friendly = queries.get_all_friendly_nations(
-                map_screen.player_country, map_screen.nation_data)
-            own_unit = any(unit.get("owner") in friendly
-                           for unit in edge_battle["side1"] + edge_battle["side2"])
-            if not visible_end and not own_unit:
-                edge_battle = None
-        if edge_battle is not None:
-            map_screen.pending_edge_battle_pair = edge_battle["pair"]
+        bubble = overlay_renderer.combat_bubble_at_screen_pos(map_screen, event.pos)
+        if bubble is not None and bubble.get("edge_pair") is not None:
+            map_screen.pending_edge_battle_pair = bubble["edge_pair"]
             map_screen.change_state("ORDERS")
             return
+        if bubble is not None:
+            province = map_screen.id_to_province.get(bubble["orders_province_id"])
+            if province is not None:
+                map_screen.selected_province = province
+                map_screen.change_state("ORDERS")
+                return
 
     # --- Direct Map Message Editing ---
     # Moved ABOVE the "STANDARD GAME SELECTION" return block!

@@ -61,6 +61,25 @@ class FortTests(unittest.TestCase):
         province["units"] = [unit("A")]
         self.assertEqual(queries.get_fort_defense_bonus(province, unit("A"), nations), 0)
 
+    def test_combat_location_categories_share_the_fort_territory_rule(self):
+        province = {"owner": "A", "buildings": [], "units": []}
+        nations = {
+            "A": {"faction": "Allies"},
+            "B": {"faction": "Allies"},
+            "C": {"faction": "Axis"},
+        }
+
+        self.assertTrue(queries.is_fort_defended_territory(province, "B", nations))
+        self.assertEqual(
+            queries.get_combat_location_category(province, "B", nations),
+            queries.COMBAT_LOCATION_DEFENSE)
+        self.assertEqual(
+            queries.get_combat_location_category(province, "C", nations),
+            queries.COMBAT_LOCATION_OFFENSE)
+        self.assertEqual(
+            queries.get_combat_location_category(None, "C", nations, midpoint=True),
+            queries.COMBAT_LOCATION_MIDPOINT)
+
     def test_fort_bonus_reduces_damage_in_tile_combat(self):
         province = {
             "owner": "A",
