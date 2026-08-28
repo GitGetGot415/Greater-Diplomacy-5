@@ -569,11 +569,9 @@ class Orders_Screen(GameState):
                 self.elements.append(btn_all)
                 button_x = btn_all.rect.right + TOP_BTN_GAP_X
 
-            clear_key = pygame.key.name(
-                resolve_keybind(self, "CLEAR_ORDERS", pygame.K_DELETE)).upper()
             btn_clear = Button(button_x, PANEL_Y + TOP_BTN_ROW_OFFSET_Y,
                                "orders_clear_button", "red",
-                               f"Clear Orders [{clear_key}]", self.clear_all_orders,
+                               "Clear ALL Orders", self.clear_all_orders,
                                font_preset="tiny")
             btn_clear.disabled = is_tactical
             self.elements.append(btn_clear)
