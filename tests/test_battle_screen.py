@@ -321,14 +321,19 @@ class SideReserveTests(BattleScreenTestCase):
         _lane, near, far = screen.current()
         listed = {id(u) for _rect, (u, _note)
                   in screen.row_paint[battle_screen.PANE_RESERVE]}
-        # Taller rows can require scrolling before every reserve entry is
-        # visible; verify the bottom of the pane is reachable too.
+        # Taller rows can require several scroll positions before every
+        # reserve entry is visible; verify the whole pane is reachable.
         reserve_limit = screen.pane_scroll_limit(battle_screen.PANE_RESERVE)
         if reserve_limit < 0:
-            screen._scroll_reserve = reserve_limit
-            screen.refresh_ui()
-            listed.update(id(u) for _rect, (u, _note)
-                          in screen.row_paint[battle_screen.PANE_RESERVE])
+            view_h = screen.regions[battle_screen.PANE_RESERVE].height
+            step = max(1, view_h - battle_screen.ROW_H)
+            scroll = 0
+            while scroll > reserve_limit:
+                scroll = max(reserve_limit, scroll - step)
+                screen._scroll_reserve = scroll
+                screen.refresh_ui()
+                listed.update(id(u) for _rect, (u, _note)
+                              in screen.row_paint[battle_screen.PANE_RESERVE])
 
         self.assertEqual(listed, {id(u) for u in list(near.reserve) + list(far.reserve)})
 

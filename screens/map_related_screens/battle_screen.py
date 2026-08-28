@@ -67,11 +67,6 @@ LANE_FLAGS_SHOWN = 2
 VIEW_MODE_ROW_RESERVE = 40
 
 
-def side_name(side):
-    """A side in words, for anywhere a flag will not fit."""
-    return " + ".join(side.nations)
-
-
 class Battle_Screen(ModalScreen):
     """A tile's lanes, and the player's units in them.
 
@@ -474,6 +469,17 @@ class Battle_Screen(ModalScreen):
             x += more.get_width() + 6
         return x
 
+    def _paint_side_heading(self, surface, rect, side, count_text):
+        """Paints a side's flags and front count above its unit column."""
+        header_rect = pygame.Rect(rect.x, rect.y - HEADER_H, rect.width, HEADER_H)
+        small = fonts.get("small")
+        self._paint_side_flags(surface, side, header_rect.x, header_rect, small)
+
+        count_surf = small.render(count_text, True, c.UI_TEXT_DIM)
+        surface.blit(
+            count_surf,
+            count_surf.get_rect(midright=(header_rect.right, header_rect.centery)))
+
     def _paint_units(self, pane):
         """The stat block the Orders panel shows, on the row it belongs to.
 
@@ -588,10 +594,6 @@ class Battle_Screen(ModalScreen):
         self.label(surface, f"{self._composition(near)}   v   {self._composition(far)}",
                    (p.x + self.PAD, p.y + 48))
 
-        near_label = "YOUR SIDE" if self.is_mine(near) else side_name(near).upper()
-        far_label = "ENEMY SIDE" if self.is_mine(near) else side_name(far).upper()
-        if self.map_screen.tactical_mode and self.is_mine(near):
-            near_label = "YOUR SIDE (tactical: one division is yours)"
         our_side = near if self.is_mine(near) else (far if self.is_mine(far) else None)
         if our_side is None:
             reserve_label = f"RESERVES ({len(near.reserve) + len(far.reserve)})"
@@ -603,13 +605,16 @@ class Battle_Screen(ModalScreen):
                 reserve_label = f"SIDE RESERVE ({ours} yours / {allied} allied)"
 
         headings = (
-            (PANE_FRONT, f"{near_label} ({len(near.front)}/{lane.slots})"),
-            (PANE_ENEMY, f"{far_label} ({len(far.front)}/{lane.slots})"),
-            (PANE_RESERVE, reserve_label),
+            (PANE_FRONT, near, f"{len(near.front)}/{lane.slots}"),
+            (PANE_ENEMY, far, f"{len(far.front)}/{lane.slots}"),
         )
-        for pane, text in headings:
+        for pane, side, count_text in headings:
             rect = self.regions[pane]
-            self.label(surface, text, (rect.x, rect.y - HEADER_H + 4))
+            self._paint_side_heading(surface, rect, side, count_text)
+
+        reserve_rect = self.regions[PANE_RESERVE]
+        self.label(surface, reserve_label,
+                   (reserve_rect.x, reserve_rect.y - HEADER_H + 4))
 
         ui_bars.draw_translucent_panel(
             surface, self.regions[PANE_LANES], (0, 0, 0, 60),
