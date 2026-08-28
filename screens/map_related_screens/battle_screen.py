@@ -1,9 +1,9 @@
 """Managing one tile's battle: which duel each of your units fights, and who
 waits in reserve.
 
-The province sidebar shows the same fight, but read-only and squeezed into 370
-pixels. This is where the two decisions the lane model actually gives a player
-live:
+The Orders screen owns a compact unit-command panel on the left and this lane
+manager fills the clear space beside it when opened. This is where the two
+decisions the lane model actually gives a player live:
 
   - which enemy a unit faces, when more than one is standing here. The default
     is the heaviest front first, which is usually right and occasionally very
@@ -38,6 +38,7 @@ from ui import flag_icons
 from ui.bars import ui_bars, view_mode_buttons
 from ui.modal_screen import ModalScreen
 from ui_elements import draw_combat_stats, draw_bombardment_stats
+from ui.text_utils import fit_text
 
 #: Panes, left to right. Lane list, then the selected lane's three columns.
 PANE_LANES = "lanes"
@@ -46,9 +47,9 @@ PANE_ENEMY = "enemy"
 PANE_RESERVE = "reserve"
 
 LANE_COL_W = 250
-#: Two lines: the unit and its flag, then its stats. The sidebar shows the same
-#: stats on the same icons, and a lane manager that showed less than the panel
-#: it opens from would be the wrong way round.
+#: Two lines: the unit and its flag, then its stats. The Orders panel shows the
+#: same stats on the same icons, and a lane manager that showed less than the
+#: panel it opens from would be the wrong way round.
 ROW_H = 42
 HEADER_H = 26
 #: Flags a lane row shows per side before it gives up and counts the rest.
@@ -72,8 +73,9 @@ class Battle_Screen(ModalScreen):
     Not a registered state like Orders_Screen: that would need an entry in
     main.py's state table, a handoff branch in flip_state and a row in the test
     harness's MAP_HANDOFFS, which is three files of state-machine wiring for a
-    screen that inspects one province and closes. ModalScreen gives the dimmed
-    freeze-frame, the panel chrome and the multi-pane scrolling for free.
+    screen that inspects one province and closes. It normally runs as a panel
+    owned by Orders_Screen; ModalScreen remains available for legacy direct
+    callers and gives that fallback the dimmed freeze-frame and chrome.
     """
 
     PANEL_SIZE = (1240, 680)
@@ -81,7 +83,7 @@ class Battle_Screen(ModalScreen):
     PAD = 16
     PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_DANGER
 
-    def __init__(self, map_screen, province, origin_screen=None):
+    def __init__(self, map_screen, province, origin_screen=None, embedded_rect=None):
         self.province = province
         # Both set before super(), because ModalScreen.__init__ asks for the
         # title and the title depends on whether any of these units are ours.
@@ -90,8 +92,12 @@ class Battle_Screen(ModalScreen):
         # The screen this battle was pushed over, normally Orders -- see
         # close_and_navigate.
         self.origin_screen = origin_screen or map_screen
-        super().__init__(map_screen, self.get_panel_title())
-        # Hotseat and fog of war: the same rule the sidebar uses. A province you
+        self.embedded = embedded_rect is not None
+        panel_size = embedded_rect.size if embedded_rect is not None else None
+        super().__init__(map_screen, self.get_panel_title(), panel_size=panel_size)
+        if embedded_rect is not None:
+            self.panel_rect = pygame.Rect(embedded_rect)
+        # Hotseat and fog of war: the same rule the Orders panel uses. A province you
         # cannot see is not one whose order of battle you get to read.
         self.visible = queries.is_province_visible(map_screen, province["id"])
         self.selected_lane = 0
@@ -234,9 +240,12 @@ class Battle_Screen(ModalScreen):
 
     def go_to_orders(self):
         """Bombard and retreat live in Orders, and both matter mid-battle."""
-        # When the inspector was opened from Orders, popping the modal reveals
-        # the existing Orders screen. Keep the handoff for legacy/direct opens
-        # too, so every route still reaches Orders before anything else.
+        if self.embedded:
+            self.exit_screen()
+            return
+        # When the inspector is embedded in Orders, closing it simply removes
+        # the child pane. Keep the handoff for legacy/direct modal opens too,
+        # so every route still reaches Orders before anything else.
         if self.origin_screen is not self.map_screen:
             self.done = True
         else:
@@ -245,11 +254,16 @@ class Battle_Screen(ModalScreen):
     def exit_screen(self):
         """Closing the battle inspector -- the Close button, or Back/Esc.
 
-        The battle inspector is opened from Orders. Popping the modal therefore
-        reveals the same Orders screen in both navigation modes, preserving its
-        selected unit, scroll position, and order controls. A legacy direct map
-        opener is forwarded into Orders as well.
+        The battle inspector is normally embedded in Orders, where this removes
+        only the right-hand pane and preserves the left panel. A legacy direct
+        map opener is still forwarded into Orders.
         """
+        if self.embedded:
+            self.done = True
+            close_panel = getattr(self.origin_screen, "close_battle_panel", None)
+            if close_panel:
+                close_panel(self)
+            return
         if self.origin_screen is not self.map_screen:
             self.done = True
             return
@@ -281,7 +295,8 @@ class Battle_Screen(ModalScreen):
     def _layout(self):
         p = self.panel_rect
         top = p.y + 64
-        view_h = p.bottom - 66 - VIEW_MODE_ROW_RESERVE - top
+        view_mode_reserve = 0 if self.embedded else VIEW_MODE_ROW_RESERVE
+        view_h = p.bottom - 66 - view_mode_reserve - top
         col_w = (p.width - 2 * self.PAD - LANE_COL_W - 3 * 10) // 3
 
         x = p.x + self.PAD
@@ -307,25 +322,34 @@ class Battle_Screen(ModalScreen):
         self.row_paint = {}
         p = self.panel_rect
 
-        btn_y = p.bottom - 52 - VIEW_MODE_ROW_RESERVE
-        self.elements.append(
-            self.button(p.x + self.PAD, btn_y, 150, "blue", "Unit Orders", self.go_to_orders))
-        # Nothing to clear on a tile you command nothing on.
-        if self.my_units():
+        view_mode_reserve = 0 if self.embedded else VIEW_MODE_ROW_RESERVE
+        btn_y = p.bottom - 52 - view_mode_reserve
+        if self.embedded:
             self.elements.append(
-                self.button(p.x + self.PAD + 160, btn_y, 150, "orange", "Clear Lane Orders",
-                            self.clear_orders))
-        self.elements.append(
-            self.button(p.right - self.PAD - 110, btn_y, 110, "red", "Close", self.exit_screen))
+                self.button(p.right - self.PAD - 130, btn_y, 130,
+                            "red", "Close Battle", self.exit_screen))
+        else:
+            self.elements.append(
+                self.button(p.x + self.PAD, btn_y, 150, "blue", "Unit Orders", self.go_to_orders))
+            # Nothing to clear on a tile you command nothing on.
+            if self.my_units():
+                self.elements.append(
+                    self.button(p.x + self.PAD + 160, btn_y, 150, "orange", "Clear Lane Orders",
+                                self.clear_orders))
+            self.elements.append(
+                self.button(p.right - self.PAD - 110, btn_y, 110, "red", "Close", self.exit_screen))
 
-        # Deferred import: ui.event_handler imports this module at load time
-        # to open battles, so importing it back at module scope here would close
-        # a cycle.
-        from ui import event_handler
-        self.view_mode_buttons = view_mode_buttons.build(
-            lambda mode: event_handler.navigate_view_mode(self.map_screen, mode, origin=self))
-        view_mode_buttons.sync_highlight(self.view_mode_buttons, self.map_screen.secondary_mode)
-        self.elements.extend(self.view_mode_buttons)
+        if self.embedded:
+            self.view_mode_buttons = []
+        else:
+            # Deferred import: ui.event_handler imports this module at load time
+            # to open battles, so importing it back at module scope here would close
+            # a cycle.
+            from ui import event_handler
+            self.view_mode_buttons = view_mode_buttons.build(
+                lambda mode: event_handler.navigate_view_mode(self.map_screen, mode, origin=self))
+            view_mode_buttons.sync_highlight(self.view_mode_buttons, self.map_screen.secondary_mode)
+            self.elements.extend(self.view_mode_buttons)
 
         if not self.visible or not self.battle.lanes:
             return
@@ -439,7 +463,7 @@ class Battle_Screen(ModalScreen):
         return x
 
     def _paint_units(self, pane):
-        """The stat block the sidebar shows, on the row it belongs to.
+        """The stat block the Orders panel shows, on the row it belongs to.
 
         Same helpers at labeled=False, so the two readings of a unit cannot
         drift. Bombardment goes on the end of the stat line rather than a third
@@ -571,6 +595,30 @@ class Battle_Screen(ModalScreen):
             surface, self.regions[PANE_LANES], (0, 0, 0, 60),
             border_color=c.UI_TEXT_MUTED, border_width=1)
 
+    def draw_embedded(self, surface):
+        """Paints the battle inspector into the right side of Orders.
+
+        Unlike ModalScreen.draw(), this does not repaint the captured map or
+        dim the whole display. Orders has already drawn its live map and owns
+        the neighboring left panel; this method paints only this panel's
+        frame, contents, controls, and scrollbars.
+        """
+        if not self.embedded:
+            self.draw(surface)
+            return
+
+        p = self.panel_rect
+        ui_bars.draw_panel_frame(
+            surface, p, title=None, bg=self.PANEL_BG, border=self.PANEL_BORDER,
+            border_width=self.PANEL_BORDER_WIDTH)
+        title_font = fonts.get("heading2")
+        title = fit_text(self.get_panel_title(), title_font, p.width - (2 * self.PAD))
+        title_surf = title_font.render(title, True, (255, 255, 255))
+        surface.blit(title_surf, title_surf.get_rect(midtop=(p.centerx, p.y + 8)))
+        self.draw_body(surface)
+        self.draw_elements(surface)
+        self.draw_foreground(surface)
+
     def draw_foreground(self, surface):
         for pane in (PANE_LANES, PANE_FRONT, PANE_ENEMY, PANE_RESERVE):
             rect = self.regions.get(pane)
@@ -582,7 +630,13 @@ class Battle_Screen(ModalScreen):
 
 
 def open_battle_screen(map_screen, origin_screen=None):
-    """Opens the lane manager for the selected province."""
+    """Opens the lane manager, embedded beside Orders when available."""
+    if origin_screen is not None:
+        open_panel = getattr(origin_screen, "open_battle_panel", None)
+        if open_panel:
+            open_panel()
+            return
+
     from ui.screen_runner import _run_pygame_sub_screen
 
     province = map_screen.selected_province

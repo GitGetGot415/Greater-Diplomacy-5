@@ -20,9 +20,6 @@ REWORK FOLDER UI SO IT USES THE BUILT IN VERSION YOUR OS HAS IF POSSIBLE
 - if multiple units are on a tile, controlled by multiple countries, fighting on the same side, then whatever
 country has the highest combat width level researched, that's the increase that will be implemented
 
-- what's causing units to sometimes not engage in combat? (is it when they both move towards each other)
-- could it be made so a battle does happen but like in the space between them
-
 - combat width depends on number of connecting tiles (hey wait a minute)
 
 - ADD REAL FLAGS SUGGESTED BY KAISERIN

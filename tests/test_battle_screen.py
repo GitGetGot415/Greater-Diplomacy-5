@@ -99,6 +99,19 @@ class BuildAndPaintTests(BattleScreenTestCase):
                               pygame.event.Event(pygame.MOUSEWHEEL, x=0, y=-1)])
         screen.draw(self.surface)
 
+    def test_embedded_battle_builds_and_paints_beside_orders(self):
+        from screens.map_related_screens.orders import Orders_Screen
+
+        orders = Orders_Screen()
+        orders.start_with_province(self.province, self.map)
+        orders.go_to_battle()
+
+        orders.draw(self.surface)
+
+        self.assertIsNotNone(orders.battle_screen)
+        self.assertTrue(orders.battle_screen.embedded)
+        self.assertGreater(orders.battle_screen.panel_rect.x, orders.panel_rect.right)
+
     def test_selecting_the_other_lane_repaints(self):
         screen = self.screen()
         self.assertGreater(len(screen.battle.lanes), 1)
@@ -696,15 +709,44 @@ class ButtonSwapTests(BattleScreenTestCase):
         labels = [getattr(el, "text", "") for el in orders.elements]
         self.assertIn("Manage Battle", labels)
 
-    def test_orders_opens_battle_with_itself_as_the_return_screen(self):
+    def test_orders_opens_battle_beside_itself(self):
         from screens.map_related_screens.orders import Orders_Screen
 
         orders = Orders_Screen()
         orders.start_with_province(self.province, self.map)
-        with mock.patch.object(battle_screen, "open_battle_screen") as open_battle:
-            orders.go_to_battle()
+        orders.go_to_battle()
 
-        open_battle.assert_called_once_with(self.map, origin_screen=orders)
+        self.assertIsInstance(orders.battle_screen, battle_screen.Battle_Screen)
+        self.assertTrue(orders.battle_screen.embedded)
+        self.assertIs(orders.battle_screen.origin_screen, orders)
+        self.assertEqual(orders.battle_screen.panel_rect, orders.battle_panel_rect())
+
+    def test_closing_embedded_battle_keeps_orders_open(self):
+        from screens.map_related_screens.orders import Orders_Screen
+
+        orders = Orders_Screen()
+        orders.start_with_province(self.province, self.map)
+        orders.go_to_battle()
+        panel = orders.battle_screen
+
+        panel.exit_screen()
+
+        self.assertIsNone(orders.battle_screen)
+        self.assertTrue(panel.done)
+        self.assertFalse(orders.done)
+        self.assertIs(self.map.selected_province, self.province)
+
+    def test_closing_orders_removes_embedded_battle_with_it(self):
+        from screens.map_related_screens.orders import Orders_Screen
+
+        orders = Orders_Screen()
+        orders.start_with_province(self.province, self.map)
+        orders.go_to_battle()
+
+        orders.exit_screen()
+
+        self.assertIsNone(orders.battle_screen)
+        self.assertTrue(orders.done)
 
     def test_closing_battle_modal_reveals_its_orders_screen(self):
         from screens.map_related_screens.orders import Orders_Screen

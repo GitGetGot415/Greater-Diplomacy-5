@@ -32,6 +32,9 @@ LIST_TOP_OFFSET_Y = 110
 
 TOP_BTN_GAP_X = 6
 
+BATTLE_PANEL_GAP = 8
+BATTLE_PANEL_RIGHT_MARGIN = 8
+
 UNIT_ROW_X_OFFSET = 4
 UNIT_ICON_OFFSET_X = 7
 UNIT_ICON_OFFSET_Y = 4
@@ -113,6 +116,7 @@ class Orders_Screen(GameState):
         self.action_buttons = []
         self.unit_row_icons = {}
         self.action_icons = {}
+        self.battle_screen = None
 
         self.renaming_unit_index = None
         self.rename_text = ""
@@ -138,6 +142,7 @@ class Orders_Screen(GameState):
     def start_with_province(self, province, map_ref):
         self.target_province = province
         self.map_screen = map_ref
+        self.battle_screen = None
         self.scroll_y = 0
         self.bombarding_unit_index = None
         self.renaming_unit_index = None
@@ -177,6 +182,9 @@ class Orders_Screen(GameState):
         self.refresh_ui()
 
     def exit_screen(self):
+        # The battle inspector is an optional child panel now, so leaving
+        # Orders removes both windows in one transition back to the map.
+        self.battle_screen = None
         # Undo the left shift applied in start_with_province so the map isn't
         # left off-center once the orders panel is gone.
         if self.map_screen and self.target_province:
@@ -201,14 +209,41 @@ class Orders_Screen(GameState):
         super().exit_screen()
 
     def go_to_battle(self):
-        """Opens the battle inspector without leaving this Orders screen."""
+        """Opens the battle inspector beside Orders without leaving it."""
         if not self.map_screen or not self.target_province:
             return
         if not queries.is_province_in_active_combat(
                 self.target_province, self.map_screen.nation_data):
             self.refresh_ui()
             return
-        battle_screen.open_battle_screen(self.map_screen, origin_screen=self)
+        self.open_battle_panel()
+
+    def battle_panel_rect(self):
+        """The clear right-hand space beside the compact Orders panel."""
+        x = self.panel_rect.right + BATTLE_PANEL_GAP
+        width = c.SCREEN_WIDTH - x - BATTLE_PANEL_RIGHT_MARGIN
+        return pygame.Rect(x, self.panel_rect.y, max(1, width), self.panel_rect.height)
+
+    def open_battle_panel(self):
+        """Creates the optional in-Orders battle panel for this province."""
+        if not self.map_screen or not self.target_province:
+            return
+        if not queries.is_province_in_active_combat(
+                self.target_province, self.map_screen.nation_data):
+            self.refresh_ui()
+            return
+        if self.battle_screen is None:
+            self.battle_screen = battle_screen.Battle_Screen(
+                self.map_screen, self.target_province, origin_screen=self,
+                embedded_rect=self.battle_panel_rect())
+        self.refresh_ui()
+
+    def close_battle_panel(self, panel=None):
+        """Removes the battle pane while keeping Orders open."""
+        if panel is not None and panel is not self.battle_screen:
+            return
+        self.battle_screen = None
+        self.refresh_ui()
 
     def handle_orders_key(self):
         """Q. Same as clicking the Units button in the view-mode row; also
@@ -502,12 +537,15 @@ class Orders_Screen(GameState):
         in_battle = queries.is_province_in_active_combat(
             self.target_province, self.map_screen.nation_data)
         if in_battle:
-            battle_label = "Manage Battle" if player_units else "View Battle"
+            battle_label = ("Close Battle" if self.battle_screen is not None else
+                            ("Manage Battle" if player_units else "View Battle"))
+            battle_callback = (self.close_battle_panel if self.battle_screen is not None
+                               else self.go_to_battle)
             battle_button = Button(
                 self.panel_rect.right - PANEL_INSET - 112,
                 PANEL_Y + TOP_BTN_ROW_OFFSET_Y,
                 "orders_header_button", "red", battle_label,
-                self.go_to_battle, font_preset="tiny")
+                battle_callback, font_preset="tiny")
             self.elements.append(battle_button)
 
         total_content_h = len(rows) * self.row_height
@@ -835,6 +873,17 @@ class Orders_Screen(GameState):
 
     def handle_events(self, events):
         for event in events:
+            # Battle is a child pane, not a modal stacked over Orders. Route
+            # events in its rectangle first so its lane rows and scrollbars
+            # remain interactive while the left Orders panel stays live.
+            if self.battle_screen is not None and event.type in (
+                    pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP,
+                    pygame.MOUSEMOTION, pygame.MOUSEWHEEL):
+                event_pos = getattr(event, "pos", pygame.mouse.get_pos())
+                if self.battle_screen.panel_rect.collidepoint(event_pos):
+                    self.battle_screen.handle_events([event])
+                    continue
+
             if event.type == pygame.KEYDOWN and self.renaming_unit_index is not None:
                 if event.key == pygame.K_RETURN:
                     self.save_unit_name(self.renaming_unit_index)
@@ -1420,8 +1469,17 @@ class Orders_Screen(GameState):
         resource_hud.draw_resource_bar(surface, self.map_screen,
                                        start_x=view_mode_buttons.RESOURCE_BAR_OFFSET_X)
 
+        if self.battle_screen is not None:
+            self.battle_screen.draw_embedded(surface)
+
     def update(self):
         super().update()
+        if self.battle_screen is not None:
+            if not queries.is_province_in_active_combat(
+                    self.target_province, self.map_screen.nation_data):
+                self.battle_screen = None
+            else:
+                self.battle_screen.update()
         # Ensure the camera keeps running its smooth zoom/pan lerp math 
         # even when the Orders screen is the active state
         if self.map_screen:
