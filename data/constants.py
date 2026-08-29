@@ -288,6 +288,57 @@ MENU_BOTTOM_TEXT_START_X = 20
 MENU_BOTTOM_TEXT_START_Y = SCREEN_HEIGHT - 40
 MENU_BOTTOM_TEXT_STEP_Y = -30
 
+MENU_BUTTON_TABLE = [
+    {
+        "attribute": "settings_btn",
+        "text": "Settings",
+        "color": "grey",
+        "state": "SETTINGS",
+        "image": "settings",
+        "text_size": 24,
+    },
+    {
+        "attribute": "music_btn",
+        "text": "Music",
+        "color": "blue",
+        "state": "MUSIC_PLAYER",
+        "image": "music",
+        "text_size": 24,
+    },
+    {
+        "attribute": "credits_btn",
+        "text": "Credits",
+        "color": "purple",
+        "state": "CREDITS",
+        "image": "credits",
+        "text_size": 24,
+    },
+    {
+        "attribute": "assets_btn",
+        "text": "Assets",
+        "color": "pink",
+        "state": "VIEW_ASSETS",
+        "image": "brush",
+        "text_size": 24,
+    },
+    {
+        "attribute": "mods_btn",
+        "text": "Mods",
+        "color": "light_blue",
+        "state": "MODS",
+        "image": "mods",
+        "text_size": 24,
+    },
+    {
+        "attribute": "translate_btn",
+        "text": "Translate",
+        "color": "white",
+        "state": "TRANSLATE",
+        "image": "export",
+        "text_size": 24,
+    }
+]
+
 MENU_BOTTOM_TEXT_COLOR = (255, 255, 255)
 MENU_BOTTOM_TEXT_LINK_COLOR = (150, 200, 255)
 MENU_BOTTOM_TEXT_HOVER_COLOR = (100, 255, 100)
@@ -720,7 +771,6 @@ SIZES = {
     "diplomatic": (200, 30),
     "keys": (60, 30),
     "menu": (200, 45),
-    "mini_menu": (130, 40),
     "medium": (200, 50),
     "brick": (150, 50),
     # Scenario settings screen: same width as "medium" but thinner, so a whole

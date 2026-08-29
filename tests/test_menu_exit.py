@@ -7,6 +7,7 @@ import pygame
 import data.constants as c
 
 from tests import app_harness
+from map_logic.rendering.font_manager import fonts
 from ui import modal_stack
 
 
@@ -54,7 +55,7 @@ class MenuExitTests(unittest.TestCase):
         credits = self.menu.credits_btn
         lowest_link_top = min(item["main_rect"].top for item in self.menu.bottom_texts)
 
-        self.assertEqual(credits.rect.left, c.MENU_BOTTOM_TEXT_START_X)
+        self.assertEqual(credits.rect.topleft, c.MENU_BUTTON_TABLE_TOP_LEFT)
         self.assertLess(credits.rect.bottom, lowest_link_top)
 
     def test_other_centered_menu_buttons_keep_their_positions(self):
@@ -73,29 +74,21 @@ class MenuExitTests(unittest.TestCase):
             expected_y = centered_y + int(offset.replace(" ", ""))
             self.assertEqual(button.rect.y, expected_y, button.text)
 
-    def test_assets_and_mods_share_credits_row_without_overlapping(self):
-        credits = self.menu.credits_btn
-        assets = self.menu.assets_btn
-        mods = self.menu.mods_btn
-        translate = self.menu.translate_btn
-        settings = self.menu.settings_btn
-        music = self.menu.music_btn
+    def test_lower_left_buttons_follow_the_configured_table(self):
+        table_x, table_y = c.MENU_BUTTON_TABLE_TOP_LEFT
+        button_w, button_h = c.MENU_BUTTON_TABLE_BUTTON_SIZE
+        columns = c.MENU_BUTTON_TABLE_COLUMNS
 
-        self.assertEqual(assets.rect.y, credits.rect.y)
-        self.assertEqual(mods.rect.y, credits.rect.y)
-        self.assertEqual(translate.rect.y, credits.rect.y)
-        self.assertEqual(settings.rect.y, credits.rect.y)
-        self.assertEqual(music.rect.y, credits.rect.y)
-        self.assertGreater(assets.rect.left, credits.rect.right)
-        self.assertGreater(mods.rect.left, assets.rect.right)
-        self.assertGreater(translate.rect.left, mods.rect.right)
-        self.assertGreater(settings.rect.left, translate.rect.right)
-        self.assertGreater(music.rect.left, settings.rect.right)
-        self.assertFalse(credits.rect.colliderect(assets.rect))
-        self.assertFalse(assets.rect.colliderect(mods.rect))
-        self.assertFalse(mods.rect.colliderect(translate.rect))
-        self.assertFalse(translate.rect.colliderect(settings.rect))
-        self.assertFalse(settings.rect.colliderect(music.rect))
+        for index, button_data in enumerate(c.MENU_BUTTON_TABLE):
+            row, column = divmod(index, columns)
+            button = getattr(self.menu, button_data["attribute"])
+            expected_x = table_x + column * (button_w + c.MENU_BUTTON_TABLE_X_SPACING)
+            expected_y = table_y + row * (button_h + c.MENU_BUTTON_TABLE_Y_SPACING)
+
+            self.assertEqual(button.rect.topleft, (expected_x, expected_y))
+            self.assertEqual(button.rect.size, c.MENU_BUTTON_TABLE_BUTTON_SIZE)
+            self.assertEqual(button.text, button_data["text"])
+            self.assertEqual(button.font.get_height(), fonts.get_size(button_data["text_size"]).get_height())
 
     def test_cancel_keeps_the_game_running(self):
         modal = self.open_exit_dialog()

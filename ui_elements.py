@@ -87,8 +87,11 @@ def draw_notification_badge(surface, rect, text, color=None):
 
 class Button:
     # UPDATED: Added font_preset parameter defaulting to "button"
-    def __init__(self, x, y, size_preset, color_preset, text, callback, image=None, show_text=True, layout="horizontal", font_preset="button"):
-        self.width, self.height = c.SIZES.get(size_preset, (200, 50))
+    def __init__(self, x, y, size_preset, color_preset, text, callback, image=None, show_text=True, layout="horizontal", font_preset="button", font_size=None):
+        if isinstance(size_preset, (tuple, list)):
+            self.width, self.height = (int(size_preset[0]), int(size_preset[1]))
+        else:
+            self.width, self.height = c.SIZES.get(size_preset, (200, 50))
         final_x = parse_pos(x, c.SCREEN_WIDTH, self.width)
         final_y = parse_pos(y, c.SCREEN_HEIGHT, self.height)
         self.rect = pygame.Rect(final_x, final_y, self.width, self.height)
@@ -101,8 +104,8 @@ class Button:
         self.show_text = show_text
         self.layout = layout
 
-        # Pull the requested font preset from the FontManager
-        self.font = fonts.get(font_preset)
+        # Pull the requested font preset or explicit size from the FontManager
+        self.font = fonts.get_size(font_size) if font_size is not None else fonts.get(font_preset)
 
         self.visible = True
         self.is_pressed = False

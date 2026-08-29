@@ -68,6 +68,25 @@ class FontManager:
                 
         return self.cache[preset_name]
 
+    def get_size(self, size, bold=False):
+        """Retrieves a cached font at an explicit point size."""
+        size = int(size)
+        cache_key = ("explicit", size, bool(bold))
+        if cache_key not in self.cache:
+            preset_path = self.font_path
+            if preset_path:
+                try:
+                    font = pygame.font.Font(preset_path, size)
+                    if bold:
+                        font.set_bold(True)
+                    self.cache[cache_key] = font
+                except Exception as e:
+                    print(f"Failed to load custom font ({e}). Falling back to SysFont.")
+                    self.cache[cache_key] = pygame.font.SysFont("Arial", size, bold=bold)
+            else:
+                self.cache[cache_key] = pygame.font.SysFont("Arial", size, bold=bold)
+        return self.cache[cache_key]
+
     def draw_text_with_shadow(self, surface, text, x, y, preset_name="normal", text_color=(255, 255, 255), shadow_color=(0, 0, 0), offset=1):
         """Helper to draw text with a drop shadow."""
         font = self.get(preset_name)

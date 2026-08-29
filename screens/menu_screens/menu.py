@@ -168,12 +168,12 @@ class Menu(GameState):
 
         # (y offset from centre, label, color, icon, destination state) — one row
         # per centred menu entry, so adding a screen is a single line here.
-        # Credits is positioned separately below, above the GitHub/Discord links.
+        # The remaining lower-left controls are defined in the table below.
         menu_items = [
-            ("- 150", "New Game",     "green",  "new_game",   "NEW_GAME"),
-            ("- 100",  "Load Game",   "yellow", "load_game",  "LOAD_GAME"),
-            ("- 50", "Tournaments",  "red",    "mail",       "MULTIPLAYER_HUB"),
-            ("+ 0",  "Map Editor",   "orange", "map_editor", "SELECT_BASE_MAP"),
+            ("- 100", "New Game",     "green",  "new_game",   "NEW_GAME"),
+            ("- 50",  "Load Game",   "yellow", "load_game",  "LOAD_GAME"),
+            ("+ 0", "Tournaments",  "red",    "mail",       "MULTIPLAYER_HUB"),
+            ("+ 50",  "Map Editor",   "orange", "map_editor", "SELECT_BASE_MAP"),
         ]
         self.elements = [
             Button("centered", f"centered {offset}", "menu", color, label,
@@ -181,42 +181,24 @@ class Menu(GameState):
             for offset, label, color, icon, state in menu_items
         ]
 
-        # Keep Credits out of the centred cascade. It shares the lower-left
-        # column with the two link rows, but sits above them without changing
-        # any of the other menu buttons' positions.
-        credits_y = (c.MENU_BOTTOM_TEXT_START_Y + c.MENU_BOTTOM_TEXT_STEP_Y
-                     - c.SIZES["mini_menu"][1] - 10)
-        self.credits_btn = Button(
-            c.MENU_BOTTOM_TEXT_START_X, credits_y, "mini_menu", "purple", "Credits",
-            lambda: self.go_to("CREDITS"), image=ui_elements.UI_ICONS.get("credits"))
-        self.elements.append(self.credits_btn)
-
-        row_button_gap = 10
-        self.assets_btn = Button(
-            self.credits_btn.rect.right + row_button_gap, credits_y, "mini_menu", "pink", "Assets",
-            lambda: self.go_to("VIEW_ASSETS"), image=ui_elements.UI_ICONS.get("brush"))
-        self.elements.append(self.assets_btn)
-
-        mods_x = self.assets_btn.rect.right + row_button_gap
-        self.mods_btn = Button(
-            mods_x, credits_y, "mini_menu", "light_blue", "Mods",
-            lambda: self.go_to("MODS"), image=ui_elements.UI_ICONS.get("mods"))
-        self.elements.append(self.mods_btn)
-
-        self.translate_btn = Button(
-            self.mods_btn.rect.right + row_button_gap, credits_y, "mini_menu", "white", "Translate",
-            lambda: self.go_to("TRANSLATE"), image=ui_elements.UI_ICONS.get("export"))
-        self.elements.append(self.translate_btn)
-
-        self.settings_btn = Button(
-            self.translate_btn.rect.right + row_button_gap, credits_y, "mini_menu", "grey", "Settings",
-            lambda: self.go_to("SETTINGS"), image=ui_elements.UI_ICONS.get("settings"))
-        self.elements.append(self.settings_btn)
-
-        self.music_btn = Button(
-            self.settings_btn.rect.right + row_button_gap, credits_y, "mini_menu", "blue", "Music",
-            lambda: self.go_to("MUSIC_PLAYER"), image=ui_elements.UI_ICONS.get("music"))
-        self.elements.append(self.music_btn)
+        button_size = (130, 40)
+        table_x, table_y = 20, 550
+        button_w, button_h = button_size
+        columns = 3
+        for index, button_data in enumerate(c.MENU_BUTTON_TABLE):
+            row, column = divmod(index, columns)
+            button = Button(
+                table_x + column * (button_w + 10),
+                table_y + row * (button_h + 10),
+                button_size,
+                button_data["color"],
+                button_data["text"],
+                lambda state=button_data["state"]: self.go_to(state),
+                image=ui_elements.UI_ICONS.get(button_data.get("image")),
+                font_size=button_data.get("text_size"),
+            )
+            setattr(self, button_data["attribute"], button)
+            self.elements.append(button)
         
         self.bottom_texts = []
         font = fonts.get("heading2")
