@@ -49,6 +49,7 @@ class Menu(GameState):
     INTRO_SLIDE_START_MARGIN = 40
     EXIT_INTRO_START_MARGIN = 2000
     GROUND_INTRO_START_MARGIN = 1600
+    SIGN_INTRO_START_MARGIN = 200
     # How far below the screen bottom rows start from, so they're fully
     # hidden (not just off their mark) until their delay elapses.
     BUTTON_INTRO_START_MARGIN = 60
@@ -172,7 +173,7 @@ class Menu(GameState):
         self.intro_start_ticks = pygame.time.get_ticks()
         self._title_draw_pos = self.title_rect.topleft if self.title_rect else (0, 0)
         self._sign_draw_pos = (
-            c.SCREEN_WIDTH + self.INTRO_SLIDE_START_MARGIN,
+            c.SCREEN_WIDTH + self.sign_rect.width + self.SIGN_INTRO_START_MARGIN,
             self.sign_rect.y,
         ) if self.sign_rect else (0, 0)
         self._right_ground_draw_pos = (
@@ -454,7 +455,7 @@ class Menu(GameState):
 
         if self.sign_rect:
             t = _ease_out_expo(elapsed / self.SIGN_INTRO_MS)
-            start_x = c.SCREEN_WIDTH + self.INTRO_SLIDE_START_MARGIN
+            start_x = c.SCREEN_WIDTH + self.sign_rect.width + self.SIGN_INTRO_START_MARGIN
             self._sign_draw_pos = (int(_lerp(start_x, self.sign_rect.x, t)), self.sign_rect.y)
 
             if self.right_ground_rect:

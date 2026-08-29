@@ -97,6 +97,12 @@ class MenuExitTests(unittest.TestCase):
             self.menu._sign_anchor_bottomright,
         )
 
+    def test_sign_starts_further_off_screen_than_its_width(self):
+        self.assertEqual(
+            self.menu._sign_draw_pos[0],
+            c.SCREEN_WIDTH + self.menu.sign_rect.width + self.menu.SIGN_INTRO_START_MARGIN,
+        )
+
     def test_exit_button_is_omitted_from_web_build(self):
         from screens.menu_screens import menu as menu_module
 
