@@ -170,10 +170,10 @@ class Menu(GameState):
         # per centred menu entry, so adding a screen is a single line here.
         # The remaining lower-left controls are defined in the table below.
         menu_items = [
-            ("- 150", "New Game",     "green",  "new_game",   "NEW_GAME"),
-            ("- 100",  "Load Game",   "yellow", "load_game",  "LOAD_GAME"),
-            ("- 50", "Tournaments",  "red",    "mail",       "MULTIPLAYER_HUB"),
-            ("+ 0",  "Map Editor",   "orange", "map_editor", "SELECT_BASE_MAP"),
+            ("- 120", "New Game",     "green",  "new_game",   "NEW_GAME"),
+            ("- 60",  "Load Game",   "yellow", "load_game",  "LOAD_GAME"),
+            ("- 00", "Tournaments",  "red",    "mail",       "MULTIPLAYER_HUB"),
+            ("+ 60",  "Map Editor",   "orange", "map_editor", "SELECT_BASE_MAP"),
         ]
         self.elements = [
             Button("centered", f"centered {offset}", "menu", color, label,
@@ -182,7 +182,7 @@ class Menu(GameState):
         ]
 
         button_size = (130, 40)
-        table_x, table_y = 430, 400
+        table_x, table_y = 430, 460
         button_w, button_h = button_size
         columns = 3
         for index, button_data in enumerate(c.MENU_BUTTON_TABLE):

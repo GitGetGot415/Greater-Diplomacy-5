@@ -770,7 +770,7 @@ SIZES = {
     "small_save_button": (100, 30),
     "diplomatic": (200, 30),
     "keys": (60, 30),
-    "menu": (200, 45),
+    "menu": (180, 50),
     "medium": (200, 50),
     "brick": (150, 50),
     # Scenario settings screen: same width as "medium" but thinner, so a whole
