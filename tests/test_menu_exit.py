@@ -42,6 +42,58 @@ class MenuExitTests(unittest.TestCase):
         self.assertEqual(self.menu.exit_btn.rect.right, pygame.display.get_surface().get_width() - 20)
         self.assertEqual(self.menu.exit_btn.text, "Exit")
 
+    def test_exit_button_slides_in_from_the_right(self):
+        current_ticks = self.menu.intro_start_ticks
+        button_rects = [(button, button.rect.copy()) for button in self.menu.elements]
+        bottom_rects = [
+            (item["main_rect"], item["main_rect"].copy(), item["link_rect"].copy())
+            for item in self.menu.bottom_texts
+        ]
+        draw_positions = {
+            name: getattr(self.menu, name)
+            for name in (
+                "_sign_draw_pos",
+                "_right_ground_draw_pos",
+                "_left_ground_draw_pos",
+                "_hildehrand_draw_pos",
+                "_version_draw_pos",
+            )
+        }
+
+        try:
+            with mock.patch("screens.menu_screens.menu.pygame.time.get_ticks", return_value=current_ticks):
+                self.menu.update()
+            self.assertGreaterEqual(self.menu.exit_btn.rect.left, c.SCREEN_WIDTH)
+        finally:
+            for button, rect in button_rects:
+                button.rect.update(rect)
+            for rect, main_copy, link_copy in bottom_rects:
+                rect.update(main_copy)
+                link_rect = next(
+                    item["link_rect"]
+                    for item in self.menu.bottom_texts
+                    if item["main_rect"] is rect
+                )
+                link_rect.update(link_copy)
+            for name, position in draw_positions.items():
+                setattr(self.menu, name, position)
+
+    def test_ground_images_start_fully_off_screen(self):
+        self.assertEqual(
+            self.menu._right_ground_draw_pos[0],
+            c.SCREEN_WIDTH + self.menu.INTRO_SLIDE_START_MARGIN,
+        )
+        self.assertEqual(
+            self.menu._left_ground_draw_pos[0],
+            -self.menu.left_ground_rect.width - self.menu.INTRO_SLIDE_START_MARGIN,
+        )
+
+    def test_sign_is_anchored_by_its_bottom_right_corner(self):
+        self.assertEqual(
+            self.menu.sign_rect.bottomright,
+            self.menu._sign_anchor_bottomright,
+        )
+
     def test_exit_button_is_omitted_from_web_build(self):
         from screens.menu_screens import menu as menu_module
 

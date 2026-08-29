@@ -46,6 +46,7 @@ class Menu(GameState):
     HILDEHRAND_SCALE = 2
     BUTTON_INTRO_DURATION_MS = 500
     BUTTON_INTRO_CASCADE_MS = 650
+    INTRO_SLIDE_START_MARGIN = 40
     # How far below the screen bottom rows start from, so they're fully
     # hidden (not just off their mark) until their delay elapses.
     BUTTON_INTRO_START_MARGIN = 60
@@ -74,9 +75,14 @@ class Menu(GameState):
             
             new_size = (int(raw_image.get_width() * scale_factor), int(raw_image.get_height() * scale_factor))
             self.sign_image = pygame.transform.scale(raw_image, new_size)
-            self.sign_rect = self.sign_image.get_rect()
-            self.sign_rect.right = c.SCREEN_WIDTH - 50
-            self.sign_rect.centery = (c.SCREEN_HEIGHT // 2) + 25
+            # Keep the sign attached to one fixed bottom-right point, just as
+            # the portrait is attached to its bottom-left point. The values
+            # preserve the sign's previous resting location while making its
+            # placement independent of the asset's height.
+            sign_anchor_x = c.SCREEN_WIDTH - 50
+            sign_anchor_y = 480
+            self._sign_anchor_bottomright = (sign_anchor_x, sign_anchor_y)
+            self.sign_rect = self.sign_image.get_rect(bottomright=self._sign_anchor_bottomright)
         except Exception as e:
             print(f"Failed to load the sign image: {e}")
             self.sign_image = None
@@ -158,13 +164,23 @@ class Menu(GameState):
             self.title_rect = None
 
         # Intro animation clock; title/sign/buttons/text all ease in relative
-        # to this timestamp. Draw positions default to the resting spot until
-        # the first update() tick moves them off-screen to start the intro.
+        # to this timestamp. Start horizontally animated art off-screen even
+        # before the first update() tick, so it cannot flash at its resting
+        # position for one frame.
         self.intro_start_ticks = pygame.time.get_ticks()
         self._title_draw_pos = self.title_rect.topleft if self.title_rect else (0, 0)
-        self._sign_draw_pos = self.sign_rect.topleft if self.sign_rect else (0, 0)
-        self._right_ground_draw_pos = self.right_ground_rect.topleft if self.right_ground_rect else (0, 0)
-        self._left_ground_draw_pos = self.left_ground_rect.topleft if self.left_ground_rect else (0, 0)
+        self._sign_draw_pos = (
+            c.SCREEN_WIDTH + self.INTRO_SLIDE_START_MARGIN,
+            self.sign_rect.y,
+        ) if self.sign_rect else (0, 0)
+        self._right_ground_draw_pos = (
+            c.SCREEN_WIDTH + self.INTRO_SLIDE_START_MARGIN,
+            self.right_ground_rect.y,
+        ) if self.right_ground_rect else (0, 0)
+        self._left_ground_draw_pos = (
+            -self.left_ground_rect.width - self.INTRO_SLIDE_START_MARGIN,
+            self.left_ground_rect.y,
+        ) if self.left_ground_rect else (0, 0)
 
         # (y offset from centre, label, color, icon, destination state) — one row
         # per centred menu entry, so adding a screen is a single line here.
@@ -285,13 +301,15 @@ class Menu(GameState):
             )
             self.elements.append(self.exit_btn)
 
-        # These two skip the rise-from-bottom cascade below and instead slide
-        # in horizontally: the refresh button from the right, alongside the
-        # sign, the exit button from the right in the top corner, and the
+        # These controls skip the rise-from-bottom cascade below and instead
+        # slide in horizontally: the refresh and exit buttons from the right,
+        # alongside the sign and in the top corner respectively, and the
         # portrait swap button from the left, alongside Hildehrand.
-        self.refresh_btn._intro_from_right = True
+        right_intro_buttons = [self.refresh_btn]
         if self.exit_btn:
-            self.exit_btn._intro_from_right = True
+            right_intro_buttons.append(self.exit_btn)
+        for button in right_intro_buttons:
+            button._intro_from_right = True
         self.swap_hildehrand_btn._intro_from_left = True
 
         # Cascade the rise-in by vertical position: rows near the top of the
@@ -432,7 +450,7 @@ class Menu(GameState):
 
         if self.sign_rect:
             t = _ease_out_expo(elapsed / self.SIGN_INTRO_MS)
-            start_x = c.SCREEN_WIDTH + 40
+            start_x = c.SCREEN_WIDTH + self.INTRO_SLIDE_START_MARGIN
             self._sign_draw_pos = (int(_lerp(start_x, self.sign_rect.x, t)), self.sign_rect.y)
 
             if self.right_ground_rect:
@@ -440,18 +458,18 @@ class Menu(GameState):
 
         if self.left_ground_rect:
             t = _ease_out_expo(elapsed / self.SIGN_INTRO_MS)
-            start_x = -self.left_ground_rect.width - 40
+            start_x = -self.left_ground_rect.width - self.INTRO_SLIDE_START_MARGIN
             self._left_ground_draw_pos = (int(_lerp(start_x, self.left_ground_rect.x, t)), self.left_ground_rect.y)
 
         if getattr(self, "hildehrand_image", None):
             rest_rect = self.hildehrand_image.get_rect(bottomleft=self._hildehrand_anchor_bottomleft)
             local_elapsed = elapsed - self.HILDEHRAND_INTRO_DELAY_MS
             t = _ease_out_expo(local_elapsed / self.SIGN_INTRO_MS) if local_elapsed > 0 else 0.0
-            start_x = -rest_rect.width - 40
+            start_x = -rest_rect.width - self.INTRO_SLIDE_START_MARGIN
             self._hildehrand_draw_pos = (int(_lerp(start_x, rest_rect.x, t)), rest_rect.y)
 
         rise_start_y = c.SCREEN_HEIGHT + self.BUTTON_INTRO_START_MARGIN
-        slide_start_x_right = c.SCREEN_WIDTH + 40
+        slide_start_x_right = c.SCREEN_WIDTH + self.INTRO_SLIDE_START_MARGIN
 
         for btn in self.elements:
             local_elapsed = elapsed - btn._intro_delay
@@ -459,7 +477,7 @@ class Menu(GameState):
             if getattr(btn, "_intro_from_right", False):
                 btn.rect.x = int(_lerp(slide_start_x_right, btn._intro_target_x, t))
             elif getattr(btn, "_intro_from_left", False):
-                slide_start_x_left = -btn.rect.width - 40
+                slide_start_x_left = -btn.rect.width - self.INTRO_SLIDE_START_MARGIN
                 btn.rect.x = int(_lerp(slide_start_x_left, btn._intro_target_x, t))
             else:
                 btn.rect.y = int(_lerp(rise_start_y, btn._intro_target_y, t))
