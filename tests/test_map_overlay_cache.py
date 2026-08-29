@@ -165,13 +165,20 @@ class CombatDisplayTests(unittest.TestCase):
     def test_full_display_makes_active_bubble_translucent(self):
         record = {"category": queries.COMBAT_LOCATION_DEFENSE,
                   "color": (255, 255, 0), "potential": False}
+        predicted_record = dict(record, potential=True)
         surface = pygame.Surface((20, 20), pygame.SRCALPHA)
         with mock.patch.object(symbol_loader, "get_symbol",
                                return_value=surface) as get_symbol:
             c.BATTLE_DISPLAY_MODE = "FULL"
             overlay_renderer._combat_bubble_symbol(record, 1.0)
-            self.assertEqual(get_symbol.call_args.kwargs["alpha"],
-                             overlay_renderer.COMBAT_BUBBLE_FULL_ALPHA)
+            active_alpha = get_symbol.call_args.kwargs["alpha"]
+            self.assertEqual(active_alpha, overlay_renderer.COMBAT_BUBBLE_FULL_ALPHA)
+
+            overlay_renderer._combat_bubble_symbol(predicted_record, 1.0)
+            predicted_alpha = get_symbol.call_args.kwargs["alpha"]
+            self.assertEqual(predicted_alpha,
+                             overlay_renderer.COMBAT_BUBBLE_FULL_PREDICTION_ALPHA)
+            self.assertLess(predicted_alpha, active_alpha)
 
             c.BATTLE_DISPLAY_MODE = "COMPACT"
             overlay_renderer._combat_bubble_symbol(record, 1.0)

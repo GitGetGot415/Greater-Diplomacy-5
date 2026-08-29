@@ -27,6 +27,9 @@ COMBAT_BUBBLE_ICON_SCALE = 1.2
 # Full battle display keeps the bubble readable while allowing the unit boxes
 # underneath it to remain visible.
 COMBAT_BUBBLE_FULL_ALPHA = 160
+# Predicted bubbles are lighter still, so they are easy to distinguish from an
+# active battle while retaining enough shape and color to be useful.
+COMBAT_BUBBLE_FULL_PREDICTION_ALPHA = 96
 
 
 def combat_strengths(sides, nation_data, friendly_nations):
@@ -219,12 +222,18 @@ def combat_bubble_records(map_screen):
 
 def _combat_bubble_symbol(record, zoom):
     asset = COMBAT_BUBBLE_ASSETS[record["category"]]
-    if c.BATTLE_DISPLAY_MODE == "COMPACT":
-        alpha = 128 if record.get("potential") else 255
-    else:
-        alpha = COMBAT_BUBBLE_FULL_ALPHA
+    alpha = _combat_bubble_alpha(record)
     return symbol_loader.get_symbol(asset, zoom * COMBAT_BUBBLE_ICON_SCALE,
                                     color=record["color"], alpha=alpha)
+
+
+def _combat_bubble_alpha(record):
+    """Return the opacity for an active or predicted combat bubble."""
+    if c.BATTLE_DISPLAY_MODE == "COMPACT":
+        return 128 if record.get("potential") else 255
+    if record.get("potential"):
+        return COMBAT_BUBBLE_FULL_PREDICTION_ALPHA
+    return COMBAT_BUBBLE_FULL_ALPHA
 
 
 def _draw_combat_bubble_turns(surface, rect, bubble, record, zoom):
@@ -252,7 +261,7 @@ def _draw_combat_bubble_turns(surface, rect, bubble, record, zoom):
             text, (max(1, int(text.get_width() * scale)),
                    max(1, int(text.get_height() * scale))))
 
-    alpha = 128 if record.get("potential") else 255
+    alpha = _combat_bubble_alpha(record)
     text.set_alpha(alpha)
     shadow = text.copy()
     shadow.fill((0, 0, 0, alpha), special_flags=pygame.BLEND_RGBA_MULT)
