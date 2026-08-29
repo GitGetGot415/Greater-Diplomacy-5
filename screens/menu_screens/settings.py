@@ -400,6 +400,13 @@ class Settings(GameState):
         self.controller.num_players = 1
         self.num_players = self.controller.num_players
 
+        self.show_fps = False
+        self.controller.show_fps = False
+
+        self.checkerboard_water = False
+        self.controller.checkerboard_water = False
+        c.apply_runtime_settings({"checkerboard_water": False})
+
         self.drag_mouse_toggle = c.DEFAULT_MOUSE_BUTTON_TOGGLE
         c.apply_runtime_settings({"drag_mouse_toggle": c.DEFAULT_MOUSE_BUTTON_TOGGLE})
         self.controller.drag_mouse_toggle = c.DEFAULT_MOUSE_BUTTON_TOGGLE

@@ -439,6 +439,10 @@ class Menu(GameState):
             else:
                 self.version_status = f"Outdated! Latest: {fetched_version} (Current: {c.GAME_VERSION})"
                 self.version_color = (255, 100, 100) # Red
+
+            # FORCE TEXT:
+            # self.version_status = "Version: v30 (Up to date)"
+            # self.version_color = c.COLOR_SUCCESS_GREEN
         except urllib.error.URLError:
             self.version_status = f"Version: {c.GAME_VERSION} (Offline)"
             self.version_color = (255, 200, 100) # Orange
