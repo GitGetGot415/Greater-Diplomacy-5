@@ -11,6 +11,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import data.constants as c
 from data import queries
+from map_logic.ai import ai_construction
 from map_logic.turn_processing import combat_processor
 import ui_elements
 
@@ -143,6 +144,27 @@ class FortTests(unittest.TestCase):
 
         entries = draw_row.call_args.args[3]
         self.assertIn((c.ICON_DEFENSE, "0 + 50"), entries)
+
+    def test_ai_never_queues_fortifications(self):
+        class Screen:
+            map_data = {"1": {}}
+
+        prov = Screen.map_data["1"]
+        prov.update({"owner": "A", "cores": ["A"], "buildings": [],
+                     "building_queue": []})
+        data = {"materials": c.AI_MIN_MATERIALS_FOR_CONSTRUCTION + 1,
+                "research": {}}
+        building_library = {
+            "Fort Lvl 1": {"group": "fortification"},
+        }
+
+        # Keep candidate groups deterministic so the old implementation would
+        # reach its fort list instead of depending on shuffle randomness.
+        with patch.object(ai_construction.random, "shuffle", lambda values: None):
+            ai_construction._apply_construction_logic(
+                Screen(), "A", data, [prov], building_library)
+
+        self.assertEqual(prov["building_queue"], [])
 
 if __name__ == "__main__":
     unittest.main()
