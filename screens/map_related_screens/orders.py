@@ -117,6 +117,7 @@ class Orders_Screen(GameState):
         self.unit_row_icons = {}
         self.action_icons = {}
         self.battle_screen = None
+        self.entered_from_combat_bubble = False
 
         self.renaming_unit_index = None
         self.rename_text = ""
@@ -144,6 +145,7 @@ class Orders_Screen(GameState):
         self.map_screen = map_ref
         open_battle_on_entry = bool(
             getattr(map_ref, "_orders_entered_from_combat_bubble", False))
+        self.entered_from_combat_bubble = open_battle_on_entry
         if hasattr(map_ref, "_orders_entered_from_combat_bubble"):
             delattr(map_ref, "_orders_entered_from_combat_bubble")
         self.battle_screen = None
@@ -198,6 +200,14 @@ class Orders_Screen(GameState):
             camera_handler.center_camera_on_province(
                 self.map_screen.camera, self.target_province["center"], c.SCREEN_WIDTH, c.SCREEN_HEIGHT,
                 self.map_screen.total_ui_h)
+
+        if self.entered_from_combat_bubble:
+            # A combat bubble is a direct map entry point, so Back should
+            # return to the map rather than reopen the selected province menu.
+            if self.map_screen:
+                self.map_screen.deselect_province()
+            super().exit_screen()
+            return
 
         if c.MAP_NAVIGATION_MODE == "CLASSIC":
             # Classic: Back lands on the plain province menu, tile still

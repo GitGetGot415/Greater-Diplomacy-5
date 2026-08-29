@@ -123,6 +123,22 @@ class BuildAndPaintTests(BattleScreenTestCase):
         self.assertTrue(orders.battle_screen.embedded)
         self.assertFalse(hasattr(self.map, "_orders_entered_from_combat_bubble"))
 
+    def test_combat_bubble_orders_exit_returns_to_the_map(self):
+        from screens.map_related_screens.orders import Orders_Screen
+
+        old_navigation = c.MAP_NAVIGATION_MODE
+        self.addCleanup(setattr, c, "MAP_NAVIGATION_MODE", old_navigation)
+        c.MAP_NAVIGATION_MODE = "CLASSIC"
+
+        self.map._orders_entered_from_combat_bubble = True
+        orders = Orders_Screen()
+        orders.start_with_province(self.province, self.map)
+        orders.exit_screen()
+
+        self.assertTrue(orders.done)
+        self.assertEqual(orders.next_state, "MAP")
+        self.assertIsNone(self.map.selected_province)
+
     def test_narrow_unit_stat_rows_wrap_complete_entries(self):
         from map_logic.rendering.font_manager import fonts
         from ui_elements import draw_wrapped_icon_row
