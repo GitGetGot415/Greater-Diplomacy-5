@@ -168,21 +168,30 @@ class Menu(GameState):
 
         # (y offset from centre, label, color, icon, destination state) — one row
         # per centred menu entry, so adding a screen is a single line here.
-        # The remaining lower-left controls are defined in the table below.
-        menu_items = [
-            ("- 120", "New Game",     "green",  "new_game",   "NEW_GAME"),
-            ("- 60",  "Load Game",   "yellow", "load_game",  "LOAD_GAME"),
-            ("- 00", "Tournaments",  "red",    "mail",       "MULTIPLAYER_HUB"),
-            ("+ 60",  "Map Editor",   "orange", "map_editor", "SELECT_BASE_MAP"),
-        ]
-        self.elements = [
-            Button("centered", f"centered {offset}", "menu", color, label,
-                   lambda s=state: self.go_to(s), image=ui_elements.UI_ICONS.get(icon))
-            for offset, label, color, icon, state in menu_items
-        ]
+        # Both menu button groups are generated from separate table settings.
+        self.elements = []
+
+        main_button_size = (200, 45)
+        main_table_x, main_table_y = (430, 225)
+        main_button_w, main_button_h = main_button_size
+        main_columns = 2
+        for index, button_data in enumerate(c.MENU_MAIN_BUTTON_TABLE):
+            row, column = divmod(index, main_columns)
+            button = Button(
+                main_table_x + column * (main_button_w + 10),
+                main_table_y + row * (main_button_h + 15),
+                main_button_size,
+                button_data["color"],
+                button_data["text"],
+                lambda state=button_data["state"]: self.go_to(state),
+                image=ui_elements.UI_ICONS.get(button_data.get("image")),
+                font_size=button_data.get("text_size"),
+            )
+            setattr(self, button_data["attribute"], button)
+            self.elements.append(button)
 
         button_size = (130, 40)
-        table_x, table_y = 430, 460
+        table_x, table_y = 430, 340
         button_w, button_h = button_size
         columns = 3
         for index, button_data in enumerate(c.MENU_BUTTON_TABLE):

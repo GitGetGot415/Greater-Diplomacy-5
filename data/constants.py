@@ -288,6 +288,41 @@ MENU_BOTTOM_TEXT_START_X = 20
 MENU_BOTTOM_TEXT_START_Y = SCREEN_HEIGHT - 40
 MENU_BOTTOM_TEXT_STEP_Y = -30
 
+MENU_MAIN_BUTTON_TABLE = [
+    {
+        "attribute": "new_game_btn",
+        "text": "New Game",
+        "color": "green",
+        "state": "NEW_GAME",
+        "image": "new_game",
+        "text_size": 24,
+    },
+    {
+        "attribute": "load_game_btn",
+        "text": "Load Game",
+        "color": "yellow",
+        "state": "LOAD_GAME",
+        "image": "load_game",
+        "text_size": 24,
+    },
+    {
+        "attribute": "tournaments_btn",
+        "text": "Tournaments",
+        "color": "red",
+        "state": "MULTIPLAYER_HUB",
+        "image": "mail",
+        "text_size": 24,
+    },
+    {
+        "attribute": "map_editor_btn",
+        "text": "Map Editor",
+        "color": "orange",
+        "state": "SELECT_BASE_MAP",
+        "image": "map_editor",
+        "text_size": 24,
+    },
+]
+
 MENU_BUTTON_TABLE = [
     {
         "attribute": "settings_btn",

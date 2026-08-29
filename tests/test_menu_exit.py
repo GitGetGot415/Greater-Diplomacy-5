@@ -52,27 +52,30 @@ class MenuExitTests(unittest.TestCase):
         self.assertNotIn("Exit", [element.text for element in web_menu.elements])
 
     def test_credits_button_is_above_the_bottom_links(self):
-        credits = self.menu.credits_btn
         lowest_link_top = min(item["main_rect"].top for item in self.menu.bottom_texts)
+        table_buttons = [
+            getattr(self.menu, button_data["attribute"])
+            for button_data in c.MENU_BUTTON_TABLE
+        ]
 
-        self.assertEqual(credits.rect.topleft, c.MENU_BUTTON_TABLE_TOP_LEFT)
-        self.assertLess(credits.rect.bottom, lowest_link_top)
+        self.assertEqual(table_buttons[0].rect.topleft, c.MENU_BUTTON_TABLE_TOP_LEFT)
+        self.assertLess(max(button.rect.bottom for button in table_buttons), lowest_link_top)
 
-    def test_other_centered_menu_buttons_keep_their_positions(self):
-        expected_offsets = {
-            "New Game": "- 150", "Load Game": "- 100", "Tournaments": "- 50",
-            "Map Editor": "+ 0",
-        }
-        display_height = pygame.display.get_surface().get_height()
-        menu_height = c.SIZES["menu"][1]
-        centered_y = int((display_height - menu_height) / 2)
+    def test_main_buttons_follow_their_separate_configured_table(self):
+        table_x, table_y = c.MENU_MAIN_BUTTON_TABLE_TOP_LEFT
+        button_w, button_h = c.MENU_MAIN_BUTTON_TABLE_BUTTON_SIZE
+        columns = c.MENU_MAIN_BUTTON_TABLE_COLUMNS
 
-        for button in self.menu.elements:
-            offset = expected_offsets.get(getattr(button, "text", ""))
-            if offset is None:
-                continue
-            expected_y = centered_y + int(offset.replace(" ", ""))
-            self.assertEqual(button.rect.y, expected_y, button.text)
+        for index, button_data in enumerate(c.MENU_MAIN_BUTTON_TABLE):
+            row, column = divmod(index, columns)
+            button = getattr(self.menu, button_data["attribute"])
+            expected_x = table_x + column * (button_w + c.MENU_MAIN_BUTTON_TABLE_X_SPACING)
+            expected_y = table_y + row * (button_h + c.MENU_MAIN_BUTTON_TABLE_Y_SPACING)
+
+            self.assertEqual(button.rect.topleft, (expected_x, expected_y))
+            self.assertEqual(button.rect.size, c.MENU_MAIN_BUTTON_TABLE_BUTTON_SIZE)
+            self.assertEqual(button.text, button_data["text"])
+            self.assertEqual(button.font.get_height(), fonts.get_size(button_data["text_size"]).get_height())
 
     def test_lower_left_buttons_follow_the_configured_table(self):
         table_x, table_y = c.MENU_BUTTON_TABLE_TOP_LEFT
