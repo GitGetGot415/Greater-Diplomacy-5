@@ -248,10 +248,25 @@ class Menu(GameState):
         )
         self.elements.append(self.swap_hildehrand_btn)
 
+        # Exit lives in the top-right corner and uses the shared modal dialog
+        # so the game is never closed accidentally by a single click.
+        self.exit_btn = Button(
+            c.SCREEN_WIDTH - 120,
+            20,
+            "small",
+            "red",
+            "Exit",
+            self.confirm_exit,
+            font_preset="button",
+        )
+        self.elements.append(self.exit_btn)
+
         # These two skip the rise-from-bottom cascade below and instead slide
         # in horizontally: the refresh button from the right, alongside the
-        # sign, and the portrait swap button from the left, alongside Hildehrand.
+        # sign, the exit button from the right in the top corner, and the
+        # portrait swap button from the left, alongside Hildehrand.
         self.refresh_btn._intro_from_right = True
+        self.exit_btn._intro_from_right = True
         self.swap_hildehrand_btn._intro_from_left = True
 
         # Cascade the rise-in by vertical position: rows near the top of the
@@ -282,6 +297,23 @@ class Menu(GameState):
 
     def open_hildehrand_picker(self):
         queries.open_character_picker(self, self.hildehrand_choice, self._set_hildehrand_choice)
+
+    def confirm_exit(self):
+        from ui import confirm_dialog
+
+        confirm_dialog.ask_yes_no(
+            "Exit Game",
+            "Are you sure you want to exit the game?",
+            self._exit_game,
+            yes_label="Exit",
+            no_label="Cancel",
+        )
+
+    @staticmethod
+    def _exit_game(confirmed):
+        if confirmed:
+            # Let the main loop handle cleanup and platform-specific shutdown.
+            pygame.event.post(pygame.event.Event(pygame.QUIT))
 
     def _set_hildehrand_choice(self, rel_path):
         from ui.character_select_screen import CHARACTERS_DIR
