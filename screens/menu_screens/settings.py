@@ -9,7 +9,7 @@ from ui.bars import ui_bars
 from ui import confirm_dialog
 
 # --- Settings screen button layout ---
-SETTINGS_RIGHT_COL_X = c.SCREEN_WIDTH - 250
+SETTINGS_RIGHT_COL_X = c.SCREEN_WIDTH - 260
 SETTINGS_BACK_POS = (50, 50)
 SETTINGS_FULLSCREEN_Y = 20
 SETTINGS_CHECKERBOARD_WATER_Y = 70
