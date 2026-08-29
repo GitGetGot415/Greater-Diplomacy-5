@@ -212,6 +212,12 @@ CHECKERBOARD_WATER = False
 DEFAULT_MAP_NAVIGATION_MODE = "CLASSIC"
 MAP_NAVIGATION_MODE = DEFAULT_MAP_NAVIGATION_MODE
 
+# How active battles are presented in the map's Units view.  COMPACT preserves
+# the original presentation, hiding units beneath an opaque combat bubble;
+# FULL leaves the units visible beneath a translucent bubble.
+DEFAULT_BATTLE_DISPLAY_MODE = "FULL"
+BATTLE_DISPLAY_MODE = DEFAULT_BATTLE_DISPLAY_MODE
+
 # Which unit art set map_logic.rendering.symbol_loader draws unit icons from.
 # "classic" is the flat assets/images set every icon has always shipped with;
 # any other style (e.g. "hanskolmer") looks up a per-unit manifest under its
@@ -2162,6 +2168,7 @@ RUNTIME_SETTINGS = {
     "checkerboard_water": "CHECKERBOARD_WATER",
     "unit_art_style": "UNIT_ART_STYLE",
     "map_navigation_mode": "MAP_NAVIGATION_MODE",
+    "battle_display_mode": "BATTLE_DISPLAY_MODE",
 }
 
 

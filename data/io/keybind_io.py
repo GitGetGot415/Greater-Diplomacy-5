@@ -19,7 +19,8 @@ def save_settings(keybind_dict, sfx_volume, music_volume, num_players=1, ai_mode
                   ai_turn_budget_seconds=c.DEFAULT_AI_TURN_BUDGET_SECONDS,
                   unit_art_style=c.DEFAULT_UNIT_ART_STYLE,
                   map_navigation_mode=c.DEFAULT_MAP_NAVIGATION_MODE,
-                  orders_key_changes_screen=True, economy_key_changes_screen=True):
+                  orders_key_changes_screen=True, economy_key_changes_screen=True,
+                  battle_display_mode=c.DEFAULT_BATTLE_DISPLAY_MODE):
     """Converts key codes to strings and saves all config data to JSON.
 
     The explicit signature is kept -- callers (and any mod) pass these

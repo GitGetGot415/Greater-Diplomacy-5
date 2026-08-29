@@ -21,6 +21,8 @@ is a function of its key. That is what these pin:
 import os
 import sys
 import unittest
+from types import SimpleNamespace
+from unittest import mock
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
@@ -29,6 +31,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import pygame
 
 import data.constants as c
+from data import queries
 from map_logic.rendering import overlay_renderer, symbol_loader
 from tests import app_harness
 
@@ -107,6 +110,72 @@ class SymbolCacheTests(unittest.TestCase):
 
         self.assertEqual(symbol_loader.SCALED_SYMBOLS, {})
         self.assertEqual(symbol_loader.RESOLVED_NAMES, {})
+
+
+class CombatDisplayTests(unittest.TestCase):
+    def setUp(self):
+        self.old_display_mode = c.BATTLE_DISPLAY_MODE
+        self.addCleanup(setattr, c, "BATTLE_DISPLAY_MODE", self.old_display_mode)
+
+        self.mine = {"owner": "A"}
+        self.enemy = {"owner": "B"}
+        self.province = {
+            "id": "battle",
+            "center": (100, 100),
+            "units": [self.mine, self.enemy],
+        }
+        self.map = SimpleNamespace(
+            player_country="A",
+            visible_provinces=None,
+            partial_visible_provinces=set(),
+            is_editor=False,
+            id_to_province={"battle": self.province},
+            nation_data={},
+        )
+        self.prediction = {
+            "type": "province",
+            "loc": "battle",
+            "forces": {"A": [self.mine], "B": [self.enemy]},
+        }
+
+    def records(self, mode):
+        c.BATTLE_DISPLAY_MODE = mode
+        with mock.patch.object(queries, "get_combat_predictions",
+                               return_value=[self.prediction]), \
+             mock.patch.object(queries, "get_all_friendly_nations",
+                               return_value={"A"}), \
+             mock.patch.object(queries, "is_province_in_active_combat",
+                               return_value=True), \
+             mock.patch.object(queries, "get_combat_location_category",
+                               return_value=queries.COMBAT_LOCATION_DEFENSE), \
+             mock.patch.object(overlay_renderer, "combat_outlook_color",
+                               return_value=(255, 255, 0)), \
+             mock.patch.object(overlay_renderer, "estimated_combat_turns",
+                               return_value=1):
+            return overlay_renderer.combat_bubble_records(self.map)
+
+    def test_full_display_keeps_active_battle_units_visible(self):
+        compact = self.records("COMPACT")[0]
+        full = self.records("FULL")[0]
+
+        self.assertEqual(compact["hidden_unit_ids"],
+                         {id(self.mine), id(self.enemy)})
+        self.assertEqual(full["hidden_unit_ids"], set())
+
+    def test_full_display_makes_active_bubble_translucent(self):
+        record = {"category": queries.COMBAT_LOCATION_DEFENSE,
+                  "color": (255, 255, 0), "potential": False}
+        surface = pygame.Surface((20, 20), pygame.SRCALPHA)
+        with mock.patch.object(symbol_loader, "get_symbol",
+                               return_value=surface) as get_symbol:
+            c.BATTLE_DISPLAY_MODE = "FULL"
+            overlay_renderer._combat_bubble_symbol(record, 1.0)
+            self.assertEqual(get_symbol.call_args.kwargs["alpha"],
+                             overlay_renderer.COMBAT_BUBBLE_FULL_ALPHA)
+
+            c.BATTLE_DISPLAY_MODE = "COMPACT"
+            overlay_renderer._combat_bubble_symbol(record, 1.0)
+            self.assertEqual(get_symbol.call_args.kwargs["alpha"], 255)
 
 
 class UnitBoxCacheTests(unittest.TestCase):

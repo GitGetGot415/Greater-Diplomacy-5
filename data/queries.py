@@ -365,7 +365,7 @@ def save_cached_json(cache_key, new_data):
 def save_global_settings(controller):
     """Writes every setting straight off the Controller.
 
-    The 25 attribute reads this used to spell out positionally are now one
+    The attribute reads this used to spell out positionally are now one
     settings_schema lookup -- which also means tournament_saves_dir is actually
     saved. It was missing from the old list, so saving any setting quietly reset
     the tournament folder to its default.

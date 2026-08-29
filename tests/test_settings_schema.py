@@ -34,6 +34,7 @@ GOLDEN_ORDER = (
     "deepseek_api_key", "kimi_api_key", "deepseek_model", "kimi_model",
     "ai_turn_budget_seconds", "unit_art_style", "map_navigation_mode",
     "orders_key_changes_screen", "economy_key_changes_screen",
+    "battle_display_mode",
 )
 
 GOLDEN_JSON_KEYS = set(GOLDEN_ORDER)
@@ -217,6 +218,9 @@ class KeybindIoTests(unittest.TestCase):
             self.assertEqual(settings_schema.defaults()["target_fps"], 999)
         finally:
             c.TARGET_FPS = original
+
+    def test_battle_display_defaults_to_full(self):
+        self.assertEqual(settings_schema.defaults()["battle_display_mode"], "FULL")
 
 
 if __name__ == "__main__":

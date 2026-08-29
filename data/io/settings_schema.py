@@ -1,12 +1,12 @@
 """One declaration of what a saved setting is.
 
 The settings schema used to be written out five times in parallel: as
-save_settings' 26-parameter signature, as the dict it builds, twice more as
-fallback tuples, and once more as load_settings' 26-element return -- plus the
-25 positional attribute reads in queries.save_global_settings and the
-`len(loaded_data) > N` ladder in main.py that unpacks it again. Adding one
-setting meant editing seven places in lockstep, and getting the order wrong
-anywhere silently mixed up unrelated settings.
+save_settings' parameter signature, as the dict it builds, twice more as
+fallback tuples, and once more as load_settings' return -- plus the positional
+attribute reads in queries.save_global_settings and the `len(loaded_data) > N`
+ladder in main.py that unpacks it again. Adding one setting meant editing seven
+places in lockstep, and getting the order wrong anywhere silently mixed up
+unrelated settings.
 
 Two contracts have to survive, and both are now derived from SETTINGS_FIELDS
 rather than restated:
@@ -84,6 +84,7 @@ SETTINGS_FIELDS = (
     # On by default, and Keybinds' "Reset Keybinds" restores that.
     _field("orders_key_changes_screen", "orders_key_changes_screen", lambda: True),
     _field("economy_key_changes_screen", "economy_key_changes_screen", lambda: True),
+    _field("battle_display_mode", "battle_display_mode", lambda: c.DEFAULT_BATTLE_DISPLAY_MODE),
 )
 
 SETTINGS_ORDER = tuple(field.name for field in SETTINGS_FIELDS)

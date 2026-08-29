@@ -24,6 +24,9 @@ COMBAT_BUBBLE_ASSETS = {
 # so there is no separate square padding to make the clickable area larger than
 # the painted bubble.
 COMBAT_BUBBLE_ICON_SCALE = 1.2
+# Full battle display keeps the bubble readable while allowing the unit boxes
+# underneath it to remain visible.
+COMBAT_BUBBLE_FULL_ALPHA = 160
 
 
 def combat_strengths(sides, nation_data, friendly_nations):
@@ -202,10 +205,12 @@ def combat_bubble_records(map_screen):
                 sides, map_screen.nation_data, province=province),
             "unit_ids": battle_unit_ids,
             # Incoming attackers belong to the predicted fight, but are still
-            # physically on their origin tiles. Only units currently on the
-            # battle tile are hidden under its bubble.
-            "hidden_unit_ids": (set() if not actual_battle
-                                else battle_unit_ids & current_unit_ids),
+            # physically on their origin tiles. In compact mode, only units
+            # currently on the battle tile are hidden under its bubble.
+            "hidden_unit_ids": (
+                battle_unit_ids & current_unit_ids
+                if actual_battle and c.BATTLE_DISPLAY_MODE == "COMPACT"
+                else set()),
             "orders_province_id": province["id"],
         })
 
@@ -214,7 +219,10 @@ def combat_bubble_records(map_screen):
 
 def _combat_bubble_symbol(record, zoom):
     asset = COMBAT_BUBBLE_ASSETS[record["category"]]
-    alpha = 128 if record.get("potential") else 255
+    if c.BATTLE_DISPLAY_MODE == "COMPACT":
+        alpha = 128 if record.get("potential") else 255
+    else:
+        alpha = COMBAT_BUBBLE_FULL_ALPHA
     return symbol_loader.get_symbol(asset, zoom * COMBAT_BUBBLE_ICON_SCALE,
                                     color=record["color"], alpha=alpha)
 

@@ -16,6 +16,7 @@ SETTINGS_CHECKERBOARD_WATER_Y = 70
 SETTINGS_FPS_TOGGLE_Y = 120
 SETTINGS_DRAG_KEY_Y = 170
 SETTINGS_MAP_NAV_Y = 220
+SETTINGS_BATTLE_DISPLAY_Y = 270
 SETTINGS_PLAYER_SLIDER_Y = 400
 SETTINGS_FPS_SLIDER_Y = 460
 SETTINGS_AI_THREAD_SLIDER_POS = (60, 400)
@@ -35,7 +36,7 @@ SETTINGS_PATH_EDIT_OFFSET_X = -220
 SETTINGS_PATH_RESET_OFFSET_X = -110
 SETTINGS_PATH_BOX_X = c.SCREEN_WIDTH // 2 - 150
 
-# Info ("?") buttons beside the Fullscreen..Map Navigation column -- same
+# Info ("?") buttons beside the Fullscreen..Battle Display column -- same
 # small square and left-of-the-setting placement scenario_settings.py uses.
 SETTINGS_INFO_GAP_X = 10
 SETTINGS_INFO_X = SETTINGS_RIGHT_COL_X - c.SIZES["scenario_setting_info"][0] - SETTINGS_INFO_GAP_X
@@ -65,6 +66,10 @@ SETTINGS_INFO_ROWS = (
      "Preemptive: a click jumps "
      "straight into the screen the current view mode implies (Orders for "
      "Units, including a fighting tile). "
+     "Click to switch between them."),
+    (SETTINGS_BATTLE_DISPLAY_Y, "Battle Display",
+     "Compact hides units that are currently fighting beneath an opaque combat "
+     "bubble. Full keeps those units visible and makes the bubble translucent. "
      "Click to switch between them."),
 )
 
@@ -106,6 +111,9 @@ def render_settings_buttons(settings_screen):
         Button(keybind_x, SETTINGS_MAP_NAV_Y, "setting_option", "purple",
                f"Map Navigation: {settings_screen.map_navigation_mode.title()}",
                settings_screen.toggle_map_navigation_mode),
+        Button(keybind_x, SETTINGS_BATTLE_DISPLAY_Y, "setting_option", "purple",
+               f"Battle Display: {settings_screen.battle_display_mode.title()}",
+               settings_screen.toggle_battle_display_mode),
     ]
     settings_screen.elements.extend(
         info_button(SETTINGS_INFO_X, y, title, text) for y, title, text in SETTINGS_INFO_ROWS
@@ -249,6 +257,7 @@ class Settings(GameState):
         self.show_fps = self.controller.show_fps
         self.checkerboard_water = self.controller.checkerboard_water
         self.map_navigation_mode = self.controller.map_navigation_mode
+        self.battle_display_mode = self.controller.battle_display_mode
 
         for key in list(self.DIR_FIELDS) + list(self.COLOR_FIELDS):
             setattr(self, key, getattr(self.controller, key))
@@ -300,6 +309,15 @@ class Settings(GameState):
         self.map_navigation_mode = "PREEMPTIVE" if self.map_navigation_mode == "CLASSIC" else "CLASSIC"
         self.controller.map_navigation_mode = self.map_navigation_mode
         c.apply_runtime_settings({"map_navigation_mode": self.map_navigation_mode})
+        queries.save_global_settings(self.controller)
+        self.refresh_ui()
+
+    def toggle_battle_display_mode(self):
+        """Cycles between the compact and full map battle presentations."""
+        self.battle_display_mode = (
+            "COMPACT" if self.battle_display_mode == "FULL" else "FULL")
+        self.controller.battle_display_mode = self.battle_display_mode
+        c.apply_runtime_settings({"battle_display_mode": self.battle_display_mode})
         queries.save_global_settings(self.controller)
         self.refresh_ui()
 
@@ -389,6 +407,10 @@ class Settings(GameState):
         self.map_navigation_mode = c.DEFAULT_MAP_NAVIGATION_MODE
         c.apply_runtime_settings({"map_navigation_mode": c.DEFAULT_MAP_NAVIGATION_MODE})
         self.controller.map_navigation_mode = c.DEFAULT_MAP_NAVIGATION_MODE
+
+        self.battle_display_mode = c.DEFAULT_BATTLE_DISPLAY_MODE
+        c.apply_runtime_settings({"battle_display_mode": c.DEFAULT_BATTLE_DISPLAY_MODE})
+        self.controller.battle_display_mode = c.DEFAULT_BATTLE_DISPLAY_MODE
 
         for key in self.COLOR_FIELDS:
             self.reset_setting(key, refresh=False)
