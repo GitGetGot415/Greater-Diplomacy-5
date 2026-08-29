@@ -732,6 +732,14 @@ def check_for_post_combat_captures(map_screen):
         units = queries.units_on_province(province)
         if not units:
             continue
+
+        # Midpoint fighters remain serialized in their departure province, but
+        # are deliberately omitted by units_on_province because they do not
+        # occupy that tile.  Keep them when rebuilding the province's unit
+        # list below; otherwise an ordinary capture on the endpoint silently
+        # deletes the other half of an unrelated edge battle.
+        edge_units = [u for u in province.get("units", [])
+                      if is_edge_battle_unit(u)]
             
         current_owner = province.get("owner", "Unclaimed")
         turn_start_owner = province.get("_turn_start_owner", current_owner)
@@ -841,7 +849,8 @@ def check_for_post_combat_captures(map_screen):
                         # Use capturer instead of true_owner here so ships are correctly scuttled even if core transferred
                         if queries.is_hostile_territory(capturer, u["owner"], map_screen.nation_data):
                             u["health"] = 0
-                province["units"] = [u for u in units if u.get("health", 0) > 0]
+                province["units"] = (edge_units +
+                                      [u for u in units if u.get("health", 0) > 0])
         else:
             # If no capturer (e.g., bounce tiebreaker triggered), revert any order-of-execution captures
             if current_owner != turn_start_owner:
