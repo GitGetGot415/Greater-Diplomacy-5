@@ -174,8 +174,6 @@ class Menu(GameState):
             ("- 100",  "Load Game",   "yellow", "load_game",  "LOAD_GAME"),
             ("- 50", "Tournaments",  "red",    "mail",       "MULTIPLAYER_HUB"),
             ("+ 0",  "Map Editor",   "orange", "map_editor", "SELECT_BASE_MAP"),
-            ("+ 50", "Settings",       "grey",   "settings",   "SETTINGS"),
-            ("+ 100", "Music Player",  "blue",   "music",      "MUSIC_PLAYER"),
         ]
         self.elements = [
             Button("centered", f"centered {offset}", "menu", color, label,
@@ -209,6 +207,16 @@ class Menu(GameState):
             self.mods_btn.rect.right + row_button_gap, credits_y, "mini_menu", "white", "Translate",
             lambda: self.go_to("TRANSLATE"), image=ui_elements.UI_ICONS.get("export"))
         self.elements.append(self.translate_btn)
+
+        self.settings_btn = Button(
+            self.translate_btn.rect.right + row_button_gap, credits_y, "mini_menu", "grey", "Settings",
+            lambda: self.go_to("SETTINGS"), image=ui_elements.UI_ICONS.get("settings"))
+        self.elements.append(self.settings_btn)
+
+        self.music_btn = Button(
+            self.settings_btn.rect.right + row_button_gap, credits_y, "mini_menu", "blue", "Music",
+            lambda: self.go_to("MUSIC_PLAYER"), image=ui_elements.UI_ICONS.get("music"))
+        self.elements.append(self.music_btn)
         
         self.bottom_texts = []
         font = fonts.get("heading2")

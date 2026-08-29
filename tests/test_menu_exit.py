@@ -59,8 +59,8 @@ class MenuExitTests(unittest.TestCase):
 
     def test_other_centered_menu_buttons_keep_their_positions(self):
         expected_offsets = {
-            "New Game": "- 200", "Load Game": "- 150", "Tournaments": "- 100",
-            "Map Editor": "- 50", "Settings": "+ 0", "Music Player": "+ 50",
+            "New Game": "- 150", "Load Game": "- 100", "Tournaments": "- 50",
+            "Map Editor": "+ 0",
         }
         display_height = pygame.display.get_surface().get_height()
         menu_height = c.SIZES["menu"][1]
@@ -78,16 +78,24 @@ class MenuExitTests(unittest.TestCase):
         assets = self.menu.assets_btn
         mods = self.menu.mods_btn
         translate = self.menu.translate_btn
+        settings = self.menu.settings_btn
+        music = self.menu.music_btn
 
         self.assertEqual(assets.rect.y, credits.rect.y)
         self.assertEqual(mods.rect.y, credits.rect.y)
         self.assertEqual(translate.rect.y, credits.rect.y)
+        self.assertEqual(settings.rect.y, credits.rect.y)
+        self.assertEqual(music.rect.y, credits.rect.y)
         self.assertGreater(assets.rect.left, credits.rect.right)
         self.assertGreater(mods.rect.left, assets.rect.right)
         self.assertGreater(translate.rect.left, mods.rect.right)
+        self.assertGreater(settings.rect.left, translate.rect.right)
+        self.assertGreater(music.rect.left, settings.rect.right)
         self.assertFalse(credits.rect.colliderect(assets.rect))
         self.assertFalse(assets.rect.colliderect(mods.rect))
         self.assertFalse(mods.rect.colliderect(translate.rect))
+        self.assertFalse(translate.rect.colliderect(settings.rect))
+        self.assertFalse(settings.rect.colliderect(music.rect))
 
     def test_cancel_keeps_the_game_running(self):
         modal = self.open_exit_dialog()
