@@ -47,6 +47,8 @@ class Menu(GameState):
     BUTTON_INTRO_DURATION_MS = 500
     BUTTON_INTRO_CASCADE_MS = 650
     INTRO_SLIDE_START_MARGIN = 40
+    EXIT_INTRO_START_MARGIN = 2000
+    GROUND_INTRO_START_MARGIN = 1600
     # How far below the screen bottom rows start from, so they're fully
     # hidden (not just off their mark) until their delay elapses.
     BUTTON_INTRO_START_MARGIN = 60
@@ -174,11 +176,11 @@ class Menu(GameState):
             self.sign_rect.y,
         ) if self.sign_rect else (0, 0)
         self._right_ground_draw_pos = (
-            c.SCREEN_WIDTH + self.INTRO_SLIDE_START_MARGIN,
+            c.SCREEN_WIDTH + self.GROUND_INTRO_START_MARGIN,
             self.right_ground_rect.y,
         ) if self.right_ground_rect else (0, 0)
         self._left_ground_draw_pos = (
-            -self.left_ground_rect.width - self.INTRO_SLIDE_START_MARGIN,
+            -self.left_ground_rect.width - self.GROUND_INTRO_START_MARGIN,
             self.left_ground_rect.y,
         ) if self.left_ground_rect else (0, 0)
 
@@ -310,6 +312,8 @@ class Menu(GameState):
             right_intro_buttons.append(self.exit_btn)
         for button in right_intro_buttons:
             button._intro_from_right = True
+        if self.exit_btn:
+            self.exit_btn._intro_start_margin = self.EXIT_INTRO_START_MARGIN
         self.swap_hildehrand_btn._intro_from_left = True
 
         # Cascade the rise-in by vertical position: rows near the top of the
@@ -454,12 +458,13 @@ class Menu(GameState):
             self._sign_draw_pos = (int(_lerp(start_x, self.sign_rect.x, t)), self.sign_rect.y)
 
             if self.right_ground_rect:
-                self._right_ground_draw_pos = (int(_lerp(start_x, self.right_ground_rect.x, t)), self.right_ground_rect.y)
+                ground_start_x = c.SCREEN_WIDTH + self.GROUND_INTRO_START_MARGIN
+                self._right_ground_draw_pos = (int(_lerp(ground_start_x, self.right_ground_rect.x, t)), self.right_ground_rect.y)
 
         if self.left_ground_rect:
             t = _ease_out_expo(elapsed / self.SIGN_INTRO_MS)
-            start_x = -self.left_ground_rect.width - self.INTRO_SLIDE_START_MARGIN
-            self._left_ground_draw_pos = (int(_lerp(start_x, self.left_ground_rect.x, t)), self.left_ground_rect.y)
+            ground_start_x = -self.left_ground_rect.width - self.GROUND_INTRO_START_MARGIN
+            self._left_ground_draw_pos = (int(_lerp(ground_start_x, self.left_ground_rect.x, t)), self.left_ground_rect.y)
 
         if getattr(self, "hildehrand_image", None):
             rest_rect = self.hildehrand_image.get_rect(bottomleft=self._hildehrand_anchor_bottomleft)
@@ -475,7 +480,8 @@ class Menu(GameState):
             local_elapsed = elapsed - btn._intro_delay
             t = _ease_out_expo(local_elapsed / self.BUTTON_INTRO_DURATION_MS) if local_elapsed > 0 else 0.0
             if getattr(btn, "_intro_from_right", False):
-                btn.rect.x = int(_lerp(slide_start_x_right, btn._intro_target_x, t))
+                start_margin = getattr(btn, "_intro_start_margin", self.INTRO_SLIDE_START_MARGIN)
+                btn.rect.x = int(_lerp(c.SCREEN_WIDTH + start_margin, btn._intro_target_x, t))
             elif getattr(btn, "_intro_from_left", False):
                 slide_start_x_left = -btn.rect.width - self.INTRO_SLIDE_START_MARGIN
                 btn.rect.x = int(_lerp(slide_start_x_left, btn._intro_target_x, t))

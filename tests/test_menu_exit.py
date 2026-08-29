@@ -63,7 +63,10 @@ class MenuExitTests(unittest.TestCase):
         try:
             with mock.patch("screens.menu_screens.menu.pygame.time.get_ticks", return_value=current_ticks):
                 self.menu.update()
-            self.assertGreaterEqual(self.menu.exit_btn.rect.left, c.SCREEN_WIDTH)
+            self.assertEqual(
+                self.menu.exit_btn.rect.left,
+                c.SCREEN_WIDTH + self.menu.EXIT_INTRO_START_MARGIN,
+            )
         finally:
             for button, rect in button_rects:
                 button.rect.update(rect)
@@ -81,11 +84,11 @@ class MenuExitTests(unittest.TestCase):
     def test_ground_images_start_fully_off_screen(self):
         self.assertEqual(
             self.menu._right_ground_draw_pos[0],
-            c.SCREEN_WIDTH + self.menu.INTRO_SLIDE_START_MARGIN,
+            c.SCREEN_WIDTH + self.menu.GROUND_INTRO_START_MARGIN,
         )
         self.assertEqual(
             self.menu._left_ground_draw_pos[0],
-            -self.menu.left_ground_rect.width - self.menu.INTRO_SLIDE_START_MARGIN,
+            -self.menu.left_ground_rect.width - self.menu.GROUND_INTRO_START_MARGIN,
         )
 
     def test_sign_is_anchored_by_its_bottom_right_corner(self):
