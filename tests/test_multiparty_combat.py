@@ -567,6 +567,56 @@ class PredictionBubbleTests(unittest.TestCase):
         return overlay_renderer.combat_strengths(
             [prov["units"]], screen.nation_data, friendly_nations)
 
+    def test_an_unseen_enemy_order_does_not_remove_a_possible_defender(self):
+        screen = StubMapScreen()
+        screen.player_country = "A"
+        screen.viewing_ai_moves = False
+        screen.add_nation("A", at_war_with=["B"])
+        screen.add_nation("B", at_war_with=["A"])
+
+        attacker = unit("A", path=["target"])
+        departing_defender = unit("B", path=["other"])
+        screen.add_province("origin", "A", units=[attacker])
+        target = screen.add_province("target", "B", units=[departing_defender])
+        screen.add_province("other", "B")
+
+        predictions = queries.get_combat_predictions(screen)
+        self.assertIn(
+            ("province", target["id"]),
+            [(prediction["type"], prediction["loc"])
+             for prediction in predictions],
+            "the prediction used an enemy movement order the player cannot see")
+
+    def test_another_nation_s_movement_does_not_create_a_prediction(self):
+        screen = StubMapScreen()
+        screen.player_country = "A"
+        screen.viewing_ai_moves = False
+        screen.add_nation("A", at_war_with=["C"])
+        screen.add_nation("B", at_war_with=["C"])
+        screen.add_nation("C", at_war_with=["A", "B"])
+        screen.nation_data["A"]["faction"] = "PACT"
+        screen.nation_data["B"]["faction"] = "PACT"
+
+        ally_attacker = unit("B", path=["target"])
+        defender = unit("C", path=[])
+        screen.add_province("origin", "B", units=[ally_attacker])
+        target = screen.add_province("target", "C", units=[defender])
+
+        predictions = queries.get_combat_predictions(screen)
+        self.assertNotIn(
+            ("province", target["id"]),
+            [(prediction["type"], prediction["loc"])
+             for prediction in predictions],
+            "a faction member's hidden movement created a prediction")
+
+        ally_attacker["owner"] = "A"
+        predictions = queries.get_combat_predictions(screen)
+        self.assertIn(
+            ("province", target["id"]),
+            [(prediction["type"], prediction["loc"])
+             for prediction in predictions],
+            "the player's own movement should create a prediction")
+
     def test_a_three_way_fight_counts_only_the_lane_you_are_in(self):
         screen = StubMapScreen()
         screen.add_nation("P", at_war_with=["X"])

@@ -2897,16 +2897,14 @@ def get_combat_predictions(map_screen):
 
     player_country = map_screen.player_country
     is_spectator = player_country == "Spectator" or map_screen.is_editor
-    friendly_nations = get_all_friendly_nations(player_country, nation_data) if not is_spectator else set()
     
     predictions = []
 
-    # 1. Meeting engagements: decided by combat_rules, the same rule the turn
-    #    resolver uses, so the bubble cannot promise a fight that will not
-    #    happen. `visible_to` is what keeps a hotseat player from seeing moves
-    #    they did not order.
+    # 1. Meeting engagements: use the same rule as the turn resolver, but only
+    #    with movement orders the player is allowed to know. Faction and
+    #    alliance membership does not disclose another nation's plans.
     from map_logic.turn_processing import combat_rules
-    visible_to = None if is_spectator else friendly_nations
+    visible_to = None if is_spectator else {player_country}
 
     # Layers hidden submarines out of the bubble the same way the map/sidebar
     # do. Spectators and the editor keep the full, unfiltered truth.
