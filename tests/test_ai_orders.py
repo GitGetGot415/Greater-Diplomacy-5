@@ -235,5 +235,58 @@ class BombardmentPriorityTests(unittest.TestCase):
         self.assertEqual(gun["order"], {"type": "BOMBARD", "target_id": 2})
 
 
+class ImmediateLossAttackTests(unittest.TestCase):
+    def context(self, target_id=2):
+        ctx = empty_ctx(
+            enemy_targets={target_id},
+            target_destinations=[target_id],
+            target_assignments={target_id: 0},
+            target_stacks={target_id: 0},
+            expedition_targets=set(),
+        )
+        return ctx
+
+    def screen(self, defender):
+        screen = BombardmentScreen(near_units=[defender])
+        attacker_prov = screen.map_data["home"]
+        attacker_prov["units"] = []
+        attacker_prov["neighbors"] = [2]
+        screen.map_data["near"]["neighbors"] = [1]
+        return screen
+
+    def attacker(self, attack=100, health=100):
+        return {"type": "Infantry Type 1936", "owner": "Avaria",
+                "attack": attack, "defense": 0, "health": health,
+                "max_health": health, "speed": 1,
+                "order": {"type": "MOVE", "path": []}}
+
+    def defender(self, attack=100, health=100):
+        return {"type": "Infantry Type 1936", "owner": "Bruland",
+                "attack": attack, "defense": 0, "health": health,
+                "max_health": health}
+
+    def test_it_does_not_charge_when_the_first_exchange_wipes_the_attacker(self):
+        screen = self.screen(self.defender(attack=1000, health=1000))
+        attacker = self.attacker(attack=1, health=1)
+        screen.map_data["home"]["units"] = [attacker]
+
+        ai_movement._assign_unit_orders(
+            screen, "Avaria", [(attacker, screen.map_data["home"])],
+            self.context(), {1, 2}, set(), {1: [2], 2: [1]})
+
+        self.assertEqual(attacker["order"], {"type": "MOVE", "path": []})
+
+    def test_it_still_charges_when_the_attacker_can_survive(self):
+        screen = self.screen(self.defender(attack=1, health=1000))
+        attacker = self.attacker(attack=100, health=100)
+        screen.map_data["home"]["units"] = [attacker]
+
+        ai_movement._assign_unit_orders(
+            screen, "Avaria", [(attacker, screen.map_data["home"])],
+            self.context(), {1, 2}, set(), {1: [2], 2: [1]})
+
+        self.assertEqual(attacker["order"]["path"], [2])
+
+
 if __name__ == "__main__":
     unittest.main()

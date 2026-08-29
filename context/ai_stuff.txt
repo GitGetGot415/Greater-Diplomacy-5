@@ -211,6 +211,11 @@ reaches a unit waiting in reserve, and under the lane model most of a deep stack
 is in reserve. The AI shells whenever it has a target in range, which is also
 what stops artillery charging into melee.
 
+The AI also projects the first lane exchange before charging an occupied hostile
+tile. If every attacking unit in the proposed charge would be destroyed
+immediately, it leaves that target alone instead of feeding units into a fight
+the resolver will turn into an instant wipeout.
+
 Multi-turn orders (DISBAND, CONVERT, REPAIR) survive the AI's per-turn
 movement re-plan. They did not used to, which meant no AI unit was ever
 disbanded by anything.

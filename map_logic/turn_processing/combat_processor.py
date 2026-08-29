@@ -200,7 +200,12 @@ def process_pinning(map_screen):
         probe = combat_rules.build_battle(
             [friendly_defenders, attacker_units_only], map_screen.nation_data)
 
-        incoming_on_charge = {}
+        # Use the same non-mutating damage projection the AI uses when it
+        # decides whether this charge is worth issuing. The actual exchange is
+        # still applied below, after the survival check, so the probe remains
+        # simultaneous and side-effect free.
+        incoming_on_charge = combat_rules.projected_incoming_damage(
+            probe, map_screen.nation_data)
         shots_at_defenders = []
         for lane in probe.lanes:
             for firing, receiving in ((lane.a, lane.b), (lane.b, lane.a)):
@@ -212,11 +217,7 @@ def process_pinning(map_screen):
                         continue
                     shot = combat_rules.volley(member.front, probe.shares,
                                                map_screen.nation_data)
-                    if receiving.side_index == CHARGE_SIDE:
-                        share = shot / len(member.targets)
-                        for target in member.targets:
-                            incoming_on_charge[id(target)] = incoming_on_charge.get(id(target), 0.0) + share
-                    else:
+                    if receiving.side_index != CHARGE_SIDE:
                         shots_at_defenders.append((member.targets, shot))
 
         # A charge deeper than the lane can seat always has survivors, because

@@ -708,6 +708,34 @@ def exchange(battle, nation_data=None):
     return shots
 
 
+def projected_incoming_damage(battle, nation_data=None, defense_bonus_fn=None):
+    """Returns the damage each unit would take in ``battle``.
+
+    This is the non-mutating counterpart to the damage arithmetic in
+    ``combat_processor.apply_group_damage``. AI planning needs to ask whether
+    a hypothetical charge leaves anyone alive, and using the same lane volley,
+    health-scaled defense, and political damage rules keeps that prediction in
+    step with the resolver.
+
+    ``defense_bonus_fn`` is optional so callers that model a fortified tile can
+    include its bonus without making fortification part of the general combat
+    rules.
+    """
+    incoming = {}
+    for targets, total_attack in exchange(battle, nation_data):
+        if not targets:
+            continue
+        damage_per_unit = total_attack / len(targets)
+        for unit in targets:
+            defense_bonus = defense_bonus_fn(unit) if defense_bonus_fn else 0
+            defense = (unit.get("defense", 0)
+                       * health_defense_multiplier(unit)
+                       + defense_bonus)
+            incoming[id(unit)] = incoming.get(id(unit), 0.0) + max(
+                0.0, damage_per_unit - defense)
+    return incoming
+
+
 def slots_held(battle, nation):
     """How many front slots `nation` was given across this whole fight.
 

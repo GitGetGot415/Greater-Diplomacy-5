@@ -406,6 +406,56 @@ def _tile_is_lost(map_screen, ai_name, prov, friendly_nations):
                    for u in units)
 
 
+def _attackers_would_survive(map_screen, ai_name, target_prov, attackers):
+    """Whether at least one attacker survives the first exchange at a target.
+
+    A charge that kills every incoming unit is resolved immediately by
+    ``combat_processor.process_pinning``. Ask the same battle builder and
+    projected damage helper here, so the AI does not deliberately issue a move
+    that the resolver will turn into an instant wipeout. A unit that is not in
+    a lane is treated as surviving: it is not actually part of this fight.
+    """
+    attackers = list(attackers)
+    if not attackers:
+        return False
+
+    target_units = list(target_prov.get("units", ()))
+    battle = combat_rules.build_battle(
+        [target_units, attackers], map_screen.nation_data)
+    if not battle.lanes:
+        return True
+
+    incoming = combat_rules.projected_incoming_damage(
+        battle, map_screen.nation_data)
+    engaged_ids = {
+        id(unit)
+        for lane in battle.lanes
+        for side in (lane.a, lane.b)
+        for unit in side.front
+    }
+
+    return any(
+        id(unit) not in engaged_ids
+        or incoming.get(id(unit), 0.0) < unit.get("health", 1)
+        for unit in attackers
+    )
+
+
+def _attack_target_is_immediate_loss(map_screen, ai_name, target_id, unit):
+    """True when moving ``unit`` into ``target_id`` would be an instant wipe."""
+    target_prov = map_screen.id_to_province.get(target_id)
+    if not target_prov:
+        return False
+
+    if not any(queries.are_at_war(ai_name, defender.get("owner"),
+                                  map_screen.nation_data)
+               for defender in target_prov.get("units", ())):
+        return False
+
+    return not _attackers_would_survive(
+        map_screen, ai_name, target_prov, [unit])
+
+
 def _track_battles_and_convoys(map_screen, ai_name, units_info, friendly_nations, unsafe_waters, all_enemy_coasts, enemy_coastal_waters):
     """Finds active battles (and whether this nation is about to lose them, in
     which case it picks a retreat tile), plus which convoys are in combat or
@@ -815,6 +865,12 @@ def _assign_unit_orders(map_screen, ai_name, units_info, ctx, allowed_prov_ids, 
                 adjacent_targets = [n for n in adjacent_targets if queries.can_convoy_enter(prov, map_screen.id_to_province.get(n)) and n not in unsafe_waters]
 
             if adjacent_targets:
+                adjacent_targets = [
+                    target_id for target_id in adjacent_targets
+                    if not _attack_target_is_immediate_loss(
+                        map_screen, ai_name, target_id, unit)
+                ]
+            if adjacent_targets:
                 # Pick the adjacent enemy with the least attackers currently assigned
                 best_adj = min(adjacent_targets, key=pressure)
 
@@ -872,6 +928,15 @@ def _assign_unit_orders(map_screen, ai_name, units_info, ctx, allowed_prov_ids, 
             targets = target_destinations
             assignments = target_assignments
             stacks = target_stacks
+
+        # Do not route a unit toward an occupied hostile tile if the first
+        # exchange is guaranteed to kill that unit. Empty targets and fights
+        # where the unit is not at war with anyone remain valid destinations.
+        targets = [
+            target_id for target_id in targets
+            if not _attack_target_is_immediate_loss(
+                map_screen, ai_name, target_id, unit)
+        ]
 
         if not targets:
             continue
