@@ -239,6 +239,10 @@ def _resolve_step_swaps(map_screen, moving_units, step, get_eff_speed):
     return [u for u in moving_units if id(u) not in dead_ids]
 
 def process_movement(map_screen):
+    # Repair a one-sided midpoint left by an older save or an interrupted
+    # decisive exchange before it can block ordinary orders.
+    combat_processor.repair_edge_battles(map_screen)
+
     moving_units = []
     for province in map_screen.map_data.values():
         units_to_keep = []
@@ -373,6 +377,10 @@ def process_movement(map_screen):
                 unit["_previous_province_id"] = unit["_current_province_id"]
                 unit["_current_province_id"] = target_id
                 order["path"].pop(0)
+                edge_target = order.get("edge_battle_target")
+                if (isinstance(edge_target, dict)
+                        and edge_target.get("destination_id") == target_id):
+                    order.pop("edge_battle_target", None)
 
                 # Both lane orders are decisions about one tile's fight. Marching
                 # somewhere else makes them meaningless at best and misleading at
@@ -431,6 +439,11 @@ def process_movement(map_screen):
     for unit in moving_units:
         if "_skip_remaining_steps" in unit:
             del unit["_skip_remaining_steps"]
+
+    # A multi-speed collision can create and settle a midpoint while movers
+    # are temporarily outside the province lists. Reconcile any edge that
+    # still ended up one-sided after the final sync as a last safety net.
+    combat_processor.repair_edge_battles(map_screen)
 
 def _find_nearest_owned_province(start_prov, owner, id_to_province):
     """BFS over the province graph for the closest tile owned by `owner`."""

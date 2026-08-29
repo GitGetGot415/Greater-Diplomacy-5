@@ -479,6 +479,12 @@ def load_map_assets(map_screen, load_path):
             if not unit.get("custom_name"):
                 unit["custom_name"] = queries.generate_unit_custom_name(unit, unit_counters)
 
+    # Midpoint battles are saved on their participating units. Repair a stale
+    # one-sided record before the first map render/order phase can present it
+    # as an active battle with no opponent to fight.
+    from map_logic.turn_processing import combat_processor
+    combat_processor.repair_edge_battles(map_screen)
+
     # --- FORCE TIME-APPROPRIATE RESEARCH ---
     # Only when actually starting a fresh game from a scenario (selection_mode) --
     # never on a save already in progress, where research has since moved on

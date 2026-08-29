@@ -157,6 +157,7 @@ class Orders_Screen(GameState):
         is the durable UI handle.  Its unit lists are re-derived from the
         saved unit tags whenever this panel refreshes.
         """
+        combat_processor.repair_edge_battles(map_ref)
         record = combat_processor.find_edge_battle(map_ref, pair)
         if record is None:
             return False
@@ -165,6 +166,7 @@ class Orders_Screen(GameState):
         return True
 
     def _start_with_context(self, province, map_ref, edge_pair=None):
+        combat_processor.repair_edge_battles(map_ref)
         self.target_province = province
         self.map_screen = map_ref
         self.edge_pair = edge_pair
@@ -226,6 +228,138 @@ class Orders_Screen(GameState):
             record = self._edge_battle()
             return [] if record is None else record["side1"] + record["side2"]
         return queries.units_on_province(self.target_province)
+
+    def _selected_units(self):
+        """Return the commandable units represented by the current selection."""
+        units = self._units()
+        if self.selected_unit_index == "ALL":
+            return [unit for unit in units
+                    if unit.get("owner") == self.map_screen.player_country]
+        if isinstance(self.selected_unit_index, int) and 0 <= self.selected_unit_index < len(units):
+            return [units[self.selected_unit_index]]
+        return []
+
+    def _path_edge_target(self, path):
+        """Return the first active midpoint battle encountered by ``path``."""
+        if not isinstance(path, list) or not path:
+            return None
+
+        origin_id = self.target_province["id"]
+        for index, destination_id in enumerate(path):
+            record = combat_processor.find_edge_battle(
+                self.map_screen, (origin_id, destination_id))
+            if record is not None:
+                return index, origin_id, destination_id, record
+            origin_id = destination_id
+        return None
+
+    def _movement_targets(self, origin_node):
+        """Split ordinary province targets from active midpoint targets."""
+        province_targets = []
+        midpoint_targets = []
+        for destination_id in origin_node.get("neighbors", []):
+            record = combat_processor.find_edge_battle(
+                self.map_screen, (origin_node["id"], destination_id))
+            if record is None:
+                province_targets.append(destination_id)
+            else:
+                midpoint_targets.append(record)
+        return province_targets, midpoint_targets
+
+    def _clicked_midpoint_battle(self, screen_pos):
+        """Return an active midpoint battle bubble clicked in the map area."""
+        bubble = overlay_renderer.combat_bubble_at_screen_pos(
+            self.map_screen, screen_pos)
+        if bubble and bubble.get("kind") == "midpoint":
+            # Rendering has a lightweight bubble record; movement validation
+            # needs the live side1/side2 lists from the combat processor.
+            return combat_processor.find_edge_battle(
+                self.map_screen, bubble.get("pair", ()))
+
+        # Orders can be opened while another map overlay is selected, in
+        # which case the bubble art is hidden but the midpoint target ring is
+        # still visible.  Keep that ring a real target too, without allowing
+        # clicks during the read-only AI movement animation.
+        if getattr(self.map_screen, "viewing_ai_moves", False):
+            return None
+        return combat_processor.edge_battle_at_screen_pos(
+            self.map_screen, screen_pos)
+
+    def _tactical_move_has_fuel(self, target_units, current_path):
+        """Apply the same immediate movement fuel check to midpoint orders."""
+        if (not self.map_screen.tactical_mode
+                or self.selected_unit_index == "ALL"
+                or not target_units
+                or target_units[0] is not self.map_screen.player_unit):
+            return True
+
+        speed = queries.get_tactical_speed(target_units[0])
+        if len(current_path) >= speed:
+            return True
+
+        fuel_inc = self.map_screen.unit_economy.get("fuel_inc", 0)
+        cost_per_tile = queries.get_tactical_fuel_cost_per_tile(
+            target_units[0], fuel_inc)
+        if self.map_screen.player_fuel < cost_per_tile:
+            self.map_screen.show_feedback("Not enough fuel!")
+            return False
+        return True
+
+    def _queue_midpoint_reinforcement(self, target_units, record):
+        """Queue the edge endpoint that represents reinforcing ``record``."""
+        if not target_units:
+            return False
+
+        order = target_units[0].get("order")
+        current_path = order.get("path", []) if isinstance(order, dict) else []
+        if not isinstance(current_path, list):
+            current_path = []
+        pair = record.get("pair", ())
+
+        # If this battle appeared after a longer route was already queued,
+        # preserve only the prefix leading to the battle.  The old endpoint
+        # beyond it must never remain in the order as a way to bypass the
+        # newly occupied connection.
+        path_edge = self._path_edge_target(current_path)
+        if path_edge is not None and path_edge[3].get("pair") == pair:
+            edge_index, origin_id, _destination_id, _ = path_edge
+            path_prefix = current_path[:edge_index]
+        else:
+            origin_id = (self.target_province["id"] if not current_path
+                         else current_path[-1])
+            path_prefix = current_path
+
+        if origin_id not in pair:
+            return False
+        destination_id = pair[1] if pair[0] == origin_id else pair[0]
+
+        if not all(combat_processor.can_join_edge_battle(
+                unit, origin_id, destination_id, record,
+                self.map_screen.nation_data) for unit in target_units):
+            self.map_screen.show_feedback(
+                "Only units that can fight this midpoint battle may reinforce it.")
+            return False
+        if not self._tactical_move_has_fuel(target_units, path_prefix):
+            return False
+
+        for unit in target_units:
+            order = unit.get("order")
+            if not isinstance(order, dict):
+                order = {"type": "MOVE", "path": []}
+                unit["order"] = order
+            order["type"] = "MOVE"
+            order["path"] = path_prefix + [destination_id]
+            order["edge_battle_target"] = {
+                "pair": list(record["pair"]),
+                "destination_id": destination_id,
+            }
+
+        speed_limit = min(unit.get("speed", 1) for unit in target_units)
+        status_str = "Queued" if len(path_prefix) + 1 > speed_limit else "Added"
+        self.map_screen.show_feedback(
+            f"Midpoint battle reinforcement {status_str.lower()}.")
+        self.refresh_ui()
+        return True
 
     def _in_battle(self):
         if self.edge_pair is not None:
@@ -1110,6 +1244,27 @@ class Orders_Screen(GameState):
             if panel_rect.collidepoint(event.pos):
                 return
 
+            # An active midpoint battle is the movement destination for a
+            # reinforcing unit.  It has no province polygon of its own, so it
+            # must be handled before the normal province hit test.
+            clicked_midpoint = self._clicked_midpoint_battle(event.pos)
+            if clicked_midpoint is not None:
+                target_units = self._selected_units()
+                if target_units:
+                    order = target_units[0].get("order")
+                    current_path = (order.get("path", [])
+                                    if isinstance(order, dict) else [])
+                    if not isinstance(current_path, list):
+                        current_path = []
+                    path_edge = self._path_edge_target(current_path)
+                    current_id = (path_edge[1] if path_edge is not None else
+                                  (self.target_province["id"] if not current_path
+                                   else current_path[-1]))
+                    if current_id in clicked_midpoint.get("pair", ()):
+                        self._queue_midpoint_reinforcement(
+                            target_units, clicked_midpoint)
+                        return
+
             dest = queries.get_clicked_province(event.pos, self.map_screen)
             if not dest: return
 
@@ -1134,15 +1289,7 @@ class Orders_Screen(GameState):
             dest = queries.get_clicked_province(event.pos, self.map_screen)
             if not dest: return
 
-            units = self._units()
-
-            if self.selected_unit_index == "ALL":
-                target_units = [u for u in units if u.get("owner") == self.map_screen.player_country]
-            elif 0 <= self.selected_unit_index < len(units):
-                target_units = [units[self.selected_unit_index]]
-            else:
-                target_units = []
-
+            target_units = self._selected_units()
             if not target_units: return
 
             if self.edge_pair is not None:
@@ -1168,6 +1315,16 @@ class Orders_Screen(GameState):
                 start_node = self.target_province
             else:
                 start_node = self.map_screen.id_to_province.get(current_path[-1])
+
+            # A live midpoint battle occupies the whole connection.  The
+            # battle bubble is the only valid target; clicking the opposing
+            # province must not create an order that tries to pass through it.
+            active_edge = combat_processor.find_edge_battle(
+                self.map_screen, (start_node["id"], dest["id"])) if start_node else None
+            if active_edge is not None:
+                self.map_screen.show_feedback(
+                    "That connection is occupied by a midpoint battle; click the battle to reinforce it.")
+                return
 
             # --- Unlimited Queueing Logic ---
             if dest["id"] in start_node["neighbors"]:
@@ -1282,6 +1439,8 @@ class Orders_Screen(GameState):
 
         path = order.get("path", [])
         if path:
+            if self._path_edge_target(path) is not None:
+                return "Reinforce midpoint battle", (255, 180, 80)
             step_word = "step" if len(path) == 1 else "steps"
             return f"Move: {len(path)} {step_word} to P{path[-1]}", (255, 225, 80)
 
@@ -1455,6 +1614,8 @@ class Orders_Screen(GameState):
                 help_text = "No commandable units in this province"
             elif self.edge_pair is not None:
                 help_text = "Select a unit, click its origin, then queue normal adjacent moves"
+            elif self._movement_targets(self.target_province)[1]:
+                help_text = "Click a midpoint battle to reinforce it"
             else:
                 help_text = "Hover a command icon for details | click unit art/name to select"
 
@@ -1491,6 +1652,31 @@ class Orders_Screen(GameState):
 
                 if 0 <= sx <= c.SCREEN_WIDTH and 0 <= sy <= c.SCREEN_HEIGHT:
                     pygame.draw.circle(surface, color, (int(sx), int(sy)), TARGET_MARKER_RADIUS, TARGET_MARKER_THICKNESS)
+
+    def draw_midpoint_target_marker(self, surface, record, color):
+        """Ring the midpoint bubble as the destination of a reinforcement order."""
+        if not isinstance(record, dict):
+            return
+        pair = record.get("pair")
+        if not isinstance(pair, (list, tuple)) or len(pair) != 2:
+            return
+
+        midpoint = combat_processor.edge_battle_midpoint(
+            self.map_screen, {"pair": tuple(pair)})
+        offsets = ([0, -self.map_screen.map_w, self.map_screen.map_w]
+                   if self.map_screen.loop_map else [0])
+        for offset in offsets:
+            sx, sy = queries.world_to_screen(midpoint, self.map_screen, offset)
+            if 0 <= sx <= c.SCREEN_WIDTH and 0 <= sy <= c.SCREEN_HEIGHT:
+                pygame.draw.circle(
+                    surface, color, (int(sx), int(sy)),
+                    TARGET_MARKER_RADIUS + 4, TARGET_MARKER_THICKNESS)
+
+    def _draw_order_path(self, surface, unit, path, owner_color):
+        """Draw a queued path, stopping at its first active midpoint battle."""
+        overlay_renderer.draw_split_movement_path_until_midpoint(
+            surface, self.map_screen, self.target_province, path,
+            unit.get("speed", 1), owner_color, force_visible=True)
 
     def draw_background(self, surface):
         # Defer to Map_Screen's own background (flat fill or checkerboard,
@@ -1548,9 +1734,7 @@ class Orders_Screen(GameState):
                     continue
                 path = order.get("path", [])
                 if path:
-                    overlay_renderer.draw_split_movement_path(
-                        surface, self.map_screen, self.target_province, path,
-                        unit.get("speed", 1), owner_color, force_visible=True)
+                    self._draw_order_path(surface, unit, path, owner_color)
                 elif order.get("type") == "BOMBARD":
                     target_id = order.get("target_id")
                     bomb_range = queries.get_bombardment_range(unit.get("type", ""))
@@ -1647,37 +1831,67 @@ class Orders_Screen(GameState):
                                 alpha=MOVE_PREVIEW_ALPHA, force_visible=True)
             elif active_unit:
                 active_path = active_unit.get("order", {}).get("path", [])
-                
-                if not active_path:
-                    last_node = self.target_province
-                else:
-                    last_node = self.map_screen.id_to_province.get(active_path[-1])
-
-                if last_node:
-                    self.draw_target_markers(surface, last_node, last_node["neighbors"], MOVE_TARGET_COLOR)
-
+                path_edge = self._path_edge_target(active_path)
+                if path_edge is not None:
+                    edge_index, origin_id, _destination_id, record = path_edge
+                    edge_start = (self.target_province if edge_index == 0 else
+                                  self.map_screen.id_to_province.get(
+                                      active_path[edge_index - 1]))
+                    self.draw_midpoint_target_marker(
+                        surface, record, MOVE_TARGET_COLOR)
                     mouse_pos = pygame.mouse.get_pos()
-                    hovered = queries.get_clicked_province(mouse_pos, self.map_screen)
-                    if hovered and hovered["id"] in last_node["neighbors"]:
-                        
-                        # Calculate speed limit based on group or individual selection
-                        if self.selected_unit_index == "ALL":
-                            speed_limit = min(u.get("speed", 1) for u in player_units)
+                    hovered_midpoint = self._clicked_midpoint_battle(mouse_pos)
+                    if (edge_start and hovered_midpoint
+                            and origin_id in hovered_midpoint.get("pair", ())):
+                        overlay_renderer.draw_movement_path_to_midpoint(
+                            surface, self.map_screen, edge_start,
+                            hovered_midpoint, color=owner_color,
+                            alpha=MOVE_PREVIEW_ALPHA, force_visible=True)
+                else:
+                    if not active_path:
+                        last_node = self.target_province
+                    else:
+                        last_node = self.map_screen.id_to_province.get(active_path[-1])
+
+                    if last_node:
+                        province_targets, midpoint_targets = self._movement_targets(last_node)
+                        self.draw_target_markers(
+                            surface, last_node, province_targets, MOVE_TARGET_COLOR)
+                        for record in midpoint_targets:
+                            self.draw_midpoint_target_marker(
+                                surface, record, MOVE_TARGET_COLOR)
+
+                        mouse_pos = pygame.mouse.get_pos()
+                        hovered_midpoint = self._clicked_midpoint_battle(mouse_pos)
+                        if (hovered_midpoint
+                                and last_node["id"] in hovered_midpoint.get("pair", ())):
+                            overlay_renderer.draw_movement_path_to_midpoint(
+                                surface, self.map_screen, last_node,
+                                hovered_midpoint, color=owner_color,
+                                alpha=MOVE_PREVIEW_ALPHA, force_visible=True)
                         else:
-                            speed_limit = active_unit.get("speed", 1)
-                        
-                        # Determine styling based on if this specific hover step exceeds the speed
-                        is_queued = len(active_path) >= speed_limit
-                        
-                        preview_color = owner_color
-                        preview_alpha = 255
-                        
-                        if is_queued:
-                            preview_color = (min(255, owner_color[0] + 150), min(255, owner_color[1] + 150), min(255, owner_color[2] + 150))
-                            preview_alpha = 120
-                            
-                        # Use the owner's color to draw the cursor hover with correct alpha logic
-                        overlay_renderer.draw_movement_path(surface, self.map_screen, last_node, [hovered["id"]], color=preview_color, alpha=preview_alpha, force_visible=True)
+                            hovered = queries.get_clicked_province(
+                                mouse_pos, self.map_screen)
+                            if hovered and hovered["id"] in province_targets:
+
+                                # Calculate speed limit based on group or individual selection
+                                if self.selected_unit_index == "ALL":
+                                    speed_limit = min(u.get("speed", 1) for u in player_units)
+                                else:
+                                    speed_limit = active_unit.get("speed", 1)
+
+                                # Determine styling based on if this specific hover step exceeds the speed
+                                is_queued = len(active_path) >= speed_limit
+
+                                preview_color = owner_color
+                                preview_alpha = 255
+
+                                if is_queued:
+                                    preview_color = (min(255, owner_color[0] + 150), min(255, owner_color[1] + 150), min(255, owner_color[2] + 150))
+                                    preview_alpha = 120
+
+                                # Use the owner's color to draw the cursor hover with correct alpha logic
+                                overlay_renderer.draw_movement_path(surface, self.map_screen, last_node, [hovered["id"]], color=preview_color, alpha=preview_alpha, force_visible=True)
 
         resource_hud.draw_resource_bar(surface, self.map_screen,
                                        start_x=view_mode_buttons.RESOURCE_BAR_OFFSET_X)

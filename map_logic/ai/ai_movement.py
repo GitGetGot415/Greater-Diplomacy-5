@@ -481,14 +481,13 @@ def _edge_reinforcement_options(map_screen, ai_name):
         pair = record["pair"]
         blocked_edges.add(pair)
 
-        for source, destination, opposing in (
-                (pair[0], pair[1], record["side2"]),
-                (pair[1], pair[0], record["side1"])):
-            if any((queries.are_at_war(ai_name, enemy.get("owner"),
-                                       map_screen.nation_data)
-                   or queries.are_at_war(enemy.get("owner"), ai_name,
-                                         map_screen.nation_data))
-                   for enemy in opposing):
+        # Check both directions explicitly: each endpoint can feed the
+        # battle, and the destination is the other real province in the pair.
+        for source, destination in (
+                (pair[0], pair[1]), (pair[1], pair[0])):
+            if combat_processor.can_nation_reinforce_edge_battle(
+                    ai_name, source, destination, record,
+                    map_screen.nation_data):
                 reinforce_edges.add((source, destination))
                 reinforcement_targets.setdefault(source, []).append(destination)
 

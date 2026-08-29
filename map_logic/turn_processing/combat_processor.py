@@ -82,7 +82,10 @@ def edge_battles(map_screen):
                 "side1": [],
                 "side2": [],
             })
-            if origin_id == pair[0] and destination_id == pair[1]:
+            saved_side = tag.get("battle_side")
+            if saved_side in (1, 2):
+                record[f"side{saved_side}"].append(unit)
+            elif origin_id == pair[0] and destination_id == pair[1]:
                 record["side1"].append(unit)
             elif origin_id == pair[1] and destination_id == pair[0]:
                 record["side2"].append(unit)
@@ -96,6 +99,103 @@ def find_edge_battle(map_screen, pair):
                  if record["pair"] == wanted), None)
 
 
+def edge_battle_opponents(record, origin_id, destination_id):
+    """Return the fighters across the edge from this movement direction."""
+    pair = record.get("pair", ())
+    if len(pair) != 2:
+        return ()
+    if (origin_id, destination_id) == (pair[0], pair[1]):
+        return record.get("side2", ())
+    if (origin_id, destination_id) == (pair[1], pair[0]):
+        return record.get("side1", ())
+    return ()
+
+
+def _nation_is_hostile_to_any(nation, units, nation_data):
+    """Whether ``nation`` is at war with at least one listed fighter."""
+    return any(
+        queries.are_at_war(nation, enemy.get("owner"), nation_data)
+        or queries.are_at_war(enemy.get("owner"), nation, nation_data)
+        for enemy in units)
+
+
+def _nation_belongs_with_side(nation, units, nation_data):
+    """Whether ``nation`` is already part of a side's friendly coalition."""
+    for member in units:
+        owner = member.get("owner")
+        if owner == nation:
+            return True
+        nation_friends = queries.friendly_nations_view(nation, nation_data)
+        owner_friends = queries.friendly_nations_view(owner, nation_data)
+        if owner in nation_friends and nation in owner_friends:
+            return True
+    return False
+
+
+def edge_battle_reinforcement_side(nation, origin_id, destination_id,
+                                   record, nation_data):
+    """Return the combat side a midpoint reinforcement should join.
+
+    The endpoint a unit approaches from is not necessarily the side it fights
+    for. A defender can send reserves through territory that is also being
+    crossed by the attacker, as in a unit at the near endpoint reinforcing its
+    country's fighters that started at the far endpoint. The old directional
+    check mistook that reserve for a possible enemy of its own side.
+
+    Side numbers are one-based to match the persisted ``battle_side`` value;
+    old tags without that value still use their origin direction when grouped.
+    """
+    pair = record.get("pair", ())
+    if (len(pair) != 2
+            or (origin_id, destination_id) not in
+            ((pair[0], pair[1]), (pair[1], pair[0]))):
+        return None
+
+    sides = (record.get("side1", ()), record.get("side2", ()))
+    # A friendly nation standing beside one side is still a bystander unless
+    # it is at war with the other side. This preserves military-access traffic
+    # as a barrier casualty rather than quietly enlisting it in the battle.
+    possible_sides = [
+        side_index + 1
+        for side_index, opposing_side in enumerate((sides[1], sides[0]))
+        if _nation_is_hostile_to_any(nation, opposing_side, nation_data)
+    ]
+    if not possible_sides:
+        return None
+
+    coalition_matches = [
+        side_index + 1
+        for side_index, side in enumerate(sides)
+        if _nation_belongs_with_side(nation, side, nation_data)
+        and side_index + 1 in possible_sides
+    ]
+    if coalition_matches:
+        return coalition_matches[0]
+
+    # A unit joins the side whose fighters are on the same side of the war as
+    # it, which means it must be hostile to the opposing side.
+    if len(possible_sides) == 1:
+        return possible_sides[0]
+    if len(possible_sides) > 1:
+        # A third party hostile to both sides has no unique coalition. Keep
+        # the historical endpoint choice for that genuinely ambiguous case.
+        return 1 if origin_id == pair[0] else 2
+    return None
+
+
+def can_nation_reinforce_edge_battle(nation, origin_id, destination_id,
+                                     record, nation_data):
+    """Whether a nation can reinforce a midpoint from either endpoint."""
+    return edge_battle_reinforcement_side(
+        nation, origin_id, destination_id, record, nation_data) is not None
+
+
+def can_join_edge_battle(unit, origin_id, destination_id, record, nation_data):
+    """Whether ``unit`` is allowed to reinforce from either endpoint."""
+    return can_nation_reinforce_edge_battle(
+        unit.get("owner"), origin_id, destination_id, record, nation_data)
+
+
 def join_edge_battle(unit, origin_id, destination_id, record, nation_data):
     """Commit a mover to an active midpoint battle, if it can reinforce it.
 
@@ -103,22 +203,25 @@ def join_edge_battle(unit, origin_id, destination_id, record, nation_data):
     that is at war with the fighters on the far side may instead join the
     battle from its endpoint and will take part in the next exchange.
     """
-    pair = record.get("pair", ())
-    if (origin_id, destination_id) not in ((pair[0], pair[1]), (pair[1], pair[0])):
+    battle_side = edge_battle_reinforcement_side(
+        unit.get("owner"), origin_id, destination_id, record, nation_data)
+    if battle_side is None:
         return False
 
-    opposing = (record["side2"] if origin_id == pair[0]
-                else record["side1"])
-    if not any(
-            queries.are_at_war(unit.get("owner"), enemy.get("owner"), nation_data)
-            or queries.are_at_war(enemy.get("owner"), unit.get("owner"), nation_data)
-            for enemy in opposing):
-        return False
-
-    unit[EDGE_BATTLE_KEY] = {
+    tag = {
         "origin_id": origin_id,
         "destination_id": destination_id,
     }
+    pair = record.get("pair", ())
+    inferred_side = (1 if origin_id == pair[0] else 2
+                     if origin_id == pair[1] else None)
+    if battle_side != inferred_side:
+        # Keep old, compact tags readable while recording the only case that
+        # cannot be reconstructed from origin_id: reinforcing the friendly
+        # side from the opposite endpoint.
+        tag["battle_side"] = battle_side
+    unit[EDGE_BATTLE_KEY] = tag
+    unit.get("order", {}).pop("edge_battle_target", None)
     return True
 
 
@@ -217,31 +320,36 @@ def _release_edge_battle(record):
     """Return a non-hostile midpoint's survivors to their existing orders."""
     for unit in record["side1"] + record["side2"]:
         _clear_edge_tag(unit)
+        unit.get("order", {}).pop("edge_battle_target", None)
 
 
 def _advance_edge_winners(map_screen, record):
-    """Move a decisive midpoint winner onto the enemy endpoint and stop it.
+    """Move each decisive midpoint winner onto its own target and stop it.
 
     Crossing the midpoint has already consumed the movement that created the
-    battle.  A victory therefore captures exactly the tile that the unit was
+    battle. A victory therefore captures exactly the tile that each unit was
     originally entering; it never silently continues any queued path beyond
-    that tile.  The helper also works during a later movement sub-step, where
-    units are temporarily outside their province lists but carry
-    ``_current_province_id`` instead.
+    that tile. Reinforcements can approach from the opposite endpoint to the
+    side they support, so the unit tag -- rather than the battle side -- is
+    authoritative for this destination. The helper also works during a later
+    movement sub-step, where units are temporarily outside their province
+    lists but carry ``_current_province_id`` instead.
     """
-    sides = ((record["side1"], record["pair"][0], record["pair"][1]),
-             (record["side2"], record["pair"][1], record["pair"][0]))
-    for winners, origin_id, destination_id in sides:
-        if not winners:
-            continue
-
-        origin = map_screen.id_to_province[origin_id]
-        destination = map_screen.id_to_province[destination_id]
-        winner_ids = {id(unit) for unit in winners}
-        origin["units"] = [unit for unit in origin.get("units", [])
-                           if id(unit) not in winner_ids]
-
+    for side_index, winners in enumerate(
+            (record["side1"], record["side2"]), start=1):
         for unit in winners:
+            tag = unit.get(EDGE_BATTLE_KEY, {})
+            origin_id = tag.get("origin_id", record["pair"][side_index - 1])
+            destination_id = tag.get(
+                "destination_id", record["pair"][1 if side_index == 1 else 0])
+            current_id = unit.get("_current_province_id", origin_id)
+            origin = map_screen.id_to_province.get(current_id)
+            destination = map_screen.id_to_province.get(destination_id)
+            if origin is None or destination is None:
+                continue
+
+            origin["units"] = [existing for existing in origin.get("units", [])
+                                if existing is not unit]
             _clear_edge_tag(unit)
             order = unit.get("order")
             if not isinstance(order, dict):
@@ -249,6 +357,7 @@ def _advance_edge_winners(map_screen, record):
             else:
                 order["type"] = "MOVE"
                 order["path"] = []
+            order.pop("edge_battle_target", None)
             unit.pop("lane_target", None)
             unit.pop("combat_stance", None)
 
@@ -256,7 +365,7 @@ def _advance_edge_winners(map_screen, record):
             # than in a province list.  Update that temporary position too so
             # the normal movement sync places the winner on this endpoint.
             if "_current_province_id" in unit:
-                unit["_previous_province_id"] = origin_id
+                unit["_previous_province_id"] = current_id
                 unit["_current_province_id"] = destination_id
             if not any(existing is unit for existing in destination["units"]):
                 destination["units"].append(unit)
@@ -292,6 +401,30 @@ def _settle_edge_battle(map_screen, record):
         # continue from their departure tiles as before.
         _release_edge_battle(current)
     return True
+
+
+def repair_edge_battles(map_screen):
+    """Settle serialized midpoint records that no longer have two sides.
+
+    A midpoint battle is only a live engagement while both endpoints have a
+    surviving fighter. Older saves, and saves made during the narrow window
+    after a decisive exchange, can contain just one tagged side. Leaving that
+    tag in place creates a visible battle with no opponent and makes every
+    attempted reinforcement fail the combatant check. Treat it like the
+    normal end-of-battle path so the remaining side advances onto the endpoint
+    it was entering.
+
+    Returns the number of records repaired. The pass is deliberately separate
+    from :func:`edge_battles` because that function is a read-only view used by
+    rendering and AI planning.
+    """
+    repaired = 0
+    for record in list(edge_battles(map_screen)):
+        if record["side1"] and record["side2"]:
+            continue
+        if _settle_edge_battle(map_screen, record):
+            repaired += 1
+    return repaired
 
 
 def start_edge_battle(prov1, prov2, units1, units2, nation_data, map_screen=None):

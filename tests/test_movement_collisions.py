@@ -315,6 +315,57 @@ class PersistentEdgeBattleTests(unittest.TestCase):
         self.assertIn(first_reinforcement, p1["units"])
         self.assertIn(second_reinforcement, p2["units"])
 
+    def test_reinforcement_supports_its_side_from_the_opposite_endpoint(self):
+        """A defender's reserve can approach from the attacker's endpoint."""
+        screen, p1, p2, a, b = self.build()
+        self.start(screen)
+
+        reinforcement = make_unit("B", ["p2"])
+        p1["units"].append(reinforcement)
+        self.start(screen)
+
+        record = combat_processor.find_edge_battle(screen, ("p1", "p2"))
+        self.assertIsNotNone(record)
+        self.assertIn(reinforcement, record["side2"])
+        self.assertEqual(reinforcement["_edge_battle"].get("battle_side"), 2)
+
+    def test_cross_endpoint_reinforcement_advances_to_its_queued_target(self):
+        """A cross-endpoint reserve keeps its own destination when it wins."""
+        screen, p1, p2, a, b = self.build()
+        self.start(screen)
+
+        reinforcement = make_unit("B", ["p2"])
+        p1["units"].append(reinforcement)
+        self.start(screen)
+
+        a[0]["health"] = 1
+        b["attack"] = 2000
+        self.start(screen)
+
+        self.assertIn(reinforcement, p2["units"])
+        self.assertNotIn(reinforcement, p1["units"])
+        self.assertNotIn(combat_processor.EDGE_BATTLE_KEY, reinforcement)
+        self.assertEqual(reinforcement["order"]["path"], [])
+
+    def test_a_one_sided_saved_midpoint_advances_its_remaining_winner(self):
+        """A stale midpoint with no enemy cannot remain an unreinforceable lock."""
+        screen, p1, p2, a, _b = self.build()
+        winner = a[0]
+        winner[combat_processor.EDGE_BATTLE_KEY] = {
+            "origin_id": "p1",
+            "destination_id": "p2",
+        }
+        winner["order"]["path"] = ["p2"]
+        p2["units"] = []
+
+        self.assertEqual(combat_processor.repair_edge_battles(screen), 1)
+
+        self.assertNotIn(combat_processor.EDGE_BATTLE_KEY, winner)
+        self.assertNotIn(winner, p1["units"])
+        self.assertIn(winner, p2["units"])
+        self.assertEqual(winner["order"]["path"], [])
+        self.assertIsNone(combat_processor.find_edge_battle(screen, ("p1", "p2")))
+
     def test_individual_retreat_leaves_other_fighters_midpoint_and_restarts_on_origin(self):
         screen, p1, _p2, a, b = self.build(a_units=2)
         self.start(screen)
