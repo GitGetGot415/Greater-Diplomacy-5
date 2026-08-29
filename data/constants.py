@@ -296,14 +296,6 @@ MENU_BOTTOM_TEXT_STEP_Y = -30
 
 MENU_MAIN_BUTTON_TABLE = [
     {
-        "attribute": "new_game_btn",
-        "text": "New Game",
-        "color": "green",
-        "state": "NEW_GAME",
-        "image": "new_game",
-        "text_size": 24,
-    },
-    {
         "attribute": "load_game_btn",
         "text": "Load Game",
         "color": "yellow",

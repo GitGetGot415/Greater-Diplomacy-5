@@ -190,10 +190,24 @@ class Menu(GameState):
         # Both menu button groups are generated from separate table settings.
         self.elements = []
 
+        # The primary New Game action is standalone so its position, size, and
+        # text size can be edited independently from the other menu buttons.
+        new_game_button_size = (200, 100)
+        new_game_text_size = 28
+        self.new_game_btn = Button(
+            460,
+            220,
+            new_game_button_size,
+            "green",
+            "New Game",
+            lambda: self.go_to("NEW_GAME"),
+            image=ui_elements.UI_ICONS.get("new_game"),
+            font_size=new_game_text_size,
+        )
+        self.elements.append(self.new_game_btn)
+
         main_button_size = (200, 45)
-        # center = 540
-        # (1280 - 200) / 2
-        main_table_x, main_table_y = (460, 245)
+        main_table_x, main_table_y = (460, 330)
         main_button_w, main_button_h = main_button_size
         main_columns = 1
         for index, button_data in enumerate(c.MENU_MAIN_BUTTON_TABLE):

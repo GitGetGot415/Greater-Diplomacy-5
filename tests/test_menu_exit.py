@@ -119,38 +119,46 @@ class MenuExitTests(unittest.TestCase):
             for button_data in c.MENU_BUTTON_TABLE
         ]
 
-        self.assertEqual(table_buttons[0].rect.topleft, c.MENU_BUTTON_TABLE_TOP_LEFT)
+        self.assertEqual(table_buttons[0].rect.topleft, (670, 220))
         self.assertLess(max(button.rect.bottom for button in table_buttons), lowest_link_top)
 
     def test_main_buttons_follow_their_separate_configured_table(self):
-        table_x, table_y = c.MENU_MAIN_BUTTON_TABLE_TOP_LEFT
-        button_w, button_h = c.MENU_MAIN_BUTTON_TABLE_BUTTON_SIZE
-        columns = c.MENU_MAIN_BUTTON_TABLE_COLUMNS
+        table_x, table_y = (460, 315)
+        button_w, button_h = (200, 45)
+        columns = 1
 
         for index, button_data in enumerate(c.MENU_MAIN_BUTTON_TABLE):
             row, column = divmod(index, columns)
             button = getattr(self.menu, button_data["attribute"])
-            expected_x = table_x + column * (button_w + c.MENU_MAIN_BUTTON_TABLE_X_SPACING)
-            expected_y = table_y + row * (button_h + c.MENU_MAIN_BUTTON_TABLE_Y_SPACING)
+            expected_x = table_x + column * (button_w + 10)
+            expected_y = table_y + row * (button_h + 10)
 
             self.assertEqual(button.rect.topleft, (expected_x, expected_y))
-            self.assertEqual(button.rect.size, c.MENU_MAIN_BUTTON_TABLE_BUTTON_SIZE)
+            self.assertEqual(button.rect.size, (200, 45))
             self.assertEqual(button.text, button_data["text"])
             self.assertEqual(button.font.get_height(), fonts.get_size(button_data["text_size"]).get_height())
 
+    def test_new_game_button_is_larger_than_the_other_main_buttons(self):
+        new_game = self.menu.new_game_btn
+        load_game = self.menu.load_game_btn
+
+        self.assertGreaterEqual(new_game.rect.width, load_game.rect.width)
+        self.assertGreater(new_game.rect.height, load_game.rect.height)
+        self.assertGreater(new_game.font.get_height(), load_game.font.get_height())
+
     def test_lower_left_buttons_follow_the_configured_table(self):
-        table_x, table_y = c.MENU_BUTTON_TABLE_TOP_LEFT
-        button_w, button_h = c.MENU_BUTTON_TABLE_BUTTON_SIZE
-        columns = c.MENU_BUTTON_TABLE_COLUMNS
+        table_x, table_y = 670, 220
+        button_w, button_h = (130, 40)
+        columns = 1
 
         for index, button_data in enumerate(c.MENU_BUTTON_TABLE):
             row, column = divmod(index, columns)
             button = getattr(self.menu, button_data["attribute"])
-            expected_x = table_x + column * (button_w + c.MENU_BUTTON_TABLE_X_SPACING)
-            expected_y = table_y + row * (button_h + c.MENU_BUTTON_TABLE_Y_SPACING)
+            expected_x = table_x + column * (button_w + 10)
+            expected_y = table_y + row * (button_h + 5)
 
             self.assertEqual(button.rect.topleft, (expected_x, expected_y))
-            self.assertEqual(button.rect.size, c.MENU_BUTTON_TABLE_BUTTON_SIZE)
+            self.assertEqual(button.rect.size, (130, 40))
             self.assertEqual(button.text, button_data["text"])
             self.assertEqual(button.font.get_height(), fonts.get_size(button_data["text_size"]).get_height())
 
