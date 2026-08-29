@@ -167,27 +167,34 @@ class Menu(GameState):
         self._left_ground_draw_pos = self.left_ground_rect.topleft if self.left_ground_rect else (0, 0)
 
         # (y offset from centre, label, color, icon, destination state) — one row
-        # per menu entry, so adding a screen is a single line here.
-        # A tenth row did not fit: at the old offsets it landed on top of the
-        # Github and Discord links below. The whole column moves up 25 to make
-        # room, which is space the title end of the screen had spare anyway.
+        # per centred menu entry, so adding a screen is a single line here.
+        # Credits is positioned separately below, above the GitHub/Discord links.
         menu_items = [
             ("- 200", "New Game",     "green",  "new_game",   "NEW_GAME"),
             ("- 150",  "Load Game",   "yellow", "load_game",  "LOAD_GAME"),
             ("- 100", "Tournaments",  "red",    "mail",       "MULTIPLAYER_HUB"),
             ("- 50",  "Map Editor",   "orange", "map_editor", "SELECT_BASE_MAP"),
-            ("+ 0",   "Credits",      "purple", "credits",    "CREDITS"),
+            ("+ 0", "Settings",     "grey",   "settings",   "SETTINGS"),
             ("+ 50", "Music Player",  "blue",   "music",      "MUSIC_PLAYER"),
-            ("+ 100", "Settings",     "grey",   "settings",   "SETTINGS"),
-            ("+ 150", "View Assets",  "pink",   "brush",      "VIEW_ASSETS"),
-            ("+ 200", "Mods",         "light_blue", "mods",   "MODS"),
-            ("+ 250", "Translate",    "white",  "export",     "TRANSLATE"),
+            ("+ 100", "View Assets",  "pink",   "brush",      "VIEW_ASSETS"),
+            ("+ 150", "Mods",         "light_blue", "mods",   "MODS"),
+            ("+ 200", "Translate",    "white",  "export",     "TRANSLATE"),
         ]
         self.elements = [
             Button("centered", f"centered {offset}", "menu", color, label,
                    lambda s=state: self.go_to(s), image=ui_elements.UI_ICONS.get(icon))
             for offset, label, color, icon, state in menu_items
         ]
+
+        # Keep Credits out of the centred cascade. It shares the lower-left
+        # column with the two link rows, but sits above them without changing
+        # any of the other menu buttons' positions.
+        credits_y = (c.MENU_BOTTOM_TEXT_START_Y + c.MENU_BOTTOM_TEXT_STEP_Y
+                     - c.SIZES["credit"][1] - 10)
+        self.credits_btn = Button(
+            c.MENU_BOTTOM_TEXT_START_X, credits_y, "credit", "purple", "Credits",
+            lambda: self.go_to("CREDITS"), image=ui_elements.UI_ICONS.get("credits"))
+        self.elements.append(self.credits_btn)
         
         self.bottom_texts = []
         font = fonts.get("heading2")

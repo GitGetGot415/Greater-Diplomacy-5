@@ -4,6 +4,7 @@ import unittest
 from unittest import mock
 
 import pygame
+import data.constants as c
 
 from tests import app_harness
 from ui import modal_stack
@@ -48,6 +49,30 @@ class MenuExitTests(unittest.TestCase):
 
         self.assertIsNone(web_menu.exit_btn)
         self.assertNotIn("Exit", [element.text for element in web_menu.elements])
+
+    def test_credits_button_is_above_the_bottom_links(self):
+        credits = self.menu.credits_btn
+        lowest_link_top = min(item["main_rect"].top for item in self.menu.bottom_texts)
+
+        self.assertEqual(credits.rect.left, c.MENU_BOTTOM_TEXT_START_X)
+        self.assertLess(credits.rect.bottom, lowest_link_top)
+
+    def test_other_centered_menu_buttons_keep_their_positions(self):
+        expected_offsets = {
+            "New Game": "- 200", "Load Game": "- 150", "Tournaments": "- 100",
+            "Map Editor": "- 50", "Music Player": "+ 50", "Settings": "+ 100",
+            "View Assets": "+ 150", "Mods": "+ 200", "Translate": "+ 250",
+        }
+        display_height = pygame.display.get_surface().get_height()
+        menu_height = c.SIZES["menu"][1]
+        centered_y = int((display_height - menu_height) / 2)
+
+        for button in self.menu.elements:
+            offset = expected_offsets.get(getattr(button, "text", ""))
+            if offset is None:
+                continue
+            expected_y = centered_y + int(offset.replace(" ", ""))
+            self.assertEqual(button.rect.y, expected_y, button.text)
 
     def test_cancel_keeps_the_game_running(self):
         modal = self.open_exit_dialog()
