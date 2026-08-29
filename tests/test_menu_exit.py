@@ -60,8 +60,8 @@ class MenuExitTests(unittest.TestCase):
     def test_other_centered_menu_buttons_keep_their_positions(self):
         expected_offsets = {
             "New Game": "- 200", "Load Game": "- 150", "Tournaments": "- 100",
-            "Map Editor": "- 50", "Music Player": "+ 50", "Settings": "+ 100",
-            "View Assets": "+ 150", "Mods": "+ 200", "Translate": "+ 250",
+            "Map Editor": "- 50", "Settings": "+ 0", "Music Player": "+ 50",
+            "Translate": "+ 200",
         }
         display_height = pygame.display.get_surface().get_height()
         menu_height = c.SIZES["menu"][1]
@@ -73,6 +73,18 @@ class MenuExitTests(unittest.TestCase):
                 continue
             expected_y = centered_y + int(offset.replace(" ", ""))
             self.assertEqual(button.rect.y, expected_y, button.text)
+
+    def test_assets_and_mods_share_credits_row_without_overlapping(self):
+        credits = self.menu.credits_btn
+        assets = self.menu.assets_btn
+        mods = self.menu.mods_btn
+
+        self.assertEqual(assets.rect.y, credits.rect.y)
+        self.assertEqual(mods.rect.y, credits.rect.y)
+        self.assertGreater(assets.rect.left, credits.rect.right)
+        self.assertGreater(mods.rect.left, assets.rect.right)
+        self.assertFalse(credits.rect.colliderect(assets.rect))
+        self.assertFalse(assets.rect.colliderect(mods.rect))
 
     def test_cancel_keeps_the_game_running(self):
         modal = self.open_exit_dialog()

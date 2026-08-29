@@ -174,11 +174,9 @@ class Menu(GameState):
             ("- 150",  "Load Game",   "yellow", "load_game",  "LOAD_GAME"),
             ("- 100", "Tournaments",  "red",    "mail",       "MULTIPLAYER_HUB"),
             ("- 50",  "Map Editor",   "orange", "map_editor", "SELECT_BASE_MAP"),
-            ("+ 0", "Settings",     "grey",   "settings",   "SETTINGS"),
+            ("+ 0", "Settings",       "grey",   "settings",   "SETTINGS"),
             ("+ 50", "Music Player",  "blue",   "music",      "MUSIC_PLAYER"),
-            ("+ 100", "View Assets",  "pink",   "brush",      "VIEW_ASSETS"),
-            ("+ 150", "Mods",         "light_blue", "mods",   "MODS"),
-            ("+ 200", "Translate",    "white",  "export",     "TRANSLATE"),
+            ("+ 100", "Translate",    "white",  "export",     "TRANSLATE"),
         ]
         self.elements = [
             Button("centered", f"centered {offset}", "menu", color, label,
@@ -195,6 +193,18 @@ class Menu(GameState):
             c.MENU_BOTTOM_TEXT_START_X, credits_y, "credit", "purple", "Credits",
             lambda: self.go_to("CREDITS"), image=ui_elements.UI_ICONS.get("credits"))
         self.elements.append(self.credits_btn)
+
+        row_button_gap = 10
+        self.assets_btn = Button(
+            self.credits_btn.rect.right + row_button_gap, credits_y, "credit", "pink", "Assets",
+            lambda: self.go_to("VIEW_ASSETS"), image=ui_elements.UI_ICONS.get("brush"))
+        self.elements.append(self.assets_btn)
+
+        mods_x = 300
+        self.mods_btn = Button(
+            mods_x, credits_y, "credit", "light_blue", "Mods",
+            lambda: self.go_to("MODS"), image=ui_elements.UI_ICONS.get("mods"))
+        self.elements.append(self.mods_btn)
         
         self.bottom_texts = []
         font = fonts.get("heading2")
