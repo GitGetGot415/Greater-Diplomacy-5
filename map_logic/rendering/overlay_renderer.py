@@ -451,6 +451,92 @@ def draw_bombardment_arrow(surface, map_screen, start_province, target_id,
                              max(2, int(3 * cam.zoom)))
 
 
+def midpoint_bounce_pairs(map_screen):
+    """Return hostile head-on movement pairs whose orders are knowable here.
+
+    During the AI-move viewing phase all orders are deliberately rendered, so
+    the marker must use the full board just like the movement arrows do. During
+    ordinary play, only the local player's orders are known; limiting the
+    resolver query prevents an enemy order from leaking through this preview.
+    Spectators and the editor can inspect the whole board at any time.
+    """
+    player = getattr(map_screen, "player_country", None)
+    full_board = (getattr(map_screen, "viewing_ai_moves", False)
+                  or player in ("Spectator", "Editor")
+                  or getattr(map_screen, "is_editor", False))
+    visible_to = None if full_board else {player}
+    return combat_rules.find_meeting_pairs(
+        map_screen.map_data, map_screen.nation_data, visible_to)
+
+
+def draw_midpoint_bounces(map_screen, surface):
+    """Draw a rotated bounce marker halfway between every hostile swap.
+
+    The marker is placed from the same shortest wrapped edge used by movement
+    paths, then rotated from the first province toward the second. This keeps
+    the art aligned with the actual edge even when the map loops horizontally.
+    """
+    if not getattr(map_screen, "viewing_ai_moves", False) and not (
+            getattr(map_screen, "player_country", None) in ("Spectator", "Editor")
+            or getattr(map_screen, "is_editor", False)):
+        return
+
+    pairs = midpoint_bounce_pairs(map_screen)
+    if not pairs:
+        return
+
+    cam = map_screen.camera
+    bounce_img = symbol_loader.get_symbol(
+        c.ICON_MIDPOINT_BOUNCE,
+        cam.zoom * c.MIDPOINT_BOUNCE_SCALE)
+    if bounce_img is None:
+        return
+
+    allowed = None
+    visible_provinces = getattr(map_screen, "visible_provinces", None)
+    if visible_provinces is not None:
+        partial = getattr(map_screen, "partial_visible_provinces", set()) or set()
+        allowed = visible_provinces.union(partial)
+
+    offsets = [0, -map_screen.map_w, map_screen.map_w] if map_screen.loop_map else [0]
+    for pair in pairs:
+        start_province = map_screen.id_to_province.get(pair[0])
+        end_province = map_screen.id_to_province.get(pair[1])
+        if not start_province or not end_province:
+            continue
+
+        # Match movement-path fog behavior: a visible endpoint is enough to
+        # show the edge, while two hidden endpoints reveal nothing.
+        if allowed is not None and not (
+                start_province["id"] in allowed or end_province["id"] in allowed):
+            continue
+
+        p1 = list(start_province["center"])
+        p2 = list(end_province["center"])
+        p2[0] = queries.get_wrapped_x(
+            p1[0], p2[0], map_screen.map_w, map_screen.loop_map)
+
+        for offset in offsets:
+            start_pos = queries.world_to_screen(p1, map_screen, offset)
+            end_pos = queries.world_to_screen(p2, map_screen, offset)
+            mid = ((start_pos[0] + end_pos[0]) / 2,
+                   (start_pos[1] + end_pos[1]) / 2)
+
+            if (mid[0] < -CULL_MARGIN or mid[0] > surface.get_width() + CULL_MARGIN
+                    or mid[1] < -CULL_MARGIN or mid[1] > surface.get_height() + CULL_MARGIN):
+                continue
+
+            dx = end_pos[0] - start_pos[0]
+            dy = end_pos[1] - start_pos[1]
+            if dx == 0 and dy == 0:
+                continue
+            angle = math.degrees(math.atan2(-dy, dx))
+            rotated = pygame.transform.rotate(bounce_img, angle)
+            rotated = map_utils.apply_tilt(
+                rotated, cam.tilt_factor, c.APPLY_TILT_TO_ARROWS)
+            surface.blit(rotated, rotated.get_rect(center=mid))
+
+
 def draw_movement_path(surface, map_screen, start_province, path_ids, color=(255, 255, 0), alpha=255, force_visible=False):
     """Draws a multi-segment path with lines underneath circles and a triangle at the end."""
     if not path_ids: return

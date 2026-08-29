@@ -1097,6 +1097,7 @@ CONVERSION_ICONS = {
 ICON_BOMBARDMENT = "Bombardment Arrows"
 ICON_BOMBARDMENT_LONG = "Long Range Bombardment Arrows"
 ICON_BOMBARDMENT_VERY_LONG = "Very Long Range Bombardment Arrows"
+ICON_MIDPOINT_BOUNCE = "Midpoint Bounce"
 
 # Barrage sprite keyed by the firing unit's range. The highest key at or below
 # the unit's range wins, so longer-ranged guns added later reuse the long art.
@@ -1105,6 +1106,9 @@ BOMBARDMENT_ARROW_ICONS = {
     2: ICON_BOMBARDMENT_LONG,
     3: ICON_BOMBARDMENT_VERY_LONG
 }
+
+# Scale of the marker shown halfway along a hostile head-on movement swap.
+MIDPOINT_BOUNCE_SCALE = 1.0
 
 OVERLAY_STATUS_ICON_SCALE = 0.6
 OVERLAY_STATUS_ICON_ALPHA = 180  # 0 to 255 transparency scale
