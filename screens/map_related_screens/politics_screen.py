@@ -9,7 +9,9 @@ The axis is drawn rather than built from the Slider widget for exactly that
 reason. A Slider invites a drag, and dragging is the one thing this must not
 allow. The map editor's version of this screen (screens/editor_screens/
 politics_editor.py) *does* use a Slider, because authoring a starting position
-is the case where dragging is right.
+is the case where dragging is right. Tactical mode keeps the player-facing
+axis readable but locks its direction controls while the player commands a
+single unit.
 """
 import pygame
 import data.constants as c
@@ -56,8 +58,14 @@ class Politics_Screen(GameState):
     def drift(self):
         return politics.drift(self.map_screen.nation_data, self.player)
 
+    @property
+    def can_edit(self):
+        """Whether this screen may change the player's political direction."""
+        return (self.is_valid_player
+                and not getattr(self.map_screen, "tactical_mode", False))
+
     def set_drift(self, direction):
-        if not self.is_valid_player:
+        if not self.can_edit:
             return
         # Refuse a direction there is no axis left to travel in. Accepting it
         # would put the arrow badge back on the map button for a move that can
@@ -88,6 +96,7 @@ class Politics_Screen(GameState):
                          "medium_square", "blue" if direction else "grey",
                          face, lambda d=direction: self.set_drift(d))
             btn.is_selected = (current == direction)
+            btn.disabled = not self.can_edit
             self.elements.append(btn)
 
     # ------------------------------------------------------------------ #
@@ -178,7 +187,9 @@ class Politics_Screen(GameState):
             surface.blit(surf, (centre_x + BUTTON_STEP_X * direction - surf.get_width() // 2,
                                 caption_y))
 
-        if self.drift:
+        if getattr(self.map_screen, "tactical_mode", False):
+            note = "Political direction cannot be changed in Tactical Mode."
+        elif self.drift:
             note = ("Moving %s one step per turn until you stop it or it reaches the end."
                     % ("left" if self.drift < 0 else "right"))
         else:

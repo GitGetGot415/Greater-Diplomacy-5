@@ -30,6 +30,7 @@ os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import data.constants as c
+import pygame
 from map_logic import politics
 from map_logic.turn_processing import combat_processor, combat_rules
 
@@ -41,6 +42,47 @@ class StubTurnScreen:
 
     def __init__(self, nation_data):
         self.nation_data = nation_data
+
+
+class PoliticsScreenEditGuardTests(unittest.TestCase):
+    """Tactical mode may read the axis but cannot steer it."""
+
+    @classmethod
+    def setUpClass(cls):
+        pygame.init()
+        pygame.display.set_mode((1, 1))
+
+    def screen(self, tactical_mode):
+        from screens.map_related_screens.politics_screen import Politics_Screen
+
+        map_screen = type("MapScreen", (), {})()
+        map_screen.player_country = "A"
+        map_screen.tactical_mode = tactical_mode
+        map_screen.nation_data = {
+            "A": {"political_value": 0, "political_drift": 0},
+        }
+        return Politics_Screen(map_screen)
+
+    def test_tactical_mode_disables_all_direction_controls(self):
+        screen = self.screen(True)
+
+        self.assertTrue(screen.is_valid_player)
+        self.assertFalse(screen.can_edit)
+        self.assertTrue(all(button.disabled for button in screen.elements[1:]))
+
+    def test_tactical_mode_guard_does_not_change_the_direction(self):
+        screen = self.screen(True)
+        before = screen.drift
+
+        screen.set_drift(1)
+
+        self.assertEqual(screen.drift, before)
+
+    def test_strategic_mode_keeps_direction_controls_editable(self):
+        screen = self.screen(False)
+
+        self.assertTrue(screen.can_edit)
+        self.assertTrue(all(not button.disabled for button in screen.elements[1:]))
 
 
 def screen_with(**by_nation):
