@@ -26,18 +26,6 @@ COMBAT_BUBBLE_ASSETS = {
 COMBAT_BUBBLE_ICON_SCALE = 1.2
 
 
-def fort_horizontal_alignment(map_screen):
-    """Returns the fort's screen-space centering correction for this zoom.
-
-    The reference alignment is one pixel at the native-sized building view,
-    while the full-zoom view needs eight pixels.  Interpolating in screen space
-    keeps the correction proportional as the sprites grow instead of applying
-    one fixed pixel offset at every zoom level.
-    """
-    zoom = max(0.0, min(map_screen.camera.zoom, c.MAX_CAMERA_ZOOM))
-    return int(8 * zoom / c.MAX_CAMERA_ZOOM)
-
-
 def combat_strengths(sides, nation_data, friendly_nations):
     """What a predicted fight is worth to the player: (friendly, enemy, involved).
 
@@ -780,17 +768,12 @@ def draw_overlay_content(map_screen, surface, draw_combat=True):
                         
                         if symbol:
                             symbol = map_utils.apply_tilt(symbol, map_screen.camera.tilt_factor, c.APPLY_TILT_TO_OVERLAYS)
-                            # Existing factory/recruitment sprites are centered
-                            # on the tile.  Fort sprites use their bottom edge
-                            # as the same baseline as those 19px-high sprites,
-                            # keeping the fort visually underneath them.
+                            # All building sprites share the tile's horizontal
+                            # centre. Fort sprites use their bottom edge as the
+                            # same baseline as those 19px-high sprites, keeping
+                            # the fort visually underneath them.
                             is_fort = b_lib.get(b_name, {}).get("group") == "fortification"
-                            # Fort art has odd pixel widths while the existing
-                            # factory/recruitment art is even-width.  Scale the
-                            # correction with the sprites so it stays aligned
-                            # while the camera zooms.
-                            fort_x_adjust = fort_horizontal_alignment(map_screen) if is_fort else 0
-                            draw_x = sx + offset_x + fort_x_adjust - (symbol.get_width() // 2)
+                            draw_x = sx + offset_x - (symbol.get_width() // 2)
                             if is_fort:
                                 draw_y = building_bottom + offset_y - symbol.get_height()
                             else:
@@ -808,12 +791,11 @@ def draw_overlay_content(map_screen, surface, draw_combat=True):
                             
                             # Center the rect using the same logic
                             is_fort = b_lib.get(b_name, {}).get("group") == "fortification"
-                            fort_x_adjust = fort_horizontal_alignment(map_screen) if is_fort else 0
                             fallback_y = (building_bottom + offset_y - h_scaled
                                           if is_fort
                                           else sy + offset_y - (h_scaled // 2))
                             rect = pygame.Rect(
-                                sx + offset_x + fort_x_adjust - (w_scaled // 2),
+                                sx + offset_x - (w_scaled // 2),
                                 fallback_y,
                                 w_scaled, 
                                 h_scaled
