@@ -673,7 +673,7 @@ def are_at_war(nation_a, nation_b, nation_data):
 
 def is_province_in_active_combat(province, nation_data):
     """Returns True if ANY units from mutually hostile nations occupy this province."""
-    units = units_on_province(province)
+    units = province.get("units", [])
     if len(units) < 2:
         return False
         
@@ -683,26 +683,9 @@ def is_province_in_active_combat(province, nation_data):
     return any(are_at_war(o1, o2, nation_data) for o1, o2 in itertools.combinations(owners_present, 2))
 
 
-def is_unit_in_edge_battle(unit):
-    """Whether ``unit`` is fighting on the edge between two provinces.
-
-    Edge battles deliberately leave their units in their departure province's
-    list.  That keeps saves, upkeep, national unit counts, and every map-wide
-    accounting pass correct without inventing a real province.  Callers that
-    care where a unit is physically standing (combat, bombardment, rendering,
-    or ordinary movement) must use this small shared test to leave those units
-    at the virtual midpoint instead.
-    """
-    return isinstance(unit.get("_edge_battle"), dict)
-
-
-def units_on_province(province):
-    """The units actually occupying ``province``, excluding midpoint fighters."""
-    return [u for u in province.get("units", []) if not is_unit_in_edge_battle(u)]
-
 def is_nation_in_combat_here(nation, province, nation_data):
     """Returns True if the specified nation has units in the province that are actively engaged with enemy units."""
-    units = units_on_province(province)
+    units = province.get("units", [])
     enemies = get_enemies(nation, nation_data)
     return any(u.get("owner") in enemies for u in units)
 
@@ -1088,7 +1071,6 @@ def get_fort_level(province):
 # future mechanics do not have to reimplement the fort-territory test.
 COMBAT_LOCATION_DEFENSE = "defense"
 COMBAT_LOCATION_OFFENSE = "offense"
-COMBAT_LOCATION_MIDPOINT = "midpoint"
 
 
 def is_fort_defended_territory(province, nation, nation_data):
@@ -1103,17 +1085,14 @@ def is_fort_defended_territory(province, nation, nation_data):
                 (nation == owner or are_in_same_faction(owner, nation, nation_data)))
 
 
-def get_combat_location_category(province, perspective_nation, nation_data,
-                                 *, midpoint=False):
-    """Classify a battle as defensive, offensive, or a virtual midpoint.
+def get_combat_location_category(province, perspective_nation, nation_data):
+    """Classify a battle as defensive or offensive.
 
     ``perspective_nation`` is normally the local player.  With no nation (for
     example a spectator), real province battles use the neutral defensive
     shape; their outcome color still remains grey because the spectator is not
     participating.
     """
-    if midpoint:
-        return COMBAT_LOCATION_MIDPOINT
     if (perspective_nation is None or perspective_nation in ("Spectator", "Editor")
             or is_fort_defended_territory(province, perspective_nation, nation_data)):
         return COMBAT_LOCATION_DEFENSE
@@ -2863,7 +2842,7 @@ def revert_transport(unit):
 
 def has_units_in_province(nation, province):
     """Returns True if the given nation has any units in the target province."""
-    return any(u.get("owner") == nation for u in units_on_province(province))
+    return any(u.get("owner") == nation for u in province.get("units", []))
 
 def get_active_ai_nations(map_screen):
     """Returns a list of all playable, active AI nations (excluding the human player)."""
@@ -2940,9 +2919,9 @@ def get_combat_predictions(map_screen):
     for pair in combat_rules.find_meeting_pairs(map_data, nation_data, visible_to):
         prov_a, prov_b, side1, side2 = combat_rules.meeting_sides(
             map_screen.id_to_province, pair, visible_to)
-        # The midpoint is the sole location of this engagement.  Keeping its
-        # participants out of the ordinary incoming/static pass below prevents
-        # duplicate bubbles on both endpoint provinces.
+        # A head-on swap is resolved between its two origin tiles, so it has no
+        # province bubble of its own. Keep those movers out of the ordinary
+        # incoming/static pass below to avoid duplicate endpoint bubbles.
         meeting_unit_ids.update(id(unit) for unit in side1 + side2)
         predictions.append({
             "type": "meeting",
@@ -2955,8 +2934,6 @@ def get_combat_predictions(map_screen):
     incoming = {}
     for prov in map_data.values():
         for u in prov.get("units", []):
-            if is_unit_in_edge_battle(u):
-                continue
             if id(u) in meeting_unit_ids:
                 continue
             order = u.get("order")
@@ -2970,7 +2947,7 @@ def get_combat_predictions(map_screen):
     # 3. Find Province Clashes (Static Defenders vs Incoming Attackers)
     for prov in map_data.values():
         prov_id = prov["id"]
-        defenders = sub_visible([unit for unit in units_on_province(prov)
+        defenders = sub_visible([unit for unit in prov.get("units", [])
                                  if id(unit) not in meeting_unit_ids], prov)
         attackers = [u for u, o in incoming.get(prov_id, [])]
         

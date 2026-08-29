@@ -209,34 +209,6 @@ class RoutingTests(WidthTestCase):
         self.assertEqual(
             self.route(stack_on_2=full + 4, weight_on_2=-20, stack_on_3=full - 1), [3])
 
-    def test_a_midpoint_battle_blocks_paths_that_would_cross_it(self):
-        provinces = {
-            1: {"id": 1, "neighbors": [2], "owner": "Avaria"},
-            2: {"id": 2, "neighbors": [1, 3], "owner": "Bruland"},
-            3: {"id": 3, "neighbors": [2], "owner": "Bruland"},
-        }
-        path = ai_movement._bfs_nearest_target(
-            1, {3}, {1, 2, 3}, provinces, target_assignments={3: 0},
-            target_stacks={3: 0}, target_capacity={3: 5}, water_ids=set(),
-            neighbor_ids={1: [2], 2: [1, 3], 3: [2]},
-            blocked_edges={(1, 2)}, reinforce_edges=set())
-
-        self.assertEqual(path, [])
-
-    def test_a_reinforcement_path_can_end_at_the_far_edge_endpoint(self):
-        provinces = {
-            1: {"id": 1, "neighbors": [2], "owner": "Avaria"},
-            2: {"id": 2, "neighbors": [1, 3], "owner": "Bruland"},
-            3: {"id": 3, "neighbors": [2], "owner": "Bruland"},
-        }
-        path = ai_movement._bfs_nearest_target(
-            1, {2}, {1, 2, 3}, provinces, target_assignments={2: -20},
-            target_stacks={2: 0}, target_capacity={2: 5}, water_ids=set(),
-            neighbor_ids={1: [2], 2: [1, 3], 3: [2]},
-            blocked_edges={(1, 2)}, reinforce_edges={(1, 2)})
-
-        self.assertEqual(path, [2])
-
 
 class CapacityIsRoomNotGarrisonTests(unittest.TestCase):
     """Where the capacity dict every test above supplies actually comes from.

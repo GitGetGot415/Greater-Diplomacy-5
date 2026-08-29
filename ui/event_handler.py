@@ -39,15 +39,15 @@ def handle_map_events(map_screen, event):
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             if hasattr(map_screen, 'ready_btn_rect') and map_screen.ready_btn_rect.collidepoint(mx, my):
                 map_screen.show_player_ready_screen = False
-                
+
                 # CRITICAL: Re-bake the relations/cores from the perspective of the new player!
-                map_screen.refresh_relations_map() 
-                map_screen.refresh_political_map() 
+                map_screen.refresh_relations_map()
+                map_screen.refresh_political_map()
                 map_screen.refresh_fog_map()
-                
+
                 map_screen.show_feedback(f"Turn started for {map_screen.player_country}")
         return # Block all other map events!
-        
+
     # --- CONFIRMATION LOGIC HIJACK ---
     if map_screen.show_exit_confirmation:
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -60,7 +60,7 @@ def handle_map_events(map_screen, event):
             elif no_rect and no_rect.collidepoint(mx, my):
                 map_screen.cancel_exit()
         return # Block all other map events while confirming
-        
+
     # --- SAVING HIJACK ---
     if map_screen.is_saving:
         return # Block all other map events while saving!
@@ -82,15 +82,15 @@ def handle_map_events(map_screen, event):
                     map_screen.multi_turn_abort_requested = True
                     map_screen.show_feedback("Multi-turn processing will stop after this turn...")
         return # Block all other map events while AI is processing!
-    
+
     # 1. UI Check (make sure the mouse can't go through the ui bars)
-    
+
     # Always check the top and bottom bars
     on_ui = map_screen.top_bar_rect.collidepoint(mx, my) or map_screen.bot_bar_rect.collidepoint(mx, my)
 
     # Only check the side bars if they are actually being rendered
     side_ui_hidden = map_screen.selection_mode or map_screen.hide_raised_rect
-    
+
     if not side_ui_hidden:
         if map_screen.raised_rect.collidepoint(mx, my) or map_screen.ui_background_rect.collidepoint(mx, my):
             on_ui = True
@@ -140,9 +140,9 @@ def handle_map_events(map_screen, event):
 
     # 3. HOVER LOGIC (CRITICAL: Must run before painting)
     if not on_ui:
-        # Combat bubbles sit above the map's province hit map.  Resolve them
-        # first so hovering one removes the tile glow underneath it and does
-        # not make the tile appear clickable at the same time.
+        # Combat bubbles sit above the map's province hit map. Resolve them
+        # first so clicking or hovering a battle cannot also select the tile
+        # underneath it.
         map_screen.hovered_combat_bubble = None
         if (map_screen.secondary_mode == "UNITS"
                 and not map_screen.viewing_ai_moves):
@@ -153,12 +153,12 @@ def handle_map_events(map_screen, event):
         map_screen.hovered_province = (
             None if map_screen.hovered_combat_bubble
             else queries.get_clicked_province((mx, my), map_screen))
-        
+
         # Block interaction with extreme hidden tiles
         if map_screen.hovered_province and hasattr(map_screen, 'extreme_hidden_provinces'):
             if map_screen.hovered_province["id"] in map_screen.extreme_hidden_provinces:
                 map_screen.hovered_province = None
-        
+
         if map_screen.hovered_province:
             curr_id = map_screen.hovered_province["id"]
             if curr_id != map_screen.last_hovered_id:
@@ -169,7 +169,7 @@ def handle_map_events(map_screen, event):
         else:
             map_screen.last_hovered_id = None
             map_screen.hover_glow_surf = None
-    else: 
+    else:
         map_screen.hovered_province = map_screen.hovered_combat_bubble = None
         map_screen.hover_glow_surf = None
 
@@ -200,7 +200,7 @@ def handle_map_events(map_screen, event):
                     if map_screen.hovered_province.get("owner") != map_screen.brush_nation:
                         if map_screen.hovered_province.get("owner") not in c.WATER_NATIONS:
                             edit_province_ownership.conquer_province(map_screen, map_screen.hovered_province, map_screen.brush_nation)
-                
+
                 # --- CORE MODE ---
                 elif map_screen.editor_mode == "CORE":
                     if map_screen.hovered_province.get("owner") not in c.WATER_NATIONS:
@@ -209,7 +209,7 @@ def handle_map_events(map_screen, event):
                             edit_province_ownership.clear_cores(map_screen, map_screen.hovered_province)
                         else:
                             edit_province_ownership.add_core(map_screen, map_screen.hovered_province, map_screen.brush_nation)
-                            
+
                 # --- CLAIM MODE ---
                 elif map_screen.editor_mode == "CLAIM":
                     if map_screen.hovered_province.get("owner") not in c.WATER_NATIONS:
@@ -221,10 +221,10 @@ def handle_map_events(map_screen, event):
                 # --- BUILDING MODE ---
                 elif map_screen.editor_mode == "BUILDING":
                     current_buildings = map_screen.hovered_province.get("buildings", [])
-                    
+
                     if map_screen.brush_building == "None":
                         map_screen.hovered_province["buildings"] = []
-                    else:                        
+                    else:
                         # Stop Advanced Buildings on empty tiles
                         is_advanced = "Refinery" in map_screen.brush_building or "Recruitment" in map_screen.brush_building
                         if is_advanced and not queries.has_basic_factory(map_screen.hovered_province):
@@ -234,7 +234,7 @@ def handle_map_events(map_screen, event):
                             is_industrial = "Workshop" in map_screen.brush_building or "Factory" in map_screen.brush_building
                             is_recruitment = "Recruitment" in map_screen.brush_building
                             is_fort = "Fort Lvl" in map_screen.brush_building
-    
+
                             new_list = []
                             for b in current_buildings:
                                 # Keep existing building IF it's not the same type we are placing
@@ -248,12 +248,12 @@ def handle_map_events(map_screen, event):
                                     keep = False
                                 if is_fort and "Fort Lvl" in b:
                                     keep = False
-    
+
                                 if keep: new_list.append(b)
-    
+
                             if map_screen.brush_building not in new_list:
                                 new_list.append(map_screen.brush_building)
-    
+
                             map_screen.hovered_province["buildings"] = new_list
 
                 # --- RESOURCE MODE ---
@@ -265,13 +265,13 @@ def handle_map_events(map_screen, event):
                         # Ensure resources is a dictionary
                         if not isinstance(map_screen.hovered_province.get("resources"), dict):
                             map_screen.hovered_province["resources"] = {}
-                        
+
                         map_screen.hovered_province["resources"][map_screen.brush_resource_type] = map_screen.brush_resource_amount
-        
+
         if pygame.mouse.get_pressed()[2]: # Right Click
             if map_screen.hovered_province:
                 if map_screen.hovered_province.get("owner") not in c.WATER_NATIONS:
-                    
+
                     if map_screen.editor_mode == "CORE":
                         edit_province_ownership.remove_core(map_screen, map_screen.hovered_province, map_screen.brush_nation)
                     elif map_screen.editor_mode == "CLAIM":
@@ -299,7 +299,7 @@ def handle_map_events(map_screen, event):
                         new_unit = queries.create_unit_dict(map_screen.brush_unit, owner, queries.get_unit_library())
                         map_screen.hovered_province.setdefault("units", []).append(new_unit)
                         map_screen.show_feedback(f"Placed {map_screen.brush_unit} for {owner}")
-        
+
         # RETURN HERE: This stops the code from reaching the "Select Province" logic below
         return
 
@@ -324,7 +324,7 @@ def handle_map_events(map_screen, event):
                 elif hasattr(map_screen, 'cancel_rect') and map_screen.cancel_rect.collidepoint(mx, my):
                     player_setup.cancel_selection(map_screen)
                 return  # <--- CRITICAL FIX: Stops any clicks on the map behind the popup
-                
+
             if map_screen.hovered_province:
                 # --- TACTICAL SELECTION ROUTING ---
                 if map_screen.tactical_mode:
@@ -333,19 +333,13 @@ def handle_map_events(map_screen, event):
                     player_setup.select_player_country(map_screen, map_screen.hovered_province)
         return
 
-    # Combat bubbles are their own interaction layer.  They must win before
-    # the id-map resolves the province beneath them so every kind of battle
-    # consistently opens its Orders view from the visual marker.
+    # A province combat bubble opens that tile's Orders view with its battle
+    # inspector already visible. Midpoint records are not produced anymore.
     if (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1
             and not map_screen.viewing_ai_moves):
         bubble = overlay_renderer.combat_bubble_at_screen_pos(map_screen, event.pos)
-        if bubble is not None and bubble.get("edge_pair") is not None:
-            map_screen._orders_entered_from_combat_bubble = True
-            map_screen.pending_edge_battle_pair = bubble["edge_pair"]
-            map_screen.change_state("ORDERS")
-            return
         if bubble is not None:
-            province = map_screen.id_to_province.get(bubble["orders_province_id"])
+            province = map_screen.id_to_province.get(bubble.get("orders_province_id"))
             if province is not None:
                 map_screen._orders_entered_from_combat_bubble = True
                 map_screen.selected_province = province
@@ -359,9 +353,9 @@ def handle_map_events(map_screen, event):
         is_foreign = queries.is_foreign_playable(owner, map_screen.player_country, map_screen.nation_data)
         if is_foreign:
             # MAIL BOX! MAIL BOX! MAIL BOX!
-            
+
             mail_rect = pygame.Rect(*c.PROVINCE_UI["mail_box"])
-            
+
             # 1. Handle clicking the box to activate/deactivate it
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if mail_rect.collidepoint(event.pos):
@@ -372,7 +366,7 @@ def handle_map_events(map_screen, event):
                         map_screen.mail_input_active = True
                 else:
                     map_screen.mail_input_active = False
-            
+
             # 2. Handle typing and sending if the box is active
             elif map_screen.mail_input_active:
                 if map_screen.tactical_mode:
@@ -381,7 +375,7 @@ def handle_map_events(map_screen, event):
                     map_screen.mail_draft_text, status = process_text_input(
                         event, map_screen.mail_draft_text, max_length=c.MAX_MAIL_DRAFT_LENGTH
                     )
-                    
+
                     if status == "SUBMIT":
                         draft = map_screen.mail_draft_text.strip()
                         if draft:

@@ -18,7 +18,6 @@ CULL_MARGIN = 250
 COMBAT_BUBBLE_ASSETS = {
     queries.COMBAT_LOCATION_DEFENSE: "Defense Bubble",
     queries.COMBAT_LOCATION_OFFENSE: "Offense Bubble",
-    queries.COMBAT_LOCATION_MIDPOINT: "Midpoint Bubble",
 }
 # Bubble art is intentionally compact so it does not hide the unit/order
 # information around the tile.  The hit test below uses the image alpha mask,
@@ -193,39 +192,13 @@ def combat_bubble_records(map_screen):
 
     for prediction in queries.get_combat_predictions(map_screen):
         if prediction["type"] == "meeting":
-            pair = prediction["loc"]
-            if not _combat_is_visible(map_screen, pair):
-                continue
-            sides = [prediction["side1"], prediction["side2"]]
-            midpoint = combat_processor.edge_battle_midpoint(map_screen, {"pair": pair})
-            own_side = next((side_index for side_index, side in enumerate(sides)
-                             if any(unit.get("owner") in friendly for unit in side)), 0)
-            records.append({
-                "kind": "predicted_midpoint",
-                "pair": pair,
-                "center": midpoint,
-                "category": queries.get_combat_location_category(
-                    None, player, map_screen.nation_data, midpoint=True),
-                "color": combat_outlook_color(sides, map_screen.nation_data, friendly),
-                "potential": True,
-                "estimated_turns": estimated_combat_turns(
-                    sides, map_screen.nation_data),
-                "unit_ids": {id(unit) for side in sides for unit in side},
-                # A predicted meeting is drawn at a virtual location. The
-                # movers remain visible on their endpoint tiles until combat
-                # actually starts.
-                "hidden_unit_ids": set(),
-                # A predicted meeting has no virtual roster yet.  Its nearest
-                # useful Orders screen is the endpoint the local side departed.
-                "orders_province_id": pair[own_side],
-            })
             continue
 
         province = map_screen.id_to_province[prediction["loc"]]
         if not _combat_is_visible(map_screen, [province["id"]]):
             continue
         sides = [[unit for units in prediction["forces"].values() for unit in units]]
-        current_unit_ids = {id(unit) for unit in queries.units_on_province(province)}
+        current_unit_ids = {id(unit) for unit in province.get("units", [])}
         battle_unit_ids = {id(unit) for side in sides for unit in side}
         actual_battle = queries.is_province_in_active_combat(
             province, map_screen.nation_data)
@@ -246,30 +219,6 @@ def combat_bubble_records(map_screen):
             "hidden_unit_ids": (set() if not actual_battle
                                 else battle_unit_ids & current_unit_ids),
             "orders_province_id": province["id"],
-        })
-
-    # A persistent midpoint no longer appears in normal movement predictions,
-    # so add it here as the same record shape rather than retaining a separate
-    # marker renderer and input path.
-    for edge in combat_processor.edge_battles(map_screen):
-        units = edge["side1"] + edge["side2"]
-        own_unit = any(unit.get("owner") in friendly for unit in units)
-        if not _combat_is_visible(map_screen, edge["pair"], own_unit=own_unit):
-            continue
-        sides = [edge["side1"], edge["side2"]]
-        records.append({
-            "kind": "midpoint",
-            "pair": edge["pair"],
-            "center": combat_processor.edge_battle_midpoint(map_screen, edge),
-            "category": queries.get_combat_location_category(
-                None, player, map_screen.nation_data, midpoint=True),
-            "color": combat_outlook_color(sides, map_screen.nation_data, friendly),
-            "potential": False,
-            "estimated_turns": estimated_combat_turns(
-                sides, map_screen.nation_data),
-            "unit_ids": {id(unit) for unit in units},
-            "hidden_unit_ids": {id(unit) for unit in units},
-            "edge_pair": edge["pair"],
         })
 
     return records
@@ -523,8 +472,7 @@ def draw_movement_path(surface, map_screen, start_province, path_ids, color=(255
     # Build an ordered list of all nodes in the path
     nodes = [start_province]
     for step_id in path_ids:
-        target_node = (step_id if isinstance(step_id, dict)
-                       else map_screen.id_to_province.get(step_id))
+        target_node = map_screen.id_to_province.get(step_id)
         if target_node:
             nodes.append(target_node)
 
@@ -722,7 +670,7 @@ def draw_overlay_content(map_screen, surface, draw_combat=True):
                     # province visibility and per-submarine visibility are
                     # separate layers.
                     visible_units = [unit for unit in queries.filter_visible_units(
-                        queries.units_on_province(province), map_screen.player_country,
+                        province.get("units", []), map_screen.player_country,
                         province, map_screen.nation_data)
                         if id(unit) not in combat_unit_ids]
 
@@ -1092,7 +1040,7 @@ def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,
     # partial-fog blip, or its position leaks through despite being otherwise
     # invisible to anyone who isn't allied or already fighting it.
     if units is None:
-        units = queries.units_on_province(province)
+        units = province.get("units", [])
     if not units_are_visible:
         units = queries.filter_visible_units(
             units, map_screen.player_country, province, map_screen.nation_data)
@@ -1173,16 +1121,6 @@ def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,
         current_sy += scaled_h + gap
 
 
-def draw_edge_battles(map_screen, surface):
-    """Compatibility helper for callers that specifically redraw edge fights.
-
-    Persistent midpoint battles now use exactly the same image-backed bubble
-    records as every other combat; no unit stack is painted at the midpoint.
-    """
-    for record in combat_bubble_records(map_screen):
-        if record["kind"] == "midpoint":
-            _draw_combat_bubble(surface, map_screen, record)
-    
 def draw_split_movement_path(surface, map_screen, start_prov, path, speed, base_color, force_visible=False):
     """Standardized helper to draw multi-segment movement paths with queued opacity."""
     if not path: return
@@ -1197,107 +1135,3 @@ def draw_split_movement_path(surface, map_screen, start_prov, path, speed, base_
         bright_color = (min(255, base_color[0] + 150), min(255, base_color[1] + 150), min(255, base_color[2] + 150))
         q_start = map_screen.id_to_province.get(immediate_path[-1]) if immediate_path else start_prov
         draw_movement_path(surface, map_screen, q_start, queued_path, color=bright_color, alpha=120, force_visible=force_visible)
-
-
-def draw_movement_path_to_midpoint(surface, map_screen, start_prov, record,
-                                   color=(255, 255, 0), alpha=255,
-                                   force_visible=False):
-    """Draw a movement arrow from a province to an active midpoint battle."""
-    if not start_prov or not isinstance(record, dict):
-        return
-    pair = record.get("pair")
-    if not isinstance(pair, (list, tuple)) or len(pair) != 2:
-        return
-
-    midpoint = combat_processor.edge_battle_midpoint(
-        map_screen, {"pair": tuple(pair)})
-    virtual_target = {
-        "id": "_midpoint_target_{}_{}".format(pair[0], pair[1]),
-        "center": midpoint,
-    }
-    draw_movement_path(surface, map_screen, start_prov, [virtual_target],
-                       color=color, alpha=alpha,
-                       force_visible=force_visible)
-
-
-def draw_split_movement_path_until_midpoint(surface, map_screen, start_prov,
-                                            path, speed, base_color,
-                                            force_visible=False):
-    """Draw a movement order, replacing its first blocked edge with its battle."""
-    if not path:
-        return
-
-    origin_id = start_prov.get("id")
-    for edge_index, destination_id in enumerate(path):
-        record = combat_processor.find_edge_battle(
-            map_screen, (origin_id, destination_id))
-        if record is None:
-            origin_id = destination_id
-            continue
-
-        prefix = path[:edge_index]
-        if prefix:
-            draw_split_movement_path(
-                surface, map_screen, start_prov, prefix, speed, base_color,
-                force_visible=force_visible)
-
-        edge_start = (start_prov if edge_index == 0 else
-                      map_screen.id_to_province.get(path[edge_index - 1]))
-        if not edge_start:
-            return
-
-        speed = max(1, int(speed))
-        if edge_index < speed:
-            path_color = base_color
-            path_alpha = 255
-        else:
-            path_color = tuple(min(255, channel + 150) for channel in base_color)
-            path_alpha = 120
-        draw_movement_path_to_midpoint(
-            surface, map_screen, edge_start, record,
-            color=path_color, alpha=path_alpha, force_visible=force_visible)
-        return
-
-    draw_split_movement_path(
-        surface, map_screen, start_prov, path, speed, base_color,
-        force_visible=force_visible)
-
-
-def draw_edge_movement_path(surface, map_screen, tag, speed, base_color,
-                            preview_path=None, alpha=255, force_visible=False):
-    """Draw a midpoint withdrawal from the virtual edge to its real path.
-
-    ``retreat_path`` starts with the fighter's origin, which represents moving
-    from the midpoint back onto that tile.  A lightweight synthetic node lets
-    the regular path renderer draw that first half-edge and every later normal
-    province step without inventing a map province.
-    """
-    if not isinstance(tag, dict):
-        return
-    origin_id = tag.get("origin_id")
-    destination_id = tag.get("destination_id")
-    path = preview_path if preview_path is not None else tag.get("retreat_path", [])
-    if (origin_id not in map_screen.id_to_province
-            or destination_id not in map_screen.id_to_province
-            or not isinstance(path, list) or not path or path[0] != origin_id):
-        return
-
-    pair = combat_processor._edge_pair_key(origin_id, destination_id)
-    midpoint = combat_processor.edge_battle_midpoint(map_screen, {"pair": pair})
-    virtual_start = {"id": origin_id, "center": midpoint}
-    speed = max(1, int(speed))
-    immediate_path = path[:speed]
-    queued_path = path[speed:]
-    if immediate_path:
-        draw_movement_path(surface, map_screen, virtual_start, immediate_path,
-                           color=base_color, alpha=alpha,
-                           force_visible=force_visible)
-    if queued_path:
-        bright_color = (min(255, base_color[0] + 150),
-                        min(255, base_color[1] + 150),
-                        min(255, base_color[2] + 150))
-        queue_start = map_screen.id_to_province.get(immediate_path[-1])
-        if queue_start:
-            draw_movement_path(surface, map_screen, queue_start, queued_path,
-                               color=bright_color, alpha=min(alpha, 120),
-                               force_visible=force_visible)

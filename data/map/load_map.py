@@ -13,10 +13,10 @@ def _load_default_images(map_obj):
     """Helper to ensure image data keys exist."""
     os.makedirs(c.FLAGS_DIR, exist_ok=True)
     os.makedirs(c.PORTRAITS_DIR, exist_ok=True)
-    
+
     # Scrub existing massive b64 strings that match defaults instantly upon load to free RAM
     queries.scrub_default_images(map_obj.nation_data)
-        
+
     for country_name, n_data in map_obj.nation_data.items():
         if not n_data.get("flag_data"):
             n_data["flag_data"] = "DEFAULT"
@@ -75,7 +75,7 @@ def load_map_assets(map_screen, load_path):
     map_screen.nation_data = {}
     map_screen.history = {}
     map_screen.raw_json_data = {}
-    
+
     # --- UNIFIED SETTINGS LOADING ---
     scenario_settings = queries.get_scenario_settings()
     # Ensure we always have a dictionary to reference
@@ -91,26 +91,26 @@ def load_map_assets(map_screen, load_path):
     if load_path == "PROCEDURAL":
         from map_logic.random_map import procedural_map_generator
         procedural_map_generator.generate_new_world(map_screen)
-        
+
         # After generating the base geography, setup standard variables
         map_screen.player_country = "None"
         map_screen.active_players = []
         map_screen.current_player_index = 0
         map_screen.loop_map = True
         map_screen.time_manager = TimeHandler(start_year=c.START_YEAR)
-        
+
         # Load the base nation templates so they are ready for the randomizer
         map_screen.nation_data = copy.deepcopy(country_io.load_all_country_data())
-        _load_default_images(map_screen) 
+        _load_default_images(map_screen)
         map_screen.nation_colors = country_io.nation_colors_from(map_screen.nation_data)
         return
-        
+
     # --- ZIP FILE INTERCEPT ---
     if load_path and str(load_path).lower().endswith(".zip"):
         extract_target = str(load_path)[:-4] # Strip the .zip extension
         queries.extract_and_flatten_zip(load_path, extract_target)
         load_path = extract_target
-        
+
     # --- DEFAULT FALLBACK LOGIC ---
     # If no path is provided (e.g., on main menu boot), default to the first available base map
     if not load_path:
@@ -118,7 +118,7 @@ def load_map_assets(map_screen, load_path):
             available_maps = [d for d in os.listdir(c.BASE_MAPS_DIR) if os.path.isdir(os.path.join(c.BASE_MAPS_DIR, d))]
             if available_maps:
                 load_path = os.path.join(c.BASE_MAPS_DIR, available_maps[0])
-                
+
     if not load_path or not os.path.exists(load_path):
         raise FileNotFoundError(f"CRITICAL: No valid map found. Make sure {c.BASE_MAPS_DIR} contains at least one map folder.")
 
@@ -126,20 +126,20 @@ def load_map_assets(map_screen, load_path):
     # We no longer need the 'if load_path:' check because we guaranteed a path above
     map_screen.terrain_map = pygame.image.load(os.path.join(load_path, "terrain.png")).convert()
     map_screen.id_map = pygame.image.load(os.path.join(load_path, "id_map.png")).convert()
-    
+
     # --- ADD THIS: Update map dimensions and camera constraints ---
     map_screen.map_w, map_screen.map_h = map_screen.id_map.get_size()
     map_screen.min_zoom = (c.SCREEN_HEIGHT - 120) / map_screen.map_h
-    
+
     try:
         map_screen.political_map = pygame.image.load(os.path.join(load_path, "political.png")).convert()
     except:
         map_screen.political_map = pygame.image.load(os.path.join(load_path, "id_map.png")).convert()
-        
+
     try:
         map_screen.cores_map = pygame.image.load(os.path.join(load_path, "cores.png")).convert()
     except:
-        map_screen.cores_map = map_screen.id_map.copy() 
+        map_screen.cores_map = map_screen.id_map.copy()
 
    # 2. Load Metadata (The Save File)
     save_meta = None
@@ -147,7 +147,7 @@ def load_map_assets(map_screen, load_path):
     if os.path.exists(meta_path):
         with open(meta_path, "r") as f:
             save_meta = json.load(f)
-            
+
     # 3. OVERRIDE: If we are loading an existing save file, prefer settings from inside the save
     # Do NOT override if we are in selection mode (starting a new scenario), so player UI choices are respected.
     if save_meta and "scenario_settings" in save_meta:
@@ -173,15 +173,15 @@ def load_map_assets(map_screen, load_path):
     # We MUST mutate the dictionaries inplace because UI screens hold pointers to them!
     unit_lib = queries.get_unit_library()
     building_lib = queries.get_building_library()
-    
+
     with open(c.UNIT_DATA_PATH, "r") as f:
         unit_lib.clear()
         unit_lib.update(json.load(f))
-        
+
     with open(c.BUILDING_DATA_PATH, "r") as f:
         building_lib.clear()
         building_lib.update(json.load(f))
-    
+
     # Same family-name rule the turn editor writes these overrides with, so the
     # keys it saves always match the ones looked up here.
     for library, overrides, time_key in (
@@ -249,14 +249,14 @@ def load_map_assets(map_screen, load_path):
             save_meta["nation_data"] = snap.get("nation_data", save_meta.get("nation_data", {}))
             if "provinces" in snap:
                 save_meta["provinces"] = snap["provinces"]
-            
+
             if "date" not in save_meta:
                 save_meta["date"] = {}
             save_meta["date"]["day"] = snap.get("day", save_meta["date"].get("day", 1))
             save_meta["date"]["month"] = snap.get("month", save_meta["date"].get("month", 0))
             save_meta["date"]["year"] = snap.get("year", save_meta["date"].get("year", 1910))
             save_meta["date"]["total_turns"] = int(map_screen.history_turn)
-            
+
             # Branches timeline by truncating future history to prevent paradoxes
             keys_to_delete = [k for k in map_screen.history.keys() if int(k) > int(map_screen.history_turn)]
             for k in keys_to_delete:
@@ -267,8 +267,8 @@ def load_map_assets(map_screen, load_path):
 
     if save_meta and "nation_data" in save_meta:
         map_screen.nation_data = save_meta["nation_data"]
-        
-        # SYNC FIX: Merge any missing research keys from the base template 
+
+        # SYNC FIX: Merge any missing research keys from the base template
         # so old map saves instantly get the updated tech tree.
         for country, base_data in base_nation_data.items():
             if country not in map_screen.nation_data:
@@ -330,7 +330,7 @@ def load_map_assets(map_screen, load_path):
     # --- 4. Set Player/Map Properties ---
     if save_meta:
         map_screen.player_country = save_meta.get("player_country", "None")
-        
+
         # --- HOTSEAT FIX ---
         # If we are in selection mode (new scenario/random map), we MUST start with an empty list
         if map_screen.selection_mode:
@@ -339,12 +339,12 @@ def load_map_assets(map_screen, load_path):
             # If loading a save, get the active players. Prevent ["None"] bug from older saves.
             loaded_players = save_meta.get("active_players", [map_screen.player_country])
             map_screen.active_players = [] if loaded_players == ["None"] else loaded_players
-            
+
         map_screen.current_player_index = save_meta.get("current_player_index", 0)
         map_screen.loop_map = save_meta.get("loop_map", False)
         map_screen.default_research = save_meta.get("default_research", None)
         map_screen.script_variables = save_meta.get("script_variables", [])
-        
+
         map_screen.time_manager = TimeHandler(start_year=save_meta["date"]["year"])
         map_screen.time_manager.day = save_meta["date"]["day"]
         map_screen.time_manager.month_index = save_meta["date"]["month"]
@@ -389,13 +389,13 @@ def load_map_assets(map_screen, load_path):
 
     for k, v in map_screen.raw_json_data.items():
         color_tuple = tuple(map(int, k.strip("()").split(",")))
-        
+
         # Overlay save data onto provinces if it exists
         if save_meta and "provinces" in save_meta:
             saved_province = save_meta["provinces"].get(k)
             if saved_province:
                 v.update(saved_province)
-        
+
         # --- THE WATER FIX ---
         terrain = v.get("terrain", "plains")
         if terrain in c.WATER_MAPPING:
@@ -409,7 +409,7 @@ def load_map_assets(map_screen, load_path):
         v["units"] = [u for u in v.get("units", []) if _unit_base_type(u) not in disabled_units]
         v["unit_queue"] = v.get("unit_queue", [])
         v["building_queue"] = v.get("building_queue", [])
-        
+
         # Legacy save migration
         if "deployment_queue" in v:
             for q in v["deployment_queue"]:
@@ -418,15 +418,15 @@ def load_map_assets(map_screen, load_path):
                 else:
                     v["unit_queue"].append(q)
             del v["deployment_queue"]
-        
+
         # Clean obsolete buildings (Removes fuel buildings from older saves automatically)
         v["buildings"] = [b for b in v.get("buildings", []) if b in bldg_lib]
 
         res = v.get("resources", {})
         v["resources"] = res if isinstance(res, dict) else {}
-        
+
         v["json_key"], v["map_color"] = k, color_tuple
-        
+
         map_screen.map_data[color_tuple] = v
         map_screen.id_to_province[v["id"]] = v
 
@@ -478,12 +478,6 @@ def load_map_assets(map_screen, load_path):
         for unit in prov.get("units", []):
             if not unit.get("custom_name"):
                 unit["custom_name"] = queries.generate_unit_custom_name(unit, unit_counters)
-
-    # Midpoint battles are saved on their participating units. Repair a stale
-    # one-sided record before the first map render/order phase can present it
-    # as an active battle with no opponent to fight.
-    from map_logic.turn_processing import combat_processor
-    combat_processor.repair_edge_battles(map_screen)
 
     # --- FORCE TIME-APPROPRIATE RESEARCH ---
     # Only when actually starting a fresh game from a scenario (selection_mode) --

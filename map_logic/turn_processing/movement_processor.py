@@ -16,7 +16,7 @@ def process_dead_nations(map_screen):
             # Keep the unit if it belongs to an unplayable faction (like Ocean) or an alive nation
             if owner in c.UNPLAYABLE_NATIONS or owner in living_nations:
                 surviving_units.append(unit)
-        
+
         # Overwrite the province units with only the survivors
         province["units"] = surviving_units
 
@@ -43,7 +43,7 @@ def process_disbands(map_screen):
             order = unit.get("order")
             if isinstance(order, dict) and order.get("type") == "DISBAND":
                 order["turns_left"] -= 1
-                
+
                 if order["turns_left"] <= 0:
                     # Time's up, process the refund and let the unit fade into the void
                     p_data = map_screen.nation_data.get(unit.get("owner"))
@@ -53,7 +53,7 @@ def process_disbands(map_screen):
                         queries.refund_resources(p_data, stats)
             else:
                 units_to_keep.append(unit)
-                
+
         # Overwrite with the surviving units
         province["units"] = units_to_keep
 
@@ -80,22 +80,22 @@ def process_upgrades(map_screen):
                     continue
 
                 order["turns_left"] -= 1
-                
+
                 if order["turns_left"] <= 0:
                     target_type = order.get("target_type")
                     if target_type and target_type in unit_library:
                         stats = unit_library[target_type]
                         hp_pct = unit.get("health", 1) / max(1, unit.get("max_health", 1))
-                        
+
                         unit["type"] = target_type
                         unit["max_health"] = stats.get("health", c.DEFAULT_UNIT_HP)
                         unit["attack"] = stats.get("attack", c.DEFAULT_UNIT_ATK)
                         unit["defense"] = stats.get("defense", c.DEFAULT_UNIT_DEF)
                         unit["speed"] = stats.get("speed", c.DEFAULT_UNIT_SPD)
-                        
+
                         # Maintain percentage health upon upgrading
                         unit["health"] = unit["max_health"] * hp_pct
-                        
+
                     # Reset back to a blank move order
                     unit["order"] = {"type": "MOVE", "path": []}
 
@@ -106,7 +106,7 @@ def process_repairs(map_screen):
             order = unit.get("order")
             if isinstance(order, dict) and order.get("type") == "REPAIR":
                 order["turns_left"] -= 1
-                
+
                 if order["turns_left"] <= 0:
                     unit["health"] = unit.get("max_health", c.DEFAULT_UNIT_HP)
                     # The AI walks wounded units home to a factory and remembers
@@ -124,15 +124,15 @@ def process_conversions(map_screen):
             order = unit.get("order")
             if isinstance(order, dict) and order.get("type") == "CONVERT":
                 order["turns_left"] -= 1
-                
+
                 if order["turns_left"] <= 0:
                     target = order.get("to")
-                    
+
                     if target in ["Convoy", "Truck"]:
                         queries.load_transport(unit, target)
                     else:
                         queries.revert_transport(unit)
-                        
+
                     # Reset back to a blank move order so they can be selected again
                     unit["order"] = {"type": "MOVE", "path": []}
 
@@ -147,7 +147,7 @@ def _resolve_step_swaps(map_screen, moving_units, step, get_eff_speed):
     walked, so the ordinary "defenders present" check never sees them either.
 
     Re-runs the same swap check for the units about to take this step, and
-    creates the same persistent midpoint battle used at turn start.
+    resolves any hits with the shared combat_processor.resolve_meeting_engagement.
     Returns moving_units with anyone killed in the process removed.
     """
     eligible = [
@@ -165,7 +165,7 @@ def _resolve_step_swaps(map_screen, moving_units, step, get_eff_speed):
     for u in eligible:
         origin = u["_current_province_id"]
         dest = u["order"]["path"][0]
-        edge = combat_processor._edge_pair_key(origin, dest)
+        edge = tuple(sorted([origin, dest]))
         if edge in seen_edges:
             continue
 
@@ -186,78 +186,39 @@ def _resolve_step_swaps(map_screen, moving_units, step, get_eff_speed):
         units1 = [m for m in by_origin.get(origin, []) if m["order"]["path"][0] == dest]
         units2 = [m for m in by_origin.get(dest, []) if m["order"]["path"][0] == origin]
 
-        existing_edge = combat_processor.find_edge_battle(
-            map_screen, (origin, dest))
-        if existing_edge is not None:
-            # These movers are meeting at a connection that is already being
-            # fought over.  Attach eligible units to that battle and hold all
-            # of them at their endpoints; do not create a second exchange.
-            for m in units1:
-                combat_processor.join_edge_battle(
-                    m, origin, dest, existing_edge, map_screen.nation_data)
-                m["_skip_remaining_steps"] = True
-            for m in units2:
-                combat_processor.join_edge_battle(
-                    m, dest, origin, existing_edge, map_screen.nation_data)
-                m["_skip_remaining_steps"] = True
-            continue
-
-        result = combat_processor.start_edge_battle(
-            prov1, prov2, units1, units2, map_screen.nation_data,
-            map_screen=map_screen)
+        result = combat_processor.resolve_meeting_engagement(
+            prov1, prov2, units1, units2, map_screen.nation_data)
         survivors = result.survivors1 + result.survivors2
         survivor_ids = {id(m) for m in survivors}
         dead_ids.update(id(m) for m in units1 + units2 if id(m) not in survivor_ids)
 
-        # A live edge battle blocks the whole connection, including neutral
-        # traffic.  Only the units that can fight are tagged; everybody else
-        # waits at their origin instead of walking through the midpoint.
-        # The movers are still outside province lists during this sub-step, so
-        # find_edge_battle cannot see a newly-created record yet.  The fighter
-        # tags on both directions are the authoritative live-battle signal
-        # until the sync below puts them back into those lists.
-        live_edge = (
-            any(combat_processor.is_edge_battle_unit(m)
-                and m.get("_edge_battle", {}).get("origin_id") == origin
-                for m in survivors)
-            and any(combat_processor.is_edge_battle_unit(m)
-                    and m.get("_edge_battle", {}).get("origin_id") == dest
-                    for m in survivors)
-        )
-        if live_edge:
-            for m in survivors:
+        # A mutual standoff digs both sides in for the rest of this turn; a
+        # one-sided win leaves the winners free to keep advancing. Only the
+        # units that were actually in the battle are held -- somebody crossing
+        # the same edge without a war of their own keeps marching.
+        for m in survivors:
+            m.pop("_combat_locked", None)
+        fighters1 = [m for m in result.survivors1 if id(m) in result.fought]
+        fighters2 = [m for m in result.survivors2 if id(m) in result.fought]
+        if fighters1 and fighters2:
+            for m in fighters1 + fighters2:
                 m["_skip_remaining_steps"] = True
-        else:
-            # A decisive winner is placed directly onto the enemy endpoint by
-            # start_edge_battle with its remaining queue cleared.
-            for m in survivors:
-                if id(m) in result.fought and combat_processor.is_edge_battle_unit(m):
-                    m["_skip_remaining_steps"] = True
 
     if not dead_ids:
         return moving_units
     return [u for u in moving_units if id(u) not in dead_ids]
 
 def process_movement(map_screen):
-    # Repair a one-sided midpoint left by an older save or an interrupted
-    # decisive exchange before it can block ordinary orders.
-    combat_processor.repair_edge_battles(map_screen)
-
     moving_units = []
     for province in map_screen.map_data.values():
         units_to_keep = []
         for unit in province.get("units", []):
-            # A midpoint fighter remains serialized/accounted for on its origin
-            # tile but cannot also be selected as an ordinary mover.
-            if combat_processor.is_edge_battle_unit(unit):
-                units_to_keep.append(unit)
-                continue
-            
+
             # --- Check and clear the combat lock flag ---
             if unit.pop("_combat_locked", False):
                 units_to_keep.append(unit)
                 continue
-                
+
             order = unit.get("order")
             if order and order.get("type") == "MOVE" and order.get("path"):
                 unit["_current_province_id"] = province["id"]
@@ -268,7 +229,7 @@ def process_movement(map_screen):
         province["units"] = units_to_keep
 
     if not moving_units: return
-    
+
     if not hasattr(map_screen, 'cached_unit_library'):
         map_screen.cached_unit_library = queries.get_unit_library()
 
@@ -288,7 +249,7 @@ def process_movement(map_screen):
             # Explicitly check if this individual unit has run out of moves or is skipping
             if unit.get("_skip_remaining_steps", False) or step >= get_eff_speed(unit):
                 continue
-                
+
             order = unit.get("order")
             if not order or not order.get("path"): continue
 
@@ -298,49 +259,37 @@ def process_movement(map_screen):
 
             player_data = map_screen.nation_data.get(unit["owner"], {})
             dest_owner = target_prov.get("owner", "Unclaimed")
-            
+
             # --- Combat Lock (Execution Check) ---
             curr_prov = map_screen.id_to_province.get(unit["_current_province_id"])
             if curr_prov:
                 in_combat = queries.is_nation_in_combat_here(unit["owner"], curr_prov, map_screen.nation_data)
-                
+
                 if in_combat:
                     if step > 0 or queries.is_hostile_territory(unit["owner"], dest_owner, map_screen.nation_data):
                         # Stop advancing for this turn, but DO NOT wipe the queue!
-                        unit["_skip_remaining_steps"] = True 
+                        unit["_skip_remaining_steps"] = True
                         continue
             # ------------------------------------------
-
-            # A midpoint battle occupies the connection itself.  A mover from
-            # either endpoint may reinforce it, but no unit may pass through to
-            # the other province while the battle remains active.
-            edge_battle = combat_processor.find_edge_battle(
-                map_screen, (unit["_current_province_id"], target_id))
-            if edge_battle is not None:
-                combat_processor.join_edge_battle(
-                    unit, unit["_current_province_id"], target_id,
-                    edge_battle, map_screen.nation_data)
-                unit["_skip_remaining_steps"] = True
-                continue
 
             # --- SHIP RULES EVALUATION ---
             dest_is_water = queries.is_water_province(target_prov)
             u_type = unit.get("type", "")
             is_convoy = u_type.startswith("Convoy")
-            
+
             # --- Convoy Land Movement Check ---
             if is_convoy and curr_prov:
                 if not queries.can_convoy_enter(curr_prov, target_prov):
                     order["path"] = []
                     continue
             # ---------------------------------------
-            
+
             if is_convoy:
                 is_naval = True
             else:
                 stats = map_screen.cached_unit_library.get(u_type, {})
                 is_naval = stats.get("naval_unit", False)
-                
+
             if is_naval and not is_convoy and not queries.can_ships_enter(unit["owner"], target_prov, map_screen.nation_data):
                 # Ships cannot enter hostile/unclaimed land
                 order["path"] = []
@@ -350,9 +299,7 @@ def process_movement(map_screen):
             # Check for existing defenders before moving
             # We look for units belonging to anyone NOT the mover and NOT an ally
             defenders = [u for u in target_prov.get("units", [])
-                         if not combat_processor.is_edge_battle_unit(u)
-                         and u["owner"] != unit["owner"]
-                         and u["owner"] not in player_data.get("allied_with", [])]
+                        if u["owner"] != unit["owner"] and u["owner"] not in player_data.get("allied_with", [])]
 
             if is_naval and not is_convoy:
                 can_enter = True # Naval rules already handled above
@@ -366,7 +313,7 @@ def process_movement(map_screen):
                 if map_screen.tactical_mode and unit is map_screen.player_unit:
                     fuel_inc = map_screen.unit_economy.get("fuel_inc", 0)
                     cost_per_tile = queries.get_tactical_fuel_cost_per_tile(unit, fuel_inc)
-                    
+
                     if map_screen.unit_economy.get("fuel", 0) >= cost_per_tile:
                         map_screen.unit_economy["fuel"] -= cost_per_tile
                     else:
@@ -377,10 +324,6 @@ def process_movement(map_screen):
                 unit["_previous_province_id"] = unit["_current_province_id"]
                 unit["_current_province_id"] = target_id
                 order["path"].pop(0)
-                edge_target = order.get("edge_battle_target")
-                if (isinstance(edge_target, dict)
-                        and edge_target.get("destination_id") == target_id):
-                    order.pop("edge_battle_target", None)
 
                 # Both lane orders are decisions about one tile's fight. Marching
                 # somewhere else makes them meaningless at best and misleading at
@@ -409,16 +352,16 @@ def process_movement(map_screen):
                 # Stop if an enemy was present
                 if defenders:
                     # Stop advancing for this turn, but DO NOT wipe the queue!
-                    unit["_skip_remaining_steps"] = True 
+                    unit["_skip_remaining_steps"] = True
             else:
                 order["path"] = []
 
         # Sync units back to provinces so units moving later in the same sub-step "see" each other
         for unit in moving_units:
             prov = map_screen.id_to_province.get(unit["_current_province_id"])
-            if not any(u is unit for u in prov["units"]): 
+            if not any(u is unit for u in prov["units"]):
                 prov["units"].append(unit)
-                
+
         if step < max_speed - 1:
             # Only pull out units with another step still coming. A unit that
             # finished this turn (ran out of path, hit a defender, or used up
@@ -439,11 +382,6 @@ def process_movement(map_screen):
     for unit in moving_units:
         if "_skip_remaining_steps" in unit:
             del unit["_skip_remaining_steps"]
-
-    # A multi-speed collision can create and settle a midpoint while movers
-    # are temporarily outside the province lists. Reconcile any edge that
-    # still ended up one-sided after the final sync as a last safety net.
-    combat_processor.repair_edge_battles(map_screen)
 
 def _find_nearest_owned_province(start_prov, owner, id_to_province):
     """BFS over the province graph for the closest tile owned by `owner`."""
@@ -511,8 +449,8 @@ def process_beached_units(map_screen):
 
     Written for saves/HOW DO YOU LAUNCH ARTILLERY FROM THE OCEAN, where a
     meeting engagement fought across a shoreline unpacked three convoys that
-    were still at sea (see combat_processor._resolve_meeting_exchange). This
-    is the net under that: it heals the saves the old rule already
+    were still at sea (see combat_processor.resolve_meeting_engagement, now
+    fixed). This is the net under that: it heals the saves the old rule already
     damaged, and closes off any other route to the same state.
     """
     unit_library = queries.get_unit_library()
@@ -522,8 +460,6 @@ def process_beached_units(map_screen):
             continue
 
         for unit in province.get("units", []):
-            if combat_processor.is_edge_battle_unit(unit):
-                continue
             if not is_land_unit(unit, unit_library):
                 continue
 
@@ -557,8 +493,6 @@ def process_stranded_units(map_screen):
 
         stranded = []
         for unit in units:
-            if combat_processor.is_edge_battle_unit(unit):
-                continue
             unit_owner = unit.get("owner")
             if not unit_owner or unit_owner == owner or unit_owner in c.UNPLAYABLE_NATIONS:
                 continue

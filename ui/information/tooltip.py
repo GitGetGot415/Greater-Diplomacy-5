@@ -8,18 +8,18 @@ def draw_tooltip(map_screen, surface):
 
     mx, my = pygame.mouse.get_pos()
     prov = map_screen.hovered_province
-    
+
     # --- FOG OF WAR VISIBILITY CHECK ---
     is_visible = queries.is_province_visible(map_screen, prov["id"])
-            
+
     owner_id = prov.get('owner', 'Unclaimed')
     owner_display = map_screen.nation_data.get(owner_id, {}).get("name", owner_id)
-    
+
     # Coastal Sea and Inland Sea display
     terrain = prov.get('terrain', 'Unknown')
     if queries.is_water_province(prov):
         owner_display = terrain.replace('_', ' ').title()
-    
+
     # 1. Start with the basic header info based on the primary map mode
     if map_screen.base_layer == "TERRAIN":
         terrain_display = terrain.replace('_', ' ').title()
@@ -41,13 +41,13 @@ def draw_tooltip(map_screen, surface):
     if map_screen.secondary_mode == "BLANK":
         # The header is already set correctly above, no need to overwrite it
         pass
-        
+
     elif map_screen.secondary_mode == "UNITS":
         # Filtered up front: a lone hidden submarine must not even trip the
         # "something is here" partial-fog hint, or its position leaks through
         # the "?" blip despite being otherwise invisible.
         visible_units = queries.filter_visible_units(
-            queries.units_on_province(prov), map_screen.player_country, prov, map_screen.nation_data)
+            prov.get("units", []), map_screen.player_country, prov, map_screen.nation_data)
         if not is_visible:
             if getattr(map_screen, 'partial_visible_provinces', None) is not None and prov["id"] in map_screen.partial_visible_provinces and visible_units:
                 lines.append("- ? (Unknown Units)")
@@ -63,7 +63,7 @@ def draw_tooltip(map_screen, surface):
                 for u in units[:5]:
                     u_name = u.get("type", "Unit")
                     level = u.get("level", 0)
-                    
+
                     if level > 0:
                         # refactor: Use 'Type' for Infantry, 'Lvl' for others
                         base_name = queries.get_base_unit_name(u_name)
@@ -71,10 +71,10 @@ def draw_tooltip(map_screen, surface):
                         lines.append(f"- {u_name} ({label} {level})")
                     else:
                         lines.append(f"- {u_name}")
-                        
+
                 if len(units) > 5:
                     lines.append(f"...and {len(units)-5} more")
-    
+
     elif map_screen.secondary_mode == "RESOURCES":
         if not is_visible:
             lines.append("(Resources hidden by Fog of War)")
@@ -92,11 +92,11 @@ def draw_tooltip(map_screen, surface):
         # Base production from the tile itself dynamically calculated
         owner_data = map_screen.nation_data.get(owner_id, {})
         research_data = owner_data.get("research", {})
-        
+
         # Calculate dynamic bonuses based on tech
         gen_rec_lvl = research_data.get("general_recruitment", 0)
         manpower_bonus = gen_rec_lvl * c.GENERAL_RECRUITMENT_BONUS
-        
+
         # Base yields including tech bonuses
         base_man = c.BASE_YIELDS['manpower'] + manpower_bonus
         base_mat = c.BASE_YIELDS['materials']
@@ -130,12 +130,12 @@ def draw_tooltip(map_screen, surface):
                     p_mat = int(stats.get('prod_materials', 0) * building_mult)
                     p_man = int(stats.get('prod_manpower', 0) * building_mult)
                     p_fuel = int(stats.get('prod_fuel', 0) * building_mult)
-                    
+
                     yields = []
                     if p_man > 0: yields.append(f"+{queries.format_number(p_man)}Man")
                     if p_mat > 0: yields.append(f"+{queries.format_number(p_mat)}Mat")
                     if p_fuel > 0: yields.append(f"+{queries.format_number(p_fuel)}Fuel")
-                    
+
                     prod_hint = f"({', '.join(yields)})" if yields else ""
                     lines.append(f"- {b} {prod_hint}")
 
@@ -144,7 +144,7 @@ def draw_tooltip(map_screen, surface):
     rendered_lines = [map_screen.small_font.render(line, True, (255, 255, 255)) for line in lines]
     width = max(ts.get_width() for ts in rendered_lines) + 20
     height = sum(ts.get_height() for ts in rendered_lines) + 15
-    
+
     # Position logic (prevent going off screen)
     tx, ty = mx + 15, my - height
     if tx + width > surface.get_width():
@@ -153,11 +153,11 @@ def draw_tooltip(map_screen, surface):
         ty = my + 20
 
     bg_rect = pygame.Rect(tx, ty, width, height)
-    
+
     # Draw Background
     pygame.draw.rect(surface, (30, 30, 30, 230), bg_rect)
     pygame.draw.rect(surface, (200, 200, 200), bg_rect, 1) # Border
-    
+
     # Draw Text
     curr_y = ty + 8
     for ts in rendered_lines:

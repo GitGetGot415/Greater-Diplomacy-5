@@ -131,14 +131,14 @@ class Controller:
             # the first real user gesture in run()) is the actual first mixer init.
             pygame.mixer.quit()
         pygame.key.set_repeat(c.KEY_REPEAT_DELAY, c.KEY_REPEAT_INTERVAL)
-        
+
         self.clock = pygame.time.Clock()
         self.fps_font = pygame.font.Font(None, 24)
-        
+
         # --- OS COMPATIBILITY CHECK ---
         system = platform.system()
         arch = platform.machine().lower()
-        
+
         # Determine if the current machine can safely run our provided binaries
         soloud_compatible = False
         if system == "Windows" and arch in ["x86_64", "amd64"]:
@@ -147,7 +147,7 @@ class Controller:
             soloud_compatible = True # Intel Macs can use the x64 .dylib
         elif system == "Linux" and arch in ["x86_64", "amd64"]:
             soloud_compatible = True # Linux usually uses the x64 .so
-            
+
         # If the user requested SoLoud, but their hardware isn't compatible (like an M1 Mac),
         # gracefully override their setting and force Pygame Mixer.
         if c.USE_SOLOUD and not soloud_compatible:
@@ -157,13 +157,13 @@ class Controller:
         # --- HYBRID AUDIO ENGINE INITIALIZATION ---
         if c.USE_SOLOUD:
             try:
-                from soloud import Soloud, Wav, WavStream 
+                from soloud import Soloud, Wav, WavStream
                 self.soloud = Soloud()
                 self.soloud.init()
-                self.music_handle = None 
+                self.music_handle = None
                 self.music_stream = WavStream()
                 ui_elements.soloud_engine = self.soloud
-                
+
                 try:
                     ui_elements.click_sound = Wav()
                     ui_elements.click_sound.load(c.SOUND_CLICK_PATH)
@@ -171,7 +171,7 @@ class Controller:
                     ui_elements.slider_sound.load(c.SOUND_SLIDER_PATH)
                 except:
                     print("Warning: Sound files not found in assets folder")
-                    
+
             except Exception as e:
                 print(f"Failed to load SoLoud DLL: {e}. Auto-switching to Pygame Mixer.")
                 c.USE_SOLOUD = False # Fallback triggered!
@@ -193,7 +193,7 @@ class Controller:
         fonts.init_fonts(font_path)
 
         self.screen = pygame.display.set_mode((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
-        
+
         # Load the sound into the ui_elements module using SoLoud Wav()
         try:
             ui_elements.click_sound = Wav()
@@ -208,7 +208,7 @@ class Controller:
             print(f"Warning: {c.SOUND_SLIDER_PATH} not found in assets folder")
 
         self.screen = pygame.display.set_mode((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
-        
+
         # 0. Load symbols
         try:
             icon = pygame.image.load('assets/icon/icon.png')
@@ -269,7 +269,7 @@ class Controller:
 
         # 2. Load settings (Safely handle old saves that might not have pitch/speed)
         loaded_data = keybind_io.load_settings(default_keys, c.DEFAULT_SFX_VOLUME, c.DEFAULT_MUSIC_VOLUME)
-        
+
         # The positional tuple, its per-setting defaults and the chain of
         # `len(loaded_data) > N` guards that used to be written out here all
         # live in data/io/settings_schema.py now -- a tuple saved by an older
@@ -343,21 +343,15 @@ class Controller:
         """Unified flip_state logic"""
         previous_state = self.active_state
         next_state_name = self.active_state.next_state
-        
+
         # 1. Data Handoff
         if next_state_name in ["PRODUCTION", "ORDERS", "NAVY", "EDIT_COUNTRY"]:
             map_ref = self.states["MAP"]
             if next_state_name == "EDIT_COUNTRY":
                 self.states["EDIT_COUNTRY"].start_editor(map_ref)
-            elif next_state_name == "ORDERS" and getattr(map_ref, "pending_edge_battle_pair", None):
-                edge_pair = map_ref.pending_edge_battle_pair
-                del map_ref.pending_edge_battle_pair
-                if not self.states["ORDERS"].start_with_edge_battle(edge_pair, map_ref):
-                    if map_ref.selected_province:
-                        self.states["ORDERS"].start_with_province(map_ref.selected_province, map_ref)
             elif map_ref.selected_province:
                 self.states[next_state_name].start_with_province(map_ref.selected_province, map_ref)
-        
+
         if next_state_name in ["RESEARCH", "ECONOMY", "MESSAGES", "FACTION", "FACTION_TERRITORIES"]:
             map_ref = self.states["MAP"]
             if next_state_name == "RESEARCH":
@@ -386,11 +380,11 @@ class Controller:
         if next_state_name == "MAP":
             if previous_state == self.states["RANDOM_SETUP"]:
                 self.states["MAP"] = Map(is_scenario=True, is_random=True, random_settings=previous_state.random_settings, num_players=self.num_players)
-            
+
             elif hasattr(previous_state, 'selected_tournament_path'):
                 path = previous_state.selected_tournament_path
                 key = previous_state.selected_tournament_key
-                
+
                 from data.io import multiplayer_io
                 res = multiplayer_io.load_tournament(path, key)
                 if len(res) >= 8:
@@ -404,7 +398,7 @@ class Controller:
                     self.states["MAP"].loaded_tournament_path = path
                     self.states["MAP"].multiplayer_tournament_dir = os.path.dirname(path)
                     self.states["MAP"].multiplayer_session_key = session_key
-                    
+
                     player_enc_cache = {}
                     if ver_table:
                         for h, v_entry in ver_table.items():
@@ -422,10 +416,10 @@ class Controller:
                     elif role == "PLAYER":
                         self.states["MAP"].multiplayer_player_key = key
                         multiplayer_io.strip_sensitive_data_for_player(self.states["MAP"], cid)
-                        
+
                     import shutil
                     shutil.rmtree(temp_dir, ignore_errors=True)
-                    
+
                     self.states["MAP"].refresh_all_maps()
                     from screens.menu_screens.map import render_buttons
                     render_buttons(self.states["MAP"])
@@ -440,20 +434,20 @@ class Controller:
                     self.active_state.done = False
                     self.active_state.next_state = "MULTIPLAYER_HUB"
                     return
-            
+
             elif hasattr(previous_state, 'selected_save_path'):
                 path = previous_state.selected_save_path
-                
+
                 if path == "RANDOM":
                     self.states["MAP"] = Map(load_path=None, is_scenario=True, is_random=True, num_players=self.num_players)
                 else:
                     is_scen = "scenarios" in path
                     is_map_editor = (previous_state == self.states["SELECT_BASE_MAP"])
-                    
+
                     history_turn = getattr(previous_state, 'selected_history_turn', None)
-                    
+
                     self.states["MAP"] = Map(load_path=path, is_scenario=is_scen, force_editor=is_map_editor, num_players=self.num_players, history_turn=history_turn)
-                    
+
             elif previous_state in [self.states["MENU"], self.states["NEW_GAME"]]:
                 self.states["MAP"] = Map(num_players=self.num_players)
 
@@ -469,13 +463,13 @@ class Controller:
         # Scan the hard drive to find whatever is actually there!
         synced_albums = {}
         self.track_start_times = {} # Clear start times whenever we scan
-        
+
         if os.path.exists(c.MUSIC_DIR):
             for item in os.listdir(c.MUSIC_DIR):
                 album_dir = os.path.join(c.MUSIC_DIR, item)
                 if os.path.isdir(album_dir):
                     synced_albums[item] = []
-                    
+
                     # Check for start_times.json
                     album_start_times = {}
                     start_times_path = os.path.join(album_dir, "start_times.json")
@@ -485,26 +479,26 @@ class Controller:
                                 album_start_times = json.load(f)
                         except Exception as e:
                             print(f"Error loading start_times.json for {item}: {e}")
-                    
+
                     for file in os.listdir(album_dir):
                         if file.lower().endswith(('.mp3', '.wav', '.ogg')):
                             track_path = os.path.join(album_dir, file).replace("\\", "/")
                             synced_albums[item].append(track_path)
-                            
+
                             # Map the start time if defined
                             file_stem = os.path.splitext(file)[0]
                             if file in album_start_times:
                                 self.track_start_times[track_path] = float(album_start_times[file])
                             elif file_stem in album_start_times:
                                 self.track_start_times[track_path] = float(album_start_times[file_stem])
-                            
+
         self.all_albums = synced_albums
-        
+
         # Load the user's active playlist toggles.
         # Returns {} by default if empty, so ensure it's a list
         loaded_albums = queries.get_active_albums()
         self.active_albums = loaded_albums if isinstance(loaded_albums, list) else []
-            
+
         # Clean up any active albums that were deleted from the disk
         self.active_albums = [a for a in self.active_albums if a in self.all_albums]
         self.build_playlist()
@@ -553,7 +547,7 @@ class Controller:
             elif not c.USE_SOLOUD:
                 pygame.mixer.music.stop()
             return
-            
+
         import random
 
         # Check if we have more than one song and if the current song is in the playlist
@@ -614,7 +608,7 @@ class Controller:
         # Debounce: prevent toggling if less than 500ms has elapsed since the last toggle finished
         if hasattr(self, 'last_toggle_time') and current_time - self.last_toggle_time < 500:
             return
-            
+
         self.is_fullscreen = not getattr(self, 'is_fullscreen', False)
         if self.is_fullscreen:
             try:
@@ -624,7 +618,7 @@ class Controller:
                 self.screen = pygame.display.set_mode((info.current_w, info.current_h), pygame.NOFRAME)
         else:
             self.screen = pygame.display.set_mode((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
-            
+
         # Update toggle time AFTER transition, so cooldown starts when screen is ready
         self.last_toggle_time = pygame.time.get_ticks()
         # Clear any accumulated KEYDOWN events (like F11 being held) that queued up while display was resetting
@@ -633,8 +627,8 @@ class Controller:
     async def run(self):
         while True:
             # --- THE MAGIC CPU FIX ---
-            self.clock.tick(self.target_fps) 
-            
+            self.clock.tick(self.target_fps)
+
             # --- HYBRID SONG END CHECK ---
             if c.USE_SOLOUD:
                 # FIX: Check self.now_playing != "None" to prevent infinite loops when playlist is empty

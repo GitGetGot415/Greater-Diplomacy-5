@@ -542,7 +542,7 @@ class HeadOnTests(unittest.TestCase):
         self.assertIn(e, result.survivors1)
         self.assertIn(a, result.survivors1)
 
-    def test_a_bystander_waits_at_a_midpoint_battle(self):
+    def test_a_bystander_keeps_walking_through_a_mid_turn_swap(self):
         screen = self.build()
         a = unit("A", attack=100, path=["p2"], speed=2)
         e = unit("E", attack=100, path=["p2", "p3"], speed=2)
@@ -555,10 +555,8 @@ class HeadOnTests(unittest.TestCase):
 
         movement_processor.process_movement(screen)
 
-        self.assertIn(e, screen.map_data["p1"]["units"],
-                      "a bystander should wait at the edge's origin")
-        self.assertNotIn(e, screen.map_data["p3"]["units"])
-        self.assertEqual(e["order"]["path"], ["p2", "p3"])
+        self.assertIn(e, screen.map_data["p3"]["units"],
+                      "a bystander was stopped by a swap it was not part of")
 
 
 class PredictionBubbleTests(unittest.TestCase):

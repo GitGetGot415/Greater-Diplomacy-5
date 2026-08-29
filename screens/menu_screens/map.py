@@ -835,13 +835,13 @@ class Map(GameState):
         self.tactical_mode = False
         self.player_unit = None
         self.unit_economy = {**{res: 0 for res in c.ECON_RESOURCE_KEYS}, "fuel_inc": 0}
-        
+
         # --- MULTI-TURN FLAGS ---
         self.multi_turn_processing_complete = False
         self.multi_turns_total = 0
         self.multi_turns_completed = 0
         self.multi_turn_abort_requested = False
-        
+
         # --- NEW PROGRESS BAR TRACKERS ---
         self.loading_status_text = "Waiting..."
         self.proactive_tasks_total = 0
@@ -874,35 +874,35 @@ class Map(GameState):
         self.refresh_tasks_completed = 0
         self.loading_spinner_angle = 0
 
-        self.brush_building = "None" 
-        self.brush_unit = "None"    
-        self.editor_mode = "NATION" 
-        
-        self.show_country_names = True 
+        self.brush_building = "None"
+        self.brush_unit = "None"
+        self.editor_mode = "NATION"
+
+        self.show_country_names = True
 
         # --- 1. Basic State Variables ---
         self.camera_tilt_slider_val = 0.0 # Starts fully top-down
         self.selection_mode = is_scenario
-        self.pending_selection = None 
+        self.pending_selection = None
         self.player_country = "None"
 
         self.secondary_modes = ["UNITS", "ECONOMY", "BLANK"]
         self.sec_idx = 0
         self.secondary_mode = self.secondary_modes[2]
-        
-        self.base_layer = "POLITICAL" 
+
+        self.base_layer = "POLITICAL"
         self.load_path = load_path
 
         self.is_editor = force_editor or (self.load_path is None and not is_scenario)
         if self.is_editor:
             self.player_country = "Editor"
-            self.selection_mode = False 
-            
-        self.painting_active = False 
-        self.brush_nation = "Unclaimed" 
+            self.selection_mode = False
+
+        self.painting_active = False
+        self.brush_nation = "Unclaimed"
         self.viewing_ai_moves = False
         self.skip_ai_view = False
-        
+
         # --- 2. Data Loading ---
         if is_random and random_settings:
             self.random_settings = random_settings
@@ -930,33 +930,32 @@ class Map(GameState):
 
         # --- 3. Visuals & UI Setup ---
         self.bg_color = (20, 20, 20)
-        self.font = fonts.get("normal") 
-        self.small_font = fonts.get("tiny") 
-        
+        self.font = fonts.get("normal")
+        self.small_font = fonts.get("tiny")
+
         self.top_ui_height = c.TOP_UI_HEIGHT
         self.bot_ui_height = c.BOT_UI_HEIGHT
         self.total_ui_h = c.TOTAL_UI_HEIGHT
-        
+
         self.top_bar_rect = pygame.Rect(0, 0, c.SCREEN_WIDTH, self.top_ui_height)
         self.bot_bar_rect = pygame.Rect(0, c.SCREEN_HEIGHT - self.bot_ui_height, c.SCREEN_WIDTH, self.bot_ui_height)
         self.raised_rect = pygame.Rect(0, 0, c.UI_LEFT_OFFSET, c.SCREEN_HEIGHT)
         self.ui_background_rect = pygame.Rect(0, c.SCREEN_HEIGHT - self.total_ui_h, 270, self.total_ui_h)
-        
+
         self.map_w, self.map_h = self.id_map.get_size()
         self.min_zoom = (c.SCREEN_HEIGHT - self.total_ui_h) / self.map_h
         self.camera = MapCamera(self.min_zoom)
-        
+
         self.active_map = self.political_map if self.base_layer == "POLITICAL" else self.terrain_map
         self.map_mode = self.base_layer
 
         self.selected_province = self.hovered_province = self.last_hovered_id = None
-        self.hovered_combat_bubble = None
         self.hover_glow_surf = self.hover_glow_rect = None
         self.feedback_text = ""
         self.feedback_timer = 0
 
-        self.show_exit_confirmation = False 
-        self.confirm_box_rect = pygame.Rect(0, 0, 400, 200) 
+        self.show_exit_confirmation = False
+        self.confirm_box_rect = pygame.Rect(0, 0, 400, 200)
 
         self.relations_map = self.id_map.copy()
         self.factions_map = self.id_map.copy()
@@ -973,7 +972,7 @@ class Map(GameState):
         self.refresh_cores_map()
         self.refresh_faction_territories_map()
         self.refresh_fog_map()
-        
+
         render_buttons(self)
 
         for country_name, data in self.nation_data.items():
@@ -1012,20 +1011,20 @@ class Map(GameState):
         """Temporarily hides UI elements and province selection to draw a clean map background."""
         temp_prov = self.selected_province
         self.selected_province = None
-        
+
         # Save previous states to be completely safe
         prev_raised = self.hide_raised_rect
         prev_tooltip = self.hide_tooltip
         prev_hud = self.hide_resource_hud
         prev_mini = self.hide_minimap
-        
+
         self.hide_raised_rect = True
         self.hide_tooltip = True
         self.hide_resource_hud = True
         self.hide_minimap = True
-        
+
         self.additional_draw(surface)
-        
+
         # Restore original states
         self.hide_raised_rect = prev_raised
         self.hide_tooltip = prev_tooltip
@@ -1035,21 +1034,21 @@ class Map(GameState):
 
     # --- Properties ---
     @property
-    def player_manpower(self): 
+    def player_manpower(self):
         if self.tactical_mode: return self.unit_economy.get("manpower", 0)
         return self.nation_data.get(self.player_country, {}).get("manpower", 0)
     @player_manpower.setter
-    def player_manpower(self, value): 
+    def player_manpower(self, value):
         if self.tactical_mode: self.unit_economy["manpower"] = value
         elif self.player_country in self.nation_data: self.nation_data[self.player_country]["manpower"] = value
 
     @property
-    def player_materials(self): 
+    def player_materials(self):
         if self.tactical_mode: return self.unit_economy.get("materials", 0)
         return self.nation_data.get(self.player_country, {}).get("materials", 0)
 
     @property
-    def player_fuel(self): 
+    def player_fuel(self):
         if self.tactical_mode and self.player_unit:
             base_fuel = self.unit_economy.get("fuel", 0)
             u = self.player_unit
@@ -1067,31 +1066,31 @@ class Map(GameState):
     def set_camera_tilt(self, val):
         """Callback for the manual camera tilt slider."""
         self.camera_tilt_slider_val = val
-        
+
         # Grab the old tilt before we update it to calculate the difference
         old_tilt = self.camera.manual_tilt_factor
         new_tilt = 1.0 - (val * (1.0 - c.MAX_Y_TILT_FACTOR))
-        
+
         # Failsafe to prevent division by zero
         if old_tilt == 0: old_tilt = 0.001
         if new_tilt == 0: new_tilt = 0.001
-        
+
         # --- NEW: Anchor the compression to the center of the camera ---
         # Find the pixel center of the playable view area (excluding UI bars)
         view_h = c.SCREEN_HEIGHT - self.total_ui_h
         screen_center_y = view_h / 2.0
-        
+
         # Shift the camera Y position to perfectly compensate for the scale change,
         # keeping the exact same world coordinate centered on your screen.
         self.camera.pos.y += (screen_center_y / self.camera.zoom) * ((1.0 / old_tilt) - (1.0 / new_tilt))
-        
+
         # Sync the target position so the smooth-pan lerp doesn't aggressively snap it back
         self.camera.target_pos.y = self.camera.pos.y
-        
+
         # Apply the new tilt
         self.camera.manual_tilt_factor = new_tilt
-        
-        # Flag the label centers for an update because tilting the world compresses 
+
+        # Flag the label centers for an update because tilting the world compresses
         # the visual space, shifting where country names need to physically render.
         self.centers_need_update = True
 
@@ -1104,7 +1103,7 @@ class Map(GameState):
         self.skip_ai_view = not self.skip_ai_view
         self.show_feedback(f"Skip AI View: {'ON' if self.skip_ai_view else 'OFF'}")
         update_button_states(self)
-        
+
     def set_view_mode(self, mode):
         self.secondary_mode = mode
         self.show_feedback(f"View: {mode}")
@@ -1196,16 +1195,16 @@ class Map(GameState):
             "FACTION_TERRITORIES": self.faction_territories_map
         }
         self.active_map = layer_map.get(layer_name, self.political_map)
-        
+
         # --- ADDED: Auto-refresh the text blobs when changing map views ---
         self.update_country_centers()
-        
+
         self.show_feedback(f"Mode: {layer_name.title()}")
-        
+
     # --- Screen Transitions ---
     def change_state(self, next_state):
         self.next_state, self.done = next_state, True
-        
+
     def change_state_if_owned(self, next_state, requires_land=False):
         """Only transitions if the player owns the selected province (and optionally if it's land)."""
         if self.selected_province:
@@ -1229,7 +1228,6 @@ class Map(GameState):
                 self.mail_input_active = False
 
         self.selected_province = self.hovered_province = self.hover_glow_surf = self.last_hovered_id = None
-        self.hovered_combat_bubble = None
         self.show_feedback("Map Unlocked")
 
     def save_map_data(self):
@@ -1295,7 +1293,7 @@ class Map(GameState):
             on_confirm
         )
 
-    def exit_to_menu(self): 
+    def exit_to_menu(self):
         self.show_exit_confirmation = True
         for el in self.elements: el.visible = False
 
@@ -1307,11 +1305,11 @@ class Map(GameState):
         diplomatic_popups.clear_popups(self)
         self.change_state("MENU")
 
-    def show_feedback(self, text): 
+    def show_feedback(self, text):
         self.feedback_text, self.feedback_timer = text, pygame.time.get_ticks()
         print(f"[UI EVENT] {text}")
 
-    def additional_events(self, event): 
+    def additional_events(self, event):
         # Intercept inputs if the game has crashed
         if self.thread_error:
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -1329,24 +1327,24 @@ class Map(GameState):
         if not unit_library:
             self.show_feedback("Error: unit library not found!")
             return
-            
+
         updated_count = 0
         removed_count = 0
-        
+
         for province in self.map_data.values():
             # 1. Clean Units
             units_to_keep = []
             for unit in province.get("units", []):
                 u_type = unit.get("type", "")
                 base_type = unit.get("original_type", u_type)
-                
+
                 # Handle dynamic transport names
                 if base_type.startswith("Convoy (") or base_type.startswith("Truck ("):
                     import re
                     match = re.search(r'\((.*?)\)', base_type)
                     if match:
                         base_type = match.group(1).strip()
-                        
+
                 # Check if the unit is still valid
                 if base_type in unit_library or base_type in ["Convoy", "Truck"]:
                     if u_type in unit_library:
@@ -1363,15 +1361,15 @@ class Map(GameState):
                     units_to_keep.append(unit)
                 else:
                     removed_count += 1 # It's obsolete, drop it!
-                    
+
             province["units"] = units_to_keep
-            
+
             # 2. Clean Buildings
             if "buildings" in province:
                 original_b_count = len(province["buildings"])
                 province["buildings"] = [b for b in province["buildings"] if b in building_library]
                 removed_count += (original_b_count - len(province["buildings"]))
-                
+
             # 3. Clean Queues
             for queue_key in ["building_queue", "unit_queue"]:
                 if queue_key in province:
@@ -1382,17 +1380,17 @@ class Map(GameState):
                             is_valid = False
                         elif "unit_type" in q and q.get("unit_type") not in unit_library:
                             is_valid = False
-                            
+
                         if is_valid:
                             valid_queue.append(q)
                         else:
                             removed_count += 1
                     province[queue_key] = valid_queue
-                    
+
             # Wipe legacy data if it exists
             if "deployment_queue" in province:
                 del province["deployment_queue"]
-                
+
         print(f"[MAP SCRUBBER] {updated_count} entities updated, {removed_count} obsolete entities vaporized.")
 
     def handle_back_key(self):
@@ -1443,9 +1441,9 @@ class Map(GameState):
     def draw(self, surface):
         super().draw(surface)
         map_renderer.draw_badges(self, surface)
-        
+
         diplomatic_popups.draw(self, surface)
-        
+
         if self.thread_error:
             surface.fill((150, 0, 0))
             title = fonts.get("heading1").render("FATAL THREAD ERROR", True, (255, 255, 255))
@@ -1454,25 +1452,25 @@ class Map(GameState):
             for line in self.thread_error.split('\n'):
                 surface.blit(fonts.get("small").render(line, True, (255, 200, 200)), (20, y_offset))
                 y_offset += 25
-                
+
             # Draw Copy Button
             btn_rect = pygame.Rect(c.SCREEN_WIDTH - 240, c.SCREEN_HEIGHT - 80, 220, 60)
             mx, my = pygame.mouse.get_pos()
-            
+
             # Hover effect
             color = (200, 50, 50) if btn_rect.collidepoint(mx, my) else (150, 30, 30)
-            
+
             pygame.draw.rect(surface, color, btn_rect, border_radius=5)
             pygame.draw.rect(surface, (255, 255, 255), btn_rect, 2, border_radius=5)
-            
+
             btn_txt = fonts.get("button").render("Copy to Clipboard", True, (255, 255, 255))
             surface.blit(btn_txt, btn_txt.get_rect(center=btn_rect.center))
-            
+
             # Show "Copied!" feedback text above the button
             if self.error_copied:
                 copied_txt = fonts.get("small").render("Copied!", True, c.COLOR_SUCCESS_GREEN)
                 surface.blit(copied_txt, (btn_rect.centerx - copied_txt.get_width()//2, btn_rect.y - 25))
-                
+
             return
 
         from ui.information import feedback_text
@@ -1487,12 +1485,12 @@ class Map(GameState):
                 "reset_flags": True,
                 "reset_colors": True,
             }
-            
+
         from data.io import country_io
         new_data = country_io.load_all_country_data()
         added_count = 0
         updated_count = 0
-        
+
         for country, data in new_data.items():
             if country not in self.nation_data:
                 self.nation_data[country] = data
@@ -1538,23 +1536,23 @@ class Map(GameState):
                 for k in obsolete_keys:
                     del data["research"][k]
                     updated_count += 1
-                    
+
         # --- NEW: Scrub the map's default template too! ---
         if getattr(self, "default_research", None) is not None:
             obsolete_defaults = [k for k in self.default_research.keys() if k not in tech_tree]
             for k in obsolete_defaults:
                 del self.default_research[k]
                 updated_count += 1
-                
+
         self.nation_colors = country_io.nation_colors_from(self.nation_data)
         self.refresh_political_map()
         self.refresh_relations_map()
-        
+
         # Merge the unit sync into this function
         self.sync_units_to_data()
-        
+
         self.show_feedback(f"Data Resynced! Added {added_count}, Updated {updated_count}. Objects Synced.")
-        
+
     def toggle_editor_brush_type(self):
         if self.editor_mode == "NATION":
             self.editor_mode = "BUILDING"
@@ -1590,9 +1588,9 @@ class Map(GameState):
             self.multi_turn_processing_complete = False
             self.multi_turns_total = 0
             self.ai_is_thinking = False
-            
+
             if self.thread_error: return
-            
+
             self.refresh_political_map()
             self.refresh_relations_map()
             self.refresh_factions_map()
@@ -1600,9 +1598,9 @@ class Map(GameState):
             self.refresh_faction_territories_map()
             self.refresh_fog_map()
             self.update_country_centers()
-            
+
             self.viewing_ai_moves = False # Safely unlock PyGame UI rendering
-            
+
             update_button_states(self)
             self.show_feedback(f"Multi-Turn Processing Complete!")
             return
@@ -1610,9 +1608,9 @@ class Map(GameState):
         if self.ai_processing_complete:
             self.ai_processing_complete = False
             self.ai_is_thinking = False
-            
+
             if self.thread_error: return
-            
+
             if self.skip_ai_view:
                 self.viewing_ai_moves = True
                 turn_manager.advance_time(self)

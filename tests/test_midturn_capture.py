@@ -145,31 +145,6 @@ class MidTurnFlipTests(unittest.TestCase):
 
         self.assertEqual(prov["owner"], "Yugoslavia")
 
-    def test_capture_keeps_a_midpoint_fighter_serialized_on_the_endpoint(self):
-        """Capturing a tile must not delete a battle crossing that tile."""
-        screen = StubMapScreen()
-        screen.add_nation("Finland", at_war_with=["Soviet Union"])
-        screen.add_nation("Soviet Union", at_war_with=["Finland"])
-
-        midpoint_fighter = unit("Finland")
-        midpoint_fighter["_edge_battle"] = {
-            "origin_id": 94,
-            "destination_id": 95,
-        }
-        arriving_garrison = unit("Soviet Union")
-        prov = screen.add_province(94, "Finland", units=[
-            midpoint_fighter,
-            arriving_garrison,
-        ])
-        screen.add_province(95, "Soviet Union")
-        screen.add_province(96, "Finland")
-
-        combat_processor.check_for_post_combat_captures(screen)
-
-        self.assertEqual(prov["owner"], "Soviet Union")
-        self.assertIn(midpoint_fighter, prov["units"])
-        self.assertIn(arriving_garrison, prov["units"])
-
 
 if __name__ == "__main__":
     unittest.main()

@@ -21,7 +21,7 @@ import pygame
 
 import data.constants as c
 from data import queries
-from map_logic.turn_processing import combat_processor, combat_rules
+from map_logic.turn_processing import combat_rules
 from screens.map_related_screens import battle_screen
 from tests import app_harness
 
@@ -92,71 +92,6 @@ class BuildAndPaintTests(BattleScreenTestCase):
         self.assertTrue(screen.battle.lanes)
         self.assertTrue(screen.elements)
 
-    def test_province_combat_uses_one_clickable_category_bubble_and_hides_its_stack(self):
-        from map_logic.rendering import overlay_renderer
-
-        previous_mode = self.map.secondary_mode
-        self.addCleanup(setattr, self.map, "secondary_mode", previous_mode)
-        self.map.secondary_mode = "UNITS"
-        records = overlay_renderer.combat_bubble_records(self.map)
-        record = next(record for record in records
-                      if record["kind"] == "province"
-                      and record["province_id"] == self.province["id"])
-
-        self.assertEqual(
-            record["category"],
-            queries.get_combat_location_category(
-                self.province, self.map.player_country, self.map.nation_data))
-        self.assertEqual(record["unit_ids"], {id(unit) for unit in self.province["units"]})
-
-        screen_pos = queries.world_to_screen(record["center"], self.map)
-        hit = overlay_renderer.combat_bubble_at_screen_pos(self.map, screen_pos)
-        self.assertEqual(hit["orders_province_id"], self.province["id"])
-
-        with mock.patch.object(overlay_renderer, "draw_unit_icon") as draw_unit_icon:
-            overlay_renderer.draw_overlay_content(self.map, self.surface)
-        self.assertFalse(any(call.args[4] is self.province
-                             for call in draw_unit_icon.call_args_list))
-
-    def test_clicking_a_province_combat_bubble_opens_its_orders_screen(self):
-        from map_logic.rendering import overlay_renderer
-        from ui import event_handler
-
-        previous_mode = self.map.secondary_mode
-        previous_selected = self.map.selected_province
-        previous_selection_mode = self.map.selection_mode
-        self.addCleanup(setattr, self.map, "secondary_mode", previous_mode)
-        self.addCleanup(setattr, self.map, "selected_province", previous_selected)
-        self.addCleanup(setattr, self.map, "selection_mode", previous_selection_mode)
-        self.map.secondary_mode = "UNITS"
-        self.map.selected_province = None
-        self.map.selection_mode = False
-        record = next(record for record in overlay_renderer.combat_bubble_records(self.map)
-                      if record["kind"] == "province"
-                      and record["province_id"] == self.province["id"])
-        position = tuple(map(int, queries.world_to_screen(record["center"], self.map)))
-        event = pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=position)
-
-        with mock.patch("pygame.mouse.get_pos", return_value=position), \
-                mock.patch.object(self.map, "change_state") as change_state:
-            event_handler.handle_map_events(self.map, event)
-
-        self.assertIs(self.map.selected_province, self.province)
-        change_state.assert_called_once_with("ORDERS")
-
-    def test_combat_bubble_entry_opens_the_battle_panel(self):
-        from screens.map_related_screens.orders import Orders_Screen
-
-        self.map._orders_entered_from_combat_bubble = True
-        self.addCleanup(self.map.__dict__.pop,
-                        "_orders_entered_from_combat_bubble", None)
-
-        orders = Orders_Screen()
-        orders.start_with_province(self.province, self.map)
-
-        self.assertIsNotNone(orders.battle_screen)
-        self.assertTrue(orders.battle_screen.battle.lanes)
-
     def test_it_survives_an_idle_event_pump(self):
         screen = self.screen()
         screen.handle_events([pygame.event.Event(pygame.MOUSEMOTION, pos=(640, 360), rel=(0, 0),
@@ -176,6 +111,17 @@ class BuildAndPaintTests(BattleScreenTestCase):
         self.assertIsNotNone(orders.battle_screen)
         self.assertTrue(orders.battle_screen.embedded)
         self.assertGreater(orders.battle_screen.panel_rect.x, orders.panel_rect.right)
+
+    def test_combat_bubble_entry_opens_the_battle_inspector(self):
+        from screens.map_related_screens.orders import Orders_Screen
+
+        self.map._orders_entered_from_combat_bubble = True
+        orders = Orders_Screen()
+        orders.start_with_province(self.province, self.map)
+
+        self.assertIsNotNone(orders.battle_screen)
+        self.assertTrue(orders.battle_screen.embedded)
+        self.assertFalse(hasattr(self.map, "_orders_entered_from_combat_bubble"))
 
     def test_narrow_unit_stat_rows_wrap_complete_entries(self):
         from map_logic.rendering.font_manager import fonts
@@ -211,35 +157,6 @@ class BuildAndPaintTests(BattleScreenTestCase):
 
         self.assertEqual(screen.selected_lane, 1)
 
-    def test_lane_outlook_is_rebuilt_for_the_selected_lane(self):
-        screen = self.screen()
-        self.assertIsInstance(screen.lane_outcome, dict)
-        self.assertEqual(
-            screen.outcome_rect.top,
-            screen.regions[battle_screen.PANE_LANES].bottom + battle_screen.OUTCOME_GAP)
-
-        with mock.patch.object(screen, "_estimate_lane_outcome",
-                               wraps=screen._estimate_lane_outcome) as estimate:
-            screen._select(1)
-
-        self.assertEqual(estimate.call_args.args[0].index, 1)
-        self.assertIsInstance(screen.lane_outcome, dict)
-
-    def test_combat_outlook_estimate_identifies_the_expected_winner(self):
-        from map_logic.rendering import overlay_renderer
-
-        library = queries.get_unit_library()
-        winner = queries.create_unit_dict("Infantry", self.a, library)
-        loser = queries.create_unit_dict("Infantry", self.x, library)
-        winner["attack"] = 1000
-        loser["attack"] = 0
-
-        outcome = overlay_renderer.estimated_combat_outcome(
-            [[winner], [loser]], self.map.nation_data)
-
-        self.assertEqual(outcome["winner_side"], 0)
-        self.assertEqual(outcome["turns"], 1)
-
     def test_a_tile_with_no_fight_on_it_says_so_rather_than_raising(self):
         self.province["units"] = [
             queries.create_unit_dict("Infantry", self.a, queries.get_unit_library())]
@@ -259,308 +176,6 @@ class BuildAndPaintTests(BattleScreenTestCase):
         self.assertFalse(screen.visible)
         # Nothing but the footer buttons: no lane rows, no unit rows.
         self.assertFalse([el for el in screen.elements if getattr(el, "pane", None)])
-
-    def test_midpoint_battle_marker_panel_and_retreat_are_available(self):
-        """The virtual location has its own lane panel and saved retreat flag."""
-        previous_mode = self.map.secondary_mode
-        self.addCleanup(setattr, self.map, "secondary_mode", previous_mode)
-        self.map.secondary_mode = "UNITS"
-
-        other = next(p for p in self.map.map_data.values()
-                     if p is not self.province and not queries.is_water_province(p))
-        original_here = self.province["units"]
-        original_other = other.get("units", [])
-        self.addCleanup(self.province.__setitem__, "units", original_here)
-        self.addCleanup(other.__setitem__, "units", original_other)
-
-        ours = queries.create_unit_dict("Infantry", self.a, queries.get_unit_library())
-        enemy = queries.create_unit_dict("Infantry", self.x, queries.get_unit_library())
-        ours["order"] = {"type": "MOVE", "path": [other["id"]]}
-        enemy["order"] = {"type": "MOVE", "path": [self.province["id"]]}
-        ours[combat_processor.EDGE_BATTLE_KEY] = {
-            "origin_id": self.province["id"], "destination_id": other["id"]}
-        enemy[combat_processor.EDGE_BATTLE_KEY] = {
-            "origin_id": other["id"], "destination_id": self.province["id"]}
-        self.province["units"] = [ours]
-        other["units"] = [enemy]
-
-        record = combat_processor.edge_battles(self.map)[0]
-        midpoint = combat_processor.edge_battle_midpoint(self.map, record)
-        marker_pos = queries.world_to_screen(midpoint, self.map)
-        self.assertEqual(combat_processor.edge_battle_at_screen_pos(self.map, marker_pos)["pair"],
-                         record["pair"])
-
-        from map_logic.rendering import overlay_renderer
-        bubble = next(bubble for bubble in overlay_renderer.combat_bubble_records(self.map)
-                      if bubble["kind"] == "midpoint")
-        self.assertEqual(bubble["category"], queries.COMBAT_LOCATION_MIDPOINT)
-        self.assertEqual(overlay_renderer.combat_bubble_at_screen_pos(self.map, marker_pos)["edge_pair"],
-                         record["pair"])
-
-        from screens.map_related_screens.orders import Orders_Screen
-
-        previous_selected = self.map.selected_province
-        self.addCleanup(setattr, self.map, "selected_province", previous_selected)
-        self.map.selected_province = None
-        orders = Orders_Screen()
-        self.assertTrue(orders.start_with_edge_battle(record["pair"], self.map))
-        orders.open_battle_panel()
-        orders.draw(self.surface)
-        self.assertTrue(orders.battle_screen.battle.lanes)
-        self.assertIn(ours, orders._units())
-        self.assertFalse(hasattr(orders.battle_screen, "request_retreat"))
-
-        self.assertTrue(orders._order_edge_move([ours], self.province))
-        self.assertTrue(ours[combat_processor.EDGE_BATTLE_KEY]["retreat"])
-        self.assertEqual(ours[combat_processor.EDGE_BATTLE_KEY]["retreat_path"],
-                         [self.province["id"]])
-        orders.draw(self.surface)
-        self.assertIn(combat_processor.EDGE_BATTLE_KEY,
-                      queries.build_save_dict(self.map)["provinces"][self.province["json_key"]]["units"][0])
-
-    def test_orders_use_the_midpoint_battle_as_the_only_move_target(self):
-        """A reinforcement clicks the battle bubble, never the far province."""
-        from map_logic.rendering import overlay_renderer
-        from screens.map_related_screens.orders import Orders_Screen
-
-        previous_mode = self.map.secondary_mode
-        self.addCleanup(setattr, self.map, "secondary_mode", previous_mode)
-        self.map.secondary_mode = "UNITS"
-
-        other = next((province for province in self.map.map_data.values()
-                      if province["id"] in self.province.get("neighbors", [])
-                      and not queries.is_water_province(province)), None)
-        if other is None:
-            self.skipTest("The boot map has no adjacent land province")
-
-        original_here = self.province["units"]
-        original_other = other.get("units", [])
-        self.addCleanup(self.province.__setitem__, "units", original_here)
-        self.addCleanup(other.__setitem__, "units", original_other)
-
-        library = queries.get_unit_library()
-        fighter = queries.create_unit_dict("Infantry", self.a, library)
-        enemy = queries.create_unit_dict("Infantry", self.x, library)
-        reinforcement = queries.create_unit_dict("Infantry", self.a, library)
-        fighter["order"] = {"type": "MOVE", "path": [other["id"]]}
-        enemy["order"] = {"type": "MOVE", "path": [self.province["id"]]}
-        fighter[combat_processor.EDGE_BATTLE_KEY] = {
-            "origin_id": self.province["id"],
-            "destination_id": other["id"],
-        }
-        enemy[combat_processor.EDGE_BATTLE_KEY] = {
-            "origin_id": other["id"],
-            "destination_id": self.province["id"],
-        }
-        reinforcement["order"] = {"type": "MOVE", "path": []}
-        self.province["units"] = [fighter, reinforcement]
-        other["units"] = [enemy]
-
-        record = combat_processor.find_edge_battle(
-            self.map, (self.province["id"], other["id"]))
-        self.assertIsNotNone(record)
-        orders = Orders_Screen()
-        orders.map_screen = self.map
-        province_targets, midpoint_targets = orders._movement_targets(
-            self.province)
-        self.assertNotIn(other["id"], province_targets)
-        self.assertEqual([battle["pair"] for battle in midpoint_targets],
-                         [record["pair"]])
-
-        orders.start_with_province(self.province, self.map)
-        # Select only the reserve unit; the fighter is already in the battle.
-        orders.select_unit(0)
-        self.assertEqual(orders._selected_units(), [reinforcement])
-        self.assertTrue(combat_processor.can_join_edge_battle(
-            reinforcement, self.province["id"], other["id"], record,
-            self.map.nation_data))
-
-        opposing_position = tuple(map(int, queries.world_to_screen(
-            other["center"], self.map)))
-        self.assertEqual(
-            queries.get_clicked_province(opposing_position, self.map)["id"],
-            other["id"])
-        opposing_click = pygame.event.Event(
-            pygame.MOUSEBUTTONDOWN, button=1, pos=opposing_position)
-        with mock.patch("pygame.mouse.get_pos", return_value=opposing_position):
-            orders.additional_events(opposing_click)
-        self.assertEqual(reinforcement["order"]["path"], [])
-
-        # The combat record itself is the hit-test source used by the Orders
-        # screen, and the rendered midpoint is the only replacement target.
-        midpoint_record = next(battle for battle in
-                               overlay_renderer.combat_bubble_records(self.map)
-                               if battle["kind"] == "midpoint")
-        midpoint_position = tuple(map(int, queries.world_to_screen(
-            midpoint_record["center"], self.map)))
-        self.assertIsNotNone(
-            orders._clicked_midpoint_battle(midpoint_position))
-        midpoint_click = pygame.event.Event(
-            pygame.MOUSEBUTTONDOWN, button=1, pos=midpoint_position)
-        with mock.patch("pygame.mouse.get_pos", return_value=midpoint_position):
-            orders.additional_events(midpoint_click)
-
-        self.assertEqual(reinforcement["order"]["path"], [other["id"]])
-        self.assertEqual(
-            reinforcement["order"]["edge_battle_target"]["pair"],
-            list(record["pair"]))
-
-    def test_orders_can_reinforce_the_same_midpoint_from_the_other_endpoint(self):
-        """The reverse endpoint gets the same midpoint target and order path."""
-        from map_logic.rendering import overlay_renderer
-        from screens.map_related_screens.orders import Orders_Screen
-
-        previous_mode = self.map.secondary_mode
-        previous_player = self.map.player_country
-        self.addCleanup(setattr, self.map, "secondary_mode", previous_mode)
-        self.addCleanup(setattr, self.map, "player_country", previous_player)
-        self.map.secondary_mode = "UNITS"
-        self.map.player_country = self.x
-
-        other = next((province for province in self.map.map_data.values()
-                      if province["id"] in self.province.get("neighbors", [])
-                      and not queries.is_water_province(province)), None)
-        if other is None:
-            self.skipTest("The boot map has no adjacent land province")
-
-        original_here = self.province["units"]
-        original_other = other.get("units", [])
-        self.addCleanup(self.province.__setitem__, "units", original_here)
-        self.addCleanup(other.__setitem__, "units", original_other)
-
-        library = queries.get_unit_library()
-        fighter = queries.create_unit_dict("Infantry", self.a, library)
-        enemy = queries.create_unit_dict("Infantry", self.x, library)
-        reinforcement = queries.create_unit_dict("Infantry", self.x, library)
-        fighter[combat_processor.EDGE_BATTLE_KEY] = {
-            "origin_id": self.province["id"],
-            "destination_id": other["id"],
-        }
-        enemy[combat_processor.EDGE_BATTLE_KEY] = {
-            "origin_id": other["id"],
-            "destination_id": self.province["id"],
-        }
-        self.province["units"] = [fighter]
-        other["units"] = [enemy, reinforcement]
-
-        record = combat_processor.find_edge_battle(
-            self.map, (self.province["id"], other["id"]))
-        orders = Orders_Screen()
-        orders.start_with_province(other, self.map)
-        self.assertEqual(orders._selected_units(), [reinforcement])
-        _, midpoint_targets = orders._movement_targets(other)
-        self.assertEqual([battle["pair"] for battle in midpoint_targets],
-                         [record["pair"]])
-
-        midpoint_record = next(battle for battle in
-                               overlay_renderer.combat_bubble_records(self.map)
-                               if battle["kind"] == "midpoint")
-        midpoint_position = tuple(map(int, queries.world_to_screen(
-            midpoint_record["center"], self.map)))
-        midpoint_click = pygame.event.Event(
-            pygame.MOUSEBUTTONDOWN, button=1, pos=midpoint_position)
-        with mock.patch("pygame.mouse.get_pos", return_value=midpoint_position):
-            orders.additional_events(midpoint_click)
-
-        self.assertEqual(reinforcement["order"]["path"],
-                         [self.province["id"]])
-        self.assertEqual(
-            reinforcement["order"]["edge_battle_target"]["pair"],
-            list(record["pair"]))
-
-    def test_orders_can_reinforce_a_friendly_battle_side_from_the_opposite_endpoint(self):
-        """A unit may support its side even when it approaches from the other end."""
-        from screens.map_related_screens.orders import Orders_Screen
-
-        previous_mode = self.map.secondary_mode
-        previous_player = self.map.player_country
-        self.addCleanup(setattr, self.map, "secondary_mode", previous_mode)
-        self.addCleanup(setattr, self.map, "player_country", previous_player)
-        self.map.secondary_mode = "UNITS"
-        self.map.player_country = self.x
-
-        other = next((province for province in self.map.map_data.values()
-                      if province["id"] in self.province.get("neighbors", [])
-                      and not queries.is_water_province(province)), None)
-        if other is None:
-            self.skipTest("The boot map has no adjacent land province")
-
-        original_here = self.province["units"]
-        original_other = other.get("units", [])
-        self.addCleanup(self.province.__setitem__, "units", original_here)
-        self.addCleanup(other.__setitem__, "units", original_other)
-
-        library = queries.get_unit_library()
-        attacker = queries.create_unit_dict("Infantry", self.a, library)
-        defender = queries.create_unit_dict("Infantry", self.x, library)
-        reinforcement = queries.create_unit_dict("Infantry", self.x, library)
-        attacker[combat_processor.EDGE_BATTLE_KEY] = {
-            "origin_id": self.province["id"],
-            "destination_id": other["id"],
-        }
-        defender[combat_processor.EDGE_BATTLE_KEY] = {
-            "origin_id": other["id"],
-            "destination_id": self.province["id"],
-        }
-        self.province["units"] = [attacker, reinforcement]
-        other["units"] = [defender]
-
-        record = combat_processor.find_edge_battle(
-            self.map, (self.province["id"], other["id"]))
-        orders = Orders_Screen()
-        orders.start_with_province(self.province, self.map)
-        self.assertEqual(orders._selected_units(), [reinforcement])
-        self.assertTrue(orders._queue_midpoint_reinforcement(
-            [reinforcement], record))
-        self.assertEqual(reinforcement["order"]["path"], [other["id"]])
-
-        # The resolver must remember that this unit supports side 2 rather
-        # than grouping it with the side it physically approached from.
-        reinforcement["_current_province_id"] = self.province["id"]
-        self.assertTrue(combat_processor.join_edge_battle(
-            reinforcement, self.province["id"], other["id"], record,
-            self.map.nation_data))
-        self.assertEqual(
-            reinforcement[combat_processor.EDGE_BATTLE_KEY]["battle_side"], 2)
-        self.assertIn(reinforcement,
-                      combat_processor.find_edge_battle(
-                          self.map, record["pair"])["side2"])
-
-    def test_hidden_combat_bubble_cannot_be_clicked(self):
-        from map_logic.rendering import overlay_renderer
-
-        previous_mode = self.map.secondary_mode
-        self.addCleanup(setattr, self.map, "secondary_mode", previous_mode)
-        self.map.secondary_mode = "ECONOMY"
-
-        record = next(record for record in overlay_renderer.combat_bubble_records(self.map)
-                      if record["kind"] == "province"
-                      and record["province_id"] == self.province["id"])
-        position = queries.world_to_screen(record["center"], self.map)
-
-        self.assertIsNone(overlay_renderer.combat_bubble_at_screen_pos(
-            self.map, position))
-
-    def test_combat_bubbles_render_during_ai_moves_but_remain_unclickable(self):
-        from map_logic.rendering import overlay_renderer
-
-        previous_mode = self.map.secondary_mode
-        previous_ai_moves = self.map.viewing_ai_moves
-        self.addCleanup(setattr, self.map, "secondary_mode", previous_mode)
-        self.addCleanup(setattr, self.map, "viewing_ai_moves", previous_ai_moves)
-        self.map.secondary_mode = "UNITS"
-        self.map.viewing_ai_moves = True
-
-        records = overlay_renderer.combat_bubble_records(self.map)
-        with mock.patch.object(overlay_renderer, "_draw_combat_bubble") as draw:
-            returned = overlay_renderer.draw_combat_bubbles(
-                self.map, self.surface, records)
-
-        self.assertEqual(returned, records)
-        self.assertEqual(draw.call_count, len(records))
-        position = queries.world_to_screen(records[0]["center"], self.map)
-        self.assertIsNone(overlay_renderer.combat_bubble_at_screen_pos(
-            self.map, position))
 
 
 class LaneOrderTests(BattleScreenTestCase):
@@ -689,12 +304,7 @@ class SideReserveTests(BattleScreenTestCase):
         screen = self.screen()
         editable = [el for el in self.rows(screen) if not getattr(el, "disabled", False)]
 
-        # The outlook footer consumes enough vertical room for a full reserve
-        # row to scroll below the first view. The rows remain editable, and the
-        # signed scroll limit exposes the rest of them.
-        self.assertTrue(editable)
-        self.assertLessEqual(len(editable), len(screen.bench()))
-        self.assertLess(screen.pane_scroll_limit(battle_screen.PANE_RESERVE), 0)
+        self.assertEqual(len(editable), len(screen.bench()))
 
     def test_the_heading_counts_both(self):
         screen = self.screen()

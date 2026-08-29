@@ -238,7 +238,7 @@ def draw_unit_roster(map_screen, surface, province, units, is_visible, x, y, wid
 
 def draw_sidebar_info(map_screen, surface):
     """
-    Draws the left-hand sidebar containing province information 
+    Draws the left-hand sidebar containing province information
     and active combat data.
     """
     # 1. Draw the Panel Background and Border
@@ -253,34 +253,34 @@ def draw_sidebar_info(map_screen, surface):
 
     # --- FOG OF WAR VISIBILITY CHECK ---
     is_visible = queries.is_province_visible(map_screen, province["id"])
-            
+
     owner_id = province.get("owner", "Unclaimed")
     terrain = province.get("terrain", "Unknown")
     # Submarines we're not allied with and aren't currently fighting stay off
     # this list entirely -- same rule the map icons and tooltip follow.
     units = queries.filter_visible_units(
-        queries.units_on_province(province), map_screen.player_country, province, map_screen.nation_data)
-    
+        province.get("units", []), map_screen.player_country, province, map_screen.nation_data)
+
     # 3. Resolve Display Name for the Owner
     owner_data = map_screen.nation_data.get(owner_id, {})
     owner_display = owner_data.get("name", owner_id).upper()
 
     # --- Terrain Image Loading ---
     terrain_filename = f"{terrain.title()}.png"
-            
+
     try:
         terrain_img = ui_bars.get_ui_image(terrain_filename, directory=c.TERRAINS_DIR)
     except FileNotFoundError:
         terrain_img = ui_bars.get_ui_image("Unknown.png", directory=c.TERRAINS_DIR)
-    
+
     # Scale to fit the sidebar width with a small padding
     img_width = SIDEBAR_INFO_WIDTH - 20
     img_height = img_width / 3
     terrain_img = pygame.transform.scale(terrain_img, (img_width, img_height))
-    
+
     img_x = info_rect.x + 10
     img_y = info_rect.y + 10
-    
+
     surface.blit(terrain_img, (img_x, img_y))
     pygame.draw.rect(surface, (100, 100, 100), (img_x, img_y, img_width,  img_height), 2)
 
@@ -290,10 +290,10 @@ def draw_sidebar_info(map_screen, surface):
         f"Owner: {owner_display}",
         f"Terrain: {terrain.replace('_', ' ').upper()}"
     ]
-    
+
     current_y = img_y + img_height + 10
     text_x = SIDEBAR_INFO_X + 10
-    
+
     for i, line in enumerate(info_lines):
         tsurf = map_screen.small_font.render(line, True, (255, 255, 255))
         surface.blit(tsurf, (text_x, current_y))
@@ -372,7 +372,7 @@ def draw_owner_portrait(map_screen, surface):
     # Position safely beside the Left UI Bar and below the Top UI Bar
     start_x = c.UI_LEFT_OFFSET + 20
     start_y = 80
-    
+
     # Determine the size
     has_title = bool(leader_title)
     has_name = bool(leader_name)
@@ -387,7 +387,7 @@ def draw_owner_portrait(map_screen, surface):
     # Shift the text downwards cleanly based on whichever dimension we just used
     text_x = start_x
     text_y = start_y + portrait_dim - 5
-    
+
     # Blit Name and Title using the unified shadow helper
     fonts.draw_text_with_shadow(surface, leader_name, text_x, text_y + 10, "heading2")
     if has_title:
