@@ -40,6 +40,15 @@ class MenuExitTests(unittest.TestCase):
         self.assertEqual(self.menu.exit_btn.rect.right, pygame.display.get_surface().get_width() - 20)
         self.assertEqual(self.menu.exit_btn.text, "Exit")
 
+    def test_exit_button_is_omitted_from_web_build(self):
+        from screens.menu_screens import menu as menu_module
+
+        with mock.patch.object(menu_module, "IS_WEB", True):
+            web_menu = menu_module.Menu()
+
+        self.assertIsNone(web_menu.exit_btn)
+        self.assertNotIn("Exit", [element.text for element in web_menu.elements])
+
     def test_cancel_keeps_the_game_running(self):
         modal = self.open_exit_dialog()
 

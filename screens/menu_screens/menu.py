@@ -248,25 +248,30 @@ class Menu(GameState):
         )
         self.elements.append(self.swap_hildehrand_btn)
 
-        # Exit lives in the top-right corner and uses the shared modal dialog
-        # so the game is never closed accidentally by a single click.
-        self.exit_btn = Button(
-            c.SCREEN_WIDTH - 120,
-            20,
-            "small",
-            "red",
-            "Exit",
-            self.confirm_exit,
-            font_preset="button",
-        )
-        self.elements.append(self.exit_btn)
+        # Exit lives in the top-right corner on desktop builds and uses the
+        # shared modal dialog so the game is never closed accidentally by a
+        # single click. Browsers cannot close their own tab, so omit this
+        # control from the web build entirely.
+        self.exit_btn = None
+        if not IS_WEB:
+            self.exit_btn = Button(
+                c.SCREEN_WIDTH - 120,
+                20,
+                "small",
+                "red",
+                "Exit",
+                self.confirm_exit,
+                font_preset="button",
+            )
+            self.elements.append(self.exit_btn)
 
         # These two skip the rise-from-bottom cascade below and instead slide
         # in horizontally: the refresh button from the right, alongside the
         # sign, the exit button from the right in the top corner, and the
         # portrait swap button from the left, alongside Hildehrand.
         self.refresh_btn._intro_from_right = True
-        self.exit_btn._intro_from_right = True
+        if self.exit_btn:
+            self.exit_btn._intro_from_right = True
         self.swap_hildehrand_btn._intro_from_left = True
 
         # Cascade the rise-in by vertical position: rows near the top of the
