@@ -720,7 +720,7 @@ SIZES = {
     "diplomatic": (200, 30),
     "keys": (60, 30),
     "menu": (200, 45),
-    "credit": (130, 45),
+    "mini_menu": (140, 45),
     "medium": (200, 50),
     "brick": (150, 50),
     # Scenario settings screen: same width as "medium" but thinner, so a whole

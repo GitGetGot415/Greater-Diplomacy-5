@@ -170,13 +170,12 @@ class Menu(GameState):
         # per centred menu entry, so adding a screen is a single line here.
         # Credits is positioned separately below, above the GitHub/Discord links.
         menu_items = [
-            ("- 200", "New Game",     "green",  "new_game",   "NEW_GAME"),
-            ("- 150",  "Load Game",   "yellow", "load_game",  "LOAD_GAME"),
-            ("- 100", "Tournaments",  "red",    "mail",       "MULTIPLAYER_HUB"),
-            ("- 50",  "Map Editor",   "orange", "map_editor", "SELECT_BASE_MAP"),
-            ("+ 0", "Settings",       "grey",   "settings",   "SETTINGS"),
-            ("+ 50", "Music Player",  "blue",   "music",      "MUSIC_PLAYER"),
-            ("+ 100", "Translate",    "white",  "export",     "TRANSLATE"),
+            ("- 150", "New Game",     "green",  "new_game",   "NEW_GAME"),
+            ("- 100",  "Load Game",   "yellow", "load_game",  "LOAD_GAME"),
+            ("- 50", "Tournaments",  "red",    "mail",       "MULTIPLAYER_HUB"),
+            ("+ 0",  "Map Editor",   "orange", "map_editor", "SELECT_BASE_MAP"),
+            ("+ 50", "Settings",       "grey",   "settings",   "SETTINGS"),
+            ("+ 100", "Music Player",  "blue",   "music",      "MUSIC_PLAYER"),
         ]
         self.elements = [
             Button("centered", f"centered {offset}", "menu", color, label,
@@ -188,23 +187,28 @@ class Menu(GameState):
         # column with the two link rows, but sits above them without changing
         # any of the other menu buttons' positions.
         credits_y = (c.MENU_BOTTOM_TEXT_START_Y + c.MENU_BOTTOM_TEXT_STEP_Y
-                     - c.SIZES["credit"][1] - 10)
+                     - c.SIZES["mini_menu"][1] - 10)
         self.credits_btn = Button(
-            c.MENU_BOTTOM_TEXT_START_X, credits_y, "credit", "purple", "Credits",
+            c.MENU_BOTTOM_TEXT_START_X, credits_y, "mini_menu", "purple", "Credits",
             lambda: self.go_to("CREDITS"), image=ui_elements.UI_ICONS.get("credits"))
         self.elements.append(self.credits_btn)
 
         row_button_gap = 10
         self.assets_btn = Button(
-            self.credits_btn.rect.right + row_button_gap, credits_y, "credit", "pink", "Assets",
+            self.credits_btn.rect.right + row_button_gap, credits_y, "mini_menu", "pink", "Assets",
             lambda: self.go_to("VIEW_ASSETS"), image=ui_elements.UI_ICONS.get("brush"))
         self.elements.append(self.assets_btn)
 
-        mods_x = 300
+        mods_x = self.assets_btn.rect.right + row_button_gap
         self.mods_btn = Button(
-            mods_x, credits_y, "credit", "light_blue", "Mods",
+            mods_x, credits_y, "mini_menu", "light_blue", "Mods",
             lambda: self.go_to("MODS"), image=ui_elements.UI_ICONS.get("mods"))
         self.elements.append(self.mods_btn)
+
+        self.translate_btn = Button(
+            self.mods_btn.rect.right + row_button_gap, credits_y, "mini_menu", "white", "Translate",
+            lambda: self.go_to("TRANSLATE"), image=ui_elements.UI_ICONS.get("export"))
+        self.elements.append(self.translate_btn)
         
         self.bottom_texts = []
         font = fonts.get("heading2")
