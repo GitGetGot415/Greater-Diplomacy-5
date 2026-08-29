@@ -137,6 +137,40 @@ class MidTurnSwapTests(unittest.TestCase):
         self.assertNotIn(unit_a, p4["units"])
         self.assertEqual(unit_a["order"]["path"], [])
 
+    def test_a_midturn_bystander_cannot_pass_through_the_new_edge_battle(self):
+        screen = StubMapScreen()
+        screen.add_nation("A", at_war_with=["B"])
+        screen.add_nation("B", at_war_with=["A"])
+        screen.add_nation("C")
+        screen.nation_data["B"]["allied_with"] = ["C"]
+        screen.nation_data["C"]["allied_with"] = ["B"]
+
+        unit_a = make_unit("A", ["p2", "p3"], speed=2)
+        unit_b = make_unit("B", ["p3", "p2"], speed=2)
+        bystander = make_unit("C", ["p3", "p2"], speed=2)
+
+        screen.add_province("p1", "A", units=[unit_a])
+        screen.add_province("p2", "A")
+        screen.add_province("p3", "B")
+        screen.add_province("p4", "B", units=[unit_b])
+        screen.add_province("p5", "C")
+        screen.add_province("p6", "C", units=[bystander])
+
+        # The neutral unit reaches p3 alongside B on step one.  On step two,
+        # it must wait at p3 when A and B form their midpoint battle on p2-p3.
+        screen.id_to_province["p3"]["neighbors"] = ["p2", "p6", "p4"]
+        screen.id_to_province["p6"]["neighbors"] = ["p3"]
+        movement_processor.process_movement(screen)
+
+        self.assertIn("_edge_battle", unit_a)
+        self.assertIn("_edge_battle", unit_b)
+        self.assertNotIn("_edge_battle", bystander)
+        self.assertEqual(unit_a["_current_province_id"], "p2")
+        self.assertEqual(unit_b["_current_province_id"], "p3")
+        self.assertEqual(bystander["_current_province_id"], "p3")
+        self.assertIn(bystander, screen.id_to_province["p3"]["units"])
+        self.assertNotIn(bystander, screen.id_to_province["p2"]["units"])
+
 
 class FinishedMoverVisibilityTests(unittest.TestCase):
     def test_a_finished_mover_still_blocks_a_later_arrival(self):
@@ -230,7 +264,7 @@ class PersistentEdgeBattleTests(unittest.TestCase):
         self.assertIn(a[0], p2["units"])
         self.assertIn(b, p1["units"])
 
-    def test_a_noncombatant_crossing_the_same_edge_keeps_moving(self):
+    def test_a_noncombatant_cannot_cross_an_active_midpoint_battle(self):
         screen, p1, p2, a, b = self.build()
         screen.add_nation("C", at_war_with=[])
         screen.nation_data["B"]["allied_with"] = ["C"]
@@ -243,7 +277,43 @@ class PersistentEdgeBattleTests(unittest.TestCase):
         self.assertIn("_edge_battle", a[0])
         self.assertIn("_edge_battle", b)
         self.assertNotIn("_edge_battle", bystander)
-        self.assertIn(bystander, p2["units"])
+        self.assertIn(bystander, p1["units"])
+        self.assertNotIn(bystander, p2["units"])
+        self.assertEqual(bystander["order"]["path"], ["p2"])
+
+    def test_a_combatant_can_reinforce_an_active_midpoint_battle(self):
+        screen, p1, p2, a, b = self.build()
+        reinforcement = make_unit("A", ["p2"])
+        p1["units"].append(reinforcement)
+
+        self.start(screen)
+
+        self.assertIn("_edge_battle", a[0])
+        self.assertIn("_edge_battle", b)
+        self.assertIn("_edge_battle", reinforcement)
+        self.assertEqual(reinforcement["_edge_battle"], {
+            "origin_id": "p1",
+            "destination_id": "p2",
+        })
+        self.assertIn(reinforcement, p1["units"])
+        self.assertNotIn(reinforcement, p2["units"])
+
+    def test_reinforcements_from_both_endpoints_join_without_a_second_exchange(self):
+        screen, p1, p2, a, b = self.build()
+        self.start(screen)
+        first_reinforcement = make_unit("A", ["p2"])
+        second_reinforcement = make_unit("B", ["p1"])
+        p1["units"].append(first_reinforcement)
+        p2["units"].append(second_reinforcement)
+
+        self.start(screen)
+
+        self.assertIn("_edge_battle", first_reinforcement)
+        self.assertIn("_edge_battle", second_reinforcement)
+        self.assertEqual(first_reinforcement["health"], 1000)
+        self.assertEqual(second_reinforcement["health"], 1000)
+        self.assertIn(first_reinforcement, p1["units"])
+        self.assertIn(second_reinforcement, p2["units"])
 
     def test_individual_retreat_leaves_other_fighters_midpoint_and_restarts_on_origin(self):
         screen, p1, _p2, a, b = self.build(a_units=2)

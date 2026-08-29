@@ -186,6 +186,22 @@ def _resolve_step_swaps(map_screen, moving_units, step, get_eff_speed):
         units1 = [m for m in by_origin.get(origin, []) if m["order"]["path"][0] == dest]
         units2 = [m for m in by_origin.get(dest, []) if m["order"]["path"][0] == origin]
 
+        existing_edge = combat_processor.find_edge_battle(
+            map_screen, (origin, dest))
+        if existing_edge is not None:
+            # These movers are meeting at a connection that is already being
+            # fought over.  Attach eligible units to that battle and hold all
+            # of them at their endpoints; do not create a second exchange.
+            for m in units1:
+                combat_processor.join_edge_battle(
+                    m, origin, dest, existing_edge, map_screen.nation_data)
+                m["_skip_remaining_steps"] = True
+            for m in units2:
+                combat_processor.join_edge_battle(
+                    m, dest, origin, existing_edge, map_screen.nation_data)
+                m["_skip_remaining_steps"] = True
+            continue
+
         result = combat_processor.start_edge_battle(
             prov1, prov2, units1, units2, map_screen.nation_data,
             map_screen=map_screen)
@@ -193,13 +209,30 @@ def _resolve_step_swaps(map_screen, moving_units, step, get_eff_speed):
         survivor_ids = {id(m) for m in survivors}
         dead_ids.update(id(m) for m in units1 + units2 if id(m) not in survivor_ids)
 
-        # A surviving edge battle holds only the actual combatants.  Neutral
-        # fellow travellers keep walking.  A decisive winner is placed directly
-        # onto the enemy endpoint by start_edge_battle with its remaining queue
-        # cleared, so it cannot continue farther this turn.
-        for m in survivors:
-            if id(m) in result.fought and combat_processor.is_edge_battle_unit(m):
+        # A live edge battle blocks the whole connection, including neutral
+        # traffic.  Only the units that can fight are tagged; everybody else
+        # waits at their origin instead of walking through the midpoint.
+        # The movers are still outside province lists during this sub-step, so
+        # find_edge_battle cannot see a newly-created record yet.  The fighter
+        # tags on both directions are the authoritative live-battle signal
+        # until the sync below puts them back into those lists.
+        live_edge = (
+            any(combat_processor.is_edge_battle_unit(m)
+                and m.get("_edge_battle", {}).get("origin_id") == origin
+                for m in survivors)
+            and any(combat_processor.is_edge_battle_unit(m)
+                    and m.get("_edge_battle", {}).get("origin_id") == dest
+                    for m in survivors)
+        )
+        if live_edge:
+            for m in survivors:
                 m["_skip_remaining_steps"] = True
+        else:
+            # A decisive winner is placed directly onto the enemy endpoint by
+            # start_edge_battle with its remaining queue cleared.
+            for m in survivors:
+                if id(m) in result.fought and combat_processor.is_edge_battle_unit(m):
+                    m["_skip_remaining_steps"] = True
 
     if not dead_ids:
         return moving_units
@@ -273,6 +306,18 @@ def process_movement(map_screen):
                         unit["_skip_remaining_steps"] = True 
                         continue
             # ------------------------------------------
+
+            # A midpoint battle occupies the connection itself.  A mover from
+            # either endpoint may reinforce it, but no unit may pass through to
+            # the other province while the battle remains active.
+            edge_battle = combat_processor.find_edge_battle(
+                map_screen, (unit["_current_province_id"], target_id))
+            if edge_battle is not None:
+                combat_processor.join_edge_battle(
+                    unit, unit["_current_province_id"], target_id,
+                    edge_battle, map_screen.nation_data)
+                unit["_skip_remaining_steps"] = True
+                continue
 
             # --- SHIP RULES EVALUATION ---
             dest_is_water = queries.is_water_province(target_prov)

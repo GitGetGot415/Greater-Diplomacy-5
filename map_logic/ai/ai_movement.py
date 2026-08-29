@@ -59,7 +59,7 @@ def _tile_pressure(assignments, stacks, tile, capacity=None):
             assignments.get(tile, 0))
 
 
-def _bfs_nearest_target(start_id, target_ids, allowed_prov_ids, id_to_province, target_assignments, is_convoy=False, is_ship=False, moving_nation=None, nation_data=None, unsafe_waters=None, unit_speed=1.0, water_ids=None, neighbor_ids=None, target_stacks=None, target_capacity=None):
+def _bfs_nearest_target(start_id, target_ids, allowed_prov_ids, id_to_province, target_assignments, is_convoy=False, is_ship=False, moving_nation=None, nation_data=None, unsafe_waters=None, unit_speed=1.0, water_ids=None, neighbor_ids=None, target_stacks=None, target_capacity=None, blocked_edges=None, reinforce_edges=None):
     """Finds shortest path using Dijkstra. Returns the path to the target with the least units assigned."""
     if unsafe_waters is None:
         unsafe_waters = {}
@@ -67,6 +67,10 @@ def _bfs_nearest_target(start_id, target_ids, allowed_prov_ids, id_to_province, 
         target_stacks = {}
     if target_capacity is None:
         target_capacity = {}
+    if blocked_edges is None:
+        blocked_edges = set()
+    if reinforce_edges is None:
+        reinforce_edges = set()
     if water_ids is None:
         water_ids = {p_id for p_id, p in id_to_province.items() if queries.is_water_province(p)}
     if neighbor_ids is None:
@@ -134,6 +138,19 @@ def _bfs_nearest_target(start_id, target_ids, allowed_prov_ids, id_to_province, 
             step_cost = sea_step if (dest_is_water and not is_ship) else land_step
 
             new_cost = current_cost + step_cost
+
+            # A live midpoint battle occupies the edge, not either endpoint.
+            # It is a terminal destination only for a nation that can reinforce
+            # that battle; otherwise the path may not cross it at all.
+            edge = combat_processor._edge_pair_key(curr, n_id)
+            if edge in blocked_edges:
+                if (curr, n_id) not in reinforce_edges:
+                    continue
+                if n_id in target_ids:
+                    valid_paths.append((new_cost, (n_id, path)))
+                    if found_cost == -1.0:
+                        found_cost = new_cost
+                continue
 
             # --- BLOCK SUICIDE PATHS ---
 
@@ -454,6 +471,30 @@ def _order_edge_retreats(map_screen, ai_nations):
                     combat_processor.request_edge_retreat(unit)
 
 
+def _edge_reinforcement_options(map_screen, ai_name):
+    """Return active edge barriers and the directions this AI can reinforce."""
+    blocked_edges = set()
+    reinforce_edges = set()
+    reinforcement_targets = {}
+
+    for record in combat_processor.edge_battles(map_screen):
+        pair = record["pair"]
+        blocked_edges.add(pair)
+
+        for source, destination, opposing in (
+                (pair[0], pair[1], record["side2"]),
+                (pair[1], pair[0], record["side1"])):
+            if any((queries.are_at_war(ai_name, enemy.get("owner"),
+                                       map_screen.nation_data)
+                   or queries.are_at_war(enemy.get("owner"), ai_name,
+                                         map_screen.nation_data))
+                   for enemy in opposing):
+                reinforce_edges.add((source, destination))
+                reinforcement_targets.setdefault(source, []).append(destination)
+
+    return blocked_edges, reinforce_edges, reinforcement_targets
+
+
 def _track_battles_and_convoys(map_screen, ai_name, units_info, friendly_nations, unsafe_waters, all_enemy_coasts, enemy_coastal_waters):
     """Finds active battles (and whether this nation is about to lose them, in
     which case it picks a retreat tile), plus which convoys are in combat or
@@ -540,6 +581,7 @@ def _build_target_assignments(units_info, borders, battles, at_war, capacity=Non
     expedition_targets = borders["expedition_targets"]
 
     active_battles = battles["active_battles"]
+    edge_reinforcement_targets = battles.get("edge_reinforcement_targets", {})
     friendly_convoys = battles["friendly_convoys"]
     convoy_in_combat = battles["convoy_in_combat"]
     convoy_near_ship = battles["convoy_near_ship"]
@@ -547,7 +589,12 @@ def _build_target_assignments(units_info, borders, battles, at_war, capacity=Non
 
     # --- FIX: UNIVERSAL TARGETS ---
     # ALWAYS include peace and coastal borders to prevent abandonment
-    target_destinations = list(set(list(unclaimed_targets) + list(all_unclaimed_coasts) + list(peace_borders) + list(coastal_borders) + list(active_battles)))
+    edge_targets = {
+        target_id
+        for destinations in edge_reinforcement_targets.values()
+        for target_id in destinations
+    }
+    target_destinations = list(set(list(unclaimed_targets) + list(all_unclaimed_coasts) + list(peace_borders) + list(coastal_borders) + list(active_battles) + list(edge_targets)))
 
     if at_war:
         # Inject expedition_targets so distant armies mobilize!
@@ -606,6 +653,13 @@ def _build_target_assignments(units_info, borders, battles, at_war, capacity=Non
             depth = _tile_depth(capacity, b_id)
             room = max(0, depth - target_stacks.get(b_id, 0)) / depth
             target_assignments[b_id] -= c.AI_REINFORCE_COMBAT_WEIGHT * room
+
+    # A midpoint battle has no province id to appear in active_battles.  Pull
+    # units toward its far endpoint as a terminal target instead; movement will
+    # turn that final edge step into a reinforcement rather than a crossing.
+    for edge_target in edge_targets:
+        if edge_target in target_assignments:
+            target_assignments[edge_target] -= c.AI_REINFORCE_COMBAT_WEIGHT
 
     # --- STRATEGIC WEIGHTING FIX ---
     # 1. Coasts are low priority. Inflate their count so units prefer land borders.
@@ -704,6 +758,9 @@ def _assign_unit_orders(map_screen, ai_name, units_info, ctx, allowed_prov_ids, 
     target_stacks = ctx["target_stacks"]
     naval_stacks = ctx["naval_stacks"]
     target_capacity = ctx["target_capacity"]
+    blocked_edge_pairs = ctx.get("blocked_edge_pairs", set())
+    reinforce_edge_pairs = ctx.get("reinforce_edge_pairs", set())
+    edge_reinforcement_targets = ctx.get("edge_reinforcement_targets", {})
 
     def claim(tile, from_tile=None):
         """Books one unit onto `tile`, freeing the tile it left.
@@ -777,6 +834,18 @@ def _assign_unit_orders(map_screen, ai_name, units_info, ctx, allowed_prov_ids, 
             _try_bombard(map_screen, ai_name, unit, prov)
             continue # Otherwise, hold the line and fight!
 
+        # Midpoint battles are not ordinary province combat, so the unit is not
+        # reported as being "in combat" by the province queries.  Give a unit
+        # at an endpoint an explicit order to join its nation's edge battle
+        # before it considers bombardment or another strategic destination.
+        edge_targets = [target_id for target_id in edge_reinforcement_targets.get(curr_id, ())
+                        if (curr_id, target_id) in reinforce_edge_pairs]
+        if edge_targets:
+            best_edge_target = min(edge_targets, key=pressure)
+            unit["order"]["path"] = [best_edge_target]
+            claim(best_edge_target, from_tile=curr_id)
+            continue
+
         # --- BOMBARDMENT ---
         # Free, draws no return fire, and the one thing not capped by combat
         # width, so a gun with anything in range has nothing better to do. An
@@ -799,7 +868,11 @@ def _assign_unit_orders(map_screen, ai_name, units_info, ctx, allowed_prov_ids, 
             if target_assignments.get(curr_id, 0) <= 1:
                 continue # Stay put!
 
-        adjacent_unclaimed = [n for n in prov.get("neighbors", []) if n in unclaimed_targets]
+        adjacent_unclaimed = [
+            n for n in prov.get("neighbors", [])
+            if n in unclaimed_targets
+            and combat_processor._edge_pair_key(curr_id, n) not in blocked_edge_pairs
+        ]
 
         # PREVENT ILLEGAL CONVOY MOVES
         if is_convoy:
@@ -825,6 +898,8 @@ def _assign_unit_orders(map_screen, ai_name, units_info, ctx, allowed_prov_ids, 
 
                         # Prevent backtracking
                         if n_id in unit["order"]["path"] or n_id == curr_id:
+                            continue
+                        if combat_processor._edge_pair_key(curr_node, n_id) in blocked_edge_pairs:
                             continue
 
                         # Obey movement rules using constants
@@ -856,7 +931,12 @@ def _assign_unit_orders(map_screen, ai_name, units_info, ctx, allowed_prov_ids, 
 
         if at_war and not is_naval_combatant:
             # Include expedition targets in the adjacent strike check so they can push off allied territory
-            adjacent_targets = [n for n in prov.get("neighbors", []) if n in target_destinations and (n in ctx["enemy_targets"] or n in ctx["expedition_targets"])]
+            adjacent_targets = [
+                n for n in prov.get("neighbors", [])
+                if n in target_destinations
+                and (n in ctx["enemy_targets"] or n in ctx["expedition_targets"])
+                and combat_processor._edge_pair_key(curr_id, n) not in blocked_edge_pairs
+            ]
 
             # PREVENT ILLEGAL CONVOY ATTACKS
             if is_convoy:
@@ -883,6 +963,8 @@ def _assign_unit_orders(map_screen, ai_name, units_info, ctx, allowed_prov_ids, 
 
                             # Prevent backtracking
                             if n_id in unit["order"]["path"] or n_id == curr_id:
+                                continue
+                            if combat_processor._edge_pair_key(curr_node, n_id) in blocked_edge_pairs:
                                 continue
 
                             # Obey movement rules using your constants/queries
@@ -948,7 +1030,9 @@ def _assign_unit_orders(map_screen, ai_name, units_info, ctx, allowed_prov_ids, 
             water_ids=water_ids,
             neighbor_ids=neighbor_ids,
             target_stacks=stacks,
-            target_capacity=target_capacity
+            target_capacity=target_capacity,
+            blocked_edges=blocked_edge_pairs,
+            reinforce_edges=reinforce_edge_pairs,
         )
 
         if path:
@@ -1130,7 +1214,8 @@ def _assign_maintenance_orders(map_screen, ai_name, units_info, ctx,
             target_assignments,
             moving_nation=ai_name, nation_data=map_screen.nation_data,
             unit_speed=unit.get("speed", 1),
-            water_ids=water_ids, neighbor_ids=neighbor_ids)
+            water_ids=water_ids, neighbor_ids=neighbor_ids,
+            blocked_edges=ctx.get("blocked_edge_pairs", set()))
         if not path or any(step in water_ids for step in path):
             return None
         return path
@@ -1381,6 +1466,10 @@ def _generate_unit_orders(map_screen):
         battles = _track_battles_and_convoys(map_screen, ai_name, units_info, friendly_nations,
                                              unsafe_waters, borders["all_enemy_coasts"], borders["enemy_coastal_waters"])
 
+        blocked_edge_pairs, reinforce_edge_pairs, edge_reinforcement_targets = \
+            _edge_reinforcement_options(map_screen, ai_name)
+        battles["edge_reinforcement_targets"] = edge_reinforcement_targets
+
         # What each destination's fight can actually seat for us, asked of the
         # combat rules rather than restated here. A tile splitting three ways
         # gives us fewer slots than one where we face a single enemy.
@@ -1400,6 +1489,8 @@ def _generate_unit_orders(map_screen):
             **borders,
             **battles,
             **assignments,
+            "blocked_edge_pairs": blocked_edge_pairs,
+            "reinforce_edge_pairs": reinforce_edge_pairs,
         }
         ctx["repair_havens"] = _repair_havens(map_screen, ai_name, my_provs, ctx)
 

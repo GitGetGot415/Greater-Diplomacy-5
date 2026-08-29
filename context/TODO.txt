@@ -14,8 +14,6 @@ REWORK FOLDER UI SO IT USES THE BUILT IN VERSION YOUR OS HAS IF POSSIBLE
 - perhaps railroad guns could be a type of artillery
 - seperate artillery research section?
 
-HOW DO YOU MOVE UNITS INTO A MIDPOINT BATTLE?????
-
 - possibly make convoying and unconvoying and trucking and untrucking all visible simultaneously? (this is kinda allot tbh)
 
 - combat width research? (ie increase combat width)

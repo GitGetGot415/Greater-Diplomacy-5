@@ -96,6 +96,32 @@ def find_edge_battle(map_screen, pair):
                  if record["pair"] == wanted), None)
 
 
+def join_edge_battle(unit, origin_id, destination_id, record, nation_data):
+    """Commit a mover to an active midpoint battle, if it can reinforce it.
+
+    An edge battle is a hard barrier: a unit cannot pass through it.  A unit
+    that is at war with the fighters on the far side may instead join the
+    battle from its endpoint and will take part in the next exchange.
+    """
+    pair = record.get("pair", ())
+    if (origin_id, destination_id) not in ((pair[0], pair[1]), (pair[1], pair[0])):
+        return False
+
+    opposing = (record["side2"] if origin_id == pair[0]
+                else record["side1"])
+    if not any(
+            queries.are_at_war(unit.get("owner"), enemy.get("owner"), nation_data)
+            or queries.are_at_war(enemy.get("owner"), unit.get("owner"), nation_data)
+            for enemy in opposing):
+        return False
+
+    unit[EDGE_BATTLE_KEY] = {
+        "origin_id": origin_id,
+        "destination_id": destination_id,
+    }
+    return True
+
+
 def edge_battle_midpoint(map_screen, record):
     """World-space midpoint for a virtual battle, respecting wrapped maps."""
     first = map_screen.id_to_province[record["pair"][0]]["center"]
@@ -272,8 +298,8 @@ def start_edge_battle(prov1, prov2, units1, units2, nation_data, map_screen=None
     """Create and immediately fight a virtual battle between two provinces.
 
     Only units in an actual lane are tagged.  Fellow travellers who are neutral
-    to the enemy keep marching, exactly as before.  If the opening volley clears
-    a direction, its opponent advances once onto the enemy endpoint and stops.
+    to the enemy do not become fighters.  If the opening volley clears a
+    direction, its opponent advances once onto the enemy endpoint and stops.
     """
     result = _resolve_meeting_exchange(prov1, prov2, units1, units2, nation_data)
     _prune_dead((prov1, prov2))
@@ -635,6 +661,11 @@ def process_meeting_engagements(map_screen):
     # prediction bubbles are drawn from.  Newly created edge fights are read
     # fresh per pair so a casualty in one cannot join another edge this turn.
     for pair in combat_rules.find_meeting_pairs(map_screen.map_data, map_screen.nation_data):
+        # New movers at an already active edge are reinforcements, not a second
+        # independent clash.  Movement will attach them to the existing record
+        # after this turn's volley has resolved.
+        if find_edge_battle(map_screen, pair) is not None:
+            continue
         prov1, prov2, units1, units2 = combat_rules.meeting_sides(map_screen.id_to_province, pair)
         start_edge_battle(prov1, prov2, units1, units2, map_screen.nation_data,
                           map_screen=map_screen)
