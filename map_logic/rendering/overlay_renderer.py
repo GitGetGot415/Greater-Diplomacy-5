@@ -469,28 +469,64 @@ def midpoint_bounce_pairs(map_screen):
         map_screen.map_data, map_screen.nation_data, visible_to)
 
 
+def midpoint_bounce_outcomes(map_screen):
+    """Describe each predicted swap and whether it becomes an immediate overrun.
+
+    A meeting engagement exchanges one volley before movement continues. If a
+    side is completely destroyed by that first exchange, the stronger side
+    does not actually bounce; it keeps moving into the other province. Slower
+    fights still use the ordinary bounce marker because both sides survive the
+    first exchange and are stopped there for the turn.
+    """
+    player = getattr(map_screen, "player_country", None)
+    full_board = (getattr(map_screen, "viewing_ai_moves", False)
+                  or player in ("Spectator", "Editor")
+                  or getattr(map_screen, "is_editor", False))
+    visible_to = None if full_board else {player}
+
+    outcomes = []
+    for pair in combat_rules.find_meeting_pairs(
+            map_screen.map_data, map_screen.nation_data, visible_to):
+        prov_a, prov_b, side_a, side_b = combat_rules.meeting_sides(
+            map_screen.id_to_province, pair, visible_to)
+        estimate = estimated_combat_outcome(
+            [side_a, side_b], map_screen.nation_data)
+        winner_side = estimate.get("winner_side")
+        is_overrun = (winner_side in (0, 1)
+                      and estimate.get("turns") == 1)
+
+        if is_overrun and winner_side == 1:
+            origin_id, target_id = prov_b["id"], prov_a["id"]
+        else:
+            origin_id, target_id = prov_a["id"], prov_b["id"]
+
+        outcomes.append({
+            "pair": pair,
+            "origin_id": origin_id,
+            "target_id": target_id,
+            "overrun": is_overrun,
+        })
+    return outcomes
+
+
 def draw_midpoint_bounces(map_screen, surface):
-    """Draw a rotated bounce marker halfway between every hostile swap.
+    """Draw a rotated bounce or overrun marker halfway between hostile swaps.
 
     The marker is placed from the same shortest wrapped edge used by movement
-    paths, then rotated from the first province toward the second. This keeps
-    the art aligned with the actual edge even when the map loops horizontally.
+    paths, then rotated in the direction the relevant side is moving. This
+    keeps the art aligned with the actual edge even when the map loops
+    horizontally.
     """
     if not getattr(map_screen, "viewing_ai_moves", False) and not (
             getattr(map_screen, "player_country", None) in ("Spectator", "Editor")
             or getattr(map_screen, "is_editor", False)):
         return
 
-    pairs = midpoint_bounce_pairs(map_screen)
-    if not pairs:
+    outcomes = midpoint_bounce_outcomes(map_screen)
+    if not outcomes:
         return
 
     cam = map_screen.camera
-    bounce_img = symbol_loader.get_symbol(
-        c.ICON_MIDPOINT_BOUNCE,
-        cam.zoom * c.MIDPOINT_BOUNCE_SCALE)
-    if bounce_img is None:
-        return
 
     allowed = None
     visible_provinces = getattr(map_screen, "visible_provinces", None)
@@ -499,10 +535,17 @@ def draw_midpoint_bounces(map_screen, surface):
         allowed = visible_provinces.union(partial)
 
     offsets = [0, -map_screen.map_w, map_screen.map_w] if map_screen.loop_map else [0]
-    for pair in pairs:
-        start_province = map_screen.id_to_province.get(pair[0])
-        end_province = map_screen.id_to_province.get(pair[1])
+    for outcome in outcomes:
+        start_province = map_screen.id_to_province.get(outcome["origin_id"])
+        end_province = map_screen.id_to_province.get(outcome["target_id"])
         if not start_province or not end_province:
+            continue
+
+        icon_name = (c.ICON_MIDPOINT_OVERRUN
+                     if outcome["overrun"] else c.ICON_MIDPOINT_BOUNCE)
+        bounce_img = symbol_loader.get_symbol(
+            icon_name, cam.zoom * c.MIDPOINT_BOUNCE_SCALE)
+        if bounce_img is None:
             continue
 
         # Match movement-path fog behavior: a visible endpoint is enough to

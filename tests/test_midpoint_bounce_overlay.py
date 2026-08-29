@@ -21,10 +21,15 @@ def province(province_id, units):
     }
 
 
-def moving_unit(owner, destination):
+def moving_unit(owner, destination, attack=100):
     return {
+        "type": "Infantry",
         "owner": owner,
         "order": {"type": "MOVE", "path": [destination]},
+        "health": 100,
+        "max_health": 100,
+        "attack": attack,
+        "defense": 0,
     }
 
 
@@ -74,6 +79,27 @@ class BouncePreviewTests(unittest.TestCase):
 
         self.assertEqual(
             overlay_renderer.midpoint_bounce_pairs(self.screen), [(1, 2)])
+
+    def test_a_one_volley_wipe_is_predicted_as_an_overrun(self):
+        self.screen.viewing_ai_moves = True
+        self.screen.map_data[1]["units"] = [moving_unit("A", 2, attack=1000)]
+        self.screen.map_data[2]["units"] = [moving_unit("B", 1, attack=0)]
+
+        outcome = overlay_renderer.midpoint_bounce_outcomes(self.screen)
+
+        self.assertEqual(len(outcome), 1)
+        self.assertTrue(outcome[0]["overrun"])
+        self.assertEqual((outcome[0]["origin_id"], outcome[0]["target_id"]), (1, 2))
+
+    def test_overrun_direction_follows_the_other_winner(self):
+        self.screen.viewing_ai_moves = True
+        self.screen.map_data[1]["units"] = [moving_unit("A", 2, attack=0)]
+        self.screen.map_data[2]["units"] = [moving_unit("B", 1, attack=1000)]
+
+        outcome = overlay_renderer.midpoint_bounce_outcomes(self.screen)
+
+        self.assertTrue(outcome[0]["overrun"])
+        self.assertEqual((outcome[0]["origin_id"], outcome[0]["target_id"]), (2, 1))
 
     def test_marker_is_drawn_between_the_two_provinces(self):
         self.screen.viewing_ai_moves = True
