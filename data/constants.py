@@ -807,6 +807,7 @@ SIZES = {
     "keys": (60, 30),
     "menu": (180, 50),
     "medium": (200, 50),
+    "setting_option": (200, 40),
     "brick": (150, 50),
     # Scenario settings screen: same width as "medium" but thinner, so a whole
     # scenario's worth of toggles/sliders can fit on one screen without scrolling.

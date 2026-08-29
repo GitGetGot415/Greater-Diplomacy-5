@@ -11,11 +11,11 @@ from ui import confirm_dialog
 # --- Settings screen button layout ---
 SETTINGS_RIGHT_COL_X = c.SCREEN_WIDTH - 250
 SETTINGS_BACK_POS = (50, 50)
-SETTINGS_FULLSCREEN_Y = 40
-SETTINGS_CHECKERBOARD_WATER_Y = 100
-SETTINGS_FPS_TOGGLE_Y = 160
-SETTINGS_DRAG_KEY_Y = 220
-SETTINGS_MAP_NAV_Y = 280
+SETTINGS_FULLSCREEN_Y = 20
+SETTINGS_CHECKERBOARD_WATER_Y = 70
+SETTINGS_FPS_TOGGLE_Y = 120
+SETTINGS_DRAG_KEY_Y = 170
+SETTINGS_MAP_NAV_Y = 220
 SETTINGS_PLAYER_SLIDER_Y = 400
 SETTINGS_FPS_SLIDER_Y = 460
 SETTINGS_AI_THREAD_SLIDER_POS = (60, 400)
@@ -39,9 +39,9 @@ SETTINGS_PATH_BOX_X = c.SCREEN_WIDTH // 2 - 150
 # small square and left-of-the-setting placement scenario_settings.py uses.
 SETTINGS_INFO_GAP_X = 10
 SETTINGS_INFO_X = SETTINGS_RIGHT_COL_X - c.SIZES["scenario_setting_info"][0] - SETTINGS_INFO_GAP_X
-# Half the leftover height between a "medium" button (50px) and the smaller
+# Half the leftover height between a "setting_option" button (40px) and the smaller
 # "scenario_setting_info" square (32px), so the two line up on center.
-SETTINGS_INFO_Y_NUDGE = (c.SIZES["medium"][1] - c.SIZES["scenario_setting_info"][1]) // 2
+SETTINGS_INFO_Y_NUDGE = (c.SIZES["setting_option"][1] - c.SIZES["scenario_setting_info"][1]) // 2
 
 # (row Y, tooltip title, tooltip text) for each info button in that column, in
 # the same top-to-bottom order as the buttons themselves.
@@ -97,13 +97,13 @@ def render_settings_buttons(settings_screen):
 
     settings_screen.elements = [
         ui_elements.make_back_button(settings_screen.save_and_go_back, pos=SETTINGS_BACK_POS),
-        Button(keybind_x, SETTINGS_FULLSCREEN_Y, "medium", "blue", "Toggle Fullscreen", settings_screen.toggle_full),
-        Button(keybind_x, SETTINGS_CHECKERBOARD_WATER_Y, "medium", "green" if settings_screen.checkerboard_water else "red",
+        Button(keybind_x, SETTINGS_FULLSCREEN_Y, "setting_option", "blue", "Toggle Fullscreen", settings_screen.toggle_full),
+        Button(keybind_x, SETTINGS_CHECKERBOARD_WATER_Y, "setting_option", "green" if settings_screen.checkerboard_water else "red",
                f"Checkerboard Water: {'ON' if settings_screen.checkerboard_water else 'OFF'}", settings_screen.toggle_checkerboard_water),
-        Button(keybind_x, SETTINGS_FPS_TOGGLE_Y, "medium", "green" if settings_screen.show_fps else "red",
+        Button(keybind_x, SETTINGS_FPS_TOGGLE_Y, "setting_option", "green" if settings_screen.show_fps else "red",
                f"Show FPS: {'ON' if settings_screen.show_fps else 'OFF'}", settings_screen.toggle_fps),
-        Button(keybind_x, SETTINGS_DRAG_KEY_Y, "medium", "purple", f"Drag Key: {settings_screen.drag_mouse_toggle}", settings_screen.toggle_drag_button),
-        Button(keybind_x, SETTINGS_MAP_NAV_Y, "medium", "purple",
+        Button(keybind_x, SETTINGS_DRAG_KEY_Y, "setting_option", "purple", f"Drag Key: {settings_screen.drag_mouse_toggle}", settings_screen.toggle_drag_button),
+        Button(keybind_x, SETTINGS_MAP_NAV_Y, "setting_option", "purple",
                f"Map Navigation: {settings_screen.map_navigation_mode.title()}",
                settings_screen.toggle_map_navigation_mode),
     ]
