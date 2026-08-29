@@ -191,14 +191,16 @@ class Menu(GameState):
         self.elements = []
 
         main_button_size = (200, 45)
-        main_table_x, main_table_y = (430, 225)
+        # center = 540
+        # (1280 - 200) / 2
+        main_table_x, main_table_y = (460, 245)
         main_button_w, main_button_h = main_button_size
-        main_columns = 2
+        main_columns = 1
         for index, button_data in enumerate(c.MENU_MAIN_BUTTON_TABLE):
             row, column = divmod(index, main_columns)
             button = Button(
                 main_table_x + column * (main_button_w + 10),
-                main_table_y + row * (main_button_h + 15),
+                main_table_y + row * (main_button_h + 10),
                 main_button_size,
                 button_data["color"],
                 button_data["text"],
@@ -210,14 +212,14 @@ class Menu(GameState):
             self.elements.append(button)
 
         button_size = (130, 40)
-        table_x, table_y = 430, 340
+        table_x, table_y = 670, 220
         button_w, button_h = button_size
-        columns = 3
+        columns = 1
         for index, button_data in enumerate(c.MENU_BUTTON_TABLE):
             row, column = divmod(index, columns)
             button = Button(
                 table_x + column * (button_w + 10),
-                table_y + row * (button_h + 10),
+                table_y + row * (button_h + 5),
                 button_size,
                 button_data["color"],
                 button_data["text"],
