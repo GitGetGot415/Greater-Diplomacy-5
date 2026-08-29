@@ -92,14 +92,18 @@ def combat_outlook_color(sides, nation_data, friendly_nations):
     return (255, 255, 0)
 
 
-def estimated_combat_turns(sides, nation_data, province=None, max_turns=100):
-    """Estimate future volleys until a battle has no hostile lane remaining.
+def estimated_combat_outcome(sides, nation_data, province=None, max_turns=100):
+    """Estimate the winning side and future volleys for a battle.
 
     This is deliberately a small, non-mutating simulation of the resolver:
     it rebuilds lanes after every simultaneous exchange, applies the same
     grouped damage function, and includes a province's fort defense when one
-    is supplied.  ``None`` means the current rules produce a stalemate (or the
-    estimate would exceed the safety limit), which the bubble displays as ``?``.
+    is supplied.
+
+    The returned ``winner_side`` is the index in ``sides`` and is ``None`` when
+    the current rules produce a stalemate, both sides survive without a hostile
+    lane, or the estimate would exceed the safety limit.  ``turns`` is the
+    number of future volleys until that result is reached.
     """
     simulated_sides = [
         [dict(unit) for unit in side if unit.get("health", 0) > 0]
@@ -115,11 +119,15 @@ def estimated_combat_turns(sides, nation_data, province=None, max_turns=100):
     for turns in range(max_turns + 1):
         battle = combat_rules.build_battle(simulated_sides, nation_data)
         if not battle.lanes:
-            return turns
+            live_side_indexes = [index for index, side in enumerate(simulated_sides)
+                                 if side]
+            winner_side = (live_side_indexes[0]
+                           if len(live_side_indexes) == 1 else None)
+            return {"winner_side": winner_side, "turns": turns}
 
         exchanges = list(combat_rules.exchange(battle, nation_data))
         if not exchanges:
-            return None
+            return {"winner_side": None, "turns": None}
 
         health_before = sum(
             max(0, float(unit.get("health", 0)))
@@ -139,9 +147,20 @@ def estimated_combat_turns(sides, nation_data, province=None, max_turns=100):
             for side in simulated_sides for unit in side
         )
         if health_after >= health_before:
-            return None
+            return {"winner_side": None, "turns": None}
 
-    return None
+    return {"winner_side": None, "turns": None}
+
+
+def estimated_combat_turns(sides, nation_data, province=None, max_turns=100):
+    """Estimate future volleys until a battle has no hostile lane remaining.
+
+    This is the backwards-compatible turns-only view used by map combat
+    bubbles.  The battle screen uses :func:`estimated_combat_outcome` so it can
+    also identify which side is expected to survive.
+    """
+    return estimated_combat_outcome(
+        sides, nation_data, province=province, max_turns=max_turns)["turns"]
 
 
 def _combat_friendly_nations(map_screen):
