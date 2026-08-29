@@ -173,6 +173,35 @@ class BuildAndPaintTests(BattleScreenTestCase):
 
         self.assertEqual(screen.selected_lane, 1)
 
+    def test_lane_outlook_is_rebuilt_for_the_selected_lane(self):
+        screen = self.screen()
+        self.assertIsInstance(screen.lane_outcome, dict)
+        self.assertEqual(
+            screen.outcome_rect.top,
+            screen.regions[battle_screen.PANE_LANES].bottom + battle_screen.OUTCOME_GAP)
+
+        with mock.patch.object(screen, "_estimate_lane_outcome",
+                               wraps=screen._estimate_lane_outcome) as estimate:
+            screen._select(1)
+
+        self.assertEqual(estimate.call_args.args[0].index, 1)
+        self.assertIsInstance(screen.lane_outcome, dict)
+
+    def test_combat_outlook_estimate_identifies_the_expected_winner(self):
+        from map_logic.rendering import overlay_renderer
+
+        library = queries.get_unit_library()
+        winner = queries.create_unit_dict("Infantry", self.a, library)
+        loser = queries.create_unit_dict("Infantry", self.x, library)
+        winner["attack"] = 1000
+        loser["attack"] = 0
+
+        outcome = overlay_renderer.estimated_combat_outcome(
+            [[winner], [loser]], self.map.nation_data)
+
+        self.assertEqual(outcome["winner_side"], 0)
+        self.assertEqual(outcome["turns"], 1)
+
     def test_a_tile_with_no_fight_on_it_says_so_rather_than_raising(self):
         self.province["units"] = [
             queries.create_unit_dict("Infantry", self.a, queries.get_unit_library())]
@@ -320,7 +349,12 @@ class SideReserveTests(BattleScreenTestCase):
         screen = self.screen()
         editable = [el for el in self.rows(screen) if not getattr(el, "disabled", False)]
 
-        self.assertEqual(len(editable), len(screen.bench()))
+        # The outlook footer consumes enough vertical room for a full reserve
+        # row to scroll below the first view. The rows remain editable, and the
+        # signed scroll limit exposes the rest of them.
+        self.assertTrue(editable)
+        self.assertLessEqual(len(editable), len(screen.bench()))
+        self.assertLess(screen.pane_scroll_limit(battle_screen.PANE_RESERVE), 0)
 
     def test_the_heading_counts_both(self):
         screen = self.screen()

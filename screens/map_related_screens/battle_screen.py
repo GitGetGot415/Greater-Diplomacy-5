@@ -66,6 +66,13 @@ LANE_FLAGS_SHOWN = 2
 #: _layout, which both shrink to make room for it instead of drawing under it.
 VIEW_MODE_ROW_RESERVE = 40
 
+# The selected lane's projected winner lives below all four scrolling panes and
+# above the fixed footer controls. Keeping it outside the panes means it stays
+# visible while a roster is scrolled, and changing the selected lane can replace
+# the one-line forecast without making a second list compete for that space.
+OUTCOME_H = 48
+OUTCOME_GAP = 8
+
 
 class Battle_Screen(ModalScreen):
     """A tile's lanes, and the player's units in them.
@@ -102,6 +109,7 @@ class Battle_Screen(ModalScreen):
         self.visible = queries.is_province_visible(map_screen, province["id"])
         self.selected_lane = 0
         self.regions = {}
+        self.lane_outcome = None
         # {pane: [(rect, payload)]}, filled by refresh_ui and read by the
         # foreground painters. Safe to cache because GameState.scroll_by calls
         # refresh_ui on every wheel notch, so the rects never go stale.
@@ -296,7 +304,12 @@ class Battle_Screen(ModalScreen):
         p = self.panel_rect
         top = p.y + 64
         view_mode_reserve = 0 if self.embedded else VIEW_MODE_ROW_RESERVE
-        view_h = p.bottom - 66 - view_mode_reserve - top
+        footer_top = p.bottom - 66 - view_mode_reserve
+        self.outcome_rect = pygame.Rect(
+            p.x + self.PAD, footer_top - OUTCOME_H,
+            max(1, p.width - 2 * self.PAD), OUTCOME_H)
+        view_h = max(HEADER_H + 1,
+                     self.outcome_rect.top - OUTCOME_GAP - top)
         col_w = (p.width - 2 * self.PAD - LANE_COL_W - 3 * 10) // 3
 
         x = p.x + self.PAD
@@ -320,6 +333,7 @@ class Battle_Screen(ModalScreen):
         self._layout()
         self.elements = []
         self.row_paint = {}
+        self.lane_outcome = None
         p = self.panel_rect
 
         view_mode_reserve = 0 if self.embedded else VIEW_MODE_ROW_RESERVE
@@ -356,6 +370,7 @@ class Battle_Screen(ModalScreen):
 
         self._lane_rows()
         lane, near, far = self.current()
+        self.lane_outcome = self._estimate_lane_outcome(lane)
         self._unit_rows(PANE_FRONT, near.front, lane, editable=self.is_mine(near))
         self._unit_rows(PANE_ENEMY, far.front, lane, editable=False)
 
@@ -490,6 +505,71 @@ class Battle_Screen(ModalScreen):
         surface.blit(
             count_surf,
             count_surf.get_rect(midright=(header_rect.right, header_rect.centery)))
+
+    def _estimate_lane_outcome(self, lane):
+        """Project this lane independently, including its waiting reserves."""
+        # Import locally: overlay_renderer imports the combat processor and is
+        # also reached from the map event/render path that opens this screen.
+        from map_logic.rendering import overlay_renderer
+
+        sides = [
+            list(lane.a.front) + list(lane.a.reserve),
+            list(lane.b.front) + list(lane.b.reserve),
+        ]
+        return overlay_renderer.estimated_combat_outcome(
+            sides, self.map_screen.nation_data, province=self.province)
+
+    def _paint_outcome(self, surface, lane):
+        """Paint the expected winner for the selected lane at the panel bottom."""
+        rect = self.outcome_rect
+        ui_bars.draw_translucent_panel(
+            surface, rect, (0, 0, 0, 90),
+            border_color=c.UI_TEXT_MUTED, border_width=1)
+
+        small = fonts.get("small")
+        heading = small.render(f"LANE {lane.index + 1} OUTLOOK", True, c.UI_TEXT_DIM)
+        surface.blit(heading, (rect.x + 8, rect.y + 4))
+
+        outcome = self.lane_outcome or {}
+        winner_index = outcome.get("winner_side")
+        if winner_index is None:
+            message = small.render("No clear winner expected", True, c.UI_TEXT_MUTED)
+            surface.blit(message, (rect.x + 8, rect.y + 24))
+            return
+
+        side = (lane.a, lane.b)[winner_index]
+        turns = outcome.get("turns")
+        if turns is None:
+            turns_text = "time unknown"
+        elif turns == 0:
+            turns_text = "already winning"
+        elif turns == 1:
+            turns_text = "in 1 turn"
+        else:
+            turns_text = f"in {turns} turns"
+
+        line_y = rect.y + 24
+        prefix = small.render("Expected winner:", True, c.UI_TEXT_LIGHT)
+        surface.blit(prefix, (rect.x + 8, line_y))
+        x = rect.x + 8 + prefix.get_width() + 8
+        turn_surf = small.render(turns_text, True, c.UI_TEXT_LIGHT)
+        turn_x = rect.right - 8 - turn_surf.get_width()
+        available_width = max(1, turn_x - x - 8)
+
+        # Show as many coalition flags as fit, retaining a +N marker for any
+        # remaining members using the same convention as the lane list.
+        flag_step = flag_icons.ROW_FLAG_SIZE[0] + 6
+        max_flags = len(side.nations)
+        while max_flags > 1:
+            extra = len(side.nations) - max_flags
+            extra_width = small.size(f"+{extra}")[0] + 6 if extra else 0
+            if max_flags * flag_step + extra_width <= available_width:
+                break
+            max_flags -= 1
+        line_rect = pygame.Rect(x, line_y, max(1, available_width), small.get_height())
+        self._paint_side_flags(surface, side, x, line_rect, small,
+                               max_flags=max(1, max_flags))
+        surface.blit(turn_surf, (turn_x, line_y))
 
     def _paint_units(self, pane):
         """The stat block the Orders panel shows, on the row it belongs to.
@@ -630,6 +710,7 @@ class Battle_Screen(ModalScreen):
         ui_bars.draw_translucent_panel(
             surface, self.regions[PANE_LANES], (0, 0, 0, 60),
             border_color=c.UI_TEXT_MUTED, border_width=1)
+        self._paint_outcome(surface, lane)
 
     def draw_embedded(self, surface):
         """Paints the battle inspector into the right side of Orders.
