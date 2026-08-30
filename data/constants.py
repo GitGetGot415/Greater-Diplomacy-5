@@ -227,7 +227,7 @@ DEFAULT_UNIT_ART_STYLE = "classic"
 UNIT_ART_STYLE = DEFAULT_UNIT_ART_STYLE
 UNIT_ART_STYLES = ("classic", "hanskolmer")
 
-GAME_VERSION = "v29"
+GAME_VERSION = "v30"
 VERSION_CHECK_URL = "https://raw.githubusercontent.com/GitGetGot415/Greater-Diplomacy-5/main/version.txt"
 
 # --- TACTICAL MODE CONSTANTS ---
