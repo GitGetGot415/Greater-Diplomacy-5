@@ -7,6 +7,7 @@ hanskolmer suggestions:
 - ability to nationalize factories (ie take them back forcefully, should cause some diplomatic issues)
 - temporarially rent out factories to other countries via trade?
 - ADD HER FLAGS
+- VOLUNTEER DIVISIONS
 
 REWORK FOLDER UI SO IT USES THE BUILT IN VERSION YOUR OS HAS IF POSSIBLE
 
