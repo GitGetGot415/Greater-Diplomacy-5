@@ -14,6 +14,17 @@ REWORK FOLDER UI SO IT USES THE BUILT IN VERSION YOUR OS HAS IF POSSIBLE
 - perhaps railroad guns could be a type of artillery
 - seperate artillery research section?
 
+exodus suggestions:
+- integrated puppets can't be customized in tournaments? what's causing this
+- STATISTICS!!!
+- Under "claims on you" only show countries with claims on your territory that currently exist on the world map
+Also, filters!
+Filters for everything
+Country filters
+Unit filters on world map
+Country filters on world map
+Everything!
+
 - why are there so many tests? are some of them even nessecary?
 - things that test visual aspects i think might not be needed, especially if they're in the menu
 
