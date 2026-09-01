@@ -554,10 +554,10 @@ class Research_Screen(GameState):
             
             icon_scale = 4.0 if is_large else 2.0
 
-            # A style's manifest can shrink/grow individual icons for the
-            # research screen (unit_art.json's per-variant "research_scale")
-            # to suit their own native resolution -- 1.0, and this is a
-            # no-op, for classic and any variant that doesn't set one.
+            # A style's research_scale.json can shrink/grow individual icons
+            # for the research screen to suit their own native resolution --
+            # 1.0, and this is a no-op, for classic and any variant that
+            # doesn't set one.
             icon_scale *= symbol_loader.get_research_scale(icon_name, country=self.subject)
 
             icon = symbol_loader.get_symbol(icon_name, icon_scale, country=self.subject)

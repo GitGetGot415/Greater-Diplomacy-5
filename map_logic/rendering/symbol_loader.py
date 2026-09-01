@@ -9,16 +9,17 @@ SYMBOLS = {}
 COLORED_SYMBOLS = {}
 
 #: Alternate unit-art sets, keyed by style name (e.g. "hanskolmer") -> {unit
-#: name key -> [variant, ...]}. Populated from <style folder>/unit_art.json,
-#: which maps the same kind of name keys assets/images files are named after
-#: (an exact tier like "Medium Tank III", an era range like "Infantry
-#: 1900-1935", or a bare family like "Artillery") to one or more variants of
-#: that art. Each variant is {"countries": frozenset|None, "surface": Surface,
-#: "filename": str} -- `countries` is None for art that applies to whoever
-#: asks (the manifest's plain "key": "file.png" form), or the set of country
-#: ids (the same strings keying data/json/countries_data.json, e.g.
+#: name key -> [variant, ...]}. Most entries come from <style
+#: folder>/unit_art.json, which maps exact tiers ("Medium Tank III") or bare
+#: families ("Artillery") to one or more variants of that art. Standard
+#: infantry is the exception: _load_infantry_symbols discovers files named
+#: `infantry_<year>.png` directly, so it does not need a manifest entry for
+#: every era. Each variant is {"countries": frozenset|None, "surface":
+#: Surface, "filename": str} -- `countries` is None for art that applies to
+#: whoever asks (the manifest's plain "key": "file.png" form), or the set of
+#: country ids (the same strings keying data/json/countries_data.json, e.g.
 #: "Germany") it's restricted to (the "key": {"file":..., "countries":[...]}
-#: form). `filename` is that entry's raw "file" value, kept around so
+#: form). `filename` is that entry's raw relative path, kept around so
 #: get_research_scale can key a *separate* per-style sizing file off it
 #: without re-deriving it from the Surface. "classic" is never a key here --
 #: it just means "use SYMBOLS", which stays a flat name -> Surface map since
@@ -166,13 +167,88 @@ def _load_variant(style, style_dir, name_key, entry, cultures=None):
             "filename": filename}
 
 
-def load_style_symbols(style):
-    """(Re)loads one alternate unit-art style from <style>/unit_art.json.
+AUTO_INFANTRY_KEY_RE = re.compile(r"^Infantry \d{4}$", re.IGNORECASE)
+INFANTRY_FILENAME_RE = re.compile(r"^infantry_(\d{4})\.png$", re.IGNORECASE)
 
-    The manifest maps a name key -- the same convention assets/images files
-    are named after (an exact tier, an era range, or a bare family) -- to one
-    or more art variants (see _load_variant). A key with several variants
-    picks between them by country at draw time; missing folder/manifest/image
+
+def _is_manifest_infantry_key(name_key):
+    """Whether a manifest key belongs to the filename-driven infantry family.
+
+    Old Hanskolmer manifests used keys such as ``Infantry 1914-1925`` to
+    describe the same behavior that is now inferred from image filenames. Do
+    not load those keys, even if an older/custom manifest still contains them:
+    standard infantry art is owned by the files in the style folder now.
+    """
+    return bool(re.fullmatch(
+        r"Infantry(?: Type)?(?: \d{4}(?:-\d{4})?)?", name_key, re.IGNORECASE
+    ))
+
+
+def _infantry_countries(relative_dir, cultures):
+    """Returns the country ids for an infantry file's culture folder.
+
+    The first directory below the style folder is the culture name (for
+    example ``british``). Keeping the lookup case-insensitive makes the file
+    convention forgiving while preserving the exact country ids from
+    ``_cultures``. Files directly in the style folder are unrestricted.
+    """
+    if relative_dir in ("", "."):
+        return None
+
+    culture_name = relative_dir.replace(os.sep, "/").split("/", 1)[0]
+    for configured_name, countries in (cultures or {}).items():
+        if configured_name.casefold() == culture_name.casefold():
+            return countries
+
+    print(f"Warning: infantry art folder '{relative_dir}' has no matching "
+          "culture in the style's unit_art.json; skipping")
+    return []
+
+
+def _load_infantry_symbols(style, style_dir, cultures, symbols):
+    """Discovers standard infantry art from ``infantry_<year>.png`` files.
+
+    A discovered image is stored under a synthetic ``Infantry <year>`` key.
+    Resolution later selects the greatest discovered year not greater than the
+    requested unit's year, and `_table_has` still applies the normal country or
+    unrestricted-variant rules to that year's variants.
+    """
+    discovered = {}
+
+    for root, dirs, files in os.walk(style_dir):
+        dirs.sort()
+        for filename in sorted(files):
+            match = INFANTRY_FILENAME_RE.fullmatch(filename)
+            if not match:
+                continue
+
+            year = int(match.group(1))
+            relative_path = os.path.relpath(os.path.join(root, filename), style_dir)
+            relative_dir = os.path.relpath(root, style_dir)
+            countries = _infantry_countries(relative_dir, cultures)
+            if countries == []:
+                continue
+
+            name_key = f"Infantry {year}"
+            entry = {"file": relative_path, "countries": countries} if countries else relative_path
+            variant = _load_variant(style, style_dir, name_key, entry, cultures)
+            if variant is not None:
+                discovered.setdefault(year, []).append(variant)
+
+    for year, variants in discovered.items():
+        symbols[f"Infantry {year}"] = variants
+
+
+def load_style_symbols(style):
+    """(Re)loads one alternate unit-art style from its asset folder.
+
+    The manifest maps non-infantry name keys -- the same convention
+    assets/images files are named after (an exact tier or a bare family) -- to
+    one or more art variants (see _load_variant). Standard infantry is loaded
+    separately from ``infantry_<year>.png`` filenames (see
+    _load_infantry_symbols), with the containing culture folder determining
+    which countries can use each image. A key with several variants picks
+    between them by country at draw time; missing folder/manifest/image
     entries are skipped rather than raised, since an incomplete style is meant
     to fall back to classic per-unit, not refuse to load at all.
     """
@@ -180,6 +256,7 @@ def load_style_symbols(style):
     manifest_path = os.path.join(style_dir, "unit_art.json")
 
     symbols = {}
+    cultures = {}
     if os.path.exists(manifest_path):
         try:
             with open(manifest_path, "r", encoding="utf-8") as f:
@@ -189,17 +266,23 @@ def load_style_symbols(style):
             manifest = {}
 
         cultures = manifest.get("_cultures", {})
-        STYLE_CULTURES[style] = cultures
 
         for name_key, value in manifest.items():
             if name_key.startswith("_"):
                 continue  # reserved for comments/metadata, not a unit name
+            if _is_manifest_infantry_key(name_key):
+                # Standard infantry is filename-driven. This also prevents an
+                # old manifest's era ranges from competing with discovered
+                # infantry_<year>.png files.
+                continue
             entries = value if isinstance(value, list) else [value]
             variants = [v for v in (_load_variant(style, style_dir, name_key, e, cultures) for e in entries)
                        if v is not None]
             if variants:
                 symbols[name_key] = variants
 
+    STYLE_CULTURES[style] = cultures
+    _load_infantry_symbols(style, style_dir, cultures, symbols)
     STYLE_SYMBOLS[style] = symbols
     _load_research_display(style, style_dir)
     clear_caches()
@@ -290,9 +373,10 @@ def _pick_variant(variants, country):
 
 def get_research_scale(name, style=None, country=None):
     """Per-icon multiplier authored in a style's <style>/research_scale.json
-    (its "icon_scales" map, keyed by the same filename unit_art.json points
-    at) for how large this unit's art should render on the research screen,
-    layered on top of whatever zoom the caller already asked for.
+    (its "icon_scales" map, keyed by the same relative filenames used by the
+    manifest or discovered from the style folder) for how large this unit's
+    art should render on the research screen, layered on top of whatever zoom
+    the caller already asked for.
 
     Exists because a style's source art can be a completely different native
     resolution than classic's hand-sized icons (hanskolmer's raw unit
@@ -333,11 +417,12 @@ def get_research_button_scale_overrides(name, style=None, country=None):
     a unit whose button needs to be wider/taller than the rest (e.g.
     hanskolmer's long artillery pieces).
 
-    Matched first against the exact resolved name key (e.g. "Artillery I"),
-    then -- same Roman-numeral stripping _resolve_against falls back to --
-    against the bare family name ("Artillery"), so one override can widen
-    every tier without listing each one. (1.0, 1.0) if nothing resolves, the
-    style is classic, or no override matches either name.
+    Matched first against the exact resolved manifest name key (e.g.
+    "Artillery I"), then -- same Roman-numeral stripping _resolve_against
+    falls back to -- against the bare family name ("Artillery"), so one
+    override can widen every tier without listing each one. (1.0, 1.0) if
+    nothing resolves, the style is classic, or no override matches either
+    name.
     """
     resolved = _resolve_name(name, style, country)
     if resolved is None:
@@ -489,6 +574,37 @@ def _resolve_against(name, table, country):
     return base_name
 
 
+def _resolve_infantry_filename(name, style, country):
+    """Resolves a year-suffixed standard infantry name from discovered art.
+
+    ``infantry_1914.png`` starts applying at 1914 and remains active until a
+    newer eligible file is reached. Country filtering happens before choosing
+    the newest year, so a British request never accidentally selects a later
+    Germanic image just because that image exists in the style.
+    """
+    if style == "classic":
+        return None
+
+    year_match = re.fullmatch(r"Infantry Type (\d{4})", name, re.IGNORECASE)
+    if not year_match:
+        return None
+
+    year = int(year_match.group(1))
+    style_table = STYLE_SYMBOLS.get(style, {})
+    eligible_keys = []
+    for key in style_table:
+        key_match = AUTO_INFANTRY_KEY_RE.fullmatch(key)
+        if not key_match:
+            continue
+        image_year = int(key.rsplit(" ", 1)[1])
+        if image_year <= year and _table_has(style_table, key, country):
+            eligible_keys.append((image_year, key))
+
+    if not eligible_keys:
+        return None
+    return max(eligible_keys)[1]
+
+
 def resolve(name, style=None, country=None):
     """Public form of _resolve_name, for callers outside this module that need
     to know what a name resolves to (and where from) without drawing it --
@@ -524,6 +640,10 @@ def _resolve_name_uncached(name, style=None, country=None):
     if style != "classic":
         style_table = STYLE_SYMBOLS.get(style)
         if style_table:
+            resolved = _resolve_infantry_filename(name, style, country)
+            if resolved is not None:
+                return (style, resolved)
+
             resolved = _resolve_against(name, style_table, country)
             if resolved is not None:
                 return (style, resolved)

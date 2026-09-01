@@ -165,8 +165,8 @@ def build_gallery_rows(style, country=None, level_display="default", show_all_ar
     wherever the Infantry/Tanks/Navy group changes.
 
     A family with several distinct pictures -- different tiers (Light Tank
-    IV/V/VI) or different eras (Infantry 1910-1913/1914-1925/...) -- gets one
-    cell per picture instead of one row per picture, so the whole family
+    IV/V/VI) or different filename-defined eras (Infantry 1914/1916/...) --
+    gets one cell per picture instead of one row per picture, so the whole family
     reads left-to-right as one line (the gallery wraps a family onto further
     lines itself if its cells don't all fit the width -- see
     Unit_Art._wrap_cells).
@@ -411,7 +411,7 @@ class Unit_Art(GameState):
         a new ROW_H-tall line (like _build_country_tabs wraps tabs) whenever
         the next one would cross `right`. A cell is at least ICON_BOX wide,
         or as wide as its own label if that label doesn't fit under a bare
-        icon (e.g. 'Infantry Type 1910-1913's era range).
+        icon (e.g. a filename-defined Infantry era label).
 
         Returns a list of lines, each a list of (cell, x, width) ready to
         draw -- computed once per refresh_ui rather than re-measured on

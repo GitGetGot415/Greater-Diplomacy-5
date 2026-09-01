@@ -112,6 +112,39 @@ class SymbolCacheTests(unittest.TestCase):
         self.assertEqual(symbol_loader.RESOLVED_NAMES, {})
 
 
+class FilenameDrivenInfantryTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        app_harness.boot()
+
+    def _filename(self, country, year):
+        resolved = symbol_loader.resolve(f"Infantry Type {year}", "hanskolmer", country)
+        self.assertIsNotNone(resolved)
+        source_style, name_key = resolved
+        if source_style == "classic":
+            return "classic"
+        return symbol_loader._pick_variant_entry(
+            symbol_loader.STYLE_SYMBOLS[source_style][name_key], country
+        )["filename"]
+
+    def test_the_latest_culture_infantry_file_carries_forward_until_overridden(self):
+        self.assertEqual(self._filename("United Kingdom", 1914),
+                         "british/infantry_1914.png")
+        self.assertEqual(self._filename("United Kingdom", 1915),
+                         "british/infantry_1914.png")
+        self.assertEqual(self._filename("United Kingdom", 1916),
+                         "british/infantry_1916.png")
+
+    def test_a_culture_does_not_use_another_cultures_later_infantry_file(self):
+        # Germanic art has a 1918 file, but the French request must keep its
+        # own 1916 art rather than taking that later file.
+        self.assertEqual(self._filename("France", 1918),
+                         "french/infantry_1916.png")
+
+    def test_years_before_a_cultures_first_file_fall_back_to_classic(self):
+        self.assertEqual(self._filename("United Kingdom", 1910), "classic")
+
+
 class CombatDisplayTests(unittest.TestCase):
     def setUp(self):
         self.old_display_mode = c.BATTLE_DISPLAY_MODE

@@ -220,9 +220,11 @@ BATTLE_DISPLAY_MODE = DEFAULT_BATTLE_DISPLAY_MODE
 
 # Which unit art set map_logic.rendering.symbol_loader draws unit icons from.
 # "classic" is the flat assets/images set every icon has always shipped with;
-# any other style (e.g. "hanskolmer") looks up a per-unit manifest under its
-# own assets/<style> folder first and falls back to "classic" for anything the
-# manifest doesn't cover. See screens/menu_screens/unit_art.py for the picker.
+# any other style (e.g. "hanskolmer") looks up non-infantry art in a manifest
+# under its own assets/<style> folder and discovers standard infantry from
+# infantry_<year>.png files in that folder. Both fall back to "classic" when
+# they do not cover a request. See screens/menu_screens/unit_art.py for the
+# picker.
 DEFAULT_UNIT_ART_STYLE = "classic"
 UNIT_ART_STYLE = DEFAULT_UNIT_ART_STYLE
 UNIT_ART_STYLES = ("classic", "hanskolmer")
@@ -2057,7 +2059,9 @@ ASSETS_DIR = "assets/images"
 # the same SYMBOLS name->Surface map as ASSETS_DIR -- see symbol_loader.load_symbols.
 BUILDINGS_DIR = "assets/buildings"
 # Alternate unit-art sets live in their own folder under here, named after the
-# style (e.g. assets/hanskolmer), each with its own unit_art.json manifest.
+# style (e.g. assets/hanskolmer). Each can have a unit_art.json manifest for
+# non-infantry art and year-stamped infantry_<year>.png files for standard
+# infantry.
 UNIT_ART_STYLES_DIR = "assets"
 TERRAINS_DIR = "assets/terrains"
 BACKGROUNDS_DIR = "assets/backgrounds"

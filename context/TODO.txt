@@ -10,6 +10,8 @@ hanskolmer suggestions:
 - VOLUNTEER DIVISIONS
 
 - it seems that when countries attempt to rename there faction (it willl literaly break the game, adding them to a separate alliance)
+- unable to edit research in map editor?
+- rebellion mechanics
 
 REWORK FOLDER UI SO IT USES THE BUILT IN VERSION YOUR OS HAS IF POSSIBLE
 
