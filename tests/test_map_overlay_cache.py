@@ -160,6 +160,16 @@ class FilenameDrivenUnitArtTests(unittest.TestCase):
         self.assertEqual(self._filename("WW1 Tank", "United Kingdom"),
                          "british/ww1_tank.png")
 
+    def test_generic_folder_art_is_available_as_unrestricted_fallback(self):
+        self.assertEqual(self._filename("Artillery", "Italy"),
+                         "generic/artillery.png")
+        self.assertEqual(self._filename("Artillery II", "United Kingdom"),
+                         "generic/artillery_2.png")
+        self.assertEqual(self._filename("Heavy Artillery I", "United Kingdom"),
+                         "generic/heavy_artillery.png")
+        self.assertEqual(self._filename("Light Tank I", "Germany"),
+                         "generic/light_tank_1.png")
+
     def test_tank_tier_files_are_scoped_and_carry_forward(self):
         self.assertEqual(self._filename("Medium Tank II", "United States of America"),
                          "classic")

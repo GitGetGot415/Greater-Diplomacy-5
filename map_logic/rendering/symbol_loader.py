@@ -229,6 +229,9 @@ def _filename_countries(relative_dir, cultures):
         return None
 
     culture_name = relative_dir.replace(os.sep, "/").split("/", 1)[0]
+    if culture_name.casefold() == "generic":
+        return None
+
     for configured_name, countries in (cultures or {}).items():
         if configured_name.casefold() == culture_name.casefold():
             return countries

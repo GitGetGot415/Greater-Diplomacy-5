@@ -1,7 +1,7 @@
 {
     "_comment": "Culture metadata for the filename-driven unit art loader. Unit art itself is discovered from files in this style folder: family.png is a baseline and family_<level>.png overrides it from that tier onward. Standard infantry uses its year in place of a level, so infantry_1914.png applies from 1914 until a newer infantry file exists. Files that do not match this convention are ignored by the automatic loader and fall back to classic.",
     "_comment_cultures": "Culture groups allow reusing common country sets. In a 'countries' field, use either a culture group name (string) or a list of country ids (array). Example: 'countries': 'germanic' or 'countries': ['Germany', 'France'].",
-    "_comment_folders": "Images are organized into one subfolder per culture group (e.g. 'french/artillery_2.png'); the loader uses the first folder below the style folder for country scoping. Standard filenames omit their culture prefix since the subfolder already says which culture they represent. The first folder below the style folder must match a name in '_cultures'.",
+    "_comment_folders": "Images are organized into one subfolder per culture group (e.g. 'french/artillery_2.png'); the loader uses the first folder below the style folder for country scoping. Standard filenames omit their culture prefix since the subfolder already says which culture they represent. The special 'generic' folder is unrestricted fallback art; other folders must match a name in '_cultures'.",
     "_cultures": {
         "germanic": ["Germany", "German Reich", "German Empire", "Weimar Republic"],
         "austrian": ["Austria-Hungary", "Austria"],

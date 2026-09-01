@@ -1,0 +1,84 @@
+# Hanskolmer unit-art reference
+#
+# Format: relative image path | real-world unit or formation represented
+#
+# These names are for people browsing the assets. They are intentionally not
+# loaded by the game; the filename is the gameplay-facing family/tier key.
+
+[Generic fallback art]
+generic/artillery.png | 120 mm De Bange modèle 1878
+generic/artillery_2.png | Canon de 75 modèle 1897
+generic/artillery_3.png | Canon de 155 C modèle 1917
+generic/heavy_artillery.png | Canon de 155 C modèle 1917
+generic/light_tank_1.png | Renault FT (FT-17)
+
+[American]
+american/artillery_7.png | M2A1 105 mm howitzer
+american/heavy_artillery.png | M1 155 mm howitzer
+american/infantry_1941.png | U.S. Army infantry (1941)
+american/infantry_1944.png | U.S. Army infantry (1944)
+american/light_tank_6.png | M3 Stuart
+american/medium_tank_3.png | M3 Lee
+american/medium_tank_4.png | M4 Sherman
+
+[Austrian]
+austrian/artillery_1.png | 8 cm Feldkanone M. 5
+austrian/artillery_2.png | 10 cm Feldhaubitze M. 14
+austrian/infantry_1.png | Austro-Hungarian Army infantry (generic)
+austrian/infantry_1914.png | Austro-Hungarian Army infantry (1914)
+austrian/infantry_1916.png | Austro-Hungarian Army infantry (1916)
+austrian/infantry_1917.png | Austro-Hungarian Army infantry (1917)
+
+[British]
+british/artillery_1.png | QF 18-pounder
+british/infantry_1914.png | British Army infantry (1914)
+british/infantry_1916.png | British Army infantry (1916)
+british/infantry_1917.png | British Army infantry (1917)
+british/ww1_tank.png | Mark V tank
+
+[French]
+french/artillery.png | 120 mm De Bange modèle 1878
+french/artillery_2.png | Canon de 75 modèle 1897
+french/artillery_3.png | Canon de 155 C modèle 1917
+french/heavy_artillery.png | Canon de 155 C modèle 1917
+french/heavy_tank_2.png | Char B1 bis
+french/infantry_1914.png | French Army infantry (1914)
+french/infantry_1916.png | French Army infantry (1916)
+french/light_tank_1.png | Renault FT (FT-17)
+french/light_tank_4.png | Hotchkiss H35
+french/light_tank_5.png | Renault R35
+french/light_tank_6.png | Hotchkiss H39
+french/medium_tank_2.png | Char D1
+french/medium_tank_3.png | Char D2
+french/medium_tank_4.png | SOMUA S35
+
+[Germanic]
+germanic/artillery.png | German artillery piece (baseline)
+germanic/artillery_1.png | 7.7 cm Feldkanone 96 neuer Art
+germanic/artillery_2.png | 21 cm Mörser 10
+germanic/artillery_3.png | 15 cm schwere Feldhaubitze 16
+germanic/heavy_tank_3.png | Panzer IV Ausführung B
+germanic/heavy_tank_4.png | Tiger I (early production)
+germanic/infantry_1.png | German Imperial Army infantry (generic)
+germanic/infantry_1910.png | German Imperial Army infantry (1910)
+germanic/infantry_1914.png | German Imperial Army infantry (1914)
+germanic/infantry_1916.png | German Army infantry (1916)
+germanic/infantry_1918.png | German Army infantry (1918)
+germanic/infantry_1935.png | Wehrmacht infantry (1935)
+germanic/light_tank_5.png | Panzer I Ausführung B
+germanic/light_tank_6.png | Panzer II Ausführung C
+germanic/medium_tank_3.png | Panzer III Ausführung F
+
+[Italian]
+italian/infantry_1914.png | Italian Army infantry (1914)
+
+[Russian]
+russian/heavy_tank_3.png | T-35
+russian/heavy_tank_4.png | KV-1B
+russian/infantry_1914.png | Imperial Russian Army infantry (1914)
+russian/infantry_1936.png | Red Army infantry (1936)
+russian/infantry_1940.png | Red Army infantry (1940)
+russian/light_tank_5.png | T-26
+russian/medium_tank_3.png | T-28A
+russian/medium_tank_4.png | T-34
+russian/super_heavy_tank_1.png | IS-3
