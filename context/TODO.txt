@@ -21,6 +21,7 @@ exodus suggestions:
 - integrated puppets can't be customized in tournaments? what's causing this
 - STATISTICS!!!
 - Under "claims on you" only show countries with claims on your territory that currently exist on the world map
+- devastation
 Also, filters!
 Filters for everything
 Country filters
