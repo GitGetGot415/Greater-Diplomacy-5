@@ -9,6 +9,8 @@ hanskolmer suggestions:
 - ADD HER FLAGS
 - VOLUNTEER DIVISIONS
 
+- it seems that when countries attempt to rename there faction (it willl literaly break the game, adding them to a separate alliance)
+
 REWORK FOLDER UI SO IT USES THE BUILT IN VERSION YOUR OS HAS IF POSSIBLE
 
 - see if the tank production buttons can be compressed like infantry or artillery
