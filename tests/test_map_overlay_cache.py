@@ -112,13 +112,13 @@ class SymbolCacheTests(unittest.TestCase):
         self.assertEqual(symbol_loader.RESOLVED_NAMES, {})
 
 
-class FilenameDrivenInfantryTests(unittest.TestCase):
+class FilenameDrivenUnitArtTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         app_harness.boot()
 
-    def _filename(self, country, year):
-        resolved = symbol_loader.resolve(f"Infantry Type {year}", "hanskolmer", country)
+    def _filename(self, unit_name, country):
+        resolved = symbol_loader.resolve(unit_name, "hanskolmer", country)
         self.assertIsNotNone(resolved)
         source_style, name_key = resolved
         if source_style == "classic":
@@ -128,21 +128,47 @@ class FilenameDrivenInfantryTests(unittest.TestCase):
         )["filename"]
 
     def test_the_latest_culture_infantry_file_carries_forward_until_overridden(self):
-        self.assertEqual(self._filename("United Kingdom", 1914),
+        self.assertEqual(self._filename("Infantry Type 1914", "United Kingdom"),
                          "british/infantry_1914.png")
-        self.assertEqual(self._filename("United Kingdom", 1915),
+        self.assertEqual(self._filename("Infantry Type 1915", "United Kingdom"),
                          "british/infantry_1914.png")
-        self.assertEqual(self._filename("United Kingdom", 1916),
+        self.assertEqual(self._filename("Infantry Type 1916", "United Kingdom"),
                          "british/infantry_1916.png")
 
     def test_a_culture_does_not_use_another_cultures_later_infantry_file(self):
         # Germanic art has a 1918 file, but the French request must keep its
         # own 1916 art rather than taking that later file.
-        self.assertEqual(self._filename("France", 1918),
+        self.assertEqual(self._filename("Infantry Type 1918", "France"),
                          "french/infantry_1916.png")
 
     def test_years_before_a_cultures_first_file_fall_back_to_classic(self):
-        self.assertEqual(self._filename("United Kingdom", 1910), "classic")
+        self.assertEqual(self._filename("Infantry Type 1910", "United Kingdom"), "classic")
+
+    def test_tiered_art_carries_forward_until_a_newer_tier_file_exists(self):
+        self.assertEqual(self._filename("Artillery I", "Germany"),
+                         "germanic/artillery_1.png")
+        self.assertEqual(self._filename("Artillery II", "Germany"),
+                         "germanic/artillery_2.png")
+        self.assertEqual(self._filename("Artillery IV", "Germany"),
+                         "germanic/artillery_3.png")
+
+    def test_filename_baselines_support_separate_unit_families(self):
+        self.assertEqual(self._filename("Artillery", "Germany"),
+                         "germanic/artillery.png")
+        self.assertEqual(self._filename("Heavy Artillery I", "France"),
+                         "french/heavy_artillery.png")
+        self.assertEqual(self._filename("WW1 Tank", "United Kingdom"),
+                         "british/ww1_tank.png")
+
+    def test_tank_tier_files_are_scoped_and_carry_forward(self):
+        self.assertEqual(self._filename("Medium Tank II", "United States of America"),
+                         "classic")
+        self.assertEqual(self._filename("Medium Tank III", "United States of America"),
+                         "american/medium_tank_3.png")
+        self.assertEqual(self._filename("Medium Tank IV", "United States of America"),
+                         "american/medium_tank_4.png")
+        self.assertEqual(self._filename("Light Tank VIII", "Germany"),
+                         "germanic/light_tank_6.png")
 
 
 class CombatDisplayTests(unittest.TestCase):

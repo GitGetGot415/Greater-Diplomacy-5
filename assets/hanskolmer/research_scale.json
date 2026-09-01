@@ -1,8 +1,8 @@
 {
     "_comment": "Sizing hints for the research screen (screens/map_related_screens/research.py) only -- this file does not map unit names to art files, and neither the map nor any other screen reads these sizing hints.",
     "_comment_button_scale": "'button_scale' (default 1.0) multiplies the size of the research screen's tech node buttons themselves while this style is active. Useful if a style's art still looks cramped/oversized after per-icon scaling below. Example: 1.2 for 20% bigger buttons.",
-    "_comment_icon_scales": "'icon_scales' maps a discovered or manifest filename (including its culture subfolder, e.g. 'french/Char_B1_bis.png') to a multiplier (default 1.0) the research screen applies on top of its own zoom for that specific image. Exists because this style's source art is a much higher native resolution than classic's hand-sized icons and would otherwise blow well past the button that contains it. Filenames not listed here (e.g. the infantry sprites, already close to classic's scale) are left at 1.0.",
-    "_comment_button_scale_overrides": "'button_scale_overrides' maps a manifest name key to {'width': ..., 'height': ...} (either omittable, default 1.0 each), multiplied on top of 'button_scale' for that tech's node button specifically. Matched first against the exact key (e.g. 'Artillery I'), then against the bare family name with any trailing Roman numeral stripped ('Artillery') -- so one 'Artillery' entry below widens the button for all three artillery tiers at once instead of needing an entry per tier.",
+    "_comment_icon_scales": "'icon_scales' maps a discovered filename (including its culture subfolder, e.g. 'french/medium_tank_3.png') to a multiplier (default 1.0) the research screen applies on top of its own zoom for that specific image. Exists because this style's source art is a much higher native resolution than classic's hand-sized icons and would otherwise blow well past the button that contains it. Filenames not listed here (e.g. the infantry sprites, already close to classic's scale) are left at 1.0.",
+    "_comment_button_scale_overrides": "'button_scale_overrides' maps a generated unit-family name key to {'width': ..., 'height': ...} (either omittable, default 1.0 each), multiplied on top of 'button_scale' for that tech's node button specifically. Matched first against the exact key (e.g. 'Artillery I'), then against the bare family name with any trailing Roman numeral stripped ('Artillery') -- so one 'Artillery' entry below widens the button for all artillery tiers at once instead of needing an entry per tier.",
 
     "button_scale": 1.0,
 
@@ -11,49 +11,55 @@
     },
 
     "icon_scales": {
-        "austrian/FK_M.5__1.png": 0.8,
-        "germanic/FK_96_n.A.png": 0.8,
-        "british/QF_18_pounder.png": 0.8,
-        "french/120_mm_De_Bange_model_1878.png": 0.8,
+        "austrian/artillery_1.png": 0.8,
+        "germanic/artillery_1.png": 0.8,
+        "british/artillery_1.png": 0.8,
+        "french/artillery.png": 0.8,
+        "germanic/artillery.png": 0.8,
 
-        "austrian/FH_M.14__1.png": 0.8,
-        "germanic/21_cm_Morser_10.png": 0.8,
-        "french/75_mm_modele_1897.png": 0.8,
+        "austrian/artillery_2.png": 0.8,
+        "germanic/artillery_2.png": 0.8,
+        "french/artillery_2.png": 0.8,
 
-        "germanic/Fh_16.png": 0.8,
-        "french/Canon_de_155_C_modele_1917.png": 0.8,
+        "germanic/artillery_3.png": 0.8,
+        "french/artillery_3.png": 0.8,
+        "french/heavy_artillery.png": 0.8,
+        "american/artillery_7.png": 0.8,
+        "american/heavy_artillery.png": 0.8,
 
-        "french/Char_B1_bis.png": 0.8,
+        "french/heavy_tank_2.png": 0.8,
 
-        "germanic/Panzer_IV_ausf_b.png": 0.4,
-        "russian/T-35.png": 0.3,
+        "germanic/heavy_tank_3.png": 0.4,
+        "russian/heavy_tank_3.png": 0.3,
 
-        "germanic/Tiger_I_early.png": 0.3,
-        "russian/KV-1B.png": 0.3,
+        "germanic/heavy_tank_4.png": 0.3,
+        "russian/heavy_tank_4.png": 0.3,
 
-        "russian/IS-3.png": 0.3,
+        "russian/super_heavy_tank_1.png": 0.3,
 
-        "french/Char_D1.png": 0.4,
+        "french/medium_tank_2.png": 0.4,
 
-        "germanic/Panzer_III_ausf_F.png": 0.4,
-        "american/sherm1.png": 0.4,
-        "russian/T-28A.png": 0.3,
-        "french/Char_D2.png": 0.4,
+        "germanic/medium_tank_3.png": 0.4,
+        "american/medium_tank_3.png": 0.4,
+        "russian/medium_tank_3.png": 0.3,
+        "french/medium_tank_3.png": 0.4,
 
-        "french/Somua_S35.png": 0.4,
-        "russian/T-34.png": 0.4,
+        "french/medium_tank_4.png": 0.4,
+        "russian/medium_tank_4.png": 0.4,
+        "american/medium_tank_4.png": 0.4,
 
-        "british/Mark_V.png": 0.3,
+        "british/ww1_tank.png": 0.3,
 
-        "french/FT_17.png": 0.5,
+        "french/light_tank_1.png": 0.5,
 
-        "french/Hotchkis_H35.png": 0.5,
+        "french/light_tank_4.png": 0.5,
 
-        "germanic/Panzer_I_ausf_b.png": 0.5,
-        "french/Renault_R35.png": 0.6,
-        "russian/T-26.png": 0.5,
+        "germanic/light_tank_5.png": 0.5,
+        "french/light_tank_5.png": 0.6,
+        "russian/light_tank_5.png": 0.5,
 
-        "germanic/Panzer_II_ausf_C.png": 0.5,
-        "french/Hotchkis_H39.png": 0.5
+        "germanic/light_tank_6.png": 0.5,
+        "french/light_tank_6.png": 0.5,
+        "american/light_tank_6.png": 0.5
     }
 }

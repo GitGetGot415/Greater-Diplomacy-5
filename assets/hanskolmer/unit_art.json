@@ -1,8 +1,7 @@
 {
-    "_comment": "Maps non-infantry unit name keys to the art that draws them. A key can be an exact tiered name ('Medium Tank III') or a bare family name used as the catch-all for every tier that has no more specific entry ('Artillery'). Standard infantry is discovered automatically from infantry_<year>.png files in the culture folders: the file with the greatest year not later than the unit's year is used. Anything not covered here falls back to the classic art.",
-    "_comment_variants": "A key's value is either one entry or a list of them. Each entry is either a plain filename (applies to whichever country asks) or an object {'file': ..., 'countries': [...]} restricted to those country ids -- the exact strings that key data/json/countries_data.json, e.g. 'Germany', 'German Reich', 'German Empire'. A country matching one of the restricted entries sees that picture; everyone else falls through to the first unrestricted entry for that key and eventually to classic. Standard infantry uses the filename-driven rule described above instead of manifest variants. See map_logic/rendering/symbol_loader.py for the exact matching and fallback rules.",
+    "_comment": "Culture metadata for the filename-driven unit art loader. Unit art itself is discovered from files in this style folder: family.png is a baseline and family_<level>.png overrides it from that tier onward. Standard infantry uses its year in place of a level, so infantry_1914.png applies from 1914 until a newer infantry file exists. Files that do not match this convention are ignored by the automatic loader and fall back to classic.",
     "_comment_cultures": "Culture groups allow reusing common country sets. In a 'countries' field, use either a culture group name (string) or a list of country ids (array). Example: 'countries': 'germanic' or 'countries': ['Germany', 'France'].",
-    "_comment_folders": "'file' paths are relative to this style's folder and may include a subfolder -- images here are organized into one subfolder per culture group (e.g. 'french/Char_B1_bis.png') and the loader uses that folder for country-scoped entries. Infantry filenames drop their culture prefix (e.g. 'infantry_1914.png' rather than 'french_infantry_1914.png') since the subfolder already says which culture it is. The first folder below the style folder must match a name in '_cultures'.",
+    "_comment_folders": "Images are organized into one subfolder per culture group (e.g. 'french/artillery_2.png'); the loader uses the first folder below the style folder for country scoping. Standard filenames omit their culture prefix since the subfolder already says which culture they represent. The first folder below the style folder must match a name in '_cultures'.",
     "_cultures": {
         "germanic": ["Germany", "German Reich", "German Empire", "Weimar Republic"],
         "austrian": ["Austria-Hungary", "Austria"],
@@ -11,102 +10,5 @@
         "french": ["France", "Commune of France", "National France", "Vichy France", "Free France"],
         "italian": ["Italy", "Socialist Republic of Italy"],
         "american": ["United States of America"]
-    },
-    "Artillery": [
-        "french/120_mm_De_Bange_model_1878.png"
-    ],
-    "Artillery I": [
-        {"file": "austrian/FK_M.5__1.png", "countries": "austrian"},
-        {"file": "germanic/FK_96_n.A.png", "countries": "germanic"},
-        {"file": "british/QF_18_pounder.png", "countries": "british"},
-        "french/120_mm_De_Bange_model_1878.png"
-    ],
-    "Artillery II": [
-        {"file": "austrian/FH_M.14__1.png", "countries": "austrian"},
-        {"file": "germanic/21_cm_Morser_10.png", "countries": "germanic"},
-        "french/75_mm_modele_1897.png"
-    ],
-    "Artillery III": [
-        {"file": "germanic/Fh_16.png", "countries": "germanic"},
-        {"file": "french/75_mm_modele_1897.png", "countries": "french"},
-        "french/Canon_de_155_C_modele_1917.png"
-    ],
-    "Artillery VII": [
-        {"file": "american/M2A1_105_mm.png", "countries": "american"},
-        "french/Canon_de_155_C_modele_1917.png"
-    ],
-    "Heavy Artillery": [
-        "french/Canon_de_155_C_modele_1917.png"
-    ],
-    "Heavy Tank I": [
-
-    ],
-    "Heavy Tank II": [
-        {"file": "french/Char_B1_bis.png", "countries": "french"}
-    ],
-    "Heavy Tank III": [
-        {"file": "germanic/Panzer_IV_ausf_b.png", "countries": "germanic"},
-        {"file": "russian/T-35.png", "countries": "russian"}
-    ],
-    "Heavy Tank IV": [
-        {"file": "germanic/Tiger_I_early.png", "countries": "germanic"},
-        {"file": "russian/KV-1B.png", "countries": "russian"}
-    ],
-    "Super Heavy Tank I": [
-        {"file": "russian/IS-3.png", "countries": "russian"}
-    ],
-    "Medium Tank I": [
-
-    ],
-    "Medium Tank II": [
-        {"file": "french/Char_D1.png", "countries": "french"}
-    ],
-    "Medium Tank III": [
-        {"file": "germanic/Panzer_III_ausf_F.png", "countries": "germanic"},
-        {"file": "american/M3_Lee.png", "countries": "american"},
-        {"file": "russian/T-28A.png", "countries": "russian"},
-        {"file": "french/Char_D2.png", "countries": "french"}
-    ],
-    "Medium Tank IV": [
-        {"file": "french/Somua_S35.png", "countries": "french"},
-        {"file": "russian/T-34.png", "countries": "russian"},
-        {"file": "american/sherm1.png", "countries": "american"}
-    ],
-    "WW1 Tank": [
-        {"file": "british/Mark_V.png", "countries": "british"}
-    ],
-    "Light Tank I": [
-        "french/FT_17.png"
-    ],
-    "Light Tank II": [
-
-    ],
-    "Light Tank III": [
-
-    ],
-    "Light Tank IV": [
-        {"file": "french/Hotchkis_H35.png", "countries": "french"}
-    ],
-    "Light Tank V": [
-        {"file": "germanic/Panzer_I_ausf_b.png", "countries": "germanic"},
-        {"file": "french/Renault_R35.png", "countries": "french"},
-        {"file": "russian/T-26.png", "countries": "russian"}
-    ],
-    "Light Tank VI": [
-        {"file": "germanic/Panzer_II_ausf_C.png", "countries": "germanic"},
-        {"file": "french/Hotchkis_H39.png", "countries": "french"},
-        {"file": "american/M3_Stuart.png", "countries": "american"}
-    ],
-    "Light Tank VII": [
-
-    ],
-    "Light Tank VIII": [
-
-    ],
-    "Light Tank IX": [
-
-    ],
-    "Light Tank X": [
-
-    ]
+    }
 }
