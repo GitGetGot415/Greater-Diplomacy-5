@@ -13,6 +13,10 @@ hanskolmer suggestions:
 - unable to edit research in map editor?
 - rebellion mechanics
 
+- make a way to organize the hanskolmer art in a less confusing way
+- make sure this ui also shows the unit art names
+- check kaiserin saves sent to you
+
 REWORK FOLDER UI SO IT USES THE BUILT IN VERSION YOUR OS HAS IF POSSIBLE
 
 - see if the tank production buttons can be compressed like infantry or artillery
