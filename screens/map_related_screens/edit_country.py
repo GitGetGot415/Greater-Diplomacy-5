@@ -385,6 +385,23 @@ class Edit_Country_Screen(GameState):
             # Trigger full map re-renders so the new color shows up instantly!
             self.map_screen.refresh_political_map()
             self.map_screen.refresh_cores_map()
+
+        # Tournament move files normally include only the controlling nation.
+        # An integrated puppet is deliberately edited through its controller's
+        # Subjects screen, so record this narrow appearance-only update for the
+        # host to validate and apply alongside the controller's move.
+        if (getattr(self.map_screen, "multiplayer_mode", False)
+                and self.editing_country != self.map_screen.player_country):
+            pending = getattr(self.map_screen,
+                              "multiplayer_pending_appearance_updates", None)
+            if pending is None:
+                pending = {}
+                self.map_screen.multiplayer_pending_appearance_updates = pending
+            pending[self.editing_country] = {
+                key: p_data.get(key)
+                for key in ("name", "adjective", "leader_name", "leader_title",
+                            "flag_data", "portrait_data", "color")
+            }
         
         self.map_screen.show_feedback("Country Data Saved!")
         self.force_exit_to_map()

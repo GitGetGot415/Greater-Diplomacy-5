@@ -166,7 +166,10 @@ def render_buttons(map_screen):
                     player_key = getattr(map_screen, 'multiplayer_player_key', '')
                     keys_dict = {cid: player_key}
 
-                    load_move_files(map_screen, [file_path], keys_dict)
+                    summary = load_move_files(map_screen, [file_path], keys_dict)
+                    if not summary["loaded"]:
+                        map_screen.show_feedback("Move import rejected: wrong key, tournament, or turn.")
+                        return
                     map_screen.show_feedback(f"Move imported from {os.path.basename(file_path)}")
 
                     map_screen.refresh_political_map()

@@ -4,7 +4,7 @@ import data.constants as c
 from ui.bars import ui_bars
 from ui_elements import Button, process_text_input, make_back_button, draw_text_box
 from map_logic.rendering.font_manager import fonts
-from map_logic.diplomacy import faction_leadership
+from map_logic.diplomacy import faction_actions, faction_leadership
 from data import queries
 
 class Faction_Screen(GameState):
@@ -137,15 +137,27 @@ class Faction_Screen(GameState):
         new_name = self.new_faction_name.strip()
         
         if new_name and old_name and new_name != old_name:
-            members = queries.get_faction_members(old_name, self.map_screen.nation_data)
-            for m in members:
-                self.map_screen.nation_data[m]["faction"] = new_name
-            
-            if "FACTION_WAR_MAPS" in self.map_screen.nation_data and old_name in self.map_screen.nation_data["FACTION_WAR_MAPS"]:
-                self.map_screen.nation_data["FACTION_WAR_MAPS"][new_name] = self.map_screen.nation_data["FACTION_WAR_MAPS"].pop(old_name)
-            
-            self.map_screen.show_feedback(f"Faction renamed to {new_name}")
-            self.map_screen.refresh_diplomacy_maps()
+            renamed = faction_actions.rename_faction(
+                self.map_screen.nation_data, player_country, old_name, new_name)
+            if renamed:
+                # A tournament move otherwise carries only the renaming
+                # leader's nation record.  Keep an explicit, host-validated
+                # command so every member is renamed when the host imports it.
+                if getattr(self.map_screen, "multiplayer_mode", False):
+                    pending = getattr(self.map_screen,
+                                      "multiplayer_pending_faction_renames", None)
+                    if pending is None:
+                        pending = []
+                        self.map_screen.multiplayer_pending_faction_renames = pending
+                    pending.append({"old_name": old_name, "new_name": new_name})
+
+                self.map_screen.show_feedback(f"Faction renamed to {new_name}")
+                from map_logic.rendering import country_names
+                country_names.clear_country_name_cache(self.map_screen)
+                self.map_screen.refresh_diplomacy_maps()
+            else:
+                self.map_screen.show_feedback(
+                    "Faction names must be unique, and only its leader may rename it.")
                 
         self.is_renaming = False
         self.refresh_ui()

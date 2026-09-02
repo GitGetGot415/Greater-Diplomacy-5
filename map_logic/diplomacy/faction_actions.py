@@ -9,6 +9,47 @@ from map_logic.diplomacy.war_actions import sever_military_access, finalize_neut
 import data.constants as c
 
 
+def rename_faction(nation_data, leader, old_name, new_name):
+    """Rename a faction without changing its membership or war bookkeeping.
+
+    A faction has no object of its own: each member stores the same faction
+    string, and its pre-war border snapshot is keyed by that string.  Keeping
+    this mutation here gives the regular UI and tournament move importer one
+    authoritative implementation instead of letting either leave a member or
+    a ``FACTION_WAR_MAPS`` entry behind under the old name.
+
+    Only the current leader may rename the faction.  Existing faction names
+    are rejected rather than silently merging two unrelated alliances.
+    """
+    if not isinstance(old_name, str) or not isinstance(new_name, str):
+        return False
+
+    new_name = new_name.strip()
+    leader_data = nation_data.get(leader, {})
+    if (not old_name or not new_name or len(new_name) > 40 or old_name == new_name
+            or leader_data.get("faction") != old_name
+            or not leader_data.get("is_faction_leader", False)):
+        return False
+
+    # A rename must not be allowed to turn into an unannounced merger.  This
+    # also protects the separate pre-war snapshots belonging to both blocs.
+    if queries.get_faction_members(new_name, nation_data):
+        return False
+
+    members = queries.get_faction_members(old_name, nation_data)
+    if not members:
+        return False
+
+    for member in members:
+        nation_data[member]["faction"] = new_name
+
+    faction_war_maps = nation_data.get("FACTION_WAR_MAPS")
+    if isinstance(faction_war_maps, dict) and old_name in faction_war_maps:
+        faction_war_maps[new_name] = faction_war_maps.pop(old_name)
+
+    return True
+
+
 def settle_with_faction(nation_data, joiner, fac):
     """Makes peace with everyone already in `fac` and drops passage rights.
 

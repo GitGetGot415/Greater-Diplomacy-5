@@ -12,9 +12,25 @@ def load_multiplayer_moves(map_ref, on_result):
             on_result(False)
             return
 
-        multiplayer_io.load_move_files(map_ref, files, getattr(map_ref, 'multiplayer_keys_dict', {}))
-        map_ref.show_feedback(f"Loaded {len(files)} move files.")
-        on_result(True)
+        summary = multiplayer_io.load_move_files(
+            map_ref, files, getattr(map_ref, 'multiplayer_keys_dict', {}))
+        loaded, rejected = summary["loaded"], summary["rejected"]
+        if loaded and hasattr(map_ref, "refresh_all_maps"):
+            # Move imports can change faction membership, country colours, and
+            # province/unit orders.  Rebuild every cached layer before the host
+            # sees the board or exports the next turn.
+            map_ref.refresh_all_maps()
+
+        if loaded:
+            detail = f"Loaded {loaded} move file{'s' if loaded != 1 else ''}."
+            if rejected:
+                detail += f" Skipped {rejected} invalid, duplicate, or wrong-turn file{'s' if rejected != 1 else ''}."
+            if summary["legacy"]:
+                detail += " Some accepted files use the legacy move format."
+            map_ref.show_feedback(detail)
+        else:
+            map_ref.show_feedback("No valid move files were loaded.")
+        on_result(bool(loaded))
 
     queries.open_file_browser(map_ref, "Select Move Files", c.TOURNAMENT_SAVES_DIR,
                               mode="open_files", extensions=[".gd5move"], on_result=_on_files)
