@@ -716,7 +716,7 @@ Anything else represents who made the flag.
 | Weimar Republic | Public Domain |
 | West Bengal | Public Domain |
 | West Germany | Public Domain |
-| Western Australia |  |
+| Western Australia | Public Domain |
 | Western Command Center |  |
 | Western Sahara | Public Domain |
 | White Kaganate |  |
