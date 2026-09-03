@@ -523,12 +523,12 @@ Anything else represents who made the flag.
 | Puerto Rico | Public Domain |
 | Punjab | Public Domain |
 | Qatar | Public Domain |
-| Qing Dynasty |  |
+| Qing Dynasty | Public Domain |
 | Quebec | Public Domain |
 | Queensland | Public Domain |
 | Quick Tag | [!!!] |
 | Rahanweyn | Public Domain |
-| Ramp |  |
+| Ramp | GitGetGot415 |
 | Reichskommissariat Kaukasien |  |
 | Reichskommissariat Moskowien |  |
 | Reichskommissariat Norwegen |  |
@@ -537,7 +537,7 @@ Anything else represents who made the flag.
 | Reichskommissariat Ukraine |  |
 | Reichskommissariat Ungarn |  |
 | Reno | Public Domain |
-| Republic of South Africa |  |
+| Republic of South Africa | Public Domain |
 | Republic of the Congo | Public Domain |
 | Rhineland | Public Domain |
 | Rhodesia | Public Domain |
@@ -556,7 +556,7 @@ Anything else represents who made the flag.
 | Sakhalin | Public Domain |
 | Salta | Public Domain |
 | Sámi | Public Domain |
-| San Francisco | [!!!] |
+| San Francisco | Public Domain |
 | San Francisco Carousel | [!!!] |
 | San Francisco Cruises | [!!!] |
 | Santiago | Public Domain |
@@ -580,7 +580,7 @@ Anything else represents who made the flag.
 | Siberia |  |
 | Siberian Black Army |  |
 | Sichuan Clique |  |
-| Sicily |  |
+| Sicily | Public Domain |
 | Sidewalk | GitGetGot415 |
 | Sidewalk 1 | GitGetGot415 |
 | Sidewalk 2 | GitGetGot415 |
