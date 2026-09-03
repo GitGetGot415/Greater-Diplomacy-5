@@ -1,4 +1,4 @@
-# Flag copyright status
+# Flags copyright status
 
 Blank status means the copyright status could not be confirmed with 100% certainty.
 `[!!!]` indicates a likely copyrighted, trademarked, photographic, or third-party design.
