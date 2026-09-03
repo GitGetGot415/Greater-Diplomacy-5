@@ -661,7 +661,7 @@ Anything else represents who made the flag.
 | Timbuktu | Public Domain |
 | Togo | Public Domain |
 | Tomsk |  |
-| Toronto | Public Domain |
+| Toronto | [!!!] |
 | Totalist Italy |  |
 | Toubou | Public Domain |
 | Transylvania | Public Domain |
