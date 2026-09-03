@@ -310,6 +310,11 @@ def execute(map_screen, deal, escrowed=None):
                 granted.append(clause["grantee"])
 
         elif kind == deal_mod.FACTION_EXIT:
+            # FACTION_EXIT is a separate-peace term.  The builder used to add
+            # it to ordinary trades made by faction members, and malformed
+            # offers can remain in saves written before that was fixed.
+            if deal.get("kind") != deal_mod.KIND_PEACE:
+                continue
             if nation_data.get(clause["nation"], {}).get("faction", ""):
                 finalize_faction_leave(nation_data, clause["nation"])
 

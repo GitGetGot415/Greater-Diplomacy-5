@@ -55,7 +55,7 @@ CLAUSE_TYPES = (WHITE_PEACE, TILES, RESOURCES, VASSALIZE, DEMILITARIZE,
                 MILITARY_ACCESS, FACTION_EXIT, WAR_EXIT)
 
 #: Which clauses only make sense inside a peace treaty.
-_PEACE_ONLY = (WHITE_PEACE, DEMILITARIZE, WAR_EXIT)
+_PEACE_ONLY = (WHITE_PEACE, DEMILITARIZE, FACTION_EXIT, WAR_EXIT)
 
 
 # ==========================================

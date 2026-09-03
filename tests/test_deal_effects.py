@@ -248,6 +248,15 @@ class OtherClauseTests(unittest.TestCase):
         deal_effects.execute(self.game, agreement)
         self.assertEqual(self.game.nation_data["B"]["faction"], "")
 
+    def test_faction_exit_in_a_trade_does_not_remove_membership(self):
+        self.game.set_faction("The Pact", "B")
+        agreement = deal.new(deal.KIND_TRADE, ["A"], ["B"],
+                             [{"type": deal.FACTION_EXIT, "nation": "B"}])
+
+        deal_effects.execute(self.game, agreement)
+
+        self.assertEqual(self.game.nation_data["B"]["faction"], "The Pact")
+
     def test_war_exit_unlinks_only_that_pair(self):
         self.game.set_war("B", "A")
         agreement = deal.new(deal.KIND_TRADE, ["A"], ["B"],

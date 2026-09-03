@@ -400,6 +400,24 @@ class AssemblyTests(DealScreenTestCase):
         kinds = [cl["type"] for cl in deal_mod.clauses(screen.build_deal())]
         self.assertNotIn(deal_mod.WHITE_PEACE, kinds)
 
+    def test_a_trade_does_not_make_a_faction_member_leave(self):
+        self.map.nation_data[self.player]["faction"] = "Allies"
+        self.map.nation_data[self.player]["is_faction_leader"] = False
+
+        screen = self.screen(deal_mod.KIND_TRADE)
+        screen.give_mats_str = "100"
+        kinds = [cl["type"] for cl in deal_mod.clauses(screen.build_deal())]
+
+        self.assertNotIn(deal_mod.FACTION_EXIT, kinds)
+
+    def test_a_separate_peace_still_makes_a_faction_member_leave(self):
+        self.map.nation_data[self.player]["faction"] = "Allies"
+        self.map.nation_data[self.player]["is_faction_leader"] = False
+
+        kinds = [cl["type"] for cl in deal_mod.clauses(self.screen().build_deal())]
+
+        self.assertIn(deal_mod.FACTION_EXIT, kinds)
+
     def test_demanded_and_offered_land_move_in_opposite_directions(self):
         screen = self.screen()
         theirs, mine = self.their_province(), self.my_province()

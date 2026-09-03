@@ -136,6 +136,12 @@ class ValidationTests(unittest.TestCase):
         problems = deal.validate(confused)
         self.assertTrue(any("only belongs in a peace treaty" in p for p in problems))
 
+    def test_a_faction_exit_does_not_belong_in_a_trade(self):
+        confused = deal.new(deal.KIND_TRADE, ["A"], ["B"],
+                            [{"type": deal.FACTION_EXIT, "nation": "B"}])
+        problems = deal.validate(confused)
+        self.assertTrue(any("only belongs in a peace treaty" in p for p in problems))
+
     def test_cannot_vassalize_someone_elses_puppet(self):
         self.nation_data["B"]["master"] = "C"
         grab = deal.new(deal.KIND_PEACE, ["A"], ["B"],

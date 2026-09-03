@@ -380,7 +380,7 @@ class Deal_Screen(MapOverlayScreen):
         # A member settling behind its bloc's back leaves the bloc. Shown as a
         # term rather than sprung on them at signing -- treaty_effects adds it
         # regardless, so the screen had better say so.
-        if peace_scope.costs_membership(self.role):
+        if self.is_peace and peace_scope.costs_membership(self.role):
             clauses.append({"type": deal_mod.FACTION_EXIT, "nation": self.player})
 
         return deal_mod.new(self.kind, self.my_side, self.their_side, clauses)
