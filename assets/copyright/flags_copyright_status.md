@@ -8,131 +8,131 @@ Anything else represents who made the flag.
 | --- | --- |
 | 49ers | [!!!] |
 | Aboriginals | [!!!] |
-| Abyssonia |  |
-| Achaemenid Empire |  |
+| Abyssonia | Public Domain |
+| Achaemenid Empire | Public Domain |
 | Adventure Cat Sailing Charters | [!!!] |
 | Afghanistan |  |
-| Afrika Korps |  |
-| Aktobe |  |
+| Afrika Korps | Public Domain |
+| Aktobe | Public Domain |
 | Alabama | Public Domain |
-| Alash Autonomy |  |
+| Alash Autonomy | Public Domain |
 | Alaska | Public Domain |
-| Albania |  |
-| Alberta |  |
+| Albania | Public Domain |
+| Alberta | Public Domain |
 | Aleenk Technologies | [!!!] |
 | Algeria | Public Domain |
-| Almaty |  |
-| Alsace-Lorraine |  |
-| Alto Rio Negro |  |
-| Amapá |  |
+| Almaty | Public Domain |
+| Alsace-Lorraine | Public Domain |
+| Alto Rio Negro | Public Domain |
+| Amapá | Public Domain |
 | American Territory of Canada |  |
 | American Union State |  |
-| Amur |  |
+| Amur | [!!!] |
 | Anarchist Commune of America |  |
-| Andalusia |  |
-| Angola |  |
-| Ankara |  |
-| Antalya |  |
-| Antofagasta |  |
-| Apulia |  |
+| Andalusia | Public Domain |
+| Angola | Public Domain |
+| Ankara | Public Domain |
+| Antalya | Public Domain |
+| Antofagasta | Public Domain |
+| Apulia | Public Domain |
 | Aquarium of the Bay | [!!!] |
-| Aragon |  |
-| Argentina |  |
-| Arizona |  |
-| Arkhangelsk |  |
-| Arkhangelsk Governorate |  |
+| Aragon | Public Domain |
+| Argentina | Public Domain |
+| Arizona | Public Domain |
+| Arkhangelsk | Public Domain |
+| Arkhangelsk Governorate | Public Domain |
 | Armenia | Public Domain |
 | Artly Robot Coffee | [!!!] |
 | Aruba | Public Domain |
 | Atalia's Gelato | [!!!] |
 | Atlantis |  |
-| Atyrau |  |
+| Atyrau | Public Domain |
 | Aunt Fanny's Hot Pretzels | [!!!] |
-| Australia |  |
+| Australia | Public Domain |
 | Australia-Hungary |  |
 | Austria | Public Domain |
-| Austria-Hungary |  |
+| Austria-Hungary | Public Domain |
 | Ayumu Kasuga | [!!!] |
-| Ayutthaya Kingdom |  |
-| Azad Hind |  |
-| Azande |  |
+| Ayutthaya Kingdom | Public Domain |
+| Azad Hind | Public Domain |
+| Azande | Public Domain |
 | Azerbaijan | Public Domain |
-| Aztec Empire |  |
-| Bahia |  |
+| Aztec Empire | [???] |
+| Bahia | Public Domain |
 | Bahrain | Public Domain |
-| Baja California |  |
+| Baja California | Public Domain |
 | Bangladesh | Public Domain |
 | Barotseland | Public Domain |
 | Basque Country | Public Domain |
 | Batavian Commune |  |
 | Bathrooms |  |
-| Bavaria |  |
+| Bavaria | Public Domain |
 | Bay Plunge | [!!!] |
 | Bay Walk | [!!!] |
 | Beach Street | [!!!] |
 | Beijing |  |
-| Belarus |  |
+| Belarus | Public Domain |
 | Belgian Congo | Public Domain |
 | Belgium | Public Domain |
-| Belize |  |
+| Belize | Public Domain |
 | Ben and Jerry's | [!!!] |
 | Benin | Public Domain |
 | Bharatiya Commune |  |
-| Bhutan |  |
+| Bhutan | Public Domain |
 | Biscoff Coffee Corner | [!!!] |
 | Blazing Saddles | [!!!] |
 | Bohemia |  |
 | Bolivia | Public Domain |
-| Bornu |  |
+| Bornu | Public Domain |
 | Bosnia and Herzegovina | Public Domain |
 | Botswana | Public Domain |
 | Boudin Bakery | [!!!] |
-| Brazil |  |
+| Brazil | Public Domain |
 | Bremen | Public Domain |
 | Bridge |  |
 | British America | Public Domain |
-| British Columbia |  |
-| British Malaya |  |
-| British Raj |  |
+| British Columbia | Public Domain |
+| British Malaya | Public Domain |
+| British Raj | Public Domain |
 | British-Japanese Empire |  |
-| Brittany |  |
-| Brunei |  |
+| Brittany | Public Domain |
+| Brunei | Public Domain |
 | Brunswick | Public Domain |
-| Bubba Gump Shrimp Co. |  |
-| Buenos Aires |  |
-| Buganda |  |
+| Bubba Gump Shrimp Co. | [!!!] |
+| Buenos Aires | Public Domain |
+| Buganda | Public Domain |
 | Build-A-Bear Workshop | [!!!] |
-| Bukhara |  |
+| Bukhara | Public Domain |
 | Bulgaria | Public Domain |
 | Burkina Faso | Public Domain |
-| Burundi |  |
+| Burundi | Public Domain |
 | Buryatia |  |
-| Byzantine Empire |  |
-| California |  |
-| Cambodia |  |
+| Byzantine Empire | Public Domain |
+| California | Public Domain |
+| Cambodia | Public Domain |
 | Cameroon | Public Domain |
 | Cameroon African State |  |
-| Canada |  |
+| Canada | Public Domain |
 | Candy Baron | [!!!] |
-| Carthage |  |
-| Catalonia |  |
-| Caucasus |  |
+| Carthage | Public Domain |
+| Catalonia | Public Domain |
+| Caucasus | Public Domain |
 | Central African Republic | Public Domain |
 | Chad | Public Domain |
 | Champa |  |
-| Chechnya |  |
-| Cherokee |  |
-| Chihuahua |  |
+| Chechnya | Public Domain |
+| Cherokee | Public Domain |
+| Chihuahua | Public Domain |
 | Chile | Public Domain |
-| Chokwe |  |
+| Chokwe | Public Domain |
 | Chongqing |  |
 | Chowder's | [!!!] |
 | Christmas in San Francisco | [!!!] |
-| Christmas Island |  |
-| Circassia |  |
+| Christmas Island | Public Domain |
+| Circassia | Public Domain |
 | Clothing Store | [!!!] |
 | Colombia | Public Domain |
-| Colorado |  |
+| Colorado | Public Domain |
 | Combined Syndicates of America |  |
 | Commune of France |  |
 | Commune of Japan |  |
@@ -141,36 +141,36 @@ Anything else represents who made the flag.
 | Communist China |  |
 | Communist Greece |  |
 | Communist Party of India |  |
-| Confederate States of America |  |
-| Confederate States of America (Battle Flag) |  |
+| Confederate States of America | Public Domain |
+| Confederate States of America (Battle Flag) | Public Domain |
 | Corporatist Brazil |  |
-| Corsica |  |
+| Corsica | Public Domain |
 | Cossacks |  |
 | Costa Rica | Public Domain |
 | Cousins Maine Lobster | [!!!] |
 | Crab House at Pier 39 | [!!!] |
 | Crepe Cafe | [!!!] |
-| Crimea |  |
-| Croatia |  |
+| Crimea | Public Domain |
+| Croatia | Public Domain |
 | Croissant Republic |  |
 | Cuba | Public Domain |
 | Curaçao | Public Domain |
-| Cyprus |  |
+| Cyprus | Public Domain |
 | Czechia | Public Domain |
 | Czechochechnyaslovenoslovakia |  |
 | Czechoslovakia | Public Domain |
 | Danubia |  |
 | Danzig | Public Domain |
 | Darfur | Public Domain |
-| default_flag |  |
-| Delhi |  |
+| default_flag | GitGetGot415 |
+| Delhi | [???] |
 | Democratic Republic of the Congo |  |
 | Denmark | Public Domain |
 | Deseret | Public Domain |
-| Djibouti |  |
-| Dominican Republic |  |
-| Dominion of Canada |  |
-| Durango |  |
+| Djibouti | Public Domain |
+| Dominican Republic | Public Domain |
+| Dominion of Canada | Public Domain |
+| Durango | Public Domain |
 | Dutch America |  |
 | Dutch East India Company |  |
 | Dutch East Indies | Public Domain |
@@ -178,13 +178,13 @@ Anything else represents who made the flag.
 | Eagle Cafe | [!!!] |
 | East African Federation |  |
 | East Asia |  |
-| East Germany |  |
-| East Timor |  |
+| East Germany | Public Domain |
+| East Timor | Public Domain |
 | Eastern Sanctuaries |  |
-| Ecuador |  |
-| Edinburgh |  |
-| Egypt |  |
-| El Salvador |  |
+| Ecuador | Public Domain |
+| Edinburgh | Public Domain |
+| Egypt | Public Domain |
+| El Salvador | Public Domain |
 | Embarcadero | [!!!] |
 | Embarcadero 1 | [!!!] |
 | Embarcadero 2 | [!!!] |
@@ -200,23 +200,23 @@ Anything else represents who made the flag.
 | Emirate of Cyrenaica |  |
 | Emirate of Jabal Shammar |  |
 | Emirate of Nedj and Hasa |  |
-| Empire of Brazil |  |
+| Empire of Brazil | Public Domain |
 | England | Public Domain |
 | Enlightenment | [!!!] |
-| Equatorial Guinea |  |
-| Eritrea |  |
+| Equatorial Guinea | Public Domain |
+| Eritrea | Public Domain |
 | Ess Eff Gift Shop | [!!!] |
 | Estonia | Public Domain |
-| Eswatini |  |
+| Eswatini | Public Domain |
 | Ethiopia | Public Domain |
 | European Union | [!!!] |
 | Expedition | [!!!] |
 | Fatmid Caliphate |  |
 | FIFA World Cup Store | [!!!] |
-| Fiji |  |
+| Fiji | Public Domain |
 | Finland | Public Domain |
 | Fisherman's Wharf Welcome Center | [!!!] |
-| Florida |  |
+| Florida | Public Domain |
 | Flyer Thrill Zone | [!!!] |
 | France | Public Domain |
 | Frankie's Crab Stand | [!!!] |
@@ -224,23 +224,23 @@ Anything else represents who made the flag.
 | French Guiana | Public Domain |
 | French Indochina | Public Domain |
 | French Madagascar | Public Domain |
-| French Polynesia |  |
-| French Sudan |  |
+| French Polynesia | Public Domain |
+| French Sudan | Public Domain |
 | Fun Food Factory | [!!!] |
-| Futa Jallon |  |
+| Futa Jallon | Public Domain |
 | Gabon | Public Domain |
 | Galicia | Public Domain |
 | Gaul |  |
 | Georgia | Public Domain |
 | German Empire | Public Domain |
-| German Reich |  |
+| German Reich | [???] |
 | Germany | Public Domain |
 | Ghana | Public Domain |
 | Gigachad | [!!!] |
-| Glasgow |  |
-| Gotia |  |
-| Gran Colombia |  |
-| Grand Est | [!!!] |
+| Glasgow | Public Domain |
+| Gotia | [???] |
+| Gran Colombia | Public Domain |
+| Grand Est | Public Domain |
 | Granite | [!!!] |
 | Grass | [!!!] |
 | Great Hwan Empire |  |
@@ -248,19 +248,19 @@ Anything else represents who made the flag.
 | Greece | Public Domain |
 | Greenland | Public Domain |
 | Guangxi Clique |  |
-| Guatemala |  |
+| Guatemala | Public Domain |
 | Guinea | Public Domain |
 | Guinea-Bissau | Public Domain |
 | Guyana | Public Domain |
-| Haiti |  |
-| Hamburg |  |
+| Haiti | Public Domain |
+| Hamburg | Public Domain |
 | Happy Bubbles | [!!!] |
 | Hard Rock Cafe | [!!!] |
 | Hawaii | Public Domain |
 | Hearts in San Francisco | [!!!] |
 | Hearts of San Francisco | [!!!] |
 | Henan |  |
-| Herero |  |
+| Herero | Public Domain |
 | Hokkaido |  |
 | Holy Britannian Empire | [!!!] |
 | Holy Roman Empire |  |
@@ -272,47 +272,47 @@ Anything else represents who made the flag.
 | Iberia |  |
 | Iceland | Public Domain |
 | Ilkhanate |  |
-| Illinois |  |
+| Illinois | Public Domain |
 | Image Arts | [!!!] |
 | India |  |
 | Indonesia | Public Domain |
 | Intersection |  |
-| Iowa |  |
+| Iowa | Public Domain |
 | Iqutios |  |
-| Iran |  |
-| Iraq |  |
+| Iran | Public Domain |
+| Iraq | Public Domain |
 | Ireland | Public Domain |
 | Irkutsk |  |
-| Iroquois Confederacy |  |
+| Iroquois Confederacy | Public Domain |
 | Islamic Republic of Japan |  |
 | Israel | Public Domain |
-| Italian East Africa |  |
+| Italian East Africa | [!!!] |
 | Italy | Public Domain |
 | Ivory Coast | Public Domain |
 | Jamaica | Public Domain |
 | Japan | Public Domain |
 | Japanese Empire | Public Domain |
 | Japanese Pacific States |  |
-| Java |  |
+| Java | [???] |
 | Jefferson Street | [!!!] |
 | Jordan | Public Domain |
 | Joseon |  |
-| Kalat |  |
+| Kalat | Public Domain |
 | Kaliningrad |  |
 | Kalmar Union |  |
-| Kamchatka |  |
-| Kansas |  |
-| Karelia |  |
+| Kamchatka | [???] |
+| Kansas | Public Domain |
+| Karelia | Public Domain |
 | Kashmir |  |
 | Katanga |  |
 | Kazakh Khanate |  |
-| Kazakhstan |  |
+| Kazakhstan | Public Domain |
 | Kazembe |  |
-| Kenya |  |
+| Kenya | Public Domain |
 | Khalistan |  |
 | Khiva | Public Domain |
-| Khmer Rouge |  |
-| Khoisan |  |
+| Khmer Rouge | Public Domain |
+| Khoisan | [???] |
 | Kingdom of Argentina |  |
 | Kingdom of Armenia |  |
 | Kingdom of Flanders-Wallonia |  |
@@ -324,49 +324,49 @@ Anything else represents who made the flag.
 | Kingdom of Two Sicilies |  |
 | Kokand |  |
 | Korea |  |
-| Kosovo |  |
+| Kosovo | Public Domain |
 | Kurdistan | Public Domain |
 | Kuwait | Public Domain |
 | KWAK | [!!!] |
-| Kyrgyzstan |  |
+| Kyrgyzstan | Public Domain |
 | Kyushu |  |
 | Laos | Public Domain |
 | Lappert's Ice Cream | [!!!] |
-| Las Vegas |  |
+| Las Vegas | Public Domain |
 | Latvia | Public Domain |
 | League of Eight Provinces |  |
-| Lebanon |  |
-| Lesotho |  |
+| Lebanon | Public Domain |
+| Lesotho | Public Domain |
 | Liangguang Clique |  |
 | Liberia | Public Domain |
 | Libya | Public Domain |
 | Lids | [!!!] |
 | Lithuania | Public Domain |
 | Livonian Order |  |
-| London |  |
-| Los Angeles |  |
-| Louisiana |  |
+| London | Public Domain |
+| Los Angeles | Public Domain |
+| Louisiana | Public Domain |
 | Luang Phrabang |  |
 | Lunda |  |
 | Luxembourg | Public Domain |
-| Lviv |  |
+| Lviv | Public Domain |
 | Madagascar | Public Domain |
-| Madrid |  |
-| Magadan |  |
+| Madrid | Public Domain |
+| Magadan | Public Domain |
 | Magnetron | [!!!] |
 | Magowan's Infinite Mirror Maze | [!!!] |
-| Maine |  |
-| Majapahit |  |
+| Maine | Public Domain |
+| Majapahit | Public Domain |
 | Malagasy Protectorate | Public Domain |
 | Malawi | Public Domain |
 | Malaysia | Public Domain |
 | Mali | Public Domain |
-| Mali Empire |  |
-| Manchester |  |
-| Manchukuo |  |
-| Manitoba |  |
-| Maracaibo |  |
-| Maranhão |  |
+| Mali Empire | Public Domain |
+| Manchester | Public Domain |
+| Manchukuo | Public Domain |
+| Manitoba | Public Domain |
+| Maracaibo | Public Domain |
+| Maranhão | Public Domain |
 | Maratha Empire |  |
 | Marshall Islands |  |
 | Mason Street | [!!!] |
@@ -375,77 +375,77 @@ Anything else represents who made the flag.
 | Mauryan Empire |  |
 | Mecklenburg | Public Domain |
 | Mega City One | [!!!] |
-| Mende |  |
-| Mengjiang |  |
-| Merina |  |
-| Mexico |  |
-| Michigan |  |
-| Midway |  |
-| Minnesota |  |
-| Mississippi |  |
-| Missouri |  |
-| Moldova |  |
+| Mende | [???] |
+| Mengjiang | Public Domain |
+| Merina | Public Domain |
+| Mexico | Public Domain |
+| Michigan | Public Domain |
+| Midway | Public Domain |
+| Minnesota | Public Domain |
+| Mississippi | Public Domain |
+| Missouri | Public Domain |
+| Moldova | Public Domain |
 | Mongol Empire |  |
-| Mongolia |  |
-| Montana |  |
-| Montenegro |  |
+| Mongolia | Public Domain |
+| Montana | Public Domain |
+| Montenegro | Public Domain |
 | Morocco | Public Domain |
-| Moscow |  |
+| Moscow | Public Domain |
 | Moss | [!!!] |
 | Mountainous Republic of the Northern Caucasus |  |
-| Mozambique |  |
+| Mozambique | Public Domain |
 | Muscogee |  |
 | Myanmar | Public Domain |
 | Namibia | Public Domain |
-| Naples |  |
+| Naples | Public Domain |
 | Napoleonic France |  |
 | Nathan's Hot Dog Cart | [!!!] |
 | National France |  |
 | Nationalist China |  |
-| Nebraska |  |
-| Nepal |  |
+| Nebraska | Public Domain |
+| Nepal | Public Domain |
 | Neptune Society | [!!!] |
 | Neptune's Palace | [!!!] |
 | Netherlands | Public Domain |
-| Nevada |  |
+| Nevada | Public Domain |
 | New Brunswick |  |
 | New Caledonia |  |
 | New England |  |
-| New Jersey |  |
-| New Mexico |  |
+| New Jersey | Public Domain |
+| New Mexico | Public Domain |
 | New South Wales |  |
-| New York |  |
+| New York | Public Domain |
 | New Zealand | Public Domain |
-| Newfoundland |  |
-| Nicaragua |  |
+| Newfoundland | Public Domain |
+| Nicaragua | Public Domain |
 | Niger | Public Domain |
 | Nigeria | Public Domain |
 | Nigerian Commune |  |
-| Normandy |  |
+| Normandy | Public Domain |
 | North Carolina | Public Domain |
 | North German Confederation |  |
-| North Korea |  |
+| North Korea | Public Domain |
 | North Macedonia | Public Domain |
-| Northern Territory |  |
-| Northwest Territories |  |
+| Northern Territory | Public Domain |
+| Northwest Territories | Public Domain |
 | Norway | Public Domain |
-| Novosibirsk |  |
+| Novosibirsk | Public Domain |
 | Nowa Polska |  |
-| Nunavut |  |
-| Oaxaca |  |
-| Occitania |  |
+| Nunavut | Public Domain |
+| Oaxaca | Public Domain |
+| Occitania | Public Domain |
 | Oceania | [!!!] |
 | Oceanian Federation |  |
-| Ohio |  |
-| Oklahoma |  |
+| Ohio | Public Domain |
+| Oklahoma | Public Domain |
 | Oldegård |  |
-| Oman |  |
-| Omani Empire |  |
+| Oman | Public Domain |
+| Omani Empire | Public Domain |
 | Omsk |  |
-| Ontario |  |
+| Ontario | [???] |
 | Orange Free State | Public Domain |
 | Ordensstaat Burgund |  |
-| Oregon |  |
+| Oregon | Public Domain |
 | Orsk |  |
 | Ostafrika |  |
 | Ottoman Empire | Public Domain |
@@ -454,11 +454,11 @@ Anything else represents who made the flag.
 | Pakistan | Public Domain |
 | Palestine | Public Domain |
 | Panama | Public Domain |
-| Papal States |  |
-| Papua New Guinea |  |
-| Pará |  |
-| Paraguay |  |
-| Paris |  |
+| Papal States | Public Domain |
+| Papua New Guinea | Public Domain |
+| Pará | Public Domain |
+| Paraguay | Public Domain |
+| Paris | Public Domain |
 | Parking Lot |  |
 | Parking Lot 1 |  |
 | Parking Lot 2 |  |
@@ -472,13 +472,13 @@ Anything else represents who made the flag.
 | Parthian Empire |  |
 | Patagonian Workers Front |  |
 | Pearl Factory | [!!!] |
-| Pennsylvania |  |
+| Pennsylvania | Public Domain |
 | Pepper Paradise Hot Sauce & More | [!!!] |
 | Perth |  |
 | Peru | Public Domain |
 | Philadelphia |  |
 | Philippines | Public Domain |
-| Piedmont |  |
+| Piedmont | Public Domain |
 | Pier 35 | [!!!] |
 | Pier 39 | [!!!] |
 | Pier 39 Docks | [!!!] |
@@ -505,26 +505,26 @@ Anything else represents who made the flag.
 | Pier Protection Barrier 8 | GitGetGot415 |
 | Pier Protection Barrier 9 | GitGetGot415 |
 | Pier Protection Barriers | GitGetGot415 |
-| Pilbara |  |
+| Pilbara | [!!!] |
 | Players Sports Grill & Arcade | [!!!] |
 | Plaza de California | [!!!] |
 | Pocatello | [!!!] |
 | Poland | Public Domain |
-| Polish-Lithuanian Commonwealth |  |
+| Polish-Lithuanian Commonwealth | Public Domain |
 | Pollo Campero | [!!!] |
-| Pomerania |  |
-| Portugal |  |
+| Pomerania | Public Domain |
+| Portugal | Public Domain |
 | Powell Street | [!!!] |
 | Princely Federation |  |
 | Protectorate of Bohemia and Moravia | Public Domain |
 | Proto-Finnish Holy Roman Khaganate |  |
-| Prussia |  |
+| Prussia | Public Domain |
 | Ptolemaic Empire |  |
 | Puerto Rico | Public Domain |
-| Punjab |  |
+| Punjab | Public Domain |
 | Qatar | Public Domain |
 | Qing Dynasty |  |
-| Quebec |  |
+| Quebec | Public Domain |
 | Queensland | Public Domain |
 | Quick Tag | [!!!] |
 | Rahanweyn | Public Domain |
@@ -536,34 +536,34 @@ Anything else represents who made the flag.
 | Reichskommissariat Sweden |  |
 | Reichskommissariat Ukraine |  |
 | Reichskommissariat Ungarn |  |
-| Reno |  |
+| Reno | Public Domain |
 | Republic of South Africa |  |
 | Republic of the Congo | Public Domain |
-| Rhineland |  |
-| Rhodesia |  |
-| Rio de Janeiro |  |
-| Rio Grande |  |
+| Rhineland | Public Domain |
+| Rhodesia | Public Domain |
+| Rio de Janeiro | Public Domain |
+| Rio Grande | Public Domain |
 | Ripley's Marvelous Mirror Maze | [!!!] |
-| Rojava |  |
+| Rojava | Public Domain |
 | Romania | Public Domain |
-| Rome |  |
+| Rome | [???] |
 | Rondon |  |
 | Roraima |  |
 | Russia | Public Domain |
 | Russian Empire | Public Domain |
 | Rwanda | Public Domain |
 | Safavid Empire |  |
-| Sakhalin |  |
-| Salta |  |
-| Sámi |  |
+| Sakhalin | Public Domain |
+| Salta | Public Domain |
+| Sámi | Public Domain |
 | San Francisco | [!!!] |
 | San Francisco Carousel | [!!!] |
 | San Francisco Cruises | [!!!] |
-| Santiago |  |
-| Sarawak |  |
-| Sardinia |  |
-| Saskatchewan |  |
-| Saudi Arabia |  |
+| Santiago | Public Domain |
+| Sarawak | Public Domain |
+| Sardinia | Public Domain |
+| Saskatchewan | Public Domain |
+| Saudi Arabia | Public Domain |
 | Saxony | Public Domain |
 | Scary Russian Empire |  |
 | Scotland | Public Domain |
@@ -572,7 +572,7 @@ Anything else represents who made the flag.
 | Sea Lion Viewing Area | [!!!] |
 | Sea Lions | [!!!] |
 | Senegal | Public Domain |
-| Serbia |  |
+| Serbia | Public Domain |
 | Shangdong Clique |  |
 | Shanghai |  |
 | Shanxi |  |
@@ -597,26 +597,26 @@ Anything else represents who made the flag.
 | Sinaloa |  |
 | Sinaloa Cartel |  |
 | Skystar Wheel | [!!!] |
-| Slovakia |  |
-| Slovenia |  |
+| Slovakia | Public Domain |
+| Slovenia | Public Domain |
 | Socialist Republic of Italy |  |
-| Sokoto |  |
-| Sokoto Caliphate |  |
+| Sokoto | [???] |
+| Sokoto Caliphate | Public Domain |
 | Solomon Islands | Public Domain |
 | Somalia | Public Domain |
 | Songhai | Public Domain |
-| Songhai Empire |  |
+| Songhai Empire | Public Domain |
 | Sonora |  |
 | South Australia |  |
 | South Carolina | Public Domain |
-| South Korea |  |
-| South Sudan |  |
-| Soviet Union |  |
-| Spain |  |
-| Spanish Empire |  |
+| South Korea | Public Domain |
+| South Sudan | Public Domain |
+| Soviet Union | Public Domain |
+| Spain | Public Domain |
+| Spanish Empire | Public Domain |
 | Sparta |  |
 | Spectator | GitGetGot415 |
-| Sri Lanka |  |
+| Sri Lanka | Public Domain |
 | SS Jeremiah O'Brien | [!!!] |
 | Stanistan |  |
 | Sudan | Public Domain |
@@ -626,7 +626,7 @@ Anything else represents who made the flag.
 | Sumatra |  |
 | Sunglass Hut | [!!!] |
 | Suriname | Public Domain |
-| Sverdlovsk |  |
+| Sverdlovsk | Public Domain |
 | Sweden | Public Domain |
 | Swiss Louis Italian And Seafood Restaurant | [!!!] |
 | Switzerland | Public Domain |
@@ -635,12 +635,12 @@ Anything else represents who made the flag.
 | Taiwan | Public Domain |
 | Tajikistan |  |
 | Taliban |  |
-| Tannu Tuva |  |
+| Tannu Tuva | Public Domain |
 | Tanzania | Public Domain |
-| Tasmania |  |
+| Tasmania | Public Domain |
 | Tatar Khanate |  |
 | Tatarstan | Public Domain |
-| Telangana |  |
+| Telangana | Public Domain |
 | Tennessee | Public Domain |
 | Teutonic Order | Public Domain |
 | Texas | Public Domain |
@@ -657,72 +657,72 @@ Anything else represents who made the flag.
 | The Spice & Tea Exchange | [!!!] |
 | Thirteen Colonies | Public Domain |
 | Tibet | Public Domain |
-| Tierra del Fuego |  |
-| Timbuktu |  |
+| Tierra del Fuego | Public Domain |
+| Timbuktu | Public Domain |
 | Togo | Public Domain |
 | Tomsk |  |
-| Toronto |  |
+| Toronto | Public Domain |
 | Totalist Italy |  |
-| Toubou |  |
-| Transylvania |  |
+| Toubou | Public Domain |
+| Transylvania | Public Domain |
 | Trazbon |  |
 | Trinidad and Tobago | Public Domain |
 | Trish's Chocolate | [!!!] |
 | Trish's Mini Donuts | [!!!] |
 | Trucial States | Public Domain |
-| Tuareg |  |
+| Tuareg | Public Domain |
 | Tunisia | Public Domain |
 | Turkestan Republic | Public Domain |
 | Turkey | Public Domain |
 | Turkmenistan |  |
 | Tyumen |  |
-| Uganda |  |
+| Uganda | Public Domain |
 | Ukraine | Public Domain |
 | Under the Golden Gate | [!!!] |
 | Union of Britain |  |
-| Union of South Africa |  |
+| Union of South Africa | Public Domain |
 | United Arab Emirates | Public Domain |
 | United Baltic Dutchy | Public Domain |
-| United Colonies |  |
+| United Colonies | [!!!] |
 | United Kingdom | Public Domain |
 | United Nations | [!!!] |
 | United States of America | Public Domain |
 | Ural League |  |
-| Uruguay |  |
-| Utah |  |
+| Uruguay | Public Domain |
+| Utah | Public Domain |
 | Uzbekistan | Public Domain |
-| Valencia |  |
+| Valencia | Public Domain |
 | Vanishing Inc. Magic Shop | [!!!] |
 | Vanuatu | Public Domain |
 | Vatican | Public Domain |
 | Venezuela | Public Domain |
-| Venice |  |
-| Vermont |  |
-| Vichy France |  |
-| Victoria |  |
+| Venice | [???] |
+| Vermont | Public Domain |
+| Vichy France | Public Domain |
+| Victoria | Public Domain |
 | Vietnam | Public Domain |
-| Vikramaditya |  |
+| Vikramaditya | Public Domain |
 | Vinland |  |
-| Virginia |  |
+| Virginia | Public Domain |
 | Vitality O2 Bar & Aqua Massage | [!!!] |
 | Vlahos Orchard | [!!!] |
 | Volgograd |  |
 | Vorkuta |  |
 | Voroniya |  |
-| Wales |  |
-| Wallachia |  |
-| Washington |  |
-| Washington DC |  |
+| Wales | Public Domain |
+| Wallachia | Public Domain |
+| Washington | Public Domain |
+| Washington DC | Public Domain |
 | Weimar Republic | Public Domain |
-| West Bengal |  |
-| West Germany |  |
+| West Bengal | Public Domain |
+| West Germany | Public Domain |
 | Western Australia |  |
 | Western Command Center |  |
 | Western Sahara | Public Domain |
 | White Kaganate |  |
 | White Ruthenia | Public Domain |
 | Wine Tasting on the Bay | [!!!] |
-| Wisconsin |  |
+| Wisconsin | Public Domain |
 | Wooden Sidewalk | GitGetGot415 |
 | Wooden Sidewalk 1 | GitGetGot415 |
 | Wooden Sidewalk 10 | GitGetGot415 |
@@ -740,27 +740,27 @@ Anything else represents who made the flag.
 | Wooden Sidewalk 7 | GitGetGot415 |
 | Wooden Sidewalk 8 | GitGetGot415 |
 | Wooden Sidewalk 9 | GitGetGot415 |
-| Wyoming |  |
+| Wyoming | Public Domain |
 | Xibei San Ma |  |
 | Xikang Clique |  |
-| Xinjiang |  |
+| Xinjiang | Public Domain |
 | Xinjiang Clique |  |
 | Yakutia |  |
 | Yemen | Public Domain |
-| York |  |
-| Yuan |  |
-| Yucatan |  |
+| York | Public Domain |
+| Yuan | [!!!] |
+| Yucatan | Public Domain |
 | Yugoslavia | Public Domain |
-| Yunnan |  |
-| Yunnan Clique |  |
-| Zabaykalsky |  |
-| Zakytaishchyna |  |
-| Zambia |  |
-| Zapatistas |  |
+| Yunnan | [!!!] |
+| Yunnan Clique | [!!!] |
+| Zabaykalsky | Public Domain |
+| Zakytaishchyna | Public Domain |
+| Zambia | Public Domain |
+| Zapatistas | Public Domain |
 | Zentralafrika |  |
-| Zhili |  |
-| Zilkhstan |  |
-| Zimbabwe |  |
-| Zlatoust |  |
-| Zulu |  |
+| Zhili | Public Domain |
+| Zilkhstan | [!!!] |
+| Zimbabwe | Public Domain |
+| Zlatoust | [!!!] |
+| Zulu | Public Domain |
 
