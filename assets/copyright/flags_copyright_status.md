@@ -119,13 +119,13 @@ Anything else represents who made the flag.
 | Caucasus | Public Domain |
 | Central African Republic | Public Domain |
 | Chad | Public Domain |
-| Champa |  |
+| Champa | [???] |
 | Chechnya | Public Domain |
 | Cherokee | Public Domain |
 | Chihuahua | Public Domain |
 | Chile | Public Domain |
 | Chokwe | Public Domain |
-| Chongqing |  |
+| Chongqing | [???] |
 | Chowder's | [!!!] |
 | Christmas in San Francisco | [!!!] |
 | Christmas Island | Public Domain |
@@ -145,21 +145,21 @@ Anything else represents who made the flag.
 | Confederate States of America (Battle Flag) | Public Domain |
 | Corporatist Brazil |  |
 | Corsica | Public Domain |
-| Cossacks |  |
+| Cossacks | Public Domain |
 | Costa Rica | Public Domain |
 | Cousins Maine Lobster | [!!!] |
 | Crab House at Pier 39 | [!!!] |
 | Crepe Cafe | [!!!] |
 | Crimea | Public Domain |
 | Croatia | Public Domain |
-| Croissant Republic |  |
+| Croissant Republic | lukionut |
 | Cuba | Public Domain |
 | Curaçao | Public Domain |
 | Cyprus | Public Domain |
 | Czechia | Public Domain |
 | Czechochechnyaslovenoslovakia |  |
 | Czechoslovakia | Public Domain |
-| Danubia |  |
+| Danubia | [!!!] |
 | Danzig | Public Domain |
 | Darfur | Public Domain |
 | default_flag | GitGetGot415 |
@@ -346,7 +346,7 @@ Anything else represents who made the flag.
 | London | Public Domain |
 | Los Angeles | Public Domain |
 | Louisiana | Public Domain |
-| Luang Phrabang |  |
+| Luang Phrabang | Public Domain |
 | Lunda |  |
 | Luxembourg | Public Domain |
 | Lviv | Public Domain |
@@ -367,12 +367,12 @@ Anything else represents who made the flag.
 | Manitoba | Public Domain |
 | Maracaibo | Public Domain |
 | Maranhão | Public Domain |
-| Maratha Empire |  |
-| Marshall Islands |  |
+| Maratha Empire | Public Domain |
+| Marshall Islands | Public Domain |
 | Mason Street | [!!!] |
-| Mato Grosso |  |
+| Mato Grosso | Public Domain |
 | Mauritania | Public Domain |
-| Mauryan Empire |  |
+| Mauryan Empire | Public Domain |
 | Mecklenburg | Public Domain |
 | Mega City One | [!!!] |
 | Mende | [???] |
@@ -394,7 +394,7 @@ Anything else represents who made the flag.
 | Moss | [!!!] |
 | Mountainous Republic of the Northern Caucasus |  |
 | Mozambique | Public Domain |
-| Muscogee |  |
+| Muscogee | Public Domain |
 | Myanmar | Public Domain |
 | Namibia | Public Domain |
 | Naples | Public Domain |
@@ -408,12 +408,12 @@ Anything else represents who made the flag.
 | Neptune's Palace | [!!!] |
 | Netherlands | Public Domain |
 | Nevada | Public Domain |
-| New Brunswick |  |
-| New Caledonia |  |
-| New England |  |
+| New Brunswick | Public Domain |
+| New Caledonia | Public Domain |
+| New England | Public Domain |
 | New Jersey | Public Domain |
 | New Mexico | Public Domain |
-| New South Wales |  |
+| New South Wales | Public Domain |
 | New York | Public Domain |
 | New Zealand | Public Domain |
 | Newfoundland | Public Domain |
@@ -469,14 +469,14 @@ Anything else represents who made the flag.
 | Parking Lot 7 |  |
 | Parking Lot 8 |  |
 | Parking Lot 9 |  |
-| Parthian Empire |  |
+| Parthian Empire | [!!!] |
 | Patagonian Workers Front |  |
 | Pearl Factory | [!!!] |
 | Pennsylvania | Public Domain |
 | Pepper Paradise Hot Sauce & More | [!!!] |
-| Perth |  |
+| Perth | Public Domain |
 | Peru | Public Domain |
-| Philadelphia |  |
+| Philadelphia | Public Domain |
 | Philippines | Public Domain |
 | Piedmont | Public Domain |
 | Pier 35 | [!!!] |
@@ -519,7 +519,7 @@ Anything else represents who made the flag.
 | Protectorate of Bohemia and Moravia | Public Domain |
 | Proto-Finnish Holy Roman Khaganate |  |
 | Prussia | Public Domain |
-| Ptolemaic Empire |  |
+| Ptolemaic Empire | [!!!] |
 | Puerto Rico | Public Domain |
 | Punjab | Public Domain |
 | Qatar | Public Domain |
@@ -592,10 +592,10 @@ Anything else represents who made the flag.
 | Sidewalk 8 | GitGetGot415 |
 | Sidewalk 9 | GitGetGot415 |
 | Sierra Leone | Public Domain |
-| Sikh Empire |  |
+| Sikh Empire | Public Domain |
 | Silesia | Public Domain |
-| Sinaloa |  |
-| Sinaloa Cartel |  |
+| Sinaloa | Public Domain |
+| Sinaloa Cartel | Public Domain |
 | Skystar Wheel | [!!!] |
 | Slovakia | Public Domain |
 | Slovenia | Public Domain |
@@ -606,15 +606,15 @@ Anything else represents who made the flag.
 | Somalia | Public Domain |
 | Songhai | Public Domain |
 | Songhai Empire | Public Domain |
-| Sonora |  |
-| South Australia |  |
+| Sonora | Public Domain |
+| South Australia | Public Domain |
 | South Carolina | Public Domain |
 | South Korea | Public Domain |
 | South Sudan | Public Domain |
 | Soviet Union | Public Domain |
 | Spain | Public Domain |
 | Spanish Empire | Public Domain |
-| Sparta |  |
+| Sparta | Public Domain |
 | Spectator | GitGetGot415 |
 | Sri Lanka | Public Domain |
 | SS Jeremiah O'Brien | [!!!] |
@@ -633,12 +633,12 @@ Anything else represents who made the flag.
 | Syria | Public Domain |
 | Taco Cantina | [!!!] |
 | Taiwan | Public Domain |
-| Tajikistan |  |
-| Taliban |  |
+| Tajikistan | Public Domain |
+| Taliban | Public Domain |
 | Tannu Tuva | Public Domain |
 | Tanzania | Public Domain |
 | Tasmania | Public Domain |
-| Tatar Khanate |  |
+| Tatar Khanate | Public Domain |
 | Tatarstan | Public Domain |
 | Telangana | Public Domain |
 | Tennessee | Public Domain |
@@ -665,7 +665,7 @@ Anything else represents who made the flag.
 | Totalist Italy |  |
 | Toubou | Public Domain |
 | Transylvania | Public Domain |
-| Trazbon |  |
+| Trazbon | Public Domain |
 | Trinidad and Tobago | Public Domain |
 | Trish's Chocolate | [!!!] |
 | Trish's Mini Donuts | [!!!] |
@@ -674,7 +674,7 @@ Anything else represents who made the flag.
 | Tunisia | Public Domain |
 | Turkestan Republic | Public Domain |
 | Turkey | Public Domain |
-| Turkmenistan |  |
+| Turkmenistan | Public Domain |
 | Tyumen |  |
 | Uganda | Public Domain |
 | Ukraine | Public Domain |
@@ -706,7 +706,7 @@ Anything else represents who made the flag.
 | Virginia | Public Domain |
 | Vitality O2 Bar & Aqua Massage | [!!!] |
 | Vlahos Orchard | [!!!] |
-| Volgograd |  |
+| Volgograd | Public Domain |
 | Vorkuta |  |
 | Voroniya |  |
 | Wales | Public Domain |
