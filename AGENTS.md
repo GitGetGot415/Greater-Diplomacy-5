@@ -20,3 +20,5 @@ use `color` (NOT `colour`) consistently in identifiers, UI copy, comments, and d
 IMPORTANT: NEVER COMMIT ANYTHING TO MAIN WITHOUT EXPLICITLY ASKING THE USER BEFOREHAND
 
 if you feel like it's nessecary, make a seperate branch and then commit each change you make there
+
+note that all images should be PNG's, if an image is not a PNG (or worse, is a different image type masquerading as a PNG) you should at the very least bring it to the attention of the user
