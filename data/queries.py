@@ -92,6 +92,14 @@ def get_all_friendly_nations(nation, nation_data):
     """Unified query to fetch a nation, its faction, imperial family, and allies."""
     return set(friendly_nations_view(nation, nation_data))
 
+def get_unit_combat_owner(unit):
+    """The diplomatic side a unit temporarily fights for.
+
+    Volunteer units retain their donor in ``owner`` for commands and vision,
+    while their host supplies their movement, combat, and capture allegiance.
+    """
+    return unit.get("volunteer_host") or unit.get("owner", "")
+
 def _apply_vision_radius(prov, id_to_province, visible_set, partial_set):
     """Standardizes FOW radius expansion."""
     visible_set.add(prov["id"])
@@ -677,7 +685,8 @@ def is_province_in_active_combat(province, nation_data):
     if len(units) < 2:
         return False
         
-    owners_present = list(set(u.get("owner") for u in units if u.get("owner")))
+    owners_present = list(set(get_unit_combat_owner(u) for u in units
+                              if get_unit_combat_owner(u)))
     
     # Optimized check using itertools
     return any(are_at_war(o1, o2, nation_data) for o1, o2 in itertools.combinations(owners_present, 2))
@@ -687,7 +696,7 @@ def is_nation_in_combat_here(nation, province, nation_data):
     """Returns True if the specified nation has units in the province that are actively engaged with enemy units."""
     units = province.get("units", [])
     enemies = get_enemies(nation, nation_data)
-    return any(u.get("owner") in enemies for u in units)
+    return any(get_unit_combat_owner(u) in enemies for u in units)
 
 def is_submarine_unit(unit_type):
     """Checks if a unit belongs to the Submarine family, at any research level."""

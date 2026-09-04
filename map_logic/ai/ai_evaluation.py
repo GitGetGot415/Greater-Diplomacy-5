@@ -311,6 +311,12 @@ def evaluate_verdict(nation_data, map_data, ai_nation, sender_nation, action_typ
 
     accepted = False
 
+    # Volunteers are an unconditional gift of troops from a peaceful country.
+    # The offer has already passed the legality checks, so AI recipients always
+    # accept it rather than spending a model response on a no-downside choice.
+    if action_type == "SEND_VOLUNTEERS":
+        return Verdict(True, 1.0, "volunteer divisions are always welcome")
+
     # --- IMPROVED FACTION LOGIC ---
     # 1. Check for basic aggressive acceptance
     if at_war and not in_faction:

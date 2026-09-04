@@ -1920,6 +1920,7 @@ MESSAGE_CATEGORIES = {
     # short form carries it.
     "CALL_TO_ARMS": "AID CALL",
     "JOIN_WARS": "JOIN WAR",
+    "SEND_VOLUNTEERS": "VOLUNTEERS",
 
     "CEASEFIRE": "PEACE",
     "PEACE_TREATY": "PEACE",
@@ -1974,7 +1975,8 @@ BILATERAL_ACTIONS = [
     "CREATE_FACTION",
     "PEACE_TREATY",
     "TRADE",
-    "REQ_MILITARY_ACCESS"
+    "REQ_MILITARY_ACCESS",
+    "SEND_VOLUNTEERS"
 ]
 
 # ==========================================

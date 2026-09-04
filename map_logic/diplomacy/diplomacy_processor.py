@@ -5,7 +5,7 @@ from data import queries
 # Import from our newly created submodules
 from map_logic.diplomacy.diplomacy_events import log_global_event
 from map_logic.diplomacy import (
-    faction_leadership, peace_scope, ratification, restrictions, treaty_effects, war_calls
+    faction_leadership, peace_scope, ratification, restrictions, treaty_effects, volunteers, war_calls
 )
 from map_logic.diplomacy.diplomacy_messages import (
     get_pending_action, send_message, send_treaty_message, get_response, get_response_map,
@@ -829,6 +829,8 @@ def _process_queued_responses(map_screen):
 
                 # Whatever the proposer put up for this offer goes home.
                 _refund_offer_escrow(map_screen.nation_data, sender, their_request)
+                if orig_action == volunteers.ACTION:
+                    volunteers.reject_offer(map_screen, sender, country_name)
 
                 send_message(map_screen, country_name, sender, msg_text, "DIPLOMACY",
                              extra=answered, llm=wrote_it)
@@ -929,6 +931,14 @@ def _process_pass1_immediate_actions(map_screen):
 
                 elif action == "CALL_TO_ARMS":
                     send_treaty_message(map_screen, country_name, target, action, custom_msg, llm=wrote_it)
+
+                elif action == volunteers.ACTION:
+                    # The mission was validated and escrowed by the picker;
+                    # tick() cancels a stale mission before this pass. Keep the
+                    # normal bilateral delivery fallback for old saves/tests
+                    # containing an action without its mission record.
+                    send_treaty_message(map_screen, country_name, target, action, custom_msg,
+                                        parameters=info.get("parameters"), llm=wrote_it)
 
                 elif action == "BREAK_ALLIANCE":
                     log_global_event(map_screen.nation_data, f"{country_name} has broken their alliance with {target}.")
@@ -1161,6 +1171,8 @@ def _process_pass2_delayed_actions(map_screen, ai_results, active_nations_list, 
                         else:
                             # Auto-decline since the human player did not respond immediately on their turn
                             _refund_offer_escrow(map_screen.nation_data, country_name, info)
+                            if action == volunteers.ACTION:
+                                volunteers.reject_offer(map_screen, country_name, target)
                             send_message(map_screen, target, country_name, "Your proposal was ignored and automatically declined.", "DIPLOMACY",
                                      extra={"action": action})
                             _decline_cooldown(map_screen, country_name, target, action)
@@ -1191,6 +1203,8 @@ def _process_pass2_delayed_actions(map_screen, ai_results, active_nations_list, 
                                 wrote_it = False
                         else:
                             _refund_offer_escrow(map_screen.nation_data, country_name, info)
+                            if action == volunteers.ACTION:
+                                volunteers.reject_offer(map_screen, country_name, target)
                             _decline_cooldown(map_screen, country_name, target, action)
 
                         send_message(map_screen, target, country_name, message, "DIPLOMACY",
@@ -1201,6 +1215,8 @@ def _process_pass2_delayed_actions(map_screen, ai_results, active_nations_list, 
                 # Auto-decline anything that outlived its response window
                 if action in c.BILATERAL_ACTIONS:
                     _refund_offer_escrow(map_screen.nation_data, country_name, info)
+                    if action == volunteers.ACTION:
+                        volunteers.reject_offer(map_screen, country_name, target)
 
                     send_message(map_screen, target, country_name, "Your proposal was ignored and automatically declined.", "DIPLOMACY",
                                      extra={"action": action})
@@ -1308,6 +1324,7 @@ def _process_claim_queues(map_screen):
 
 def process_diplomacy_turn(map_screen):
     _decay_modifiers_and_truces(map_screen)
+    volunteers.tick(map_screen)
     # Ages every faction member's claim on the leadership. Before anything acts,
     # so the button a player sees, the number an AI decides on and the state a
     # claim executes against are one measurement rather than three.

@@ -1,5 +1,6 @@
 from data import queries
 from map_logic.diplomacy import diplomacy_logic, peace_scope, ratification
+from map_logic.diplomacy import volunteers
 import data.constants as c
 
 
@@ -287,3 +288,56 @@ def handle_call_to_arms(map_screen):
                            "Cannot call enemies to arms!",
                            "You must be in the same faction to call them to arms!",
                            "Cannot call to arms while leaving the faction!")
+
+
+def handle_send_volunteers(map_screen):
+    """Choose a bounded set of land divisions for a volunteer offer."""
+    from ui.checkbox_list_screen import CheckboxItem
+
+    donor = map_screen.player_country
+    host = map_screen.selected_province.get("owner")
+    legal, reason = volunteers.is_eligible(donor, host, map_screen.nation_data)
+    if not legal:
+        map_screen.show_feedback(reason)
+        return
+    capacity = volunteers.remaining_capacity(map_screen, donor)
+    if capacity <= 0:
+        map_screen.show_feedback("Your volunteer division limit is already in use.")
+        return
+
+    refs, rows = {}, []
+    for number, (province, unit) in enumerate(volunteers.available_units(map_screen, donor), 1):
+        key = str(number)
+        refs[key] = (province, unit)
+        name = unit.get("custom_name") or unit.get("type", "Division")
+        rows.append(CheckboxItem(key, f"{name} — Province {province['id']}"))
+
+    def send(keys):
+        if not keys:
+            return
+        details, error = volunteers.create_offer(
+            map_screen, donor, host, [refs[key] for key in keys if key in refs])
+        if error:
+            map_screen.show_feedback(error)
+            return
+        count, turns = details["count"], details["travel_turns"]
+        message = (f"We offer {count} volunteer {'division' if count == 1 else 'divisions'}. "
+                   f"They are estimated to arrive {turns} {'turn' if turns == 1 else 'turns'} after acceptance.")
+        msg = diplomacy_logic.toggle_diplomacy_action(
+            map_screen.nation_data, donor, host, volunteers.ACTION, message,
+            parameters=details)
+        if msg.startswith("A diplomatic action is already"):
+            volunteers.cancel_offer(map_screen, donor, host)
+        map_screen.show_feedback(msg)
+
+    queries.open_checkbox_list(
+        map_screen, "Send Volunteers", f"Choose up to {capacity} land divisions for {host}.",
+        rows, send, confirm_label="Send Volunteers", show_select_all=False,
+        footnote="Volunteer divisions are unavailable while this offer and its travel are pending.")
+
+
+def handle_recall_volunteers(map_screen):
+    donor = map_screen.player_country
+    host = map_screen.selected_province.get("owner")
+    if volunteers.recall(map_screen, donor, host):
+        map_screen.show_feedback("Volunteer divisions are returning home.")

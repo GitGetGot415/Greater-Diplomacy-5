@@ -23,7 +23,7 @@ from ui_elements import Button, Slider
 from ui import diplomatic_popups, spectator_menus, editor_menus
 from map_logic.camera.camera_handler import MapCamera
 from map_logic.camera import camera_handler
-from map_logic.diplomacy import diplomacy_logic, player_diplomacy_actions
+from map_logic.diplomacy import diplomacy_logic, player_diplomacy_actions, volunteers
 from map_logic.random_map import random_map_generator
 from map_logic.rendering import map_renderer, refresh_map
 from map_logic.rendering.font_manager import fonts
@@ -72,7 +72,9 @@ BTN_TACTICAL_OFFSET_X = 240
 ACTION_BTN_X = 200          # Spectator god-power column
 DIPLO_BTN_X = 180           # Player diplomacy column
 ACTION_BTN_START_Y = 300
-ACTION_BTN_STEP_Y = 33
+# Ten foreign-diplomacy rows fit above the province-action buttons at this
+# spacing (the tenth is Send/Recall Volunteers).
+ACTION_BTN_STEP_Y = 30
 
 PROVINCE_BTN_X = 280
 BTN_ORDERS_Y = 603
@@ -321,6 +323,7 @@ def render_buttons(map_screen):
         ("btn_fac_join_req", 6, "green", "Req. Join Faction", "JOIN_FACTION_REQ"),
         ("btn_fac_kick", 7, "red", "Kick from Faction", "KICK_FACTION_MEMBER"),
         ("btn_fac_create", 8, "blue", "Create Faction", "CREATE_FACTION"),
+        ("btn_volunteers", 9, "purple", "Send Volunteers", player_diplomacy_actions.handle_send_volunteers),
     )
     for attr, row, color, label, handler in diplo_buttons:
         if isinstance(handler, str):
@@ -396,6 +399,7 @@ def render_buttons(map_screen):
         map_screen.btn_gp_save, map_screen.btn_gp_settings, map_screen.btn_gp_music, map_screen.btn_gp_faction, map_screen.btn_gp_claims, map_screen.btn_gp_puppets, map_screen.btn_gp_automation, map_screen.btn_gp_politics, map_screen.btn_go_orders, map_screen.btn_go_battle, map_screen.btn_go_production,
         map_screen.btn_declare_war, map_screen.btn_join_wars, map_screen.btn_call_to_arms, map_screen.btn_fac_invite,
         map_screen.btn_fac_join_req, map_screen.btn_fac_kick, map_screen.btn_fac_create,
+        map_screen.btn_volunteers,
         map_screen.btn_req_mil_access, map_screen.btn_cancel_mil_access, map_screen.btn_revoke_mil_access,
         map_screen.btn_accept_req, map_screen.btn_reject_req, map_screen.btn_force_war, map_screen.btn_force_peace,
         map_screen.btn_spec_create_fac, map_screen.btn_spec_join_fac, map_screen.btn_spec_invite_fac, map_screen.btn_spec_leave_fac,
@@ -658,6 +662,7 @@ def update_button_states(map_screen):
                     set_btn(map_screen.btn_declare_war, True, False, "Tactical: Disabled", "grey")
                     set_btn(map_screen.btn_join_wars, True, False, "Tactical: Disabled", "grey")
                     set_btn(map_screen.btn_call_to_arms, True, False, "Tactical: Disabled", "grey")
+                    set_btn(map_screen.btn_volunteers, True, False, "Tactical: Disabled", "grey")
                     set_btn(map_screen.btn_fac_invite, True, False, "Tactical: Disabled", "grey")
                     set_btn(map_screen.btn_fac_join_req, True, False, "Tactical: Disabled", "grey")
                     set_btn(map_screen.btn_fac_kick, True, False, "Tactical: Disabled", "grey")
@@ -739,6 +744,23 @@ def update_button_states(map_screen):
                 ca_text = get_status_text("CALL TO ARMS") if pending_action == "CALL_TO_ARMS" else "Call to Arms"
                 set_btn(map_screen.btn_call_to_arms, True, can_call_to_arms or pending_action == "CALL_TO_ARMS", ca_text, "red")
 
+                volunteer_state = volunteers.mission_state(map_screen.nation_data, map_screen.player_country, owner)
+                if volunteer_state == volunteers.AWAITING:
+                    set_btn(map_screen.btn_volunteers, True, False, "Waiting for Answer", "grey")
+                elif volunteer_state in (volunteers.OUTBOUND, volunteers.DEPLOYED):
+                    turns_left = map_screen.nation_data[map_screen.player_country]["volunteer_missions"][owner].get("turns_left")
+                    text = "Recall Volunteers" if turns_left is None else f"Recall Volunteers ({turns_left}t)"
+                    set_btn(map_screen.btn_volunteers, True, True, text, "purple")
+                    map_screen.btn_volunteers.callback = lambda: player_diplomacy_actions.handle_recall_volunteers(map_screen)
+                elif volunteer_state == volunteers.RETURNING:
+                    turns_left = map_screen.nation_data[map_screen.player_country]["volunteer_missions"][owner].get("turns_left", 0)
+                    set_btn(map_screen.btn_volunteers, True, False, f"Volunteers Returning ({turns_left}t)", "grey")
+                else:
+                    legal, _reason = volunteers.is_eligible(map_screen.player_country, owner, map_screen.nation_data)
+                    enabled = legal and volunteers.remaining_capacity(map_screen, map_screen.player_country) > 0
+                    set_btn(map_screen.btn_volunteers, True, enabled, "Send Volunteers", "purple")
+                    map_screen.btn_volunteers.callback = lambda: player_diplomacy_actions.handle_send_volunteers(map_screen)
+
                 factions_disabled = getattr(c, 'DISABLE_FACTIONS', False)
 
                 # A puppet's alignment is its master's, both ways round: it may
@@ -796,6 +818,7 @@ def update_button_states(map_screen):
                     map_screen.btn_req_mil_access.visible = False
                     map_screen.btn_cancel_mil_access.visible = False
                     map_screen.btn_revoke_mil_access.visible = False
+                    map_screen.btn_volunteers.visible = False
 
             else:
                 set_orders_or_battle(map_screen, set_btn, has_player_units)

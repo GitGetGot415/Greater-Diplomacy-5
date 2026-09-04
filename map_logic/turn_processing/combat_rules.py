@@ -128,11 +128,13 @@ def _columns(sides):
     units marching both ways down the same edge fields one column per direction,
     since those are two bodies of troops meeting two different enemies.
     """
+    from data import queries
+
     columns = []
     seen = {}
     for side_index, side in enumerate(sides):
         for unit in side:
-            owner = unit.get("owner")
+            owner = queries.get_unit_combat_owner(unit)
             if not owner:
                 continue
             key = (side_index, owner)
@@ -816,7 +818,8 @@ def find_meeting_pairs(map_data, nation_data, visible_to=None):
             # Anyone heading the other way down the same edge, who we are at war with.
             crossing = any(
                 other_origin == dest_id
-                and queries.are_at_war(unit["owner"], other["owner"], nation_data)
+                and queries.are_at_war(queries.get_unit_combat_owner(unit),
+                                        queries.get_unit_combat_owner(other), nation_data)
                 for other, other_origin in incoming.get(origin_id, [])
             )
             if not crossing:

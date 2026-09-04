@@ -268,6 +268,7 @@ DEFAULT_ANNOUNCEMENTS = {
     "TRADE": "We propose a trade agreement.",
     "PEACE_TREATY": "We propose terms to end this war.",
     "JOIN_WARS": ("REQUEST_JOIN_WARS", "We request permission to join your ongoing wars."),
+    "SEND_VOLUNTEERS": "We offer volunteer divisions for your war.",
     "BREAK_ALLIANCE": ("BREAK_ALLIANCE", "We have broken our alliance."),
     "DISBAND_FACTION": ("FACTION_DISBANDED", "It is a shame to see our alliance broken."),
     "KICK_FACTION_MEMBER": ("KICKED_FROM_FACTION", "We will not forget being expelled from the alliance."),

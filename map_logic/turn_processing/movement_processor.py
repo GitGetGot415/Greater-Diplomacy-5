@@ -171,7 +171,8 @@ def _resolve_step_swaps(map_screen, moving_units, step, get_eff_speed):
 
         opposing = any(
             o["order"]["path"][0] == origin
-            and queries.are_at_war(u["owner"], o["owner"], map_screen.nation_data)
+            and queries.are_at_war(queries.get_unit_combat_owner(u),
+                                    queries.get_unit_combat_owner(o), map_screen.nation_data)
             for o in by_origin.get(dest, [])
         )
         if not opposing:
@@ -257,16 +258,17 @@ def process_movement(map_screen):
             target_prov = map_screen.id_to_province.get(target_id)
             if not target_prov: continue
 
-            player_data = map_screen.nation_data.get(unit["owner"], {})
+            combat_owner = queries.get_unit_combat_owner(unit)
+            player_data = map_screen.nation_data.get(combat_owner, {})
             dest_owner = target_prov.get("owner", "Unclaimed")
 
             # --- Combat Lock (Execution Check) ---
             curr_prov = map_screen.id_to_province.get(unit["_current_province_id"])
             if curr_prov:
-                in_combat = queries.is_nation_in_combat_here(unit["owner"], curr_prov, map_screen.nation_data)
+                in_combat = queries.is_nation_in_combat_here(combat_owner, curr_prov, map_screen.nation_data)
 
                 if in_combat:
-                    if step > 0 or queries.is_hostile_territory(unit["owner"], dest_owner, map_screen.nation_data):
+                    if step > 0 or queries.is_hostile_territory(combat_owner, dest_owner, map_screen.nation_data):
                         # Stop advancing for this turn, but DO NOT wipe the queue!
                         unit["_skip_remaining_steps"] = True
                         continue
@@ -290,7 +292,7 @@ def process_movement(map_screen):
                 stats = map_screen.cached_unit_library.get(u_type, {})
                 is_naval = stats.get("naval_unit", False)
 
-            if is_naval and not is_convoy and not queries.can_ships_enter(unit["owner"], target_prov, map_screen.nation_data):
+            if is_naval and not is_convoy and not queries.can_ships_enter(combat_owner, target_prov, map_screen.nation_data):
                 # Ships cannot enter hostile/unclaimed land
                 order["path"] = []
                 continue
@@ -299,14 +301,15 @@ def process_movement(map_screen):
             # Check for existing defenders before moving
             # We look for units belonging to anyone NOT the mover and NOT an ally
             defenders = [u for u in target_prov.get("units", [])
-                        if u["owner"] != unit["owner"] and u["owner"] not in player_data.get("allied_with", [])]
+                         if queries.are_at_war(combat_owner, queries.get_unit_combat_owner(u),
+                                               map_screen.nation_data)]
 
             if is_naval and not is_convoy:
                 can_enter = True # Naval rules already handled above
             elif is_convoy and dest_is_water:
                 can_enter = True
             else:
-                can_enter = queries.can_land_units_enter(unit["owner"], target_prov, map_screen.nation_data)
+                can_enter = queries.can_land_units_enter(combat_owner, target_prov, map_screen.nation_data)
 
             if can_enter:
                 # --- TACTICAL MOVEMENT ECONOMY ---
@@ -344,7 +347,7 @@ def process_movement(map_screen):
                     if dest_owner == "Unclaimed" or dest_owner in player_data.get("at_war_with", []):
                         # Prevent capturing water tiles via movement
                         if not queries.is_water_province(target_prov):
-                            capturer = unit["owner"]
+                            capturer = combat_owner
                             # faction core transfer stuff
                             true_owner = queries.get_faction_core_transfer_target(capturer, target_prov, map_screen.nation_data)
                             edit_province_ownership.conquer_province(map_screen, target_prov, true_owner)
@@ -494,14 +497,15 @@ def process_stranded_units(map_screen):
         stranded = []
         for unit in units:
             unit_owner = unit.get("owner")
-            if not unit_owner or unit_owner == owner or unit_owner in c.UNPLAYABLE_NATIONS:
+            unit_side = queries.get_unit_combat_owner(unit)
+            if not unit_owner or unit_side == owner or unit_owner in c.UNPLAYABLE_NATIONS:
                 continue
 
             # Naval units follow separate coastal-access rules; only land armies exile here.
             if not is_land_unit(unit, unit_library):
                 continue
 
-            if queries.can_land_units_enter(unit_owner, province, map_screen.nation_data):
+            if queries.can_land_units_enter(unit_side, province, map_screen.nation_data):
                 continue  # legally present: at war, has access, or friendly territory
 
             stranded.append(unit)

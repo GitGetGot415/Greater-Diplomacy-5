@@ -12,9 +12,8 @@ turn 1: msg1 is received, receiver writes msg2 back
 turn 1.5: msg2 is sent
 turn 2: msg2 is received by original sender
 
-maybe add testcases for each potential diplomatic action?
-
-each test case should return how long it takes for each statement to send and what happens, one example could be of a faction join request, returning something simmilar to this:
+all diplomatic requests should be able to be undone if sent on the same turn, so if you declare war but then immediately decide not to that should be allowed
+simmilarly if you send an offer to give volunteers but decide not to send them on the same turn, you should be able to undo the offer
 
 turn 0: [A] writes request to join faction of [B]
 turn 0.5: request message is sent

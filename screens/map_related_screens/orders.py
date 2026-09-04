@@ -611,9 +611,10 @@ class Orders_Screen(GameState):
 
             unit_name = unit.get("type", "")
             unit_owner = unit.get("owner")
-            row_owner_color = self.map_screen.nation_colors.get(unit_owner, (200, 200, 200))
+            combat_owner = queries.get_unit_combat_owner(unit)
+            row_owner_color = self.map_screen.nation_colors.get(combat_owner, (200, 200, 200))
             icon = symbol_loader.get_symbol(
-                unit_name, zoom=UNIT_ICON_ZOOM, color=row_owner_color, country=unit_owner)
+                unit_name, zoom=UNIT_ICON_ZOOM, color=row_owner_color, country=combat_owner)
             self.unit_row_icons[index] = self.fit_icon(
                 icon, "small_square", padding=8)
 
@@ -1179,7 +1180,8 @@ class Orders_Screen(GameState):
                          c.COLOR_GOLD_HIGHLIGHT if selected else (62, 66, 74),
                          row_rect, 1)
 
-        row_owner_color = self.map_screen.nation_colors.get(unit.get("owner"), owner_color)
+        row_owner_color = self.map_screen.nation_colors.get(
+            queries.get_unit_combat_owner(unit), owner_color)
         strip_color = row_owner_color if selected else tuple(max(35, channel // 2)
                                                               for channel in row_owner_color)
         pygame.draw.rect(surface, strip_color,
@@ -1230,7 +1232,9 @@ class Orders_Screen(GameState):
                 owner_id = unit.get("owner", "Unknown")
                 summary = self.map_screen.nation_data.get(owner_id, {}).get("name", owner_id)
                 summary_color = c.UI_TEXT_MUTED
-            status = fit_text(f"HP {int(hp_ratio * 100)}% | {summary}",
+            volunteer_note = (f" | Volunteer: {unit['volunteer_host']}"
+                              if unit.get("volunteer_host") else "")
+            status = fit_text(f"HP {int(hp_ratio * 100)}% | {summary}{volunteer_note}",
                               tiny_font, text_width)
             surface.blit(tiny_font.render(status, True, summary_color),
                          (name_x, row_y + UNIT_STATUS_OFFSET_Y))

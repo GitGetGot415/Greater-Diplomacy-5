@@ -1182,10 +1182,11 @@ def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,
         surface.blit(final_surf, final_surf.get_rect(center=(sx, int(sy))))
         return
 
-    # 1. Group units by owner so we can draw stacked boxes for each nation
+    # 1. Group by military side. Volunteers keep their donor as unit owner for
+    # commands, but visually and tactically stand with their host country.
     units_by_owner = {}
     for u in units:
-        owner = u.get("owner", "Unclaimed")
+        owner = queries.get_unit_combat_owner(u) or "Unclaimed"
         units_by_owner.setdefault(owner, []).append(u)
 
     gap = max(2, int(4 * display_scale)) # Spacing between stacked boxes

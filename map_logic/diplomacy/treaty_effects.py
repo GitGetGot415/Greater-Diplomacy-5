@@ -207,4 +207,11 @@ def apply_treaty_effect(host, action, proposer, accepter, params=None, escrow=No
 
         return _canned("ACCEPT_MILITARY_ACCESS")
 
+    elif action == "SEND_VOLUNTEERS":
+        from map_logic.diplomacy import volunteers
+        accepted, reason = volunteers.accept_offer(host, proposer, accepter)
+        if not accepted:
+            return _blocked(reason)
+        return _canned("ACCEPT_GENERIC")
+
     return _NOTHING

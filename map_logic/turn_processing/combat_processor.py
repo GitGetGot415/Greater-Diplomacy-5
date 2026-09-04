@@ -401,7 +401,7 @@ def process_combat(map_screen):
         # Unpack Convoys Caught on Land -- only the ones in the battle.
         if is_land:
             for u in units:
-                if u.get("owner") in fighters and u.get("type", "").startswith("Convoy"):
+                if queries.get_unit_combat_owner(u) in fighters and u.get("type", "").startswith("Convoy"):
                     queries.revert_transport(u)
 
         # Every volley is measured before any of it lands, so the fight is
@@ -437,10 +437,10 @@ def process_combat(map_screen):
             }
 
             for u in surviving_units:
-                if u.get("owner") not in fighters:
+                if queries.get_unit_combat_owner(u) not in fighters:
                     continue
 
-                if u.get("owner") in still_fighting:
+                if queries.get_unit_combat_owner(u) in still_fighting:
                     if "order" in u and "path" in u["order"]:
                         u["order"]["path"] = []
 
@@ -465,7 +465,7 @@ def check_for_post_combat_captures(map_screen):
         turn_start_owner = province.get("_turn_start_owner", current_owner)
 
         # Get a list of unique owners of units currently in the tile
-        unit_owners = list(set(u["owner"] for u in units))
+        unit_owners = list(set(queries.get_unit_combat_owner(u) for u in units))
 
         # If the original owner of the tile (from the start of the turn) is STILL HERE,
         # they automatically retain (or regain) ownership, regardless of HP.
@@ -488,7 +488,7 @@ def check_for_post_combat_captures(map_screen):
         valid_capturer_units = [
             u for u in units
             if any(o in c.OWNERLESS_OWNERS
-                   or queries.are_at_war(u["owner"], o, map_screen.nation_data)
+                   or queries.are_at_war(queries.get_unit_combat_owner(u), o, map_screen.nation_data)
                    for o in claim_owners)
         ]
 
@@ -498,7 +498,7 @@ def check_for_post_combat_captures(map_screen):
         # Tally HP for all VALID units on the tile to see who claims it
         hp_totals = {}
         for u in valid_capturer_units:
-            o = u["owner"]
+            o = queries.get_unit_combat_owner(u)
             hp_totals[o] = hp_totals.get(o, 0) + u.get("health", 0)
 
         # Find the nation(s) with the highest combined HP
@@ -519,7 +519,8 @@ def check_for_post_combat_captures(map_screen):
         # If there's a tie, run through the tiebreaker cascade
         elif len(top_nations) > 1:
             # Tiebreaker 1: Highest combined attack
-            atk_totals = {o: sum(u.get("attack", 0) for u in units if u["owner"] == o) for o in top_nations}
+            atk_totals = {o: sum(u.get("attack", 0) for u in units
+                                 if queries.get_unit_combat_owner(u) == o) for o in top_nations}
             max_atk = max(atk_totals.values())
             tied_by_atk = [o for o, atk in atk_totals.items() if atk == max_atk]
 
@@ -527,7 +528,8 @@ def check_for_post_combat_captures(map_screen):
                 capturer = tied_by_atk[0]
             else:
                 # Tiebreaker 2: Highest speed stat
-                spd_max = {o: max((u.get("speed", 0) for u in units if u["owner"] == o), default=0) for o in tied_by_atk}
+                spd_max = {o: max((u.get("speed", 0) for u in units
+                                   if queries.get_unit_combat_owner(u) == o), default=0) for o in tied_by_atk}
                 max_spd = max(spd_max.values())
                 tied_by_spd = [o for o, spd in spd_max.items() if spd == max_spd]
 
