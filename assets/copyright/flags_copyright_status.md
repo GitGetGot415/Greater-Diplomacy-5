@@ -11,7 +11,7 @@ Anything else represents who made the flag.
 | Abyssonia | Public Domain |
 | Achaemenid Empire | Public Domain |
 | Adventure Cat Sailing Charters | [!!!] |
-| Afghanistan |  |
+| Afghanistan | Public Domain |
 | Afrika Korps | Public Domain |
 | Aktobe | Public Domain |
 | Alabama | Public Domain |
@@ -164,7 +164,7 @@ Anything else represents who made the flag.
 | Darfur | Public Domain |
 | default_flag | GitGetGot415 |
 | Delhi | [???] |
-| Democratic Republic of the Congo |  |
+| Democratic Republic of the Congo | Public Domain |
 | Denmark | Public Domain |
 | Deseret | Public Domain |
 | Djibouti | Public Domain |
@@ -176,7 +176,7 @@ Anything else represents who made the flag.
 | Dutch East Indies | Public Domain |
 | Ea-Nasir | [!!!] |
 | Eagle Cafe | [!!!] |
-| East African Federation |  |
+| East African Federation | Public Domain |
 | East Asia |  |
 | East Germany | Public Domain |
 | East Timor | Public Domain |
@@ -196,10 +196,10 @@ Anything else represents who made the flag.
 | Embarcadero 8 | [!!!] |
 | Embarcadero 9 | [!!!] |
 | Emirate of Afghanistan |  |
-| Emirate of Bukhara |  |
-| Emirate of Cyrenaica |  |
-| Emirate of Jabal Shammar |  |
-| Emirate of Nedj and Hasa |  |
+| Emirate of Bukhara | Public Domain |
+| Emirate of Cyrenaica | Public Domain |
+| Emirate of Jabal Shammar | Public Domain |
+| Emirate of Nedj and Hasa | Public Domain |
 | Empire of Brazil | Public Domain |
 | England | Public Domain |
 | Enlightenment | [!!!] |
@@ -211,7 +211,7 @@ Anything else represents who made the flag.
 | Ethiopia | Public Domain |
 | European Union | [!!!] |
 | Expedition | [!!!] |
-| Fatmid Caliphate |  |
+| Fatmid Caliphate | Public Domain |
 | FIFA World Cup Store | [!!!] |
 | Fiji | Public Domain |
 | Finland | Public Domain |
@@ -261,9 +261,9 @@ Anything else represents who made the flag.
 | Hearts of San Francisco | [!!!] |
 | Henan |  |
 | Herero | Public Domain |
-| Hokkaido |  |
+| Hokkaido | Public Domain |
 | Holy Britannian Empire | [!!!] |
-| Holy Roman Empire |  |
+| Holy Roman Empire | Public Domain |
 | Honduras | Public Domain |
 | Humble Sea Brewing Co. | [!!!] |
 | Hunan Clique |  |
@@ -274,11 +274,11 @@ Anything else represents who made the flag.
 | Ilkhanate |  |
 | Illinois | Public Domain |
 | Image Arts | [!!!] |
-| India |  |
+| India | Public Domain |
 | Indonesia | Public Domain |
 | Intersection |  |
 | Iowa | Public Domain |
-| Iqutios |  |
+| Iqutios | Public Domain |
 | Iran | Public Domain |
 | Iraq | Public Domain |
 | Ireland | Public Domain |
@@ -660,7 +660,7 @@ Anything else represents who made the flag.
 | Tierra del Fuego | Public Domain |
 | Timbuktu | Public Domain |
 | Togo | Public Domain |
-| Tomsk |  |
+| Tomsk | Public Domain |
 | Toronto | [!!!] |
 | Totalist Italy |  |
 | Toubou | Public Domain |
@@ -745,7 +745,7 @@ Anything else represents who made the flag.
 | Xikang Clique |  |
 | Xinjiang | Public Domain |
 | Xinjiang Clique |  |
-| Yakutia |  |
+| Yakutia | Public Domain |
 | Yemen | Public Domain |
 | York | Public Domain |
 | Yuan | [!!!] |
