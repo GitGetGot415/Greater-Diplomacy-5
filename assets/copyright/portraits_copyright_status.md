@@ -2,7 +2,6 @@
 
 | Flag name | Status |
 | --- | --- |
-| Ayumu Kasuga | [!!!] |
 | default_portrait | GitGetGot415 |
 | Ea-Nasir | [!!!] |
 | Gigachad | [!!!] |

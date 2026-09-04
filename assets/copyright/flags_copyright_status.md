@@ -52,7 +52,6 @@ Anything else represents who made the flag.
 | Australia-Hungary |  |
 | Austria | Public Domain |
 | Austria-Hungary | Public Domain |
-| Ayumu Kasuga | [!!!] |
 | Ayutthaya Kingdom | Public Domain |
 | Azad Hind | Public Domain |
 | Azande | Public Domain |
