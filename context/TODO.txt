@@ -17,6 +17,14 @@ hanskolmer suggestions:
 - make a way to organize the hanskolmer art in a less confusing way
 - make sure this ui also shows the unit art names
 
+Couple of diplomacy suggestion to make this game Greater for this fifth instalment:
+1- (Idk how volunteers work, so this might be irrelevant) Military attaché
+2- Non Aggression pact
+3- Guarantees
+4- Declaring someone as your rivals (it make your relation worse, but give you a free justification for humiliation war (you can only rival someone with similar power level))
+5- Research Sharing.
+Also some more resources would be nice (like have other type of resources that are needed in the creation of  tanks/factory,etc)
+
 fatass suggestion:
 I mean, why not allow me to click on another province while I'm inside the menu for a province?
 I mean you let me see the map anyway, I should be able to click out if I'm not selecting any troops
