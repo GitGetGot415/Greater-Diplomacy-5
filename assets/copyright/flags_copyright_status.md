@@ -173,7 +173,7 @@ Anything else represents who made the flag.
 | Dutch America |  |
 | Dutch East India Company |  |
 | Dutch East Indies | Public Domain |
-| Ea-Nasir | [!!!] |
+| Ea-Nasir | Public Domain |
 | Eagle Cafe | [!!!] |
 | East African Federation | Public Domain |
 | East Asia |  |
