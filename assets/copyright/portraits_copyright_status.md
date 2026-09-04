@@ -4,5 +4,5 @@
 | --- | --- |
 | default_portrait | GitGetGot415 |
 | Ea-Nasir | Public Domain |
-| Gigachad | Public Domain |
+| Gigachad | GitGetGot415 |
 | The Rot | GitGetGot415 |

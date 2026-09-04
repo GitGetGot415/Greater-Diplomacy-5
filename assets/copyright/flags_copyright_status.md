@@ -235,7 +235,7 @@ Anything else represents who made the flag.
 | German Reich | [???] |
 | Germany | Public Domain |
 | Ghana | Public Domain |
-| Gigachad | [!!!] |
+| Gigachad | GitGetGot415 |
 | Glasgow | Public Domain |
 | Gotia | [???] |
 | Gran Colombia | Public Domain |
