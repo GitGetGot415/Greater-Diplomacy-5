@@ -30,7 +30,9 @@ MSG_BUBBLE_PLAYER = (40, 100, 200)
 MSG_BUBBLE_PLAYER_DIPLO = (180, 60, 60) # Player diplomatic red
 MSG_BUBBLE_AI = (60, 60, 80)
 MSG_BUBBLE_AI_DIPLO = (200, 100, 0) # AI diplomatic orange
+MSG_BUBBLE_FORWARDED = (65, 105, 75)
 MSG_BUBBLE_MAX_WIDTH_RATIO = 0.6
+MSG_FORWARD_BUTTON_SIZE = (82, 24)
 
 
 class Messages_Screen(GameState):
@@ -57,6 +59,7 @@ class Messages_Screen(GameState):
         self.max_contact_scroll = 0
         self.is_dragging_contacts = False
         self.is_dragging_messages = False # Tracks dragging inside the message pane
+        self.forward_button_rects = []
         
         self.show_all_contacts = False
 
@@ -71,6 +74,7 @@ class Messages_Screen(GameState):
         self.contact_scroll_y = 0
         self.is_dragging_contacts = False
         self.is_dragging_messages = False
+        self.forward_button_rects = []
         self.show_all_contacts = False
         self.refresh_ui()
 
@@ -198,6 +202,70 @@ class Messages_Screen(GameState):
             self.save_current_draft()
             self.refresh_ui()
 
+    def _forward_targets(self, message):
+        """Returns living countries this player can send the message to."""
+        active_nations = {
+            prov.get("owner") for prov in self.map_screen.map_data.values()
+            if prov.get("owner") not in c.UNPLAYABLE_NATIONS
+        }
+        sender = message.get("sender", "") if isinstance(message, dict) else ""
+        return [
+            country for country, data in self.map_screen.nation_data.items()
+            if data.get("is_playable")
+            and country != self.map_screen.player_country
+            and country != sender
+            and country in active_nations
+        ]
+
+    def open_forward_picker(self, message):
+        """Opens the country picker for one received message."""
+        if not self.map_screen or self.map_screen.tactical_mode:
+            return
+
+        targets = self._forward_targets(message)
+        targets.sort(key=lambda country: self.map_screen.nation_data.get(country, {}).get("name", country))
+        if not targets:
+            self.map_screen.show_feedback("There are no countries available to receive this message.")
+            return
+
+        # ListSelectScreen accepts display strings. Add the internal country key
+        # only when two countries share a display name, then map the selection
+        # back to the authoritative nation key in the callback.
+        labels = []
+        label_to_country = {}
+        for country in targets:
+            display_name = str(self.map_screen.nation_data.get(country, {}).get("name", country))
+            label = display_name
+            if label in label_to_country:
+                label = f"{display_name} ({country})"
+            labels.append(label)
+            label_to_country[label] = country
+
+        def confirm(label):
+            target = label_to_country.get(label)
+            if target:
+                self.queue_forward(message, target)
+
+        self.save_current_draft()
+        queries.open_listbox_selector(
+            self, "Forward Message", "Select a country to receive this message:",
+            labels, confirm)
+        self.refresh_ui()
+
+    def queue_forward(self, message, target):
+        """Queues a provenance-stamped forward and keeps the current thread open."""
+        if not self.map_screen or self.map_screen.tactical_mode:
+            return
+        result = diplomacy_messages.queue_forwarded_message(
+            self.map_screen.nation_data, self.map_screen.player_country,
+            target, self.map_screen.player_country, message)
+        target_name = self.map_screen.nation_data.get(target, {}).get("name", target)
+        if result.startswith("Forward queued"):
+            self.map_screen.show_feedback(f"{result} ({target_name})")
+        else:
+            self.map_screen.show_feedback(result)
+        self.refresh_ui()
+
     def mark_thread_unread(self):
         """Marks all messages from the selected contact as unread and returns to contact list."""
         if not self.selected_recipient or not self.map_screen: return
@@ -227,7 +295,7 @@ class Messages_Screen(GameState):
         self.refresh_ui()
 
     def additional_events(self, event):
-        mx, my = pygame.mouse.get_pos()
+        mx, my = getattr(event, "pos", pygame.mouse.get_pos())
         is_tactical = self.map_screen.tactical_mode
         
         # --- Handle Draft Delete Clicks ---
@@ -275,6 +343,18 @@ class Messages_Screen(GameState):
                         self.refresh_ui()
                         return
 
+        # Forward buttons are drawn with the message bubbles because their
+        # positions move with the thread scroll. Handle release here rather than
+        # making them ordinary screen elements, so a clipped/off-screen button
+        # can never be clicked from stale geometry.
+        if (event.type == pygame.MOUSEBUTTONUP and event.button == 1
+                and not is_tactical and my < c.SCREEN_HEIGHT - MSG_INPUT_H):
+            for forward_rect, message in reversed(self.forward_button_rects):
+                if forward_rect.collidepoint((mx, my)):
+                    self.is_dragging_messages = False
+                    self.open_forward_picker(message)
+                    return
+
         # --- Contact List Scrolling (wheel, scrollbar-handle drag, content drag) ---
         if event.type == pygame.MOUSEWHEEL and mx < MSG_LEFT_PANE_W:
             self.scroll_by(event, attr="contact_scroll_y", limit_attr="max_contact_scroll", speed=30)
@@ -299,7 +379,9 @@ class Messages_Screen(GameState):
                         if del_rect.collidepoint(mx, my):
                             clicked_del = True
                             break
-                if not clicked_del:
+                clicked_forward = any(
+                    rect.collidepoint((mx, my)) for rect, _ in self.forward_button_rects)
+                if not clicked_del and not clicked_forward:
                     self.is_dragging_messages = True
 
         elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
@@ -321,6 +403,9 @@ class Messages_Screen(GameState):
     def refresh_ui(self):
         self.elements = [Button(20, 20, "small", "red", "Exit", self.exit_screen)]
         self.elements.append(Button(20, 70, "small", "blue", "Mark All Read", self.mark_all_read))
+        # The thread draws these hitboxes after it knows the current scroll
+        # position. Never retain geometry from a frame that was rebuilt.
+        self.forward_button_rects = []
         if self.selected_recipient:
             self.elements.append(Button(130, 20, "small", "orange", "Mark Unread", self.mark_thread_unread))
 
@@ -562,13 +647,23 @@ class Messages_Screen(GameState):
                 for idx, sub_text in enumerate(lines_split):
                     # Only append the date to the first bubble if it's a split message
                     show_date = msg.get("date", "") if idx == 0 else ""
+                    forwarded_header = []
+                    if idx == 0 and diplomacy_messages.is_forwarded(msg):
+                        details = diplomacy_messages.forwarded_details(msg)
+                        forwarded_header = [
+                            ">> FORWARDED MESSAGE",
+                            f"Originally sent by {details['original_sender']} to {details['original_receiver']} on {details['original_date']}",
+                            f"Forwarded by {details['forwarded_by']} on {details['forwarded_at']}",
+                        ]
 
                     display_thread.append({
                         "content": sub_text,
                         "is_player": is_player,
                         "is_draft": False,
                         "is_diplo": msg.get("type") == "DIPLOMACY",
-                        "date": show_date
+                        "date": "" if forwarded_header else show_date,
+                        "forwarded_header": forwarded_header,
+                        "forward_source": msg if idx == 0 and not is_player else None,
                     })
 
                 # --- WHAT THIS TRADE ACTUALLY ASKED FOR ---
@@ -580,12 +675,24 @@ class Messages_Screen(GameState):
                 # its pending entry cleared. Keys are written from the
                 # PROPOSER's point of view, so the sent copy reads them
                 # straight and the received copy reads them inverted.
+                trade_subject = None
+                trade_viewer_is_proposer = is_player
+                if diplomacy_messages.is_forwarded(msg):
+                    # A forwarded treaty is being read by a third party. Keep
+                    # the terms in the original recipient's voice instead of
+                    # relabelling them as the current reader's own deal.
+                    trade_details = diplomacy_messages.forwarded_details(msg)
+                    trade_subject = trade_details["original_receiver"]
+                    trade_viewer_is_proposer = False
                 for line in diplomacy_messages.describe_trade(
-                        msg.get("parameters"), viewer_is_proposer=is_player):
+                        msg.get("parameters"),
+                        viewer_is_proposer=trade_viewer_is_proposer,
+                        subject=trade_subject):
                     archived_terms = True
                     display_thread.append({
                         "content": line, "is_player": is_player, "is_draft": False,
-                        "is_diplo": True, "date": "",
+                        "is_diplo": True, "date": "", "forwarded_header": [],
+                        "forward_source": None,
                     })
 
         # Saves made before the terms were recorded on the message still have
@@ -598,7 +705,8 @@ class Messages_Screen(GameState):
             for line in diplomacy_messages.describe_trade(their_offer.get("parameters")):
                 display_thread.append({
                     "content": line, "is_player": False, "is_draft": False,
-                    "is_diplo": True, "date": "",
+                    "is_diplo": True, "date": "", "forwarded_header": [],
+                    "forward_source": None,
                 })
 
         # Check if there is an active diplomatic action pending for this target
@@ -626,7 +734,9 @@ class Messages_Screen(GameState):
                 "is_draft": True,
                 "draft_idx": d_idx,
                 "is_diplo": True,
-                "date": ""
+                "date": "",
+                "forwarded_header": [],
+                "forward_source": None,
             })
 
         # --- INJECT TEXT DRAFTS AS VISUAL DRAFTS SO THEY CAN BE CANCELED ---
@@ -637,7 +747,9 @@ class Messages_Screen(GameState):
                 "is_draft": True,
                 "draft_idx": idx,
                 "is_diplo": False,
-                "date": ""
+                "date": "",
+                "forwarded_header": [],
+                "forward_source": None,
             })
         
         input_rect = pygame.Rect(MSG_LEFT_PANE_W, c.SCREEN_HEIGHT - MSG_INPUT_H, c.SCREEN_WIDTH - MSG_LEFT_PANE_W, MSG_INPUT_H)
@@ -658,8 +770,11 @@ class Messages_Screen(GameState):
             box_height = 20 + (len(lines) * 20)
             if msg.get("date"):
                 box_height += 25 # Reserve space above the bubble for the date
+            if msg.get("forwarded_header"):
+                box_height += len(msg["forwarded_header"]) * 20 + 5
                 
-            box_width = max([font_small.size(l)[0] for l in lines] + [100]) + 30
+            header_widths = [font_tiny.size(line)[0] for line in msg.get("forwarded_header", [])]
+            box_width = max([font_small.size(l)[0] for l in lines] + header_widths + [100]) + 30
             total_h += box_height + 15
 
             processed_messages.append({
@@ -680,6 +795,7 @@ class Messages_Screen(GameState):
 
         current_y = input_rect.y - bottom_padding + self.msg_scroll_y
         self.draft_edit_rects = []
+        self.forward_button_rects = []
         
         msg_pane_rect = pygame.Rect(MSG_LEFT_PANE_W, 0, c.SCREEN_WIDTH - MSG_LEFT_PANE_W, input_rect.y)
         with ui_bars.clip_scroll_region(surface, msg_pane_rect,
@@ -702,11 +818,24 @@ class Messages_Screen(GameState):
                 is_draft = msg.get('is_draft', False)
                 is_diplo = msg.get('is_diplo', False)
                 date_str = msg.get("date", "")
+                forwarded_header = msg.get("forwarded_header", [])
+                forward_source = msg.get("forward_source")
 
                 draw_y = current_y
             
-                # --- Render Date Header ---
-                if date_str:
+                # --- Render Date / Forwarding Provenance Header ---
+                if forwarded_header:
+                    for header_idx, header in enumerate(forwarded_header):
+                        header_color = c.COLOR_GOLD_HIGHLIGHT if header_idx == 0 else (170, 170, 185)
+                        header_surf = font_tiny.render(header, True, header_color)
+                        if is_player:
+                            surface.blit(header_surf, (c.SCREEN_WIDTH - header_surf.get_width() - 30,
+                                                       draw_y))
+                        else:
+                            surface.blit(header_surf, (MSG_LEFT_PANE_W + 30, draw_y))
+                        draw_y += 20
+                    draw_y += 5
+                elif date_str:
                     date_surf = font_tiny.render(date_str, True, (130, 130, 150))
                     if is_player:
                         surface.blit(date_surf, (c.SCREEN_WIDTH - date_surf.get_width() - 30, draw_y))
@@ -716,10 +845,12 @@ class Messages_Screen(GameState):
 
                 # Only color the physical bubble, excluding the space we reserved for the date
                 bubble_h = box_height - (25 if date_str else 0)
+                if forwarded_header:
+                    bubble_h -= len(forwarded_header) * 20 + 5
 
                 if is_player:
                     box_x = c.SCREEN_WIDTH - box_width - 30
-                    color = MSG_BUBBLE_PLAYER_DIPLO if is_diplo else MSG_BUBBLE_PLAYER
+                    color = MSG_BUBBLE_FORWARDED if forwarded_header else (MSG_BUBBLE_PLAYER_DIPLO if is_diplo else MSG_BUBBLE_PLAYER)
                 
                     if is_draft:
                         del_rect = pygame.Rect(box_x - 35, draw_y + bubble_h//2 - 12, 25, 25)
@@ -730,18 +861,29 @@ class Messages_Screen(GameState):
                             surface.blit(font_small.render("X", True, (255, 255, 255)), (del_rect.x + 7, del_rect.y + 2))
                 else:
                     box_x = MSG_LEFT_PANE_W + 30
-                    color = MSG_BUBBLE_AI_DIPLO if is_diplo else MSG_BUBBLE_AI
+                    color = MSG_BUBBLE_FORWARDED if forwarded_header else (MSG_BUBBLE_AI_DIPLO if is_diplo else MSG_BUBBLE_AI)
 
                 bubble_rect = pygame.Rect(box_x, draw_y, box_width, bubble_h)
                 pygame.draw.rect(surface, color, bubble_rect, border_radius=10)
             
                 if is_draft:
                     pygame.draw.rect(surface, c.COLOR_GOLD_HIGHLIGHT, bubble_rect, 2, border_radius=10)
+                elif forwarded_header:
+                    pygame.draw.rect(surface, c.COLOR_GOLD_HIGHLIGHT, bubble_rect, 3, border_radius=10)
             
                 ly = draw_y + 10
                 for l in lines:
                     surface.blit(font_small.render(l, True, (255, 255, 255)), (box_x + 15, ly))
                     ly += 20
+
+                if forward_source and not self.map_screen.tactical_mode:
+                    button_x = bubble_rect.right + 8
+                    button_y = bubble_rect.y + max(0, (bubble_rect.height - MSG_FORWARD_BUTTON_SIZE[1]) // 2)
+                    forward_button = Button(
+                        button_x, button_y, MSG_FORWARD_BUTTON_SIZE, "light_blue", "Forward",
+                        lambda: None, font_preset="tiny")
+                    forward_button.draw(surface)
+                    self.forward_button_rects.append((forward_button.rect.copy(), forward_source))
                 
                 current_y -= 15 
 

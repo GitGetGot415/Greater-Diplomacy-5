@@ -1886,6 +1886,7 @@ UNILATERAL_ACTIONS = [
     "TAKE_PUPPETS",
     "CANCEL_MILITARY_ACCESS",
     "REVOKE_MILITARY_ACCESS",
+    "FORWARD_MESSAGE",
     "RECALL_VOLUNTEERS"
 ]
 
@@ -1947,6 +1948,7 @@ MESSAGE_CATEGORIES = {
     "REQ_MILITARY_ACCESS": "ACCESS",
     "CANCEL_MILITARY_ACCESS": "ACCESS",
     "REVOKE_MILITARY_ACCESS": "ACCESS",
+    "FORWARD_MESSAGE": "FORWARDED",
 
     "ANNEX_PUPPET": "PUPPET",
     "RELEASE_PUPPET": "PUPPET",
@@ -1959,6 +1961,9 @@ MESSAGE_CATEGORIES = {
 # Deliberately close to the table's own dark ground -- it has to be legible
 # behind bright text and readable at a glance down a column, not shout.
 MESSAGE_LLM_ROW_COLOR = (74, 50, 24)
+# A separate cool-green tint makes forwarding visible even before the detail
+# view is opened. LLM-written forwarded messages keep the LLM tint priority.
+MESSAGE_FORWARDED_ROW_COLOR = (36, 74, 48)
 
 # Proposals that require the target to explicitly Accept or Reject
 # Moves a nation makes about itself rather than at somebody. The distinction

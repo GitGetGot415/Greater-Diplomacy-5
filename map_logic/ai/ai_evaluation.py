@@ -12,6 +12,7 @@ import data.constants as c
 from map_logic.ai import ai_commitments, ai_opinion, ai_settings, ai_world
 from data import queries
 from map_logic.ai import ai_prompts
+from map_logic.diplomacy import diplomacy_messages
 
 
 def _to_int(value, default=0):
@@ -220,10 +221,25 @@ def get_world_context(nation_data, active_nations, ai_nation, target_nation=None
         # Reverse to read chronologically (oldest to newest)
         for msg in reversed(inbox):
             sender_field = msg.get("sender", "")
+            forwarded = diplomacy_messages.forwarded_details(msg)
             if sender_field == target_nation:
-                thread.append(f"{target_nation}: '{msg.get('content')}'")
+                speaker = target_nation
             elif sender_field == f"To: {target_nation}":
-                thread.append(f"You: '{msg.get('content')}'")
+                speaker = "You"
+            else:
+                continue
+
+            if forwarded:
+                provenance = (
+                    f"[AUTHENTIC FORWARDED MESSAGE: originally sent by "
+                    f"{forwarded['original_sender']} to {forwarded['original_receiver']} "
+                    f"on {forwarded['original_date']}; "
+                    f"forwarded by {forwarded['forwarded_by']} on "
+                    f"{forwarded['forwarded_at']}]"
+                )
+                thread.append(f"{speaker} {provenance}: '{msg.get('content')}'")
+            else:
+                thread.append(f"{speaker}: '{msg.get('content')}'")
 
         if thread:
             # Only give the last 10 messages so we don't blow up the context window

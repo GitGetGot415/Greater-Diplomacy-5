@@ -232,6 +232,12 @@ def open_spectator_messages(map_screen):
                         "message": msg.get("content", ""),
                         "parameters": msg.get("parameters"),
                         "llm": bool(msg.get("llm")),
+                        "forwarded": diplomacy_messages.is_forwarded(msg),
+                        "forwarded_by": msg.get("forwarded_by", ""),
+                        "forwarded_at": msg.get("forwarded_at", ""),
+                        "original_sender": msg.get("original_sender", ""),
+                        "original_receiver": msg.get("original_receiver", ""),
+                        "original_date": msg.get("original_date", ""),
                     })
 
     all_msgs.sort(key=lambda m: m["date_sort"], reverse=True)
@@ -244,7 +250,7 @@ def open_spectator_messages(map_screen):
         TableColumn("type", "Type", 100),
         TableColumn("message", "Message", 700, align="left", fmt=lambda v: truncate(v, 90)),
     ]
-    hint = "Click a message to read it. Orange = LLM generated."
+    hint = "Click a message to read it. Orange = LLM generated; green = forwarded."
 
     # The column has to truncate -- there is no width at which some message
     # does not overflow -- so a row opens the whole thing instead.
@@ -254,14 +260,28 @@ def open_spectator_messages(map_screen):
 
         # The sent copies are dropped above, so the surviving copy is always
         # the recipient's -- the terms read from their side, named rather than
-        # called "You", since the reader is neither party.
+        # called "You", since the reader is neither party. A forwarded treaty
+        # still describes the original recipient's side, not the last relay.
+        terms_subject = row.get("receiver", "They")
+        if row.get("forwarded"):
+            terms_subject = row.get("original_receiver", terms_subject)
         terms = diplomacy_messages.describe_trade(row.get("parameters"),
-                                                  subject=row.get("receiver", "They"))
+                                                  subject=terms_subject)
         if terms:
             body = f"{body}\n\nTerms:\n" + "\n".join(terms)
 
         marks = [row.get("date", ""), row.get("type", "")]
         marks.append("written by the model" if row.get("llm") else "standard response")
+        if row.get("forwarded"):
+            body = (
+                ">> AUTHENTIC FORWARDED MESSAGE\n"
+                f"Originally sent by {row.get('original_sender', 'Unknown')} to "
+                f"{row.get('original_receiver', 'Unknown')} on "
+                f"{row.get('original_date', 'Unknown')}\n"
+                f"Forwarded by {row.get('forwarded_by', 'Unknown')} on "
+                f"{row.get('forwarded_at', 'Unknown')}\n\n" + body
+            )
+            marks.append(f"forwarded by {row.get('forwarded_by', 'Unknown')}")
         _launch(map_screen, TextDetailScreen(
             map_screen,
             f"{row.get('sender', '?')} to {row.get('receiver', '?')}",
@@ -269,7 +289,11 @@ def open_spectator_messages(map_screen):
             subtitle="   |   ".join(m for m in marks if m)))
 
     def tint(row):
-        return c.MESSAGE_LLM_ROW_COLOR if row.get("llm") else None
+        if row.get("llm"):
+            return c.MESSAGE_LLM_ROW_COLOR
+        if row.get("forwarded"):
+            return c.MESSAGE_FORWARDED_ROW_COLOR
+        return None
 
     _launch_table(map_screen, f"Global Messages Overview  ({hint})", columns, all_msgs,
                   empty_message="No messages have been sent yet.",

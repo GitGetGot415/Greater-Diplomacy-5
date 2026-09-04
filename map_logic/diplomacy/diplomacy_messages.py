@@ -1,4 +1,7 @@
 
+import copy
+import uuid
+
 import data.constants as c
 
 # ==========================================
@@ -187,6 +190,70 @@ def cancel_text_message(nation_data, player_name, target_name):
         return "Draft cleared."
     return "No drafted message to clear."
 
+
+# ==========================================
+# FORWARDED MESSAGE ACCESS
+# ==========================================
+
+FORWARD_ACTION = "FORWARD_MESSAGE"
+
+
+def is_forwarded(msg):
+    """Whether a message carries the engine's forwarding provenance stamp."""
+    return isinstance(msg, dict) and msg.get("forwarded") is True
+
+
+def forwarded_details(msg):
+    """Returns the reader-facing provenance fields for a forwarded message.
+
+    Old saves have no forwarding fields, so callers can use this helper without
+    having to distinguish a missing field from a malformed forwarded record.
+    """
+    if not is_forwarded(msg):
+        return None
+    return {
+        "original_sender": msg.get("original_sender") or "Unknown",
+        "original_receiver": msg.get("original_receiver") or "Unknown",
+        "original_date": msg.get("original_date") or "Unknown",
+        "forwarded_by": msg.get("forwarded_by") or msg.get("sender") or "Unknown",
+        "forwarded_at": msg.get("forwarded_at") or msg.get("date") or "Unknown",
+        "forward_chain": msg.get("forward_chain", []),
+    }
+
+
+def queue_forwarded_message(nation_data, player_name, target_name, source_owner,
+                            original_message):
+    """Queues one authenticated forward for the end-of-turn message pass.
+
+    The original record is copied into the pending entry. The sender cannot
+    rewrite its provenance through the compose box, and the delivery pass later
+    creates a fresh forwarding record with a new message/forward id.
+    """
+    if player_name not in nation_data:
+        return "Cannot forward messages as this entity."
+    if target_name not in nation_data or target_name == player_name:
+        return "That country cannot receive this forwarded message."
+    if not isinstance(original_message, dict) or not original_message.get("content", ""):
+        return "This message cannot be forwarded."
+
+    pending = get_pending_map(nation_data, player_name, writable=True)
+    existing = pending.get(target_name)
+    if existing is not None:
+        existing_turns = existing.get("turns", 0) if isinstance(existing, dict) else 0
+        if existing_turns > 0:
+            return "A diplomatic action is already in transit to this country."
+        return "A diplomatic action is already pending with this country."
+
+    pending[target_name] = {
+        "action": FORWARD_ACTION,
+        "turns": 0,
+        "timer": 0,
+        "message": original_message.get("content", ""),
+        "forwarded_message": copy.deepcopy(original_message),
+        "forwarded_source": source_owner,
+    }
+    return "Forward queued. It will be sent at the end of the turn."
+
 def _deliver(nation_data, owner, entry):
     """Puts one message at the top of a nation's inbox, oldest trimmed off.
 
@@ -225,14 +292,23 @@ def send_message(map_screen, sender, receiver, content, msg_type="TEXT", extra=N
     nation_data = map_screen.nation_data
     date_str = map_screen.time_manager.get_date_string()
 
-    stamp = dict(extra or {})
+    # Delivery fields are owned by this function. In particular, an action or
+    # forwarding stamp must not be able to replace the visible sender/date by
+    # arriving through an arbitrary `extra` dict.
+    protected = {"sender", "content", "type", "read", "spectator_read", "date",
+                 "message_id"}
+    stamp = {key: value for key, value in (extra or {}).items()
+             if key not in protected}
     if llm:
         stamp["llm"] = True
+
+    message_id = uuid.uuid4().hex
 
     # 1. Deliver the message to the receiver
     incoming = {
         "sender": sender, "content": content, "type": msg_type,
-        "read": False, "spectator_read": False, "date": date_str
+        "read": False, "spectator_read": False, "date": date_str,
+        "message_id": message_id,
     }
     incoming.update(stamp)
     _deliver(nation_data, receiver, incoming)
@@ -240,10 +316,66 @@ def send_message(map_screen, sender, receiver, content, msg_type="TEXT", extra=N
     # 2. Save a "Sent" copy to the sender's inbox
     outgoing = {
         "sender": f"To: {receiver}", "content": content, "type": msg_type,
-        "read": True, "spectator_read": True, "date": date_str
+        "read": True, "spectator_read": True, "date": date_str,
+        "message_id": message_id,
     }
     outgoing.update(stamp)
     _deliver(nation_data, sender, outgoing)
+    return incoming
+
+
+def forward_message(map_screen, sender, receiver, original_message, source_owner=None):
+    """Delivers a forwarded copy with immutable, visible provenance metadata.
+
+    `sender` is the country doing the forwarding, while `original_sender` is
+    retained from the first message in the chain. Action/terms/LLM metadata are
+    carried over so a forwarded war declaration or treaty remains machine-
+    readable to the next country.
+    """
+    if not isinstance(original_message, dict):
+        return None
+    content = original_message.get("content", "")
+    if not content:
+        return None
+
+    # Give a legacy message a stable reference the first time it is forwarded.
+    source_message_id = original_message.get("message_id")
+    if not source_message_id:
+        source_message_id = uuid.uuid4().hex
+        original_message["message_id"] = source_message_id
+
+    was_forwarded = is_forwarded(original_message)
+    original_sender = (original_message.get("original_sender")
+                       if was_forwarded else original_message.get("sender")) or "Unknown"
+    original_date = (original_message.get("original_date")
+                     if was_forwarded else original_message.get("date")) or "Unknown"
+    original_receiver = (original_message.get("original_receiver")
+                         if was_forwarded else (source_owner or sender)) or "Unknown"
+
+    forward_chain = copy.deepcopy(original_message.get("forward_chain", [])) if was_forwarded else []
+    if not isinstance(forward_chain, list):
+        forward_chain = []
+    date_str = map_screen.time_manager.get_date_string()
+    forward_chain.append({"country": sender, "date": date_str})
+
+    extra = {
+        "forwarded": True,
+        "forward_id": uuid.uuid4().hex,
+        "original_sender": original_sender,
+        "original_receiver": original_receiver,
+        "original_date": original_date,
+        "forwarded_by": sender,
+        "forwarded_at": date_str,
+        "forwarded_from_message_id": source_message_id,
+        "forward_chain": forward_chain,
+    }
+    for key in ("action", "parameters"):
+        if key in original_message:
+            extra[key] = copy.deepcopy(original_message[key])
+
+    return send_message(map_screen, sender, receiver, content,
+                        original_message.get("type", "TEXT"), extra=extra,
+                        llm=bool(original_message.get("llm")))
 
 # ==========================================
 # OUTGOING ANNOUNCEMENTS

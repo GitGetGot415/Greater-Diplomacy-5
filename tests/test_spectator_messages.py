@@ -137,6 +137,63 @@ class SendTests(unittest.TestCase):
         self.assertEqual(self.inbox("B")[0]["type"], "DIPLOMACY")
 
 
+class ForwardedMessageTests(unittest.TestCase):
+    def setUp(self):
+        self.game = StubMapScreen(["A", "B", "C"], human_players=["A"])
+
+    def test_a_forward_keeps_the_original_identity_and_adds_provenance(self):
+        dm.send_message(self.game, "B", "A", "Keep this secret.", "TEXT")
+        original = self.game.nation_data["A"]["inbox"][0]
+
+        forwarded = dm.forward_message(self.game, "A", "C", original,
+                                        source_owner="A")
+        self.assertEqual(forwarded["sender"], "A")
+        self.assertEqual(forwarded["content"], original["content"])
+        self.assertTrue(dm.is_forwarded(forwarded))
+        self.assertEqual(forwarded["original_sender"], "B")
+        self.assertEqual(forwarded["original_receiver"], "A")
+        self.assertEqual(forwarded["original_date"], original["date"])
+        self.assertEqual(forwarded["forwarded_by"], "A")
+        self.assertEqual(forwarded["forwarded_at"], self.game.time_manager.get_date_string())
+        self.assertEqual(forwarded["forwarded_from_message_id"], original["message_id"])
+        self.assertNotEqual(forwarded["message_id"], original["message_id"])
+
+    def test_a_queued_forward_is_delivered_by_the_normal_message_pass(self):
+        from map_logic.diplomacy import diplomacy_processor
+
+        dm.send_message(self.game, "B", "A", "Forward this.", "TEXT")
+        original = self.game.nation_data["A"]["inbox"][0]
+        result = dm.queue_forwarded_message(
+            self.game.nation_data, "A", "C", "A", original)
+        self.assertTrue(result.startswith("Forward queued"))
+
+        diplomacy_processor._process_pass1_immediate_actions(self.game)
+        received = self.game.nation_data["C"]["inbox"][0]
+        self.assertTrue(received["forwarded"])
+        self.assertEqual(received["original_sender"], "B")
+        self.assertEqual(received["forwarded_by"], "A")
+
+    def test_a_puppet_forwards_a_war_declaration_to_its_master_immediately(self):
+        from map_logic.diplomacy import diplomacy_processor
+
+        self.game.nation_data["A"]["puppets"] = ["B"]
+        self.game.nation_data["B"]["master"] = "A"
+        dm.set_pending(self.game.nation_data, "C", "B", "WAR_DECLARATION",
+                       message="No CB", prose="We have declared war!")
+
+        diplomacy_processor._process_pass1_immediate_actions(self.game)
+
+        direct = next(m for m in self.game.nation_data["B"]["inbox"]
+                      if m.get("sender") == "C")
+        forwarded = self.game.nation_data["A"]["inbox"][0]
+        self.assertEqual(direct["action"], "WAR_DECLARATION")
+        self.assertEqual(forwarded["sender"], "B")
+        self.assertEqual(forwarded["content"], direct["content"])
+        self.assertTrue(forwarded["forwarded"])
+        self.assertEqual(forwarded["original_sender"], "C")
+        self.assertEqual(forwarded["forwarded_by"], "B")
+
+
 class TradeWordingTests(unittest.TestCase):
     PARAMS = {"give_materials": 400, "take_fuel": 150}
 

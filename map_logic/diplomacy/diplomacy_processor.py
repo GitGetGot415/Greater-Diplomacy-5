@@ -8,8 +8,9 @@ from map_logic.diplomacy import (
     faction_leadership, peace_scope, ratification, restrictions, treaty_effects, volunteers, war_calls
 )
 from map_logic.diplomacy.diplomacy_messages import (
-    get_pending_action, send_message, send_treaty_message, get_response, get_response_map,
-    set_response, clear_response, RESPONSE_ACCEPT
+    get_pending_action, send_message, send_treaty_message, forward_message,
+    get_response, get_response_map, set_response, clear_response, RESPONSE_ACCEPT,
+    FORWARD_ACTION
 )
 from map_logic.diplomacy.diplomacy_agreements import (
     finalize_war, finalize_neutral, finalize_disband_faction, finalize_faction_join, finalize_faction_leave,
@@ -316,6 +317,35 @@ def _resolve_simultaneous_clashes(map_screen):
                     join_faction_wars(map_screen.map_data, map_screen.nation_data, nation_b, nation_a)
                     log_global_event(map_screen.nation_data, f"ESCALATION: {nation_a} and {nation_b} have formally combined their war efforts!")
                     _resolve_cross_action(map_screen, nation_a, nation_b, a_data, b_data, "CROSS_CALL_TO_ARMS")
+
+
+def _forward_war_declaration_to_masters(map_screen, declared_country, declarer,
+                                        declaration_message):
+    """Pass a declaration up the entire puppet chain before war state changes.
+
+    The direct recipient gets the normal declaration first. Each master then
+    receives an authenticated forward of that exact record, so an AI or player
+    can distinguish the original declaration from a report supplied by its
+    subject. Walking the chain also covers nested puppets without requiring a
+    second event pass.
+    """
+    current_country = declared_country
+    current_message = declaration_message
+    visited = set()
+
+    while isinstance(current_message, dict):
+        master = map_screen.nation_data.get(current_country, {}).get("master", "")
+        if not master or master in visited or master == declarer:
+            return
+        visited.add(master)
+
+        forwarded = forward_message(
+            map_screen, current_country, master, current_message,
+            source_owner=declared_country)
+        if forwarded is None:
+            return
+        current_country = master
+        current_message = forwarded
 
 
 def _gather_ai_tasks(map_screen):
@@ -914,8 +944,11 @@ def _process_pass1_immediate_actions(map_screen):
                     # was declared in exactly the same words.
                     words = info.get("prose") or "We have declared war!"
                     goal = f" Goal: {custom_msg}" if custom_msg else ""
-                    send_message(map_screen, country_name, target, f"{words}{goal}",
-                                 "DIPLOMACY", extra={"action": action}, llm=wrote_it)
+                    declaration_message = send_message(
+                        map_screen, country_name, target, f"{words}{goal}",
+                        "DIPLOMACY", extra={"action": action}, llm=wrote_it)
+                    _forward_war_declaration_to_masters(
+                        map_screen, target, country_name, declaration_message)
                     finalize_war(map_screen.map_data, map_screen.nation_data, country_name, target)
                     actions_to_clear.append(target)
 
@@ -985,6 +1018,13 @@ def _process_pass1_immediate_actions(map_screen):
                     send_treaty_message(map_screen, country_name, target, action, custom_msg, llm=wrote_it)
                     actions_to_clear.append(target)
 
+
+                elif action == FORWARD_ACTION:
+                    original_message = info.get("forwarded_message")
+                    forward_message(
+                        map_screen, country_name, target, original_message,
+                        source_owner=info.get("forwarded_source", country_name))
+                    actions_to_clear.append(target)
 
                 # DELIVER messages to inbox on Turn 0
                 elif action.startswith("MSG:"):
