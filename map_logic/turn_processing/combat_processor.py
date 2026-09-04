@@ -152,7 +152,9 @@ def process_pinning(map_screen):
             if order and order.get("type") == "MOVE" and order.get("path"):
                 dest_id = order["path"][0]
                 dest_prov = map_screen.id_to_province.get(dest_id)
-                if dest_prov and queries.is_hostile_territory(unit["owner"], dest_prov.get("owner", "Unclaimed"), map_screen.nation_data):
+                if dest_prov and queries.is_hostile_territory(
+                        queries.get_unit_combat_owner(unit), dest_prov.get("owner", "Unclaimed"),
+                        map_screen.nation_data):
                     # Track the origin province ID (province["id"]) along with the unit
                     incoming_attacks.setdefault(dest_id, []).append((unit, province["id"]))
 
@@ -169,12 +171,13 @@ def process_pinning(map_screen):
         tile_owner = dest_prov.get("owner", "Unclaimed")
         if tile_owner in c.UNPLAYABLE_NATIONS: continue
 
-        friendly_defenders = [u for u in defenders if not queries.are_at_war(tile_owner, u.get("owner"), map_screen.nation_data)]
+        friendly_defenders = [u for u in defenders if not queries.are_at_war(
+            tile_owner, queries.get_unit_combat_owner(u), map_screen.nation_data)]
         if not friendly_defenders: continue
 
         hostile_attackers = [
             info for info in attackers_info
-            if queries.are_at_war(tile_owner, info[0].get("owner"), map_screen.nation_data)
+            if queries.are_at_war(tile_owner, queries.get_unit_combat_owner(info[0]), map_screen.nation_data)
         ]
 
         if not hostile_attackers: continue
@@ -186,7 +189,8 @@ def process_pinning(map_screen):
         # fighting.
         friendly_defenders = [
             u for u in friendly_defenders
-            if any(queries.are_at_war(u.get("owner"), a.get("owner"), map_screen.nation_data)
+            if any(queries.are_at_war(queries.get_unit_combat_owner(u),
+                                      queries.get_unit_combat_owner(a), map_screen.nation_data)
                    for a, _ in hostile_attackers)
         ]
         if not friendly_defenders: continue
@@ -266,13 +270,17 @@ def process_pinning(map_screen):
                 dest_prov = map_screen.id_to_province.get(dest_id)
 
                 # If moving to hostile territory, check if we are pinned by an incoming attack
-                if dest_prov and queries.is_hostile_territory(unit["owner"], dest_prov.get("owner", "Unclaimed"), map_screen.nation_data):
+                if dest_prov and queries.is_hostile_territory(
+                        queries.get_unit_combat_owner(unit), dest_prov.get("owner", "Unclaimed"),
+                        map_screen.nation_data):
                     attackers = incoming_attacks.get(province["id"], [])
 
                     # ONLY pin if the attacker is hostile AND NOT coming from the tile we are moving to.
                     hostile_attackers = [
                         a for a, origin_id in attackers
-                        if queries.are_at_war(unit["owner"], a["owner"], map_screen.nation_data) and origin_id != dest_id
+                        if queries.are_at_war(queries.get_unit_combat_owner(unit),
+                                              queries.get_unit_combat_owner(a), map_screen.nation_data)
+                        and origin_id != dest_id
                     ]
 
                     if hostile_attackers:

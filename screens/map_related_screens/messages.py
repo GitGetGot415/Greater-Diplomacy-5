@@ -5,7 +5,7 @@ from ui.bars import ui_bars
 from ui import text_utils
 from ui_elements import Button, process_text_input
 from map_logic.rendering.font_manager import fonts
-from map_logic.diplomacy import diplomacy_logic, diplomacy_messages
+from map_logic.diplomacy import diplomacy_logic, diplomacy_messages, volunteers
 from data import queries
 
 # ==========================================
@@ -248,8 +248,25 @@ class Messages_Screen(GameState):
                             self.map_screen.show_feedback("War Declaration Cancelled.")
                         elif isinstance(idx, str) and idx.startswith("FORMAL_"):
                             act_name = idx[7:]
-                            diplomacy_messages.clear_pending(self.map_screen.nation_data, self.map_screen.player_country, self.selected_recipient)
-                            self.map_screen.show_feedback(f"{act_name.replace('_', ' ').title()} Cancelled.")
+                            pending = diplomacy_messages.get_pending(
+                                self.map_screen.nation_data, self.map_screen.player_country,
+                                self.selected_recipient)
+                            if act_name == volunteers.ACTION:
+                                if pending.get("turns", 0) == 0:
+                                    volunteers.cancel_offer(
+                                        self.map_screen, self.map_screen.player_country,
+                                        self.selected_recipient)
+                                    self.map_screen.show_feedback("Volunteer Offer Cancelled.")
+                                else:
+                                    self.map_screen.show_feedback("Cannot undo after the volunteer offer was delivered.")
+                            elif act_name == volunteers.RECALL_ACTION:
+                                msg = diplomacy_logic.toggle_diplomacy_action(
+                                    self.map_screen.nation_data, self.map_screen.player_country,
+                                    self.selected_recipient, volunteers.RECALL_ACTION)
+                                self.map_screen.show_feedback(msg)
+                            else:
+                                diplomacy_messages.clear_pending(self.map_screen.nation_data, self.map_screen.player_country, self.selected_recipient)
+                                self.map_screen.show_feedback(f"{act_name.replace('_', ' ').title()} Cancelled.")
                         else:
                             if isinstance(idx, int) and 0 <= idx < len(self.drafts):
                                 self.drafts.pop(idx)

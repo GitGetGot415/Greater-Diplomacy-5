@@ -7,6 +7,7 @@ from data import queries
 from map_logic.turn_processing import movement_processor
 
 ACTION = "SEND_VOLUNTEERS"
+RECALL_ACTION = "RECALL_VOLUNTEERS"
 AWAITING = "AWAITING_ANSWER"
 OUTBOUND = "OUTBOUND"
 DEPLOYED = "DEPLOYED"
@@ -228,7 +229,6 @@ def _deploy(map_screen, donor, host, mission):
         for entry in mission.get("held_units", []):
             _restore_to_origin(map_screen, donor, entry)
         missions(map_screen.nation_data, donor, writable=True).pop(host, None)
-        return
         return
     for entry in mission.get("held_units", []):
         unit = entry.get("unit")

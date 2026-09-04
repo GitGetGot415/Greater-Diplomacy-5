@@ -1068,6 +1068,7 @@ class Orders_Screen(GameState):
                     self.refresh_ui()
 
     def can_unit_enter(self, unit, dest):
+        combat_owner = queries.get_unit_combat_owner(unit)
         dest_is_water = queries.is_water_province(dest)
 
         # Look up the actual unit stats using its type name
@@ -1088,7 +1089,7 @@ class Orders_Screen(GameState):
                 return False
 
             # Ships can only dock at friendly coasts
-            if not is_convoy and not queries.can_ships_enter(unit["owner"], dest, self.map_screen.nation_data):
+            if not is_convoy and not queries.can_ships_enter(combat_owner, dest, self.map_screen.nation_data):
                 self.map_screen.show_feedback("Ships can only enter friendly/owned coastal tiles!")
                 return False
 
@@ -1104,7 +1105,7 @@ class Orders_Screen(GameState):
                 self.map_screen.show_feedback("Convoys on land can only move to ocean!")
                 return False
 
-            if not dest_is_water and not queries.can_land_units_enter(unit["owner"], dest, self.map_screen.nation_data):
+            if not dest_is_water and not queries.can_land_units_enter(combat_owner, dest, self.map_screen.nation_data):
                 self.map_screen.show_feedback(f"Neutral territory!")
                 return False
 
@@ -1114,12 +1115,12 @@ class Orders_Screen(GameState):
         # Combat Lock (Player UI Check)
         current_path = unit.get("order", {}).get("path", [])
         if not current_path: # First step of the move order
-            in_combat = queries.is_nation_in_combat_here(unit["owner"], self.target_province, self.map_screen.nation_data)
-            if in_combat and queries.is_hostile_territory(unit["owner"], dest_owner, self.map_screen.nation_data):
+            in_combat = queries.is_nation_in_combat_here(combat_owner, self.target_province, self.map_screen.nation_data)
+            if in_combat and queries.is_hostile_territory(combat_owner, dest_owner, self.map_screen.nation_data):
                 self.map_screen.show_feedback("Cannot advance into enemy territory while in combat! (Retreat only)")
                 return False
 
-        if not is_naval and not queries.can_land_units_enter(unit["owner"], dest, self.map_screen.nation_data):
+        if not is_naval and not queries.can_land_units_enter(combat_owner, dest, self.map_screen.nation_data):
             self.map_screen.show_feedback(f"Neutral {dest_owner} territory!")
             return False
 

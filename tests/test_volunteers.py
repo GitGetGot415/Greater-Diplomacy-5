@@ -68,6 +68,43 @@ class VolunteerTests(unittest.TestCase):
         self.assertEqual(len(origin["units"]), 1)
         self.assertFalse(volunteers.mission_state(game.nation_data, "A", "B"))
 
+    def test_same_turn_offer_withdrawal_restores_divisions(self):
+        game = self.game()
+        self.offer(game)
+        self.assertFalse(game.home_of("A")["units"])
+        volunteers.cancel_offer(game, "A", "B")
+        self.assertEqual(len(game.home_of("A")["units"]), 1)
+        self.assertFalse(game.pending_action("A", "B"))
+
+    def test_recall_is_a_reversible_unilateral_turn_action(self):
+        game = self.game()
+        self.offer(game)
+        game.run_turn()
+        game.run_turn()
+        diplomacy_logic.toggle_diplomacy_action(
+            game.nation_data, "A", "B", volunteers.RECALL_ACTION,
+            "We are recalling our volunteer divisions.")
+        self.assertEqual(game.pending_action("A", "B"), volunteers.RECALL_ACTION)
+        diplomacy_logic.toggle_diplomacy_action(
+            game.nation_data, "A", "B", volunteers.RECALL_ACTION)
+        self.assertEqual(volunteers.mission_state(game.nation_data, "A", "B"), volunteers.DEPLOYED)
+        self.assertFalse(game.pending_action("A", "B"))
+
+    def test_orders_uses_volunteer_host_for_neutral_territory_entry(self):
+        from screens.map_related_screens.orders import Orders_Screen
+
+        game = self.game()
+        host_home = game.home_of("B")
+        host_extension = game.add_province("B", cores=["B"])
+        game.border(host_home["id"], host_extension["id"])
+        unit = division("A")
+        unit["volunteer_host"] = "B"
+        host_home["units"] = [unit]
+        screen = object.__new__(Orders_Screen)
+        screen.map_screen = game
+        screen.target_province = host_home
+        self.assertTrue(screen.can_unit_enter(unit, host_extension))
+
     def test_recall_uses_return_travel_then_send_unit_home(self):
         game = self.game()
         self.offer(game)

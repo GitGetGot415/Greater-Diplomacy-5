@@ -1182,11 +1182,12 @@ def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,
         surface.blit(final_surf, final_surf.get_rect(center=(sx, int(sy))))
         return
 
-    # 1. Group by military side. Volunteers keep their donor as unit owner for
-    # commands, but visually and tactically stand with their host country.
+    # 1. Keep each donor's volunteers in their own stack. They use the host's
+    # military colour below, but grouping them with the host's own army makes a
+    # player's divisions impossible to locate on a busy front.
     units_by_owner = {}
     for u in units:
-        owner = queries.get_unit_combat_owner(u) or "Unclaimed"
+        owner = u.get("owner", "Unclaimed")
         units_by_owner.setdefault(owner, []).append(u)
 
     gap = max(2, int(4 * display_scale)) # Spacing between stacked boxes
@@ -1226,7 +1227,8 @@ def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,
 
         unit_count = len(owner_units)
         unit_type = best_unit.get("type", "")
-        owner_color = map_screen.nation_colors.get(owner, (200, 200, 200))
+        owner_color = map_screen.nation_colors.get(
+            queries.get_unit_combat_owner(best_unit) or owner, (200, 200, 200))
         
         # Check if it's a dynamic convoy or truck
         if unit_type.startswith("Convoy"):

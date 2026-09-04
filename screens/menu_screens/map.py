@@ -746,10 +746,17 @@ def update_button_states(map_screen):
 
                 volunteer_state = volunteers.mission_state(map_screen.nation_data, map_screen.player_country, owner)
                 if volunteer_state == volunteers.AWAITING:
-                    set_btn(map_screen.btn_volunteers, True, False, "Waiting for Answer", "grey")
+                    if pending_action == volunteers.ACTION and pending_turns == 0:
+                        set_btn(map_screen.btn_volunteers, True, True, "Undo Send Volunteers", "purple")
+                        map_screen.btn_volunteers.callback = lambda: player_diplomacy_actions.handle_withdraw_volunteer_offer(map_screen)
+                    else:
+                        set_btn(map_screen.btn_volunteers, True, False, "Waiting for Answer", "grey")
                 elif volunteer_state in (volunteers.OUTBOUND, volunteers.DEPLOYED):
                     turns_left = map_screen.nation_data[map_screen.player_country]["volunteer_missions"][owner].get("turns_left")
-                    text = "Recall Volunteers" if turns_left is None else f"Recall Volunteers ({turns_left}t)"
+                    if pending_action == volunteers.RECALL_ACTION and pending_turns == 0:
+                        text = "Undo Recall Volunteers"
+                    else:
+                        text = "Recall Volunteers" if turns_left is None else f"Recall Volunteers ({turns_left}t)"
                     set_btn(map_screen.btn_volunteers, True, True, text, "purple")
                     map_screen.btn_volunteers.callback = lambda: player_diplomacy_actions.handle_recall_volunteers(map_screen)
                 elif volunteer_state == volunteers.RETURNING:

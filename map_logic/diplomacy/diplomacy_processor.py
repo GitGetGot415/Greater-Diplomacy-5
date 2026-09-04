@@ -940,6 +940,15 @@ def _process_pass1_immediate_actions(map_screen):
                     send_treaty_message(map_screen, country_name, target, action, custom_msg,
                                         parameters=info.get("parameters"), llm=wrote_it)
 
+                elif action == volunteers.RECALL_ACTION:
+                    # A recall is unilateral, but still announced to the host.
+                    # It runs at turn resolution, not on the click, so the
+                    # player can undo it while it remains a same-turn draft.
+                    if volunteers.recall(map_screen, country_name, target):
+                        send_treaty_message(map_screen, country_name, target, action, custom_msg,
+                                            llm=wrote_it)
+                    actions_to_clear.append(target)
+
                 elif action == "BREAK_ALLIANCE":
                     log_global_event(map_screen.nation_data, f"{country_name} has broken their alliance with {target}.")
                     send_treaty_message(map_screen, country_name, target, action, custom_msg, llm=wrote_it)

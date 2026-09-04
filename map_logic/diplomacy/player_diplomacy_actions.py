@@ -339,5 +339,14 @@ def handle_send_volunteers(map_screen):
 def handle_recall_volunteers(map_screen):
     donor = map_screen.player_country
     host = map_screen.selected_province.get("owner")
-    if volunteers.recall(map_screen, donor, host):
-        map_screen.show_feedback("Volunteer divisions are returning home.")
+    msg = diplomacy_logic.toggle_diplomacy_action(
+        map_screen.nation_data, donor, host, volunteers.RECALL_ACTION,
+        "We are recalling our volunteer divisions.")
+    map_screen.show_feedback(msg)
+
+
+def handle_withdraw_volunteer_offer(map_screen):
+    donor = map_screen.player_country
+    host = map_screen.selected_province.get("owner")
+    volunteers.cancel_offer(map_screen, donor, host)
+    map_screen.show_feedback("Volunteer offer cancelled; divisions returned.")
