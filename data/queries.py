@@ -2962,13 +2962,15 @@ def get_combat_predictions(map_screen):
         for u in defenders + attackers:
             forces_by_owner.setdefault(u["owner"], []).append(u)
             
-        owners = list(forces_by_owner.keys())
-        clash = False
-        for i in range(len(owners)):
-            for j in range(i+1, len(owners)):
-                if are_at_war(owners[i], owners[j], nation_data):
-                    clash = True
-                    break
+        # A donor may volunteer to more than one host.  Do not reduce the
+        # conflict test to the actual owner here: two divisions with the same
+        # donor can have different effective military allegiances.
+        all_forces = defenders + attackers
+        clash = any(
+            are_at_war(get_unit_combat_owner(first),
+                       get_unit_combat_owner(second), nation_data)
+            for index, first in enumerate(all_forces)
+            for second in all_forces[index + 1:])
         if clash:
             predictions.append({
                 "type": "province",

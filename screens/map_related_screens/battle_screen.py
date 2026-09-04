@@ -131,7 +131,7 @@ class Battle_Screen(ModalScreen):
     def my_lanes(self):
         """The lanes this player holds a side in, which are the editable ones."""
         return [lane for lane in self.battle.lanes
-                if self.player in lane.a.nations or self.player in lane.b.nations]
+                if self.is_mine(lane.a) or self.is_mine(lane.b)]
 
     def current(self):
         """(lane, near, far) for the selected lane, or (None, None, None).
@@ -147,7 +147,9 @@ class Battle_Screen(ModalScreen):
         return (lane,) + self.near_far(lane)
 
     def is_mine(self, side):
-        return side is not None and self.player in side.nations
+        return side is not None and any(
+            unit.get("owner") == self.player
+            for unit in side.front + side.reserve)
 
     def near_far(self, lane):
         """A lane's two sides, the player's first when they hold one.
@@ -156,9 +158,30 @@ class Battle_Screen(ModalScreen):
         summary line, the two columns -- so a player never has to work out which
         half of "6 v 3" is theirs.
         """
-        if self.player in lane.b.nations:
+        if self.is_mine(lane.b):
             return lane.b, lane.a
         return lane.a, lane.b
+
+    @staticmethod
+    def side_units(side):
+        """All units visually contributing to a combat side.
+
+        `side.nations` is intentionally the effective military allegiance, so
+        a volunteer is listed under its host there.  The battle UI instead
+        uses actual owners for its flags and roster identity.
+        """
+        return list(getattr(side, "front", ())) + list(getattr(side, "reserve", ()))
+
+    def side_display_nations(self, side):
+        """Actual owners in stable order for a side's visual presentation."""
+        nations = []
+        for unit in self.side_units(side):
+            owner = unit.get("owner")
+            if owner and owner not in nations:
+                nations.append(owner)
+        # Lightweight callers and a few UI layout tests provide only the
+        # nation list. It is also a sensible fallback for an empty side.
+        return nations or list(side.nations)
 
     def my_units(self):
         """The units on this tile the player may actually give orders to.
@@ -205,12 +228,14 @@ class Battle_Screen(ModalScreen):
         mine = self.bench()
         commanded = {id(u) for u in mine}
 
+        side_unit_ids = {id(unit) for unit in self.side_units(side)}
         rest = [u for u in self.province.get("units", [])
-                if u.get("owner") in side.nations
+                if id(u) in side_unit_ids
                 and id(u) not in seated and id(u) not in commanded]
         # Grouped by nation so the flags read as blocks; sorted() is stable, so
         # within a nation they keep the order they stand in on the tile.
-        rest.sort(key=lambda u: side.nations.index(u.get("owner")))
+        display_nations = self.side_display_nations(side)
+        rest.sort(key=lambda u: display_nations.index(u.get("owner")))
         return mine + rest
 
     # ------------------------------------------------------------------ #
@@ -219,7 +244,7 @@ class Battle_Screen(ModalScreen):
 
     def send_to_lane(self, unit, lane):
         """Pins a unit to the duel against whoever is on the other side."""
-        far = lane.b if self.player in lane.a.nations else lane.a
+        far = lane.b if self.is_mine(lane.a) else lane.a
         # A pin names an enemy nation; build_battle resolves it back to whichever
         # lane has that nation on the other side.
         unit["lane_target"] = far.nations[0]
@@ -475,10 +500,11 @@ class Battle_Screen(ModalScreen):
         flags is worse than a short one with a number: it looks like the whole
         side is two nations.
         """
-        for nation in side.nations[:max_flags]:
+        display_nations = self.side_display_nations(side)
+        for nation in display_nations[:max_flags]:
             x = flag_icons.draw_flag_centered(surface, nation, self.map_screen.nation_data,
                                               x, rect.y, rect.height)
-        extra = len(side.nations) - max_flags
+        extra = len(display_nations) - max_flags
         if extra > 0:
             more = font.render(f"+{extra}", True, c.UI_TEXT_MUTED)
             surface.blit(more, (x, rect.y + (rect.height - font.get_height()) // 2))
@@ -492,9 +518,10 @@ class Battle_Screen(ModalScreen):
         count_surf = small.render(count_text, True, c.UI_TEXT_DIM)
         available_width = max(1, header_rect.width - count_surf.get_width() - 8)
         flag_step = flag_icons.ROW_FLAG_SIZE[0] + 6
-        max_flags = len(side.nations)
+        display_nations = self.side_display_nations(side)
+        max_flags = len(display_nations)
         while max_flags > 1:
-            extra = len(side.nations) - max_flags
+            extra = len(display_nations) - max_flags
             extra_width = small.size(f"+{extra}")[0] + 6 if extra else 0
             if max_flags * flag_step + extra_width <= available_width:
                 break
@@ -559,9 +586,10 @@ class Battle_Screen(ModalScreen):
         # Show as many coalition flags as fit, retaining a +N marker for any
         # remaining members using the same convention as the lane list.
         flag_step = flag_icons.ROW_FLAG_SIZE[0] + 6
-        max_flags = len(side.nations)
+        display_nations = self.side_display_nations(side)
+        max_flags = len(display_nations)
         while max_flags > 1:
-            extra = len(side.nations) - max_flags
+            extra = len(display_nations) - max_flags
             extra_width = small.size(f"+{extra}")[0] + 6 if extra else 0
             if max_flags * flag_step + extra_width <= available_width:
                 break
@@ -652,7 +680,12 @@ class Battle_Screen(ModalScreen):
 
     def _composition(self, side):
         """`Vichy France 5 Â· German Reich 1` -- a side's members and their width."""
-        return "  +  ".join(f"{m.nation} {len(m.front)}/{m.slots}" for m in side.members)
+        counts = {}
+        for unit in self.side_units(side):
+            owner = unit.get("owner", "?")
+            counts[owner] = counts.get(owner, 0) + 1
+        return "  +  ".join(
+            f"{nation} {count}" for nation, count in counts.items())
 
     def get_panel_title(self):
         owner = self.province.get("owner", "Unclaimed")

@@ -17,6 +17,10 @@ hanskolmer suggestions:
 - make a way to organize the hanskolmer art in a less confusing way
 - make sure this ui also shows the unit art names
 
+fatass suggestion:
+I mean, why not allow me to click on another province while I'm inside the menu for a province?
+I mean you let me see the map anyway, I should be able to click out if I'm not selecting any troops
+
 REWORK FOLDER UI SO IT USES THE BUILT IN VERSION YOUR OS HAS IF POSSIBLE
 
 - see if the tank production buttons can be compressed like infantry or artillery
@@ -24,7 +28,6 @@ REWORK FOLDER UI SO IT USES THE BUILT IN VERSION YOUR OS HAS IF POSSIBLE
 - seperate artillery research section?
 
 exodus suggestions:
-- integrated puppets can't be customized in tournaments? what's causing this
 - STATISTICS!!!
 - Under "claims on you" only show countries with claims on your territory that currently exist on the world map
 - devastation

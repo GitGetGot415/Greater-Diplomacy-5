@@ -3,12 +3,16 @@
 import os
 import sys
 import unittest
+from types import SimpleNamespace
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from tests.stub_map_screen import StubMapScreen
 from map_logic.diplomacy import diplomacy_logic, diplomacy_messages, volunteers
 from map_logic.turn_processing import combat_processor
+from map_logic.rendering import overlay_renderer
+from map_logic.turn_processing import combat_rules
+from screens.map_related_screens.battle_screen import Battle_Screen
 
 
 def division(owner):
@@ -147,6 +151,31 @@ class VolunteerTests(unittest.TestCase):
         enemy_home["units"] = [unit]
         combat_processor.check_for_post_combat_captures(game)
         self.assertEqual(enemy_home["owner"], "B")
+
+    def test_volunteer_battle_is_donor_controlled_and_gets_an_outlook(self):
+        game = self.game()
+        volunteer = division("A")
+        volunteer["volunteer_host"] = "B"
+        enemy = division("C")
+        province = game.home_of("B")
+        province["units"] = [volunteer, enemy]
+
+        battle = combat_rules.build_battle([province["units"]], game.nation_data)
+        screen = object.__new__(Battle_Screen)
+        screen.player = "A"
+        screen.battle = battle
+        screen.province = province
+        screen.map_screen = SimpleNamespace(tactical_mode=False, player_unit=None)
+
+        lane = battle.lanes[0]
+        self.assertTrue(screen.is_mine(lane.a) or screen.is_mine(lane.b))
+        near, far = screen.near_far(lane)
+        self.assertTrue(screen.is_mine(near))
+        self.assertFalse(screen.is_mine(far))
+        self.assertEqual(
+            overlay_renderer.combat_outlook_color(
+                [province["units"]], game.nation_data, {"A"}, "A"),
+            (255, 255, 0))
 
 
 if __name__ == "__main__":

@@ -32,7 +32,7 @@ COMBAT_BUBBLE_FULL_ALPHA = 160
 COMBAT_BUBBLE_FULL_PREDICTION_ALPHA = 96
 
 
-def combat_strengths(sides, nation_data, friendly_nations):
+def combat_strengths(sides, nation_data, friendly_nations, player_nation=None):
     """What a predicted fight is worth to the player: (friendly, enemy, involved).
 
     Read off combat_rules.build_battle, the same rule the turn resolver fights
@@ -57,8 +57,18 @@ def combat_strengths(sides, nation_data, friendly_nations):
 
     battle = combat_rules.build_battle(sides, nation_data)
     for lane in battle.lanes:
-        mine = [side for side in (lane.a, lane.b)
-                if any(nation in friendly_nations for nation in side.nations)]
+        # A volunteer fights on its host's military side, but remains the
+        # donor's division for control and presentation.  Treat that side as
+        # the player's only in the battle where one of their divisions is
+        # actually present; making the host globally friendly would color
+        # unrelated host battles as though the donor took part in them.
+        def is_friendly_side(side):
+            return (any(nation in friendly_nations for nation in side.nations)
+                    or (player_nation is not None
+                        and any(unit.get("owner") == player_nation
+                                for unit in side.front + side.reserve)))
+
+        mine = [side for side in (lane.a, lane.b) if is_friendly_side(side)]
         # Two friends fighting each other is not a fight you are in either way.
         if len(mine) != 1:
             continue
@@ -72,10 +82,10 @@ def combat_strengths(sides, nation_data, friendly_nations):
     return friendly_atk, enemy_atk, involved
 
 
-def combat_outlook_color(sides, nation_data, friendly_nations):
+def combat_outlook_color(sides, nation_data, friendly_nations, player_nation=None):
     """Return the shared red/yellow/green/grey combat-outlook color."""
     friendly_atk, enemy_atk, involved = combat_strengths(
-        sides, nation_data, friendly_nations)
+        sides, nation_data, friendly_nations, player_nation)
     if not involved:
         return (150, 150, 150)
     if friendly_atk > enemy_atk:
@@ -202,7 +212,8 @@ def combat_bubble_records(map_screen):
             "center": province["center"],
             "category": queries.get_combat_location_category(
                 province, player, map_screen.nation_data),
-            "color": combat_outlook_color(sides, map_screen.nation_data, friendly),
+            "color": combat_outlook_color(
+                sides, map_screen.nation_data, friendly, player),
             "potential": not actual_battle,
             "estimated_turns": estimated_combat_turns(
                 sides, map_screen.nation_data, province=province),
@@ -1182,9 +1193,8 @@ def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,
         surface.blit(final_surf, final_surf.get_rect(center=(sx, int(sy))))
         return
 
-    # 1. Keep each donor's volunteers in their own stack. They use the host's
-    # military colour below, but grouping them with the host's own army makes a
-    # player's divisions impossible to locate on a busy front.
+    # Keep each donor's volunteers in their own stack. They remain visibly the
+    # donor's divisions even though combat and capture use their host side.
     units_by_owner = {}
     for u in units:
         owner = u.get("owner", "Unclaimed")
@@ -1227,8 +1237,7 @@ def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,
 
         unit_count = len(owner_units)
         unit_type = best_unit.get("type", "")
-        owner_color = map_screen.nation_colors.get(
-            queries.get_unit_combat_owner(best_unit) or owner, (200, 200, 200))
+        owner_color = map_screen.nation_colors.get(owner, (200, 200, 200))
         
         # Check if it's a dynamic convoy or truck
         if unit_type.startswith("Convoy"):
