@@ -744,6 +744,10 @@ def update_button_states(map_screen):
                 ca_text = get_status_text("CALL TO ARMS") if pending_action == "CALL_TO_ARMS" else "Call to Arms"
                 set_btn(map_screen.btn_call_to_arms, True, can_call_to_arms or pending_action == "CALL_TO_ARMS", ca_text, "red")
 
+                # A destroyed volunteer has no off-map record to clean up, so
+                # reconcile before deciding whether this is Send or Recall.
+                volunteers.reconcile_deployed_missions(
+                    map_screen, map_screen.player_country)
                 volunteer_state = volunteers.mission_state(map_screen.nation_data, map_screen.player_country, owner)
                 if volunteer_state == volunteers.AWAITING:
                     if pending_action == volunteers.ACTION and pending_turns == 0:

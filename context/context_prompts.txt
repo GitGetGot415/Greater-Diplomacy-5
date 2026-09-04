@@ -31,3 +31,5 @@ Also, if you notice duplicated numbers and such that would probably be better of
 ideally, if it's for something like button placement, it should be stored in the same file it was in instead of moved to constants.py, so if you want to edit it you don't have to go to constants.py
 said variables should be stored close together so it's easy to see where and what they all are
 there are instances where i did end up moving hardcoded stuff to a variable in constants.py instead of on the file locally, and i realize now i kinda regret doing that, so if possible try to stick to that convention i listed above
+
+in addition, if you notice any weird tests that don't seem nessecary (for example a test to ensure a button is in the right place) maybe consider removing it

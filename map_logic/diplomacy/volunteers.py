@@ -50,8 +50,34 @@ def _held_count(mission):
     return len(mission.get("held_units", [])) if isinstance(mission, dict) else 0
 
 
+def reconcile_deployed_missions(map_screen, donor=None):
+    """Discard deployed missions whose last volunteer was destroyed.
+
+    Deployed divisions live only on the map, deliberately avoiding duplicate
+    unit records in the mission save data.  That means combat can destroy the
+    last one without touching the mission dict.  Reconcile at every
+    player-facing capacity/state lookup so the diplomacy button and picker do
+    not wait for the next turn to catch up.
+    """
+    donors = [donor] if donor is not None else list(map_screen.nation_data)
+    for mission_donor in donors:
+        deployed_hosts = [
+            host for host, mission in missions(
+                map_screen.nation_data, mission_donor).items()
+            if mission.get("state") == DEPLOYED]
+        for host in deployed_hosts:
+            still_deployed = any(
+                unit.get("owner") == mission_donor
+                and unit.get("volunteer_host") == host
+                for province in map_screen.map_data.values()
+                for unit in province.get("units", []))
+            if not still_deployed:
+                missions(map_screen.nation_data, mission_donor, writable=True).pop(host, None)
+
+
 def committed_count(map_screen, donor):
     """All of a donor's divisions unavailable as volunteers, across hosts."""
+    reconcile_deployed_missions(map_screen, donor)
     count = 0
     for mission in missions(map_screen.nation_data, donor).values():
         count += _held_count(mission)
@@ -164,6 +190,7 @@ def create_offer(map_screen, donor, host, chosen):
     `chosen` contains the exact (province, unit) objects displayed in the
     checkbox picker, so an index cannot become stale after earlier removals.
     """
+    reconcile_deployed_missions(map_screen, donor)
     legal, reason = is_eligible(donor, host, map_screen.nation_data)
     if not legal:
         return None, reason
@@ -312,10 +339,7 @@ def tick(map_screen):
                 # also being ticked in this same automatic-recall pass.
                 continue
             if state == DEPLOYED:
-                if not any(unit.get("owner") == donor and unit.get("volunteer_host") == host
-                           for province in map_screen.map_data.values()
-                           for unit in province.get("units", [])):
-                    missions(map_screen.nation_data, donor, writable=True).pop(host, None)
+                reconcile_deployed_missions(map_screen, donor)
                 continue
             if state in (OUTBOUND, RETURNING):
                 mission["turns_left"] = mission.get("turns_left", mission.get("travel_turns", 2)) - 1

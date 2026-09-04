@@ -152,6 +152,26 @@ class VolunteerTests(unittest.TestCase):
         combat_processor.check_for_post_combat_captures(game)
         self.assertEqual(enemy_home["owner"], "B")
 
+    def test_destroyed_volunteers_free_capacity_and_clear_the_mission(self):
+        game = self.game()
+        home = game.home_of("A")
+        home["units"] = [division("A") for _ in range(10)]
+        details, error = volunteers.create_offer(
+            game, "A", "B", [(home, home["units"][0])])
+        self.assertFalse(error)
+        diplomacy_logic.toggle_diplomacy_action(
+            game.nation_data, "A", "B", volunteers.ACTION,
+            "We offer a volunteer division.", parameters=details)
+        game.run_turn()
+        game.run_turn()
+        host_home = game.home_of("B")
+        host_home["units"] = [unit for unit in host_home["units"]
+                              if unit.get("owner") != "A"]
+
+        self.assertEqual(volunteers.remaining_capacity(game, "A"), 1)
+        self.assertFalse(volunteers.mission_state(game.nation_data, "A", "B"))
+        self.assertTrue(volunteers.available_units(game, "A"))
+
     def test_volunteer_battle_is_donor_controlled_and_gets_an_outlook(self):
         game = self.game()
         volunteer = division("A")
