@@ -1,6 +1,6 @@
-# Portrait Creators
+# Portrait Copyright Status
 
-| Portrait name | Creator |
+| Portrait name | Status |
 | --- | --- |
 | default_portrait | GitGetGot415 |
 | Ea-Nasir | Public Domain |

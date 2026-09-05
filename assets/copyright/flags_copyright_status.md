@@ -1,6 +1,6 @@
-# Flag Creators
+# Flag Copyright Status
 
-| Flag name | Creator |
+| Flag name | Status |
 | --- | --- |
 | 49ers | Public Domain |
 | Aboriginals | Public Domain |
