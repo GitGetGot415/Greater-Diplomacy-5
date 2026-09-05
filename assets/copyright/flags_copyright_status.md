@@ -47,14 +47,14 @@
 | Atyrau | Public Domain |
 | Aunt Fanny's Hot Pretzels | [!!!] |
 | Australia | Public Domain |
-| Australia-Hungary | [!!!] |
+| Australia-Hungary | Public Domain |
 | Austria | Public Domain |
 | Austria-Hungary | Public Domain |
 | Ayutthaya Kingdom | Public Domain |
 | Azad Hind | Public Domain |
 | Azande | Public Domain |
 | Azerbaijan | Public Domain |
-| Aztec Empire | [???] |
+| Aztec Empire | Public Domain |
 | Bahia | Public Domain |
 | Bahrain | Public Domain |
 | Baja California | Public Domain |
@@ -132,12 +132,12 @@
 | Colorado | Public Domain |
 | Combined Syndicates of America | Kaiserreich |
 | Commune of France | Kaiserreich |
-| Commune of Japan |  |
+| Commune of Japan | Public Domain |
 | Commune of Lemuria | [!!!] |
-| Commune of Spain |  |
+| Commune of Spain | Public Domain |
 | Communist China | Public Domain |
-| Communist Greece |  |
-| Communist Party of India |  |
+| Communist Greece | Public Domain |
+| Communist Party of India | Public Domain |
 | Confederate States of America | Public Domain |
 | Confederate States of America (Battle Flag) | Public Domain |
 | Corporatist Brazil | (kaiserin??? idk) |
@@ -227,7 +227,7 @@
 | Futa Jallon | Public Domain |
 | Gabon | Public Domain |
 | Galicia | Public Domain |
-| Gaul | [???] |
+| Gaul | Public Domain |
 | Georgia | Public Domain |
 | German Empire | Public Domain |
 | German Reich | the hoi4 flag |
@@ -235,11 +235,11 @@
 | Ghana | Public Domain |
 | Gigachad | GitGetGot415 |
 | Glasgow | Public Domain |
-| Gotia | [???] |
+| Gotia | Public Domain |
 | Gran Colombia | Public Domain |
 | Grand Est | Public Domain |
-| Granite | [!!!] |
-| Grass | [!!!] |
+| Granite | Public Domain |
+| Grass | GitGetGot415 |
 | Great Hwan Empire | [!!!] |
 | Great Lakes Republic | [!!!] |
 | Greece | Public Domain |
@@ -256,7 +256,7 @@
 | Hawaii | Public Domain |
 | Hearts in San Francisco | [!!!] |
 | Hearts of San Francisco | GitGetGot415 |
-| Henan | [???] |
+| Henan | Public Domain |
 | Herero | Public Domain |
 | Hokkaido | Public Domain |
 | Holy Britannian Empire | [!!!] |
@@ -388,7 +388,7 @@
 | Montenegro | Public Domain |
 | Morocco | Public Domain |
 | Moscow | Public Domain |
-| Moss | [???] |
+| Moss | Public Domain |
 | Mountainous Republic of the Northern Caucasus | Public Domain |
 | Mozambique | Public Domain |
 | Muscogee | Public Domain |
@@ -432,7 +432,7 @@
 | Oaxaca | Public Domain |
 | Occitania | Public Domain |
 | Oceania | [!!!] |
-| Oceanian Federation |  |
+| Oceanian Federation | Public Domain |
 | Ohio | Public Domain |
 | Oklahoma | Public Domain |
 | Oldegård | Public Domain |
@@ -514,9 +514,9 @@
 | Powell Street | [!!!] |
 | Princely Federation | Kaiserreich |
 | Protectorate of Bohemia and Moravia | Public Domain |
-| Proto-Finnish Holy Roman Khaganate |  |
+| Proto-Finnish Holy Roman Khaganate | Public Domain |
 | Prussia | Public Domain |
-| Ptolemaic Empire | [!!!] |
+| Ptolemaic Empire | Public Domain |
 | Puerto Rico | Public Domain |
 | Punjab | Public Domain |
 | Qatar | Public Domain |
@@ -543,7 +543,7 @@
 | Ripley's Marvelous Mirror Maze | [!!!] |
 | Rojava | Public Domain |
 | Romania | Public Domain |
-| Rome | [???] |
+| Rome | Public Domain |
 | Rondon | Public Domain |
 | Roraima | Public Domain |
 | Russia | Public Domain |
@@ -598,7 +598,7 @@
 | Slovakia | Public Domain |
 | Slovenia | Public Domain |
 | Socialist Republic of Italy | Kaiserreich |
-| Sokoto | [???] |
+| Sokoto | Public Domain |
 | Sokoto Caliphate | Public Domain |
 | Solomon Islands | Public Domain |
 | Somalia | Public Domain |
@@ -616,12 +616,12 @@
 | Spectator | GitGetGot415 |
 | Sri Lanka | Public Domain |
 | SS Jeremiah O'Brien | [!!!] |
-| Stanistan | [!!!] |
+| Stanistan | Public Domain |
 | Sudan | Public Domain |
 | Sudwestafrika | TNO |
-| Sulawesi | [!!!] |
-| Sulawesi Separatists | [!!!] |
-| Sumatra | [!!!] |
+| Sulawesi | Public Domain |
+| Sulawesi Separatists | Public Domain |
+| Sumatra | Public Domain |
 | Sunglass Hut | [!!!] |
 | Suriname | Public Domain |
 | Sverdlovsk | TNO |
