@@ -477,15 +477,15 @@
 | Philippines | Public Domain |
 | Piedmont | Public Domain |
 | Pier 35 | [!!!] |
-| Pier 39 | [!!!] |
+| Pier 39 | Public Domain |
 | Pier 39 Docks | [!!!] |
 | Pier 39 Garage | [!!!] |
-| Pier 39 Marina | [!!!] |
-| Pier 39 Marina Dock 1 | [!!!] |
-| Pier 39 Marina Dock 2 | [!!!] |
-| Pier 39 Marina Dock 3 | [!!!] |
-| Pier 39 Marina Dock 4 | [!!!] |
-| Pier 39 Marina Dock 5 | [!!!] |
+| Pier 39 Marina | Public Domain |
+| Pier 39 Marina Dock 1 | Public Domain |
+| Pier 39 Marina Dock 2 | Public Domain |
+| Pier 39 Marina Dock 3 | Public Domain |
+| Pier 39 Marina Dock 4 | Public Domain |
+| Pier 39 Marina Dock 5 | Public Domain |
 | Pier 39 Playground | [!!!] |
 | Pier 41 Ferry Terminal | [!!!] |
 | Pier 41 Wooden Pier | [!!!] |
