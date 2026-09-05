@@ -1,14 +1,12 @@
 # Flag Creators
 
-`[!!!]` indicates a likely copyrighted, trademarked, photographic, or third-party design that should be replaced
-
 | Flag name | Artist |
 | --- | --- |
 | 49ers | Public Domain |
 | Aboriginals | Public Domain |
 | Abyssonia | Public Domain |
 | Achaemenid Empire | Public Domain |
-| Adventure Cat Sailing Charters | [!!!] |
+| Adventure Cat Sailing Charters | Public Domain |
 | Afghanistan | Public Domain |
 | Afrika Korps | Public Domain |
 | Aktobe | Public Domain |
@@ -17,7 +15,7 @@
 | Alaska | Public Domain |
 | Albania | Public Domain |
 | Alberta | Public Domain |
-| Aleenk Technologies | [!!!] |
+| Aleenk Technologies | Public Domain |
 | Algeria | Public Domain |
 | Almaty | Public Domain |
 | Alsace-Lorraine | Public Domain |
@@ -33,19 +31,19 @@
 | Antalya | Public Domain |
 | Antofagasta | Public Domain |
 | Apulia | Public Domain |
-| Aquarium of the Bay | [!!!] |
+| Aquarium of the Bay | Public Domain |
 | Aragon | Public Domain |
 | Argentina | Public Domain |
 | Arizona | Public Domain |
 | Arkhangelsk | Public Domain |
 | Arkhangelsk Governorate | Public Domain |
 | Armenia | Public Domain |
-| Artly Robot Coffee | [!!!] |
+| Artly Robot Coffee | Public Domain |
 | Aruba | Public Domain |
-| Atalia's Gelato | [!!!] |
-| Atlantis | [!!!] |
+| Atalia's Gelato | Public Domain |
+| Atlantis | Public Domain |
 | Atyrau | Public Domain |
-| Aunt Fanny's Hot Pretzels | [!!!] |
+| Aunt Fanny's Hot Pretzels | Public Domain |
 | Australia | Public Domain |
 | Australia-Hungary | Public Domain |
 | Austria | Public Domain |
@@ -64,41 +62,41 @@
 | Batavian Commune | Kaiserreich |
 | Bathrooms | Public Domain |
 | Bavaria | Public Domain |
-| Bay Plunge | [!!!] |
+| Bay Plunge | Public Domain |
 | Bay Walk | GitGetGot415 |
-| Beach Street | [!!!] |
+| Beach Street | Public Domain |
 | Beijing | Public Domain |
 | Belarus | Public Domain |
 | Belgian Congo | Public Domain |
 | Belgium | Public Domain |
 | Belize | Public Domain |
-| Ben and Jerry's | [!!!] |
+| Ben and Jerry's | Public Domain |
 | Benin | Public Domain |
 | Bharatiya Commune | Kaiserreich |
 | Bhutan | Public Domain |
-| Biscoff Coffee Corner | [!!!] |
-| Blazing Saddles | [!!!] |
+| Biscoff Coffee Corner | Public Domain |
+| Blazing Saddles | Public Domain |
 | Bohemia | Kaiserreich |
 | Bolivia | Public Domain |
 | Bornu | Public Domain |
 | Bosnia and Herzegovina | Public Domain |
 | Botswana | Public Domain |
-| Boudin Bakery | [!!!] |
+| Boudin Bakery | Public Domain |
 | Brazil | Public Domain |
 | Bremen | Public Domain |
-| Bridge | [!!!] |
+| Bridge | Public Domain |
 | British America | Public Domain |
 | British Columbia | Public Domain |
 | British Malaya | Public Domain |
 | British Raj | Public Domain |
-| British-Japanese Empire | [!!!] |
+| British-Japanese Empire | Public Domain |
 | Brittany | Public Domain |
 | Brunei | Public Domain |
 | Brunswick | Public Domain |
-| Bubba Gump Shrimp Co. | [!!!] |
+| Bubba Gump Shrimp Co. | Public Domain |
 | Buenos Aires | Public Domain |
 | Buganda | Public Domain |
-| Build-A-Bear Workshop | [!!!] |
+| Build-A-Bear Workshop | Public Domain |
 | Bukhara | Public Domain |
 | Bulgaria | Public Domain |
 | Burkina Faso | Public Domain |
@@ -110,7 +108,7 @@
 | Cameroon | Public Domain |
 | Cameroon African State | TNO |
 | Canada | Public Domain |
-| Candy Baron | [!!!] |
+| Candy Baron | Public Domain |
 | Carthage | Public Domain |
 | Catalonia | Public Domain |
 | Caucasus | Public Domain |
@@ -123,17 +121,17 @@
 | Chile | Public Domain |
 | Chokwe | Public Domain |
 | Chongqing | Public Domain |
-| Chowder's | [!!!] |
-| Christmas in San Francisco | [!!!] |
+| Chowder's | Public Domain |
+| Christmas in San Francisco | Public Domain |
 | Christmas Island | Public Domain |
 | Circassia | Public Domain |
-| Clothing Store | [!!!] |
+| Clothing Store | Public Domain |
 | Colombia | Public Domain |
 | Colorado | Public Domain |
 | Combined Syndicates of America | Kaiserreich |
 | Commune of France | Kaiserreich |
 | Commune of Japan | Public Domain |
-| Commune of Lemuria | [!!!] |
+| Commune of Lemuria | Public Domain |
 | Commune of Spain | Public Domain |
 | Communist China | Public Domain |
 | Communist Greece | Public Domain |
@@ -144,9 +142,9 @@
 | Corsica | Public Domain |
 | Cossacks | Public Domain |
 | Costa Rica | Public Domain |
-| Cousins Maine Lobster | [!!!] |
-| Crab House at Pier 39 | [!!!] |
-| Crepe Cafe | [!!!] |
+| Cousins Maine Lobster | Public Domain |
+| Crab House at Pier 39 | Public Domain |
+| Crepe Cafe | Public Domain |
 | Crimea | Public Domain |
 | Croatia | Public Domain |
 | Croissant Republic | lukionut |
@@ -154,7 +152,7 @@
 | Curaçao | Public Domain |
 | Cyprus | Public Domain |
 | Czechia | Public Domain |
-| Czechochechnyaslovenoslovakia | [!!!] |
+| Czechochechnyaslovenoslovakia | Public Domain |
 | Czechoslovakia | Public Domain |
 | Danubia | Kaiserreich |
 | Danzig | Public Domain |
@@ -172,9 +170,9 @@
 | Dutch East India Company | Public Domain |
 | Dutch East Indies | Public Domain |
 | Ea-Nasir | Public Domain |
-| Eagle Cafe | [!!!] |
+| Eagle Cafe | Public Domain |
 | East African Federation | Public Domain |
-| East Asia | [!!!] |
+| East Asia | Public Domain |
 | East Germany | Public Domain |
 | East Timor | Public Domain |
 | Eastern Sanctuaries | Public Domain |
@@ -182,16 +180,16 @@
 | Edinburgh | Public Domain |
 | Egypt | Public Domain |
 | El Salvador | Public Domain |
-| Embarcadero | [!!!] |
-| Embarcadero 1 | [!!!] |
-| Embarcadero 2 | [!!!] |
-| Embarcadero 3 | [!!!] |
-| Embarcadero 4 | [!!!] |
-| Embarcadero 5 | [!!!] |
-| Embarcadero 6 | [!!!] |
-| Embarcadero 7 | [!!!] |
-| Embarcadero 8 | [!!!] |
-| Embarcadero 9 | [!!!] |
+| Embarcadero | Public Domain |
+| Embarcadero 1 | Public Domain |
+| Embarcadero 2 | Public Domain |
+| Embarcadero 3 | Public Domain |
+| Embarcadero 4 | Public Domain |
+| Embarcadero 5 | Public Domain |
+| Embarcadero 6 | Public Domain |
+| Embarcadero 7 | Public Domain |
+| Embarcadero 8 | Public Domain |
+| Embarcadero 9 | Public Domain |
 | Emirate of Afghanistan | Public Domain |
 | Emirate of Bukhara | Public Domain |
 | Emirate of Cyrenaica | Public Domain |
@@ -199,31 +197,31 @@
 | Emirate of Nedj and Hasa | Public Domain |
 | Empire of Brazil | Public Domain |
 | England | Public Domain |
-| Enlightenment | [!!!] |
+| Enlightenment | Public Domain |
 | Equatorial Guinea | Public Domain |
 | Eritrea | Public Domain |
-| Ess Eff Gift Shop | [!!!] |
+| Ess Eff Gift Shop | Public Domain |
 | Estonia | Public Domain |
 | Eswatini | Public Domain |
 | Ethiopia | Public Domain |
 | European Union | Public Domain |
-| Expedition | [!!!] |
+| Expedition | Public Domain |
 | Fatmid Caliphate | Public Domain |
-| FIFA World Cup Store | [!!!] |
+| FIFA World Cup Store | Public Domain |
 | Fiji | Public Domain |
 | Finland | Public Domain |
-| Fisherman's Wharf Welcome Center | [!!!] |
+| Fisherman's Wharf Welcome Center | Public Domain |
 | Florida | Public Domain |
-| Flyer Thrill Zone | [!!!] |
+| Flyer Thrill Zone | Public Domain |
 | France | Public Domain |
-| Frankie's Crab Stand | [!!!] |
+| Frankie's Crab Stand | Public Domain |
 | Free France | Public Domain |
 | French Guiana | Public Domain |
 | French Indochina | Public Domain |
 | French Madagascar | Public Domain |
 | French Polynesia | Public Domain |
 | French Sudan | Public Domain |
-| Fun Food Factory | [!!!] |
+| Fun Food Factory | Public Domain |
 | Futa Jallon | Public Domain |
 | Gabon | Public Domain |
 | Galicia | Public Domain |
@@ -240,8 +238,8 @@
 | Grand Est | Public Domain |
 | Granite | Public Domain |
 | Grass | GitGetGot415 |
-| Great Hwan Empire | [!!!] |
-| Great Lakes Republic | [!!!] |
+| Great Hwan Empire | Public Domain |
+| Great Lakes Republic | Public Domain |
 | Greece | Public Domain |
 | Greenland | Public Domain |
 | Guangxi Clique | Public Domain |
@@ -251,26 +249,26 @@
 | Guyana | Public Domain |
 | Haiti | Public Domain |
 | Hamburg | Public Domain |
-| Happy Bubbles | [!!!] |
-| Hard Rock Cafe | [!!!] |
+| Happy Bubbles | Public Domain |
+| Hard Rock Cafe | Public Domain |
 | Hawaii | Public Domain |
-| Hearts in San Francisco | [!!!] |
+| Hearts in San Francisco | Public Domain |
 | Hearts of San Francisco | GitGetGot415 |
 | Henan | Public Domain |
 | Herero | Public Domain |
 | Hokkaido | Public Domain |
-| Holy Britannian Empire | [!!!] |
+| Holy Britannian Empire | Public Domain |
 | Holy Roman Empire | Public Domain |
 | Honduras | Public Domain |
-| Humble Sea Brewing Co. | [!!!] |
+| Humble Sea Brewing Co. | Public Domain |
 | Hunan Clique | Public Domain |
 | Hungary | Public Domain |
-| I Love SF | [!!!] |
-| Iberia | [!!!] |
+| I Love SF | Public Domain |
+| Iberia | Public Domain |
 | Iceland | Public Domain |
 | Ilkhanate | Public Domain |
 | Illinois | Public Domain |
-| Image Arts | [!!!] |
+| Image Arts | Public Domain |
 | India | Public Domain |
 | Indonesia | Public Domain |
 | Intersection | Public Domain |
@@ -283,15 +281,15 @@
 | Iroquois Confederacy | Public Domain |
 | Islamic Republic of Japan | Public Domain |
 | Israel | Public Domain |
-| Italian East Africa | [!!!] |
+| Italian East Africa | Public Domain |
 | Italy | Public Domain |
 | Ivory Coast | Public Domain |
 | Jamaica | Public Domain |
 | Japan | Public Domain |
 | Japanese Empire | Public Domain |
-| Japanese Pacific States | [!!!] |
+| Japanese Pacific States | Public Domain |
 | Java | Public Domain |
-| Jefferson Street | [!!!] |
+| Jefferson Street | Public Domain |
 | Jordan | Public Domain |
 | Joseon | Public Domain |
 | Kalat | Public Domain |
@@ -350,8 +348,8 @@
 | Madagascar | Public Domain |
 | Madrid | Public Domain |
 | Magadan | TNO |
-| Magnetron | [!!!] |
-| Magowan's Infinite Mirror Maze | [!!!] |
+| Magnetron | Public Domain |
+| Magowan's Infinite Mirror Maze | Public Domain |
 | Maine | Public Domain |
 | Majapahit | Public Domain |
 | Malagasy Protectorate | Public Domain |
@@ -366,12 +364,12 @@
 | Maranhão | Public Domain |
 | Maratha Empire | Public Domain |
 | Marshall Islands | Public Domain |
-| Mason Street | [!!!] |
+| Mason Street | Public Domain |
 | Mato Grosso | Public Domain |
 | Mauritania | Public Domain |
 | Mauryan Empire | Public Domain |
 | Mecklenburg | Public Domain |
-| Mega City One | [!!!] |
+| Mega City One | Public Domain |
 | Mende | Public Domain |
 | Mengjiang | Public Domain |
 | Merina | Public Domain |
@@ -396,13 +394,13 @@
 | Namibia | Public Domain |
 | Naples | Public Domain |
 | Napoleonic France | Public Domain |
-| Nathan's Hot Dog Cart | [!!!] |
+| Nathan's Hot Dog Cart | Public Domain |
 | National France | Kaiserreich |
 | Nationalist China | Public Domain |
 | Nebraska | Public Domain |
 | Nepal | Public Domain |
-| Neptune Society | [!!!] |
-| Neptune's Palace | [!!!] |
+| Neptune Society | Public Domain |
+| Neptune's Palace | Public Domain |
 | Netherlands | Public Domain |
 | Nevada | Public Domain |
 | New Brunswick | Public Domain |
@@ -417,7 +415,7 @@
 | Nicaragua | Public Domain |
 | Niger | Public Domain |
 | Nigeria | Public Domain |
-| Nigerian Commune | [!!!] |
+| Nigerian Commune | Public Domain |
 | Normandy | Public Domain |
 | North Carolina | Public Domain |
 | North German Confederation | Public Domain |
@@ -431,7 +429,7 @@
 | Nunavut | Public Domain |
 | Oaxaca | Public Domain |
 | Occitania | Public Domain |
-| Oceania | [!!!] |
+| Oceania | Public Domain |
 | Oceanian Federation | Public Domain |
 | Ohio | Public Domain |
 | Oklahoma | Public Domain |
@@ -446,7 +444,7 @@
 | Orsk | TNO |
 | Ostafrika | TNO |
 | Ottoman Empire | Public Domain |
-| Pacific Islands Forum | [!!!] |
+| Pacific Islands Forum | Public Domain |
 | Pacific States of America | Kaiserreich |
 | Pakistan | Public Domain |
 | Palestine | Public Domain |
@@ -456,42 +454,42 @@
 | Pará | Public Domain |
 | Paraguay | Public Domain |
 | Paris | Public Domain |
-| Parking Lot | [!!!] |
-| Parking Lot 1 | [!!!] |
-| Parking Lot 2 | [!!!] |
-| Parking Lot 3 | [!!!] |
-| Parking Lot 4 | [!!!] |
-| Parking Lot 5 | [!!!] |
-| Parking Lot 6 | [!!!] |
-| Parking Lot 7 | [!!!] |
-| Parking Lot 8 | [!!!] |
-| Parking Lot 9 | [!!!] |
+| Parking Lot | Public Domain |
+| Parking Lot 1 | Public Domain |
+| Parking Lot 2 | Public Domain |
+| Parking Lot 3 | Public Domain |
+| Parking Lot 4 | Public Domain |
+| Parking Lot 5 | Public Domain |
+| Parking Lot 6 | Public Domain |
+| Parking Lot 7 | Public Domain |
+| Parking Lot 8 | Public Domain |
+| Parking Lot 9 | Public Domain |
 | Parthian Empire | Public Domain |
 | Patagonian Workers Front | Kaiserreich |
-| Pearl Factory | [!!!] |
+| Pearl Factory | Public Domain |
 | Pennsylvania | Public Domain |
-| Pepper Paradise Hot Sauce & More | [!!!] |
+| Pepper Paradise Hot Sauce & More | Public Domain |
 | Perth | Public Domain |
 | Peru | Public Domain |
 | Philadelphia | Public Domain |
 | Philippines | Public Domain |
 | Piedmont | Public Domain |
-| Pier 35 | [!!!] |
+| Pier 35 | Public Domain |
 | Pier 39 | Public Domain |
-| Pier 39 Docks | [!!!] |
-| Pier 39 Garage | [!!!] |
+| Pier 39 Docks | Public Domain |
+| Pier 39 Garage | Public Domain |
 | Pier 39 Marina | Public Domain |
 | Pier 39 Marina Dock 1 | Public Domain |
 | Pier 39 Marina Dock 2 | Public Domain |
 | Pier 39 Marina Dock 3 | Public Domain |
 | Pier 39 Marina Dock 4 | Public Domain |
 | Pier 39 Marina Dock 5 | Public Domain |
-| Pier 39 Playground | [!!!] |
-| Pier 41 Ferry Terminal | [!!!] |
-| Pier 41 Wooden Pier | [!!!] |
-| Pier 43 Ferry Arch | [!!!] |
-| Pier 43 Promenade | [!!!] |
-| Pier Market Seafood Restaurant | [!!!] |
+| Pier 39 Playground | Public Domain |
+| Pier 41 Ferry Terminal | Public Domain |
+| Pier 41 Wooden Pier | Public Domain |
+| Pier 43 Ferry Arch | Public Domain |
+| Pier 43 Promenade | Public Domain |
+| Pier Market Seafood Restaurant | Public Domain |
 | Pier Protection Barrier 1 | GitGetGot415 |
 | Pier Protection Barrier 2 | GitGetGot415 |
 | Pier Protection Barrier 3 | GitGetGot415 |
@@ -503,15 +501,15 @@
 | Pier Protection Barrier 9 | GitGetGot415 |
 | Pier Protection Barriers | GitGetGot415 |
 | Pilbara | Public Domain |
-| Players Sports Grill & Arcade | [!!!] |
-| Plaza de California | [!!!] |
-| Pocatello | [!!!] |
+| Players Sports Grill & Arcade | Public Domain |
+| Plaza de California | Public Domain |
+| Pocatello | Public Domain |
 | Poland | Public Domain |
 | Polish-Lithuanian Commonwealth | Public Domain |
-| Pollo Campero | [!!!] |
+| Pollo Campero | Public Domain |
 | Pomerania | Public Domain |
 | Portugal | Public Domain |
-| Powell Street | [!!!] |
+| Powell Street | Public Domain |
 | Princely Federation | Kaiserreich |
 | Protectorate of Bohemia and Moravia | Public Domain |
 | Proto-Finnish Holy Roman Khaganate | Public Domain |
@@ -523,7 +521,7 @@
 | Qing Dynasty | Public Domain |
 | Quebec | Public Domain |
 | Queensland | Public Domain |
-| Quick Tag | [!!!] |
+| Quick Tag | Public Domain |
 | Rahanweyn | Public Domain |
 | Ramp | GitGetGot415 |
 | Reichskommissariat Kaukasien | TNO??? |
@@ -540,7 +538,7 @@
 | Rhodesia | Public Domain |
 | Rio de Janeiro | Public Domain |
 | Rio Grande | Public Domain |
-| Ripley's Marvelous Mirror Maze | [!!!] |
+| Ripley's Marvelous Mirror Maze | Public Domain |
 | Rojava | Public Domain |
 | Romania | Public Domain |
 | Rome | Public Domain |
@@ -555,26 +553,26 @@
 | Salta | Public Domain |
 | Sámi | Public Domain |
 | San Francisco | Public Domain |
-| San Francisco Carousel | [!!!] |
-| San Francisco Cruises | [!!!] |
+| San Francisco Carousel | Public Domain |
+| San Francisco Cruises | Public Domain |
 | Santiago | Public Domain |
 | Sarawak | Public Domain |
 | Sardinia | Public Domain |
 | Saskatchewan | Public Domain |
 | Saudi Arabia | Public Domain |
 | Saxony | Public Domain |
-| Scary Russian Empire | [!!!] |
+| Scary Russian Empire | Public Domain |
 | Scotland | Public Domain |
-| Scrumptious | [!!!] |
-| Sea Lion Statue | [!!!] |
-| Sea Lion Viewing Area | [!!!] |
-| Sea Lions | [!!!] |
+| Scrumptious | Public Domain |
+| Sea Lion Statue | Public Domain |
+| Sea Lion Viewing Area | Public Domain |
+| Sea Lions | Public Domain |
 | Senegal | Public Domain |
 | Serbia | Public Domain |
 | Shangdong Clique | Kaiserreich |
 | Shanghai | Public Domain |
 | Shanxi | TNO |
-| Shirtique & Krazy Kaps | [!!!] |
+| Shirtique & Krazy Kaps | Public Domain |
 | Siberia | Public Domain |
 | Siberian Black Army | TNO |
 | Sichuan Clique | Public Domain |
@@ -594,7 +592,7 @@
 | Silesia | Public Domain |
 | Sinaloa | Public Domain |
 | Sinaloa Cartel | Public Domain |
-| Skystar Wheel | [!!!] |
+| Skystar Wheel | Public Domain |
 | Slovakia | Public Domain |
 | Slovenia | Public Domain |
 | Socialist Republic of Italy | Kaiserreich |
@@ -615,21 +613,21 @@
 | Sparta | Public Domain |
 | Spectator | GitGetGot415 |
 | Sri Lanka | Public Domain |
-| SS Jeremiah O'Brien | [!!!] |
+| SS Jeremiah O'Brien | Public Domain |
 | Stanistan | Public Domain |
 | Sudan | Public Domain |
 | Sudwestafrika | TNO |
 | Sulawesi | Public Domain |
 | Sulawesi Separatists | Public Domain |
 | Sumatra | Public Domain |
-| Sunglass Hut | [!!!] |
+| Sunglass Hut | Public Domain |
 | Suriname | Public Domain |
 | Sverdlovsk | TNO |
 | Sweden | Public Domain |
-| Swiss Louis Italian And Seafood Restaurant | [!!!] |
+| Swiss Louis Italian And Seafood Restaurant | Public Domain |
 | Switzerland | Public Domain |
 | Syria | Public Domain |
-| Taco Cantina | [!!!] |
+| Taco Cantina | Public Domain |
 | Taiwan | Public Domain |
 | Tajikistan | Public Domain |
 | Taliban | Public Domain |
@@ -644,15 +642,15 @@
 | Texas | Public Domain |
 | Thailand | Public Domain |
 | The Bahamas | Public Domain |
-| The Crystal Shop | [!!!] |
-| The Escape Game | [!!!] |
-| The Fudgery | [!!!] |
+| The Crystal Shop | Public Domain |
+| The Escape Game | Public Domain |
+| The Fudgery | Public Domain |
 | The Gambia | Public Domain |
-| The Hook | [!!!] |
+| The Hook | Public Domain |
 | The Rot | Public Domain |
-| The SF Sock Market | [!!!] |
-| THE SOCIALITE KITCHEN & BREWERY | [!!!] |
-| The Spice & Tea Exchange | [!!!] |
+| The SF Sock Market | Public Domain |
+| THE SOCIALITE KITCHEN & BREWERY | Public Domain |
+| The Spice & Tea Exchange | Public Domain |
 | Thirteen Colonies | Public Domain |
 | Tibet | Public Domain |
 | Tierra del Fuego | Public Domain |
@@ -665,8 +663,8 @@
 | Transylvania | Public Domain |
 | Trazbon | Public Domain |
 | Trinidad and Tobago | Public Domain |
-| Trish's Chocolate | [!!!] |
-| Trish's Mini Donuts | [!!!] |
+| Trish's Chocolate | Public Domain |
+| Trish's Mini Donuts | Public Domain |
 | Trucial States | Public Domain |
 | Tuareg | Public Domain |
 | Tunisia | Public Domain |
@@ -676,21 +674,21 @@
 | Tyumen | TNO |
 | Uganda | Public Domain |
 | Ukraine | Public Domain |
-| Under the Golden Gate | [!!!] |
+| Under the Golden Gate | Public Domain |
 | Union of Britain | Kaiserreich |
 | Union of South Africa | Public Domain |
 | United Arab Emirates | Public Domain |
 | United Baltic Dutchy | Kaiserreich |
-| United Colonies | [!!!] |
+| United Colonies | Public Domain |
 | United Kingdom | Public Domain |
-| United Nations | [!!!] |
+| United Nations | Public Domain |
 | United States of America | Public Domain |
 | Ural League | TNO |
 | Uruguay | Public Domain |
 | Utah | Public Domain |
 | Uzbekistan | Public Domain |
 | Valencia | Public Domain |
-| Vanishing Inc. Magic Shop | [!!!] |
+| Vanishing Inc. Magic Shop | Public Domain |
 | Vanuatu | Public Domain |
 | Vatican | Public Domain |
 | Venezuela | Public Domain |
@@ -702,8 +700,8 @@
 | Vikramaditya | Public Domain |
 | Vinland | Public Domain |
 | Virginia | Public Domain |
-| Vitality O2 Bar & Aqua Massage | [!!!] |
-| Vlahos Orchard | [!!!] |
+| Vitality O2 Bar & Aqua Massage | Public Domain |
+| Vlahos Orchard | Public Domain |
 | Volgograd | Public Domain |
 | Vorkuta | TNO |
 | Voroniya | Public Domain |
@@ -719,7 +717,7 @@
 | Western Sahara | Public Domain |
 | White Kaganate | Public Domain |
 | White Ruthenia | Public Domain |
-| Wine Tasting on the Bay | [!!!] |
+| Wine Tasting on the Bay | Public Domain |
 | Wisconsin | Public Domain |
 | Wooden Sidewalk | GitGetGot415 |
 | Wooden Sidewalk 1 | GitGetGot415 |
@@ -746,7 +744,7 @@
 | Yakutia | TNO |
 | Yemen | Public Domain |
 | York | Public Domain |
-| Yuan | [!!!] |
+| Yuan | Public Domain |
 | Yucatan | Public Domain |
 | Yugoslavia | Public Domain |
 | Yunnan | Public Domain |
@@ -757,7 +755,7 @@
 | Zapatistas | Public Domain |
 | Zentralafrika | TNO |
 | Zhili | Public Domain |
-| Zilkhstan | [!!!] |
+| Zilkhstan | Public Domain |
 | Zimbabwe | Public Domain |
 | Zlatoust | TNO |
 | Zulu | Public Domain |
