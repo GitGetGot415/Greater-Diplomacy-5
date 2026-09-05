@@ -1,6 +1,6 @@
 # Flag Creators
 
-| Flag name | Artist |
+| Flag name | Creator |
 | --- | --- |
 | 49ers | Public Domain |
 | Aboriginals | Public Domain |
@@ -21,7 +21,7 @@
 | Alsace-Lorraine | Public Domain |
 | Alto Rio Negro | Public Domain |
 | Amapá | Public Domain |
-| American Territory of Canada | (kaiserin??? idk) |
+| American Territory of Canada | neptune2019 |
 | American Union State | Kaiserreich |
 | Amur | TNO |
 | Anarchist Commune of America | Kaiserreich |
@@ -138,7 +138,7 @@
 | Communist Party of India | Public Domain |
 | Confederate States of America | Public Domain |
 | Confederate States of America (Battle Flag) | Public Domain |
-| Corporatist Brazil | (kaiserin??? idk) |
+| Corporatist Brazil | neptune2019 |
 | Corsica | Public Domain |
 | Cossacks | Public Domain |
 | Costa Rica | Public Domain |
@@ -228,10 +228,10 @@
 | Gaul | Public Domain |
 | Georgia | Public Domain |
 | German Empire | Public Domain |
-| German Reich | the hoi4 flag |
+| German Reich | Paradox |
 | Germany | Public Domain |
 | Ghana | Public Domain |
-| Gigachad | GitGetGot415 |
+| Gigachad | Public Domain |
 | Glasgow | Public Domain |
 | Gotia | Public Domain |
 | Gran Colombia | Public Domain |
@@ -454,16 +454,16 @@
 | Pará | Public Domain |
 | Paraguay | Public Domain |
 | Paris | Public Domain |
-| Parking Lot | Public Domain |
-| Parking Lot 1 | Public Domain |
-| Parking Lot 2 | Public Domain |
-| Parking Lot 3 | Public Domain |
-| Parking Lot 4 | Public Domain |
-| Parking Lot 5 | Public Domain |
-| Parking Lot 6 | Public Domain |
-| Parking Lot 7 | Public Domain |
-| Parking Lot 8 | Public Domain |
-| Parking Lot 9 | Public Domain |
+| Parking Lot | GitGetGot415 |
+| Parking Lot 1 | GitGetGot415 |
+| Parking Lot 2 | GitGetGot415 |
+| Parking Lot 3 | GitGetGot415 |
+| Parking Lot 4 | GitGetGot415 |
+| Parking Lot 5 | GitGetGot415 |
+| Parking Lot 6 | GitGetGot415 |
+| Parking Lot 7 | GitGetGot415 |
+| Parking Lot 8 | GitGetGot415 |
+| Parking Lot 9 | GitGetGot415 |
 | Parthian Empire | Public Domain |
 | Patagonian Workers Front | Kaiserreich |
 | Pearl Factory | Public Domain |
@@ -524,13 +524,13 @@
 | Quick Tag | Public Domain |
 | Rahanweyn | Public Domain |
 | Ramp | GitGetGot415 |
-| Reichskommissariat Kaukasien | TNO??? |
-| Reichskommissariat Moskowien | TNO??? |
-| Reichskommissariat Norwegen | TNO??? |
-| Reichskommissariat Ostland | TNO??? |
-| Reichskommissariat Sweden | TNO??? |
-| Reichskommissariat Ukraine | TNO??? |
-| Reichskommissariat Ungarn | TNO??? |
+| Reichskommissariat Kaukasien | TNO |
+| Reichskommissariat Moskowien | TNO |
+| Reichskommissariat Norwegen | TNO |
+| Reichskommissariat Ostland | TNO |
+| Reichskommissariat Skandinavien | TNO |
+| Reichskommissariat Ukraine | TNO |
+| Reichskommissariat Ungarn | Public Domain |
 | Reno | Public Domain |
 | Republic of South Africa | Public Domain |
 | Republic of the Congo | Public Domain |

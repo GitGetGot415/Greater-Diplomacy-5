@@ -1,8 +1,8 @@
 # Portrait Creators
 
-| Portrait name | Artist |
+| Portrait name | Creator |
 | --- | --- |
 | default_portrait | GitGetGot415 |
 | Ea-Nasir | Public Domain |
-| Gigachad | GitGetGot415 |
-| The Rot | GitGetGot415 |
+| Gigachad | Public Domain |
+| The Rot | Public Domain |
