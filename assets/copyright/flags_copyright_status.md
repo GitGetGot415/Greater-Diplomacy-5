@@ -43,11 +43,11 @@
 | Artly Robot Coffee | [!!!] |
 | Aruba | Public Domain |
 | Atalia's Gelato | [!!!] |
-| Atlantis |  |
+| Atlantis | [!!!] |
 | Atyrau | Public Domain |
 | Aunt Fanny's Hot Pretzels | [!!!] |
 | Australia | Public Domain |
-| Australia-Hungary |  |
+| Australia-Hungary | [!!!] |
 | Austria | Public Domain |
 | Austria-Hungary | Public Domain |
 | Ayutthaya Kingdom | Public Domain |
@@ -62,12 +62,12 @@
 | Barotseland | Public Domain |
 | Basque Country | Public Domain |
 | Batavian Commune | Kaiserreich |
-| Bathrooms |  |
+| Bathrooms | Public Domain |
 | Bavaria | Public Domain |
 | Bay Plunge | [!!!] |
 | Bay Walk | GitGetGot415 |
 | Beach Street | [!!!] |
-| Beijing |  |
+| Beijing | Public Domain |
 | Belarus | Public Domain |
 | Belgian Congo | Public Domain |
 | Belgium | Public Domain |
@@ -78,7 +78,7 @@
 | Bhutan | Public Domain |
 | Biscoff Coffee Corner | [!!!] |
 | Blazing Saddles | [!!!] |
-| Bohemia |  |
+| Bohemia | Kaiserreich |
 | Bolivia | Public Domain |
 | Bornu | Public Domain |
 | Bosnia and Herzegovina | Public Domain |
@@ -86,7 +86,7 @@
 | Boudin Bakery | [!!!] |
 | Brazil | Public Domain |
 | Bremen | Public Domain |
-| Bridge |  |
+| Bridge | [!!!] |
 | British America | Public Domain |
 | British Columbia | Public Domain |
 | British Malaya | Public Domain |
@@ -133,7 +133,7 @@
 | Combined Syndicates of America | Kaiserreich |
 | Commune of France | Kaiserreich |
 | Commune of Japan |  |
-| Commune of Lemuria |  |
+| Commune of Lemuria | [!!!] |
 | Commune of Spain |  |
 | Communist China |  |
 | Communist Greece |  |
@@ -168,8 +168,8 @@
 | Dominican Republic | Public Domain |
 | Dominion of Canada | Public Domain |
 | Durango | Public Domain |
-| Dutch America |  |
-| Dutch East India Company |  |
+| Dutch America | [???] |
+| Dutch East India Company | Public Domain |
 | Dutch East Indies | Public Domain |
 | Ea-Nasir | Public Domain |
 | Eagle Cafe | [!!!] |
@@ -192,7 +192,7 @@
 | Embarcadero 7 | [!!!] |
 | Embarcadero 8 | [!!!] |
 | Embarcadero 9 | [!!!] |
-| Emirate of Afghanistan |  |
+| Emirate of Afghanistan | [???] |
 | Emirate of Bukhara | Public Domain |
 | Emirate of Cyrenaica | Public Domain |
 | Emirate of Jabal Shammar | Public Domain |
@@ -227,7 +227,7 @@
 | Futa Jallon | Public Domain |
 | Gabon | Public Domain |
 | Galicia | Public Domain |
-| Gaul |  |
+| Gaul | [???] |
 | Georgia | Public Domain |
 | German Empire | Public Domain |
 | German Reich | the hoi4 flag |
@@ -240,11 +240,11 @@
 | Grand Est | Public Domain |
 | Granite | [!!!] |
 | Grass | [!!!] |
-| Great Hwan Empire |  |
-| Great Lakes Republic |  |
+| Great Hwan Empire | [!!!] |
+| Great Lakes Republic | [!!!] |
 | Greece | Public Domain |
 | Greenland | Public Domain |
-| Guangxi Clique |  |
+| Guangxi Clique | Public Domain |
 | Guatemala | Public Domain |
 | Guinea | Public Domain |
 | Guinea-Bissau | Public Domain |
@@ -256,24 +256,24 @@
 | Hawaii | Public Domain |
 | Hearts in San Francisco | [!!!] |
 | Hearts of San Francisco | [!!!] |
-| Henan |  |
+| Henan | [???] |
 | Herero | Public Domain |
 | Hokkaido | Public Domain |
 | Holy Britannian Empire | [!!!] |
 | Holy Roman Empire | Public Domain |
 | Honduras | Public Domain |
 | Humble Sea Brewing Co. | [!!!] |
-| Hunan Clique |  |
+| Hunan Clique | Public Domain |
 | Hungary | Public Domain |
 | I Love SF | [!!!] |
-| Iberia |  |
+| Iberia | [!!!] |
 | Iceland | Public Domain |
-| Ilkhanate |  |
+| Ilkhanate | Public Domain |
 | Illinois | Public Domain |
 | Image Arts | [!!!] |
 | India | Public Domain |
 | Indonesia | Public Domain |
-| Intersection |  |
+| Intersection | Public Domain |
 | Iowa | Public Domain |
 | Iqutios | Public Domain |
 | Iran | Public Domain |
@@ -281,7 +281,7 @@
 | Ireland | Public Domain |
 | Irkutsk | TNO |
 | Iroquois Confederacy | Public Domain |
-| Islamic Republic of Japan |  |
+| Islamic Republic of Japan | Public Domain |
 | Israel | Public Domain |
 | Italian East Africa | [!!!] |
 | Italy | Public Domain |
@@ -289,29 +289,29 @@
 | Jamaica | Public Domain |
 | Japan | Public Domain |
 | Japanese Empire | Public Domain |
-| Japanese Pacific States |  |
+| Japanese Pacific States | [!!!] |
 | Java | [???] |
 | Jefferson Street | [!!!] |
 | Jordan | Public Domain |
-| Joseon |  |
+| Joseon | Public Domain |
 | Kalat | Public Domain |
-| Kaliningrad |  |
-| Kalmar Union |  |
+| Kaliningrad | Public Domain |
+| Kalmar Union | Public Domain |
 | Kamchatka | TNO |
 | Kansas | Public Domain |
 | Karelia | Public Domain |
-| Kashmir |  |
-| Katanga |  |
-| Kazakh Khanate |  |
+| Kashmir | Public Domain |
+| Katanga | Public Domain |
+| Kazakh Khanate | Public Domain |
 | Kazakhstan | Public Domain |
 | Kazembe |  |
 | Kenya | Public Domain |
-| Khalistan |  |
+| Khalistan | Public Domain |
 | Khiva | Public Domain |
 | Khmer Rouge | Public Domain |
 | Khoisan | [???] |
 | Kingdom of Argentina | Kaiserreich |
-| Kingdom of Armenia |  |
+| Kingdom of Armenia | Public Domain |
 | Kingdom of Flanders-Wallonia | Kaiserreich |
 | Kingdom of France | Public Domain |
 | Kingdom of Lithuania | Kaiserreich |
@@ -326,7 +326,7 @@
 | Kuwait | Public Domain |
 | KWAK | [!!!] |
 | Kyrgyzstan | Public Domain |
-| Kyushu |  |
+| Kyushu | Public Domain |
 | Laos | Public Domain |
 | Lappert's Ice Cream | [!!!] |
 | Las Vegas | Public Domain |
@@ -334,17 +334,17 @@
 | League of Eight Provinces | Kaiserreich |
 | Lebanon | Public Domain |
 | Lesotho | Public Domain |
-| Liangguang Clique |  |
+| Liangguang Clique | Public Domain |
 | Liberia | Public Domain |
 | Libya | Public Domain |
 | Lids | [!!!] |
 | Lithuania | Public Domain |
-| Livonian Order |  |
+| Livonian Order | [!!!] |
 | London | Public Domain |
 | Los Angeles | Public Domain |
 | Louisiana | Public Domain |
 | Luang Phrabang | Public Domain |
-| Lunda |  |
+| Lunda | [!!!] |
 | Luxembourg | Public Domain |
 | Lviv | Public Domain |
 | Madagascar | Public Domain |
@@ -382,23 +382,23 @@
 | Mississippi | Public Domain |
 | Missouri | Public Domain |
 | Moldova | Public Domain |
-| Mongol Empire |  |
+| Mongol Empire | Public Domain |
 | Mongolia | Public Domain |
 | Montana | Public Domain |
 | Montenegro | Public Domain |
 | Morocco | Public Domain |
 | Moscow | Public Domain |
-| Moss | [!!!] |
-| Mountainous Republic of the Northern Caucasus |  |
+| Moss | [???] |
+| Mountainous Republic of the Northern Caucasus | Public Domain |
 | Mozambique | Public Domain |
 | Muscogee | Public Domain |
 | Myanmar | Public Domain |
 | Namibia | Public Domain |
 | Naples | Public Domain |
-| Napoleonic France |  |
+| Napoleonic France | [???] |
 | Nathan's Hot Dog Cart | [!!!] |
 | National France | Kaiserreich |
-| Nationalist China |  |
+| Nationalist China | Public Domain |
 | Nebraska | Public Domain |
 | Nepal | Public Domain |
 | Neptune Society | [!!!] |
@@ -417,10 +417,10 @@
 | Nicaragua | Public Domain |
 | Niger | Public Domain |
 | Nigeria | Public Domain |
-| Nigerian Commune |  |
+| Nigerian Commune | [!!!] |
 | Normandy | Public Domain |
 | North Carolina | Public Domain |
-| North German Confederation |  |
+| North German Confederation | Public Domain |
 | North Korea | Public Domain |
 | North Macedonia | Public Domain |
 | Northern Territory | Public Domain |
@@ -456,16 +456,16 @@
 | Pará | Public Domain |
 | Paraguay | Public Domain |
 | Paris | Public Domain |
-| Parking Lot |  |
-| Parking Lot 1 |  |
-| Parking Lot 2 |  |
-| Parking Lot 3 |  |
-| Parking Lot 4 |  |
-| Parking Lot 5 |  |
-| Parking Lot 6 |  |
-| Parking Lot 7 |  |
-| Parking Lot 8 |  |
-| Parking Lot 9 |  |
+| Parking Lot | [!!!] |
+| Parking Lot 1 | [!!!] |
+| Parking Lot 2 | [!!!] |
+| Parking Lot 3 | [!!!] |
+| Parking Lot 4 | [!!!] |
+| Parking Lot 5 | [!!!] |
+| Parking Lot 6 | [!!!] |
+| Parking Lot 7 | [!!!] |
+| Parking Lot 8 | [!!!] |
+| Parking Lot 9 | [!!!] |
 | Parthian Empire | [!!!] |
 | Patagonian Workers Front | Kaiserreich |
 | Pearl Factory | [!!!] |
@@ -545,7 +545,7 @@
 | Romania | Public Domain |
 | Rome | [???] |
 | Rondon |  |
-| Roraima |  |
+| Roraima | Public Domain |
 | Russia | Public Domain |
 | Russian Empire | Public Domain |
 | Rwanda | Public Domain |
@@ -562,7 +562,7 @@
 | Saskatchewan | Public Domain |
 | Saudi Arabia | Public Domain |
 | Saxony | Public Domain |
-| Scary Russian Empire |  |
+| Scary Russian Empire | [!!!] |
 | Scotland | Public Domain |
 | Scrumptious | [!!!] |
 | Sea Lion Statue | [!!!] |
@@ -570,13 +570,13 @@
 | Sea Lions | [!!!] |
 | Senegal | Public Domain |
 | Serbia | Public Domain |
-| Shangdong Clique |  |
-| Shanghai |  |
-| Shanxi |  |
+| Shangdong Clique | Kaiserreich |
+| Shanghai | Public Domain |
+| Shanxi | TNO |
 | Shirtique & Krazy Kaps | [!!!] |
 | Siberia | Public Domain |
-| Siberian Black Army |  |
-| Sichuan Clique |  |
+| Siberian Black Army | TNO |
+| Sichuan Clique | Public Domain |
 | Sicily | Public Domain |
 | Sidewalk | GitGetGot415 |
 | Sidewalk 1 | GitGetGot415 |
@@ -615,12 +615,12 @@
 | Spectator | GitGetGot415 |
 | Sri Lanka | Public Domain |
 | SS Jeremiah O'Brien | [!!!] |
-| Stanistan |  |
+| Stanistan | [!!!] |
 | Sudan | Public Domain |
 | Sudwestafrika | TNO |
-| Sulawesi |  |
-| Sulawesi Separatists |  |
-| Sumatra |  |
+| Sulawesi | [!!!] |
+| Sulawesi Separatists | [!!!] |
+| Sumatra | [!!!] |
 | Sunglass Hut | [!!!] |
 | Suriname | Public Domain |
 | Sverdlovsk | TNO |
@@ -704,7 +704,7 @@
 | Vitality O2 Bar & Aqua Massage | [!!!] |
 | Vlahos Orchard | [!!!] |
 | Volgograd | Public Domain |
-| Vorkuta |  |
+| Vorkuta | TNO |
 | Voroniya |  |
 | Wales | Public Domain |
 | Wallachia | Public Domain |
@@ -714,7 +714,7 @@
 | West Bengal | Public Domain |
 | West Germany | Public Domain |
 | Western Australia | Public Domain |
-| Western Command Center |  |
+| Western Command Center | Kaiserreich |
 | Western Sahara | Public Domain |
 | White Kaganate |  |
 | White Ruthenia | Public Domain |
@@ -738,18 +738,18 @@
 | Wooden Sidewalk 8 | GitGetGot415 |
 | Wooden Sidewalk 9 | GitGetGot415 |
 | Wyoming | Public Domain |
-| Xibei San Ma |  |
-| Xikang Clique |  |
+| Xibei San Ma | Public Domain |
+| Xikang Clique | TNO |
 | Xinjiang | Public Domain |
-| Xinjiang Clique |  |
+| Xinjiang Clique | TNO |
 | Yakutia | Public Domain |
 | Yemen | Public Domain |
 | York | Public Domain |
 | Yuan | [!!!] |
 | Yucatan | Public Domain |
 | Yugoslavia | Public Domain |
-| Yunnan | [!!!] |
-| Yunnan Clique | [!!!] |
+| Yunnan | Public Domain |
+| Yunnan Clique | Kaiserreich |
 | Zabaykalsky | Public Domain |
 | Zakytaishchyna | Public Domain |
 | Zambia | Public Domain |
@@ -758,5 +758,5 @@
 | Zhili | Public Domain |
 | Zilkhstan | [!!!] |
 | Zimbabwe | Public Domain |
-| Zlatoust | [!!!] |
+| Zlatoust | TNO |
 | Zulu | Public Domain |
