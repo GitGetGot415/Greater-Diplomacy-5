@@ -1,13 +1,11 @@
-# Flags copyright status
+# Flag Creators
 
-Blank status means the copyright status could not be confirmed with 100% certainty.
-`[!!!]` indicates a likely copyrighted, trademarked, photographic, or third-party design.
-Anything else represents who made the flag.
+`[!!!]` indicates a likely copyrighted, trademarked, photographic, or third-party design that should be replaced
 
-| Flag name | Status |
+| Flag name | Artist |
 | --- | --- |
-| 49ers | [!!!] |
-| Aboriginals | [!!!] |
+| 49ers | Public Domain |
+| Aboriginals | Public Domain |
 | Abyssonia | Public Domain |
 | Achaemenid Empire | Public Domain |
 | Adventure Cat Sailing Charters | [!!!] |
@@ -132,8 +130,8 @@ Anything else represents who made the flag.
 | Clothing Store | [!!!] |
 | Colombia | Public Domain |
 | Colorado | Public Domain |
-| Combined Syndicates of America |  |
-| Commune of France |  |
+| Combined Syndicates of America | Kaiserreich |
+| Commune of France | Kaiserreich |
 | Commune of Japan |  |
 | Commune of Lemuria |  |
 | Commune of Spain |  |
@@ -551,7 +549,7 @@ Anything else represents who made the flag.
 | Russia | Public Domain |
 | Russian Empire | Public Domain |
 | Rwanda | Public Domain |
-| Safavid Empire |  |
+| Safavid Empire | Public Domain |
 | Sakhalin | Public Domain |
 | Salta | Public Domain |
 | Sámi | Public Domain |
@@ -576,7 +574,7 @@ Anything else represents who made the flag.
 | Shanghai |  |
 | Shanxi |  |
 | Shirtique & Krazy Kaps | [!!!] |
-| Siberia |  |
+| Siberia | Public Domain |
 | Siberian Black Army |  |
 | Sichuan Clique |  |
 | Sicily | Public Domain |
@@ -661,7 +659,7 @@ Anything else represents who made the flag.
 | Togo | Public Domain |
 | Tomsk | Public Domain |
 | Toronto | [!!!] |
-| Totalist Italy |  |
+| Totalist Italy | Kaiserreich |
 | Toubou | Public Domain |
 | Transylvania | Public Domain |
 | Trazbon | Public Domain |
@@ -678,7 +676,7 @@ Anything else represents who made the flag.
 | Uganda | Public Domain |
 | Ukraine | Public Domain |
 | Under the Golden Gate | [!!!] |
-| Union of Britain |  |
+| Union of Britain | Kaiserreich |
 | Union of South Africa | Public Domain |
 | United Arab Emirates | Public Domain |
 | United Baltic Dutchy | Public Domain |
