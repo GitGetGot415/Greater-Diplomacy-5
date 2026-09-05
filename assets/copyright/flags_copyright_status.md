@@ -242,7 +242,7 @@
 | Great Lakes Republic | Public Domain |
 | Greece | Public Domain |
 | Greenland | Public Domain |
-| Guangxi Clique | Public Domain |
+| Guangxi Clique | Paradox |
 | Guatemala | Public Domain |
 | Guinea | Public Domain |
 | Guinea-Bissau | Public Domain |
@@ -737,7 +737,7 @@
 | Wooden Sidewalk 8 | GitGetGot415 |
 | Wooden Sidewalk 9 | GitGetGot415 |
 | Wyoming | Public Domain |
-| Xibei San Ma | Public Domain |
+| Xibei San Ma | Paradox |
 | Xikang Clique | TNO |
 | Xinjiang | Public Domain |
 | Xinjiang Clique | TNO |
@@ -747,7 +747,7 @@
 | Yuan | Public Domain |
 | Yucatan | Public Domain |
 | Yugoslavia | Public Domain |
-| Yunnan | Public Domain |
+| Yunnan | Paradox |
 | Yunnan Clique | Kaiserreich |
 | Zabaykalsky | Public Domain |
 | Zakytaishchyna | Public Domain |
