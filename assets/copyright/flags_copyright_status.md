@@ -116,13 +116,13 @@
 | Caucasus | Public Domain |
 | Central African Republic | Public Domain |
 | Chad | Public Domain |
-| Champa | [???] |
+| Champa | Public Domain |
 | Chechnya | Public Domain |
 | Cherokee | Public Domain |
 | Chihuahua | Public Domain |
 | Chile | Public Domain |
 | Chokwe | Public Domain |
-| Chongqing | [???] |
+| Chongqing | Public Domain |
 | Chowder's | [!!!] |
 | Christmas in San Francisco | [!!!] |
 | Christmas Island | Public Domain |
@@ -192,7 +192,7 @@
 | Embarcadero 7 | [!!!] |
 | Embarcadero 8 | [!!!] |
 | Embarcadero 9 | [!!!] |
-| Emirate of Afghanistan | [???] |
+| Emirate of Afghanistan | Public Domain |
 | Emirate of Bukhara | Public Domain |
 | Emirate of Cyrenaica | Public Domain |
 | Emirate of Jabal Shammar | Public Domain |
@@ -290,7 +290,7 @@
 | Japan | Public Domain |
 | Japanese Empire | Public Domain |
 | Japanese Pacific States | [!!!] |
-| Java | [???] |
+| Java | Public Domain |
 | Jefferson Street | [!!!] |
 | Jordan | Public Domain |
 | Joseon | Public Domain |
@@ -395,7 +395,7 @@
 | Myanmar | Public Domain |
 | Namibia | Public Domain |
 | Naples | Public Domain |
-| Napoleonic France | [???] |
+| Napoleonic France | Public Domain |
 | Nathan's Hot Dog Cart | [!!!] |
 | National France | Kaiserreich |
 | Nationalist China | Public Domain |
@@ -439,7 +439,7 @@
 | Oman | Public Domain |
 | Omani Empire | Public Domain |
 | Omsk | TNO |
-| Ontario | [???] |
+| Ontario | Public Domain |
 | Orange Free State | Public Domain |
 | Ordensstaat Burgund | TNO |
 | Oregon | Public Domain |
@@ -694,7 +694,7 @@
 | Vanuatu | Public Domain |
 | Vatican | Public Domain |
 | Venezuela | Public Domain |
-| Venice | [???] |
+| Venice | Public Domain |
 | Vermont | Public Domain |
 | Vichy France | Public Domain |
 | Victoria | Public Domain |
