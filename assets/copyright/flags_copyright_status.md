@@ -135,7 +135,7 @@
 | Commune of Japan |  |
 | Commune of Lemuria | [!!!] |
 | Commune of Spain |  |
-| Communist China |  |
+| Communist China | Public Domain |
 | Communist Greece |  |
 | Communist Party of India |  |
 | Confederate States of America | Public Domain |
@@ -154,13 +154,13 @@
 | Curaçao | Public Domain |
 | Cyprus | Public Domain |
 | Czechia | Public Domain |
-| Czechochechnyaslovenoslovakia |  |
+| Czechochechnyaslovenoslovakia | [!!!] |
 | Czechoslovakia | Public Domain |
-| Danubia | [!!!] |
+| Danubia | Kaiserreich |
 | Danzig | Public Domain |
 | Darfur | Public Domain |
 | default_flag | GitGetGot415 |
-| Delhi | [???] |
+| Delhi | Public Domain |
 | Democratic Republic of the Congo | Public Domain |
 | Denmark | Public Domain |
 | Deseret | Public Domain |
@@ -168,7 +168,7 @@
 | Dominican Republic | Public Domain |
 | Dominion of Canada | Public Domain |
 | Durango | Public Domain |
-| Dutch America | [???] |
+| Dutch America | Public Domain |
 | Dutch East India Company | Public Domain |
 | Dutch East Indies | Public Domain |
 | Ea-Nasir | Public Domain |
@@ -177,7 +177,7 @@
 | East Asia | [!!!] |
 | East Germany | Public Domain |
 | East Timor | Public Domain |
-| Eastern Sanctuaries |  |
+| Eastern Sanctuaries | Public Domain |
 | Ecuador | Public Domain |
 | Edinburgh | Public Domain |
 | Egypt | Public Domain |
@@ -206,7 +206,7 @@
 | Estonia | Public Domain |
 | Eswatini | Public Domain |
 | Ethiopia | Public Domain |
-| European Union | [!!!] |
+| European Union | Public Domain |
 | Expedition | [!!!] |
 | Fatmid Caliphate | Public Domain |
 | FIFA World Cup Store | [!!!] |
@@ -255,7 +255,7 @@
 | Hard Rock Cafe | [!!!] |
 | Hawaii | Public Domain |
 | Hearts in San Francisco | [!!!] |
-| Hearts of San Francisco | [!!!] |
+| Hearts of San Francisco | GitGetGot415 |
 | Henan | [???] |
 | Herero | Public Domain |
 | Hokkaido | Public Domain |
@@ -304,12 +304,12 @@
 | Katanga | Public Domain |
 | Kazakh Khanate | Public Domain |
 | Kazakhstan | Public Domain |
-| Kazembe |  |
+| Kazembe | Public Domain |
 | Kenya | Public Domain |
 | Khalistan | Public Domain |
 | Khiva | Public Domain |
 | Khmer Rouge | Public Domain |
-| Khoisan | [???] |
+| Khoisan | Public Domain |
 | Kingdom of Argentina | Kaiserreich |
 | Kingdom of Armenia | Public Domain |
 | Kingdom of Flanders-Wallonia | Kaiserreich |
@@ -324,11 +324,11 @@
 | Kosovo | Public Domain |
 | Kurdistan | Public Domain |
 | Kuwait | Public Domain |
-| KWAK | [!!!] |
+| KWAK | Public Domain |
 | Kyrgyzstan | Public Domain |
 | Kyushu | Public Domain |
 | Laos | Public Domain |
-| Lappert's Ice Cream | [!!!] |
+| Lappert's Ice Cream | Public Domain |
 | Las Vegas | Public Domain |
 | Latvia | Public Domain |
 | League of Eight Provinces | Kaiserreich |
@@ -337,14 +337,14 @@
 | Liangguang Clique | Public Domain |
 | Liberia | Public Domain |
 | Libya | Public Domain |
-| Lids | [!!!] |
+| Lids | Public Domain |
 | Lithuania | Public Domain |
-| Livonian Order | [!!!] |
+| Livonian Order | Public Domain |
 | London | Public Domain |
 | Los Angeles | Public Domain |
 | Louisiana | Public Domain |
 | Luang Phrabang | Public Domain |
-| Lunda | [!!!] |
+| Lunda | Public Domain |
 | Luxembourg | Public Domain |
 | Lviv | Public Domain |
 | Madagascar | Public Domain |
@@ -372,7 +372,7 @@
 | Mauryan Empire | Public Domain |
 | Mecklenburg | Public Domain |
 | Mega City One | [!!!] |
-| Mende | [???] |
+| Mende | Public Domain |
 | Mengjiang | Public Domain |
 | Merina | Public Domain |
 | Mexico | Public Domain |
@@ -435,7 +435,7 @@
 | Oceanian Federation |  |
 | Ohio | Public Domain |
 | Oklahoma | Public Domain |
-| Oldegård |  |
+| Oldegård | Public Domain |
 | Oman | Public Domain |
 | Omani Empire | Public Domain |
 | Omsk | TNO |
@@ -502,7 +502,7 @@
 | Pier Protection Barrier 8 | GitGetGot415 |
 | Pier Protection Barrier 9 | GitGetGot415 |
 | Pier Protection Barriers | GitGetGot415 |
-| Pilbara | [!!!] |
+| Pilbara | Public Domain |
 | Players Sports Grill & Arcade | [!!!] |
 | Plaza de California | [!!!] |
 | Pocatello | [!!!] |
@@ -544,12 +544,13 @@
 | Rojava | Public Domain |
 | Romania | Public Domain |
 | Rome | [???] |
-| Rondon |  |
+| Rondon | Public Domain |
 | Roraima | Public Domain |
 | Russia | Public Domain |
 | Russian Empire | Public Domain |
 | Rwanda | Public Domain |
 | Safavid Empire | Public Domain |
+| Sakha | Public Domain |
 | Sakhalin | Public Domain |
 | Salta | Public Domain |
 | Sámi | Public Domain |
@@ -648,7 +649,7 @@
 | The Fudgery | [!!!] |
 | The Gambia | Public Domain |
 | The Hook | [!!!] |
-| The Rot | GitGetGot415 |
+| The Rot | Public Domain |
 | The SF Sock Market | [!!!] |
 | THE SOCIALITE KITCHEN & BREWERY | [!!!] |
 | The Spice & Tea Exchange | [!!!] |
@@ -658,7 +659,7 @@
 | Timbuktu | Public Domain |
 | Togo | Public Domain |
 | Tomsk | TNO |
-| Toronto | [!!!] |
+| Toronto | Public Domain |
 | Totalist Italy | Kaiserreich |
 | Toubou | Public Domain |
 | Transylvania | Public Domain |
@@ -699,13 +700,13 @@
 | Victoria | Public Domain |
 | Vietnam | Public Domain |
 | Vikramaditya | Public Domain |
-| Vinland |  |
+| Vinland | Public Domain |
 | Virginia | Public Domain |
 | Vitality O2 Bar & Aqua Massage | [!!!] |
 | Vlahos Orchard | [!!!] |
 | Volgograd | Public Domain |
 | Vorkuta | TNO |
-| Voroniya |  |
+| Voroniya | Public Domain |
 | Wales | Public Domain |
 | Wallachia | Public Domain |
 | Washington | Public Domain |
@@ -716,7 +717,7 @@
 | Western Australia | Public Domain |
 | Western Command Center | Kaiserreich |
 | Western Sahara | Public Domain |
-| White Kaganate |  |
+| White Kaganate | Public Domain |
 | White Ruthenia | Public Domain |
 | Wine Tasting on the Bay | [!!!] |
 | Wisconsin | Public Domain |
@@ -742,7 +743,7 @@
 | Xikang Clique | TNO |
 | Xinjiang | Public Domain |
 | Xinjiang Clique | TNO |
-| Yakutia | Public Domain |
+| Yakutia | TNO |
 | Yemen | Public Domain |
 | York | Public Domain |
 | Yuan | [!!!] |
