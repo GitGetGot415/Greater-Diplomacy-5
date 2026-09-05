@@ -466,7 +466,7 @@
 | Parking Lot 7 | [!!!] |
 | Parking Lot 8 | [!!!] |
 | Parking Lot 9 | [!!!] |
-| Parthian Empire | [!!!] |
+| Parthian Empire | Public Domain |
 | Patagonian Workers Front | Kaiserreich |
 | Pearl Factory | [!!!] |
 | Pennsylvania | Public Domain |
