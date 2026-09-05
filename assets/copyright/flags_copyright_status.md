@@ -91,7 +91,7 @@
 | British Columbia | Public Domain |
 | British Malaya | Public Domain |
 | British Raj | Public Domain |
-| British-Japanese Empire |  |
+| British-Japanese Empire | [!!!] |
 | Brittany | Public Domain |
 | Brunei | Public Domain |
 | Brunswick | Public Domain |
@@ -108,7 +108,7 @@
 | California | Public Domain |
 | Cambodia | Public Domain |
 | Cameroon | Public Domain |
-| Cameroon African State |  |
+| Cameroon African State | TNO |
 | Canada | Public Domain |
 | Candy Baron | [!!!] |
 | Carthage | Public Domain |
