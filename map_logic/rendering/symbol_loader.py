@@ -274,7 +274,12 @@ def _load_filename_symbols(style, style_dir, cultures, symbols):
             if family == "infantry" and (level is None or level < 1000):
                 continue
 
-            relative_path = os.path.relpath(os.path.join(root, filename), style_dir)
+            # These are asset identifiers, not native filesystem paths. Keep
+            # their serialized/displayed form portable while os.path.join in
+            # _load_variant still resolves them correctly on every platform.
+            relative_path = os.path.relpath(
+                os.path.join(root, filename), style_dir
+            ).replace(os.sep, "/")
             relative_dir = os.path.relpath(root, style_dir)
             countries = _filename_countries(relative_dir, cultures)
             if countries == []:

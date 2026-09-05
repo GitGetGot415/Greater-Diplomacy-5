@@ -10,6 +10,7 @@ messagebox.showerror() call would block the test run waiting for a click.
 
 import os
 import sys
+import tempfile
 import unittest
 from unittest import mock
 
@@ -22,20 +23,13 @@ import main
 
 class CrashHandlerTests(unittest.TestCase):
     def setUp(self):
-        # _write_crash_log() always targets this fixed path -- protect
-        # whatever a real crash on this machine may have already left there.
-        self.crash_log_path = os.path.expanduser("~/GD5_crash.log")
-        self._preexisting = os.path.exists(self.crash_log_path)
-        if self._preexisting:
-            with open(self.crash_log_path, "r", encoding="utf-8") as f:
-                self._original_contents = f.read()
+        self._temporary_directory = tempfile.TemporaryDirectory()
+        self.crash_log_path = os.path.join(
+            self._temporary_directory.name, "GD5_crash.log"
+        )
 
     def tearDown(self):
-        if self._preexisting:
-            with open(self.crash_log_path, "w", encoding="utf-8") as f:
-                f.write(self._original_contents)
-        elif os.path.exists(self.crash_log_path):
-            os.remove(self.crash_log_path)
+        self._temporary_directory.cleanup()
 
     def _simulate_crash(self):
         """Raises and hands the exception to _write_crash_log(), the same
@@ -45,7 +39,7 @@ class CrashHandlerTests(unittest.TestCase):
         try:
             raise ValueError("simulated crash for testing")
         except ValueError:
-            main._write_crash_log()
+            main._write_crash_log(self.crash_log_path)
 
     @mock.patch("tkinter.messagebox.showerror")
     @mock.patch("tkinter.Tk")

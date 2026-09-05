@@ -147,22 +147,28 @@ class FilenameDrivenUnitArtTests(unittest.TestCase):
     def test_tiered_art_carries_forward_until_a_newer_tier_file_exists(self):
         self.assertEqual(self._filename("Artillery I", "Germany"),
                          "germanic/artillery_1.png")
+        # Germanic art has no tier-II file; the unrestricted tier-II image
+        # is newer than Germany's dedicated tier-I image.
         self.assertEqual(self._filename("Artillery II", "Germany"),
-                         "germanic/artillery_2.png")
+                         "generic/artillery_2.png")
         self.assertEqual(self._filename("Artillery IV", "Germany"),
                          "germanic/artillery_3.png")
 
     def test_filename_baselines_support_separate_unit_families(self):
         self.assertEqual(self._filename("Artillery", "Germany"),
                          "germanic/artillery.png")
+        # France has a dedicated heavy-artillery tier III, but no baseline,
+        # so tier I uses the generic baseline.
         self.assertEqual(self._filename("Heavy Artillery I", "France"),
-                         "french/heavy_artillery.png")
+                         "generic/heavy_artillery.png")
         self.assertEqual(self._filename("WW1 Tank", "United Kingdom"),
                          "british/ww1_tank.png")
 
-    def test_generic_folder_art_is_available_as_unrestricted_fallback(self):
+    def test_generic_tiered_art_is_available_as_unrestricted_fallback(self):
+        # generic/artillery.png does not exist, so an untiered request keeps
+        # the normal classic fallback. The generic folder starts at tier I.
         self.assertEqual(self._filename("Artillery", "Italy"),
-                         "generic/artillery.png")
+                         "classic")
         self.assertEqual(self._filename("Artillery II", "United Kingdom"),
                          "generic/artillery_2.png")
         self.assertEqual(self._filename("Heavy Artillery I", "United Kingdom"),

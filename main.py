@@ -749,11 +749,12 @@ async def _bootstrap():
     game = Controller()
     await game.run()
 
-def _write_crash_log():
-    """Writes a crash report to ~/GD5_crash.log and pops up a dialog telling
-    the player where it is, so they can find and send it without needing a
-    console window -- a windowed/frozen build doesn't show one, so without
-    this a crash would otherwise just silently vanish from their view.
+def _write_crash_log(crash_log_path=None):
+    """Writes a crash report and tells the player where it is.
+
+    Reports normally go to ``~/GD5_crash.log``.  ``crash_log_path`` is an
+    internal test hook that lets callers choose a writable location without
+    changing the player's crash-report location.
 
     Deliberately self-contained (own imports, no reliance on project
     modules) since this runs from the top-level except block, which can be
@@ -782,7 +783,8 @@ def _write_crash_log():
             text,
         )
 
-    crash_log_path = os.path.expanduser("~/GD5_crash.log")
+    if crash_log_path is None:
+        crash_log_path = os.path.expanduser("~/GD5_crash.log")
 
     header_lines = [
         "Greater Diplomacy 5 crash report",
@@ -800,7 +802,7 @@ def _write_crash_log():
         pass
 
     tb_text = _scrub_build_paths(traceback.format_exc())
-    with open(crash_log_path, "w") as f:
+    with open(crash_log_path, "w", encoding="utf-8") as f:
         f.write("\n".join(header_lines) + "\n\n")
         f.write(tb_text)
 
