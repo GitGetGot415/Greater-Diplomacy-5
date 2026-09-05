@@ -25,7 +25,7 @@ and forget to edit it there?
 I need you to aggressively consolidate duplicate functions or variables / code into single unified functions / helpers to make making edits significantly easier
 for example, if you notice 2 functions / variables that are technically different but essentially do the same thing try to merge those into a unified one
 also, try to standardize how the code works, so if you notice simmilar things being done a bit differently make them follow a simmilar ruleset
-do keep in mind though that the gameplay ideally should NOT be changed
+do keep in mind though that the gameplay ideally should NOT be changed  unless it looks like an obvious bug or something that a bit of standardization wouldn't change too much
 
 Also, if you notice duplicated numbers and such that would probably be better off as a single variable so they can all be edited by just editing that one variable, please do that
 ideally, if it's for something like button placement, it should be stored in the same file it was in instead of moved to constants.py, so if you want to edit it you don't have to go to constants.py
