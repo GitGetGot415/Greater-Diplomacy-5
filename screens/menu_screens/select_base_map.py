@@ -54,11 +54,9 @@ class Select_Base_Map(FolderListState):
         return ""
 
     def set_sub_state(self, state):
-        self.sub_state = state
-        self.scroll_y = 0
         self.renaming_item = None
         self.deleting_item = None
-        self.refresh_ui()
+        super().set_sub_state(state)
 
     def update(self):
         super().update()

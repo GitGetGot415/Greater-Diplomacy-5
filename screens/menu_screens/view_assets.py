@@ -1,7 +1,7 @@
 import pygame
 import os
 import shutil
-from gameState import GameState
+from gameState import GameState, ScreenLayer
 from ui.bars import ui_bars
 from ui import text_utils
 from ui.scroll_panes import ScrollPanes
@@ -47,43 +47,6 @@ def _wrap_text(text, font, max_width):
 
 # Folders that hold non-image, non-text assets and shouldn't show up as browsable albums.
 EXCLUDED_ASSET_FOLDERS = {"sounds", "fonts"}
-
-
-class TopBarOverlay:
-    """Fixed header drawn over the scrolling folder/file panes, mirroring the music screen."""
-    def __init__(self, screen):
-        self.screen = screen
-        self.visible = True
-
-    def handle_event(self, event):
-        pass
-
-    def draw(self, surface):
-        pygame.draw.rect(surface, (35, 35, 45), (0, 0, FOLDER_PANE_W, HEADER_H))
-        pygame.draw.rect(surface, (30, 30, 38), (FOLDER_PANE_W, 0, FILE_PANE_W, HEADER_H))
-        pygame.draw.rect(surface, PREVIEW_BACKGROUND_COLOR, (PREVIEW_X, 0, PREVIEW_W, HEADER_H))
-
-        pygame.draw.line(surface, (100, 100, 100), (FOLDER_PANE_W, 0), (FOLDER_PANE_W, c.SCREEN_HEIGHT), 2)
-        pygame.draw.line(surface, (100, 100, 100), (PREVIEW_X, 0), (PREVIEW_X, c.SCREEN_HEIGHT), 2)
-
-        font_title = fonts.get("heading2")
-        # Sits below the Back button so the two never overlap.
-        surface.blit(font_title.render("FOLDERS", True, (255, 255, 255)), (20, 72))
-
-        # No Back-button clearance needed here, so it can sit right at the top edge.
-        folder_label = self.screen.current_folder.upper() if self.screen.current_folder else "FILES"
-        surface.blit(font_title.render(folder_label, True, (255, 255, 255)), (FOLDER_PANE_W + 15, 72))
-
-        name_text = self.screen.current_file or "No file selected"
-        name_surf = fonts.get("normal").render(name_text, True, c.COLOR_GOLD_HIGHLIGHT)
-        surface.blit(name_surf, (PREVIEW_X + 20, 35))
-
-        # Download status: drawn here (not additional_draw) so this pane's own
-        # background fill above doesn't paint over it a moment later.
-        status = self.screen.download_status
-        if status and pygame.time.get_ticks() - self.screen.download_status_timer < 2500:
-            status_surf = fonts.get("small").render(status, True, self.screen.download_status_color)
-            surface.blit(status_surf, status_surf.get_rect(topright=(c.SCREEN_WIDTH - 20, 75)))
 
 
 class View_Assets(ScrollPanes, GameState):
@@ -314,7 +277,7 @@ class View_Assets(ScrollPanes, GameState):
         self._max_file = min(0, c.SCREEN_HEIGHT - HEADER_H - file_content_h - 20)
 
         # --- Fixed chrome on top ---
-        self.elements.append(TopBarOverlay(self))
+        self.elements.append(ScreenLayer(self, "draw_top_bar"))
         self.elements.append(make_back_button(self.handle_back_key))
 
         if self.current_file:
@@ -332,6 +295,32 @@ class View_Assets(ScrollPanes, GameState):
 
     def additional_events(self, event):
         self.route_pane_scroll(event)
+
+    def draw_top_bar(self, surface):
+        """Fixed header drawn over the scrolling folder and file panes."""
+        pygame.draw.rect(surface, (35, 35, 45), (0, 0, FOLDER_PANE_W, HEADER_H))
+        pygame.draw.rect(surface, (30, 30, 38), (FOLDER_PANE_W, 0, FILE_PANE_W, HEADER_H))
+        pygame.draw.rect(surface, PREVIEW_BACKGROUND_COLOR, (PREVIEW_X, 0, PREVIEW_W, HEADER_H))
+        pygame.draw.line(surface, (100, 100, 100), (FOLDER_PANE_W, 0),
+                         (FOLDER_PANE_W, c.SCREEN_HEIGHT), 2)
+        pygame.draw.line(surface, (100, 100, 100), (PREVIEW_X, 0),
+                         (PREVIEW_X, c.SCREEN_HEIGHT), 2)
+
+        font_title = fonts.get("heading2")
+        # Sits below the Back button so the two never overlap.
+        surface.blit(font_title.render("FOLDERS", True, (255, 255, 255)), (20, 72))
+        folder_label = self.current_folder.upper() if self.current_folder else "FILES"
+        surface.blit(font_title.render(folder_label, True, (255, 255, 255)), (FOLDER_PANE_W + 15, 72))
+
+        name_surf = fonts.get("normal").render(self.current_file or "No file selected",
+                                                 True, c.COLOR_GOLD_HIGHLIGHT)
+        surface.blit(name_surf, (PREVIEW_X + 20, 35))
+
+        # Draw here, above the pane fills that additional_draw paints first.
+        status = self.download_status
+        if status and pygame.time.get_ticks() - self.download_status_timer < 2500:
+            status_surf = fonts.get("small").render(status, True, self.download_status_color)
+            surface.blit(status_surf, status_surf.get_rect(topright=(c.SCREEN_WIDTH - 20, 75)))
 
     def draw_elements(self, surface):
         """Folder and file rows each crop to their own pane; the preview pane

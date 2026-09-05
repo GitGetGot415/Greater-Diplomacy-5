@@ -47,11 +47,6 @@ class New_Game(GameState):
         attr = self.CATEGORIES[self.sub_state][1]
         return getattr(c, attr) if attr else None
 
-    def set_sub_state(self, state):
-        self.sub_state = state
-        self.scroll_y = 0
-        self.refresh_ui()
-
     def refresh_ui(self):
         settings_btn = Button(c.SCREEN_WIDTH - 220, c.SCREEN_HEIGHT - 80, "medium", "pink",
                               "Scenario Settings", self.scenario_settings)

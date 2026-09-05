@@ -19,6 +19,7 @@ Stdlib and `data` only, so it imports under Pyodide.
 import hashlib
 
 import data.constants as c
+from data.number_utils import clamp_float
 
 #: All 0.0-1.0. Kept deliberately few: each one has to earn its keep by being
 #: read somewhere that visibly changes play.
@@ -60,13 +61,6 @@ def procedural(nation_name, scenario_seed):
     """
     digest = hashlib.sha256(f"{scenario_seed}|{nation_name}".encode("utf-8")).digest()
     return {trait: _trait_from(digest[i * 4:(i + 1) * 4]) for i, trait in enumerate(TRAITS)}
-
-
-def _clamp(value):
-    try:
-        return max(0.0, min(1.0, float(value)))
-    except (TypeError, ValueError):
-        return _DEFAULT
 
 
 def scenario_seed(scenario_settings):
@@ -113,7 +107,7 @@ def get(nation_data, nation_name, scenario_settings=None):
     if isinstance(nation_overrides, dict):
         for trait, value in nation_overrides.items():
             if trait in TRAITS:
-                traits[trait] = _clamp(value)
+                traits[trait] = clamp_float(value, 0.0, 1.0, _DEFAULT)
         source = "scenario"
 
     traits["_seed"] = seed
@@ -124,13 +118,14 @@ def get(nation_data, nation_name, scenario_settings=None):
 
 def trait(nation_data, nation_name, name, scenario_settings=None):
     """One trait, defaulting to the midpoint for anything unrecognised."""
-    return _clamp(get(nation_data, nation_name, scenario_settings).get(name, _DEFAULT))
+    return clamp_float(get(nation_data, nation_name, scenario_settings).get(name, _DEFAULT),
+                       0.0, 1.0, _DEFAULT)
 
 
 def set_authored(nation_data, nation_name, traits, source="editor"):
     """Pins traits so nothing regenerates them. Used by the scenario editor."""
     block = nation_data.setdefault(nation_name, {})
-    stored = {t: _clamp(traits.get(t, _DEFAULT)) for t in TRAITS}
+    stored = {t: clamp_float(traits.get(t, _DEFAULT), 0.0, 1.0, _DEFAULT) for t in TRAITS}
     stored["_source"] = source if source in AUTHORED_SOURCES else "editor"
     stored["_seed"] = block.get("personality", {}).get("_seed", "")
     block["personality"] = stored
@@ -146,7 +141,7 @@ def describe(nation_data, nation_name, scenario_settings=None):
                             ("caution", "reckless", "cautious"),
                             ("loyalty", "faithless", "loyal"),
                             ("trust", "suspicious", "trusting")):
-        value = _clamp(traits.get(name, _DEFAULT))
+        value = clamp_float(traits.get(name, _DEFAULT), 0.0, 1.0, _DEFAULT)
         if value >= c.AI_TRAIT_NOTABLE_HIGH:
             words.append(high)
         elif value <= c.AI_TRAIT_NOTABLE_LOW:

@@ -94,7 +94,7 @@ def confirm_player_country(map_screen):
             map_screen.show_feedback(f"Now playing as {map_screen.player_country}")
             from screens.menu_screens.map import render_buttons
             render_buttons(map_screen)
-            map_screen.refresh_relations_map()
+            map_screen.refresh_map_layers("relations")
 
 def cancel_selection(map_screen):
     # Clean up ghost units
@@ -124,4 +124,4 @@ def start_spectator(map_screen):
 
     from screens.menu_screens.map import render_buttons
     render_buttons(map_screen)
-    map_screen.refresh_relations_map()
+    map_screen.refresh_map_layers("relations")

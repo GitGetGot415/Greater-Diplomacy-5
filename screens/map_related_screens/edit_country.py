@@ -383,8 +383,7 @@ class Edit_Country_Screen(GameState):
             self.map_screen.nation_colors[self.editing_country] = tuple(self.new_map_color)
             
             # Trigger full map re-renders so the new color shows up instantly!
-            self.map_screen.refresh_political_map()
-            self.map_screen.refresh_cores_map()
+            self.map_screen.refresh_map_layers("political", "cores")
 
         # Tournament move files normally include only the controlling nation.
         # An integrated puppet is deliberately edited through its controller's

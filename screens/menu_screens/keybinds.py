@@ -1,9 +1,9 @@
 import pygame
 from gameState import GameState
-from ui_elements import Button, make_back_button
+from ui_elements import Button, make_back_button, make_info_button
 import data.constants as c
 from data import queries
-from screens.menu_screens.settings import info_button
+from ui import confirm_dialog
 
 # --- Keybinds screen layout ---
 KEYBINDS_ROW_X = c.SCREEN_WIDTH // 2 - 100
@@ -16,6 +16,7 @@ KEYBINDS_RESET_GAP_Y = 30
 KEYBINDS_TOGGLE_GAP_X = 10
 KEYBINDS_TOGGLE_X = KEYBINDS_ROW_X + c.SIZES["medium"][0] + KEYBINDS_TOGGLE_GAP_X
 KEYBINDS_TOGGLE_INFO_X = KEYBINDS_TOGGLE_X + c.SIZES["keybind_toggle"][0] + KEYBINDS_TOGGLE_GAP_X
+KEYBINDS_INFO_Y_NUDGE = (c.SIZES["keybind_toggle"][1] - c.SIZES["scenario_setting_info"][1]) // 2
 
 TOGGLE_INFO_TEXT = (
     "When on, pressing this key also jumps straight to the screen its view "
@@ -83,8 +84,10 @@ class Keybinds(GameState):
                           font_preset="tiny")
                 )
                 self.elements.append(
-                    info_button(KEYBINDS_TOGGLE_INFO_X, y, "Change Screen With This Keybind",
-                               TOGGLE_INFO_TEXT)
+                    make_info_button(
+                        KEYBINDS_TOGGLE_INFO_X, y,
+                        lambda: confirm_dialog.show_info("Change Screen With This Keybind", TOGGLE_INFO_TEXT),
+                        y_offset=KEYBINDS_INFO_Y_NUDGE)
                 )
 
             y += KEYBINDS_ROW_GAP_Y

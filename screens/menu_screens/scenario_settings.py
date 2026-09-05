@@ -1,6 +1,6 @@
 import pygame
 from gameState import GameState
-from ui_elements import Button, Slider, parse_pos, make_back_button
+from ui_elements import Button, Slider, parse_pos, make_back_button, make_info_button
 import data.constants as c
 from data import queries
 from ui import confirm_dialog
@@ -138,9 +138,10 @@ class Scenario_Settings(GameState):
         defaults["defense_at_zero_health"] = c.DEFENSE_AT_ZERO_HEALTH
         return defaults
 
-    def info_button(self, x, y, tooltip_title, tooltip_text):
-        return Button(x, y + INFO_Y_NUDGE, "scenario_setting_info", "light_blue", "?",
-                     lambda: confirm_dialog.show_info(tooltip_title, tooltip_text))
+    def make_info_button(self, x, y, tooltip_title, tooltip_text):
+        return make_info_button(x, y,
+                                lambda: confirm_dialog.show_info(tooltip_title, tooltip_text),
+                                y_offset=INFO_Y_NUDGE)
 
     def refresh_ui(self):
         self.elements = [make_back_button(self.exit_screen)]
@@ -148,7 +149,7 @@ class Scenario_Settings(GameState):
         for i, (key, default, label, tooltip) in enumerate(TOGGLE_ROWS):
             y = LEFT_TOP_Y + i * ROW_H
             is_on = queries.get_scenario_flag(key, default, self.settings)
-            self.elements.append(self.info_button(LEFT_INFO_X, y, label, tooltip))
+            self.elements.append(self.make_info_button(LEFT_INFO_X, y, label, tooltip))
             self.elements.append(
                 Button(LEFT_BTN_X, y, "scenario_setting_button", "green" if is_on else "red",
                        f"{label}: {'ON' if is_on else 'OFF'}",
@@ -158,16 +159,16 @@ class Scenario_Settings(GameState):
         self.elements.append(self.build_fog_slider())
 
         dpt_val = self.settings.get("days_per_turn", "Default")
-        self.elements.append(self.info_button(LEFT_INFO_X, DAYS_PER_TURN_ROW_Y, "Days Per Turn", DAYS_PER_TURN_TOOLTIP))
+        self.elements.append(self.make_info_button(LEFT_INFO_X, DAYS_PER_TURN_ROW_Y, "Days Per Turn", DAYS_PER_TURN_TOOLTIP))
         self.elements.append(
             Button(LEFT_BTN_X, DAYS_PER_TURN_ROW_Y, "scenario_setting_button", "blue",
                    f"Days Per Turn: {dpt_val}", self.cycle_days_per_turn, font_preset="button_small")
         )
 
-        self.elements.append(self.info_button(LEFT_INFO_X, DAMAGE_FLOOR_ROW_Y, "Wounded Damage Floor", DAMAGE_FLOOR_TOOLTIP))
+        self.elements.append(self.make_info_button(LEFT_INFO_X, DAMAGE_FLOOR_ROW_Y, "Wounded Damage Floor", DAMAGE_FLOOR_TOOLTIP))
         self.elements.append(self.build_damage_floor_slider())
 
-        self.elements.append(self.info_button(LEFT_INFO_X, DEFENSE_FLOOR_ROW_Y, "Wounded Defense Floor", DEFENSE_FLOOR_TOOLTIP))
+        self.elements.append(self.make_info_button(LEFT_INFO_X, DEFENSE_FLOOR_ROW_Y, "Wounded Defense Floor", DEFENSE_FLOOR_TOOLTIP))
         self.elements.append(self.build_defense_floor_slider())
 
         self.elements.extend(self.build_ai_section())
@@ -209,14 +210,14 @@ class Scenario_Settings(GameState):
         ai_disabled = queries.get_scenario_flag("ai_disabled", c.DEFAULT_AI_DISABLED, self.settings)
 
         elements = [
-            self.info_button(AI_INFO_X, AI_TOP_Y, "AI", AI_TOGGLE_TOOLTIP),
+            self.make_info_button(AI_INFO_X, AI_TOP_Y, "AI", AI_TOGGLE_TOOLTIP),
             Button(AI_BTN_X, AI_TOP_Y, "scenario_setting_button", "red" if ai_disabled else "green",
                    "AI: OFF" if ai_disabled else "AI: ON", self.toggle_ai_disabled, font_preset="button_small"),
-            self.info_button(AI_INFO_X, AI_TOP_Y + ROW_H, "Turns Before War", AI_TURNS_TOOLTIP),
+            self.make_info_button(AI_INFO_X, AI_TOP_Y + ROW_H, "Turns Before War", AI_TURNS_TOOLTIP),
             self.build_ai_slider("turns_slider", AI_TOP_Y + ROW_H, "turns_to_wait_before_war",
                                  c.TURNS_TO_WAIT_BEFORE_WAR, MAX_TURNS_BEFORE_WAR,
                                  lambda v: f"Turns Before War: {int(v)}", int),
-            self.info_button(AI_INFO_X, AI_TOP_Y + 2 * ROW_H, "War Chance", AI_CHANCE_TOOLTIP),
+            self.make_info_button(AI_INFO_X, AI_TOP_Y + 2 * ROW_H, "War Chance", AI_CHANCE_TOOLTIP),
             self.build_ai_slider("chance_slider", AI_TOP_Y + 2 * ROW_H, "ai_war_declaration_chance",
                                  c.AI_WAR_DECLARATION_CHANCE, 1.0,
                                  lambda v: f"War Chance: {v:.2f}", float),

@@ -19,12 +19,6 @@ from ui import modal_stack
 from ui.bars import ui_bars
 
 
-def acquire_surface(size=None, caption=None):
-    """Kept as the name this module's callers use; the implementation is shared
-    with ui/confirm_dialog/ via ui_bars."""
-    return ui_bars.acquire_surface(size, caption)
-
-
 class _ScreenModal:
     """Pushed onto the modal stack in place of a blocking loop -- see
     ui/modal_stack.py for why nothing here is allowed to block.
@@ -107,7 +101,7 @@ def run_screen(screen_or_factory, on_done=None, tk_parent=None, caption=None, si
     window (the standalone path below), and exits the game when it did not,
     matching the main loop's own QUIT handling.
     """
-    surface, owns_display = acquire_surface(size, caption)
+    surface, owns_display = ui_bars.acquire_surface(size, caption)
     screen = screen_or_factory() if callable(screen_or_factory) else screen_or_factory
 
     if owns_display:

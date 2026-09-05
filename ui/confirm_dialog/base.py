@@ -53,14 +53,6 @@ def _show_tk_chain(hidden):
             pass
 
 
-def _acquire_surface():
-    return ui_bars.acquire_surface(_STANDALONE_SIZE, "Confirm")
-
-
-def _release_surface(owns_display):
-    ui_bars.release_surface(owns_display)
-
-
 def _wrap_text(text, font, max_width):
     """Kept as the name checkbox_list_screen and scripted_events_editor already
     import; the implementation now lives in ui/text_utils.py."""
@@ -182,7 +174,7 @@ def _run_blocking(make_modal, tk_parent, default_result=None):
     This was written out once per dialog, differing only in the modal class and
     the sentinel returned on QUIT.
     """
-    surface, owns_display = _acquire_surface()
+    surface, owns_display = ui_bars.acquire_surface(_STANDALONE_SIZE, "Confirm")
     hidden_tk = _hide_tk_chain(tk_parent) if tk_parent is not None else []
 
     modal = make_modal(surface)
@@ -204,6 +196,6 @@ def _run_blocking(make_modal, tk_parent, default_result=None):
             clock.tick(c.TARGET_FPS)
     finally:
         _show_tk_chain(hidden_tk)
-        _release_surface(owns_display)
+        ui_bars.release_surface(owns_display)
 
     return result

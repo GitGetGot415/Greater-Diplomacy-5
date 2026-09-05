@@ -41,9 +41,7 @@ def handle_map_events(map_screen, event):
                 map_screen.show_player_ready_screen = False
 
                 # CRITICAL: Re-bake the relations/cores from the perspective of the new player!
-                map_screen.refresh_relations_map()
-                map_screen.refresh_political_map()
-                map_screen.refresh_fog_map()
+                map_screen.refresh_map_layers("relations", "political", "fog")
 
                 map_screen.show_feedback(f"Turn started for {map_screen.player_country}")
         return # Block all other map events!
@@ -319,7 +317,7 @@ def handle_map_events(map_screen, event):
                 if hasattr(map_screen, 'confirm_rect') and map_screen.confirm_rect.collidepoint(mx, my):
                     player_setup.confirm_player_country(map_screen)
                     # Refresh the fog map as soon as the player officially takes control of the country
-                    map_screen.refresh_fog_map()
+                    map_screen.refresh_map_layers("fog")
                     map_screen.update_country_centers()
                 elif hasattr(map_screen, 'cancel_rect') and map_screen.cancel_rect.collidepoint(mx, my):
                     player_setup.cancel_selection(map_screen)

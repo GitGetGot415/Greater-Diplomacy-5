@@ -3,7 +3,7 @@ tkinter tool windows -- see screens/editor_screens/__init__.py."""
 import pygame
 import data.constants as c
 from data import queries
-from gameState import MapOverlayScreen
+from gameState import MapOverlayScreen, NationListOverlayScreen
 from ui_elements import Button, TextField, make_back_button
 from ui import confirm_dialog
 from ui.screen_runner import _run_pygame_sub_screen
@@ -138,7 +138,7 @@ class Starting_Economy_Edit_Screen(MapOverlayScreen):
     def draw_content(self, surface):
         self.draw_panel(surface)
 
-class Starting_Economy_List_Screen(MapOverlayScreen):
+class Starting_Economy_List_Screen(NationListOverlayScreen):
     pans_camera = False
     scroll_anywhere = True
     PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_CONFIRM
@@ -146,35 +146,18 @@ class Starting_Economy_List_Screen(MapOverlayScreen):
     TITLE_PRESET = "heading2"
     TITLE_Y_OFFSET = c.MODAL_TITLE_Y_OFFSET
 
-    def __init__(self, map_screen):
-        super().__init__(map_screen, pygame.Rect(0, 0, 620, 560))
-        self.back_state = "MAP"
-        self.active_countries = sorted(queries.get_living_nations(map_screen.map_data))
-        self.refresh_ui()
-
-    def refresh_ui(self):
+    def list_header_elements(self):
         p = self.panel_rect
-        self.elements = [
-            make_back_button(self.exit_screen, style="map"),
+        return [
             Button(p.right - 120, p.y + 20, "small", "red", "Reset All", self.reset_all),
         ]
 
-        row_top = p.y + 90
-        view_h = p.height - 110
-        row_x = p.centerx - (c.SIZES["list_row"][0] // 2)
-        cull_top, cull_bottom = p.y + 80, p.bottom - 20
-        self.scroll_content_rect = pygame.Rect(p.x, cull_top, p.width, cull_bottom - cull_top)
-        for i, y in self.layout_list_rows(len(self.active_countries), 40, row_top, view_h=view_h,
-                                          cull_top=cull_top, cull_bottom=cull_bottom):
-            cid = self.active_countries[i]
-            is_modified = any(self.map_screen.nation_data.get(cid, {}).get(res, 0) != 0 for res in c.ECON_RESOURCE_KEYS)
-            label = f"[MODIFIED] {cid}" if is_modified else cid
-            btn = Button(row_x, y, "list_row", "blue", label, lambda cc=cid: self.edit(cc))
-            btn.is_scrollable = True
-            btn.click_guard = self.scroll_click_guard
-            self.elements.append(btn)
-
-        self.list_view_h = view_h
+    def country_button(self, country_id, x, y):
+        is_modified = any(self.map_screen.nation_data.get(country_id, {}).get(res, 0) != 0
+                          for res in c.ECON_RESOURCE_KEYS)
+        label = f"[MODIFIED] {country_id}" if is_modified else country_id
+        return Button(x, y, "list_row", "blue", label,
+                      lambda cid=country_id: self.edit(cid))
 
     def edit(self, cid):
         _run_pygame_sub_screen(self.map_screen, Starting_Economy_Edit_Screen(self.map_screen, cid), on_done=self.refresh_ui)
@@ -191,7 +174,3 @@ class Starting_Economy_List_Screen(MapOverlayScreen):
             self.done = True
 
         confirm_dialog.ask_yes_no("Confirm Reset", "Are you sure you want to reset every starting economy to 0?", on_confirm)
-
-    def draw_content(self, surface):
-        self.draw_panel(surface)
-        self.draw_list_scrollbar(surface, self.panel_rect.right - 15, self.panel_rect.y + 90, self.list_view_h)

@@ -56,7 +56,7 @@ def editor_load_map(map_screen):
     def on_picked(path):
         if path:
             load_map.load_map_assets(map_screen, path)
-            map_screen.refresh_political_map()
+            map_screen.refresh_map_layers("political")
             map_screen.show_feedback("Map Loaded into Editor")
 
     queries.open_file_browser(map_screen, "Select Map Folder to Edit", c.SCENARIOS_CUSTOM_DIR,

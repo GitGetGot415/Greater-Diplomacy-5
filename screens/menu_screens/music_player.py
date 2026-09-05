@@ -2,7 +2,7 @@ import pygame
 import os
 from data import queries
 import ui_elements 
-from gameState import GameState
+from gameState import GameState, ScreenLayer
 from ui.bars import ui_bars
 from ui.scroll_panes import ScrollPanes
 from ui_elements import Button, Slider, make_back_button
@@ -35,47 +35,6 @@ if not hasattr(pygame.mixer.music, '_original_get_busy'):
         return pygame.mixer.music._original_get_busy()
         
     pygame.mixer.music.get_busy = _patched_get_busy
-
-
-class TopBarOverlay:
-    """A custom UI element injected to act as a solid header, clipping scrolled items."""
-    def __init__(self, controller):
-        self.controller = controller
-        self.visible = True
-        
-    def handle_event(self, event): 
-        pass
-        
-    def draw(self, surface):
-        # Draw solid backgrounds over the scrolling area
-        pygame.draw.rect(surface, (35, 35, 45), (0, 0, MUSIC_LEFT_PANE_W, 120))
-        pygame.draw.rect(surface, (25, 25, 30), (MUSIC_LEFT_PANE_W, 0, c.SCREEN_WIDTH - MUSIC_LEFT_PANE_W, 200)) # Height for scrubber
-        
-        # Re-draw the divider line over the header
-        pygame.draw.line(surface, (100, 100, 100), (MUSIC_LEFT_PANE_W, 0), (MUSIC_LEFT_PANE_W, c.SCREEN_HEIGHT), 2)
-        
-        font_title = fonts.get("heading1")
-        font_norm = fonts.get("normal")
-        surface.blit(font_title.render("ALBUMS", True, (255, 255, 255)), (20, 80))
-        
-        np_text = f"Now Playing: {os.path.basename(self.controller.now_playing)}" if self.controller.now_playing != "None" else "Now Playing: Nothing"
-        surface.blit(font_norm.render(np_text, True, c.COLOR_GOLD_HIGHLIGHT), (MUSIC_LEFT_PANE_W + 20, 30))
-
-
-class StartingSongOverlay:
-    """Fixed HUD label showing which track (if any) is pinned to play on boot."""
-    def __init__(self, controller):
-        self.controller = controller
-        self.visible = True
-
-    def handle_event(self, event):
-        pass
-
-    def draw(self, surface):
-        font = fonts.get("normal")
-        name = os.path.basename(self.controller.starting_song) if self.controller.starting_song else "None (Random)"
-        text = f"Starting Song: {name}"
-        surface.blit(font.render(text, True, c.COLOR_GOLD_HIGHLIGHT), (c.SCREEN_WIDTH - 250, c.SCREEN_HEIGHT - 150))
 
 
 class MusicScrubber:
@@ -271,7 +230,7 @@ class Music_Player(ScrollPanes, GameState):
         self._max_track = min(0, c.SCREEN_HEIGHT - 200 - track_content_h - 20)
 
         # --- 3. Top Layer: Fixed Overlay & Buttons ---
-        self.elements.append(TopBarOverlay(self.controller))
+        self.elements.append(ScreenLayer(self, "draw_top_bar"))
         
         self.elements.append(make_back_button(self.handle_back_key))
         # Anchored relative to the UI so it never scrolls away!
@@ -303,7 +262,7 @@ class Music_Player(ScrollPanes, GameState):
         # --- 6. Starting Song Selector (Bottom Right) ---
         # Pins whichever track is currently playing so it always opens the
         # game, independent of which albums happen to be toggled active.
-        self.elements.append(StartingSongOverlay(self.controller))
+        self.elements.append(ScreenLayer(self, "draw_starting_song_label"))
 
         set_start_btn = Button(slider_x, c.SCREEN_HEIGHT - 130, "medium", "blue",
                                 "Set as Starting Song", self.set_starting_song)
@@ -642,6 +601,29 @@ class Music_Player(ScrollPanes, GameState):
 
     def additional_events(self, event):
         self.route_pane_scroll(event)
+
+    def draw_top_bar(self, surface):
+        """Fixed chrome painted over the two independently scrolling panes."""
+        pygame.draw.rect(surface, (35, 35, 45), (0, 0, MUSIC_LEFT_PANE_W, 120))
+        pygame.draw.rect(surface, (25, 25, 30),
+                         (MUSIC_LEFT_PANE_W, 0, c.SCREEN_WIDTH - MUSIC_LEFT_PANE_W, 200))
+        pygame.draw.line(surface, (100, 100, 100),
+                         (MUSIC_LEFT_PANE_W, 0), (MUSIC_LEFT_PANE_W, c.SCREEN_HEIGHT), 2)
+
+        font_title = fonts.get("heading1")
+        font_norm = fonts.get("normal")
+        surface.blit(font_title.render("ALBUMS", True, (255, 255, 255)), (20, 80))
+        now_playing = (f"Now Playing: {os.path.basename(self.controller.now_playing)}"
+                       if self.controller.now_playing != "None" else "Now Playing: Nothing")
+        surface.blit(font_norm.render(now_playing, True, c.COLOR_GOLD_HIGHLIGHT),
+                     (MUSIC_LEFT_PANE_W + 20, 30))
+
+    def draw_starting_song_label(self, surface):
+        """Fixed HUD label showing which track, if any, starts on boot."""
+        font = fonts.get("normal")
+        name = os.path.basename(self.controller.starting_song) if self.controller.starting_song else "None (Random)"
+        surface.blit(font.render(f"Starting Song: {name}", True, c.COLOR_GOLD_HIGHLIGHT),
+                     (c.SCREEN_WIDTH - 250, c.SCREEN_HEIGHT - 150))
 
     def draw_elements(self, surface):
         """Two independent scrolling panes, each cropped to its own rect."""

@@ -279,6 +279,16 @@ def make_back_button(on_click, style="menu", pos=None, label="Back", color="red"
     return Button(x, y, "small", color, label, on_click)
 
 
+def make_info_button(x, y, on_click, y_offset=0):
+    """Builds the standard small help button beside a settings control.
+
+    Each screen owns its own local ``y_offset`` because its neighboring control
+    size is local layout, while the button's behavior and visual identity stay
+    consistent everywhere.
+    """
+    return Button(x, y + y_offset, "scenario_setting_info", "light_blue", "?", on_click)
+
+
 class Slider:
     def __init__(self, x, y, width, text, initial_val, callback, visual_max=1.0, allowed_max=1.0):
         self.rect = pygame.Rect(x, y, width, 20)

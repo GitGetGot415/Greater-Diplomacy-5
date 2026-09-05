@@ -174,12 +174,8 @@ def render_buttons(map_screen):
                         return
                     map_screen.show_feedback(f"Move imported from {os.path.basename(file_path)}")
 
-                    map_screen.refresh_political_map()
-                    map_screen.refresh_factions_map()
-                    map_screen.refresh_relations_map()
-                    # If economy map refresh is needed we can do it, but Map doesn't have refresh_economy_map so we skip or call refresh_all_maps()
-                    map_screen.refresh_cores_map()
-                    map_screen.refresh_faction_territories_map()
+                    map_screen.refresh_map_layers(
+                        "political", "factions", "relations", "cores", "faction_territories")
                     if hasattr(map_screen, 'sync_units_to_data'):
                         map_screen.sync_units_to_data()
 
@@ -369,7 +365,7 @@ def render_buttons(map_screen):
     # General Controls
     def start_spectator_action():
         player_setup.start_spectator(map_screen)
-        map_screen.refresh_fog_map()
+        map_screen.refresh_map_layers("fog")
 
     def toggle_tactical_action():
         map_screen.tactical_mode = not map_screen.tactical_mode
@@ -1003,12 +999,7 @@ class Map(GameState):
             random_map_generator.randomize_all_provinces(self, random_settings)
 
         # --- 4. REFRESH MAPS ---
-        self.refresh_political_map()
-        self.refresh_relations_map()
-        self.refresh_factions_map()
-        self.refresh_cores_map()
-        self.refresh_faction_territories_map()
-        self.refresh_fog_map()
+        self.refresh_map_layers(*self.ALL_MAP_LAYERS)
 
         render_buttons(self)
 
@@ -1282,30 +1273,38 @@ class Map(GameState):
 
         run_background(save_map.save_map_data, self)
 
-    def refresh_political_map(self): refresh_map.refresh_political_map(self)
-    def refresh_relations_map(self): refresh_map.refresh_relations_map(self)
-    def refresh_factions_map(self): refresh_map.refresh_factions_map(self)
-    def refresh_cores_map(self): refresh_map.refresh_cores_map(self)
-    def refresh_faction_territories_map(self): refresh_map.refresh_faction_territories_map(self)
-    def refresh_fog_map(self): refresh_map.refresh_fog_map(self)
+    MAP_LAYER_REFRESHERS = {
+        "political": refresh_map.refresh_political_map,
+        "relations": refresh_map.refresh_relations_map,
+        "factions": refresh_map.refresh_factions_map,
+        "cores": refresh_map.refresh_cores_map,
+        "faction_territories": refresh_map.refresh_faction_territories_map,
+        "fog": refresh_map.refresh_fog_map,
+    }
+    ALL_MAP_LAYERS = tuple(MAP_LAYER_REFRESHERS)
+
+    def refresh_map_layers(self, *layers):
+        """Rebuilds named visual layers in the caller-supplied order.
+
+        Layer names live beside the Map UI that owns their cached surfaces.
+        The renderer remains responsible for the actual image construction;
+        callers no longer need six nearly identical forwarding methods.
+        """
+        for layer in layers:
+            try:
+                self.MAP_LAYER_REFRESHERS[layer](self)
+            except KeyError as error:
+                raise ValueError(f"Unknown map layer: {layer!r}") from error
 
     def refresh_diplomacy_maps(self):
         """Unified helper to quickly refresh only diplomacy-related overlays."""
-        self.refresh_relations_map()
-        self.refresh_factions_map()
-        if hasattr(self, 'refresh_faction_territories_map'):
-            self.refresh_faction_territories_map()
+        self.refresh_map_layers("relations", "factions", "faction_territories")
 
     def refresh_all_maps(self):
         """Unified method to refresh all visual map layers and text at once."""
         # do note that for larger maps this might take over 1000 ms to complete, this is NOT instant by any means
         # TODO: maybe add the ability to ignore certain refresh actions (example: refresh all except for faction territories)
-        self.refresh_political_map()
-        self.refresh_relations_map()
-        self.refresh_factions_map()
-        self.refresh_cores_map()
-        self.refresh_faction_territories_map()
-        self.refresh_fog_map()
+        self.refresh_map_layers(*self.ALL_MAP_LAYERS)
         self.update_country_centers()
         self.show_feedback("Maps refreshed!")
 
@@ -1319,7 +1318,7 @@ class Map(GameState):
                     province["cores"] = [owner] if owner not in c.OWNERLESS_OWNERS else []
                 self.show_feedback("Auto-assigned all cores!")
                 if self.map_mode == "CORES":
-                    self.refresh_cores_map()
+                    self.refresh_map_layers("cores")
             else:
                 self.show_feedback("Auto-core cancelled.")
 
@@ -1582,8 +1581,7 @@ class Map(GameState):
                 updated_count += 1
 
         self.nation_colors = country_io.nation_colors_from(self.nation_data)
-        self.refresh_political_map()
-        self.refresh_relations_map()
+        self.refresh_map_layers("political", "relations")
 
         # Merge the unit sync into this function
         self.sync_units_to_data()
@@ -1628,12 +1626,7 @@ class Map(GameState):
 
             if self.thread_error: return
 
-            self.refresh_political_map()
-            self.refresh_relations_map()
-            self.refresh_factions_map()
-            self.refresh_cores_map()
-            self.refresh_faction_territories_map()
-            self.refresh_fog_map()
+            self.refresh_map_layers(*self.ALL_MAP_LAYERS)
             self.update_country_centers()
 
             self.viewing_ai_moves = False # Safely unlock PyGame UI rendering
@@ -1653,9 +1646,7 @@ class Map(GameState):
                 turn_manager.advance_time(self)
             else:
                 self.viewing_ai_moves = True
-                self.refresh_political_map()
-                self.refresh_relations_map()
-                self.refresh_fog_map()
+                self.refresh_map_layers("political", "relations", "fog")
                 render_buttons(self)
                 elapsed_seconds = (pygame.time.get_ticks() - self.turn_start_time) / 1000.0
                 self.show_feedback(f"AI Strategy generated in {elapsed_seconds:.2f}s")

@@ -8,7 +8,7 @@ import tkinter as tk
 from tkinter import messagebox
 import data.constants as c
 from data import queries
-from data.io.json_io import dump_compact, load_json_or_empty
+from data.io.json_io import load_json_or_empty, write_compact_mapping
 
 PATH = c.UNIT_DATA_PATH
 
@@ -51,20 +51,10 @@ class UnitEditor:
     def load_data(self):
         return load_json_or_empty(PATH)
 
-    def custom_json_dump(self, data_dict, filepath):
-        """Custom dumper to keep top-level items on new lines, but inner dicts compact."""
-        lines = ["{"]
-        items = list(data_dict.items())
-        for i, (key, val) in enumerate(items):
-            val_str = dump_compact(val)
-            comma = "," if i < len(items) - 1 else ""
-            lines.append(f'    "{key}": {val_str}{comma}')
-        lines.append("}")
-        
-        with open(filepath, "w") as f:
-            f.write("\n".join(lines))
-            
-        queries.clear_json_caches()  # <-- CLEAR CACHE AFTER DISK WRITE
+    def save_data(self):
+        """Writes unit data and invalidates the game's cached library together."""
+        write_compact_mapping(PATH, self.data)
+        queries.clear_json_caches()
 
     def format_json(self):
         """Forces the current data dictionary to rewrite using the custom one-line format."""
@@ -72,7 +62,7 @@ class UnitEditor:
             messagebox.showwarning("Warning", "No data to format.")
             return
             
-        self.custom_json_dump(self.data, PATH)
+        self.save_data()
         messagebox.showinfo("Success", "Unit JSON has been reset to one-line format!")
 
     def save_unit(self):
@@ -93,8 +83,7 @@ class UnitEditor:
                 "order": {}
             }
             
-            # Use the custom dumper instead of standard json.dump
-            self.custom_json_dump(self.data, PATH)
+            self.save_data()
             
             messagebox.showinfo("Success", f"Updated {name}")
             self.refresh_list()

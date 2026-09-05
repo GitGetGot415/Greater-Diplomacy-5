@@ -267,7 +267,7 @@ class Faction_Territories_Screen(GameState):
 
     def start_view(self, map_ref):
         self.map_screen = map_ref
-        self.map_screen.refresh_faction_territories_map()
+        self.map_screen.refresh_map_layers("faction_territories")
         self.refresh_ui()
 
     def refresh_ui(self):

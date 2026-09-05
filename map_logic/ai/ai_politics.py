@@ -26,6 +26,7 @@ Stdlib, `data` and the sibling ai modules only, so it imports under Pyodide.
 
 import data.constants as c
 from data import queries
+from data.number_utils import clamp01
 from map_logic import politics
 from map_logic.ai import ai_opinion, ai_personality
 
@@ -44,8 +45,8 @@ def _danger(world, nation, enemies):
         losing = max(losing, 1.0 - ai_opinion._sigmoid(
             (border_ratio + global_ratio) / 2.0, 1.0, c.AI_ODDS_STEEPNESS))
 
-    return ai_opinion._clamp01(c.POLITICS_AI_W_LOSING * losing
-                               + c.POLITICS_AI_W_LOAD * ai_opinion.war_load(world, nation))
+    return clamp01(c.POLITICS_AI_W_LOSING * losing
+                   + c.POLITICS_AI_W_LOAD * ai_opinion.war_load(world, nation))
 
 
 def _menace(world, nation, enemies):
@@ -64,7 +65,7 @@ def _menace(world, nation, enemies):
             continue
         _, global_ratio = world.power_ratio(nation, other)
         worst = max(worst, 1.0 - ai_opinion._sigmoid(global_ratio, 1.0, c.AI_ODDS_STEEPNESS))
-    return ai_opinion._clamp01(worst)
+    return clamp01(worst)
 
 
 def desired_value(world, nation, scenario_settings=None):
@@ -85,7 +86,7 @@ def desired_value(world, nation, scenario_settings=None):
     base += c.POLITICS_AI_W_CAUTION * (person.get("caution", 0.5) - 0.5)
     base += c.POLITICS_AI_W_AGGRO * (person.get("aggression", 0.5) - 0.5)
 
-    return politics.clamp((2.0 * ai_opinion._clamp01(base) - 1.0) * c.POLITICS_MAX)
+    return politics.clamp((2.0 * clamp01(base) - 1.0) * c.POLITICS_MAX)
 
 
 def decide(world, nation, nation_data, scenario_settings=None):

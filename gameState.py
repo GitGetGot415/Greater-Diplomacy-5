@@ -107,6 +107,17 @@ class GameState:
         self.next_state = state
         self.done = True
 
+    def set_sub_state(self, state):
+        """Changes a screen's local view and resets its standard list scroll.
+
+        Category/list screens use the same transition contract: switch the
+        state, return to the first row, then rebuild controls. Screens with
+        extra transient state can clear it before delegating here.
+        """
+        self.sub_state = state
+        self.scroll_y = 0
+        self.refresh_ui()
+
     def exit_screen(self):
         """Closes this screen, handing off to back_state when one is declared."""
         if self.back_state:
@@ -742,3 +753,68 @@ class MapOverlayScreen(GameState):
     def draw_content(self, surface):
         """Hook for highlights and panels drawn between the map and the buttons."""
         pass
+
+
+class NationListOverlayScreen(MapOverlayScreen):
+    """Standard scrollable picker for the living nations on an editor map.
+
+    Starting economy, politics, and AI personality each had the same panel,
+    scroll bounds, button wiring, and scrollbar contract. They now only say
+    how to label/color one country, what opening it should perform, and any
+    header content unique to that tool. Geometry remains class-local so a
+    future editor can intentionally choose a different list shape.
+    """
+
+    LIST_PANEL_SIZE = (620, 560)
+    LIST_ROW_HEIGHT = 40
+    LIST_HEADER_HEIGHT = 90
+    LIST_BOTTOM_MARGIN = 20
+    LIST_SCROLLBAR_WIDTH = 15
+
+    def __init__(self, map_screen):
+        super().__init__(map_screen, pygame.Rect(0, 0, *self.LIST_PANEL_SIZE))
+        self.back_state = "MAP"
+        self.active_countries = sorted(queries.get_living_nations(map_screen.map_data))
+        self.refresh_ui()
+
+    def list_header_elements(self):
+        """Fixed controls in the panel header, excluding the shared Back button."""
+        return []
+
+    def country_button(self, country_id, x, y):
+        """Builds the one row that represents ``country_id`` in this tool."""
+        raise NotImplementedError
+
+    def draw_list_header(self, surface):
+        """Screen-specific explanatory text drawn above the scrolling rows."""
+        pass
+
+    def refresh_ui(self):
+        from ui_elements import make_back_button
+
+        panel = self.panel_rect
+        self.elements = [make_back_button(self.exit_screen, style="map")] + self.list_header_elements()
+
+        row_top = panel.y + self.LIST_HEADER_HEIGHT
+        view_h = panel.height - self.LIST_HEADER_HEIGHT - self.LIST_BOTTOM_MARGIN
+        row_x = panel.centerx - (c.SIZES["list_row"][0] // 2)
+        cull_top = panel.y + self.LIST_HEADER_HEIGHT - 10
+        cull_bottom = panel.bottom - self.LIST_BOTTOM_MARGIN
+        self.scroll_content_rect = pygame.Rect(panel.x, cull_top, panel.width, cull_bottom - cull_top)
+
+        for index, y in self.layout_list_rows(len(self.active_countries), self.LIST_ROW_HEIGHT,
+                                              row_top, view_h=view_h, cull_top=cull_top,
+                                              cull_bottom=cull_bottom):
+            button = self.country_button(self.active_countries[index], row_x, y)
+            button.is_scrollable = True
+            button.click_guard = self.scroll_click_guard
+            self.elements.append(button)
+
+        self.list_view_h = view_h
+
+    def draw_content(self, surface):
+        self.draw_panel(surface)
+        self.draw_list_scrollbar(surface, self.panel_rect.right - self.LIST_SCROLLBAR_WIDTH,
+                                 self.panel_rect.y + self.LIST_HEADER_HEIGHT,
+                                 self.list_view_h, width=self.LIST_SCROLLBAR_WIDTH)
+        self.draw_list_header(surface)

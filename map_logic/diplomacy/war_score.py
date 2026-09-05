@@ -29,13 +29,9 @@ See the note at the top of map_logic/ai/ai_world.py.
 """
 
 import data.constants as c
+from data.number_utils import clamp01
 from data import queries
 from map_logic.diplomacy import deal as deal_mod
-
-
-def _clamp01(value):
-    return max(0.0, min(1.0, value))
-
 
 # ==========================================
 # WHOSE LAND IS IT REALLY
@@ -77,8 +73,8 @@ def occupation(map_screen, side_a, side_b):
             lost[side] += value
 
     # "a" holds what side b lost, and vice versa.
-    return (_clamp01(lost["b"] / homeland["b"]) if homeland["b"] else 0.0,
-            _clamp01(lost["a"] / homeland["a"]) if homeland["a"] else 0.0)
+    return (clamp01(lost["b"] / homeland["b"]) if homeland["b"] else 0.0,
+            clamp01(lost["a"] / homeland["a"]) if homeland["a"] else 0.0)
 
 
 # ==========================================
@@ -116,7 +112,7 @@ def strength_share(map_screen, side_a, side_b, world=None):
     combined = power_a + power_b
     if combined <= 0:
         return 0.5
-    return _clamp01(power_a / combined)
+    return clamp01(power_a / combined)
 
 
 # ==========================================

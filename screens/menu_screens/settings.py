@@ -1,6 +1,6 @@
 import pygame
 import ui_elements
-from ui_elements import Button, Slider
+from ui_elements import Button, Slider, make_info_button
 from gameState import GameState
 import data.constants as c
 from data import queries
@@ -74,13 +74,6 @@ SETTINGS_INFO_ROWS = (
 )
 
 
-def info_button(x, y, tooltip_title, tooltip_text):
-    """A small "?" button that pops up a tooltip -- same shape scenario_settings
-    uses for its rows, reused here for the Settings/Keybinds screens' toggles."""
-    return Button(x, y + SETTINGS_INFO_Y_NUDGE, "scenario_setting_info", "light_blue", "?",
-                 lambda: confirm_dialog.show_info(tooltip_title, tooltip_text))
-
-
 def make_option_buttons(options, on_select, current, size="ai_opinion", color="blue", font_preset="small"):
     """Builds a row/column of mutually exclusive buttons with the active one highlighted.
 
@@ -116,7 +109,10 @@ def render_settings_buttons(settings_screen):
                settings_screen.toggle_battle_display_mode),
     ]
     settings_screen.elements.extend(
-        info_button(SETTINGS_INFO_X, y, title, text) for y, title, text in SETTINGS_INFO_ROWS
+        make_info_button(SETTINGS_INFO_X, y,
+                         lambda heading=title, body=text: confirm_dialog.show_info(heading, body),
+                         y_offset=SETTINGS_INFO_Y_NUDGE)
+        for y, title, text in SETTINGS_INFO_ROWS
     )
 
     # --- MASTER AI TOGGLE BUTTON ---

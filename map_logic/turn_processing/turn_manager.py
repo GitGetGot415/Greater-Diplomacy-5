@@ -106,12 +106,12 @@ async def _resolve_turn_and_refresh(map_screen):
 
         # 2. Define Refresh Tasks
         refresh_steps = [
-            ("Refreshing Political Map...", map_screen.refresh_political_map),
-            ("Refreshing Relations Map...", map_screen.refresh_relations_map),
-            ("Refreshing Factions Map...", map_screen.refresh_factions_map),
-            ("Refreshing Core Map...", map_screen.refresh_cores_map),
-            ("Refreshing Territories...", map_screen.refresh_faction_territories_map),
-            ("Refreshing Fog of War...", map_screen.refresh_fog_map),
+            ("Refreshing Political Map...", lambda: map_screen.refresh_map_layers("political")),
+            ("Refreshing Relations Map...", lambda: map_screen.refresh_map_layers("relations")),
+            ("Refreshing Factions Map...", lambda: map_screen.refresh_map_layers("factions")),
+            ("Refreshing Core Map...", lambda: map_screen.refresh_map_layers("cores")),
+            ("Refreshing Territories...", lambda: map_screen.refresh_map_layers("faction_territories")),
+            ("Refreshing Fog of War...", lambda: map_screen.refresh_map_layers("fog")),
             ("Updating Map Labels...", map_screen.update_country_centers)
         ]
 

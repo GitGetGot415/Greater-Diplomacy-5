@@ -14,7 +14,7 @@ inside nation_data.
 import pygame
 import data.constants as c
 from data import queries
-from gameState import MapOverlayScreen
+from gameState import MapOverlayScreen, NationListOverlayScreen
 from ui_elements import Button, Slider, make_back_button
 from ui.screen_runner import _run_pygame_sub_screen
 from map_logic.rendering.font_manager import fonts
@@ -111,7 +111,7 @@ class Personality_Edit_Screen(MapOverlayScreen):
         surface.blit(summary, (p.x + 30, p.bottom - 90))
 
 
-class Personality_List_Screen(MapOverlayScreen):
+class Personality_List_Screen(NationListOverlayScreen):
     pans_camera = False
     scroll_anywhere = True
     PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_SPECIAL
@@ -119,46 +119,19 @@ class Personality_List_Screen(MapOverlayScreen):
     TITLE_PRESET = "heading2"
     TITLE_Y_OFFSET = c.MODAL_TITLE_Y_OFFSET
 
-    def __init__(self, map_screen):
-        super().__init__(map_screen, pygame.Rect(0, 0, 620, 560))
-        self.back_state = "MAP"
-        self.active_countries = sorted(queries.get_living_nations(map_screen.map_data))
-        self.refresh_ui()
-
-    def refresh_ui(self):
-        p = self.panel_rect
-        self.elements = [make_back_button(self.exit_screen, style="map")]
-
-        row_top = p.y + 90
-        view_h = p.height - 110
-        row_x = p.centerx - (c.SIZES["list_row"][0] // 2)
-        cull_top, cull_bottom = p.y + 80, p.bottom - 20
-        self.scroll_content_rect = pygame.Rect(p.x, cull_top, p.width, cull_bottom - cull_top)
-
-        for i, y in self.layout_list_rows(len(self.active_countries), 40, row_top, view_h=view_h,
-                                          cull_top=cull_top, cull_bottom=cull_bottom):
-            cid = self.active_countries[i]
-            stored = self.map_screen.nation_data.get(cid, {}).get("personality") or {}
-            authored = stored.get("_source") in ai_personality.AUTHORED_SOURCES
-            label = f"[AUTHORED] {cid}" if authored else cid
-            btn = Button(row_x, y, "list_row", "green" if authored else "blue", label,
-                         lambda cc=cid: self.edit(cc))
-            btn.is_scrollable = True
-            btn.click_guard = self.scroll_click_guard
-            self.elements.append(btn)
-
-        self.list_view_h = view_h
+    def country_button(self, country_id, x, y):
+        stored = self.map_screen.nation_data.get(country_id, {}).get("personality") or {}
+        authored = stored.get("_source") in ai_personality.AUTHORED_SOURCES
+        label = f"[AUTHORED] {country_id}" if authored else country_id
+        return Button(x, y, "list_row", "green" if authored else "blue", label,
+                      lambda cid=country_id: self.edit(cid))
 
     def edit(self, cid):
         _run_pygame_sub_screen(self.map_screen, Personality_Edit_Screen(self.map_screen, cid),
                                on_done=self.refresh_ui)
 
-    def draw_content(self, surface):
+    def draw_list_header(self, surface):
         p = self.panel_rect
-        self.draw_panel(surface)
-        # Also publishes the track/handle rects handle_list_scroll drags by, so
-        # this is what makes the bar grabbable and not merely visible.
-        self.draw_list_scrollbar(surface, p.right - 15, p.y + 90, self.list_view_h)
         note = fonts.get("small").render(
             "Unmarked nations use procedural traits, seeded from the scenario.",
             True, c.UI_TEXT_MUTED)

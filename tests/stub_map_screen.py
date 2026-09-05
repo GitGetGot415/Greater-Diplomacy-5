@@ -148,6 +148,15 @@ class StubMapScreen:
     def refresh_diplomacy_maps(self):
         pass
 
+    def refresh_map_layers(self, *layers):
+        """Test-double counterpart of Map.refresh_map_layers.
+
+        Rendering is outside this lightweight diplomacy fixture's scope, but
+        recording requests lets callers share the real Map API without six
+        no-op refresh methods.
+        """
+        self.refreshed_map_layers = getattr(self, "refreshed_map_layers", []) + list(layers)
+
     # --- helpers used by the tests -------------------------------------------------
 
     def run_turn(self):

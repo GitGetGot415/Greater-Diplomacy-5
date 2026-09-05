@@ -20,13 +20,9 @@ import collections
 import math
 
 import data.constants as c
+from data.number_utils import clamp01
 from data import queries
 from map_logic.ai import ai_commitments, ai_personality
-
-
-def _clamp01(value):
-    return max(0.0, min(1.0, value))
-
 
 def _sigmoid(value, midpoint, steepness):
     """0..1, crossing 0.5 at `midpoint`. The soft version of a threshold."""
@@ -51,14 +47,14 @@ def war_load(world, nation):
                if e in world.nation_data]
     if not enemies:
         return 0.0
-    return _clamp01(len(enemies) / float(c.AI_WAR_LOAD_SATURATION))
+    return clamp01(len(enemies) / float(c.AI_WAR_LOAD_SATURATION))
 
 
 def target_value(world, nation, target):
     """How much this nation stands to gain from taking the target's land, 0..1."""
     contested = world.claim_pressure.get((target, nation), 0)
     owned = max(1, len(world.provs_by_owner.get(target, ())))
-    return _clamp01(contested / float(owned))
+    return clamp01(contested / float(owned))
 
 
 def war_desire(world, nation, target, scenario_settings=None):
@@ -98,7 +94,7 @@ def war_desire(world, nation, target, scenario_settings=None):
     # neutral upward only: being disliked does not by itself make a nation
     # attack you, that is what aggression is for, but being genuinely friendly
     # holds it back.
-    goodwill = _clamp01(max(0.0, world.relation(nation, target)) / 200.0)
+    goodwill = clamp01(max(0.0, world.relation(nation, target)) / 200.0)
     restraint = (c.AI_W_RELATION * goodwill
                  + c.AI_W_OVEREXTENSION * war_load(world, nation))
 
@@ -113,7 +109,7 @@ def war_desire(world, nation, target, scenario_settings=None):
     if target in ai_commitments.is_sphered(world.nation_data, nation, target):
         restraint += c.AI_COMMITMENT_WEIGHT
 
-    return _clamp01(core - restraint)
+    return clamp01(core - restraint)
 
 
 def wants_war(world, nation, target, scenario_settings=None):
@@ -136,7 +132,7 @@ def peace_appetite(world, nation, enemy, scenario_settings=None):
     border_ratio, global_ratio = world.power_ratio(nation, enemy)
     losing = 1.0 - _sigmoid((border_ratio + global_ratio) / 2.0, 1.0, c.AI_ODDS_STEEPNESS)
 
-    return _clamp01(c.AI_W_PEACE_LOSING * losing
+    return clamp01(c.AI_W_PEACE_LOSING * losing
                     + c.AI_W_PEACE_CAUTION * person.get("caution", 0.5))
 
 
@@ -598,13 +594,13 @@ def trade_verdict(world, nation, sender, agreement, scenario_settings=None):
 def alliance_appetite(world, nation, other, scenario_settings=None):
     """How much this nation wants a formal bloc with `other`, 0..1."""
     person = traits(world, nation, scenario_settings)
-    relation = _clamp01((world.relation(nation, other) + 200.0) / 400.0)
+    relation = clamp01((world.relation(nation, other) + 200.0) / 400.0)
 
     mine = set(queries.get_enemies(nation, world.nation_data))
     theirs = set(queries.get_enemies(other, world.nation_data))
     shared = 1.0 if (mine & theirs) else 0.0
 
-    return _clamp01(c.AI_W_ALLY_RELATION * relation * (0.5 + person.get("trust", 0.5))
+    return clamp01(c.AI_W_ALLY_RELATION * relation * (0.5 + person.get("trust", 0.5))
                     + c.AI_W_ALLY_SHARED_ENEMY * shared
-                    + c.AI_W_ALLY_WEAKNESS * (1.0 - _clamp01(
+                    + c.AI_W_ALLY_WEAKNESS * (1.0 - clamp01(
                         world.power_ratio(nation, other)[1])))
