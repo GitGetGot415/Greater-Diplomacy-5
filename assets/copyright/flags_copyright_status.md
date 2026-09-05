@@ -23,10 +23,10 @@
 | Alsace-Lorraine | Public Domain |
 | Alto Rio Negro | Public Domain |
 | Amapá | Public Domain |
-| American Territory of Canada |  |
-| American Union State |  |
-| Amur | [!!!] |
-| Anarchist Commune of America |  |
+| American Territory of Canada | (kaiserin??? idk) |
+| American Union State | Kaiserreich |
+| Amur | TNO |
+| Anarchist Commune of America | Kaiserreich |
 | Andalusia | Public Domain |
 | Angola | Public Domain |
 | Ankara | Public Domain |
@@ -61,11 +61,11 @@
 | Bangladesh | Public Domain |
 | Barotseland | Public Domain |
 | Basque Country | Public Domain |
-| Batavian Commune |  |
+| Batavian Commune | Kaiserreich |
 | Bathrooms |  |
 | Bavaria | Public Domain |
 | Bay Plunge | [!!!] |
-| Bay Walk | [!!!] |
+| Bay Walk | GitGetGot415 |
 | Beach Street | [!!!] |
 | Beijing |  |
 | Belarus | Public Domain |
@@ -74,7 +74,7 @@
 | Belize | Public Domain |
 | Ben and Jerry's | [!!!] |
 | Benin | Public Domain |
-| Bharatiya Commune |  |
+| Bharatiya Commune | Kaiserreich |
 | Bhutan | Public Domain |
 | Biscoff Coffee Corner | [!!!] |
 | Blazing Saddles | [!!!] |
@@ -103,7 +103,7 @@
 | Bulgaria | Public Domain |
 | Burkina Faso | Public Domain |
 | Burundi | Public Domain |
-| Buryatia |  |
+| Buryatia | TNO |
 | Byzantine Empire | Public Domain |
 | California | Public Domain |
 | Cambodia | Public Domain |
@@ -140,7 +140,7 @@
 | Communist Party of India |  |
 | Confederate States of America | Public Domain |
 | Confederate States of America (Battle Flag) | Public Domain |
-| Corporatist Brazil |  |
+| Corporatist Brazil | (kaiserin??? idk) |
 | Corsica | Public Domain |
 | Cossacks | Public Domain |
 | Costa Rica | Public Domain |
@@ -174,7 +174,7 @@
 | Ea-Nasir | Public Domain |
 | Eagle Cafe | [!!!] |
 | East African Federation | Public Domain |
-| East Asia |  |
+| East Asia | [!!!] |
 | East Germany | Public Domain |
 | East Timor | Public Domain |
 | Eastern Sanctuaries |  |
@@ -230,7 +230,7 @@
 | Gaul |  |
 | Georgia | Public Domain |
 | German Empire | Public Domain |
-| German Reich | [???] |
+| German Reich | the hoi4 flag |
 | Germany | Public Domain |
 | Ghana | Public Domain |
 | Gigachad | GitGetGot415 |
@@ -279,7 +279,7 @@
 | Iran | Public Domain |
 | Iraq | Public Domain |
 | Ireland | Public Domain |
-| Irkutsk |  |
+| Irkutsk | TNO |
 | Iroquois Confederacy | Public Domain |
 | Islamic Republic of Japan |  |
 | Israel | Public Domain |
@@ -297,7 +297,7 @@
 | Kalat | Public Domain |
 | Kaliningrad |  |
 | Kalmar Union |  |
-| Kamchatka | [???] |
+| Kamchatka | TNO |
 | Kansas | Public Domain |
 | Karelia | Public Domain |
 | Kashmir |  |
@@ -310,17 +310,17 @@
 | Khiva | Public Domain |
 | Khmer Rouge | Public Domain |
 | Khoisan | [???] |
-| Kingdom of Argentina |  |
+| Kingdom of Argentina | Kaiserreich |
 | Kingdom of Armenia |  |
-| Kingdom of Flanders-Wallonia |  |
-| Kingdom of France |  |
-| Kingdom of Lithuania |  |
-| Kingdom of Portugal |  |
-| Kingdom of Russia |  |
-| Kingdom of Sardinia |  |
-| Kingdom of Two Sicilies |  |
-| Kokand |  |
-| Korea |  |
+| Kingdom of Flanders-Wallonia | Kaiserreich |
+| Kingdom of France | Public Domain |
+| Kingdom of Lithuania | Kaiserreich |
+| Kingdom of Portugal | Kaiserreich |
+| Kingdom of Russia | Kaiserreich |
+| Kingdom of Sardinia | Kaiserreich |
+| Kingdom of Two Sicilies | Kaiserreich |
+| Kokand | Public Domain |
+| Korea | Public Domain |
 | Kosovo | Public Domain |
 | Kurdistan | Public Domain |
 | Kuwait | Public Domain |
@@ -331,7 +331,7 @@
 | Lappert's Ice Cream | [!!!] |
 | Las Vegas | Public Domain |
 | Latvia | Public Domain |
-| League of Eight Provinces |  |
+| League of Eight Provinces | Kaiserreich |
 | Lebanon | Public Domain |
 | Lesotho | Public Domain |
 | Liangguang Clique |  |
@@ -349,7 +349,7 @@
 | Lviv | Public Domain |
 | Madagascar | Public Domain |
 | Madrid | Public Domain |
-| Magadan | Public Domain |
+| Magadan | TNO |
 | Magnetron | [!!!] |
 | Magowan's Infinite Mirror Maze | [!!!] |
 | Maine | Public Domain |
@@ -397,7 +397,7 @@
 | Naples | Public Domain |
 | Napoleonic France |  |
 | Nathan's Hot Dog Cart | [!!!] |
-| National France |  |
+| National France | Kaiserreich |
 | Nationalist China |  |
 | Nebraska | Public Domain |
 | Nepal | Public Domain |
@@ -427,7 +427,7 @@
 | Northwest Territories | Public Domain |
 | Norway | Public Domain |
 | Novosibirsk | Public Domain |
-| Nowa Polska |  |
+| Nowa Polska | TNO |
 | Nunavut | Public Domain |
 | Oaxaca | Public Domain |
 | Occitania | Public Domain |
@@ -438,16 +438,16 @@
 | Oldegård |  |
 | Oman | Public Domain |
 | Omani Empire | Public Domain |
-| Omsk |  |
+| Omsk | TNO |
 | Ontario | [???] |
 | Orange Free State | Public Domain |
-| Ordensstaat Burgund |  |
+| Ordensstaat Burgund | TNO |
 | Oregon | Public Domain |
-| Orsk |  |
-| Ostafrika |  |
+| Orsk | TNO |
+| Ostafrika | TNO |
 | Ottoman Empire | Public Domain |
 | Pacific Islands Forum | [!!!] |
-| Pacific States of America | [!!!] |
+| Pacific States of America | Kaiserreich |
 | Pakistan | Public Domain |
 | Palestine | Public Domain |
 | Panama | Public Domain |
@@ -467,7 +467,7 @@
 | Parking Lot 8 |  |
 | Parking Lot 9 |  |
 | Parthian Empire | [!!!] |
-| Patagonian Workers Front |  |
+| Patagonian Workers Front | Kaiserreich |
 | Pearl Factory | [!!!] |
 | Pennsylvania | Public Domain |
 | Pepper Paradise Hot Sauce & More | [!!!] |
@@ -512,7 +512,7 @@
 | Pomerania | Public Domain |
 | Portugal | Public Domain |
 | Powell Street | [!!!] |
-| Princely Federation |  |
+| Princely Federation | Kaiserreich |
 | Protectorate of Bohemia and Moravia | Public Domain |
 | Proto-Finnish Holy Roman Khaganate |  |
 | Prussia | Public Domain |
@@ -526,13 +526,13 @@
 | Quick Tag | [!!!] |
 | Rahanweyn | Public Domain |
 | Ramp | GitGetGot415 |
-| Reichskommissariat Kaukasien |  |
-| Reichskommissariat Moskowien |  |
-| Reichskommissariat Norwegen |  |
-| Reichskommissariat Ostland |  |
-| Reichskommissariat Sweden |  |
-| Reichskommissariat Ukraine |  |
-| Reichskommissariat Ungarn |  |
+| Reichskommissariat Kaukasien | TNO??? |
+| Reichskommissariat Moskowien | TNO??? |
+| Reichskommissariat Norwegen | TNO??? |
+| Reichskommissariat Ostland | TNO??? |
+| Reichskommissariat Sweden | TNO??? |
+| Reichskommissariat Ukraine | TNO??? |
+| Reichskommissariat Ungarn | TNO??? |
 | Reno | Public Domain |
 | Republic of South Africa | Public Domain |
 | Republic of the Congo | Public Domain |
@@ -596,7 +596,7 @@
 | Skystar Wheel | [!!!] |
 | Slovakia | Public Domain |
 | Slovenia | Public Domain |
-| Socialist Republic of Italy |  |
+| Socialist Republic of Italy | Kaiserreich |
 | Sokoto | [???] |
 | Sokoto Caliphate | Public Domain |
 | Solomon Islands | Public Domain |
@@ -617,13 +617,13 @@
 | SS Jeremiah O'Brien | [!!!] |
 | Stanistan |  |
 | Sudan | Public Domain |
-| Sudwestafrika |  |
+| Sudwestafrika | TNO |
 | Sulawesi |  |
 | Sulawesi Separatists |  |
 | Sumatra |  |
 | Sunglass Hut | [!!!] |
 | Suriname | Public Domain |
-| Sverdlovsk | Public Domain |
+| Sverdlovsk | TNO |
 | Sweden | Public Domain |
 | Swiss Louis Italian And Seafood Restaurant | [!!!] |
 | Switzerland | Public Domain |
@@ -657,7 +657,7 @@
 | Tierra del Fuego | Public Domain |
 | Timbuktu | Public Domain |
 | Togo | Public Domain |
-| Tomsk | Public Domain |
+| Tomsk | TNO |
 | Toronto | [!!!] |
 | Totalist Italy | Kaiserreich |
 | Toubou | Public Domain |
@@ -672,19 +672,19 @@
 | Turkestan Republic | Public Domain |
 | Turkey | Public Domain |
 | Turkmenistan | Public Domain |
-| Tyumen |  |
+| Tyumen | TNO |
 | Uganda | Public Domain |
 | Ukraine | Public Domain |
 | Under the Golden Gate | [!!!] |
 | Union of Britain | Kaiserreich |
 | Union of South Africa | Public Domain |
 | United Arab Emirates | Public Domain |
-| United Baltic Dutchy | Public Domain |
+| United Baltic Dutchy | Kaiserreich |
 | United Colonies | [!!!] |
 | United Kingdom | Public Domain |
 | United Nations | [!!!] |
 | United States of America | Public Domain |
-| Ural League |  |
+| Ural League | TNO |
 | Uruguay | Public Domain |
 | Utah | Public Domain |
 | Uzbekistan | Public Domain |
@@ -754,7 +754,7 @@
 | Zakytaishchyna | Public Domain |
 | Zambia | Public Domain |
 | Zapatistas | Public Domain |
-| Zentralafrika |  |
+| Zentralafrika | TNO |
 | Zhili | Public Domain |
 | Zilkhstan | [!!!] |
 | Zimbabwe | Public Domain |
