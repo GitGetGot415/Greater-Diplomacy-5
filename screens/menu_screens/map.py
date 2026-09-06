@@ -23,7 +23,7 @@ from ui_elements import Button, Slider
 from ui import diplomatic_popups, spectator_menus, editor_menus
 from map_logic.camera.camera_handler import MapCamera
 from map_logic.camera import camera_handler
-from map_logic.diplomacy import diplomacy_logic, guarantees, player_diplomacy_actions, volunteers
+from map_logic.diplomacy import diplomacy_logic, guarantees, military_attaches, player_diplomacy_actions, volunteers
 from map_logic.random_map import random_map_generator
 from map_logic.rendering import map_renderer, refresh_map
 from map_logic.rendering.font_manager import fonts
@@ -324,6 +324,7 @@ def render_buttons(map_screen):
         ("btn_fac_create", 8, "blue", "Create Faction", "CREATE_FACTION"),
         ("btn_volunteers", 9, "purple", "Send Volunteers", player_diplomacy_actions.handle_send_volunteers),
         ("btn_guarantee", 10, "blue", "Guarantee Independence", player_diplomacy_actions.handle_guarantee),
+        ("btn_military_attache", 11, "orange", "Send Military Attaché", player_diplomacy_actions.handle_military_attache),
     )
     map_screen.country_action_buttons = []
     for attr, row, color, label, handler in diplo_buttons:
@@ -408,6 +409,7 @@ def render_buttons(map_screen):
         map_screen.btn_fac_join_req, map_screen.btn_fac_kick, map_screen.btn_fac_create,
         map_screen.btn_volunteers,
         map_screen.btn_guarantee,
+        map_screen.btn_military_attache,
         map_screen.btn_req_mil_access, map_screen.btn_cancel_mil_access, map_screen.btn_revoke_mil_access,
         map_screen.btn_accept_req, map_screen.btn_reject_req, map_screen.btn_force_war, map_screen.btn_force_peace,
         map_screen.btn_spec_create_fac, map_screen.btn_spec_join_fac, map_screen.btn_spec_invite_fac, map_screen.btn_spec_leave_fac,
@@ -697,6 +699,7 @@ def update_button_states(map_screen):
                     set_btn(map_screen.btn_call_to_arms, True, False, "Tactical: Disabled", "grey")
                     set_btn(map_screen.btn_volunteers, True, False, "Tactical: Disabled", "grey")
                     set_btn(map_screen.btn_guarantee, True, False, "Tactical: Disabled", "grey")
+                    set_btn(map_screen.btn_military_attache, True, False, "Tactical: Disabled", "grey")
                     set_btn(map_screen.btn_fac_invite, True, False, "Tactical: Disabled", "grey")
                     set_btn(map_screen.btn_fac_join_req, True, False, "Tactical: Disabled", "grey")
                     set_btn(map_screen.btn_fac_kick, True, False, "Tactical: Disabled", "grey")
@@ -825,6 +828,27 @@ def update_button_states(map_screen):
                         or (guarantee_legal and not already_guaranteed),
                         guarantee_text, "blue")
 
+                attache_legal, _attache_reason = military_attaches.is_eligible(
+                    map_screen.player_country, owner, map_screen.nation_data)
+                attached = owner in military_attaches.hosts_for(
+                    map_screen.player_country, map_screen.nation_data)
+                pending_attache = (pending_action == military_attaches.ACTION
+                                   and pending_turns == 0)
+                pending_withdraw_attache = (pending_action == military_attaches.WITHDRAW_ACTION
+                                             and pending_turns == 0)
+                if pending_attache:
+                    attache_text = "Undo Attaché Request"
+                elif pending_withdraw_attache:
+                    attache_text = "Undo Attaché Withdrawal"
+                elif attached:
+                    attache_text = "Withdraw Military Attaché"
+                else:
+                    attache_text = "Send Military Attaché"
+                set_btn(map_screen.btn_military_attache, True,
+                        pending_attache or pending_withdraw_attache or attached
+                        or (attache_legal and not attached),
+                        attache_text, "orange")
+
                 factions_disabled = getattr(c, 'DISABLE_FACTIONS', False)
 
                 # A puppet's alignment is its master's, both ways round: it may
@@ -884,6 +908,7 @@ def update_button_states(map_screen):
                     map_screen.btn_revoke_mil_access.visible = False
                     map_screen.btn_volunteers.visible = False
                     map_screen.btn_guarantee.visible = False
+                    map_screen.btn_military_attache.visible = False
 
             else:
                 set_orders_or_battle(map_screen, set_btn, has_player_units)
@@ -1070,6 +1095,7 @@ class Map(GameState):
             data.setdefault("at_war_with", [])
             data.setdefault("allied_with", [])
             data.setdefault("guarantees", [])
+            data.setdefault("military_attaches", [])
             data.setdefault("pending_diplomacy", {})
             responses = data.setdefault("diplo_responses", {})
 

@@ -1551,6 +1551,7 @@ AI_ACTION_PHRASES = {
     "CALL_TO_ARMS": "call to arms",
     "JOIN_WARS": "offer to join the wars of",
     "REQ_MILITARY_ACCESS": "request military access through",
+    "SEND_MILITARY_ATTACHE": "send a military attaché to",
     "TRADE": "propose a trade with",
     "BREAK_ALLIANCE": "break our alliance with",
 }
@@ -1893,6 +1894,7 @@ UNILATERAL_ACTIONS = [
     "RECALL_VOLUNTEERS",
     "GUARANTEE",
     "REVOKE_GUARANTEE",
+    "WITHDRAW_MILITARY_ATTACHE",
 ]
 
 # What kind of act a message announced, for anyone reading a list of them.
@@ -1953,6 +1955,8 @@ MESSAGE_CATEGORIES = {
     "CLAIM_FACTION_LEADERSHIP": "LEADERSHIP",
 
     "REQ_MILITARY_ACCESS": "ACCESS",
+    "SEND_MILITARY_ATTACHE": "ATTACHÉ",
+    "WITHDRAW_MILITARY_ATTACHE": "ATTACHÉ",
     "CANCEL_MILITARY_ACCESS": "ACCESS",
     "REVOKE_MILITARY_ACCESS": "ACCESS",
     "FORWARD_MESSAGE": "FORWARDED",
@@ -1990,6 +1994,7 @@ BILATERAL_ACTIONS = [
     "PEACE_TREATY",
     "TRADE",
     "REQ_MILITARY_ACCESS",
+    "SEND_MILITARY_ATTACHE",
     "SEND_VOLUNTEERS"
 ]
 

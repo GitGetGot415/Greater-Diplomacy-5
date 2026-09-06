@@ -120,6 +120,14 @@ def get_visible_provinces(map_screen):
         return None, None # Returns None to signify "Full Visibility / Ignore Fog"
         
     friendly_nations = get_all_friendly_nations(player_country, nation_data)
+    # An attaché shares the host's battlefield intelligence, including what
+    # that host sees through its own faction, subjects, and allies. It does not
+    # grant movement or make either country friendly for any other rule.
+    vision_nations = set(friendly_nations)
+    if not (map_screen.tactical_mode and map_screen.player_unit):
+        from map_logic.diplomacy import military_attaches
+        for host in military_attaches.hosts_for(player_country, nation_data):
+            vision_nations.update(get_all_friendly_nations(host, nation_data))
         
     visible_set = set()
     partial_set = set()
@@ -134,11 +142,11 @@ def get_visible_provinces(map_screen):
         owner = prov.get("owner", "")
         
         # In general, owning a tile only makes that specific tile visible
-        if owner in friendly_nations:
+        if owner in vision_nations:
             visible_set.add(prov["id"])
             
         for u in prov.get("units", []):
-            if u.get("owner") in friendly_nations:
+            if u.get("owner") in vision_nations:
                 friendly_unit_locations.append(prov)
             if is_tactical and u is tactical_unit:
                 tactical_location = prov

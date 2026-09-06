@@ -2,6 +2,7 @@ from data import queries
 from map_logic.diplomacy import diplomacy_logic, peace_scope, ratification
 from map_logic.diplomacy import volunteers
 from map_logic.diplomacy import guarantees
+from map_logic.diplomacy import military_attaches
 import data.constants as c
 
 
@@ -176,6 +177,27 @@ def handle_guarantee(map_screen):
         map_screen.show_feedback(reason)
         return
     _queue_and_report(map_screen, target, guarantees.ACTION, "")
+
+
+def handle_military_attache(map_screen):
+    """Queue or undo an attaché request after checking the live war state."""
+    target = map_screen.selected_province.get("owner")
+    pending = map_screen.nation_data.get(map_screen.player_country, {}).get(
+        "pending_diplomacy", {}).get(target, {})
+    pending_action = pending.get("action") if isinstance(pending, dict) else pending
+    if pending_action in (military_attaches.ACTION, military_attaches.WITHDRAW_ACTION):
+        _queue_and_report(map_screen, target, pending_action, "")
+        return
+    if target in military_attaches.hosts_for(map_screen.player_country,
+                                             map_screen.nation_data):
+        _queue_and_report(map_screen, target, military_attaches.WITHDRAW_ACTION, "")
+        return
+    legal, reason = military_attaches.is_eligible(map_screen.player_country, target,
+                                                   map_screen.nation_data)
+    if not legal:
+        map_screen.show_feedback(reason)
+        return
+    _queue_and_report(map_screen, target, military_attaches.ACTION, "")
 
 def _answer_incoming_request(map_screen, target, verdict, custom_msg):
     """Shared plumbing for the Accept / Reject buttons.

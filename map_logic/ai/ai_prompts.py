@@ -312,6 +312,8 @@ def get_proactive_action_context(action_type, target=None):
         return "proposing to create a new faction together to combat mutual threats"
     elif action_type == "REQ_MILITARY_ACCESS":
         return "requesting military access through your territory since we are both fighting a common enemy"
+    elif action_type == "SEND_MILITARY_ATTACHE":
+        return "requesting to send a military attaché to observe your war"
     elif action_type == "PEACE_TREATY":
         return "offering terms to end the war between us, which has gone badly for us"
     elif action_type == "FACTION_INVITE":
@@ -371,6 +373,8 @@ def get_bilateral_receive_context(action_type, sender_nation, custom_msg="", not
                    f"Terms: {custom_msg}")
     elif action_type == "REQ_MILITARY_ACCESS":
         context = f"{sender_nation} is requesting military access to move their troops through your territory."
+    elif action_type == "SEND_MILITARY_ATTACHE":
+        context = f"{sender_nation} is requesting to send a military attaché to observe your war."
     else:
         context = f"{sender_nation} has proposed a {action_type.replace('_', ' ').title()}."
 

@@ -2,6 +2,7 @@ import pygame
 import data.constants as c
 from data import queries
 from map_logic.diplomacy import guarantees
+from map_logic.diplomacy import military_attaches
 from ui.bars import ui_bars
 
 # ==========================================
@@ -56,6 +57,23 @@ def draw_unit_info(map_screen, surface):
             for label, color, nations in (
                     ("Guaranteeing:", c.COLOR_GOLD_HIGHLIGHT, protected),
                     ("Guaranteed By:", (150, 200, 255), guarantors)):
+                if not nations:
+                    continue
+                surface.blit(map_screen.small_font.render(label, True, color),
+                             (dip_rect.x + 10, y_offset))
+                y_offset += 20
+                for nation in nations:
+                    display = map_screen.nation_data.get(nation, {}).get("name", nation)
+                    surface.blit(map_screen.small_font.render(f" - {display}", True,
+                                                              c.UI_TEXT_LIGHT),
+                                 (dip_rect.x + 10, y_offset))
+                    y_offset += 20
+
+            hosts = military_attaches.hosts_for(owner, map_screen.nation_data)
+            observers = military_attaches.attaches_from(owner, map_screen.nation_data)
+            for label, color, nations in (
+                    ("Military Attachés With:", (255, 180, 100), hosts),
+                    ("Hosts Attachés From:", (255, 210, 150), observers)):
                 if not nations:
                     continue
                 surface.blit(map_screen.small_font.render(label, True, color),

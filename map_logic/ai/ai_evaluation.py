@@ -333,6 +333,12 @@ def evaluate_verdict(nation_data, map_data, ai_nation, sender_nation, action_typ
     if action_type == "SEND_VOLUNTEERS":
         return Verdict(True, 1.0, "volunteer divisions are always welcome")
 
+    # The host has already met the at-war/non-hostile eligibility gate before
+    # this request can arrive. An attaché costs it nothing and shares no command,
+    # so AI countries always approve it.
+    if action_type == "SEND_MILITARY_ATTACHE":
+        return Verdict(True, 1.0, "military attachés are always welcome")
+
     # --- IMPROVED FACTION LOGIC ---
     # 1. Check for basic aggressive acceptance
     if at_war and not in_faction:

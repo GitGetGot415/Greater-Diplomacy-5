@@ -130,7 +130,7 @@ def clear_own_pre_war_map_if_peace(nation_data, nation):
 def finalize_war(map_data, nation_data, a, b, activate_guarantees=True):
     from map_logic.diplomacy.faction_actions import finalize_faction_leave
     from map_logic.diplomacy.puppet_actions import pull_puppets_into_war, pull_master_into_war
-    from map_logic.diplomacy import guarantees
+    from map_logic.diplomacy import guarantees, military_attaches
 
     master_a = nation_data.get(a, {}).get("master", "")
     master_b = nation_data.get(b, {}).get("master", "")
@@ -209,9 +209,11 @@ def finalize_war(map_data, nation_data, a, b, activate_guarantees=True):
                              f"{guarantor} has honoured its guarantee of {b} against {a}.")
 
     guarantees.reconcile(nation_data)
+    military_attaches.reconcile(nation_data)
 
 def finalize_neutral(nation_data, a, b):
     from map_logic.diplomacy.puppet_actions import pull_puppets_into_peace
+    from map_logic.diplomacy import military_attaches
 
     for country, other in [(a, b), (b, a)]:
         remove_enemy(nation_data, country, other)
@@ -236,6 +238,7 @@ def finalize_neutral(nation_data, a, b):
 
     clear_own_pre_war_map_if_peace(nation_data, a)
     clear_own_pre_war_map_if_peace(nation_data, b)
+    military_attaches.reconcile(nation_data)
 
 def execute_peace_treaty(map_data, nation_data, proposer, target, peace_type, map_screen):
     """Settles a war on one of the three old peace sentences.

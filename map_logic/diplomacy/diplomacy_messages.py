@@ -395,6 +395,8 @@ DEFAULT_ANNOUNCEMENTS = {
     "FACTION_INVITE": "We invite your nation to join our faction.",
     "JOIN_FACTION_REQ": "We formally request to join your faction.",
     "REQ_MILITARY_ACCESS": "We formally request military access to move our troops through your territory.",
+    "SEND_MILITARY_ATTACHE": "We request to send a military attaché to observe your war.",
+    "WITHDRAW_MILITARY_ATTACHE": "We are withdrawing our military attaché.",
     "CEASEFIRE": "We offer terms for a ceasefire.",
     "CREATE_FACTION": "We propose establishing a new faction together.",
     "TRADE": "We propose a trade agreement.",

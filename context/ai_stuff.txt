@@ -77,6 +77,10 @@ War desire also accounts for guarantees of independence. Declaring on a
 guaranteed country means fighting its guarantors, so their relative power adds
 restraint to the normal target-strength calculation.
 
+AI countries always accept a valid Military Attaché request. The attaché only
+shares the host's battlefield vision and is withdrawn automatically if the host
+leaves its wars or becomes hostile to the sender.
+
 
 THREE THINGS THE VALUATIONS GET RIGHT THAT ARE EASY TO GET WRONG
 ----------------------------------------------------------------

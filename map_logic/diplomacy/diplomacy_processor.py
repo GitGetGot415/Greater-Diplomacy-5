@@ -5,7 +5,7 @@ from data import queries
 # Import from our newly created submodules
 from map_logic.diplomacy.diplomacy_events import log_global_event
 from map_logic.diplomacy import (
-    faction_leadership, guarantees, peace_scope, ratification, restrictions, treaty_effects, volunteers, war_calls
+    faction_leadership, guarantees, military_attaches, peace_scope, ratification, restrictions, treaty_effects, volunteers, war_calls
 )
 from map_logic.diplomacy.diplomacy_messages import (
     get_pending_action, send_message, send_treaty_message, forward_message,
@@ -1005,6 +1005,17 @@ def _process_pass1_immediate_actions(map_screen):
                         map_screen.show_feedback("You do not guarantee that country.")
                     actions_to_clear.append(target)
 
+                elif action == military_attaches.WITHDRAW_ACTION:
+                    if military_attaches.withdraw(country_name, target, map_screen.nation_data):
+                        log_global_event(map_screen.nation_data,
+                                         f"{country_name} has withdrawn its military attaché from {target}.")
+                        send_message(map_screen, country_name, target,
+                                     "We are withdrawing our military attaché.",
+                                     "DIPLOMACY", extra={"action": action}, llm=wrote_it)
+                    elif country_name == map_screen.player_country:
+                        map_screen.show_feedback("You have no military attaché there.")
+                    actions_to_clear.append(target)
+
                 elif action == "BREAK_ALLIANCE":
                     log_global_event(map_screen.nation_data, f"{country_name} has broken their alliance with {target}.")
                     send_treaty_message(map_screen, country_name, target, action, custom_msg, llm=wrote_it)
@@ -1435,5 +1446,6 @@ def process_diplomacy_turn(map_screen):
     # --- PROCESS CLAIM QUEUES ---
     _process_claim_queues(map_screen)
     # Direct editor/multiplayer state changes can bypass their normal mutation
-    # helpers. Keep guarantees valid even on those paths.
+    # helpers. Keep temporary diplomatic state valid even on those paths.
     guarantees.reconcile(map_screen.nation_data)
+    military_attaches.reconcile(map_screen.nation_data)

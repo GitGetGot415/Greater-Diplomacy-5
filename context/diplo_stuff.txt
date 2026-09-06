@@ -13,6 +13,12 @@ called into the target's defensive war against the attacker; a country that
 started the war never receives that help. A guarantor may also revoke its own
 guarantee unilaterally.
 
+Military Attachés are bilateral: they can only be sent to a country currently
+at war that is not fighting the sender. Once accepted, the sender sees exactly
+what the host can see. AI hosts always accept. The attaché is immediately
+withdrawn if the host leaves its wars or becomes hostile to the sender.
+The sender may also withdraw its attaché unilaterally.
+
 declarations requiring response:
 turn 0: msg1 is written
 turn 0.5: msg1 is sent
