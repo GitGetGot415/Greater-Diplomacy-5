@@ -78,11 +78,16 @@ guaranteed country means fighting its guarantors, so their relative power adds
 restraint to the normal target-strength calculation.
 
 AI countries accept a valid Military Attaché request unless the sender is
-sending volunteers to, or observing through an attaché at, a country the AI is
+sending active volunteer divisions to, or observing through an attaché at, a country the AI is
 fighting. They schedule an existing conflicting attaché for revocation on the
 following turn. The attaché only shares the host's battlefield vision and is
 withdrawn automatically if the host leaves its wars or becomes hostile to the
 sender.
+
+AI countries apply the same conflict rule to volunteer divisions: they reject
+an offer from a country with active volunteers at, or an attaché observing, one
+of their enemies. If both hostile hosts accept simultaneous offers, each sends
+the divisions home on the following turn after the conflict becomes known.
 
 
 THREE THINGS THE VALUATIONS GET RIGHT THAT ARE EASY TO GET WRONG

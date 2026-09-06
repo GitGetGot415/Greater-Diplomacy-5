@@ -327,11 +327,14 @@ def evaluate_verdict(nation_data, map_data, ai_nation, sender_nation, action_typ
 
     accepted = False
 
-    # Volunteers are an unconditional gift of troops from a peaceful country.
-    # The offer has already passed the legality checks, so AI recipients always
-    # accept it rather than spending a model response on a no-downside choice.
+    # Volunteers are welcome unless the donor is supporting one of the host's
+    # enemies through another volunteer mission or military attaché.
     if action_type == "SEND_VOLUNTEERS":
-        return Verdict(True, 1.0, "volunteer divisions are always welcome")
+        from map_logic.diplomacy import volunteers
+        accepted, reason = volunteers.ai_can_accept(
+            sender_nation, ai_nation, nation_data)
+        return Verdict(accepted, 1.0 if accepted else 0.0,
+                       "volunteer divisions are always welcome" if accepted else reason)
 
     # The host is otherwise happy to share battlefield intelligence, except with
     # a country supporting one of the other side's war effort.

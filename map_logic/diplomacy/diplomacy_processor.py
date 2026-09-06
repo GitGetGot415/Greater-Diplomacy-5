@@ -982,6 +982,19 @@ def _process_pass1_immediate_actions(map_screen):
                                             llm=wrote_it)
                     actions_to_clear.append(target)
 
+                elif action == volunteers.SEND_HOME_ACTION:
+                    # The host controls whether foreign volunteers may remain
+                    # in its war, while the donor still owns the divisions.
+                    if volunteers.send_home_by_host(map_screen, country_name, target):
+                        log_global_event(map_screen.nation_data,
+                                         f"{country_name} has sent {target}'s volunteer divisions home.")
+                        send_message(map_screen, country_name, target,
+                                     "Your volunteer divisions are being sent home.",
+                                     "DIPLOMACY", extra={"action": action}, llm=wrote_it)
+                    elif country_name == map_screen.player_country:
+                        map_screen.show_feedback("That country has no volunteers assigned to you.")
+                    actions_to_clear.append(target)
+
                 elif action == guarantees.ACTION:
                     changed, reason = guarantees.grant(country_name, target, map_screen.nation_data)
                     if changed:
@@ -1428,6 +1441,16 @@ def _process_scheduled_ai_attache_revocations(map_screen):
                      "DIPLOMACY", extra={"action": military_attaches.REVOKE_ACTION})
 
 
+def _process_scheduled_ai_volunteer_send_homes(map_screen):
+    """Apply the AI hosts' volunteer return orders from the previous turn."""
+    for donor, host in volunteers.process_scheduled_send_homes(map_screen):
+        log_global_event(map_screen.nation_data,
+                         f"{host} has sent {donor}'s volunteer divisions home for supporting its enemy.")
+        send_message(map_screen, host, donor,
+                     "Your volunteer divisions are being sent home because you are supporting a country we are fighting.",
+                     "DIPLOMACY", extra={"action": volunteers.SEND_HOME_ACTION})
+
+
 def _schedule_conflicting_ai_attache_revocations(map_screen):
     """Record new AI attaché conflicts for processing on the next turn."""
     human_hosts = set(getattr(map_screen, "active_players", ()))
@@ -1436,10 +1459,19 @@ def _schedule_conflicting_ai_attache_revocations(map_screen):
         map_screen.nation_data, human_hosts)
 
 
+def _schedule_conflicting_ai_volunteer_send_homes(map_screen):
+    """Record AI volunteer conflicts for processing on the next turn."""
+    human_hosts = set(getattr(map_screen, "active_players", ()))
+    human_hosts.add(getattr(map_screen, "player_country", ""))
+    volunteers.schedule_conflict_send_homes_for_ai_hosts(
+        map_screen.nation_data, human_hosts)
+
+
 def process_diplomacy_turn(map_screen):
     _decay_modifiers_and_truces(map_screen)
     volunteers.tick(map_screen)
     _process_scheduled_ai_attache_revocations(map_screen)
+    _process_scheduled_ai_volunteer_send_homes(map_screen)
     # Ages every faction member's claim on the leadership. Before anything acts,
     # so the button a player sees, the number an AI decides on and the state a
     # claim executes against are one measurement rather than three.
@@ -1482,3 +1514,4 @@ def process_diplomacy_turn(map_screen):
     guarantees.reconcile(map_screen.nation_data)
     military_attaches.reconcile(map_screen.nation_data)
     _schedule_conflicting_ai_attache_revocations(map_screen)
+    _schedule_conflicting_ai_volunteer_send_homes(map_screen)

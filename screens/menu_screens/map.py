@@ -326,6 +326,7 @@ def render_buttons(map_screen):
         ("btn_guarantee", 10, "blue", "Guarantee Independence", player_diplomacy_actions.handle_guarantee),
         ("btn_military_attache", 11, "orange", "Send Military Attaché", player_diplomacy_actions.handle_military_attache),
         ("btn_revoke_foreign_military_attache", 12, "red", "Revoke Their Attaché", player_diplomacy_actions.handle_revoke_foreign_military_attache),
+        ("btn_send_home_foreign_volunteers", 13, "red", "Send Their Volunteers Home", player_diplomacy_actions.handle_send_home_foreign_volunteers),
     )
     map_screen.country_action_buttons = []
     for attr, row, color, label, handler in diplo_buttons:
@@ -412,6 +413,7 @@ def render_buttons(map_screen):
         map_screen.btn_guarantee,
         map_screen.btn_military_attache,
         map_screen.btn_revoke_foreign_military_attache,
+        map_screen.btn_send_home_foreign_volunteers,
         map_screen.btn_req_mil_access, map_screen.btn_cancel_mil_access, map_screen.btn_revoke_mil_access,
         map_screen.btn_accept_req, map_screen.btn_reject_req, map_screen.btn_force_war, map_screen.btn_force_peace,
         map_screen.btn_spec_create_fac, map_screen.btn_spec_join_fac, map_screen.btn_spec_invite_fac, map_screen.btn_spec_leave_fac,
@@ -703,6 +705,7 @@ def update_button_states(map_screen):
                     set_btn(map_screen.btn_guarantee, True, False, "Tactical: Disabled", "grey")
                     set_btn(map_screen.btn_military_attache, True, False, "Tactical: Disabled", "grey")
                     set_btn(map_screen.btn_revoke_foreign_military_attache, True, False, "Tactical: Disabled", "grey")
+                    set_btn(map_screen.btn_send_home_foreign_volunteers, True, False, "Tactical: Disabled", "grey")
                     set_btn(map_screen.btn_fac_invite, True, False, "Tactical: Disabled", "grey")
                     set_btn(map_screen.btn_fac_join_req, True, False, "Tactical: Disabled", "grey")
                     set_btn(map_screen.btn_fac_kick, True, False, "Tactical: Disabled", "grey")
@@ -811,6 +814,18 @@ def update_button_states(map_screen):
                     enabled = legal and volunteers.remaining_capacity(map_screen, map_screen.player_country) > 0
                     set_btn(map_screen.btn_volunteers, True, enabled, "Send Volunteers", "purple")
                     map_screen.btn_volunteers.callback = lambda: player_diplomacy_actions.handle_send_volunteers(map_screen)
+
+                foreign_volunteer_state = volunteers.mission_state(
+                    map_screen.nation_data, owner, map_screen.player_country)
+                pending_send_home = (pending_action == volunteers.SEND_HOME_ACTION
+                                     and pending_turns == 0)
+                hosting_foreign_volunteers = foreign_volunteer_state in (
+                    volunteers.OUTBOUND, volunteers.DEPLOYED)
+                set_btn(map_screen.btn_send_home_foreign_volunteers,
+                        hosting_foreign_volunteers or pending_send_home,
+                        hosting_foreign_volunteers or pending_send_home,
+                        "Undo Send Home" if pending_send_home else "Send Their Volunteers Home",
+                        "red")
 
                 guarantee_legal, _guarantee_reason = guarantees.is_eligible(
                     map_screen.player_country, owner, map_screen.nation_data)
@@ -923,6 +938,7 @@ def update_button_states(map_screen):
                     map_screen.btn_guarantee.visible = False
                     map_screen.btn_military_attache.visible = False
                     map_screen.btn_revoke_foreign_military_attache.visible = False
+                    map_screen.btn_send_home_foreign_volunteers.visible = False
 
             else:
                 set_orders_or_battle(map_screen, set_btn, has_player_units)

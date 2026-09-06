@@ -126,7 +126,8 @@ class MilitaryAttacheTests(unittest.TestCase):
         screen.set_war("B", "C")
         screen.nation_data["A"]["military_attaches"] = ["B"]
         screen.nation_data["A"]["volunteer_missions"] = {
-            "C": {"state": volunteers.AWAITING}}
+            "C": {"state": volunteers.OUTBOUND, "travel_turns": 2, "turns_left": 2,
+                  "held_units": []}}
 
         diplomacy_logic.process_diplomacy_turn(screen)
 

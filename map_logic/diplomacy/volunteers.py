@@ -8,6 +8,8 @@ from map_logic.turn_processing import movement_processor
 
 ACTION = "SEND_VOLUNTEERS"
 RECALL_ACTION = "RECALL_VOLUNTEERS"
+SEND_HOME_ACTION = "SEND_HOME_VOLUNTEERS"
+PENDING_SEND_HOME_KEY = "pending_volunteer_send_homes"
 AWAITING = "AWAITING_ANSWER"
 OUTBOUND = "OUTBOUND"
 DEPLOYED = "DEPLOYED"
@@ -39,6 +41,17 @@ def is_eligible(donor, host, nation_data):
         return False, "Countries at war cannot send volunteers."
     if not queries.get_enemies(host, nation_data):
         return False, "Volunteers can only be sent to a country at war."
+    return True, ""
+
+
+def ai_can_accept(donor, host, nation_data):
+    """AI-only acceptance rule for a volunteer offer."""
+    legal, reason = is_eligible(donor, host, nation_data)
+    if not legal:
+        return False, reason
+    from map_logic.diplomacy import military_attaches
+    if military_attaches.supports_an_enemy(donor, host, nation_data):
+        return False, "You are supporting a country we are at war with."
     return True, ""
 
 
@@ -299,6 +312,61 @@ def recall(map_screen, donor, host):
     if mission["turns_left"] == 0:
         _finish_return(map_screen, donor, host, mission)
     return True
+
+
+def send_home_by_host(map_screen, host, donor):
+    """Have a volunteer host send the donor's divisions back home."""
+    return recall(map_screen, donor, host)
+
+
+def schedule_conflict_send_homes_for_ai_hosts(nation_data, human_hosts=()):
+    """Schedule AI hosts to return foreign volunteers aiding their enemies.
+
+    Decisions use the same snapshot for every host, then return orders resolve
+    on the following turn. That preserves simultaneous diplomacy: two hostile
+    hosts can both accept offers before either learns of the other mission.
+    """
+    from map_logic.diplomacy import military_attaches
+
+    human_hosts = set(human_hosts)
+    missions_snapshot = {
+        donor: dict(missions(nation_data, donor))
+        for donor in nation_data
+    }
+    to_send_home = [
+        (donor, host)
+        for donor, donor_missions in missions_snapshot.items()
+        for host, mission in donor_missions.items()
+        if isinstance(mission, dict)
+        and mission.get("state") in (OUTBOUND, DEPLOYED)
+        and host not in human_hosts
+        and military_attaches.supports_an_enemy(donor, host, nation_data)
+    ]
+    scheduled = []
+    for donor, host in to_send_home:
+        host_data = nation_data.get(host, {})
+        pending = host_data.setdefault(PENDING_SEND_HOME_KEY, [])
+        if not isinstance(pending, list):
+            pending = host_data[PENDING_SEND_HOME_KEY] = []
+        if donor not in pending:
+            pending.append(donor)
+            scheduled.append((donor, host))
+    return scheduled
+
+
+def process_scheduled_send_homes(map_screen):
+    """Begin returns that AI hosts scheduled on the previous turn."""
+    sent_home = []
+    for host, host_data in map_screen.nation_data.items():
+        if not isinstance(host_data, dict):
+            continue
+        pending = host_data.pop(PENDING_SEND_HOME_KEY, [])
+        if not isinstance(pending, list):
+            continue
+        for donor in dict.fromkeys(pending):
+            if send_home_by_host(map_screen, host, donor):
+                sent_home.append((donor, host))
+    return sent_home
 
 
 def _finish_return(map_screen, donor, host, mission):

@@ -8,7 +8,9 @@ from types import SimpleNamespace
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from tests.stub_map_screen import StubMapScreen
+from map_logic.ai import ai_evaluation
 from map_logic.diplomacy import diplomacy_logic, diplomacy_messages, volunteers
+from map_logic.diplomacy import military_attaches
 from map_logic.turn_processing import combat_processor
 from map_logic.rendering import overlay_renderer
 from map_logic.turn_processing import combat_rules
@@ -60,6 +62,80 @@ class VolunteerTests(unittest.TestCase):
         self.assertEqual(len(volunteer_units), 1)
         self.assertEqual(volunteer_units[0].get("volunteer_host"), "B")
         self.assertEqual(volunteers.mission_state(game.nation_data, "A", "B"), volunteers.DEPLOYED)
+
+    def test_ai_rejects_volunteers_from_a_country_aiding_its_enemy(self):
+        game = self.game()
+        game.nation_data["A"]["volunteer_missions"] = {
+            "C": {"state": volunteers.DEPLOYED}}
+
+        verdict = ai_evaluation.evaluate_verdict(
+            game.nation_data, game.map_data, "B", "A", volunteers.ACTION)
+
+        self.assertFalse(verdict.accepted)
+
+    def test_ai_rejects_volunteers_from_a_country_observing_its_enemy(self):
+        game = self.game()
+        game.nation_data["A"]["military_attaches"] = ["C"]
+
+        verdict = ai_evaluation.evaluate_verdict(
+            game.nation_data, game.map_data, "B", "A", volunteers.ACTION)
+
+        self.assertFalse(verdict.accepted)
+
+    def test_ai_schedules_conflicting_volunteers_for_next_turn_send_home(self):
+        game = self.game()
+        game.nation_data["A"]["volunteer_missions"] = {
+            "B": {"state": volunteers.DEPLOYED, "travel_turns": 1, "held_units": []},
+            "C": {"state": volunteers.DEPLOYED, "travel_turns": 1, "held_units": []},
+        }
+
+        scheduled = volunteers.schedule_conflict_send_homes_for_ai_hosts(game.nation_data)
+
+        self.assertEqual(scheduled, [("A", "B"), ("A", "C")])
+        self.assertEqual(volunteers.mission_state(game.nation_data, "A", "B"), volunteers.DEPLOYED)
+        self.assertEqual(volunteers.process_scheduled_send_homes(game), [("A", "B"), ("A", "C")])
+        self.assertEqual(volunteers.mission_state(game.nation_data, "A", "B"), volunteers.RETURNING)
+        self.assertEqual(volunteers.mission_state(game.nation_data, "A", "C"), volunteers.RETURNING)
+
+    def test_simultaneous_opposite_side_offers_accept_before_next_turn_send_home(self):
+        game = self.game()
+        home = game.home_of("A")
+        home["units"] = [division("A") for _ in range(11)]
+        for host in ("B", "C"):
+            details, error = volunteers.create_offer(
+                game, "A", host, [(home, home["units"][0])])
+            self.assertFalse(error)
+            diplomacy_logic.toggle_diplomacy_action(
+                game.nation_data, "A", host, volunteers.ACTION,
+                "We offer volunteer divisions.", parameters=details)
+
+        game.run_turn()  # Both offers travel.
+        game.run_turn()  # Both AI hosts accept and schedule a send-home.
+
+        self.assertEqual(volunteers.mission_state(game.nation_data, "A", "B"), volunteers.DEPLOYED)
+        self.assertEqual(volunteers.mission_state(game.nation_data, "A", "C"), volunteers.OUTBOUND)
+        self.assertEqual(game.nation_data["B"].get(volunteers.PENDING_SEND_HOME_KEY), ["A"])
+        self.assertEqual(game.nation_data["C"].get(volunteers.PENDING_SEND_HOME_KEY), ["A"])
+
+        game.run_turn()  # Both scheduled send-homes start now.
+
+        self.assertFalse(volunteers.mission_state(game.nation_data, "A", "B"))
+        self.assertEqual(volunteers.mission_state(game.nation_data, "A", "C"), volunteers.RETURNING)
+
+    def test_player_host_can_send_foreign_volunteers_home(self):
+        game = self.game(human_players=("B",))
+        unit = division("A")
+        unit["volunteer_host"] = "B"
+        unit["volunteer_origin_id"] = game.home_of("A")["id"]
+        game.home_of("B")["units"] = [unit]
+        game.nation_data["A"]["volunteer_missions"] = {
+            "B": {"state": volunteers.DEPLOYED, "travel_turns": 1, "held_units": []}}
+        diplomacy_logic.toggle_diplomacy_action(
+            game.nation_data, "B", "A", volunteers.SEND_HOME_ACTION)
+
+        diplomacy_logic.process_diplomacy_turn(game)
+
+        self.assertEqual(volunteers.mission_state(game.nation_data, "A", "B"), volunteers.RETURNING)
 
     def test_rejection_restores_the_selected_origin(self):
         game = self.game(human_players=("A", "B"))

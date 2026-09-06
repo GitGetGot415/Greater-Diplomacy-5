@@ -15,12 +15,17 @@ guarantee unilaterally.
 
 Military Attachés are bilateral: they can only be sent to a country currently
 at war that is not fighting the sender. Once accepted, the sender sees exactly
-what the host can see. AI hosts reject attachés from a country sending
-volunteers to, or observing, one of their enemies; an already accepted
+what the host can see. AI hosts reject attachés from a country with active
+volunteers at, or observing, one of their enemies; an already accepted
 conflicting attaché is revoked on the following turn. A host controlled by a
 player may revoke any foreign attaché instead. An attaché is immediately
 withdrawn if the host leaves its wars or becomes hostile to the sender.
 The sender may also withdraw its attaché unilaterally.
+
+Volunteer divisions follow the same conflict rule. AI hosts reject volunteers
+from a country that has active volunteers with, or an attaché observing, one of
+their enemies. Existing conflicting volunteers are sent home on the following
+turn; a player hosting foreign volunteers may send them home directly.
 
 declarations requiring response:
 turn 0: msg1 is written

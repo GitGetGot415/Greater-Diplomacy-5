@@ -404,6 +404,22 @@ def handle_recall_volunteers(map_screen):
     map_screen.show_feedback(msg)
 
 
+def handle_send_home_foreign_volunteers(map_screen):
+    """Queue or undo sending the selected country's volunteers home."""
+    donor = map_screen.selected_province.get("owner")
+    host = map_screen.player_country
+    pending = map_screen.nation_data.get(host, {}).get("pending_diplomacy", {}).get(donor, {})
+    pending_action = pending.get("action") if isinstance(pending, dict) else pending
+    if pending_action == volunteers.SEND_HOME_ACTION:
+        _queue_and_report(map_screen, donor, pending_action, "")
+        return
+    state = volunteers.mission_state(map_screen.nation_data, donor, host)
+    if state not in (volunteers.OUTBOUND, volunteers.DEPLOYED):
+        map_screen.show_feedback("That country has no volunteers assigned to you.")
+        return
+    _queue_and_report(map_screen, donor, volunteers.SEND_HOME_ACTION, "")
+
+
 def handle_withdraw_volunteer_offer(map_screen):
     donor = map_screen.player_country
     host = map_screen.selected_province.get("owner")

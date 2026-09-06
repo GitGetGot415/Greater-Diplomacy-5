@@ -40,9 +40,9 @@ def supports_an_enemy(sender, host, nation_data, observed_hosts=None):
     """Whether ``sender`` is aiding a country currently fighting ``host``.
 
     An attaché is an intelligence privilege, not a way to observe both sides of
-    the same war.  A pending volunteer offer counts as aid here too: an AI host
-    should not grant its battlefield information while that offer is waiting to
-    be answered.
+    the same war. A volunteer offer still awaiting its host's answer is private
+    diplomacy, not active support; only divisions already travelling or
+    deployed reveal a conflicting commitment.
     """
     enemies = set(queries.get_enemies(host, nation_data))
     if not enemies:
@@ -53,7 +53,7 @@ def supports_an_enemy(sender, host, nation_data, observed_hosts=None):
     if isinstance(missions, dict):
         for enemy in enemies:
             mission = missions.get(enemy)
-            if isinstance(mission, dict) and mission.get("state") != "RETURNING":
+            if isinstance(mission, dict) and mission.get("state") in ("OUTBOUND", "DEPLOYED"):
                 return True
 
     if observed_hosts is None:
