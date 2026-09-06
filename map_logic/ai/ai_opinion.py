@@ -23,6 +23,7 @@ import data.constants as c
 from data.number_utils import clamp01
 from data import queries
 from map_logic.ai import ai_commitments, ai_personality
+from map_logic.diplomacy import guarantees
 
 def _sigmoid(value, midpoint, steepness):
     """0..1, crossing 0.5 at `midpoint`. The soft version of a threshold."""
@@ -103,6 +104,18 @@ def war_desire(world, nation, target, scenario_settings=None):
     # enough -- which is the interesting outcome, not a bug -- and pay for it.
     restraint += ai_commitments.war_restraint(world.nation_data, nation, target,
                                               scenario_settings)
+
+    # Declaring on a guaranteed country also declares on every guarantor. The
+    # strongest promised response is enough to deter a weak attacker, while a
+    # clear great-power advantage can still carry a war through this restraint.
+    guarantors = [g for g in guarantees.guarantors_of(target, world.nation_data)
+                  if g != nation]
+    if guarantors:
+        strongest_response = min(world.power_ratio(nation, guarantor)[1]
+                                 for guarantor in guarantors)
+        guarantee_risk = 1.0 - _sigmoid(strongest_response, 1.0,
+                                         c.AI_ODDS_STEEPNESS)
+        restraint += c.AI_GUARANTEE_RESTRAINT * (0.45 + 0.55 * guarantee_risk)
 
     # Nobody wants to be the third front for a nation that already spheres this
     # target away from us by agreement.

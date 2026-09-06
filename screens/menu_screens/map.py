@@ -23,7 +23,7 @@ from ui_elements import Button, Slider
 from ui import diplomatic_popups, spectator_menus, editor_menus
 from map_logic.camera.camera_handler import MapCamera
 from map_logic.camera import camera_handler
-from map_logic.diplomacy import diplomacy_logic, player_diplomacy_actions, volunteers
+from map_logic.diplomacy import diplomacy_logic, guarantees, player_diplomacy_actions, volunteers
 from map_logic.random_map import random_map_generator
 from map_logic.rendering import map_renderer, refresh_map
 from map_logic.rendering.font_manager import fonts
@@ -72,9 +72,12 @@ BTN_TACTICAL_OFFSET_X = 240
 ACTION_BTN_X = 200          # Spectator god-power column
 DIPLO_BTN_X = 180           # Player diplomacy column
 ACTION_BTN_START_Y = 300
-# Ten foreign-diplomacy rows fit above the province-action buttons at this
-# spacing (the tenth is Send/Recall Volunteers).
 ACTION_BTN_STEP_Y = 30
+# Country actions live in this clipped pane instead of claiming the whole left
+# side of the map. It has room for several choices at once and scrolls for the
+# rest, leaving the orders and production entry points permanently reachable.
+ACTION_SCROLL_HEIGHT = 300
+ACTION_SCROLL_WIDTH = 215
 
 PROVINCE_BTN_X = 280
 BTN_ORDERS_Y = 603
@@ -320,15 +323,20 @@ def render_buttons(map_screen):
         ("btn_fac_kick", 7, "red", "Kick from Faction", "KICK_FACTION_MEMBER"),
         ("btn_fac_create", 8, "blue", "Create Faction", "CREATE_FACTION"),
         ("btn_volunteers", 9, "purple", "Send Volunteers", player_diplomacy_actions.handle_send_volunteers),
+        ("btn_guarantee", 10, "blue", "Guarantee Independence", player_diplomacy_actions.handle_guarantee),
     )
+    map_screen.country_action_buttons = []
     for attr, row, color, label, handler in diplo_buttons:
         if isinstance(handler, str):
             action = (lambda a=handler:
                       player_diplomacy_actions.handle_specific_action(map_screen, a))
         else:
             action = lambda h=handler: h(map_screen)
-        setattr(map_screen, attr, Button(diplo_x, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * row,
-                                   "diplomatic", color, label, action))
+        button = Button(diplo_x, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * row,
+                        "diplomatic", color, label, action)
+        button.country_action_base_y = ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * row
+        setattr(map_screen, attr, button)
+        map_screen.country_action_buttons.append(button)
 
     # Spectator God Power Buttons. Same overlapping-row rule as the foreign set:
     # only one of the buttons sharing a row is shown for a given selection.
@@ -342,9 +350,12 @@ def render_buttons(map_screen):
         ("btn_spec_disband_fac", 3, "red", "Disband Faction", "spec_disband_faction"),
     )
     for attr, row, color, label, menu_fn in spectator_buttons:
-        setattr(map_screen, attr, Button(ACTION_BTN_X, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * row,
-                                   "diplomatic", color, label,
-                                   lambda f=menu_fn: getattr(spectator_menus, f)(map_screen)))
+        button = Button(ACTION_BTN_X, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * row,
+                        "diplomatic", color, label,
+                        lambda f=menu_fn: getattr(spectator_menus, f)(map_screen))
+        button.country_action_base_y = ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * row
+        setattr(map_screen, attr, button)
+        map_screen.country_action_buttons.append(button)
 
     def host_manage_players():
         from ui.multiplayer_host_panel import manage_players_panel
@@ -396,6 +407,7 @@ def render_buttons(map_screen):
         map_screen.btn_declare_war, map_screen.btn_join_wars, map_screen.btn_call_to_arms, map_screen.btn_fac_invite,
         map_screen.btn_fac_join_req, map_screen.btn_fac_kick, map_screen.btn_fac_create,
         map_screen.btn_volunteers,
+        map_screen.btn_guarantee,
         map_screen.btn_req_mil_access, map_screen.btn_cancel_mil_access, map_screen.btn_revoke_mil_access,
         map_screen.btn_accept_req, map_screen.btn_reject_req, map_screen.btn_force_war, map_screen.btn_force_peace,
         map_screen.btn_spec_create_fac, map_screen.btn_spec_join_fac, map_screen.btn_spec_invite_fac, map_screen.btn_spec_leave_fac,
@@ -436,11 +448,36 @@ def set_orders_or_battle(map_screen, set_btn, has_player_units):
     set_btn(map_screen.btn_go_battle, False, False, "Battle", "red")
 
 
+def layout_country_action_buttons(map_screen):
+    """Place the fixed country-action stack inside its scroll viewport."""
+    buttons = getattr(map_screen, "country_action_buttons", ())
+    rect = getattr(map_screen, "country_actions_scroll_rect", None)
+    if not buttons or rect is None:
+        return
+
+    content_bottom = max(button.country_action_base_y + button.rect.height
+                         for button in buttons)
+    map_screen.country_actions_scroll_max = max(
+        0, content_bottom - rect.bottom)
+    map_screen.country_actions_scroll_y = max(
+        0, min(getattr(map_screen, "country_actions_scroll_y", 0),
+                   map_screen.country_actions_scroll_max))
+
+    for button in buttons:
+        button.rect.y = (button.country_action_base_y
+                         - map_screen.country_actions_scroll_y)
+        # GameState dispatches button events before the map event handler can
+        # consume a pane drag. Do not let clipped-away rows receive that click.
+        button.click_guard = lambda r=rect: r.collidepoint(pygame.mouse.get_pos())
+
+
 def update_button_states(map_screen):
     """Dynamically updates button visibility, colors, and text every frame using explicit attributes."""
 
     for el in map_screen.elements:
         el.visible = False
+
+    layout_country_action_buttons(map_screen)
 
     is_sel = bool(map_screen.selected_province)
 
@@ -659,6 +696,7 @@ def update_button_states(map_screen):
                     set_btn(map_screen.btn_join_wars, True, False, "Tactical: Disabled", "grey")
                     set_btn(map_screen.btn_call_to_arms, True, False, "Tactical: Disabled", "grey")
                     set_btn(map_screen.btn_volunteers, True, False, "Tactical: Disabled", "grey")
+                    set_btn(map_screen.btn_guarantee, True, False, "Tactical: Disabled", "grey")
                     set_btn(map_screen.btn_fac_invite, True, False, "Tactical: Disabled", "grey")
                     set_btn(map_screen.btn_fac_join_req, True, False, "Tactical: Disabled", "grey")
                     set_btn(map_screen.btn_fac_kick, True, False, "Tactical: Disabled", "grey")
@@ -768,6 +806,21 @@ def update_button_states(map_screen):
                     set_btn(map_screen.btn_volunteers, True, enabled, "Send Volunteers", "purple")
                     map_screen.btn_volunteers.callback = lambda: player_diplomacy_actions.handle_send_volunteers(map_screen)
 
+                guarantee_legal, _guarantee_reason = guarantees.is_eligible(
+                    map_screen.player_country, owner, map_screen.nation_data)
+                already_guaranteed = owner in guarantees.guaranteed_targets(
+                    map_screen.player_country, map_screen.nation_data)
+                pending_guarantee = (pending_action == guarantees.ACTION and pending_turns == 0)
+                if pending_guarantee:
+                    guarantee_text = "Undo Guarantee"
+                elif already_guaranteed:
+                    guarantee_text = "Already Guaranteeing"
+                else:
+                    guarantee_text = "Guarantee Independence"
+                set_btn(map_screen.btn_guarantee, True,
+                        pending_guarantee or (guarantee_legal and not already_guaranteed),
+                        guarantee_text, "blue")
+
                 factions_disabled = getattr(c, 'DISABLE_FACTIONS', False)
 
                 # A puppet's alignment is its master's, both ways round: it may
@@ -826,6 +879,7 @@ def update_button_states(map_screen):
                     map_screen.btn_cancel_mil_access.visible = False
                     map_screen.btn_revoke_mil_access.visible = False
                     map_screen.btn_volunteers.visible = False
+                    map_screen.btn_guarantee.visible = False
 
             else:
                 set_orders_or_battle(map_screen, set_btn, has_player_units)
@@ -834,6 +888,11 @@ def update_button_states(map_screen):
 class Map(GameState):
     def __init__(self, load_path=None, is_scenario=False, is_random=False, force_editor=False, random_settings=None, map_settings=None, num_players=1, history_turn=None, skip_initial_income=False):
         super().__init__()
+
+        self.country_actions_scroll_rect = pygame.Rect(
+            DIPLO_BTN_X, ACTION_BTN_START_Y, ACTION_SCROLL_WIDTH, ACTION_SCROLL_HEIGHT)
+        self.country_actions_scroll_y = 0
+        self.country_actions_scroll_max = 0
 
         self.history_turn = history_turn
         self.num_players = num_players
@@ -1006,6 +1065,7 @@ class Map(GameState):
         for country_name, data in self.nation_data.items():
             data.setdefault("at_war_with", [])
             data.setdefault("allied_with", [])
+            data.setdefault("guarantees", [])
             data.setdefault("pending_diplomacy", {})
             responses = data.setdefault("diplo_responses", {})
 
@@ -1026,6 +1086,11 @@ class Map(GameState):
                         }
                         del data["pending_diplomacy"][other]
                         break
+
+        # A loaded save may have been written immediately before a faction join
+        # or war was resolved. Reconcile once on load so its UI never advertises
+        # a guarantee that is no longer valid.
+        guarantees.reconcile(self.nation_data)
 
         self.update_country_centers()
 
@@ -1473,6 +1538,36 @@ class Map(GameState):
 
     def additional_draw(self, surface):
         map_renderer.draw_map_screen(self, surface)
+
+    def draw_elements(self, surface):
+        """Draw country actions in their own clipped, scrollable HUD pane."""
+        country_actions = set(getattr(self, "country_action_buttons", ()))
+        for element in self.elements:
+            if element not in country_actions:
+                element.draw(surface)
+
+        visible_actions = [button for button in country_actions if button.visible]
+        if not visible_actions:
+            return
+
+        layout_country_action_buttons(self)
+        old_clip = surface.get_clip()
+        surface.set_clip(self.country_actions_scroll_rect)
+        for button in country_actions:
+            button.draw(surface)
+        surface.set_clip(old_clip)
+
+        if self.country_actions_scroll_max > 0:
+            rect = self.country_actions_scroll_rect
+            pygame.draw.rect(surface, (50, 50, 60),
+                             (rect.right - 10, rect.y, 8, rect.height))
+            handle_h = max(30, int(rect.height * rect.height /
+                                   (rect.height + self.country_actions_scroll_max)))
+            travel = rect.height - handle_h
+            ratio = self.country_actions_scroll_y / self.country_actions_scroll_max
+            pygame.draw.rect(surface, (150, 150, 150),
+                             (rect.right - 10, rect.y + int(travel * ratio), 8, handle_h),
+                             border_radius=4)
 
     def draw(self, surface):
         super().draw(surface)

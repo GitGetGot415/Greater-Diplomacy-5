@@ -127,9 +127,10 @@ def clear_own_pre_war_map_if_peace(nation_data, nation):
         maps.pop(nation, None)
 
 
-def finalize_war(map_data, nation_data, a, b):
+def finalize_war(map_data, nation_data, a, b, activate_guarantees=True):
     from map_logic.diplomacy.faction_actions import finalize_faction_leave
     from map_logic.diplomacy.puppet_actions import pull_puppets_into_war, pull_master_into_war
+    from map_logic.diplomacy import guarantees
 
     master_a = nation_data.get(a, {}).get("master", "")
     master_b = nation_data.get(b, {}).get("master", "")
@@ -169,6 +170,12 @@ def finalize_war(map_data, nation_data, a, b):
     # sever_military_access, always cleared both.
     sever_military_access(nation_data, a, b)
 
+    # The ordinary declaration UI refuses to break a truce, but a defensive
+    # guarantee can legitimately bring a guarantor into an existing war. Once
+    # that happens the old bilateral truce cannot remain as a stale exemption.
+    for country, other in ((a, b), (b, a)):
+        nation_data.get(country, {}).get("truces", {}).pop(other, None)
+
     for country, other in [(a, b), (b, a)]:
         if add_enemy(nation_data, country, other):
             # NEW: Track war duration for ceasefire cooldowns
@@ -187,6 +194,21 @@ def finalize_war(map_data, nation_data, a, b):
     # Pull masters into the fray (which cascades to their other puppets)
     pull_master_into_war(a, b, map_data, nation_data)
     pull_master_into_war(b, a, map_data, nation_data)
+
+    if activate_guarantees:
+        # A promise only defends its target. `a` initiated this war, so
+        # guarantees held over `b` pull their guarantors in against `a`;
+        # guarantees over `a` do nothing. Use the same finalizer for that war
+        # so access, truce, faction, puppet and duration bookkeeping agree.
+        # These are defensive entries, not fresh declarations, so the nested
+        # call deliberately does not wake up guarantees protecting `a`.
+        for guarantor in guarantees.defensive_guarantors(b, a, nation_data):
+            finalize_war(map_data, nation_data, guarantor, a,
+                         activate_guarantees=False)
+            log_global_event(nation_data,
+                             f"{guarantor} has honoured its guarantee of {b} against {a}.")
+
+    guarantees.reconcile(nation_data)
 
 def finalize_neutral(nation_data, a, b):
     from map_logic.diplomacy.puppet_actions import pull_puppets_into_peace

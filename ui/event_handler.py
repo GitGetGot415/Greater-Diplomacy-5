@@ -99,6 +99,33 @@ def handle_map_events(map_screen, event):
     if _panels_are_live(map_screen):
         if any((r := _panel_rect(map_screen, name)) and r.collidepoint(mx, my) for name in MAP_PANELS):
             on_ui = True
+        action_rect = getattr(map_screen, "country_actions_scroll_rect", None)
+        if action_rect and action_rect.collidepoint(mx, my):
+            on_ui = True
+
+    # Country-action buttons have their own short scroll pane. It is separate
+    # from the information panels because its buttons are normal map elements,
+    # not text rendered by the panel itself.
+    action_rect = getattr(map_screen, "country_actions_scroll_rect", None)
+    if (event.type == pygame.MOUSEWHEEL and _panels_are_live(map_screen)
+            and action_rect and action_rect.collidepoint(mx, my)):
+        maximum = getattr(map_screen, "country_actions_scroll_max", 0)
+        map_screen.country_actions_scroll_y = max(
+            0, min(map_screen.country_actions_scroll_y - event.y * c.SCROLL_STEP,
+                   maximum))
+        return
+
+    if (_panels_are_live(map_screen)
+            and event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP, pygame.MOUSEMOTION)
+            and action_rect):
+        if map_screen.handle_content_drag(
+                event, attr="country_actions_scroll_y",
+                limit_attr="country_actions_scroll_max",
+                rect_attr="country_actions_scroll_rect",
+                drag_attr="country_actions_drag_state", lo=0,
+                hi=getattr(map_screen, "country_actions_scroll_max", 0),
+                invert=True, refresh=False):
+            return
 
     # --- SCROLLABLE INFO PANEL WHEEL INTERCEPT ---
     # Lets the mouse wheel scroll long Buildings/Garrison, Diplomatic Info, and

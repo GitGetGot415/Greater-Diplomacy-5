@@ -1,6 +1,7 @@
 from data import queries
 from map_logic.diplomacy import diplomacy_logic, peace_scope, ratification
 from map_logic.diplomacy import volunteers
+from map_logic.diplomacy import guarantees
 import data.constants as c
 
 
@@ -154,6 +155,23 @@ def handle_specific_action(map_screen, action_type):
 
     # Pass the validated action down to the engine
     _queue_and_report(map_screen, target, action_type, custom_msg)
+
+
+def handle_guarantee(map_screen):
+    """Queue a unilateral guarantee after checking the live target state."""
+    target = map_screen.selected_province.get("owner")
+    pending = map_screen.nation_data.get(map_screen.player_country, {}).get(
+        "pending_diplomacy", {}).get(target, {})
+    pending_action = pending.get("action") if isinstance(pending, dict) else pending
+    if pending_action == guarantees.ACTION:
+        _queue_and_report(map_screen, target, guarantees.ACTION, "")
+        return
+    legal, reason = guarantees.is_eligible(map_screen.player_country, target,
+                                           map_screen.nation_data)
+    if not legal:
+        map_screen.show_feedback(reason)
+        return
+    _queue_and_report(map_screen, target, guarantees.ACTION, "")
 
 def _answer_incoming_request(map_screen, target, verdict, custom_msg):
     """Shared plumbing for the Accept / Reject buttons.

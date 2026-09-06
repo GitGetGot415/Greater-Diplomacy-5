@@ -73,6 +73,10 @@ map_logic/ai/
   ai_director.py     the model choosing from the menu
   ai_construction.py, ai_movement.py, ai_research.py, ai_diplomacy.py
 
+War desire also accounts for guarantees of independence. Declaring on a
+guaranteed country means fighting its guarantors, so their relative power adds
+restraint to the normal target-strength calculation.
+
 
 THREE THINGS THE VALUATIONS GET RIGHT THAT ARE EASY TO GET WRONG
 ----------------------------------------------------------------

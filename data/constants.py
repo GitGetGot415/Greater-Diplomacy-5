@@ -1337,6 +1337,9 @@ AI_W_AMBITION = 0.20        # appetite for land we have no claim on yet
 
 AI_W_RELATION = 0.55        # good relations suppress war. Previously: nothing did.
 AI_W_OVEREXTENSION = 0.45   # every war already being fought makes the next one less appealing
+# A guarantee is a credible extra enemy, even where that guarantor does not
+# share the target's border. ai_opinion scales this by the guarantor's power.
+AI_GUARANTEE_RESTRAINT = 0.55
 
 # Measured over 20 turns of the 1939 scenario against the old boolean, which
 # declared 33 wars and ended 8. This gives 23 declared and 7 ended: a
@@ -1887,7 +1890,8 @@ UNILATERAL_ACTIONS = [
     "CANCEL_MILITARY_ACCESS",
     "REVOKE_MILITARY_ACCESS",
     "FORWARD_MESSAGE",
-    "RECALL_VOLUNTEERS"
+    "RECALL_VOLUNTEERS",
+    "GUARANTEE",
 ]
 
 # What kind of act a message announced, for anyone reading a list of them.
@@ -1924,6 +1928,7 @@ MESSAGE_CATEGORIES = {
     "JOIN_WARS": "JOIN WAR",
     "SEND_VOLUNTEERS": "VOLUNTEERS",
     "RECALL_VOLUNTEERS": "VOLUNTEERS",
+    "GUARANTEE": "GUARANTEE",
 
     "CEASEFIRE": "PEACE",
     "PEACE_TREATY": "PEACE",

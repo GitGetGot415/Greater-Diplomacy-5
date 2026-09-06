@@ -128,6 +128,7 @@ def resent_departure(nation_data, a, b):
 
 def finalize_create_faction(map_data, nation_data, creator):
     from map_logic.diplomacy.puppet_actions import pull_puppets_into_faction
+    from map_logic.diplomacy import guarantees
 
     if getattr(c, "DISABLE_FACTIONS", False):
         return
@@ -147,6 +148,7 @@ def finalize_create_faction(map_data, nation_data, creator):
         queries.save_faction_pre_war_map(fac, map_data, nation_data)
 
     pull_puppets_into_faction(leader, fac, map_data, nation_data)
+    guarantees.reconcile(nation_data)
 
 def finalize_disband_faction(nation_data, leader):
     from map_logic.diplomacy.puppet_actions import pull_puppets_out_of_faction
@@ -169,6 +171,7 @@ def finalize_disband_faction(nation_data, leader):
 def finalize_faction_join(map_data, nation_data, host, joiner):
     """Returns True if the join happened, False if it was skipped."""
     from map_logic.diplomacy.puppet_actions import pull_puppets_into_faction
+    from map_logic.diplomacy import guarantees
 
     # A puppet has no alignment of its own; it follows its master in through
     # pull_puppets_into_faction below, which sets `faction` directly and so does
@@ -197,6 +200,7 @@ def finalize_faction_join(map_data, nation_data, host, joiner):
         queries.add_member_to_pre_war_map(joiner, fac, map_data, nation_data)
 
     pull_puppets_into_faction(joiner, fac, map_data, nation_data)
+    guarantees.reconcile(nation_data)
 
     return True
 

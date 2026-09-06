@@ -1,6 +1,7 @@
 import pygame
 import data.constants as c
 from data import queries
+from map_logic.diplomacy import guarantees
 from ui.bars import ui_bars
 
 # ==========================================
@@ -48,6 +49,25 @@ def draw_unit_info(map_screen, surface):
 
         with ui_bars.clip_scroll_region(surface, body_rect,
                                         draw_top=scroll_offset != 0, draw_bottom=scroll_offset < scroll_max):
+            # Guarantees are the first diplomatic fact: they decide who joins
+            # a new war before factions or access do.
+            protected = guarantees.guaranteed_targets(owner, map_screen.nation_data)
+            guarantors = guarantees.guarantors_of(owner, map_screen.nation_data)
+            for label, color, nations in (
+                    ("Guaranteeing:", c.COLOR_GOLD_HIGHLIGHT, protected),
+                    ("Guaranteed By:", (150, 200, 255), guarantors)):
+                if not nations:
+                    continue
+                surface.blit(map_screen.small_font.render(label, True, color),
+                             (dip_rect.x + 10, y_offset))
+                y_offset += 20
+                for nation in nations:
+                    display = map_screen.nation_data.get(nation, {}).get("name", nation)
+                    surface.blit(map_screen.small_font.render(f" - {display}", True,
+                                                              c.UI_TEXT_LIGHT),
+                                 (dip_rect.x + 10, y_offset))
+                    y_offset += 20
+
             faction_name = map_screen.nation_data.get(owner, {}).get("faction", "")
 
             if not faction_name:
