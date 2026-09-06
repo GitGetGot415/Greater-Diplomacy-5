@@ -342,12 +342,15 @@ def build_save_payload(parsed, base_map_dir=None):
     for name in living:
         nation_data[name]["research"] = date_research.copy()
 
-    player_country = code_to_name.get(parsed.get("player_code", ""), "")
-    if player_country not in living:
-        # Malformed/old saves can lack GD4's selected-country field. A save
-        # with no controlled country crashes GD5's gameplay UI, so choose a
-        # stable owned-country fallback rather than persisting "None".
-        player_country = sorted(living)[0] if living else "Spectator"
+    player_code = parsed.get("player_code", "")
+    if str(player_code).strip().casefold() == "spectator":
+        player_country = "Spectator"
+    else:
+        player_country = code_to_name.get(player_code, "")
+    if player_country not in living and player_country != "Spectator":
+        # Malformed/old saves can lack GD4's selected-country field. Spectator
+        # is safe for GD5's gameplay UI and does not silently assign a country.
+        player_country = "Spectator"
 
     payload = {
         "version": c.GAME_VERSION,

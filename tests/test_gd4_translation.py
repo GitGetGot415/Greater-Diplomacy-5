@@ -104,6 +104,18 @@ class GD4TranslationTests(unittest.TestCase):
             with self.subTest(level=level):
                 self.assertEqual(gd4._industry_buildings(level), buildings)
 
+    def test_spectator_and_missing_player_country_import_as_spectator(self):
+        parsed = gd4.parse_save(self.source_text)
+        parsed["player_code"] = "Spectator"
+        spectator_payload, _notes = gd4.build_save_payload(parsed)
+        self.assertEqual(spectator_payload["player_country"], "Spectator")
+        self.assertEqual(spectator_payload["active_players"], [])
+
+        parsed["player_code"] = ""
+        fallback_payload, _notes = gd4.build_save_payload(parsed)
+        self.assertEqual(fallback_payload["player_country"], "Spectator")
+        self.assertEqual(fallback_payload["active_players"], [])
+
     def test_payload_converts_date_resources_buildings_troops_and_diplomacy(self):
         payload, notes = gd4.build_save_payload(gd4.parse_save(self.source_text))
         self.assertEqual(payload["date"], {"day": 15, "month": 9, "year": 1939, "total_turns": 0})

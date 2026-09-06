@@ -49,9 +49,9 @@ GD4 time is stored as `year * 12 + zero-based month`. An import uses the 15th
 of that month, starts with `total_turns` at 0, and sets turns to 30 days. GD5's
 time-appropriate research is applied for the imported year; partial GD4
 research is not copied. The country selected by the GD4 player is carried into
-GD5 as the player country. If an older GD4 save does not contain a valid selected
-country, the importer chooses a country that owns land so the GD5 gameplay UI
-always has a valid player.
+GD5 as the player country, and GD4 `Spectator` saves remain GD5 Spectator saves.
+If an older GD4 save does not contain a valid selected country, the importer
+falls back to Spectator rather than silently assigning a country.
 
 Troops become `Infantry Type <imported year>`:
 
