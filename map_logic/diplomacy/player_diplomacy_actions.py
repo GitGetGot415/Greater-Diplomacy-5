@@ -199,6 +199,21 @@ def handle_military_attache(map_screen):
         return
     _queue_and_report(map_screen, target, military_attaches.ACTION, "")
 
+
+def handle_revoke_foreign_military_attache(map_screen):
+    """Queue or undo revoking the selected country's attaché from us."""
+    sender = map_screen.selected_province.get("owner")
+    host = map_screen.player_country
+    pending = map_screen.nation_data.get(host, {}).get("pending_diplomacy", {}).get(sender, {})
+    pending_action = pending.get("action") if isinstance(pending, dict) else pending
+    if pending_action == military_attaches.REVOKE_ACTION:
+        _queue_and_report(map_screen, sender, pending_action, "")
+        return
+    if host not in military_attaches.hosts_for(sender, map_screen.nation_data):
+        map_screen.show_feedback("That country has no military attaché with you.")
+        return
+    _queue_and_report(map_screen, sender, military_attaches.REVOKE_ACTION, "")
+
 def _answer_incoming_request(map_screen, target, verdict, custom_msg):
     """Shared plumbing for the Accept / Reject buttons.
 

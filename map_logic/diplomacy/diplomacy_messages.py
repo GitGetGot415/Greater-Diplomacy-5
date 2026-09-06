@@ -397,6 +397,7 @@ DEFAULT_ANNOUNCEMENTS = {
     "REQ_MILITARY_ACCESS": "We formally request military access to move our troops through your territory.",
     "SEND_MILITARY_ATTACHE": "We request to send a military attaché to observe your war.",
     "WITHDRAW_MILITARY_ATTACHE": "We are withdrawing our military attaché.",
+    "REVOKE_MILITARY_ATTACHE": "Your military attaché has been revoked.",
     "CEASEFIRE": "We offer terms for a ceasefire.",
     "CREATE_FACTION": "We propose establishing a new faction together.",
     "TRADE": "We propose a trade agreement.",

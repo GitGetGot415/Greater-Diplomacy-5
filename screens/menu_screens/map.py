@@ -325,6 +325,7 @@ def render_buttons(map_screen):
         ("btn_volunteers", 9, "purple", "Send Volunteers", player_diplomacy_actions.handle_send_volunteers),
         ("btn_guarantee", 10, "blue", "Guarantee Independence", player_diplomacy_actions.handle_guarantee),
         ("btn_military_attache", 11, "orange", "Send Military Attaché", player_diplomacy_actions.handle_military_attache),
+        ("btn_revoke_foreign_military_attache", 12, "red", "Revoke Their Attaché", player_diplomacy_actions.handle_revoke_foreign_military_attache),
     )
     map_screen.country_action_buttons = []
     for attr, row, color, label, handler in diplo_buttons:
@@ -410,6 +411,7 @@ def render_buttons(map_screen):
         map_screen.btn_volunteers,
         map_screen.btn_guarantee,
         map_screen.btn_military_attache,
+        map_screen.btn_revoke_foreign_military_attache,
         map_screen.btn_req_mil_access, map_screen.btn_cancel_mil_access, map_screen.btn_revoke_mil_access,
         map_screen.btn_accept_req, map_screen.btn_reject_req, map_screen.btn_force_war, map_screen.btn_force_peace,
         map_screen.btn_spec_create_fac, map_screen.btn_spec_join_fac, map_screen.btn_spec_invite_fac, map_screen.btn_spec_leave_fac,
@@ -700,6 +702,7 @@ def update_button_states(map_screen):
                     set_btn(map_screen.btn_volunteers, True, False, "Tactical: Disabled", "grey")
                     set_btn(map_screen.btn_guarantee, True, False, "Tactical: Disabled", "grey")
                     set_btn(map_screen.btn_military_attache, True, False, "Tactical: Disabled", "grey")
+                    set_btn(map_screen.btn_revoke_foreign_military_attache, True, False, "Tactical: Disabled", "grey")
                     set_btn(map_screen.btn_fac_invite, True, False, "Tactical: Disabled", "grey")
                     set_btn(map_screen.btn_fac_join_req, True, False, "Tactical: Disabled", "grey")
                     set_btn(map_screen.btn_fac_kick, True, False, "Tactical: Disabled", "grey")
@@ -849,6 +852,16 @@ def update_button_states(map_screen):
                         or (attache_legal and not attached),
                         attache_text, "orange")
 
+                hosting_their_attache = map_screen.player_country in military_attaches.hosts_for(
+                    owner, map_screen.nation_data)
+                pending_revoke_their_attache = (
+                    pending_action == military_attaches.REVOKE_ACTION and pending_turns == 0)
+                set_btn(map_screen.btn_revoke_foreign_military_attache,
+                        hosting_their_attache or pending_revoke_their_attache,
+                        hosting_their_attache or pending_revoke_their_attache,
+                        "Undo Revoke Their Attaché" if pending_revoke_their_attache
+                        else "Revoke Their Attaché", "red")
+
                 factions_disabled = getattr(c, 'DISABLE_FACTIONS', False)
 
                 # A puppet's alignment is its master's, both ways round: it may
@@ -909,6 +922,7 @@ def update_button_states(map_screen):
                     map_screen.btn_volunteers.visible = False
                     map_screen.btn_guarantee.visible = False
                     map_screen.btn_military_attache.visible = False
+                    map_screen.btn_revoke_foreign_military_attache.visible = False
 
             else:
                 set_orders_or_battle(map_screen, set_btn, has_player_units)

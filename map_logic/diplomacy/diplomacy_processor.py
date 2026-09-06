@@ -1016,6 +1016,18 @@ def _process_pass1_immediate_actions(map_screen):
                         map_screen.show_feedback("You have no military attaché there.")
                     actions_to_clear.append(target)
 
+                elif action == military_attaches.REVOKE_ACTION:
+                    if military_attaches.revoke_by_host(country_name, target,
+                                                        map_screen.nation_data):
+                        log_global_event(map_screen.nation_data,
+                                         f"{country_name} has revoked {target}'s military attaché.")
+                        send_message(map_screen, country_name, target,
+                                     "Your military attaché has been revoked.", "DIPLOMACY",
+                                     extra={"action": action}, llm=wrote_it)
+                    elif country_name == map_screen.player_country:
+                        map_screen.show_feedback("That country has no military attaché with you.")
+                    actions_to_clear.append(target)
+
                 elif action == "BREAK_ALLIANCE":
                     log_global_event(map_screen.nation_data, f"{country_name} has broken their alliance with {target}.")
                     send_treaty_message(map_screen, country_name, target, action, custom_msg, llm=wrote_it)
@@ -1405,9 +1417,29 @@ def _process_claim_queues(map_screen):
                     map_screen.show_feedback(f"Created integrated puppet from {core_nation} cores!")
 
 
+def _process_scheduled_ai_attache_revocations(map_screen):
+    """Apply the AI hosts' attaché revocations from the previous turn."""
+    for sender, host in military_attaches.process_scheduled_revocations(
+            map_screen.nation_data):
+        log_global_event(map_screen.nation_data,
+                         f"{host} has revoked {sender}'s military attaché for supporting its enemy.")
+        send_message(map_screen, host, sender,
+                     "Your military attaché has been revoked because you are supporting a country we are fighting.",
+                     "DIPLOMACY", extra={"action": military_attaches.REVOKE_ACTION})
+
+
+def _schedule_conflicting_ai_attache_revocations(map_screen):
+    """Record new AI attaché conflicts for processing on the next turn."""
+    human_hosts = set(getattr(map_screen, "active_players", ()))
+    human_hosts.add(getattr(map_screen, "player_country", ""))
+    military_attaches.schedule_conflict_revocations_for_ai_hosts(
+        map_screen.nation_data, human_hosts)
+
+
 def process_diplomacy_turn(map_screen):
     _decay_modifiers_and_truces(map_screen)
     volunteers.tick(map_screen)
+    _process_scheduled_ai_attache_revocations(map_screen)
     # Ages every faction member's claim on the leadership. Before anything acts,
     # so the button a player sees, the number an AI decides on and the state a
     # claim executes against are one measurement rather than three.
@@ -1449,3 +1481,4 @@ def process_diplomacy_turn(map_screen):
     # helpers. Keep temporary diplomatic state valid even on those paths.
     guarantees.reconcile(map_screen.nation_data)
     military_attaches.reconcile(map_screen.nation_data)
+    _schedule_conflicting_ai_attache_revocations(map_screen)

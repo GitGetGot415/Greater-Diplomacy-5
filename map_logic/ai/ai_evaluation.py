@@ -333,11 +333,14 @@ def evaluate_verdict(nation_data, map_data, ai_nation, sender_nation, action_typ
     if action_type == "SEND_VOLUNTEERS":
         return Verdict(True, 1.0, "volunteer divisions are always welcome")
 
-    # The host has already met the at-war/non-hostile eligibility gate before
-    # this request can arrive. An attaché costs it nothing and shares no command,
-    # so AI countries always approve it.
+    # The host is otherwise happy to share battlefield intelligence, except with
+    # a country supporting one of the other side's war effort.
     if action_type == "SEND_MILITARY_ATTACHE":
-        return Verdict(True, 1.0, "military attachés are always welcome")
+        from map_logic.diplomacy import military_attaches
+        accepted, reason = military_attaches.ai_can_accept(
+            sender_nation, ai_nation, nation_data)
+        return Verdict(accepted, 1.0 if accepted else 0.0,
+                       "military attachés are always welcome" if accepted else reason)
 
     # --- IMPROVED FACTION LOGIC ---
     # 1. Check for basic aggressive acceptance
