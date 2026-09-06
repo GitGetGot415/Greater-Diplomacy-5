@@ -229,10 +229,16 @@ def _make_country_names(records, base_nation_data):
     return nation_data, code_to_name
 
 
-def _apply_diplomacy(nation_data, code_to_name, friends, wars):
+def _apply_diplomacy(nation_data, code_to_name, wars):
     for entry in nation_data.values():
         entry["allied_with"] = []
         entry["at_war_with"] = []
+        # GD4 has no factions. Clearing all shared-visibility relationships
+        # means an imported player sees only their own territory under fog.
+        entry["faction"] = ""
+        entry["is_faction_leader"] = False
+        entry["master"] = ""
+        entry["puppets"] = []
 
     def add_pair(field, first, second):
         if first == second or first not in nation_data or second not in nation_data:
@@ -245,9 +251,6 @@ def _apply_diplomacy(nation_data, code_to_name, friends, wars):
 
     for index, code in enumerate(GD4_COUNTRY_CODES):
         country = code_to_name[code]
-        for other_code in friends[index]:
-            if other_code in code_to_name:
-                add_pair("allied_with", country, code_to_name[other_code])
         for other_code in wars[index]:
             if other_code in code_to_name:
                 add_pair("at_war_with", country, code_to_name[other_code])
@@ -302,7 +305,7 @@ def build_save_payload(parsed, base_map_dir=None):
         raise GD4TranslationError("GD4 dates before year 0 are not supported")
     year, month = divmod(months, 12)
     nation_data, code_to_name = _make_country_names(parsed["countries"], base_meta["nation_data"])
-    _apply_diplomacy(nation_data, code_to_name, parsed["friends"], parsed["wars"])
+    _apply_diplomacy(nation_data, code_to_name, parsed["wars"])
     unit_library = queries.get_unit_library()
     provinces = {}
     by_id = {province["id"]: (key, province) for key, province in raw_map.items()}

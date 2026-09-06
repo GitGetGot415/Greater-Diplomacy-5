@@ -115,8 +115,10 @@ class GD4TranslationTests(unittest.TestCase):
         self.assertEqual(payload["nation_data"]["United States of America"]["leader_title"], "President")
         self.assertEqual(payload["nation_data"]["United States of America"]["leader_name"],
                          "United States of America Leader")
-        self.assertIn("Canada", payload["nation_data"]["United States of America"]["allied_with"])
-        self.assertIn("United States of America", payload["nation_data"]["Canada"]["allied_with"])
+        self.assertEqual(payload["nation_data"]["United States of America"]["allied_with"], [])
+        self.assertEqual(payload["nation_data"]["Canada"]["allied_with"], [])
+        self.assertEqual(payload["nation_data"]["United States of America"]["faction"], "")
+        self.assertEqual(payload["nation_data"]["Canada"]["faction"], "")
         self.assertIn("Mexico", payload["nation_data"]["United States of America"]["at_war_with"])
         self.assertIn("United States of America", payload["nation_data"]["Mexico"]["at_war_with"])
 

@@ -29,8 +29,10 @@ loader when the new save is opened.
 The importer preserves recognised country names and leader title/name, province
 ownership, factories, forts, and the four supported resources: Iron, Coal, Oil,
 and Wheat. A GD4 resource amount is multiplied by 50 and rounded to an integer
-in GD5. Forts become `Fort Lvl N`, and valid GD4 friendship and war entries
-become symmetric GD5 alliances and wars.
+in GD5. Forts become `Fort Lvl N`, and valid GD4 wars become symmetric GD5
+wars. GD4 friendship data is intentionally ignored: GD4 has no factions, and
+an import starts with no GD5 alliances, factions, subjects, or shared map
+visibility.
 
 GD4's factory level represents both industry and recruitment capacity, so it
 uses this GD5 building progression:
@@ -64,10 +66,10 @@ infantry year is used.
 ## Intentionally omitted data
 
 The import does not carry GD4 money, partial research, passive-income/fort/naval
-research, naval units or connections, devastation, production queues, artillery
-targets, mail, flags, portraits, GD4 color effects, or moon/unsupported
-provinces. Destination country colors and base-map country resource balances come
-from GD5's existing GD4 map.
+research, friendship/alliance state, naval units or connections, devastation,
+production queues, artillery targets, mail, flags, portraits, GD4 color effects,
+or moon/unsupported provinces. Destination country colors and base-map country
+resource balances come from GD5's existing GD4 map.
 
 ## Maintaining the importer
 
