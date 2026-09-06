@@ -452,6 +452,7 @@
 | Panama | Public Domain |
 | Papal States | Public Domain |
 | Papua New Guinea | Public Domain |
+| Pará | Public Domain |
 | Paraguay | Public Domain |
 | Paris | Public Domain |
 | Parking Lot | GitGetGot415 |
@@ -465,7 +466,6 @@
 | Parking Lot 8 | GitGetGot415 |
 | Parking Lot 9 | GitGetGot415 |
 | Parthian Empire | Public Domain |
-| Pará | Public Domain |
 | Patagonian Workers Front | Kaiserreich |
 | Pearl Factory | Public Domain |
 | Pennsylvania | Public Domain |
@@ -508,7 +508,7 @@
 | Poland | Public Domain |
 | Polish-Lithuanian Commonwealth | Public Domain |
 | Pollo Campero | Public Domain |
-| PolynesianSSR | Exodus |
+| Polynesian SSR | Exodus |
 | Pomerania | Public Domain |
 | Portugal | Public Domain |
 | Powell Street | Public Domain |
@@ -553,6 +553,7 @@
 | Sakha | Public Domain |
 | Sakhalin | Public Domain |
 | Salta | Public Domain |
+| Sámi | Public Domain |
 | San Francisco | Public Domain |
 | San Francisco Carousel | Public Domain |
 | San Francisco Cruises | Public Domain |
@@ -628,7 +629,6 @@
 | Swiss Louis Italian And Seafood Restaurant | Public Domain |
 | Switzerland | Public Domain |
 | Syria | Public Domain |
-| Sámi | Public Domain |
 | Taco Cantina | Public Domain |
 | Taiwan | Public Domain |
 | Tajikistan | Public Domain |

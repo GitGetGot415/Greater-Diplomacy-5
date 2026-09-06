@@ -2,6 +2,7 @@
 
 from pathlib import Path
 import re
+import unicodedata
 
 
 COPYRIGHT_DIR = Path(__file__).resolve().parent
@@ -10,6 +11,13 @@ STATUS_FILES = (
     COPYRIGHT_DIR / "portraits_copyright_status.md",
 )
 TABLE_ROW_RE = re.compile(r"^\|\s*(.*?)\s*\|\s*(.*?)\s*\|\s*$")
+
+
+def alphabetical_key(value):
+    """Return a case- and accent-insensitive key for human-style sorting."""
+    normalized = unicodedata.normalize("NFKD", value.casefold())
+    return "".join(character for character in normalized
+                    if not unicodedata.combining(character))
 
 
 def sort_status_file(path):
@@ -31,7 +39,7 @@ def sort_status_file(path):
             table_rows.append((match.group(1), index, line))
 
     sorted_rows = [
-        line for _, _, line in sorted(table_rows, key=lambda row: row[0].casefold())
+        line for _, _, line in sorted(table_rows, key=lambda row: alphabetical_key(row[0]))
     ]
     for (_, index, _), sorted_row in zip(table_rows, sorted_rows):
         body_lines[index] = sorted_row
