@@ -25,7 +25,7 @@ class Translate(GameState):
     refused and says so, which matters more than usual: the maps on the other
     side of this are somebody's work in a different game.
     """
-    back_state = "MENU"
+    back_state = "TRANSLATION_MENU"
     title = "TRANSLATE MAPS"
 
     # A "new_game" button is 50 tall, so anything under that overlaps the row

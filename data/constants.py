@@ -366,7 +366,7 @@ MENU_BUTTON_TABLE = [
         "attribute": "translate_btn",
         "text": "Translate",
         "color": "white",
-        "state": "TRANSLATE",
+        "state": "TRANSLATION_MENU",
         "image": "export",
         "text_size": 24,
     }
