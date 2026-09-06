@@ -47,6 +47,7 @@ def _standard_gd4_text():
     sections[2] = _nested(friends)
     sections[3] = _nested(wars)
     sections[12] = str(1939 * 12 + 9)
+    sections[16] = "USA"
     return gd4.DIVIDER.join(sections)
 
 
@@ -91,6 +92,8 @@ class GD4TranslationTests(unittest.TestCase):
         payload, notes = gd4.build_save_payload(gd4.parse_save(self.source_text))
         self.assertEqual(payload["date"], {"day": 15, "month": 9, "year": 1939, "total_turns": 0})
         self.assertEqual(payload["scenario_settings"]["days_per_turn"], 30)
+        self.assertEqual(payload["player_country"], "United States of America")
+        self.assertEqual(payload["active_players"], ["United States of America"])
         self.assertEqual(payload["nation_data"]["United States of America"]["research"],
                          gd4.queries.get_time_appropriate_research(1939))
         self.assertEqual(payload["nation_data"]["United States of America"]["leader_title"], "President")
@@ -136,8 +139,11 @@ class GD4TranslationTests(unittest.TestCase):
             self.assertEqual(loaded.time_manager.month_index, 9)
             self.assertEqual(loaded.time_manager.day, 15)
             self.assertEqual(loaded.scenario_settings["days_per_turn"], 30)
+            self.assertEqual(loaded.player_country, "United States of America")
             self.assertEqual(loaded.id_to_province[gd4.GD4_PROVINCE_TO_GD5[0]]["owner"],
                              "United States of America")
+            # This is where a persisted "None" player country used to crash.
+            loaded.update()
 
 
 if __name__ == "__main__":

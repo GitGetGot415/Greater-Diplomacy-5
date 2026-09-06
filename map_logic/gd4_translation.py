@@ -167,7 +167,10 @@ def parse_save(source):
     if len(GD4_COUNTRY_CODES) != COUNTRY_COUNT or len(GD4_PROVINCE_TO_GD5) != WORLD_PROVINCE_COUNT:
         raise RuntimeError("the bundled GD4 mapping constants are incomplete")
     return {"countries": countries, "provinces": provinces, "friends": friends,
-            "wars": wars, "time": _number(parts[12], "time")}
+            "wars": wars, "time": _number(parts[12], "time"),
+            # GD4 writes the country currently controlled by the local player
+            # here.  It is a code, unlike the display names in country records.
+            "player_code": str(parts[16]).strip()}
 
 
 def _number(value, label):
@@ -324,12 +327,20 @@ def build_save_payload(parsed, base_map_dir=None):
     for name in living:
         nation_data[name]["research"] = date_research.copy()
 
+    player_country = code_to_name.get(parsed.get("player_code", ""), "")
+    if player_country not in living:
+        # Malformed/old saves can lack GD4's selected-country field. A save
+        # with no controlled country crashes GD5's gameplay UI, so choose a
+        # stable owned-country fallback rather than persisting "None".
+        player_country = sorted(living)[0] if living else "Spectator"
+
     payload = {
         "version": c.GAME_VERSION,
         "generated_at": datetime.now().isoformat(),
         "date": {"day": 15, "month": month, "year": year, "total_turns": 0},
-        "loop_map": base_meta.get("loop_map", True), "player_country": "None",
-        "active_players": [], "current_player_index": 0,
+        "loop_map": base_meta.get("loop_map", True), "player_country": player_country,
+        "active_players": [] if player_country == "Spectator" else [player_country],
+        "current_player_index": 0,
         "scenario_settings": {"fog_of_war": True, "casus_belli_required": True,
                               "days_per_turn": 30, "use_scripted_events": True,
                               "ai_disabled": False},
