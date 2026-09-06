@@ -272,6 +272,20 @@ def _build_units(troops, owner, year, unit_library):
     return units
 
 
+def _industry_buildings(level):
+    """Translate GD4's combined industry level into GD5 production buildings."""
+    level = min(_positive_int(level), 8)
+    if level == 0:
+        return []
+    if level == 1:
+        return ["Basic Factory"]
+    if level == 2:
+        return ["Basic Factory", "Basic Recruitment Center"]
+    if level == 3:
+        return ["Basic Factory", "Recruitment Building Lvl 1"]
+    return [f"Factory Lvl {level - 3}", f"Recruitment Building Lvl {level - 2}"]
+
+
 def build_save_payload(parsed, base_map_dir=None):
     """Build a regular GD5 meta payload and report deliberately lossy actions."""
     base_map_dir = base_map_dir or os.path.join(c.BASE_MAPS_DIR, "GD4")
@@ -305,9 +319,7 @@ def build_save_payload(parsed, base_map_dir=None):
         if owner not in nation_data:
             owner = "Unclaimed"
         industry, forts, troops = (_positive_int(record[3]), _positive_int(record[4]), record[5])
-        buildings = []
-        if industry:
-            buildings.append(f"Factory Lvl {min(industry, 25)}")
+        buildings = _industry_buildings(industry)
         if forts:
             buildings.append(f"Fort Lvl {min(forts, 20)}")
         provinces[key] = {

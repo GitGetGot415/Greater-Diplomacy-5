@@ -29,8 +29,19 @@ loader when the new save is opened.
 The importer preserves recognised country names and leader title/name, province
 ownership, factories, forts, and the four supported resources: Iron, Coal, Oil,
 and Wheat. A GD4 resource amount is multiplied by 50 and rounded to an integer
-in GD5. Factories become `Factory Lvl N`, forts become `Fort Lvl N`, and valid
-GD4 friendship and war entries become symmetric GD5 alliances and wars.
+in GD5. Forts become `Fort Lvl N`, and valid GD4 friendship and war entries
+become symmetric GD5 alliances and wars.
+
+GD4's factory level represents both industry and recruitment capacity, so it
+uses this GD5 building progression:
+
+| GD4 level | GD5 buildings |
+| --- | --- |
+| 0 | None |
+| 1 | Basic Factory |
+| 2 | Basic Factory; Basic Recruitment Center |
+| 3 | Basic Factory; Recruitment Building Lvl 1 |
+| 4–8 | Factory Lvl `level - 3`; Recruitment Building Lvl `level - 2` |
 
 GD4 time is stored as `year * 12 + zero-based month`. An import uses the 15th
 of that month, starts with `total_turns` at 0, and sets turns to 30 days. GD5's

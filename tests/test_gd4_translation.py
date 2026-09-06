@@ -88,6 +88,22 @@ class GD4TranslationTests(unittest.TestCase):
         self.assertEqual(len(targets), len(set(targets)))
         self.assertEqual(gd4.GD4_COUNTRY_CODES[:3], ["USA", "CAN", "MEX"])
 
+    def test_factory_levels_follow_the_gd4_industry_progression(self):
+        expected = {
+            0: [],
+            1: ["Basic Factory"],
+            2: ["Basic Factory", "Basic Recruitment Center"],
+            3: ["Basic Factory", "Recruitment Building Lvl 1"],
+            4: ["Factory Lvl 1", "Recruitment Building Lvl 2"],
+            5: ["Factory Lvl 2", "Recruitment Building Lvl 3"],
+            6: ["Factory Lvl 3", "Recruitment Building Lvl 4"],
+            7: ["Factory Lvl 4", "Recruitment Building Lvl 5"],
+            8: ["Factory Lvl 5", "Recruitment Building Lvl 6"],
+        }
+        for level, buildings in expected.items():
+            with self.subTest(level=level):
+                self.assertEqual(gd4._industry_buildings(level), buildings)
+
     def test_payload_converts_date_resources_buildings_troops_and_diplomacy(self):
         payload, notes = gd4.build_save_payload(gd4.parse_save(self.source_text))
         self.assertEqual(payload["date"], {"day": 15, "month": 9, "year": 1939, "total_turns": 0})
@@ -110,7 +126,8 @@ class GD4TranslationTests(unittest.TestCase):
                    if province["id"] == gd4.GD4_PROVINCE_TO_GD5[0])
         province = payload["provinces"][key]
         self.assertEqual(province["resources"], {"Oil": 25})
-        self.assertEqual(province["buildings"], ["Factory Lvl 5", "Fort Lvl 3"])
+        self.assertEqual(province["buildings"],
+                         ["Factory Lvl 2", "Recruitment Building Lvl 3", "Fort Lvl 3"])
         self.assertEqual(len(province["units"]), 2)
         self.assertEqual(province["units"][0]["health"], province["units"][0]["max_health"])
         self.assertEqual(province["units"][1]["health"], province["units"][1]["max_health"] * 0.1)
