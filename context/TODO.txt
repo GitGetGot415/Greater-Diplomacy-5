@@ -18,7 +18,6 @@ hanskolmer suggestions:
 - make sure this ui also shows the unit art names
 
 Couple of diplomacy suggestion to make this game Greater for this fifth instalment:
-1- (Idk how volunteers work, so this might be irrelevant) Military attaché
 2- Non Aggression pact
 4- Declaring someone as your rivals (it make your relation worse, but give you a free justification for humiliation war (you can only rival someone with similar power level))
 5- Research Sharing.
