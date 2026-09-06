@@ -994,6 +994,17 @@ def _process_pass1_immediate_actions(map_screen):
                         map_screen.show_feedback(reason)
                     actions_to_clear.append(target)
 
+                elif action == guarantees.REVOKE_ACTION:
+                    if guarantees.revoke(country_name, target, map_screen.nation_data):
+                        log_global_event(map_screen.nation_data,
+                                         f"{country_name} has revoked its guarantee of {target}.")
+                        send_message(map_screen, country_name, target,
+                                     "We are revoking our guarantee of your independence.",
+                                     "DIPLOMACY", extra={"action": action}, llm=wrote_it)
+                    elif country_name == map_screen.player_country:
+                        map_screen.show_feedback("You do not guarantee that country.")
+                    actions_to_clear.append(target)
+
                 elif action == "BREAK_ALLIANCE":
                     log_global_event(map_screen.nation_data, f"{country_name} has broken their alliance with {target}.")
                     send_treaty_message(map_screen, country_name, target, action, custom_msg, llm=wrote_it)

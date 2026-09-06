@@ -1892,6 +1892,7 @@ UNILATERAL_ACTIONS = [
     "FORWARD_MESSAGE",
     "RECALL_VOLUNTEERS",
     "GUARANTEE",
+    "REVOKE_GUARANTEE",
 ]
 
 # What kind of act a message announced, for anyone reading a list of them.
@@ -1929,6 +1930,7 @@ MESSAGE_CATEGORIES = {
     "SEND_VOLUNTEERS": "VOLUNTEERS",
     "RECALL_VOLUNTEERS": "VOLUNTEERS",
     "GUARANTEE": "GUARANTEE",
+    "REVOKE_GUARANTEE": "GUARANTEE",
 
     "CEASEFIRE": "PEACE",
     "PEACE_TREATY": "PEACE",

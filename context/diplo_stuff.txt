@@ -10,7 +10,8 @@ country in its own guarantees list; the target cannot accept or decline it.
 The target must be at peace and outside a faction. A guarantee is removed as
 soon as that stops being true. If war is the reason, every guarantor is first
 called into the target's defensive war against the attacker; a country that
-started the war never receives that help.
+started the war never receives that help. A guarantor may also revoke its own
+guarantee unilaterally.
 
 declarations requiring response:
 turn 0: msg1 is written

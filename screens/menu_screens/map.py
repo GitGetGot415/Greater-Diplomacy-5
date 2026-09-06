@@ -811,14 +811,18 @@ def update_button_states(map_screen):
                 already_guaranteed = owner in guarantees.guaranteed_targets(
                     map_screen.player_country, map_screen.nation_data)
                 pending_guarantee = (pending_action == guarantees.ACTION and pending_turns == 0)
+                pending_revoke = (pending_action == guarantees.REVOKE_ACTION and pending_turns == 0)
                 if pending_guarantee:
                     guarantee_text = "Undo Guarantee"
+                elif pending_revoke:
+                    guarantee_text = "Undo Revoke Guarantee"
                 elif already_guaranteed:
-                    guarantee_text = "Already Guaranteeing"
+                    guarantee_text = "Revoke Guarantee"
                 else:
                     guarantee_text = "Guarantee Independence"
                 set_btn(map_screen.btn_guarantee, True,
-                        pending_guarantee or (guarantee_legal and not already_guaranteed),
+                        pending_guarantee or pending_revoke or already_guaranteed
+                        or (guarantee_legal and not already_guaranteed),
                         guarantee_text, "blue")
 
                 factions_disabled = getattr(c, 'DISABLE_FACTIONS', False)

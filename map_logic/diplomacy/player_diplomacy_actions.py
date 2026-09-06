@@ -158,13 +158,17 @@ def handle_specific_action(map_screen, action_type):
 
 
 def handle_guarantee(map_screen):
-    """Queue a unilateral guarantee after checking the live target state."""
+    """Queue, undo, or revoke a unilateral guarantee."""
     target = map_screen.selected_province.get("owner")
     pending = map_screen.nation_data.get(map_screen.player_country, {}).get(
         "pending_diplomacy", {}).get(target, {})
     pending_action = pending.get("action") if isinstance(pending, dict) else pending
-    if pending_action == guarantees.ACTION:
-        _queue_and_report(map_screen, target, guarantees.ACTION, "")
+    if pending_action in (guarantees.ACTION, guarantees.REVOKE_ACTION):
+        _queue_and_report(map_screen, target, pending_action, "")
+        return
+    if target in guarantees.guaranteed_targets(map_screen.player_country,
+                                               map_screen.nation_data):
+        _queue_and_report(map_screen, target, guarantees.REVOKE_ACTION, "")
         return
     legal, reason = guarantees.is_eligible(map_screen.player_country, target,
                                            map_screen.nation_data)

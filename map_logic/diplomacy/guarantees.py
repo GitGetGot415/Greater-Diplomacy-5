@@ -10,6 +10,7 @@ from data import queries
 
 
 ACTION = "GUARANTEE"
+REVOKE_ACTION = "REVOKE_GUARANTEE"
 
 
 def is_eligible(guarantor, target, nation_data):
@@ -55,6 +56,17 @@ def grant(guarantor, target, nation_data):
         return False, "You already guarantee that country."
     promises.append(target)
     return True, ""
+
+
+def revoke(guarantor, target, nation_data):
+    """Remove one promise, returning whether anything changed."""
+    promises = nation_data.get(guarantor, {}).get("guarantees", [])
+    if not isinstance(promises, list) or target not in promises:
+        return False
+    promises.remove(target)
+    if not promises:
+        nation_data[guarantor].pop("guarantees", None)
+    return True
 
 
 def reconcile(nation_data):
