@@ -27,6 +27,12 @@ from a country that has active volunteers with, or an attaché observing, one of
 their enemies. Existing conflicting volunteers are sent home on the following
 turn; a player hosting foreign volunteers may send them home directly.
 
+When selecting a country, each available bilateral proposal to an AI displays
+the same deterministic acceptance verdict that the AI will use: YES, NO, or
+MAYBE. MAYBE is reserved for human-controlled targets, whose response cannot
+be forecast. The indicator is informational; it neither changes eligibility
+nor queues the proposal.
+
 declarations requiring response:
 turn 0: msg1 is written
 turn 0.5: msg1 is sent

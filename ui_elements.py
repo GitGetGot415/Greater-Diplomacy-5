@@ -199,6 +199,14 @@ class Button:
         pygame.draw.rect(surface, border_color, self.rect, border_thickness)
 
         labelled = bool(self.image and self.text and self.show_text)
+        # Some compact action buttons pair their label with a small status
+        # image at the far edge. Keep this separate from ``image``: that one
+        # is the button's primary icon and participates in its own layouts.
+        right_image = getattr(self, "right_image", None)
+        right_image_rect = None
+        if right_image:
+            right_image_rect = right_image.get_rect(
+                midright=(self.rect.right - 5, self.rect.centery))
 
         if self.image:
             if not labelled:
@@ -219,8 +227,18 @@ class Button:
         elif self.text and not self.image:
             if self.text_align == "left":
                 self.draw_label(surface, self.text, midleft=(self.rect.x + 10, self.rect.centery))
+            elif right_image_rect:
+                # Centre the label in the space left of the indicator, rather
+                # than underneath the image or across the button as a whole.
+                text_right = right_image_rect.left - 4
+                self.draw_label(surface, self.text,
+                                center=((self.rect.left + text_right) // 2,
+                                        self.rect.centery))
             else:
                 self.draw_label(surface, self.text, center=self.rect.center)
+
+        if right_image_rect:
+            surface.blit(right_image, right_image_rect)
 
         badge_text = getattr(self, 'notification_text', None)
         if not badge_text and getattr(self, 'notification_count', 0) > 0:

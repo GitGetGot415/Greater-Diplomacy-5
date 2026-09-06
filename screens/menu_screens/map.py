@@ -79,6 +79,10 @@ ACTION_BTN_STEP_Y = 30
 ACTION_SCROLL_HEIGHT = 300
 ACTION_SCROLL_WIDTH = 215
 
+# The diplomacy buttons are only 30px high, so their response prediction uses
+# a compact image at the right edge and the smaller shared button font.
+AI_RESPONSE_INDICATOR_SIZE = 20
+
 PROVINCE_BTN_X = 280
 BTN_ORDERS_Y = 603
 BTN_PRODUCTION_Y = 543
@@ -328,6 +332,17 @@ def render_buttons(map_screen):
         ("btn_revoke_foreign_military_attache", 12, "red", "Revoke Their Attaché", player_diplomacy_actions.handle_revoke_foreign_military_attache),
         ("btn_send_home_foreign_volunteers", 13, "red", "Send Their Volunteers Home", player_diplomacy_actions.handle_send_home_foreign_volunteers),
     )
+    response_images = {}
+    for response in ("YES", "NO", "MAYBE"):
+        image_path = os.path.join(c.ASSETS_DIR, f"{response}.png")
+        image = pygame.image.load(image_path).convert_alpha()
+        scale = min(AI_RESPONSE_INDICATOR_SIZE / image.get_width(),
+                    AI_RESPONSE_INDICATOR_SIZE / image.get_height())
+        response_images[response] = pygame.transform.smoothscale(
+            image, (round(image.get_width() * scale),
+                    round(image.get_height() * scale)))
+    map_screen.ai_response_images = response_images
+
     map_screen.country_action_buttons = []
     for attr, row, color, label, handler in diplo_buttons:
         if isinstance(handler, str):
@@ -336,7 +351,8 @@ def render_buttons(map_screen):
         else:
             action = lambda h=handler: h(map_screen)
         button = Button(diplo_x, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * row,
-                        "diplomatic", color, label, action)
+                        "diplomatic", color, label, action,
+                        font_preset="button_small")
         button.country_action_base_y = ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * row
         setattr(map_screen, attr, button)
         map_screen.country_action_buttons.append(button)
@@ -475,6 +491,41 @@ def layout_country_action_buttons(map_screen):
         # GameState dispatches button events before the map event handler can
         # consume a pane drag. Do not let clipped-away rows receive that click.
         button.click_guard = lambda r=rect: r.collidepoint(pygame.mouse.get_pos())
+
+
+def bilateral_response_indicator(map_screen, target, action):
+    """Return the response icon an outgoing bilateral proposal should show.
+
+    This is deliberately a view of ``evaluate_verdict`` rather than a second
+    set of UI rules. The result therefore remains in step with the decision
+    the target AI receives at turn processing time. A country controlled by a
+    player is inherently unpredictable, including in multiplayer/hotseat.
+    """
+    human_players = set(getattr(map_screen, "active_players", ()) or ())
+    if target in human_players:
+        return "MAYBE"
+    if target not in map_screen.nation_data:
+        return None
+
+    from map_logic.ai.ai_evaluation import evaluate_verdict
+
+    verdict = evaluate_verdict(map_screen.nation_data, map_screen.map_data,
+                               target, map_screen.player_country, action,
+                               scenario_settings=getattr(
+                                   map_screen, "scenario_settings", None))
+    return "YES" if verdict.accepted else "NO"
+
+
+def set_bilateral_response_indicator(map_screen, button, target, action,
+                                    applicable=True):
+    """Attach or remove one outgoing-proposal response image from a button."""
+    button.right_image = None
+    if not applicable:
+        return
+    response = bilateral_response_indicator(map_screen, target, action)
+    if response:
+        button.right_image = getattr(map_screen, "ai_response_images", {}).get(
+            response)
 
 
 def update_button_states(map_screen):
@@ -922,6 +973,35 @@ def update_button_states(map_screen):
                     set_btn(map_screen.btn_revoke_mil_access, True, True, revoke_acc_text, "red")
                 else:
                     set_btn(map_screen.btn_revoke_mil_access, False, False, "", "red")
+
+                # Forecast every offer this menu can send to the selected
+                # country. Indicators are hidden while a button is performing
+                # a different follow-up action (undo, recall, withdrawal,
+                # etc.), because those actions do not ask for a fresh reply.
+                predictions = (
+                    (map_screen.btn_join_wars, "JOIN_WARS",
+                     can_join_wars and pending_action != "JOIN_WARS"),
+                    (map_screen.btn_call_to_arms, "CALL_TO_ARMS",
+                     can_call_to_arms and pending_action != "CALL_TO_ARMS"),
+                    (map_screen.btn_fac_invite, "FACTION_INVITE",
+                     can_invite and pending_action != "FACTION_INVITE"),
+                    (map_screen.btn_fac_join_req, "JOIN_FACTION_REQ",
+                     can_req_join and pending_action != "JOIN_FACTION_REQ"),
+                    (map_screen.btn_fac_create, "CREATE_FACTION",
+                     can_create_fac and pending_action != "CREATE_FACTION"),
+                    (map_screen.btn_req_mil_access, "REQ_MILITARY_ACCESS",
+                     can_req_access and pending_action != "REQ_MILITARY_ACCESS"),
+                    (map_screen.btn_volunteers, volunteers.ACTION,
+                     volunteer_state not in (volunteers.AWAITING,
+                                             volunteers.OUTBOUND,
+                                             volunteers.DEPLOYED,
+                                             volunteers.RETURNING)),
+                    (map_screen.btn_military_attache, military_attaches.ACTION,
+                     not attached and not pending_attache and not pending_withdraw_attache),
+                )
+                for button, action, applicable in predictions:
+                    set_bilateral_response_indicator(map_screen, button, owner,
+                                                     action, applicable)
 
                 # HIDE ALLIANCE/FACTION BUTTONS IN BATTLE ROYALE
                 if c.BATTLE_ROYALE_MODE:
