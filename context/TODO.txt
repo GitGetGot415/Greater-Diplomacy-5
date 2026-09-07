@@ -20,8 +20,9 @@ hanskolmer suggestions:
 Couple of diplomacy suggestion to make this game Greater for this fifth instalment:
 2- Non Aggression pact
 4- Declaring someone as your rivals (it make your relation worse, but give you a free justification for humiliation war (you can only rival someone with similar power level))
-5- Research Sharing.
 Also some more resources would be nice (like have other type of resources that are needed in the creation of  tanks/factory,etc)
+
+- is automatic research turned off by default???
 
 fatass suggestion:
 I mean, why not allow me to click on another province while I'm inside the menu for a province?

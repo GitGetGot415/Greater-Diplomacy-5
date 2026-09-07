@@ -575,6 +575,16 @@ class Research_Screen(GameState):
             btn = Button(base_x + self.scroll_x, node_y, btn_size, btn_color, display_name,
                          lambda n=node_info: self.open_modal(n), image=icon, show_text=False)
 
+            # A gold percentage badge marks every not-yet-completed level for
+            # which faction partners can share finished research. The resolver
+            # asks this same query, so the tree cannot promise a bonus that its
+            # research points do not receive.
+            faction_bonus = queries.get_faction_research_bonus(
+                self.subject, tech_key, lvl, self.map_screen.nation_data)
+            if status != "COMPLETED" and faction_bonus:
+                btn.notification_text = f"+{int(faction_bonus * 100)}%"
+                btn.notification_color = (255, 0, 0)
+
             if (raw_btn_w, raw_btn_h) != (btn_w, btn_h):
                 # Button() sizes itself from c.SIZES[btn_size] directly, so a
                 # style-driven size has to be applied after the fact.
@@ -792,14 +802,22 @@ class Research_Screen(GameState):
         
         days_per_turn = queries.get_days_per_turn(self.map_screen.scenario_settings)
         pol_mult = politics.research_multiplier(self.map_screen.nation_data, self.subject)
-        pts_per_turn = c.BASE_RESEARCH_POINTS_PER_DAY * days_per_turn * pol_mult
+        faction_bonus = queries.get_faction_research_bonus(
+            self.subject, self.active_modal["tech_key"], self.active_modal["level"],
+            self.map_screen.nation_data)
+        pts_per_turn = (c.BASE_RESEARCH_POINTS_PER_DAY * days_per_turn * pol_mult
+                        * (1.0 + faction_bonus))
         
         # pts_per_turn is 0 at the authoritarian end of the political axis, which
         # is a project that never finishes rather than one that takes a very
         # large number of turns -- say so instead of printing the number.
         base_time = (cost / pts_per_turn) if pts_per_turn > 0 else 0
         time_txt = f"{max(1, int(base_time))} turns" if pts_per_turn > 0 else "halted"
-        cost_txt = font_med.render(f"Base Research Cost: {queries.format_number(cost)} pts ({time_txt})", True, c.COLOR_GOLD_HIGHLIGHT)
+        sharing_text = (f"; faction sharing +{int(faction_bonus * 100)}%"
+                        if faction_bonus else "")
+        cost_txt = font_med.render(
+            f"Research Cost: {queries.format_number(cost)} pts ({time_txt}{sharing_text})",
+            True, c.COLOR_GOLD_HIGHLIGHT)
         surface.blit(cost_txt, (panel_rect.x + MODAL_TEXT_X, panel_rect.y + MODAL_COST_Y))
 
         # --- AHEAD OF TIME SIMULATION ---
@@ -810,7 +828,8 @@ class Research_Screen(GameState):
         sim_year = current_exact_year
         pts_accumulated = 0
         
-        base_pts_per_turn = c.BASE_RESEARCH_POINTS_PER_DAY * days_per_turn * pol_mult
+        base_pts_per_turn = (c.BASE_RESEARCH_POINTS_PER_DAY * days_per_turn * pol_mult
+                             * (1.0 + faction_bonus))
         year_inc = days_per_turn / 360.0
         
         # Simulate the research progress turn-by-turn using the central math query

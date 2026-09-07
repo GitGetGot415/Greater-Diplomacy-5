@@ -244,7 +244,8 @@ class Button:
         if not badge_text and getattr(self, 'notification_count', 0) > 0:
             badge_text = str(self.notification_count)
         if badge_text:
-            draw_notification_badge(surface, self.rect, badge_text)
+            draw_notification_badge(surface, self.rect, badge_text,
+                                    getattr(self, "notification_color", None))
 
     def draw_gradient_rect(self, surface, color, rect):
         hi = 30

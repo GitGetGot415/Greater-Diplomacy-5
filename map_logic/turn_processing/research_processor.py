@@ -35,8 +35,11 @@ def process_national_research(map_screen):
             # A libertarian nation researches faster and an authoritarian one
             # slower -- at the far end, not at all, which is a stalled project
             # rather than a guarded division.
+            faction_bonus = queries.get_faction_research_bonus(
+                country_name, tech_key, current_level + 1, map_screen.nation_data)
             effective_points = (base_points_per_turn * multiplier
-                                * politics.research_multiplier(map_screen.nation_data, country_name))
+                                * politics.research_multiplier(map_screen.nation_data, country_name)
+                                * (1.0 + faction_bonus))
             # -----------------------------------
             
             # Use 'points_remaining' instead of 'days_remaining'

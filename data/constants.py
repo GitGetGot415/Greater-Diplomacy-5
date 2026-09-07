@@ -548,6 +548,12 @@ RESEARCH_TIMELINE_SPACING = 70 # Width between years on the research timeline
 BASE_RESEARCH_POINTS_PER_DAY = 10
 RESEARCH_SLOTS = 3 # Number of techs a nation can research simultaneously
 
+# Faction partners that have already completed the exact tech level being
+# researched share their findings. Each partner makes research points 10% more
+# effective; five or more partners reach the 50% cap.
+FACTION_RESEARCH_BONUS_PER_MEMBER = 0.10
+FACTION_RESEARCH_BONUS_CAP = 0.50
+
 # Random Scenario Settings
 RANDOM_SCENARIO_SPAWN_UNITS = True
 RANDOM_SCENARIO_MIN_INFANTRY = 3 # Minimum ground army before buying ships/tanks

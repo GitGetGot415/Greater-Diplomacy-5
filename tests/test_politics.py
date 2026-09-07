@@ -435,6 +435,72 @@ class ResearchTests(unittest.TestCase):
         self.assertAlmostEqual(self.points_after_one_turn(c.POLITICS_MAX), 0.0)
 
 
+class FactionResearchTests(unittest.TestCase):
+    """Research sharing counts faction partners per exact completed level."""
+
+    def nation_data(self):
+        return {
+            "A": {"faction": "Pact", "research": {"infantry_type": 0}},
+            "B": {"faction": "Pact", "research": {"infantry_type": 1}},
+            "C": {"faction": "Pact", "research": {"infantry_type": 2}},
+            "Outside": {"faction": "Other", "research": {"infantry_type": 9}},
+        }
+
+    def test_only_faction_partners_with_the_target_level_share_research(self):
+        from data import queries
+
+        nation_data = self.nation_data()
+        self.assertAlmostEqual(
+            queries.get_faction_research_bonus("A", "infantry_type", 1, nation_data), 0.2)
+        self.assertAlmostEqual(
+            queries.get_faction_research_bonus("A", "infantry_type", 2, nation_data), 0.1)
+        self.assertAlmostEqual(
+            queries.get_faction_research_bonus("A", "infantry_type", 3, nation_data), 0.0)
+
+    def test_sharing_bonus_caps_at_fifty_percent(self):
+        from data import queries
+
+        nation_data = self.nation_data()
+        for index in range(6):
+            nation_data[f"Partner {index}"] = {
+                "faction": "Pact", "research": {"infantry_type": 1}}
+        self.assertAlmostEqual(
+            queries.get_faction_research_bonus("A", "infantry_type", 1, nation_data), 0.5)
+
+    def test_resolver_applies_the_shared_research_multiplier(self):
+        from map_logic.turn_processing import research_processor
+
+        class Screen:
+            pass
+
+        def points_spent(with_partner):
+            screen = Screen()
+            screen.scenario_settings = {}
+            screen.player_country = "A"
+            screen.nation_data = {
+                "A": {"faction": "Pact" if with_partner else "",
+                      "research": {"infantry_type": 0},
+                      "research_queue": [{"tech_name": "infantry_type",
+                                          "points_remaining": 100000}],
+                      "political_value": 0},
+            }
+            if with_partner:
+                screen.nation_data["B"] = {
+                    "faction": "Pact", "research": {"infantry_type": 1}}
+
+            class Time:
+                year, month_index, day, total_turns = 1910, 0, 1, 1
+
+            screen.time_manager = Time()
+            screen.show_feedback = lambda *_a, **_k: None
+            before = screen.nation_data["A"]["research_queue"][0]["points_remaining"]
+            research_processor.process_national_research(screen)
+            after = screen.nation_data["A"]["research_queue"][0]["points_remaining"]
+            return before - after
+
+        self.assertAlmostEqual(points_spent(True), points_spent(False) * 1.1)
+
+
 # ============================================================================ #
 #                                  THE AI                                      #
 # ============================================================================ #

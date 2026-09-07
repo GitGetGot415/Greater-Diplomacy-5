@@ -766,6 +766,34 @@ def get_faction_members(faction_name, nation_data):
         store["faction_members"] = index
     return list(index.get(faction_name, ()))
 
+def get_faction_research_bonus(nation, tech_key, target_level, nation_data):
+    """Return this faction's research-sharing bonus for one tech level.
+
+    Only *other* members of the nation's current faction count, and a member
+    must have completed at least the level the nation is pursuing.  That makes
+    a faction member with Infantry III useful for an ally researching Infantry
+    I or II, but not for an ally moving on to Infantry IV.
+    """
+    faction = nation_data.get(nation, {}).get("faction", "")
+    if not faction:
+        return 0.0
+
+    try:
+        target_level = int(target_level)
+    except (TypeError, ValueError):
+        return 0.0
+
+    if target_level < 1:
+        return 0.0
+
+    completed_by_partners = sum(
+        1 for member in get_faction_members(faction, nation_data)
+        if member != nation
+        and nation_data.get(member, {}).get("research", {}).get(tech_key, 0) >= target_level
+    )
+    return min(completed_by_partners * c.FACTION_RESEARCH_BONUS_PER_MEMBER,
+               c.FACTION_RESEARCH_BONUS_CAP)
+
 def get_faction_leader(faction_name, nation_data):
     """Returns the leader of the specified faction."""
     if not faction_name: return None
