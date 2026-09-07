@@ -14,11 +14,18 @@ layout, owner layout, and coastlines. Land becomes plains and water becomes
 ocean because Hex Edition does not save land terrain types.
 
 `P` becomes the playable **Player** nation and `E` becomes **Enemy**; they
-start at war. Numeric nonzero owner colors become neutral countries named `Hex
-Country <color>` and retain their source hue. The Hex Edition owner token `0`
-becomes GD5's built-in **Unclaimed** land, with no core. Hex Edition does not
-save country names, leaders, diplomacy, factions, or faction membership for
-these owners.
+start at war. The Hex Edition owner token `0` becomes GD5's built-in
+**Unclaimed** land, with no core. Hex Edition does not save country names,
+leaders, diplomacy, factions, or faction membership for these owners. A
+built-in mapping identifies the known Hex Edition values for
+Switzerland, Sweden, Turkey, Iran, Iraq, Afghanistan, Portugal, Italy,
+Ireland, Belgium, the Netherlands, Germany, Poland, Denmark, Norway, Finland,
+Estonia, Latvia, Lithuania, Belarus, Russia, Ukraine, Kazakhstan, Georgia,
+Armenia, Azerbaijan, Saudi Arabia, Pakistan, Egypt, Libya, Tunisia, Algeria,
+Morocco, Romania, Bulgaria, Greece, Yugoslavia, Austria, Czechia, Slovakia,
+Hungary, the United Kingdom, France, Spain, Syria, Lebanon, Israel, Palestine,
+Kuwait, Turkmenistan, and Uzbekistan. Every other numeric owner value is
+assigned a random unused playable GD5 country identity for that import.
 
 ## Converted state
 

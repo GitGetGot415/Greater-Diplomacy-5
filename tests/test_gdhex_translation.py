@@ -65,7 +65,7 @@ class GDHEXTranslationTests(unittest.TestCase):
         self.assertEqual(payload["nation_data"]["Player"]["manpower"], 100)
         self.assertEqual(payload["nation_data"]["Player"]["fuel"], 200)
         self.assertEqual(payload["nation_data"]["Player"]["materials"], 300)
-        self.assertIn("Hex Country 50", payload["nation_data"])
+        self.assertIn("Iran", payload["nation_data"])
         self.assertEqual(provinces[1]["neighbors"], [4, 2])
         self.assertTrue(provinces[1]["is_coastal"])
         self.assertEqual(provinces[1]["resources"], {"Wheat": 100})
@@ -83,6 +83,32 @@ class GDHEXTranslationTests(unittest.TestCase):
         self.assertTrue(all(unit["naval_unit"] for unit in navy))
         self.assertEqual(len(assets), 4)
         self.assertTrue(any("3 x 2" in note for note in notes))
+
+    def test_known_numeric_owner_tokens_use_country_identities(self):
+        expected = {
+            "2": "Switzerland", "50": "Iran", "142.5": "Afghanistan",
+            "165": "Germany", "180.5": "Poland", "41": "Russia",
+            "110.5": "Greece", "80.5": "Czechia", "20": "Hungary",
+            "180": "United Kingdom", "120": "France", "30": "Spain",
+            "72.5": "Syria", "6": "Lebanon", "132": "Israel",
+            "70": "Palestine", "3": "Kuwait", "35": "Turkmenistan",
+            "40.5": "Uzbekistan",
+        }
+
+        for token, country in expected.items():
+            with self.subTest(token=token):
+                self.assertEqual(gdhex._country_name(token), country)
+
+    def test_unknown_numeric_owner_uses_an_existing_gd5_country_identity(self):
+        parsed = gdhex.parse_save(self.source)
+        parsed["hexes"][3][2] = 999
+        payload, raw_map, _assets, _notes = gdhex.build_save_payload(parsed)
+        provinces = {province["id"]: province for province in raw_map.values()}
+        assigned_owner = provinces[4]["owner"]
+
+        self.assertFalse(assigned_owner.startswith("Hex Country"))
+        self.assertIn(assigned_owner, gdhex.queries.get_country_data())
+        self.assertIn(assigned_owner, payload["nation_data"])
 
     def test_dates_before_gd5_timeline_start_clamp_to_january_15(self):
         fields = self.source.split("|")

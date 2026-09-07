@@ -11,6 +11,7 @@ import colorsys
 import json
 import math
 import os
+import random
 import re
 import shutil
 from datetime import datetime
@@ -33,6 +34,59 @@ OCEAN_COLOR = (40, 100, 180)
 PLAYER_COLOR = [65, 145, 255]
 ENEMY_COLOR = [255, 70, 70]
 RESOURCE_BY_CODE = {1: "Wheat", 2: "Oil", 3: "Iron"}
+HEX_COUNTRY_IDENTITIES = {
+    "2": "Switzerland",
+    "110": "Sweden",
+    "180": "United Kingdom",
+    "120": "France",
+    "30": "Spain",
+    "24": "Turkey",
+    "50": "Iran",
+    "170": "Iraq",
+    "142.5": "Afghanistan",
+    "79": "Portugal",
+    "60": "Italy",
+    "50.5": "Ireland",
+    "30.5": "Belgium",
+    "16.5": "Netherlands",
+    "165": "Germany",
+    "180.5": "Poland",
+    "25": "Denmark",
+    "0.5": "Norway",
+    "100.5": "Finland",
+    "120.5": "Estonia",
+    "150": "Latvia",
+    "26": "Lithuania",
+    "40": "Belarus",
+    "41": "Russia",
+    "130": "Ukraine",
+    "160": "Kazakhstan",
+    "152.5": "Georgia",
+    "12": "Armenia",
+    "82.5": "Azerbaijan",
+    "72.5": "Syria",
+    "6": "Lebanon",
+    "132": "Israel",
+    "70": "Palestine",
+    "3": "Kuwait",
+    "35": "Turkmenistan",
+    "40.5": "Uzbekistan",
+    "51": "Saudi Arabia",
+    "102": "Pakistan",
+    "171": "Egypt",
+    "36": "Libya",
+    "98.5": "Tunisia",
+    "154": "Algeria",
+    "21": "Morocco",
+    "24.5": "Romania",
+    "46": "Bulgaria",
+    "110.5": "Greece",
+    "140": "Yugoslavia",
+    "150.5": "Austria",
+    "80.5": "Czechia",
+    "99": "Slovakia",
+    "20": "Hungary",
+}
 UNIT_TYPES = {
     "i": "Infantry Type {year}",
     "c": "Cavalry I",
@@ -141,13 +195,36 @@ def _token_text(token):
     return format(number, "g")
 
 
-def _country_name(token):
+def _country_name(token, fallback_names=None):
     token = str(token).strip()
     if token == "P":
         return "Player"
     if token == "E":
         return "Enemy"
-    return f"Hex Country {_token_text(token)}"
+    token_text = _token_text(token)
+    if token_text in HEX_COUNTRY_IDENTITIES:
+        return HEX_COUNTRY_IDENTITIES[token_text]
+    if fallback_names and token_text in fallback_names:
+        return fallback_names[token_text]
+    return f"Hex Country {token_text}"
+
+
+def _random_fallback_names(country_tokens, nation_data):
+    """Assign every unmapped Hex owner an unused playable GD5 country name."""
+    mapped_names = set(HEX_COUNTRY_IDENTITIES.values()) | {"Player", "Enemy"}
+    fallback_tokens = sorted(
+        {_token_text(token) for token in country_tokens
+         if str(token).strip() not in {"P", "E"}
+         and _token_text(token) not in HEX_COUNTRY_IDENTITIES},
+        key=float)
+    candidates = [
+        name for name, country in nation_data.items()
+        if country.get("is_playable") and name not in mapped_names
+    ]
+    if len(fallback_tokens) > len(candidates):
+        raise GDHEXTranslationError(
+            "save has more unmapped countries than available GD5 country identities")
+    return dict(zip(fallback_tokens, random.sample(candidates, len(fallback_tokens))))
 
 
 def _hex_color(token):
@@ -209,7 +286,7 @@ def _unit_type(code, year, unit_library):
     return min(choices, key=lambda item: abs(int(item.rsplit(" ", 1)[1]) - year))
 
 
-def _build_units(source_units, year, unit_library, known_countries, skipped):
+def _build_units(source_units, year, unit_library, known_countries, skipped, fallback_names):
     converted = []
     for unit in source_units:
         if not isinstance(unit, list) or len(unit) < 7:
@@ -227,7 +304,7 @@ def _build_units(source_units, year, unit_library, known_countries, skipped):
             skipped.add(f"unit with unclaimed owner {owner_token}")
             continue
         try:
-            owner = _country_name(owner_token)
+            owner = _country_name(owner_token, fallback_names)
         except GDHEXTranslationError:
             skipped.add(f"unit with invalid owner {owner_token}")
             continue
@@ -334,9 +411,10 @@ def build_save_payload(parsed):
                 country_tokens.add(str(unit[6]).strip())
 
     nation_data = copy.deepcopy(queries.get_country_data())
+    fallback_names = _random_fallback_names(country_tokens, nation_data)
     for token in sorted(country_tokens, key=lambda value: (value not in {"P", "E"}, value)):
         try:
-            name = _country_name(token)
+            name = _country_name(token, fallback_names)
             nation_data[name] = _country_template(name, _hex_color(token), research)
         except GDHEXTranslationError as error:
             raise GDHEXTranslationError(f"invalid Hex Edition country token {token!r}") from error
@@ -356,7 +434,8 @@ def build_save_payload(parsed):
         source_keys.append(key)
         water = _is_water(record[2])
         unclaimed = _is_unclaimed(record[2])
-        owner = "Ocean" if water else "Unclaimed" if unclaimed else _country_name(record[2])
+        owner = ("Ocean" if water else "Unclaimed" if unclaimed
+                 else _country_name(record[2], fallback_names))
         resource = RESOURCE_BY_CODE.get(_positive_int(record[5]))
         buildings = _factory_buildings(record[3], has_resource=bool(resource) and not water)
         fort_level = min(_positive_int(record[4]), 20)
@@ -391,7 +470,7 @@ def build_save_payload(parsed):
     skipped = set()
     for index, source_units in enumerate(parsed["armies"]):
         raw_map[source_keys[index]]["units"] = _build_units(
-            source_units, year, unit_library, nation_data, skipped)
+            source_units, year, unit_library, nation_data, skipped, fallback_names)
 
     player_country = "Player" if any(
         province["owner"] == "Player" for province in raw_map.values()) else "Spectator"
