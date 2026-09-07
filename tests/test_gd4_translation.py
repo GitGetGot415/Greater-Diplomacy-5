@@ -141,6 +141,18 @@ class GD4TranslationTests(unittest.TestCase):
         self.assertEqual(fallback_payload["player_country"], "Spectator")
         self.assertEqual(fallback_payload["active_players"], [])
 
+    def test_dates_before_the_gd5_timeline_clamp_to_january_15(self):
+        parsed = gd4.parse_save(self.source_text)
+        parsed["time"] = (gd4.c.START_YEAR - 1) * 12 + 11
+        payload, notes = gd4.build_save_payload(parsed)
+        self.assertEqual(payload["date"], {
+            "day": 15,
+            "month": 0,
+            "year": gd4.c.START_YEAR,
+            "total_turns": 0,
+        })
+        self.assertTrue(any("predates GD5's timeline" in note for note in notes))
+
     def test_split_province_companions_receive_only_owner_and_core(self):
         parsed = gd4.parse_save(self.source_text)
         for source_index in (383, 352, 346, 132):

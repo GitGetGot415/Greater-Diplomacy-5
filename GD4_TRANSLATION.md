@@ -66,6 +66,10 @@ GD5 as the player country, and GD4 `Spectator` saves remain GD5 Spectator saves.
 If an older GD4 save does not contain a valid selected country, the importer
 falls back to Spectator rather than silently assigning a country.
 
+GD5's timeline begins in 1910. A GD4 date earlier than that is clamped to
+January 15, 1910 and recorded as a conversion note; later dates retain their
+saved month and use the 15th.
+
 Troops become `Infantry Type <imported year>`:
 
 - Each complete 100,000 GD4 troops becomes one full-health infantry unit.

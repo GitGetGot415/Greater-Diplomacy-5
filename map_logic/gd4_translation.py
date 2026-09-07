@@ -380,9 +380,9 @@ def build_save_payload(parsed, base_map_dir=None):
     except OSError as error:
         raise GD4TranslationError("the bundled GD5 GD4 base map is unavailable") from error
 
-    months = int(math.floor(parsed["time"]))
-    if months < 0:
-        raise GD4TranslationError("GD4 dates before year 0 are not supported")
+    requested_months = int(math.floor(parsed["time"]))
+    minimum_months = c.START_YEAR * 12
+    months = max(requested_months, minimum_months)
     year, month = divmod(months, 12)
     nation_data, code_to_name = _make_country_names(parsed["countries"], base_meta["nation_data"])
     _apply_diplomacy(nation_data, code_to_name, parsed["wars"])
@@ -471,7 +471,11 @@ def build_save_payload(parsed, base_map_dir=None):
         "script_variables": [], "default_research": date_research,
         "nation_data": nation_data, "provinces": provinces,
     }
-    notes = list(parsed.get("warnings", [])) + [f"Mapped {mapped} GD4 world provinces onto the GD5 GD4 map.",
+    notes = list(parsed.get("warnings", []))
+    if requested_months < minimum_months:
+        notes.append(
+            f"GD4 date predates GD5's timeline; used January 15, {c.START_YEAR} instead.")
+    notes += [f"Mapped {mapped} GD4 world provinces onto the GD5 GD4 map.",
              "GD4 navy, devastation, queues, mail, flags, portraits, and moon provinces were ignored."]
     return payload, notes
 
