@@ -98,6 +98,7 @@ class GD4TranslationTests(unittest.TestCase):
         targets = [target for target in gd4.GD4_PROVINCE_TO_GD5 if target]
         self.assertEqual(len(targets), len(set(targets)))
         self.assertEqual(gd4.GD4_COUNTRY_CODES[:3], ["USA", "CAN", "MEX"])
+        self.assertEqual(gd4.GD4_PROVINCE_TO_GD5[131], 7)
         self.assertEqual(gd4.GD4_PROVINCE_TO_GD5[282], 45)
 
     def test_factory_levels_follow_the_gd4_industry_progression(self):
@@ -147,6 +148,11 @@ class GD4TranslationTests(unittest.TestCase):
             parsed["provinces"][source_index][3] = "8"
             parsed["provinces"][source_index][5] = "250000"
             parsed["provinces"][source_index][18] = "Oil, 2"
+        # GD4 province 132 maps directly to GD5 7, so it wins over the
+        # ownership-only 57 -> 7 compatibility relationship.
+        parsed["provinces"][131][2] = "MEX"
+        parsed["provinces"][131][3] = "2"
+        parsed["provinces"][131][5] = "100000"
         payload, _notes = gd4.build_save_payload(parsed)
         with open(ROOT / "base_maps" / "GD4" / "map_data.json", encoding="utf-8") as handle:
             base_map = json.load(handle)
@@ -156,6 +162,12 @@ class GD4TranslationTests(unittest.TestCase):
                              "United States of America")
             for companion_id in companion_ids:
                 companion = payload["provinces"][key_by_id[companion_id]]
+                if companion_id == 7:
+                    self.assertEqual(companion["owner"], "Mexico")
+                    self.assertEqual(companion["buildings"],
+                                     ["Basic Factory", "Basic Recruitment Center"])
+                    self.assertEqual(len(companion["units"]), 1)
+                    continue
                 self.assertEqual(companion, {
                     "owner": "United States of America",
                     "cores": ["United States of America"],
