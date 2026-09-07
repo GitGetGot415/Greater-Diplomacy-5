@@ -129,6 +129,23 @@ class GD4TranslationTests(unittest.TestCase):
         self.assertEqual(gd4._gd4_color(0, 100), [255, 255, 255])
         self.assertEqual(payload["nation_data"]["United States of America"]["color"], [0, 80, 255])
 
+    def test_the_rot_tro_owner_token_resolves_to_the_rot(self):
+        parsed = gd4.parse_save(self.source_text)
+        parsed["countries"][gd4.GD4_COUNTRY_CODES.index("WWE")][2] = "The Rot"
+        parsed["provinces"][2][2] = "TRO"
+        parsed["provinces"][2][3] = "3"
+        parsed["provinces"][2][5] = "100000"
+        payload, _notes = gd4.build_save_payload(parsed)
+
+        with open(ROOT / "base_maps" / "GD4" / "map_data.json", encoding="utf-8") as handle:
+            base_map = json.load(handle)
+        key = next(key for key, province in base_map.items()
+                   if province["id"] == gd4.GD4_PROVINCE_TO_GD5[2])
+        province = payload["provinces"][key]
+        self.assertEqual(province["owner"], "The Rot")
+        self.assertEqual(province["cores"], ["The Rot"])
+        self.assertEqual(len(province["units"]), 1)
+
     def test_spectator_and_missing_player_country_import_as_spectator(self):
         parsed = gd4.parse_save(self.source_text)
         parsed["player_code"] = "Spectator"

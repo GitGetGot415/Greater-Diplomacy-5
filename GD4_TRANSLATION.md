@@ -46,6 +46,9 @@ visibility.
 Recognised GD5 countries retain their established GD5-map colors. If a GD4
 country has no GD5 equivalent, its GD4 color-wheel value (0–200) and brightness
 (-100–100) are converted to RGB instead, so the imported country is not blank.
+GD4 encodes territory taken by The Rot with its special `TRO` owner token while
+storing The Rot's country record elsewhere; when that record is present, `TRO`
+tiles correctly import as The Rot rather than Unclaimed.
 
 GD4's factory level represents both industry and recruitment capacity, so it
 uses this GD5 building progression:

@@ -306,6 +306,17 @@ def _make_country_names(records, base_nation_data):
         if name in nation_data and name not in {"Ocean", "Lakes", "Unclaimed"}:
             nation_data[name]["leader_title"] = str(record[23]).strip()
             nation_data[name]["leader_name"] = str(record[24]).strip()
+
+    # GD4 writes tiles conquered by The Rot with its special TRO owner token,
+    # while its country record remains in the WWE slot. TRO's own record is an
+    # unused Unclaimed placeholder, so resolving it normally loses The Rot.
+    rot_name = next(
+        (str(record[2]).strip() for record in records
+         if str(record[2]).strip().casefold() == "the rot"),
+        "",
+    )
+    if rot_name:
+        code_to_name["TRO"] = rot_name
     return nation_data, code_to_name
 
 
