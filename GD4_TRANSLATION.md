@@ -42,6 +42,10 @@ wars. GD4 friendship data is intentionally ignored: GD4 has no factions, and
 an import starts with no GD5 alliances, factions, subjects, or shared map
 visibility.
 
+Recognised GD5 countries retain their established GD5-map colors. If a GD4
+country has no GD5 equivalent, its GD4 color-wheel value (0–200) and brightness
+(-100–100) are converted to RGB instead, so the imported country is not blank.
+
 GD4's factory level represents both industry and recruitment capacity, so it
 uses this GD5 building progression:
 

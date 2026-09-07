@@ -7,6 +7,7 @@ picker around these functions, and tests can validate a conversion headlessly.
 
 import base64
 import copy
+import colorsys
 import json
 import math
 import os
@@ -260,6 +261,21 @@ def _resource_dict(value):
         return {}
 
 
+def _gd4_color(color_value, brightness):
+    """Convert GD4's 0–200 color wheel and -100–100 brightness effect to RGB."""
+    try:
+        hue = max(0.0, min(200.0, float(color_value))) / 200.0
+        brightness = max(-100.0, min(100.0, float(brightness)))
+    except (TypeError, ValueError):
+        return [150, 150, 150]
+    rgb = [round(channel * 255) for channel in colorsys.hsv_to_rgb(hue, 1.0, 1.0)]
+    if brightness >= 0:
+        amount = brightness / 100.0
+        return [round(channel + ((255 - channel) * amount)) for channel in rgb]
+    amount = 1.0 + (brightness / 100.0)
+    return [round(channel * amount) for channel in rgb]
+
+
 def _unique_name(name, nation_data):
     name = str(name).strip()[:c.COUNTRY_NAME_MAX_LENGTH]
     if not name:
@@ -280,7 +296,13 @@ def _make_country_names(records, base_nation_data):
         name = _unique_name(record[2], nation_data)
         if name not in nation_data and name != "Unclaimed":
             template = copy.deepcopy(base_nation_data.get("Unclaimed", {}))
-            template.update({"name": name, "is_playable": True, "at_war_with": [], "allied_with": []})
+            template.update({
+                "name": name,
+                "color": _gd4_color(record[0], record[1]),
+                "is_playable": True,
+                "at_war_with": [],
+                "allied_with": [],
+            })
             nation_data[name] = template
         code_to_name[code] = name
         if name in nation_data and name not in {"Ocean", "Lakes", "Unclaimed"}:

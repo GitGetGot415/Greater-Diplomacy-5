@@ -116,6 +116,18 @@ class GD4TranslationTests(unittest.TestCase):
             with self.subTest(level=level):
                 self.assertEqual(gd4._industry_buildings(level), buildings)
 
+    def test_unknown_country_uses_its_gd4_color_and_brightness(self):
+        parsed = gd4.parse_save(self.source_text)
+        parsed["countries"][3][2] = "Custom GD4 Nation"
+        parsed["countries"][3][0] = "0"
+        parsed["countries"][3][1] = "0"
+        parsed["provinces"][3][2] = "CUB"
+        payload, _notes = gd4.build_save_payload(parsed)
+        self.assertEqual(payload["nation_data"]["Custom GD4 Nation"]["color"], [255, 0, 0])
+        self.assertEqual(gd4._gd4_color(0, -100), [0, 0, 0])
+        self.assertEqual(gd4._gd4_color(0, 100), [255, 255, 255])
+        self.assertEqual(payload["nation_data"]["United States of America"]["color"], [0, 80, 255])
+
     def test_spectator_and_missing_player_country_import_as_spectator(self):
         parsed = gd4.parse_save(self.source_text)
         parsed["player_code"] = "Spectator"
