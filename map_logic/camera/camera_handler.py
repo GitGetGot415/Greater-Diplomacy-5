@@ -73,9 +73,15 @@ class MapCamera:
         if self_map.loop_map:
             self.pos.x %= self_map.map_w
         else:
-            # If not looping, clamp X between 0 and the max scroll distance
-            max_x = self_map.map_w - (c.SCREEN_WIDTH / self.zoom) # Assuming 1600 width
-            self.pos.x = max(0, min(self.pos.x, max(0, max_x)))
+            # In normal gameplay the raised left UI bar overlays the map.  Let
+            # the view move left by that bar's world-space width so map x=0
+            # can be placed immediately beside it rather than underneath it.
+            left_ui_offset = 0
+            if not getattr(self_map, "selection_mode", False) and not getattr(self_map, "hide_raised_rect", False):
+                left_ui_offset = c.UI_LEFT_OFFSET
+            min_x = -left_ui_offset / self.zoom
+            max_x = self_map.map_w - (c.SCREEN_WIDTH / self.zoom)
+            self.pos.x = max(min_x, min(self.pos.x, max(min_x, max_x)))
 
         max_y = self_map.map_h - ((SCREEN_HEIGHT - self_map.total_ui_h) / (self.zoom * self.tilt_factor))
         

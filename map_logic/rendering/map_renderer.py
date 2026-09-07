@@ -102,15 +102,21 @@ def draw_map_screen(map_screen, surface):
         if clipped.width > 0 and clipped.height > 0:
             scaled_w = int(clipped.width*map_screen.camera.zoom)
             scaled_h = int(clipped.height*map_screen.camera.zoom*map_screen.camera.tilt_factor)
+            # ``clipped`` may begin to the right of ``src_rect`` when a
+            # bounded camera reaches its negative left limit.  Retain that
+            # difference when drawing: map x=0 then appears beside the left
+            # UI bar, while the newly exposed area keeps the ocean background.
+            render_x_offset = int((clipped.x - x1_world) * map_screen.camera.zoom)
+            render_position = (render_x_offset, map_screen.top_ui_height + int(render_y_offset))
             
             # Base Map
             view = current_base.subsurface(clipped)
-            surface.blit(pygame.transform.scale(view, (scaled_w, scaled_h)), (0, map_screen.top_ui_height + int(render_y_offset)))
+            surface.blit(pygame.transform.scale(view, (scaled_w, scaled_h)), render_position)
             
             # Fog Map
             if map_screen.fog_map:
                 f_view = map_screen.fog_map.subsurface(clipped)
-                surface.blit(pygame.transform.scale(f_view, (scaled_w, scaled_h)), (0, map_screen.top_ui_height + int(render_y_offset)))
+                surface.blit(pygame.transform.scale(f_view, (scaled_w, scaled_h)), render_position)
 
     # --- CPU BOTTLENECK OPTIMIZATION ---
     # Pygame's transform functions (scale, rotate, tilt) are extremely heavy.
