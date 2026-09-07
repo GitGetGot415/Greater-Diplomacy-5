@@ -1157,6 +1157,7 @@ class Map(GameState):
                 "fog_of_war": c.DEFAULT_FOG_OF_WAR,
                 "fog_of_war_strength": c.DEFAULT_FOG_OF_WAR_STRENGTH,
                 "casus_belli_required": c.DEFAULT_CASUS_BELLI,
+                "truce_turns": c.DEFAULT_TRUCE_TURNS,
                 "force_time_appropriate_research": c.DEFAULT_FORCE_TIME_APPROPRIATE_RESEARCH,
             }
 

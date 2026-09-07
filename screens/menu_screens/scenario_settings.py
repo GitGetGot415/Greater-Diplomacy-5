@@ -14,7 +14,7 @@ from ui import confirm_dialog
 # below both columns. Only "Edit Construction Turns" still opens a sub-screen.
 
 
-ROW_H = 46
+ROW_H = 50
 INFO_GAP = 10  # gap between an info button's right edge and its setting button's left edge
 # Half the leftover height between a "scenario_setting_button" (36px) and the
 # smaller "scenario_setting_info" square (32px), so the two line up on center.
@@ -46,8 +46,9 @@ SLIDER_Y_OFFSET = 8
 
 # --- Footer actions, centred under both columns ---
 DAYS_PER_TURN_ROW_Y = LEFT_TOP_Y + 8 * ROW_H
-DAMAGE_FLOOR_ROW_Y = LEFT_TOP_Y + 9 * ROW_H
-DEFENSE_FLOOR_ROW_Y = LEFT_TOP_Y + 10 * ROW_H
+TRUCE_ROW_Y = LEFT_TOP_Y + 9 * ROW_H
+DAMAGE_FLOOR_ROW_Y = LEFT_TOP_Y + 10 * ROW_H
+DEFENSE_FLOOR_ROW_Y = LEFT_TOP_Y + 11 * ROW_H
 RESET_ROW_Y = 615
 TURN_EDITOR_ROW_Y = 675
 
@@ -84,6 +85,10 @@ TOGGLE_ROWS = [
 ]
 
 DAYS_PER_TURN_TOOLTIP = "Sets how many in-game days pass with each turn you take."
+
+TRUCE_TOOLTIP = (
+    "Sets how many turns a non-aggression truce lasts after a peace deal is "
+    "signed. Set it to 0 to allow war declarations immediately.")
 
 DAMAGE_FLOOR_TOOLTIP = (
     "How much damage a unit still deals at 0% health, as a share of its full "
@@ -131,6 +136,7 @@ class Scenario_Settings(GameState):
         defaults["fog_of_war_strength"] = c.DEFAULT_FOG_OF_WAR_STRENGTH
         defaults["use_scripted_events"] = c.DEFAULT_USE_SCRIPTED_EVENTS
         defaults["days_per_turn"] = "Default"
+        defaults["truce_turns"] = c.DEFAULT_TRUCE_TURNS
         defaults["ai_disabled"] = c.DEFAULT_AI_DISABLED
         defaults["turns_to_wait_before_war"] = c.TURNS_TO_WAIT_BEFORE_WAR
         defaults["ai_war_declaration_chance"] = c.AI_WAR_DECLARATION_CHANCE
@@ -165,6 +171,10 @@ class Scenario_Settings(GameState):
             Button(LEFT_BTN_X, DAYS_PER_TURN_ROW_Y, "scenario_setting_button", "blue",
                    f"Days Per Turn: {dpt_val}", self.cycle_days_per_turn, font_preset="button_small")
         )
+
+        self.elements.append(self.make_info_button(LEFT_INFO_X, TRUCE_ROW_Y,
+                                                   "Truce After Peace", TRUCE_TOOLTIP))
+        self.elements.append(self.build_truce_slider())
 
         self.elements.append(self.make_info_button(LEFT_INFO_X, DAMAGE_FLOOR_ROW_Y, "Wounded Damage Floor", DAMAGE_FLOOR_TOOLTIP))
         self.elements.append(self.build_damage_floor_slider())
@@ -258,6 +268,22 @@ class Scenario_Settings(GameState):
             LEFT_BTN_X, DEFENSE_FLOOR_ROW_Y, "defense_floor_slider", "defense_at_zero_health",
             c.DEFENSE_AT_ZERO_HEALTH, 1.0,
             lambda v: f"Defense at 0% HP: {v * 100:.0f}%", float)
+
+    def build_truce_slider(self):
+        value = queries.get_truce_turns(self.settings)
+
+        def on_slide(val):
+            self.settings["truce_turns"] = max(
+                c.MIN_TRUCE_TURNS,
+                min(c.MAX_TRUCE_TURNS, int(round(val))))
+            self.truce_slider.text = f"Truce After Peace: {self.settings['truce_turns']} turns"
+            queries.save_scenario_settings(self.settings)
+
+        self.truce_slider = Slider(
+            LEFT_BTN_X, TRUCE_ROW_Y + SLIDER_Y_OFFSET, SLIDER_WIDTH,
+            f"Truce After Peace: {value} turns", value, on_slide,
+            visual_max=c.MAX_TRUCE_TURNS, allowed_max=c.MAX_TRUCE_TURNS)
+        return self.truce_slider
 
     def toggle(self, key, default):
         queries.toggle_scenario_flag(self.settings, key, default)

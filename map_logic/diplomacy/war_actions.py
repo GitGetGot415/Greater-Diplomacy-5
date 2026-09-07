@@ -223,8 +223,13 @@ def finalize_neutral(nation_data, a, b):
         # Apply Temporary Post-War Modifier
         queries.add_temporary_modifier(country, other, "recent_war", c.REL_MOD_RECENT_WAR, nation_data)
 
-        # Apply Non-Aggression Pact
-        nation_data[country].setdefault("truces", {})[other] = c.TRUCE_TURNS
+        # Apply Non-Aggression Pact. A zero-turn setting means there is no
+        # truce to record at all, rather than a stale zero-valued entry.
+        truces = nation_data[country].setdefault("truces", {})
+        if c.TRUCE_TURNS > 0:
+            truces[other] = c.TRUCE_TURNS
+        else:
+            truces.pop(other, None)
 
     # Subdue puppets
     pull_puppets_into_peace(a, b, nation_data)

@@ -266,7 +266,25 @@ GLOBAL_SCENARIO_FLAGS = {
 GLOBAL_SCENARIO_VALUES = {
     "damage_at_zero_health": ("DAMAGE_AT_ZERO_HEALTH", c.DAMAGE_AT_ZERO_HEALTH, float),
     "defense_at_zero_health": ("DEFENSE_AT_ZERO_HEALTH", c.DEFENSE_AT_ZERO_HEALTH, float),
+    "truce_turns": ("TRUCE_TURNS", c.DEFAULT_TRUCE_TURNS, int),
 }
+
+
+def get_truce_turns(scenario_settings=None):
+    """Returns the configured post-peace truce length within its legal range.
+
+    Calls that do not have a map's scenario settings yet retain the live
+    constant for compatibility with older diplomacy helpers and tests. Once a
+    scenario settings dictionary is available, a missing field means the
+    historical 12-turn default.
+    """
+    default = c.TRUCE_TURNS if scenario_settings is None else c.DEFAULT_TRUCE_TURNS
+    raw = (scenario_settings or {}).get("truce_turns", default)
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        value = default
+    return max(c.MIN_TRUCE_TURNS, min(c.MAX_TRUCE_TURNS, value))
 
 
 def apply_global_scenario_flags(scenario_settings):
@@ -280,6 +298,9 @@ def apply_global_scenario_flags(scenario_settings):
         setattr(c, const_name, get_scenario_flag(flag_name, default, scenario_settings))
 
     for key, (const_name, default, cast) in GLOBAL_SCENARIO_VALUES.items():
+        if key == "truce_turns":
+            setattr(c, const_name, get_truce_turns(scenario_settings))
+            continue
         raw = (scenario_settings or {}).get(key, default)
         try:
             setattr(c, const_name, cast(raw))

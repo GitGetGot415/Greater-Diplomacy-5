@@ -16,6 +16,7 @@ os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import data.constants as c
+from data import queries
 from map_logic.diplomacy import deal, deal_effects, restrictions
 from tests.stub_map_screen import StubMapScreen
 
@@ -344,6 +345,36 @@ class WarEndingTests(unittest.TestCase):
     def test_executing_something_that_is_not_a_deal_does_nothing(self):
         self.assertEqual(deal_effects.execute(self.game, "Ceasefire"), [])
         self.assertIn("B", self.game.nation_data["A"]["at_war_with"])
+
+
+class TruceSettingTests(unittest.TestCase):
+    def setUp(self):
+        self.original_truce_turns = c.TRUCE_TURNS
+        self.game = StubMapScreen(["A", "B"])
+        self.game.set_war("A", "B")
+
+    def tearDown(self):
+        c.TRUCE_TURNS = self.original_truce_turns
+
+    def test_zero_turn_truce_setting_allows_immediate_war(self):
+        self.game.scenario_settings = {"truce_turns": 0}
+        queries.apply_global_scenario_flags(self.game.scenario_settings)
+
+        deal_effects.execute(self.game, deal.ceasefire_deal("A", "B"))
+
+        self.assertNotIn("B", self.game.nation_data["A"]["truces"])
+        self.assertNotIn("A", self.game.nation_data["B"]["truces"])
+
+    def test_truce_setting_is_clamped_to_twelve_turns(self):
+        self.game.scenario_settings = {"truce_turns": 99}
+        queries.apply_global_scenario_flags(self.game.scenario_settings)
+
+        self.assertEqual(c.TRUCE_TURNS, c.MAX_TRUCE_TURNS)
+
+    def test_missing_truce_setting_keeps_the_twelve_turn_default(self):
+        queries.apply_global_scenario_flags({})
+
+        self.assertEqual(c.TRUCE_TURNS, c.DEFAULT_TRUCE_TURNS)
 
 
 if __name__ == "__main__":

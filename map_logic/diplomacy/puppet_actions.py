@@ -105,8 +105,12 @@ def pull_puppets_into_peace(master, target, nation_data):
     def _remove_war(p):
         remove_enemy(nation_data, p, target)
         remove_enemy(nation_data, target, p)
-        nation_data[p].setdefault("truces", {})[target] = c.TRUCE_TURNS
-        nation_data.setdefault(target, {}).setdefault("truces", {})[p] = c.TRUCE_TURNS
+        for country, other in ((p, target), (target, p)):
+            truces = nation_data.setdefault(country, {}).setdefault("truces", {})
+            if c.TRUCE_TURNS > 0:
+                truces[other] = c.TRUCE_TURNS
+            else:
+                truces.pop(other, None)
     apply_to_puppets_recursively(master, nation_data, _remove_war)
 
 def pull_puppets_into_faction(master, fac, map_data, nation_data):
