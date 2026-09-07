@@ -143,31 +143,82 @@ def decode_save_text(source):
     raise GD4TranslationError("not a decompressed or TurboWarp Base64 GD4 save")
 
 
-def _decode_json_list(section, label, expected_count=None):
+def _generic_country_record():
+    record = ["0"] * 38
+    record[2] = "Unclaimed"
+    return record
+
+
+def _generic_province_record():
+    record = ["0"] * 22
+    record[2] = "UNC"
+    record[18] = "NO"
+    return record
+
+
+def _decode_json_list(section, label, expected_count=None, default_record=None,
+                      minimum_record_length=0, warnings=None):
     try:
         outer = json.loads(section)
-        values = [json.loads(value) for value in outer]
+        if not isinstance(outer, list):
+            raise TypeError("outer value is not a list")
+        values = [json.loads(value) if isinstance(value, str) else value for value in outer]
     except (TypeError, ValueError, json.JSONDecodeError) as error:
         raise GD4TranslationError(f"invalid GD4 {label} data") from error
     if expected_count is not None and len(values) != expected_count:
-        raise GD4TranslationError(
-            f"GD4 {label} has {len(values)} records; expected {expected_count} for the standard GD4 map")
+        if warnings is not None:
+            warnings.append(
+                f"GD4 {label} had {len(values)} records; missing records were filled with neutral defaults.")
+        values = values[:expected_count]
+        if default_record is not None:
+            values.extend(default_record() for _ in range(expected_count - len(values)))
+    if default_record is not None and minimum_record_length:
+        for index, value in enumerate(values):
+            if not isinstance(value, list):
+                if warnings is not None:
+                    warnings.append(f"GD4 {label} record {index + 1} was invalid and was reset.")
+                values[index] = default_record()
+            elif len(value) < minimum_record_length:
+                if warnings is not None:
+                    warnings.append(f"GD4 {label} record {index + 1} was incomplete and was filled with defaults.")
+                completed = default_record()
+                completed[:len(value)] = value
+                values[index] = completed
     return values
 
 
 def parse_save(source):
     """Parse and validate the supported GD4 save envelope into its useful fields."""
     parts = decode_save_text(source).split(DIVIDER)
-    if len(parts) != SECTION_COUNT:
-        raise GD4TranslationError(f"GD4 save has {len(parts)} sections; expected {SECTION_COUNT}")
-    countries = _decode_json_list(parts[0], "country", COUNTRY_COUNT)
-    provinces = _decode_json_list(parts[1], "province", PROVINCE_COUNT)
-    friends = _decode_json_list(parts[2], "friendship", COUNTRY_COUNT)
-    wars = _decode_json_list(parts[3], "war", COUNTRY_COUNT)
+    warnings = []
+    if len(parts) < SECTION_COUNT:
+        warnings.append(
+            f"GD4 save has {len(parts)} of {SECTION_COUNT} sections; missing fields used neutral defaults.")
+        parts.extend([""] * (SECTION_COUNT - len(parts)))
+    elif len(parts) > SECTION_COUNT:
+        warnings.append(f"GD4 save has {len(parts)} sections; ignored {len(parts) - SECTION_COUNT} extra sections.")
+        parts = parts[:SECTION_COUNT]
+
+    def decode_or_default(index, label, expected_count, default_record, minimum_record_length):
+        if not parts[index].strip():
+            warnings.append(f"GD4 {label} data was missing and was filled with neutral defaults.")
+            return [default_record() for _ in range(expected_count)]
+        return _decode_json_list(parts[index], label, expected_count, default_record,
+                                 minimum_record_length, warnings)
+
+    countries = decode_or_default(0, "country", COUNTRY_COUNT, _generic_country_record, 26)
+    provinces = decode_or_default(1, "province", PROVINCE_COUNT, _generic_province_record, 19)
+    friends = decode_or_default(2, "friendship", COUNTRY_COUNT, list, 0)
+    wars = decode_or_default(3, "war", COUNTRY_COUNT, list, 0)
     if len(GD4_COUNTRY_CODES) != COUNTRY_COUNT or len(GD4_PROVINCE_TO_GD5) != WORLD_PROVINCE_COUNT:
         raise RuntimeError("the bundled GD4 mapping constants are incomplete")
+    if parts[12].strip():
+        time_value = _number(parts[12], "time")
+    else:
+        time_value = c.START_YEAR * 12
+        warnings.append(f"GD4 date was missing; used GD5's default year {c.START_YEAR}.")
     return {"countries": countries, "provinces": provinces, "friends": friends,
-            "wars": wars, "time": _number(parts[12], "time"),
+            "wars": wars, "time": time_value, "warnings": warnings,
             # GD4 writes the country currently controlled by the local player
             # here.  It is a code, unlike the display names in country records.
             "player_code": str(parts[16]).strip()}
@@ -365,7 +416,7 @@ def build_save_payload(parsed, base_map_dir=None):
         "script_variables": [], "default_research": date_research,
         "nation_data": nation_data, "provinces": provinces,
     }
-    notes = [f"Mapped {mapped} GD4 world provinces onto the GD5 GD4 map.",
+    notes = list(parsed.get("warnings", [])) + [f"Mapped {mapped} GD4 world provinces onto the GD5 GD4 map.",
              "GD4 navy, devastation, queues, mail, flags, portraits, and moon provinces were ignored."]
     return payload, notes
 

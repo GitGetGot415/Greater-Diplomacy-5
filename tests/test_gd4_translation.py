@@ -70,16 +70,27 @@ class GD4TranslationTests(unittest.TestCase):
             destination, _notes = gd4.translate_file(str(COMPRESSED_SAMPLE), saves_dir=temporary)
             self.assertTrue((Path(destination) / "meta.json").is_file())
 
-    def test_rejects_bad_divider_sections_and_record_counts(self):
+    def test_rejects_non_gd4_data_but_recovers_missing_sections_and_records(self):
         with self.assertRaises(gd4.GD4TranslationError):
             gd4.parse_save("not a GD4 save")
-        with self.assertRaises(gd4.GD4TranslationError):
-            gd4.parse_save(gd4.DIVIDER.join([""] * 64))
 
         sections = self.source_text.split(gd4.DIVIDER)
-        sections[0] = _nested([["0"] * 38])
         with self.assertRaises(gd4.GD4TranslationError):
-            gd4.parse_save(gd4.DIVIDER.join(sections))
+            gd4.parse_save(gd4.DIVIDER.join(["not JSON"] + sections[1:]))
+
+        truncated = gd4.parse_save(gd4.DIVIDER.join(sections[:13]))
+        self.assertEqual(len(truncated["countries"]), gd4.COUNTRY_COUNT)
+        self.assertEqual(len(truncated["provinces"]), gd4.PROVINCE_COUNT)
+        self.assertEqual(truncated["time"], 1939 * 12 + 9)
+        self.assertTrue(any("sections" in warning for warning in truncated["warnings"]))
+        payload, notes = gd4.build_save_payload(truncated)
+        self.assertEqual(payload["player_country"], "Spectator")
+        self.assertTrue(any("sections" in note for note in notes))
+
+        sections[0] = _nested([["0"] * 38])
+        recovered = gd4.parse_save(gd4.DIVIDER.join(sections))
+        self.assertEqual(len(recovered["countries"]), gd4.COUNTRY_COUNT)
+        self.assertTrue(any("country had 1 records" in warning for warning in recovered["warnings"]))
 
     def test_canonical_mappings_are_complete_and_unique(self):
         self.assertEqual(len(gd4.GD4_COUNTRY_CODES), gd4.COUNTRY_COUNT)

@@ -12,10 +12,13 @@ The importer accepts both forms written by the TurboWarp GD4 project:
 - TurboWarp LZ-String `Base64` save text.
 - The same save after it has been decompressed to text.
 
-It validates the GD4 divider (`⎚`, U+239A), all 65 save sections, and the
-standard 458-country/564-province record counts. Custom maps, altered country
-lists, and saves with a different province count are rejected rather than
-being guessed at.
+It validates the GD4 divider (`⎚`, U+239A) and the standard
+458-country/564-province map structure. Older saves that have fewer than 65
+sections, or have shorter country/province lists, are accepted with conversion
+notes: missing fields use neutral country/province data and a missing date uses
+GD5's default start year. Invalid non-GD4 text and malformed required JSON are
+still rejected. Custom-map data is mapped only when its surviving records match
+the standard GD4 ordering.
 
 ## Map and state conversion
 
