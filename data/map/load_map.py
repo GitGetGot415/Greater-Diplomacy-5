@@ -82,7 +82,8 @@ def load_map_assets(map_screen, load_path):
     map_screen.scenario_settings = copy.deepcopy(scenario_settings) if scenario_settings is not None else {
         "fog_of_war": c.DEFAULT_FOG_OF_WAR,
         "fog_of_war_strength": c.DEFAULT_FOG_OF_WAR_STRENGTH,
-        "casus_belli_required": c.DEFAULT_CASUS_BELLI
+        "casus_belli_required": c.DEFAULT_CASUS_BELLI,
+        "force_time_appropriate_research": c.DEFAULT_FORCE_TIME_APPROPRIATE_RESEARCH,
     }
     queries.apply_global_scenario_flags(map_screen.scenario_settings)
     print(f"[SYSTEM] Fog of War set to: {c.USE_FOG_OF_WAR}")
@@ -167,6 +168,14 @@ def load_map_assets(map_screen, load_path):
                 map_screen.scenario_settings["use_scripted_events"] = save_meta["scenario_settings"]["use_scripted_events"]
             if "force_time_appropriate_research" in save_meta["scenario_settings"]:
                 map_screen.scenario_settings["force_time_appropriate_research"] = save_meta["scenario_settings"]["force_time_appropriate_research"]
+
+    # Base maps and older scenarios may not have stored this setting yet. Add
+    # the effective default to the live settings so an editor save writes it
+    # explicitly to the new map's meta.json.
+    map_screen.scenario_settings.setdefault(
+        "force_time_appropriate_research",
+        c.DEFAULT_FORCE_TIME_APPROPRIATE_RESEARCH,
+    )
 
     # --- APPLY TURN OVERRIDES ---
     # Clear and reload libraries to ensure a clean slate before applying overrides

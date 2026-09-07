@@ -1156,7 +1156,8 @@ class Map(GameState):
             self.scenario_settings = {
                 "fog_of_war": c.DEFAULT_FOG_OF_WAR,
                 "fog_of_war_strength": c.DEFAULT_FOG_OF_WAR_STRENGTH,
-                "casus_belli_required": c.DEFAULT_CASUS_BELLI
+                "casus_belli_required": c.DEFAULT_CASUS_BELLI,
+                "force_time_appropriate_research": c.DEFAULT_FORCE_TIME_APPROPRIATE_RESEARCH,
             }
 
         # --- 3. Visuals & UI Setup ---

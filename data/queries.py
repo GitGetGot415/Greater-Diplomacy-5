@@ -2023,6 +2023,15 @@ def migrate_units_to_current_stats(map_data, unit_library):
 
 def build_save_dict(map_screen):
     """Standardizes the construction of the map save state dictionary."""
+    scenario_settings = getattr(map_screen, 'scenario_settings', {}) or {}
+    # Keep this setting explicit in every new save. Older base maps omit it,
+    # but their effective default is OFF and that default should survive the
+    # editor's copy/save path instead of disappearing from meta.json.
+    scenario_settings.setdefault(
+        "force_time_appropriate_research",
+        c.DEFAULT_FORCE_TIME_APPROPRIATE_RESEARCH,
+    )
+
     save_dict = {
         "version": c.GAME_VERSION,
         "generated_at": datetime.now().isoformat(),
@@ -2036,7 +2045,7 @@ def build_save_dict(map_screen):
         "player_country": map_screen.player_country,
         "active_players": map_screen.active_players,
         "current_player_index": getattr(map_screen, 'current_player_index', 0),
-        "scenario_settings": getattr(map_screen, 'scenario_settings', {}),
+        "scenario_settings": scenario_settings,
         "script_variables": getattr(map_screen, 'script_variables', []),
         "default_research": getattr(map_screen, 'default_research', None),
         "nation_data": map_screen.nation_data,

@@ -136,6 +136,7 @@ class Scenario_Settings(GameState):
         defaults["ai_war_declaration_chance"] = c.AI_WAR_DECLARATION_CHANCE
         defaults["damage_at_zero_health"] = c.DAMAGE_AT_ZERO_HEALTH
         defaults["defense_at_zero_health"] = c.DEFENSE_AT_ZERO_HEALTH
+        defaults["force_time_appropriate_research"] = c.DEFAULT_FORCE_TIME_APPROPRIATE_RESEARCH
         return defaults
 
     def make_info_button(self, x, y, tooltip_title, tooltip_text):
