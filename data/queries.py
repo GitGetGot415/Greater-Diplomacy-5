@@ -2091,7 +2091,9 @@ def get_clicked_province(mouse_pos, map_screen):
     """Resolves the province dictionary corresponding to a screen click."""
     mx, my = mouse_pos
     cam = map_screen.camera
-    wx = ((mx / cam.zoom) + cam.pos.x) % map_screen.map_w
+    wx = (mx / cam.zoom) + cam.pos.x
+    if map_screen.loop_map:
+        wx %= map_screen.map_w
     wy = ((my - map_screen.top_ui_height) / (cam.zoom * cam.tilt_factor)) + cam.pos.y
     
     if 0 <= wy < map_screen.map_h:

@@ -45,16 +45,27 @@ class MapCamera:
         # 1. Smooth Zoom
         if abs(self.zoom - self.target_zoom) > 0.001:
             mx, my = pygame.mouse.get_pos()
-            w_pre = pygame.Vector2(((mx / self.zoom) + self.pos.x) % self_map.map_w, 
-                                   ((my - self_map.top_ui_height) / (self.zoom * self.tilt_factor)) + self.pos.y)
+            world_x = (mx / self.zoom) + self.pos.x
+            if self_map.loop_map:
+                world_x %= self_map.map_w
+            w_pre = pygame.Vector2(
+                world_x,
+                ((my - self_map.top_ui_height) / (self.zoom * self.tilt_factor)) + self.pos.y,
+            )
             self.zoom += (self.target_zoom - self.zoom) * self.lerp_speed
-            self.pos.x = (w_pre.x - (mx / self.zoom)) % self_map.map_w
+            self.pos.x = w_pre.x - (mx / self.zoom)
+            if self_map.loop_map:
+                self.pos.x %= self_map.map_w
             self.pos.y = w_pre.y - ((my - self_map.top_ui_height) / (self.zoom * self.tilt_factor))
             self.target_pos = pygame.Vector2(self.pos)
 
         # 2. Smooth Pan
         if self.pos.distance_to(self.target_pos) > 0.1:
-            dx = (self.target_pos.x - self.pos.x + self_map.map_w / 2) % self_map.map_w - self_map.map_w / 2
+            if self_map.loop_map:
+                dx = ((self.target_pos.x - self.pos.x + self_map.map_w / 2)
+                      % self_map.map_w - self_map.map_w / 2)
+            else:
+                dx = self.target_pos.x - self.pos.x
             self.pos.x += dx * self.lerp_speed
             self.pos.y += (self.target_pos.y - self.pos.y) * self.lerp_speed
 
