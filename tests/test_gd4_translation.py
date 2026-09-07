@@ -98,6 +98,7 @@ class GD4TranslationTests(unittest.TestCase):
         targets = [target for target in gd4.GD4_PROVINCE_TO_GD5 if target]
         self.assertEqual(len(targets), len(set(targets)))
         self.assertEqual(gd4.GD4_COUNTRY_CODES[:3], ["USA", "CAN", "MEX"])
+        self.assertEqual(gd4.GD4_PROVINCE_TO_GD5[282], 45)
 
     def test_factory_levels_follow_the_gd4_industry_progression(self):
         expected = {
@@ -126,6 +127,27 @@ class GD4TranslationTests(unittest.TestCase):
         fallback_payload, _notes = gd4.build_save_payload(parsed)
         self.assertEqual(fallback_payload["player_country"], "Spectator")
         self.assertEqual(fallback_payload["active_players"], [])
+
+    def test_split_province_companions_receive_only_owner_and_core(self):
+        parsed = gd4.parse_save(self.source_text)
+        for source_index in (383, 352, 346, 132):
+            parsed["provinces"][source_index][2] = "USA"
+            parsed["provinces"][source_index][3] = "8"
+            parsed["provinces"][source_index][5] = "250000"
+            parsed["provinces"][source_index][18] = "Oil, 2"
+        payload, _notes = gd4.build_save_payload(parsed)
+        with open(ROOT / "base_maps" / "GD4" / "map_data.json", encoding="utf-8") as handle:
+            base_map = json.load(handle)
+        key_by_id = {item["id"]: key for key, item in base_map.items()}
+        for source_id, companion_ids in gd4.GD5_OWNERSHIP_LINKS.items():
+            self.assertEqual(payload["provinces"][key_by_id[source_id]]["owner"],
+                             "United States of America")
+            for companion_id in companion_ids:
+                companion = payload["provinces"][key_by_id[companion_id]]
+                self.assertEqual(companion, {
+                    "owner": "United States of America",
+                    "cores": ["United States of America"],
+                })
 
     def test_payload_converts_date_resources_buildings_troops_and_diplomacy(self):
         payload, notes = gd4.build_save_payload(gd4.parse_save(self.source_text))
