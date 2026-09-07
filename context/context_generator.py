@@ -160,9 +160,9 @@ files_to_silently_ignore = [
     "build/**",
     "**/__init__.py",
     "venv/**",
-    "compilation_scripts/macos_compilation.py",
-    "compilation_scripts/windows_compilation.py",
+    "compilation_scripts/**",
     "temp_multiplayer_io.py",
+    "tests/**"
 ]
 
 combine_files(
