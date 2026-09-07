@@ -112,6 +112,7 @@
 | Carthage | Public Domain |
 | Catalonia | Public Domain |
 | Caucasus | Public Domain |
+| CCP | misteron |
 | Central African Republic | Public Domain |
 | Chad | Public Domain |
 | Champa | Public Domain |
@@ -129,6 +130,7 @@
 | Colombia | Public Domain |
 | Colorado | Public Domain |
 | Combined Syndicates of America | Kaiserreich |
+| COMINTERN | misteron |
 | Commune of France | Kaiserreich |
 | Commune of Japan | Public Domain |
 | Commune of Lemuria | Public Domain |
