@@ -128,6 +128,14 @@ def _is_water(token):
     return str(token).upper().startswith("WATER")
 
 
+def _is_unclaimed(token):
+    """Return whether Hex Edition's numeric owner token represents no owner."""
+    try:
+        return _number(token, "country color") == 0
+    except GDHEXTranslationError:
+        return False
+
+
 def _token_text(token):
     number = _number(token, "country color")
     return format(number, "g")
@@ -177,11 +185,12 @@ def _country_template(name, color, research):
     return template
 
 
-def _factory_buildings(level):
+def _factory_buildings(level, has_resource=False):
+    """Match Hex factory levels, seeding resource-only land with industry."""
     level = min(_positive_int(level), 50)
-    if level == 0:
-        return []
-    return ["Basic Factory" if level == 1 else f"Factory Lvl {level - 1}"]
+    if level:
+        return [f"Factory Lvl {level}"]
+    return ["Basic Factory"] if has_resource else []
 
 
 def _unit_type(code, year, unit_library):
@@ -213,6 +222,9 @@ def _build_units(source_units, year, unit_library, known_countries, skipped):
         owner_token = str(unit[6]).strip()
         if _is_water(owner_token):
             skipped.add(f"unit with water owner {owner_token}")
+            continue
+        if _is_unclaimed(owner_token):
+            skipped.add(f"unit with unclaimed owner {owner_token}")
             continue
         try:
             owner = _country_name(owner_token)
@@ -302,7 +314,10 @@ def _build_map_assets(raw_map, nation_data, width, height):
 
 def build_save_payload(parsed):
     """Create GD5 metadata, structural map data, images, and conversion notes."""
-    months = int(math.floor(parsed["time"]))
+    # GD5's data, research, and timeline begin at START_YEAR. Hex Edition can
+    # save earlier dates, so clamp them to January; imported saves always use
+    # the established mid-month turn date below.
+    months = max(int(math.floor(parsed["time"])), c.START_YEAR * 12)
     year, month = divmod(months, 12)
     research = queries.get_time_appropriate_research(year)
     width, height = parsed["width"], parsed["height"]
@@ -310,11 +325,12 @@ def build_save_payload(parsed):
     country_tokens = {"P", "E"}
     for record in parsed["hexes"]:
         token = record[2]
-        if not _is_water(token):
+        if not _is_water(token) and not _is_unclaimed(token):
             country_tokens.add(str(token).strip())
     for army in parsed["armies"]:
         for unit in army:
-            if isinstance(unit, list) and len(unit) >= 7 and not _is_water(unit[6]):
+            if (isinstance(unit, list) and len(unit) >= 7
+                    and not _is_water(unit[6]) and not _is_unclaimed(unit[6])):
                 country_tokens.add(str(unit[6]).strip())
 
     nation_data = copy.deepcopy(queries.get_country_data())
@@ -339,9 +355,10 @@ def build_save_payload(parsed):
         key = f"({color[0]}, {color[1]}, {color[2]})"
         source_keys.append(key)
         water = _is_water(record[2])
-        owner = "Ocean" if water else _country_name(record[2])
+        unclaimed = _is_unclaimed(record[2])
+        owner = "Ocean" if water else "Unclaimed" if unclaimed else _country_name(record[2])
         resource = RESOURCE_BY_CODE.get(_positive_int(record[5]))
-        buildings = _factory_buildings(record[3])
+        buildings = _factory_buildings(record[3], has_resource=bool(resource) and not water)
         fort_level = min(_positive_int(record[4]), 20)
         if fort_level:
             buildings.append(f"Fort Lvl {fort_level}")
@@ -359,7 +376,7 @@ def build_save_payload(parsed):
             "orders": [],
             "buildings": buildings,
             "resources": {resource: RESOURCE_SCALE} if resource and not water else {},
-            "cores": [] if water else [owner],
+            "cores": [] if water or unclaimed else [owner],
             "json_key": key,
             "map_color": list(color),
         }

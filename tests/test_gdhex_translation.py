@@ -10,6 +10,7 @@ from map_logic import gdhex_translation as gdhex
 
 ROOT = Path(__file__).resolve().parent.parent
 SAMPLE = ROOT / "TEMP_GDHEX" / "GD-HEX_GameSave.txt"
+UNCLAIMED_SAMPLE = ROOT / "TEMP_GDHEX" / "(INCLUDING UNCLAIMED)GD-HEX_GameSave.txt"
 
 
 def _nested(rows):
@@ -68,9 +69,11 @@ class GDHEXTranslationTests(unittest.TestCase):
         self.assertEqual(provinces[1]["neighbors"], [4, 2])
         self.assertTrue(provinces[1]["is_coastal"])
         self.assertEqual(provinces[1]["resources"], {"Wheat": 100})
-        self.assertEqual(provinces[1]["buildings"], ["Factory Lvl 1", "Fort Lvl 3"])
+        self.assertEqual(provinces[1]["buildings"], ["Factory Lvl 2", "Fort Lvl 3"])
         self.assertEqual(provinces[2]["owner"], "Ocean")
         self.assertEqual(provinces[2]["resources"], {})
+        self.assertEqual(provinces[3]["buildings"], ["Basic Factory"])
+        self.assertEqual(provinces[4]["buildings"], ["Basic Factory"])
 
         infantry = provinces[1]["units"][0]
         self.assertEqual(infantry["type"], "Infantry Type 1939")
@@ -80,6 +83,16 @@ class GDHEXTranslationTests(unittest.TestCase):
         self.assertTrue(all(unit["naval_unit"] for unit in navy))
         self.assertEqual(len(assets), 4)
         self.assertTrue(any("3 x 2" in note for note in notes))
+
+    def test_dates_before_gd5_timeline_start_clamp_to_january_15(self):
+        fields = self.source.split("|")
+        fields[5] = "0"
+        payload, _raw_map, _assets, _notes = gdhex.build_save_payload(
+            gdhex.parse_save("|".join(fields)))
+
+        self.assertEqual(payload["date"], {
+            "day": 15, "month": 0, "year": gdhex.c.START_YEAR, "total_turns": 0,
+        })
 
     def test_translation_writes_a_complete_loadable_save(self):
         from tests import app_harness
@@ -106,6 +119,19 @@ class GDHEXTranslationTests(unittest.TestCase):
         self.assertEqual(len(raw_map), 1040)
         self.assertEqual(payload["date"]["year"], 1941)
         self.assertEqual(payload["date"]["month"], 5)
+
+    @unittest.skipUnless(UNCLAIMED_SAMPLE.is_file(), "supplied unclaimed Hex Edition sample is not present")
+    def test_supplied_save_maps_zero_owner_to_unclaimed_land(self):
+        parsed = gdhex.parse_save(UNCLAIMED_SAMPLE.read_text(encoding="utf-8"))
+        payload, raw_map, _assets, _notes = gdhex.build_save_payload(parsed)
+        source_and_target = zip(parsed["hexes"], raw_map.values())
+        unclaimed = [province for record, province in source_and_target
+                     if not gdhex._is_water(record[2]) and gdhex._is_unclaimed(record[2])]
+
+        self.assertTrue(unclaimed)
+        self.assertNotIn("Hex Country 0", payload["nation_data"])
+        self.assertTrue(all(province["owner"] == "Unclaimed" for province in unclaimed))
+        self.assertTrue(all(province["cores"] == [] for province in unclaimed))
 
 
 if __name__ == "__main__":

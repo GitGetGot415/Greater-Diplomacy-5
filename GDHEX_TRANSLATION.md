@@ -14,18 +14,24 @@ layout, owner layout, and coastlines. Land becomes plains and water becomes
 ocean because Hex Edition does not save land terrain types.
 
 `P` becomes the playable **Player** nation and `E` becomes **Enemy**; they
-start at war. Numeric owner colors become neutral countries named `Hex Country
-<color>` and retain their source hue. Hex Edition does not save country names,
-leaders, diplomacy, factions, or faction membership for these owners.
+start at war. Numeric nonzero owner colors become neutral countries named `Hex
+Country <color>` and retain their source hue. The Hex Edition owner token `0`
+becomes GD5's built-in **Unclaimed** land, with no core. Hex Edition does not
+save country names, leaders, diplomacy, factions, or faction membership for
+these owners.
 
 ## Converted state
 
 - The source month counter becomes the 15th of the same GD5 month and year.
+  Dates before GD5's configured `START_YEAR` are clamped to January 15 of
+  that year (currently January 15, 1910).
 - Player and Enemy Grain/Manpower, Oil, and Steel stockpiles become GD5
   manpower, fuel, and materials at 100 times their saved values.
 - Per-hex Wheat, Oil, and Steel markers become GD5 Wheat, Oil, and Iron
   deposits at 100 each.
-- Factory and fort levels become GD5 factory and fort buildings.
+- Source factory levels become the matching GD5 `Factory Lvl <n>` building.
+  Resource-bearing land with no source factory receives a `Basic Factory`, so
+  it produces its converted resource immediately. Fort levels are preserved.
 - Infantry, cavalry, motorized infantry, mechanized infantry, armored cars,
   and main battle tanks become their corresponding GD5 unit families. Current
   health percentage is retained.
