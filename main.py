@@ -48,7 +48,7 @@ def _import_project_modules():
     global IS_WEB, restore_persisted_dir, platform, pygame
     global Messages_Screen, dispatch_global_keys, fonts, ui_elements, c, queries
     global Load_Game, Map, Menu, New_Game, Settings, Credits, Music_Player, View_Assets, Mods, Unit_Art, Keybinds
-    global Translate, Translation_Menu, Greater_Diplomacy_4_Translation
+    global Translate, Translation_Menu, Greater_Diplomacy_4_Translation, Greater_Diplomacy_Hex_Translation
     global Orders_Screen, keybind_io, settings_schema, symbol_loader, modal_stack
     global Research_Screen, Economy_Screen, Edit_Country_Screen, Production_Screen
     global Faction_Screen, Faction_Territories_Screen
@@ -99,6 +99,7 @@ def _import_project_modules():
     from screens.menu_screens.translation_menu import (
         Translation_Menu,
         Greater_Diplomacy_4_Translation,
+        Greater_Diplomacy_Hex_Translation,
     )
     from screens.menu_screens.music_player import Music_Player
     from screens.menu_screens.view_assets import View_Assets
@@ -327,6 +328,7 @@ class Controller:
             "TRANSLATE": Translate(),
             "TRANSLATION_MENU": Translation_Menu(),
             "TRANSLATE_GD4": Greater_Diplomacy_4_Translation(),
+            "TRANSLATE_GDHEX": Greater_Diplomacy_Hex_Translation(),
             "SELECT_BASE_MAP": Select_Base_Map(),
             "MAP": None,
             "PRODUCTION": Production_Screen(),

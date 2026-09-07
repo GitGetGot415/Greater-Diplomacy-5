@@ -33,7 +33,8 @@ tournament_saves
 scenarios/map_editor
 main.spec
 mods
-TEMP
+TEMP_GD4
+TEMP_GDHEX
 
 *.pyc
 !countries_data.json
