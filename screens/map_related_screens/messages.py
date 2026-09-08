@@ -98,6 +98,12 @@ class Messages_Screen(GameState):
         open_view_peace_treaty_menu(self.map_screen, target)
         self.refresh_ui()
 
+    def view_trade_deal(self, target):
+        self.save_current_draft()
+        from screens.map_related_screens.peace_screen import open_view_trade_deal_menu
+        open_view_trade_deal_menu(self.map_screen, target)
+        self.refresh_ui()
+
     def save_current_draft(self):
         """Auto-saves whatever is currently typed or queued before switching menus/contacts."""
         if self.selected_recipient and self.map_screen:
@@ -534,17 +540,21 @@ class Messages_Screen(GameState):
                 answered = (queued_action == incoming_action)
 
                 is_peace = incoming_action in ["PEACE_TREATY", "CEASEFIRE"]
+                is_trade = incoming_action == "TRADE"
+                is_viewable_deal = is_peace or is_trade
 
-                def _peace_btn(slot):
+                def _view_deal_btn(slot):
+                    label = "View Peace Treaty" if is_peace else "View Trade Deal"
+                    callback = self.view_peace_treaty if is_peace else self.view_trade_deal
                     return Button(MSG_DIPLO_BTN_START_X + MSG_DIPLO_BTN_STEP_X * slot, btn_y_diplo,
-                                  "medium", "yellow", "View Peace Treaty",
-                                  lambda: self.view_peace_treaty(self.selected_recipient))
+                                  "medium", "yellow", label,
+                                  lambda: callback(self.selected_recipient))
 
                 if is_tactical:
                     self.elements.append(Button(MSG_DIPLO_BTN_START_X, btn_y_diplo, "medium", "grey", "Tactical: Read Only", lambda: None))
                     self.elements.append(Button(MSG_DIPLO_BTN_START_X + MSG_DIPLO_BTN_STEP_X, btn_y_diplo, "medium", "grey", "Tactical: Read Only", lambda: None))
-                    if is_peace:
-                        self.elements.append(_peace_btn(2))
+                    if is_viewable_deal:
+                        self.elements.append(_view_deal_btn(2))
                 elif answered and queued_verdict == diplomacy_messages.RESPONSE_ACCEPT:
                     self.elements.append(Button(MSG_DIPLO_BTN_START_X, btn_y_diplo, "medium", "green", "Undo Accept", lambda: self.accept_proposal(self.selected_recipient)))
                 elif answered and queued_verdict == diplomacy_messages.RESPONSE_REJECT:
@@ -552,8 +562,8 @@ class Messages_Screen(GameState):
                 else:
                     self.elements.append(Button(MSG_DIPLO_BTN_START_X, btn_y_diplo, "medium", "green", f"Accept {action_name}", lambda: self.accept_proposal(self.selected_recipient)))
                     self.elements.append(Button(MSG_DIPLO_BTN_START_X + MSG_DIPLO_BTN_STEP_X, btn_y_diplo, "medium", "red", f"Reject {action_name}", lambda: self.reject_proposal(self.selected_recipient)))
-                    if is_peace:
-                        self.elements.append(_peace_btn(2))
+                    if is_viewable_deal:
+                        self.elements.append(_view_deal_btn(2))
 
     def _offer_ratification_buttons(self):
         """Ratify / refuse, when the selected contact is the leader who signed.

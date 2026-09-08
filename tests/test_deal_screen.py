@@ -639,6 +639,41 @@ class ProjectedMapTests(DealScreenTestCase):
         self.assertEqual(painted[wanted][1],
                          self.map.nation_colors.get(self.enemy))
 
+    def test_a_trade_view_projects_its_transferred_province(self):
+        """Trade land is no less real than treaty land in the map preview."""
+        from map_logic.diplomacy import deal as dm
+        from screens.map_related_screens.peace_screen import View_Trade_Deal_Screen
+
+        wanted = self.my_province()["id"]
+        agreement = dm.new(dm.KIND_TRADE, [self.enemy], [self.player],
+                           [dm.tiles_clause(self.player, self.enemy, [wanted])])
+        self.map.nation_data[self.enemy]["pending_diplomacy"][self.player] = {
+            "action": "TRADE", "turns": 1, "parameters": agreement}
+
+        screen = View_Trade_Deal_Screen(self.map, self.enemy)
+        self.assertEqual(screen.transfers, {wanted: self.enemy})
+        self.assertTrue(any("you cede 1 province" in line for line in screen.terms))
+        screen.draw(self.surface)
+
+
+class IncomingTradeButtonTests(DealScreenTestCase):
+    def test_an_incoming_trade_has_a_view_trade_deal_button(self):
+        """The offer's map view must be reachable before its answer buttons."""
+        from map_logic.diplomacy import deal as dm
+        from screens.map_related_screens.messages import Messages_Screen
+
+        agreement = dm.new(dm.KIND_TRADE, [self.enemy], [self.player],
+                           [dm.tiles_clause(self.player, self.enemy,
+                                            [self.my_province()["id"]])])
+        self.map.nation_data[self.enemy]["pending_diplomacy"][self.player] = {
+            "action": "TRADE", "turns": 1, "parameters": agreement}
+
+        messages = Messages_Screen()
+        messages.start_messages(self.map)
+        messages.select_recipient(self.enemy)
+        labels = [element.text for element in messages.elements]
+        self.assertIn("View Trade Deal", labels)
+
 
 class OccupiedLandTests(DealScreenTestCase):
     """Land you are standing on: pickable one at a time, and worth something.

@@ -34,23 +34,27 @@ class View_Peace_Treaty_Screen(MapOverlayScreen):
     #: The terms box places itself top-left, beside the map it is about.
     CENTER_PANEL = False
 
-    def __init__(self, map_screen, proposer):
+    def __init__(self, map_screen, proposer, kind=deal_mod.KIND_PEACE):
         super().__init__(map_screen)
         self.proposer = proposer
         self.target = map_screen.player_country
+        self.kind = kind
 
-        # Two ways a treaty can be sitting in front of you: they proposed it, or
-        # your own faction leader signed it on your behalf and you are being
-        # asked to ratify. The second lives in its own channel -- see
+        # Two ways a peace treaty can be sitting in front of you: they proposed
+        # it, or your own faction leader signed it on your behalf and you are
+        # being asked to ratify. The second lives in its own channel -- see
         # map_logic/diplomacy/ratification.py -- so both are looked for here.
+        # A trade is bilateral, so it simply reads its pending offer below.
         asked = ratification.pending_for(map_screen.nation_data, self.target)
-        if asked.get("signatory") == proposer and deal_mod.is_deal(asked.get("deal")):
+        if (kind == deal_mod.KIND_PEACE and asked.get("signatory") == proposer
+                and deal_mod.is_deal(asked.get("deal"))):
             params = asked["deal"]
         else:
             pending = diplomacy_messages.get_pending(map_screen.nation_data, proposer, self.target)
-            params = pending.get("parameters", pending.get("message", c.PEACE_WHITE_PEACE))
+            fallback = c.PEACE_WHITE_PEACE if kind == deal_mod.KIND_PEACE else {}
+            params = pending.get("parameters", pending.get("message", fallback))
 
-        self.deal = deal_mod.coerce(params, proposer, self.target, kind=deal_mod.KIND_PEACE)
+        self.deal = deal_mod.coerce(params, proposer, self.target, kind=kind)
         self.transfers = deal_mod.tile_transfers(self.deal, map_screen.map_data,
                                                  map_screen.nation_data)
         # What the map reverts to underneath the treaty's own transfers. Without
@@ -84,8 +88,9 @@ class View_Peace_Treaty_Screen(MapOverlayScreen):
     def draw_content(self, surface):
         draw_projected_deal_map(surface, self.map_screen, self.transfers,
                                 deal_mod.parties(self.deal), self.baseline)
+        document = "Trade Deal" if self.kind == deal_mod.KIND_TRADE else "Treaty"
         ui_bars.draw_centered_title(
-            surface, f"Projected Map: Treaty from {self.proposer}", 30)
+            surface, f"Projected Map: {document} from {self.proposer}", 30)
         self._draw_terms(surface)
 
     def _wrapped(self):
@@ -181,3 +186,14 @@ def _draw_swapped_in(surface, map_screen, preview):
 
 def open_view_peace_treaty_menu(map_screen, proposer):
     _run_pygame_sub_screen(map_screen, View_Peace_Treaty_Screen(map_screen, proposer))
+
+
+class View_Trade_Deal_Screen(View_Peace_Treaty_Screen):
+    """Read an offered trade on the map before accepting its territory terms."""
+
+    def __init__(self, map_screen, proposer):
+        super().__init__(map_screen, proposer, kind=deal_mod.KIND_TRADE)
+
+
+def open_view_trade_deal_menu(map_screen, proposer):
+    _run_pygame_sub_screen(map_screen, View_Trade_Deal_Screen(map_screen, proposer))
