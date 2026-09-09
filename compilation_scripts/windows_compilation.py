@@ -64,6 +64,7 @@ def main():
     # so without these the game folder next to main.exe has nothing on disk for
     # mod_loader._resolve_target() to find, and every dropped-in mod is silently
     # rejected as "target file not found".
+    # Copying the complete screens package also ships menu_screens/multiplayer_menu.py.
     dirs_to_copy = ["assets", "base_maps", "data", "screens", "map_logic", "ui",
                      "saves", "scenarios", "tournament_saves"]
 

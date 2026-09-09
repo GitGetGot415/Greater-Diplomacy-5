@@ -4,7 +4,7 @@ import data.constants as c
 from data import queries
 
 class Multiplayer_Hub(GameState):
-    back_state = "MENU"
+    back_state = "MULTIPLAYER_MENU"
 
     title = "Asynchronous Multiplayer"
     title_y = 100

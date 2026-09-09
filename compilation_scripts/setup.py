@@ -50,7 +50,8 @@ DATA_FILES += find_data_files('scenarios', file_filter=not_under_map_editor)
 DATA_FILES += find_data_files('data/json', 'data/json')
 DATA_FILES.append(('.', ['mac64-libsoloud.dylib']))
 
-# Loose .py copies of every project package/module py2app also bundles below
+# Loose .py copies of every project package/module py2app also bundles below;
+# this includes screens/menu_screens/multiplayer_menu.py.
 # (compiled, zipped into lib/pythonXY.zip). mod_loader resolves mod targets
 # against real files on disk next to the app -- see mod_loader.py's
 # _base_dir() docstring for why the zipped copies can't serve that role --

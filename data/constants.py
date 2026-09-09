@@ -304,10 +304,10 @@ MENU_MAIN_BUTTON_TABLE = [
         "text_size": 24,
     },
     {
-        "attribute": "tournaments_btn",
-        "text": "Tournaments",
+        "attribute": "multiplayer_btn",
+        "text": "Multiplayer",
         "color": "red",
-        "state": "MULTIPLAYER_HUB",
+        "state": "MULTIPLAYER_MENU",
         "image": "mail",
         "text_size": 24,
     },

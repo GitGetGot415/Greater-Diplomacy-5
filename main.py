@@ -53,6 +53,7 @@ def _import_project_modules():
     global Research_Screen, Economy_Screen, Edit_Country_Screen, Production_Screen
     global Faction_Screen, Faction_Territories_Screen
     global Select_Base_Map, Random_Setup, Scenario_Settings
+    global Multiplayer_Menu, Real_Time_Multiplayer
     global Multiplayer_Hub, Multiplayer_Host, Multiplayer_Join, Multiplayer_New
 
     # Must run before any other project module is imported below -- see
@@ -118,6 +119,7 @@ def _import_project_modules():
     from screens.menu_screens.select_base_map import Select_Base_Map
     from screens.menu_screens.random_setup import Random_Setup
     from screens.menu_screens.scenario_settings import Scenario_Settings
+    from screens.menu_screens.multiplayer_menu import Multiplayer_Menu, Real_Time_Multiplayer
     from screens.menu_screens.multiplayer_hub import Multiplayer_Hub
     from screens.menu_screens.multiplayer_host import Multiplayer_Host
     from screens.menu_screens.multiplayer_join import Multiplayer_Join
@@ -340,10 +342,12 @@ class Controller:
             "FACTION": Faction_Screen(),
             "FACTION_TERRITORIES": Faction_Territories_Screen(),
             "SCENARIO_SETTINGS": Scenario_Settings(),
+            "MULTIPLAYER_MENU": Multiplayer_Menu(),
             "MULTIPLAYER_HUB": Multiplayer_Hub(),
             "MULTIPLAYER_HOST": Multiplayer_Host(),
             "MULTIPLAYER_JOIN": Multiplayer_Join(),
             "MULTIPLAYER_NEW": Multiplayer_New(),
+            "REAL_TIME_MULTIPLAYER": Real_Time_Multiplayer(),
         }
         self.active_state = self.states["MENU"]
 

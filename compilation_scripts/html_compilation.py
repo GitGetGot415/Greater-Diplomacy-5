@@ -28,6 +28,8 @@ STAGE_DIR = "web_stage"
 # of it, and the Translate screen reported it missing from web_stage/assets.
 SOURCE_FILES = ["main.py", "mod_loader.py", "gameState.py", "ui_elements.py",
                 "libdragoman.so"]
+# The multiplayer menu screen lives in screens/menu_screens and is included by
+# this whole-package copy, so it stays available in the web build automatically.
 SOURCE_PACKAGES = ["data", "ui", "screens", "map_logic"]
 DATA_DIRS = ["assets", "base_maps", "scenarios", "tournament_saves"]
 
