@@ -872,7 +872,11 @@ def _process_queued_responses(map_screen):
             if isinstance(their_entry, dict) and their_entry.get("action") == orig_action:
                 del their_pending[country_name]
 
-            del responses[sender]
+            # A treaty can eliminate its proposer (for example, by ceding its
+            # final province).  The landless-nation cleanup then removes that
+            # proposer from every response map, including this one, before the
+            # response pass reaches its ordinary cleanup.
+            responses.pop(sender, None)
 
 
 def _process_pass1_immediate_actions(map_screen):

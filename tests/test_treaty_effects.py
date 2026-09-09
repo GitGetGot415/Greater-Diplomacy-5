@@ -12,7 +12,7 @@ import unittest
 from tests.stub_map_screen import StubMapScreen
 
 from map_logic.ai import ai_prompts
-from map_logic.diplomacy import treaty_effects
+from map_logic.diplomacy import diplomacy_processor, treaty_effects
 
 
 class TreatyEffectTests(unittest.TestCase):
@@ -126,6 +126,31 @@ class TreatyEffectTests(unittest.TestCase):
         outcome = self.apply(host, "NOT_A_REAL_ACTION")
         self.assertIsNone(outcome.blocked)
         self.assertIsNone(outcome.canned)
+
+    def test_accepting_a_trade_that_eliminates_the_proposer_clears_response_once(self):
+        """Regression: landless cleanup removes the response while its own
+        processor is still settling it, so the normal final delete must be
+        harmless."""
+        host = StubMapScreen(("Bulgaria", "Ottoman Empire"), human_players=())
+        bulgaria_province = host.home_of("Bulgaria")
+        host.border(bulgaria_province["id"], host.home_of("Ottoman Empire")["id"])
+        terms = {
+            "v": 1,
+            "kind": "TRADE",
+            "sides": {"a": ["Bulgaria"], "b": ["Ottoman Empire"]},
+            "clauses": [{"type": "TILES", "from": "Bulgaria",
+                         "to": "Ottoman Empire", "ids": [bulgaria_province["id"]]}],
+        }
+        host.nation_data["Bulgaria"]["pending_diplomacy"]["Ottoman Empire"] = {
+            "action": "TRADE", "parameters": terms}
+        host.nation_data["Ottoman Empire"]["diplo_responses"]["Bulgaria"] = {
+            "verdict": "ACCEPT", "action": "TRADE", "parameters": terms}
+
+        diplomacy_processor._process_queued_responses(host)
+
+        self.assertEqual(bulgaria_province["owner"], "Ottoman Empire")
+        self.assertEqual(host.nation_data["Ottoman Empire"]["diplo_responses"], {})
+        self.assertEqual(host.nation_data["Bulgaria"]["pending_diplomacy"], {})
 
 
 if __name__ == "__main__":
