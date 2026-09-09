@@ -25,7 +25,7 @@ class Multiplayer_Menu(GameState):
 
 
 class Real_Time_Multiplayer(GameState):
-    """Placeholder for the future real-time multiplayer mode."""
+    """Desktop authoritative real-time multiplayer entry point."""
 
     back_state = "MULTIPLAYER_MENU"
     title = "Real Time Multiplayer"
@@ -35,10 +35,18 @@ class Real_Time_Multiplayer(GameState):
     def __init__(self):
         super().__init__()
         self.bg_color = (10, 10, 40)
-        self.elements = [make_back_button(self.exit_screen)]
+        self.elements = [
+            Button("centered", 260, "large", "green", "Host Match",
+                   lambda: self.go_to("REALTIME_HOST_SETUP")),
+            Button("centered", 370, "large", "blue", "Join Match",
+                   lambda: self.go_to("REALTIME_JOIN")),
+            make_back_button(self.exit_screen),
+        ]
 
     def additional_draw(self, surface):
-        text = "Real-time multiplayer soon!"
+        from data.platform import IS_WEB
+        text = ("Desktop-only: host directly over LAN or a forwarded WAN port."
+                if not IS_WEB else "Real-time multiplayer is available in desktop builds only.")
         font = fonts.get("normal")
         text_surface = font.render(text, True, (220, 220, 220))
         surface.blit(text_surface, text_surface.get_rect(midtop=(c.SCREEN_WIDTH // 2, 220)))

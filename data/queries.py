@@ -2076,6 +2076,11 @@ def build_save_dict(map_screen):
         "nation_data": map_screen.nation_data,
         "provinces": {}
     }
+    realtime_metadata = getattr(map_screen, "realtime_match_metadata", None)
+    if isinstance(realtime_metadata, dict):
+        # Additive metadata keeps the normal save/load format compatible with
+        # old single-player and tournament files.
+        save_dict["realtime_match"] = realtime_metadata
     
     for data in map_screen.map_data.values():
         save_dict["provinces"][data["json_key"]] = {

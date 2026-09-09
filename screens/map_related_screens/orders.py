@@ -165,8 +165,12 @@ class Orders_Screen(GameState):
         # A province you command nothing in is still worth reading -- what is
         # standing on the front you are about to walk into, and what orders it
         # already has. The panel shows every unit there and edits none of them.
-        self.read_only = not any(u.get("owner") == self.map_screen.player_country
-                                 for u in units)
+        self.read_only = (not any(u.get("owner") == self.map_screen.player_country
+                                  for u in units)
+                          or (getattr(self.map_screen, "realtime_multiplayer", False)
+                              and (self.map_screen.realtime_session.phase != "TURN"
+                                   or self.map_screen.realtime_session.players[
+                                       self.map_screen.realtime_player_id].submitted)))
 
         if self.map_screen.tactical_mode:
             # TACTICAL MODE: Lock to player unit
@@ -530,6 +534,10 @@ class Orders_Screen(GameState):
         return [(i, u) for i, u in enumerate(units) if id(u) in visible_ids]
 
     def refresh_ui(self):
+        if getattr(self.map_screen, "realtime_multiplayer", False):
+            player = self.map_screen.realtime_session.players.get(self.map_screen.realtime_player_id)
+            self.read_only = (self.map_screen.realtime_session.phase != "TURN" or not player
+                              or player.submitted or player.eliminated)
         self.view_mode_buttons = view_mode_buttons.build(
             lambda mode: event_handler.navigate_view_mode(self.map_screen, mode, origin=self))
         view_mode_buttons.sync_highlight(self.view_mode_buttons, self.map_screen.secondary_mode)

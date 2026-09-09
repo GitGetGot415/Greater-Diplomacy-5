@@ -55,6 +55,7 @@ def _import_project_modules():
     global Select_Base_Map, Random_Setup, Scenario_Settings
     global Multiplayer_Menu, Real_Time_Multiplayer
     global Multiplayer_Hub, Multiplayer_Host, Multiplayer_Join, Multiplayer_New
+    global Realtime_Host_Setup, Realtime_Scenario_Select, Realtime_Lobby, Realtime_Join, Realtime_Remote_Lobby
 
     # Must run before any other project module is imported below -- see
     # mod_loader's own docstring for why. Applies enabled .py mods in memory
@@ -124,6 +125,9 @@ def _import_project_modules():
     from screens.menu_screens.multiplayer_host import Multiplayer_Host
     from screens.menu_screens.multiplayer_join import Multiplayer_Join
     from screens.menu_screens.multiplayer_new import Multiplayer_New
+    from screens.menu_screens.realtime_multiplayer import (
+        Realtime_Host_Setup, Realtime_Scenario_Select, Realtime_Lobby, Realtime_Join, Realtime_Remote_Lobby,
+    )
 
     pygame.display.set_caption("Greater Diplomacy 5")
 
@@ -348,6 +352,11 @@ class Controller:
             "MULTIPLAYER_JOIN": Multiplayer_Join(),
             "MULTIPLAYER_NEW": Multiplayer_New(),
             "REAL_TIME_MULTIPLAYER": Real_Time_Multiplayer(),
+            "REALTIME_HOST_SETUP": Realtime_Host_Setup(),
+            "REALTIME_SCENARIO_SELECT": Realtime_Scenario_Select(),
+            "REALTIME_LOBBY": Realtime_Lobby(),
+            "REALTIME_JOIN": Realtime_Join(),
+            "REALTIME_REMOTE_LOBBY": Realtime_Remote_Lobby(),
         }
         self.active_state = self.states["MENU"]
 
@@ -390,7 +399,50 @@ class Controller:
 
         # 2. Map Persistence
         if next_state_name == "MAP":
-            if previous_state == self.states["RANDOM_SETUP"]:
+            if hasattr(previous_state, "selected_realtime_session"):
+                # The host's visible board is a second map instance. The
+                # server-owned map stays inside MapRealtimeDriver, preventing
+                # host UI edits from bypassing authoritative validation.
+                realtime_map = Map(load_path=previous_state.selected_realtime_scenario_path,
+                                   is_scenario=True,
+                                   map_settings=previous_state.selected_realtime_settings,
+                                   num_players=len(previous_state.selected_realtime_session.players))
+                session = previous_state.selected_realtime_session
+                host_player = session.players[previous_state.selected_realtime_player_id]
+                realtime_map.realtime_multiplayer = True
+                realtime_map.realtime_session = session
+                realtime_map.realtime_server = previous_state.selected_realtime_server
+                realtime_map.realtime_server_map = previous_state.selected_realtime_server_map
+                realtime_map.realtime_player_id = host_player.player_id
+                realtime_map.player_country = host_player.country_id
+                realtime_map.active_players = [p.country_id for p in session.players.values() if p.country_id]
+                self.states["MAP"] = realtime_map
+                from screens.menu_screens.map import render_buttons
+                render_buttons(realtime_map)
+            elif hasattr(previous_state, "selected_realtime_client"):
+                view = previous_state.selected_realtime_view
+                import shutil
+                from data.io.realtime_multiplayer import materialize_map_bundle
+                bundle_path = materialize_map_bundle(previous_state.selected_realtime_client.map_bundle)
+                try:
+                    realtime_map = Map(load_path=bundle_path, is_scenario=False,
+                                       num_players=len(view.players))
+                finally:
+                    shutil.rmtree(bundle_path, ignore_errors=True)
+                me = view.players[view.player_id]
+                realtime_map.realtime_multiplayer = True
+                realtime_map.realtime_session = view
+                realtime_map.realtime_client = previous_state.selected_realtime_client
+                realtime_map.realtime_player_id = view.player_id
+                realtime_map.player_country = me.country_id
+                realtime_map.active_players = [p.country_id for p in view.players.values() if p.country_id]
+                from data.io.realtime_multiplayer import apply_authoritative_snapshot
+                if view.snapshot:
+                    apply_authoritative_snapshot(realtime_map, view.snapshot)
+                self.states["MAP"] = realtime_map
+                from screens.menu_screens.map import render_buttons
+                render_buttons(realtime_map)
+            elif previous_state == self.states["RANDOM_SETUP"]:
                 self.states["MAP"] = Map(is_scenario=True, is_random=True, random_settings=previous_state.random_settings, num_players=self.num_players)
 
             elif hasattr(previous_state, 'selected_tournament_path'):
@@ -466,6 +518,14 @@ class Controller:
         # 3. Load Game Refresh
         if next_state_name == "LOAD_GAME":
             self.states["LOAD_GAME"].refresh_ui()
+
+        if next_state_name == "REALTIME_SCENARIO_SELECT":
+            self.states["REALTIME_SCENARIO_SELECT"].host_setup = self.states["REALTIME_HOST_SETUP"]
+            self.states["REALTIME_SCENARIO_SELECT"].refresh_ui()
+        elif next_state_name == "REALTIME_LOBBY":
+            self.states["REALTIME_LOBBY"].bind_host(self.states["REALTIME_HOST_SETUP"])
+        elif next_state_name == "REALTIME_REMOTE_LOBBY":
+            self.states["REALTIME_REMOTE_LOBBY"].bind_join(self.states["REALTIME_JOIN"])
 
         self.active_state.done = False
         self.active_state = self.states[next_state_name]

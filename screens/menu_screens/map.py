@@ -150,8 +150,50 @@ def render_buttons(map_screen):
     map_screen.btn_ed_personality = Button(LEFT_UI_BAR_X, start_y_val + LEFT_UI_BAR_STEP_Y * 11, "left_ui_button", "purple", "AI Personality", lambda: editor_menus.open_personality_editor(map_screen), font_preset="normal")
     map_screen.btn_ed_scripts = Button(LEFT_UI_BAR_X, start_y_val + LEFT_UI_BAR_STEP_Y * 10, "left_ui_button", "red", "Scripted Events", lambda: scripted_events_editor.open_scripted_events_editor(map_screen), font_preset="normal")
 
-    # Gameplay Buttons
-    if getattr(map_screen, 'multiplayer_mode', False):
+    # Gameplay Buttons. Real-time mode is deliberately checked before the
+    # legacy tournament flag: tournaments remain file-based and untouched.
+    if getattr(map_screen, "realtime_multiplayer", False):
+        def rt_submit():
+            from data.io.realtime_multiplayer import collect_map_commands, RealtimeError
+            from ui import confirm_dialog
+
+            def confirmed(accepted):
+                if not accepted:
+                    return
+                try:
+                    session = map_screen.realtime_session
+                    player = map_screen.realtime_player_id
+                    turn = session.turn_number
+                    session.sync_draft(player, turn, collect_map_commands(map_screen, map_screen.player_country))
+                    session.submit(player, turn)
+                    map_screen.show_feedback("Turn submitted. Unsubmit to edit again.")
+                except RealtimeError as error:
+                    map_screen.show_feedback(f"Submission rejected: {error}")
+            confirm_dialog.ask_yes_no("Submit Turn", "Lock these orders for this turn?", confirmed,
+                                      yes_label="Submit", no_label="Keep Editing")
+
+        def rt_unsubmit():
+            from data.io.realtime_multiplayer import RealtimeError
+            from ui import confirm_dialog
+
+            def confirmed(accepted):
+                if not accepted:
+                    return
+                try:
+                    map_screen.realtime_session.unsubmit(map_screen.realtime_player_id,
+                                                          map_screen.realtime_session.turn_number)
+                    map_screen.show_feedback("Turn unlocked. You may edit orders again.")
+                except RealtimeError as error:
+                    map_screen.show_feedback(f"Cannot unsubmit: {error}")
+            confirm_dialog.ask_yes_no("Unsubmit Turn", "Unlock your turn and allow further edits?", confirmed,
+                                      yes_label="Unsubmit", no_label="Stay Submitted")
+
+        map_screen._realtime_submit = rt_submit
+        map_screen._realtime_unsubmit = rt_unsubmit
+        map_screen.btn_next_turn = Button(EDITOR_BOT_BTN_START_X, c.BOTTOM_BAR_UI_CENTER_Y,
+                                          "small", "purple", "Submit Turn", rt_submit)
+        map_screen.btn_import_turn = Button(-1000, -1000, "small", "grey", "Import Turn", lambda: None)
+    elif getattr(map_screen, 'multiplayer_mode', False):
         def m_export():
             from data.io.multiplayer_io import export_move_file
             import os
@@ -622,7 +664,16 @@ def update_button_states(map_screen):
 
         # Hide/disable the button if we are thinking
         map_screen.btn_next_turn.visible = not is_sel and not is_thinking
-        if getattr(map_screen, 'multiplayer_mode', False):
+        if getattr(map_screen, "realtime_multiplayer", False):
+            session = map_screen.realtime_session
+            player = session.players.get(map_screen.realtime_player_id)
+            locked = (session.phase != "TURN" or not player or player.submitted or player.eliminated)
+            map_screen.btn_next_turn.text = ("Unsubmit Turn" if player and player.submitted else "Submit Turn")
+            map_screen.btn_next_turn.callback = (map_screen._realtime_unsubmit if player and player.submitted
+                                                 else map_screen._realtime_submit)
+            map_screen.btn_next_turn.set_palette("orange" if player and player.submitted else "purple")
+            map_screen.btn_next_turn.apply_state(enabled=not (session.phase == "PROCESSING" or player and player.eliminated))
+        elif getattr(map_screen, 'multiplayer_mode', False):
             map_screen.btn_next_turn.text = "Export Turn"
         else:
             map_screen.btn_next_turn.text = "Resolve Turn" if viewing_ai else "Next Turn"
@@ -630,7 +681,10 @@ def update_button_states(map_screen):
         map_screen.btn_next_turn.set_palette("red" if viewing_ai else "purple")
 
         # Visibility and active color swapping for the skip toggle
-        if getattr(map_screen, 'multiplayer_mode', False):
+        if getattr(map_screen, "realtime_multiplayer", False):
+            map_screen.btn_skip_ai.visible = False
+            map_screen.btn_import_turn.visible = False
+        elif getattr(map_screen, 'multiplayer_mode', False):
             map_screen.btn_skip_ai.visible = False
             map_screen.btn_import_turn.visible = not is_sel and not is_thinking
         else:
@@ -1438,6 +1492,14 @@ class Map(GameState):
 
     # --- Screen Transitions ---
     def change_state(self, next_state):
+        if (getattr(self, "realtime_multiplayer", False)
+                and next_state in {"PRODUCTION", "ORDERS", "RESEARCH", "ECONOMY", "EDIT_COUNTRY",
+                                  "MESSAGES", "FACTION", "FACTION_TERRITORIES"}):
+            player = self.realtime_session.players.get(self.realtime_player_id)
+            if (self.realtime_session.phase != "TURN" or not player
+                    or player.submitted or player.eliminated):
+                self.show_feedback("Orders are locked until you explicitly unsubmit.")
+                return
         self.next_state, self.done = next_state, True
 
     def change_state_if_owned(self, next_state, requires_land=False):
@@ -1466,6 +1528,16 @@ class Map(GameState):
         self.show_feedback("Map Unlocked")
 
     def save_map_data(self):
+        if getattr(self, "realtime_multiplayer", False):
+            session = self.realtime_session
+            if session.phase != "GAME_OVER":
+                self.show_feedback("Real-time matches can be saved after they end.")
+                return
+            authoritative_map = getattr(self, "realtime_server_map", self)
+            authoritative_map.realtime_match_metadata = session.completed_metadata()
+            authoritative_map.show_feedback = self.show_feedback
+            authoritative_map.save_map_data()
+            return
         if self.is_saving:
             return # Already saving, ignore duplicate clicks
         self.is_saving = True
@@ -1537,6 +1609,29 @@ class Map(GameState):
         )
 
     def exit_to_menu(self):
+        if (getattr(self, "realtime_multiplayer", False)
+                and self.realtime_session.phase == "GAME_OVER"):
+            if getattr(self, "realtime_server", None):
+                self.realtime_server.stop()
+            self.change_state("MULTIPLAYER_MENU")
+            return
+        if (getattr(self, "realtime_multiplayer", False)
+                and self.realtime_session.phase != "GAME_OVER"):
+            from ui import confirm_dialog
+            def close_match(confirmed):
+                if not confirmed:
+                    return
+                self.realtime_session.end_match(self.realtime_player_id)
+                if self.realtime_session.phase == "PROCESSING":
+                    self.show_feedback("Current turn is finishing safely; the match will then end.")
+                    return
+                if getattr(self, "realtime_server", None):
+                    self.realtime_server.stop()
+                self.show_feedback("Real-time match ended by host. Save the final result before leaving.")
+            confirm_dialog.ask_yes_no("End Real-Time Match",
+                                      "Leaving stops the server for every player. End this match?",
+                                      close_match, yes_label="End Match", no_label="Cancel")
+            return
         self.show_exit_confirmation = True
         for el in self.elements: el.visible = False
 
@@ -1715,6 +1810,9 @@ class Map(GameState):
         super().draw(surface)
         map_renderer.draw_badges(self, surface)
 
+        from ui import realtime_status_panel
+        realtime_status_panel.draw(self, surface)
+
         diplomatic_popups.draw(self, surface)
 
         if self.thread_error:
@@ -1834,6 +1932,42 @@ class Map(GameState):
             self.show_feedback("Editor: Nation Painting")
 
     def update(self):
+        if getattr(self, "realtime_multiplayer", False):
+            session = self.realtime_session
+            player = session.players.get(self.realtime_player_id)
+            if session.phase == "TURN" and player and not player.submitted and not player.eliminated:
+                # Keep the server's last accepted draft current even before
+                # Submit. A deadline therefore resolves the latest legal work,
+                # while Submit only locks that draft.
+                from data.io.realtime_multiplayer import collect_map_commands, RealtimeError
+                import json
+                commands = collect_map_commands(self, self.player_country)
+                fingerprint = f"{session.turn_number}:" + json.dumps(commands, sort_keys=True, separators=(",", ":"))
+                if fingerprint != getattr(self, "_realtime_draft_fingerprint", None):
+                    try:
+                        session.sync_draft(self.realtime_player_id, session.turn_number, commands)
+                        self._realtime_draft_fingerprint = fingerprint
+                    except RealtimeError as error:
+                        self.show_feedback(f"Order update rejected: {error}")
+        if getattr(self, "realtime_multiplayer", False) and getattr(self, "realtime_client", None):
+            from data.io.realtime_multiplayer import apply_authoritative_snapshot
+            for event in self.realtime_client.poll():
+                payload = event.get("payload", {})
+                state = payload if event.get("type") == "state" else payload.get("state")
+                if state:
+                    self.realtime_session.update(state)
+                    if self.realtime_session.snapshot:
+                        apply_authoritative_snapshot(self, self.realtime_session.snapshot)
+                elif event.get("type") in ("error", "disconnected"):
+                    self.show_feedback(payload.get("message", "Disconnected from real-time server."))
+        elif getattr(self, "realtime_multiplayer", False) and getattr(self, "realtime_server_map", None):
+            # The host uses a separate visual map. Pull only processed server
+            # turns across, never an in-progress draft, so hosting confers no
+            # direct gameplay authority.
+            server_map = self.realtime_server_map
+            if server_map.time_manager.total_turns != self.time_manager.total_turns:
+                from data.io.realtime_multiplayer import MapRealtimeDriver, apply_authoritative_snapshot
+                apply_authoritative_snapshot(self, MapRealtimeDriver(server_map).snapshot())
         super().update()
         self.camera.update(self, c.SCREEN_HEIGHT)
 

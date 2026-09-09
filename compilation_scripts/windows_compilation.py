@@ -42,6 +42,7 @@ def main():
     # --collect-all takes the module, its submodules and its binaries together.
     cmd = ('pyinstaller --clean --onefile '
            '--collect-all dragoman '
+           '--collect-all cryptography '
            '--hidden-import screens.map_related_screens.automation_screen '
            '--hidden-import screens.map_related_screens.declare_independence '
            '--hidden-import screens.map_related_screens.politics_screen '

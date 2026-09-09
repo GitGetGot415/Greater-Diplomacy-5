@@ -130,6 +130,30 @@ class Scenario_Settings(GameState):
             self.settings = self.default_settings()
         self.refresh_ui()
 
+    # A real-time lobby owns an in-memory settings dictionary.  Reusing this
+    # screen must not overwrite the player's global scenario_settings.json.
+    pending_session_settings = None
+    pending_session_back_state = None
+
+    @classmethod
+    def configure_realtime_session(cls, settings, back_state):
+        cls.pending_session_settings = settings
+        cls.pending_session_back_state = back_state
+
+    def _adopt_pending_session(self):
+        if self.__class__.pending_session_settings is None:
+            return
+        self.settings = self.__class__.pending_session_settings
+        self.back_state = self.__class__.pending_session_back_state or "NEW_GAME"
+        self._session_bound = True
+        self.__class__.pending_session_settings = None
+        self.__class__.pending_session_back_state = None
+        self.refresh_ui()
+
+    def _save_settings(self):
+        if not getattr(self, "_session_bound", False):
+            queries.save_scenario_settings(self.settings)
+
     def default_settings(self):
         """Every scenario and AI rule this screen owns, at its constants.py default."""
         defaults = {key: default for key, default, _label, _tip in TOGGLE_ROWS}
@@ -209,7 +233,7 @@ class Scenario_Settings(GameState):
             name = min(FOG_STRENGTH_STEPS, key=lambda step: abs(step[1] - val))[0]
             self.settings["fog_of_war_strength"] = name
             self.fog_slider.text = label_for(name)
-            queries.save_scenario_settings(self.settings)
+            self._save_settings()
 
         fog_y = LEFT_TOP_Y # fog is always the first toggle row
         self.fog_slider = Slider(FOG_SLIDER_X, fog_y + FOG_SLIDER_Y_OFFSET, FOG_SLIDER_WIDTH,
@@ -246,7 +270,7 @@ class Scenario_Settings(GameState):
         def on_slide(val):
             self.settings[key] = cast(val)
             getattr(self, attr).text = label_for(val)
-            queries.save_scenario_settings(self.settings)
+            self._save_settings()
 
         slider = Slider(x, y + SLIDER_Y_OFFSET, SLIDER_WIDTH,
                         label_for(value), value, on_slide,
@@ -277,7 +301,7 @@ class Scenario_Settings(GameState):
                 c.MIN_TRUCE_TURNS,
                 min(c.MAX_TRUCE_TURNS, int(round(val))))
             self.truce_slider.text = f"Truce After Peace: {self.settings['truce_turns']} turns"
-            queries.save_scenario_settings(self.settings)
+            self._save_settings()
 
         self.truce_slider = Slider(
             LEFT_BTN_X, TRUCE_ROW_Y + SLIDER_Y_OFFSET, SLIDER_WIDTH,
@@ -286,12 +310,14 @@ class Scenario_Settings(GameState):
         return self.truce_slider
 
     def toggle(self, key, default):
-        queries.toggle_scenario_flag(self.settings, key, default)
+        if getattr(self, "_session_bound", False):
+            self.settings[key] = not queries.get_scenario_flag(key, default, self.settings)
+        else:
+            queries.toggle_scenario_flag(self.settings, key, default)
         self.refresh_ui()
 
     def toggle_ai_disabled(self):
-        queries.toggle_scenario_flag(self.settings, "ai_disabled", c.DEFAULT_AI_DISABLED)
-        self.refresh_ui()
+        self.toggle("ai_disabled", c.DEFAULT_AI_DISABLED)
 
     def open_turn_editor(self):
         try:
@@ -307,13 +333,25 @@ class Scenario_Settings(GameState):
         current = self.settings.get("days_per_turn", "Default")
         next_idx = (options.index(current) + 1) % len(options) if current in options else 0
         self.settings["days_per_turn"] = options[next_idx]
-        queries.save_scenario_settings(self.settings)
+        self._save_settings()
         self.refresh_ui()
 
     def reset_defaults(self):
         self.settings.update(self.default_settings())
-        queries.save_scenario_settings(self.settings)
+        self._save_settings()
         self.refresh_ui()
+
+    def exit_screen(self):
+        was_session_bound = getattr(self, "_session_bound", False)
+        super().exit_screen()
+        if was_session_bound:
+            # The controller reuses this screen for ordinary New Game later.
+            self._session_bound = False
+            self.settings = queries.get_scenario_settings() or self.default_settings()
+
+    def update(self):
+        self._adopt_pending_session()
+        super().update()
 
     def additional_draw(self, surface):
         from map_logic.rendering.font_manager import fonts

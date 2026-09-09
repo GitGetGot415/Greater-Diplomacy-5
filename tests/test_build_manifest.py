@@ -291,6 +291,16 @@ class BuildManifestTests(unittest.TestCase):
         self.assertEqual(windows - web, {"soloud.py"},
                          "the desktop and web module lists have drifted apart")
 
+    def test_desktop_builds_include_realtime_tls_dependency(self):
+        """Frozen desktop builds need certificate generation at runtime."""
+        windows_cmd = next(ast.literal_eval(node.value) for node in ast.walk(self.windows)
+                           if isinstance(node, ast.Assign)
+                           and any(isinstance(target, ast.Name) and target.id == "cmd"
+                                   for target in node.targets))
+        self.assertIn("--collect-all cryptography", windows_cmd)
+        packages = set(_dict_key_lists(self.setup, "OPTIONS", {"packages"}).get("packages", []))
+        self.assertIn("cryptography", packages)
+
     def test_web_exclusions_are_the_documented_ones(self):
         """Guards the one intentional asymmetry: data/editors is tkinter-only and
         dropped from the web build, so mods targeting it work on desktop only."""

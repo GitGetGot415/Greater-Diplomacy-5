@@ -33,3 +33,7 @@ The fix:
 
 For every instalation Greater Diplomacy 5, this command needs to be ran:
 xattr -dr com.apple.quarantine /path/to/the/GD5/main.app
+
+## Real Time Multiplayer
+
+desktop real-time multiplayer hosts use TLS. Source and packaging environments need the `cryptography` Python package (`pip install cryptography`); the Windows and macOS build recipes bundle it automatically. Browser builds intentionally show real-time multiplayer as desktop-only.

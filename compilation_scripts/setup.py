@@ -76,6 +76,7 @@ OPTIONS = {
         # files; py2app copies a named package's directory whole, data and all,
         # where a graph-discovered dependency brings only the modules.
         'dragoman',
+        'cryptography',
     ],
     # Standalone modules that aren't packages but are imported by the app.
     'includes': ['gameState', 'ui_elements', 'soloud', 'pygame', 'tkinter'],
