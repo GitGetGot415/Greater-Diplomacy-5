@@ -8,6 +8,8 @@ from types import SimpleNamespace
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from tests.stub_map_screen import StubMapScreen
+from data import queries
+import data.constants as c
 from map_logic.ai import ai_evaluation
 from map_logic.diplomacy import diplomacy_logic, diplomacy_messages, volunteers
 from map_logic.diplomacy import military_attaches
@@ -219,14 +221,31 @@ class VolunteerTests(unittest.TestCase):
         game.run_turn()
         self.assertEqual(len(game.home_of("A")["units"]), 1)
 
-    def test_volunteers_capture_for_the_host_not_the_donor(self):
+    def test_volunteers_capture_factory_for_the_host_not_the_donor(self):
         game = self.game()
         enemy_home = game.home_of("C")
+        enemy_home["buildings"] = ["Basic Factory"]
+        host_home = game.home_of("B")
+        host_home["buildings"] = ["Basic Factory"]
+        host_home["building_queue"] = [{"item_name": "Factory Lvl 1"}]
+        new_host_factory = game.add_province("B")
+        new_host_factory["building_queue"] = [{"item_name": "Basic Factory"}]
         unit = division("A")
         unit["volunteer_host"] = "B"
         enemy_home["units"] = [unit]
         combat_processor.check_for_post_combat_captures(game)
+
         self.assertEqual(enemy_home["owner"], "B")
+        self.assertEqual(queries.get_factory_count("A", game.map_data), 0)
+        self.assertEqual(queries.get_factory_count("B", game.map_data), 3)
+        self.assertEqual(
+            queries.get_building_cost("Basic Factory", "A", game.map_data, {})["cost_manpower"],
+            c.BASIC_FACTORY_BASE_COST_X,
+        )
+        self.assertEqual(
+            queries.get_building_cost("Basic Factory", "B", game.map_data, {})["cost_manpower"],
+            c.BASIC_FACTORY_BASE_COST_X + (3 * c.BASIC_FACTORY_COST_MULTIPLIER),
+        )
 
     def test_destroyed_volunteers_free_capacity_and_clear_the_mission(self):
         game = self.game()

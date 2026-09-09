@@ -1539,14 +1539,18 @@ def get_wrapped_x(x1, x2, map_w, loop_map):
 # ==========================================
 
 def get_factory_count(nation, map_data):
-    """Counts the total number of factories a nation has (built and in-progress)."""
+    """Counts a nation's existing factories and new Basic Factories in progress."""
     count = 0
     for prov in map_data.values():
         if prov.get("owner") == nation:
             for b in prov.get("buildings", []):
                 if "Factory" in b: count += 1
             for q in prov.get("building_queue", []):
-                if "Factory" in q.get("item_name", ""): count += 1
+                # This is the number of factories that exist on the map. A
+                # queued Factory Lvl upgrade improves an existing factory; it
+                # does not create another one. A Basic Factory is the one
+                # exception, because its construction creates a new factory.
+                if q.get("item_name") == "Basic Factory": count += 1
     return count
 
 def has_core(nation, province):
