@@ -920,14 +920,14 @@ class RemoteSessionView:
         self.players = {item["player_id"]: SimpleNamespace(**item)
                         for item in state.get("players", []) if isinstance(item, dict)}
 
-    def sync_draft(self, _player_id: str, turn: int, commands: list[dict[str, Any]]) -> None:
-        self.client.send("sync_draft", {"turn": turn, "commands": commands})
+    def sync_draft(self, _player_id: str, turn: int, commands: list[dict[str, Any]]) -> bool:
+        return self.client.send("sync_draft", {"turn": turn, "commands": commands})
 
-    def submit(self, _player_id: str, turn: int) -> None:
-        self.client.send("submit", {"turn": turn})
+    def submit(self, _player_id: str, turn: int) -> bool:
+        return self.client.send("submit", {"turn": turn})
 
-    def unsubmit(self, _player_id: str, turn: int) -> None:
-        self.client.send("unsubmit", {"turn": turn})
+    def unsubmit(self, _player_id: str, turn: int) -> bool:
+        return self.client.send("unsubmit", {"turn": turn})
 
 
 def apply_authoritative_snapshot(map_ref, snapshot: dict[str, Any]) -> None:
@@ -1238,6 +1238,10 @@ class RealtimeClient:
         if not secrets.compare_digest(fingerprint.lower(), self.invite["fingerprint"].lower()):
             secured.close()
             raise RealtimeError("The server certificate does not match this invite.")
+        # ``create_connection`` deliberately has a short setup timeout. It is
+        # not a gameplay read deadline: an uneventful timed turn may have no
+        # packets for longer than that. Use a blocking TLS stream thereafter.
+        secured.settimeout(None)
         self.socket = secured
 
     def _start_receiver(self) -> None:
@@ -1297,8 +1301,17 @@ class RealtimeClient:
 
     def _receive_loop(self) -> None:
         try:
-            while self.socket:
-                message = read_message(self.socket)
+            while True:
+                connection = self.socket
+                if connection is None:
+                    return
+                try:
+                    message = read_message(connection)
+                except TimeoutError:
+                    # Defensive compatibility with a socket restored by an
+                    # older launcher/configuration that still has a timeout.
+                    # A quiet connection is healthy; wait for its heartbeat.
+                    continue
                 if message["session_id"] != self.invite["session"]:
                     raise RealtimeError("Server changed match sessions.")
                 if message["type"] == "ok":
@@ -1308,4 +1321,7 @@ class RealtimeClient:
                     self.map_bundle = payload.get("map_bundle", getattr(self, "map_bundle", None))
                 self.events.put(message)
         except (ConnectionError, OSError, ssl.SSLError, RealtimeError) as exc:
-            self._mark_disconnected(str(exc))
+            # A local, intentional close (such as leaving the lobby) is not a
+            # second network failure to surface in the UI.
+            if self.socket is not None:
+                self._mark_disconnected(str(exc))

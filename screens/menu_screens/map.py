@@ -175,8 +175,13 @@ def render_buttons(map_screen):
                     session = map_screen.realtime_session
                     player = map_screen.realtime_player_id
                     turn = session.turn_number
-                    session.sync_draft(player, turn, collect_map_commands(map_screen, map_screen.player_country))
-                    session.submit(player, turn)
+                    if session.sync_draft(player, turn, collect_map_commands(
+                            map_screen, map_screen.player_country)) is False:
+                        map_screen.show_feedback("Cannot submit: connection to the host was lost.")
+                        return
+                    if session.submit(player, turn) is False:
+                        map_screen.show_feedback("Cannot submit: connection to the host was lost.")
+                        return
                     map_screen.show_feedback("Turn submitted. Unsubmit to edit again.")
                 except RealtimeError as error:
                     map_screen.show_feedback(f"Submission rejected: {error}")
@@ -191,8 +196,11 @@ def render_buttons(map_screen):
                 if not accepted:
                     return
                 try:
-                    map_screen.realtime_session.unsubmit(map_screen.realtime_player_id,
-                                                          map_screen.realtime_session.turn_number)
+                    if map_screen.realtime_session.unsubmit(
+                            map_screen.realtime_player_id,
+                            map_screen.realtime_session.turn_number) is False:
+                        map_screen.show_feedback("Cannot unsubmit: connection to the host was lost.")
+                        return
                     map_screen.show_feedback("Turn unlocked. You may edit orders again.")
                 except RealtimeError as error:
                     map_screen.show_feedback(f"Cannot unsubmit: {error}")
@@ -679,11 +687,13 @@ def update_button_states(map_screen):
             session = map_screen.realtime_session
             player = session.players.get(map_screen.realtime_player_id)
             locked = (session.phase != "TURN" or not player or player.submitted or player.eliminated)
+            connection_lost = bool(getattr(map_screen, "realtime_connection_error", ""))
             map_screen.btn_next_turn.text = ("Unsubmit Turn" if player and player.submitted else "Submit Turn")
             map_screen.btn_next_turn.callback = (map_screen._realtime_unsubmit if player and player.submitted
                                                  else map_screen._realtime_submit)
             map_screen.btn_next_turn.set_palette("orange" if player and player.submitted else "purple")
-            map_screen.btn_next_turn.apply_state(enabled=not (session.phase == "PROCESSING" or player and player.eliminated))
+            map_screen.btn_next_turn.apply_state(enabled=not (connection_lost or session.phase == "PROCESSING"
+                                                               or player and player.eliminated))
         elif getattr(map_screen, 'multiplayer_mode', False):
             map_screen.btn_next_turn.text = "Export Turn"
         else:
@@ -1976,8 +1986,8 @@ class Map(GameState):
                 fingerprint = f"{session.turn_number}:" + json.dumps(commands, sort_keys=True, separators=(",", ":"))
                 if fingerprint != getattr(self, "_realtime_draft_fingerprint", None):
                     try:
-                        session.sync_draft(self.realtime_player_id, session.turn_number, commands)
-                        self._realtime_draft_fingerprint = fingerprint
+                        if session.sync_draft(self.realtime_player_id, session.turn_number, commands) is not False:
+                            self._realtime_draft_fingerprint = fingerprint
                     except RealtimeError as error:
                         self.show_feedback(f"Order update rejected: {error}")
         if getattr(self, "realtime_multiplayer", False) and getattr(self, "realtime_client", None):
@@ -2003,12 +2013,16 @@ class Map(GameState):
                         self._realtime_snapshot_turn = current_turn
                         self._realtime_snapshot_phase = current_phase
                 elif event.get("type") in ("error", "disconnected"):
-                    self.show_feedback(payload.get("message", "Disconnected from real-time server."))
+                    message = payload.get("message", "Disconnected from real-time server.")
                     if event.get("type") == "disconnected":
                         # Do not keep retrying a draft send after the relay or
                         # host has gone away. The final authoritative state
                         # remains visible, but this client is read-only.
+                        self.realtime_connection_error = message
                         self.realtime_client = None
+                        self.show_feedback("Connection lost. Multiplayer actions are disabled; rejoin from the menu.")
+                    else:
+                        self.show_feedback(message)
         elif getattr(self, "realtime_multiplayer", False) and getattr(self, "realtime_server_map", None):
             # The host uses a separate visual map. Pull only processed server
             # turns across, never an in-progress draft, so hosting confers no

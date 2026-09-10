@@ -29,16 +29,21 @@ def draw(map_screen, surface):
         state = "SUBMITTED" if player.submitted else "NOT SUBMITTED"
     lines = [f"Turn {session.turn_number} / {session.config.max_turns}  •  {remaining} remaining",
              f"Time: {countdown}  •  {submitted} / {active} players submitted", state]
+    connection_error = getattr(map_screen, "realtime_connection_error", "")
+    if connection_error:
+        lines.append("CONNECTION LOST - actions disabled; rejoin from the menu")
     # The top-right map controls, including Exit, occupy the first toolbar
     # row. Keep live-match status immediately below that row instead.
-    rect = pygame.Rect(c.SCREEN_WIDTH - 330, 58, 320, 67)
+    rect = pygame.Rect(c.SCREEN_WIDTH - 330, 58, 320, 86 if connection_error else 67)
     panel = pygame.Surface(rect.size, pygame.SRCALPHA)
     panel.fill((5, 10, 25, 220))
     surface.blit(panel, rect.topleft)
-    pygame.draw.rect(surface, (110, 160, 230), rect, 1, border_radius=4)
+    pygame.draw.rect(surface, (220, 100, 75) if connection_error else (110, 160, 230),
+                     rect, 1, border_radius=4)
     font = fonts.get("tiny")
     for index, line in enumerate(lines):
-        surface.blit(font.render(line, True, (240, 240, 245)), (rect.x + 8, rect.y + 6 + index * 19))
+        color = (255, 175, 135) if connection_error and index == len(lines) - 1 else (240, 240, 245)
+        surface.blit(font.render(line, True, color), (rect.x + 8, rect.y + 6 + index * 19))
     if session.phase == "GAME_OVER":
         overlay = pygame.Rect(c.SCREEN_WIDTH // 2 - 220, c.SCREEN_HEIGHT // 2 - 125, 440, 250)
         panel = pygame.Surface(overlay.size, pygame.SRCALPHA)

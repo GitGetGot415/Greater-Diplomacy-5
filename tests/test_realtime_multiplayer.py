@@ -146,6 +146,19 @@ class RelayTransportTests(unittest.TestCase):
         self.assertEqual(client.poll(), [{"type": "disconnected", "payload": {
             "message": "connection closed"}}])
 
+    def test_idle_read_timeout_is_ignored_until_the_connection_actually_closes(self):
+        class Socket:
+            def close(self): pass
+
+        client = RealtimeClient({"session": "test"})
+        client.socket = Socket()
+        with mock.patch("data.io.realtime_multiplayer.read_message",
+                        side_effect=[TimeoutError("idle"), ConnectionError("closed")]) as read:
+            client._receive_loop()
+
+        self.assertEqual(read.call_count, 2)
+        self.assertEqual(client.poll(), [{"type": "disconnected", "payload": {"message": "closed"}}])
+
     def test_finished_relay_task_is_attached_and_transitioned_once(self):
         """A completed worker stays completed, so the screen must consume it once."""
         relay = object()
@@ -191,6 +204,7 @@ class RelayTransportTests(unittest.TestCase):
                 self.assertEqual(invite["transport"], "relay")
                 client = RealtimeClient(invite)
                 client.connect()
+                self.assertIsNone(client.socket.gettimeout())
                 client.send("join", {"name": "Relay Guest", "password": ""})
                 deadline = time.monotonic() + 5
                 while time.monotonic() < deadline and not client.player_id:
@@ -350,6 +364,7 @@ class RealtimeSessionTests(unittest.TestCase):
                                                      self.session.session_id, fingerprint))
                 client = RealtimeClient(invite)
                 client.connect()
+                self.assertIsNone(client.socket.gettimeout())
                 client.send("join", {"name": "Network Guest", "password": ""})
                 deadline = time.monotonic() + 5.0
                 events = []
