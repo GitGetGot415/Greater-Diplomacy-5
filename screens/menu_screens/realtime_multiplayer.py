@@ -3,6 +3,9 @@
 import copy
 import os
 import tempfile
+import secrets
+import threading
+import webbrowser
 
 import pygame
 
@@ -14,15 +17,30 @@ from data.io.realtime_multiplayer import (
     default_advertised_address,
     persist_reconnect_token,
     create_match_certificate, decode_invite, encode_invite,
+    encode_relay_invite,
 )
 from data.io.realtime_networking import (
     AutomaticPortMappingTask, LanMatchAdvertiser, LanMatchBrowser,
     host_network_diagnostics, is_public_ipv4,
 )
+from data.io.realtime_relay import (
+    DEFAULT_RELAY_REGION, DEFAULT_RELAY_SIZE, DigitalOceanRelayTask,
+    RelayHostTransport, destroy_temporary_relay,
+)
 from data.platform import IS_WEB
 from gameState import GameState
 from ui import confirm_dialog
 from ui_elements import Button, make_back_button
+
+
+def _delete_relay_quietly(token, droplet_id):
+    """Best-effort background cleanup; a provider dashboard remains fallback."""
+    try:
+        destroy_temporary_relay(token, droplet_id)
+    except RealtimeError:
+        # The UI has already explained that a failed deletion can be retried
+        # from the provider dashboard; never freeze map shutdown on the API.
+        pass
 
 
 def _scenario_entries():
@@ -57,6 +75,11 @@ class Realtime_Host_Setup(GameState):
         self._address_is_detected = True
         self.port, self.capacity = DEFAULT_PORT, 4
         self.max_turns, self.turn_minutes = DEFAULT_MAX_TURNS, DEFAULT_TURN_MINUTES
+        # Tokens are intentionally session-memory only.  A player can create
+        # a fresh personal-access token for a later match if they restart.
+        self.relay_enabled = False
+        self.relay_token = ""
+        self.relay_region, self.relay_size = DEFAULT_RELAY_REGION, DEFAULT_RELAY_SIZE
         self.refresh_ui()
 
     def refresh_ui(self):
@@ -75,7 +98,10 @@ class Realtime_Host_Setup(GameState):
             Button("centered+150", 280, "medium", "purple", f"Turn Time: {self.turn_minutes} minutes", self.edit_minutes),
             Button("centered+150", 360, "medium", "pink", "Scenario Settings", self.edit_settings),
             Button("centered+150", 440, "medium", "green", "Open Lobby", self.open_lobby),
-            Button("centered", 520, "medium", "light_blue", "Networking Help", self.show_network_help),
+            Button("centered-150", 520, "medium", "purple",
+                   "Temporary Relay: ON" if self.relay_enabled else "Temporary Relay: Off",
+                   lambda: self.go_to("REALTIME_RELAY_SETUP")),
+            Button("centered+150", 520, "medium", "light_blue", "Networking Help", self.show_network_help),
             make_back_button(self.exit_screen),
         ]
 
@@ -85,7 +111,10 @@ class Realtime_Host_Setup(GameState):
             "LAN (same router): hosts advertise open lobbies automatically. Players choose Find LAN Matches "
             "and click the lobby; no address, port, or copied invite is needed. A LAN invite remains available "
             "as a fallback. Guest Wi-Fi, VPNs, and Wi-Fi client isolation can block local connections.\n\n"
-            "WAN hosting: after Open Lobby, the game automatically tries UPnP and NAT-PMP router mapping. "
+            "Temporary relay: choose Temporary Relay on the host setup screen to create a short-lived personal "
+            "DigitalOcean relay. It needs a DigitalOcean account/API token but no router forwarding; delete it "
+            "when the match ends to stop the Droplet allocation charge.\n\n"
+            "Direct WAN hosting: after Open Lobby, the game automatically tries UPnP and NAT-PMP router mapping. "
             "Use Networking Status to see the result and copy the Internet Invite when mapping succeeds. "
             "Joining players never need port forwarding.\n\n"
             "If automatic mapping is unavailable, enter a public IP or DNS hostname as Advertised Address and "
@@ -159,12 +188,19 @@ class Realtime_Host_Setup(GameState):
             certificate_dir = tempfile.mkdtemp(prefix="gd5-realtime-")
             certificate, key, fingerprint = create_match_certificate(certificate_dir)
             server = RealtimeServer(session, certificate, key)
-            actual_port = server.start(self.port)
-            session.config.port = actual_port
             self.realtime_session = session
             self.realtime_server = server
             self.realtime_server_map = server_map
             self.realtime_fingerprint = fingerprint
+            if self.relay_enabled:
+                self.relay_host_key, self.relay_join_key = secrets.token_urlsafe(32), secrets.token_urlsafe(32)
+                self.relay_task = DigitalOceanRelayTask(self.relay_token, session.session_id,
+                                                         self.relay_region, self.relay_size)
+                self.relay_task.start()
+                self.go_to("REALTIME_RELAY_PROVISION")
+                return
+            actual_port = server.start(self.port)
+            session.config.port = actual_port
             self.realtime_invite = encode_invite(self.address, actual_port, session.session_id, fingerprint)
             self.realtime_lan_invite = encode_invite(self.local_address, actual_port,
                                                      session.session_id, fingerprint)
@@ -188,6 +224,141 @@ class Realtime_Host_Setup(GameState):
             if advertiser: advertiser.stop()
             if server: server.stop()
             confirm_dialog.show_error("Could Not Open Lobby", str(exc))
+
+    def finish_relay_provisioning(self, relay):
+        """Attach the already-created server to the new relay room."""
+        transport = RelayHostTransport(relay.address, self.realtime_session.session_id,
+                                       self.relay_host_key, self.relay_join_key)
+        self.realtime_server.start_relay(transport)
+        self.realtime_temporary_relay = relay
+        self.realtime_relay_transport = transport
+        self.realtime_port_mapping = None
+        self.realtime_lan_advertiser = None
+        self.realtime_invite = encode_relay_invite(relay.address, 443, self.realtime_session.session_id,
+                                                   self.realtime_fingerprint, self.relay_join_key)
+        self.realtime_lan_invite = self.realtime_invite
+        self.go_to("REALTIME_LOBBY")
+
+
+class Realtime_Relay_Setup(GameState):
+    """Memory-only credentials for the host's own temporary relay account."""
+    back_state = "REALTIME_HOST_SETUP"
+    title = "Temporary Internet Relay"
+    title_y = 35
+
+    def __init__(self):
+        super().__init__()
+        self.bg_color, self.host_setup = (12, 28, 50), None
+        self.refresh_ui()
+
+    def bind_host(self, host_setup):
+        self.host_setup = host_setup
+        self.refresh_ui()
+
+    def refresh_ui(self):
+        self.elements = [make_back_button(self.exit_screen)]
+        if not self.host_setup:
+            return
+        token_set = bool(self.host_setup.relay_token)
+        self.elements.extend([
+            Button("centered", 130, "medium", "blue", "DigitalOcean Token: SET" if token_set else "DigitalOcean Token", self.edit_token),
+            Button("centered", 210, "medium", "blue", f"Region: {self.host_setup.relay_region}", self.edit_region),
+            Button("centered", 290, "medium", "blue", f"Droplet Size: {self.host_setup.relay_size}", self.edit_size),
+            Button("centered", 370, "medium", "light_blue", "Open DigitalOcean Token Page", self.open_token_page),
+            Button("centered-120", 460, "medium", "green" if token_set else "grey",
+                   "Use Temporary Relay" if token_set else "Enter Token First", self.enable),
+            Button("centered+120", 460, "medium", "orange", "Use Direct Hosting", self.disable),
+        ])
+
+    def edit_token(self):
+        def saved(value):
+            if value is not None:
+                self.host_setup.relay_token = value.strip()
+                self.refresh_ui()
+        confirm_dialog.ask_string("DigitalOcean API Token", "Paste a read/write personal access token:",
+                                  saved, initial=self.host_setup.relay_token)
+
+    def edit_region(self):
+        def saved(value):
+            if value is not None:
+                self.host_setup.relay_region = value.strip().lower()
+                self.refresh_ui()
+        confirm_dialog.ask_string("DigitalOcean Region", "Example: nyc3, sfo3, lon1:", saved,
+                                  initial=self.host_setup.relay_region)
+
+    def edit_size(self):
+        def saved(value):
+            if value is not None:
+                self.host_setup.relay_size = value.strip()
+                self.refresh_ui()
+        confirm_dialog.ask_string("Droplet Size", "Recommended: s-1vcpu-1gb:", saved,
+                                  initial=self.host_setup.relay_size)
+
+    def open_token_page(self):
+        if IS_WEB:
+            return
+        try:
+            webbrowser.open("https://cloud.digitalocean.com/account/api/tokens", new=2)
+        except OSError:
+            confirm_dialog.show_info("DigitalOcean Token", "Open DigitalOcean, then go to API > Personal Access Tokens.")
+
+    def enable(self):
+        if not self.host_setup.relay_token:
+            confirm_dialog.show_error("Token Required", "Paste a DigitalOcean read/write personal access token first.")
+            return
+        self.host_setup.relay_enabled = True
+        self.host_setup.refresh_ui()
+        self.go_to("REALTIME_HOST_SETUP")
+
+    def disable(self):
+        self.host_setup.relay_enabled = False
+        self.host_setup.refresh_ui()
+        self.go_to("REALTIME_HOST_SETUP")
+
+
+class Realtime_Relay_Provision(GameState):
+    """Non-blocking provisioning screen while DigitalOcean starts the VPS."""
+    back_state = "REALTIME_HOST_SETUP"
+    title = "Creating Temporary Relay"
+    title_y = 55
+
+    def __init__(self):
+        super().__init__()
+        self.bg_color, self.host_setup = (12, 28, 50), None
+        self.elements = [Button("centered", 450, "medium", "red", "Cancel and Delete Relay", self.cancel)]
+
+    def bind_host(self, host_setup):
+        self.host_setup = host_setup
+
+    def cancel(self):
+        if self.host_setup and getattr(self.host_setup, "relay_task", None):
+            self.host_setup.relay_task.cancel_and_destroy()
+        if self.host_setup and getattr(self.host_setup, "realtime_server", None):
+            self.host_setup.realtime_server.stop()
+        self.go_to("REALTIME_HOST_SETUP")
+
+    def update(self):
+        task = getattr(self.host_setup, "relay_task", None) if self.host_setup else None
+        if task and task.done():
+            if task.result:
+                try:
+                    self.host_setup.finish_relay_provisioning(task.result)
+                except (OSError, RealtimeError) as exc:
+                    task.cancel_and_destroy()
+                    self.host_setup.realtime_server.stop()
+                    confirm_dialog.show_error("Relay Could Not Start", str(exc))
+                    self.go_to("REALTIME_HOST_SETUP")
+            else:
+                confirm_dialog.show_error("Relay Could Not Be Created", task.error or "Unknown provisioning error.")
+                self.go_to("REALTIME_HOST_SETUP")
+        super().update()
+
+    def additional_draw(self, surface):
+        font = pygame.font.Font(None, 28)
+        text = "DigitalOcean is creating a small relay. This can take a minute or two."
+        surface.blit(font.render(text, True, (235, 235, 235)), (55, 180))
+        text = "You can cancel safely; GD5 will delete any Droplet it created."
+        surface.blit(font.render(text, True, (235, 235, 235)), (85, 225))
 
 
 class Realtime_Scenario_Select(GameState):
@@ -252,6 +423,8 @@ class Realtime_Lobby(GameState):
         self.local_address = ""
         self.fingerprint = ""
         self.manual_advertised_address = False
+        self.temporary_relay = None
+        self.relay_token = ""
         self.country_page = 0
         self.refresh_ui()
 
@@ -266,6 +439,10 @@ class Realtime_Lobby(GameState):
         self.fingerprint = host_setup.realtime_fingerprint
         self.manual_advertised_address = not host_setup._address_is_detected
         self.advertiser = host_setup.realtime_lan_advertiser
+        self.temporary_relay = getattr(host_setup, "realtime_temporary_relay", None)
+        # Retained only in the running host process so it can delete its own
+        # temporary Droplet.  It is never placed in an invite or save.
+        self.relay_token = host_setup.relay_token if self.temporary_relay else ""
         self._lobby_signature = None
         self.country_page = 0
         self.refresh_ui()
@@ -276,7 +453,8 @@ class Realtime_Lobby(GameState):
             return
         host = self.session.host_id
         self.elements.extend([
-            Button("centered-220", 100, "medium", "blue", "Copy LAN Invite", self.show_lan_invite),
+            Button("centered-220", 100, "medium", "blue",
+                   "Copy Relay Invite" if self.temporary_relay else "Copy LAN Invite", self.show_lan_invite),
             Button("centered", 100, "medium", "green", "Start Match", self.start_match),
             Button("centered+220", 100, "medium", "red", "End Lobby", self.end_lobby),
             Button("centered-120", 150, "medium", self.internet_button_color(),
@@ -328,6 +506,8 @@ class Realtime_Lobby(GameState):
             confirm_dialog.show_error("Cannot Ready", str(exc))
 
     def internet_button_label(self):
+        if self.temporary_relay:
+            return "Copy Relay Invite"
         result = self.port_mapping.result() if self.port_mapping else None
         if result is None and self.port_mapping:
             return "Internet Mapping..."
@@ -338,6 +518,8 @@ class Realtime_Lobby(GameState):
         return "Internet Invite Unavailable"
 
     def internet_button_color(self):
+        if self.temporary_relay:
+            return "purple"
         result = self.port_mapping.result() if self.port_mapping else None
         if result and result.succeeded and is_public_ipv4(result.external_address):
             return "purple"
@@ -352,12 +534,24 @@ class Realtime_Lobby(GameState):
             title, invite + "\n\n" + clipboard_note + "\n\n" + note)
 
     def show_lan_invite(self):
+        if self.temporary_relay:
+            self._show_copied_invite(
+                "Internet Relay Invite", self.invite,
+                "Players can use this from any normal internet connection. No player needs port forwarding. "
+                "Share any lobby password separately.")
+            return
         self._show_copied_invite(
             "LAN Invite", self.lan_invite,
             "This works for players on the same local network. They can also use Find LAN Matches. "
             "Share any lobby password separately.")
 
     def show_internet_invite(self):
+        if self.temporary_relay:
+            self._show_copied_invite(
+                "Internet Relay Invite", self.invite,
+                "This match uses your temporary DigitalOcean relay. The host and players only make outbound "
+                "connections. Share any lobby password separately.")
+            return
         result = self.port_mapping.result() if self.port_mapping else None
         if result and result.succeeded and is_public_ipv4(result.external_address):
             invite = encode_invite(result.external_address, result.external_port,
@@ -380,6 +574,14 @@ class Realtime_Lobby(GameState):
         )
 
     def show_network_status(self):
+        if self.temporary_relay:
+            confirm_dialog.show_info(
+                "Temporary Relay Status",
+                f"Relay is running at {self.temporary_relay.address}:443. No router forwarding is needed. "
+                "The host's certificate-pinned game connection remains end-to-end through the relay. "
+                "End the lobby, or return to the multiplayer menu after the match, to delete this temporary "
+                "Droplet and stop its allocation charge.")
+            return
         result = self.port_mapping.result() if self.port_mapping else None
         confirm_dialog.show_info(
             "Real-Time Networking Status",
@@ -398,6 +600,8 @@ class Realtime_Lobby(GameState):
         self.selected_realtime_server = self.server
         self.selected_realtime_server_map = self.server_map
         self.selected_realtime_port_mapping = self.port_mapping
+        self.selected_realtime_temporary_relay = self.temporary_relay
+        self.selected_realtime_relay_token = self.relay_token
         self.selected_realtime_scenario_path = self.session.config.scenario_id
         self.selected_realtime_settings = copy.deepcopy(self.session.config.scenario_settings)
         self.selected_realtime_player_id = self.session.host_id
@@ -407,8 +611,16 @@ class Realtime_Lobby(GameState):
         if getattr(self, "advertiser", None): self.advertiser.stop()
         if self.port_mapping: self.port_mapping.stop()
         if self.server: self.server.stop()
+        self._destroy_temporary_relay()
         self.session = self.server = self.server_map = None
         self.go_to("REALTIME_HOST_SETUP")
+
+    def _destroy_temporary_relay(self):
+        if not self.temporary_relay or not self.relay_token:
+            return
+        relay, token = self.temporary_relay, self.relay_token
+        self.temporary_relay = None
+        threading.Thread(target=lambda: _delete_relay_quietly(token, relay.droplet_id), daemon=True).start()
 
     def leave_lobby(self):
         self.end_lobby()

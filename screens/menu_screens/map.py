@@ -31,6 +31,17 @@ from map_logic.rendering.country_names import update_country_centers as calc_cou
 from map_logic.setup import player_setup
 from screens.editor_screens import scripted_events_editor
 
+
+def _delete_relay_safely(token, droplet_id):
+    """Best-effort cleanup must never delay leaving a finished match."""
+    try:
+        from data.io.realtime_relay import destroy_temporary_relay
+        destroy_temporary_relay(token, droplet_id)
+    except Exception:
+        # The host can still delete the tagged Droplet in DigitalOcean if the
+        # provider API is temporarily unreachable during game shutdown.
+        pass
+
 # ============================================================================ #
 #                                   LAYOUT                                     #
 # ============================================================================ #
@@ -1615,6 +1626,7 @@ class Map(GameState):
                 self.realtime_port_mapping.stop()
             if getattr(self, "realtime_server", None):
                 self.realtime_server.stop()
+            self._destroy_temporary_relay()
             self.change_state("MULTIPLAYER_MENU")
             return
         if (getattr(self, "realtime_multiplayer", False)
@@ -1631,6 +1643,7 @@ class Map(GameState):
                     self.realtime_port_mapping.stop()
                 if getattr(self, "realtime_server", None):
                     self.realtime_server.stop()
+                self._destroy_temporary_relay()
                 self.show_feedback("Real-time match ended by host. Save the final result before leaving.")
             confirm_dialog.ask_yes_no("End Real-Time Match",
                                       "Leaving stops the server for every player. End this match?",
@@ -1638,6 +1651,20 @@ class Map(GameState):
             return
         self.show_exit_confirmation = True
         for el in self.elements: el.visible = False
+
+    def _destroy_temporary_relay(self):
+        """Delete the host-owned, memory-only temporary relay after shutdown."""
+        relay = getattr(self, "realtime_temporary_relay", None)
+        token = getattr(self, "realtime_relay_token", "")
+        if not relay or not token:
+            return
+        self.realtime_temporary_relay = None
+        try:
+            from data.io.realtime_relay import destroy_temporary_relay
+            import threading
+            threading.Thread(target=lambda: _delete_relay_safely(token, relay.droplet_id), daemon=True).start()
+        except (ImportError, AttributeError):
+            pass
 
     def cancel_exit(self):
         self.show_exit_confirmation = False

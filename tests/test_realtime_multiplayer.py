@@ -12,9 +12,11 @@ from unittest import mock
 from data.io.realtime_multiplayer import (
     DEFAULT_MAX_TURNS, RealtimeConfig, RealtimeError, RealtimeSession,
     RealtimeClient, RealtimeServer, create_match_certificate, decode_invite,
-    encode_invite, read_message, sanitize_display_name, MapRealtimeDriver,
+    encode_invite, encode_relay_invite, read_message, sanitize_display_name, MapRealtimeDriver,
     collect_map_commands, default_advertised_address,
 )
+from data.io.realtime_relay import RelayHostTransport, relay_cloud_init, validate_relay_invite
+from data.io.realtime_relay_service import Relay
 from data.io.realtime_networking import (
     PortMappingResult, automatic_tcp_port_mapping, host_network_diagnostics,
     is_public_ipv4, make_lan_announcement, parse_lan_announcement,
@@ -105,6 +107,57 @@ class ConvenienceNetworkingTests(unittest.TestCase):
         with mock.patch("data.io.realtime_multiplayer.socket.socket", return_value=probe):
             self.assertEqual(default_advertised_address(), "127.0.0.1")
         self.assertTrue(probe.closed)
+
+
+class RelayTransportTests(unittest.TestCase):
+    def test_relay_invite_validation_and_cloud_init_exclude_provider_credentials(self):
+        invite = decode_invite(encode_relay_invite("203.0.113.7", 443, "a" * 32, "b" * 64, "c" * 32))
+        self.assertEqual(validate_relay_invite(invite)["relay_host"], "203.0.113.7")
+        cloud_init = relay_cloud_init()
+        self.assertIn("gd5-relay.service", cloud_init)
+        self.assertNotIn("DigitalOcean", cloud_init)
+        with self.assertRaises(RealtimeError):
+            validate_relay_invite({"v": 1, "transport": "relay"})
+
+    def _start_relay(self):
+        relay, stopped = Relay(), threading.Event()
+        listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        listener.bind(("127.0.0.1", 0)); listener.listen(); listener.settimeout(.05)
+        def accept_loop():
+            while not stopped.is_set():
+                try: connection, _ = listener.accept()
+                except socket.timeout: continue
+                except OSError: break
+                threading.Thread(target=relay.serve, args=(connection,), daemon=True).start()
+        threading.Thread(target=accept_loop, daemon=True).start()
+        return listener, stopped
+
+    def test_relay_invite_connects_to_the_existing_tls_server(self):
+        listener, stopped = self._start_relay()
+        session = RealtimeSession(RealtimeConfig("test", {}, max_players=2), ["A", "B"], "Host", Driver())
+        with tempfile.TemporaryDirectory() as directory:
+            certificate, key, fingerprint = create_match_certificate(directory)
+            server = RealtimeServer(session, certificate, key)
+            transport = RelayHostTransport("127.0.0.1", session.session_id, "h" * 32, "j" * 32,
+                                           listener.getsockname()[1])
+            try:
+                server.start_relay(transport)
+                invite = decode_invite(encode_relay_invite("127.0.0.1", listener.getsockname()[1],
+                                                           session.session_id, fingerprint, "j" * 32))
+                self.assertEqual(invite["transport"], "relay")
+                client = RealtimeClient(invite)
+                client.connect()
+                client.send("join", {"name": "Relay Guest", "password": ""})
+                deadline = time.monotonic() + 5
+                while time.monotonic() < deadline and not client.player_id:
+                    client.poll(); time.sleep(.01)
+                self.assertIsNotNone(client.player_id)
+                self.assertTrue(server.listening)
+                client.close()
+            finally:
+                server.stop()
+                stopped.set(); listener.close()
 
 
 class RealtimeSessionTests(unittest.TestCase):
@@ -262,7 +315,7 @@ class RealtimeSessionTests(unittest.TestCase):
                     if client.player_id:
                         break
                     time.sleep(.01)
-                self.assertIsNotNone(client.player_id, events)
+                self.assertIsNotNone(client.player_id, (events, client.disconnect_message))
                 client.close()
             finally:
                 server.stop()

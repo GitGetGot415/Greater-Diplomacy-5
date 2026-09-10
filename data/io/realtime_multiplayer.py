@@ -102,6 +102,20 @@ def encode_invite(address: str, port: int, session_id: str, fingerprint: str) ->
     return "gd5rt:" + encoded.rstrip("=")
 
 
+def encode_relay_invite(relay_host: str, relay_port: int, session_id: str,
+                        fingerprint: str, join_key: str) -> str:
+    """Encode an invite that reaches the authoritative host through a relay.
+
+    ``join_key`` authorizes a connection to one short-lived relay room.  It is
+    not a provider credential and does not replace the optional lobby password
+    or the inner certificate pin.
+    """
+    from data.io.realtime_relay import relay_invite
+    payload = relay_invite(relay_host, session_id, fingerprint, join_key, relay_port)
+    encoded = base64.urlsafe_b64encode(json.dumps(payload, separators=(",", ":")).encode()).decode()
+    return "gd5rt:" + encoded.rstrip("=")
+
+
 def decode_invite(value: str) -> dict[str, Any]:
     try:
         raw = value.strip()
@@ -111,9 +125,12 @@ def decode_invite(value: str) -> dict[str, Any]:
         data = json.loads(base64.urlsafe_b64decode(raw.encode()).decode("utf-8"))
     except Exception as exc:
         raise RealtimeError("Invalid real-time invite code.") from exc
+    if isinstance(data, dict) and data.get("transport") == "relay":
+        from data.io.realtime_relay import validate_relay_invite
+        return validate_relay_invite(data)
     if (not isinstance(data, dict) or data.get("v") != PROTOCOL_VERSION
-            or not isinstance(data.get("host"), str)
-            or not isinstance(data.get("port"), int)
+            or not isinstance(data.get("host"), str) or not data["host"]
+            or not isinstance(data.get("port"), int) or not 1 <= data["port"] <= 65535
             or not isinstance(data.get("session"), str)
             or not isinstance(data.get("fingerprint"), str)):
         raise RealtimeError("Unsupported or incomplete invite code.")
@@ -135,9 +152,13 @@ def persist_reconnect_token(invite: dict[str, Any], token: str, display_name: st
     try:
         records = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
         if not isinstance(records, dict): records = {}
-        records[invite["session"]] = {"token": token, "name": display_name,
-                                       "host": invite["host"], "port": invite["port"],
-                                       "fingerprint": invite["fingerprint"]}
+        record = {"token": token, "name": display_name, "fingerprint": invite["fingerprint"]}
+        if invite.get("transport") == "relay":
+            record.update({"transport": "relay", "relay_host": invite["relay_host"],
+                           "relay_port": invite["relay_port"], "join_key": invite["join_key"]})
+        else:
+            record.update({"host": invite["host"], "port": invite["port"]})
+        records[invite["session"]] = record
         path.write_text(json.dumps(records, indent=2), encoding="utf-8")
     except OSError:
         return ""
@@ -1006,6 +1027,10 @@ class RealtimeServer:
         self._stopped = threading.Event()
         self._clients: dict[str, socket.socket] = {}
         self._clients_lock = threading.Lock()
+        self._open_connections: set[socket.socket] = set()
+        self._connection_lock = threading.Lock()
+        self._relay_transport = None
+        self._timer_started = False
         self.session.add_listener(self._broadcast_state)
 
     def start(self, port: int) -> int:
@@ -1023,16 +1048,41 @@ class RealtimeServer:
         self._listener = listener
         self._tls_context = context
         threading.Thread(target=self._accept_loop, daemon=True).start()
-        threading.Thread(target=self._timer_loop, daemon=True).start()
+        self._start_timer()
         return self._listener.getsockname()[1]
+
+    def start_relay(self, relay_transport: Any) -> None:
+        """Expose this server through an outbound relay instead of a listener.
+
+        The relay hands us a fresh raw byte stream for each player.  The normal
+        per-player TLS handshake and authoritative message loop are unchanged.
+        """
+        if IS_WEB:
+            raise RealtimeError("Real-time hosting is available on desktop builds only.")
+        if self._listener or self._relay_transport:
+            raise RealtimeError("The real-time server has already started.")
+        self._tls_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        self._tls_context.load_cert_chain(self.certificate_path, self.key_path)
+        relay_transport.start(self._serve_connection)
+        self._relay_transport = relay_transport
+        self._start_timer()
+
+    def _start_timer(self) -> None:
+        if not self._timer_started:
+            self._timer_started = True
+            threading.Thread(target=self._timer_loop, daemon=True).start()
 
     @property
     def listening(self) -> bool:
         """Whether the server still owns its TCP listening socket."""
-        return self._listener is not None and not self._stopped.is_set()
+        return bool((self._listener is not None or self._relay_transport is not None)
+                    and not self._stopped.is_set())
 
     def stop(self) -> None:
         self._stopped.set()
+        if self._relay_transport:
+            self._relay_transport.stop()
+            self._relay_transport = None
         if self._listener:
             try: self._listener.close()
             except OSError: pass
@@ -1041,6 +1091,11 @@ class RealtimeServer:
                 try: sock.close()
                 except OSError: pass
             self._clients.clear()
+        with self._connection_lock:
+            connections, self._open_connections = list(self._open_connections), set()
+        for connection in connections:
+            try: connection.close()
+            except OSError: pass
 
     def _accept_loop(self) -> None:
         assert self._listener is not None
@@ -1049,6 +1104,8 @@ class RealtimeServer:
                 connection, _address = self._listener.accept()
             except OSError:
                 break
+            with self._connection_lock:
+                self._open_connections.add(connection)
             threading.Thread(target=self._serve_connection, args=(connection,), daemon=True).start()
 
     def _timer_loop(self) -> None:
@@ -1063,9 +1120,14 @@ class RealtimeServer:
 
     def _serve_connection(self, connection: socket.socket) -> None:
         player_id: str | None = None
+        raw_connection = connection
+        with self._connection_lock:
+            self._open_connections.add(raw_connection)
         try:
             assert self._tls_context is not None
             connection = self._tls_context.wrap_socket(connection, server_side=True)
+            with self._connection_lock:
+                self._open_connections.add(connection)
             while not self._stopped.is_set():
                 message = read_message(connection)
                 if message["session_id"] != self.session.session_id:
@@ -1089,6 +1151,9 @@ class RealtimeServer:
                     self._clients.pop(player_id, None)
             try: connection.close()
             except OSError: pass
+            with self._connection_lock:
+                self._open_connections.discard(raw_connection)
+                self._open_connections.discard(connection)
 
     def _handle_message(self, player_id: str | None, message: dict[str, Any]) -> tuple[dict[str, Any], str | None]:
         action, payload = message["type"], message["payload"]
@@ -1138,26 +1203,50 @@ class RealtimeClient:
         self.events: queue.SimpleQueue[dict[str, Any]] = queue.SimpleQueue()
         self.player_id: str | None = None
         self.reconnect_token: str | None = None
+        self.disconnect_message: str | None = None
         self._send_lock = threading.Lock()
+        self._receiver_lock = threading.Lock()
+        self._receiver_started = False
 
     def connect(self) -> None:
         if IS_WEB:
             raise RealtimeError("Real-time multiplayer is available on desktop builds only.")
-        raw = socket.create_connection((self.invite["host"], self.invite["port"]), self.timeout)
+        if self.invite.get("transport") == "relay":
+            from data.io.realtime_relay import connect_relay_client
+            raw = connect_relay_client(self.invite, self.timeout)
+        else:
+            raw = socket.create_connection((self.invite["host"], self.invite["port"]), self.timeout)
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         context.check_hostname, context.verify_mode = False, ssl.CERT_NONE
-        secured = context.wrap_socket(raw, server_hostname=self.invite["host"])
+        # Relay invites contain no direct host address; hostname validation is
+        # disabled and the match certificate SHA-256 pin below is authoritative.
+        secured = context.wrap_socket(raw, server_hostname=self.invite.get("host", self.invite.get("relay_host")))
         fingerprint = hashlib.sha256(secured.getpeercert(binary_form=True)).hexdigest()
         if not secrets.compare_digest(fingerprint.lower(), self.invite["fingerprint"].lower()):
             secured.close()
             raise RealtimeError("The server certificate does not match this invite.")
         self.socket = secured
-        threading.Thread(target=self._receive_loop, daemon=True).start()
+
+    def _start_receiver(self) -> None:
+        """Start reads after the first request has fully left the TLS socket.
+
+        On some Windows OpenSSL builds, immediately beginning a blocking read
+        in a second thread while the main thread performs the first post-
+        handshake write can intermittently stall that first write.  Joining is
+        always the first protocol request, so delaying the reader by one send
+        avoids that platform race without changing the wire protocol.
+        """
+        with self._receiver_lock:
+            if self._receiver_started:
+                return
+            self._receiver_started = True
+            threading.Thread(target=self._receive_loop, daemon=True).start()
 
     def send(self, message_type: str, payload: dict[str, Any]) -> None:
         if not self.socket: raise RealtimeError("Not connected to a real-time server.")
         with self._send_lock:
             self.socket.sendall(encode_message(message_type, self.invite["session"], payload))
+        self._start_receiver()
 
     def poll(self) -> list[dict[str, Any]]:
         result = []
@@ -1184,4 +1273,5 @@ class RealtimeClient:
                     self.map_bundle = payload.get("map_bundle", getattr(self, "map_bundle", None))
                 self.events.put(message)
         except (ConnectionError, OSError, ssl.SSLError, RealtimeError) as exc:
+            self.disconnect_message = str(exc)
             self.events.put({"type": "disconnected", "payload": {"message": str(exc)}})

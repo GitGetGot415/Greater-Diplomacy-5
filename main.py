@@ -56,6 +56,7 @@ def _import_project_modules():
     global Multiplayer_Menu, Real_Time_Multiplayer
     global Multiplayer_Hub, Multiplayer_Host, Multiplayer_Join, Multiplayer_New
     global Realtime_Host_Setup, Realtime_Scenario_Select, Realtime_Lobby, Realtime_Join, Realtime_Lan_Browser, Realtime_Remote_Lobby
+    global Realtime_Relay_Setup, Realtime_Relay_Provision
 
     # Must run before any other project module is imported below -- see
     # mod_loader's own docstring for why. Applies enabled .py mods in memory
@@ -127,7 +128,7 @@ def _import_project_modules():
     from screens.menu_screens.multiplayer_new import Multiplayer_New
     from screens.menu_screens.realtime_multiplayer import (
         Realtime_Host_Setup, Realtime_Scenario_Select, Realtime_Lobby, Realtime_Join, Realtime_Lan_Browser,
-        Realtime_Remote_Lobby,
+        Realtime_Remote_Lobby, Realtime_Relay_Setup, Realtime_Relay_Provision,
     )
 
     pygame.display.set_caption("Greater Diplomacy 5")
@@ -355,6 +356,8 @@ class Controller:
             "REAL_TIME_MULTIPLAYER": Real_Time_Multiplayer(),
             "REALTIME_HOST_SETUP": Realtime_Host_Setup(),
             "REALTIME_SCENARIO_SELECT": Realtime_Scenario_Select(),
+            "REALTIME_RELAY_SETUP": Realtime_Relay_Setup(),
+            "REALTIME_RELAY_PROVISION": Realtime_Relay_Provision(),
             "REALTIME_LOBBY": Realtime_Lobby(),
             "REALTIME_JOIN": Realtime_Join(),
             "REALTIME_LAN_BROWSER": Realtime_Lan_Browser(),
@@ -422,6 +425,8 @@ class Controller:
                 realtime_map.realtime_server = previous_state.selected_realtime_server
                 realtime_map.realtime_server_map = previous_state.selected_realtime_server_map
                 realtime_map.realtime_port_mapping = previous_state.selected_realtime_port_mapping
+                realtime_map.realtime_temporary_relay = previous_state.selected_realtime_temporary_relay
+                realtime_map.realtime_relay_token = previous_state.selected_realtime_relay_token
                 realtime_map.realtime_player_id = host_player.player_id
                 realtime_map.player_country = host_player.country_id
                 realtime_map.active_players = [p.country_id for p in session.players.values() if p.country_id]
@@ -544,6 +549,8 @@ class Controller:
         if next_state_name == "REALTIME_SCENARIO_SELECT":
             self.states["REALTIME_SCENARIO_SELECT"].host_setup = self.states["REALTIME_HOST_SETUP"]
             self.states["REALTIME_SCENARIO_SELECT"].refresh_ui()
+        elif next_state_name in ("REALTIME_RELAY_SETUP", "REALTIME_RELAY_PROVISION"):
+            self.states[next_state_name].bind_host(self.states["REALTIME_HOST_SETUP"])
         elif next_state_name == "REALTIME_LOBBY":
             self.states["REALTIME_LOBBY"].bind_host(self.states["REALTIME_HOST_SETUP"])
         elif next_state_name == "REALTIME_REMOTE_LOBBY":
