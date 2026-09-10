@@ -1956,8 +1956,21 @@ class Map(GameState):
                 state = payload if event.get("type") == "state" else payload.get("state")
                 if state:
                     self.realtime_session.update(state)
-                    if self.realtime_session.snapshot:
+                    # Status heartbeats and draft acknowledgements describe
+                    # the same in-progress turn. Re-applying their base-game
+                    # snapshot would erase a player's unsubmitted local
+                    # research/orders/queues. Apply only the initial board,
+                    # a newly opened turn, or the final processed result.
+                    current_turn = self.realtime_session.turn_number
+                    current_phase = self.realtime_session.phase
+                    applied_turn = getattr(self, "_realtime_snapshot_turn", None)
+                    applied_phase = getattr(self, "_realtime_snapshot_phase", None)
+                    should_apply = (applied_turn is None or current_turn != applied_turn or
+                                    (current_phase == "GAME_OVER" and applied_phase != "GAME_OVER"))
+                    if self.realtime_session.snapshot and should_apply:
                         apply_authoritative_snapshot(self, self.realtime_session.snapshot)
+                        self._realtime_snapshot_turn = current_turn
+                        self._realtime_snapshot_phase = current_phase
                 elif event.get("type") in ("error", "disconnected"):
                     self.show_feedback(payload.get("message", "Disconnected from real-time server."))
         elif getattr(self, "realtime_multiplayer", False) and getattr(self, "realtime_server_map", None):

@@ -456,6 +456,8 @@ class Controller:
                 from data.io.realtime_multiplayer import apply_authoritative_snapshot
                 if view.snapshot:
                     apply_authoritative_snapshot(realtime_map, view.snapshot)
+                    realtime_map._realtime_snapshot_turn = view.turn_number
+                    realtime_map._realtime_snapshot_phase = view.phase
                 self.states["MAP"] = realtime_map
                 from screens.menu_screens.map import render_buttons
                 render_buttons(realtime_map)

@@ -61,8 +61,14 @@ class Politics_Screen(GameState):
     @property
     def can_edit(self):
         """Whether this screen may change the player's political direction."""
-        return (self.is_valid_player
-                and not getattr(self.map_screen, "tactical_mode", False))
+        if not (self.is_valid_player and not getattr(self.map_screen, "tactical_mode", False)):
+            return False
+        if getattr(self.map_screen, "realtime_multiplayer", False):
+            session = getattr(self.map_screen, "realtime_session", None)
+            player = getattr(session, "players", {}).get(
+                getattr(self.map_screen, "realtime_player_id", None))
+            return bool(session and session.phase == "TURN" and player and not player.submitted and not player.eliminated)
+        return True
 
     def set_drift(self, direction):
         if not self.can_edit:

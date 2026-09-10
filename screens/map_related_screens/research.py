@@ -214,6 +214,13 @@ class Research_Screen(GameState):
         """
         if self.map_screen.tactical_mode:
             return False
+        if getattr(self.map_screen, "realtime_multiplayer", False):
+            session = getattr(self.map_screen, "realtime_session", None)
+            player_id = getattr(self.map_screen, "realtime_player_id", None)
+            player = getattr(session, "players", {}).get(player_id)
+            if (not session or session.phase != "TURN" or not player or player.submitted or
+                    player.eliminated):
+                return False
         if self.map_screen.player_country == "Spectator":
             return c.SPECTATOR_CAN_EDIT_RESEARCH
         return True

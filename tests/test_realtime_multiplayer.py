@@ -6,11 +6,14 @@ import unittest
 import tempfile
 import socket
 import struct
+from types import SimpleNamespace
+from unittest import mock
 
 from data.io.realtime_multiplayer import (
     DEFAULT_MAX_TURNS, RealtimeConfig, RealtimeError, RealtimeSession,
     RealtimeClient, RealtimeServer, create_match_certificate, decode_invite,
-    encode_invite, read_message, sanitize_display_name,
+    encode_invite, read_message, sanitize_display_name, MapRealtimeDriver,
+    collect_map_commands,
 )
 
 
@@ -144,6 +147,36 @@ class RealtimeSessionTests(unittest.TestCase):
         self.assertEqual(restored.player_id, self.other.player_id)
         invite = encode_invite("example.test", 38475, self.session.session_id, "ab" * 32)
         self.assertEqual(decode_invite(invite)["session"], self.session.session_id)
+
+    def test_research_draft_uses_server_progress_not_client_progress(self):
+        map_ref = SimpleNamespace(
+            nation_data={"A": {"research": {"test_tech": 0}, "research_queue": [],
+                               "research_progress": {}}},
+            map_data={}, id_to_province={})
+        driver = MapRealtimeDriver(map_ref)
+        tech_tree = {"test_tech": {"max_lvl": 1, "cost": 250, "req": {}}}
+        with mock.patch("data.queries.get_tech_tree", return_value=tech_tree):
+            canonical = driver.validate_draft("A", [{"type": "research_queue",
+                                                       "tech_names": ["test_tech"],
+                                                       "points_remaining": 0}])
+            self.assertEqual(canonical[0]["projects"],
+                             [{"tech_name": "test_tech", "points_remaining": 250}])
+
+            map_ref.nation_data["A"]["research_queue"] = canonical[0]["projects"]
+            map_ref.nation_data["A"]["research_queue"][0]["points_remaining"] = 125
+            paused = driver.validate_draft("A", [{"type": "research_queue", "tech_names": []}])
+        self.assertEqual(paused[0]["research_progress"], {"test_tech": 125})
+
+    def test_collects_empty_and_nonempty_research_selection(self):
+        map_ref = SimpleNamespace(
+            map_data={},
+            nation_data={"A": {"name": "A", "color": [1, 2, 3],
+                               "research_queue": [{"tech_name": "test_tech", "points_remaining": 10}]}})
+        commands = collect_map_commands(map_ref, "A")
+        self.assertIn({"type": "research_queue", "tech_names": ["test_tech"]}, commands)
+        map_ref.nation_data["A"]["research_queue"] = []
+        self.assertIn({"type": "research_queue", "tech_names": []},
+                      collect_map_commands(map_ref, "A"))
 
     def test_tls_server_client_join_and_malformed_frame_rejection(self):
         with tempfile.TemporaryDirectory() as directory:

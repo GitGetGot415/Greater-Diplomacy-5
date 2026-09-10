@@ -29,7 +29,9 @@ def draw(map_screen, surface):
         state = "SUBMITTED" if player.submitted else "NOT SUBMITTED"
     lines = [f"Turn {session.turn_number} / {session.config.max_turns}  •  {remaining} remaining",
              f"Time: {countdown}  •  {submitted} / {active} players submitted", state]
-    rect = pygame.Rect(c.SCREEN_WIDTH - 330, 8, 320, 67)
+    # The top-right map controls, including Exit, occupy the first toolbar
+    # row. Keep live-match status immediately below that row instead.
+    rect = pygame.Rect(c.SCREEN_WIDTH - 330, 58, 320, 67)
     panel = pygame.Surface(rect.size, pygame.SRCALPHA)
     panel.fill((5, 10, 25, 220))
     surface.blit(panel, rect.topleft)

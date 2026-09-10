@@ -27,6 +27,7 @@ from types import SimpleNamespace
 from pathlib import Path
 from typing import Any, Callable
 
+import data.constants as c
 from data.platform import IS_WEB
 
 
@@ -548,10 +549,14 @@ class MapRealtimeDriver:
     """Adapter that lets the existing map/turn logic run only on the server.
 
     The command schema deliberately contains no arbitrary map replacement.
-    It currently covers the map's normal unit-order and owned-queue state;
-    additional UI domains can add explicit commands without widening trust.
+    It covers normal unit orders, owned production queues, and research
+    selection. Additional UI domains can add explicit commands without
+    widening trust.
     """
     _UNIT_MUTABLE_KEYS = {"order", "name", "combat_stance"}
+    _AUTOMATION_KEYS = {"construction", "movement", "research"}
+    _APPEARANCE_KEYS = {"name", "adjective", "leader_name", "leader_title",
+                        "flag_data", "portrait_data", "color"}
 
     def __init__(self, map_ref):
         self.map_ref = map_ref
@@ -564,6 +569,7 @@ class MapRealtimeDriver:
 
     def validate_draft(self, country_id: str, commands: list[dict[str, Any]]) -> list[dict[str, Any]]:
         canonical = []
+        has_research_command = False
         for command in commands:
             if not isinstance(command, dict):
                 raise RealtimeError("Invalid order command.")
@@ -572,9 +578,63 @@ class MapRealtimeDriver:
                 canonical.append(self._validate_unit_order(country_id, command))
             elif kind == "province_queue":
                 canonical.append(self._validate_queue(country_id, command))
+            elif kind == "research_queue":
+                if has_research_command:
+                    raise RealtimeError("Only one research selection may be submitted per turn.")
+                canonical.append(self._validate_research_queue(country_id, command))
+                has_research_command = True
+            elif kind == "country_preferences":
+                canonical.append(self._validate_country_preferences(country_id, command))
+            elif kind == "country_appearance":
+                canonical.append(self._validate_country_appearance(country_id, command))
             else:
                 raise RealtimeError("That order type is not supported by the server.")
         return canonical
+
+    def _country(self, country_id: str) -> dict[str, Any]:
+        country = self.map_ref.nation_data.get(country_id)
+        if not isinstance(country, dict):
+            raise RealtimeError("Unknown player country.")
+        return country
+
+    def _validate_country_preferences(self, country_id: str, command: dict[str, Any]) -> dict[str, Any]:
+        """Validate the regular politics/automation controls for one country."""
+        self._country(country_id)
+        drift = command.get("political_drift", 0)
+        automation = command.get("automation", {})
+        if not isinstance(drift, int) or drift not in (-1, 0, 1):
+            raise RealtimeError("Invalid political direction.")
+        if not isinstance(automation, dict) or set(automation) - self._AUTOMATION_KEYS:
+            raise RealtimeError("Invalid automation settings.")
+        if any(not isinstance(value, bool) for value in automation.values()):
+            raise RealtimeError("Invalid automation settings.")
+        return {"type": "country_preferences", "political_drift": drift,
+                "automation": {key: bool(automation.get(key, False))
+                               for key in self._AUTOMATION_KEYS}}
+
+    def _validate_country_appearance(self, country_id: str, command: dict[str, Any]) -> dict[str, Any]:
+        """Allow identity changes without allowing a client to alter gameplay data."""
+        self._country(country_id)
+        appearance = command.get("appearance")
+        if not isinstance(appearance, dict) or set(appearance) - self._APPEARANCE_KEYS:
+            raise RealtimeError("Invalid country appearance.")
+        canonical = {}
+        for key in ("name", "adjective", "leader_name", "leader_title"):
+            value = appearance.get(key, "")
+            if not isinstance(value, str) or len(value) > 120 or any(ord(ch) < 32 for ch in value):
+                raise RealtimeError("Invalid country appearance text.")
+            canonical[key] = value
+        for key in ("flag_data", "portrait_data"):
+            value = appearance.get(key, "DEFAULT")
+            if not isinstance(value, str) or len(value) > 4_000_000:
+                raise RealtimeError("Invalid country appearance image.")
+            canonical[key] = value
+        color = appearance.get("color")
+        if (not isinstance(color, list) or len(color) not in (3, 4) or
+                any(not isinstance(channel, int) or not 0 <= channel <= 255 for channel in color)):
+            raise RealtimeError("Invalid country color.")
+        canonical["color"] = list(color)
+        return {"type": "country_appearance", "appearance": canonical}
 
     def _province(self, province_id: Any):
         try:
@@ -618,18 +678,117 @@ class MapRealtimeDriver:
         return {"type": "province_queue", "province_id": province["id"],
                 "queue": queue_type, "items": copy.deepcopy(items)}
 
+    def _validate_research_queue(self, country_id: str, command: dict[str, Any]) -> dict[str, Any]:
+        """Replay a player's start/pause choices without trusting client points.
+
+        Clients submit only the desired ordered tech names. Progress always
+        comes from the authoritative map: pausing stores that server progress,
+        and resuming restores it. A forged client therefore cannot finish a
+        technology by claiming a smaller point cost.
+        """
+        from data import queries
+
+        requested = command.get("tech_names")
+        if (not isinstance(requested, list) or len(requested) > c.RESEARCH_SLOTS or
+                any(not isinstance(tech, str) for tech in requested) or
+                len(set(requested)) != len(requested)):
+            raise RealtimeError("Invalid research selection.")
+        country_data = self.map_ref.nation_data.get(country_id)
+        if not isinstance(country_data, dict):
+            raise RealtimeError("Unknown country research selection.")
+        tech_tree = queries.get_tech_tree()
+        research = country_data.get("research", {})
+        if not isinstance(research, dict):
+            raise RealtimeError("Invalid authoritative research data.")
+        current_queue = country_data.get("research_queue", [])
+        if not isinstance(current_queue, list):
+            raise RealtimeError("Invalid authoritative research queue.")
+        running = {project.get("tech_name"): project for project in current_queue
+                   if isinstance(project, dict) and isinstance(project.get("tech_name"), str)}
+        progress = copy.deepcopy(country_data.get("research_progress", {}))
+        if not isinstance(progress, dict):
+            progress = {}
+
+        # Paused projects retain the authoritative remaining point total.
+        for tech_name, project in running.items():
+            if tech_name not in requested:
+                remaining = project.get("points_remaining", tech_tree.get(tech_name, {}).get("cost", 0))
+                if isinstance(remaining, (int, float)) and remaining >= 0:
+                    progress[tech_name] = remaining
+
+        canonical_projects = []
+        for tech_name in requested:
+            tech = tech_tree.get(tech_name)
+            if not isinstance(tech, dict):
+                raise RealtimeError("Unknown research technology.")
+            if tech_name in running:
+                # Keep the server's project object and progress, never the
+                # similarly shaped value supplied by a client.
+                project = copy.deepcopy(running[tech_name])
+            else:
+                current_level = research.get(tech_name, 0)
+                if not isinstance(current_level, int) or current_level < 0:
+                    raise RealtimeError("Invalid research level.")
+                if current_level >= tech.get("max_lvl", 0):
+                    raise RealtimeError("That research is already complete.")
+                if not queries.check_tech_requirements(research, tech.get("req", {}), current_level + 1):
+                    raise RealtimeError("Research requirements are not met.")
+                cost = tech.get("cost")
+                if not isinstance(cost, (int, float)) or cost <= 0:
+                    raise RealtimeError("Invalid research technology.")
+                remaining = progress.pop(tech_name, cost)
+                if not isinstance(remaining, (int, float)) or remaining < 0:
+                    remaining = cost
+                project = {"tech_name": tech_name, "points_remaining": remaining}
+            progress.pop(tech_name, None)
+            canonical_projects.append(project)
+        return {"type": "research_queue", "projects": canonical_projects,
+                "research_progress": progress}
+
     def process_turn(self, drafts: dict[str, list[dict[str, Any]]]) -> None:
         for country_id, commands in drafts.items():
             for command in commands:
-                province = self._province(command["province_id"])
                 if command["type"] == "unit_order":
+                    province = self._province(command["province_id"])
                     unit = province["units"][command["unit_index"]]
                     if command["order"] is None:
                         unit.pop("order", None)
                     else:
                         unit["order"] = copy.deepcopy(command["order"])
                 elif command["type"] == "province_queue":
+                    province = self._province(command["province_id"])
                     province[command["queue"]] = copy.deepcopy(command["items"])
+                elif command["type"] == "research_queue":
+                    country_data = self.map_ref.nation_data[country_id]
+                    country_data["research_queue"] = copy.deepcopy(command["projects"])
+                    country_data["research_progress"] = copy.deepcopy(command["research_progress"])
+                elif command["type"] == "country_preferences":
+                    country_data = self.map_ref.nation_data[country_id]
+                    country_data["political_drift"] = command["political_drift"]
+                    country_data["automation"] = copy.deepcopy(command["automation"])
+                elif command["type"] == "country_appearance":
+                    country_data = self.map_ref.nation_data[country_id]
+                    country_data.update(copy.deepcopy(command["appearance"]))
+                    self.map_ref.nation_colors[country_id] = tuple(country_data["color"])
+        # The normal turn processor's player-automation hook expects one local
+        # player. A real-time server has none, so run each opted-in human here
+        # under the same helpers before the shared turn simulation begins.
+        from map_logic.ai import automation_logic
+        original_player = self.map_ref.player_country
+        try:
+            for country_id in drafts:
+                automation = self.map_ref.nation_data.get(country_id, {}).get("automation", {})
+                if not isinstance(automation, dict):
+                    continue
+                self.map_ref.player_country = country_id
+                if automation.get("construction"):
+                    automation_logic.automate_player_construction(self.map_ref)
+                if automation.get("movement"):
+                    automation_logic.automate_player_movement(self.map_ref)
+                if automation.get("research"):
+                    automation_logic.automate_player_research(self.map_ref)
+        finally:
+            self.map_ref.player_country = original_player
         from map_logic.turn_processing import turn_processor
         asyncio.run(turn_processor.prepare_turn(self.map_ref))
         asyncio.run(turn_processor.resolve_turn_logic(self.map_ref))
@@ -663,10 +822,10 @@ class MapRealtimeDriver:
 
 
 def collect_map_commands(map_ref, country_id: str) -> list[dict[str, Any]]:
-    """Serialize the supported local order controls into server commands.
+    """Serialize supported local order controls into server commands.
 
-    This deliberately reads only order/queue choices, never mutable combat or
-    resource fields from the client map.
+    This deliberately reads only order/queue/research choices, never mutable
+    combat, resource, or research-progress fields from the client map.
     """
     commands: list[dict[str, Any]] = []
     for province in map_ref.map_data.values():
@@ -680,6 +839,19 @@ def collect_map_commands(map_ref, country_id: str) -> list[dict[str, Any]]:
                     commands.append({"type": "province_queue", "province_id": province["id"],
                                      "queue": queue_name,
                                      "items": copy.deepcopy(province[queue_name])})
+    country_data = map_ref.nation_data.get(country_id, {})
+    research_queue = country_data.get("research_queue", []) if isinstance(country_data, dict) else []
+    tech_names = [project.get("tech_name") for project in research_queue
+                  if isinstance(project, dict) and isinstance(project.get("tech_name"), str)]
+    # Include an empty selection too: pausing every project must be a real
+    # draft change rather than silently preserving the server's old queue.
+    commands.append({"type": "research_queue", "tech_names": tech_names})
+    commands.append({"type": "country_preferences",
+                     "political_drift": country_data.get("political_drift", 0),
+                     "automation": copy.deepcopy(country_data.get("automation", {}))})
+    commands.append({"type": "country_appearance", "appearance": {
+        key: copy.deepcopy(country_data.get(key, "DEFAULT" if key.endswith("_data") else [] if key == "color" else ""))
+        for key in MapRealtimeDriver._APPEARANCE_KEYS}})
     return commands
 
 

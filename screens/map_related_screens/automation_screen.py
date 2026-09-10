@@ -60,7 +60,7 @@ class Automation_Screen(GameState):
             y_pos += ROW_SPACING
 
     def toggle_automation(self, key):
-        if self.is_valid_player:
+        if self.can_edit_realtime():
             val = self.map_screen.nation_data[self.player]["automation"].get(key, False)
             self.map_screen.nation_data[self.player]["automation"][key] = not val
             self.refresh_ui()
@@ -75,11 +75,21 @@ class Automation_Screen(GameState):
         from ui.confirm_dialog import ask_yes_no
 
         def answered(confirmed):
-            if confirmed and self.is_valid_player:
+            if confirmed and self.can_edit_realtime():
                 action(self.map_screen)
             self.refresh_ui()
 
         ask_yes_no("Automation", question, answered)
+
+    def can_edit_realtime(self):
+        if not self.is_valid_player:
+            return False
+        if not getattr(self.map_screen, "realtime_multiplayer", False):
+            return True
+        session = getattr(self.map_screen, "realtime_session", None)
+        player = getattr(session, "players", {}).get(
+            getattr(self.map_screen, "realtime_player_id", None))
+        return bool(session and session.phase == "TURN" and player and not player.submitted and not player.eliminated)
 
     def additional_draw(self, surface):
         # Panel Background
