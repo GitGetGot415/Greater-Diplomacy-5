@@ -8,6 +8,7 @@ blocks; these tests pin the behaviour the table-driven version has to keep.
 """
 
 import unittest
+from unittest import mock
 
 import pygame
 
@@ -109,6 +110,21 @@ class MapPanelScrollTests(unittest.TestCase):
                                          rel=(1, 1), buttons=(0, 0, 0)))
         self.assertIsNone(self.map.hovered_province,
                           f"hover reached the map through a panel (was {before})")
+
+    def test_province_menu_blocks_hidden_combat_bubbles(self):
+        """The full-screen province background must also block bubble input."""
+        pos = (self.surface.get_width() // 2, self.surface.get_height() // 2)
+        pygame.mouse.get_pos = lambda: pos
+        event = pygame.event.Event(pygame.MOUSEBUTTONDOWN,
+                                   pos=pos, button=1)
+
+        with mock.patch.object(
+                event_handler.overlay_renderer,
+                "combat_bubble_at_screen_pos",
+                return_value={"orders_province_id": "hidden"}) as hit_test:
+            event_handler.handle_map_events(self.map, event)
+
+        hit_test.assert_not_called()
 
 
 

@@ -103,6 +103,12 @@ def handle_map_events(map_screen, event):
         if action_rect and action_rect.collidepoint(mx, my):
             on_ui = True
 
+    # The province menu is painted over the entire map after the combat
+    # bubbles.  Treat it as an input layer too, otherwise a bubble hidden by
+    # that background can still win the later click hit-test.
+    if map_screen.selected_province:
+        on_ui = True
+
     # Country-action buttons have their own short scroll pane. It is separate
     # from the information panels because its buttons are normal map elements,
     # not text rendered by the panel itself.
@@ -361,7 +367,8 @@ def handle_map_events(map_screen, event):
     # A province combat bubble opens that tile's Orders view with its battle
     # inspector already visible. Midpoint records are not produced anymore.
     if (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1
-            and not map_screen.viewing_ai_moves):
+            and not map_screen.viewing_ai_moves
+            and not on_ui):
         bubble = overlay_renderer.combat_bubble_at_screen_pos(map_screen, event.pos)
         if bubble is not None:
             province = map_screen.id_to_province.get(bubble.get("orders_province_id"))
