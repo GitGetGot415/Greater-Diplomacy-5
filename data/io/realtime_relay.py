@@ -209,6 +209,7 @@ def relay_cloud_init() -> str:
     """Cloud-init payload that installs and starts one self-contained relay."""
     encoded = base64.b64encode(relay_service_source().encode("utf-8")).decode("ascii")
     return """#cloud-config
+ssh_pwauth: false
 bootcmd:
   - mkdir -p /opt/gd5-relay
 write_files:
@@ -267,6 +268,7 @@ class TemporaryRelay:
     address: str
     region: str
     size: str
+    firewall_id: str | None = None
 
 
 class DigitalOceanRelayTask:
@@ -279,6 +281,7 @@ class DigitalOceanRelayTask:
         self._done = threading.Event()
         self._cancelled = threading.Event()
         self._droplet_id: int | None = None
+        self._firewall_id: str | None = None
 
     def start(self) -> None:
         if IS_WEB:
@@ -292,8 +295,7 @@ class DigitalOceanRelayTask:
     def cancel_and_destroy(self) -> None:
         self._cancelled.set()
         if self._droplet_id:
-            try: _api_request(self.token, "DELETE", f"/droplets/{self._droplet_id}")
-            except RealtimeError: pass
+            _destroy_relay_resources(self.token, self._droplet_id, self._firewall_id)
 
     def _run(self) -> None:
         try:
@@ -301,12 +303,17 @@ class DigitalOceanRelayTask:
                 raise RealtimeError("Enter a valid DigitalOcean personal access token.")
             payload = {"name": "gd5-relay-" + self.session_id[:10], "region": self.region,
                        "size": self.size, "image": "ubuntu-24-04-x64", "backups": False,
-                       "ipv6": False, "monitoring": False, "tags": ["gd5-temporary-relay"],
+                       "ipv6": False, "monitoring": False,
                        "user_data": relay_cloud_init()}
             created = _api_request(self.token, "POST", "/droplets", payload).get("droplet", {})
             if not isinstance(created, dict) or not isinstance(created.get("id"), int):
                 raise RealtimeError("DigitalOcean did not return the temporary relay ID.")
             self._droplet_id = created["id"]
+            firewall = _api_request(self.token, "POST", "/firewalls", _relay_firewall_payload(self._droplet_id))
+            firewall_data = firewall.get("firewall", {})
+            if not isinstance(firewall_data, dict) or not isinstance(firewall_data.get("id"), str):
+                raise RealtimeError("DigitalOcean did not return the temporary relay firewall ID.")
+            self._firewall_id = firewall_data["id"]
             deadline = time.monotonic() + 180.0
             while time.monotonic() < deadline:
                 if self._cancelled.is_set():
@@ -321,7 +328,8 @@ class DigitalOceanRelayTask:
                     try:
                         probe = socket.create_connection((address, DEFAULT_RELAY_PORT), timeout=2)
                         probe.close()
-                        self.result = TemporaryRelay(self._droplet_id, address, self.region, self.size)
+                        self.result = TemporaryRelay(self._droplet_id, address, self.region, self.size,
+                                                     self._firewall_id)
                         return
                     except OSError:
                         pass
@@ -330,14 +338,35 @@ class DigitalOceanRelayTask:
         except RealtimeError as exc:
             self.error = str(exc)
             if self._droplet_id:
-                try: _api_request(self.token, "DELETE", f"/droplets/{self._droplet_id}")
-                except RealtimeError: pass
+                _destroy_relay_resources(self.token, self._droplet_id, self._firewall_id)
         finally:
             self._done.set()
 
 
-def destroy_temporary_relay(token: str, droplet_id: int) -> None:
+def _relay_firewall_payload(droplet_id: int) -> dict[str, Any]:
+    """Public players need only the relay; shell administration stays closed."""
+    anywhere = {"addresses": ["0.0.0.0/0"]}
+    return {"name": f"gd5-relay-{droplet_id}", "droplet_ids": [droplet_id],
+            "inbound_rules": [{"protocol": "tcp", "ports": str(DEFAULT_RELAY_PORT), "sources": anywhere}],
+            "outbound_rules": [
+                {"protocol": "tcp", "ports": "0", "destinations": anywhere},
+                {"protocol": "udp", "ports": "0", "destinations": anywhere},
+                {"protocol": "icmp", "destinations": anywhere},
+            ]}
+
+
+def _destroy_relay_resources(token: str, droplet_id: int, firewall_id: str | None = None) -> None:
+    # Delete the firewall too: a deleted Droplet stops billing, but retaining
+    # empty security resources makes a host's account needlessly confusing.
+    if firewall_id:
+        try: _api_request(token, "DELETE", f"/firewalls/{firewall_id}")
+        except RealtimeError: pass
+    try: _api_request(token, "DELETE", f"/droplets/{droplet_id}")
+    except RealtimeError: pass
+
+
+def destroy_temporary_relay(token: str, droplet_id: int, firewall_id: str | None = None) -> None:
     """Delete the VPS, ending its Droplet allocation charge."""
     if not isinstance(droplet_id, int) or droplet_id <= 0:
         raise RealtimeError("Invalid temporary relay identifier.")
-    _api_request(token, "DELETE", f"/droplets/{droplet_id}")
+    _destroy_relay_resources(token, droplet_id, firewall_id)

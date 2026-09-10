@@ -15,7 +15,7 @@ from data.io.realtime_multiplayer import (
     encode_invite, encode_relay_invite, read_message, sanitize_display_name, MapRealtimeDriver,
     collect_map_commands, default_advertised_address,
 )
-from data.io.realtime_relay import RelayHostTransport, relay_cloud_init, validate_relay_invite
+from data.io.realtime_relay import RelayHostTransport, relay_cloud_init, validate_relay_invite, _relay_firewall_payload
 from data.io.realtime_relay_service import Relay
 from data.io.realtime_networking import (
     PortMappingResult, automatic_tcp_port_mapping, host_network_diagnostics,
@@ -115,7 +115,12 @@ class RelayTransportTests(unittest.TestCase):
         self.assertEqual(validate_relay_invite(invite)["relay_host"], "203.0.113.7")
         cloud_init = relay_cloud_init()
         self.assertIn("gd5-relay.service", cloud_init)
+        self.assertIn("ssh_pwauth: false", cloud_init)
         self.assertNotIn("DigitalOcean", cloud_init)
+        firewall = _relay_firewall_payload(42)
+        self.assertEqual(firewall["droplet_ids"], [42])
+        self.assertEqual(firewall["inbound_rules"],
+                         [{"protocol": "tcp", "ports": "443", "sources": {"addresses": ["0.0.0.0/0"]}}])
         with self.assertRaises(RealtimeError):
             validate_relay_invite({"v": 1, "transport": "relay"})
 

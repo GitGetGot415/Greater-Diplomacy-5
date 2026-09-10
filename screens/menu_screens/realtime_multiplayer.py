@@ -33,10 +33,10 @@ from ui import confirm_dialog
 from ui_elements import Button, make_back_button
 
 
-def _delete_relay_quietly(token, droplet_id):
+def _delete_relay_quietly(token, droplet_id, firewall_id=None):
     """Best-effort background cleanup; a provider dashboard remains fallback."""
     try:
-        destroy_temporary_relay(token, droplet_id)
+        destroy_temporary_relay(token, droplet_id, firewall_id)
     except RealtimeError:
         # The UI has already explained that a failed deletion can be retried
         # from the provider dashboard; never freeze map shutdown on the API.
@@ -275,7 +275,8 @@ class Realtime_Relay_Setup(GameState):
             if value is not None:
                 self.host_setup.relay_token = value.strip()
                 self.refresh_ui()
-        confirm_dialog.ask_string("DigitalOcean API Token", "Paste a read/write personal access token:",
+        confirm_dialog.ask_string("DigitalOcean API Token",
+                                  "Paste a custom token with Droplet create/read/delete and Firewall create/delete:",
                                   saved, initial=self.host_setup.relay_token)
 
     def edit_region(self):
@@ -620,7 +621,7 @@ class Realtime_Lobby(GameState):
             return
         relay, token = self.temporary_relay, self.relay_token
         self.temporary_relay = None
-        threading.Thread(target=lambda: _delete_relay_quietly(token, relay.droplet_id), daemon=True).start()
+        threading.Thread(target=lambda: _delete_relay_quietly(token, relay.droplet_id, relay.firewall_id), daemon=True).start()
 
     def leave_lobby(self):
         self.end_lobby()

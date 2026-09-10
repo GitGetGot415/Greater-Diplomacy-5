@@ -1,8 +1,19 @@
-Region:         choose the closest supported region to the host and most players
-Image:          Ubuntu 24.04 x64
-Plan:           Basic / Regular shared CPU
-Size:           s-1vcpu-512mb-10gb
-IPv4:           enabled
-IPv6:           disabled
-Backups:        disabled (this relay stores no match saves)
-Monitoring:     disabled (unless you want to diagnose failures)
+Droplet Defaults:
+Region:     choose the closest supported region to the host and most players
+Image:      Ubuntu 24.04 x64
+Plan:       Basic / Regular shared CPU
+Size:       s-1vcpu-512mb-10gb
+IPv4:       enabled
+IPv6:       disabled
+Backups:    disabled (this relay stores no match saves)
+Monitoring: disabled (unless you want to diagnose failures)
+
+Personal Access Tokens Defaults:
+droplet:    create
+droplet:    read
+droplet:    delete
+firewall:   create
+firewall:   read
+firewall:   delete
+
+TLDR: create/read/delete for droplets and firewalls

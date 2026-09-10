@@ -14,6 +14,9 @@ hanskolmer suggestions:
 - unable to edit research in map editor?
 - rebellion mechanics
 
+curry suggestions
+- you should be able to do separate peace deals
+
 - make a way to organize the hanskolmer art in a less confusing way
 - make sure this ui also shows the unit art names
 

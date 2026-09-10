@@ -32,11 +32,11 @@ from map_logic.setup import player_setup
 from screens.editor_screens import scripted_events_editor
 
 
-def _delete_relay_safely(token, droplet_id):
+def _delete_relay_safely(token, droplet_id, firewall_id=None):
     """Best-effort cleanup must never delay leaving a finished match."""
     try:
         from data.io.realtime_relay import destroy_temporary_relay
-        destroy_temporary_relay(token, droplet_id)
+        destroy_temporary_relay(token, droplet_id, firewall_id)
     except Exception:
         # The host can still delete the tagged Droplet in DigitalOcean if the
         # provider API is temporarily unreachable during game shutdown.
@@ -1662,7 +1662,7 @@ class Map(GameState):
         try:
             from data.io.realtime_relay import destroy_temporary_relay
             import threading
-            threading.Thread(target=lambda: _delete_relay_safely(token, relay.droplet_id), daemon=True).start()
+            threading.Thread(target=lambda: _delete_relay_safely(token, relay.droplet_id, relay.firewall_id), daemon=True).start()
         except (ImportError, AttributeError):
             pass
 
