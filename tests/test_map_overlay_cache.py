@@ -237,6 +237,56 @@ class CombatDisplayTests(unittest.TestCase):
                          {id(self.mine), id(self.enemy)})
         self.assertEqual(full["hidden_unit_ids"], set())
 
+    def test_informed_uninvolved_battle_uses_muted_expected_owner_color(self):
+        attacker = dict(self.mine, owner="A", health=100, max_health=100,
+                        attack=100, defense=0)
+        defender = dict(self.enemy, owner="B", health=100, max_health=100,
+                        attack=0, defense=0)
+        province = dict(self.province, owner="B", units=[attacker, defender])
+        nation_data = {
+            "A": {"color": (20, 100, 220), "at_war_with": ["B"]},
+            "B": {"color": (220, 40, 40), "at_war_with": ["A"]},
+            "C": {"color": (40, 220, 80), "at_war_with": []},
+        }
+
+        color = overlay_renderer.combat_outlook_color(
+            [[attacker, defender]], nation_data, set(), "C",
+            province=province, information_available=True)
+
+        self.assertEqual(color, (92, 128, 182))
+        self.assertNotEqual(color, overlay_renderer.COMBAT_BUBBLE_UNKNOWN_COLOR)
+
+    def test_uninformed_uninvolved_battle_stays_grey(self):
+        attacker = dict(self.mine, owner="A", health=100, max_health=100,
+                        attack=100, defense=0)
+        defender = dict(self.enemy, owner="B", health=100, max_health=100,
+                        attack=0, defense=0)
+        province = dict(self.province, owner="B", units=[attacker, defender])
+        nation_data = {
+            "A": {"color": (20, 100, 220), "at_war_with": ["B"]},
+            "B": {"color": (220, 40, 40), "at_war_with": ["A"]},
+        }
+
+        color = overlay_renderer.combat_outlook_color(
+            [[attacker, defender]], nation_data, set(), "Spectator",
+            province=province, information_available=False)
+
+        self.assertEqual(color, overlay_renderer.COMBAT_BUBBLE_UNKNOWN_COLOR)
+
+    def test_uninformed_battle_draws_unknown_turn_count(self):
+        record = {"estimated_turns": 3, "information_available": False}
+        bubble = pygame.Surface((20, 20), pygame.SRCALPHA)
+        surface = pygame.Surface((40, 40), pygame.SRCALPHA)
+        tiny_font = mock.Mock()
+        tiny_font.render.return_value = pygame.Surface((10, 10), pygame.SRCALPHA)
+
+        with mock.patch.object(overlay_renderer.fonts, "get",
+                               return_value=tiny_font):
+            overlay_renderer._draw_combat_bubble_turns(
+                surface, bubble.get_rect(center=(20, 20)), bubble, record, 1.0)
+
+        self.assertEqual(tiny_font.render.call_args.args[0], "?")
+
     def test_full_display_makes_active_bubble_translucent(self):
         record = {"category": queries.COMBAT_LOCATION_DEFENSE,
                   "color": (255, 255, 0), "potential": False}

@@ -30,6 +30,11 @@ COMBAT_BUBBLE_FULL_ALPHA = 160
 # Predicted bubbles are lighter still, so they are easy to distinguish from an
 # active battle while retaining enough shape and color to be useful.
 COMBAT_BUBBLE_FULL_PREDICTION_ALPHA = 96
+# Battles outside the player's own front still get a useful hint when the
+# province is fully visible.  Blend the expected capturer's country color with
+# grey so this remains distinct from the stronger green/red local outlook.
+COMBAT_BUBBLE_UNKNOWN_COLOR = (150, 150, 150)
+COMBAT_BUBBLE_OUTCOME_COLOR_SATURATION = 0.45
 
 
 def combat_strengths(sides, nation_data, friendly_nations, player_nation=None):
@@ -82,12 +87,112 @@ def combat_strengths(sides, nation_data, friendly_nations, player_nation=None):
     return friendly_atk, enemy_atk, involved
 
 
-def combat_outlook_color(sides, nation_data, friendly_nations, player_nation=None):
-    """Return the shared red/yellow/green/grey combat-outlook color."""
+def _desaturated_country_color(color):
+    """Return a muted country color suitable for a distant battle bubble."""
+    return tuple(round(COMBAT_BUBBLE_UNKNOWN_COLOR[index]
+                     + (int(channel) - COMBAT_BUBBLE_UNKNOWN_COLOR[index])
+                     * COMBAT_BUBBLE_OUTCOME_COLOR_SATURATION)
+                 for index, channel in enumerate(color))
+
+
+def _country_color(nation_data, nation):
+    color = nation_data.get(nation, {}).get("color")
+    if not isinstance(color, (list, tuple)) or len(color) < 3:
+        return None
+    return tuple(max(0, min(255, int(channel))) for channel in color[:3])
+
+
+def _capture_owner_from_survivors(units, province, nation_data):
+    """Approximate the owner selected by post-combat capture rules."""
+    current_owner = province.get("owner") if province else None
+    turn_start_owner = (province.get("_turn_start_owner", current_owner)
+                        if province else None)
+    unit_owners = [queries.get_unit_combat_owner(unit) for unit in units]
+
+    # A defender that remains on the tile keeps the province, matching the
+    # resolver's first and most important capture rule.
+    if turn_start_owner in unit_owners:
+        return turn_start_owner
+
+    claim_owners = {owner for owner in (current_owner, turn_start_owner)
+                    if owner}
+    if claim_owners:
+        valid_units = [
+            unit for unit in units
+            if any(queries.get_unit_combat_owner(unit) in c.OWNERLESS_OWNERS
+                   or queries.are_at_war(queries.get_unit_combat_owner(unit),
+                                         owner, nation_data)
+                   for owner in claim_owners)
+        ]
+    else:
+        # Direct callers can provide the known forces without a province
+        # record.  In that case the surviving force is the best available
+        # approximation of who would take the tile.
+        valid_units = list(units)
+    if not valid_units:
+        return current_owner
+
+    def totals(stat):
+        result = {}
+        for unit in valid_units:
+            owner = queries.get_unit_combat_owner(unit)
+            result[owner] = result.get(owner, 0) + unit.get(stat, 0)
+        return result
+
+    hp_totals = totals("health")
+    top = _top_total_owners(hp_totals)
+    if len(top) > 1:
+        top = _top_total_owners({owner: totals("attack").get(owner, 0)
+                                 for owner in top})
+    if len(top) > 1:
+        top = _top_total_owners({owner: sum(
+            unit.get("speed", 0) for unit in valid_units
+            if queries.get_unit_combat_owner(unit) == owner)
+            for owner in top})
+
+    # The live resolver uses a random final tie-breaker.  Prefer the existing
+    # owner for a stable preview, then use the first stable force order.
+    if current_owner in top:
+        return current_owner
+    return top[0] if top else current_owner
+
+
+def _top_total_owners(totals):
+    if not totals:
+        return []
+    highest = max(totals.values())
+    return [owner for owner, total in totals.items() if total == highest]
+
+
+def _estimated_capture_owner(units, province, nation_data):
+    """Return the country expected to hold the province after the battle."""
+    simulation = _simulate_combat(
+        [units], nation_data, province=province)
+    survivors = simulation["sides"][0]
+    return _capture_owner_from_survivors(survivors, province, nation_data)
+
+
+def combat_outlook_color(sides, nation_data, friendly_nations,
+                         player_nation=None, province=None,
+                         information_available=True, capture_owner=None):
+    """Return the red/yellow/green local outlook or an informed grey tint.
+
+    A bubble is grey only when the viewer lacks enough information to estimate
+    its outcome.  A fully visible battle outside the viewer's own front uses a
+    muted version of the country color expected to keep or capture the tile.
+    """
     friendly_atk, enemy_atk, involved = combat_strengths(
         sides, nation_data, friendly_nations, player_nation)
     if not involved:
-        return (150, 150, 150)
+        if not information_available:
+            return COMBAT_BUBBLE_UNKNOWN_COLOR
+        owner = (capture_owner if capture_owner is not None else
+                 _estimated_capture_owner(
+                     [unit for side in sides for unit in side], province,
+                     nation_data))
+        color = _country_color(nation_data, owner)
+        return (_desaturated_country_color(color)
+                if color is not None else COMBAT_BUBBLE_UNKNOWN_COLOR)
     if friendly_atk > enemy_atk:
         return (0, 255, 0)
     if enemy_atk > friendly_atk:
@@ -108,6 +213,13 @@ def estimated_combat_outcome(sides, nation_data, province=None, max_turns=100):
     lane, or the estimate would exceed the safety limit.  ``turns`` is the
     number of future volleys until that result is reached.
     """
+    return {key: value for key, value in _simulate_combat(
+        sides, nation_data, province=province, max_turns=max_turns).items()
+        if key != "sides"}
+
+
+def _simulate_combat(sides, nation_data, province=None, max_turns=100):
+    """Run the non-mutating combat estimate and retain its survivors."""
     simulated_sides = [
         [dict(unit) for unit in side if unit.get("health", 0) > 0]
         for side in sides
@@ -126,11 +238,13 @@ def estimated_combat_outcome(sides, nation_data, province=None, max_turns=100):
                                  if side]
             winner_side = (live_side_indexes[0]
                            if len(live_side_indexes) == 1 else None)
-            return {"winner_side": winner_side, "turns": turns}
+            return {"winner_side": winner_side, "turns": turns,
+                    "sides": simulated_sides}
 
         exchanges = list(combat_rules.exchange(battle, nation_data))
         if not exchanges:
-            return {"winner_side": None, "turns": None}
+            return {"winner_side": None, "turns": None,
+                    "sides": simulated_sides}
 
         health_before = sum(
             max(0, float(unit.get("health", 0)))
@@ -150,9 +264,10 @@ def estimated_combat_outcome(sides, nation_data, province=None, max_turns=100):
             for side in simulated_sides for unit in side
         )
         if health_after >= health_before:
-            return {"winner_side": None, "turns": None}
+            return {"winner_side": None, "turns": None,
+                    "sides": simulated_sides}
 
-    return {"winner_side": None, "turns": None}
+    return {"winner_side": None, "turns": None, "sides": simulated_sides}
 
 
 def estimated_combat_turns(sides, nation_data, province=None, max_turns=100):
@@ -183,6 +298,12 @@ def _combat_is_visible(map_screen, province_ids, *, own_unit=False):
                            for province_id in province_ids)
 
 
+def _combat_information_available(map_screen, province_id):
+    """Whether the viewer has full unit information for this battle tile."""
+    visible = getattr(map_screen, "visible_provinces", None)
+    return visible is None or province_id in visible
+
+
 def combat_bubble_records(map_screen):
     """Describe every visible combat bubble and its Orders-screen destination.
 
@@ -206,6 +327,12 @@ def combat_bubble_records(map_screen):
         battle_unit_ids = {id(unit) for side in sides for unit in side}
         actual_battle = queries.is_province_in_active_combat(
             province, map_screen.nation_data)
+        combat_estimate = _simulate_combat(
+            sides, map_screen.nation_data, province=province)
+        information_available = _combat_information_available(
+            map_screen, province["id"])
+        capture_owner = _capture_owner_from_survivors(
+            combat_estimate["sides"][0], province, map_screen.nation_data)
         records.append({
             "kind": "province",
             "province_id": province["id"],
@@ -213,10 +340,13 @@ def combat_bubble_records(map_screen):
             "category": queries.get_combat_location_category(
                 province, player, map_screen.nation_data),
             "color": combat_outlook_color(
-                sides, map_screen.nation_data, friendly, player),
+                sides, map_screen.nation_data, friendly, player,
+                province=province,
+                information_available=information_available,
+                capture_owner=capture_owner),
             "potential": not actual_battle,
-            "estimated_turns": estimated_combat_turns(
-                sides, map_screen.nation_data, province=province),
+            "estimated_turns": combat_estimate["turns"],
+            "information_available": information_available,
             "unit_ids": battle_unit_ids,
             # Incoming attackers belong to the predicted fight, but are still
             # physically on their origin tiles. In compact mode, only units
@@ -250,7 +380,8 @@ def _combat_bubble_alpha(record):
 def _draw_combat_bubble_turns(surface, rect, bubble, record, zoom):
     """Draw the estimated remaining turns at the bubble's visual center."""
     turns = record.get("estimated_turns")
-    label = "?" if turns is None else str(max(0, int(turns)))
+    label = ("?" if not record.get("information_available", True)
+             else "?" if turns is None else str(max(0, int(turns))))
     text = fonts.get("tiny").render(label, True, (255, 255, 255))
 
     # Render the label at the camera scale first. The subsequent fit is only a
