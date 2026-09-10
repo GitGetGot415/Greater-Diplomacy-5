@@ -250,7 +250,7 @@ def open_spectator_messages(map_screen):
         TableColumn("type", "Type", 100),
         TableColumn("message", "Message", 700, align="left", fmt=lambda v: truncate(v, 90)),
     ]
-    hint = "Orange = LLM generated; green = forwarded."
+    hint = "Orange = LLM generated, Green = forwarded."
 
     # The column has to truncate -- there is no width at which some message
     # does not overflow -- so a row opens the whole thing instead.
