@@ -100,6 +100,49 @@ def get_unit_combat_owner(unit):
     """
     return unit.get("volunteer_host") or unit.get("owner", "")
 
+
+def rank_combat_nations_by_health(units):
+    """Rank combat nations by the same cascade used for land capture.
+
+    Health is the primary result, followed by combined attack and then the
+    highest speed. Combat bubbles and post-combat capture both use this so
+    their predicted winner cannot drift apart. The returned list can still
+    contain ties after all three rules, which the live resolver handles with
+    its bounce/random setting.
+    """
+    health_totals = {}
+    for unit in units:
+        owner = get_unit_combat_owner(unit)
+        health_totals[owner] = health_totals.get(owner, 0) + unit.get("health", 0)
+
+    top_nations = _top_total_owners(health_totals)
+    if len(top_nations) > 1:
+        attack_totals = {
+            owner: sum(unit.get("attack", 0) for unit in units
+                       if get_unit_combat_owner(unit) == owner)
+            for owner in top_nations
+        }
+        top_nations = _top_total_owners(attack_totals)
+
+    if len(top_nations) > 1:
+        speed_totals = {
+            owner: max(
+                (unit.get("speed", 0) for unit in units
+                 if get_unit_combat_owner(unit) == owner),
+                default=0)
+            for owner in top_nations
+        }
+        top_nations = _top_total_owners(speed_totals)
+
+    return top_nations
+
+
+def _top_total_owners(totals):
+    if not totals:
+        return []
+    highest = max(totals.values())
+    return [owner for owner, total in totals.items() if total == highest]
+
 def _apply_vision_radius(prov, id_to_province, visible_set, partial_set):
     """Standardizes FOW radius expansion."""
     visible_set.add(prov["id"])

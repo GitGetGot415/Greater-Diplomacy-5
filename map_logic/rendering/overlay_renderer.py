@@ -103,74 +103,24 @@ def _country_color(nation_data, nation):
     return tuple(max(0, min(255, int(channel))) for channel in color[:3])
 
 
-def _capture_owner_from_survivors(units, province, nation_data):
-    """Approximate the owner selected by post-combat capture rules."""
-    current_owner = province.get("owner") if province else None
-    turn_start_owner = (province.get("_turn_start_owner", current_owner)
-                        if province else None)
-    unit_owners = [queries.get_unit_combat_owner(unit) for unit in units]
+def _combat_winner_from_survivors(units):
+    """Choose the country with the most predicted surviving health.
 
-    # A defender that remains on the tile keeps the province, matching the
-    # resolver's first and most important capture rule.
-    if turn_start_owner in unit_owners:
-        return turn_start_owner
-
-    claim_owners = {owner for owner in (current_owner, turn_start_owner)
-                    if owner}
-    if claim_owners:
-        valid_units = [
-            unit for unit in units
-            if any(queries.get_unit_combat_owner(unit) in c.OWNERLESS_OWNERS
-                   or queries.are_at_war(queries.get_unit_combat_owner(unit),
-                                         owner, nation_data)
-                   for owner in claim_owners)
-        ]
-    else:
-        # Direct callers can provide the known forces without a province
-        # record.  In that case the surviving force is the best available
-        # approximation of who would take the tile.
-        valid_units = list(units)
-    if not valid_units:
-        return current_owner
-
-    def totals(stat):
-        result = {}
-        for unit in valid_units:
-            owner = queries.get_unit_combat_owner(unit)
-            result[owner] = result.get(owner, 0) + unit.get(stat, 0)
-        return result
-
-    hp_totals = totals("health")
-    top = _top_total_owners(hp_totals)
-    if len(top) > 1:
-        top = _top_total_owners({owner: totals("attack").get(owner, 0)
-                                 for owner in top})
-    if len(top) > 1:
-        top = _top_total_owners({owner: sum(
-            unit.get("speed", 0) for unit in valid_units
-            if queries.get_unit_combat_owner(unit) == owner)
-            for owner in top})
-
-    # The live resolver uses a random final tie-breaker.  Prefer the existing
-    # owner for a stable preview, then use the first stable force order.
-    if current_owner in top:
-        return current_owner
-    return top[0] if top else current_owner
+    This deliberately does not consult province ownership.  Sea tiles do not
+    have an owner, and a land battle's likely winner is not necessarily the
+    country that currently owns the province.  Volunteers are grouped under
+    their temporary combat host, matching the side used by the resolver.
+    """
+    ranked = queries.rank_combat_nations_by_health(units)
+    return ranked[0] if ranked else None
 
 
-def _top_total_owners(totals):
-    if not totals:
-        return []
-    highest = max(totals.values())
-    return [owner for owner, total in totals.items() if total == highest]
-
-
-def _estimated_capture_owner(units, province, nation_data):
-    """Return the country expected to hold the province after the battle."""
+def _estimated_combat_winner(units, province, nation_data):
+    """Return the country expected to win the engagement."""
     simulation = _simulate_combat(
         [units], nation_data, province=province)
     survivors = simulation["sides"][0]
-    return _capture_owner_from_survivors(survivors, province, nation_data)
+    return _combat_winner_from_survivors(survivors)
 
 
 def combat_outlook_color(sides, nation_data, friendly_nations,
@@ -181,12 +131,12 @@ def combat_outlook_color(sides, nation_data, friendly_nations,
     ``friendly_nations`` and ``player_nation`` remain accepted for callers that
     used the old outlook API, but the bubble no longer changes color based on
     whether the local player is involved.  Every informed battle uses the same
-    predicted-capturer rule.
+    predicted surviving-health rule.
     """
     if not information_available:
         return COMBAT_BUBBLE_UNKNOWN_COLOR
     owner = (capture_owner if capture_owner is not None else
-             _estimated_capture_owner(
+             _estimated_combat_winner(
                  [unit for side in sides for unit in side], province,
                  nation_data))
     color = _country_color(nation_data, owner)
@@ -325,8 +275,8 @@ def combat_bubble_records(map_screen):
             sides, map_screen.nation_data, province=province)
         information_available = _combat_information_available(
             map_screen, province["id"])
-        capture_owner = _capture_owner_from_survivors(
-            combat_estimate["sides"][0], province, map_screen.nation_data)
+        winner_nation = _combat_winner_from_survivors(
+            combat_estimate["sides"][0])
         category = (
             queries.get_combat_location_category(
                 province, player, map_screen.nation_data)
@@ -340,7 +290,7 @@ def combat_bubble_records(map_screen):
                 sides, map_screen.nation_data, friendly, player,
                 province=province,
                 information_available=information_available,
-                capture_owner=capture_owner),
+                capture_owner=winner_nation),
             "potential": not actual_battle,
             "estimated_turns": combat_estimate["turns"],
             "information_available": information_available,

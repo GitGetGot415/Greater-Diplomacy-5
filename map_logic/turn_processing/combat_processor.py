@@ -503,21 +503,8 @@ def check_for_post_combat_captures(map_screen):
         if not valid_capturer_units:
             continue # No one here is legally allowed to capture the tile
 
-        # Tally HP for all VALID units on the tile to see who claims it
-        hp_totals = {}
-        for u in valid_capturer_units:
-            o = queries.get_unit_combat_owner(u)
-            hp_totals[o] = hp_totals.get(o, 0) + u.get("health", 0)
-
-        # Find the nation(s) with the highest combined HP
-        max_hp = -1
-        top_nations = []
-        for o, hp in hp_totals.items():
-            if hp > max_hp:
-                max_hp = hp
-                top_nations = [o]
-            elif hp == max_hp:
-                top_nations.append(o)
+        # Use the same health/attack/speed ranking that combat bubbles use.
+        top_nations = queries.rank_combat_nations_by_health(valid_capturer_units)
 
         capturer = None
 
@@ -526,43 +513,25 @@ def check_for_post_combat_captures(map_screen):
             capturer = top_nations[0]
         # If there's a tie, run through the tiebreaker cascade
         elif len(top_nations) > 1:
-            # Tiebreaker 1: Highest combined attack
-            atk_totals = {o: sum(u.get("attack", 0) for u in units
-                                 if queries.get_unit_combat_owner(u) == o) for o in top_nations}
-            max_atk = max(atk_totals.values())
-            tied_by_atk = [o for o, atk in atk_totals.items() if atk == max_atk]
+            # Tiebreaker 3: Let fate decide, or bounce.
+            if queries.get_scenario_flag("bounce_tiebreaker", c.DEFAULT_BOUNCE_TIEBREAKER, map_screen.scenario_settings):
+                capturer = None
 
-            if len(tied_by_atk) == 1:
-                capturer = tied_by_atk[0]
+                # Bounce all valid capturer units back to where they came from
+                for u in valid_capturer_units:
+                    if "_previous_province_id" in u:
+                        prev_prov_id = u.pop("_previous_province_id")
+                        prev_prov = map_screen.id_to_province.get(prev_prov_id)
+                        if prev_prov:
+                            if u in units:
+                                units.remove(u)
+                            u["_current_province_id"] = prev_prov_id
+                            if u not in prev_prov.get("units", []):
+                                prev_prov.setdefault("units", []).append(u)
+                            if "order" in u and "path" in u["order"]:
+                                u["order"]["path"] = []
             else:
-                # Tiebreaker 2: Highest speed stat
-                spd_max = {o: max((u.get("speed", 0) for u in units
-                                   if queries.get_unit_combat_owner(u) == o), default=0) for o in tied_by_atk}
-                max_spd = max(spd_max.values())
-                tied_by_spd = [o for o, spd in spd_max.items() if spd == max_spd]
-
-                if len(tied_by_spd) == 1:
-                    capturer = tied_by_spd[0]
-                else:
-                    # Tiebreaker 3: Let fate decide, or bounce
-                    if queries.get_scenario_flag("bounce_tiebreaker", c.DEFAULT_BOUNCE_TIEBREAKER, map_screen.scenario_settings):
-                        capturer = None
-
-                        # Bounce all valid capturer units back to where they came from
-                        for u in valid_capturer_units:
-                            if "_previous_province_id" in u:
-                                prev_prov_id = u.pop("_previous_province_id")
-                                prev_prov = map_screen.id_to_province.get(prev_prov_id)
-                                if prev_prov:
-                                    if u in units:
-                                        units.remove(u)
-                                    u["_current_province_id"] = prev_prov_id
-                                    if u not in prev_prov.get("units", []):
-                                        prev_prov.setdefault("units", []).append(u)
-                                    if "order" in u and "path" in u["order"]:
-                                        u["order"]["path"] = []
-                    else:
-                        capturer = random.choice(tied_by_spd)
+                capturer = random.choice(top_nations)
 
         # Finalize Capture Logic
         if capturer:

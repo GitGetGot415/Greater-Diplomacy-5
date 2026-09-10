@@ -253,7 +253,8 @@ class CombatDisplayTests(unittest.TestCase):
             [[attacker, defender]], nation_data, set(), "C",
             province=province, information_available=True)
 
-        self.assertEqual(color, (92, 128, 182))
+        self.assertEqual(
+            color, overlay_renderer._desaturated_country_color((20, 100, 220)))
         self.assertNotEqual(color, overlay_renderer.COMBAT_BUBBLE_UNKNOWN_COLOR)
 
     def test_uninformed_uninvolved_battle_stays_grey(self):
@@ -272,6 +273,24 @@ class CombatDisplayTests(unittest.TestCase):
             province=province, information_available=False)
 
         self.assertEqual(color, overlay_renderer.COMBAT_BUBBLE_UNKNOWN_COLOR)
+
+    def test_informed_ownerless_battle_uses_the_health_leader_color(self):
+        navy_a = dict(self.mine, owner="A", health=120, max_health=120,
+                      attack=100, defense=100)
+        navy_b = dict(self.enemy, owner="B", health=40, max_health=40,
+                      attack=5, defense=5)
+        sea = {"id": "sea", "units": [navy_a, navy_b]}
+        nation_data = {
+            "A": {"color": (20, 100, 220), "at_war_with": ["B"]},
+            "B": {"color": (220, 40, 40), "at_war_with": ["A"]},
+        }
+
+        color = overlay_renderer.combat_outlook_color(
+            [[navy_a, navy_b]], nation_data, set(), "Spectator",
+            province=sea, information_available=True)
+
+        self.assertEqual(
+            color, overlay_renderer._desaturated_country_color((20, 100, 220)))
 
     def test_uninformed_battle_draws_unknown_turn_count(self):
         record = {"estimated_turns": 3, "information_available": False}
