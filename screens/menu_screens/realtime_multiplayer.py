@@ -736,6 +736,10 @@ class Realtime_Join(GameState):
                     self.go_to("REALTIME_REMOTE_LOBBY")
                 elif event.get("type") == "error":
                     confirm_dialog.show_error("Join Rejected", event.get("payload", {}).get("message", "Unknown error"))
+                elif event.get("type") == "disconnected":
+                    self.client = None
+                    confirm_dialog.show_error("Connection Lost", event.get("payload", {}).get(
+                        "message", "The host closed the connection."))
         super().update()
 
 
@@ -865,6 +869,11 @@ class Realtime_Remote_Lobby(GameState):
                         self.go_to("MAP")
                 elif event.get("type") == "error":
                     confirm_dialog.show_error("Server Rejected Request", payload.get("message", "Unknown error"))
+                elif event.get("type") == "disconnected":
+                    self.client = None
+                    confirm_dialog.show_error("Connection Lost", payload.get(
+                        "message", "The host closed the connection."))
+                    self.go_to("REAL_TIME_MULTIPLAYER")
         super().update()
 
     def leave(self):

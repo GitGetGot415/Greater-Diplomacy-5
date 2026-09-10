@@ -909,6 +909,13 @@ def _write_crash_log(crash_log_path=None):
         f.write("\n".join(header_lines) + "\n\n")
         f.write(tb_text)
 
+    # Tk is not part of the running game UI.  On current macOS releases,
+    # creating its first NSApplication after SDL has started can itself abort
+    # the process, replacing the useful Python error with a huge OS report.
+    # The file above is the reliable report on macOS.
+    if sys.platform == "darwin":
+        return
+
     # Best-effort: an environment without a display (or without tkinter)
     # just misses the popup, not the crash log itself.
     try:

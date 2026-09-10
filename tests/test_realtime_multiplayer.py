@@ -130,6 +130,22 @@ class RelayTransportTests(unittest.TestCase):
         task = DigitalOceanRelayTask("x" * 24, "a" * 32)
         self.assertIn("Ready", task.status)
 
+    def test_client_send_reports_a_broken_pipe_without_raising_to_the_ui(self):
+        class BrokenSocket:
+            def __init__(self): self.closed = False
+            def sendall(self, _data): raise BrokenPipeError("connection closed")
+            def close(self): self.closed = True
+
+        client = RealtimeClient({"session": "test"})
+        connection = BrokenSocket()
+        client.socket = connection
+
+        self.assertFalse(client.send("select_country", {"country_id": "A"}))
+        self.assertTrue(connection.closed)
+        self.assertIsNone(client.socket)
+        self.assertEqual(client.poll(), [{"type": "disconnected", "payload": {
+            "message": "connection closed"}}])
+
     def test_finished_relay_task_is_attached_and_transitioned_once(self):
         """A completed worker stays completed, so the screen must consume it once."""
         relay = object()
@@ -343,6 +359,24 @@ class RealtimeSessionTests(unittest.TestCase):
                         break
                     time.sleep(.01)
                 self.assertIsNotNone(client.player_id, (events, client.disconnect_message))
+                # The host makes this change locally rather than through a
+                # client request. A joined remote player must still receive
+                # the authoritative broadcast immediately.
+                client.poll()
+                self.session.select_country(self.host, "A")
+                state_events = []
+                while time.monotonic() < deadline:
+                    state_events.extend(client.poll())
+                    if any(event.get("type") == "state" and any(
+                            player.get("player_id") == self.host and player.get("country_id") == "A"
+                            for player in event.get("payload", {}).get("players", []))
+                           for event in state_events):
+                        break
+                    time.sleep(.01)
+                self.assertTrue(any(event.get("type") == "state" and any(
+                                player.get("player_id") == self.host and player.get("country_id") == "A"
+                                for player in event.get("payload", {}).get("players", []))
+                            for event in state_events), (state_events, client.disconnect_message))
                 client.close()
             finally:
                 server.stop()

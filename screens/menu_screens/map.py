@@ -2004,6 +2004,11 @@ class Map(GameState):
                         self._realtime_snapshot_phase = current_phase
                 elif event.get("type") in ("error", "disconnected"):
                     self.show_feedback(payload.get("message", "Disconnected from real-time server."))
+                    if event.get("type") == "disconnected":
+                        # Do not keep retrying a draft send after the relay or
+                        # host has gone away. The final authoritative state
+                        # remains visible, but this client is read-only.
+                        self.realtime_client = None
         elif getattr(self, "realtime_multiplayer", False) and getattr(self, "realtime_server_map", None):
             # The host uses a separate visual map. Pull only processed server
             # turns across, never an in-progress draft, so hosting confers no

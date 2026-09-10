@@ -73,6 +73,17 @@ class CrashHandlerTests(unittest.TestCase):
             contents = f.read()
         self.assertIn("ValueError: simulated crash for testing", contents)
 
+    @mock.patch("tkinter.messagebox.showerror")
+    @mock.patch("tkinter.Tk")
+    def test_macos_uses_the_log_without_initializing_tk(self, mock_tk, mock_showerror):
+        """Tk can abort macOS after pygame/SDL has claimed the app process."""
+        with mock.patch.object(main.sys, "platform", "darwin"):
+            self._simulate_crash()
+
+        self.assertTrue(os.path.exists(self.crash_log_path))
+        mock_tk.assert_not_called()
+        mock_showerror.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

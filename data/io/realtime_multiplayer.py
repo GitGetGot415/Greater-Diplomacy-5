@@ -1027,6 +1027,10 @@ class RealtimeServer:
         self._stopped = threading.Event()
         self._clients: dict[str, socket.socket] = {}
         self._clients_lock = threading.Lock()
+        # A state broadcast can originate from the host UI, a client worker,
+        # or the timer thread.  TLS frames must never be written concurrently
+        # to the same connection or their length prefixes can interleave.
+        self._send_lock = threading.Lock()
         self._open_connections: set[socket.socket] = set()
         self._connection_lock = threading.Lock()
         self._relay_transport = None
@@ -1133,15 +1137,16 @@ class RealtimeServer:
                 if message["session_id"] != self.session.session_id:
                     raise RealtimeError("Wrong match session.")
                 result, player_id = self._handle_message(player_id, message)
-                connection.sendall(encode_message("ok", self.session.session_id, result,
-                                                  message.get("request_id")))
                 if player_id:
+                    # Register before acknowledging the join.  Once the
+                    # client can see its lobby, it must also be eligible for
+                    # a host-originated state broadcast in that same instant.
                     with self._clients_lock:
                         self._clients[player_id] = connection
+                self._send_message(connection, "ok", result, message.get("request_id"))
         except (ConnectionError, OSError, ssl.SSLError, RealtimeError) as exc:
             try:
-                connection.sendall(encode_message("error", self.session.session_id,
-                                                  {"message": str(exc)}))
+                self._send_message(connection, "error", {"message": str(exc)})
             except OSError:
                 pass
         finally:
@@ -1186,13 +1191,19 @@ class RealtimeServer:
         return {"state": self.session.public_state()}, player_id
 
     def _broadcast_state(self, state: dict[str, Any]) -> None:
-        raw = encode_message("state", self.session.session_id, state)
         with self._clients_lock:
             clients = list(self._clients.items())
         for player_id, connection in clients:
-            try: connection.sendall(raw)
+            try: self._send_message(connection, "state", state)
             except OSError:
                 self.session.disconnect(player_id)
+
+    def _send_message(self, connection: socket.socket, message_type: str,
+                      payload: dict[str, Any], request_id: str | None = None) -> None:
+        """Serialize every server write so framed TLS messages stay intact."""
+        raw = encode_message(message_type, self.session.session_id, payload, request_id)
+        with self._send_lock:
+            connection.sendall(raw)
 
 
 class RealtimeClient:
@@ -1205,6 +1216,8 @@ class RealtimeClient:
         self.reconnect_token: str | None = None
         self.disconnect_message: str | None = None
         self._send_lock = threading.Lock()
+        self._disconnect_lock = threading.Lock()
+        self._disconnect_notified = False
         self._receiver_lock = threading.Lock()
         self._receiver_started = False
 
@@ -1242,11 +1255,19 @@ class RealtimeClient:
             self._receiver_started = True
             threading.Thread(target=self._receive_loop, daemon=True).start()
 
-    def send(self, message_type: str, payload: dict[str, Any]) -> None:
-        if not self.socket: raise RealtimeError("Not connected to a real-time server.")
+    def send(self, message_type: str, payload: dict[str, Any]) -> bool:
+        """Send a request, returning False rather than crashing on a lost link."""
         with self._send_lock:
-            self.socket.sendall(encode_message(message_type, self.invite["session"], payload))
+            if not self.socket:
+                self._mark_disconnected("The connection to the real-time host has closed.")
+                return False
+            try:
+                self.socket.sendall(encode_message(message_type, self.invite["session"], payload))
+            except (ConnectionError, OSError, ssl.SSLError) as exc:
+                self._mark_disconnected(str(exc))
+                return False
         self._start_receiver()
+        return True
 
     def poll(self) -> list[dict[str, Any]]:
         result = []
@@ -1255,10 +1276,24 @@ class RealtimeClient:
             except queue.Empty: return result
 
     def close(self) -> None:
-        if self.socket:
-            try: self.socket.close()
+        with self._disconnect_lock:
+            connection, self.socket = self.socket, None
+        if connection:
+            try: connection.close()
             except OSError: pass
-            self.socket = None
+
+    def _mark_disconnected(self, message: str) -> None:
+        """Close and report a failed connection exactly once across both threads."""
+        with self._disconnect_lock:
+            if self._disconnect_notified:
+                return
+            self._disconnect_notified = True
+            self.disconnect_message = message or "Disconnected from the real-time host."
+            connection, self.socket = self.socket, None
+        if connection:
+            try: connection.close()
+            except OSError: pass
+        self.events.put({"type": "disconnected", "payload": {"message": self.disconnect_message}})
 
     def _receive_loop(self) -> None:
         try:
@@ -1273,5 +1308,4 @@ class RealtimeClient:
                     self.map_bundle = payload.get("map_bundle", getattr(self, "map_bundle", None))
                 self.events.put(message)
         except (ConnectionError, OSError, ssl.SSLError, RealtimeError) as exc:
-            self.disconnect_message = str(exc)
-            self.events.put({"type": "disconnected", "payload": {"message": str(exc)}})
+            self._mark_disconnected(str(exc))
