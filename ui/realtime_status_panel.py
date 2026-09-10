@@ -7,6 +7,7 @@ import data.constants as c
 from gameState import GameState
 from map_logic.rendering.font_manager import fonts
 from ui_elements import make_back_button
+from ui.flag_icons import draw_flag
 
 
 def _ping_text(player, host_id):
@@ -47,10 +48,16 @@ class _MatchDetails(GameState):
             submitted = "Eliminated / spectating" if player.eliminated else (
                 "Submitted" if player.submitted else "Not submitted")
             connection = "Connected" if player.connected else "Disconnected"
-            values = (player.name, player.country_id or "No country", submitted,
-                      connection, _ping_text(player, session.host_id))
+            values = (player.name, submitted, connection, _ping_text(player, session.host_id))
             color = (240, 240, 245) if player.connected else (185, 150, 150)
-            for value, x in zip(values, columns):
+            surface.blit(row_font.render(str(values[0]), True, color), (columns[0], y))
+            country = player.country_id or "No country"
+            country_x = columns[1]
+            if player.country_id and player.country_id in getattr(self.map_screen, "nation_data", {}):
+                country_x = draw_flag(surface, player.country_id, self.map_screen.nation_data,
+                                      country_x, y + 1)
+            surface.blit(row_font.render(str(country), True, color), (country_x, y))
+            for value, x in zip(values[1:], columns[2:]):
                 surface.blit(row_font.render(str(value), True, color), (x, y))
 
 

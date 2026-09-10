@@ -6,6 +6,7 @@ import unittest
 import tempfile
 import socket
 import struct
+import pygame
 from types import SimpleNamespace
 from unittest import mock
 
@@ -25,6 +26,7 @@ from data.io.realtime_networking import (
 )
 from screens.menu_screens.realtime_multiplayer import Realtime_Relay_Provision
 from screens.menu_screens.map import Map
+from ui_elements import Button
 
 
 class Clock:
@@ -267,6 +269,42 @@ class RealtimeExitTests(unittest.TestCase):
         session.end_match.assert_not_called()
         map_ref.change_state.assert_called_once_with("MULTIPLAYER_MENU")
 
+    def test_host_exit_notifies_guests_before_stopping_server(self):
+        server = SimpleNamespace(stop=mock.Mock())
+        session = SimpleNamespace(phase="TURN", host_id="host")
+
+        def end_match(_player):
+            session.phase = "GAME_OVER"
+
+        session.end_match = end_match
+        map_ref = SimpleNamespace(
+            realtime_multiplayer=True,
+            realtime_session=session,
+            realtime_player_id="host",
+            realtime_server=server,
+            realtime_port_mapping=None,
+            _destroy_temporary_relay=mock.Mock(),
+            show_feedback=mock.Mock(),
+        )
+
+        def confirm(_title, _message, callback, **_labels):
+            callback(True)
+
+        with mock.patch("ui.confirm_dialog.ask_yes_no", side_effect=confirm):
+            Map.exit_to_menu(map_ref)
+
+        server.stop.assert_called_once_with(
+            "The host ended the real-time match. You have been disconnected.")
+
+    def test_map_hud_button_click_does_not_fall_through_to_a_tile(self):
+        pygame.font.init()
+        button = Button(100, 100, "small", "blue", "Details", lambda: None)
+        map_ref = SimpleNamespace(thread_error=None, elements=[button])
+        event = pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=(110, 110))
+        with mock.patch("screens.menu_screens.map.event_handler.handle_map_events") as handle:
+            Map.additional_events(map_ref, event)
+        handle.assert_not_called()
+
 
 class RealtimeSessionTests(unittest.TestCase):
     def setUp(self):
@@ -330,6 +368,15 @@ class RealtimeSessionTests(unittest.TestCase):
         self.session.disconnect(self.other.player_id)
         players = {player["player_id"]: player for player in self.session.public_state()["players"]}
         self.assertIsNone(players[self.other.player_id]["ping_ms"])
+
+    def test_server_stop_sends_an_explicit_shutdown_to_each_guest(self):
+        server = RealtimeServer(self.session, "unused-cert", "unused-key")
+        guest_connection = mock.Mock()
+        server._clients[self.other.player_id] = guest_connection
+        with mock.patch.object(server, "_send_message") as send:
+            server.stop("The host ended the match.")
+        send.assert_called_once_with(
+            guest_connection, "shutdown", {"message": "The host ended the match."})
 
     def test_timer_uses_server_clock_and_latest_draft(self):
         self.start()

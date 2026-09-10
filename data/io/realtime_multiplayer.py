@@ -1245,7 +1245,18 @@ class RealtimeServer:
         return bool((self._listener is not None or self._relay_transport is not None)
                     and not self._stopped.is_set())
 
-    def stop(self) -> None:
+    def stop(self, reason: str | None = None) -> None:
+        """Stop accepting clients and close every active connection.
+
+        A normal socket close looks indistinguishable from a cable or relay
+        failure to a guest. When the host deliberately ends a lobby or match,
+        send a final protocol message first so clients can explain what
+        happened instead of leaving a disabled Submit button with no context.
+        """
+        if self._stopped.is_set():
+            return
+        if reason:
+            self._broadcast_shutdown(reason)
         self._stopped.set()
         if self._relay_transport:
             self._relay_transport.stop()
@@ -1263,6 +1274,18 @@ class RealtimeServer:
         for connection in connections:
             try: connection.close()
             except OSError: pass
+
+    def _broadcast_shutdown(self, reason: str) -> None:
+        """Best-effort final notice before ``stop`` closes the TLS streams."""
+        with self._clients_lock:
+            clients = list(self._clients.items())
+        for _player_id, connection in clients:
+            try:
+                self._send_message(connection, "shutdown", {"message": reason})
+            except OSError:
+                # A client already gone receives no worse outcome from this
+                # than it would from the following socket close.
+                pass
 
     def _accept_loop(self) -> None:
         assert self._listener is not None

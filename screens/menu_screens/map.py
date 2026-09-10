@@ -1679,7 +1679,7 @@ class Map(GameState):
                 if getattr(self, "realtime_port_mapping", None):
                     self.realtime_port_mapping.stop()
                 if getattr(self, "realtime_server", None):
-                    self.realtime_server.stop()
+                    self.realtime_server.stop("The host closed this completed real-time match.")
                 self._destroy_temporary_relay()
                 self.change_state("MULTIPLAYER_MENU")
                 return
@@ -1689,15 +1689,16 @@ class Map(GameState):
                 if not confirmed:
                     return
                 session.end_match(self.realtime_player_id)
-                if session.phase == "PROCESSING":
-                    self.show_feedback("Current turn is finishing safely; the match will then end.")
-                    return
                 if getattr(self, "realtime_port_mapping", None):
                     self.realtime_port_mapping.stop()
                 if getattr(self, "realtime_server", None):
-                    self.realtime_server.stop()
+                    self.realtime_server.stop(
+                        "The host ended the real-time match. You have been disconnected.")
                 self._destroy_temporary_relay()
-                self.show_feedback("Real-time match ended by host. Save the final result before leaving.")
+                self.show_feedback(
+                    "Current turn is finishing safely; all guests have been disconnected."
+                    if session.phase == "PROCESSING" else
+                    "Real-time match ended by host. Save the final result before leaving.")
             confirm_dialog.ask_yes_no("End Real-Time Match",
                                       "Leaving stops the server for every player. End this match?",
                                       close_match, yes_label="End Match", no_label="Cancel")
@@ -1741,6 +1742,14 @@ class Map(GameState):
                         self.error_copied = True
             return # Block all other map events!
 
+        # Buttons are dispatched before this method, but map tile selection
+        # starts on mouse-down whereas Button callbacks fire on mouse-up. Do
+        # not let a click on a visible map HUD control (notably the movable
+        # Details button) fall through and select the province underneath it.
+        if event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
+            if any(isinstance(element, Button) and element.visible
+                   and element.rect.collidepoint(event.pos) for element in self.elements):
+                return
         event_handler.handle_map_events(self, event)
 
     def sync_units_to_data(self):
@@ -2059,16 +2068,21 @@ class Map(GameState):
                         apply_authoritative_snapshot(self, self.realtime_session.snapshot)
                         self._realtime_snapshot_turn = current_turn
                         self._realtime_snapshot_phase = current_phase
-                elif event.get("type") in ("error", "disconnected"):
+                elif event.get("type") in ("error", "disconnected", "shutdown"):
                     message = payload.get("message", "Disconnected from real-time server.")
                     self.realtime_submission_pending = False
-                    if event.get("type") == "disconnected":
+                    if event.get("type") in ("disconnected", "shutdown"):
                         # Do not keep retrying a draft send after the relay or
                         # host has gone away. The final authoritative state
                         # remains visible, but this client is read-only.
                         self.realtime_connection_error = message
+                        if event.get("type") == "shutdown":
+                            self.realtime_client.close()
                         self.realtime_client = None
-                        self.show_feedback("Connection lost. Multiplayer actions are disabled; rejoin from the menu.")
+                        self.show_feedback(
+                            "Match ended by host. Multiplayer actions are disabled."
+                            if event.get("type") == "shutdown" else
+                            "Connection lost. Multiplayer actions are disabled; rejoin from the menu.")
                     else:
                         self.show_feedback(message)
         elif getattr(self, "realtime_multiplayer", False) and getattr(self, "realtime_server_map", None):

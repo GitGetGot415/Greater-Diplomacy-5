@@ -31,6 +31,7 @@ from data.platform import IS_WEB
 from gameState import GameState
 from ui import confirm_dialog
 from ui_elements import Button, UI_ICONS, make_back_button
+from ui.flag_icons import flag_surface
 
 
 def _delete_relay_quietly(token, droplet_id, firewall_id=None):
@@ -390,33 +391,28 @@ class Realtime_Scenario_Select(GameState):
     def __init__(self):
         super().__init__()
         self.bg_color = (12, 28, 50)
-        self.page = 0
+        self.scroll_y = 0
         self.refresh_ui()
 
     def refresh_ui(self):
         self.elements = [make_back_button(self.exit_screen)]
-        self.entries = _scenario_entries()
-        per_page = 10
-        page_count = max(1, (len(self.entries) + per_page - 1) // per_page)
-        self.page = min(self.page, page_count - 1)
-        start = self.page * per_page
-        for index, (label, path) in enumerate(self.entries[start:start + per_page]):
-            column, row = index % 2, index // 2
-            x = "centered-200" if column == 0 else "centered+200"
-            self.elements.append(Button(x, 110 + row * 70, "medium", "blue", label,
-                                        lambda selected=path: self.select(selected)))
-        if self.page:
-            self.elements.append(Button("centered-180", 530, "small", "blue", "Previous", self.previous_page))
-        if self.page + 1 < page_count:
-            self.elements.append(Button("centered+80", 530, "small", "blue", "Next", self.next_page))
+        self.entries = sorted(_scenario_entries(), key=lambda entry: entry[0].casefold())
+        top, bottom = 105, c.SCREEN_HEIGHT - 55
+        self.scroll_content_rect = pygame.Rect(90, 90, c.SCREEN_WIDTH - 180, bottom - 90)
+        for index, button_y in self.layout_list_rows(
+                len(self.entries), 60, top, pad=16, cull_top=90, cull_bottom=bottom):
+            label, path = self.entries[index]
+            button = Button("centered", button_y, "new_game", "blue", label,
+                            lambda selected=path: self.select(selected))
+            button.is_scrollable = True
+            button.click_guard = self.scroll_click_guard
+            self.elements.append(button)
 
-    def previous_page(self):
-        self.page = max(0, self.page - 1)
-        self.refresh_ui()
+    def additional_events(self, event):
+        self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
 
-    def next_page(self):
-        self.page += 1
-        self.refresh_ui()
+    def additional_draw(self, surface):
+        self.draw_list_scrollbar(surface, c.SCREEN_WIDTH - 55, 100, c.SCREEN_HEIGHT - 155)
 
     def select(self, path):
         # The host setup is a persistent controller state; the controller gives
@@ -446,7 +442,7 @@ class Realtime_Lobby(GameState):
         self.manual_advertised_address = False
         self.temporary_relay = None
         self.relay_token = ""
-        self.country_page = 0
+        self.scroll_y = 0
         self.refresh_ui()
 
     def bind_host(self, host_setup):
@@ -465,7 +461,7 @@ class Realtime_Lobby(GameState):
         # temporary Droplet.  It is never placed in an invite or save.
         self.relay_token = host_setup.relay_token if self.temporary_relay else ""
         self._lobby_signature = None
-        self.country_page = 0
+        self.scroll_y = 0
         self.refresh_ui()
 
     def refresh_ui(self):
@@ -490,34 +486,35 @@ class Realtime_Lobby(GameState):
                    self.internet_button_label(), self.show_internet_invite),
             Button("centered+120", 150, "medium", "light_blue", "Networking Status", self.show_network_status),
         ])
-        countries = self.session.countries
-        per_page = 8
-        page_count = max(1, (len(countries) + per_page - 1) // per_page)
-        self.country_page = min(self.country_page, page_count - 1)
-        start = self.country_page * per_page
-        for index, country in enumerate(countries[start:start + per_page]):
+        countries = sorted(self.session.countries, key=str.casefold)
+        # Compact rows leave room for a genuinely useful viewport rather than
+        # forcing a page-like experience on scenarios with many countries.
+        list_top, list_bottom = 210, 540
+        self.scroll_content_rect = pygame.Rect(c.SCREEN_WIDTH // 2 - 310, list_top - 8,
+                                                620, list_bottom - list_top + 8)
+        nation_data = getattr(self.server_map, "nation_data", {})
+        for index, button_y in self.layout_list_rows(
+                len(countries), 38, list_top, pad=8, cull_top=list_top - 8,
+                cull_bottom=list_bottom):
+            country = countries[index]
             selected = next((p.name for p in self.session.players.values() if p.country_id == country), None)
             label = f"{country}: {selected or 'Available'}"
             color = "green" if not selected or selected == self.session.players[host].name else "grey"
-            column, row = index % 2, index // 2
-            x = "centered-140" if column == 0 else "centered+140"
-            self.elements.append(Button(x, 215 + row * 65, (270, 44), color, label,
-                                        lambda country_id=country: self.choose_host_country(country_id)))
-        if self.country_page:
-            self.elements.append(Button("centered-140", 480, "small", "blue", "Previous", self.previous_country_page))
-        if self.country_page + 1 < page_count:
-            self.elements.append(Button("centered+140", 480, "small", "blue", "Next", self.next_country_page))
+            try:
+                flag = flag_surface(country, nation_data)
+            except (KeyError, TypeError, ValueError, pygame.error):
+                flag = None
+            button = Button("centered", button_y, (600, 32), color, label,
+                            lambda country_id=country: self.choose_host_country(country_id), image=flag)
+            button.is_scrollable = True
+            button.click_guard = self.scroll_click_guard
+            self.elements.append(button)
         ready = self.session.players[host].ready
-        self.elements.append(Button("centered", 535, "medium", "green" if ready else "orange",
+        self.elements.append(Button("centered", 550, (200, 36), "green" if ready else "orange",
                                     "Host Ready" if ready else "Mark Host Ready", self.toggle_ready))
 
-    def previous_country_page(self):
-        self.country_page = max(0, self.country_page - 1)
-        self.refresh_ui()
-
-    def next_country_page(self):
-        self.country_page += 1
-        self.refresh_ui()
+    def additional_events(self, event):
+        self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
 
     def choose_host_country(self, country_id):
         try:
@@ -646,7 +643,8 @@ class Realtime_Lobby(GameState):
     def end_lobby(self):
         if getattr(self, "advertiser", None): self.advertiser.stop()
         if self.port_mapping: self.port_mapping.stop()
-        if self.server: self.server.stop()
+        if self.server:
+            self.server.stop("The host ended the real-time lobby. You have been disconnected.")
         self._destroy_temporary_relay()
         self.session = self.server = self.server_map = None
         self.go_to("REALTIME_HOST_SETUP")
@@ -677,12 +675,13 @@ class Realtime_Lobby(GameState):
 
     def additional_draw(self, surface):
         if not self.session: return
+        self.draw_list_scrollbar(surface, c.SCREEN_WIDTH // 2 + 320, 202, 338, width=22)
         font = pygame.font.Font(None, 22)
         players = list(self.session.players.values())
         for index, player in enumerate(players[:5]):
             text = (f"{player.name} — {_ping_label(player, self.session.host_id)} — "
                     f"{player.country_id or 'No country'} — {'READY' if player.ready else 'waiting'}")
-            surface.blit(font.render(text, True, (230, 230, 230)), (30, 585 + index * 24))
+            surface.blit(font.render(text, True, (230, 230, 230)), (30, 605 + index * 22))
 
 
 class Realtime_Join(GameState):
@@ -865,13 +864,13 @@ class Realtime_Remote_Lobby(GameState):
         self.bg_color = (12, 28, 50)
         self.client = self.view = None
         self.reconnect_token = ""
-        self.country_page = 0
+        self.scroll_y = 0
         self.refresh_ui()
 
     def bind_join(self, join_screen):
         self.client, self.view = join_screen.realtime_client, join_screen.realtime_view
         self.reconnect_token = join_screen.reconnect_token
-        self.country_page = 0
+        self.scroll_y = 0
         self.refresh_ui()
 
     def refresh_ui(self):
@@ -886,35 +885,38 @@ class Realtime_Remote_Lobby(GameState):
         if not self.view:
             return
         me = self.view.players.get(self.view.player_id)
-        countries = list(getattr(self.view, "available_countries", ()))
-        per_page = 8
-        page_count = max(1, (len(countries) + per_page - 1) // per_page)
-        self.country_page = min(self.country_page, page_count - 1)
-        start = self.country_page * per_page
-        for index, country in enumerate(countries[start:start + per_page]):
+        countries = sorted(getattr(self.view, "available_countries", ()), key=str.casefold)
+        list_top, list_bottom = 175, 545
+        self.scroll_content_rect = pygame.Rect(c.SCREEN_WIDTH // 2 - 310, list_top - 8,
+                                                620, list_bottom - list_top + 8)
+        bundle = getattr(self.client, "map_bundle", {}) if self.client else {}
+        nation_data = bundle.get("snapshot", {}).get("nation_data", {}) if isinstance(bundle, dict) else {}
+        if not isinstance(nation_data, dict):
+            nation_data = {}
+        for index, button_y in self.layout_list_rows(
+                len(countries), 38, list_top, pad=8, cull_top=list_top - 8,
+                cull_bottom=list_bottom):
+            country = countries[index]
             selected = next((p.name for p in self.view.players.values() if p.country_id == country), None)
-            column, row = index % 2, index // 2
-            x = "centered-280" if column == 0 else "centered+10"
-            self.elements.append(Button(x, 175 + row * 65, (270, 44),
-                                        "green" if not selected or me and me.country_id == country else "grey",
-                                        f"{country}: {selected or 'Available'}",
-                                        lambda picked=country: self.client.send("select_country", {"country_id": picked})))
-        if self.country_page:
-            self.elements.append(Button("centered-180", 455, "small", "blue", "Previous", self.previous_country_page))
-        if self.country_page + 1 < page_count:
-            self.elements.append(Button("centered+80", 455, "small", "blue", "Next", self.next_country_page))
+            try:
+                flag = flag_surface(country, nation_data)
+            except (KeyError, TypeError, ValueError, pygame.error):
+                flag = None
+            button = Button("centered", button_y, (600, 32),
+                            "green" if not selected or me and me.country_id == country else "grey",
+                            f"{country}: {selected or 'Available'}",
+                            lambda picked=country: self.client.send("select_country", {"country_id": picked}),
+                            image=flag)
+            button.is_scrollable = True
+            button.click_guard = self.scroll_click_guard
+            self.elements.append(button)
         if me:
-            self.elements.append(Button("centered", 515, "medium", "orange" if not me.ready else "green",
+            self.elements.append(Button("centered", 555, (200, 36), "orange" if not me.ready else "green",
                                         "Ready" if me.ready else "Mark Ready",
                                         lambda: self.client.send("ready", {"ready": not me.ready})))
 
-    def previous_country_page(self):
-        self.country_page = max(0, self.country_page - 1)
-        self.refresh_ui()
-
-    def next_country_page(self):
-        self.country_page += 1
-        self.refresh_ui()
+    def additional_events(self, event):
+        self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
 
     def update(self):
         if self.client:
@@ -933,6 +935,12 @@ class Realtime_Remote_Lobby(GameState):
                         self.go_to("MAP")
                 elif event.get("type") == "error":
                     confirm_dialog.show_error("Server Rejected Request", payload.get("message", "Unknown error"))
+                elif event.get("type") == "shutdown":
+                    self.client.close()
+                    self.client = None
+                    confirm_dialog.show_info("Match Ended by Host", payload.get(
+                        "message", "The host ended the real-time match and disconnected all players."))
+                    self.go_to("REAL_TIME_MULTIPLAYER")
                 elif event.get("type") == "disconnected":
                     self.client = None
                     confirm_dialog.show_error("Connection Lost", payload.get(
@@ -965,9 +973,11 @@ class Realtime_Remote_Lobby(GameState):
         self.request_leave()
 
     def additional_draw(self, surface):
+        if self.view:
+            self.draw_list_scrollbar(surface, c.SCREEN_WIDTH // 2 + 320, 167, 378, width=22)
         if not self.view: return
         font = pygame.font.Font(None, 22)
         for index, player in enumerate(list(self.view.players.values())[:5]):
             text = (f"{player.name} — {_ping_label(player, self.view.host_id)} — "
                     f"{player.country_id or 'No country'} — {'READY' if player.ready else 'waiting'}")
-            surface.blit(font.render(text, True, (230, 230, 230)), (30, 585 + index * 24))
+            surface.blit(font.render(text, True, (230, 230, 230)), (30, 605 + index * 22))
