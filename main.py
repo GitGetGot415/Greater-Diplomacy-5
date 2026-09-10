@@ -409,6 +409,12 @@ class Controller:
                                    num_players=len(previous_state.selected_realtime_session.players))
                 session = previous_state.selected_realtime_session
                 host_player = session.players[previous_state.selected_realtime_player_id]
+                # Scenario loading supplies the finalized map, but the host
+                # selected a country in the lobby already.  Do not re-enter
+                # the ordinary single-player country-selection flow.
+                realtime_map.selection_mode = False
+                realtime_map.pending_selection = None
+                realtime_map.show_player_ready_screen = False
                 realtime_map.realtime_multiplayer = True
                 realtime_map.realtime_session = session
                 realtime_map.realtime_server = previous_state.selected_realtime_server
@@ -430,6 +436,9 @@ class Controller:
                 finally:
                     shutil.rmtree(bundle_path, ignore_errors=True)
                 me = view.players[view.player_id]
+                realtime_map.selection_mode = False
+                realtime_map.pending_selection = None
+                realtime_map.show_player_ready_screen = False
                 realtime_map.realtime_multiplayer = True
                 realtime_map.realtime_session = view
                 realtime_map.realtime_client = previous_state.selected_realtime_client

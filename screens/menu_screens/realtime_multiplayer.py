@@ -54,18 +54,20 @@ class Realtime_Host_Setup(GameState):
 
     def refresh_ui(self):
         scenario_label = os.path.basename(self.scenario_path) if self.scenario_path else "Select Scenario"
+        # Keep every setup control visible at ordinary desktop resolutions.
+        # A single vertical stack made the bottom controls inaccessible.
         self.elements = [
-            Button("centered", 125, "medium", "blue", f"Scenario: {scenario_label}",
+            Button("centered-150", 120, "medium", "blue", f"Scenario: {scenario_label}",
                    lambda: self.go_to("REALTIME_SCENARIO_SELECT")),
-            Button("centered", 185, "medium", "blue", f"Host Name: {self.host_name}", self.edit_name),
-            Button("centered", 245, "medium", "blue", f"Advertised Address: {self.address}", self.edit_address),
-            Button("centered", 305, "medium", "blue", f"Port: {self.port}", self.edit_port),
-            Button("centered", 365, "medium", "blue", f"Lobby Password: {'SET' if self.password else 'None'}", self.edit_password),
-            Button("centered", 425, "medium", "purple", f"Player Capacity: {self.capacity}", self.edit_capacity),
-            Button("centered", 485, "medium", "purple", f"Maximum Turns: {self.max_turns}", self.edit_turns),
-            Button("centered", 545, "medium", "purple", f"Turn Time: {self.turn_minutes} minutes", self.edit_minutes),
-            Button("centered", 605, "medium", "pink", "Scenario Settings", self.edit_settings),
-            Button("centered", 675, "medium", "green", "Open Lobby", self.open_lobby),
+            Button("centered-150", 200, "medium", "blue", f"Host Name: {self.host_name}", self.edit_name),
+            Button("centered-150", 280, "medium", "blue", f"Advertised Address: {self.address}", self.edit_address),
+            Button("centered-150", 360, "medium", "blue", f"Port: {self.port}", self.edit_port),
+            Button("centered-150", 440, "medium", "blue", f"Lobby Password: {'SET' if self.password else 'None'}", self.edit_password),
+            Button("centered+150", 120, "medium", "purple", f"Player Capacity: {self.capacity}", self.edit_capacity),
+            Button("centered+150", 200, "medium", "purple", f"Maximum Turns: {self.max_turns}", self.edit_turns),
+            Button("centered+150", 280, "medium", "purple", f"Turn Time: {self.turn_minutes} minutes", self.edit_minutes),
+            Button("centered+150", 360, "medium", "pink", "Scenario Settings", self.edit_settings),
+            Button("centered+150", 440, "medium", "green", "Open Lobby", self.open_lobby),
             make_back_button(self.exit_screen),
         ]
 
@@ -133,14 +135,33 @@ class Realtime_Scenario_Select(GameState):
     def __init__(self):
         super().__init__()
         self.bg_color = (12, 28, 50)
+        self.page = 0
         self.refresh_ui()
 
     def refresh_ui(self):
         self.elements = [make_back_button(self.exit_screen)]
         self.entries = _scenario_entries()
-        for index, (label, path) in enumerate(self.entries[:9]):
-            self.elements.append(Button("centered", 110 + index * 62, "medium", "blue", label,
+        per_page = 10
+        page_count = max(1, (len(self.entries) + per_page - 1) // per_page)
+        self.page = min(self.page, page_count - 1)
+        start = self.page * per_page
+        for index, (label, path) in enumerate(self.entries[start:start + per_page]):
+            column, row = index % 2, index // 2
+            x = "centered-200" if column == 0 else "centered+200"
+            self.elements.append(Button(x, 110 + row * 70, "medium", "blue", label,
                                         lambda selected=path: self.select(selected)))
+        if self.page:
+            self.elements.append(Button("centered-180", 530, "small", "blue", "Previous", self.previous_page))
+        if self.page + 1 < page_count:
+            self.elements.append(Button("centered+80", 530, "small", "blue", "Next", self.next_page))
+
+    def previous_page(self):
+        self.page = max(0, self.page - 1)
+        self.refresh_ui()
+
+    def next_page(self):
+        self.page += 1
+        self.refresh_ui()
 
     def select(self, path):
         # The host setup is a persistent controller state; the controller gives
@@ -163,6 +184,7 @@ class Realtime_Lobby(GameState):
         self.server = None
         self.server_map = None
         self.invite = ""
+        self.country_page = 0
         self.refresh_ui()
 
     def bind_host(self, host_setup):
@@ -171,6 +193,7 @@ class Realtime_Lobby(GameState):
         self.server_map = host_setup.realtime_server_map
         self.invite = host_setup.realtime_invite
         self._lobby_signature = None
+        self.country_page = 0
         self.refresh_ui()
 
     def refresh_ui(self):
@@ -179,20 +202,38 @@ class Realtime_Lobby(GameState):
             return
         host = self.session.host_id
         self.elements.extend([
-            Button("centered", 105, "medium", "blue", "Show Invite Code", self.show_invite),
-            Button("centered", 165, "medium", "green", "Start Match", self.start_match),
-            Button("centered", 225, "medium", "red", "End Lobby", self.end_lobby),
+            Button("centered-220", 100, "medium", "blue", "Show Invite Code", self.show_invite),
+            Button("centered", 100, "medium", "green", "Start Match", self.start_match),
+            Button("centered+220", 100, "medium", "red", "End Lobby", self.end_lobby),
         ])
         countries = self.session.countries
-        for index, country in enumerate(countries[:8]):
+        per_page = 8
+        page_count = max(1, (len(countries) + per_page - 1) // per_page)
+        self.country_page = min(self.country_page, page_count - 1)
+        start = self.country_page * per_page
+        for index, country in enumerate(countries[start:start + per_page]):
             selected = next((p.name for p in self.session.players.values() if p.country_id == country), None)
             label = f"{country}: {selected or 'Available'}"
             color = "green" if not selected or selected == self.session.players[host].name else "grey"
-            self.elements.append(Button("centered", 290 + index * 46, "small", color, label,
+            column, row = index % 2, index // 2
+            x = "centered-140" if column == 0 else "centered+140"
+            self.elements.append(Button(x, 175 + row * 65, (270, 44), color, label,
                                         lambda country_id=country: self.choose_host_country(country_id)))
+        if self.country_page:
+            self.elements.append(Button("centered-140", 455, "small", "blue", "Previous", self.previous_country_page))
+        if self.country_page + 1 < page_count:
+            self.elements.append(Button("centered+140", 455, "small", "blue", "Next", self.next_country_page))
         ready = self.session.players[host].ready
-        self.elements.append(Button("centered", 670, "medium", "green" if ready else "orange",
+        self.elements.append(Button("centered", 515, "medium", "green" if ready else "orange",
                                     "Host Ready" if ready else "Mark Host Ready", self.toggle_ready))
+
+    def previous_country_page(self):
+        self.country_page = max(0, self.country_page - 1)
+        self.refresh_ui()
+
+    def next_country_page(self):
+        self.country_page += 1
+        self.refresh_ui()
 
     def choose_host_country(self, country_id):
         try:
@@ -246,9 +287,9 @@ class Realtime_Lobby(GameState):
         if not self.session: return
         font = pygame.font.Font(None, 22)
         players = list(self.session.players.values())
-        for index, player in enumerate(players):
+        for index, player in enumerate(players[:5]):
             text = f"{player.name} — {player.country_id or 'No country'} — {'READY' if player.ready else 'waiting'}"
-            surface.blit(font.render(text, True, (230, 230, 230)), (30, 110 + index * 26))
+            surface.blit(font.render(text, True, (230, 230, 230)), (30, 585 + index * 24))
 
 
 class Realtime_Join(GameState):
@@ -324,10 +365,12 @@ class Realtime_Remote_Lobby(GameState):
         super().__init__()
         self.bg_color = (12, 28, 50)
         self.client = self.view = None
+        self.country_page = 0
         self.refresh_ui()
 
     def bind_join(self, join_screen):
         self.client, self.view = join_screen.realtime_client, join_screen.realtime_view
+        self.country_page = 0
         self.refresh_ui()
 
     def refresh_ui(self):
@@ -335,16 +378,35 @@ class Realtime_Remote_Lobby(GameState):
         if not self.view:
             return
         me = self.view.players.get(self.view.player_id)
-        for index, country in enumerate(getattr(self.view, "available_countries", ())):
+        countries = list(getattr(self.view, "available_countries", ()))
+        per_page = 8
+        page_count = max(1, (len(countries) + per_page - 1) // per_page)
+        self.country_page = min(self.country_page, page_count - 1)
+        start = self.country_page * per_page
+        for index, country in enumerate(countries[start:start + per_page]):
             selected = next((p.name for p in self.view.players.values() if p.country_id == country), None)
-            self.elements.append(Button("centered", 190 + index * 46, "small",
+            column, row = index % 2, index // 2
+            x = "centered-280" if column == 0 else "centered+10"
+            self.elements.append(Button(x, 175 + row * 65, (270, 44),
                                         "green" if not selected or me and me.country_id == country else "grey",
                                         f"{country}: {selected or 'Available'}",
                                         lambda picked=country: self.client.send("select_country", {"country_id": picked})))
+        if self.country_page:
+            self.elements.append(Button("centered-180", 455, "small", "blue", "Previous", self.previous_country_page))
+        if self.country_page + 1 < page_count:
+            self.elements.append(Button("centered+80", 455, "small", "blue", "Next", self.next_country_page))
         if me:
-            self.elements.append(Button("centered", 650, "medium", "orange" if not me.ready else "green",
+            self.elements.append(Button("centered", 515, "medium", "orange" if not me.ready else "green",
                                         "Ready" if me.ready else "Mark Ready",
                                         lambda: self.client.send("ready", {"ready": not me.ready})))
+
+    def previous_country_page(self):
+        self.country_page = max(0, self.country_page - 1)
+        self.refresh_ui()
+
+    def next_country_page(self):
+        self.country_page += 1
+        self.refresh_ui()
 
     def update(self):
         if self.client:
@@ -372,6 +434,6 @@ class Realtime_Remote_Lobby(GameState):
     def additional_draw(self, surface):
         if not self.view: return
         font = pygame.font.Font(None, 22)
-        for index, player in enumerate(self.view.players.values()):
+        for index, player in enumerate(list(self.view.players.values())[:5]):
             text = f"{player.name} — {player.country_id or 'No country'} — {'READY' if player.ready else 'waiting'}"
-            surface.blit(font.render(text, True, (230, 230, 230)), (30, 95 + index * 25))
+            surface.blit(font.render(text, True, (230, 230, 230)), (30, 585 + index * 24))
