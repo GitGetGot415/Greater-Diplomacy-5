@@ -794,6 +794,7 @@ SIZES = {
     "production": (130, 30),
     "orders": (100, 50),
     "small": (100, 40),
+    "tiny": (80, 30),
     "thin": (150, 30),
     "ai_opinion": (100, 30),
     "puppet_option": (100, 30),

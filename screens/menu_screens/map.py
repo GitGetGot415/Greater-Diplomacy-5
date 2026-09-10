@@ -489,8 +489,8 @@ def render_buttons(map_screen):
     map_screen.btn_close_info = Button(TOP_RIGHT_BTN_X, c.TOP_BAR_UI_CENTER_Y, "small", "red", "X", map_screen.deselect_province)
     map_screen.btn_exit_to_menu = Button(TOP_RIGHT_BTN_X, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Exit", map_screen.exit_to_menu)
     from ui import realtime_status_panel
-    map_screen.btn_realtime_details = Button(TOP_RIGHT_BTN_X - 110, c.TOP_BAR_UI_CENTER_Y,
-                                              "small", "blue", "Details",
+    map_screen.btn_realtime_details = Button(TOP_RIGHT_BTN_X + 30, c.TOP_BAR_UI_CENTER_Y + 120,
+                                              "tiny", "blue", "Details",
                                               lambda: realtime_status_panel.show_details(map_screen))
 
     # --- Append all explicitly defined buttons into the elements list ---
