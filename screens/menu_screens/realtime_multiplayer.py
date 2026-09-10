@@ -154,7 +154,7 @@ class Realtime_Host_Setup(GameState):
                                   saved, initial=self.address)
     def edit_password(self): self._string("Lobby Password", "password", "Optional password (blank removes it):", True)
     def edit_port(self): self._integer("Server Port", "port", "Forward this TCP port for WAN play:", 1024, 65535)
-    def edit_turns(self): self._integer("Maximum Turns", "max_turns", "1 to 100:", 1, 100)
+    def edit_turns(self): self._integer("Maximum Turns", "max_turns", "1 to 240:", 1, 240)
     def edit_minutes(self): self._integer("Turn Time", "turn_minutes", "Minutes per turn (1 to 240):", 1, 240)
 
     def edit_capacity(self):
