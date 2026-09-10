@@ -30,7 +30,7 @@ from data.io.realtime_relay import (
 from data.platform import IS_WEB
 from gameState import GameState
 from ui import confirm_dialog
-from ui_elements import Button, make_back_button
+from ui_elements import Button, UI_ICONS, make_back_button
 
 
 def _delete_relay_quietly(token, droplet_id, firewall_id=None):
@@ -459,7 +459,15 @@ class Realtime_Lobby(GameState):
         self.refresh_ui()
 
     def refresh_ui(self):
-        self.elements = [make_back_button(self.leave_lobby)]
+        # A running lobby is a shared session, not an ordinary menu.  Keep
+        # its explicit End Lobby control as the visible way out so a host
+        # cannot mistake Back for harmless navigation.
+        self.elements = [
+            Button(20, 75, "left_ui_button", "pink", "Settings", lambda: self.go_to("SETTINGS"),
+                   image=UI_ICONS.get("settings")),
+            Button(20, 110, "left_ui_button", "pink", "Music", lambda: self.go_to("MUSIC_PLAYER"),
+                   image=UI_ICONS.get("music")),
+        ]
         if not self.session:
             return
         host = self.session.host_id
@@ -467,7 +475,7 @@ class Realtime_Lobby(GameState):
             Button("centered-220", 100, "medium", "blue",
                    "Copy Relay Invite" if self.temporary_relay else "Copy LAN Invite", self.show_lan_invite),
             Button("centered", 100, "medium", "green", "Start Match", self.start_match),
-            Button("centered+220", 100, "medium", "red", "End Lobby", self.end_lobby),
+            Button("centered+220", 100, "medium", "red", "End Lobby", self.request_end_lobby),
             Button("centered-120", 150, "medium", self.internet_button_color(),
                    self.internet_button_label(), self.show_internet_invite),
             Button("centered+120", 150, "medium", "light_blue", "Networking Status", self.show_network_status),
@@ -618,6 +626,13 @@ class Realtime_Lobby(GameState):
         self.selected_realtime_player_id = self.session.host_id
         self.go_to("MAP")
 
+    def request_end_lobby(self):
+        confirm_dialog.ask_yes_no(
+            "End Real-Time Lobby",
+            "End this lobby for every connected player? The server and any temporary relay will stop.",
+            lambda confirmed: self.end_lobby() if confirmed else None,
+            yes_label="End Lobby", no_label="Keep Lobby")
+
     def end_lobby(self):
         if getattr(self, "advertiser", None): self.advertiser.stop()
         if self.port_mapping: self.port_mapping.stop()
@@ -633,8 +648,10 @@ class Realtime_Lobby(GameState):
         self.temporary_relay = None
         threading.Thread(target=lambda: _delete_relay_quietly(token, relay.droplet_id, relay.firewall_id), daemon=True).start()
 
-    def leave_lobby(self):
-        self.end_lobby()
+    def handle_back_key(self):
+        # Escape takes the same deliberate route as End Lobby, rather than
+        # silently dismantling a session while the host is waiting for people.
+        self.request_end_lobby()
 
     def update(self):
         if self.session:
@@ -818,7 +835,13 @@ class Realtime_Remote_Lobby(GameState):
         self.refresh_ui()
 
     def refresh_ui(self):
-        self.elements = [make_back_button(self.leave)]
+        self.elements = [
+            Button(20, 75, "left_ui_button", "pink", "Settings", lambda: self.go_to("SETTINGS"),
+                   image=UI_ICONS.get("settings")),
+            Button(20, 110, "left_ui_button", "pink", "Music", lambda: self.go_to("MUSIC_PLAYER"),
+                   image=UI_ICONS.get("music")),
+            Button("centered+280", 100, "medium", "red", "Leave Lobby", self.request_leave),
+        ]
         if not self.view:
             return
         me = self.view.players.get(self.view.player_id)
@@ -876,9 +899,19 @@ class Realtime_Remote_Lobby(GameState):
                     self.go_to("REAL_TIME_MULTIPLAYER")
         super().update()
 
+    def request_leave(self):
+        confirm_dialog.ask_yes_no(
+            "Leave Real-Time Lobby",
+            "Leave this lobby? You can rejoin with your reconnect code while the host keeps it open.",
+            lambda confirmed: self.leave() if confirmed else None,
+            yes_label="Leave Lobby", no_label="Stay")
+
     def leave(self):
         if self.client: self.client.close()
         self.exit_screen()
+
+    def handle_back_key(self):
+        self.request_leave()
 
     def additional_draw(self, surface):
         if not self.view: return

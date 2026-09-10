@@ -77,6 +77,25 @@ class ControllerConstructionTests(unittest.TestCase):
     def test_active_state_is_the_menu(self):
         self.assertIs(self.controller.active_state, self.controller.states["MENU"])
 
+    def test_lobby_music_and_settings_return_to_the_same_live_lobby(self):
+        """Convenience screens must not drop a host or guest out of a lobby."""
+        controller = self.controller
+        original_active = controller.active_state
+        original_settings_back = controller.states["SETTINGS"].back_state
+        original_music_back = controller.states["MUSIC_PLAYER"].back_state
+        try:
+            for lobby_name in ("REALTIME_LOBBY", "REALTIME_REMOTE_LOBBY"):
+                for destination in ("SETTINGS", "MUSIC_PLAYER"):
+                    lobby = controller.states[lobby_name]
+                    lobby.next_state, lobby.done = destination, True
+                    controller.active_state = lobby
+                    controller.flip_state()
+                    self.assertEqual(controller.states[destination].back_state, lobby_name)
+        finally:
+            controller.active_state = original_active
+            controller.states["SETTINGS"].back_state = original_settings_back
+            controller.states["MUSIC_PLAYER"].back_state = original_music_back
+
     def test_clear_orders_keybind_is_available_by_default(self):
         from screens.menu_screens.keybinds import KEYBIND_ACTIONS
 

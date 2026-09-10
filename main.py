@@ -394,6 +394,12 @@ class Controller:
         if next_state_name in ["SETTINGS", "MUSIC_PLAYER"]:
             if previous_state == self.states["MAP"]:
                 self.states[next_state_name].back_state = "MAP"
+            elif previous_state == self.states["REALTIME_LOBBY"]:
+                # These are convenience overlays while a host waits in the
+                # lobby. Returning must preserve the live server/session.
+                self.states[next_state_name].back_state = "REALTIME_LOBBY"
+            elif previous_state == self.states["REALTIME_REMOTE_LOBBY"]:
+                self.states[next_state_name].back_state = "REALTIME_REMOTE_LOBBY"
             # Returning from a Settings sub-screen (e.g. Unit Art, Keybinds)
             # isn't a fresh entry into Settings -- it must not overwrite the
             # MAP/MENU back_state Settings already picked up when it was
