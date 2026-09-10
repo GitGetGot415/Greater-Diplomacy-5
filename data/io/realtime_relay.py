@@ -32,8 +32,8 @@ from data.platform import IS_WEB
 
 
 DIGITALOCEAN_API = "https://api.digitalocean.com/v2"
-DEFAULT_RELAY_REGION = "nyc3"
-DEFAULT_RELAY_SIZE = "s-1vcpu-1gb"
+DEFAULT_RELAY_REGION = "nyc1"
+DEFAULT_RELAY_SIZE = "s-1vcpu-512mb-10gb"
 DEFAULT_RELAY_PORT = 443
 MAX_CONTROL_BYTES = 16 * 1024
 
