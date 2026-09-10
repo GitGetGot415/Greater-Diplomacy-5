@@ -84,18 +84,9 @@ def clear_caches():
 
 
 def load_symbols():
-    """Load small icons for units, factories, etc., plus every non-classic unit art style."""
-    path = c.ASSETS_DIR
-    if not os.path.exists(path):
-        os.makedirs(path)
-        return
-
-    for file in os.listdir(path):
-        if file.endswith(".png"):
-            name = os.path.splitext(file)[0]
-            # Load and keep transparency
-            img = pygame.image.load(os.path.join(path, file)).convert_alpha()
-            SYMBOLS[name] = img
+    """Load flat icons, classic art, bubbles, buildings, and alternate styles."""
+    for path in (c.ASSETS_DIR, c.CLASSIC_UNIT_ART_DIR, c.COMBAT_BUBBLES_DIR):
+        _load_flat_symbols(path)
 
     # Factory/recruitment center building art lives in its own folder (see
     # c.BUILDINGS_DIR) but still resolves through the same flat name->Surface
@@ -115,6 +106,19 @@ def load_symbols():
     # A mod can add or replace art, and both caches below are keyed on names
     # that were resolved against the old set.
     clear_caches()
+
+
+def _load_flat_symbols(path):
+    """Load the PNG symbols in one flat asset folder into ``SYMBOLS``."""
+    if not os.path.exists(path):
+        return
+
+    for file in os.listdir(path):
+        if file.endswith(".png"):
+            name = os.path.splitext(file)[0]
+            # Load and keep transparency
+            img = pygame.image.load(os.path.join(path, file)).convert_alpha()
+            SYMBOLS[name] = img
 
 
 def _load_variant(style, style_dir, name_key, entry, cultures=None):

@@ -111,6 +111,14 @@ class SymbolCacheTests(unittest.TestCase):
         self.assertEqual(symbol_loader.SCALED_SYMBOLS, {})
         self.assertEqual(symbol_loader.RESOLVED_NAMES, {})
 
+    def test_classic_art_and_combat_bubbles_load_from_their_dedicated_folders(self):
+        symbol_loader.load_symbols()
+
+        self.assertTrue(os.path.isdir(c.CLASSIC_UNIT_ART_DIR))
+        self.assertTrue(os.path.isdir(c.COMBAT_BUBBLES_DIR))
+        self.assertIn("Infantry", symbol_loader.SYMBOLS)
+        self.assertIn("Defense Bubble", symbol_loader.SYMBOLS)
+
 
 class FilenameDrivenUnitArtTests(unittest.TestCase):
     @classmethod

@@ -2086,6 +2086,11 @@ REBELLION_TERMS = [
 # Directories
 ASSETS_ROOT_DIR = "assets"
 ASSETS_DIR = "assets/images"
+# Classic unit art is kept in its own flat style folder, just like the
+# alternate art styles below. Combat bubbles have their own flat folder too;
+# both are loaded into the shared symbol registry by symbol_loader.
+CLASSIC_UNIT_ART_DIR = "assets/classic"
+COMBAT_BUBBLES_DIR = "assets/combat_bubbles"
 # Factory and recruitment center building art, kept out of the flat
 # assets/images set since building names/levels multiply fast. Loaded into
 # the same SYMBOLS name->Surface map as ASSETS_DIR -- see symbol_loader.load_symbols.
