@@ -269,6 +269,8 @@ class VolunteerTests(unittest.TestCase):
 
     def test_volunteer_battle_is_donor_controlled_and_gets_an_outlook(self):
         game = self.game()
+        game.nation_data["B"]["color"] = (30, 120, 220)
+        game.nation_data["C"]["color"] = (220, 50, 50)
         volunteer = division("A")
         volunteer["volunteer_host"] = "B"
         enemy = division("C")
@@ -289,8 +291,10 @@ class VolunteerTests(unittest.TestCase):
         self.assertFalse(screen.is_mine(far))
         self.assertEqual(
             overlay_renderer.combat_outlook_color(
-                [province["units"]], game.nation_data, {"A"}, "A"),
-            (255, 255, 0))
+                [province["units"]], game.nation_data, {"A"}, "A",
+                province=province),
+            overlay_renderer._desaturated_country_color(
+                game.nation_data["B"]["color"]))
 
 
 if __name__ == "__main__":

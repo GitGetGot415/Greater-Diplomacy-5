@@ -1137,6 +1137,7 @@ def get_fort_level(province):
 # future mechanics do not have to reimplement the fort-territory test.
 COMBAT_LOCATION_DEFENSE = "defense"
 COMBAT_LOCATION_OFFENSE = "offense"
+COMBAT_LOCATION_UNKNOWN = "unknown"
 
 
 def is_fort_defended_territory(province, nation, nation_data):

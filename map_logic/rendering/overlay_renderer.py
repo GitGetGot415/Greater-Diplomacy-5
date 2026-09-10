@@ -12,12 +12,13 @@ from map_logic.turn_processing import combat_processor, combat_rules
 #: pixels tall, and cropping one at the screen edge would make it pop.
 CULL_MARGIN = 250
 
-# The images are deliberately separate from outcome color.  That leaves one
-# consistent location category for future combat rules while the renderer can
-# still say whether the local player's lanes look favourable.
+# The images are deliberately separate from outcome color.  A known battle
+# gets the expected winner's muted country color, while an unknown battle uses
+# a distinct silhouette so its defensive/offensive status is not guessed.
 COMBAT_BUBBLE_ASSETS = {
     queries.COMBAT_LOCATION_DEFENSE: "Defense Bubble",
     queries.COMBAT_LOCATION_OFFENSE: "Offense Bubble",
+    queries.COMBAT_LOCATION_UNKNOWN: "Unknown Bubble",
 }
 # Bubble art is intentionally compact so it does not hide the unit/order
 # information around the tile.  The hit test below uses the image alpha mask,
@@ -34,7 +35,7 @@ COMBAT_BUBBLE_FULL_PREDICTION_ALPHA = 96
 # province is fully visible.  Blend the expected capturer's country color with
 # grey so this remains distinct from the stronger green/red local outlook.
 COMBAT_BUBBLE_UNKNOWN_COLOR = (150, 150, 150)
-COMBAT_BUBBLE_OUTCOME_COLOR_SATURATION = 0.45
+COMBAT_BUBBLE_OUTCOME_COLOR_SATURATION = 0.75
 
 
 def combat_strengths(sides, nation_data, friendly_nations, player_nation=None):
@@ -175,29 +176,22 @@ def _estimated_capture_owner(units, province, nation_data):
 def combat_outlook_color(sides, nation_data, friendly_nations,
                          player_nation=None, province=None,
                          information_available=True, capture_owner=None):
-    """Return the red/yellow/green local outlook or an informed grey tint.
+    """Return the expected winner's muted country color or neutral grey.
 
-    A bubble is grey only when the viewer lacks enough information to estimate
-    its outcome.  A fully visible battle outside the viewer's own front uses a
-    muted version of the country color expected to keep or capture the tile.
+    ``friendly_nations`` and ``player_nation`` remain accepted for callers that
+    used the old outlook API, but the bubble no longer changes color based on
+    whether the local player is involved.  Every informed battle uses the same
+    predicted-capturer rule.
     """
-    friendly_atk, enemy_atk, involved = combat_strengths(
-        sides, nation_data, friendly_nations, player_nation)
-    if not involved:
-        if not information_available:
-            return COMBAT_BUBBLE_UNKNOWN_COLOR
-        owner = (capture_owner if capture_owner is not None else
-                 _estimated_capture_owner(
-                     [unit for side in sides for unit in side], province,
-                     nation_data))
-        color = _country_color(nation_data, owner)
-        return (_desaturated_country_color(color)
-                if color is not None else COMBAT_BUBBLE_UNKNOWN_COLOR)
-    if friendly_atk > enemy_atk:
-        return (0, 255, 0)
-    if enemy_atk > friendly_atk:
-        return (255, 0, 0)
-    return (255, 255, 0)
+    if not information_available:
+        return COMBAT_BUBBLE_UNKNOWN_COLOR
+    owner = (capture_owner if capture_owner is not None else
+             _estimated_capture_owner(
+                 [unit for side in sides for unit in side], province,
+                 nation_data))
+    color = _country_color(nation_data, owner)
+    return (_desaturated_country_color(color)
+            if color is not None else COMBAT_BUBBLE_UNKNOWN_COLOR)
 
 
 def estimated_combat_outcome(sides, nation_data, province=None, max_turns=100):
@@ -333,12 +327,15 @@ def combat_bubble_records(map_screen):
             map_screen, province["id"])
         capture_owner = _capture_owner_from_survivors(
             combat_estimate["sides"][0], province, map_screen.nation_data)
+        category = (
+            queries.get_combat_location_category(
+                province, player, map_screen.nation_data)
+            if information_available else queries.COMBAT_LOCATION_UNKNOWN)
         records.append({
             "kind": "province",
             "province_id": province["id"],
             "center": province["center"],
-            "category": queries.get_combat_location_category(
-                province, player, map_screen.nation_data),
+            "category": category,
             "color": combat_outlook_color(
                 sides, map_screen.nation_data, friendly, player,
                 province=province,

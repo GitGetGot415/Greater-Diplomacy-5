@@ -287,6 +287,27 @@ class CombatDisplayTests(unittest.TestCase):
 
         self.assertEqual(tiny_font.render.call_args.args[0], "?")
 
+    def test_partial_information_uses_unknown_bubble_shape(self):
+        old_visible = self.map.visible_provinces
+        old_partial = self.map.partial_visible_provinces
+        self.addCleanup(setattr, self.map, "visible_provinces", old_visible)
+        self.addCleanup(setattr, self.map, "partial_visible_provinces", old_partial)
+        self.map.visible_provinces = set()
+        self.map.partial_visible_provinces = {"battle"}
+
+        with mock.patch.object(queries, "get_combat_predictions",
+                               return_value=[self.prediction]), \
+             mock.patch.object(queries, "get_all_friendly_nations",
+                               return_value=set()), \
+             mock.patch.object(queries, "is_province_in_active_combat",
+                               return_value=True):
+            record = overlay_renderer.combat_bubble_records(self.map)[0]
+
+        self.assertFalse(record["information_available"])
+        self.assertEqual(record["category"], queries.COMBAT_LOCATION_UNKNOWN)
+        self.assertEqual(overlay_renderer.COMBAT_BUBBLE_ASSETS[record["category"]],
+                         "Unknown Bubble")
+
     def test_full_display_makes_active_bubble_translucent(self):
         record = {"category": queries.COMBAT_LOCATION_DEFENSE,
                   "color": (255, 255, 0), "potential": False}
