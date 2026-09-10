@@ -182,7 +182,15 @@ def render_buttons(map_screen):
                     if session.submit(player, turn) is False:
                         map_screen.show_feedback("Cannot submit: connection to the host was lost.")
                         return
-                    map_screen.show_feedback("Turn submitted. Unsubmit to edit again.")
+                    # A remote client has queued a request, not yet a server
+                    # acknowledgement.  Make the short in-flight interval
+                    # explicit instead of leaving an apparently live Submit
+                    # button on screen.
+                    if getattr(map_screen, "realtime_client", None):
+                        map_screen.realtime_submission_pending = True
+                        map_screen.show_feedback("Submitting turn to the host...")
+                    else:
+                        map_screen.show_feedback("Turn submitted. Unsubmit to edit again.")
                 except RealtimeError as error:
                     map_screen.show_feedback(f"Submission rejected: {error}")
             confirm_dialog.ask_yes_no("Submit Turn", "Lock these orders for this turn?", confirmed,
@@ -686,14 +694,17 @@ def update_button_states(map_screen):
         if getattr(map_screen, "realtime_multiplayer", False):
             session = map_screen.realtime_session
             player = session.players.get(map_screen.realtime_player_id)
+            submission_pending = bool(getattr(map_screen, "realtime_submission_pending", False))
             locked = (session.phase != "TURN" or not player or player.submitted or player.eliminated)
             connection_lost = bool(getattr(map_screen, "realtime_connection_error", ""))
-            map_screen.btn_next_turn.text = ("Unsubmit Turn" if player and player.submitted else "Submit Turn")
+            map_screen.btn_next_turn.text = ("Submitting..." if submission_pending else
+                                             "Unsubmit Turn" if player and player.submitted else "Submit Turn")
             map_screen.btn_next_turn.callback = (map_screen._realtime_unsubmit if player and player.submitted
                                                  else map_screen._realtime_submit)
-            map_screen.btn_next_turn.set_palette("orange" if player and player.submitted else "purple")
+            map_screen.btn_next_turn.set_palette("blue" if submission_pending else
+                                                 "orange" if player and player.submitted else "purple")
             map_screen.btn_next_turn.apply_state(enabled=not (connection_lost or session.phase == "PROCESSING"
-                                                               or player and player.eliminated))
+                                                               or submission_pending or player and player.eliminated))
         elif getattr(map_screen, 'multiplayer_mode', False):
             map_screen.btn_next_turn.text = "Export Turn"
         else:
@@ -1996,7 +2007,8 @@ class Map(GameState):
         if getattr(self, "realtime_multiplayer", False):
             session = self.realtime_session
             player = session.players.get(self.realtime_player_id)
-            if session.phase == "TURN" and player and not player.submitted and not player.eliminated:
+            if (session.phase == "TURN" and player and not player.submitted and not player.eliminated
+                    and not getattr(self, "realtime_submission_pending", False)):
                 # Keep the server's last accepted draft current even before
                 # Submit. A deadline therefore resolves the latest legal work,
                 # while Submit only locks that draft.
@@ -2017,6 +2029,9 @@ class Map(GameState):
                 state = payload if event.get("type") == "state" else payload.get("state")
                 if state:
                     self.realtime_session.update(state)
+                    player = self.realtime_session.players.get(self.realtime_player_id)
+                    if player and player.submitted:
+                        self.realtime_submission_pending = False
                     # Status heartbeats and draft acknowledgements describe
                     # the same in-progress turn. Re-applying their base-game
                     # snapshot would erase a player's unsubmitted local
@@ -2034,6 +2049,7 @@ class Map(GameState):
                         self._realtime_snapshot_phase = current_phase
                 elif event.get("type") in ("error", "disconnected"):
                     message = payload.get("message", "Disconnected from real-time server.")
+                    self.realtime_submission_pending = False
                     if event.get("type") == "disconnected":
                         # Do not keep retrying a draft send after the relay or
                         # host has gone away. The final authoritative state

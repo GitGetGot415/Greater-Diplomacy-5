@@ -63,6 +63,15 @@ class Automation_Screen(GameState):
         if self.can_edit_realtime():
             val = self.map_screen.nation_data[self.player]["automation"].get(key, False)
             self.map_screen.nation_data[self.player]["automation"][key] = not val
+            if getattr(self.map_screen, "realtime_multiplayer", False):
+                # The map's regular draft sync runs every frame, but clearing
+                # its fingerprint here makes this visible preference update
+                # send on the very next frame even if the screen was opened
+                # between normal map updates.
+                self.map_screen._realtime_draft_fingerprint = None
+                state = "enabled" if not val else "disabled"
+                self.map_screen.show_feedback(
+                    f"{key.replace('_', ' ').title()} automation {state}; it runs when this timed turn processes.")
             self.refresh_ui()
 
     def confirm_then(self, action, question):

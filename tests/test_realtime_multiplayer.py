@@ -114,6 +114,16 @@ class ConvenienceNetworkingTests(unittest.TestCase):
 
 
 class RelayTransportTests(unittest.TestCase):
+    def test_macos_clipboard_fallback_uses_pbcopy_when_sdl_clipboard_is_unavailable(self):
+        from data import queries
+        with mock.patch("data.queries.pygame.scrap.get_init", side_effect=RuntimeError("no SDL clipboard")), \
+             mock.patch("data.queries.sys.platform", "darwin"), \
+             mock.patch("data.queries.subprocess.run") as run:
+            self.assertTrue(queries.copy_to_clipboard("reconnect-code"))
+        run.assert_called_once()
+        self.assertEqual(run.call_args.args[0], ["/usr/bin/pbcopy"])
+        self.assertEqual(run.call_args.kwargs["input"], b"reconnect-code")
+
     def test_relay_invite_validation_and_cloud_init_exclude_provider_credentials(self):
         invite = decode_invite(encode_relay_invite("203.0.113.7", 443, "a" * 32, "b" * 64, "c" * 32))
         self.assertEqual(validate_relay_invite(invite)["relay_host"], "203.0.113.7")
@@ -391,6 +401,32 @@ class RealtimeSessionTests(unittest.TestCase):
         self.assertIn({"type": "research_queue", "tech_names": []},
                       collect_map_commands(map_ref, "A"))
 
+    def test_diplomacy_draft_is_collected_and_cannot_replace_inflight_offer(self):
+        map_ref = SimpleNamespace(
+            map_data={}, id_to_province={}, nation_colors={},
+            nation_data={
+                "A": {"name": "A", "color": [1, 2, 3], "research_queue": [],
+                      "pending_diplomacy": {
+                          "B": {"action": "REQ_MILITARY_ACCESS", "turns": 0,
+                                "timer": 0, "message": "Please allow passage."},
+                          "C": {"action": "TRADE", "turns": 2, "timer": 0,
+                                "message": "Already sent."},
+                      }, "diplo_responses": {}, "draft_lists": {}},
+                "B": {}, "C": {},
+            })
+        commands = collect_map_commands(map_ref, "A")
+        diplomacy = next(command for command in commands if command["type"] == "country_diplomacy")
+        self.assertEqual(set(diplomacy["pending"]), {"B"})
+        driver = MapRealtimeDriver(map_ref)
+        canonical = driver.validate_draft("A", [diplomacy])[0]
+        # The current request is canonicalized for end-of-turn processing;
+        # the already-sent proposal was omitted from the client command.
+        self.assertEqual(canonical["pending"]["B"]["action"], "REQ_MILITARY_ACCESS")
+        with self.assertRaises(RealtimeError):
+            driver.validate_draft("A", [{"type": "country_diplomacy", "pending": {
+                "B": {"action": "NOT_A_REAL_ACTION", "timer": 0, "message": ""}},
+                "responses": {}, "draft_lists": {}}])
+
     def test_tls_server_client_join_and_malformed_frame_rejection(self):
         with tempfile.TemporaryDirectory() as directory:
             certificate, key, fingerprint = create_match_certificate(directory)
@@ -429,6 +465,30 @@ class RealtimeSessionTests(unittest.TestCase):
                                 player.get("player_id") == self.host and player.get("country_id") == "A"
                                 for player in event.get("payload", {}).get("players", []))
                             for event in state_events), (state_events, client.disconnect_message))
+                # A concurrent selection race must reject the losing request
+                # without treating the player as a malformed/disconnected client.
+                client.send("select_country", {"country_id": "A"})
+                rejected = []
+                while time.monotonic() < deadline:
+                    rejected.extend(client.poll())
+                    if any(event.get("type") == "error" for event in rejected):
+                        break
+                    time.sleep(.01)
+                self.assertTrue(any(event.get("type") == "error" and
+                                    "selected by another player" in event.get("payload", {}).get("message", "")
+                                    for event in rejected), (rejected, client.disconnect_message))
+                self.assertIsNotNone(client.socket)
+                client.send("select_country", {"country_id": "B"})
+                chosen = []
+                while time.monotonic() < deadline:
+                    chosen.extend(client.poll())
+                    if any(event.get("payload", {}).get("state") for event in chosen):
+                        break
+                    time.sleep(.01)
+                self.assertTrue(any(any(player.get("player_id") == client.player_id and
+                                        player.get("country_id") == "B"
+                                        for player in event.get("payload", {}).get("state", {}).get("players", []))
+                                    for event in chosen), (chosen, client.disconnect_message))
                 client.close()
             finally:
                 server.stop()

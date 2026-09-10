@@ -650,6 +650,8 @@ class MapRealtimeDriver:
                 canonical.append(self._validate_country_preferences(country_id, command))
             elif kind == "country_appearance":
                 canonical.append(self._validate_country_appearance(country_id, command))
+            elif kind == "country_diplomacy":
+                canonical.append(self._validate_country_diplomacy(country_id, command))
             else:
                 raise RealtimeError("That order type is not supported by the server.")
         return canonical
@@ -698,6 +700,95 @@ class MapRealtimeDriver:
             raise RealtimeError("Invalid country color.")
         canonical["color"] = list(color)
         return {"type": "country_appearance", "appearance": canonical}
+
+    def _validate_country_diplomacy(self, country_id: str, command: dict[str, Any]) -> dict[str, Any]:
+        """Validate only this country's unprocessed diplomatic draft.
+
+        Diplomacy is deliberately a command rather than copied client map data.
+        In-flight proposals remain on the authoritative map; clients can only
+        replace their own unsent proposals and responses for the current turn.
+        """
+        self._country(country_id)
+        pending = command.get("pending", {})
+        responses = command.get("responses", {})
+        draft_lists = command.get("draft_lists", {})
+        if not all(isinstance(value, dict) for value in (pending, responses, draft_lists)):
+            raise RealtimeError("Invalid diplomacy draft.")
+        if any(len(value) > 100 for value in (pending, responses, draft_lists)):
+            raise RealtimeError("Too many diplomatic actions in one turn.")
+        allowed_actions = set(c.UNILATERAL_ACTIONS) | set(c.BILATERAL_ACTIONS)
+
+        def target_ok(target: Any) -> str:
+            if (not isinstance(target, str) or target == country_id or
+                    target not in self.map_ref.nation_data):
+                raise RealtimeError("Invalid diplomacy target.")
+            return target
+
+        def text(value: Any, label: str, limit: int = 4000) -> str:
+            if (not isinstance(value, str) or len(value) > limit or
+                    any(ord(character) < 32 and character not in "\n\t" for character in value)):
+                raise RealtimeError(f"Invalid diplomacy {label}.")
+            return value
+
+        canonical_pending = {}
+        for target, info in pending.items():
+            target_ok(target)
+            if not isinstance(info, dict):
+                raise RealtimeError("Invalid diplomatic action.")
+            action = info.get("action")
+            if not isinstance(action, str) or len(action) > 4500:
+                raise RealtimeError("Invalid diplomatic action.")
+            if action.startswith("MSG:"):
+                text(action[4:], "message")
+            elif action not in allowed_actions:
+                raise RealtimeError("Unknown diplomatic action.")
+            timer = info.get("timer", 0)
+            if not isinstance(timer, int) or isinstance(timer, bool) or not -1 <= timer <= 1000:
+                raise RealtimeError("Invalid diplomacy timer.")
+            entry = {"action": action, "turns": 0,
+                     "timer": timer,
+                     "message": text(info.get("message", ""), "message")}
+            if "parameters" in info:
+                try:
+                    encoded = json.dumps(info["parameters"], separators=(",", ":"))
+                except (TypeError, ValueError) as exc:
+                    raise RealtimeError("Invalid diplomacy terms.") from exc
+                if len(encoded) > 50_000:
+                    raise RealtimeError("Diplomacy terms are too large.")
+                entry["parameters"] = copy.deepcopy(info["parameters"])
+            canonical_pending[target] = entry
+
+        canonical_responses = {}
+        for target, info in responses.items():
+            target_ok(target)
+            if not isinstance(info, dict):
+                raise RealtimeError("Invalid diplomatic response.")
+            verdict, action = info.get("verdict"), info.get("action")
+            if verdict not in ("ACCEPT", "REJECT") or action not in c.BILATERAL_ACTIONS:
+                raise RealtimeError("Invalid diplomatic response.")
+            entry = {"verdict": verdict, "action": action,
+                     "message": text(info.get("message", ""), "response message")}
+            if "parameters" in info:
+                try:
+                    encoded = json.dumps(info["parameters"], separators=(",", ":"))
+                except (TypeError, ValueError) as exc:
+                    raise RealtimeError("Invalid diplomacy terms.") from exc
+                if len(encoded) > 50_000:
+                    raise RealtimeError("Diplomacy terms are too large.")
+                entry["parameters"] = copy.deepcopy(info["parameters"])
+            canonical_responses[target] = entry
+
+        canonical_lists = {}
+        for target, messages in draft_lists.items():
+            target_ok(target)
+            if (not isinstance(messages, list) or len(messages) > 20 or
+                    any(not isinstance(message, str) or len(message) > 4000 or
+                        any(ord(character) < 32 and character not in "\n\t" for character in message)
+                        for message in messages)):
+                raise RealtimeError("Invalid diplomatic message draft.")
+            canonical_lists[target] = list(messages)
+        return {"type": "country_diplomacy", "pending": canonical_pending,
+                "responses": canonical_responses, "draft_lists": canonical_lists}
 
     def _province(self, province_id: Any):
         try:
@@ -833,9 +924,24 @@ class MapRealtimeDriver:
                     country_data = self.map_ref.nation_data[country_id]
                     country_data.update(copy.deepcopy(command["appearance"]))
                     self.map_ref.nation_colors[country_id] = tuple(country_data["color"])
-        # The normal turn processor's player-automation hook expects one local
-        # player. A real-time server has none, so run each opted-in human here
-        # under the same helpers before the shared turn simulation begins.
+                elif command["type"] == "country_diplomacy":
+                    country_data = self.map_ref.nation_data[country_id]
+                    # A proposal already travelling belongs to the server and
+                    # cannot be cancelled or rewritten by a stale client view.
+                    existing = country_data.get("pending_diplomacy", {})
+                    in_flight = {target: copy.deepcopy(info) for target, info in existing.items()
+                                 if isinstance(info, dict) and info.get("turns", 0) > 0}
+                    in_flight.update(copy.deepcopy(command["pending"]))
+                    country_data["pending_diplomacy"] = in_flight
+                    country_data["diplo_responses"] = copy.deepcopy(command["responses"])
+                    country_data["draft_lists"] = copy.deepcopy(command["draft_lists"])
+        from map_logic.turn_processing import turn_processor
+        asyncio.run(turn_processor.prepare_turn(self.map_ref))
+        asyncio.run(turn_processor.resolve_turn_logic(self.map_ref))
+        # In a normal game this hook runs *after* resolution, so its orders
+        # genuinely prepare the next turn.  The server has no local player and
+        # therefore cannot use that single-player hook directly; replay it for
+        # each opted-in real-time player at the same point in the turn instead.
         from map_logic.ai import automation_logic
         original_player = self.map_ref.player_country
         try:
@@ -852,9 +958,6 @@ class MapRealtimeDriver:
                     automation_logic.automate_player_research(self.map_ref)
         finally:
             self.map_ref.player_country = original_player
-        from map_logic.turn_processing import turn_processor
-        asyncio.run(turn_processor.prepare_turn(self.map_ref))
-        asyncio.run(turn_processor.resolve_turn_logic(self.map_ref))
 
     def is_eliminated(self, country_id: str) -> bool:
         from data import queries
@@ -915,6 +1018,24 @@ def collect_map_commands(map_ref, country_id: str) -> list[dict[str, Any]]:
     commands.append({"type": "country_appearance", "appearance": {
         key: copy.deepcopy(country_data.get(key, "DEFAULT" if key.endswith("_data") else [] if key == "color" else ""))
         for key in MapRealtimeDriver._APPEARANCE_KEYS}})
+    # Only unsent proposals are a local draft.  Messages already in transit
+    # are server-owned and are deliberately omitted so a stale client cannot
+    # cancel or alter them on its next ordinary sync.
+    pending = country_data.get("pending_diplomacy", {})
+    if not isinstance(pending, dict):
+        pending = {}
+    responses = country_data.get("diplo_responses", {})
+    if not isinstance(responses, dict):
+        responses = {}
+    draft_lists = country_data.get("draft_lists", {})
+    if not isinstance(draft_lists, dict):
+        draft_lists = {}
+    commands.append({"type": "country_diplomacy",
+                     "pending": {target: copy.deepcopy(info) for target, info in pending.items()
+                                 if isinstance(target, str) and isinstance(info, dict)
+                                 and info.get("turns", 0) <= 0},
+                     "responses": copy.deepcopy(responses),
+                     "draft_lists": copy.deepcopy(draft_lists)})
     return commands
 
 
@@ -1158,7 +1279,15 @@ class RealtimeServer:
                 message = read_message(connection)
                 if message["session_id"] != self.session.session_id:
                     raise RealtimeError("Wrong match session.")
-                result, player_id = self._handle_message(player_id, message)
+                try:
+                    result, player_id = self._handle_message(player_id, message)
+                except RealtimeError as exc:
+                    # A valid client can make an invalid lobby/order request.
+                    # That must be a request-level rejection, never a reason
+                    # to disconnect them (notably for country-selection races).
+                    self._send_message(connection, "error", {"message": str(exc)},
+                                       message.get("request_id"))
+                    continue
                 if player_id:
                     # Register before acknowledging the join.  Once the
                     # client can see its lobby, it must also be eligible for

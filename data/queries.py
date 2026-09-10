@@ -9,6 +9,8 @@ import math
 import random
 import threading
 import shutil
+import subprocess
+import sys
 import zipfile
 from data.platform import run_background, IS_WEB, download_file, downloads_dir, sync_persisted_dir
 from datetime import datetime
@@ -3696,13 +3698,23 @@ def open_file_browser(game_state, title, start_dir=None, mode="open_file", exten
                      game_state=game_state, tk_parent=tk_parent, on_result=_on_result)
 
 def copy_to_clipboard(text):
-    """Pushes text to the OS clipboard via SDL's clipboard (pygame.scrap)."""
+    """Push text to the OS clipboard, including macOS SDL fallback builds."""
     try:
         if not pygame.scrap.get_init():
             pygame.scrap.init()
         pygame.scrap.put(pygame.SCRAP_TEXT, text.encode("utf-8"))
         return True
     except Exception as e:
+        # pygame.scrap is unavailable in a number of macOS packaged builds.
+        # pbcopy is part of macOS itself and gives reconnect/invite copying the
+        # same reliable fallback as text-input paste uses through pbpaste.
+        if sys.platform == "darwin":
+            try:
+                subprocess.run(["/usr/bin/pbcopy"], input=str(text).encode("utf-8"),
+                               check=True, timeout=2)
+                return True
+            except (OSError, subprocess.SubprocessError):
+                pass
         print(f"Failed to copy to clipboard: {e}")
         return False
 
