@@ -76,22 +76,20 @@ class Realtime_Host_Setup(GameState):
     def show_network_help(self):
         confirm_dialog.show_info(
             "Real-Time Multiplayer Help",
-            "Windows host:\n"
-            "LAN: keep the detected Advertised Address and put both computers on the same network. "
-            "WAN: use the public IP or DNS hostname, forward TCP port 38475 to the Windows PC, and allow "
-            "the port through Windows Defender Firewall.\n\n"
-            "macOS host:\n"
-            "LAN: use the detected Advertised Address. WAN: use the public IP or DNS hostname and forward "
-            "the selected TCP port to the Mac. Allow the game through System Settings > Network > Firewall "
-            "if macOS asks.\n\n"
-            "Windows joining:\n"
-            "Choose Join Match and paste the invite. The joining PC does not need port forwarding.\n\n"
-            "macOS joining:\n"
-            "Choose Join Match and paste the invite with Command+V. The joining Mac does not need port "
-            "forwarding.\n\n"
-            "Keep the host's lobby open and generate a new invite after changing its address or port. "
-            "A timeout means the address or port cannot be reached; connection refused means the address "
-            "was reached but no server was listening."
+            "LAN (same router): keep the detected Advertised Address and use a newly generated invite. "
+            "For a connection test from a Mac, run: nc -vz HOST_LAN_IP PORT. Guest Wi-Fi, VPNs, and Wi-Fi "
+            "client isolation can block local connections.\n\n"
+            "WAN hosting: enter the host's public IP or DNS name as Advertised Address BEFORE opening the "
+            "lobby, then generate a new invite. In the router, forward the selected TCP port (38475 by "
+            "default) to this computer's LAN IP and the same port. Allow that port through the host's "
+            "firewall. Joining players never need port forwarding.\n\n"
+            "Do not test a public/WAN invite from another device on the same home network unless the router "
+            "supports NAT loopback. Test the LAN address locally or use an external network, such as a phone "
+            "hotspot. If LAN works but external WAN does not, check the forward target, a changing LAN IP, "
+            "double NAT, or ISP CGNAT/inbound-port blocking.\n\n"
+            "Keep the host lobby open. Changing address or port requires a new invite. A timeout means the "
+            "address or port cannot be reached; connection refused means it was reached but no server is "
+            "listening."
         )
 
     def _string(self, title, attr, prompt, allow_empty=False):
