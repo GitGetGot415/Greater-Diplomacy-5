@@ -291,7 +291,7 @@ class Realtime_Relay_Setup(GameState):
             if value is not None:
                 self.host_setup.relay_size = value.strip()
                 self.refresh_ui()
-        confirm_dialog.ask_string("Droplet Size", "Recommended: s-1vcpu-1gb:", saved,
+        confirm_dialog.ask_string("Droplet Size", "Recommended: s-1vcpu-512mb-10gb:", saved,
                                   initial=self.host_setup.relay_size)
 
     def open_token_page(self):
