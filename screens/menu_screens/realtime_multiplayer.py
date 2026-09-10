@@ -251,6 +251,7 @@ class Realtime_Lobby(GameState):
         self.port_mapping = None
         self.local_address = ""
         self.fingerprint = ""
+        self.manual_advertised_address = False
         self.country_page = 0
         self.refresh_ui()
 
@@ -263,6 +264,7 @@ class Realtime_Lobby(GameState):
         self.port_mapping = host_setup.realtime_port_mapping
         self.local_address = host_setup.local_address
         self.fingerprint = host_setup.realtime_fingerprint
+        self.manual_advertised_address = not host_setup._address_is_detected
         self.advertiser = host_setup.realtime_lan_advertiser
         self._lobby_signature = None
         self.country_page = 0
@@ -274,11 +276,12 @@ class Realtime_Lobby(GameState):
             return
         host = self.session.host_id
         self.elements.extend([
-            Button("centered-270", 100, "small", "blue", "Copy LAN Invite", self.show_lan_invite),
-            Button("centered-90", 100, "small", "purple", self.internet_button_label(), self.show_internet_invite),
-            Button("centered+90", 100, "small", "green", "Start Match", self.start_match),
-            Button("centered+270", 100, "small", "red", "End Lobby", self.end_lobby),
-            Button("centered", 145, "small", "light_blue", "Networking Status", self.show_network_status),
+            Button("centered-220", 100, "medium", "blue", "Copy LAN Invite", self.show_lan_invite),
+            Button("centered", 100, "medium", "green", "Start Match", self.start_match),
+            Button("centered+220", 100, "medium", "red", "End Lobby", self.end_lobby),
+            Button("centered-120", 150, "medium", self.internet_button_color(),
+                   self.internet_button_label(), self.show_internet_invite),
+            Button("centered+120", 150, "medium", "light_blue", "Networking Status", self.show_network_status),
         ])
         countries = self.session.countries
         per_page = 8
@@ -291,14 +294,14 @@ class Realtime_Lobby(GameState):
             color = "green" if not selected or selected == self.session.players[host].name else "grey"
             column, row = index % 2, index // 2
             x = "centered-140" if column == 0 else "centered+140"
-            self.elements.append(Button(x, 190 + row * 65, (270, 44), color, label,
+            self.elements.append(Button(x, 215 + row * 65, (270, 44), color, label,
                                         lambda country_id=country: self.choose_host_country(country_id)))
         if self.country_page:
-            self.elements.append(Button("centered-140", 470, "small", "blue", "Previous", self.previous_country_page))
+            self.elements.append(Button("centered-140", 480, "small", "blue", "Previous", self.previous_country_page))
         if self.country_page + 1 < page_count:
-            self.elements.append(Button("centered+140", 470, "small", "blue", "Next", self.next_country_page))
+            self.elements.append(Button("centered+140", 480, "small", "blue", "Next", self.next_country_page))
         ready = self.session.players[host].ready
-        self.elements.append(Button("centered", 530, "medium", "green" if ready else "orange",
+        self.elements.append(Button("centered", 535, "medium", "green" if ready else "orange",
                                     "Host Ready" if ready else "Mark Host Ready", self.toggle_ready))
 
     def previous_country_page(self):
@@ -327,10 +330,18 @@ class Realtime_Lobby(GameState):
     def internet_button_label(self):
         result = self.port_mapping.result() if self.port_mapping else None
         if result is None and self.port_mapping:
-            return "Mapping Router..."
+            return "Internet Mapping..."
         if result and result.succeeded and is_public_ipv4(result.external_address):
             return "Copy Internet Invite"
-        return "Copy Shared Invite"
+        if self.manual_advertised_address:
+            return "Copy Manual Invite"
+        return "Internet Invite Unavailable"
+
+    def internet_button_color(self):
+        result = self.port_mapping.result() if self.port_mapping else None
+        if result and result.succeeded and is_public_ipv4(result.external_address):
+            return "purple"
+        return "orange" if self.manual_advertised_address else "grey"
 
     def _show_copied_invite(self, title, invite, note):
         copied = queries.copy_to_clipboard(invite)
@@ -356,10 +367,17 @@ class Realtime_Lobby(GameState):
                 "Your router accepted an automatic mapping. Share any lobby password separately. "
                 "Ask a player on another network to test it; some ISPs block incoming connections.")
             return
-        self._show_copied_invite(
-            "Shared Invite", self.invite,
-            "This uses the Advertised Address chosen in host setup. Share any lobby password separately. "
-            "Use Networking Status for automatic-mapping diagnostics.")
+        if self.manual_advertised_address:
+            self._show_copied_invite(
+                "Manual Internet Invite", self.invite,
+                "This uses the public address or DNS hostname entered in host setup. Share any lobby password "
+                "separately; it still requires a working manual port forward.")
+            return
+        confirm_dialog.show_info(
+            "Internet Invite Unavailable",
+            "The router has not provided a usable public mapping yet. Open Networking Status for the exact "
+            "result. Do not send the LAN/shared invite to an internet player: it contains a private local address."
+        )
 
     def show_network_status(self):
         result = self.port_mapping.result() if self.port_mapping else None
