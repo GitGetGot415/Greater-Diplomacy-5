@@ -1611,6 +1611,8 @@ class Map(GameState):
     def exit_to_menu(self):
         if (getattr(self, "realtime_multiplayer", False)
                 and self.realtime_session.phase == "GAME_OVER"):
+            if getattr(self, "realtime_port_mapping", None):
+                self.realtime_port_mapping.stop()
             if getattr(self, "realtime_server", None):
                 self.realtime_server.stop()
             self.change_state("MULTIPLAYER_MENU")
@@ -1625,6 +1627,8 @@ class Map(GameState):
                 if self.realtime_session.phase == "PROCESSING":
                     self.show_feedback("Current turn is finishing safely; the match will then end.")
                     return
+                if getattr(self, "realtime_port_mapping", None):
+                    self.realtime_port_mapping.stop()
                 if getattr(self, "realtime_server", None):
                     self.realtime_server.stop()
                 self.show_feedback("Real-time match ended by host. Save the final result before leaving.")

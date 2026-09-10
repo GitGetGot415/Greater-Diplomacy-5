@@ -1002,6 +1002,7 @@ class RealtimeServer:
         self.session, self.certificate_path, self.key_path = session, certificate_path, key_path
         self.bind_address = bind_address
         self._listener: socket.socket | None = None
+        self._tls_context: ssl.SSLContext | None = None
         self._stopped = threading.Event()
         self._clients: dict[str, socket.socket] = {}
         self._clients_lock = threading.Lock()
@@ -1016,10 +1017,19 @@ class RealtimeServer:
         listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         listener.bind((self.bind_address, port))
         listener.listen()
-        self._listener = context.wrap_socket(listener, server_side=True)
+        # Keep the listening socket plain TCP and perform TLS handshakes in
+        # per-client workers.  A port scanner or diagnostic ``nc`` probe must
+        # never make the one accept loop exit with an SSL handshake error.
+        self._listener = listener
+        self._tls_context = context
         threading.Thread(target=self._accept_loop, daemon=True).start()
         threading.Thread(target=self._timer_loop, daemon=True).start()
         return self._listener.getsockname()[1]
+
+    @property
+    def listening(self) -> bool:
+        """Whether the server still owns its TCP listening socket."""
+        return self._listener is not None and not self._stopped.is_set()
 
     def stop(self) -> None:
         self._stopped.set()
@@ -1037,7 +1047,7 @@ class RealtimeServer:
         while not self._stopped.is_set():
             try:
                 connection, _address = self._listener.accept()
-            except (OSError, ssl.SSLError):
+            except OSError:
                 break
             threading.Thread(target=self._serve_connection, args=(connection,), daemon=True).start()
 
@@ -1054,6 +1064,8 @@ class RealtimeServer:
     def _serve_connection(self, connection: socket.socket) -> None:
         player_id: str | None = None
         try:
+            assert self._tls_context is not None
+            connection = self._tls_context.wrap_socket(connection, server_side=True)
             while not self._stopped.is_set():
                 message = read_message(connection)
                 if message["session_id"] != self.session.session_id:

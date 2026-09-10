@@ -15,6 +15,10 @@ from data.io.realtime_multiplayer import (
     persist_reconnect_token,
     create_match_certificate, decode_invite, encode_invite,
 )
+from data.io.realtime_networking import (
+    AutomaticPortMappingTask, LanMatchAdvertiser, LanMatchBrowser,
+    host_network_diagnostics, is_public_ipv4,
+)
 from data.platform import IS_WEB
 from gameState import GameState
 from ui import confirm_dialog
@@ -49,6 +53,8 @@ class Realtime_Host_Setup(GameState):
         self.host_name = "Host"
         self.password = ""
         self.address = default_advertised_address()
+        self.local_address = self.address
+        self._address_is_detected = True
         self.port, self.capacity = DEFAULT_PORT, 4
         self.max_turns, self.turn_minutes = DEFAULT_MAX_TURNS, DEFAULT_TURN_MINUTES
         self.refresh_ui()
@@ -76,13 +82,15 @@ class Realtime_Host_Setup(GameState):
     def show_network_help(self):
         confirm_dialog.show_info(
             "Real-Time Multiplayer Help",
-            "LAN (same router): keep the detected Advertised Address and use a newly generated invite. "
-            "For a connection test from a Mac, run: nc -vz HOST_LAN_IP PORT. Guest Wi-Fi, VPNs, and Wi-Fi "
-            "client isolation can block local connections.\n\n"
-            "WAN hosting: enter the host's public IP or DNS name as Advertised Address BEFORE opening the "
-            "lobby, then generate a new invite. In the router, forward the selected TCP port (38475 by "
-            "default) to this computer's LAN IP and the same port. Allow that port through the host's "
-            "firewall. Joining players never need port forwarding.\n\n"
+            "LAN (same router): hosts advertise open lobbies automatically. Players choose Find LAN Matches "
+            "and click the lobby; no address, port, or copied invite is needed. A LAN invite remains available "
+            "as a fallback. Guest Wi-Fi, VPNs, and Wi-Fi client isolation can block local connections.\n\n"
+            "WAN hosting: after Open Lobby, the game automatically tries UPnP and NAT-PMP router mapping. "
+            "Use Networking Status to see the result and copy the Internet Invite when mapping succeeds. "
+            "Joining players never need port forwarding.\n\n"
+            "If automatic mapping is unavailable, enter a public IP or DNS hostname as Advertised Address and "
+            "use manual TCP forwarding to this computer's LAN IP and selected port. Double NAT or ISP CGNAT "
+            "cannot be fixed by forwarding on this router alone.\n\n"
             "Do not test a public/WAN invite from another device on the same home network unless the router "
             "supports NAT loopback. Test the LAN address locally or use an external network, such as a phone "
             "hotspot. If LAN works but external WAN does not, check the forward target, a changing LAN IP, "
@@ -106,7 +114,15 @@ class Realtime_Host_Setup(GameState):
         confirm_dialog.ask_integer(title, prompt, saved, low, high, getattr(self, attr))
 
     def edit_name(self): self._string("Host Display Name", "host_name", "Enter your display name:")
-    def edit_address(self): self._string("Advertised Address", "address", "Enter LAN IP, public IP, or hostname to share:")
+
+    def edit_address(self):
+        def saved(value):
+            if value is not None:
+                self.address = value.strip()
+                self._address_is_detected = False
+                self.refresh_ui()
+        confirm_dialog.ask_string("Advertised Address", "Enter LAN IP, public IP, or hostname to share:",
+                                  saved, initial=self.address)
     def edit_password(self): self._string("Lobby Password", "password", "Optional password (blank removes it):", True)
     def edit_port(self): self._integer("Server Port", "port", "Forward this TCP port for WAN play:", 1024, 65535)
     def edit_turns(self): self._integer("Maximum Turns", "max_turns", "1 to 100:", 1, 100)
@@ -125,7 +141,13 @@ class Realtime_Host_Setup(GameState):
         if IS_WEB:
             confirm_dialog.show_error("Desktop Only", "Real-time hosting is available in desktop builds only.")
             return
+        server = advertiser = mapping = None
         try:
+            # Re-detect just before hosting: a Wi-Fi or VPN change since this
+            # screen opened must not make LAN discovery advertise a stale IP.
+            self.local_address = default_advertised_address()
+            if self._address_is_detected:
+                self.address = self.local_address
             from screens.menu_screens.map import Map
             server_map = Map(load_path=self.scenario_path, is_scenario=True,
                              map_settings=copy.deepcopy(self.settings))
@@ -142,9 +164,29 @@ class Realtime_Host_Setup(GameState):
             self.realtime_session = session
             self.realtime_server = server
             self.realtime_server_map = server_map
+            self.realtime_fingerprint = fingerprint
             self.realtime_invite = encode_invite(self.address, actual_port, session.session_id, fingerprint)
+            self.realtime_lan_invite = encode_invite(self.local_address, actual_port,
+                                                     session.session_id, fingerprint)
+            advertiser = LanMatchAdvertiser(
+                decode_invite(self.realtime_lan_invite), self.host_name,
+                os.path.basename(self.scenario_path),
+            )
+            advertiser.start()
+            self.realtime_lan_advertiser = advertiser
+            # UPnP/NAT-PMP is a convenience attempt only.  It runs in a
+            # worker so opening a lobby never freezes the game UI, and the
+            # existing manual invite remains usable if the router declines it.
+            self.realtime_port_mapping = None
+            if self.local_address != "127.0.0.1":
+                mapping = AutomaticPortMappingTask(self.local_address, actual_port)
+                mapping.start()
+                self.realtime_port_mapping = mapping
             self.go_to("REALTIME_LOBBY")
         except (OSError, RealtimeError, FileNotFoundError) as exc:
+            if mapping: mapping.stop()
+            if advertiser: advertiser.stop()
+            if server: server.stop()
             confirm_dialog.show_error("Could Not Open Lobby", str(exc))
 
 
@@ -205,6 +247,10 @@ class Realtime_Lobby(GameState):
         self.server = None
         self.server_map = None
         self.invite = ""
+        self.lan_invite = ""
+        self.port_mapping = None
+        self.local_address = ""
+        self.fingerprint = ""
         self.country_page = 0
         self.refresh_ui()
 
@@ -213,6 +259,11 @@ class Realtime_Lobby(GameState):
         self.server = host_setup.realtime_server
         self.server_map = host_setup.realtime_server_map
         self.invite = host_setup.realtime_invite
+        self.lan_invite = host_setup.realtime_lan_invite
+        self.port_mapping = host_setup.realtime_port_mapping
+        self.local_address = host_setup.local_address
+        self.fingerprint = host_setup.realtime_fingerprint
+        self.advertiser = host_setup.realtime_lan_advertiser
         self._lobby_signature = None
         self.country_page = 0
         self.refresh_ui()
@@ -223,9 +274,11 @@ class Realtime_Lobby(GameState):
             return
         host = self.session.host_id
         self.elements.extend([
-            Button("centered-220", 100, "medium", "blue", "Show / Copy Invite", self.show_invite),
-            Button("centered", 100, "medium", "green", "Start Match", self.start_match),
-            Button("centered+220", 100, "medium", "red", "End Lobby", self.end_lobby),
+            Button("centered-270", 100, "small", "blue", "Copy LAN Invite", self.show_lan_invite),
+            Button("centered-90", 100, "small", "purple", self.internet_button_label(), self.show_internet_invite),
+            Button("centered+90", 100, "small", "green", "Start Match", self.start_match),
+            Button("centered+270", 100, "small", "red", "End Lobby", self.end_lobby),
+            Button("centered", 145, "small", "light_blue", "Networking Status", self.show_network_status),
         ])
         countries = self.session.countries
         per_page = 8
@@ -238,14 +291,14 @@ class Realtime_Lobby(GameState):
             color = "green" if not selected or selected == self.session.players[host].name else "grey"
             column, row = index % 2, index // 2
             x = "centered-140" if column == 0 else "centered+140"
-            self.elements.append(Button(x, 175 + row * 65, (270, 44), color, label,
+            self.elements.append(Button(x, 190 + row * 65, (270, 44), color, label,
                                         lambda country_id=country: self.choose_host_country(country_id)))
         if self.country_page:
-            self.elements.append(Button("centered-140", 455, "small", "blue", "Previous", self.previous_country_page))
+            self.elements.append(Button("centered-140", 470, "small", "blue", "Previous", self.previous_country_page))
         if self.country_page + 1 < page_count:
-            self.elements.append(Button("centered+140", 455, "small", "blue", "Next", self.next_country_page))
+            self.elements.append(Button("centered+140", 470, "small", "blue", "Next", self.next_country_page))
         ready = self.session.players[host].ready
-        self.elements.append(Button("centered", 515, "medium", "green" if ready else "orange",
+        self.elements.append(Button("centered", 530, "medium", "green" if ready else "orange",
                                     "Host Ready" if ready else "Mark Host Ready", self.toggle_ready))
 
     def previous_country_page(self):
@@ -271,29 +324,70 @@ class Realtime_Lobby(GameState):
         except RealtimeError as exc:
             confirm_dialog.show_error("Cannot Ready", str(exc))
 
-    def show_invite(self):
-        copied = queries.copy_to_clipboard(self.invite)
+    def internet_button_label(self):
+        result = self.port_mapping.result() if self.port_mapping else None
+        if result is None and self.port_mapping:
+            return "Mapping Router..."
+        if result and result.succeeded and is_public_ipv4(result.external_address):
+            return "Copy Internet Invite"
+        return "Copy Shared Invite"
+
+    def _show_copied_invite(self, title, invite, note):
+        copied = queries.copy_to_clipboard(invite)
         clipboard_note = ("The invite code has been copied to your clipboard."
                           if copied else
                           "Clipboard copy was unavailable; select the code below manually.")
         confirm_dialog.show_info(
-            "Share This Invite", self.invite + "\n\n" + clipboard_note +
-            "\n\nShare any lobby password separately. WAN hosts must forward the selected TCP port.")
+            title, invite + "\n\n" + clipboard_note + "\n\n" + note)
+
+    def show_lan_invite(self):
+        self._show_copied_invite(
+            "LAN Invite", self.lan_invite,
+            "This works for players on the same local network. They can also use Find LAN Matches. "
+            "Share any lobby password separately.")
+
+    def show_internet_invite(self):
+        result = self.port_mapping.result() if self.port_mapping else None
+        if result and result.succeeded and is_public_ipv4(result.external_address):
+            invite = encode_invite(result.external_address, result.external_port,
+                                   self.session.session_id, self.fingerprint)
+            self._show_copied_invite(
+                "Internet Invite", invite,
+                "Your router accepted an automatic mapping. Share any lobby password separately. "
+                "Ask a player on another network to test it; some ISPs block incoming connections.")
+            return
+        self._show_copied_invite(
+            "Shared Invite", self.invite,
+            "This uses the Advertised Address chosen in host setup. Share any lobby password separately. "
+            "Use Networking Status for automatic-mapping diagnostics.")
+
+    def show_network_status(self):
+        result = self.port_mapping.result() if self.port_mapping else None
+        confirm_dialog.show_info(
+            "Real-Time Networking Status",
+            host_network_diagnostics(self.local_address, self.session.config.port,
+                                     bool(self.server and self.server.listening), result)
+        )
 
     def start_match(self):
         try:
             self.session.start(self.session.host_id)
         except RealtimeError as exc:
             confirm_dialog.show_error("Cannot Start", str(exc)); return
+        if getattr(self, "advertiser", None):
+            self.advertiser.stop()
         self.selected_realtime_session = self.session
         self.selected_realtime_server = self.server
         self.selected_realtime_server_map = self.server_map
+        self.selected_realtime_port_mapping = self.port_mapping
         self.selected_realtime_scenario_path = self.session.config.scenario_id
         self.selected_realtime_settings = copy.deepcopy(self.session.config.scenario_settings)
         self.selected_realtime_player_id = self.session.host_id
         self.go_to("MAP")
 
     def end_lobby(self):
+        if getattr(self, "advertiser", None): self.advertiser.stop()
+        if self.port_mapping: self.port_mapping.stop()
         if self.server: self.server.stop()
         self.session = self.server = self.server_map = None
         self.go_to("REALTIME_HOST_SETUP")
@@ -305,6 +399,9 @@ class Realtime_Lobby(GameState):
         if self.session:
             signature = tuple((p.player_id, p.country_id, p.ready, p.connected)
                               for p in self.session.players.values())
+            mapping = self.port_mapping.result() if self.port_mapping else None
+            signature += ((mapping.protocol, mapping.message, mapping.external_address, mapping.external_port)
+                          if mapping else ("mapping",))
             if signature != getattr(self, "_lobby_signature", None):
                 self._lobby_signature = signature
                 self.refresh_ui()
@@ -329,15 +426,18 @@ class Realtime_Join(GameState):
         self.bg_color = (12, 28, 50)
         self.invite_text = ""
         self.name, self.password, self.reconnect_token = "Player", "", ""
+        self.lan_browser = LanMatchBrowser()
+        self.lan_browser.start()
         self.refresh_ui()
 
     def refresh_ui(self):
         self.elements = [
-            Button("centered", 200, "large", "blue", "Paste Invite Code", self.edit_invite),
-            Button("centered", 290, "medium", "blue", f"Name: {self.name}", self.edit_name),
-            Button("centered", 350, "medium", "blue", f"Password: {'SET' if self.password else 'None'}", self.edit_password),
-            Button("centered", 410, "medium", "purple", "Reconnect Token" if not self.reconnect_token else "Reconnect Token: SET", self.edit_reconnect_token),
-            Button("centered", 490, "medium", "green", "Reconnect" if self.reconnect_token else "Connect", self.connect),
+            Button("centered", 120, "large", "light_blue", "Find LAN Matches", self.find_lan_matches),
+            Button("centered", 210, "large", "blue", "Paste Invite Code", self.edit_invite),
+            Button("centered", 300, "medium", "blue", f"Name: {self.name}", self.edit_name),
+            Button("centered", 360, "medium", "blue", f"Password: {'SET' if self.password else 'None'}", self.edit_password),
+            Button("centered", 420, "medium", "purple", "Reconnect Token" if not self.reconnect_token else "Reconnect Token: SET", self.edit_reconnect_token),
+            Button("centered", 500, "medium", "green", "Reconnect" if self.reconnect_token else "Connect", self.connect),
             make_back_button(self.exit_screen),
         ]
 
@@ -350,6 +450,12 @@ class Realtime_Join(GameState):
     def edit_name(self): self._edit("name", "Display Name")
     def edit_password(self): self._edit("password", "Lobby Password", True)
     def edit_reconnect_token(self): self._edit("reconnect_token", "Reconnect Token", True)
+
+    def find_lan_matches(self):
+        if IS_WEB:
+            confirm_dialog.show_error("Desktop Only", "Real-time multiplayer is available in desktop builds only.")
+            return
+        self.go_to("REALTIME_LAN_BROWSER")
 
     def connect(self):
         if IS_WEB:
@@ -364,6 +470,13 @@ class Realtime_Join(GameState):
             else:
                 client.send("join", {"name": self.name, "password": self.password})
             self.client = client
+        except TimeoutError:
+            confirm_dialog.show_error(
+                "Could Not Connect",
+                "The host did not answer in time. For a local match, use Find LAN Matches and make sure both "
+                "devices are on the same non-guest network. For an internet match, ask the host to check "
+                "Networking Status."
+            )
         except (OSError, RealtimeError) as exc:
             confirm_dialog.show_error("Could Not Connect", str(exc))
 
@@ -380,6 +493,63 @@ class Realtime_Join(GameState):
                     self.go_to("REALTIME_REMOTE_LOBBY")
                 elif event.get("type") == "error":
                     confirm_dialog.show_error("Join Rejected", event.get("payload", {}).get("message", "Unknown error"))
+        super().update()
+
+
+class Realtime_Lan_Browser(GameState):
+    """A no-address, no-port join path for matches announced on the LAN."""
+
+    back_state = "REALTIME_JOIN"
+    title = "Find LAN Matches"
+    title_y = 35
+
+    def __init__(self):
+        super().__init__()
+        self.bg_color = (12, 28, 50)
+        self.join_screen = None
+        self.matches = []
+        self._signature = None
+        self.refresh_ui()
+
+    def bind_join(self, join_screen):
+        self.join_screen = join_screen
+        self._signature = None
+        self.refresh_ui()
+
+    def refresh_ui(self):
+        self.elements = [make_back_button(self.exit_screen)]
+        if not self.join_screen:
+            return
+        self.matches = self.join_screen.lan_browser.matches()
+        self.elements.append(Button("centered", 85, "small", "light_blue", "Refresh Local List", self.refresh_ui))
+        if not self.matches:
+            self.elements.append(Button("centered", 180, "medium", "grey",
+                                        "Searching for open local lobbies...", lambda: None))
+            return
+        for index, match in enumerate(self.matches[:8]):
+            column, row = index % 2, index // 2
+            x = "centered-200" if column == 0 else "centered+200"
+            label = f"{match.host_name}: {match.scenario_name}"
+            self.elements.append(Button(x, 150 + row * 80, "medium", "green", label,
+                                        lambda selected=match: self.join_match(selected)))
+
+    def join_match(self, match):
+        from data.io.realtime_multiplayer import encode_invite
+        self.join_screen.invite_text = encode_invite(match.invite["host"], match.invite["port"],
+                                                     match.invite["session"], match.invite["fingerprint"])
+        self.join_screen.connect()
+        # Reuse the normal join screen's response/error handling once the
+        # selected local invite has opened its TLS connection.
+        self.go_to("REALTIME_JOIN")
+
+    def update(self):
+        if self.join_screen:
+            matches = self.join_screen.lan_browser.matches()
+            signature = tuple((match.invite["session"], match.host_name, match.scenario_name,
+                               match.invite["host"], match.invite["port"]) for match in matches)
+            if signature != self._signature:
+                self._signature = signature
+                self.refresh_ui()
         super().update()
 
 

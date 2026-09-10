@@ -15,6 +15,10 @@ from data.io.realtime_multiplayer import (
     encode_invite, read_message, sanitize_display_name, MapRealtimeDriver,
     collect_map_commands, default_advertised_address,
 )
+from data.io.realtime_networking import (
+    PortMappingResult, automatic_tcp_port_mapping, host_network_diagnostics,
+    is_public_ipv4, make_lan_announcement, parse_lan_announcement,
+)
 
 
 class Clock:
@@ -61,6 +65,40 @@ class AddressDetectionTests(unittest.TestCase):
         with mock.patch("data.io.realtime_multiplayer.socket.socket", return_value=probe):
             self.assertEqual(default_advertised_address(), "192.168.1.42")
         self.assertTrue(probe.closed)
+
+
+class ConvenienceNetworkingTests(unittest.TestCase):
+    def test_lan_announcement_uses_the_observed_sender_address(self):
+        invite = {"v": 1, "host": "public.example", "port": 38475,
+                  "session": "session", "fingerprint": "ab" * 32}
+        announcement = make_lan_announcement(invite, "Host", "1939")
+        match = parse_lan_announcement(announcement, "192.168.1.41", now=10.0)
+        self.assertIsNotNone(match)
+        self.assertEqual(match.invite["host"], "192.168.1.41")
+        self.assertEqual(match.host_name, "Host")
+        self.assertEqual(match.scenario_name, "1939")
+
+    def test_lan_discovery_rejects_malformed_and_loopback_announcements(self):
+        self.assertIsNone(parse_lan_announcement(b"not json", "192.168.1.41"))
+        invite = {"v": 1, "host": "host", "port": 38475,
+                  "session": "session", "fingerprint": "ab" * 32}
+        self.assertIsNone(parse_lan_announcement(make_lan_announcement(invite, "Host", "Map"),
+                                                  "127.0.0.1"))
+
+    def test_mapping_falls_back_from_upnp_to_natpmp_and_reports_diagnostics(self):
+        failed = PortMappingResult("UPnP", "No UPnP gateway.")
+        mapped = PortMappingResult("NAT-PMP", "Mapped", "203.0.113.20", 38475,
+                                   _release=lambda: None)
+        with mock.patch("data.io.realtime_networking.try_upnp_port_mapping", return_value=failed), \
+             mock.patch("data.io.realtime_networking.try_natpmp_port_mapping", return_value=mapped):
+            result = automatic_tcp_port_mapping("192.168.1.41", 38475)
+        self.assertIs(result, mapped)
+        self.assertFalse(is_public_ipv4("192.168.1.41"))
+        # TEST-NET addresses are intentionally non-global, so use a real
+        # routable shape only to exercise the public-address classification.
+        self.assertTrue(is_public_ipv4("8.8.8.8"))
+        text = host_network_diagnostics("192.168.1.41", 38475, True, result)
+        self.assertIn("Game server: listening", text)
 
     def test_default_address_falls_back_to_loopback_without_a_route(self):
         probe = FakeAddressProbe(error=OSError("no route"))
@@ -217,11 +255,14 @@ class RealtimeSessionTests(unittest.TestCase):
                 client = RealtimeClient(invite)
                 client.connect()
                 client.send("join", {"name": "Network Guest", "password": ""})
-                for _ in range(50):
-                    if any(event.get("type") == "ok" for event in client.poll()):
+                deadline = time.monotonic() + 5.0
+                events = []
+                while time.monotonic() < deadline:
+                    events.extend(client.poll())
+                    if client.player_id:
                         break
                     time.sleep(.01)
-                self.assertIsNotNone(client.player_id)
+                self.assertIsNotNone(client.player_id, events)
                 client.close()
             finally:
                 server.stop()
@@ -232,6 +273,27 @@ class RealtimeSessionTests(unittest.TestCase):
                 read_message(left)
         finally:
             left.close(); right.close()
+
+    def test_plain_tcp_probe_does_not_stop_tls_listener(self):
+        with tempfile.TemporaryDirectory() as directory:
+            certificate, key, fingerprint = create_match_certificate(directory)
+            server = RealtimeServer(self.session, certificate, key)
+            port = server.start(0)
+            try:
+                # A port check has no TLS handshake.  It must be contained in
+                # its own worker rather than ending the authoritative accept
+                # loop for future real clients.
+                probe = socket.create_connection(("127.0.0.1", port), 1)
+                probe.close()
+                time.sleep(.03)
+                self.assertTrue(server.listening)
+                invite = decode_invite(encode_invite("127.0.0.1", port,
+                                                     self.session.session_id, fingerprint))
+                client = RealtimeClient(invite)
+                client.connect()
+                client.close()
+            finally:
+                server.stop()
 
 
 if __name__ == "__main__":
