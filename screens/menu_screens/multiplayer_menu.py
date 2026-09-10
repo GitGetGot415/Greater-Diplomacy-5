@@ -14,7 +14,7 @@ class Multiplayer_Menu(GameState):
 
     def __init__(self):
         super().__init__()
-        self.bg_color = (10, 10, 40)
+        self.bg_color = (80, 0, 0)
         self.elements = [
             Button("centered", 220, "large", "green", "Asynchronous (Tournaments)",
                    lambda: self.go_to("MULTIPLAYER_HUB")),
