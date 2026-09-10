@@ -237,7 +237,6 @@ class Realtime_Host_Setup(GameState):
         self.realtime_invite = encode_relay_invite(relay.address, 443, self.realtime_session.session_id,
                                                    self.realtime_fingerprint, self.relay_join_key)
         self.realtime_lan_invite = self.realtime_invite
-        self.go_to("REALTIME_LOBBY")
 
 
 class Realtime_Relay_Setup(GameState):
@@ -326,10 +325,12 @@ class Realtime_Relay_Provision(GameState):
     def __init__(self):
         super().__init__()
         self.bg_color, self.host_setup = (12, 28, 50), None
+        self._relay_transitioned = False
         self.elements = [Button("centered", 450, "medium", "red", "Cancel and Delete Relay", self.cancel)]
 
     def bind_host(self, host_setup):
         self.host_setup = host_setup
+        self._relay_transitioned = False
 
     def cancel(self):
         if self.host_setup and getattr(self.host_setup, "relay_task", None):
@@ -340,10 +341,16 @@ class Realtime_Relay_Provision(GameState):
 
     def update(self):
         task = getattr(self.host_setup, "relay_task", None) if self.host_setup else None
-        if task and task.done():
+        # The result remains available after the worker finishes.  Consume it
+        # once: a relay transport can only be attached to a server once.
+        if task and task.done() and not self._relay_transitioned:
+            self._relay_transitioned = True
             if task.result:
                 try:
                     self.host_setup.finish_relay_provisioning(task.result)
+                    # This screen, rather than Host Setup, is active while
+                    # provisioning.  It therefore owns the state transition.
+                    self.go_to("REALTIME_LOBBY")
                 except (OSError, RealtimeError) as exc:
                     task.cancel_and_destroy()
                     self.host_setup.realtime_server.stop()

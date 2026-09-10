@@ -22,6 +22,7 @@ from data.io.realtime_networking import (
     PortMappingResult, automatic_tcp_port_mapping, host_network_diagnostics,
     is_public_ipv4, make_lan_announcement, parse_lan_announcement,
 )
+from screens.menu_screens.realtime_multiplayer import Realtime_Relay_Provision
 
 
 class Clock:
@@ -128,6 +129,22 @@ class RelayTransportTests(unittest.TestCase):
     def test_relay_task_exposes_a_nonempty_progress_status(self):
         task = DigitalOceanRelayTask("x" * 24, "a" * 32)
         self.assertIn("Ready", task.status)
+
+    def test_finished_relay_task_is_attached_and_transitioned_once(self):
+        """A completed worker stays completed, so the screen must consume it once."""
+        relay = object()
+        finish = mock.Mock()
+        task = SimpleNamespace(done=lambda: True, result=relay)
+        screen = Realtime_Relay_Provision.__new__(Realtime_Relay_Provision)
+        screen.host_setup = SimpleNamespace(relay_task=task, finish_relay_provisioning=finish)
+        screen._relay_transitioned = False
+        screen.go_to = mock.Mock()
+
+        screen.update()
+        screen.update()
+
+        finish.assert_called_once_with(relay)
+        screen.go_to.assert_called_once_with("REALTIME_LOBBY")
 
     def _start_relay(self):
         relay, stopped = Relay(), threading.Event()
