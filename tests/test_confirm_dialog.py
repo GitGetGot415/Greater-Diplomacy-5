@@ -9,6 +9,7 @@ path only runs when no display exists, which is the opposite of a test run.
 """
 
 import unittest
+from unittest import mock
 
 import pygame
 
@@ -99,6 +100,15 @@ class DialogTests(unittest.TestCase):
                              key(pygame.K_RETURN)])
         self.settle()
         self.assertEqual(self.answers, ["a"])
+
+    def test_ask_string_accepts_clipboard_paste(self):
+        confirm_dialog.ask_string("T", "Name?", self.answers.append)
+        modal = modal_stack.active()
+        paste = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_v, unicode="", mod=pygame.KMOD_CTRL)
+        with mock.patch("ui_elements._clipboard_text", return_value="Pasted name"):
+            modal.handle_events([paste, key(pygame.K_RETURN)])
+        self.settle()
+        self.assertEqual(self.answers, ["Pasted name"])
 
     def test_ask_string_cancel_yields_none(self):
         confirm_dialog.ask_string("T", "Name?", self.answers.append)

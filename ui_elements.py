@@ -497,6 +497,23 @@ class TextField:
 
         draw_text_box(surface, self.rect, self.text, active=self.active, pad_x=8)
 
+def _clipboard_text():
+    """Returns OS clipboard text, or an empty string when it is unavailable."""
+    try:
+        if not pygame.scrap.get_init():
+            pygame.scrap.init()
+        clip_bytes = pygame.scrap.get(pygame.SCRAP_TEXT)
+        if not clip_bytes:
+            return ""
+        if isinstance(clip_bytes, bytes):
+            return clip_bytes.decode("utf-8", errors="ignore").replace("\x00", "")
+        return str(clip_bytes).replace("\x00", "")
+    except Exception:
+        # Clipboard support is optional on some SDL targets. Typing should
+        # continue to work normally when a platform does not provide it.
+        return ""
+
+
 def process_text_input(event, current_text, max_length=None, validation_func=None):
     if event.type != pygame.KEYDOWN:
         return current_text, "TYPING"
@@ -507,24 +524,18 @@ def process_text_input(event, current_text, max_length=None, validation_func=Non
         return current_text, "SUBMIT"
     elif event.key == pygame.K_ESCAPE:
         return current_text, "CANCEL"
-    elif event.key == pygame.K_v and (pygame.key.get_mods() & pygame.KMOD_CTRL or pygame.key.get_mods() & pygame.KMOD_GUI):
-        try:
-            if not pygame.scrap.get_init():
-                pygame.scrap.init()
-            clip_bytes = pygame.scrap.get(pygame.SCRAP_TEXT)
-            if clip_bytes:
-                clip_str = clip_bytes.decode('utf-8', errors='ignore').replace('\x00', '')
-                for char in clip_str:
-                    if max_length is not None and len(current_text) >= max_length:
-                        break
-                        
-                    if validation_func:
-                        if validation_func(char):
-                            current_text += char
-                    elif char.isprintable():
-                        current_text += char
-        except Exception as e:
-            print(f"Paste Error: {e}")
+    elif ((event.key == pygame.K_v and
+           ((getattr(event, "mod", 0) | pygame.key.get_mods()) & (pygame.KMOD_CTRL | pygame.KMOD_GUI))) or
+          (event.key == pygame.K_INSERT and
+           ((getattr(event, "mod", 0) | pygame.key.get_mods()) & pygame.KMOD_SHIFT))):
+        for char in _clipboard_text():
+            if max_length is not None and len(current_text) >= max_length:
+                break
+            if validation_func:
+                if validation_func(char):
+                    current_text += char
+            elif char.isprintable():
+                current_text += char
         return current_text, "TYPING"
     else:
         if max_length is not None and len(current_text) >= max_length:

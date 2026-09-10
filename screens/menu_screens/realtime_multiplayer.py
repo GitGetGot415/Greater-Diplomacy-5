@@ -202,7 +202,7 @@ class Realtime_Lobby(GameState):
             return
         host = self.session.host_id
         self.elements.extend([
-            Button("centered-220", 100, "medium", "blue", "Show Invite Code", self.show_invite),
+            Button("centered-220", 100, "medium", "blue", "Show / Copy Invite", self.show_invite),
             Button("centered", 100, "medium", "green", "Start Match", self.start_match),
             Button("centered+220", 100, "medium", "red", "End Lobby", self.end_lobby),
         ])
@@ -251,7 +251,13 @@ class Realtime_Lobby(GameState):
             confirm_dialog.show_error("Cannot Ready", str(exc))
 
     def show_invite(self):
-        confirm_dialog.show_info("Share This Invite", self.invite + "\n\nShare any lobby password separately. WAN hosts must forward the selected TCP port.")
+        copied = queries.copy_to_clipboard(self.invite)
+        clipboard_note = ("The invite code has been copied to your clipboard."
+                          if copied else
+                          "Clipboard copy was unavailable; select the code below manually.")
+        confirm_dialog.show_info(
+            "Share This Invite", self.invite + "\n\n" + clipboard_note +
+            "\n\nShare any lobby password separately. WAN hosts must forward the selected TCP port.")
 
     def start_match(self):
         try:

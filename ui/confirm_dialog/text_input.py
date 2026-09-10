@@ -3,6 +3,7 @@ import data.constants as c
 from map_logic.rendering.font_manager import fonts
 from ui import modal_stack
 from ui.confirm_dialog.base import _BaseModal, _back_key, _run_blocking
+from ui_elements import process_text_input
 
 
 class _TextInputModal(_BaseModal):
@@ -35,12 +36,22 @@ class _TextInputModal(_BaseModal):
                     self._finish(None)
                 elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
                     self._submit()
-                elif event.key == pygame.K_BACKSPACE:
-                    self.text = self.text[:-1]
-                    self.error_text = ""
-                elif event.unicode and self.char_allowed(event.unicode, self.text):
-                    self.text += event.unicode
-                    self.error_text = ""
+                else:
+                    # Every ordinary text field uses this shared handler,
+                    # including Ctrl/Cmd+V and Shift+Insert clipboard paste.
+                    candidate = [self.text]
+
+                    def is_allowed(char):
+                        allowed = self.char_allowed(char, candidate[0])
+                        if allowed:
+                            candidate[0] += char
+                        return allowed
+
+                    new_text, _status = process_text_input(
+                        event, self.text, validation_func=is_allowed)
+                    if new_text != self.text:
+                        self.text = new_text
+                        self.error_text = ""
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if self.ok_rect.collidepoint(event.pos):
                     self._submit()

@@ -422,6 +422,11 @@ class Controller:
                 realtime_map.realtime_player_id = host_player.player_id
                 realtime_map.player_country = host_player.country_id
                 realtime_map.active_players = [p.country_id for p in session.players.values() if p.country_id]
+                # Map construction initially suppresses fog while scenario
+                # country selection is active.  We disabled that mode above,
+                # so rebuild the player-dependent layers immediately instead
+                # of waiting for the first processed turn to do it for us.
+                realtime_map.refresh_map_layers("relations", "faction_territories", "fog")
                 self.states["MAP"] = realtime_map
                 from screens.menu_screens.map import render_buttons
                 render_buttons(realtime_map)
@@ -445,6 +450,9 @@ class Controller:
                 realtime_map.realtime_player_id = view.player_id
                 realtime_map.player_country = me.country_id
                 realtime_map.active_players = [p.country_id for p in view.players.values() if p.country_id]
+                # The map was loaded before the remote player's country was
+                # known; initialize that player's visibility immediately.
+                realtime_map.refresh_map_layers("relations", "faction_territories", "fog")
                 from data.io.realtime_multiplayer import apply_authoritative_snapshot
                 if view.snapshot:
                     apply_authoritative_snapshot(realtime_map, view.snapshot)
