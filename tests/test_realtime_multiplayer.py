@@ -13,7 +13,7 @@ from data.io.realtime_multiplayer import (
     DEFAULT_MAX_TURNS, RealtimeConfig, RealtimeError, RealtimeSession,
     RealtimeClient, RealtimeServer, create_match_certificate, decode_invite,
     encode_invite, read_message, sanitize_display_name, MapRealtimeDriver,
-    collect_map_commands,
+    collect_map_commands, default_advertised_address,
 )
 
 
@@ -39,6 +39,34 @@ class Driver:
         self.processed.append(drafts)
 
     def is_eliminated(self, country): return country in self.eliminated
+
+
+class FakeAddressProbe:
+    def __init__(self, address="192.168.1.42", error=None):
+        self.address = address
+        self.error = error
+        self.closed = False
+
+    def connect(self, _endpoint):
+        if self.error:
+            raise self.error
+
+    def getsockname(self): return (self.address, 54321)
+    def close(self): self.closed = True
+
+
+class AddressDetectionTests(unittest.TestCase):
+    def test_default_address_uses_the_local_outbound_ipv4(self):
+        probe = FakeAddressProbe()
+        with mock.patch("data.io.realtime_multiplayer.socket.socket", return_value=probe):
+            self.assertEqual(default_advertised_address(), "192.168.1.42")
+        self.assertTrue(probe.closed)
+
+    def test_default_address_falls_back_to_loopback_without_a_route(self):
+        probe = FakeAddressProbe(error=OSError("no route"))
+        with mock.patch("data.io.realtime_multiplayer.socket.socket", return_value=probe):
+            self.assertEqual(default_advertised_address(), "127.0.0.1")
+        self.assertTrue(probe.closed)
 
 
 class RealtimeSessionTests(unittest.TestCase):

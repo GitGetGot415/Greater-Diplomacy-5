@@ -41,6 +41,27 @@ MAX_FRAME_BYTES = 64 * 1024 * 1024
 MAX_NAME_LENGTH = 24
 
 
+def default_advertised_address() -> str:
+    """Return the local IPv4 address other devices can usually reach.
+
+    A UDP connect selects the address for the machine's normal outbound route
+    without sending application data.  This is a better multiplayer default
+    than ``127.0.0.1``, which only works when the client is on the host itself.
+    Hosts can still replace this with a public IP or DNS name for WAN play.
+    """
+    probe = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        probe.connect(("8.8.8.8", 80))
+        address = probe.getsockname()[0]
+        if address and address != "0.0.0.0":
+            return address
+    except OSError:
+        pass
+    finally:
+        probe.close()
+    return "127.0.0.1"
+
+
 class RealtimeError(ValueError):
     """A client-safe real-time multiplayer rejection."""
 

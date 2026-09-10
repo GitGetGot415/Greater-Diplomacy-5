@@ -11,6 +11,7 @@ from data import queries
 from data.io.realtime_multiplayer import (
     DEFAULT_MAX_TURNS, DEFAULT_PORT, DEFAULT_TURN_MINUTES, MapRealtimeDriver,
     RealtimeClient, RealtimeConfig, RealtimeError, RealtimeServer, RealtimeSession, RemoteSessionView,
+    default_advertised_address,
     persist_reconnect_token,
     create_match_certificate, decode_invite, encode_invite,
 )
@@ -47,7 +48,7 @@ class Realtime_Host_Setup(GameState):
         self.settings = copy.deepcopy(queries.get_scenario_settings() or {})
         self.host_name = "Host"
         self.password = ""
-        self.address = "127.0.0.1"
+        self.address = default_advertised_address()
         self.port, self.capacity = DEFAULT_PORT, 4
         self.max_turns, self.turn_minutes = DEFAULT_MAX_TURNS, DEFAULT_TURN_MINUTES
         self.refresh_ui()
@@ -85,7 +86,7 @@ class Realtime_Host_Setup(GameState):
         confirm_dialog.ask_integer(title, prompt, saved, low, high, getattr(self, attr))
 
     def edit_name(self): self._string("Host Display Name", "host_name", "Enter your display name:")
-    def edit_address(self): self._string("Advertised Address", "address", "Enter LAN/public IP or hostname to share:")
+    def edit_address(self): self._string("Advertised Address", "address", "Enter LAN IP, public IP, or hostname to share:")
     def edit_password(self): self._string("Lobby Password", "password", "Optional password (blank removes it):", True)
     def edit_port(self): self._integer("Server Port", "port", "Forward this TCP port for WAN play:", 1024, 65535)
     def edit_turns(self): self._integer("Maximum Turns", "max_turns", "1 to 100:", 1, 100)
