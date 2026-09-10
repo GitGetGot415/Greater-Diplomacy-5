@@ -1630,23 +1630,43 @@ class Map(GameState):
         )
 
     def exit_to_menu(self):
-        if (getattr(self, "realtime_multiplayer", False)
-                and self.realtime_session.phase == "GAME_OVER"):
-            if getattr(self, "realtime_port_mapping", None):
-                self.realtime_port_mapping.stop()
-            if getattr(self, "realtime_server", None):
-                self.realtime_server.stop()
-            self._destroy_temporary_relay()
-            self.change_state("MULTIPLAYER_MENU")
-            return
-        if (getattr(self, "realtime_multiplayer", False)
-                and self.realtime_session.phase != "GAME_OVER"):
+        if getattr(self, "realtime_multiplayer", False):
+            session = self.realtime_session
+            is_host = (self.realtime_player_id == getattr(session, "host_id", None))
+            if not is_host:
+                from ui import confirm_dialog
+
+                def leave_match(confirmed):
+                    if not confirmed:
+                        return
+                    client = getattr(self, "realtime_client", None)
+                    if client:
+                        client.close()
+                    self.show_feedback("You left the match. The host and other players continue normally.")
+                    self.change_state("MULTIPLAYER_MENU")
+
+                confirm_dialog.ask_yes_no(
+                    "Leave Real-Time Match",
+                    "Leave this match? This disconnects only you; the host and other players keep playing. "
+                    "You can rejoin with your reconnect code while the match is active.",
+                    leave_match, yes_label="Leave Match", no_label="Stay")
+                return
+
+            if session.phase == "GAME_OVER":
+                if getattr(self, "realtime_port_mapping", None):
+                    self.realtime_port_mapping.stop()
+                if getattr(self, "realtime_server", None):
+                    self.realtime_server.stop()
+                self._destroy_temporary_relay()
+                self.change_state("MULTIPLAYER_MENU")
+                return
+
             from ui import confirm_dialog
             def close_match(confirmed):
                 if not confirmed:
                     return
-                self.realtime_session.end_match(self.realtime_player_id)
-                if self.realtime_session.phase == "PROCESSING":
+                session.end_match(self.realtime_player_id)
+                if session.phase == "PROCESSING":
                     self.show_feedback("Current turn is finishing safely; the match will then end.")
                     return
                 if getattr(self, "realtime_port_mapping", None):

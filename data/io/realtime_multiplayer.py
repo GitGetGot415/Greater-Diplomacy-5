@@ -165,6 +165,27 @@ def persist_reconnect_token(invite: dict[str, Any], token: str, display_name: st
     return str(path)
 
 
+def load_reconnect_token(invite: dict[str, Any]) -> str:
+    """Return this computer's saved reconnect token for the exact match invite."""
+    if IS_WEB or not isinstance(invite, dict):
+        return ""
+    session_id, fingerprint = invite.get("session"), invite.get("fingerprint")
+    if not isinstance(session_id, str) or not isinstance(fingerprint, str):
+        return ""
+    from data import constants as c
+    path = Path(c.SAVES_DIR) / ".gd5_realtime_reconnect.json"
+    try:
+        records = json.loads(path.read_text(encoding="utf-8"))
+        record = records.get(session_id, {}) if isinstance(records, dict) else {}
+        token = record.get("token") if isinstance(record, dict) else ""
+        if (isinstance(token, str) and token
+                and secrets.compare_digest(str(record.get("fingerprint", "")).lower(), fingerprint.lower())):
+            return token
+    except (OSError, json.JSONDecodeError, TypeError):
+        pass
+    return ""
+
+
 def encode_message(message_type: str, session_id: str, payload: dict[str, Any] | None = None,
                    request_id: str | None = None) -> bytes:
     body = {"version": PROTOCOL_VERSION, "type": message_type,
@@ -551,7 +572,7 @@ class RealtimeSession:
             submitted = sum(1 for p in self.players.values() if p.submitted or p.eliminated)
             active = sum(1 for p in self.players.values() if not p.eliminated)
             state = {
-                "session_id": self.session_id, "phase": self.phase,
+                "session_id": self.session_id, "host_id": self.host_id, "phase": self.phase,
                 "turn": self.turn_number, "max_turns": self.config.max_turns,
                 "turn_minutes": self.config.turn_minutes, "deadline_monotonic": self.deadline,
                 "deadline_epoch": self.deadline_epoch,
@@ -905,6 +926,7 @@ class RemoteSessionView:
         self.update(state)
 
     def update(self, state: dict[str, Any]) -> None:
+        self.host_id = state.get("host_id")
         self.phase = state.get("phase", "LOBBY")
         self.turn_number = state.get("turn", 1)
         self.max_turns = state.get("max_turns", 1)

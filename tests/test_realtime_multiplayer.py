@@ -13,8 +13,9 @@ from data.io.realtime_multiplayer import (
     DEFAULT_MAX_TURNS, RealtimeConfig, RealtimeError, RealtimeSession,
     RealtimeClient, RealtimeServer, create_match_certificate, decode_invite,
     encode_invite, encode_relay_invite, read_message, sanitize_display_name, MapRealtimeDriver,
-    collect_map_commands, default_advertised_address,
+    collect_map_commands, default_advertised_address, load_reconnect_token, persist_reconnect_token,
 )
+import data.constants as c
 from data.io.realtime_relay import (RelayHostTransport, relay_cloud_init, validate_relay_invite,
                                     _relay_firewall_payload, DigitalOceanRelayTask)
 from data.io.realtime_relay_service import Relay
@@ -23,6 +24,7 @@ from data.io.realtime_networking import (
     is_public_ipv4, make_lan_announcement, parse_lan_announcement,
 )
 from screens.menu_screens.realtime_multiplayer import Realtime_Relay_Provision
+from screens.menu_screens.map import Map
 
 
 class Clock:
@@ -146,6 +148,14 @@ class RelayTransportTests(unittest.TestCase):
         self.assertEqual(client.poll(), [{"type": "disconnected", "payload": {
             "message": "connection closed"}}])
 
+    def test_reconnect_token_is_recovered_only_for_the_same_pinned_invite(self):
+        invite = decode_invite(encode_invite("example.test", 38475, "s" * 32, "a" * 64))
+        with tempfile.TemporaryDirectory() as directory, mock.patch.object(c, "SAVES_DIR", directory):
+            persist_reconnect_token(invite, "reconnect-secret", "Guest")
+            self.assertEqual(load_reconnect_token(invite), "reconnect-secret")
+            other_invite = dict(invite, fingerprint="b" * 64)
+            self.assertEqual(load_reconnect_token(other_invite), "")
+
     def test_idle_read_timeout_is_ignored_until_the_connection_actually_closes(self):
         class Socket:
             def close(self): pass
@@ -217,6 +227,32 @@ class RelayTransportTests(unittest.TestCase):
                 stopped.set(); listener.close()
 
 
+class RealtimeExitTests(unittest.TestCase):
+    def test_guest_leaving_does_not_call_host_end_match(self):
+        """A remote player may disconnect, but cannot shut down the host match."""
+        client = SimpleNamespace(close=mock.Mock())
+        session = SimpleNamespace(phase="TURN", host_id="host", end_match=mock.Mock())
+        map_ref = SimpleNamespace(
+            realtime_multiplayer=True,
+            realtime_session=session,
+            realtime_player_id="guest",
+            realtime_client=client,
+            show_feedback=mock.Mock(),
+            change_state=mock.Mock(),
+        )
+
+        def confirm(_title, _message, callback, **_labels):
+            callback(True)
+
+        with mock.patch("ui.confirm_dialog.ask_yes_no", side_effect=confirm) as ask:
+            Map.exit_to_menu(map_ref)
+
+        self.assertEqual(ask.call_args.args[0], "Leave Real-Time Match")
+        client.close.assert_called_once()
+        session.end_match.assert_not_called()
+        map_ref.change_state.assert_called_once_with("MULTIPLAYER_MENU")
+
+
 class RealtimeSessionTests(unittest.TestCase):
     def setUp(self):
         self.clock, self.driver = Clock(), Driver()
@@ -269,6 +305,7 @@ class RealtimeSessionTests(unittest.TestCase):
         self.session.start(self.host)
         self.assertEqual(self.session.players[self.host].country_id, "A")
         self.assertFalse(hasattr(self.session.players[self.host], "admin_gameplay"))
+        self.assertEqual(self.session.public_state()["host_id"], self.host)
 
     def test_timer_uses_server_clock_and_latest_draft(self):
         self.start()

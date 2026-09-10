@@ -15,7 +15,7 @@ from data.io.realtime_multiplayer import (
     DEFAULT_MAX_TURNS, DEFAULT_PORT, DEFAULT_TURN_MINUTES, MapRealtimeDriver,
     RealtimeClient, RealtimeConfig, RealtimeError, RealtimeServer, RealtimeSession, RemoteSessionView,
     default_advertised_address,
-    persist_reconnect_token,
+    load_reconnect_token, persist_reconnect_token,
     create_match_certificate, decode_invite, encode_invite,
     encode_relay_invite,
 )
@@ -684,6 +684,7 @@ class Realtime_Join(GameState):
         self.bg_color = (12, 28, 50)
         self.invite_text = ""
         self.name, self.password, self.reconnect_token = "Player", "", ""
+        self._shown_reconnect_session = None
         self.lan_browser = LanMatchBrowser()
         self.lan_browser.start()
         self.refresh_ui()
@@ -706,7 +707,20 @@ class Realtime_Join(GameState):
             if value is not None: setattr(self, attr, value); self.refresh_ui()
         confirm_dialog.ask_string(title, "Enter value:", saved, initial=getattr(self, attr), allow_empty=allow_empty)
 
-    def edit_invite(self): self._edit("invite_text", "Real-Time Invite")
+    def edit_invite(self):
+        def saved(value):
+            if value is None:
+                return
+            self.invite_text = value
+            try:
+                self.reconnect_token = load_reconnect_token(decode_invite(value))
+            except RealtimeError:
+                # The normal Connect action gives the player the fuller
+                # malformed-invite explanation; do not retain a code for an
+                # unrelated match meanwhile.
+                self.reconnect_token = ""
+            self.refresh_ui()
+        confirm_dialog.ask_string("Real-Time Invite", "Enter value:", saved, initial=self.invite_text)
     def edit_name(self): self._edit("name", "Display Name")
     def edit_password(self): self._edit("password", "Lobby Password", True)
     def edit_reconnect_token(self): self._edit("reconnect_token", "Reconnect Token", True)
@@ -750,6 +764,9 @@ class Realtime_Join(GameState):
                     if client.reconnect_token:
                         persist_reconnect_token(client.invite, client.reconnect_token, self.name)
                         self.reconnect_token = client.reconnect_token
+                        if self._shown_reconnect_session != client.invite["session"]:
+                            self._shown_reconnect_session = client.invite["session"]
+                            self.show_reconnect_code(client.reconnect_token)
                     self.go_to("REALTIME_REMOTE_LOBBY")
                 elif event.get("type") == "error":
                     confirm_dialog.show_error("Join Rejected", event.get("payload", {}).get("message", "Unknown error"))
@@ -758,6 +775,14 @@ class Realtime_Join(GameState):
                     confirm_dialog.show_error("Connection Lost", event.get("payload", {}).get(
                         "message", "The host closed the connection."))
         super().update()
+
+    def show_reconnect_code(self, token):
+        copied = queries.copy_to_clipboard(token)
+        copy_note = "It has been copied to your clipboard." if copied else "Copy it from this dialog and keep it private."
+        confirm_dialog.show_info(
+            "Your Reconnect Code",
+            f"{token}\n\nThis code restores your player identity if you disconnect. {copy_note} "
+            "Anyone with it can rejoin as you for this match.")
 
 
 class Realtime_Lan_Browser(GameState):
@@ -801,6 +826,8 @@ class Realtime_Lan_Browser(GameState):
         from data.io.realtime_multiplayer import encode_invite
         self.join_screen.invite_text = encode_invite(match.invite["host"], match.invite["port"],
                                                      match.invite["session"], match.invite["fingerprint"])
+        self.join_screen.reconnect_token = load_reconnect_token(decode_invite(self.join_screen.invite_text))
+        self.join_screen.refresh_ui()
         self.join_screen.connect()
         # Reuse the normal join screen's response/error handling once the
         # selected local invite has opened its TLS connection.
@@ -826,11 +853,13 @@ class Realtime_Remote_Lobby(GameState):
         super().__init__()
         self.bg_color = (12, 28, 50)
         self.client = self.view = None
+        self.reconnect_token = ""
         self.country_page = 0
         self.refresh_ui()
 
     def bind_join(self, join_screen):
         self.client, self.view = join_screen.realtime_client, join_screen.realtime_view
+        self.reconnect_token = join_screen.reconnect_token
         self.country_page = 0
         self.refresh_ui()
 
@@ -840,6 +869,7 @@ class Realtime_Remote_Lobby(GameState):
                    image=UI_ICONS.get("settings")),
             Button(20, 110, "left_ui_button", "pink", "Music", lambda: self.go_to("MUSIC_PLAYER"),
                    image=UI_ICONS.get("music")),
+            Button(20, 145, "left_ui_button", "purple", "Copy Reconnect Code", self.copy_reconnect_code),
             Button("centered+280", 100, "medium", "red", "Leave Lobby", self.request_leave),
         ]
         if not self.view:
@@ -905,6 +935,16 @@ class Realtime_Remote_Lobby(GameState):
             "Leave this lobby? You can rejoin with your reconnect code while the host keeps it open.",
             lambda confirmed: self.leave() if confirmed else None,
             yes_label="Leave Lobby", no_label="Stay")
+
+    def copy_reconnect_code(self):
+        if not self.reconnect_token:
+            confirm_dialog.show_info("Reconnect Code", "No reconnect code is available for this connection.")
+            return
+        copied = queries.copy_to_clipboard(self.reconnect_token)
+        copy_note = "Copied to your clipboard." if copied else "Clipboard copy was unavailable; copy the code below."
+        confirm_dialog.show_info(
+            "Your Reconnect Code",
+            f"{self.reconnect_token}\n\n{copy_note} Keep it private: it can restore your identity in this match.")
 
     def leave(self):
         if self.client: self.client.close()
