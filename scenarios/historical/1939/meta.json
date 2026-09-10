@@ -1,6 +1,6 @@
 {
     "version": "v33",
-    "generated_at": "2026-09-09T12:43:49.450205",
+    "generated_at": "2026-09-09T23:32:55.044741",
     "date": {
         "day": 15,
         "month": 2,
@@ -39176,7 +39176,9 @@
             "unit_queue": [],
             "orders": [],
             "resources": {},
-            "buildings": []
+            "buildings": [
+                "Basic Factory"
+            ]
         },
         "(21, 0, 0)": {
             "owner": "Denmark",
@@ -39484,8 +39486,12 @@
             "building_queue": [],
             "unit_queue": [],
             "orders": [],
-            "resources": {},
-            "buildings": []
+            "resources": {
+                "Oil": 50
+            },
+            "buildings": [
+                "Basic Factory"
+            ]
         },
         "(46, 0, 0)": {
             "owner": "Finland",
@@ -39906,7 +39912,9 @@
             "building_queue": [],
             "unit_queue": [],
             "orders": [],
-            "resources": {},
+            "resources": {
+                "Oil": 50
+            },
             "buildings": []
         },
         "(77, 0, 0)": {
@@ -40375,7 +40383,10 @@
             "resources": {
                 "Oil": 50
             },
-            "buildings": []
+            "buildings": [
+                "Factory Lvl 1",
+                "Basic Recruitment Center"
+            ]
         },
         "(108, 0, 0)": {
             "owner": "Soviet Union",
@@ -40752,7 +40763,24 @@
                 "Soviet Union"
             ],
             "is_coastal": false,
-            "units": [],
+            "units": [
+                {
+                    "type": "Medium Tank III",
+                    "owner": "Soviet Union",
+                    "health": 3500,
+                    "max_health": 3500,
+                    "morale": 100.0,
+                    "speed": 2,
+                    "attack": 3600,
+                    "defense": 200,
+                    "level": 0,
+                    "order": {
+                        "type": "MOVE",
+                        "path": []
+                    },
+                    "custom_name": "1st Medium Tank Division (III)"
+                }
+            ],
             "building_queue": [],
             "unit_queue": [],
             "orders": [],
@@ -41123,7 +41151,8 @@
             "orders": [],
             "resources": {},
             "buildings": [
-                "Factory Lvl 2"
+                "Factory Lvl 2",
+                "Basic Recruitment Center"
             ]
         },
         "(160, 0, 0)": {
@@ -41586,7 +41615,10 @@
             "unit_queue": [],
             "orders": [],
             "resources": {},
-            "buildings": []
+            "buildings": [
+                "Factory Lvl 1",
+                "Basic Recruitment Center"
+            ]
         },
         "(187, 0, 0)": {
             "owner": "Ireland",
@@ -41645,7 +41677,24 @@
                 "Soviet Union"
             ],
             "is_coastal": false,
-            "units": [],
+            "units": [
+                {
+                    "type": "Medium Tank III",
+                    "owner": "Soviet Union",
+                    "health": 3500,
+                    "max_health": 3500,
+                    "morale": 100.0,
+                    "speed": 2,
+                    "attack": 3600,
+                    "defense": 200,
+                    "level": 0,
+                    "order": {
+                        "type": "MOVE",
+                        "path": []
+                    },
+                    "custom_name": "2nd Medium Tank Division (III)"
+                }
+            ],
             "building_queue": [],
             "unit_queue": [],
             "orders": [],
@@ -41827,13 +41876,8 @@
             "building_queue": [],
             "unit_queue": [],
             "orders": [],
-            "resources": {
-                "Oil": 50
-            },
-            "buildings": [
-                "Factory Lvl 1",
-                "Recruitment Building Lvl 2"
-            ]
+            "resources": {},
+            "buildings": []
         },
         "(204, 0, 0)": {
             "owner": "German Reich",
@@ -42050,9 +42094,7 @@
             "building_queue": [],
             "unit_queue": [],
             "orders": [],
-            "resources": {
-                "Oil": 50
-            },
+            "resources": {},
             "buildings": [
                 "Factory Lvl 2",
                 "Recruitment Building Lvl 2"
@@ -42276,7 +42318,9 @@
             "unit_queue": [],
             "orders": [],
             "resources": {},
-            "buildings": []
+            "buildings": [
+                "Basic Factory"
+            ]
         },
         "(229, 0, 0)": {
             "owner": "German Reich",
@@ -42813,9 +42857,7 @@
             "building_queue": [],
             "unit_queue": [],
             "orders": [],
-            "resources": {
-                "Coal": 50
-            },
+            "resources": {},
             "buildings": []
         },
         "(1, 1, 0)": {
@@ -42842,9 +42884,7 @@
             "unit_queue": [],
             "orders": [],
             "resources": {},
-            "buildings": [
-                "Basic Factory"
-            ]
+            "buildings": []
         },
         "(3, 1, 0)": {
             "owner": "Ocean",
@@ -42907,10 +42947,7 @@
             "unit_queue": [],
             "orders": [],
             "resources": {},
-            "buildings": [
-                "Factory Lvl 2",
-                "Recruitment Building Lvl 2"
-            ]
+            "buildings": []
         },
         "(8, 1, 0)": {
             "owner": "Poland",
@@ -43179,9 +43216,7 @@
             "unit_queue": [],
             "orders": [],
             "resources": {},
-            "buildings": [
-                "Basic Factory"
-            ]
+            "buildings": []
         },
         "(18, 1, 0)": {
             "owner": "German Reich",
@@ -43645,7 +43680,10 @@
             "unit_queue": [],
             "orders": [],
             "resources": {},
-            "buildings": []
+            "buildings": [
+                "Factory Lvl 1",
+                "Recruitment Building Lvl 1"
+            ]
         },
         "(47, 1, 0)": {
             "owner": "Poland",
@@ -43660,7 +43698,9 @@
             "unit_queue": [],
             "orders": [],
             "resources": {},
-            "buildings": []
+            "buildings": [
+                "Basic Factory"
+            ]
         },
         "(48, 1, 0)": {
             "owner": "Poland",
@@ -43803,9 +43843,7 @@
             "building_queue": [],
             "unit_queue": [],
             "orders": [],
-            "resources": {
-                "Coal": 50
-            },
+            "resources": {},
             "buildings": []
         },
         "(59, 1, 0)": {
@@ -43877,10 +43915,7 @@
             "unit_queue": [],
             "orders": [],
             "resources": {},
-            "buildings": [
-                "Factory Lvl 2",
-                "Recruitment Building Lvl 2"
-            ]
+            "buildings": []
         },
         "(63, 1, 0)": {
             "owner": "German Reich",
@@ -43998,7 +44033,24 @@
                 "Ukraine"
             ],
             "is_coastal": false,
-            "units": [],
+            "units": [
+                {
+                    "type": "Medium Tank III",
+                    "owner": "Soviet Union",
+                    "health": 3500,
+                    "max_health": 3500,
+                    "morale": 100.0,
+                    "speed": 2,
+                    "attack": 3600,
+                    "defense": 200,
+                    "level": 0,
+                    "order": {
+                        "type": "MOVE",
+                        "path": []
+                    },
+                    "custom_name": "3rd Medium Tank Division (III)"
+                }
+            ],
             "building_queue": [],
             "unit_queue": [],
             "orders": [],
@@ -44138,7 +44190,10 @@
             "unit_queue": [],
             "orders": [],
             "resources": {},
-            "buildings": []
+            "buildings": [
+                "Factory Lvl 1",
+                "Recruitment Building Lvl 1"
+            ]
         },
         "(78, 1, 0)": {
             "owner": "German Reich",
@@ -44328,7 +44383,9 @@
             "building_queue": [],
             "unit_queue": [],
             "orders": [],
-            "resources": {},
+            "resources": {
+                "Oil": 50
+            },
             "buildings": []
         },
         "(89, 1, 0)": {
@@ -44413,7 +44470,8 @@
             "orders": [],
             "resources": {},
             "buildings": [
-                "Factory Lvl 1"
+                "Factory Lvl 1",
+                "Basic Recruitment Center"
             ]
         },
         "(94, 1, 0)": {
@@ -44939,9 +44997,7 @@
             "building_queue": [],
             "unit_queue": [],
             "orders": [],
-            "resources": {
-                "Coal": 50
-            },
+            "resources": {},
             "buildings": []
         },
         "(117, 1, 0)": {
@@ -45071,9 +45127,7 @@
             "building_queue": [],
             "unit_queue": [],
             "orders": [],
-            "resources": {
-                "Coal": 50
-            },
+            "resources": {},
             "buildings": []
         },
         "(123, 1, 0)": {
@@ -45231,10 +45285,7 @@
             "unit_queue": [],
             "orders": [],
             "resources": {},
-            "buildings": [
-                "Factory Lvl 2",
-                "Recruitment Building Lvl 2"
-            ]
+            "buildings": []
         },
         "(131, 1, 0)": {
             "owner": "Soviet Union",
@@ -45526,7 +45577,10 @@
             "unit_queue": [],
             "orders": [],
             "resources": {},
-            "buildings": []
+            "buildings": [
+                "Factory Lvl 1",
+                "Recruitment Building Lvl 1"
+            ]
         },
         "(150, 1, 0)": {
             "owner": "Canada",
@@ -46300,7 +46354,10 @@
             "unit_queue": [],
             "orders": [],
             "resources": {},
-            "buildings": []
+            "buildings": [
+                "Factory Lvl 1",
+                "Basic Recruitment Center"
+            ]
         },
         "(195, 1, 0)": {
             "owner": "Switzerland",
@@ -47626,9 +47683,7 @@
             "building_queue": [],
             "unit_queue": [],
             "orders": [],
-            "resources": {
-                "Coal": 50
-            },
+            "resources": {},
             "buildings": [
                 "Factory Lvl 2",
                 "Recruitment Building Lvl 1"
@@ -47953,7 +48008,9 @@
             "unit_queue": [],
             "orders": [],
             "resources": {},
-            "buildings": []
+            "buildings": [
+                "Basic Factory"
+            ]
         },
         "(35, 2, 0)": {
             "owner": "Bulgaria",
@@ -48095,7 +48152,9 @@
             "unit_queue": [],
             "orders": [],
             "resources": {},
-            "buildings": []
+            "buildings": [
+                "Basic Factory"
+            ]
         },
         "(43, 2, 0)": {
             "owner": "United States of America",
@@ -48266,7 +48325,8 @@
             "orders": [],
             "resources": {},
             "buildings": [
-                "Factory Lvl 2"
+                "Factory Lvl 2",
+                "Basic Recruitment Center"
             ]
         },
         "(51, 2, 0)": {
@@ -49466,7 +49526,9 @@
             "resources": {
                 "Iron": 50
             },
-            "buildings": []
+            "buildings": [
+                "Basic Factory"
+            ]
         },
         "(126, 2, 0)": {
             "owner": "Turkey",
@@ -49693,7 +49755,24 @@
                 "Azerbaijan"
             ],
             "is_coastal": false,
-            "units": [],
+            "units": [
+                {
+                    "type": "Infantry Type 1939",
+                    "owner": "Soviet Union",
+                    "health": 2450,
+                    "max_health": 2450,
+                    "morale": 100.0,
+                    "speed": 1,
+                    "attack": 390,
+                    "defense": 0,
+                    "level": 0,
+                    "order": {
+                        "type": "MOVE",
+                        "path": []
+                    },
+                    "custom_name": "1st Infantry Division (1939)"
+                }
+            ],
             "building_queue": [],
             "unit_queue": [],
             "orders": [],
@@ -49743,7 +49822,9 @@
             "unit_queue": [],
             "orders": [],
             "resources": {},
-            "buildings": []
+            "buildings": [
+                "Basic Factory"
+            ]
         },
         "(144, 2, 0)": {
             "owner": "Spain",
@@ -50242,10 +50323,7 @@
             "unit_queue": [],
             "orders": [],
             "resources": {},
-            "buildings": [
-                "Basic Factory",
-                "Basic Recruitment Center"
-            ]
+            "buildings": []
         },
         "(179, 2, 0)": {
             "owner": "France",
@@ -50259,10 +50337,7 @@
             "unit_queue": [],
             "orders": [],
             "resources": {},
-            "buildings": [
-                "Basic Factory",
-                "Basic Recruitment Center"
-            ]
+            "buildings": []
         },
         "(180, 2, 0)": {
             "owner": "France",
@@ -50420,7 +50495,10 @@
             "unit_queue": [],
             "orders": [],
             "resources": {},
-            "buildings": []
+            "buildings": [
+                "Basic Factory",
+                "Basic Recruitment Center"
+            ]
         },
         "(192, 2, 0)": {
             "owner": "Turkey",
@@ -50433,7 +50511,10 @@
             "unit_queue": [],
             "orders": [],
             "resources": {},
-            "buildings": []
+            "buildings": [
+                "Basic Factory",
+                "Basic Recruitment Center"
+            ]
         },
         "(193, 2, 0)": {
             "owner": "Ocean",
@@ -50694,24 +50775,7 @@
                 "Italy"
             ],
             "is_coastal": true,
-            "units": [
-                {
-                    "type": "Destroyer VIII",
-                    "owner": "Italy",
-                    "health": 2600.0,
-                    "max_health": 5200,
-                    "speed": 1,
-                    "attack": 3300,
-                    "defense": 340,
-                    "level": 0,
-                    "order": {
-                        "type": "MOVE",
-                        "path": []
-                    },
-                    "custom_name": "2nd Destroyer (VIII)",
-                    "naval_unit": true
-                }
-            ],
+            "units": [],
             "building_queue": [],
             "unit_queue": [],
             "orders": [],
@@ -51028,7 +51092,9 @@
             "unit_queue": [],
             "orders": [],
             "resources": {},
-            "buildings": []
+            "buildings": [
+                "Basic Factory"
+            ]
         },
         "(235, 2, 0)": {
             "owner": "United States of America",
@@ -51097,9 +51163,7 @@
             "unit_queue": [],
             "orders": [],
             "resources": {},
-            "buildings": [
-                "Basic Factory"
-            ]
+            "buildings": []
         },
         "(239, 2, 0)": {
             "owner": "United States of America",
@@ -51138,7 +51202,9 @@
             "resources": {
                 "Iron": 50
             },
-            "buildings": []
+            "buildings": [
+                "Basic Factory"
+            ]
         },
         "(242, 2, 0)": {
             "owner": "Ocean",
@@ -51508,7 +51574,8 @@
             "orders": [],
             "resources": {},
             "buildings": [
-                "Factory Lvl 1"
+                "Factory Lvl 1",
+                "Basic Recruitment Center"
             ]
         },
         "(15, 3, 0)": {
@@ -51881,7 +51948,9 @@
             "unit_queue": [],
             "orders": [],
             "resources": {},
-            "buildings": []
+            "buildings": [
+                "Basic Factory"
+            ]
         },
         "(40, 3, 0)": {
             "owner": "United States of America",
@@ -52632,9 +52701,7 @@
             "unit_queue": [],
             "orders": [],
             "resources": {},
-            "buildings": [
-                "Basic Factory"
-            ]
+            "buildings": []
         },
         "(87, 3, 0)": {
             "owner": "United Kingdom",

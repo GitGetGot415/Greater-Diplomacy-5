@@ -644,7 +644,9 @@
             }
         ],
         "orders": [],
-        "buildings": [],
+        "buildings": [
+            "Basic Factory"
+        ],
         "resources": {},
         "cores": [
             "Soviet Union"
@@ -1440,8 +1442,12 @@
         "owner": "Soviet Union",
         "units": [],
         "orders": [],
-        "buildings": [],
-        "resources": {},
+        "buildings": [
+            "Basic Factory"
+        ],
+        "resources": {
+            "Oil": 50
+        },
         "cores": [
             "Soviet Union"
         ],
@@ -2476,7 +2482,9 @@
         "units": [],
         "orders": [],
         "buildings": [],
-        "resources": {},
+        "resources": {
+            "Oil": 50
+        },
         "cores": [
             "Soviet Union"
         ],
@@ -3561,7 +3569,10 @@
         "owner": "United Kingdom",
         "units": [],
         "orders": [],
-        "buildings": [],
+        "buildings": [
+            "Factory Lvl 1",
+            "Basic Recruitment Center"
+        ],
         "resources": {
             "Oil": 50
         },
@@ -4459,7 +4470,24 @@
             92
         ],
         "owner": "Soviet Union",
-        "units": [],
+        "units": [
+            {
+                "type": "Medium Tank III",
+                "owner": "Soviet Union",
+                "health": 3500,
+                "max_health": 3500,
+                "morale": 100.0,
+                "speed": 2,
+                "attack": 3600,
+                "defense": 200,
+                "level": 0,
+                "order": {
+                    "type": "MOVE",
+                    "path": []
+                },
+                "custom_name": "1st Medium Tank Division (III)"
+            }
+        ],
         "orders": [],
         "buildings": [
             "Basic Factory"
@@ -5343,7 +5371,8 @@
         ],
         "orders": [],
         "buildings": [
-            "Factory Lvl 2"
+            "Factory Lvl 2",
+            "Basic Recruitment Center"
         ],
         "resources": {},
         "cores": [
@@ -6320,7 +6349,10 @@
         "owner": "United Kingdom",
         "units": [],
         "orders": [],
-        "buildings": [],
+        "buildings": [
+            "Factory Lvl 1",
+            "Basic Recruitment Center"
+        ],
         "resources": {},
         "cores": [
             "United Kingdom"
@@ -6487,7 +6519,24 @@
             252
         ],
         "owner": "Soviet Union",
-        "units": [],
+        "units": [
+            {
+                "type": "Medium Tank III",
+                "owner": "Soviet Union",
+                "health": 3500,
+                "max_health": 3500,
+                "morale": 100.0,
+                "speed": 2,
+                "attack": 3600,
+                "defense": 200,
+                "level": 0,
+                "order": {
+                    "type": "MOVE",
+                    "path": []
+                },
+                "custom_name": "2nd Medium Tank Division (III)"
+            }
+        ],
         "orders": [],
         "buildings": [
             "Basic Factory"
@@ -6897,13 +6946,8 @@
             }
         ],
         "orders": [],
-        "buildings": [
-            "Factory Lvl 1",
-            "Recruitment Building Lvl 2"
-        ],
-        "resources": {
-            "Oil": 50
-        },
+        "buildings": [],
+        "resources": {},
         "cores": [
             "German Reich"
         ],
@@ -7401,9 +7445,7 @@
             "Factory Lvl 2",
             "Recruitment Building Lvl 2"
         ],
-        "resources": {
-            "Oil": 50
-        },
+        "resources": {},
         "cores": [
             "German Reich"
         ],
@@ -7838,7 +7880,9 @@
         "owner": "Netherlands",
         "units": [],
         "orders": [],
-        "buildings": [],
+        "buildings": [
+            "Basic Factory"
+        ],
         "resources": {},
         "cores": [
             "Netherlands"
@@ -8923,9 +8967,7 @@
         ],
         "orders": [],
         "buildings": [],
-        "resources": {
-            "Coal": 50
-        },
+        "resources": {},
         "cores": [
             "German Reich"
         ],
@@ -8991,9 +9033,7 @@
         "owner": "Poland",
         "units": [],
         "orders": [],
-        "buildings": [
-            "Basic Factory"
-        ],
+        "buildings": [],
         "resources": {},
         "cores": [
             "Poland"
@@ -9161,10 +9201,7 @@
         "owner": "German Reich",
         "units": [],
         "orders": [],
-        "buildings": [
-            "Factory Lvl 2",
-            "Recruitment Building Lvl 2"
-        ],
+        "buildings": [],
         "resources": {},
         "cores": [
             "German Reich"
@@ -9628,9 +9665,7 @@
         "owner": "Netherlands",
         "units": [],
         "orders": [],
-        "buildings": [
-            "Basic Factory"
-        ],
+        "buildings": [],
         "resources": {},
         "cores": [
             "Netherlands"
@@ -10667,7 +10702,10 @@
         "owner": "France",
         "units": [],
         "orders": [],
-        "buildings": [],
+        "buildings": [
+            "Factory Lvl 1",
+            "Recruitment Building Lvl 1"
+        ],
         "resources": {},
         "cores": [
             "France"
@@ -10699,7 +10737,9 @@
         "owner": "Poland",
         "units": [],
         "orders": [],
-        "buildings": [],
+        "buildings": [
+            "Basic Factory"
+        ],
         "resources": {},
         "cores": [
             "Soviet Union",
@@ -11070,9 +11110,7 @@
         "units": [],
         "orders": [],
         "buildings": [],
-        "resources": {
-            "Coal": 50
-        },
+        "resources": {},
         "cores": [
             "German Reich"
         ],
@@ -11223,10 +11261,7 @@
         "owner": "German Reich",
         "units": [],
         "orders": [],
-        "buildings": [
-            "Factory Lvl 2",
-            "Recruitment Building Lvl 2"
-        ],
+        "buildings": [],
         "resources": {},
         "cores": [
             "German Reich"
@@ -11500,7 +11535,24 @@
             307
         ],
         "owner": "Soviet Union",
-        "units": [],
+        "units": [
+            {
+                "type": "Medium Tank III",
+                "owner": "Soviet Union",
+                "health": 3500,
+                "max_health": 3500,
+                "morale": 100.0,
+                "speed": 2,
+                "attack": 3600,
+                "defense": 200,
+                "level": 0,
+                "order": {
+                    "type": "MOVE",
+                    "path": []
+                },
+                "custom_name": "3rd Medium Tank Division (III)"
+            }
+        ],
         "orders": [],
         "buildings": [
             "Basic Factory"
@@ -11779,7 +11831,10 @@
         "owner": "German Reich",
         "units": [],
         "orders": [],
-        "buildings": [],
+        "buildings": [
+            "Factory Lvl 1",
+            "Recruitment Building Lvl 1"
+        ],
         "resources": {},
         "cores": [
             "German Reich"
@@ -12188,7 +12243,9 @@
         "units": [],
         "orders": [],
         "buildings": [],
-        "resources": {},
+        "resources": {
+            "Oil": 50
+        },
         "cores": [
             "Soviet Union"
         ],
@@ -12371,7 +12428,8 @@
         "units": [],
         "orders": [],
         "buildings": [
-            "Factory Lvl 1"
+            "Factory Lvl 1",
+            "Basic Recruitment Center"
         ],
         "resources": {},
         "cores": [
@@ -13351,9 +13409,7 @@
         "units": [],
         "orders": [],
         "buildings": [],
-        "resources": {
-            "Coal": 50
-        },
+        "resources": {},
         "cores": [
             "France"
         ],
@@ -13603,9 +13659,7 @@
         ],
         "orders": [],
         "buildings": [],
-        "resources": {
-            "Coal": 50
-        },
+        "resources": {},
         "cores": [
             "Czechia"
         ],
@@ -13920,10 +13974,7 @@
         "owner": "German Reich",
         "units": [],
         "orders": [],
-        "buildings": [
-            "Factory Lvl 2",
-            "Recruitment Building Lvl 2"
-        ],
+        "buildings": [],
         "resources": {},
         "cores": [
             "German Reich"
@@ -14598,7 +14649,10 @@
         "owner": "France",
         "units": [],
         "orders": [],
-        "buildings": [],
+        "buildings": [
+            "Factory Lvl 1",
+            "Recruitment Building Lvl 1"
+        ],
         "resources": {},
         "cores": [
             "France"
@@ -16262,7 +16316,10 @@
             }
         ],
         "orders": [],
-        "buildings": [],
+        "buildings": [
+            "Factory Lvl 1",
+            "Basic Recruitment Center"
+        ],
         "resources": {},
         "cores": [
             "Canada"
@@ -19029,9 +19086,7 @@
             "Factory Lvl 2",
             "Recruitment Building Lvl 1"
         ],
-        "resources": {
-            "Coal": 50
-        },
+        "resources": {},
         "cores": [
             "Italy"
         ],
@@ -19837,7 +19892,9 @@
         "owner": "Spain",
         "units": [],
         "orders": [],
-        "buildings": [],
+        "buildings": [
+            "Basic Factory"
+        ],
         "resources": {},
         "cores": [
             "Spain"
@@ -20134,7 +20191,9 @@
             }
         ],
         "orders": [],
-        "buildings": [],
+        "buildings": [
+            "Basic Factory"
+        ],
         "resources": {},
         "cores": [
             "Soviet Union",
@@ -20461,7 +20520,8 @@
         "units": [],
         "orders": [],
         "buildings": [
-            "Factory Lvl 2"
+            "Factory Lvl 2",
+            "Basic Recruitment Center"
         ],
         "resources": {},
         "cores": [
@@ -23146,7 +23206,9 @@
         "owner": "Spain",
         "units": [],
         "orders": [],
-        "buildings": [],
+        "buildings": [
+            "Basic Factory"
+        ],
         "resources": {
             "Iron": 50
         },
@@ -23665,7 +23727,24 @@
             631
         ],
         "owner": "Soviet Union",
-        "units": [],
+        "units": [
+            {
+                "type": "Infantry Type 1939",
+                "owner": "Soviet Union",
+                "health": 2450,
+                "max_health": 2450,
+                "morale": 100.0,
+                "speed": 1,
+                "attack": 390,
+                "defense": 0,
+                "level": 0,
+                "order": {
+                    "type": "MOVE",
+                    "path": []
+                },
+                "custom_name": "1st Infantry Division (1939)"
+            }
+        ],
         "orders": [],
         "buildings": [
             "Basic Factory"
@@ -23773,7 +23852,9 @@
         "owner": "Albania",
         "units": [],
         "orders": [],
-        "buildings": [],
+        "buildings": [
+            "Basic Factory"
+        ],
         "resources": {},
         "cores": [
             "Albania"
@@ -24968,10 +25049,7 @@
         "owner": "Turkey",
         "units": [],
         "orders": [],
-        "buildings": [
-            "Basic Factory",
-            "Basic Recruitment Center"
-        ],
+        "buildings": [],
         "resources": {},
         "cores": [
             "Turkey"
@@ -25003,10 +25081,7 @@
         "owner": "France",
         "units": [],
         "orders": [],
-        "buildings": [
-            "Basic Factory",
-            "Basic Recruitment Center"
-        ],
+        "buildings": [],
         "resources": {},
         "cores": [
             "Turkey",
@@ -25393,7 +25468,10 @@
         "owner": "Turkey",
         "units": [],
         "orders": [],
-        "buildings": [],
+        "buildings": [
+            "Basic Factory",
+            "Basic Recruitment Center"
+        ],
         "resources": {},
         "cores": [
             "Turkey"
@@ -25425,7 +25503,10 @@
         "owner": "Turkey",
         "units": [],
         "orders": [],
-        "buildings": [],
+        "buildings": [
+            "Basic Factory",
+            "Basic Recruitment Center"
+        ],
         "resources": {},
         "cores": [
             "Turkey"
@@ -26086,24 +26167,7 @@
             695
         ],
         "owner": "Italy",
-        "units": [
-            {
-                "type": "Destroyer VIII",
-                "owner": "Italy",
-                "health": 2600.0,
-                "max_health": 5200,
-                "speed": 1,
-                "attack": 3300,
-                "defense": 340,
-                "level": 0,
-                "order": {
-                    "type": "MOVE",
-                    "path": []
-                },
-                "custom_name": "2nd Destroyer (VIII)",
-                "naval_unit": true
-            }
-        ],
+        "units": [],
         "orders": [],
         "buildings": [],
         "resources": {},
@@ -26860,7 +26924,9 @@
         "owner": "France",
         "units": [],
         "orders": [],
-        "buildings": [],
+        "buildings": [
+            "Basic Factory"
+        ],
         "resources": {},
         "cores": [
             "Tunisia"
@@ -27000,9 +27066,7 @@
         "owner": "France",
         "units": [],
         "orders": [],
-        "buildings": [
-            "Basic Factory"
-        ],
+        "buildings": [],
         "resources": {},
         "cores": [
             "Algeria"
@@ -27102,7 +27166,9 @@
         "owner": "France",
         "units": [],
         "orders": [],
-        "buildings": [],
+        "buildings": [
+            "Basic Factory"
+        ],
         "resources": {
             "Iron": 50
         },
@@ -28042,7 +28108,8 @@
         "units": [],
         "orders": [],
         "buildings": [
-            "Factory Lvl 1"
+            "Factory Lvl 1",
+            "Basic Recruitment Center"
         ],
         "resources": {},
         "cores": [
@@ -28905,7 +28972,9 @@
             }
         ],
         "orders": [],
-        "buildings": [],
+        "buildings": [
+            "Basic Factory"
+        ],
         "resources": {},
         "cores": [
             "Libya"
@@ -30545,9 +30614,7 @@
         "owner": "United Kingdom",
         "units": [],
         "orders": [],
-        "buildings": [
-            "Basic Factory"
-        ],
+        "buildings": [],
         "resources": {},
         "cores": [
             "Saudi Arabia"
