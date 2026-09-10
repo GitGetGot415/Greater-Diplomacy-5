@@ -16,8 +16,11 @@ class _TextInputModal(_BaseModal):
         self.char_allowed = char_allowed
         self.validate = validate
 
-        self.input_rect = pygame.Rect(self.box_rect.x + 40, self.box_rect.bottom - 110,
-                                      self.box_rect.width - 80, 40)
+        # Keep Clear in the input row, but outside the black text box: it is
+        # easy to find without covering the value being entered.
+        self.clear_rect = pygame.Rect(self.box_rect.x + 40, self.box_rect.bottom - 107, 64, 34)
+        self.input_rect = pygame.Rect(self.clear_rect.right + 8, self.box_rect.bottom - 110,
+                                      self.box_rect.right - (self.clear_rect.right + 8) - 40, 40)
         self.ok_rect = pygame.Rect(self.box_rect.centerx - 140, self.box_rect.bottom - 55, 120, 40)
         self.cancel_rect = pygame.Rect(self.box_rect.centerx + 20, self.box_rect.bottom - 55, 120, 40)
 
@@ -53,7 +56,10 @@ class _TextInputModal(_BaseModal):
                         self.text = new_text
                         self.error_text = ""
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                if self.ok_rect.collidepoint(event.pos):
+                if self.clear_rect.collidepoint(event.pos):
+                    self.text = ""
+                    self.error_text = ""
+                elif self.ok_rect.collidepoint(event.pos):
                     self._submit()
                 elif self.cancel_rect.collidepoint(event.pos):
                     self._finish(None)
@@ -62,9 +68,13 @@ class _TextInputModal(_BaseModal):
         pygame.draw.rect(surface, (20, 20, 20), self.input_rect)
         border_color = (220, 80, 80) if self.error_text else c.UI_TEXT_LIGHT
         pygame.draw.rect(surface, border_color, self.input_rect, 2)
+        clear_color = (135, 45, 45) if self.text else (85, 85, 85)
+        self.draw_button(surface, self.clear_rect, "Clear", clear_color,
+                         (180, 65, 65) if self.text else (115, 115, 115))
         input_surf = self.msg_font.render(self.text or " ", True, (255, 255, 255))
-        surface.set_clip(self.input_rect.inflate(-10, -6))
-        surface.blit(input_surf, input_surf.get_rect(midleft=(self.input_rect.x + 10,
+        text_rect = self.input_rect.inflate(-8, -6)
+        surface.set_clip(text_rect)
+        surface.blit(input_surf, input_surf.get_rect(midleft=(text_rect.x + 2,
                                                              self.input_rect.centery)))
         surface.set_clip(None)
 

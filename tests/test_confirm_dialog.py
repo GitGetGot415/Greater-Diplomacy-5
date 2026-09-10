@@ -101,6 +101,13 @@ class DialogTests(unittest.TestCase):
         self.settle()
         self.assertEqual(self.answers, ["a"])
 
+    def test_text_input_clear_control_erases_the_current_value(self):
+        confirm_dialog.ask_string("T", "Name?", self.answers.append, initial="wrong invite")
+        modal = modal_stack.active()
+        modal.handle_events([click(modal.clear_rect.center), typed("r"), key(pygame.K_RETURN)])
+        self.settle()
+        self.assertEqual(self.answers, ["r"])
+
     def test_ask_string_accepts_clipboard_paste(self):
         confirm_dialog.ask_string("T", "Name?", self.answers.append)
         modal = modal_stack.active()

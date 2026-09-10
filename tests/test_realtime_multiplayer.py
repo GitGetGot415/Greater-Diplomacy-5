@@ -15,7 +15,8 @@ from data.io.realtime_multiplayer import (
     encode_invite, encode_relay_invite, read_message, sanitize_display_name, MapRealtimeDriver,
     collect_map_commands, default_advertised_address,
 )
-from data.io.realtime_relay import RelayHostTransport, relay_cloud_init, validate_relay_invite, _relay_firewall_payload
+from data.io.realtime_relay import (RelayHostTransport, relay_cloud_init, validate_relay_invite,
+                                    _relay_firewall_payload, DigitalOceanRelayTask)
 from data.io.realtime_relay_service import Relay
 from data.io.realtime_networking import (
     PortMappingResult, automatic_tcp_port_mapping, host_network_diagnostics,
@@ -123,6 +124,10 @@ class RelayTransportTests(unittest.TestCase):
                          [{"protocol": "tcp", "ports": "443", "sources": {"addresses": ["0.0.0.0/0"]}}])
         with self.assertRaises(RealtimeError):
             validate_relay_invite({"v": 1, "transport": "relay"})
+
+    def test_relay_task_exposes_a_nonempty_progress_status(self):
+        task = DigitalOceanRelayTask("x" * 24, "a" * 32)
+        self.assertIn("Ready", task.status)
 
     def _start_relay(self):
         relay, stopped = Relay(), threading.Event()

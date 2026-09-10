@@ -278,6 +278,7 @@ class DigitalOceanRelayTask:
         self.token, self.session_id, self.region, self.size = token.strip(), session_id, region.strip(), size.strip()
         self.result: TemporaryRelay | None = None
         self.error: str | None = None
+        self.status = "Ready to create a temporary relay."
         self._done = threading.Event()
         self._cancelled = threading.Event()
         self._droplet_id: int | None = None
@@ -293,14 +294,17 @@ class DigitalOceanRelayTask:
         return self._done.is_set()
 
     def cancel_and_destroy(self) -> None:
+        self.status = "Cancelling and deleting the temporary relay..."
         self._cancelled.set()
         if self._droplet_id:
             _destroy_relay_resources(self.token, self._droplet_id, self._firewall_id)
 
     def _run(self) -> None:
         try:
+            self.status = "Checking your DigitalOcean access token..."
             if len(self.token) < 20:
                 raise RealtimeError("Enter a valid DigitalOcean personal access token.")
+            self.status = "Creating the temporary Droplet..."
             payload = {"name": "gd5-relay-" + self.session_id[:10], "region": self.region,
                        "size": self.size, "image": "ubuntu-24-04-x64", "backups": False,
                        "ipv6": False, "monitoring": False,
@@ -309,6 +313,7 @@ class DigitalOceanRelayTask:
             if not isinstance(created, dict) or not isinstance(created.get("id"), int):
                 raise RealtimeError("DigitalOcean did not return the temporary relay ID.")
             self._droplet_id = created["id"]
+            self.status = "Securing the relay firewall (TCP 443 only)..."
             firewall = _api_request(self.token, "POST", "/firewalls", _relay_firewall_payload(self._droplet_id))
             firewall_data = firewall.get("firewall", {})
             if not isinstance(firewall_data, dict) or not isinstance(firewall_data.get("id"), str):
@@ -325,18 +330,23 @@ class DigitalOceanRelayTask:
                 address = next((entry.get("ip_address") for entry in public if isinstance(entry, dict)
                                 and entry.get("type") == "public" and isinstance(entry.get("ip_address"), str)), None)
                 if address:
+                    self.status = "Starting the encrypted relay service..."
                     try:
                         probe = socket.create_connection((address, DEFAULT_RELAY_PORT), timeout=2)
                         probe.close()
                         self.result = TemporaryRelay(self._droplet_id, address, self.region, self.size,
                                                      self._firewall_id)
+                        self.status = "Relay is ready; opening your lobby..."
                         return
                     except OSError:
                         pass
+                else:
+                    self.status = "Waiting for DigitalOcean to assign the relay address..."
                 time.sleep(3)
             raise RealtimeError("The temporary relay did not become ready within three minutes.")
         except RealtimeError as exc:
             self.error = str(exc)
+            self.status = "Relay creation failed. Cleaning up..."
             if self._droplet_id:
                 _destroy_relay_resources(self.token, self._droplet_id, self._firewall_id)
         finally:

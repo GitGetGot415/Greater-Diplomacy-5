@@ -358,8 +358,11 @@ class Realtime_Relay_Provision(GameState):
         font = pygame.font.Font(None, 28)
         text = "DigitalOcean is creating a small relay. This can take a minute or two."
         surface.blit(font.render(text, True, (235, 235, 235)), (55, 180))
-        text = "You can cancel safely; GD5 will delete any Droplet it created."
+        task = getattr(self.host_setup, "relay_task", None) if self.host_setup else None
+        text = task.status if task else "Preparing relay setup..."
         surface.blit(font.render(text, True, (235, 235, 235)), (85, 225))
+        text = "You can cancel safely; GD5 will delete any Droplet it created."
+        surface.blit(font.render(text, True, (235, 235, 235)), (85, 270))
 
 
 class Realtime_Scenario_Select(GameState):
@@ -662,9 +665,11 @@ class Realtime_Join(GameState):
         self.refresh_ui()
 
     def refresh_ui(self):
+        invite_set = bool(self.invite_text)
         self.elements = [
             Button("centered", 120, "large", "light_blue", "Find LAN Matches", self.find_lan_matches),
-            Button("centered", 210, "large", "blue", "Paste Invite Code", self.edit_invite),
+            Button("centered", 210, "large", "blue",
+                   "Replace Invite Code" if invite_set else "Paste Invite Code", self.edit_invite),
             Button("centered", 300, "medium", "blue", f"Name: {self.name}", self.edit_name),
             Button("centered", 360, "medium", "blue", f"Password: {'SET' if self.password else 'None'}", self.edit_password),
             Button("centered", 420, "medium", "purple", "Reconnect Token" if not self.reconnect_token else "Reconnect Token: SET", self.edit_reconnect_token),
