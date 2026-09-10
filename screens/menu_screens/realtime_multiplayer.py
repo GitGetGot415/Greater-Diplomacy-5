@@ -43,6 +43,16 @@ def _delete_relay_quietly(token, droplet_id, firewall_id=None):
         pass
 
 
+def _ping_label(player, host_id):
+    """Short, stable lobby text for server-measured round-trip latency."""
+    if not getattr(player, "connected", True):
+        return "offline"
+    if player.player_id == host_id:
+        return "local"
+    ping = getattr(player, "ping_ms", None)
+    return f"{ping} ms" if isinstance(ping, int) else "checking..."
+
+
 def _scenario_entries():
     entries = []
     for label, directory in (("Historical", c.SCENARIOS_HISTORICAL_DIR),
@@ -655,7 +665,7 @@ class Realtime_Lobby(GameState):
 
     def update(self):
         if self.session:
-            signature = tuple((p.player_id, p.country_id, p.ready, p.connected)
+            signature = tuple((p.player_id, p.country_id, p.ready, p.connected, p.ping_ms)
                               for p in self.session.players.values())
             mapping = self.port_mapping.result() if self.port_mapping else None
             signature += ((mapping.protocol, mapping.message, mapping.external_address, mapping.external_port)
@@ -670,7 +680,8 @@ class Realtime_Lobby(GameState):
         font = pygame.font.Font(None, 22)
         players = list(self.session.players.values())
         for index, player in enumerate(players[:5]):
-            text = f"{player.name} — {player.country_id or 'No country'} — {'READY' if player.ready else 'waiting'}"
+            text = (f"{player.name} — {_ping_label(player, self.session.host_id)} — "
+                    f"{player.country_id or 'No country'} — {'READY' if player.ready else 'waiting'}")
             surface.blit(font.render(text, True, (230, 230, 230)), (30, 585 + index * 24))
 
 
@@ -957,5 +968,6 @@ class Realtime_Remote_Lobby(GameState):
         if not self.view: return
         font = pygame.font.Font(None, 22)
         for index, player in enumerate(list(self.view.players.values())[:5]):
-            text = f"{player.name} — {player.country_id or 'No country'} — {'READY' if player.ready else 'waiting'}"
+            text = (f"{player.name} — {_ping_label(player, self.view.host_id)} — "
+                    f"{player.country_id or 'No country'} — {'READY' if player.ready else 'waiting'}")
             surface.blit(font.render(text, True, (230, 230, 230)), (30, 585 + index * 24))

@@ -142,7 +142,7 @@ class RelayTransportTests(unittest.TestCase):
         task = DigitalOceanRelayTask("x" * 24, "a" * 32)
         self.assertIn("Ready", task.status)
 
-    def test_client_send_reports_a_broken_pipe_without_raising_to_the_ui(self):
+    def test_client_send_reports_a_broken_pipe_without_blocking_the_ui(self):
         class BrokenSocket:
             def __init__(self): self.closed = False
             def sendall(self, _data): raise BrokenPipeError("connection closed")
@@ -152,7 +152,12 @@ class RelayTransportTests(unittest.TestCase):
         connection = BrokenSocket()
         client.socket = connection
 
-        self.assertFalse(client.send("select_country", {"country_id": "A"}))
+        # Queuing succeeds immediately; the sender thread reports the actual
+        # broken pipe asynchronously instead of freezing a confirmation modal.
+        self.assertTrue(client.send("select_country", {"country_id": "A"}))
+        deadline = time.monotonic() + 1
+        while time.monotonic() < deadline and client.socket is not None:
+            time.sleep(.01)
         self.assertTrue(connection.closed)
         self.assertIsNone(client.socket)
         self.assertEqual(client.poll(), [{"type": "disconnected", "payload": {
@@ -316,6 +321,15 @@ class RealtimeSessionTests(unittest.TestCase):
         self.assertEqual(self.session.players[self.host].country_id, "A")
         self.assertFalse(hasattr(self.session.players[self.host], "admin_gameplay"))
         self.assertEqual(self.session.public_state()["host_id"], self.host)
+
+    def test_public_state_reports_server_measured_player_ping(self):
+        self.session.set_ping(self.other.player_id, 47)
+        players = {player["player_id"]: player for player in self.session.public_state()["players"]}
+        self.assertEqual(players[self.host]["ping_ms"], 0)
+        self.assertEqual(players[self.other.player_id]["ping_ms"], 47)
+        self.session.disconnect(self.other.player_id)
+        players = {player["player_id"]: player for player in self.session.public_state()["players"]}
+        self.assertIsNone(players[self.other.player_id]["ping_ms"])
 
     def test_timer_uses_server_clock_and_latest_draft(self):
         self.start()

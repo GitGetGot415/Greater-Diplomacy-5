@@ -175,21 +175,28 @@ def render_buttons(map_screen):
                     session = map_screen.realtime_session
                     player = map_screen.realtime_player_id
                     turn = session.turn_number
-                    if session.sync_draft(player, turn, collect_map_commands(
-                            map_screen, map_screen.player_country)) is False:
+                    commands = collect_map_commands(map_screen, map_screen.player_country)
+                    is_remote = bool(getattr(map_screen, "realtime_client", None))
+                    # Set this before the queued socket work begins.  The
+                    # confirmation modal can therefore close on this frame
+                    # and the map remains interactive while TLS writes and
+                    # the host acknowledgement happen in background threads.
+                    if is_remote:
+                        map_screen.realtime_submission_pending = True
+                        map_screen.show_feedback("Submitting turn to the host...")
+                    if session.sync_draft(player, turn, commands) is False:
+                        map_screen.realtime_submission_pending = False
                         map_screen.show_feedback("Cannot submit: connection to the host was lost.")
                         return
                     if session.submit(player, turn) is False:
+                        map_screen.realtime_submission_pending = False
                         map_screen.show_feedback("Cannot submit: connection to the host was lost.")
                         return
                     # A remote client has queued a request, not yet a server
                     # acknowledgement.  Make the short in-flight interval
                     # explicit instead of leaving an apparently live Submit
                     # button on screen.
-                    if getattr(map_screen, "realtime_client", None):
-                        map_screen.realtime_submission_pending = True
-                        map_screen.show_feedback("Submitting turn to the host...")
-                    else:
+                    if not is_remote:
                         map_screen.show_feedback("Turn submitted. Unsubmit to edit again.")
                 except RealtimeError as error:
                     map_screen.show_feedback(f"Submission rejected: {error}")
@@ -481,6 +488,10 @@ def render_buttons(map_screen):
     map_screen.btn_tactical = Button(LEFT_UI_BAR_X + BTN_TACTICAL_OFFSET_X, BTN_SPECTATOR_Y, "medium", "orange", "Tactical Mode", toggle_tactical_action)
     map_screen.btn_close_info = Button(TOP_RIGHT_BTN_X, c.TOP_BAR_UI_CENTER_Y, "small", "red", "X", map_screen.deselect_province)
     map_screen.btn_exit_to_menu = Button(TOP_RIGHT_BTN_X, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Exit", map_screen.exit_to_menu)
+    from ui import realtime_status_panel
+    map_screen.btn_realtime_details = Button(TOP_RIGHT_BTN_X - 110, c.TOP_BAR_UI_CENTER_Y,
+                                              "small", "blue", "Details",
+                                              lambda: realtime_status_panel.show_details(map_screen))
 
     # --- Append all explicitly defined buttons into the elements list ---
     map_screen.elements.extend([
@@ -502,7 +513,7 @@ def render_buttons(map_screen):
         map_screen.btn_req_mil_access, map_screen.btn_cancel_mil_access, map_screen.btn_revoke_mil_access,
         map_screen.btn_accept_req, map_screen.btn_reject_req, map_screen.btn_force_war, map_screen.btn_force_peace,
         map_screen.btn_spec_create_fac, map_screen.btn_spec_join_fac, map_screen.btn_spec_invite_fac, map_screen.btn_spec_leave_fac,
-        map_screen.btn_spec_disband_fac, map_screen.btn_spectator, map_screen.btn_tactical, map_screen.btn_close_info, map_screen.btn_exit_to_menu,
+        map_screen.btn_spec_disband_fac, map_screen.btn_spectator, map_screen.btn_tactical, map_screen.btn_close_info, map_screen.btn_exit_to_menu, map_screen.btn_realtime_details,
         map_screen.btn_spec_mp_manage, map_screen.btn_spec_mp_export, map_screen.btn_spec_mp_keys,
         map_screen.slider_camera_tilt
     ])
@@ -784,6 +795,7 @@ def update_button_states(map_screen):
 
     map_screen.btn_exit_to_menu.visible = not is_sel
     map_screen.btn_close_info.visible = is_sel
+    map_screen.btn_realtime_details.visible = bool(getattr(map_screen, "realtime_multiplayer", False)) and not is_sel
 
     # ======================================================================== #
     #                        PROVINCE INTERACTION LOGIC                        #

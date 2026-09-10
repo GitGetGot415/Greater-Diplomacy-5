@@ -256,6 +256,7 @@ class Player:
     connected: bool = True
     submitted: bool = False
     eliminated: bool = False
+    ping_ms: int | None = None
     draft: list[dict[str, Any]] = field(default_factory=list)
 
 
@@ -289,6 +290,9 @@ class RealtimeSession:
         self._password_salt = secrets.token_bytes(16)
         self._password_digest = _password_hash(password, self._password_salt) if password else None
         self.host_id = self._new_player(host_name).player_id
+        # The host's game client shares the authoritative local process; it
+        # has no network hop to measure.
+        self.players[self.host_id].ping_ms = 0
 
     def _new_player(self, name: str) -> Player:
         name = sanitize_display_name(name)
@@ -333,6 +337,8 @@ class RealtimeSession:
             for player in self.players.values():
                 if secrets.compare_digest(player.reconnect_token, str(token)):
                     player.connected = True
+                    if player.player_id != self.host_id:
+                        player.ping_ms = None
                     self._broadcast()
                     return copy.copy(player)
         raise RealtimeError("Invalid reconnect token.")
@@ -341,8 +347,19 @@ class RealtimeSession:
         with self.lock:
             player = self._player(player_id)
             player.connected = False
+            if player_id != self.host_id:
+                player.ping_ms = None
             if self.phase == "LOBBY":
                 player.ready = False
+            self._broadcast()
+
+    def set_ping(self, player_id: str, ping_ms: int) -> None:
+        """Publish a server-measured application round-trip time for the UI."""
+        with self.lock:
+            player = self._player(player_id)
+            if player.player_id == self.host_id:
+                return
+            player.ping_ms = max(0, min(60_000, int(ping_ms)))
             self._broadcast()
 
     def rename(self, player_id: str, name: str) -> None:
@@ -581,7 +598,8 @@ class RealtimeSession:
                 "submitted_count": submitted, "active_count": active,
                 "players": [{"player_id": p.player_id, "name": p.name, "country_id": p.country_id,
                              "ready": p.ready, "connected": p.connected,
-                             "submitted": p.submitted, "eliminated": p.eliminated}
+                             "submitted": p.submitted, "eliminated": p.eliminated,
+                             "ping_ms": p.ping_ms}
                             for p in self.players.values()],
                 "config": {"scenario_id": self.config.scenario_id,
                            "scenario_settings": copy.deepcopy(self.config.scenario_settings),
@@ -1178,6 +1196,8 @@ class RealtimeServer:
         self._connection_lock = threading.Lock()
         self._relay_transport = None
         self._timer_started = False
+        self._ping_lock = threading.Lock()
+        self._pending_pings: dict[str, tuple[str, float]] = {}
         self.session.add_listener(self._broadcast_state)
 
     def start(self, port: int) -> int:
@@ -1257,13 +1277,38 @@ class RealtimeServer:
 
     def _timer_loop(self) -> None:
         last_status = 0.0
+        last_ping = 0.0
         while not self._stopped.wait(0.1):
             self.session.tick()
+            if time.monotonic() - last_ping >= 3.0:
+                last_ping = time.monotonic()
+                self._send_ping_requests()
             # Clients derive a smooth local countdown, but this heartbeat
             # periodically refreshes their server-clock/deadline estimate.
             if time.monotonic() - last_status >= 5.0:
                 last_status = time.monotonic()
                 self._broadcast_state(self.session.public_state())
+
+    def _send_ping_requests(self) -> None:
+        """Send server-originated probes so displayed ping cannot freeze the UI."""
+        with self._clients_lock:
+            clients = list(self._clients.items())
+        for player_id, connection in clients:
+            nonce = secrets.token_hex(8)
+            with self._ping_lock:
+                self._pending_pings[player_id] = (nonce, time.monotonic())
+            try:
+                self._send_message(connection, "ping", {"nonce": nonce})
+            except OSError:
+                self.session.disconnect(player_id)
+
+    def _record_pong(self, player_id: str, nonce: Any) -> None:
+        with self._ping_lock:
+            expected = self._pending_pings.get(player_id)
+            if not expected or not isinstance(nonce, str) or not secrets.compare_digest(expected[0], nonce):
+                raise RealtimeError("Invalid ping response.")
+            del self._pending_pings[player_id]
+        self.session.set_ping(player_id, round((time.monotonic() - expected[1]) * 1000))
 
     def _serve_connection(self, connection: socket.socket) -> None:
         player_id: str | None = None
@@ -1336,6 +1381,7 @@ class RealtimeServer:
         elif action == "sync_draft": self.session.sync_draft(player_id, payload.get("turn"), payload.get("commands"))
         elif action == "submit": self.session.submit(player_id, payload.get("turn"))
         elif action == "unsubmit": self.session.unsubmit(player_id, payload.get("turn"))
+        elif action == "pong": self._record_pong(player_id, payload.get("nonce"))
         elif action == "start": self.session.start(player_id)
         elif action == "end_match": self.session.end_match(player_id)
         else: raise RealtimeError("Unknown real-time message type.")
@@ -1367,6 +1413,9 @@ class RealtimeClient:
         self.reconnect_token: str | None = None
         self.disconnect_message: str | None = None
         self._send_lock = threading.Lock()
+        self._outbound: queue.SimpleQueue[tuple[str, dict[str, Any]] | None] = queue.SimpleQueue()
+        self._sender_lock = threading.Lock()
+        self._sender_started = False
         self._disconnect_lock = threading.Lock()
         self._disconnect_notified = False
         self._receiver_lock = threading.Lock()
@@ -1411,18 +1460,38 @@ class RealtimeClient:
             threading.Thread(target=self._receive_loop, daemon=True).start()
 
     def send(self, message_type: str, payload: dict[str, Any]) -> bool:
-        """Send a request, returning False rather than crashing on a lost link."""
-        with self._send_lock:
-            if not self.socket:
-                self._mark_disconnected("The connection to the real-time host has closed.")
-                return False
-            try:
-                self.socket.sendall(encode_message(message_type, self.invite["session"], payload))
-            except (ConnectionError, OSError, ssl.SSLError) as exc:
-                self._mark_disconnected(str(exc))
-                return False
-        self._start_receiver()
+        """Queue a request without ever blocking the pygame event loop."""
+        if not self.socket:
+            self._mark_disconnected("The connection to the real-time host has closed.")
+            return False
+        self._outbound.put((message_type, payload))
+        self._start_sender()
         return True
+
+    def _start_sender(self) -> None:
+        with self._sender_lock:
+            if self._sender_started:
+                return
+            self._sender_started = True
+            threading.Thread(target=self._send_loop, daemon=True).start()
+
+    def _send_loop(self) -> None:
+        """Own the potentially blocking TLS writes away from input handling."""
+        while True:
+            request = self._outbound.get()
+            if request is None:
+                return
+            message_type, payload = request
+            with self._send_lock:
+                connection = self.socket
+                if connection is None:
+                    return
+                try:
+                    connection.sendall(encode_message(message_type, self.invite["session"], payload))
+                except (ConnectionError, OSError, ssl.SSLError) as exc:
+                    self._mark_disconnected(str(exc))
+                    return
+            self._start_receiver()
 
     def poll(self) -> list[dict[str, Any]]:
         result = []
@@ -1436,6 +1505,7 @@ class RealtimeClient:
         if connection:
             try: connection.close()
             except OSError: pass
+        self._outbound.put(None)
 
     def _mark_disconnected(self, message: str) -> None:
         """Close and report a failed connection exactly once across both threads."""
@@ -1448,6 +1518,7 @@ class RealtimeClient:
         if connection:
             try: connection.close()
             except OSError: pass
+        self._outbound.put(None)
         self.events.put({"type": "disconnected", "payload": {"message": self.disconnect_message}})
 
     def _receive_loop(self) -> None:
@@ -1465,6 +1536,11 @@ class RealtimeClient:
                     continue
                 if message["session_id"] != self.invite["session"]:
                     raise RealtimeError("Server changed match sessions.")
+                if message["type"] == "ping":
+                    nonce = message.get("payload", {}).get("nonce")
+                    if isinstance(nonce, str):
+                        self.send("pong", {"nonce": nonce})
+                    continue
                 if message["type"] == "ok":
                     payload = message["payload"]
                     self.player_id = payload.get("player_id", self.player_id)
