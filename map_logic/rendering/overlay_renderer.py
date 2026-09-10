@@ -13,12 +13,12 @@ from map_logic.turn_processing import combat_processor, combat_rules
 CULL_MARGIN = 250
 
 # The images are deliberately separate from outcome color.  A known battle
-# gets the expected winner's muted country color, while an unknown battle uses
+# gets the expected winner's muted country color, while a generic battle uses
 # a distinct silhouette so its defensive/offensive status is not guessed.
 COMBAT_BUBBLE_ASSETS = {
     queries.COMBAT_LOCATION_DEFENSE: "Defense Bubble",
     queries.COMBAT_LOCATION_OFFENSE: "Offense Bubble",
-    queries.COMBAT_LOCATION_UNKNOWN: "Unknown Bubble",
+    queries.COMBAT_LOCATION_GENERIC: "Generic Bubble",
 }
 # Bubble art is intentionally compact so it does not hide the unit/order
 # information around the tile.  The hit test below uses the image alpha mask,
@@ -279,8 +279,8 @@ def combat_bubble_records(map_screen):
             combat_estimate["sides"][0])
         category = (
             queries.get_combat_location_category(
-                province, player, map_screen.nation_data)
-            if information_available else queries.COMBAT_LOCATION_UNKNOWN)
+                province, player, map_screen.nation_data, sides[0])
+            if information_available else queries.COMBAT_LOCATION_GENERIC)
         records.append({
             "kind": "province",
             "province_id": province["id"],

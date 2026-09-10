@@ -331,9 +331,48 @@ class CombatDisplayTests(unittest.TestCase):
             record = overlay_renderer.combat_bubble_records(self.map)[0]
 
         self.assertFalse(record["information_available"])
-        self.assertEqual(record["category"], queries.COMBAT_LOCATION_UNKNOWN)
+        self.assertEqual(record["category"], queries.COMBAT_LOCATION_GENERIC)
         self.assertEqual(overlay_renderer.COMBAT_BUBBLE_ASSETS[record["category"]],
-                         "Unknown Bubble")
+                         "Generic Bubble")
+
+    def test_unaligned_known_battle_uses_generic_bubble(self):
+        nation_data = {
+            "A": {"at_war_with": ["B"]},
+            "B": {"at_war_with": ["A"]},
+            "C": {"at_war_with": []},
+        }
+        self.assertEqual(
+            queries.get_combat_location_category(
+                {"owner": "B"}, "C", nation_data,
+                [dict(self.mine, owner="A"), dict(self.enemy, owner="B")]),
+            queries.COMBAT_LOCATION_GENERIC)
+
+    def test_spectator_known_battle_uses_generic_bubble(self):
+        nation_data = {
+            "A": {"at_war_with": ["B"]},
+            "B": {"at_war_with": ["A"]},
+        }
+        self.assertEqual(
+            queries.get_combat_location_category(
+                {"owner": "B"}, "Spectator", nation_data,
+                [dict(self.mine, owner="A"), dict(self.enemy, owner="B")]),
+            queries.COMBAT_LOCATION_GENERIC)
+
+    def test_aligned_viewer_gets_defense_or_offense_bubble(self):
+        nation_data = {
+            "A": {"at_war_with": ["B"]},
+            "B": {"at_war_with": ["A"]},
+        }
+        forces = [dict(self.mine, owner="A"), dict(self.enemy, owner="B")]
+
+        self.assertEqual(
+            queries.get_combat_location_category(
+                {"owner": "B"}, "B", nation_data, forces),
+            queries.COMBAT_LOCATION_DEFENSE)
+        self.assertEqual(
+            queries.get_combat_location_category(
+                {"owner": "B"}, "A", nation_data, forces),
+            queries.COMBAT_LOCATION_OFFENSE)
 
     def test_full_display_makes_active_bubble_translucent(self):
         record = {"category": queries.COMBAT_LOCATION_DEFENSE,

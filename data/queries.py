@@ -1180,7 +1180,11 @@ def get_fort_level(province):
 # future mechanics do not have to reimplement the fort-territory test.
 COMBAT_LOCATION_DEFENSE = "defense"
 COMBAT_LOCATION_OFFENSE = "offense"
-COMBAT_LOCATION_UNKNOWN = "unknown"
+COMBAT_LOCATION_GENERIC = "generic"
+# Backwards-compatible name for callers that use "unknown" to mean that the
+# viewer has no usable side-specific information. The rendered asset is now
+# the generic bubble.
+COMBAT_LOCATION_UNKNOWN = COMBAT_LOCATION_GENERIC
 
 
 def is_fort_defended_territory(province, nation, nation_data):
@@ -1195,18 +1199,49 @@ def is_fort_defended_territory(province, nation, nation_data):
                 (nation == owner or are_in_same_faction(owner, nation, nation_data)))
 
 
-def get_combat_location_category(province, perspective_nation, nation_data):
-    """Classify a battle as defensive or offensive.
+def get_combat_location_category(province, perspective_nation, nation_data,
+                                 battle_units=None):
+    """Classify a battle from the viewer's aligned side.
 
-    ``perspective_nation`` is normally the local player.  With no nation (for
-    example a spectator), real province battles use the neutral defensive
-    shape; their outcome color still remains grey because the spectator is not
-    participating.
+    A viewer who is not engaged on either side gets the generic shape. This
+    includes spectators, editors, and countries merely observing a battle.
+    The battle units are required to tell an aligned viewer which side is
+    engaged and whether that side is defending the current land owner.
     """
-    if (perspective_nation is None or perspective_nation in ("Spectator", "Editor")
-            or is_fort_defended_territory(province, perspective_nation, nation_data)):
-        return COMBAT_LOCATION_DEFENSE
-    return COMBAT_LOCATION_OFFENSE
+    if (not battle_units or perspective_nation is None
+            or perspective_nation in ("Spectator", "Editor")):
+        return COMBAT_LOCATION_GENERIC
+
+    from map_logic.turn_processing import combat_rules
+
+    battle = combat_rules.build_battle([battle_units], nation_data)
+    if not battle.lanes:
+        return COMBAT_LOCATION_GENERIC
+
+    friendly_nations = get_all_friendly_nations(
+        perspective_nation, nation_data)
+    owner = province.get("owner")
+
+    def side_matches_viewer(side):
+        return (any(nation in friendly_nations for nation in side.nations)
+                or any(unit.get("owner") in friendly_nations
+                       for unit in side.front + side.reserve))
+
+    def side_defends_tile(side):
+        if not owner:
+            return False
+        return any(
+            nation == owner or are_in_same_faction(owner, nation, nation_data)
+            for nation in side.nations)
+
+    for lane in battle.lanes:
+        for side in (lane.a, lane.b):
+            if side_matches_viewer(side):
+                return (COMBAT_LOCATION_DEFENSE
+                        if side_defends_tile(side)
+                        else COMBAT_LOCATION_OFFENSE)
+
+    return COMBAT_LOCATION_GENERIC
 
 def damage_fort(province, nation_data, map_data=None):
     """Removes one fort level and cancels/refunds queued fort upgrades.
