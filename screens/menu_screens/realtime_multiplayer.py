@@ -69,8 +69,30 @@ class Realtime_Host_Setup(GameState):
             Button("centered+150", 280, "medium", "purple", f"Turn Time: {self.turn_minutes} minutes", self.edit_minutes),
             Button("centered+150", 360, "medium", "pink", "Scenario Settings", self.edit_settings),
             Button("centered+150", 440, "medium", "green", "Open Lobby", self.open_lobby),
+            Button("centered", 520, "medium", "light_blue", "Networking Help", self.show_network_help),
             make_back_button(self.exit_screen),
         ]
+
+    def show_network_help(self):
+        confirm_dialog.show_info(
+            "Real-Time Multiplayer Help",
+            "Windows host:\n"
+            "LAN: keep the detected Advertised Address and put both computers on the same network. "
+            "WAN: use the public IP or DNS hostname, forward TCP port 38475 to the Windows PC, and allow "
+            "the port through Windows Defender Firewall.\n\n"
+            "macOS host:\n"
+            "LAN: use the detected Advertised Address. WAN: use the public IP or DNS hostname and forward "
+            "the selected TCP port to the Mac. Allow the game through System Settings > Network > Firewall "
+            "if macOS asks.\n\n"
+            "Windows joining:\n"
+            "Choose Join Match and paste the invite. The joining PC does not need port forwarding.\n\n"
+            "macOS joining:\n"
+            "Choose Join Match and paste the invite with Command+V. The joining Mac does not need port "
+            "forwarding.\n\n"
+            "Keep the host's lobby open and generate a new invite after changing its address or port. "
+            "A timeout means the address or port cannot be reached; connection refused means the address "
+            "was reached but no server was listening."
+        )
 
     def _string(self, title, attr, prompt, allow_empty=False):
         def saved(value):
