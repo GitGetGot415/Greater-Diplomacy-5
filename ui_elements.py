@@ -1,3 +1,6 @@
+import subprocess
+import sys
+
 import pygame
 try:
     # Not available in pygame-ce's WASM build; clipboard calls elsewhere already
@@ -499,18 +502,40 @@ class TextField:
 
 def _clipboard_text():
     """Returns OS clipboard text, or an empty string when it is unavailable."""
+
+    def as_text(value):
+        if isinstance(value, bytes):
+            return value.decode("utf-8", errors="ignore").replace("\x00", "")
+        return str(value).replace("\x00", "")
+
     try:
         if not pygame.scrap.get_init():
             pygame.scrap.init()
         clip_bytes = pygame.scrap.get(pygame.SCRAP_TEXT)
         if not clip_bytes:
-            return ""
-        if isinstance(clip_bytes, bytes):
-            return clip_bytes.decode("utf-8", errors="ignore").replace("\x00", "")
-        return str(clip_bytes).replace("\x00", "")
+            raise RuntimeError("SDL clipboard is empty")
+        return as_text(clip_bytes)
     except Exception:
-        # Clipboard support is optional on some SDL targets. Typing should
-        # continue to work normally when a platform does not provide it.
+        # Clipboard support is optional on some SDL targets. On macOS, the
+        # bundled app can have an SDL clipboard that is unavailable even when
+        # the system clipboard is populated, so use Apple's built-in command
+        # line clipboard reader as a fallback.
+        if sys.platform == "darwin":
+            try:
+                result = subprocess.run(
+                    ["/usr/bin/pbpaste"],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.DEVNULL,
+                    check=False,
+                    timeout=1,
+                )
+                if result.returncode == 0:
+                    return as_text(result.stdout)
+            except Exception:
+                pass
+
+        # Typing should continue to work normally when a platform does not
+        # provide clipboard access.
         return ""
 
 

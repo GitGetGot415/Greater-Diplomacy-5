@@ -110,6 +110,33 @@ class DialogTests(unittest.TestCase):
         self.settle()
         self.assertEqual(self.answers, ["Pasted name"])
 
+    def test_ask_string_accepts_macos_command_v_paste(self):
+        confirm_dialog.ask_string("T", "Name?", self.answers.append)
+        modal = modal_stack.active()
+        paste = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_v, unicode="", mod=pygame.KMOD_GUI)
+        with mock.patch("ui_elements._clipboard_text", return_value="Pasted on Mac"):
+            modal.handle_events([paste, key(pygame.K_RETURN)])
+        self.settle()
+        self.assertEqual(self.answers, ["Pasted on Mac"])
+
+    def test_clipboard_falls_back_to_macos_pbpaste(self):
+        import ui_elements
+
+        pbpaste = mock.Mock(returncode=0, stdout=b"From the Mac clipboard\x00")
+        with mock.patch.object(ui_elements.sys, "platform", "darwin"), \
+             mock.patch.object(ui_elements.pygame.scrap, "get_init", return_value=True), \
+             mock.patch.object(ui_elements.pygame.scrap, "get", return_value=b""), \
+             mock.patch.object(ui_elements.subprocess, "run", return_value=pbpaste) as run:
+            self.assertEqual(ui_elements._clipboard_text(), "From the Mac clipboard")
+
+        run.assert_called_once_with(
+            ["/usr/bin/pbpaste"],
+            stdout=ui_elements.subprocess.PIPE,
+            stderr=ui_elements.subprocess.DEVNULL,
+            check=False,
+            timeout=1,
+        )
+
     def test_ask_string_cancel_yields_none(self):
         confirm_dialog.ask_string("T", "Name?", self.answers.append)
         modal_stack.active().handle_events([key(pygame.K_ESCAPE)])
