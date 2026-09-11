@@ -1,6 +1,6 @@
 {
-    "version": "v33",
-    "generated_at": "2026-09-09T23:32:55.044741",
+    "version": "v34",
+    "generated_at": "2026-09-11T16:55:28.998063",
     "date": {
         "day": 15,
         "month": 2,
@@ -2199,7 +2199,8 @@
             "adjective": "British",
             "diplo_responses": {},
             "puppets": [
-                "Canada"
+                "Canada",
+                "Egypt"
             ],
             "military_attaches": []
         },
@@ -5506,31 +5507,41 @@
                 89
             ],
             "research": {
-                "infantry_type": 1,
-                "cavalry": 1,
-                "civilian_car": 0,
-                "ww1_armored_car": 0,
-                "ww1_tank": 0,
-                "armored_car": 0,
-                "light_tank": 0,
-                "medium_tank": 0,
-                "heavy_tank": 0,
-                "main_battle_tank": 0,
-                "destroyer": 0,
-                "aircraft_carrier": 0,
-                "basic_factory": 0,
-                "factory": 0,
-                "bergius_process": 0,
-                "fuel_refining": 0,
-                "dreadnought": 0,
-                "general_recruitment": 0,
-                "militia": 0,
-                "trucks": 0,
+                "infantry_type": 30,
+                "cavalry": 5,
+                "militia": 6,
+                "artillery": 6,
+                "trucks": 1,
                 "armored_personnel_carriers": 0,
-                "battleship": 0,
-                "basic_recruitment": 0,
-                "recruitment_buildings": 0,
-                "submarine": 0
+                "infantry_fighting_vehicle": 0,
+                "civilian_car": 1,
+                "ww1_armored_car": 1,
+                "armored_car": 6,
+                "ww1_tank": 1,
+                "light_tank": 6,
+                "medium_tank": 3,
+                "heavy_tank": 3,
+                "super_heavy_tank": 0,
+                "landkreuzer_p1000_ratte": 0,
+                "landkreuzer_p1500_monster": 0,
+                "electromagnetic_launcher": 0,
+                "railgun": 0,
+                "main_battle_tank": 0,
+                "ww1_railroad_gun": 1,
+                "ww2_railroad_gun": 1,
+                "dreadnought": 1,
+                "battleship": 1,
+                "destroyer": 8,
+                "aircraft_carrier": 2,
+                "submarine": 8,
+                "basic_factory": 1,
+                "factory": 7,
+                "bergius_process": 1,
+                "fuel_refining": 14,
+                "basic_recruitment": 1,
+                "recruitment_buildings": 14,
+                "general_recruitment": 13,
+                "resource_refining": 28
             },
             "manpower": 0,
             "materials": 0,
@@ -5546,7 +5557,11 @@
             "relations": {},
             "adjective": "Egyptian",
             "diplo_responses": {},
-            "military_attaches": []
+            "military_attaches": [],
+            "faction": "Allies",
+            "is_faction_leader": false,
+            "master": "United Kingdom",
+            "puppet_type": "Autonomous"
         },
         "Jordan": {
             "name": "Jordan",
@@ -40767,7 +40782,7 @@
                 {
                     "type": "Medium Tank III",
                     "owner": "Soviet Union",
-                    "health": 3500,
+                    "health": 3500.0,
                     "max_health": 3500,
                     "morale": 100.0,
                     "speed": 2,
@@ -40778,7 +40793,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Medium Tank Division (III)"
+                    "custom_name": "1st Medium Tank Division (III)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -41681,7 +41697,7 @@
                 {
                     "type": "Medium Tank III",
                     "owner": "Soviet Union",
-                    "health": 3500,
+                    "health": 3500.0,
                     "max_health": 3500,
                     "morale": 100.0,
                     "speed": 2,
@@ -41692,7 +41708,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "2nd Medium Tank Division (III)"
+                    "custom_name": "2nd Medium Tank Division (III)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -44037,7 +44054,7 @@
                 {
                     "type": "Medium Tank III",
                     "owner": "Soviet Union",
-                    "health": 3500,
+                    "health": 3500.0,
                     "max_health": 3500,
                     "morale": 100.0,
                     "speed": 2,
@@ -44048,7 +44065,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "3rd Medium Tank Division (III)"
+                    "custom_name": "3rd Medium Tank Division (III)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -49759,7 +49777,7 @@
                 {
                     "type": "Infantry Type 1939",
                     "owner": "Soviet Union",
-                    "health": 2450,
+                    "health": 2450.0,
                     "max_health": 2450,
                     "morale": 100.0,
                     "speed": 1,
@@ -49770,7 +49788,8 @@
                         "type": "MOVE",
                         "path": []
                     },
-                    "custom_name": "1st Infantry Division (1939)"
+                    "custom_name": "1st Infantry Division (1939)",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -52330,7 +52349,7 @@
             "buildings": []
         },
         "(61, 3, 0)": {
-            "owner": "United Kingdom",
+            "owner": "Egypt",
             "cores": [
                 "Egypt"
             ],
@@ -52351,6 +52370,23 @@
                     },
                     "custom_name": "9th Infantry Division (1939)",
                     "naval_unit": false
+                },
+                {
+                    "type": "Infantry Type 1939",
+                    "owner": "Egypt",
+                    "health": 2450.0,
+                    "max_health": 2450,
+                    "morale": 100.0,
+                    "speed": 1,
+                    "attack": 390,
+                    "defense": 0,
+                    "level": 0,
+                    "order": {
+                        "type": "MOVE",
+                        "path": []
+                    },
+                    "naval_unit": false,
+                    "custom_name": "1st Infantry Division (1939)"
                 }
             ],
             "building_queue": [],
@@ -52397,7 +52433,7 @@
             "buildings": []
         },
         "(65, 3, 0)": {
-            "owner": "United Kingdom",
+            "owner": "Egypt",
             "cores": [
                 "Egypt"
             ],
@@ -52418,6 +52454,23 @@
                     },
                     "custom_name": "4th Destroyer (VIII)",
                     "naval_unit": true
+                },
+                {
+                    "type": "Infantry Type 1939",
+                    "owner": "Egypt",
+                    "health": 2450.0,
+                    "max_health": 2450,
+                    "morale": 100.0,
+                    "speed": 1,
+                    "attack": 390,
+                    "defense": 0,
+                    "level": 0,
+                    "order": {
+                        "type": "MOVE",
+                        "path": []
+                    },
+                    "naval_unit": false,
+                    "custom_name": "2nd Infantry Division (1939)"
                 }
             ],
             "building_queue": [],
@@ -52466,7 +52519,7 @@
             "buildings": []
         },
         "(69, 3, 0)": {
-            "owner": "United Kingdom",
+            "owner": "Egypt",
             "cores": [
                 "Egypt"
             ],
@@ -52492,7 +52545,7 @@
             "buildings": []
         },
         "(71, 3, 0)": {
-            "owner": "United Kingdom",
+            "owner": "Egypt",
             "cores": [
                 "Egypt"
             ],
@@ -52505,7 +52558,7 @@
             "buildings": []
         },
         "(72, 3, 0)": {
-            "owner": "United Kingdom",
+            "owner": "Egypt",
             "cores": [
                 "Egypt"
             ],
@@ -52533,7 +52586,7 @@
             ]
         },
         "(74, 3, 0)": {
-            "owner": "United Kingdom",
+            "owner": "Egypt",
             "cores": [
                 "Egypt"
             ],
@@ -52600,7 +52653,7 @@
             "buildings": []
         },
         "(79, 3, 0)": {
-            "owner": "United Kingdom",
+            "owner": "Egypt",
             "cores": [
                 "Egypt"
             ],
@@ -52613,7 +52666,7 @@
             "buildings": []
         },
         "(80, 3, 0)": {
-            "owner": "United Kingdom",
+            "owner": "Egypt",
             "cores": [
                 "Egypt"
             ],
@@ -52639,7 +52692,7 @@
             "buildings": []
         },
         "(82, 3, 0)": {
-            "owner": "United Kingdom",
+            "owner": "Egypt",
             "cores": [
                 "Egypt"
             ],
@@ -52704,7 +52757,7 @@
             "buildings": []
         },
         "(87, 3, 0)": {
-            "owner": "United Kingdom",
+            "owner": "Egypt",
             "cores": [
                 "Egypt"
             ],
@@ -52717,7 +52770,7 @@
             "buildings": []
         },
         "(88, 3, 0)": {
-            "owner": "United Kingdom",
+            "owner": "Egypt",
             "cores": [
                 "Egypt"
             ],
@@ -52743,7 +52796,7 @@
             "buildings": []
         },
         "(90, 3, 0)": {
-            "owner": "United Kingdom",
+            "owner": "Egypt",
             "cores": [
                 "Egypt"
             ],
@@ -52799,7 +52852,7 @@
             ]
         },
         "(94, 3, 0)": {
-            "owner": "United Kingdom",
+            "owner": "Egypt",
             "cores": [
                 "Egypt"
             ],
@@ -52823,7 +52876,7 @@
             "buildings": []
         },
         "(96, 3, 0)": {
-            "owner": "United Kingdom",
+            "owner": "Egypt",
             "cores": [
                 "Egypt"
             ],
@@ -52882,7 +52935,7 @@
             "buildings": []
         },
         "(101, 3, 0)": {
-            "owner": "United Kingdom",
+            "owner": "Egypt",
             "cores": [
                 "Egypt"
             ],
@@ -52938,7 +52991,7 @@
             "buildings": []
         },
         "(104, 3, 0)": {
-            "owner": "United Kingdom",
+            "owner": "Egypt",
             "cores": [
                 "Egypt"
             ],
@@ -53021,7 +53074,7 @@
             "buildings": []
         },
         "(111, 3, 0)": {
-            "owner": "United Kingdom",
+            "owner": "Egypt",
             "cores": [
                 "Egypt"
             ],
@@ -53112,7 +53165,7 @@
             "buildings": []
         },
         "(117, 3, 0)": {
-            "owner": "United Kingdom",
+            "owner": "Egypt",
             "cores": [
                 "Egypt"
             ],
@@ -53125,7 +53178,7 @@
             "buildings": []
         },
         "(118, 3, 0)": {
-            "owner": "United Kingdom",
+            "owner": "Egypt",
             "cores": [
                 "Egypt"
             ],
@@ -53225,7 +53278,7 @@
             "buildings": []
         },
         "(126, 3, 0)": {
-            "owner": "United Kingdom",
+            "owner": "Egypt",
             "cores": [
                 "Egypt"
             ],
@@ -53238,7 +53291,7 @@
             "buildings": []
         },
         "(127, 3, 0)": {
-            "owner": "United Kingdom",
+            "owner": "Egypt",
             "cores": [
                 "Egypt"
             ],
@@ -53275,7 +53328,7 @@
             "buildings": []
         },
         "(130, 3, 0)": {
-            "owner": "United Kingdom",
+            "owner": "Egypt",
             "cores": [
                 "Egypt"
             ],
@@ -53303,7 +53356,7 @@
             ]
         },
         "(132, 3, 0)": {
-            "owner": "United Kingdom",
+            "owner": "Egypt",
             "cores": [
                 "Egypt"
             ],
@@ -53327,7 +53380,7 @@
             "buildings": []
         },
         "(134, 3, 0)": {
-            "owner": "United Kingdom",
+            "owner": "Egypt",
             "cores": [
                 "Egypt"
             ],
@@ -53340,7 +53393,7 @@
             "buildings": []
         },
         "(135, 3, 0)": {
-            "owner": "United Kingdom",
+            "owner": "Egypt",
             "cores": [
                 "Egypt"
             ],
