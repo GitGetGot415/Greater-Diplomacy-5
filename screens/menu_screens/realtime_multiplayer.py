@@ -170,7 +170,7 @@ class Realtime_Host_Setup(GameState):
 
     def edit_capacity(self):
         # Country count is checked authoritatively when opening the lobby.
-        self._integer("Player Capacity", "capacity", "Maximum connected players:", 1, 100)
+        self._integer("Player Capacity", "capacity", "Maximum connected players (1 to 100):", 1, 100)
 
     def edit_settings(self):
         from screens.menu_screens.scenario_settings import Scenario_Settings
