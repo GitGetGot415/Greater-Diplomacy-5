@@ -2024,7 +2024,46 @@ class Map(GameState):
             self.editor_mode = "NATION"
             self.show_feedback("Editor: Nation Painting")
 
+    def _apply_host_realtime_snapshot(self):
+        """Refresh the host's visible map when the authoritative turn changes.
+
+        The host intentionally plays on a separate map from MapRealtimeDriver,
+        so its UI cannot mutate the server state directly.  Unlike guests it
+        has no network client to poll, however, and therefore needs to take a
+        turn-boundary snapshot from its local session before it serializes its
+        next draft.  Applying only at a new turn (or game over) preserves the
+        host's unsubmitted local orders throughout the active turn.
+        """
+        if (not getattr(self, "realtime_server_map", None)
+                or getattr(self, "realtime_client", None)):
+            return
+        session = getattr(self, "realtime_session", None)
+        if not session or session.phase not in ("TURN", "GAME_OVER"):
+            return
+
+        current_turn = session.turn_number
+        current_phase = session.phase
+        applied_turn = getattr(self, "_realtime_snapshot_turn", None)
+        applied_phase = getattr(self, "_realtime_snapshot_phase", None)
+        should_apply = (applied_turn is None or current_turn != applied_turn or
+                        (current_phase == "GAME_OVER" and applied_phase != "GAME_OVER"))
+        if not should_apply:
+            return
+
+        # public_state holds the session lock while it snapshots the server
+        # map, so the UI cannot copy a halfway-resolved turn.
+        state = session.public_state()
+        snapshot = state.get("game_state") if isinstance(state, dict) else None
+        if not snapshot:
+            return
+        from data.io.realtime_multiplayer import apply_authoritative_snapshot
+        apply_authoritative_snapshot(self, snapshot)
+        self._realtime_snapshot_turn = current_turn
+        self._realtime_snapshot_phase = current_phase
+
     def update(self):
+        if getattr(self, "realtime_multiplayer", False):
+            self._apply_host_realtime_snapshot()
         if getattr(self, "realtime_multiplayer", False):
             session = self.realtime_session
             player = session.players.get(self.realtime_player_id)

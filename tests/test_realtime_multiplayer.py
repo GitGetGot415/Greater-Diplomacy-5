@@ -67,6 +67,37 @@ class FakeAddressProbe:
     def close(self): self.closed = True
 
 
+class HostSnapshotTests(unittest.TestCase):
+    def test_host_view_refreshes_from_server_before_the_next_turn_draft(self):
+        """The host UI is a separate map and must not retain turn-one units."""
+        province = {"id": 1, "json_key": "home", "owner": "A", "units": [],
+                    "cores": [], "building_queue": [], "unit_queue": []}
+        host_view = object.__new__(Map)
+        host_view.realtime_server_map = object()
+        host_view.map_data = {"home": province}
+        host_view.nation_data = {"A": {}}
+        host_view.time_manager = SimpleNamespace(day=1, month_index=0, year=1939,
+                                                  total_turns=0)
+        host_view.refresh_all_maps = mock.Mock()
+        snapshot = {
+            "nation_data": {"A": {"name": "A"}},
+            "provinces": {"home": {"units": [{"owner": "A", "type": "Infantry"}]}},
+            "date": {"day": 1, "month": 0, "year": 1939, "total_turns": 1},
+        }
+        session = SimpleNamespace(phase="TURN", turn_number=2,
+                                  public_state=mock.Mock(return_value={"game_state": snapshot}))
+        host_view.realtime_session = session
+
+        Map._apply_host_realtime_snapshot(host_view)
+
+        self.assertEqual(host_view.map_data["home"]["units"], snapshot["provinces"]["home"]["units"])
+        self.assertEqual(host_view._realtime_snapshot_turn, 2)
+        session.public_state.assert_called_once_with()
+
+        Map._apply_host_realtime_snapshot(host_view)
+        session.public_state.assert_called_once_with()
+
+
 class AddressDetectionTests(unittest.TestCase):
     def test_default_address_uses_the_local_outbound_ipv4(self):
         probe = FakeAddressProbe()

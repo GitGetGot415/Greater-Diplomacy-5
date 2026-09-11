@@ -6,9 +6,6 @@ what makes it unique is that ai controlled countries can be made to use an llm t
 
 feel free to look around, fork it, clone it, etc
 
-- itch.io: https://via415.itch.io/greater-diplomacy-5 (recommended for install)
-- discord: https://discord.gg/f5Jugz9SKa
-
 ## Maintaining Raw Source
 if you have decided to download the raw source from here (Code > Download ZIP > extract it), this section covers how to maintain it.
 
