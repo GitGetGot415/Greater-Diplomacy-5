@@ -22,6 +22,26 @@ player may revoke any foreign attaché instead. An attaché is immediately
 withdrawn if the host leaves its wars or becomes hostile to the sender.
 The sender may also withdraw its attaché unilaterally.
 
+The map maker's Global Diplomacy & Factions editor has a Diplomatic
+Agreements view. It can set the selected country to guarantee another country,
+place a military attaché at an at-war country, or receive one-way military
+access through another country. These setup relationships use the same rules
+and save fields as their in-game diplomatic counterparts.
+
+Scripted events can guarantee independence, send military attaché and military
+access requests, offer volunteer divisions, and accept or reject each of those
+three request types. A scripted volunteer offer uses its message value as the
+number of available land divisions to reserve (one if blank); after that it
+uses the normal offer, acceptance, travel, and return process.
+
+The scripted-event action "Offer Volunteer Divisions" also has a "Use Available
+Capacity" option. It lowers the requested number to the country’s remaining
+volunteer cap, instead of failing because the requested number is too high.
+It still cannot create an offer when no eligible divisions or no capacity remain.
+The event editor can additionally test guarantees, military attachés, one-way
+military access in either direction, volunteer divisions already committed, and
+remaining volunteer capacity.
+
 Volunteer divisions follow the same conflict rule. AI hosts reject volunteers
 from a country that has active volunteers with, or an attaché observing, one of
 their enemies. Existing conflicting volunteers are sent home on the following

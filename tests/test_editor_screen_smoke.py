@@ -64,6 +64,12 @@ class EditorScreenSmokeTests(unittest.TestCase):
             with self.subTest(screen=name):
                 self.exercise(getattr(editor_screens, name)(self.map))
 
+    def test_diplomacy_editor_agreements_view(self):
+        from screens import editor_screens
+        screen = editor_screens.Diplomacy_Editor_Screen(self.map)
+        screen.set_relationship_view("agreements")
+        self.exercise(screen)
+
     def test_convoy_converter(self):
         """Takes a province as well as the map, unlike its siblings."""
         from screens import editor_screens

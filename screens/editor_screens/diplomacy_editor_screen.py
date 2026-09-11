@@ -9,13 +9,14 @@ from ui.scroll_panes import ScrollPanes
 from ui.table_screen import truncate
 from map_logic.rendering.font_manager import fonts
 from map_logic.diplomacy.diplomacy_agreements import assign_puppet
+from map_logic.diplomacy import guarantees, military_attaches
 
 # ==========================================
 # GLOBAL DIPLOMACY & FACTIONS EDITOR
 # ==========================================
 
 class Diplomacy_Editor_Screen(ScrollPanes, MapOverlayScreen):
-    """Wars, factions and puppets for the whole map on a single screen.
+    """The map's diplomatic relationships on a single screen.
 
     Keeps the shape of the tkinter original: nations down the left, and the
     selected nation's relations laid out live to the right. Picking a nation
@@ -26,7 +27,7 @@ class Diplomacy_Editor_Screen(ScrollPanes, MapOverlayScreen):
     pans_camera = False
     overlay_alpha = 220
     PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_INFO
-    PANEL_TITLE = "Global Diplomacy & Factions"
+    PANEL_TITLE = "Global Diplomacy, Factions & Agreements"
     TITLE_PRESET = "heading2"
     TITLE_Y_OFFSET = c.MODAL_TITLE_Y_OFFSET
 
@@ -35,9 +36,10 @@ class Diplomacy_Editor_Screen(ScrollPanes, MapOverlayScreen):
     COL_W = 296
     COL_GAP = 10
     LIST_VIEW_H = 390
-    # Each scrollable region keeps its own offset/track attributes so the four
+    # Each scrollable region keeps its own offset/track attributes so the
     # lists on screen scroll independently.
-    REGIONS = ("nations", "wars", "members", "master")
+    REGIONS = ("nations", "wars", "members", "master", "guarantees",
+               "attaches", "access")
     PUPPET_TYPES = (c.PUPPET_TYPE_AUTONOMOUS, c.PUPPET_TYPE_INTEGRATED)
 
     def __init__(self, map_screen):
@@ -49,9 +51,13 @@ class Diplomacy_Editor_Screen(ScrollPanes, MapOverlayScreen):
         self.others = []
         self.wars = set()
         self.members = set()
+        self.guarantees = set()
+        self.attaches = set()
+        self.access = set()
         self.is_leader = False
         self.master = "None"
         self.puppet_type = c.PUPPET_TYPE_AUTONOMOUS
+        self.relationship_view = "core"
 
         for name in self.REGIONS:
             setattr(self, f"_scroll_{name}", 0)
@@ -78,6 +84,11 @@ class Diplomacy_Editor_Screen(ScrollPanes, MapOverlayScreen):
         self.regions = {"nations": pygame.Rect(self.nat_x, self.nations_top, self.NAT_W, self.nations_view_h)}
         for i, name in enumerate(("wars", "members", "master")):
             self.regions[name] = pygame.Rect(self._col_x(i), self.lists_top, self.COL_W, self.LIST_VIEW_H)
+        # The agreement view reuses the same three visible columns, but each
+        # list retains its own scroll state when the map maker switches views.
+        for name in ("guarantees", "attaches", "access"):
+            self.regions[name] = pygame.Rect(self._col_x(("guarantees", "attaches", "access").index(name)),
+                                              self.lists_top, self.COL_W, self.LIST_VIEW_H)
 
         # Published per-region so scroll_attrs's content_rect_attr can point
         # handle_content_drag/draw_elements at each region's own rect by name.
@@ -103,6 +114,12 @@ class Diplomacy_Editor_Screen(ScrollPanes, MapOverlayScreen):
         self.others = [n for n in self.countries if n != cid]
 
         self.wars = {n for n in data.get("at_war_with", []) if n in self.others}
+        self.guarantees = {n for n in guarantees.guaranteed_targets(cid, self.map_screen.nation_data)
+                           if n in self.others}
+        self.attaches = {n for n in military_attaches.hosts_for(cid, self.map_screen.nation_data)
+                         if n in self.others}
+        self.access = {n for n in self.others
+                       if cid in self.map_screen.nation_data.get(n, {}).get("military_access", [])}
         self.is_leader = bool(data.get("is_faction_leader", False))
         self.master = data.get("master", "") or "None"
         self.puppet_type = data.get("puppet_type", "") or c.PUPPET_TYPE_AUTONOMOUS
@@ -113,7 +130,7 @@ class Diplomacy_Editor_Screen(ScrollPanes, MapOverlayScreen):
         self.members = {n for n in self.others
                         if faction and self.map_screen.nation_data.get(n, {}).get("faction", "") == faction}
 
-        for name in ("wars", "members", "master"):
+        for name in self.REGIONS:
             setattr(self, f"_scroll_{name}", 0)
         self.refresh_ui()
 
@@ -181,8 +198,45 @@ class Diplomacy_Editor_Screen(ScrollPanes, MapOverlayScreen):
             data["master"] = ""
             data["puppet_type"] = ""
 
+        # 4. Persistent diplomatic agreements.  These use the runtime
+        # helpers, keeping editor-authored scenarios subject to precisely the
+        # same legality and storage rules as diplomacy during a game.
+        for other in self.others:
+            if other not in self.guarantees:
+                guarantees.revoke(target, other, nation_data)
+            if other not in self.attaches:
+                military_attaches.withdraw(target, other, nation_data)
+            granted = nation_data.get(other, {}).get("military_access", [])
+            if target not in self.access and target in granted:
+                granted.remove(target)
+                reasons = nation_data[other].get("military_access_reasons", {})
+                if isinstance(reasons, dict):
+                    reasons.pop(target, None)
+
+        rejected = []
+        for other in self.guarantees:
+            changed, reason = guarantees.grant(target, other, nation_data)
+            if not changed and other not in guarantees.guaranteed_targets(target, nation_data):
+                rejected.append(f"guarantee of {other} ({reason})")
+        for other in self.attaches:
+            changed, reason = military_attaches.send(target, other, nation_data)
+            if not changed and other not in military_attaches.hosts_for(target, nation_data):
+                rejected.append(f"attaché to {other} ({reason})")
+        for other in self.access:
+            granted = nation_data[other].setdefault("military_access", [])
+            if target not in granted:
+                granted.append(target)
+            # This is scenario-authored access, not the temporary common-war
+            # access granted by the AI, so it has no automatic expiry reason.
+            reasons = nation_data[other].get("military_access_reasons", {})
+            if isinstance(reasons, dict):
+                reasons.pop(target, None)
+
         self.map_screen.refresh_diplomacy_maps()
-        self.map_screen.show_feedback(f"Diplomacy saved for {target}")
+        message = f"Diplomacy saved for {target}"
+        if rejected:
+            message += "; could not set " + ", ".join(rejected)
+        self.map_screen.show_feedback(message)
         self.refresh_ui()
 
     # ------------------------------------------------------------------ #
@@ -195,7 +249,19 @@ class Diplomacy_Editor_Screen(ScrollPanes, MapOverlayScreen):
         return btn
 
     def _columns(self):
-        """(region, header, rows, is_checked, on_click) for the three right-hand lists."""
+        """The three lists visible in the selected relationship view."""
+        if self.relationship_view == "agreements":
+            return [
+                ("guarantees", "Guarantees Independence Of", self.others,
+                 lambda n: n in self.guarantees,
+                 lambda n: self.toggle_membership(self.guarantees, n)),
+                ("attaches", "Has Military Attaché At", self.others,
+                 lambda n: n in self.attaches,
+                 lambda n: self.toggle_membership(self.attaches, n)),
+                ("access", "Has Military Access Through", self.others,
+                 lambda n: n in self.access,
+                 lambda n: self.toggle_membership(self.access, n)),
+            ]
         return [
             ("wars", "At War With", self.others,
              lambda n: n in self.wars, lambda n: self.toggle_membership(self.wars, n)),
@@ -204,6 +270,10 @@ class Diplomacy_Editor_Screen(ScrollPanes, MapOverlayScreen):
             ("master", "Master Nation", ["None"] + self.others,
              lambda n: n == self.master, self.set_master),
         ]
+
+    def set_relationship_view(self, view):
+        self.relationship_view = view
+        self.refresh_ui()
 
     def refresh_ui(self):
         p = self.panel_rect
@@ -235,20 +305,29 @@ class Diplomacy_Editor_Screen(ScrollPanes, MapOverlayScreen):
                 btn.click_guard = getattr(self, f"_guard_{region}")
                 self.elements.append(btn)
 
-        self.faction_field.rect.topleft = (self.cols_x + 130, self.row_a_y)
-        self.elements.append(self.faction_field)
+        core_button = Button(self.cols_x, self.row_a_y - 2, "editor_ui",
+                             "green" if self.relationship_view == "core" else "blue",
+                             "Wars, Factions & Puppets",
+                             lambda: self.set_relationship_view("core"), font_preset="button_small")
+        agreement_button = Button(self.cols_x + 310, self.row_a_y - 2, "editor_ui",
+                                  "green" if self.relationship_view == "agreements" else "blue",
+                                  "Diplomatic Agreements",
+                                  lambda: self.set_relationship_view("agreements"), font_preset="button_small")
+        self.elements += [core_button, agreement_button]
 
-        leader_btn = Button(self.cols_x + 470, self.row_a_y - 2, "editor_ui",
-                            "green" if self.is_leader else "grey",
-                            f"Faction Leader: {'Yes' if self.is_leader else 'No'}",
-                            self.toggle_leader, font_preset="button_small")
-        leader_btn.is_selected = self.is_leader
-        self.elements.append(leader_btn)
-
-        self.elements.append(Button(self.cols_x, self.row_b_y, "editor_ui", "blue",
-                                    f"Puppet Type: {self.puppet_type}", self.cycle_puppet_type,
-                                    font_preset="button_small"))
-        self.elements.append(Button(self.cols_x + 470, self.row_b_y - 5, "medium", "green",
+        if self.relationship_view == "core":
+            self.faction_field.rect.topleft = (self.cols_x + 130, self.row_b_y)
+            self.elements.append(self.faction_field)
+            leader_btn = Button(self.cols_x + 470, self.row_b_y - 2, "editor_ui",
+                                "green" if self.is_leader else "grey",
+                                f"Faction Leader: {'Yes' if self.is_leader else 'No'}",
+                                self.toggle_leader, font_preset="button_small")
+            leader_btn.is_selected = self.is_leader
+            self.elements.append(leader_btn)
+            self.elements.append(Button(self.cols_x, self.row_b_y + 48, "editor_ui", "blue",
+                                        f"Puppet Type: {self.puppet_type}", self.cycle_puppet_type,
+                                        font_preset="button_small"))
+        self.elements.append(Button(self.cols_x + 700, self.row_a_y - 2, "medium", "green",
                                     "Save Changes", self.save))
 
     def pane_rects(self):
@@ -258,7 +337,7 @@ class Diplomacy_Editor_Screen(ScrollPanes, MapOverlayScreen):
         self.route_pane_scroll(event)
 
     def draw_elements(self, surface):
-        """Four independent scrolling regions: nations plus the three columns."""
+        """The nations pane and the three lists in the active view scroll independently."""
         self.draw_panes(surface)
 
     def draw_content(self, surface):

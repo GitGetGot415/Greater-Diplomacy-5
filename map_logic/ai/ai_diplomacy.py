@@ -1402,7 +1402,35 @@ def process_scripted_events(map_screen):
                         if c_op == "==": res = (str(var_val) == str(c_val))
                         elif c_op == "!=": res = (str(var_val) != str(c_val))
                         
-                elif c_type in ["At War With", "In Faction With", "Not In Faction With", "Has Truce With", "At Peace With", "Country Exists", "Country Doesn't Exist", "Occupying Claims Of", "Occupying All Claims"]:
+                elif c_type in ("Volunteer Divisions Sent", "Volunteer Capacity Remaining"):
+                    # These counts deliberately follow the same definition as
+                    # the volunteer picker: a division in an outstanding
+                    # offer, travelling, or deployed is committed capacity.
+                    from map_logic.diplomacy import volunteers
+
+                    current_v = (volunteers.committed_count(map_screen, nation_name)
+                                 if c_type == "Volunteer Divisions Sent"
+                                 else volunteers.remaining_capacity(map_screen, nation_name))
+                    try:
+                        if "BETWEEN" in c_op:
+                            parts = str(c_val).split(",")
+                            if len(parts) >= 2:
+                                v1, v2 = (int(float(parts[0].strip())),
+                                          int(float(parts[1].strip())))
+                                res = (v1 <= current_v <= v2 if c_op == "BETWEEN (INC)"
+                                       else v1 < current_v < v2)
+                        else:
+                            check_v = int(float(str(c_val).strip()))
+                            if c_op == "==": res = current_v == check_v
+                            elif c_op == "!=": res = current_v != check_v
+                            elif c_op == ">": res = current_v > check_v
+                            elif c_op == "<": res = current_v < check_v
+                            elif c_op == ">=": res = current_v >= check_v
+                            elif c_op == "<=": res = current_v <= check_v
+                    except ValueError:
+                        res = False
+
+                elif c_type in ["At War With", "In Faction With", "Not In Faction With", "Has Truce With", "At Peace With", "Country Exists", "Country Doesn't Exist", "Occupying Claims Of", "Occupying All Claims", "Guaranteeing", "Not Guaranteeing", "Has Military Attaché", "Doesn't Have Military Attaché", "Has Military Access Through", "Doesn't Have Military Access Through", "Grants Military Access To", "Doesn't Grant Military Access To"]:
                     targets = [t.strip() for t in str(c_val).split(",") if t.strip()]
                     if not targets:
                         res = False
@@ -1424,6 +1452,28 @@ def process_scripted_events(map_screen):
                         res = all(any(map_screen.id_to_province.get(pid, {}).get("owner") == nation_name for pid in map_screen.nation_data.get(t, {}).get("claims", [])) for t in targets)
                     elif c_type == "Occupying All Claims":
                         res = all(map_screen.nation_data.get(t, {}).get("claims") and all(map_screen.id_to_province.get(pid, {}).get("owner") == nation_name for pid in map_screen.nation_data.get(t, {}).get("claims", [])) for t in targets)
+                    elif c_type in ("Guaranteeing", "Not Guaranteeing"):
+                        from map_logic.diplomacy import guarantees
+                        promised = set(guarantees.guaranteed_targets(nation_name, map_screen.nation_data))
+                        expected = c_type == "Guaranteeing"
+                        res = all(t in active_nations and ((t in promised) == expected)
+                                  for t in targets)
+                    elif c_type in ("Has Military Attaché", "Doesn't Have Military Attaché"):
+                        from map_logic.diplomacy import military_attaches
+                        hosts = set(military_attaches.hosts_for(nation_name, map_screen.nation_data))
+                        expected = c_type == "Has Military Attaché"
+                        res = all(t in active_nations and ((t in hosts) == expected)
+                                  for t in targets)
+                    elif c_type in ("Has Military Access Through", "Doesn't Have Military Access Through"):
+                        expected = c_type == "Has Military Access Through"
+                        res = all(t in active_nations and
+                                  (queries.has_military_access(nation_name, t, map_screen.nation_data) == expected)
+                                  for t in targets)
+                    elif c_type in ("Grants Military Access To", "Doesn't Grant Military Access To"):
+                        expected = c_type == "Grants Military Access To"
+                        res = all(t in active_nations and
+                                  (queries.has_military_access(t, nation_name, map_screen.nation_data) == expected)
+                                  for t in targets)
                 elif c_type == "True":
                     res = True
                 elif c_type == "False":
@@ -1619,6 +1669,64 @@ def process_scripted_events(map_screen):
                                     message=act.get("message", ""), parameters=their_req.get("parameters"))
                             continue
 
+                        # Specific answers make a scenario's intent visible at
+                        # a glance, while retaining the generic accept/reject
+                        # actions for old scenarios and deliberately broad
+                        # event logic.  They can never answer the wrong offer.
+                        response_actions = {
+                            "Accept Military Attaché": ("SEND_MILITARY_ATTACHE", diplomacy_messages.RESPONSE_ACCEPT),
+                            "Reject Military Attaché": ("SEND_MILITARY_ATTACHE", diplomacy_messages.RESPONSE_REJECT),
+                            "Accept Military Access": ("REQ_MILITARY_ACCESS", diplomacy_messages.RESPONSE_ACCEPT),
+                            "Reject Military Access": ("REQ_MILITARY_ACCESS", diplomacy_messages.RESPONSE_REJECT),
+                            "Accept Volunteer Divisions": ("SEND_VOLUNTEERS", diplomacy_messages.RESPONSE_ACCEPT),
+                            "Reject Volunteer Divisions": ("SEND_VOLUNTEERS", diplomacy_messages.RESPONSE_REJECT),
+                        }
+                        if a_type in response_actions:
+                            expected_action, verdict = response_actions[a_type]
+                            pend_act, pend_turns = queries.get_diplomatic_status(
+                                a_target, nation_name, map_screen.nation_data)
+                            if pend_turns > 0 and pend_act == expected_action:
+                                their_req = diplomacy_messages.get_pending(
+                                    map_screen.nation_data, a_target, nation_name)
+                                diplomacy_messages.set_response(
+                                    map_screen.nation_data, nation_name, a_target,
+                                    verdict, expected_action,
+                                    message=act.get("message", ""),
+                                    parameters=their_req.get("parameters"))
+                            continue
+
+                        if a_type == "Offer Volunteer Divisions":
+                            # Scripted events cannot open the player's unit
+                            # picker.  Instead, reserve the requested number
+                            # of eligible divisions in the stable map order;
+                            # this creates the same reversible offer and
+                            # travel state as the normal picker.
+                            from map_logic.diplomacy import volunteers
+
+                            if a_target in pending:
+                                continue
+                            try:
+                                count = int(str(act.get("message", "1")).strip() or "1")
+                            except ValueError:
+                                count = 1
+                            count = max(1, count)
+                            if act.get("send_up_to", False):
+                                count = min(count, volunteers.remaining_capacity(map_screen, nation_name))
+                            available = volunteers.available_units(map_screen, nation_name)
+                            chosen = available[:count]
+                            details, error = volunteers.create_offer(
+                                map_screen, nation_name, a_target, chosen)
+                            if not error:
+                                pending[a_target] = {
+                                    "action": volunteers.ACTION,
+                                    "turns": 0,
+                                    "timer": 0,
+                                    "message": (f"We offer {details['count']} volunteer "
+                                                f"{'division' if details['count'] == 1 else 'divisions'}."),
+                                    "parameters": details,
+                                }
+                            continue
+
                         eng_action = ""
                         if a_type == "Declare War": eng_action = "WAR_DECLARATION"
                         elif a_type == "Join Faction": eng_action = "JOIN_FACTION_REQ"
@@ -1626,6 +1734,9 @@ def process_scripted_events(map_screen):
                         elif a_type == "Invite to Faction": eng_action = "FACTION_INVITE"
                         elif a_type == "Send Ceasefire": eng_action = "CEASEFIRE"
                         elif a_type == "Send Custom Message": eng_action = f"MSG:{act.get('message', '')}"
+                        elif a_type == "Guarantee Independence": eng_action = "GUARANTEE"
+                        elif a_type == "Send Military Attaché": eng_action = "SEND_MILITARY_ATTACHE"
+                        elif a_type == "Request Military Access": eng_action = "REQ_MILITARY_ACCESS"
 
                         if eng_action:
                             already_queued = (a_target in pending and isinstance(pending[a_target], dict) and pending[a_target].get("action") == eng_action)

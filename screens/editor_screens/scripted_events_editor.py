@@ -33,7 +33,11 @@ COND_TYPES = [
     "Country Exists", "Country Doesn't Exist", "Occupying Core Of",
     "Occupying All Cores Of", "Occupying Claims Of", "Occupying All Claims",
     "Occupying Tile", "Is AI Controlled", "Is Player Controlled", "Bordering",
-    "Not Bordering", "True", "False",
+    "Not Bordering", "Guaranteeing", "Not Guaranteeing", "Has Military Attaché",
+    "Doesn't Have Military Attaché", "Has Military Access Through",
+    "Doesn't Have Military Access Through", "Grants Military Access To",
+    "Doesn't Grant Military Access To", "Volunteer Divisions Sent",
+    "Volunteer Capacity Remaining", "True", "False",
 ]
 
 # Longest condition/action summary shown on an event row before ellipsising.
@@ -43,13 +47,19 @@ CHAIN_OPS = ["AND", "OR", "XOR", "NOR", "NAND"]
 NUMERIC_OPS = ["==", "!=", ">", "<", ">=", "<=", "BETWEEN (INC)", "BETWEEN (EXC)"]
 TURN_OPS = ["==", ">", "<", ">=", "<=", "BETWEEN (INC)", "BETWEEN (EXC)"]
 RECEIVED_ACTIONS = ["WAR_DECLARATION", "JOIN_WARS", "CALL_TO_ARMS", "CREATE_FACTION",
-                    "FACTION_INVITE", "JOIN_FACTION_REQ", "TRADE", "CEASEFIRE"]
+                    "FACTION_INVITE", "JOIN_FACTION_REQ", "TRADE", "CEASEFIRE",
+                    "REQ_MILITARY_ACCESS", "SEND_MILITARY_ATTACHE", "SEND_VOLUNTEERS"]
 TRIGGER_TYPES = ["AI Only", "Player Only", "Both"]
 
 # Condition types whose value is a comma-separated list of nation IDs.
 TARGET_LIST_TYPES = ["At War With", "In Faction With", "Not In Faction With", "Has Truce With",
                      "At Peace With", "Country Exists", "Country Doesn't Exist",
-                     "Occupying Claims Of", "Occupying All Claims"]
+                     "Occupying Claims Of", "Occupying All Claims", "Guaranteeing",
+                     "Not Guaranteeing", "Has Military Attaché", "Doesn't Have Military Attaché",
+                     "Has Military Access Through", "Doesn't Have Military Access Through",
+                     "Grants Military Access To", "Doesn't Grant Military Access To"]
+# These quantities always describe the country that owns the event.
+SELF_NUMERIC_CONDITION_TYPES = ["Volunteer Divisions Sent", "Volunteer Capacity Remaining"]
 # Condition types that take a single nation ID, or blank to mean the event's owner.
 SELF_OR_TARGET_TYPES = ["Is AI Controlled", "Is Player Controlled", "Is At War",
                         "Is At Peace", "Is In Faction", "Is Faction Leader"]
@@ -59,7 +69,12 @@ EDIT_ACTIONS = ["Edit Name", "Edit Leader Name", "Edit Leader Title",
 ACT_TYPES = ["Declare War", "Join Faction", "Create Faction", "Invite to Faction",
              "Accept Proposal", "Reject Proposal", "Send Ceasefire", "Send Custom Message",
              "Queue Claims", "Revoke Claims", "Revoke All Claims", "Give Territory",
-             "Spawn Unit", "Set Variable"] + EDIT_ACTIONS
+             "Spawn Unit", "Set Variable", "Guarantee Independence",
+             "Send Military Attaché", "Request Military Access",
+             "Offer Volunteer Divisions", "Accept Military Attaché",
+             "Reject Military Attaché", "Accept Military Access",
+             "Reject Military Access", "Accept Volunteer Divisions",
+             "Reject Volunteer Divisions"] + EDIT_ACTIONS
 # Actions that only write a plain text value onto the event's owner.
 TEXT_ONLY_ACTIONS = ["Edit Name", "Edit Leader Name", "Edit Leader Title",
                      "Queue Claims", "Revoke Claims"]
@@ -95,6 +110,12 @@ HELP_TEXT = """ === EVENT TYPE ===
 - Is AI Controlled: Checks if the target nation (or self if blank) is controlled by AI
 - Is Player Controlled: Checks if the target nation (or self if blank) is controlled by a human
 - Bordering / Not Bordering: Checks physical adjacency to the target
+- Guaranteeing / Not Guaranteeing: Checks whether this country guarantees each target country
+- Has / Doesn't Have Military Attaché: Checks whether this country has an attaché at each target country
+- Has / Doesn't Have Military Access Through: Checks whether this country can move through each target country's territory
+- Grants / Doesn't Grant Military Access To: Checks whether each target country can move through this country's territory
+- Volunteer Divisions Sent: Compares this country's volunteer divisions currently reserved, travelling, or deployed
+- Volunteer Capacity Remaining: Compares how many more volunteer divisions this country may currently send
 - Variable: Compares a selected global variable against a static value (supports math operators for numerical variables)
 
 === ACTIONS ===
@@ -111,6 +132,10 @@ HELP_TEXT = """ === EVENT TYPE ===
 - Give Territory: Transfers the specified Province IDs (comma-separated) to the target nation. Check 'Must Control' if they must currently control the tiles to transfer them.
 - Spawn Unit: Spawns the specified unit type for the target nation on the specified Province IDs (comma-separated). Check 'Must Control' if they must currently control the tiles to spawn the unit on them.
 - Set Variable: Modifies a selected global variable by setting, adding, subtracting, multiplying, or dividing it by a static value.
+- Guarantee Independence: Queues a unilateral guarantee of the selected country's independence.
+- Send Military Attaché / Request Military Access: Sends the normal diplomatic request to the selected country.
+- Offer Volunteer Divisions: Sends the selected country the number of available land divisions entered in the message box (default: 1). Enable 'Use Available Capacity' to send fewer if the requested number exceeds the remaining cap. The host must accept the offer.
+- Accept / Reject Military Attaché, Military Access, or Volunteer Divisions: Responds only to that matching pending request from the selected country.
 
 The AI Msg Checkbox means that you can allow the ai to generate custom text for that message
 It will fallback to whatever you manually entered if the llm ai is turned off or otherwise fails"""
@@ -452,11 +477,13 @@ class _ActRow:
         self.target = data.get("target", "None")
         self.unit_type = data.get("unit_type", "Infantry Type 1910")
         self.ai_generate = bool(data.get("ai_generate", False))
+        self.send_up_to = bool(data.get("send_up_to", False))
         self.field = TextField(0, 0, 220, 28, str(data.get("message", "")))
 
     def to_dict(self):
         return {"type": self.type, "target": self.target, "unit_type": self.unit_type,
-                "message": self.field.text, "ai_generate": self.ai_generate}
+                "message": self.field.text, "ai_generate": self.ai_generate,
+                "send_up_to": self.send_up_to}
 
 
 class _EventEditScreen(_ModalScreen):
@@ -530,6 +557,8 @@ class _EventEditScreen(_ModalScreen):
         if ctype == "Variable":
             var_type = next((v["type"] for v in self.variables if v["name"] == row.variable), "string")
             return (NUMERIC_OPS if var_type in ("int", "double") else ["==", "!="]), ""
+        if ctype in SELF_NUMERIC_CONDITION_TYPES:
+            return NUMERIC_OPS, "(This country's count)"
         if ctype in ("Turn Number", "Random (0.00 - 1.00)"):
             hint = ""
             if ctype == "Turn Number":
@@ -752,6 +781,16 @@ class _EventEditScreen(_ModalScreen):
             x += 256
             message_field()
             flag_toggle("Must Control")
+        elif t == "Offer Volunteer Divisions":
+            target_combo(["None"] + self.countries)
+            message_field()
+            els.append(self.toggle(x, y + 2, 200, row.send_up_to, "Use Available Capacity",
+                                   lambda: self._set(row, "send_up_to", not row.send_up_to)))
+        elif t in ("Guarantee Independence", "Accept Military Attaché",
+                   "Reject Military Attaché", "Accept Military Access",
+                   "Reject Military Access", "Accept Volunteer Divisions",
+                   "Reject Volunteer Divisions"):
+            target_combo(["None"] + self.countries)
         else:
             target_combo(["None"] + self.countries)
             message_field()
