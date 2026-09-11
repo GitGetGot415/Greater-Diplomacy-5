@@ -551,6 +551,51 @@ class RealtimeSessionTests(unittest.TestCase):
         self.assertIn({"type": "research_queue", "tech_names": []},
                       collect_map_commands(map_ref, "A"))
 
+    def test_economy_conversions_and_claim_drafts_are_server_validated(self):
+        province = {"id": 7, "owner": "B", "units": []}
+        map_ref = SimpleNamespace(
+            map_data={"target": province}, id_to_province={7: province},
+            nation_data={
+                "A": {"claims": [], "claim_queue": [], "research": {}},
+                "B": {},
+            })
+        driver = MapRealtimeDriver(map_ref)
+        preferences = {
+            "type": "country_preferences", "political_drift": 0,
+            "automation": {}, "conscription_slider": .4,
+            "mat_to_fuel_slider": .25,
+        }
+        with mock.patch("data.queries.get_max_fuel_conversion", return_value=.5):
+            canonical = driver.validate_draft("A", [
+                preferences, {"type": "claim_draft", "province_ids": [7]},
+            ])
+            self.assertEqual(canonical[0]["conscription_slider"], .4)
+            self.assertEqual(canonical[0]["mat_to_fuel_slider"], .25)
+            self.assertEqual(canonical[1]["queue"], [
+                {"prov_id": 7, "turns_left": c.CLAIM_TURN_NON_CORE}])
+            with self.assertRaises(RealtimeError):
+                driver.validate_draft("A", [{**preferences, "mat_to_fuel_slider": .6}])
+
+        # A follow-up draft can retain an accepted claim but cannot forge a
+        # shorter countdown to make it complete early.
+        map_ref.nation_data["A"]["claim_queue"] = [{"prov_id": 7, "turns_left": 3}]
+        retained = driver.validate_draft("A", [{"type": "claim_draft", "province_ids": [7]}])
+        self.assertEqual(retained[0]["queue"], [{"prov_id": 7, "turns_left": 3}])
+
+    def test_collects_economy_conversion_and_claim_choices(self):
+        map_ref = SimpleNamespace(
+            map_data={}, nation_data={"A": {
+                "conscription_slider": .6, "mat_to_fuel_slider": .2,
+                "claim_queue": [{"prov_id": 4, "turns_left": 5}],
+                "research_queue": [],
+            }})
+        commands = collect_map_commands(map_ref, "A")
+        preferences = next(command for command in commands
+                           if command["type"] == "country_preferences")
+        claim_draft = next(command for command in commands if command["type"] == "claim_draft")
+        self.assertEqual((preferences["conscription_slider"], preferences["mat_to_fuel_slider"]), (.6, .2))
+        self.assertEqual(claim_draft["province_ids"], [4])
+
     def test_diplomacy_draft_is_collected_and_cannot_replace_inflight_offer(self):
         map_ref = SimpleNamespace(
             map_data={}, id_to_province={}, nation_colors={},

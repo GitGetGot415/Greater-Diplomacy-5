@@ -635,14 +635,15 @@ class MapRealtimeDriver:
     """Adapter that lets the existing map/turn logic run only on the server.
 
     The command schema deliberately contains no arbitrary map replacement.
-    It covers normal unit orders, owned production queues, and research
-    selection. Additional UI domains can add explicit commands without
-    widening trust.
+    It covers normal unit orders, owned production queues, research selection,
+    economy conversion settings, and claim drafts. Additional UI domains can
+    add explicit commands without widening trust.
     """
     _UNIT_MUTABLE_KEYS = {"order", "name", "combat_stance"}
     _AUTOMATION_KEYS = {"construction", "movement", "research"}
     _APPEARANCE_KEYS = {"name", "adjective", "leader_name", "leader_title",
                         "flag_data", "portrait_data", "color"}
+    _MAX_CLAIM_DRAFTS = 100
 
     def __init__(self, map_ref):
         self.map_ref = map_ref
@@ -671,6 +672,8 @@ class MapRealtimeDriver:
                 has_research_command = True
             elif kind == "country_preferences":
                 canonical.append(self._validate_country_preferences(country_id, command))
+            elif kind == "claim_draft":
+                canonical.append(self._validate_claim_draft(country_id, command))
             elif kind == "country_appearance":
                 canonical.append(self._validate_country_appearance(country_id, command))
             elif kind == "country_diplomacy":
@@ -686,8 +689,10 @@ class MapRealtimeDriver:
         return country
 
     def _validate_country_preferences(self, country_id: str, command: dict[str, Any]) -> dict[str, Any]:
-        """Validate the regular politics/automation controls for one country."""
-        self._country(country_id)
+        """Validate politics, automation, and the two economy conversions."""
+        from data import queries
+
+        country = self._country(country_id)
         drift = command.get("political_drift", 0)
         automation = command.get("automation", {})
         if not isinstance(drift, int) or drift not in (-1, 0, 1):
@@ -696,9 +701,62 @@ class MapRealtimeDriver:
             raise RealtimeError("Invalid automation settings.")
         if any(not isinstance(value, bool) for value in automation.values()):
             raise RealtimeError("Invalid automation settings.")
+        conscription = command.get("conscription_slider", 1.0)
+        fuel_conversion = command.get("mat_to_fuel_slider", 0.0)
+        if (isinstance(conscription, bool) or not isinstance(conscription, (int, float))
+                or not 0.0 <= float(conscription) <= 1.0):
+            raise RealtimeError("Invalid manpower conversion setting.")
+        max_conversion = max(0.0, float(queries.get_max_fuel_conversion(country)))
+        if (isinstance(fuel_conversion, bool) or not isinstance(fuel_conversion, (int, float))
+                or not 0.0 <= float(fuel_conversion) <= max_conversion):
+            raise RealtimeError("Invalid material-to-fuel conversion setting.")
         return {"type": "country_preferences", "political_drift": drift,
                 "automation": {key: bool(automation.get(key, False))
-                               for key in self._AUTOMATION_KEYS}}
+                               for key in self._AUTOMATION_KEYS},
+                "conscription_slider": float(conscription),
+                "mat_to_fuel_slider": float(fuel_conversion)}
+
+    def _validate_claim_draft(self, country_id: str, command: dict[str, Any]) -> dict[str, Any]:
+        """Validate a player's desired claim queue without trusting timers.
+
+        Clients name the provinces they want to keep in their queue. The
+        authoritative map retains timers for existing entries and assigns the
+        normal fabrication duration to new ones. This lets a player add or
+        cancel claims while preventing forged instant claims or countdowns.
+        """
+        country = self._country(country_id)
+        requested = command.get("province_ids", [])
+        if (not isinstance(requested, list) or len(requested) > self._MAX_CLAIM_DRAFTS
+                or any(isinstance(province_id, bool) or not isinstance(province_id, int)
+                       for province_id in requested)
+                or len(set(requested)) != len(requested)):
+            raise RealtimeError("Invalid claim draft.")
+
+        existing = {}
+        for entry in country.get("claim_queue", []):
+            if not isinstance(entry, dict):
+                continue
+            province_id, turns_left = entry.get("prov_id"), entry.get("turns_left")
+            if (isinstance(province_id, int) and not isinstance(province_id, bool)
+                    and isinstance(turns_left, int) and not isinstance(turns_left, bool)):
+                existing[province_id] = {"prov_id": province_id, "turns_left": max(0, turns_left)}
+
+        claims = set(country.get("claims", []))
+        queue = []
+        for province_id in requested:
+            if province_id in existing:
+                # This entry was accepted by the server on an earlier turn;
+                # preserve its authoritative remaining time exactly.
+                queue.append(existing[province_id])
+                continue
+            province = self._province(province_id)
+            owner = province.get("owner")
+            if owner == country_id or owner in c.UNPLAYABLE_NATIONS:
+                raise RealtimeError("Claims must target a foreign playable province.")
+            if province_id in claims:
+                raise RealtimeError("That province is already claimed.")
+            queue.append({"prov_id": province_id, "turns_left": c.CLAIM_TURN_NON_CORE})
+        return {"type": "claim_draft", "queue": queue}
 
     def _validate_country_appearance(self, country_id: str, command: dict[str, Any]) -> dict[str, Any]:
         """Allow identity changes without allowing a client to alter gameplay data."""
@@ -943,6 +1001,10 @@ class MapRealtimeDriver:
                     country_data = self.map_ref.nation_data[country_id]
                     country_data["political_drift"] = command["political_drift"]
                     country_data["automation"] = copy.deepcopy(command["automation"])
+                    country_data["conscription_slider"] = command["conscription_slider"]
+                    country_data["mat_to_fuel_slider"] = command["mat_to_fuel_slider"]
+                elif command["type"] == "claim_draft":
+                    self.map_ref.nation_data[country_id]["claim_queue"] = copy.deepcopy(command["queue"])
                 elif command["type"] == "country_appearance":
                     country_data = self.map_ref.nation_data[country_id]
                     country_data.update(copy.deepcopy(command["appearance"]))
@@ -1013,8 +1075,8 @@ class MapRealtimeDriver:
 def collect_map_commands(map_ref, country_id: str) -> list[dict[str, Any]]:
     """Serialize supported local order controls into server commands.
 
-    This deliberately reads only order/queue/research choices, never mutable
-    combat, resource, or research-progress fields from the client map.
+    This deliberately reads only player choices, never mutable combat,
+    resource, research-progress, or claim-timer fields from the client map.
     """
     commands: list[dict[str, Any]] = []
     for province in map_ref.map_data.values():
@@ -1037,7 +1099,17 @@ def collect_map_commands(map_ref, country_id: str) -> list[dict[str, Any]]:
     commands.append({"type": "research_queue", "tech_names": tech_names})
     commands.append({"type": "country_preferences",
                      "political_drift": country_data.get("political_drift", 0),
-                     "automation": copy.deepcopy(country_data.get("automation", {}))})
+                     "automation": copy.deepcopy(country_data.get("automation", {})),
+                     "conscription_slider": country_data.get("conscription_slider", 1.0),
+                     "mat_to_fuel_slider": country_data.get("mat_to_fuel_slider", 0.0)})
+    # Claim timers are server state. A client only says which existing/new
+    # claims should remain queued; validation restores server timers and gives
+    # new claims the standard fabrication time.
+    claim_queue = country_data.get("claim_queue", []) if isinstance(country_data, dict) else []
+    commands.append({"type": "claim_draft", "province_ids": [entry.get("prov_id")
+                     for entry in claim_queue if isinstance(entry, dict)
+                     and isinstance(entry.get("prov_id"), int)
+                     and not isinstance(entry.get("prov_id"), bool)]})
     commands.append({"type": "country_appearance", "appearance": {
         key: copy.deepcopy(country_data.get(key, "DEFAULT" if key.endswith("_data") else [] if key == "color" else ""))
         for key in MapRealtimeDriver._APPEARANCE_KEYS}})
