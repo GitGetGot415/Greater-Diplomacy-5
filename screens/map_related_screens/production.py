@@ -122,6 +122,16 @@ class Production_Screen(GameState):
         self.artillery_mode = "normal"
         self.custom_artillery_modes = {}
 
+    def can_edit_realtime(self):
+        if not getattr(self.map_screen, "realtime_multiplayer", False):
+            return True
+        session = getattr(self.map_screen, "realtime_session", None)
+        player = session.players.get(getattr(self.map_screen, "realtime_player_id", "")) if session else None
+        if session and session.phase == "TURN" and player and not player.submitted and not player.eliminated:
+            return True
+        self.map_screen.show_feedback("Turn submitted or unavailable; unsubmit to change production.")
+        return False
+
     def exit_screen(self):
         if c.MAP_NAVIGATION_MODE == "CLASSIC":
             # Classic: Back lands on the plain province menu, tile still
@@ -659,6 +669,8 @@ class Production_Screen(GameState):
         self.scroll_content_rect = pygame.Rect(0, CLICK_GUARD_TOP, c.SCREEN_WIDTH, CLICK_GUARD_BOTTOM - CLICK_GUARD_TOP)
 
     def start_coring(self):
+        if not self.can_edit_realtime():
+            return
         owner = self.target_province.get("owner")
         data = queries.get_core_cost(owner, self.map_screen.map_data)
         p_data = self.map_screen.nation_data.get(owner, {})
@@ -683,6 +695,8 @@ class Production_Screen(GameState):
             self.map_screen.show_feedback("Insufficient resources!")
 
     def start_remove_cores(self):
+        if not self.can_edit_realtime():
+            return
         owner = self.target_province.get("owner")
         data = queries.get_remove_core_cost(owner, self.map_screen.map_data)
         p_data = self.map_screen.nation_data.get(owner, {})
@@ -707,6 +721,8 @@ class Production_Screen(GameState):
             self.map_screen.show_feedback("Insufficient resources!")
 
     def start_construction(self, b_name):
+        if not self.can_edit_realtime():
+            return
         owner = self.target_province.get("owner")
         if not queries.has_core(owner, self.target_province):
             self.map_screen.show_feedback("Must core territory before producing!")
@@ -735,6 +751,8 @@ class Production_Screen(GameState):
             self.map_screen.show_feedback("Insufficient resources!")
 
     def buy_unit(self, unit_name):
+        if not self.can_edit_realtime():
+            return
         owner = self.target_province.get("owner")
         if not queries.has_core(owner, self.target_province):
             self.map_screen.show_feedback("Must core territory before recruiting!")
@@ -783,6 +801,8 @@ class Production_Screen(GameState):
             self.map_screen.show_feedback("Insufficient resources!")
 
     def open_custom_unit_manager(self):
+        if not self.can_edit_realtime():
+            return
         if not self.map_screen: return
 
         owner_nation = self.target_province.get("owner")
@@ -831,6 +851,8 @@ class Production_Screen(GameState):
             items, on_picked, confirm_label="Apply")
 
     def cancel_order(self, index, q_type):
+        if not self.can_edit_realtime():
+            return
         queue_key = "building_queue" if q_type == "building" else "unit_queue"
         queue = self.target_province.get(queue_key, [])
         

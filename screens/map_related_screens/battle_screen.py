@@ -242,8 +242,20 @@ class Battle_Screen(ModalScreen):
     #                              COMMANDS                              #
     # ------------------------------------------------------------------ #
 
+    def can_edit_realtime(self):
+        if not getattr(self.map_screen, "realtime_multiplayer", False):
+            return True
+        session = getattr(self.map_screen, "realtime_session", None)
+        player = session.players.get(getattr(self.map_screen, "realtime_player_id", "")) if session else None
+        if session and session.phase == "TURN" and player and not player.submitted and not player.eliminated:
+            return True
+        self.map_screen.show_feedback("Turn submitted or unavailable; unsubmit to change battle orders.")
+        return False
+
     def send_to_lane(self, unit, lane):
         """Pins a unit to the duel against whoever is on the other side."""
+        if not self.can_edit_realtime():
+            return
         far = lane.b if self.is_mine(lane.a) else lane.a
         # A pin names an enemy nation; build_battle resolves it back to whichever
         # lane has that nation on the other side.
@@ -259,6 +271,8 @@ class Battle_Screen(ModalScreen):
         one has a slot. Which is why a held unit can still show up in the front
         pane -- it says [Release] there rather than [Hold].
         """
+        if not self.can_edit_realtime():
+            return
         if unit.get("combat_stance") == "RESERVE":
             unit.pop("combat_stance", None)
         else:
@@ -266,6 +280,8 @@ class Battle_Screen(ModalScreen):
         self.refresh_ui()
 
     def clear_orders(self):
+        if not self.can_edit_realtime():
+            return
         for unit in self.my_units():
             unit.pop("lane_target", None)
             unit.pop("combat_stance", None)

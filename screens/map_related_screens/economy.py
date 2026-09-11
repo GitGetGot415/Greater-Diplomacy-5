@@ -71,13 +71,25 @@ class Economy_Screen(GameState):
 
     def set_conscription(self, val):
         if not self.map_screen or self.map_screen.tactical_mode: return
+        if not self.can_edit_realtime(): return
         p_data = self.map_screen.nation_data[self.map_screen.player_country]
         p_data["conscription_slider"] = val
 
     def set_conversion(self, val):
         if not self.map_screen or self.map_screen.tactical_mode: return
+        if not self.can_edit_realtime(): return
         p_data = self.map_screen.nation_data[self.map_screen.player_country]
         p_data["mat_to_fuel_slider"] = val
+
+    def can_edit_realtime(self):
+        if not getattr(self.map_screen, "realtime_multiplayer", False):
+            return True
+        session = getattr(self.map_screen, "realtime_session", None)
+        player = session.players.get(getattr(self.map_screen, "realtime_player_id", "")) if session else None
+        if session and session.phase == "TURN" and player and not player.submitted and not player.eliminated:
+            return True
+        self.map_screen.show_feedback("Turn submitted or unavailable; unsubmit to change the economy.")
+        return False
 
     def additional_draw(self, surface):
         if not self.map_screen: return

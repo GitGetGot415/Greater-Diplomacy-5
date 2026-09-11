@@ -132,6 +132,10 @@ class Faction_Screen(GameState):
 
     def confirm_rename(self):
         if not self.map_screen: return
+        if getattr(self.map_screen, "realtime_multiplayer", False):
+            from map_logic.diplomacy import player_diplomacy_actions
+            if not player_diplomacy_actions.can_edit_diplomacy(self.map_screen):
+                return
         player_country = self.map_screen.player_country
         old_name = self.map_screen.nation_data.get(player_country, {}).get("faction", "")
         new_name = self.new_faction_name.strip()

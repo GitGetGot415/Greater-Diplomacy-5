@@ -406,18 +406,43 @@ def handle_send_volunteers(map_screen):
             return
         if not can_edit_diplomacy(map_screen):
             return
-        details, error = volunteers.create_offer(
-            map_screen, donor, host, [refs[key] for key in keys if key in refs])
-        if error:
-            map_screen.show_feedback(error)
-            return
+        selected = [refs[key] for key in keys if key in refs]
+        if getattr(map_screen, "realtime_multiplayer", False):
+            # The client may preview its selection, but reservations belong to
+            # the authoritative server.  Removing the local units here made a
+            # valid offer disappear before the server could identify it.
+            details = {"count": len(selected),
+                       "travel_turns": volunteers.travel_turns(map_screen, donor, host)}
+            refs_for_server = []
+            for province, unit in selected:
+                try:
+                    refs_for_server.append({"province_id": province["id"],
+                                            "unit_index": province["units"].index(unit)})
+                except ValueError:
+                    map_screen.show_feedback("A selected volunteer division is no longer available.")
+                    return
+        else:
+            details, error = volunteers.create_offer(map_screen, donor, host, selected)
+            if error:
+                map_screen.show_feedback(error)
+                return
+            refs_for_server = []
         count, turns = details["count"], details["travel_turns"]
         message = (f"We offer {count} volunteer {'division' if count == 1 else 'divisions'}. "
                    f"They are estimated to arrive {turns} {'turn' if turns == 1 else 'turns'} after acceptance.")
         msg = diplomacy_logic.toggle_diplomacy_action(
             map_screen.nation_data, donor, host, volunteers.ACTION, message,
             parameters=details)
-        if msg.startswith("A diplomatic action is already"):
+        if getattr(map_screen, "realtime_multiplayer", False):
+            drafts = getattr(map_screen, "realtime_volunteer_drafts", None)
+            if drafts is None:
+                drafts = {}
+                map_screen.realtime_volunteer_drafts = drafts
+            if msg.startswith("Message drafted"):
+                drafts[host] = refs_for_server
+            else:
+                drafts.pop(host, None)
+        elif msg.startswith("A diplomatic action is already"):
             volunteers.cancel_offer(map_screen, donor, host)
         map_screen.show_feedback(msg)
 
@@ -461,5 +486,15 @@ def handle_withdraw_volunteer_offer(map_screen):
         return None
     donor = map_screen.player_country
     host = map_screen.selected_province.get("owner")
+    if getattr(map_screen, "realtime_multiplayer", False):
+        # An unsubmitted offer has no server reservation yet.  Undo only the
+        # local draft; the next sync removes it from the authoritative intent.
+        pending = map_screen.nation_data.get(donor, {}).get("pending_diplomacy", {})
+        info = pending.get(host, {})
+        if isinstance(info, dict) and info.get("action") == volunteers.ACTION and info.get("turns", 0) == 0:
+            pending.pop(host, None)
+        getattr(map_screen, "realtime_volunteer_drafts", {}).pop(host, None)
+        map_screen.show_feedback("Volunteer offer withdrawn before submission.")
+        return
     volunteers.cancel_offer(map_screen, donor, host)
     map_screen.show_feedback("Volunteer offer cancelled; divisions returned.")

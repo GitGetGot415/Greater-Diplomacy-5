@@ -1538,7 +1538,8 @@ class Map(GameState):
     def change_state(self, next_state):
         if (getattr(self, "realtime_multiplayer", False)
                 and next_state in {"PRODUCTION", "ORDERS", "RESEARCH", "ECONOMY", "EDIT_COUNTRY",
-                                  "MESSAGES", "FACTION", "FACTION_TERRITORIES"}):
+                                  "MESSAGES", "FACTION", "FACTION_TERRITORIES", "POLITICS",
+                                  "AUTOMATION", "PUPPETS", "CLAIMS", "DECLARE_INDEPENDENCE"}):
             player = self.realtime_session.players.get(self.realtime_player_id)
             if (self.realtime_session.phase != "TURN" or not player
                     or player.submitted or player.eliminated):

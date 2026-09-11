@@ -355,11 +355,24 @@ class Edit_Country_Screen(GameState):
         """
         if self.map_screen and self.map_screen.player_country == "Spectator":
             return c.SPECTATOR_CAN_EDIT_APPEARANCE
+        if self.map_screen and getattr(self.map_screen, "realtime_multiplayer", False):
+            session = getattr(self.map_screen, "realtime_session", None)
+            player = session.players.get(getattr(self.map_screen, "realtime_player_id", "")) if session else None
+            return bool(session and session.phase == "TURN" and player
+                        and not player.submitted and not player.eliminated)
         return True
 
     def save_and_exit(self):
         if not self.can_edit:
             return
+        if (getattr(self.map_screen, "realtime_multiplayer", False)
+                and self.editing_country != self.map_screen.player_country):
+            controller = self.map_screen.nation_data.get(self.map_screen.player_country, {})
+            subject = self.map_screen.nation_data.get(self.editing_country, {})
+            if (self.editing_country not in controller.get("puppets", [])
+                    or subject.get("puppet_type") != c.PUPPET_TYPE_INTEGRATED):
+                self.map_screen.show_feedback("Only your integrated subjects may be edited in real-time multiplayer.")
+                return
         p_data = self.map_screen.nation_data[self.editing_country]
         p_data["name"] = self.country_name
         p_data["adjective"] = self.adjective
@@ -396,6 +409,21 @@ class Edit_Country_Screen(GameState):
             if pending is None:
                 pending = {}
                 self.map_screen.multiplayer_pending_appearance_updates = pending
+            pending[self.editing_country] = {
+                key: p_data.get(key)
+                for key in ("name", "adjective", "leader_name", "leader_title",
+                            "flag_data", "portrait_data", "color")
+            }
+
+        # Real-time clients have a separate authoritative map.  A controller
+        # may customise an integrated subject, but that change must travel as
+        # a narrow server-validated draft instead of remaining a local edit.
+        if (getattr(self.map_screen, "realtime_multiplayer", False)
+                and self.editing_country != self.map_screen.player_country):
+            pending = getattr(self.map_screen, "realtime_pending_appearance_updates", None)
+            if pending is None:
+                pending = {}
+                self.map_screen.realtime_pending_appearance_updates = pending
             pending[self.editing_country] = {
                 key: p_data.get(key)
                 for key in ("name", "adjective", "leader_name", "leader_title",

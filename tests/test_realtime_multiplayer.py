@@ -717,5 +717,132 @@ class RealtimeSessionTests(unittest.TestCase):
                 server.stop()
 
 
+class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
+    """Regression coverage for strategic controls that used to be local-only."""
+
+    def make_map(self):
+        home = {"id": 1, "json_key": "home", "owner": "A", "terrain": "plains",
+                "neighbors": [2], "cores": ["A", "P"], "units": [{"owner": "A", "type": "Infantry"}],
+                "building_queue": [], "unit_queue": [], "is_coastal": False}
+        foreign = {"id": 2, "json_key": "foreign", "owner": "B", "terrain": "plains",
+                   "neighbors": [1], "cores": ["B"], "units": [], "building_queue": [],
+                   "unit_queue": [], "is_coastal": False}
+        nations = {
+            "A": {"name": "A", "color": [1, 2, 3], "materials": 1000, "manpower": 1000,
+                  "fuel": 1000, "research": {}, "claims": [1], "claim_queue": [],
+                  "revoke_queue": [], "return_queue": [], "puppets": ["P"],
+                  "release_puppet_queue": [], "faction": "Old Pact", "is_faction_leader": True,
+                  "pending_ratification": {"terms": {}}, "research_queue": []},
+            "B": {"name": "B", "color": [4, 5, 6], "claims": [1], "faction": "Old Pact"},
+            "P": {"name": "P", "color": [7, 8, 9], "puppet_type": c.PUPPET_TYPE_INTEGRATED,
+                  "siphon_rates": {"manpower": 0, "materials": 0, "fuel": 0}},
+        }
+        return SimpleNamespace(map_data={"home": home, "foreign": foreign},
+                               id_to_province={1: home, 2: foreign}, nation_data=nations,
+                               nation_colors={"A": (1, 2, 3), "B": (4, 5, 6), "P": (7, 8, 9)},
+                               scenario_settings={})
+
+    def test_collects_empty_queues_and_unit_identity_combat_intents(self):
+        map_ref = self.make_map()
+        unit = map_ref.map_data["home"]["units"][0]
+        unit.update({"custom_name": "First Division", "combat_stance": "RESERVE", "lane_target": "B"})
+        commands = collect_map_commands(map_ref, "A")
+        unit_command = next(command for command in commands if command["type"] == "unit_order")
+        self.assertEqual(unit_command["custom_name"], "First Division")
+        self.assertEqual(unit_command["combat_stance"], "RESERVE")
+        self.assertEqual(unit_command["lane_target"], "B")
+        queues = [command for command in commands if command["type"] == "province_queue"]
+        self.assertEqual({command["queue"] for command in queues}, {"building_queue", "unit_queue"})
+        self.assertTrue(all(command["items"] == [] for command in queues))
+
+    def test_an_idle_complete_draft_is_accepted(self):
+        map_ref = self.make_map()
+        # An ordinary player has many units with no order.  This regression
+        # catches validators that treat an explicit no-order intent as a dict.
+        MapRealtimeDriver(map_ref).validate_draft("A", collect_map_commands(map_ref, "A"))
+
+    def test_claim_puppet_faction_and_ratification_drafts_are_server_validated(self):
+        map_ref = self.make_map()
+        driver = MapRealtimeDriver(map_ref)
+        appearance = {"name": "Subject", "adjective": "Subject", "leader_name": "Leader",
+                      "leader_title": "Chief", "flag_data": "DEFAULT", "portrait_data": "DEFAULT",
+                      "color": [9, 8, 7]}
+        commands = driver.validate_draft("A", [
+            {"type": "claim_draft", "province_ids": [], "revoke_ids": [1],
+             "returns": [{"prov_id": 1, "recipient": "B"}]},
+            {"type": "puppet_draft", "puppet_order": ["P"],
+             "siphons": {"P": {"manpower": .25, "materials": .20, "fuel": .15}},
+             "release_subjects": [{"core_nation": "P", "keep_cores": False}],
+             "appearances": {"P": appearance}},
+            {"type": "faction_rename", "name": "New Pact"},
+            {"type": "ratification_response", "verdict": "RATIFY"},
+        ])
+        claim = next(command for command in commands if command["type"] == "claim_draft")
+        self.assertEqual(claim["revokes"], [{"prov_id": 1, "turns_left": 1}])
+        self.assertEqual(claim["returns"], [{"prov_id": 1, "recipient": "B", "turns_left": 1}])
+        self.assertEqual(next(command for command in commands if command["type"] == "faction_rename")["name"], "New Pact")
+        with self.assertRaises(RealtimeError):
+            driver.validate_draft("A", [{"type": "puppet_draft", "puppet_order": ["P"],
+                                          "siphons": {"B": {"manpower": 1, "materials": 1, "fuel": 1}},
+                                          "release_subjects": [], "appearances": {}}])
+
+    def test_queue_items_are_rebuilt_from_server_costs_not_client_refunds(self):
+        map_ref = self.make_map()
+        driver = MapRealtimeDriver(map_ref)
+        forged = {"order_type": "BUILDING", "item_name": "Factory", "turns_remaining": 0,
+                  "refund": {"cost_materials": -999999, "cost_manpower": -999999, "cost_fuel": -999999}}
+        with mock.patch("data.queries.get_building_library", return_value={"Factory": {}}), \
+             mock.patch("data.queries.get_building_required_tech", return_value=("", 0)), \
+             mock.patch("data.queries.get_building_cost", return_value={"time": 3, "group": "industry",
+                                                                           "cost_materials": 25,
+                                                                           "cost_manpower": 5,
+                                                                           "cost_fuel": 2}), \
+             mock.patch("data.queries.has_core", return_value=True):
+            command = driver.validate_draft("A", [{"type": "province_queue", "province_id": 1,
+                                                     "queue": "building_queue", "items": [forged]}])[0]
+        item = command["items"][0]
+        self.assertEqual(item["turns_remaining"], 3)
+        self.assertEqual(item["refund"], {"cost_materials": 25, "cost_manpower": 5, "cost_fuel": 2})
+
+    def test_repair_cost_is_deducted_by_the_server_not_the_client_order(self):
+        map_ref = self.make_map()
+        map_ref.player_country = "None"
+        map_ref.map_data["home"]["units"][0].update({"health": 5, "max_health": 10})
+        driver = MapRealtimeDriver(map_ref)
+        with mock.patch("data.queries.get_unit_library", return_value={"Infantry": {
+                "cost_materials": 20, "cost_manpower": 10, "cost_fuel": 4}}), \
+             mock.patch("data.queries.get_scenario_flag", return_value=False), \
+             mock.patch("data.queries.is_nation_in_combat_here", return_value=False):
+            command = driver.validate_draft("A", [{"type": "unit_order", "province_id": 1,
+                                                     "unit_index": 0,
+                                                     "order": {"type": "REPAIR", "refund": {"cost_materials": 0}},
+                                                     "custom_name": None, "combat_stance": None,
+                                                     "lane_target": None}])
+        async def no_op(_map_ref):
+            return None
+        before = map_ref.nation_data["A"]["materials"]
+        with mock.patch("map_logic.turn_processing.turn_processor.prepare_turn", new=no_op), \
+             mock.patch("map_logic.turn_processing.turn_processor.resolve_turn_logic", new=no_op):
+            driver.process_turn({"A": command})
+        self.assertEqual(map_ref.nation_data["A"]["materials"], before - 10)
+        self.assertNotIn("realtime_cost", map_ref.map_data["home"]["units"][0]["order"])
+
+    def test_volunteer_reservations_require_a_matching_authoritative_offer(self):
+        map_ref = self.make_map()
+        map_ref.nation_data["B"]["at_war_with"] = ["C"]
+        map_ref.nation_data["C"] = {"name": "C", "at_war_with": ["B"]}
+        driver = MapRealtimeDriver(map_ref)
+        offer = {"type": "country_diplomacy", "pending": {
+            "B": {"action": "SEND_VOLUNTEERS", "timer": 0, "message": "We can help."}},
+            "responses": {}, "draft_lists": {}}
+        reservation = {"type": "volunteer_draft", "target": "B",
+                       "units": [{"province_id": 1, "unit_index": 0}]}
+        commands = driver.validate_draft("A", [offer, reservation])
+        self.assertEqual(next(command for command in commands if command["type"] == "volunteer_draft")["units"],
+                         [{"province_id": 1, "unit_index": 0}])
+        with self.assertRaises(RealtimeError):
+            driver.validate_draft("A", [offer])
+
+
 if __name__ == "__main__":
     unittest.main()

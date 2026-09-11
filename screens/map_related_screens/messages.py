@@ -610,6 +610,9 @@ class Messages_Screen(GameState):
 
     def clear_ratification(self):
         """Takes back an answer, while the leader is still waiting on it."""
+        from map_logic.diplomacy import player_diplomacy_actions
+        if not player_diplomacy_actions.can_edit_diplomacy(self.map_screen):
+            return
         from map_logic.diplomacy import ratification
 
         ratification.pending_for(self.map_screen.nation_data,

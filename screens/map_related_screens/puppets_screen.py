@@ -96,10 +96,24 @@ class Puppets_Screen(MapOverlayScreen):
 
         self.max_scroll = min(0, self.panel_rect.height - (y_pos - self.scroll_y - self.panel_rect.y) - 20)
 
+    def can_edit_realtime(self):
+        if not getattr(self.map_screen, "realtime_multiplayer", False):
+            return True
+        session = getattr(self.map_screen, "realtime_session", None)
+        player = session.players.get(getattr(self.map_screen, "realtime_player_id", "")) if session else None
+        if session and session.phase == "TURN" and player and not player.submitted and not player.eliminated:
+            return True
+        self.map_screen.show_feedback("Turn submitted or unavailable; unsubmit to change subjects.")
+        return False
+
     def set_siphon(self, puppet, res, slider_val):
+        if not self.can_edit_realtime():
+            return
         self.map_screen.nation_data[puppet]["siphon_rates"][res] = slider_val
 
     def move_puppet(self, index, direction):
+        if not self.can_edit_realtime():
+            return
         puppets = self.map_screen.nation_data.get(self.player, {}).get("puppets", [])
         new_index = index + direction
         if 0 <= new_index < len(puppets):
@@ -107,20 +121,30 @@ class Puppets_Screen(MapOverlayScreen):
         self.refresh_ui()
 
     def edit_puppet(self, puppet):
+        if not self.can_edit_realtime():
+            return
         self.map_screen.editing_country = puppet
         self.map_screen.change_state("EDIT_COUNTRY")
         self.done = True
 
     def queue_annex(self, puppet):
+        if not self.can_edit_realtime():
+            return
         self.queue_diplomacy_action(puppet, "ANNEX_PUPPET")
 
     def queue_take_puppets(self, puppet):
+        if not self.can_edit_realtime():
+            return
         self.queue_diplomacy_action(puppet, "TAKE_PUPPETS")
 
     def queue_release(self, puppet):
+        if not self.can_edit_realtime():
+            return
         self.queue_diplomacy_action(puppet, "RELEASE_PUPPET")
 
     def open_create_puppet(self):
+        if not self.can_edit_realtime():
+            return
         screen = Create_Integrated_Puppet_Screen(self.map_screen)
         _run_pygame_sub_screen(self.map_screen, screen, on_done=self.refresh_ui)
 
@@ -203,7 +227,19 @@ class Create_Integrated_Puppet_Screen(MapOverlayScreen):
         self.valid_subjects = sorted(list(self.valid_subjects))
         self.refresh_ui()
 
+    def can_edit_realtime(self):
+        if not getattr(self.map_screen, "realtime_multiplayer", False):
+            return True
+        session = getattr(self.map_screen, "realtime_session", None)
+        player = session.players.get(getattr(self.map_screen, "realtime_player_id", "")) if session else None
+        if session and session.phase == "TURN" and player and not player.submitted and not player.eliminated:
+            return True
+        self.map_screen.show_feedback("Turn submitted or unavailable; unsubmit to change subjects.")
+        return False
+
     def toggle_keep_cores(self):
+        if not self.can_edit_realtime():
+            return
         self.keep_cores = not self.keep_cores
         self.refresh_ui()
 
@@ -272,12 +308,16 @@ class Create_Integrated_Puppet_Screen(MapOverlayScreen):
                 el.rect.y = el.base_y + self.scroll_y
 
     def queue_creation(self, subject):
+        if not self.can_edit_realtime():
+            return
         queue = self.map_screen.nation_data[self.player].setdefault("release_puppet_queue", [])
         queue.append({"core_nation": subject, "turns_left": 1, "keep_cores": self.keep_cores})
         self.map_screen.show_feedback(f"Creation of {subject} queued (1 turn).")
         self.refresh_ui()
 
     def cancel_queue(self, subject):
+        if not self.can_edit_realtime():
+            return
         queue = self.map_screen.nation_data[self.player].setdefault("release_puppet_queue", [])
         for i, q in enumerate(queue):
             if q["core_nation"] == subject:
