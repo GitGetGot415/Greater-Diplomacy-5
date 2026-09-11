@@ -414,7 +414,7 @@ BUILDING_CHAINS = [
         base_name="Fort Lvl 1",
         base_req=None,
         base_stats={
-            "time": 1, "group": "fortification", "cost_materials": 6000,
+            "time": 1, "group": "fortification", "cost_materials": 5000,
             "cost_manpower": 0, "cost_fuel": 0, "prod_materials": 0,
             "prod_manpower": 0, "prod_fuel": 0,
         },
@@ -423,7 +423,7 @@ BUILDING_CHAINS = [
         skip_generated_base=True,
         stats={
             "time": const(1), "group": const("fortification"),
-            "cost_materials": lambda n: 5000 + (1000 * n),
+            "cost_materials": lambda n: 4000 + (1000 * n),
             "cost_manpower": const(0), "cost_fuel": const(0),
             "prod_materials": const(0), "prod_manpower": const(0),
             "prod_fuel": const(0),
