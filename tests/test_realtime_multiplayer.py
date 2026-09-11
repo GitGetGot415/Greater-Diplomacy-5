@@ -14,7 +14,8 @@ from data.io.realtime_multiplayer import (
     DEFAULT_MAX_TURNS, RealtimeConfig, RealtimeError, RealtimeSession,
     RealtimeClient, RealtimeServer, create_match_certificate, decode_invite,
     encode_invite, encode_relay_invite, read_message, sanitize_display_name, MapRealtimeDriver,
-    collect_map_commands, default_advertised_address, load_reconnect_token, persist_reconnect_token,
+    apply_authoritative_snapshot, collect_map_commands, default_advertised_address,
+    load_reconnect_token, persist_reconnect_token,
 )
 import data.constants as c
 from data.io.realtime_relay import (RelayHostTransport, relay_cloud_init, validate_relay_invite,
@@ -96,6 +97,27 @@ class HostSnapshotTests(unittest.TestCase):
 
         Map._apply_host_realtime_snapshot(host_view)
         session.public_state.assert_called_once_with()
+
+    def test_snapshot_retains_local_read_and_popup_state_for_the_same_message(self):
+        client_map = object.__new__(Map)
+        client_map.player_country = "A"
+        client_map.nation_data = {"A": {"inbox": [
+            {"message_id": "handled", "read": True, "popup_shown": True},
+        ]}}
+        client_map.map_data = {}
+        client_map.refresh_all_maps = mock.Mock()
+        snapshot = {"nation_data": {"A": {"inbox": [
+            {"message_id": "handled", "read": False, "popup_shown": False},
+            {"message_id": "new", "read": False, "popup_shown": False},
+        ]}}}
+
+        apply_authoritative_snapshot(client_map, snapshot)
+
+        handled, new = client_map.nation_data["A"]["inbox"]
+        self.assertTrue(handled["read"])
+        self.assertTrue(handled["popup_shown"])
+        self.assertFalse(new["read"])
+        self.assertFalse(new["popup_shown"])
 
 
 class AddressDetectionTests(unittest.TestCase):
@@ -216,6 +238,25 @@ class RelayTransportTests(unittest.TestCase):
 
         self.assertEqual(read.call_count, 2)
         self.assertEqual(client.poll(), [{"type": "disconnected", "payload": {"message": "closed"}}])
+
+    def test_explicit_host_shutdown_is_not_replaced_by_a_disconnect_alert(self):
+        class Socket:
+            def __init__(self): self.closed = False
+            def close(self): self.closed = True
+
+        client = RealtimeClient({"session": "test"})
+        connection = Socket()
+        client.socket = connection
+        shutdown = {"session_id": "test", "type": "shutdown",
+                    "payload": {"message": "The host ended the match."}}
+        with mock.patch("data.io.realtime_multiplayer.read_message", return_value=shutdown):
+            client._receive_loop()
+
+        self.assertTrue(connection.closed)
+        self.assertIsNone(client.socket)
+        self.assertEqual(client.poll(), [shutdown])
+        client._mark_disconnected("connection closed")
+        self.assertEqual(client.poll(), [])
 
     def test_finished_relay_task_is_attached_and_transitioned_once(self):
         """A completed worker stays completed, so the screen must consume it once."""

@@ -16,6 +16,7 @@ Terminal", via run_tests.py in the repo root, or with
 import os
 import sys
 import unittest
+from types import SimpleNamespace
 
 # Running this file directly puts tests/ on the path rather than the repo root,
 # so put the root back before importing anything from the game.
@@ -24,10 +25,28 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from tests.stub_map_screen import StubMapScreen
 
 from map_logic.diplomacy import diplomacy_messages
+from map_logic.diplomacy import player_diplomacy_actions
 import data.constants as c
 
 ACCEPT = diplomacy_messages.RESPONSE_ACCEPT
 REJECT = diplomacy_messages.RESPONSE_REJECT
+
+
+class SubmittedTurnDiplomacyTests(unittest.TestCase):
+    def test_submitted_player_cannot_call_a_faction_member_to_arms(self):
+        game = StubMapScreen(["A", "B"], human_players=["A"])
+        game.set_faction("Pact", "A", "B")
+        game.nation_data["A"]["at_war_with"] = ["C"]
+        game.selected_province = game.home_of("B")
+        game.realtime_multiplayer = True
+        game.realtime_player_id = "local"
+        game.realtime_session = SimpleNamespace(
+            phase="TURN", players={"local": SimpleNamespace(submitted=True, eliminated=False)})
+
+        player_diplomacy_actions.handle_call_to_arms(game)
+
+        self.assertEqual(game.pending_action("A", "B"), "")
+        self.assertIn("Turn submitted", game.feedback[-1])
 
 
 class BilateralDeliveryTests(unittest.TestCase):

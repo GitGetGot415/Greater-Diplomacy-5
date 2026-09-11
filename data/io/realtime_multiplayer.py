@@ -1095,7 +1095,33 @@ def apply_authoritative_snapshot(map_ref, snapshot: dict[str, Any]) -> None:
     """Replace mutable game state on a client map after a server broadcast."""
     if not isinstance(snapshot, dict):
         return
-    map_ref.nation_data = copy.deepcopy(snapshot.get("nation_data", map_ref.nation_data))
+    # Message read and popup flags are local UI state, not game-state changes.
+    # The server deliberately keeps inbound messages unread so a reconnecting
+    # player can still discover them.  Retain a matching local message's flags
+    # while replacing the authoritative diplomatic/game data, otherwise every
+    # state broadcast makes an already handled offer look new again.
+    local_message_state = {}
+    player_country = getattr(map_ref, "player_country", None)
+    current_player = getattr(map_ref, "nation_data", {}).get(player_country, {})
+    for message in current_player.get("inbox", []) if isinstance(current_player, dict) else []:
+        if not isinstance(message, dict):
+            continue
+        message_id = message.get("message_id")
+        if message_id:
+            local_message_state[message_id] = {
+                key: message[key] for key in ("read", "popup_shown", "spectator_read")
+                if key in message
+            }
+
+    nation_data = copy.deepcopy(snapshot.get("nation_data", map_ref.nation_data))
+    incoming_player = nation_data.get(player_country, {}) if isinstance(nation_data, dict) else {}
+    for message in incoming_player.get("inbox", []) if isinstance(incoming_player, dict) else []:
+        if not isinstance(message, dict):
+            continue
+        saved_state = local_message_state.get(message.get("message_id"))
+        if saved_state:
+            message.update(saved_state)
+    map_ref.nation_data = nation_data
     by_json_key = {province.get("json_key"): province for province in map_ref.map_data.values()}
     for json_key, update in snapshot.get("provinces", {}).items():
         province = by_json_key.get(json_key)
@@ -1559,6 +1585,15 @@ class RealtimeClient:
                     continue
                 if message["session_id"] != self.invite["session"]:
                     raise RealtimeError("Server changed match sessions.")
+                if message["type"] == "shutdown":
+                    # A server shutdown is an intentional, user-facing end to
+                    # the match.  Stop reading before TLS close is reported as
+                    # a second, misleading generic disconnection.
+                    with self._disconnect_lock:
+                        self._disconnect_notified = True
+                    self.events.put(message)
+                    self.close()
+                    return
                 if message["type"] == "ping":
                     nonce = message.get("payload", {}).get("nonce")
                     if isinstance(nonce, str):

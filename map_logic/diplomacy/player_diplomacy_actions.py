@@ -6,12 +6,28 @@ from map_logic.diplomacy import military_attaches
 import data.constants as c
 
 
+def can_edit_diplomacy(map_screen):
+    """Whether the player can alter their diplomatic draft at this moment."""
+    if not getattr(map_screen, "realtime_multiplayer", False):
+        return True
+    session = getattr(map_screen, "realtime_session", None)
+    player = (session.players.get(getattr(map_screen, "realtime_player_id", ""))
+              if session else None)
+    if (session and session.phase == "TURN" and player and not player.submitted
+            and not player.eliminated):
+        return True
+    map_screen.show_feedback("Turn submitted or unavailable; unsubmit to change diplomacy.")
+    return False
+
+
 def _queue_and_report(map_screen, target, action_type, custom_msg):
     """Hands a validated action to the engine and reports what it said.
 
     Closing the mail box and echoing the engine's message is the tail of every
     "queue this offer" path, so it lives here rather than at each caller.
     """
+    if not can_edit_diplomacy(map_screen):
+        return None
     msg = diplomacy_logic.toggle_diplomacy_action(
         map_screen.nation_data, map_screen.player_country, target, action_type, custom_msg)
     map_screen.mail_input_active = False
@@ -19,6 +35,8 @@ def _queue_and_report(map_screen, target, action_type, custom_msg):
 
 
 def handle_declare_war(map_screen):
+    if not can_edit_diplomacy(map_screen):
+        return None
     player = map_screen.player_country
     target = map_screen.selected_province.get("owner")
     
@@ -82,6 +100,8 @@ def open_claims_menu(map_screen):
     open_claims_menu(map_screen)
 
 def handle_ceasefire(map_screen):
+    if not can_edit_diplomacy(map_screen):
+        return None
     target = map_screen.selected_province.get("owner")
 
     # Puppets, and now blocs: a nation inside a faction at war cannot pick off
@@ -115,6 +135,8 @@ def open_puppets_menu(map_screen):
 
 def handle_specific_action(map_screen, action_type):
     """A clean, generic handler replacing the overloaded faction button logic."""
+    if not can_edit_diplomacy(map_screen):
+        return None
     target = map_screen.selected_province.get("owner")
         
     custom_msg = map_screen.mail_draft_text.strip()
@@ -220,6 +242,8 @@ def _answer_incoming_request(map_screen, target, verdict, custom_msg):
     Answers live in their own channel, so queueing one never disturbs an offer we
     already have travelling towards the same nation.
     """
+    if not can_edit_diplomacy(map_screen):
+        return None
     action, incoming_turns = queries.get_diplomatic_status(target, map_screen.player_country, map_screen.nation_data)
     if incoming_turns <= 0 or action not in c.BILATERAL_ACTIONS:
         return None
@@ -307,6 +331,8 @@ def handle_ratify_treaty(map_screen, accept):
     war with the whole other side on their own. That is what makes the veto a
     decision rather than a formality.
     """
+    if not can_edit_diplomacy(map_screen):
+        return None
     verdict = ratification.RATIFY if accept else ratification.REFUSE
     message = ratification.answer(map_screen.nation_data, map_screen.player_country, verdict)
     if message:
@@ -320,6 +346,8 @@ def _handle_faction_assist(map_screen, action, at_war_msg, not_allied_msg, leavi
     differed only in the action string and the wording of each refusal, so the
     wording is now the parameter and the gates are written once.
     """
+    if not can_edit_diplomacy(map_screen):
+        return None
     target = map_screen.selected_province.get("owner")
     if queries.are_at_war(map_screen.player_country, target, map_screen.nation_data):
         map_screen.show_feedback(at_war_msg)
@@ -351,6 +379,8 @@ def handle_call_to_arms(map_screen):
 
 def handle_send_volunteers(map_screen):
     """Choose a bounded set of land divisions for a volunteer offer."""
+    if not can_edit_diplomacy(map_screen):
+        return None
     from ui.checkbox_list_screen import CheckboxItem
 
     donor = map_screen.player_country
@@ -373,6 +403,8 @@ def handle_send_volunteers(map_screen):
 
     def send(keys):
         if not keys:
+            return
+        if not can_edit_diplomacy(map_screen):
             return
         details, error = volunteers.create_offer(
             map_screen, donor, host, [refs[key] for key in keys if key in refs])
@@ -398,6 +430,8 @@ def handle_send_volunteers(map_screen):
 def handle_recall_volunteers(map_screen):
     donor = map_screen.player_country
     host = map_screen.selected_province.get("owner")
+    if not can_edit_diplomacy(map_screen):
+        return None
     msg = diplomacy_logic.toggle_diplomacy_action(
         map_screen.nation_data, donor, host, volunteers.RECALL_ACTION,
         "We are recalling our volunteer divisions.")
@@ -406,6 +440,8 @@ def handle_recall_volunteers(map_screen):
 
 def handle_send_home_foreign_volunteers(map_screen):
     """Queue or undo sending the selected country's volunteers home."""
+    if not can_edit_diplomacy(map_screen):
+        return None
     donor = map_screen.selected_province.get("owner")
     host = map_screen.player_country
     pending = map_screen.nation_data.get(host, {}).get("pending_diplomacy", {}).get(donor, {})
@@ -421,6 +457,8 @@ def handle_send_home_foreign_volunteers(map_screen):
 
 
 def handle_withdraw_volunteer_offer(map_screen):
+    if not can_edit_diplomacy(map_screen):
+        return None
     donor = map_screen.player_country
     host = map_screen.selected_province.get("owner")
     volunteers.cancel_offer(map_screen, donor, host)

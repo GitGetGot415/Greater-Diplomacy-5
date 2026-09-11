@@ -2084,7 +2084,13 @@ class Map(GameState):
                         self.show_feedback(f"Order update rejected: {error}")
         if getattr(self, "realtime_multiplayer", False) and getattr(self, "realtime_client", None):
             from data.io.realtime_multiplayer import apply_authoritative_snapshot
-            for event in self.realtime_client.poll():
+            events = self.realtime_client.poll()
+            # A socket close can be queued next to the host's explicit
+            # shutdown frame.  The latter is the useful reason, so never let
+            # its companion disconnect event replace it.
+            if any(event.get("type") == "shutdown" for event in events):
+                events = [event for event in events if event.get("type") != "disconnected"]
+            for event in events:
                 payload = event.get("payload", {})
                 state = payload if event.get("type") == "state" else payload.get("state")
                 if state:
@@ -2119,7 +2125,7 @@ class Map(GameState):
                             self.realtime_client.close()
                         self.realtime_client = None
                         self.show_feedback(
-                            "Match ended by host. Multiplayer actions are disabled."
+                            f"Match ended by host: {message} Multiplayer actions are disabled."
                             if event.get("type") == "shutdown" else
                             "Connection lost. Multiplayer actions are disabled; rejoin from the menu.")
                     else:
