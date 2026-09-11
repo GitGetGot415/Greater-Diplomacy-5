@@ -68,6 +68,25 @@ def repair_faction_rosters(nation_data, map_data):
         data["is_faction_leader"] = False
 
 
+def _saved_player_view(save_meta):
+    """Return the offline viewing identity and active-player list for a save.
+
+    Real-time matches save the authoritative server map. That map correctly
+    uses ``None`` during the live session, but a completed result loaded from
+    disk should be an ordinary offline spectator replay. The format check also
+    repairs completed real-time saves made before ``offline_view`` was added.
+    """
+    realtime_match = save_meta.get("realtime_match") if isinstance(save_meta, dict) else None
+    if isinstance(realtime_match, dict) and (
+            realtime_match.get("offline_view") == "spectator"
+            or realtime_match.get("format") == "gd5-realtime-v1"):
+        return "Spectator", []
+
+    player_country = save_meta.get("player_country", "None")
+    loaded_players = save_meta.get("active_players", [player_country])
+    return player_country, [] if loaded_players == ["None"] else loaded_players
+
+
 def load_map_assets(map_screen, load_path):
     # Ensure no residual data from a previous map persists during the load
     map_screen.map_data = {}
@@ -339,16 +358,15 @@ def load_map_assets(map_screen, load_path):
 
     # --- 4. Set Player/Map Properties ---
     if save_meta:
-        map_screen.player_country = save_meta.get("player_country", "None")
+        saved_player_country, saved_active_players = _saved_player_view(save_meta)
+        map_screen.player_country = saved_player_country
 
         # --- HOTSEAT FIX ---
         # If we are in selection mode (new scenario/random map), we MUST start with an empty list
         if map_screen.selection_mode:
             map_screen.active_players = []
         else:
-            # If loading a save, get the active players. Prevent ["None"] bug from older saves.
-            loaded_players = save_meta.get("active_players", [map_screen.player_country])
-            map_screen.active_players = [] if loaded_players == ["None"] else loaded_players
+            map_screen.active_players = saved_active_players
 
         map_screen.current_player_index = save_meta.get("current_player_index", 0)
         map_screen.loop_map = save_meta.get("loop_map", False)

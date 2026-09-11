@@ -1579,6 +1579,13 @@ class Map(GameState):
                 return
             authoritative_map = getattr(self, "realtime_server_map", self)
             authoritative_map.realtime_match_metadata = session.completed_metadata()
+            # The authoritative map is intentionally a countryless server
+            # instance while the match runs. Persisting that internal ``None``
+            # country made an opened result feel broken. Completed matches are
+            # offline spectator replays instead, never resumable sessions.
+            authoritative_map.player_country = "Spectator"
+            authoritative_map.active_players = []
+            authoritative_map.current_player_index = 0
             authoritative_map.show_feedback = self.show_feedback
             authoritative_map.save_map_data()
             return

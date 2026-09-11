@@ -21,6 +21,7 @@ import data.constants as c
 from data.io.realtime_relay import (RelayHostTransport, relay_cloud_init, validate_relay_invite,
                                     _relay_firewall_payload, DigitalOceanRelayTask)
 from data.io.realtime_relay_service import Relay
+from data.map.load_map import _saved_player_view
 from data.io.realtime_networking import (
     PortMappingResult, automatic_tcp_port_mapping, host_network_diagnostics,
     is_public_ipv4, make_lan_announcement, parse_lan_announcement,
@@ -449,6 +450,22 @@ class RealtimeSessionTests(unittest.TestCase):
             server.stop("The host ended the match.")
         send.assert_called_once_with(
             guest_connection, "shutdown", {"message": "The host ended the match."})
+
+    def test_completed_realtime_save_loads_as_an_offline_spectator(self):
+        metadata = self.session.completed_metadata()
+        self.assertEqual(metadata["offline_view"], "spectator")
+        player, active_players = _saved_player_view({
+            "player_country": "None", "active_players": ["A", "B"],
+            "realtime_match": metadata,
+        })
+        self.assertEqual((player, active_players), ("Spectator", []))
+
+        # The first real-time format already existed before offline_view was
+        # stored. Keep those completed saves usable too.
+        legacy_player, legacy_active = _saved_player_view({
+            "player_country": "None", "realtime_match": {"format": "gd5-realtime-v1"},
+        })
+        self.assertEqual((legacy_player, legacy_active), ("Spectator", []))
 
     def test_timer_uses_server_clock_and_latest_draft(self):
         self.start()

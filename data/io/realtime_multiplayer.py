@@ -621,6 +621,11 @@ class RealtimeSession:
                 "max_turns": self.config.max_turns, "turn_minutes": self.config.turn_minutes,
                 "final_turn": self.turn_number, "game_over": self.phase == "GAME_OVER",
                 "end_reason": self.game_over_reason,
+                # A completed match is deliberately no longer an active
+                # session when opened from Saves. It is an offline replay
+                # view, so do not accidentally restore the server map's
+                # internal ``None`` country as a playable identity.
+                "offline_view": "spectator",
                 "players": [{"name": p.name, "country_id": p.country_id,
                              "eliminated": p.eliminated} for p in self.players.values()],
             }
