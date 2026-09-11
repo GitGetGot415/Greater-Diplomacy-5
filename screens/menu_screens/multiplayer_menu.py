@@ -2,6 +2,7 @@ from gameState import GameState
 from ui_elements import Button, make_back_button
 from map_logic.rendering.font_manager import fonts
 import data.constants as c
+import ui_elements
 
 
 class Multiplayer_Menu(GameState):
@@ -17,9 +18,9 @@ class Multiplayer_Menu(GameState):
         self.bg_color = (80, 0, 0)
         self.elements = [
             Button("centered", 220, "large", "green", "Asynchronous (Tournaments)",
-                   lambda: self.go_to("MULTIPLAYER_HUB")),
+                   lambda: self.go_to("MULTIPLAYER_HUB"), image=ui_elements.UI_ICONS.get("mail")),
             Button("centered", 330, "large", "blue", "Real Time",
-                   lambda: self.go_to("REAL_TIME_MULTIPLAYER")),
+                   lambda: self.go_to("REAL_TIME_MULTIPLAYER"), image=ui_elements.UI_ICONS.get("clock")),
             make_back_button(self.exit_screen),
         ]
 
