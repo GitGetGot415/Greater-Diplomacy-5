@@ -394,7 +394,13 @@ def export_move_file(map_ref, file_path, player_key):
     
     player_data = {
         "nation_data": save_dict.get("nation_data", {}).get(cid, {}),
-        "provinces": {}
+        "provinces": {},
+        # A move must be able to say "I have no units left".  Older moves
+        # inferred that from a non-empty province update, which lost an
+        # all-disbanded army (and an all-volunteer army) because there was
+        # nothing left to serialize.  New hosts use this marker to replace
+        # the submitting country's complete map-unit snapshot atomically.
+        "unit_snapshot": True,
     }
 
     session_key = getattr(map_ref, "multiplayer_session_key", None)
@@ -417,6 +423,22 @@ def export_move_file(map_ref, file_path, player_key):
             {"country_id": target, "appearance": appearance}
             for target, appearance in pending_appearances.items()
         ]
+
+    # Integrated-puppet siphon sliders live on the subject's country record,
+    # not on the controlling player's record.  Carry their values as a small
+    # explicit command, just like integrated-puppet appearance edits, so an
+    # asynchronous player does not silently lose them on host import.
+    siphon_updates = []
+    player_country = save_dict.get("nation_data", {}).get(cid, {})
+    for puppet in player_country.get("puppets", []) if isinstance(player_country, dict) else ():
+        puppet_data = save_dict.get("nation_data", {}).get(puppet, {})
+        if (isinstance(puppet_data, dict)
+                and puppet_data.get("master") == cid
+                and puppet_data.get("puppet_type") == c.PUPPET_TYPE_INTEGRATED):
+            siphon_updates.append({"country_id": puppet,
+                                   "siphon_rates": puppet_data.get("siphon_rates", {})})
+    if siphon_updates:
+        player_data["puppet_siphon_updates"] = siphon_updates
     
     for prov_key, prov_data in save_dict.get("provinces", {}).items():
         prov_updates = {}
@@ -613,6 +635,47 @@ def _apply_appearance_updates(map_ref, country_id, player_data):
     return applied
 
 
+def _apply_puppet_siphon_updates(map_ref, country_id, player_data):
+    """Apply integrated-puppet resource siphons controlled by one player.
+
+    The subject record belongs to a different country id, so it is deliberately
+    excluded from the ordinary player nation-data merge.  Values are bounded
+    here against the host's current relationship and the same slider limit the
+    normal UI uses.
+    """
+    updates = player_data.get("puppet_siphon_updates", ())
+    if not isinstance(updates, list):
+        return 0
+
+    applied = 0
+    resource_keys = tuple(c.ECON_RESOURCE_KEYS)
+    for update in updates:
+        if not isinstance(update, dict):
+            continue
+        target = update.get("country_id")
+        rates = update.get("siphon_rates")
+        target_data = map_ref.nation_data.get(target)
+        if (not isinstance(target_data, dict) or not isinstance(rates, dict)
+                or target_data.get("master") != country_id
+                or target_data.get("puppet_type") != c.PUPPET_TYPE_INTEGRATED):
+            continue
+
+        sanitized = {}
+        valid = True
+        for resource in resource_keys:
+            value = rates.get(resource, 0.0)
+            if (isinstance(value, bool) or not isinstance(value, (int, float))
+                    or value < 0 or value > c.MAX_PUPPET_SIPHON):
+                valid = False
+                break
+            sanitized[resource] = float(value)
+        if not valid:
+            continue
+        target_data["siphon_rates"] = sanitized
+        applied += 1
+    return applied
+
+
 def load_move_files(map_ref, move_file_paths, keys_dict):
     """
     Loads a list of .gd5move files and applies their orders to the host's map.
@@ -624,7 +687,8 @@ def load_move_files(map_ref, move_file_paths, keys_dict):
     processed_cids = set()
     processed_move_cids = set()
     summary = {"loaded": 0, "rejected": 0, "legacy": 0,
-               "faction_renames": 0, "appearance_updates": 0}
+               "faction_renames": 0, "appearance_updates": 0,
+               "puppet_siphon_updates": 0}
 
     def _decrypt_move(file_path):
         if not os.path.exists(file_path):
@@ -702,8 +766,14 @@ def load_move_files(map_ref, move_file_paths, keys_dict):
             continue
         summary["appearance_updates"] += _apply_appearance_updates(
             map_ref, cid, player_data)
+        summary["puppet_siphon_updates"] += _apply_puppet_siphon_updates(
+            map_ref, cid, player_data)
             
-        if provs:
+        # ``unit_snapshot`` was added after the original .gd5move format.
+        # Preserve old files' behavior, but make every newly-created move
+        # replace even an empty army so disbands and volunteer offers survive.
+        apply_unit_snapshot = player_data.get("unit_snapshot") is True or bool(provs)
+        if apply_unit_snapshot:
             if cid not in processed_cids:
                 for target_prov in map_ref.map_data.values():
                     target_prov["units"] = [u for u in target_prov.get("units", []) if u.get("owner") != cid]

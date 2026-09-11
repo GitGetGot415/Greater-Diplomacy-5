@@ -226,6 +226,70 @@ class TournamentMoveTests(unittest.TestCase):
         self.assertEqual(data["faction_renames"][0]["new_name"], "New Pact")
         self.assertEqual(data["appearance_updates"][0]["country_id"], "Subject")
 
+    def test_export_includes_empty_unit_snapshot_and_puppet_siphons(self):
+        host = Host()
+        host.player_country = "Leader"
+        host.active_players = ["Leader"]
+        host.current_player_index = 0
+        host.loop_map = False
+        host.scenario_settings = {}
+        host.script_variables = []
+        host.default_research = None
+        host.nation_data["Subject"]["siphon_rates"] = {
+            "manpower": 0.25, "materials": 0.5, "fuel": 0.5}
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "out.gd5move")
+            multiplayer_io.export_move_file(host, path, self.keys["Leader"])
+            with open(path, "r") as file:
+                payload = json.load(file)
+
+        data = multiplayer_io.decrypt_dict(payload["data"], self.keys["Leader"])
+        self.assertTrue(data["unit_snapshot"])
+        self.assertEqual(data["puppet_siphon_updates"], [{
+            "country_id": "Subject",
+            "siphon_rates": {"manpower": 0.25, "materials": 0.5, "fuel": 0.5},
+        }])
+
+    def test_empty_unit_snapshot_removes_all_player_units(self):
+        host = Host()
+        host.map_data = {
+            (1, 1): {"id": 1, "json_key": "P1", "units": [
+                {"owner": "Leader", "type": "Infantry"},
+                {"owner": "Member", "type": "Infantry"},
+            ]},
+        }
+        move = self.player_data("Leader", host, unit_snapshot=True)
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = self.write_move(directory, "empty-army.gd5move", "Leader", move)
+            summary = self.import_moves(host, [path])
+
+        self.assertEqual(summary["loaded"], 1)
+        self.assertEqual(host.map_data[(1, 1)]["units"], [
+            {"owner": "Member", "type": "Infantry"}])
+        self.assertEqual(host.syncs, 1)
+
+    def test_integrated_puppet_siphons_are_host_validated(self):
+        host = Host()
+        move = self.player_data("Leader", host, puppet_siphon_updates=[{
+            "country_id": "Subject",
+            "siphon_rates": {"manpower": 0.2, "materials": 0.4, "fuel": 0.5},
+        }, {
+            # A controller cannot alter a country it does not integrate.
+            "country_id": "Outsider",
+            "siphon_rates": {"manpower": 1, "materials": 1, "fuel": 1},
+        }])
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = self.write_move(directory, "siphons.gd5move", "Leader", move)
+            summary = self.import_moves(host, [path])
+
+        self.assertEqual(summary["puppet_siphon_updates"], 1)
+        self.assertEqual(host.nation_data["Subject"]["siphon_rates"], {
+            "manpower": 0.2, "materials": 0.4, "fuel": 0.5})
+        self.assertNotIn("siphon_rates", host.nation_data["Outsider"])
+
     def test_tournament_round_trip_and_malformed_key_entry(self):
         host = Host()
         host.player_country = "Leader"

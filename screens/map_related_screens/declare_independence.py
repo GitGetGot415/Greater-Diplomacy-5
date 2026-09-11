@@ -75,12 +75,15 @@ class Declare_Independence_Screen(MapOverlayScreen):
         queries.open_color_picker(self, "Choose Country Color", tuple(self.new_country_color), on_confirm)
 
     def confirm_independence(self):
-        # Real-time country assignments are fixed when the lobby starts.  A
-        # tactical breakaway would replace one player's assigned country with
-        # a newly generated tag, so it is deliberately unavailable rather
-        # than performing a local-only map mutation that the server discards.
-        if getattr(self.map_screen, "realtime_multiplayer", False):
-            self.map_screen.show_feedback("Tactical independence is unavailable in real-time multiplayer.")
+        # Multiplayer identities are fixed: real-time sessions bind a player
+        # to a lobby country and asynchronous tournaments bind their key to a
+        # country id.  A tactical breakaway creates a new id, so accepting it
+        # locally would create an unsendable tournament move (or a client-only
+        # real-time mutation).  Keep the action visibly unavailable rather
+        # than letting either mode appear to accept an ignored command.
+        if (getattr(self.map_screen, "realtime_multiplayer", False)
+                or getattr(self.map_screen, "multiplayer_mode", False)):
+            self.map_screen.show_feedback("Tactical independence is unavailable in multiplayer.")
             return
         if not self.new_country_name.strip():
             self.map_screen.show_feedback("Please enter a name!")
