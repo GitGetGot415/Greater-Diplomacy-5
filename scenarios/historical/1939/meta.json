@@ -1,6 +1,6 @@
 {
     "version": "v34",
-    "generated_at": "2026-09-11T16:55:28.998063",
+    "generated_at": "2026-09-11T18:09:39.871462",
     "date": {
         "day": 15,
         "month": 2,
@@ -475,7 +475,8 @@
             },
             "adjective": "French",
             "diplo_responses": {},
-            "military_attaches": []
+            "military_attaches": [],
+            "scripted_events": []
         },
         "Vichy France": {
             "name": "Vichy France",
@@ -585,7 +586,32 @@
             "relations": {},
             "adjective": "American",
             "diplo_responses": {},
-            "military_attaches": []
+            "military_attaches": [],
+            "scripted_events": [
+                {
+                    "conditions": [
+                        {
+                            "chain": "AND",
+                            "type": "Is At War",
+                            "variable": "",
+                            "operator": "==",
+                            "value": "United Kingdom"
+                        }
+                    ],
+                    "actions": [
+                        {
+                            "type": "Join Faction",
+                            "target": "United Kingdom",
+                            "unit_type": "Infantry Type 1910",
+                            "message": "arsenal of democracy incoming",
+                            "ai_generate": false,
+                            "send_up_to": false
+                        }
+                    ],
+                    "fire_once": true,
+                    "trigger_type": "AI Only"
+                }
+            ]
         },
         "German Reich": {
             "name": "Germany",
@@ -651,7 +677,35 @@
             "is_faction_leader": true,
             "adjective": "German",
             "diplo_responses": {},
-            "military_attaches": []
+            "military_attaches": [],
+            "scripted_events": [
+                {
+                    "conditions": [
+                        {
+                            "chain": "AND",
+                            "type": "Turn Number",
+                            "variable": "",
+                            "operator": "==",
+                            "value": "11"
+                        }
+                    ],
+                    "actions": [
+                        {
+                            "type": "Declare War",
+                            "target": "Poland",
+                            "unit_type": "Infantry Type 1910",
+                            "message": "guten tag polen",
+                            "ai_generate": false,
+                            "send_up_to": false
+                        }
+                    ],
+                    "fire_once": true,
+                    "trigger_type": "AI Only"
+                }
+            ],
+            "puppets": [
+                "Slovakia"
+            ]
         },
         "Austria-Hungary": {
             "name": "Austria-Hungary",
@@ -930,7 +984,8 @@
             "is_faction_leader": false,
             "master": "United Kingdom",
             "puppet_type": "Autonomous",
-            "military_attaches": []
+            "military_attaches": [],
+            "scripted_events": []
         },
         "Soviet Union": {
             "name": "Soviet Union",
@@ -992,7 +1047,8 @@
             "is_faction_leader": true,
             "adjective": "Soviet",
             "diplo_responses": {},
-            "military_attaches": []
+            "military_attaches": [],
+            "scripted_events": []
         },
         "Hungary": {
             "name": "Hungary",
@@ -1058,7 +1114,8 @@
             "is_faction_leader": false,
             "adjective": "Hungarian",
             "diplo_responses": {},
-            "military_attaches": []
+            "military_attaches": [],
+            "scripted_events": []
         },
         "Italy": {
             "name": "Italy",
@@ -1124,7 +1181,8 @@
             "is_faction_leader": false,
             "adjective": "Italian",
             "diplo_responses": {},
-            "military_attaches": []
+            "military_attaches": [],
+            "scripted_events": []
         },
         "Bulgaria": {
             "name": "Bulgaria",
@@ -1259,7 +1317,8 @@
             "is_faction_leader": false,
             "adjective": "Romanian",
             "diplo_responses": {},
-            "military_attaches": []
+            "military_attaches": [],
+            "scripted_events": []
         },
         "Spain": {
             "name": "Spain",
@@ -1319,7 +1378,8 @@
             "relations": {},
             "adjective": "Spanish",
             "diplo_responses": {},
-            "military_attaches": []
+            "military_attaches": [],
+            "scripted_events": []
         },
         "Belgium": {
             "name": "Belgium",
@@ -1439,7 +1499,8 @@
             "relations": {},
             "adjective": "Dutch",
             "diplo_responses": {},
-            "military_attaches": []
+            "military_attaches": [],
+            "scripted_events": []
         },
         "Luxembourg": {
             "name": "Luxembourg",
@@ -1499,7 +1560,8 @@
             "relations": {},
             "adjective": "Luxembourgish",
             "diplo_responses": {},
-            "military_attaches": []
+            "military_attaches": [],
+            "scripted_events": []
         },
         "Ukraine": {
             "name": "Ukraine",
@@ -1668,7 +1730,8 @@
             "relations": {},
             "adjective": "Swedish",
             "diplo_responses": {},
-            "military_attaches": []
+            "military_attaches": [],
+            "scripted_events": []
         },
         "Czechoslovakia": {
             "name": "Czechoslovakia",
@@ -1830,11 +1893,19 @@
                 "Hungary": 100,
                 "Italy": 100
             },
-            "faction": "",
+            "faction": "Axis",
             "is_faction_leader": false,
             "adjective": "Slovakian",
             "diplo_responses": {},
-            "military_attaches": []
+            "military_attaches": [],
+            "scripted_events": [],
+            "master": "German Reich",
+            "puppet_type": "Integrated",
+            "spawned_territories": [
+                375,
+                379,
+                389
+            ]
         },
         "Turkey": {
             "name": "Turkey",
@@ -1894,7 +1965,8 @@
             "relations": {},
             "adjective": "Turkish",
             "diplo_responses": {},
-            "military_attaches": []
+            "military_attaches": [],
+            "scripted_events": []
         },
         "Ottoman Empire": {
             "name": "Ottoman Empire",
@@ -2069,7 +2141,8 @@
             "relations": {},
             "adjective": "Norwegian",
             "diplo_responses": {},
-            "military_attaches": []
+            "military_attaches": [],
+            "scripted_events": []
         },
         "Portugal": {
             "name": "Portugal",
@@ -2129,7 +2202,8 @@
             "relations": {},
             "adjective": "Portuguese",
             "diplo_responses": {},
-            "military_attaches": []
+            "military_attaches": [],
+            "scripted_events": []
         },
         "United Kingdom": {
             "name": "United Kingdom",
@@ -2202,7 +2276,55 @@
                 "Canada",
                 "Egypt"
             ],
-            "military_attaches": []
+            "military_attaches": [],
+            "scripted_events": [
+                {
+                    "conditions": [
+                        {
+                            "chain": "AND",
+                            "type": "Received Action",
+                            "variable": "",
+                            "operator": "JOIN_FACTION_REQ",
+                            "value": "Poland"
+                        }
+                    ],
+                    "actions": [
+                        {
+                            "type": "Reject Proposal",
+                            "target": "Poland",
+                            "unit_type": "Infantry Type 1910",
+                            "message": "ok look i know historically we would accept however if we did that then we would get into a war with the soviet union and we both know that's not historical, honestly france and i not helping you out at all is more historically accurate if you think about it",
+                            "ai_generate": false,
+                            "send_up_to": false
+                        }
+                    ],
+                    "fire_once": true,
+                    "trigger_type": "AI Only"
+                },
+                {
+                    "conditions": [
+                        {
+                            "chain": "AND",
+                            "type": "Received Action",
+                            "variable": "",
+                            "operator": "JOIN_FACTION_REQ",
+                            "value": "United States of America"
+                        }
+                    ],
+                    "actions": [
+                        {
+                            "type": "Accept Proposal",
+                            "target": "United States of America",
+                            "unit_type": "Infantry Type 1910",
+                            "message": "we are so back",
+                            "ai_generate": false,
+                            "send_up_to": false
+                        }
+                    ],
+                    "fire_once": true,
+                    "trigger_type": "AI Only"
+                }
+            ]
         },
         "Japan": {
             "name": "Japan",
@@ -2462,7 +2584,8 @@
             "relations": {},
             "adjective": "Yugoslav",
             "diplo_responses": {},
-            "military_attaches": []
+            "military_attaches": [],
+            "scripted_events": []
         },
         "India": {
             "name": "India",
@@ -2772,7 +2895,8 @@
             "relations": {},
             "adjective": "Danish",
             "diplo_responses": {},
-            "military_attaches": []
+            "military_attaches": [],
+            "scripted_events": []
         },
         "Finland": {
             "name": "Finland",
@@ -2832,7 +2956,8 @@
             "relations": {},
             "adjective": "Finnish",
             "diplo_responses": {},
-            "military_attaches": []
+            "military_attaches": [],
+            "scripted_events": []
         },
         "Estonia": {
             "name": "Estonia",
@@ -2892,7 +3017,8 @@
             "relations": {},
             "adjective": "Estonian",
             "diplo_responses": {},
-            "military_attaches": []
+            "military_attaches": [],
+            "scripted_events": []
         },
         "Latvia": {
             "name": "Latvia",
@@ -2952,7 +3078,8 @@
             "relations": {},
             "adjective": "Latvian",
             "diplo_responses": {},
-            "military_attaches": []
+            "military_attaches": [],
+            "scripted_events": []
         },
         "Lithuania": {
             "name": "Lithuania",
@@ -3012,7 +3139,8 @@
             "relations": {},
             "adjective": "Lithuanian",
             "diplo_responses": {},
-            "military_attaches": []
+            "military_attaches": [],
+            "scripted_events": []
         },
         "Switzerland": {
             "name": "Switzerland",
@@ -3072,7 +3200,8 @@
             "relations": {},
             "adjective": "Swiss",
             "diplo_responses": {},
-            "military_attaches": []
+            "military_attaches": [],
+            "scripted_events": []
         },
         "Iran": {
             "name": "Iran",
@@ -3132,7 +3261,8 @@
             "relations": {},
             "adjective": "Iranian",
             "diplo_responses": {},
-            "military_attaches": []
+            "military_attaches": [],
+            "scripted_events": []
         },
         "Iraq": {
             "name": "Kingdom of Iraq",
@@ -3192,7 +3322,8 @@
             "relations": {},
             "adjective": "Iraqi",
             "diplo_responses": {},
-            "military_attaches": []
+            "military_attaches": [],
+            "scripted_events": []
         },
         "Saudi Arabia": {
             "name": "Saudi Arabia",
@@ -3259,7 +3390,8 @@
             "is_faction_leader": false,
             "adjective": "Saudi Arabian",
             "diplo_responses": {},
-            "military_attaches": []
+            "military_attaches": [],
+            "scripted_events": []
         },
         "Oman": {
             "name": "Muscat and Oman",
@@ -3915,7 +4047,32 @@
             "is_faction_leader": false,
             "adjective": "Polish",
             "diplo_responses": {},
-            "military_attaches": []
+            "military_attaches": [],
+            "scripted_events": [
+                {
+                    "conditions": [
+                        {
+                            "chain": "AND",
+                            "type": "Is At War",
+                            "variable": "",
+                            "operator": "==",
+                            "value": ""
+                        }
+                    ],
+                    "actions": [
+                        {
+                            "type": "Join Faction",
+                            "target": "United Kingdom",
+                            "unit_type": "Infantry Type 1910",
+                            "message": "help!!!",
+                            "ai_generate": false,
+                            "send_up_to": false
+                        }
+                    ],
+                    "fire_once": true,
+                    "trigger_type": "AI Only"
+                }
+            ]
         },
         "Belarus": {
             "name": "Belarus",
@@ -4025,7 +4182,8 @@
             "relations": {},
             "adjective": "Irish",
             "diplo_responses": {},
-            "military_attaches": []
+            "military_attaches": [],
+            "scripted_events": []
         },
         "Greece": {
             "name": "Greece",
@@ -4085,7 +4243,8 @@
             "relations": {},
             "adjective": "Greek",
             "diplo_responses": {},
-            "military_attaches": []
+            "military_attaches": [],
+            "scripted_events": []
         },
         "Albania": {
             "name": "Albania",
@@ -4255,7 +4414,8 @@
             "relations": {},
             "adjective": "Cuban",
             "diplo_responses": {},
-            "military_attaches": []
+            "military_attaches": [],
+            "scripted_events": []
         },
         "Tibet": {
             "name": "Tibet",
@@ -5561,7 +5721,8 @@
             "faction": "Allies",
             "is_faction_leader": false,
             "master": "United Kingdom",
-            "puppet_type": "Autonomous"
+            "puppet_type": "Autonomous",
+            "scripted_events": []
         },
         "Jordan": {
             "name": "Jordan",
@@ -48561,7 +48722,10 @@
             "unit_queue": [],
             "orders": [],
             "resources": {},
-            "buildings": []
+            "buildings": [
+                "Factory Lvl 1",
+                "Basic Recruitment Center"
+            ]
         },
         "(65, 2, 0)": {
             "owner": "France",

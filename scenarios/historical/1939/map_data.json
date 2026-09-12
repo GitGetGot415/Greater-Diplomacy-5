@@ -21022,7 +21022,10 @@
         "owner": "United States of America",
         "units": [],
         "orders": [],
-        "buildings": [],
+        "buildings": [
+            "Factory Lvl 1",
+            "Basic Recruitment Center"
+        ],
         "resources": {},
         "cores": [
             "United States of America"
