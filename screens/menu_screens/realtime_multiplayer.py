@@ -679,7 +679,7 @@ class Realtime_Lobby(GameState):
             except RealtimeError as exc:
                 confirm_dialog.show_error("Turn Limit Rejected", str(exc))
 
-        confirm_dialog.ask_integer("Maximum Turns", "1 to 100:", saved, 1, 100,
+        confirm_dialog.ask_integer("Maximum Turns", "1 to 240:", saved, 1, 240,
                                    self.session.config.max_turns)
 
     def edit_turn_minutes(self):
