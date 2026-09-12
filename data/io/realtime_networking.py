@@ -154,6 +154,18 @@ class LanMatchAdvertiser:
     def stop(self) -> None:
         self._stopped.set()
 
+    def set_host_name(self, host_name: str) -> None:
+        """Refresh the display name carried by future LAN announcements."""
+        try:
+            body = json.loads(self._announcement.decode("utf-8"))
+            invite = body.get("invite") if isinstance(body, dict) else None
+            scenario_name = body.get("scenario_name", "Match") if isinstance(body, dict) else "Match"
+            self._announcement = make_lan_announcement(invite, host_name, scenario_name)
+        except (UnicodeDecodeError, ValueError, json.JSONDecodeError):
+            # The existing advert remains usable if an unexpected local
+            # mutation ever damaged it; a name refresh must not stop LAN play.
+            pass
+
     def _run(self) -> None:
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as broadcast:

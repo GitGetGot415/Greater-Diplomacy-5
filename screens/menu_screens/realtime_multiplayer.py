@@ -460,6 +460,7 @@ class Realtime_Lobby(GameState):
         # Retained only in the running host process so it can delete its own
         # temporary Droplet.  It is never placed in an invite or save.
         self.relay_token = host_setup.relay_token if self.temporary_relay else ""
+        self.host_setup = host_setup
         self._lobby_signature = None
         self.scroll_y = 0
         self.refresh_ui()
@@ -473,6 +474,7 @@ class Realtime_Lobby(GameState):
                    image=UI_ICONS.get("settings")),
             Button(20, 110, "left_ui_button", "pink", "Music", lambda: self.go_to("MUSIC_PLAYER"),
                    image=UI_ICONS.get("music")),
+            Button(20, 145, "left_ui_button", "blue", "Rename", self.edit_host_name),
         ]
         if not self.session:
             return
@@ -539,6 +541,32 @@ class Realtime_Lobby(GameState):
             self.refresh_ui()
         except RealtimeError as exc:
             confirm_dialog.show_error("Cannot Ready", str(exc))
+
+    def edit_host_name(self):
+        """Rename the host through the same authoritative lobby rule as guests."""
+        if not self.session:
+            return
+        host_id = self.session.host_id
+        player = self.session.players.get(host_id)
+        if not player:
+            return
+
+        def saved(value):
+            if value is None:
+                return
+            try:
+                self.session.rename(host_id, value)
+                accepted_name = self.session.players[host_id].name
+                if getattr(self, "host_setup", None):
+                    self.host_setup.host_name = accepted_name
+                if getattr(self, "advertiser", None):
+                    self.advertiser.set_host_name(accepted_name)
+                self.refresh_ui()
+            except RealtimeError as exc:
+                confirm_dialog.show_error("Name Rejected", str(exc))
+
+        confirm_dialog.ask_string("Host Display Name", "Enter your display name:", saved,
+                                  initial=player.name, allow_empty=False)
 
     def request_kick(self, player_id, player_name):
         """Ask before removing a named guest from the authoritative lobby."""
@@ -933,7 +961,8 @@ class Realtime_Remote_Lobby(GameState):
                    image=UI_ICONS.get("settings")),
             Button(20, 110, "left_ui_button", "pink", "Music", lambda: self.go_to("MUSIC_PLAYER"),
                    image=UI_ICONS.get("music")),
-            Button(20, 145, "left_ui_button", "purple", "Copy Reconnect Code", self.copy_reconnect_code),
+            Button(20, 145, "left_ui_button", "purple", "Copy Reconnect Code", self.copy_reconnect_code,
+                   font_preset="tiny"),
             Button(20, 180, "left_ui_button", "blue", "Rename", self.edit_name),
             Button("centered+280", 100, "medium", "red", "Leave Lobby", self.request_leave),
         ]

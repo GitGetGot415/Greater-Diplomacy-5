@@ -23,7 +23,7 @@ from data.io.realtime_relay import (RelayHostTransport, relay_cloud_init, valida
 from data.io.realtime_relay_service import Relay
 from data.map.load_map import _saved_player_view
 from data.io.realtime_networking import (
-    PortMappingResult, automatic_tcp_port_mapping, host_network_diagnostics,
+    LanMatchAdvertiser, PortMappingResult, automatic_tcp_port_mapping, host_network_diagnostics,
     is_public_ipv4, make_lan_announcement, parse_lan_announcement,
 )
 from screens.menu_screens.realtime_multiplayer import (
@@ -148,6 +148,15 @@ class ConvenienceNetworkingTests(unittest.TestCase):
                   "session": "session", "fingerprint": "ab" * 32}
         self.assertIsNone(parse_lan_announcement(make_lan_announcement(invite, "Host", "Map"),
                                                   "127.0.0.1"))
+
+    def test_lan_advertisement_reflects_a_renamed_host(self):
+        invite = {"v": 1, "host": "192.168.1.41", "port": 38475,
+                  "session": "session", "fingerprint": "ab" * 32}
+        advertiser = LanMatchAdvertiser(invite, "Host", "Map")
+        advertiser.set_host_name("Commander")
+
+        match = parse_lan_announcement(advertiser._announcement, "192.168.1.41", now=10.0)
+        self.assertEqual(match.host_name, "Commander")
 
     def test_mapping_falls_back_from_upnp_to_natpmp_and_reports_diagnostics(self):
         failed = PortMappingResult("UPnP", "No UPnP gateway.")
@@ -466,6 +475,15 @@ class RealtimeSessionTests(unittest.TestCase):
         self.assertEqual(sanitize_display_name("  Alice  "), "Alice")
         with self.assertRaises(RealtimeError): sanitize_display_name("\nAlice")
         with self.assertRaises(RealtimeError): self.session.join("guest")
+
+    def test_host_can_rename_in_the_lobby_and_must_ready_again(self):
+        self.session.select_country(self.host, "A")
+        self.session.set_ready(self.host, True)
+
+        self.session.rename(self.host, "Commander")
+
+        self.assertEqual(self.session.players[self.host].name, "Commander")
+        self.assertFalse(self.session.players[self.host].ready)
 
     def test_server_acknowledges_the_authoritative_join_name(self):
         server = RealtimeServer(self.session, "unused-cert", "unused-key")
