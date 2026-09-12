@@ -287,6 +287,10 @@ class RealtimeSession:
         self._end_after_processing: str | None = None
         self.game_over_reason: str | None = None
         self.listeners: list[Callable[[dict[str, Any]], None]] = []
+        # Lobby departures do not occupy an on-screen slot, country, or name,
+        # but retain their authenticated identity long enough for an explicit
+        # reconnect.  This store is deliberately not included in public state.
+        self._lobby_reconnects: dict[str, Player] = {}
         self._password_salt = secrets.token_bytes(16)
         self._password_digest = _password_hash(password, self._password_salt) if password else None
         self.host_id = self._new_player(host_name).player_id
@@ -341,16 +345,45 @@ class RealtimeSession:
                         player.ping_ms = None
                     self._broadcast()
                     return copy.copy(player)
+
+            # Before the game starts, a departed player is hidden from the
+            # lobby and frees their country.  Restore that identity only on
+            # explicit token authentication, leaving it unready and without a
+            # country if another player claimed it while they were away.
+            player = self._lobby_reconnects.get(str(token))
+            if player is not None:
+                if len(self.players) >= self.config.max_players:
+                    raise RealtimeError("The lobby is full.")
+                self._assert_name_available(player.name)
+                if any(p.country_id == player.country_id for p in self.players.values()):
+                    player.country_id = None
+                player.ready = False
+                player.connected = True
+                player.ping_ms = None
+                self.players[player.player_id] = player
+                del self._lobby_reconnects[str(token)]
+                self._broadcast()
+                return copy.copy(player)
         raise RealtimeError("Invalid reconnect token.")
 
     def disconnect(self, player_id: str) -> None:
         with self.lock:
-            player = self._player(player_id)
+            # A lobby connection is not an active match identity yet. Remove
+            # it entirely, freeing its name and country immediately rather
+            # than leaving a misleading permanent "offline" slot behind.
+            # Once play starts, disconnected players intentionally remain so
+            # their country/draft can be restored with their reconnect code.
+            player = self.players.get(player_id)
+            if player is None:
+                return
+            if self.phase == "LOBBY" and player_id != self.host_id:
+                self._lobby_reconnects[player.reconnect_token] = player
+                del self.players[player_id]
+                self._broadcast()
+                return
             player.connected = False
             if player_id != self.host_id:
                 player.ping_ms = None
-            if self.phase == "LOBBY":
-                player.ready = False
             self._broadcast()
 
     def set_ping(self, player_id: str, ping_ms: int) -> None:
@@ -1886,6 +1919,25 @@ class RealtimeServer:
             try: connection.close()
             except OSError: pass
 
+    def kick_player(self, host_id: str, player_id: str) -> None:
+        """Remove one pre-game guest and immediately close their connection."""
+        with self._clients_lock:
+            connection = self._clients.pop(player_id, None)
+        # Removing the connection first prevents the kicked client receiving a
+        # normal state update that still looks like a healthy lobby transition.
+        self.session.kick(host_id, player_id)
+        if connection is None:
+            return
+        try:
+            self._send_message(connection, "kicked", {
+                "message": "The host removed you from the real-time lobby.",
+            })
+        except OSError:
+            pass
+        finally:
+            try: connection.close()
+            except OSError: pass
+
     def _broadcast_shutdown(self, reason: str) -> None:
         """Best-effort final notice before ``stop`` closes the TLS streams."""
         with self._clients_lock:
@@ -1934,6 +1986,8 @@ class RealtimeServer:
             try:
                 self._send_message(connection, "ping", {"nonce": nonce})
             except OSError:
+                with self._clients_lock:
+                    self._clients.pop(player_id, None)
                 self.session.disconnect(player_id)
 
     def _record_pong(self, player_id: str, nonce: Any) -> None:
@@ -1981,9 +2035,12 @@ class RealtimeServer:
                 pass
         finally:
             if player_id:
-                self.session.disconnect(player_id)
+                # ``kick_player`` already removed a lobby guest.  The stream
+                # then reaches this cleanup path too, where disconnect must be
+                # harmless rather than raising from a background thread.
                 with self._clients_lock:
                     self._clients.pop(player_id, None)
+                self.session.disconnect(player_id)
             try: connection.close()
             except OSError: pass
             with self._connection_lock:
@@ -2014,6 +2071,7 @@ class RealtimeServer:
         if action == "select_country": self.session.select_country(player_id, payload.get("country_id", ""))
         elif action == "ready": self.session.set_ready(player_id, bool(payload.get("ready")))
         elif action == "rename": self.session.rename(player_id, payload.get("name", ""))
+        elif action == "kick": self.kick_player(player_id, payload.get("player_id", ""))
         elif action == "sync_draft": self.session.sync_draft(player_id, payload.get("turn"), payload.get("commands"))
         elif action == "submit": self.session.submit(player_id, payload.get("turn"))
         elif action == "unsubmit": self.session.unsubmit(player_id, payload.get("turn"))
@@ -2029,6 +2087,8 @@ class RealtimeServer:
         for player_id, connection in clients:
             try: self._send_message(connection, "state", state)
             except OSError:
+                with self._clients_lock:
+                    self._clients.pop(player_id, None)
                 self.session.disconnect(player_id)
 
     def _send_message(self, connection: socket.socket, message_type: str,
@@ -2176,10 +2236,11 @@ class RealtimeClient:
                     continue
                 if message["session_id"] != self.invite["session"]:
                     raise RealtimeError("Server changed match sessions.")
-                if message["type"] == "shutdown":
+                if message["type"] in ("shutdown", "kicked"):
                     # A server shutdown is an intentional, user-facing end to
-                    # the match.  Stop reading before TLS close is reported as
-                    # a second, misleading generic disconnection.
+                    # the match (or the host explicitly removed this guest).
+                    # Stop reading before TLS close is reported as a second,
+                    # misleading generic disconnection.
                     with self._disconnect_lock:
                         self._disconnect_notified = True
                     self.events.put(message)

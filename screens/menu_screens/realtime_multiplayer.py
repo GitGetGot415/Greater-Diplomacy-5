@@ -512,6 +512,15 @@ class Realtime_Lobby(GameState):
         ready = self.session.players[host].ready
         self.elements.append(Button("centered", 550, (200, 36), "green" if ready else "orange",
                                     "Host Ready" if ready else "Mark Host Ready", self.toggle_ready))
+        # Lobby administration ends at game start.  Until then, give the host
+        # a direct control beside every guest rather than forcing them to
+        # identify a player from an opaque connection ID.
+        for index, player in enumerate(list(self.session.players.values())[:5]):
+            if player.player_id == host:
+                continue
+            self.elements.append(Button(c.SCREEN_WIDTH - 105, 594 + index * 22, (80, 20), "red", "Kick",
+                                        lambda target=player.player_id, name=player.name:
+                                        self.request_kick(target, name)))
 
     def additional_events(self, event):
         self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
@@ -530,6 +539,24 @@ class Realtime_Lobby(GameState):
             self.refresh_ui()
         except RealtimeError as exc:
             confirm_dialog.show_error("Cannot Ready", str(exc))
+
+    def request_kick(self, player_id, player_name):
+        """Ask before removing a named guest from the authoritative lobby."""
+        def kicked(confirmed):
+            if not confirmed:
+                return
+            try:
+                # Going through the server also closes the guest's TLS stream
+                # and gives their UI an immediate, explicit explanation.
+                self.server.kick_player(self.session.host_id, player_id)
+                self.refresh_ui()
+            except RealtimeError as exc:
+                confirm_dialog.show_error("Cannot Kick Player", str(exc))
+
+        confirm_dialog.ask_yes_no(
+            "Kick Player",
+            f"Remove {player_name} from this lobby? They can join again with an invite while the lobby remains open.",
+            kicked, yes_label="Kick Player", no_label="Keep Player")
 
     def internet_button_label(self):
         if self.temporary_relay:
@@ -968,6 +995,12 @@ class Realtime_Remote_Lobby(GameState):
                     self.client = None
                     confirm_dialog.show_info("Match Ended by Host", payload.get(
                         "message", "The host ended the real-time match and disconnected all players."))
+                    self.go_to("REAL_TIME_MULTIPLAYER")
+                elif event.get("type") == "kicked":
+                    self.client.close()
+                    self.client = None
+                    confirm_dialog.show_info("Removed From Lobby", payload.get(
+                        "message", "The host removed you from the real-time lobby."))
                     self.go_to("REAL_TIME_MULTIPLAYER")
                 elif event.get("type") == "disconnected":
                     self.client = None

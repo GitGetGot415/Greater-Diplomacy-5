@@ -302,6 +302,23 @@ class RelayTransportTests(unittest.TestCase):
         client._mark_disconnected("connection closed")
         self.assertEqual(client.poll(), [])
 
+    def test_explicit_lobby_kick_is_not_replaced_by_a_disconnect_alert(self):
+        class Socket:
+            def __init__(self): self.closed = False
+            def close(self): self.closed = True
+
+        client = RealtimeClient({"session": "test"})
+        connection = Socket()
+        client.socket = connection
+        kicked = {"session_id": "test", "type": "kicked",
+                  "payload": {"message": "The host removed you from the real-time lobby."}}
+        with mock.patch("data.io.realtime_multiplayer.read_message", return_value=kicked):
+            client._receive_loop()
+
+        self.assertTrue(connection.closed)
+        self.assertIsNone(client.socket)
+        self.assertEqual(client.poll(), [kicked])
+
     def test_finished_relay_task_is_attached_and_transitioned_once(self):
         """A completed worker stays completed, so the screen must consume it once."""
         relay = object()
@@ -492,7 +509,31 @@ class RealtimeSessionTests(unittest.TestCase):
         self.assertEqual(players[self.other.player_id]["ping_ms"], 47)
         self.session.disconnect(self.other.player_id)
         players = {player["player_id"]: player for player in self.session.public_state()["players"]}
-        self.assertIsNone(players[self.other.player_id]["ping_ms"])
+        self.assertNotIn(self.other.player_id, players)
+
+    def test_lobby_disconnect_removes_the_player_and_releases_their_country(self):
+        self.session.select_country(self.other.player_id, "B")
+        self.session.set_ready(self.other.player_id, True)
+
+        self.session.disconnect(self.other.player_id)
+
+        self.assertNotIn(self.other.player_id, self.session.players)
+        self.assertNotIn("B", [p.country_id for p in self.session.players.values()])
+
+    def test_server_kick_removes_guest_and_sends_a_specific_notice(self):
+        server = RealtimeServer(self.session, "unused-cert", "unused-key")
+        guest_connection = mock.Mock()
+        server._clients[self.other.player_id] = guest_connection
+
+        with mock.patch.object(server, "_send_message") as send:
+            server.kick_player(self.host, self.other.player_id)
+
+        self.assertNotIn(self.other.player_id, self.session.players)
+        self.assertNotIn(self.other.player_id, server._clients)
+        send.assert_called_once_with(guest_connection, "kicked", {
+            "message": "The host removed you from the real-time lobby.",
+        })
+        guest_connection.close.assert_called_once_with()
 
     def test_server_stop_sends_an_explicit_shutdown_to_each_guest(self):
         server = RealtimeServer(self.session, "unused-cert", "unused-key")
@@ -766,6 +807,40 @@ class RealtimeSessionTests(unittest.TestCase):
                 client.connect()
                 client.close()
             finally:
+                server.stop()
+
+    def test_host_lobby_shutdown_reaches_a_joined_guest_immediately(self):
+        """Ending a lobby must be a visible protocol event, not something the
+        guest discovers only by attempting its next action."""
+        with tempfile.TemporaryDirectory() as directory:
+            certificate, key, fingerprint = create_match_certificate(directory)
+            server = RealtimeServer(self.session, certificate, key)
+            port = server.start(0)
+            client = None
+            try:
+                invite = decode_invite(encode_invite("127.0.0.1", port,
+                                                     self.session.session_id, fingerprint))
+                client = RealtimeClient(invite)
+                client.connect()
+                client.send("join", {"name": "Network Guest", "password": ""})
+                deadline = time.monotonic() + 5.0
+                while time.monotonic() < deadline and not client.player_id:
+                    client.poll()
+                    time.sleep(.01)
+                self.assertIsNotNone(client.player_id, client.disconnect_message)
+
+                server.stop("The host ended the real-time lobby. You have been disconnected.")
+                events = []
+                while time.monotonic() < deadline:
+                    events.extend(client.poll())
+                    if any(event.get("type") == "shutdown" for event in events):
+                        break
+                    time.sleep(.01)
+                self.assertTrue(any(event.get("type") == "shutdown" for event in events),
+                                (events, client.disconnect_message))
+            finally:
+                if client:
+                    client.close()
                 server.stop()
 
 
