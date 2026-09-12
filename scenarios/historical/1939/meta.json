@@ -1,6 +1,6 @@
 {
     "version": "v34",
-    "generated_at": "2026-09-11T18:09:39.871462",
+    "generated_at": "2026-09-11T19:12:38.994331",
     "date": {
         "day": 15,
         "month": 2,
@@ -1182,7 +1182,31 @@
             "adjective": "Italian",
             "diplo_responses": {},
             "military_attaches": [],
-            "scripted_events": []
+            "scripted_events": [
+                {
+                    "conditions": [
+                        {
+                            "chain": "AND",
+                            "type": "Turn Number",
+                            "variable": "",
+                            "operator": "==",
+                            "value": "1"
+                        }
+                    ],
+                    "actions": [
+                        {
+                            "type": "Declare War",
+                            "target": "Albania",
+                            "unit_type": "Infantry Type 1910",
+                            "message": "not much you can really do about this, might as well accept it",
+                            "ai_generate": false,
+                            "send_up_to": false
+                        }
+                    ],
+                    "fire_once": true,
+                    "trigger_type": "AI Only"
+                }
+            ]
         },
         "Bulgaria": {
             "name": "Bulgaria",
@@ -50367,7 +50391,23 @@
                 "Italy"
             ],
             "is_coastal": true,
-            "units": [],
+            "units": [
+                {
+                    "type": "Infantry Type 1939",
+                    "owner": "Italy",
+                    "health": 2450,
+                    "max_health": 2450,
+                    "morale": 100.0,
+                    "speed": 1,
+                    "attack": 390,
+                    "defense": 0,
+                    "level": 0,
+                    "order": {
+                        "type": "MOVE",
+                        "path": []
+                    }
+                }
+            ],
             "building_queue": [],
             "unit_queue": [],
             "orders": [],
@@ -50421,7 +50461,23 @@
                 "Italy"
             ],
             "is_coastal": true,
-            "units": [],
+            "units": [
+                {
+                    "type": "Infantry Type 1939",
+                    "owner": "Italy",
+                    "health": 2450,
+                    "max_health": 2450,
+                    "morale": 100.0,
+                    "speed": 1,
+                    "attack": 390,
+                    "defense": 0,
+                    "level": 0,
+                    "order": {
+                        "type": "MOVE",
+                        "path": []
+                    }
+                }
+            ],
             "building_queue": [],
             "unit_queue": [],
             "orders": [],
@@ -50462,8 +50518,9 @@
                 {
                     "type": "Destroyer VIII",
                     "owner": "Italy",
-                    "health": 2600.0,
+                    "health": 5200,
                     "max_health": 5200,
+                    "morale": 100.0,
                     "speed": 1,
                     "attack": 3300,
                     "defense": 340,
@@ -50471,9 +50528,7 @@
                     "order": {
                         "type": "MOVE",
                         "path": []
-                    },
-                    "custom_name": "1st Destroyer (VIII)",
-                    "naval_unit": true
+                    }
                 }
             ],
             "building_queue": [],
@@ -50958,7 +51013,23 @@
                 "Italy"
             ],
             "is_coastal": true,
-            "units": [],
+            "units": [
+                {
+                    "type": "Infantry Type 1939",
+                    "owner": "Italy",
+                    "health": 2450,
+                    "max_health": 2450,
+                    "morale": 100.0,
+                    "speed": 1,
+                    "attack": 390,
+                    "defense": 0,
+                    "level": 0,
+                    "order": {
+                        "type": "MOVE",
+                        "path": []
+                    }
+                }
+            ],
             "building_queue": [],
             "unit_queue": [],
             "orders": [],

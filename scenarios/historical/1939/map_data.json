@@ -24749,7 +24749,23 @@
             670
         ],
         "owner": "Italy",
-        "units": [],
+        "units": [
+            {
+                "type": "Infantry Type 1939",
+                "owner": "Italy",
+                "health": 2450,
+                "max_health": 2450,
+                "morale": 100.0,
+                "speed": 1,
+                "attack": 390,
+                "defense": 0,
+                "level": 0,
+                "order": {
+                    "type": "MOVE",
+                    "path": []
+                }
+            }
+        ],
         "orders": [],
         "buildings": [
             "Factory Lvl 1"
@@ -24877,7 +24893,23 @@
             717
         ],
         "owner": "Italy",
-        "units": [],
+        "units": [
+            {
+                "type": "Infantry Type 1939",
+                "owner": "Italy",
+                "health": 2450,
+                "max_health": 2450,
+                "morale": 100.0,
+                "speed": 1,
+                "attack": 390,
+                "defense": 0,
+                "level": 0,
+                "order": {
+                    "type": "MOVE",
+                    "path": []
+                }
+            }
+        ],
         "orders": [],
         "buildings": [],
         "resources": {},
@@ -24977,8 +25009,9 @@
             {
                 "type": "Destroyer VIII",
                 "owner": "Italy",
-                "health": 2600.0,
+                "health": 5200,
                 "max_health": 5200,
+                "morale": 100.0,
                 "speed": 1,
                 "attack": 3300,
                 "defense": 340,
@@ -24986,9 +25019,7 @@
                 "order": {
                     "type": "MOVE",
                     "path": []
-                },
-                "custom_name": "1st Destroyer (VIII)",
-                "naval_unit": true
+                }
             }
         ],
         "orders": [],
@@ -26174,7 +26205,23 @@
             695
         ],
         "owner": "Italy",
-        "units": [],
+        "units": [
+            {
+                "type": "Infantry Type 1939",
+                "owner": "Italy",
+                "health": 2450,
+                "max_health": 2450,
+                "morale": 100.0,
+                "speed": 1,
+                "attack": 390,
+                "defense": 0,
+                "level": 0,
+                "order": {
+                    "type": "MOVE",
+                    "path": []
+                }
+            }
+        ],
         "orders": [],
         "buildings": [],
         "resources": {},
