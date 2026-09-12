@@ -891,7 +891,9 @@ class Realtime_Lobby(GameState):
         # The host sees the same current configuration summary guests see,
         # rather than having to infer it from five edit controls.
         summary = font.render(_lobby_config_summary(self.session.config), True, (230, 230, 230))
-        surface.blit(summary, summary.get_rect(center=(c.SCREEN_WIDTH // 2, 185)))
+        # The host owns the invite/start/network controls at y=100/150, so
+        # place this read-only summary in the clear title strip above them.
+        surface.blit(summary, summary.get_rect(center=(c.SCREEN_WIDTH // 2, 72)))
         panel = pygame.Rect(10, 200, 290, 251)
         pygame.draw.rect(surface, (50, 35, 90), panel)
         pygame.draw.rect(surface, (150, 120, 220), panel, 2)
