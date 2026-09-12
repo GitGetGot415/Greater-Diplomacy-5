@@ -156,10 +156,22 @@ class LanMatchAdvertiser:
 
     def set_host_name(self, host_name: str) -> None:
         """Refresh the display name carried by future LAN announcements."""
+        self._set_announcement_field("host_name", host_name)
+
+    def set_scenario_name(self, scenario_name: str) -> None:
+        """Refresh the scenario label carried by future LAN announcements."""
+        self._set_announcement_field("scenario_name", scenario_name)
+
+    def _set_announcement_field(self, field: str, value: str) -> None:
         try:
             body = json.loads(self._announcement.decode("utf-8"))
             invite = body.get("invite") if isinstance(body, dict) else None
+            host_name = body.get("host_name", "Host") if isinstance(body, dict) else "Host"
             scenario_name = body.get("scenario_name", "Match") if isinstance(body, dict) else "Match"
+            if field == "host_name":
+                host_name = value
+            else:
+                scenario_name = value
             self._announcement = make_lan_announcement(invite, host_name, scenario_name)
         except (UnicodeDecodeError, ValueError, json.JSONDecodeError):
             # The existing advert remains usable if an unexpected local

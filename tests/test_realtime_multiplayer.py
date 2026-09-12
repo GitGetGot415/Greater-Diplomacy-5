@@ -158,6 +158,15 @@ class ConvenienceNetworkingTests(unittest.TestCase):
         match = parse_lan_announcement(advertiser._announcement, "192.168.1.41", now=10.0)
         self.assertEqual(match.host_name, "Commander")
 
+    def test_lan_advertisement_reflects_a_changed_scenario(self):
+        invite = {"v": 1, "host": "192.168.1.41", "port": 38475,
+                  "session": "session", "fingerprint": "ab" * 32}
+        advertiser = LanMatchAdvertiser(invite, "Host", "1939")
+        advertiser.set_scenario_name("Custom Map")
+
+        match = parse_lan_announcement(advertiser._announcement, "192.168.1.41", now=10.0)
+        self.assertEqual(match.scenario_name, "Custom Map")
+
     def test_mapping_falls_back_from_upnp_to_natpmp_and_reports_diagnostics(self):
         failed = PortMappingResult("UPnP", "No UPnP gateway.")
         mapped = PortMappingResult("NAT-PMP", "Mapped", "203.0.113.20", 38475,
@@ -484,6 +493,35 @@ class RealtimeSessionTests(unittest.TestCase):
 
         self.assertEqual(self.session.players[self.host].name, "Commander")
         self.assertFalse(self.session.players[self.host].ready)
+
+    def test_host_lobby_settings_are_broadcast_and_locked_to_the_host(self):
+        self.session.set_turn_limit(self.host, 12)
+        self.session.set_turn_minutes(self.host, 25)
+        self.session.set_scenario_settings(self.host, {"fog_of_war": True})
+
+        state = self.session.public_state()
+        self.assertEqual((state["max_turns"], state["turn_minutes"]), (12, 25))
+        self.assertEqual(state["config"]["scenario_settings"], {"fog_of_war": True})
+        with self.assertRaises(RealtimeError):
+            self.session.set_turn_limit(self.other.player_id, 8)
+
+    def test_map_change_resets_every_lobby_country_and_ready_state(self):
+        self.session.select_country(self.host, "A")
+        self.session.select_country(self.other.player_id, "B")
+        self.session.set_ready(self.host, True)
+        self.session.set_ready(self.other.player_id, True)
+        replacement_driver = Driver()
+
+        self.session.reconfigure_lobby(
+            self.host, "alternate-map", {"fog_of_war": False},
+            ["X", "Y", "Z"], replacement_driver, max_players=3)
+
+        self.assertEqual(self.session.countries, ["X", "Y", "Z"])
+        self.assertIs(self.session.driver, replacement_driver)
+        self.assertEqual(self.session.config.max_players, 3)
+        self.assertEqual(self.session.config.scenario_id, "alternate-map")
+        self.assertTrue(all(player.country_id is None and not player.ready
+                            for player in self.session.players.values()))
 
     def test_server_acknowledges_the_authoritative_join_name(self):
         server = RealtimeServer(self.session, "unused-cert", "unused-key")

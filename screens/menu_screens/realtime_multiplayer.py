@@ -54,6 +54,27 @@ def _ping_label(player, host_id):
     return f"{ping} ms" if isinstance(ping, int) else "checking..."
 
 
+def _lobby_config_summary(config):
+    """Compact, shared wording for the configuration all guests receive."""
+    scenario = os.path.basename(str(getattr(config, "scenario_id", "Unknown Scenario")))
+    return (f"Scenario: {scenario}    Capacity: {getattr(config, 'max_players', '?')}    "
+            f"Turns: {getattr(config, 'max_turns', '?')}    "
+            f"Time: {getattr(config, 'turn_minutes', '?')} min/turn")
+
+
+def _lobby_rules_text(config):
+    settings = getattr(config, "scenario_settings", {})
+    if not isinstance(settings, dict) or not settings:
+        return "Scenario rules: defaults."
+    lines = []
+    for key, value in sorted(settings.items(), key=lambda item: str(item[0]).casefold()):
+        label = str(key).replace("_", " ").title()
+        if isinstance(value, bool):
+            value = "On" if value else "Off"
+        lines.append(f"{label}: {value}")
+    return "Scenario Rules\n\n" + "\n".join(lines)
+
+
 def _scenario_entries():
     entries = []
     for label, directory in (("Historical", c.SCENARIOS_HISTORICAL_DIR),
@@ -84,7 +105,7 @@ class Realtime_Host_Setup(GameState):
         self.address = default_advertised_address()
         self.local_address = self.address
         self._address_is_detected = True
-        self.port, self.capacity = DEFAULT_PORT, 4
+        self.port, self.capacity = DEFAULT_PORT, None
         self.max_turns, self.turn_minutes = DEFAULT_MAX_TURNS, DEFAULT_TURN_MINUTES
         # Tokens are intentionally session-memory only.  A player can create
         # a fresh personal-access token for a later match if they restart.
@@ -94,25 +115,19 @@ class Realtime_Host_Setup(GameState):
         self.refresh_ui()
 
     def refresh_ui(self):
-        scenario_label = os.path.basename(self.scenario_path) if self.scenario_path else "Select Scenario"
-        # Keep every setup control visible at ordinary desktop resolutions.
-        # A single vertical stack made the bottom controls inaccessible.
+        # Match rules live in the lobby, where every connected player receives
+        # the resulting authoritative update. This screen is only for opening
+        # the local server and choosing its connection details.
         self.elements = [
-            Button("centered-150", 120, "medium", "blue", f"Scenario: {scenario_label}",
-                   lambda: self.go_to("REALTIME_SCENARIO_SELECT")),
-            Button("centered-150", 200, "medium", "blue", f"Host Name: {self.host_name}", self.edit_name),
-            Button("centered-150", 280, "medium", "blue", f"Advertised Address: {self.address}", self.edit_address),
-            Button("centered-150", 360, "medium", "blue", f"Port: {self.port}", self.edit_port),
-            Button("centered-150", 440, "medium", "blue", f"Lobby Password: {'SET' if self.password else 'None'}", self.edit_password),
-            Button("centered+150", 120, "medium", "purple", f"Player Capacity: {self.capacity}", self.edit_capacity),
-            Button("centered+150", 200, "medium", "purple", f"Maximum Turns: {self.max_turns}", self.edit_turns),
-            Button("centered+150", 280, "medium", "purple", f"Turn Time: {self.turn_minutes} minutes", self.edit_minutes),
-            Button("centered+150", 360, "medium", "pink", "Scenario Settings", self.edit_settings),
-            Button("centered+150", 440, "medium", "green", "Open Lobby", self.open_lobby),
-            Button("centered-150", 520, "medium", "purple",
+            Button("centered-150", 150, "medium", "blue", f"Host Name: {self.host_name}", self.edit_name),
+            Button("centered-150", 230, "medium", "blue", f"Advertised Address: {self.address}", self.edit_address),
+            Button("centered-150", 310, "medium", "blue", f"Port: {self.port}", self.edit_port),
+            Button("centered-150", 390, "medium", "blue", f"Lobby Password: {'SET' if self.password else 'None'}", self.edit_password),
+            Button("centered+150", 230, "medium", "green", "Open Lobby", self.open_lobby),
+            Button("centered-150", 500, "medium", "purple",
                    "Temporary Relay: ON" if self.relay_enabled else "Temporary Relay: Off",
                    lambda: self.go_to("REALTIME_RELAY_SETUP")),
-            Button("centered+150", 520, "medium", "light_blue", "Networking Help", self.show_network_help),
+            Button("centered+150", 500, "medium", "light_blue", "Networking Help", self.show_network_help),
             make_back_button(self.exit_screen),
         ]
 
@@ -192,6 +207,8 @@ class Realtime_Host_Setup(GameState):
             server_map = Map(load_path=self.scenario_path, is_scenario=True,
                              map_settings=copy.deepcopy(self.settings))
             countries = queries.get_active_playable_nations(server_map.map_data, server_map.nation_data)
+            if self.capacity is None:
+                self.capacity = min(100, len(countries))
             config = RealtimeConfig(self.scenario_path, copy.deepcopy(self.settings), self.capacity,
                                     self.max_turns, self.turn_minutes, self.address, self.port)
             session = RealtimeSession(config, countries, self.host_name,
@@ -391,8 +408,18 @@ class Realtime_Scenario_Select(GameState):
     def __init__(self):
         super().__init__()
         self.bg_color = (12, 28, 50)
+        self.lobby = None
         self.scroll_y = 0
         self.refresh_ui()
+
+    def bind_host(self, host_setup):
+        self.lobby = None
+        self.host_setup = host_setup
+        self.back_state = "REALTIME_HOST_SETUP"
+
+    def bind_lobby(self, lobby):
+        self.lobby = lobby
+        self.back_state = "REALTIME_LOBBY"
 
     def refresh_ui(self):
         self.elements = [make_back_button(self.exit_screen)]
@@ -415,6 +442,10 @@ class Realtime_Scenario_Select(GameState):
         self.draw_list_scrollbar(surface, c.SCREEN_WIDTH - 55, 100, c.SCREEN_HEIGHT - 155)
 
     def select(self, path):
+        if self.lobby:
+            if self.lobby.apply_scenario(path):
+                self.go_to("REALTIME_LOBBY")
+            return
         # The host setup is a persistent controller state; the controller gives
         # this selector its reference immediately before transition.
         if hasattr(self, "host_setup"):
@@ -479,6 +510,21 @@ class Realtime_Lobby(GameState):
         if not self.session:
             return
         host = self.session.host_id
+        scenario_name = os.path.basename(str(self.session.config.scenario_id))
+        # Match setup gets its own wide panel, distinct from the personal
+        # Settings/Music/Rename bar above it. The button labels include the
+        # active values so the host sees exactly what guests receive.
+        self.elements.extend([
+            Button(20, 225, (270, 36), "purple", f"Map: {scenario_name}", self.edit_scenario,
+                   font_preset="tiny"),
+            Button(20, 270, (270, 36), "purple", f"Player Capacity: {self.session.config.max_players}",
+                   self.edit_capacity, font_preset="tiny"),
+            Button(20, 315, (270, 36), "purple", f"Maximum Turns: {self.session.config.max_turns}",
+                   self.edit_turn_limit, font_preset="tiny"),
+            Button(20, 360, (270, 36), "purple", f"Turn Time: {self.session.config.turn_minutes} minutes",
+                   self.edit_turn_minutes, font_preset="tiny"),
+            Button(20, 405, (270, 36), "purple", "Scenario Rules", self.edit_scenario_settings),
+        ])
         self.elements.extend([
             Button("centered-220", 100, "medium", "blue",
                    "Copy Relay Invite" if self.temporary_relay else "Copy LAN Invite", self.show_lan_invite),
@@ -568,6 +614,110 @@ class Realtime_Lobby(GameState):
 
         confirm_dialog.ask_string("Host Display Name", "Enter your display name:", saved,
                                   initial=player.name, allow_empty=False)
+
+    def edit_scenario(self):
+        """Open the existing scenario picker while retaining this live lobby."""
+        self.go_to("REALTIME_SCENARIO_SELECT")
+
+    def apply_scenario(self, path):
+        """Build and install a new authoritative pre-game map safely."""
+        if not self.session:
+            return
+        try:
+            from screens.menu_screens.map import Map
+            settings = copy.deepcopy(self.session.config.scenario_settings)
+            replacement_map = Map(load_path=path, is_scenario=True, map_settings=settings)
+            countries = queries.get_active_playable_nations(replacement_map.map_data,
+                                                             replacement_map.nation_data)
+            default_capacity = min(100, len(countries))
+            self.session.reconfigure_lobby(
+                self.session.host_id, path, settings, countries,
+                MapRealtimeDriver(replacement_map), default_capacity)
+            self.server_map = replacement_map
+            self.host_setup.scenario_path = path
+            self.host_setup.settings = copy.deepcopy(settings)
+            self.host_setup.capacity = default_capacity
+            self.host_setup.realtime_server_map = replacement_map
+            if getattr(self, "advertiser", None):
+                self.advertiser.set_scenario_name(os.path.basename(path))
+            self.server.broadcast_map_bundle()
+            self.refresh_ui()
+            return True
+        except (OSError, RealtimeError, FileNotFoundError) as exc:
+            confirm_dialog.show_error("Could Not Change Scenario", str(exc))
+            return False
+
+    def edit_capacity(self):
+        if not self.session:
+            return
+        limit = min(100, len(self.session.countries))
+
+        def saved(value):
+            if value is None:
+                return
+            try:
+                self.session.set_capacity(self.session.host_id, value)
+                self.host_setup.capacity = value
+                self.refresh_ui()
+            except RealtimeError as exc:
+                confirm_dialog.show_error("Capacity Rejected", str(exc))
+
+        confirm_dialog.ask_integer("Player Capacity", f"1 to {limit}:", saved, 1, limit,
+                                   self.session.config.max_players)
+
+    def edit_turn_limit(self):
+        if not self.session:
+            return
+
+        def saved(value):
+            if value is None:
+                return
+            try:
+                self.session.set_turn_limit(self.session.host_id, value)
+                self.host_setup.max_turns = value
+                self.refresh_ui()
+            except RealtimeError as exc:
+                confirm_dialog.show_error("Turn Limit Rejected", str(exc))
+
+        confirm_dialog.ask_integer("Maximum Turns", "1 to 100:", saved, 1, 100,
+                                   self.session.config.max_turns)
+
+    def edit_turn_minutes(self):
+        if not self.session:
+            return
+
+        def saved(value):
+            if value is None:
+                return
+            try:
+                self.session.set_turn_minutes(self.session.host_id, value)
+                self.host_setup.turn_minutes = value
+                self.refresh_ui()
+            except RealtimeError as exc:
+                confirm_dialog.show_error("Turn Time Rejected", str(exc))
+
+        confirm_dialog.ask_integer("Turn Time", "Minutes per turn (1 to 240):", saved, 1, 240,
+                                   self.session.config.turn_minutes)
+
+    def edit_scenario_settings(self):
+        if not self.session:
+            return
+        from screens.menu_screens.scenario_settings import Scenario_Settings
+        # Work on an isolated copy. Closing the shared screen atomically
+        # applies and broadcasts the whole rules bundle rather than leaking a
+        # partially edited dict into the live session between clicks.
+        Scenario_Settings.configure_realtime_session(
+            copy.deepcopy(self.session.config.scenario_settings), "REALTIME_LOBBY",
+            on_close=self.apply_scenario_settings)
+        self.go_to("SCENARIO_SETTINGS")
+
+    def apply_scenario_settings(self, settings):
+        try:
+            self.session.set_scenario_settings(self.session.host_id, settings)
+            self.host_setup.settings = copy.deepcopy(settings)
+            self.refresh_ui()
+        except RealtimeError as exc:
+            confirm_dialog.show_error("Scenario Rules Rejected", str(exc))
 
     def request_kick(self, player_id, player_name):
         """Ask before removing a named guest from the authoritative lobby."""
@@ -733,6 +883,15 @@ class Realtime_Lobby(GameState):
         if not self.session: return
         self.draw_list_scrollbar(surface, c.SCREEN_WIDTH // 2 + 320, 202, 338, width=22)
         font = pygame.font.Font(None, 22)
+        # The host sees the same current configuration summary guests see,
+        # rather than having to infer it from five edit controls.
+        summary = font.render(_lobby_config_summary(self.session.config), True, (230, 230, 230))
+        surface.blit(summary, summary.get_rect(center=(c.SCREEN_WIDTH // 2, 185)))
+        panel = pygame.Rect(10, 200, 290, 251)
+        pygame.draw.rect(surface, (50, 35, 90), panel)
+        pygame.draw.rect(surface, (150, 120, 220), panel, 2)
+        heading = pygame.font.Font(None, 24).render("Match Setup (Host)", True, (235, 235, 255))
+        surface.blit(heading, heading.get_rect(center=(panel.centerx, panel.y + 12)))
         players = list(self.session.players.values())
         for index, player in enumerate(players[:5]):
             text = (f"{player.name} — {_ping_label(player, self.session.host_id)} — "
@@ -965,6 +1124,7 @@ class Realtime_Remote_Lobby(GameState):
             Button(20, 145, "left_ui_button", "purple", "Copy Reconnect Code", self.copy_reconnect_code,
                    font_preset="tiny"),
             Button(20, 180, "left_ui_button", "blue", "Rename", self.edit_name),
+            Button(20, 215, "left_ui_button", "purple", "Match Rules", self.show_match_rules),
             Button("centered+280", 100, "medium", "red", "Leave Lobby", self.request_leave),
         ]
         if not self.view:
@@ -1019,6 +1179,10 @@ class Realtime_Remote_Lobby(GameState):
                         self.selected_realtime_client = self.client
                         self.selected_realtime_view = self.view
                         self.go_to("MAP")
+                elif event.get("type") == "map_bundle":
+                    # The matching state update carries country names/config;
+                    # redraw the rows now their new map assets are available.
+                    self.refresh_ui()
                 elif event.get("type") == "error":
                     confirm_dialog.show_error("Server Rejected Request", payload.get("message", "Unknown error"))
                 elif event.get("type") == "shutdown":
@@ -1046,6 +1210,10 @@ class Realtime_Remote_Lobby(GameState):
             "Leave this lobby? You can rejoin with your reconnect code while the host keeps it open.",
             lambda confirmed: self.leave() if confirmed else None,
             yes_label="Leave Lobby", no_label="Stay")
+
+    def show_match_rules(self):
+        if self.view:
+            confirm_dialog.show_info("Real-Time Match Rules", _lobby_rules_text(self.view.config))
 
     def edit_name(self):
         """Request a server-validated lobby rename for this connected player."""
@@ -1084,6 +1252,8 @@ class Realtime_Remote_Lobby(GameState):
             self.draw_list_scrollbar(surface, c.SCREEN_WIDTH // 2 + 320, 167, 378, width=22)
         if not self.view: return
         font = pygame.font.Font(None, 22)
+        summary = font.render(_lobby_config_summary(self.view.config), True, (230, 230, 230))
+        surface.blit(summary, summary.get_rect(center=(c.SCREEN_WIDTH // 2, 70)))
         for index, player in enumerate(list(self.view.players.values())[:5]):
             text = (f"{player.name} — {_ping_label(player, self.view.host_id)} — "
                     f"{player.country_id or 'No country'} — {'READY' if player.ready else 'waiting'}")

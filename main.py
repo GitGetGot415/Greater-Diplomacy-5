@@ -553,8 +553,12 @@ class Controller:
             self.states["LOAD_GAME"].refresh_ui()
 
         if next_state_name == "REALTIME_SCENARIO_SELECT":
-            self.states["REALTIME_SCENARIO_SELECT"].host_setup = self.states["REALTIME_HOST_SETUP"]
-            self.states["REALTIME_SCENARIO_SELECT"].refresh_ui()
+            selector = self.states["REALTIME_SCENARIO_SELECT"]
+            if previous_state == self.states["REALTIME_LOBBY"]:
+                selector.bind_lobby(previous_state)
+            else:
+                selector.bind_host(self.states["REALTIME_HOST_SETUP"])
+            selector.refresh_ui()
         elif next_state_name in ("REALTIME_RELAY_SETUP", "REALTIME_RELAY_PROVISION"):
             self.states[next_state_name].bind_host(self.states["REALTIME_HOST_SETUP"])
         elif next_state_name == "REALTIME_LOBBY":

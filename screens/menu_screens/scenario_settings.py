@@ -134,11 +134,13 @@ class Scenario_Settings(GameState):
     # screen must not overwrite the player's global scenario_settings.json.
     pending_session_settings = None
     pending_session_back_state = None
+    pending_session_on_close = None
 
     @classmethod
-    def configure_realtime_session(cls, settings, back_state):
+    def configure_realtime_session(cls, settings, back_state, on_close=None):
         cls.pending_session_settings = settings
         cls.pending_session_back_state = back_state
+        cls.pending_session_on_close = on_close
 
     def _adopt_pending_session(self):
         if self.__class__.pending_session_settings is None:
@@ -146,8 +148,10 @@ class Scenario_Settings(GameState):
         self.settings = self.__class__.pending_session_settings
         self.back_state = self.__class__.pending_session_back_state or "NEW_GAME"
         self._session_bound = True
+        self._session_on_close = self.__class__.pending_session_on_close
         self.__class__.pending_session_settings = None
         self.__class__.pending_session_back_state = None
+        self.__class__.pending_session_on_close = None
         self.refresh_ui()
 
     def _save_settings(self):
@@ -343,10 +347,14 @@ class Scenario_Settings(GameState):
 
     def exit_screen(self):
         was_session_bound = getattr(self, "_session_bound", False)
+        on_close = getattr(self, "_session_on_close", None)
+        if was_session_bound and on_close:
+            on_close(self.settings)
         super().exit_screen()
         if was_session_bound:
             # The controller reuses this screen for ordinary New Game later.
             self._session_bound = False
+            self._session_on_close = None
             self.settings = queries.get_scenario_settings() or self.default_settings()
 
     def update(self):

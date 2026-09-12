@@ -418,6 +418,67 @@ class RealtimeSession:
                 raise
             self._broadcast()
 
+    def set_turn_limit(self, host_id: str, max_turns: int) -> None:
+        with self.lock:
+            self._require_host_lobby(host_id)
+            previous = self.config.max_turns
+            self.config.max_turns = max_turns
+            try:
+                self.config.validate(len(self.countries))
+            except Exception:
+                self.config.max_turns = previous
+                raise
+            self._broadcast()
+
+    def set_turn_minutes(self, host_id: str, turn_minutes: int) -> None:
+        with self.lock:
+            self._require_host_lobby(host_id)
+            previous = self.config.turn_minutes
+            self.config.turn_minutes = turn_minutes
+            try:
+                self.config.validate(len(self.countries))
+            except Exception:
+                self.config.turn_minutes = previous
+                raise
+            self._broadcast()
+
+    def set_scenario_settings(self, host_id: str, settings: dict[str, Any]) -> None:
+        """Replace the pre-game rule bundle and notify every lobby client."""
+        with self.lock:
+            self._require_host_lobby(host_id)
+            if not isinstance(settings, dict):
+                raise RealtimeError("Scenario settings must be an object.")
+            self.config.scenario_settings = copy.deepcopy(settings)
+            self._broadcast()
+
+    def reconfigure_lobby(self, host_id: str, scenario_id: str,
+                          scenario_settings: dict[str, Any], countries: list[str],
+                          driver: Any, max_players: int) -> None:
+        """Atomically install a new pre-game map and reset all selections.
+
+        The host may alter the map only before start. No old country assignment
+        or Ready state can survive a map change, and clients receive one state
+        update containing the new map identity, countries, capacity and rules.
+        """
+        with self.lock:
+            self._require_host_lobby(host_id)
+            new_countries = list(dict.fromkeys(countries))
+            if not new_countries:
+                raise RealtimeError("The selected scenario has no playable countries.")
+            if len(self.players) > max_players:
+                raise RealtimeError("Remove players before switching to a map with fewer player slots.")
+            new_config = RealtimeConfig(
+                scenario_id, copy.deepcopy(scenario_settings), max_players,
+                self.config.max_turns, self.config.turn_minutes,
+                self.config.advertised_address, self.config.port)
+            new_config.validate(len(new_countries))
+            self.countries, self.config, self.driver = new_countries, new_config, driver
+            for player in self.players.values():
+                player.country_id, player.ready = None, False
+            for player in self._lobby_reconnects.values():
+                player.country_id, player.ready = None, False
+            self._broadcast()
+
     def kick(self, host_id: str, player_id: str) -> None:
         with self.lock:
             self._require_host_lobby(host_id)
@@ -2091,6 +2152,27 @@ class RealtimeServer:
                     self._clients.pop(player_id, None)
                 self.session.disconnect(player_id)
 
+    def broadcast_map_bundle(self) -> None:
+        """Send a newly selected lobby map to already-connected guests.
+
+        The ordinary state message carries the new country/configuration list;
+        this separate message carries the potentially large PNG/map bundle only
+        when the host actually changes scenario, not on every lobby update.
+        """
+        bundle_factory = getattr(self.session.driver, "map_bundle", None)
+        if not bundle_factory:
+            return
+        bundle = bundle_factory()
+        with self._clients_lock:
+            clients = list(self._clients.items())
+        for player_id, connection in clients:
+            try:
+                self._send_message(connection, "map_bundle", {"map_bundle": bundle})
+            except OSError:
+                with self._clients_lock:
+                    self._clients.pop(player_id, None)
+                self.session.disconnect(player_id)
+
     def _send_message(self, connection: socket.socket, message_type: str,
                       payload: dict[str, Any], request_id: str | None = None) -> None:
         """Serialize every server write so framed TLS messages stay intact."""
@@ -2256,6 +2338,9 @@ class RealtimeClient:
                     self.player_id = payload.get("player_id", self.player_id)
                     self.display_name = payload.get("display_name", self.display_name)
                     self.reconnect_token = payload.get("reconnect_token", self.reconnect_token)
+                    self.map_bundle = payload.get("map_bundle", getattr(self, "map_bundle", None))
+                elif message["type"] == "map_bundle":
+                    payload = message["payload"]
                     self.map_bundle = payload.get("map_bundle", getattr(self, "map_bundle", None))
                 self.events.put(message)
         except (ConnectionError, OSError, ssl.SSLError, RealtimeError) as exc:
