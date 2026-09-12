@@ -35,6 +35,17 @@ PROTOCOL_VERSION = 1
 DEFAULT_PORT = 38475
 DEFAULT_MAX_TURNS = 20
 DEFAULT_TURN_MINUTES = 10
+# Real-time match setup limits. Keep these together so a host/modder can tune
+# the lobby without hunting through UI and validation code. The UI imports the
+# same names, so a changed limit is enforced and displayed consistently.
+MIN_PLAYER_CAPACITY = 1
+MAX_PLAYER_CAPACITY = 500
+MIN_MATCH_TURNS = 1
+MAX_MATCH_TURNS = 240
+MIN_TURN_MINUTES = 1
+MAX_TURN_MINUTES = 240
+MIN_SERVER_PORT = 1024
+MAX_SERVER_PORT = 65535
 # Initial map bundles include four PNGs. Keep a firm bound while allowing the
 # large historical maps to join without fragile ad-hoc chunking.
 MAX_FRAME_BYTES = 64 * 1024 * 1024
@@ -236,14 +247,17 @@ class RealtimeConfig:
     port: int = DEFAULT_PORT
 
     def validate(self, country_count: int) -> None:
-        if not isinstance(self.max_players, int) or not 1 <= self.max_players <= country_count:
-            raise RealtimeError("Player capacity must fit the selected scenario.")
-        if not isinstance(self.max_turns, int) or not 1 <= self.max_turns <= 100:
-            raise RealtimeError("Maximum turns must be between 1 and 100.")
-        if not isinstance(self.turn_minutes, int) or not 1 <= self.turn_minutes <= 240:
-            raise RealtimeError("Turn time must be between 1 and 240 minutes.")
-        if not isinstance(self.port, int) or not 1024 <= self.port <= 65535:
-            raise RealtimeError("Port must be between 1024 and 65535.")
+        if (not isinstance(self.max_players, int)
+                or not MIN_PLAYER_CAPACITY <= self.max_players <= min(MAX_PLAYER_CAPACITY, country_count)):
+            raise RealtimeError(
+                f"Player capacity must be between {MIN_PLAYER_CAPACITY} and "
+                f"{min(MAX_PLAYER_CAPACITY, country_count)} for this scenario.")
+        if not isinstance(self.max_turns, int) or not MIN_MATCH_TURNS <= self.max_turns <= MAX_MATCH_TURNS:
+            raise RealtimeError(f"Maximum turns must be between {MIN_MATCH_TURNS} and {MAX_MATCH_TURNS}.")
+        if not isinstance(self.turn_minutes, int) or not MIN_TURN_MINUTES <= self.turn_minutes <= MAX_TURN_MINUTES:
+            raise RealtimeError(f"Turn time must be between {MIN_TURN_MINUTES} and {MAX_TURN_MINUTES} minutes.")
+        if not isinstance(self.port, int) or not MIN_SERVER_PORT <= self.port <= MAX_SERVER_PORT:
+            raise RealtimeError(f"Port must be between {MIN_SERVER_PORT} and {MAX_SERVER_PORT}.")
 
 
 @dataclass

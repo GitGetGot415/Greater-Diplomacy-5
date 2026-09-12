@@ -12,7 +12,10 @@ import pygame
 import data.constants as c
 from data import queries
 from data.io.realtime_multiplayer import (
-    DEFAULT_MAX_TURNS, DEFAULT_PORT, DEFAULT_TURN_MINUTES, MapRealtimeDriver,
+    DEFAULT_MAX_TURNS, DEFAULT_PORT, DEFAULT_TURN_MINUTES,
+    MAX_MATCH_TURNS, MAX_PLAYER_CAPACITY, MAX_SERVER_PORT, MAX_TURN_MINUTES,
+    MIN_MATCH_TURNS, MIN_PLAYER_CAPACITY, MIN_SERVER_PORT, MIN_TURN_MINUTES,
+    MapRealtimeDriver,
     RealtimeClient, RealtimeConfig, RealtimeError, RealtimeServer, RealtimeSession, RemoteSessionView,
     default_advertised_address,
     load_reconnect_token, persist_reconnect_token,
@@ -179,13 +182,13 @@ class Realtime_Host_Setup(GameState):
         confirm_dialog.ask_string("Advertised Address", "Enter LAN IP, public IP, or hostname to share:",
                                   saved, initial=self.address)
     def edit_password(self): self._string("Lobby Password", "password", "Optional password (blank removes it):", True)
-    def edit_port(self): self._integer("Server Port", "port", "Forward this TCP port for WAN play:", 1024, 65535)
-    def edit_turns(self): self._integer("Maximum Turns", "max_turns", "1 to 240:", 1, 240)
-    def edit_minutes(self): self._integer("Turn Time", "turn_minutes", "Minutes per turn (1 to 240):", 1, 240)
+    def edit_port(self): self._integer("Server Port", "port", "Forward this TCP port for WAN play:", MIN_SERVER_PORT, MAX_SERVER_PORT)
+    def edit_turns(self): self._integer("Maximum Turns", "max_turns", f"{MIN_MATCH_TURNS} to {MAX_MATCH_TURNS}:", MIN_MATCH_TURNS, MAX_MATCH_TURNS)
+    def edit_minutes(self): self._integer("Turn Time", "turn_minutes", f"Minutes per turn ({MIN_TURN_MINUTES} to {MAX_TURN_MINUTES}):", MIN_TURN_MINUTES, MAX_TURN_MINUTES)
 
     def edit_capacity(self):
         # Country count is checked authoritatively when opening the lobby.
-        self._integer("Player Capacity", "capacity", "Maximum connected players (1 to 100):", 1, 100)
+        self._integer("Player Capacity", "capacity", f"Maximum connected players ({MIN_PLAYER_CAPACITY} to {MAX_PLAYER_CAPACITY}):", MIN_PLAYER_CAPACITY, MAX_PLAYER_CAPACITY)
 
     def edit_settings(self):
         from screens.menu_screens.scenario_settings import Scenario_Settings
@@ -208,7 +211,7 @@ class Realtime_Host_Setup(GameState):
                              map_settings=copy.deepcopy(self.settings))
             countries = queries.get_active_playable_nations(server_map.map_data, server_map.nation_data)
             if self.capacity is None:
-                self.capacity = min(100, len(countries))
+                self.capacity = min(MAX_PLAYER_CAPACITY, len(countries))
             config = RealtimeConfig(self.scenario_path, copy.deepcopy(self.settings), self.capacity,
                                     self.max_turns, self.turn_minutes, self.address, self.port)
             session = RealtimeSession(config, countries, self.host_name,
@@ -629,7 +632,7 @@ class Realtime_Lobby(GameState):
             replacement_map = Map(load_path=path, is_scenario=True, map_settings=settings)
             countries = queries.get_active_playable_nations(replacement_map.map_data,
                                                              replacement_map.nation_data)
-            default_capacity = min(100, len(countries))
+            default_capacity = min(MAX_PLAYER_CAPACITY, len(countries))
             self.session.reconfigure_lobby(
                 self.session.host_id, path, settings, countries,
                 MapRealtimeDriver(replacement_map), default_capacity)
@@ -650,7 +653,7 @@ class Realtime_Lobby(GameState):
     def edit_capacity(self):
         if not self.session:
             return
-        limit = min(100, len(self.session.countries))
+        limit = min(MAX_PLAYER_CAPACITY, len(self.session.countries))
 
         def saved(value):
             if value is None:
@@ -662,7 +665,7 @@ class Realtime_Lobby(GameState):
             except RealtimeError as exc:
                 confirm_dialog.show_error("Capacity Rejected", str(exc))
 
-        confirm_dialog.ask_integer("Player Capacity", f"1 to {limit}:", saved, 1, limit,
+        confirm_dialog.ask_integer("Player Capacity", f"{MIN_PLAYER_CAPACITY} to {limit}:", saved, MIN_PLAYER_CAPACITY, limit,
                                    self.session.config.max_players)
 
     def edit_turn_limit(self):
@@ -679,7 +682,8 @@ class Realtime_Lobby(GameState):
             except RealtimeError as exc:
                 confirm_dialog.show_error("Turn Limit Rejected", str(exc))
 
-        confirm_dialog.ask_integer("Maximum Turns", "1 to 240:", saved, 1, 240,
+        confirm_dialog.ask_integer("Maximum Turns", f"{MIN_MATCH_TURNS} to {MAX_MATCH_TURNS}:", saved,
+                                   MIN_MATCH_TURNS, MAX_MATCH_TURNS,
                                    self.session.config.max_turns)
 
     def edit_turn_minutes(self):
@@ -696,7 +700,8 @@ class Realtime_Lobby(GameState):
             except RealtimeError as exc:
                 confirm_dialog.show_error("Turn Time Rejected", str(exc))
 
-        confirm_dialog.ask_integer("Turn Time", "Minutes per turn (1 to 240):", saved, 1, 240,
+        confirm_dialog.ask_integer("Turn Time", f"Minutes per turn ({MIN_TURN_MINUTES} to {MAX_TURN_MINUTES}):", saved,
+                                   MIN_TURN_MINUTES, MAX_TURN_MINUTES,
                                    self.session.config.turn_minutes)
 
     def edit_scenario_settings(self):
