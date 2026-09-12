@@ -403,6 +403,15 @@ class Slider:
                     play_ui_sound("slider")
                     self.last_sound_tick = current_time # Reset the throttle
 
+def _text_box_text_x(rect, inner, text_width, pad_x, active):
+    """Left edge for text in a single-line box, keeping an active caret visible."""
+    text_x = rect.x + pad_x
+    if not active:
+        return text_x
+    available_width = max(1, inner.right - text_x)
+    return text_x - max(0, text_width - available_width)
+
+
 def draw_text_box(surface, rect, text, active=False, font=None, placeholder=None,
                   pad_x=10, show_caret=True):
     """Draws one single-line text entry box: fill, border, text, caret.
@@ -430,7 +439,13 @@ def draw_text_box(surface, rect, text, active=False, font=None, placeholder=None
     old_clip = surface.get_clip()
     inner = rect.inflate(-6, -4)
     surface.set_clip(inner.clip(old_clip) if old_clip else inner)
-    surface.blit(text_surf, text_surf.get_rect(midleft=(rect.x + pad_x, rect.centery)))
+    # Text entry has a single append-at-the-end caret.  Once the entered value
+    # is wider than its box, shift just the focused rendering left so the
+    # caret and newly typed/pasted suffix stay visible instead of being clipped
+    # beyond the right edge.  An unfocused field continues to show its start,
+    # which keeps long saved values easy to identify at a glance.
+    text_x = _text_box_text_x(rect, inner, text_surf.get_width(), pad_x, active)
+    surface.blit(text_surf, text_surf.get_rect(midleft=(text_x, rect.centery)))
     surface.set_clip(old_clip)
 
 

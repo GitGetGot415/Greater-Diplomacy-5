@@ -331,7 +331,19 @@ class Diplomacy_Editor_Screen(ScrollPanes, MapOverlayScreen):
                                     "Save Changes", self.save))
 
     def pane_rects(self):
-        return self.regions
+        """Return only the panes currently visible to the player.
+
+        The core and agreements views occupy identical columns but keep their
+        own scroll offsets.  Routing every region here left the hidden view's
+        previously drawn scrollbar track live, so after changing tabs it could
+        consume a click meant for Guarantees, Attachés, or Military Access.
+        """
+        if not self.target:
+            return {"nations": self.regions["nations"]}
+        visible = {"nations": self.regions["nations"]}
+        for region, _header, _rows, _is_checked, _on_click in self._columns():
+            visible[region] = self.regions[region]
+        return visible
 
     def additional_events(self, event):
         self.route_pane_scroll(event)

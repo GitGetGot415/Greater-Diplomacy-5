@@ -27,6 +27,7 @@ pygame.display.set_mode((800, 600))
 import data.constants as c
 from map_logic.diplomacy import diplomacy_messages as dm
 from ui import diplomatic_popups
+from ui_elements import _text_box_text_x
 
 
 class Clock:
@@ -299,6 +300,18 @@ class TableRowClickTests(unittest.TestCase):
         detail = TextDetailScreen(Screen({}), "Avaria to Borland", "Short.")
         detail.draw(pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT)))
         self.assertEqual(detail.max_scroll, 0)
+
+
+class TextBoxViewportTests(unittest.TestCase):
+    def test_active_text_box_keeps_its_end_visible(self):
+        rect = pygame.Rect(20, 20, 100, 30)
+        inner = rect.inflate(-6, -4)
+        start = rect.x + 10
+
+        self.assertEqual(_text_box_text_x(rect, inner, 20, 10, True), start)
+        self.assertEqual(_text_box_text_x(rect, inner, 200, 10, True),
+                         inner.right - 200)
+        self.assertEqual(_text_box_text_x(rect, inner, 200, 10, False), start)
 
 
 if __name__ == "__main__":
