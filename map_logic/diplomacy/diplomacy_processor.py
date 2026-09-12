@@ -5,7 +5,7 @@ from data import queries
 # Import from our newly created submodules
 from map_logic.diplomacy.diplomacy_events import log_global_event
 from map_logic.diplomacy import (
-    faction_leadership, guarantees, military_attaches, peace_scope, ratification, restrictions, treaty_effects, volunteers, war_calls
+    faction_leadership, guarantees, military_attaches, peace_scope, ratification, restrictions, treaty_effects, volunteers, war_actions, war_calls
 )
 from map_logic.diplomacy.diplomacy_messages import (
     get_pending_action, send_message, send_treaty_message, forward_message,
@@ -1516,6 +1516,7 @@ def process_diplomacy_turn(map_screen):
     # Direct editor/multiplayer state changes can bypass their normal mutation
     # helpers. Keep temporary diplomatic state valid even on those paths.
     guarantees.reconcile(map_screen.nation_data)
+    war_actions.reconcile_military_access(map_screen.nation_data)
     military_attaches.reconcile(map_screen.nation_data)
     _schedule_conflicting_ai_attache_revocations(map_screen)
     _schedule_conflicting_ai_volunteer_send_homes(map_screen)

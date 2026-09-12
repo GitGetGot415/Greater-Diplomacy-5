@@ -38,6 +38,17 @@ class WarListTests(unittest.TestCase):
         agreements.link_war(data, "A", "B")
         self.assertEqual(data["A"]["at_war_with"], ["B"])
 
+    def test_link_war_revokes_military_access_in_both_directions(self):
+        """Faction and puppet war cascades also use link_war, not finalize_war."""
+        data = {
+            "Turkey": {"military_access": ["Germany"]},
+            "Germany": {"military_access": ["Turkey"]},
+        }
+        agreements.link_war(data, "Turkey", "Germany")
+
+        self.assertEqual(data["Turkey"]["military_access"], [])
+        self.assertEqual(data["Germany"]["military_access"], [])
+
     def test_add_enemy_reports_whether_it_changed_anything(self):
         """finalize_war starts a war-duration counter off this answer, so a
         re-declaration must not reset the clock."""
@@ -151,6 +162,18 @@ class MilitaryAccessTests(unittest.TestCase):
 
     def test_a_nation_with_no_access_list_is_survivable(self):
         agreements.sever_military_access({"A": {}, "B": {}}, "A", "B")
+
+    def test_reconcile_removes_access_from_a_legacy_war_save(self):
+        """A load can contain an old direct war-list mutation rather than a
+        war made through the normal action helper."""
+        data = {
+            "Turkey": {"at_war_with": ["Germany"], "military_access": []},
+            "Germany": {"at_war_with": [], "military_access": ["Turkey"]},
+        }
+
+        agreements.reconcile_military_access(data)
+
+        self.assertNotIn("Turkey", data["Germany"]["military_access"])
 
 
 class CooldownTests(unittest.TestCase):

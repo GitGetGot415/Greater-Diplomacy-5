@@ -10,6 +10,7 @@ them under the name every existing caller and diplomacy_logic.py already uses.
 
 from map_logic.diplomacy.war_actions import (
     sever_military_access,
+    reconcile_military_access,
     add_enemy,
     remove_enemy,
     link_war,

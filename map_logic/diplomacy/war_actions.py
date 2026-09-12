@@ -17,10 +17,10 @@ import data.constants as c
 def sever_military_access(nation_data, a, b):
     """Drops any granted or requested passage between two nations.
 
-    Done when a nation is puppeted, when it joins a faction, and when a puppet
-    is dragged into its master's faction: in all three cases the two now move
-    through each other's territory by right, so a standing grant is redundant
-    and a pending request is moot.
+    Done when nations become allies/subjects (where a standing grant is
+    redundant) and when they become enemies (where passage would be
+    contradictory).  It also clears an in-flight request, which must never be
+    accepted after either of those state changes.
     """
     for country, other in ((a, b), (b, a)):
         access = nation_data.get(country, {}).get("military_access", [])
@@ -52,13 +52,40 @@ def remove_enemy(nation_data, country, other):
 
 
 def link_war(nation_data, a, b):
-    """Puts two nations on each other's war list.
+    """Puts two nations on each other's war list and revokes their passage.
 
     Four call sites wrote this out; one of them indexed nation_data directly
-    and raised KeyError for a nation that had never been given the key.
+    and raised KeyError for a nation that had never been given the key.  This
+    is also used for faction calls to arms and puppet cascades, so it is the
+    one place every route into a war must remove bilateral military access.
     """
+    sever_military_access(nation_data, a, b)
     for country, other in ((a, b), (b, a)):
         add_enemy(nation_data, country, other)
+
+
+def reconcile_military_access(nation_data):
+    """Remove access grants that contradict a currently recorded war.
+
+    Older saves and editor/script mutations can write ``at_war_with`` directly
+    instead of using :func:`link_war` or :func:`finalize_war`.  Reconcile the
+    whole state on load and at the end of a diplomacy turn so neither a stale
+    one-sided war list nor a legacy save can show an impossible access grant.
+    """
+    enemy_pairs = set()
+    for country, data in nation_data.items():
+        if not isinstance(country, str) or not isinstance(data, dict):
+            continue
+        enemies = data.get("at_war_with", [])
+        if not isinstance(enemies, list):
+            continue
+        for enemy in enemies:
+            if (isinstance(enemy, str) and enemy != country
+                    and enemy in nation_data):
+                enemy_pairs.add(tuple(sorted((country, enemy))))
+
+    for a, b in enemy_pairs:
+        sever_military_access(nation_data, a, b)
 
 
 def clear_war_call_cooldowns(nation_data, country, other):

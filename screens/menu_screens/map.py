@@ -24,7 +24,7 @@ from ui import diplomatic_popups, spectator_menus, editor_menus
 from map_logic.camera.camera_handler import MapCamera
 from map_logic.camera import camera_handler
 from map_logic.diplomacy import (diplomacy_logic, guarantees, military_attaches,
-                                 peace_scope, player_diplomacy_actions, volunteers)
+                                 peace_scope, player_diplomacy_actions, volunteers, war_actions)
 from map_logic.random_map import random_map_generator
 from map_logic.rendering import map_renderer, refresh_map
 from map_logic.rendering.font_manager import fonts
@@ -1332,8 +1332,9 @@ class Map(GameState):
 
         # A loaded save may have been written immediately before a faction join
         # or war was resolved. Reconcile once on load so its UI never advertises
-        # a guarantee that is no longer valid.
+        # a guarantee or military-access grant that is no longer valid.
         guarantees.reconcile(self.nation_data)
+        war_actions.reconcile_military_access(self.nation_data)
 
         self.update_country_centers()
 
