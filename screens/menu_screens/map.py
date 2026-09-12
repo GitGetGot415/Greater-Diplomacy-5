@@ -23,7 +23,8 @@ from ui_elements import Button, Slider
 from ui import diplomatic_popups, spectator_menus, editor_menus
 from map_logic.camera.camera_handler import MapCamera
 from map_logic.camera import camera_handler
-from map_logic.diplomacy import diplomacy_logic, guarantees, military_attaches, player_diplomacy_actions, volunteers
+from map_logic.diplomacy import (diplomacy_logic, guarantees, military_attaches,
+                                 peace_scope, player_diplomacy_actions, volunteers)
 from map_logic.random_map import random_map_generator
 from map_logic.rendering import map_renderer, refresh_map
 from map_logic.rendering.font_manager import fonts
@@ -891,12 +892,14 @@ def update_button_states(map_screen):
 
                 # War / Peace UI routing (Allows internal faction wars strictly for rebellions & preemptive attacks)
                 dw_enabled = not (not at_war and in_same_faction and not (is_rebellion or is_preemptive))
+                faction_peace_active = peace_scope.has_settleable_war(
+                    map_screen.player_country, owner, map_screen.nation_data)
                 has_truce = queries.has_active_truce(map_screen.player_country, owner, map_screen.nation_data)
 
                 # Fetch the exact number of turns remaining ---
                 truce_turns = map_screen.nation_data.get(map_screen.player_country, {}).get("truces", {}).get(owner, 0)
 
-                if has_truce and not at_war:
+                if has_truce and not at_war and not faction_peace_active:
                     dw_enabled = False
 
                 if pending_action == "PEACE_TREATY" or pending_action == "CEASEFIRE":
@@ -908,10 +911,10 @@ def update_button_states(map_screen):
                 elif pending_action == "WAR_DECLARATION":
                     dw_text = "Edit War Declaration"
                 else:
-                    if has_truce and not at_war:
+                    if has_truce and not at_war and not faction_peace_active:
                         dw_text = f"Truce Active ({truce_turns})"
                     else:
-                        if at_war:
+                        if at_war or faction_peace_active:
                             if c.BATTLE_ROYALE_MODE:
                                 dw_text = "Battle Royale (No Peace)"
                                 dw_enabled = False

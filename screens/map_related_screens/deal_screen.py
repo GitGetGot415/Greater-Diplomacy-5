@@ -994,6 +994,10 @@ class Deal_Screen(MapOverlayScreen):
         """
         if not self.is_peace:
             return f"Trade Agreement: {self.target_nation}"
+        if peace_scope.is_member_separate_peace(self.role):
+            mine = _bloc_name(self.map_screen.nation_data, self.my_side)
+            theirs = _bloc_name(self.map_screen.nation_data, self.their_side)
+            return f"Separate Peace: {mine} vs {theirs} (member only)"
         if peace_scope.binds_whole_bloc(self.role) and len(self.my_side) > 1:
             mine = _bloc_name(self.map_screen.nation_data, self.my_side)
             theirs = _bloc_name(self.map_screen.nation_data, self.their_side)

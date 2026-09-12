@@ -19,13 +19,19 @@ The rules, in the order they are decided:
     leader signs binds every member -- including their territory. Members get a
     ratification round (see diplomacy_processor) and may refuse, which costs
     them their membership.
-  * A non-leader may sue for a SEPARATE peace with the entire enemy bloc. It is
-    the only way out for a member whose leader will not settle, and it costs
-    them their faction.
+  * A faction leader and an individual member of the opposing faction may make
+    a MEMBER_SEPARATE_PEACE. The leader speaks for their own bloc, but the
+    named enemy member alone settles; neither side is ejected from its faction.
+    This is the limited peace needed when a single ally wants to leave that
+    particular front without deciding its whole faction's war.
+  * A non-leader may otherwise sue for a SEPARATE peace with the entire enemy
+    bloc. It is the only way out for a member whose leader will not settle, and
+    it costs them their faction.
   * A leader may not make a separate peace. Abandoning the bloc you lead is not
     a thing you get to do quietly.
-  * A one-on-one deal with an individual member of an enemy faction is refused
-    outright. That is the hole this module exists to close.
+  * Two ordinary non-leaders still cannot make a one-on-one deal with members
+    of the opposing faction. Only a leader may authorise the member-level
+    settlement above.
 """
 
 from data import queries
@@ -34,6 +40,9 @@ from data import queries
 BLOC_LEADER = "BLOC_LEADER"
 #: A faction member buying its own way out. Signing costs it its membership.
 SEPARATE_PEACE = "SEPARATE_PEACE"
+#: A faction leader's bloc settling with one named member of the enemy bloc.
+#: The member remains in its faction; only its war against this bloc ends.
+MEMBER_SEPARATE_PEACE = "MEMBER_SEPARATE_PEACE"
 #: Nobody's bloc is involved; the old two-nation deal.
 BILATERAL = "BILATERAL"
 
@@ -103,20 +112,33 @@ def negotiation_role(nation, opponent, nation_data):
 
     my_faction = _faction_of(nation, nation_data)
     their_faction = _faction_of(opponent, nation_data)
+    i_am_leader = queries.is_faction_leader(nation, nation_data)
+    they_are_leader = queries.is_faction_leader(opponent, nation_data)
+
+    # A leader may settle their bloc's war with one named member of the other
+    # bloc. The mirror is equally important: that member may offer terms to
+    # the leader, who can accept without treating it as a decision for every
+    # member of the offerer's faction. A leaderless faction still falls through
+    # to the normal whole-bloc rule below, because it has nobody authorised to
+    # distinguish a member-level settlement from a bloc one.
+    their_leader = queries.get_faction_leader(their_faction, nation_data) if their_faction else None
+    my_leader = queries.get_faction_leader(my_faction, nation_data) if my_faction else None
+    if ((i_am_leader and their_faction and not they_are_leader and their_leader)
+            or (they_are_leader and my_faction and not i_am_leader and my_leader)):
+        return MEMBER_SEPARATE_PEACE
 
     # Talking to a bloc means talking to whoever runs it -- unless it has nobody
     # running it, in which case there is nobody to be sent to and refusing would
     # make the war unendable. faction_leadership.promote fills that seat the
     # moment a leader is conquered, so this only catches the gap before the next
     # tick and saves written before the succession rule existed.
-    if (their_faction and not queries.is_faction_leader(opponent, nation_data)
-            and queries.get_faction_leader(their_faction, nation_data)):
+    if their_faction and not they_are_leader and their_leader:
         return None
 
     if not my_faction:
         return BILATERAL
 
-    if queries.is_faction_leader(nation, nation_data):
+    if i_am_leader:
         return BLOC_LEADER
 
     # A member may still walk out on its own -- but only by settling with the
@@ -139,6 +161,8 @@ def refusal_reason(nation, opponent, nation_data):
     if their_faction and not queries.is_faction_leader(opponent, nation_data):
         leader = queries.get_faction_leader(their_faction, nation_data)
         if leader:
+            if queries.is_faction_leader(nation, nation_data):
+                return ""
             return f"{opponent} cannot settle alone -- negotiate with {leader}, who leads {their_faction}."
         # A leaderless bloc has nobody to redirect to, so there is no reason to
         # refuse; negotiation_role lets this through as an ordinary bilateral.
@@ -147,12 +171,23 @@ def refusal_reason(nation, opponent, nation_data):
 
 
 def binds_whole_bloc(role):
-    return role == BLOC_LEADER
+    return role in (BLOC_LEADER, MEMBER_SEPARATE_PEACE)
 
 
 def costs_membership(role):
     """Whether signing this deal takes the proposer out of its own faction."""
     return role == SEPARATE_PEACE
+
+
+def is_member_separate_peace(role):
+    """Whether this settles one enemy faction member against a leader's bloc."""
+    return role == MEMBER_SEPARATE_PEACE
+
+
+def _leader_side_against(leader, opponent, nation_data):
+    """The leader's faction members actually bound against one opponent."""
+    return [nation for nation in _bloc(leader, nation_data)
+            if nation == leader or queries.are_at_war(nation, opponent, nation_data)]
 
 
 def deal_sides(nation, opponent, nation_data, role=None):
@@ -166,11 +201,31 @@ def deal_sides(nation, opponent, nation_data, role=None):
         role = negotiation_role(nation, opponent, nation_data)
 
     mine, theirs = war_sides(nation, opponent, nation_data)
+    if role == MEMBER_SEPARATE_PEACE:
+        if queries.is_faction_leader(nation, nation_data):
+            return _leader_side_against(nation, opponent, nation_data), [opponent]
+        return [nation], _leader_side_against(opponent, nation, nation_data)
     if role == SEPARATE_PEACE:
         return [nation], theirs
     if role == BLOC_LEADER:
         return mine, theirs
     return [nation], theirs
+
+
+def has_settleable_war(nation, opponent, nation_data):
+    """Whether the peace scope contains at least one live enemy pair.
+
+    A faction leader can represent a member who is still fighting even after
+    the leader themselves has made peace with that particular opponent. Looking
+    only at the two clicked country ids would label that situation as a new war
+    declaration rather than the faction-level peace it actually is.
+    """
+    role = negotiation_role(nation, opponent, nation_data)
+    if role is None:
+        return False
+    mine, theirs = deal_sides(nation, opponent, nation_data, role)
+    return any(queries.are_at_war(ours, theirs_nation, nation_data)
+               for ours in mine for theirs_nation in theirs)
 
 
 def bound_members(deal_sides_for_proposer, proposer):

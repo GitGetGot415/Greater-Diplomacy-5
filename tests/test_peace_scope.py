@@ -14,6 +14,7 @@ os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from map_logic.diplomacy import peace_scope
+from data import queries
 from tests.stub_map_screen import StubMapScreen
 
 
@@ -64,17 +65,23 @@ class BlocTests(unittest.TestCase):
         self.assertEqual(sorted(mine), ["A", "S"])
         self.assertEqual(peace_scope.bound_members(mine, "A"), ["S"])
 
-    def test_nobody_may_deal_with_an_individual_member(self):
-        """The hole this module exists to close."""
-        self.assertIsNone(peace_scope.negotiation_role("A", "T", self.game.nation_data))
-        reason = peace_scope.refusal_reason("A", "T", self.game.nation_data)
-        self.assertIn("G", reason)
-        self.assertIn("Alliance", reason)
+    def test_a_leader_may_settle_with_an_individual_enemy_member(self):
+        """Only T settles; G and the rest of the Alliance fight on."""
+        role = peace_scope.negotiation_role("A", "T", self.game.nation_data)
+        self.assertEqual(role, peace_scope.MEMBER_SEPARATE_PEACE)
+        self.assertFalse(peace_scope.costs_membership(role))
+        self.assertEqual(peace_scope.refusal_reason("A", "T", self.game.nation_data), "")
+        mine, theirs = peace_scope.deal_sides("A", "T", self.game.nation_data)
+        self.assertEqual(sorted(mine), ["A", "S"])
+        self.assertEqual(theirs, ["T"])
 
-    def test_a_member_may_only_buy_its_own_way_out(self):
+    def test_a_member_may_offer_the_leader_the_same_limited_peace(self):
         role = peace_scope.negotiation_role("S", "G", self.game.nation_data)
-        self.assertEqual(role, peace_scope.SEPARATE_PEACE)
-        self.assertTrue(peace_scope.costs_membership(role))
+        self.assertEqual(role, peace_scope.MEMBER_SEPARATE_PEACE)
+        self.assertFalse(peace_scope.costs_membership(role))
+        mine, theirs = peace_scope.deal_sides("S", "G", self.game.nation_data)
+        self.assertEqual(mine, ["S"])
+        self.assertEqual(sorted(theirs), ["G", "T"])
 
     def test_a_separate_peace_is_one_nation_against_the_whole_enemy_bloc(self):
         mine, theirs = peace_scope.deal_sides("S", "G", self.game.nation_data)
@@ -103,6 +110,17 @@ class BlocTests(unittest.TestCase):
         self.assertIn("A", mine)
         self.assertIn("S", mine)
         self.assertTrue(theirs)
+
+    def test_leader_can_still_open_member_peace_when_only_an_ally_fights(self):
+        """The map action must be peace, not a second war declaration."""
+        self.game.nation_data["A"]["at_war_with"].remove("T")
+        self.game.nation_data["T"]["at_war_with"].remove("A")
+
+        self.assertFalse(queries.are_at_war("A", "T", self.game.nation_data))
+        self.assertTrue(peace_scope.has_settleable_war("A", "T", self.game.nation_data))
+        mine, theirs = peace_scope.deal_sides("A", "T", self.game.nation_data)
+        self.assertEqual(sorted(mine), ["A", "S"])
+        self.assertEqual(theirs, ["T"])
 
 
 class LeadershipTests(unittest.TestCase):

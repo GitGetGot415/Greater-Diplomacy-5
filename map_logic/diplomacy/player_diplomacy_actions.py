@@ -56,7 +56,8 @@ def handle_declare_war(map_screen):
     # their master", which is a true sentence about a thing it was not doing.
     # Whether it may make peace, and the wording of that refusal, belongs to
     # peace_scope via handle_ceasefire.
-    if queries.are_at_war(player, target, map_screen.nation_data):
+    if (queries.are_at_war(player, target, map_screen.nation_data)
+            or peace_scope.has_settleable_war(player, target, map_screen.nation_data)):
         handle_ceasefire(map_screen)
         return
 
@@ -117,6 +118,10 @@ def handle_ceasefire(map_screen):
     role = peace_scope.negotiation_role(map_screen.player_country, target, map_screen.nation_data)
     if role is None:
         map_screen.show_feedback("You cannot negotiate this peace.")
+        return
+    if not peace_scope.has_settleable_war(map_screen.player_country, target,
+                                          map_screen.nation_data):
+        map_screen.show_feedback("There is no active war to settle with that country.")
         return
 
     # Guard check: Prevent modifying or opening a peace offer if it has already been sent (turns > 0)

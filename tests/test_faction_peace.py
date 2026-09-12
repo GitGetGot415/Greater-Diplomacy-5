@@ -16,6 +16,7 @@ Three things this pins down:
 import os
 import sys
 import unittest
+from unittest import mock
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
@@ -306,14 +307,14 @@ class RatificationRouteTests(unittest.TestCase):
         self.assertEqual(player_diplomacy_actions.handle_ratify_treaty(self.game, True), "")
 
 
-class SeparatePeaceTests(unittest.TestCase):
-    """S is a human member who wants out of a war its leader will not end."""
+class MemberSeparatePeaceTests(unittest.TestCase):
+    """S settles only with the enemy leader's bloc while remaining an ally."""
 
     def setUp(self):
         self.game = two_blocs(human_players=("S",))
         old_enough_to_settle(self.game)
 
-    def test_a_member_settling_alone_leaves_its_faction(self):
+    def test_a_member_settling_with_an_enemy_leader_keeps_its_faction(self):
         mine, theirs = peace_scope.deal_sides("S", "G", self.game.nation_data)
         agreement = deal.new(deal.KIND_PEACE, mine, theirs, [deal.white_peace()])
 
@@ -321,11 +322,11 @@ class SeparatePeaceTests(unittest.TestCase):
         self.game.run_turn()
         self.game.run_turn()
 
-        self.assertEqual(self.game.nation_data["S"]["faction"], "")
+        self.assertEqual(self.game.nation_data["S"]["faction"], "Entente")
         self.assertFalse(at_war(self.game, "S", "G"))
         self.assertFalse(at_war(self.game, "S", "T"))
 
-    def test_the_bloc_it_left_fights_on(self):
+    def test_its_faction_fights_the_enemy_leader_on(self):
         mine, theirs = peace_scope.deal_sides("S", "G", self.game.nation_data)
         agreement = deal.new(deal.KIND_PEACE, mine, theirs, [deal.white_peace()])
 
@@ -335,16 +336,66 @@ class SeparatePeaceTests(unittest.TestCase):
 
         self.assertTrue(at_war(self.game, "A", "G"))
 
-    def test_leaving_is_enforced_even_if_the_clause_is_missing(self):
-        """The price of the manoeuvre, not a term either side chose -- so
-        treaty_effects adds it whether or not the screen did."""
+    def test_no_faction_exit_is_added_to_a_member_level_peace(self):
+        """A leader-member settlement does not quietly eject either party."""
         agreement = deal.new(deal.KIND_PEACE, ["S"], ["G", "T"], [deal.white_peace()])
 
         self.game.propose("S", "G", "PEACE_TREATY", parameters=agreement)
         self.game.run_turn()
         self.game.run_turn()
 
-        self.assertEqual(self.game.nation_data["S"]["faction"], "")
+        self.assertEqual(self.game.nation_data["S"]["faction"], "Entente")
+
+
+class LeaderToMemberPeaceTests(unittest.TestCase):
+    """A leader can send terms directly to one non-leader enemy member."""
+
+    def setUp(self):
+        self.game = two_blocs(human_players=("A", "T"))
+        old_enough_to_settle(self.game)
+
+    def test_the_limited_deal_ends_only_the_named_members_front(self):
+        mine, theirs = peace_scope.deal_sides("A", "T", self.game.nation_data)
+        agreement = deal.new(deal.KIND_PEACE, mine, theirs, [deal.white_peace()])
+
+        self.game.propose("A", "T", "PEACE_TREATY", parameters=agreement)
+        self.game.run_turn()
+        self.game.answer("T", "A", diplomacy_logic.RESPONSE_ACCEPT, "PEACE_TREATY")
+        self.game.run_turn()
+
+        for ours in ("A", "S"):
+            self.assertFalse(at_war(self.game, ours, "T"),
+                             f"{ours} should be at peace with the named member")
+            self.assertTrue(at_war(self.game, ours, "G"),
+                            f"{ours} should still be fighting the enemy leader")
+        self.assertEqual(self.game.nation_data["T"]["faction"], "Alliance")
+
+    def test_map_peace_button_routes_to_terms_when_only_an_ally_fights(self):
+        self.game.nation_data["A"]["at_war_with"].remove("T")
+        self.game.nation_data["T"]["at_war_with"].remove("A")
+        self.game.selected_province = self.game.home_of("T")
+
+        with mock.patch("screens.map_related_screens.deal_screen.open_peace_menu") as open_menu:
+            player_diplomacy_actions.handle_declare_war(self.game)
+
+        open_menu.assert_called_once_with(self.game, "T")
+
+    def test_leader_can_accept_a_members_offer_without_ejecting_them(self):
+        mine, theirs = peace_scope.deal_sides("T", "A", self.game.nation_data)
+        agreement = deal.new(deal.KIND_PEACE, mine, theirs, [deal.white_peace()])
+
+        self.game.propose("T", "A", "PEACE_TREATY", parameters=agreement)
+        self.game.run_turn()
+        self.game.selected_province = self.game.home_of("T")
+        self.game.mail_draft_text = ""
+        self.game.mail_input_active = False
+        player_diplomacy_actions.handle_accept_req(self.game)
+        self.game.run_turn()
+
+        self.assertFalse(at_war(self.game, "T", "A"))
+        self.assertFalse(at_war(self.game, "T", "S"))
+        self.assertTrue(at_war(self.game, "G", "A"))
+        self.assertEqual(self.game.nation_data["T"]["faction"], "Alliance")
 
 
 class AlliesAreNotTrucedTests(unittest.TestCase):
@@ -434,11 +485,9 @@ class FactionMateCeasefireTests(unittest.TestCase):
         self.retaliate("A", "G")
         self.assertEqual(self.queued(), [("A", "G", "CEASEFIRE")])
 
-    def test_a_ceasefire_aimed_at_a_mere_member_of_the_enemy_bloc_is_dropped(self):
-        """T is at war with A, but T does not lead the Alliance -- so there is
-        nobody there with the authority to answer."""
+    def test_a_leader_can_offer_a_member_level_ceasefire_to_an_enemy_member(self):
         self.retaliate("A", "T")
-        self.assertEqual(self.queued(), [])
+        self.assertEqual(self.queued(), [("A", "T", "CEASEFIRE")])
 
     def test_a_follow_up_ceasefire_is_validated_too(self):
         """_flush_queued_ai_actions injected these with no checks at all."""

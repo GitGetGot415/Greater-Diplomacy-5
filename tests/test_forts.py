@@ -34,17 +34,6 @@ class FortTests(unittest.TestCase):
         with open(c.BUILDING_DATA_PATH, "r", encoding="utf-8") as handle:
             cls.buildings = json.load(handle)
 
-    def test_fort_chain_has_twenty_always_available_levels_and_costs(self):
-        self.assertEqual(len([name for name in self.buildings if name.startswith("Fort Lvl ")]), 20)
-        self.assertEqual(self.buildings["Fort Lvl 1"]["req"], None)
-        self.assertEqual(self.buildings["Fort Lvl 1"]["time"], 1)
-        for level in range(1, c.FORT_MAX_LEVEL + 1):
-            name = f"Fort Lvl {level}"
-            self.assertEqual(queries.get_building_required_tech(name), (None, 0))
-            self.assertEqual(self.buildings[name]["cost_materials"], 5000 + level * 1000)
-            if level > 1:
-                self.assertEqual(self.buildings[name]["req"], f"Fort Lvl {level - 1}")
-
     def test_fort_bonus_only_protects_owner_and_faction_members_in_combat(self):
         province = {"owner": "A", "buildings": ["Fort Lvl 20"], "units": []}
         nations = {

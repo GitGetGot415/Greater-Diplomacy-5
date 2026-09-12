@@ -178,8 +178,7 @@ def _follow_up_is_legal(map_screen, sender, target, action_type):
     could land on a nation the sender had never fought.
     """
     if action_type in ("CEASEFIRE", "PEACE_TREATY"):
-        return (queries.are_at_war(sender, target, map_screen.nation_data)
-                and bool(peace_scope.negotiation_role(sender, target, map_screen.nation_data)))
+        return peace_scope.has_settleable_war(sender, target, map_screen.nation_data)
     if action_type == "WAR_DECLARATION":
         return not (queries.are_in_same_faction(sender, target, map_screen.nation_data)
                     or queries.has_active_truce(sender, target, map_screen.nation_data))
@@ -707,7 +706,8 @@ def _process_ai_retaliation(map_screen, active_nations_list, delayed_responses, 
         # faction-mate, in peacetime. Accepting it ran finalize_neutral, which
         # wrote a 12-turn truce, and join_faction_wars skips a truced pair --
         # so an ally silently opted out of the bloc's wars for twelve turns.
-        if not queries.are_at_war(country_name, act_target, map_screen.nation_data):
+        if not peace_scope.has_settleable_war(country_name, act_target,
+                                              map_screen.nation_data):
             print(f"[AI GUARDRAIL] Aborting CEASEFIRE: {country_name} is not at war with {act_target}.")
         elif not peace_scope.negotiation_role(country_name, act_target, map_screen.nation_data):
             print(f"[AI GUARDRAIL] Aborting CEASEFIRE: {country_name} may not settle with {act_target}.")
