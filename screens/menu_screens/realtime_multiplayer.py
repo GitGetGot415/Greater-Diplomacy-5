@@ -501,7 +501,8 @@ class Realtime_Lobby(GameState):
             country = countries[index]
             selected = next((p.name for p in self.session.players.values() if p.country_id == country), None)
             label = f"{country}: {selected or 'Available'}"
-            color = "green" if not selected or selected == self.session.players[host].name else "grey"
+            color = ("blue" if self.session.players[host].country_id == country
+                     else "green" if not selected else "grey")
             try:
                 flag = flag_surface(country, nation_data)
             except (KeyError, TypeError, ValueError, pygame.error):
@@ -987,7 +988,8 @@ class Realtime_Remote_Lobby(GameState):
             except (KeyError, TypeError, ValueError, pygame.error):
                 flag = None
             button = Button("centered", button_y, (600, 32),
-                            "green" if not selected or me and me.country_id == country else "grey",
+                            "blue" if me and me.country_id == country else
+                            "green" if not selected else "grey",
                             f"{country}: {selected or 'Available'}",
                             lambda picked=country: self.client.send("select_country", {"country_id": picked}),
                             image=flag)
