@@ -26,7 +26,9 @@ from data.io.realtime_networking import (
     PortMappingResult, automatic_tcp_port_mapping, host_network_diagnostics,
     is_public_ipv4, make_lan_announcement, parse_lan_announcement,
 )
-from screens.menu_screens.realtime_multiplayer import Realtime_Relay_Provision
+from screens.menu_screens.realtime_multiplayer import (
+    Realtime_Join, Realtime_Relay_Provision, Realtime_Remote_Lobby,
+)
 from screens.menu_screens.map import Map
 from ui_elements import Button
 
@@ -227,6 +229,47 @@ class RelayTransportTests(unittest.TestCase):
             other_invite = dict(invite, fingerprint="b" * 64)
             self.assertEqual(load_reconnect_token(other_invite), "")
 
+    def test_join_uses_entered_name_even_when_an_old_reconnect_code_exists(self):
+        """A reconnect token restores a prior identity only when the player
+        explicitly chooses Reconnect; it must not silently discard a new name.
+        """
+        invite = encode_invite("example.test", 38475, "s" * 32, "a" * 64)
+        screen = object.__new__(Realtime_Join)
+        screen.invite_text, screen.name = invite, "New Guest"
+        screen.password, screen.reconnect_token = "", "old-reconnect-code"
+        client = mock.Mock()
+        with mock.patch("screens.menu_screens.realtime_multiplayer.RealtimeClient", return_value=client):
+            Realtime_Join.connect(screen)
+
+        client.connect.assert_called_once_with()
+        client.send.assert_called_once_with("join", {"name": "New Guest", "password": ""})
+
+    def test_reconnect_is_an_explicit_separate_request(self):
+        invite = encode_invite("example.test", 38475, "s" * 32, "a" * 64)
+        screen = object.__new__(Realtime_Join)
+        screen.invite_text, screen.name = invite, "New Guest"
+        screen.password, screen.reconnect_token = "", "old-reconnect-code"
+        client = mock.Mock()
+        with mock.patch("screens.menu_screens.realtime_multiplayer.RealtimeClient", return_value=client):
+            Realtime_Join.reconnect(screen)
+
+        client.send.assert_called_once_with("reconnect", {"reconnect_token": "old-reconnect-code"})
+
+    def test_remote_lobby_rename_sends_a_server_validated_request(self):
+        screen = object.__new__(Realtime_Remote_Lobby)
+        screen.client = mock.Mock()
+        screen.view = SimpleNamespace(player_id="guest", players={
+            "guest": SimpleNamespace(name="Player"),
+        })
+
+        def answer(_title, _message, callback, **_kwargs):
+            callback("New Guest")
+
+        with mock.patch("ui.confirm_dialog.ask_string", side_effect=answer):
+            Realtime_Remote_Lobby.edit_name(screen)
+
+        screen.client.send.assert_called_once_with("rename", {"name": "New Guest"})
+
     def test_idle_read_timeout_is_ignored_until_the_connection_actually_closes(self):
         class Socket:
             def close(self): pass
@@ -406,6 +449,15 @@ class RealtimeSessionTests(unittest.TestCase):
         self.assertEqual(sanitize_display_name("  Alice  "), "Alice")
         with self.assertRaises(RealtimeError): sanitize_display_name("\nAlice")
         with self.assertRaises(RealtimeError): self.session.join("guest")
+
+    def test_server_acknowledges_the_authoritative_join_name(self):
+        server = RealtimeServer(self.session, "unused-cert", "unused-key")
+        result, player_id = server._handle_message(None, {
+            "type": "join", "payload": {"name": "  Network Guest  ", "password": ""},
+        })
+
+        self.assertEqual(result["display_name"], "Network Guest")
+        self.assertEqual(self.session.players[player_id].name, "Network Guest")
 
     def test_country_selection_is_exclusive_under_race(self):
         outcomes = []

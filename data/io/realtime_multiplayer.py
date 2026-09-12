@@ -1995,6 +1995,7 @@ class RealtimeServer:
         if action == "join":
             player = self.session.join(payload.get("name", ""), payload.get("password", ""))
             result = {"player_id": player.player_id, "reconnect_token": player.reconnect_token,
+                      "display_name": player.name,
                       "state": self.session.public_state()}
             bundle = getattr(self.session.driver, "map_bundle", None)
             if bundle:
@@ -2002,7 +2003,8 @@ class RealtimeServer:
             return result, player.player_id
         if action == "reconnect":
             player = self.session.reconnect(payload.get("reconnect_token", ""))
-            result = {"player_id": player.player_id, "state": self.session.public_state()}
+            result = {"player_id": player.player_id, "display_name": player.name,
+                      "state": self.session.public_state()}
             bundle = getattr(self.session.driver, "map_bundle", None)
             if bundle:
                 result["map_bundle"] = bundle()
@@ -2044,6 +2046,10 @@ class RealtimeClient:
         self.socket: socket.socket | None = None
         self.events: queue.SimpleQueue[dict[str, Any]] = queue.SimpleQueue()
         self.player_id: str | None = None
+        # This comes from the server's join/reconnect acknowledgement.  It is
+        # never inferred from a local text field, which may be stale when a
+        # reconnect restores an existing player identity.
+        self.display_name: str | None = None
         self.reconnect_token: str | None = None
         self.disconnect_message: str | None = None
         self._send_lock = threading.Lock()
@@ -2187,6 +2193,7 @@ class RealtimeClient:
                 if message["type"] == "ok":
                     payload = message["payload"]
                     self.player_id = payload.get("player_id", self.player_id)
+                    self.display_name = payload.get("display_name", self.display_name)
                     self.reconnect_token = payload.get("reconnect_token", self.reconnect_token)
                     self.map_bundle = payload.get("map_bundle", getattr(self, "map_bundle", None))
                 self.events.put(message)

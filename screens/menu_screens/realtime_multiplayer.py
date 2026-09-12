@@ -708,9 +708,18 @@ class Realtime_Join(GameState):
             Button("centered", 300, "medium", "blue", f"Name: {self.name}", self.edit_name),
             Button("centered", 360, "medium", "blue", f"Password: {'SET' if self.password else 'None'}", self.edit_password),
             Button("centered", 420, "medium", "purple", "Reconnect Token" if not self.reconnect_token else "Reconnect Token: SET", self.edit_reconnect_token),
-            Button("centered", 500, "medium", "green", "Reconnect" if self.reconnect_token else "Connect", self.connect),
-            make_back_button(self.exit_screen),
         ]
+        # A recovered reconnect code identifies an *existing* player.  Do not
+        # silently prefer it over the name the user just entered: joining as a
+        # new player and reconnecting are deliberately separate choices.
+        if self.reconnect_token:
+            self.elements.extend([
+                Button("centered-130", 500, "medium", "green", "Join as New Player", self.connect),
+                Button("centered+130", 500, "medium", "purple", "Reconnect", self.reconnect),
+            ])
+        else:
+            self.elements.append(Button("centered", 500, "medium", "green", "Join Match", self.connect))
+        self.elements.append(make_back_button(self.exit_screen))
 
     def _edit(self, attr, title, allow_empty=False):
         def saved(value):
@@ -741,15 +750,18 @@ class Realtime_Join(GameState):
             return
         self.go_to("REALTIME_LAN_BROWSER")
 
-    def connect(self):
+    def connect(self, reconnect=False):
         if IS_WEB:
             confirm_dialog.show_error("Desktop Only", "Real-time multiplayer is available in desktop builds only.")
+            return
+        if reconnect and not self.reconnect_token:
+            confirm_dialog.show_error("Reconnect Code Required", "Enter the reconnect code for this match first.")
             return
         try:
             invite = decode_invite(self.invite_text)
             client = RealtimeClient(invite)
             client.connect()
-            if self.reconnect_token:
+            if reconnect:
                 client.send("reconnect", {"reconnect_token": self.reconnect_token})
             else:
                 client.send("join", {"name": self.name, "password": self.password})
@@ -764,6 +776,9 @@ class Realtime_Join(GameState):
         except (OSError, RealtimeError) as exc:
             confirm_dialog.show_error("Could Not Connect", str(exc))
 
+    def reconnect(self):
+        self.connect(reconnect=True)
+
     def update(self):
         client = getattr(self, "client", None)
         if client:
@@ -771,14 +786,26 @@ class Realtime_Join(GameState):
                 if event.get("type") == "ok" and event.get("payload", {}).get("state"):
                     self.realtime_client = client
                     self.realtime_view = RemoteSessionView(client, event["payload"]["state"], client.player_id)
+                    # Store and display the name actually accepted by the
+                    # authoritative server (not merely whatever used to be in
+                    # the local input box).
+                    if isinstance(client.display_name, str):
+                        self.name = client.display_name
                     if client.reconnect_token:
-                        persist_reconnect_token(client.invite, client.reconnect_token, self.name)
+                        persist_reconnect_token(client.invite, client.reconnect_token,
+                                                client.display_name or self.name)
                         self.reconnect_token = client.reconnect_token
                         if self._shown_reconnect_session != client.invite["session"]:
                             self._shown_reconnect_session = client.invite["session"]
                             self.show_reconnect_code(client.reconnect_token)
                     self.go_to("REALTIME_REMOTE_LOBBY")
                 elif event.get("type") == "error":
+                    # A rejected first join leaves an otherwise idle TLS
+                    # connection open on the server. Close this attempt so a
+                    # corrected name/password always starts from a clean,
+                    # unsurprising connection.
+                    self.client.close()
+                    self.client = None
                     confirm_dialog.show_error("Join Rejected", event.get("payload", {}).get("message", "Unknown error"))
                 elif event.get("type") == "disconnected":
                     self.client = None
@@ -880,6 +907,7 @@ class Realtime_Remote_Lobby(GameState):
             Button(20, 110, "left_ui_button", "pink", "Music", lambda: self.go_to("MUSIC_PLAYER"),
                    image=UI_ICONS.get("music")),
             Button(20, 145, "left_ui_button", "purple", "Copy Reconnect Code", self.copy_reconnect_code),
+            Button(20, 180, "left_ui_button", "blue", "Rename", self.edit_name),
             Button("centered+280", 100, "medium", "red", "Leave Lobby", self.request_leave),
         ]
         if not self.view:
@@ -954,6 +982,21 @@ class Realtime_Remote_Lobby(GameState):
             "Leave this lobby? You can rejoin with your reconnect code while the host keeps it open.",
             lambda confirmed: self.leave() if confirmed else None,
             yes_label="Leave Lobby", no_label="Stay")
+
+    def edit_name(self):
+        """Request a server-validated lobby rename for this connected player."""
+        if not self.client or not self.view:
+            return
+        player = self.view.players.get(self.view.player_id)
+        if not player:
+            return
+
+        def saved(value):
+            if value is not None:
+                self.client.send("rename", {"name": value})
+
+        confirm_dialog.ask_string("Display Name", "Enter your display name:", saved,
+                                  initial=player.name, allow_empty=False)
 
     def copy_reconnect_code(self):
         if not self.reconnect_token:
