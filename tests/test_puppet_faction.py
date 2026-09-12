@@ -311,6 +311,15 @@ class RosterRepairTests(unittest.TestCase):
     def test_a_puppet_in_its_masters_faction_is_kept(self):
         self.assertIn("Loyal", self.repair())
 
+    def test_a_same_faction_war_ejects_one_member_on_load(self):
+        self.nation_data["Italy"]["at_war_with"] = ["Loyal"]
+        self.nation_data["Loyal"]["at_war_with"] = ["Italy"]
+
+        self.repair()
+
+        self.assertFalse(queries.are_in_same_faction("Italy", "Loyal", self.nation_data))
+        self.assertEqual(self.nation_data["Loyal"]["faction"], "")
+
     def test_ordinary_members_are_kept(self):
         self.assertEqual(self.repair(), {"Reich", "Italy", "Loyal"})
 

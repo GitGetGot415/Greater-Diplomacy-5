@@ -155,18 +155,26 @@ def clear_own_pre_war_map_if_peace(nation_data, nation):
 
 
 def finalize_war(map_data, nation_data, a, b, activate_guarantees=True):
-    from map_logic.diplomacy.faction_actions import finalize_faction_leave
+    from map_logic.diplomacy.faction_actions import finalize_faction_leave, leave_faction
     from map_logic.diplomacy.puppet_actions import pull_puppets_into_war, pull_master_into_war
     from map_logic.diplomacy import guarantees, military_attaches
 
     master_a = nation_data.get(a, {}).get("master", "")
     master_b = nation_data.get(b, {}).get("master", "")
 
-    # GUARDRAIL: If they are in the same faction, the aggressor (a) leaves automatically
-    # UNLESS it's a preemptive war against a puppet, then the puppet leaves
+    # A faction cannot contain belligerents. Usually the declarer leaves before
+    # the war begins. A master/puppet war is different: the puppet is about to
+    # become independent, so it must leave instead. finalize_faction_leave
+    # correctly refuses to move an ordinary puppet on its own, but that rule
+    # used to leave the newly independent puppet in its former master's faction
+    # after this branch broke the puppet link below (Italy/Albania was the
+    # visible case). leave_faction is the shared, ungated mutation used by that
+    # forced independence transition.
     if queries.are_in_same_faction(a, b, nation_data):
-        if master_b == a:
-            finalize_faction_leave(nation_data, b)
+        if master_a == b:
+            leave_faction(nation_data, a)
+        elif master_b == a:
+            leave_faction(nation_data, b)
         else:
             finalize_faction_leave(nation_data, a)
 

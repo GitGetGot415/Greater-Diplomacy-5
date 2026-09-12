@@ -1559,6 +1559,8 @@ def process_scripted_events(map_screen):
                     if a_type == "Queue Claims":
                         prov_ids = [int(p.strip()) for p in str(act.get("message", "")).split(",") if p.strip().isdigit()]
                         for pid in prov_ids:
+                            if pid not in map_screen.id_to_province:
+                                continue
                             queue = data.setdefault("claim_queue", [])
                             if not any(q["prov_id"] == pid for q in queue) and pid not in data.get("claims", []):
                                 queue.append({"prov_id": pid, "turns_left": c.CLAIM_TURN_NON_CORE})
@@ -1589,7 +1591,8 @@ def process_scripted_events(map_screen):
                         must_control = act.get("ai_generate", False)
                         from map_logic.turn_processing import edit_province_ownership
                         for a_target in target_list:
-                            if a_target == "None": continue
+                            if a_target not in active_nations:
+                                continue
                             for tile_id in tiles:
                                 if not tile_id.isdigit(): continue
                                 prov = map_screen.id_to_province.get(int(tile_id))
@@ -1605,7 +1608,8 @@ def process_scripted_events(map_screen):
                         tiles = [t.strip() for t in str(act.get("message", "")).split(",") if t.strip()]
                         must_control = act.get("ai_generate", False)
                         for a_target in target_list:
-                            if a_target == "None": continue
+                            if a_target not in active_nations:
+                                continue
                             for tile_id in tiles:
                                 if not tile_id.isdigit(): continue
                                 prov = map_screen.id_to_province.get(int(tile_id))
@@ -1741,6 +1745,20 @@ def process_scripted_events(map_screen):
                         if eng_action:
                             already_queued = (a_target in pending and isinstance(pending[a_target], dict) and pending[a_target].get("action") == eng_action)
                             if not already_queued:
+                                # Scripted events bypass the player UI, so they
+                                # must ask the shared diplomacy guard before
+                                # entering pending_diplomacy. This keeps an
+                                # authored event from starting an illegal war,
+                                # faction change, or diplomatic request merely
+                                # because the board changed since it was made.
+                                from map_logic.diplomacy.diplomacy_processor import action_is_legal
+                                legal, reason = action_is_legal(
+                                    map_screen, nation_name, a_target, eng_action)
+                                if not legal:
+                                    print(f"[SCRIPTED EVENT] Skipping {eng_action} from "
+                                          f"{nation_name} to {a_target}: {reason}.")
+                                    continue
+
                                 custom_msg = act.get("message", "")
                                 ai_generate = act.get("ai_generate", False)
 

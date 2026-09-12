@@ -112,7 +112,7 @@ def apply_treaty_effect(host, action, proposer, accepter, params=None, escrow=No
     charged twice. See deal_effects for why that no longer lives in the UI.
     """
     from data import queries
-    from map_logic.diplomacy import deal_effects, ratification
+    from map_logic.diplomacy import deal_effects, peace_scope, ratification
     from map_logic.diplomacy.diplomacy_agreements import (
         finalize_create_faction, finalize_faction_join, join_faction_wars)
     from map_logic.diplomacy.diplomacy_events import log_global_event
@@ -126,6 +126,8 @@ def apply_treaty_effect(host, action, proposer, accepter, params=None, escrow=No
             return _blocked("PUPPET_CANNOT_CHOOSE_FACTION")
         if nation_data[accepter].get("faction", ""):
             return _blocked("ACCEPT_FACTION_ALREADY_IN")
+        if not queries.is_faction_leader(proposer, nation_data):
+            return TreatyOutcome("Only a faction leader may invite members.", None)
         finalize_faction_join(map_data, nation_data, proposer, accepter)
 
     elif action == "JOIN_FACTION_REQ":
@@ -134,6 +136,8 @@ def apply_treaty_effect(host, action, proposer, accepter, params=None, escrow=No
             return _blocked("PUPPET_CANNOT_CHOOSE_FACTION")
         if nation_data[proposer].get("faction", ""):
             return _blocked("ACCEPT_FACTION_JOIN_ALREADY_IN")
+        if not queries.is_faction_leader(accepter, nation_data):
+            return TreatyOutcome("Only a faction leader may accept new members.", None)
         finalize_faction_join(map_data, nation_data, accepter, proposer)
 
     elif action == "CREATE_FACTION":
@@ -151,6 +155,8 @@ def apply_treaty_effect(host, action, proposer, accepter, params=None, escrow=No
         for side, other in ((proposer, accepter), (accepter, proposer)):
             if not queries.can_negotiate_peace(side, other, nation_data):
                 return _blocked("PUPPET_CANNOT_MAKE_PEACE")
+        if not peace_scope.has_settleable_war(proposer, accepter, nation_data):
+            return _blocked("NO_WAR_TO_SETTLE")
 
         # A bare CEASEFIRE carries no terms by definition; a PEACE_TREATY may
         # carry an itemized deal, an old peace sentence from a save made before
@@ -196,6 +202,8 @@ def apply_treaty_effect(host, action, proposer, accepter, params=None, escrow=No
     elif action == "REQ_MILITARY_ACCESS":
         # The accepter grants the proposer passage through their territory.
         # Deliberately one-way: the proposer gets no say over the reverse.
+        if proposer == accepter or queries.are_at_war(proposer, accepter, nation_data):
+            return _blocked("INVALID_MILITARY_ACCESS")
         granted = nation_data.setdefault(accepter, {}).setdefault("military_access", [])
         if proposer not in granted:
             granted.append(proposer)

@@ -129,6 +129,57 @@ class ScriptedDiplomacyActionTests(unittest.TestCase):
         self.assertEqual((verdict, action), (diplomacy_messages.RESPONSE_ACCEPT,
                                              volunteers.ACTION))
 
+    def test_scripted_master_war_makes_the_puppet_leave_the_faction_first(self):
+        """The historical Albania event must not leave Axis members at war."""
+        self.game.set_faction("Axis", "A", "B")
+        self.game.nation_data["A"]["puppets"] = ["B"]
+        self.game.nation_data["B"].update(master="A", puppet_type="Autonomous")
+        self.game.nation_data["A"]["scripted_events"] = [event("Declare War", "B")]
+
+        process_scripted_events(self.game)
+        self.game.run_turn()
+
+        self.assertEqual(self.game.nation_data["A"]["faction"], "Axis")
+        self.assertEqual(self.game.nation_data["B"]["faction"], "")
+        self.assertIn("B", self.game.nation_data["A"]["at_war_with"])
+        self.assertIn("A", self.game.nation_data["B"]["at_war_with"])
+
+    def test_illegal_scripted_diplomacy_actions_are_not_queued(self):
+        """Scripted events use the same structural rules as the player UI."""
+        self.game.set_faction("Axis", "A", "B")
+        self.game.nation_data["A"]["scripted_events"] = [
+            event("Declare War", "B"),
+            event("Send Ceasefire", "C"),
+            event("Guarantee Independence", "B"),
+            event("Send Military Attaché", "C"),
+            event("Request Military Access", "A"),
+        ]
+
+        process_scripted_events(self.game)
+
+        self.assertEqual(self.game.nation_data["A"]["pending_diplomacy"], {})
+
+    def test_scripted_direct_effects_ignore_missing_targets_and_provinces(self):
+        home = self.game.home_of("A")
+        self.game.nation_data["A"]["scripted_events"] = [{
+            "conditions": [{"type": "True", "operator": "==", "value": "", "chain": "AND"}],
+            "actions": [
+                {"type": "Give Territory", "target": "Missing", "message": str(home["id"])},
+                {"type": "Spawn Unit", "target": "Missing", "message": str(home["id"])},
+                {"type": "Queue Claims", "target": "None", "message": "999999"},
+                {"type": "Send Custom Message", "target": "Missing", "message": "Hello."},
+            ],
+            "fire_once": True,
+            "trigger_type": "Both",
+        }]
+
+        process_scripted_events(self.game)
+
+        self.assertEqual(home["owner"], "A")
+        self.assertEqual(home["units"], [])
+        self.assertEqual(self.game.nation_data["A"].get("claim_queue", []), [])
+        self.assertEqual(self.game.nation_data["A"]["pending_diplomacy"], {})
+
 
 if __name__ == "__main__":
     unittest.main()

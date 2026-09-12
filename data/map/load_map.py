@@ -26,8 +26,8 @@ def _load_default_images(map_obj):
 def repair_faction_rosters(nation_data, map_data):
     """Drops from every faction roster the members who should never have been on it.
 
-    Two states the engine now prevents but older saves are already in, because
-    nothing checked either one:
+    Three states the engine now prevents but older saves are already in, because
+    nothing checked them:
 
       - a puppet in a faction its master is not in. A subject holds whatever its
         master holds; it does not sign its own pacts. saves/Madagascar but not
@@ -37,6 +37,9 @@ def repair_faction_rosters(nation_data, map_data):
         defeated nation off one only ever ran for a puppet the player had
         created, so an ordinary conquest left a ghost: saves/Tannu Tuva Gone but
         not forgotten carries three, of which only Tannu Tuva is a puppet.
+      - two members of the same faction at war. This was possible when a master
+        attacked its own puppet: the puppet became independent, but the normal
+        faction-leave guard had refused to move it first.
 
     Membership is cleared; nothing else about the nation is touched, and no
     nation is deleted. Each repair is logged, so a roster changing between one
@@ -66,6 +69,45 @@ def repair_faction_rosters(nation_data, map_data):
                          f"{name} is no longer counted among {data['faction']}: {reason}.")
         data["faction"] = ""
         data["is_faction_leader"] = False
+
+    # A repaired save can still contain a historical internal war. Keep the
+    # war intact, but remove the least-established side from the faction so the
+    # game never loads two allies as enemies. Prefer a non-leader and then a
+    # puppet; the alphabetical tie-break makes this recovery deterministic.
+    seen_pairs = set()
+    for name, data in sorted(nation_data.items()):
+        if not isinstance(data, dict):
+            continue
+        for enemy in data.get("at_war_with", []):
+            if not isinstance(enemy, str) or enemy not in nation_data:
+                continue
+            pair = tuple(sorted((name, enemy)))
+            if pair in seen_pairs:
+                continue
+            seen_pairs.add(pair)
+
+            other = nation_data.get(enemy, {})
+            if not (isinstance(other, dict)
+                    and queries.are_in_same_faction(name, enemy, nation_data)):
+                continue
+
+            def removal_priority(member):
+                member_data = nation_data[member]
+                try:
+                    tenure = int(member_data.get("faction_tenure", 0) or 0)
+                except (TypeError, ValueError):
+                    tenure = 0
+                return (bool(member_data.get("is_faction_leader")),
+                        not bool(member_data.get("master", "")), tenure, member)
+
+            leaver = min((name, enemy), key=removal_priority)
+            faction = nation_data[leaver]["faction"]
+            log_global_event(
+                nation_data,
+                f"{leaver} is no longer counted among {faction}: it is at war with "
+                f"fellow member {enemy if leaver == name else name}.")
+            nation_data[leaver]["faction"] = ""
+            nation_data[leaver]["is_faction_leader"] = False
 
 
 def _saved_player_view(save_meta):

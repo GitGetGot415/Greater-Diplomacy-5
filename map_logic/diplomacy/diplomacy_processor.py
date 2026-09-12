@@ -168,31 +168,114 @@ def _decay_modifiers_and_truces(map_screen):
                 del war_durs[enemy]
 
 
-def _follow_up_is_legal(map_screen, sender, target, action_type):
-    """Whether a queued follow-up still makes sense by the time it fires.
+def action_is_legal(map_screen, sender, target, action_type):
+    """Return whether a diplomatic action is currently legal, plus a reason.
 
-    These come from a model's `follow_up_action` and were injected straight into
-    pending_diplomacy with no checks of any kind -- no war state, no faction, no
-    truce -- while the immediate action beside them went through a whole
-    guardrail block. A peace offer is the one that shows: a follow-up CEASEFIRE
-    could land on a nation the sender had never fought.
+    The player UI has friendly, action-specific checks, but scripted events and
+    AI follow-ups place their actions straight into ``pending_diplomacy``.
+    Keeping their structural checks here means those alternate routes cannot
+    create a state the ordinary buttons would refuse. This is deliberately
+    about rules, rather than AI preferences such as cooldowns or war appetite.
     """
-    if action_type in ("CEASEFIRE", "PEACE_TREATY"):
-        return peace_scope.has_settleable_war(sender, target, map_screen.nation_data)
+    nation_data = map_screen.nation_data
+    sender_data = nation_data.get(sender)
+    target_data = nation_data.get(target)
+
+    if not isinstance(sender_data, dict) or not isinstance(target_data, dict):
+        return False, "one of the countries no longer exists"
+    if action_type.startswith("MSG:"):
+        return True, ""
+
     if action_type == "WAR_DECLARATION":
-        return not (queries.are_in_same_faction(sender, target, map_screen.nation_data)
-                    or queries.has_active_truce(sender, target, map_screen.nation_data))
-    if action_type in ("JOIN_WARS", "CALL_TO_ARMS"):
-        return queries.are_in_same_faction(sender, target, map_screen.nation_data)
-    if action_type == "LEAVE_FACTION":
-        # The prompt teaches the two-step defection ("leaving your faction this
-        # turn to declare war next turn"), so the follow-up channel is the
-        # likelier half of it -- and it was the unchecked one.
-        return not why_an_ai_may_not_leave(sender, map_screen.nation_data)
-    if action_type == "JOIN_FACTION_REQ":
-        return (not map_screen.nation_data.get(sender, {}).get("faction", "")
-                and not queries.are_at_war(sender, target, map_screen.nation_data))
-    return True
+        if sender == target:
+            return False, "a country cannot declare war on itself"
+        if queries.are_at_war(sender, target, nation_data):
+            return False, "the countries are already at war"
+        sender_master = sender_data.get("master", "")
+        target_master = target_data.get("master", "")
+        sender_type = sender_data.get("puppet_type", "")
+        target_type = target_data.get("puppet_type", "")
+        if sender_master and sender_master != target:
+            return False, "a puppet may only declare war on its master"
+        if target_master and target_type == c.PUPPET_TYPE_INTEGRATED:
+            return False, "integrated puppets cannot be declared on"
+        subject_war = ((sender_master == target and sender_type == c.PUPPET_TYPE_AUTONOMOUS)
+                       or (target_master == sender and target_type == c.PUPPET_TYPE_AUTONOMOUS))
+        if queries.are_in_same_faction(sender, target, nation_data) and not subject_war:
+            return False, "the countries are in the same faction"
+        if queries.has_active_truce(sender, target, nation_data):
+            return False, "the countries have an active truce"
+
+    elif action_type in ("CEASEFIRE", "PEACE_TREATY"):
+        if not peace_scope.has_settleable_war(sender, target, nation_data):
+            return False, "there is no war these countries may settle"
+
+    elif action_type == "FACTION_INVITE":
+        if getattr(c, "DISABLE_FACTIONS", False):
+            return False, "factions are disabled"
+        if not queries.is_faction_leader(sender, nation_data):
+            return False, "only a faction leader may invite members"
+        if not queries.can_choose_own_faction(target, nation_data):
+            return False, "a puppet follows its master's faction"
+        if target_data.get("faction", ""):
+            return False, "the target is already in a faction"
+
+    elif action_type == "JOIN_FACTION_REQ":
+        if getattr(c, "DISABLE_FACTIONS", False):
+            return False, "factions are disabled"
+        if not queries.can_choose_own_faction(sender, nation_data):
+            return False, "a puppet follows its master's faction"
+        if sender_data.get("faction", ""):
+            return False, "the sender is already in a faction"
+        if not queries.is_faction_leader(target, nation_data):
+            return False, "the target is not a faction leader"
+        if queries.are_at_war(sender, target, nation_data):
+            return False, "the countries are at war"
+
+    elif action_type == "CREATE_FACTION":
+        if getattr(c, "DISABLE_FACTIONS", False):
+            return False, "factions are disabled"
+        if (not queries.can_choose_own_faction(sender, nation_data)
+                or not queries.can_choose_own_faction(target, nation_data)):
+            return False, "puppets cannot found factions independently"
+        if sender_data.get("faction", "") or target_data.get("faction", ""):
+            return False, "both founders must be outside factions"
+
+    elif action_type == "GUARANTEE":
+        legal, reason = guarantees.is_eligible(sender, target, nation_data)
+        if not legal:
+            return False, reason
+
+    elif action_type == "SEND_MILITARY_ATTACHE":
+        legal, reason = military_attaches.is_eligible(sender, target, nation_data)
+        if not legal:
+            return False, reason
+
+    elif action_type == "REQ_MILITARY_ACCESS":
+        if sender == target:
+            return False, "a country already has access to itself"
+        if queries.are_at_war(sender, target, nation_data):
+            return False, "enemies cannot request military access"
+        if queries.has_military_access(sender, target, nation_data):
+            return False, "military access is already granted"
+
+    elif action_type in ("JOIN_WARS", "CALL_TO_ARMS"):
+        if not queries.are_in_same_faction(sender, target, nation_data):
+            return False, "the countries are not in the same faction"
+        if not war_calls.is_honest(action_type, sender, target, nation_data):
+            return False, "there is no unshared war to join"
+
+    elif action_type == "LEAVE_FACTION":
+        blocked = why_an_ai_may_not_leave(sender, nation_data)
+        if blocked:
+            return False, blocked
+
+    return True, ""
+
+
+def _follow_up_is_legal(map_screen, sender, target, action_type):
+    """Compatibility wrapper for AI follow-ups using the shared legality gate."""
+    return action_is_legal(map_screen, sender, target, action_type)[0]
 
 
 def _flush_queued_ai_actions(map_screen):
