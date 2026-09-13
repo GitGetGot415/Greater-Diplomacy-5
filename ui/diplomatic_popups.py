@@ -138,20 +138,26 @@ def spawn_popups_for_player(map_screen):
             if not msg.get("sender", "").startswith("To: "):
                 idx = len(map_screen.diplomatic_popups)
                 content = msg.get("content", "")
-                sender = msg.get("sender", "Unknown")
+                sender_id = msg.get("sender", "Unknown")
+                sender = queries.get_country_display_name(sender_id, map_screen.nation_data)
 
                 forwarded = diplomacy_messages.forwarded_details(msg)
                 if forwarded:
                     content = (
                         ">> FORWARDED MESSAGE\n"
-                        f"Originally sent by {forwarded['original_sender']} to "
-                        f"{forwarded['original_receiver']} on {forwarded['original_date']}\n"
-                        f"Forwarded by {forwarded['forwarded_by']} on "
-                        f"{forwarded['forwarded_at']}\n" + content
+                        "Originally sent by " + queries.get_country_display_name(
+                            forwarded["original_sender"], map_screen.nation_data) + " to "
+                        + queries.get_country_display_name(
+                            forwarded["original_receiver"], map_screen.nation_data)
+                        + f" on {forwarded['original_date']}\n"
+                        + "Forwarded by " + queries.get_country_display_name(
+                            forwarded["forwarded_by"], map_screen.nation_data)
+                        + f" on {forwarded['forwarded_at']}\n" + content
                     )
 
                 # Dynamically append instructions if action requires a bilateral response
-                incoming_action, incoming_turns = queries.get_diplomatic_status(sender, map_screen.player_country, map_screen.nation_data)
+                incoming_action, incoming_turns = queries.get_diplomatic_status(
+                    sender_id, map_screen.player_country, map_screen.nation_data)
                 if incoming_turns > 0 and incoming_action in c.BILATERAL_ACTIONS:
                     content += "\n(See Messages to accept or decline)"
 

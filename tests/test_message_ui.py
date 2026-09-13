@@ -69,6 +69,17 @@ class PopupLifetimeTests(unittest.TestCase):
     def test_an_incoming_request_raises_a_popup(self):
         self.assertEqual(len(self.screen.diplomatic_popups), 1)
 
+    def test_popup_uses_the_senders_country_name(self):
+        self.msg["sender"] = "AVR"
+        self.nation_data["AVR"] = self.nation_data.pop("Avaria")
+        self.nation_data["AVR"]["name"] = "Avarian Republic"
+        self.msg.pop("popup_shown", None)
+        self.screen.diplomatic_popups = []
+
+        diplomatic_popups.spawn_popups_for_player(self.screen)
+
+        self.assertEqual("Avarian Republic", self.screen.diplomatic_popups[0].sender)
+
     def test_it_stays_up_while_the_request_is_unanswered(self):
         diplomatic_popups.close_spent_popups(self.screen)
         self.assertEqual(len(self.screen.diplomatic_popups), 1)
