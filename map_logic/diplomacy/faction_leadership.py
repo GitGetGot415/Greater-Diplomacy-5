@@ -153,6 +153,30 @@ def promote(map_screen, faction, world=None):
     return heir
 
 
+def repair_leaderless_factions(map_screen, world=None):
+    """Give every surviving faction exactly one leader.
+
+    A normal turn calls :func:`tick`, which repairs an orphaned chair before it
+    measures challenges.  Saves, however, are playable before their first turn
+    and older/edited saves can contain a faction with no leader at all.  Repair
+    those immediately after loading as well, so the diplomacy UI never has to
+    guess whether a member is a puppet merely because there is no chair to
+    challenge.
+
+    Returns the factions whose roster changed.  The deterministic order keeps
+    load migration stable when several old factions need repair at once.
+    """
+    nation_data = map_screen.nation_data
+    factions = sorted({data.get("faction", "") for data in nation_data.values()
+                       if isinstance(data, dict) and data.get("faction")})
+    repaired = []
+    for faction in factions:
+        if not queries.get_faction_leader(faction, nation_data):
+            promote(map_screen, faction, world)
+            repaired.append(faction)
+    return repaired
+
+
 def tick(map_screen, world=None):
     """Ages every member's claim on its faction's leadership by one turn.
 

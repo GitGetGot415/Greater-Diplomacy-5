@@ -525,6 +525,12 @@ def load_map_assets(map_screen, load_path):
     # Runs before the pre-war maps below, which are built off the rosters.
     repair_faction_rosters(map_screen.nation_data, map_screen.map_data)
 
+    # A faction needs a chair before any screen, peace negotiation, or AI can
+    # reason about it.  Turn processing heals this state too, but a loaded save
+    # must already be internally consistent before its first turn.
+    from map_logic.diplomacy import faction_leadership
+    faction_leadership.repair_leaderless_factions(map_screen)
+
     # Init Pre-War Maps for Factions starting at war
     map_screen.nation_data.setdefault("FACTION_WAR_MAPS", {})
     for c_name, c_data in map_screen.nation_data.items():

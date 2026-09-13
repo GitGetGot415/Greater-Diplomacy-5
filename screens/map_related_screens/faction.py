@@ -2,10 +2,22 @@ import pygame
 from gameState import GameState, resolve_keybind
 import data.constants as c
 from ui.bars import ui_bars
+from ui.flag_icons import draw_flag_centered
 from ui_elements import Button, process_text_input, make_back_button, draw_text_box
 from map_logic.rendering.font_manager import fonts
 from map_logic.diplomacy import faction_actions, faction_leadership
 from data import queries
+
+
+# The roster deliberately ends above the action buttons.  Its content can grow
+# freely; this fixed viewport, rather than a growing sequence of row positions,
+# is what keeps a large faction usable at every screen height.
+ROSTER_LEFT_OFFSET = 300
+ROSTER_WIDTH = 600
+ROSTER_TOP_Y = 160
+ROSTER_BOTTOM_BUTTON_GAP = 245
+ROSTER_ROW_HEIGHT = 30
+ROSTER_SECTION_GAP = 16
 
 class Faction_Screen(GameState):
     back_state = "MAP"
@@ -16,11 +28,15 @@ class Faction_Screen(GameState):
         self.map_screen = None
         self.is_renaming = False
         self.new_faction_name = ""
+        self.scroll_y = 0
+        self.max_scroll = 0
+        self.scroll_content_rect = None
 
     def start_faction(self, map_ref):
         self.map_screen = map_ref
         self.is_renaming = False
         self.new_faction_name = ""
+        self.scroll_y = 0
         self.refresh_ui()
 
     def refresh_ui(self):
@@ -99,7 +115,14 @@ class Faction_Screen(GameState):
 
         state = faction_leadership.standing(self.map_screen, player)
         if state is None:
-            btn.apply_state(enabled=False, text="Puppets Cannot Claim")
+            nation_data = self.map_screen.nation_data
+            if nation_data.get(player, {}).get("master", ""):
+                btn.apply_state(enabled=False, text="Puppets Cannot Claim")
+            elif not queries.get_faction_leader(
+                    nation_data.get(player, {}).get("faction", ""), nation_data):
+                btn.apply_state(enabled=False, text="Faction Needs A Leader")
+            else:
+                btn.apply_state(enabled=False, text="Cannot Claim Leadership")
             return btn
 
         held, needed, ahead = state
@@ -171,6 +194,8 @@ class Faction_Screen(GameState):
         self.refresh_ui()
         
     def additional_events(self, event):
+        if self.handle_list_scroll(event, content_rect_attr="scroll_content_rect"):
+            return
         if self.is_renaming:
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_RETURN:
@@ -205,55 +230,75 @@ class Faction_Screen(GameState):
         else:
             ui_bars.draw_centered_title(surface, f"Faction: {my_faction}", 40, font_preset="title")
             
-        members = queries.get_faction_members(my_faction, nation_data)
+        # Alphabetize what the player reads, not the internal nation IDs.  The
+        # latter can differ after a rename or imported save and should never
+        # determine the visible roster order.
+        members = sorted(
+            queries.get_faction_members(my_faction, nation_data),
+            key=lambda nation: (queries.get_country_display_name(nation, nation_data).casefold(),
+                                nation),
+        )
         leader = queries.get_faction_leader(my_faction, nation_data)
 
-        leader_txt = font_heading.render(f"Leader: {nation_data.get(leader, {}).get('name', leader)}", True, c.COLOR_GOLD_HIGHLIGHT)
+        leader_name = queries.get_country_display_name(leader, nation_data)
+        leader_txt = font_heading.render(f"Leader: {leader_name}", True, c.COLOR_GOLD_HIGHLIGHT)
         surface.blit(leader_txt, (c.SCREEN_WIDTH // 2 - leader_txt.get_width() // 2, 120))
 
-        list_start_y = self._draw_challengers(surface, nation_data, my_faction, 160)
-        surface.blit(font_heading.render("Members:", True, c.UI_TEXT_LIGHT), (c.SCREEN_WIDTH // 2 - 300, list_start_y))
+        self._draw_roster(surface, nation_data, my_faction, members,
+                          font_heading, font_normal)
 
-        for i, member in enumerate(members):
-            m_name = nation_data.get(member, {}).get("name", member)
-            txt = font_normal.render(f"- {m_name}", True, (255, 255, 255))
-            surface.blit(txt, (c.SCREEN_WIDTH // 2 - 280, list_start_y + 40 + (i * 30)))
-
-    def _draw_challengers(self, surface, nation_data, faction, top_y):
-        """Who is closing on the chair, under the name of whoever is in it.
-
-        The claim used to be legible from exactly one place: the button on this
-        screen, which only ever spoke about *you*. A leader had no way of
-        knowing it was being challenged and a member had no way of knowing
-        somebody else was ahead of it, so the first anyone heard of a handover
-        was the handover. Several members can be building a claim at once, so
-        this is a list rather than a line.
-
-        Returns the y the members list should start at, so a long list of
-        challengers pushes it down instead of drawing over it.
-        """
-        font_small = fonts.get("normal")
+    def _draw_roster(self, surface, nation_data, faction, members,
+                     font_heading, font_normal):
+        """Draw a clipped, scrollable faction roster and active challenges."""
         standings = faction_leadership.contenders(nation_data, faction)
-        if not standings:
-            return 200
+        left = c.SCREEN_WIDTH // 2 - ROSTER_LEFT_OFFSET
+        bottom = c.SCREEN_HEIGHT - ROSTER_BOTTOM_BUTTON_GAP
+        self.scroll_content_rect = pygame.Rect(left, ROSTER_TOP_Y,
+                                                ROSTER_WIDTH, bottom - ROSTER_TOP_Y)
 
-        heading = font_small.render("Building a claim on the leadership:", True,
-                                    c.MSG_NOTIFICATION_COLOR)
-        surface.blit(heading, (c.SCREEN_WIDTH // 2 - heading.get_width() // 2, top_y))
+        challenge_height = 0
+        if standings:
+            challenge_height = ROSTER_ROW_HEIGHT * (len(standings) + 1) + ROSTER_SECTION_GAP
+        content_height = challenge_height + ROSTER_ROW_HEIGHT * (len(members) + 1)
+        self.max_scroll = min(0, self.scroll_content_rect.height - content_height)
+        self.scroll_y = max(self.max_scroll, min(0, self.scroll_y))
 
-        y = top_y + 26
-        for nation, held, needed in standings:
-            name = nation_data.get(nation, {}).get("name", nation)
-            if held >= needed:
-                when = "can claim it now"
-            else:
-                left = needed - held
-                when = f"{left} more turn{'' if left == 1 else 's'} of holding it"
-            line = font_small.render(f"{name} -- {when}", True, c.UI_TEXT_LIGHT)
-            surface.blit(line, (c.SCREEN_WIDTH // 2 - line.get_width() // 2, y))
-            y += 24
+        y = self.scroll_content_rect.top + self.scroll_y
+        with ui_bars.clip_scroll_region(surface, self.scroll_content_rect):
+            if standings:
+                heading = font_normal.render("Building a claim on the leadership:", True,
+                                             c.MSG_NOTIFICATION_COLOR)
+                surface.blit(heading, (left, y))
+                y += ROSTER_ROW_HEIGHT
+                for nation, held, needed in standings:
+                    name = queries.get_country_display_name(nation, nation_data)
+                    if held >= needed:
+                        when = "can claim it now"
+                    else:
+                        remaining = needed - held
+                        when = (f"{remaining} more turn"
+                                f"{'' if remaining == 1 else 's'} of holding it")
+                    text_x = draw_flag_centered(surface, nation, nation_data, left + 4,
+                                                 y, ROSTER_ROW_HEIGHT)
+                    line = font_normal.render(f"{name} -- {when}", True, c.UI_TEXT_LIGHT)
+                    surface.blit(line, (text_x, y))
+                    y += ROSTER_ROW_HEIGHT
+                y += ROSTER_SECTION_GAP
 
-        return max(200, y + 20)
+            surface.blit(font_heading.render("Members:", True, c.UI_TEXT_LIGHT), (left, y))
+            y += ROSTER_ROW_HEIGHT
+            for member in members:
+                text_x = draw_flag_centered(surface, member, nation_data, left + 4,
+                                             y, ROSTER_ROW_HEIGHT)
+                name = queries.get_country_display_name(member, nation_data)
+                txt = font_normal.render(name, True, (255, 255, 255))
+                surface.blit(txt, (text_x, y))
+                y += ROSTER_ROW_HEIGHT
+
+        if self.max_scroll < 0:
+            self.draw_list_scrollbar(surface, self.scroll_content_rect.right - 15,
+                                     self.scroll_content_rect.top,
+                                     self.scroll_content_rect.height, width=12)
 
     def handle_back_key(self):
         # Escape cancels an in-progress rename before it leaves the screen.
