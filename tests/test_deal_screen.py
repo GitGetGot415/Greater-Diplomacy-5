@@ -382,10 +382,11 @@ class AssemblyTests(DealScreenTestCase):
         screen.military_access = True
 
         kinds = [cl["type"] for cl in deal_mod.clauses(screen.build_deal())]
-        for expected in (deal_mod.WHITE_PEACE, deal_mod.TILES, deal_mod.RESOURCES,
+        for expected in (deal_mod.TILES, deal_mod.RESOURCES,
                          deal_mod.VASSALIZE, deal_mod.DEMILITARIZE,
                          deal_mod.MILITARY_ACCESS):
             self.assertIn(expected, kinds)
+        self.assertNotIn(deal_mod.WHITE_PEACE, kinds)
 
     def test_the_assembled_deal_is_always_valid(self):
         screen = self.screen()

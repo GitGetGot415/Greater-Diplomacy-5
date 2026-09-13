@@ -68,7 +68,7 @@ def new(kind, side_a, side_b, clauses=()):
         "v": VERSION,
         "kind": kind,
         "sides": {"a": list(side_a), "b": list(side_b)},
-        "clauses": [dict(clause) for clause in clauses],
+        "clauses": _canonical_clauses(kind, clauses),
     }
 
 
@@ -81,12 +81,26 @@ def clauses(deal):
     return deal.get("clauses", []) if isinstance(deal, dict) else []
 
 
+def _canonical_clauses(kind, proposed_clauses):
+    """Keep the white-peace marker only on a settlement with no demands.
+
+    ``WHITE_PEACE`` is a complete status-quo settlement, not a modifier for
+    territorial or other terms. Older builders prepended it to every peace
+    deal, which made the UI promise restored borders immediately before listing
+    a cession. A non-white clause makes the settlement non-white.
+    """
+    copied = [dict(clause) for clause in proposed_clauses]
+    if kind == KIND_PEACE and any(clause.get("type") != WHITE_PEACE for clause in copied):
+        return [clause for clause in copied if clause.get("type") != WHITE_PEACE]
+    return copied
+
+
 def with_clauses(deal, new_clauses):
     """A copy of `deal` carrying a different clause list. See the module note on
     why nothing here edits a deal in place."""
     replacement = dict(deal)
     replacement["sides"] = {"a": list(deal["sides"]["a"]), "b": list(deal["sides"]["b"])}
-    replacement["clauses"] = [dict(clause) for clause in new_clauses]
+    replacement["clauses"] = _canonical_clauses(deal.get("kind"), new_clauses)
     return replacement
 
 
@@ -873,7 +887,7 @@ def describe(deal, viewer=None, nation_data=None):
     for clause in clauses(deal):
         kind = clause.get("type")
 
-        if kind == WHITE_PEACE:
+        if kind == WHITE_PEACE and is_white_peace(deal):
             # It said "the map stands", which stopped being true when unnamed
             # occupied land started going home -- and it is the one line a player
             # reads before signing away every conquest they made.

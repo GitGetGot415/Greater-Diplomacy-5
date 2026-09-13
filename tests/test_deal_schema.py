@@ -47,7 +47,8 @@ class ConstructionTests(unittest.TestCase):
         extended = deal.add_clause(original, deal.tiles_clause("B", "A", [3]))
 
         self.assertEqual(len(deal.clauses(original)), 1)
-        self.assertEqual(len(deal.clauses(extended)), 2)
+        self.assertEqual(len(deal.clauses(extended)), 1)
+        self.assertFalse(deal.is_white_peace(extended))
         self.assertIsNot(original["sides"]["a"], extended["sides"]["a"])
 
     def test_tiles_clause_dedupes_and_sorts(self):
@@ -292,8 +293,21 @@ class DescriptionTests(unittest.TestCase):
             {"type": deal.WAR_EXIT, "nation": "B", "against": "A"},
         ])
         lines = deal.describe(agreement, viewer="A")
-        self.assertEqual(len(lines), 8)
+        self.assertEqual(len(lines), 7)
         self.assertTrue(all(line.strip() for line in lines))
+
+    def test_terms_never_describe_a_mixed_deal_as_white_peace(self):
+        # Older saves can still contain the old marker-plus-demand shape. It
+        # must be read as a settlement, never as a white peace.
+        agreement = {
+            "v": deal.VERSION, "kind": deal.KIND_PEACE,
+            "sides": {"a": ["A"], "b": ["B"]},
+            "clauses": [deal.white_peace(), deal.tiles_clause("B", "A", [3])],
+        }
+        lines = deal.describe(agreement, viewer="A")
+        self.assertFalse(deal.is_white_peace(agreement))
+        self.assertFalse(any(line.startswith("White peace:") for line in lines))
+        self.assertIn("B cede 1 province to you.", lines)
 
     def test_the_viewer_is_called_you(self):
         agreement = deal.new(deal.KIND_PEACE, ["A"], ["B"],

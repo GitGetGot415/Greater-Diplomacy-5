@@ -584,7 +584,7 @@ def _victors_terms(map_screen, ai_name, enemy, leverage):
     # at least one province is asked for. Handing the lot back is not a position.
     floor = 1 if leverage > 0.5 else 0
 
-    clauses = [deal_mod.white_peace()]
+    clauses = []
     for (loser, winner), provs in sorted(holdings.items()):
         # Most valuable first, so a partial demand keeps the ground worth
         # keeping rather than whichever tiles happened to come out of map_data
@@ -595,7 +595,7 @@ def _victors_terms(map_screen, ai_name, enemy, leverage):
             clauses.append(deal_mod.tiles_clause(
                 loser, winner, [p["id"] for p in ranked[:wanted]]))
 
-    if len(clauses) == 1:
+    if not clauses:
         return _white_peace_terms(map_screen, ai_name, enemy)
     return _with_the_price_of_walking_out(
         map_screen, ai_name, enemy,
