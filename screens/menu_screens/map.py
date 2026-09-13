@@ -506,7 +506,7 @@ def render_buttons(map_screen):
                                               lambda: realtime_status_panel.show_details(map_screen))
     map_screen.btn_view_foreign_politics = Button(
         *c.PROVINCE_UI["foreign_politics_button"][:2],
-        c.PROVINCE_UI["foreign_politics_button"][2:], "purple", "Politics",
+        c.PROVINCE_UI["foreign_politics_button"][2:], "purple", "View Their Politics",
         open_selected_country_politics, font_preset="normal")
 
     # --- Append all explicitly defined buttons into the elements list ---
