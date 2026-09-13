@@ -4,6 +4,7 @@ import data.constants as c
 from ui.bars import ui_bars
 from ui_elements import Button, Slider, make_back_button
 from map_logic.rendering.font_manager import fonts
+from map_logic import politics
 from data import queries
 
 # ==========================================
@@ -122,7 +123,9 @@ class Economy_Screen(GameState):
             }
         else:
             # Cache the economy to prevent 60 FPS global recalculations
-            current_sliders = (p_data.get("conscription_slider", 1.0), p_data.get("mat_to_fuel_slider", 0.0))
+            current_sliders = (p_data.get("conscription_slider", 1.0),
+                               p_data.get("mat_to_fuel_slider", 0.0),
+                               repr(p_data.get(politics.POLICY_KEY, {})))
             if not hasattr(self, 'last_econ_state') or self.last_econ_state != current_sliders or self.map_screen.time_manager.total_turns != getattr(self, 'last_econ_turn', -1):
                 self.econ_cache = queries.get_economy_projections(self.map_screen.player_country, self.map_screen.map_data, self.map_screen.nation_data)
                 self.last_econ_state = current_sliders
@@ -185,6 +188,11 @@ class Economy_Screen(GameState):
                     sign = "+" if conv_val > 0 else ""
                     label = "Conversion Income" if conv_val > 0 else "Conversion Cost"
                     detail_breakdown += f"  |  {label}: {sign}{conv_val}"
+
+                if bd.get('policy', 0) != 0:
+                    policy_val = int(bd.get('policy', 0))
+                    sign = "+" if policy_val > 0 else ""
+                    detail_breakdown += f"  |  Policy: {sign}{policy_val}"
                     
                 if bd.get('siphon', 0) != 0:
                     detail_breakdown += f"  |  Siphoned to Master: {int(bd.get('siphon', 0))}"

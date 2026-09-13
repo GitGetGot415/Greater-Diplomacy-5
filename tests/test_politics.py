@@ -68,7 +68,7 @@ class PoliticsScreenEditGuardTests(unittest.TestCase):
 
         self.assertTrue(screen.is_valid_player)
         self.assertFalse(screen.can_edit)
-        self.assertTrue(all(button.disabled for button in screen.elements[1:]))
+        self.assertTrue(all(button.disabled for button in screen.elements[1:4]))
 
     def test_tactical_mode_guard_does_not_change_the_direction(self):
         screen = self.screen(True)
@@ -82,7 +82,7 @@ class PoliticsScreenEditGuardTests(unittest.TestCase):
         screen = self.screen(False)
 
         self.assertTrue(screen.can_edit)
-        self.assertTrue(all(not button.disabled for button in screen.elements[1:]))
+        self.assertTrue(all(not button.disabled for button in screen.elements[1:4]))
 
     def test_politics_and_blank_policies_panels_split_the_available_height(self):
         screen = self.screen(False)
@@ -240,6 +240,118 @@ class DriftTests(unittest.TestCase):
         self.assertEqual(politics.value(screen.nation_data, "A"), 3)
         self.assertEqual(politics.value(screen.nation_data, "B"), -3)
         self.assertEqual(politics.value(screen.nation_data, "C"), 0)
+
+
+# ============================================================================ #
+#                                POLICIES                                     #
+# ============================================================================ #
+
+class PolicyTests(unittest.TestCase):
+    def screen_at(self, political_value):
+        return StubTurnScreen({"A": {"political_value": political_value}})
+
+    def activate_and_finish(self, screen, policy_id):
+        self.assertTrue(politics.activate_or_cancel_policy(screen.nation_data, "A", policy_id))
+        for _ in range(politics.POLICY_ACTIVATION_TURNS):
+            politics.tick(screen)
+
+    def test_policy_needs_three_processed_turns_before_its_effects_apply(self):
+        screen = self.screen_at(-3)
+        self.assertTrue(politics.activate_or_cancel_policy(
+            screen.nation_data, "A", "research_subsidies"))
+
+        for expected_turns in (2, 1):
+            politics.tick(screen)
+            self.assertEqual(politics.policy_state(screen.nation_data, "A")["turns_remaining"],
+                             expected_turns)
+            self.assertEqual(politics.research_multiplier(screen.nation_data, "A"), 1.3)
+
+        politics.tick(screen)
+        self.assertEqual(politics.policy_state(screen.nation_data, "A")["status"],
+                         politics.POLICY_ACTIVE)
+        self.assertAlmostEqual(politics.research_multiplier(screen.nation_data, "A"), 1.3 * 1.2)
+        self.assertAlmostEqual(politics.resource_multiplier(screen.nation_data, "A", "manpower"), 0.9)
+        self.assertAlmostEqual(politics.resource_multiplier(screen.nation_data, "A", "materials"), 0.9)
+
+    def test_policy_requirements_are_strict(self):
+        self.assertFalse(politics.requirements_met({"A": {"political_value": -2}}, "A",
+                                                   "research_subsidies"))
+        self.assertFalse(politics.requirements_met({"A": {"political_value": 3}}, "A",
+                                                   "prioritize_civilian_needs"))
+        self.assertFalse(politics.requirements_met({"A": {"political_value": -3}}, "A",
+                                                   "national_service"))
+        self.assertFalse(politics.requirements_met({"A": {"political_value": 2}}, "A",
+                                                   "total_mobilisation"))
+
+    def test_losing_a_requirement_cancels_before_the_turn_uses_the_effect(self):
+        screen = self.screen_at(-3)
+        self.activate_and_finish(screen, "research_subsidies")
+        politics.set_drift(screen.nation_data, "A", 1)
+
+        politics.tick(screen)
+
+        self.assertIsNone(politics.policy_state(screen.nation_data, "A"))
+        self.assertAlmostEqual(politics.research_multiplier(screen.nation_data, "A"), 1.2)
+
+    def test_cancel_can_be_undone_before_the_next_processed_turn(self):
+        screen = self.screen_at(0)
+        self.activate_and_finish(screen, "prioritize_industrial_needs")
+        self.assertTrue(politics.activate_or_cancel_policy(
+            screen.nation_data, "A", "prioritize_industrial_needs"))
+        self.assertEqual(politics.policy_state(screen.nation_data, "A")["status"],
+                         politics.POLICY_CANCELLING)
+
+        self.assertTrue(politics.activate_or_cancel_policy(
+            screen.nation_data, "A", "prioritize_industrial_needs"))
+        self.assertEqual(politics.policy_state(screen.nation_data, "A")["status"],
+                         politics.POLICY_ACTIVE)
+        self.assertAlmostEqual(politics.resource_multiplier(screen.nation_data, "A", "materials"), 1.1)
+
+    def test_cancellation_finishes_on_the_next_processed_turn(self):
+        screen = self.screen_at(0)
+        self.activate_and_finish(screen, "prioritize_industrial_needs")
+        politics.activate_or_cancel_policy(screen.nation_data, "A", "prioritize_industrial_needs")
+
+        politics.tick(screen)
+
+        self.assertIsNone(politics.policy_state(screen.nation_data, "A"))
+
+    def test_each_eligible_policy_has_its_own_activation_and_effect(self):
+        screen = self.screen_at(0)
+        politics.activate_or_cancel_policy(screen.nation_data, "A", "prioritize_civilian_needs")
+        politics.activate_or_cancel_policy(screen.nation_data, "A", "prioritize_industrial_needs")
+
+        for _ in range(politics.POLICY_ACTIVATION_TURNS):
+            politics.tick(screen)
+
+        self.assertEqual(politics.policy_state(screen.nation_data, "A", "prioritize_civilian_needs")["status"],
+                         politics.POLICY_ACTIVE)
+        self.assertEqual(politics.policy_state(screen.nation_data, "A", "prioritize_industrial_needs")["status"],
+                         politics.POLICY_ACTIVE)
+        self.assertAlmostEqual(politics.research_multiplier(screen.nation_data, "A"), 1.1 * 0.8)
+        self.assertAlmostEqual(politics.resource_multiplier(screen.nation_data, "A", "manpower"), 0.9 * 0.9)
+
+    def test_resource_policy_changes_the_shared_economy_calculation(self):
+        from data import queries
+
+        screen = self.screen_at(-3)
+        screen.nation_data["A"]["research"] = {}
+        map_data = {"p": {"owner": "A", "cores": ["A"], "resources": {},
+                          "buildings": [], "units": []}}
+        before = queries.calculate_all_economies(map_data, screen.nation_data)["A"]["total_inc"]
+
+        self.activate_and_finish(screen, "research_subsidies")
+        after = queries.calculate_all_economies(map_data, screen.nation_data)["A"]["total_inc"]
+
+        self.assertAlmostEqual(after["manpower"], before["manpower"] * 0.9)
+        self.assertAlmostEqual(after["materials"], before["materials"] * 0.9)
+        self.assertAlmostEqual(after["fuel"], before["fuel"])
+
+    def test_total_mobilisation_stacks_its_damage_bonus_on_the_axis_bonus(self):
+        screen = self.screen_at(3)
+        self.activate_and_finish(screen, "total_mobilisation")
+        self.assertAlmostEqual(politics.damage_multiplier(screen.nation_data, "A"), 1.09 * 1.2)
+        self.assertAlmostEqual(politics.research_multiplier(screen.nation_data, "A"), 0.7 * 0.5)
 
 
 # ============================================================================ #

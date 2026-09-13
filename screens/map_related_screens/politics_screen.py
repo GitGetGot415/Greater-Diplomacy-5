@@ -16,6 +16,7 @@ single unit.
 import pygame
 import data.constants as c
 from ui_elements import Button, make_back_button
+from ui.bars import ui_bars
 from map_logic.rendering.font_manager import fonts
 from gameState import GameState
 from map_logic import politics
@@ -45,6 +46,15 @@ POLITICS_BUTTON_OFFSET_Y = 205
 POLITICS_CAPTION_OFFSET_Y = 267
 POLITICS_NOTE_OFFSET_FROM_BOTTOM = 34
 
+POLICY_VIEWPORT_MARGIN_X = 20
+POLICY_VIEWPORT_TOP_OFFSET_Y = 62
+POLICY_VIEWPORT_BOTTOM_OFFSET_Y = 38
+POLICY_CARD_WIDTH = 250
+POLICY_CARD_GAP = 16
+POLICY_SCROLL_WHEEL_STEP = 90
+POLICY_SCROLLBAR_HEIGHT = 14
+POLICY_CARD_PADDING = 12
+
 
 class Politics_Screen(GameState):
     def __init__(self, map_screen):
@@ -54,6 +64,11 @@ class Politics_Screen(GameState):
         self.map_screen = map_screen
         self.player = map_screen.player_country
         self._set_panel_rects()
+        self.policy_scroll_x = 0
+        self.policy_scroll_min_x = 0
+        self.policy_scrollbar_dragging = False
+        self.policy_scroll_track_rect = None
+        self.policy_scroll_handle_rect = None
 
         self.is_valid_player = (self.player in self.map_screen.nation_data
                                 and self.player not in ["Spectator", "None", "Editor"])
@@ -118,9 +133,16 @@ class Politics_Screen(GameState):
 
     def refresh_ui(self):
         self.elements = [make_back_button(self.exit_screen, style="map")]
+        self._update_policy_scroll_bounds()
+        self.scroll_content_rect = self._policy_viewport_rect()
 
         if not self.is_valid_player:
             return
+
+        # Requirements may change outside this screen (for example, in the map
+        # editor), so opening or refreshing this page applies an immediate
+        # cancellation before it can be drawn as active.
+        politics.reconcile_policy(self.map_screen.nation_data, self.player)
 
         current = self.drift
         centre_x = self.politics_rect.centerx
@@ -133,6 +155,75 @@ class Politics_Screen(GameState):
             btn.is_selected = (current == direction)
             btn.disabled = not self.can_edit
             self.elements.append(btn)
+
+        for definition in politics.POLICIES:
+            button = self._make_policy_button(definition)
+            button.is_scrollable = True
+            viewport = self._policy_viewport_rect()
+            button.click_guard = lambda rect=viewport: rect.collidepoint(pygame.mouse.get_pos())
+            self.elements.append(button)
+
+    def _policy_viewport_rect(self):
+        return pygame.Rect(
+            self.policies_rect.x + POLICY_VIEWPORT_MARGIN_X,
+            self.policies_rect.y + POLICY_VIEWPORT_TOP_OFFSET_Y,
+            self.policies_rect.width - 2 * POLICY_VIEWPORT_MARGIN_X,
+            self.policies_rect.height - POLICY_VIEWPORT_TOP_OFFSET_Y - POLICY_VIEWPORT_BOTTOM_OFFSET_Y,
+        )
+
+    def _policy_content_width(self):
+        return (len(politics.POLICIES) * POLICY_CARD_WIDTH
+                + max(0, len(politics.POLICIES) - 1) * POLICY_CARD_GAP)
+
+    def _update_policy_scroll_bounds(self):
+        viewport = self._policy_viewport_rect()
+        self.policy_scroll_min_x = min(0, viewport.width - self._policy_content_width())
+        self.policy_scroll_x = max(self.policy_scroll_min_x, min(0, self.policy_scroll_x))
+
+    def _policy_card_rect(self, index):
+        viewport = self._policy_viewport_rect()
+        return pygame.Rect(viewport.x + self.policy_scroll_x
+                           + index * (POLICY_CARD_WIDTH + POLICY_CARD_GAP),
+                           viewport.y, POLICY_CARD_WIDTH, viewport.height)
+
+    def _make_policy_button(self, definition):
+        index = politics.POLICIES.index(definition)
+        card = self._policy_card_rect(index)
+        label, color, disabled = self._policy_button_appearance(definition)
+        button = Button(card.centerx - 50, card.bottom - 48, "small", color, label,
+                        lambda policy_id=definition["id"]: self.toggle_policy(policy_id))
+        button.disabled = disabled
+        return button
+
+    def _policy_button_appearance(self, definition):
+        state = politics.policy_state(self.map_screen.nation_data, self.player, definition["id"])
+        if state:
+            if state["status"] == politics.POLICY_CANCELLING:
+                return "Undo Cancel", "green", not self.can_edit
+            return "Cancel", "red", not self.can_edit
+        if not politics.requirements_met(self.map_screen.nation_data, self.player, definition["id"]):
+            return "Requirements Unmet", "grey", True
+        return "Activate", "blue", not self.can_edit
+
+    def toggle_policy(self, policy_id):
+        before = politics.policy_state(self.map_screen.nation_data, self.player, policy_id)
+        definition = politics.policy(policy_id)
+        if not definition or not self.can_edit:
+            return
+        if not politics.activate_or_cancel_policy(self.map_screen.nation_data, self.player, policy_id):
+            self.map_screen.show_feedback("This policy's political requirement is not met.")
+            return
+
+        after = politics.policy_state(self.map_screen.nation_data, self.player, policy_id)
+        if before and before["status"] == politics.POLICY_CANCELLING:
+            message = "%s cancellation undone." % definition["name"]
+        elif after and after["status"] == politics.POLICY_CANCELLING:
+            message = "%s will cancel next turn." % definition["name"]
+        else:
+            message = "%s activates in %d turns." % (definition["name"],
+                                                        politics.POLICY_ACTIVATION_TURNS)
+        self.map_screen.show_feedback(message)
+        self.refresh_ui()
 
     # ------------------------------------------------------------------ #
     #                              DRAWING                               #
@@ -178,6 +269,7 @@ class Politics_Screen(GameState):
         self._draw_axis(surface)
         self._draw_effects(surface)
         self._draw_captions(surface)
+        self._draw_policies(surface)
 
     @staticmethod
     def _draw_panel(surface, rect):
@@ -221,6 +313,100 @@ class Politics_Screen(GameState):
         line = normal.render(text, True, c.UI_TEXT_LIGHT)
         surface.blit(line, (self.politics_rect.centerx - line.get_width() // 2,
                             self.politics_rect.y + POLITICS_EFFECTS_OFFSET_Y))
+
+    def _draw_policies(self, surface):
+        viewport = self._policy_viewport_rect()
+        with ui_bars.clip_scroll_region(surface, viewport):
+            for index, definition in enumerate(politics.POLICIES):
+                self._draw_policy_card(surface, self._policy_card_rect(index), definition)
+
+        track, handle = ui_bars.draw_standard_scrollbar_horizontal(
+            surface, self.policy_scroll_x, self.policy_scroll_min_x, 0,
+            viewport.x, self.policies_rect.bottom - POLICY_SCROLLBAR_HEIGHT - 10,
+            viewport.width, POLICY_SCROLLBAR_HEIGHT)
+        self.policy_scroll_track_rect = track
+        self.policy_scroll_handle_rect = handle
+
+    def _draw_policy_card(self, surface, card, definition):
+        state = politics.policy_state(self.map_screen.nation_data, self.player, definition["id"])
+        if state and state["status"] == politics.POLICY_ACTIVE:
+            border = c.COLOR_GOLD_HIGHLIGHT
+        elif state:
+            border = (120, 170, 255)
+        else:
+            border = c.COLOR_DIM_BORDER
+        pygame.draw.rect(surface, (27, 31, 49), card)
+        pygame.draw.rect(surface, border, card, 2)
+
+        heading = fonts.get("heading2").render(definition["name"], True, c.UI_TEXT_LIGHT)
+        surface.blit(heading, heading.get_rect(centerx=card.centerx,
+                                                y=card.y + POLICY_CARD_PADDING))
+        y = card.y + POLICY_CARD_PADDING + heading.get_height() + 8
+        small = fonts.get("small")
+        for line in definition["effect_lines"]:
+            effect = small.render(line, True, c.UI_TEXT_MUTED)
+            surface.blit(effect, (card.x + POLICY_CARD_PADDING, y))
+            y += effect.get_height() + 3
+
+        requirement = small.render(politics.requirement_text(definition["id"]), True,
+                                   c.UI_TEXT_DIM if politics.requirements_met(
+                                       self.map_screen.nation_data, self.player, definition["id"])
+                                   else (255, 150, 150))
+        surface.blit(requirement, (card.x + POLICY_CARD_PADDING, y + 4))
+
+        status = self._policy_status_text(definition, state)
+        status_surf = small.render(status, True, c.COLOR_GOLD_HIGHLIGHT if state else c.UI_TEXT_MUTED)
+        surface.blit(status_surf, (card.x + POLICY_CARD_PADDING, card.bottom - 74))
+
+    @staticmethod
+    def _policy_status_text(definition, state):
+        if not state:
+            return "Inactive"
+        if state["status"] == politics.POLICY_ACTIVE:
+            return "Active"
+        if state["status"] == politics.POLICY_CANCELLING:
+            return "Cancelling: %d turn remaining" % state.get("turns_remaining", 1)
+        return "Activating: %d turns remaining" % state.get("turns_remaining", 0)
+
+    def additional_events(self, event):
+        viewport = self._policy_viewport_rect()
+        if event.type == pygame.MOUSEWHEEL and viewport.collidepoint(pygame.mouse.get_pos()):
+            self.policy_scroll_x = max(self.policy_scroll_min_x,
+                                       min(0, self.policy_scroll_x + event.y * POLICY_SCROLL_WHEEL_STEP))
+            self.refresh_ui()
+            return
+
+        if self._handle_policy_scrollbar(event):
+            return
+        self.handle_content_drag(event, attr="policy_scroll_x", limit_attr="policy_scroll_min_x",
+                                 rect_attr="scroll_content_rect", axis="x")
+
+    def _handle_policy_scrollbar(self, event):
+        if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+            was_dragging = self.policy_scrollbar_dragging
+            self.policy_scrollbar_dragging = False
+            return was_dragging
+
+        track = self.policy_scroll_track_rect
+        handle = self.policy_scroll_handle_rect
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and track:
+            if (handle and handle.collidepoint(event.pos)) or track.collidepoint(event.pos):
+                self.policy_scrollbar_dragging = True
+                self._cancel_pressed_elements()
+                self._snap_policy_scroll(event.pos[0])
+                self.refresh_ui()
+                return True
+        elif event.type == pygame.MOUSEMOTION and self.policy_scrollbar_dragging:
+            self._snap_policy_scroll(event.pos[0])
+            self.refresh_ui()
+            return True
+        return False
+
+    def _snap_policy_scroll(self, mouse_x):
+        track = self.policy_scroll_track_rect
+        if track:
+            self.policy_scroll_x = ui_bars.calculate_scroll_snap_horizontal(
+                mouse_x, self.policy_scroll_min_x, 0, track.x, track.width)
 
     def _draw_captions(self, surface):
         small = fonts.get("small")

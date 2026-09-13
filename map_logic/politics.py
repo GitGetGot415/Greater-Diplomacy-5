@@ -1,9 +1,12 @@
-"""One domestic axis: libertarian at one end, authoritarian at the other.
+"""Domestic politics: an ideological axis and timed national policies.
 
 A country trades how hard its armies hit against how fast it researches, and it
 cannot do it quickly -- picking a direction moves the value one step per
 processed turn, so either extreme is ten turns away from the centre. Everyone
-starts centrist; the map editor can author a different starting position.
+starts centrist; the map editor can author a different starting position. A
+country may additionally pursue eligible policies. Each takes three processed
+turns to activate, and a cancellation takes one unless undone before that turn
+resolves.
 
 Damage means every point of damage a nation's units deal, attacking or
 defending, plus bombardment. A lane fight is a simultaneous exchange with no
@@ -23,6 +26,56 @@ import data.constants as c
 #: merge in load_map never sees -- rebellions, splinter states, generated maps.
 VALUE_KEY = "political_value"
 DRIFT_KEY = "political_drift"
+
+# Policies remain a flat mapping within nation_data so saves and history
+# snapshots need no schema migration.  Every card has its own lifecycle.
+POLICY_KEY = "domestic_policies"
+POLICY_ACTIVATING = "ACTIVATING"
+POLICY_ACTIVE = "ACTIVE"
+POLICY_CANCELLING = "CANCELLING"
+POLICY_ACTIVATION_TURNS = 3
+POLICY_CANCELLATION_TURNS = 1
+
+# Ordered left-to-right exactly as the Politics panel presents the cards.
+# Requirements are strict: e.g. max_politics=-2 means the country must be at
+# -3 or further left.  Effects are multiplicative and apply only when ACTIVE.
+POLICIES = (
+    {
+        "id": "research_subsidies",
+        "name": "Research Subsidies",
+        "max_politics": -2,
+        "effects": {"research": 1.20, "manpower": 0.90, "materials": 0.90},
+        "effect_lines": ("Research +20%", "Manpower -10%", "Materials -10%"),
+    },
+    {
+        "id": "prioritize_civilian_needs",
+        "name": "Prioritize Civilian Needs",
+        "max_politics": 3,
+        "effects": {"research": 1.10, "manpower": 0.90},
+        "effect_lines": ("Research +10%", "Manpower -10%"),
+    },
+    {
+        "id": "prioritize_industrial_needs",
+        "name": "Prioritize Industrial Needs",
+        "effects": {"materials": 1.10, "fuel": 1.05, "research": 0.80, "manpower": 0.90},
+        "effect_lines": ("Materials +10%", "Fuel +5%", "Research -20%", "Manpower -10%"),
+    },
+    {
+        "id": "national_service",
+        "name": "National Service",
+        "min_politics": -3,
+        "effects": {"manpower": 1.20, "materials": 0.90, "fuel": 0.90, "research": 0.80},
+        "effect_lines": ("Manpower +20%", "Materials -10%", "Fuel -10%", "Research -20%"),
+    },
+    {
+        "id": "total_mobilisation",
+        "name": "Total Mobilisation",
+        "min_politics": 2,
+        "effects": {"damage": 1.20, "research": 0.50, "materials": 0.80, "fuel": 0.90},
+        "effect_lines": ("Army damage +20%", "Research -50%", "Materials -20%", "Fuel -10%"),
+    },
+)
+POLICIES_BY_ID = {policy["id"]: policy for policy in POLICIES}
 
 
 def clamp(value):
@@ -65,24 +118,150 @@ def set_drift(nation_data, nation, direction):
     nation_data.setdefault(nation, {})[DRIFT_KEY] = max(-1, min(1, int(direction)))
 
 
+def policy(policy_id):
+    """Returns a policy definition, or None for an unknown saved value."""
+    return POLICIES_BY_ID.get(policy_id)
+
+
+def policy_states(nation_data, nation):
+    """The country's valid policy states, keyed by policy id."""
+    states = nation_data.get(nation, {}).get(POLICY_KEY, {}) if nation_data else {}
+    if not isinstance(states, dict):
+        return {}
+    return {
+        policy_id: state for policy_id, state in states.items()
+        if (policy(policy_id) is not None and isinstance(state, dict)
+            and state.get("status") in (POLICY_ACTIVATING, POLICY_ACTIVE, POLICY_CANCELLING))
+    }
+
+
+def policy_state(nation_data, nation, policy_id=None):
+    """One policy's saved state, or the sole state for legacy-style callers."""
+    states = policy_states(nation_data, nation)
+    if policy_id is not None:
+        return states.get(policy_id)
+    return next(iter(states.values()), None) if len(states) == 1 else None
+
+
+def requirements_met(nation_data, nation, policy_id):
+    """Whether a policy can be activated at the country's current position."""
+    definition = policy(policy_id)
+    if definition is None:
+        return False
+    political_value = value(nation_data, nation)
+    return (("max_politics" not in definition or political_value < definition["max_politics"])
+            and ("min_politics" not in definition or political_value > definition["min_politics"]))
+
+
+def requirement_text(policy_id):
+    """A short, exact explanation of a policy's political-axis requirement."""
+    definition = policy(policy_id)
+    if definition is None:
+        return "Unavailable"
+    if "max_politics" in definition:
+        return "Requires politics < %+d" % definition["max_politics"]
+    if "min_politics" in definition:
+        return "Requires politics > %+d" % definition["min_politics"]
+    return "No political requirement"
+
+
+def activate_or_cancel_policy(nation_data, nation, policy_id):
+    """Starts a policy, requests its cancellation, or undoes that request.
+
+    Cancelling records the prior state so clicking the same card before the
+    next processed turn restores that policy's activation timer exactly where
+    it was.
+    """
+    definition = policy(policy_id)
+    if definition is None:
+        return False
+    stats = nation_data.setdefault(nation, {})
+    states = stats.get(POLICY_KEY)
+    if not isinstance(states, dict):
+        states = stats[POLICY_KEY] = {}
+    current = policy_state(nation_data, nation, policy_id)
+
+    if current:
+        if current["status"] == POLICY_CANCELLING:
+            states[policy_id] = {
+                "status": current.get("resume_status", POLICY_ACTIVE),
+                "turns_remaining": current.get("resume_turns_remaining", 0),
+            }
+        else:
+            states[policy_id] = {
+                "status": POLICY_CANCELLING,
+                "turns_remaining": POLICY_CANCELLATION_TURNS,
+                "resume_status": current["status"],
+                "resume_turns_remaining": current.get("turns_remaining", 0),
+            }
+        return True
+
+    if not requirements_met(nation_data, nation, policy_id):
+        return False
+    states[policy_id] = {
+        "status": POLICY_ACTIVATING,
+        "turns_remaining": POLICY_ACTIVATION_TURNS,
+    }
+    return True
+
+
+def active_policies(nation_data, nation):
+    """Fully activated, still-eligible policy definitions for one country."""
+    return tuple(
+        policy(policy_id) for policy_id, state in policy_states(nation_data, nation).items()
+        if state["status"] == POLICY_ACTIVE and requirements_met(nation_data, nation, policy_id)
+    )
+
+
+def reconcile_policy(nation_data, nation):
+    """Immediately removes every policy whose political requirement was lost."""
+    stats = nation_data.get(nation, {})
+    states = stats.get(POLICY_KEY, {})
+    if not isinstance(states, dict):
+        return False
+    removed = False
+    for policy_id in tuple(policy_states(nation_data, nation)):
+        if not requirements_met(nation_data, nation, policy_id):
+            states.pop(policy_id, None)
+            removed = True
+    if not states:
+        stats.pop(POLICY_KEY, None)
+    return removed
+
+
+def effect_multiplier(nation_data, nation, effect):
+    """Multiplier contributed by the country's fully activated policy."""
+    result = 1.0
+    for current in active_policies(nation_data, nation):
+        result *= current.get("effects", {}).get(effect, 1.0)
+    return result
+
+
 def _fraction(nation_data, nation):
     """Position as -1.0..+1.0, which is what both multipliers are linear in."""
     return value(nation_data, nation) / float(c.POLITICS_MAX)
 
 
 def damage_multiplier(nation_data, nation):
-    """What this nation's units multiply their damage by. 0.7x .. 1.3x."""
-    return 1.0 + c.POLITICS_DAMAGE_SPAN * _fraction(nation_data, nation)
+    """What this nation's units multiply their damage by, including policy."""
+    axis_multiplier = 1.0 + c.POLITICS_DAMAGE_SPAN * _fraction(nation_data, nation)
+    return axis_multiplier * effect_multiplier(nation_data, nation, "damage")
 
 
 def research_multiplier(nation_data, nation):
-    """What this nation multiplies its research points by. 2.0x .. 0.0x.
+    """What this nation multiplies its research points by, including policy.
 
     Zero at the authoritarian end is deliberate and not a floor to guard
     against: points_remaining simply stops falling, which is what "research is
     frozen" has to look like.
     """
-    return 1.0 - c.POLITICS_RESEARCH_SPAN * _fraction(nation_data, nation)
+    axis_multiplier = 1.0 - c.POLITICS_RESEARCH_SPAN * _fraction(nation_data, nation)
+    return axis_multiplier * effect_multiplier(nation_data, nation, "research")
+
+
+def resource_multiplier(nation_data, nation, resource):
+    """What this nation multiplies one resource's produced income by."""
+    return effect_multiplier(nation_data, nation, resource)
 
 
 #: The axis carved into five named bands, libertarian first. Each entry is
@@ -150,3 +329,24 @@ def tick(map_screen):
         stats[VALUE_KEY] = new_value
         if at_limit(new_value):
             stats[DRIFT_KEY] = 0
+
+    # Do this after political drift, before combat/economy/research resolve.
+    # An activated policy becomes effective on the third processed turn; a
+    # cancellation completes on the next one.  Losing eligibility is immediate
+    # and removes the effects before any phase of that turn can use them.
+    for name, stats in map_screen.nation_data.items():
+        if name == "GLOBAL_EVENTS" or name in c.UNPLAYABLE_NATIONS:
+            continue
+        reconcile_policy(map_screen.nation_data, name)
+        for policy_id, state in tuple(policy_states(map_screen.nation_data, name).items()):
+            if state["status"] == POLICY_ACTIVE:
+                continue
+            turns_left = max(0, int(state.get("turns_remaining", 0)) - 1)
+            if state["status"] == POLICY_ACTIVATING and turns_left == 0:
+                stats[POLICY_KEY][policy_id] = {"status": POLICY_ACTIVE, "turns_remaining": 0}
+            elif state["status"] == POLICY_CANCELLING and turns_left == 0:
+                stats[POLICY_KEY].pop(policy_id, None)
+            else:
+                stats[POLICY_KEY][policy_id]["turns_remaining"] = turns_left
+        if not stats.get(POLICY_KEY):
+            stats.pop(POLICY_KEY, None)

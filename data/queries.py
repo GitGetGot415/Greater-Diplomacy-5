@@ -16,6 +16,7 @@ from data.platform import run_background, IS_WEB, download_file, downloads_dir, 
 from datetime import datetime
 
 import pygame
+from map_logic import politics
 
 import data.constants as c
 
@@ -1861,7 +1862,8 @@ def calculate_all_economies(map_data, nation_data):
         breakdown = {
             res: {"base": c.COUNTRY_BASE_YIELDS[res] + (bergius_bonus if res == "fuel" else 0), 
                   "core": 0, "non_core": 0, "buildings": 0, "resources": 0, 
-                  "conversion": 0, "conscription": 0, "siphon": 0, "siphon_income": 0}
+                  "conversion": 0, "conscription": 0, "policy": 0,
+                  "siphon": 0, "siphon_income": 0}
             for res in c.ECON_RESOURCE_KEYS
         }
 
@@ -1935,6 +1937,12 @@ def calculate_all_economies(map_data, nation_data):
         _process_conversion(data, "materials", "fuel", "conversion", min(n_data.get("mat_to_fuel_slider", 0.0), get_max_fuel_conversion(n_data)), c.FUEL_CONVERSION_RATIO)
 
         for res in c.ECON_RESOURCE_KEYS:
+            produced_income = sum(data["breakdown"][res].values())
+            policy_multiplier = politics.resource_multiplier(nation_data, name, res)
+            # A policy changes what the country produces, never standing-army
+            # upkeep.  Store the difference in the same breakdown that powers
+            # the economy panel, so its displayed total matches the turn result.
+            data["breakdown"][res]["policy"] = produced_income * (policy_multiplier - 1.0)
             data["total_inc"][res] = sum(data["breakdown"][res].values())
 
         # --- PUPPET SIPHONING LOGIC ---
