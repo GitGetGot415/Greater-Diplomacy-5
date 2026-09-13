@@ -153,6 +153,12 @@ feature working in one says nothing about the other.
 
 ### UI and permissions
 
+- Country IDs are internal storage/protocol keys, not player-facing labels. In
+  UI text, popups, message headers, lists, and tables, display the country name
+  through `queries.get_country_display_name`; show an ID only when it is
+  explicitly labeled or needed to disambiguate duplicate names. Country pickers
+  should use `queries.country_picker_items` so they return IDs without exposing
+  them unnecessarily.
 - A control's visibility is not authorization. Enforce ownership and permission
   checks again at the state-changing boundary.
 - Explicitly consider normal player, hotseat, spectator, tactical player,

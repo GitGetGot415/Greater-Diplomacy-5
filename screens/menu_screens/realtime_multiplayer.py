@@ -549,7 +549,7 @@ class Realtime_Lobby(GameState):
                 cull_bottom=list_bottom):
             country = countries[index]
             selected = next((p.name for p in self.session.players.values() if p.country_id == country), None)
-            label = f"{country}: {selected or 'Available'}"
+            label = f"{queries.get_country_display_name(country, nation_data)}: {selected or 'Available'}"
             color = ("blue" if self.session.players[host].country_id == country
                      else "green" if not selected else "grey")
             try:
@@ -902,7 +902,7 @@ class Realtime_Lobby(GameState):
         players = list(self.session.players.values())
         for index, player in enumerate(players[:5]):
             text = (f"{player.name} — {_ping_label(player, self.session.host_id)} — "
-                    f"{player.country_id or 'No country'} — {'READY' if player.ready else 'waiting'}")
+                    f"{queries.get_country_display_name(player.country_id, self.server_map.nation_data) if player.country_id else 'No country'} — {'READY' if player.ready else 'waiting'}")
             surface.blit(font.render(text, True, (230, 230, 230)), (30, 605 + index * 22))
 
 
@@ -920,6 +920,12 @@ class Realtime_Join(GameState):
         self.lan_browser = LanMatchBrowser()
         self.lan_browser.start()
         self.refresh_ui()
+
+    def _lobby_nation_data(self):
+        """The client-side snapshot used to label lobby country assignments."""
+        bundle = getattr(self.client, "map_bundle", {}) if self.client else {}
+        nation_data = bundle.get("snapshot", {}).get("nation_data", {}) if isinstance(bundle, dict) else {}
+        return nation_data if isinstance(nation_data, dict) else {}
 
     def refresh_ui(self):
         invite_set = bool(self.invite_text)
@@ -1157,7 +1163,7 @@ class Realtime_Remote_Lobby(GameState):
             button = Button("centered", button_y, (600, 32),
                             "blue" if me and me.country_id == country else
                             "green" if not selected else "grey",
-                            f"{country}: {selected or 'Available'}",
+                            f"{queries.get_country_display_name(country, nation_data)}: {selected or 'Available'}",
                             lambda picked=country: self.client.send("select_country", {"country_id": picked}),
                             image=flag)
             button.is_scrollable = True
@@ -1263,5 +1269,5 @@ class Realtime_Remote_Lobby(GameState):
         surface.blit(summary, summary.get_rect(center=(c.SCREEN_WIDTH // 2, 70)))
         for index, player in enumerate(list(self.view.players.values())[:5]):
             text = (f"{player.name} — {_ping_label(player, self.view.host_id)} — "
-                    f"{player.country_id or 'No country'} — {'READY' if player.ready else 'waiting'}")
+                    f"{queries.get_country_display_name(player.country_id, self._lobby_nation_data()) if player.country_id else 'No country'} — {'READY' if player.ready else 'waiting'}")
             surface.blit(font.render(text, True, (230, 230, 230)), (30, 605 + index * 22))

@@ -34,14 +34,21 @@ class ListSelectScreen(ModalScreen):
         self.refresh_ui()
 
     def select(self, item):
-        self.on_confirm(item)
+        self.on_confirm(item[1] if isinstance(item, tuple) else item)
         self.exit_screen()
+
+    @staticmethod
+    def _item_label(item):
+        """The visible half of an optional ``(label, value)`` picker row."""
+        return item[0] if isinstance(item, tuple) else str(item)
 
     def _filtered_items(self):
         if not self.search_text:
             return self.items
         query = self.search_text.lower()
-        return [item for item in self.items if item != self.SEPARATOR and query in item.lower()]
+        return [item for item in self.items
+                if self._item_label(item) != self.SEPARATOR
+                and query in self._item_label(item).lower()]
 
     def refresh_ui(self):
         self.elements = [Button(self.panel_rect.x + 20, self.panel_rect.y + 20, "small", "red",
@@ -63,9 +70,10 @@ class ListSelectScreen(ModalScreen):
         for i, y in self.layout_list_rows(len(self.visible_items), self.ROW_HEIGHT, row_top, view_h=view_h,
                                           cull_top=cull_top, cull_bottom=cull_bottom):
             item = self.visible_items[i]
-            label = text_utils.truncate_chars(item, self.ROW_LABEL_MAX_CHARS)
+            item_label = self._item_label(item)
+            label = text_utils.truncate_chars(item_label, self.ROW_LABEL_MAX_CHARS)
             btn = Button(row_x, y, "list_row", "blue", label, lambda it=item: self.select(it))
-            if item == self.SEPARATOR:
+            if item_label == self.SEPARATOR:
                 btn.apply_state(enabled=False)
             btn.is_scrollable = True
             btn.click_guard = self.scroll_click_guard
@@ -86,7 +94,7 @@ class ListSelectScreen(ModalScreen):
         from ui_elements import process_text_input
         if event.key == pygame.K_RETURN:
             for item in self.visible_items:
-                if item != self.SEPARATOR:
+                if self._item_label(item) != self.SEPARATOR:
                     self.select(item)
                     break
             return

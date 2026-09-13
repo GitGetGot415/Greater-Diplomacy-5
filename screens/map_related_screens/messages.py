@@ -240,7 +240,7 @@ class Messages_Screen(GameState):
         labels = []
         label_to_country = {}
         for country in targets:
-            display_name = str(self.map_screen.nation_data.get(country, {}).get("name", country))
+            display_name = queries.get_country_display_name(country, self.map_screen.nation_data)
             label = display_name
             if label in label_to_country:
                 label = f"{display_name} ({country})"
@@ -265,7 +265,7 @@ class Messages_Screen(GameState):
         result = diplomacy_messages.queue_forwarded_message(
             self.map_screen.nation_data, self.map_screen.player_country,
             target, self.map_screen.player_country, message)
-        target_name = self.map_screen.nation_data.get(target, {}).get("name", target)
+        target_name = queries.get_country_display_name(target, self.map_screen.nation_data)
         if result.startswith("Forward queued"):
             self.map_screen.show_feedback(f"{result} ({target_name})")
         else:

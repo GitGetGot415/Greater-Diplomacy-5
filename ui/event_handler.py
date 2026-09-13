@@ -43,7 +43,8 @@ def handle_map_events(map_screen, event):
                 # CRITICAL: Re-bake the relations/cores from the perspective of the new player!
                 map_screen.refresh_map_layers("relations", "political", "fog")
 
-                map_screen.show_feedback(f"Turn started for {map_screen.player_country}")
+                map_screen.show_feedback("Turn started for " + queries.get_country_display_name(
+                    map_screen.player_country, map_screen.nation_data))
         return # Block all other map events!
 
     # --- CONFIRMATION LOGIC HIJACK ---
@@ -309,7 +310,8 @@ def handle_map_events(map_screen, event):
                         edit_province_ownership.remove_claim(map_screen, map_screen.hovered_province, map_screen.brush_nation)
                     else:
                         map_screen.brush_nation = map_screen.hovered_province.get("owner", "Unclaimed")
-                        map_screen.show_feedback(f"Picked: {map_screen.brush_nation}")
+                        map_screen.show_feedback("Picked: " + queries.get_country_display_name(
+                            map_screen.brush_nation, map_screen.nation_data))
 
         # Unit placement logic
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:

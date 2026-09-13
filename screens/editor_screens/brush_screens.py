@@ -262,7 +262,9 @@ class Clear_Map_Screen(MapOverlayScreen):
             self.selected_country = val
             self.refresh_ui()
         queries.open_listbox_selector(self.map_screen, "Select Country", "Choose a country:",
-                                      self.available_countries, on_pick)
+                                      queries.country_picker_items(
+                                          self.available_countries,
+                                          self.map_screen.nation_data), on_pick)
         self.refresh_ui()
 
     def pick_unit_type(self):

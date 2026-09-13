@@ -312,7 +312,8 @@ class Create_Integrated_Puppet_Screen(MapOverlayScreen):
             return
         queue = self.map_screen.nation_data[self.player].setdefault("release_puppet_queue", [])
         queue.append({"core_nation": subject, "turns_left": 1, "keep_cores": self.keep_cores})
-        self.map_screen.show_feedback(f"Creation of {subject} queued (1 turn).")
+        self.map_screen.show_feedback("Creation of " + queries.get_country_display_name(
+            subject, self.map_screen.nation_data) + " queued (1 turn).")
         self.refresh_ui()
 
     def cancel_queue(self, subject):
@@ -322,7 +323,8 @@ class Create_Integrated_Puppet_Screen(MapOverlayScreen):
         for i, q in enumerate(queue):
             if q["core_nation"] == subject:
                 queue.pop(i)
-                self.map_screen.show_feedback(f"Creation of {subject} cancelled.")
+                self.map_screen.show_feedback("Creation of " + queries.get_country_display_name(
+                    subject, self.map_screen.nation_data) + " cancelled.")
                 self.refresh_ui()
                 return
 

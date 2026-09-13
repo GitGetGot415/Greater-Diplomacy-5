@@ -166,11 +166,14 @@ class PickerTests(unittest.TestCase):
                  self.map.next_state, self.map.done)
         try:
             editor_menus.spec_select_research_country(self.map)
-            self.assertEqual(captured["items"],
-                             sorted(queries.get_living_nations(self.map.map_data)))
+            self.assertEqual(
+                captured["items"],
+                queries.country_picker_items(
+                    sorted(queries.get_living_nations(self.map.map_data)), self.map.nation_data))
 
-            captured["confirm"](captured["items"][0])
-            self.assertEqual(self.map.viewing_research_country, captured["items"][0])
+            picked_id = captured["items"][0][1]
+            captured["confirm"](picked_id)
+            self.assertEqual(self.map.viewing_research_country, picked_id)
             self.assertEqual(self.map.next_state, "RESEARCH")
             self.assertTrue(self.map.done)
         finally:

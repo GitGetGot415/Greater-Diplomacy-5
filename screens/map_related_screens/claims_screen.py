@@ -1,5 +1,6 @@
 import pygame
 import data.constants as c
+from data import queries
 from gameState import MapOverlayScreen
 from ui_elements import make_back_button, Button
 from map_logic.rendering.font_manager import fonts
@@ -162,7 +163,8 @@ class Claims_Screen(MapOverlayScreen):
                     self.toggle_claim(dest)
                 else:
                     self.map_screen.show_feedback(
-                        f"Pick territory held by {self.target_nation}.")
+                        "Pick territory held by " + queries.get_country_display_name(
+                            self.target_nation, self.map_screen.nation_data) + ".")
             elif self.view_mode == "YOURS" and dest.get("owner") != self.player:
                 self.toggle_claim(dest)
             elif self.view_mode == "THEIRS" and dest.get("owner") == self.player:
@@ -410,13 +412,15 @@ class Claims_Screen(MapOverlayScreen):
                                        border_color=c.MODAL_BORDER)
 
         font = fonts.get("heading1")
-        heading = f"Justify: {self.target_nation}" if self.is_picker else "Territory Claims"
+        heading = ("Justify: " + queries.get_country_display_name(
+            self.target_nation, self.map_screen.nation_data)) if self.is_picker else "Territory Claims"
         title = font.render(heading, True, (255, 255, 255))
         surface.blit(title, (self.panel_rect.centerx - title.get_width()//2, self.panel_rect.y + 10))
 
         if self.is_picker:
             hint = fonts.get("small").render(
-                f"Click {self.target_nation}'s provinces to build a case.",
+                "Click " + queries.get_country_display_name(
+                    self.target_nation, self.map_screen.nation_data) + "'s provinces to build a case.",
                 True, c.COLOR_GOLD_HIGHLIGHT)
             surface.blit(hint, (self.panel_rect.centerx - hint.get_width() // 2,
                                 self.panel_rect.y + 48))

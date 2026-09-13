@@ -82,16 +82,18 @@ class Personality_Edit_Screen(MapOverlayScreen):
         traits = ai_personality.get(nation_data, self.country_id,
                                     getattr(self.map_screen, "scenario_settings", None))
         self.values = {t: float(traits.get(t, 0.5)) for t in ai_personality.TRAITS}
-        self.map_screen.show_feedback(f"{self.country_id} reset to procedural traits")
+        self.map_screen.show_feedback(queries.get_country_display_name(
+            self.country_id, self.map_screen.nation_data) + " reset to procedural traits")
         self.refresh_ui()
 
     def save(self):
         ai_personality.set_authored(self.map_screen.nation_data, self.country_id, self.values)
-        self.map_screen.show_feedback(f"Saved personality for {self.country_id}")
+        self.map_screen.show_feedback("Saved personality for " + queries.get_country_display_name(
+            self.country_id, self.map_screen.nation_data))
         self.done = True
 
     def get_panel_title(self):
-        return f"{self.country_id} Personality"
+        return queries.get_country_display_name(self.country_id, self.map_screen.nation_data) + " Personality"
 
     def draw_content(self, surface):
         p = self.panel_rect
@@ -122,7 +124,8 @@ class Personality_List_Screen(NationListOverlayScreen):
     def country_button(self, country_id, x, y):
         stored = self.map_screen.nation_data.get(country_id, {}).get("personality") or {}
         authored = stored.get("_source") in ai_personality.AUTHORED_SOURCES
-        label = f"[AUTHORED] {country_id}" if authored else country_id
+        country_name = queries.get_country_display_name(country_id, self.map_screen.nation_data)
+        label = f"[AUTHORED] {country_name}" if authored else country_name
         return Button(x, y, "list_row", "green" if authored else "blue", label,
                       lambda cid=country_id: self.edit(cid))
 

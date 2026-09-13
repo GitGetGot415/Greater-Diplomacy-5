@@ -342,8 +342,11 @@ class Edit_Country_Screen(GameState):
             self.portrait_surf = queries.decode_b64_to_surf(src_data.get("portrait_data", "DEFAULT"), self.portrait_size, is_portrait=True, country_name=chosen_country)
             
             self.save_state()
-            self.map_screen.show_feedback(f"Appearance copied from {chosen_country}!")
-        queries.open_listbox_selector(self, "Switch Appearance Profile", "Select Target Country look:", items, cb)
+            self.map_screen.show_feedback("Appearance copied from " + queries.get_country_display_name(
+                chosen_country, self.map_screen.nation_data) + "!")
+        queries.open_listbox_selector(
+            self, "Switch Appearance Profile", "Select Target Country look:",
+            queries.country_picker_items(items, self.map_screen.nation_data), cb)
 
     @property
     def can_edit(self):

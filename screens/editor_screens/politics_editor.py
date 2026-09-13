@@ -77,11 +77,13 @@ class Politics_Edit_Screen(MapOverlayScreen):
         # the scenario does not open with the country already on the move.
         politics.set_drift(nation_data, self.country_id, 0)
         self.map_screen.show_feedback(
-            "%s starts as %s (%+d)" % (self.country_id, politics.label(self.value), self.value))
+            "%s starts as %s (%+d)" % (queries.get_country_display_name(
+                self.country_id, nation_data), politics.label(self.value), self.value))
         self.done = True
 
     def get_panel_title(self):
-        return "%s Politics" % self.country_id
+        return "%s Politics" % queries.get_country_display_name(
+            self.country_id, self.map_screen.nation_data)
 
     def draw_content(self, surface):
         p = self.panel_rect
@@ -118,8 +120,9 @@ class Politics_List_Screen(NationListOverlayScreen):
 
     def country_button(self, country_id, x, y):
         value = politics.value(self.map_screen.nation_data, country_id)
-        label = country_id if value == c.POLITICS_START else "%s  (%+d %s)" % (
-            country_id, value, politics.label(value))
+        country_name = queries.get_country_display_name(country_id, self.map_screen.nation_data)
+        label = country_name if value == c.POLITICS_START else "%s  (%+d %s)" % (
+            country_name, value, politics.label(value))
         # Color is the ideology, not "has anybody edited this" -- the list
         # then reads as a heat map of who has centralised, and an untouched
         # map opens uniformly yellow because centrist *is* a position.

@@ -1030,7 +1030,8 @@ class Research_Screen(GameState):
         font = fonts.get("heading1")
         # Whose tree this is, once it can be somebody else's. A player is only
         # ever looking at their own, so naming them there would be noise.
-        looking_at = "" if self.subject == self.map_screen.player_country else f"{self.subject} -- "
+        looking_at = "" if self.subject == self.map_screen.player_country else (
+            queries.get_country_display_name(self.subject, self.map_screen.nation_data) + " -- ")
         ts = font.render(f"{looking_at}VIEWING: {self.current_category}", True, (255, 255, 255))
         surface.blit(ts, (c.SCREEN_WIDTH//2 - ts.get_width()//2, HEADER_TITLE_Y))
 

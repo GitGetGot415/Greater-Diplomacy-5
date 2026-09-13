@@ -18,6 +18,7 @@ deal_effects will act on.
 import pygame
 
 import data.constants as c
+from data import queries
 from gameState import MapOverlayScreen
 from map_logic.diplomacy import deal as deal_mod
 from map_logic.diplomacy import diplomacy_messages, ratification
@@ -90,7 +91,8 @@ class View_Peace_Treaty_Screen(MapOverlayScreen):
                                 deal_mod.parties(self.deal), self.baseline)
         document = "Trade Deal" if self.kind == deal_mod.KIND_TRADE else "Treaty"
         ui_bars.draw_centered_title(
-            surface, f"Projected Map: {document} from {self.proposer}", 30)
+            surface, f"Projected Map: {document} from " + queries.get_country_display_name(
+                self.proposer, self.map_screen.nation_data), 30)
         self._draw_terms(surface)
 
     def _wrapped(self):

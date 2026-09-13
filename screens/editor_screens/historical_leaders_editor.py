@@ -154,7 +154,9 @@ class Historical_Leaders_Editor(ScrollPanes, GameState):
             self._scroll_timeline = 0
             self.refresh_ui()
 
-        queries.open_listbox_selector(self, "Add Country", "Choose a country to track:", available, on_pick)
+        queries.open_listbox_selector(
+            self, "Add Country", "Choose a country to track:",
+            queries.country_picker_items(available, self.map_screen.nation_data), on_pick)
 
     def remove_country(self, country):
         def on_confirm(ok):
@@ -169,7 +171,7 @@ class Historical_Leaders_Editor(ScrollPanes, GameState):
         count = len(self.data.get(country, []))
         confirm_dialog.ask_yes_no(
             "Remove Country",
-            f"Stop tracking {country} and discard its {count} timeline entr{'y' if count == 1 else 'ies'}?\n"
+            f"Stop tracking {queries.get_country_display_name(country, self.map_screen.nation_data)} and discard its {count} timeline entr{'y' if count == 1 else 'ies'}?\n"
             f"This isn't written to disk until you Save Timeline.",
             on_confirm)
 

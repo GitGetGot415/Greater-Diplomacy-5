@@ -129,11 +129,12 @@ class Starting_Economy_Edit_Screen(MapOverlayScreen):
                     data[res] = int(field.text)
                 except ValueError:
                     pass
-            self.map_screen.show_feedback(f"Saved economy for {self.country_id}")
+            self.map_screen.show_feedback("Saved economy for " + queries.get_country_display_name(
+                self.country_id, self.map_screen.nation_data))
         self.done = True
 
     def get_panel_title(self):
-        return f"{self.country_id} Economy"
+        return queries.get_country_display_name(self.country_id, self.map_screen.nation_data) + " Economy"
 
     def draw_content(self, surface):
         self.draw_panel(surface)
@@ -155,7 +156,8 @@ class Starting_Economy_List_Screen(NationListOverlayScreen):
     def country_button(self, country_id, x, y):
         is_modified = any(self.map_screen.nation_data.get(country_id, {}).get(res, 0) != 0
                           for res in c.ECON_RESOURCE_KEYS)
-        label = f"[MODIFIED] {country_id}" if is_modified else country_id
+        country_name = queries.get_country_display_name(country_id, self.map_screen.nation_data)
+        label = f"[MODIFIED] {country_name}" if is_modified else country_name
         return Button(x, y, "list_row", "blue", label,
                       lambda cid=country_id: self.edit(cid))
 

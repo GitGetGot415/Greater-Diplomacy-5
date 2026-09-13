@@ -29,6 +29,29 @@ import data.constants as c
 _DIPLO_LOCAL = threading.local()
 
 
+def get_country_display_name(country_id, nation_data):
+    """Return the player-facing name for a country ID.
+
+    Nation IDs are storage and protocol keys.  UI callers should use this
+    helper rather than exposing one directly; the ID remains the safe fallback
+    for legacy or incomplete nation data.
+    """
+    country = nation_data.get(country_id, {}) if isinstance(nation_data, dict) else {}
+    name = country.get("name") if isinstance(country, dict) else None
+    return name.strip() if isinstance(name, str) and name.strip() else str(country_id)
+
+
+def country_picker_items(country_ids, nation_data):
+    """Build (label, ID) picker rows, exposing IDs only to disambiguate names."""
+    country_ids = list(country_ids)
+    names = [get_country_display_name(country_id, nation_data) for country_id in country_ids]
+    duplicates = {name for name in names if names.count(name) > 1}
+    return [
+        (f"{name} ({country_id})" if name in duplicates else name, country_id)
+        for country_id, name in zip(country_ids, names)
+    ]
+
+
 @contextlib.contextmanager
 def diplomacy_snapshot(freeze_access=True):
     """Memoises faction/friendly lookups for the duration of a read-only pass.

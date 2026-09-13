@@ -150,7 +150,8 @@ class Declare_War_Screen(MapOverlayScreen):
             self.done = True
 
     def get_panel_title(self):
-        return f"Declare War: {self.target_nation}"
+        return "Declare War: " + queries.get_country_display_name(
+            self.target_nation, self.map_screen.nation_data)
 
     def draw_content(self, surface):
         self.draw_panel(surface)

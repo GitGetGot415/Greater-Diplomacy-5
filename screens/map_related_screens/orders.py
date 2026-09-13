@@ -1129,7 +1129,9 @@ class Orders_Screen(GameState):
                 return False
 
         if not is_naval and not queries.can_land_units_enter(combat_owner, dest, self.map_screen.nation_data):
-            self.map_screen.show_feedback(f"Neutral {dest_owner} territory!")
+            self.map_screen.show_feedback(
+                "Neutral " + queries.get_country_display_name(
+                    dest_owner, self.map_screen.nation_data) + " territory!")
             return False
 
         return True
@@ -1239,9 +1241,10 @@ class Orders_Screen(GameState):
                 summary, summary_color = self._order_summary(unit_index, unit)
             else:
                 owner_id = unit.get("owner", "Unknown")
-                summary = self.map_screen.nation_data.get(owner_id, {}).get("name", owner_id)
+                summary = queries.get_country_display_name(owner_id, self.map_screen.nation_data)
                 summary_color = c.UI_TEXT_MUTED
-            volunteer_note = (f" | Volunteer: {unit['volunteer_host']}"
+            volunteer_note = (" | Volunteer: " + queries.get_country_display_name(
+                                  unit["volunteer_host"], self.map_screen.nation_data)
                               if unit.get("volunteer_host") else "")
             status = fit_text(f"HP {int(hp_ratio * 100)}% | {summary}{volunteer_note}",
                               tiny_font, text_width)

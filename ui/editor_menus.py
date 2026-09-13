@@ -67,13 +67,18 @@ def _select_brush(map_screen, mode, attr, items, title, prompt, feedback_label="
     def cb(val):
         setattr(map_screen, attr, val)
         map_screen.editor_mode = mode
-        map_screen.show_feedback(f"{feedback_label}: {val}")
+        display = (queries.get_country_display_name(val, map_screen.nation_data)
+                   if val in map_screen.nation_data else val)
+        map_screen.show_feedback(f"{feedback_label}: {display}")
     queries.open_listbox_selector(map_screen, title, prompt, items, cb)
 
 def _paintable_nations(map_screen):
     """The nation list every nation-painting brush offers, sorted accent-insensitively."""
     nations = sorted(map_screen.nation_data.keys(), key=lambda k: unicodedata.normalize('NFKD', k).encode('ascii', 'ignore').decode('utf-8').lower())
-    return ["Unclaimed", "The Rot", "----------"] + [n for n in nations if n not in ["Unclaimed", "The Rot"] and (n not in c.UNPLAYABLE_NATIONS or n == "None")]
+    country_ids = [n for n in nations if n not in ["Unclaimed", "The Rot"]
+                   and (n not in c.UNPLAYABLE_NATIONS or n == "None")]
+    return ["Unclaimed", "The Rot", "----------"] + queries.country_picker_items(
+        country_ids, map_screen.nation_data)
 
 def select_brush_nation(map_screen):
     """Opens a Tkinter selection window and sets mode to NATION."""
@@ -96,7 +101,8 @@ def open_editor_claims(map_screen):
     for c_name in sorted(map_screen.nation_data.keys()):
         claims = map_screen.nation_data[c_name].get("claims", [])
         if claims:
-            rows.append({"country": c_name, "claims": ", ".join(map(str, claims))})
+            rows.append({"country": queries.get_country_display_name(c_name, map_screen.nation_data),
+                         "claims": ", ".join(map(str, claims))})
 
     from ui.table_screen import TableColumn
     columns = [
@@ -117,7 +123,8 @@ def spec_select_edit_country(map_screen):
     """Opens a Tkinter window for a Spectator to select which nation to edit."""
     if not _has_active_countries(map_screen):
         return
-    items = sorted(queries.get_living_nations(map_screen.map_data))
+    items = queries.country_picker_items(sorted(queries.get_living_nations(map_screen.map_data)),
+                                         map_screen.nation_data)
     def cb(val):
         map_screen.editing_country = val
         map_screen.next_state, map_screen.done = "EDIT_COUNTRY", True
@@ -135,7 +142,8 @@ def spec_select_research_country(map_screen):
     """
     if not _has_active_countries(map_screen):
         return
-    items = sorted(queries.get_living_nations(map_screen.map_data))
+    items = queries.country_picker_items(sorted(queries.get_living_nations(map_screen.map_data)),
+                                         map_screen.nation_data)
     def cb(val):
         map_screen.viewing_research_country = val
         map_screen.next_state, map_screen.done = "RESEARCH", True
@@ -170,7 +178,7 @@ def open_editor_economy(map_screen):
     for cid in active_countries:
         if cid not in all_econ:
             continue
-        row = {"country": cid}
+        row = {"country": queries.get_country_display_name(cid, map_screen.nation_data)}
         for prefix, res_key in (("p", "manpower"), ("m", "materials"), ("f", "fuel")):
             cur, inc, bld, upk, net = get_stats(cid, res_key)
             row[f"{prefix}_cur"], row[f"{prefix}_inc"] = cur, inc
@@ -223,8 +231,10 @@ def open_spectator_messages(map_screen):
                     all_msgs.append({
                         "date": date_str,
                         "date_sort": sort_val,
-                        "sender": sender,
-                        "receiver": c_name,
+                        "sender": queries.get_country_display_name(sender, map_screen.nation_data),
+                        "sender_id": sender,
+                        "receiver": queries.get_country_display_name(c_name, map_screen.nation_data),
+                        "receiver_id": c_name,
                         # What kind of act it was, not merely that it was
                         # diplomatic -- which is all this column could say
                         # before the action was recorded on the message.
@@ -233,10 +243,14 @@ def open_spectator_messages(map_screen):
                         "parameters": msg.get("parameters"),
                         "llm": bool(msg.get("llm")),
                         "forwarded": diplomacy_messages.is_forwarded(msg),
-                        "forwarded_by": msg.get("forwarded_by", ""),
+                        "forwarded_by": queries.get_country_display_name(
+                            msg.get("forwarded_by", ""), map_screen.nation_data),
                         "forwarded_at": msg.get("forwarded_at", ""),
-                        "original_sender": msg.get("original_sender", ""),
-                        "original_receiver": msg.get("original_receiver", ""),
+                        "original_sender": queries.get_country_display_name(
+                            msg.get("original_sender", ""), map_screen.nation_data),
+                        "original_receiver": queries.get_country_display_name(
+                            msg.get("original_receiver", ""), map_screen.nation_data),
+                        "original_receiver_id": msg.get("original_receiver", ""),
                         "original_date": msg.get("original_date", ""),
                     })
 
@@ -262,9 +276,9 @@ def open_spectator_messages(map_screen):
         # the recipient's -- the terms read from their side, named rather than
         # called "You", since the reader is neither party. A forwarded treaty
         # still describes the original recipient's side, not the last relay.
-        terms_subject = row.get("receiver", "They")
+        terms_subject = row.get("receiver_id", "They")
         if row.get("forwarded"):
-            terms_subject = row.get("original_receiver", terms_subject)
+            terms_subject = row.get("original_receiver_id", terms_subject)
         terms = diplomacy_messages.describe_trade(row.get("parameters"),
                                                   subject=terms_subject)
         if terms:

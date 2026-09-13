@@ -4,6 +4,7 @@ import time
 import pygame
 
 import data.constants as c
+from data import queries
 from gameState import GameState
 from map_logic.rendering.font_manager import fonts
 from ui_elements import make_back_button
@@ -51,7 +52,8 @@ class _MatchDetails(GameState):
             values = (player.name, submitted, connection, _ping_text(player, session.host_id))
             color = (240, 240, 245) if player.connected else (185, 150, 150)
             surface.blit(row_font.render(str(values[0]), True, color), (columns[0], y))
-            country = player.country_id or "No country"
+            country = (queries.get_country_display_name(player.country_id, self.map_screen.nation_data)
+                       if player.country_id else "No country")
             country_x = columns[1]
             if player.country_id and player.country_id in getattr(self.map_screen, "nation_data", {}):
                 country_x = draw_flag(surface, player.country_id, self.map_screen.nation_data,
@@ -120,7 +122,9 @@ def draw(map_screen, surface):
                         for unit in province.get("units", []) if unit.get("owner") == item.country_id)
             standings.append((provinces, units, item.name, item.country_id))
         for index, (provinces, units, name, country) in enumerate(sorted(standings, reverse=True)):
-            row = f"{index + 1}. {name} ({country}) — {provinces} provinces, {units} units"
+            country_name = (queries.get_country_display_name(country, map_screen.nation_data)
+                            if country else "No country")
+            row = f"{index + 1}. {name} ({country_name}) — {provinces} provinces, {units} units"
             surface.blit(font.render(row, True, (240, 240, 245)), (overlay.x + 20, overlay.y + 62 + index * 21))
         note = fonts.get("tiny").render("Save to keep the result, or Exit to Multiplayer.", True, (190, 200, 220))
         surface.blit(note, note.get_rect(midbottom=(overlay.centerx, overlay.bottom - 15)))

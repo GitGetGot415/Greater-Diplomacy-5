@@ -24,7 +24,8 @@ def _spec_faction_action(map_screen, finalizer, verb, wants_map_data=False):
         fn(map_screen.map_data, map_screen.nation_data, source_nation)
     else:
         fn(map_screen.nation_data, source_nation)
-    map_screen.show_feedback(f"{verb} Faction: {source_nation}")
+    map_screen.show_feedback(f"{verb} Faction: " + queries.get_country_display_name(
+        source_nation, map_screen.nation_data))
     map_screen.refresh_diplomacy_maps()
 
 def spec_create_faction(map_screen):
@@ -100,7 +101,13 @@ def open_spectator_action_menu(map_screen, action_type):
         if action.apply:
             from map_logic.diplomacy import diplomacy_logic
             action.apply(diplomacy_logic, map_screen, source_nation, target_nation)
-            map_screen.show_feedback(action.feedback.format(src=source_nation, tgt=target_nation))
+            map_screen.show_feedback(action.feedback.format(
+                src=queries.get_country_display_name(source_nation, map_screen.nation_data),
+                tgt=queries.get_country_display_name(target_nation, map_screen.nation_data)))
         map_screen.refresh_diplomacy_maps()
 
-    queries.open_listbox_selector(map_screen, f"{action_type} for {source_nation}", f"Select Target for {action_type}:", items, cb)
+    queries.open_listbox_selector(
+        map_screen,
+        f"{action_type} for " + queries.get_country_display_name(source_nation, map_screen.nation_data),
+        f"Select Target for {action_type}:",
+        queries.country_picker_items(items, map_screen.nation_data), cb)

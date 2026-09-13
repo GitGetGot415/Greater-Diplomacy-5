@@ -934,10 +934,10 @@ class Deal_Screen(MapOverlayScreen):
         if gained <= 0 and lost <= 0:
             return "Nothing is on the table yet."
         if lost <= 0:
-            return f"{self.target_nation} is being asked for nothing in return."
+            return queries.get_country_display_name(self.target_nation, self.map_screen.nation_data) + " is being asked for nothing in return."
         if gained <= 0:
-            return f"{self.target_nation} is being offered nothing for it."
-        return (f"{self.target_nation} rates what you offer at "
+            return queries.get_country_display_name(self.target_nation, self.map_screen.nation_data) + " is being offered nothing for it."
+        return (queries.get_country_display_name(self.target_nation, self.map_screen.nation_data) + " rates what you offer at "
                 f"{ai_opinion.times_phrase(gained / lost)} what it would give up.")
 
     # ------------------------------------------------------------------ #
@@ -993,7 +993,8 @@ class Deal_Screen(MapOverlayScreen):
         instead, where there is room and where a long list can be trimmed.
         """
         if not self.is_peace:
-            return f"Trade Agreement: {self.target_nation}"
+            return "Trade Agreement: " + queries.get_country_display_name(
+                self.target_nation, self.map_screen.nation_data)
         if peace_scope.is_member_separate_peace(self.role):
             mine = _bloc_name(self.map_screen.nation_data, self.my_side)
             theirs = _bloc_name(self.map_screen.nation_data, self.their_side)
@@ -1004,8 +1005,10 @@ class Deal_Screen(MapOverlayScreen):
             count = len(self.my_side) + len(self.their_side)
             return f"Peace: {mine} vs {theirs} ({count} nations)"
         if peace_scope.costs_membership(self.role):
-            return f"Separate Peace: {self.target_nation} (leaves your faction)"
-        return f"Peace Terms: {self.target_nation}"
+            return "Separate Peace: " + queries.get_country_display_name(
+                self.target_nation, self.map_screen.nation_data) + " (leaves your faction)"
+        return "Peace Terms: " + queries.get_country_display_name(
+            self.target_nation, self.map_screen.nation_data)
 
     def preview_map(self):
         """The map this deal starts from: the parties in color, the rest grey.
