@@ -84,6 +84,13 @@ class PoliticsScreenEditGuardTests(unittest.TestCase):
         self.assertTrue(screen.can_edit)
         self.assertTrue(all(not button.disabled for button in screen.elements[1:]))
 
+    def test_politics_and_blank_policies_panels_split_the_available_height(self):
+        screen = self.screen(False)
+
+        self.assertEqual(screen.politics_rect.height, screen.policies_rect.height)
+        self.assertLess(screen.politics_rect.bottom, screen.policies_rect.y)
+        self.assertEqual(screen.policies_rect.bottom, c.SCREEN_HEIGHT - 20)
+
 
 def screen_with(**by_nation):
     """A nation_data holder where each nation is (value, drift)."""

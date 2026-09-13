@@ -31,6 +31,20 @@ TRACK_WIDTH = 520
 TRACK_HEIGHT = 8
 BUTTON_STEP_X = 130
 
+# The politics screen intentionally keeps both panels the same size.  Change
+# these values to retune the whole screen layout without hunting through draw
+# calls below.
+PANEL_WIDTH = 800
+SCREEN_PANEL_MARGIN_Y = 20
+PANEL_GAP = 20
+
+POLITICS_TITLE_OFFSET_Y = 18
+POLITICS_TRACK_OFFSET_Y = 112
+POLITICS_EFFECTS_OFFSET_Y = 170
+POLITICS_BUTTON_OFFSET_Y = 205
+POLITICS_CAPTION_OFFSET_Y = 267
+POLITICS_NOTE_OFFSET_FROM_BOTTOM = 34
+
 
 class Politics_Screen(GameState):
     def __init__(self, map_screen):
@@ -39,12 +53,27 @@ class Politics_Screen(GameState):
         self.bg_color = (24, 26, 44)
         self.map_screen = map_screen
         self.player = map_screen.player_country
-        self.panel_rect = pygame.Rect(c.SCREEN_WIDTH // 2 - 400, 100, 800, c.SCREEN_HEIGHT - 200)
+        self._set_panel_rects()
 
         self.is_valid_player = (self.player in self.map_screen.nation_data
                                 and self.player not in ["Spectator", "None", "Editor"])
 
         self.refresh_ui()
+
+    def _set_panel_rects(self):
+        """Lay out two equally sized panels in the screen's usable height."""
+        available_height = c.SCREEN_HEIGHT - 2 * SCREEN_PANEL_MARGIN_Y - PANEL_GAP
+        politics_height = available_height // 2
+        policies_height = available_height - politics_height
+        panel_x = c.SCREEN_WIDTH // 2 - PANEL_WIDTH // 2
+
+        self.politics_rect = pygame.Rect(panel_x, SCREEN_PANEL_MARGIN_Y,
+                                         PANEL_WIDTH, politics_height)
+        self.policies_rect = pygame.Rect(panel_x, self.politics_rect.bottom + PANEL_GAP,
+                                         PANEL_WIDTH, policies_height)
+        # Kept as the politics panel for code outside this screen that may use
+        # the established attribute name.
+        self.panel_rect = self.politics_rect
 
     # ------------------------------------------------------------------ #
     #                               STATE                                #
@@ -94,8 +123,8 @@ class Politics_Screen(GameState):
             return
 
         current = self.drift
-        centre_x = self.panel_rect.centerx
-        y = self.panel_rect.bottom - 160
+        centre_x = self.politics_rect.centerx
+        y = self.politics_rect.y + POLITICS_BUTTON_OFFSET_Y
 
         for direction, face, _caption in DRIFT_OPTIONS:
             btn = Button(centre_x + BUTTON_STEP_X * direction - 25, y,
@@ -110,8 +139,8 @@ class Politics_Screen(GameState):
     # ------------------------------------------------------------------ #
 
     def _track_rect(self):
-        return pygame.Rect(self.panel_rect.centerx - TRACK_WIDTH // 2,
-                           self.panel_rect.centery - TRACK_HEIGHT // 2,
+        return pygame.Rect(self.politics_rect.centerx - TRACK_WIDTH // 2,
+                           self.politics_rect.y + POLITICS_TRACK_OFFSET_Y,
                            TRACK_WIDTH, TRACK_HEIGHT)
 
     def _x_for(self, political_value):
@@ -121,29 +150,39 @@ class Politics_Screen(GameState):
         return track.x + int(track.width * (political_value - c.POLITICS_MIN) / span)
 
     def additional_draw(self, surface):
-        pygame.draw.rect(surface, (34, 38, 58), self.panel_rect)
-        pygame.draw.rect(surface, c.COLOR_DIM_BORDER, self.panel_rect, 3)
+        self._draw_panel(surface, self.politics_rect)
+        self._draw_panel(surface, self.policies_rect)
 
         title_surf = fonts.get("title").render("Politics", True, c.COLOR_GOLD_HIGHLIGHT)
-        surface.blit(title_surf, (self.panel_rect.centerx - title_surf.get_width() // 2,
-                                  self.panel_rect.y + 20))
+        surface.blit(title_surf, (self.politics_rect.centerx - title_surf.get_width() // 2,
+                                  self.politics_rect.y + POLITICS_TITLE_OFFSET_Y))
 
         subtitle_surf = fonts.get("small").render(
             "Liberalising raises research speed but weakens army damage; "
             "centralising does the reverse.", True, c.UI_TEXT_DIM)
-        surface.blit(subtitle_surf, (self.panel_rect.centerx - subtitle_surf.get_width() // 2,
-                                     self.panel_rect.y + 20 + title_surf.get_height() + 6))
+        surface.blit(subtitle_surf, (self.politics_rect.centerx - subtitle_surf.get_width() // 2,
+                                     self.politics_rect.y + POLITICS_TITLE_OFFSET_Y
+                                     + title_surf.get_height() + 6))
+
+        policies_title = fonts.get("title").render("Policies", True, c.COLOR_GOLD_HIGHLIGHT)
+        surface.blit(policies_title, (self.policies_rect.centerx - policies_title.get_width() // 2,
+                                      self.policies_rect.y + POLITICS_TITLE_OFFSET_Y))
 
         if not self.is_valid_player:
             msg = fonts.get("normal").render("Politics is not available in Spectator Mode.",
                                              True, (255, 150, 150))
-            surface.blit(msg, (self.panel_rect.centerx - msg.get_width() // 2,
-                               self.panel_rect.centery))
+            surface.blit(msg, (self.politics_rect.centerx - msg.get_width() // 2,
+                               self.politics_rect.centery))
             return
 
         self._draw_axis(surface)
         self._draw_effects(surface)
         self._draw_captions(surface)
+
+    @staticmethod
+    def _draw_panel(surface, rect):
+        pygame.draw.rect(surface, (34, 38, 58), rect)
+        pygame.draw.rect(surface, c.COLOR_DIM_BORDER, rect, 3)
 
     def _draw_axis(self, surface):
         track = self._track_rect()
@@ -180,13 +219,13 @@ class Politics_Screen(GameState):
 
         text = "Damage dealt  x%.2f          Research speed  x%.2f" % (damage, research)
         line = normal.render(text, True, c.UI_TEXT_LIGHT)
-        surface.blit(line, (self.panel_rect.centerx - line.get_width() // 2,
-                            self.panel_rect.centery + 60))
+        surface.blit(line, (self.politics_rect.centerx - line.get_width() // 2,
+                            self.politics_rect.y + POLITICS_EFFECTS_OFFSET_Y))
 
     def _draw_captions(self, surface):
         small = fonts.get("small")
-        centre_x = self.panel_rect.centerx
-        caption_y = self.panel_rect.bottom - 100
+        centre_x = self.politics_rect.centerx
+        caption_y = self.politics_rect.y + POLITICS_CAPTION_OFFSET_Y
 
         for direction, _face, caption in DRIFT_OPTIONS:
             surf = small.render(caption, True, c.UI_TEXT_MUTED)
@@ -201,4 +240,5 @@ class Politics_Screen(GameState):
         else:
             note = "Holding position. Nothing changes until you pick a direction."
         surf = small.render(note, True, c.UI_TEXT_DIM)
-        surface.blit(surf, (centre_x - surf.get_width() // 2, self.panel_rect.bottom - 60))
+        surface.blit(surf, (centre_x - surf.get_width() // 2,
+                            self.politics_rect.bottom - POLITICS_NOTE_OFFSET_FROM_BOTTOM))

@@ -21,6 +21,8 @@ IMPORTANT: NEVER COMMIT ANYTHING TO MAIN WITHOUT EXPLICITLY ASKING THE USER BEFO
 
 if you feel like it's nessecary, make a seperate branch and then commit each change you make there
 
+when editing the position of things on a certain ui screen make sure that the code is made in such a way that someone could easily edit the position of stuff in the page by changing 1 variable near the top of the file instead of having to change multiple hardcoded values
+
 note that all images should be PNG's, if an image is not a PNG (or worse, is a different image type masquerading as a PNG) you should at the very least bring it to the attention of the user
 
 also do check out ai_stuff.txt and diplo_stuff.txt
