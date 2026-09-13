@@ -206,7 +206,7 @@ CHECKERBOARD_WATER = False
 # a view-mode button) jumps straight into whatever screen the current view
 # mode implies. See ui/event_handler.py's navigate_view_mode. Defaults to
 # CLASSIC -- it is the behaviour the game shipped with the longest. Split from
-# its default the same way DRAG_MOUSE_BUTTON_TOGGLE is, so Settings' "Reset
+# its default so Settings' "Reset
 # Defaults" has a fixed value to reset back to rather than whatever this is
 # currently set to.
 DEFAULT_MAP_NAVIGATION_MODE = "CLASSIC"
@@ -2182,9 +2182,8 @@ HISTORY_GZIP_LEVEL = 1
 # does not redo identical work for every turn it has ever recorded.
 HISTORY_SCRUBBED_KEY = "_scrubbed"
 
-# Camera Settings
-DEFAULT_MOUSE_BUTTON_TOGGLE = "RIGHT"
-DRAG_MOUSE_BUTTON_TOGGLE = DEFAULT_MOUSE_BUTTON_TOGGLE # Options: "RIGHT", "LEFT", "BOTH"
+# Map navigation is intentionally fixed: middle-mouse drags the camera.  This
+# leaves left and right mouse available for the strategy-map selection model.
 
 # ==========================================
 # RUNTIME SETTINGS
@@ -2196,7 +2195,6 @@ DRAG_MOUSE_BUTTON_TOGGLE = DEFAULT_MOUSE_BUTTON_TOGGLE # Options: "RIGHT", "LEFT
 
 #: setting name (as used by data/io/settings_schema.py) -> constant name here.
 RUNTIME_SETTINGS = {
-    "drag_mouse_toggle": "DRAG_MOUSE_BUTTON_TOGGLE",
     "saves_dir": "SAVES_DIR",
     "custom_scenarios_dir": "SCENARIOS_CUSTOM_DIR",
     "ocean_light_color": "OCEAN_LIGHT_BLUE",

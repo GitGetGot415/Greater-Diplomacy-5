@@ -26,6 +26,59 @@ def _panels_are_live(map_screen):
     return bool(map_screen.selected_province) and not map_screen.selection_mode
 
 
+def _handle_map_unit_selection(map_screen, event, on_ui):
+    """Consume the HOI-style unit gestures while the map is in Units view."""
+    if (map_screen.secondary_mode != "UNITS" or on_ui
+            or not map_screen.can_select_map_units()):
+        return False
+
+    if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
+        map_screen.unit_selection_drag = {
+            "start": event.pos, "current": event.pos,
+            "additive": bool(pygame.key.get_mods() & pygame.KMOD_SHIFT),
+        }
+        return True
+
+    if event.type == pygame.MOUSEMOTION and map_screen.unit_selection_drag:
+        map_screen.unit_selection_drag["current"] = event.pos
+        return True
+
+    if event.type == pygame.MOUSEBUTTONUP and event.button == 3:
+        drag = map_screen.unit_selection_drag
+        map_screen.unit_selection_drag = None
+        if not drag:
+            return True
+        rect = pygame.Rect(drag["start"],
+                           (event.pos[0] - drag["start"][0],
+                            event.pos[1] - drag["start"][1]))
+        rect.normalize()
+        # A short right-click is the map-order gesture.  A real drag remains
+        # box selection, so both gestures can share the same mouse button.
+        if rect.width < 4 and rect.height < 4:
+            destination = queries.get_clicked_province(event.pos, map_screen)
+            if destination and map_screen.selected_unit_records():
+                map_screen.issue_selected_move_orders(
+                    destination,
+                    append=bool(pygame.key.get_mods() & pygame.KMOD_SHIFT))
+            return True
+        selected, first_province = [], None
+        for stack in getattr(map_screen, "unit_stack_hitboxes", []):
+            if rect.colliderect(stack["rect"]):
+                selected.extend(stack["units"])
+                first_province = first_province or stack["province"]
+        map_screen.select_map_units(selected, additive=drag["additive"])
+        if selected and first_province:
+            map_screen.open_orders_for_unit_stack(first_province, selected)
+        return True
+
+    if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+        for stack in getattr(map_screen, "unit_stack_hitboxes", []):
+            if stack["rect"].collidepoint(event.pos):
+                map_screen.open_orders_for_unit_stack(stack["province"], stack["units"])
+                return True
+    return False
+
+
 def handle_map_events(map_screen, event):
     mx, my = pygame.mouse.get_pos()
 
@@ -366,6 +419,12 @@ def handle_map_events(map_screen, event):
                     player_setup.select_player_country(map_screen, map_screen.hovered_province)
         return
 
+    # Unit stacks are a map-level interaction rather than an Orders-panel
+    # special case.  Run this before combat bubbles and ordinary province
+    # selection so a selected group can target any open map province.
+    if _handle_map_unit_selection(map_screen, event, on_ui):
+        return
+
     # A province combat bubble opens that tile's Orders view with its battle
     # inspector already visible. Midpoint records are not produced anymore.
     if (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1
@@ -572,6 +631,7 @@ def _jump_to_view_mode_screen(map_screen, mode, origin=None):
 
 def go_to_orders_screen(map_screen):
     """Give Orders sidebar button."""
+    map_screen._orders_return_to_province_menu = True
     if is_classic_navigation():
         map_screen.change_state("ORDERS")
     else:

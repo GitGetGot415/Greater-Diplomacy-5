@@ -1161,6 +1161,7 @@ class Map(GameState):
         self.active_players = [] # Usually empty on boot unless loaded from save
         self.current_player_index = 0
         self.show_player_ready_screen = False
+        self.show_navigation_intro_when_ready = False
 
        # --- UI DISPLAY OVERRIDES ---
         self.hide_raised_rect = False
@@ -1265,13 +1266,6 @@ class Map(GameState):
         else:
             load_map.load_map_assets(self, load_path)
 
-        # Re-mirror the camera's drag button onto data.constants, where the
-        # camera reads it. Deliberately only this one: a controller that is
-        # missing an attribute would otherwise hand apply_runtime_settings a
-        # schema default and quietly reset the player's save folder.
-        if hasattr(self, 'controller') and hasattr(self.controller, 'drag_mouse_toggle'):
-            c.apply_runtime_settings({"drag_mouse_toggle": self.controller.drag_mouse_toggle})
-
         # Capture settings passed from New_Game
         if map_settings:
             self.scenario_settings = map_settings
@@ -1307,6 +1301,14 @@ class Map(GameState):
 
         self.selected_province = self.hovered_province = self.last_hovered_id = None
         self.hover_glow_surf = self.hover_glow_rect = None
+        # Map-unit selection is presentation state only. Unit dictionaries
+        # remain the persisted source of truth; object identities are stable
+        # for this map instance and are deliberately discarded on snapshots.
+        self.selected_unit_ids = set()
+        self.unit_stack_hitboxes = []
+        self.unit_selection_drag = None
+        self._unit_selection_turn = self.time_manager.total_turns
+        self._unit_selection_player = self.player_country
         self.feedback_text = ""
         self.feedback_timer = 0
 
@@ -1786,6 +1788,102 @@ class Map(GameState):
                 return
         event_handler.handle_map_events(self, event)
 
+    # --- Map-level unit selection and movement ---------------------------------
+
+    def can_select_map_units(self):
+        if (self.selection_mode or self.is_editor or self.viewing_ai_moves
+                or self.ai_is_thinking or self.player_country in ("None", "Spectator")):
+            return False
+        if getattr(self, "realtime_multiplayer", False):
+            player = self.realtime_session.players.get(self.realtime_player_id)
+            if (self.realtime_session.phase != "TURN" or not player
+                    or player.submitted or player.eliminated):
+                return False
+        return True
+
+    def is_unit_selected(self, unit):
+        return id(unit) in getattr(self, "selected_unit_ids", set())
+
+    def clear_map_unit_selection(self):
+        getattr(self, "selected_unit_ids", set()).clear()
+        self.unit_selection_drag = None
+
+    def deselect_map_units(self, units):
+        """Remove specific stacks without disturbing selections elsewhere."""
+        self.selected_unit_ids.difference_update(id(unit) for unit in units)
+
+    def select_map_units(self, units, additive=False):
+        """Select commandable units represented by one or more visible stacks."""
+        if not self.can_select_map_units():
+            return
+        eligible = [unit for unit in units if unit.get("owner") == self.player_country]
+        if self.tactical_mode:
+            eligible = [unit for unit in eligible if unit is self.player_unit]
+        if not additive:
+            self.selected_unit_ids.clear()
+        self.selected_unit_ids.update(id(unit) for unit in eligible)
+        self.show_feedback(f"{len(self.selected_unit_ids)} unit{'s' if len(self.selected_unit_ids) != 1 else ''} selected")
+
+    def selected_unit_records(self):
+        """Return selected units with their current provinces, pruning stale IDs."""
+        records, live_ids = [], set()
+        for province in self.map_data.values():
+            for unit in province.get("units", []):
+                unit_id = id(unit)
+                if unit_id in self.selected_unit_ids:
+                    live_ids.add(unit_id)
+                    if unit.get("owner") == self.player_country:
+                        records.append((unit, province))
+        self.selected_unit_ids.intersection_update(live_ids)
+        return records
+
+    def issue_selected_move_orders(self, destination, append=False):
+        """Atomically give every selected unit its own route to a destination."""
+        if not self.can_select_map_units() or not destination:
+            return False
+        records = self.selected_unit_records()
+        if not records:
+            return False
+        planned = []
+        for unit, origin in records:
+            order = unit.get("order", {})
+            if isinstance(order, dict) and order.get("type") in c.ORDERS_BLOCKING_MOVEMENT:
+                self.show_feedback("Cannot move units with a blocking order.")
+                return False
+            old_path = (list(order.get("path", [])) if append and isinstance(order, dict)
+                        and order.get("type") == "MOVE" else [])
+            start = self.id_to_province.get(old_path[-1]) if old_path else origin
+            if start is None:
+                self.show_feedback("A selected unit has an invalid queued route.")
+                return False
+            segment = queries.find_unit_move_path(
+                unit, start, destination["id"], self.id_to_province, self.nation_data)
+            if segment is None:
+                self.show_feedback("No legal route exists for every selected unit.")
+                return False
+            if (self.tactical_mode and unit is self.player_unit and segment
+                    and len(old_path) < queries.get_tactical_speed(unit)):
+                fuel_inc = self.unit_economy.get("fuel_inc", 0)
+                if self.player_fuel < queries.get_tactical_fuel_cost_per_tile(unit, fuel_inc):
+                    self.show_feedback("Not enough fuel!")
+                    return False
+            planned.append((unit, old_path + segment))
+
+        for unit, path in planned:
+            if path:
+                unit["order"] = {"type": "MOVE", "path": path}
+            else:
+                unit.pop("order", None)
+        self.show_feedback(f"{len(planned)} unit{'s' if len(planned) != 1 else ''} routed to province {destination['id']}")
+        return True
+
+    def open_orders_for_unit_stack(self, province, units, return_to_province_menu=False):
+        """Open Orders around a clicked stack without losing map selection."""
+        self.select_map_units(units)
+        self.selected_province = province
+        self._orders_return_to_province_menu = return_to_province_menu
+        self.change_state("ORDERS")
+
     def sync_units_to_data(self):
         unit_library = queries.get_unit_library()
         building_library = queries.get_building_library()
@@ -1902,6 +2000,15 @@ class Map(GameState):
 
     def additional_draw(self, surface):
         map_renderer.draw_map_screen(self, surface)
+        if self.unit_selection_drag:
+            start = self.unit_selection_drag["start"]
+            current = self.unit_selection_drag["current"]
+            rect = pygame.Rect(start, (current[0] - start[0], current[1] - start[1]))
+            rect.normalize()
+            pygame.draw.rect(surface, (220, 210, 80), rect, 2)
+            shade = pygame.Surface(rect.size, pygame.SRCALPHA)
+            shade.fill((220, 210, 80, 35))
+            surface.blit(shade, rect.topleft)
 
     def draw_elements(self, surface):
         """Draw country actions in their own clipped, scrollable HUD pane."""
@@ -2096,6 +2203,11 @@ class Map(GameState):
         self._realtime_snapshot_phase = current_phase
 
     def update(self):
+        if (self._unit_selection_turn != self.time_manager.total_turns
+                or self._unit_selection_player != self.player_country):
+            self.clear_map_unit_selection()
+            self._unit_selection_turn = self.time_manager.total_turns
+            self._unit_selection_player = self.player_country
         if getattr(self, "realtime_multiplayer", False):
             self._apply_host_realtime_snapshot()
         if getattr(self, "realtime_multiplayer", False):
@@ -2189,6 +2301,13 @@ class Map(GameState):
         if is_playing:
             from ui import diplomatic_popups
             diplomatic_popups.spawn_popups_for_player(self)
+
+        if (self.show_navigation_intro_when_ready and is_playing
+                and not getattr(self, "realtime_multiplayer", False)):
+            self.show_navigation_intro_when_ready = False
+            if queries.get_settings().get("show_intro_popup", True):
+                from ui import confirm_dialog
+                confirm_dialog.show_navigation_intro()
 
         if self.show_player_ready_screen:
             for el in self.elements: el.visible = False

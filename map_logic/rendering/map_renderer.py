@@ -141,6 +141,9 @@ def draw_map_screen(map_screen, surface):
     # --- LAYER 3: OVERLAYS (Units & Movement Arrows) ---
     # Keep the bubble records while the arrows are painted.  The bubbles are
     # blitted after this loop so an arrow ending at a fight cannot cover it.
+    # Unit-icon drawing publishes hitboxes for map-level selection.  Rebuild
+    # them every frame so zoom, tilt, fog, and stacked owner order stay exact.
+    map_screen.unit_stack_hitboxes = []
     combat_records = overlay_renderer.draw_overlay_content(
         map_screen, surface, draw_combat=False)
     

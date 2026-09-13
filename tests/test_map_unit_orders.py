@@ -1,0 +1,170 @@
+"""Regression coverage for map-level unit routing without a live display."""
+import os
+import sys
+import unittest
+from unittest.mock import patch
+
+import pygame
+
+os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
+os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from data import queries
+from screens.menu_screens.map import Map
+from screens.map_related_screens.orders import Orders_Screen
+from ui import event_handler
+
+
+def province(province_id, neighbors):
+    return {"id": province_id, "neighbors": neighbors, "owner": "Unclaimed",
+            "terrain": "Plains", "units": []}
+
+
+class RouteFindingTests(unittest.TestCase):
+    def setUp(self):
+        self.p1 = province(1, [2])
+        self.p2 = province(2, [1, 3, 4])
+        self.p3 = province(3, [2])
+        self.p4 = province(4, [2, 5])
+        self.p5 = province(5, [4])
+        self.by_id = {p["id"]: p for p in (self.p1, self.p2, self.p3, self.p4, self.p5)}
+        self.nations = {"A": {"at_war_with": []}}
+
+    def test_shortest_legal_path_is_deterministic(self):
+        unit = {"owner": "A", "type": "Infantry"}
+        self.assertEqual(queries.find_unit_move_path(unit, self.p1, 3, self.by_id, self.nations),
+                         [2, 3])
+
+    def test_unreachable_destination_returns_none(self):
+        unit = {"owner": "A", "type": "Infantry"}
+        self.p2["neighbors"].remove(4)
+        self.p4["neighbors"].remove(2)
+        self.assertIsNone(queries.find_unit_move_path(unit, self.p1, 5, self.by_id, self.nations))
+
+
+class MapOrderTests(unittest.TestCase):
+    def make_map(self):
+        game = object.__new__(Map)
+        p1, p2, p3 = province(1, [2]), province(2, [1, 3]), province(3, [2])
+        slow = {"owner": "A", "type": "Infantry", "speed": 1}
+        fast = {"owner": "A", "type": "Infantry", "speed": 2}
+        p1["units"] = [slow]
+        p2["units"] = [fast]
+        game.map_data = {"one": p1, "two": p2, "three": p3}
+        game.id_to_province = {1: p1, 2: p2, 3: p3}
+        game.nation_data = {"A": {"at_war_with": []}}
+        game.player_country = "A"
+        game.selection_mode = game.is_editor = game.viewing_ai_moves = game.ai_is_thinking = False
+        game.tactical_mode = False
+        game.selected_unit_ids = {id(slow), id(fast)}
+        game.unit_selection_drag = None
+        game.show_feedback = lambda _text: None
+        return game, slow, fast, p3
+
+    def test_each_selected_unit_gets_its_own_route(self):
+        game, slow, fast, destination = self.make_map()
+        self.assertTrue(game.issue_selected_move_orders(destination))
+        self.assertEqual(slow["order"]["path"], [2, 3])
+        self.assertEqual(fast["order"]["path"], [3])
+
+    def test_shift_destination_appends_after_existing_waypoint(self):
+        game, slow, fast, destination = self.make_map()
+        self.assertTrue(game.issue_selected_move_orders(game.id_to_province[2]))
+        self.assertTrue(game.issue_selected_move_orders(destination, append=True))
+        self.assertEqual(slow["order"]["path"], [2, 3])
+        self.assertEqual(fast["order"]["path"], [3])
+
+    def test_unreachable_member_keeps_all_orders_unchanged(self):
+        game, slow, fast, destination = self.make_map()
+        fast["type"] = "Battleship"
+        self.assertFalse(game.issue_selected_move_orders(destination))
+        self.assertNotIn("order", slow)
+        self.assertNotIn("order", fast)
+
+    def test_selection_rectangle_draws_when_dragged_up_and_left(self):
+        """pygame.Rect.normalize mutates; it must never be used as a return value."""
+        game = object.__new__(Map)
+        game.unit_selection_drag = {"start": (200, 200), "current": (100, 100)}
+        with patch("screens.menu_screens.map.map_renderer.draw_map_screen"):
+            Map.additional_draw(game, pygame.Surface((400, 300)))
+
+
+class OrdersSelectionRowsTests(unittest.TestCase):
+    def test_roster_keeps_each_selected_unit_and_its_own_origin(self):
+        """The Orders panel must not collapse a cross-province group to one tile."""
+        first = province(1, [])
+        second = province(2, [])
+        unit_a = {"owner": "A", "type": "Infantry"}
+        unit_b = {"owner": "A", "type": "Infantry"}
+        first["units"] = [unit_a]
+        second["units"] = [unit_b]
+
+        map_stub = type("MapStub", (), {
+            "selected_unit_records": lambda self: [(unit_a, first), (unit_b, second)],
+        })()
+        screen = object.__new__(Orders_Screen)
+        screen.map_screen = map_stub
+        screen.target_province = first
+
+        rows = screen._visible_rows()
+
+        self.assertEqual([(unit, origin, index) for _key, unit, origin, index in rows],
+                         [(unit_a, first, 0), (unit_b, second, 0)])
+        self.assertEqual(rows[0][0], 0)
+        self.assertEqual(rows[1][0], (2, 0))
+
+    def test_per_unit_action_can_target_a_selected_unit_on_another_tile(self):
+        """A row action must never fall back to the panel's focused province."""
+        focused = province(1, [])
+        remote = province(2, [])
+        focused_unit = {"owner": "A", "type": "Infantry"}
+        remote_unit = {"owner": "A", "type": "Infantry"}
+        focused["units"] = [focused_unit]
+        remote["units"] = [remote_unit]
+
+        map_stub = type("MapStub", (), {
+            "player_country": "A",
+            "tactical_mode": False,
+            "show_feedback": lambda self, _message: None,
+        })()
+        screen = object.__new__(Orders_Screen)
+        screen.map_screen = map_stub
+        screen.target_province = focused
+        screen.refresh_ui = lambda: None
+
+        screen.disband_unit(0, remote)
+
+        self.assertNotIn("order", focused_unit)
+        self.assertEqual(remote_unit["order"]["type"], "DISBAND")
+
+
+class MapOrderGestureTests(unittest.TestCase):
+    def test_short_right_click_orders_selected_units_and_left_click_does_not(self):
+        unit = {"owner": "A", "type": "Infantry"}
+        destination = province(2, [])
+        calls = []
+        map_stub = type("MapStub", (), {
+            "secondary_mode": "UNITS",
+            "unit_selection_drag": None,
+            "unit_stack_hitboxes": [],
+            "selected_unit_ids": {id(unit)},
+            "can_select_map_units": lambda self: True,
+            "selected_unit_records": lambda self: [(unit, province(1, []))],
+            "issue_selected_move_orders": lambda self, dest, append=False: calls.append((dest, append)),
+        })()
+
+        with (patch("ui.event_handler.queries.get_clicked_province", return_value=destination),
+              patch("ui.event_handler.pygame.key.get_mods", return_value=0)):
+            self.assertTrue(event_handler._handle_map_unit_selection(
+                map_stub, pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(20, 20), button=3), False))
+            self.assertTrue(event_handler._handle_map_unit_selection(
+                map_stub, pygame.event.Event(pygame.MOUSEBUTTONUP, pos=(20, 20), button=3), False))
+            self.assertFalse(event_handler._handle_map_unit_selection(
+                map_stub, pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(20, 20), button=1), False))
+
+        self.assertEqual(calls, [(destination, False)])
+
+
+if __name__ == "__main__":
+    unittest.main()

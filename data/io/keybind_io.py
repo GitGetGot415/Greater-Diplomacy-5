@@ -10,7 +10,7 @@ def save_settings(keybind_dict, sfx_volume, music_volume, num_players=1, ai_mode
                   gemini_api_key="", chatgpt_api_key="", claude_api_key="", ollama_api_key="",
                   gemini_model="", chatgpt_model="", claude_model="", ollama_model="",
                   ai_immersion_level="LITE", music_pitch=0.5, sfx_pitch=0.5, target_fps=60,
-                  ai_threads=1, show_fps=True, drag_mouse_toggle="RIGHT",
+                  ai_threads=1, show_fps=True, show_intro_popup=True,
                   saves_dir=c.DEFAULT_SAVES_DIR, custom_scenarios_dir=c.DEFAULT_SCENARIOS_CUSTOM_DIR,
                   ocean_light_color=c.DEFAULT_OCEAN_LIGHT_BLUE, ocean_dark_color=c.DEFAULT_OCEAN_DARK_BLUE,
                   tournament_saves_dir=c.DEFAULT_TOURNAMENT_SAVES_DIR, checkerboard_water=c.CHECKERBOARD_WATER,

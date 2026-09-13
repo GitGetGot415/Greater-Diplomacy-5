@@ -59,7 +59,7 @@ SETTINGS_FIELDS = (
     _field("target_fps", "target_fps", lambda: c.TARGET_FPS),
     _field("ai_threads", "ai_threads", lambda: c.DEFAULT_AI_THREADS),
     _field("show_fps", "show_fps", lambda: c.SHOW_FPS),
-    _field("drag_mouse_toggle", "drag_mouse_toggle", lambda: c.DRAG_MOUSE_BUTTON_TOGGLE),
+    _field("show_intro_popup", "show_intro_popup", lambda: True),
     _field("saves_dir", "saves_dir", lambda: c.DEFAULT_SAVES_DIR),
     _field("custom_scenarios_dir", "custom_scenarios_dir",
            lambda: c.DEFAULT_SCENARIOS_CUSTOM_DIR),

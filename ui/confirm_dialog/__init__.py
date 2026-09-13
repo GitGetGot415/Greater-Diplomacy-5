@@ -34,5 +34,6 @@ from ui.confirm_dialog.message_box import (
     show_success,
     show_warning,
     show_error,
+    show_navigation_intro,
 )
 from ui.confirm_dialog.person_info import show_person_info

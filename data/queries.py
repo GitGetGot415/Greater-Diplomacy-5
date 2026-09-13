@@ -1127,6 +1127,67 @@ def can_land_units_enter(moving_nation, target_province, nation_data):
 
     return _can_enter_owned_tile(moving_nation, target_owner, nation_data)
 
+
+def can_unit_move_step(unit, current_province, destination, nation_data):
+    """Whether ``unit`` may take one currently legal map edge.
+
+    This is deliberately a planning-time rule: combat can still stop a queued
+    route during turn resolution, but UI route finding and real-time command
+    validation must agree on terrain, convoy, naval, and access constraints.
+    """
+    if not current_province or not destination:
+        return False
+    if destination.get("id") not in current_province.get("neighbors", []):
+        return False
+    combat_owner = get_unit_combat_owner(unit)
+    unit_type = unit.get("type", "")
+    if unit_type.startswith("Convoy"):
+        if not can_convoy_enter(current_province, destination):
+            return False
+        return (is_water_province(destination)
+                or can_land_units_enter(combat_owner, destination, nation_data))
+    if is_naval_unit(unit_type):
+        return can_ships_enter(combat_owner, destination, nation_data)
+    return can_land_units_enter(combat_owner, destination, nation_data)
+
+
+def find_unit_move_path(unit, start_province, destination_id, id_to_province, nation_data):
+    """Return a deterministic shortest legal route, or ``None`` if blocked.
+
+    Paths contain destination province IDs only, matching the persisted MOVE
+    order contract.  Neighbours are sorted so identical maps produce identical
+    routes on every client and server.
+    """
+    if not start_province or destination_id not in id_to_province:
+        return None
+    start_id = start_province.get("id")
+    if start_id == destination_id:
+        return []
+
+    frontier = collections.deque([start_id])
+    previous = {start_id: None}
+    while frontier:
+        current_id = frontier.popleft()
+        current = id_to_province.get(current_id)
+        if not current:
+            continue
+        for neighbor_id in sorted(current.get("neighbors", []), key=str):
+            if neighbor_id in previous:
+                continue
+            neighbor = id_to_province.get(neighbor_id)
+            if not can_unit_move_step(unit, current, neighbor, nation_data):
+                continue
+            previous[neighbor_id] = current_id
+            if neighbor_id == destination_id:
+                path = []
+                cursor = destination_id
+                while cursor != start_id:
+                    path.append(cursor)
+                    cursor = previous[cursor]
+                return list(reversed(path))
+            frontier.append(neighbor_id)
+    return None
+
 def get_tactical_speed(unit):
     """Calculates the effective speed of a unit in tactical mode."""
     return unit.get("speed", c.DEFAULT_UNIT_SPD)

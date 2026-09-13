@@ -14,7 +14,7 @@ SETTINGS_BACK_POS = (50, 50)
 SETTINGS_FULLSCREEN_Y = 20
 SETTINGS_CHECKERBOARD_WATER_Y = 70
 SETTINGS_FPS_TOGGLE_Y = 120
-SETTINGS_DRAG_KEY_Y = 170
+SETTINGS_INTRO_POPUP_Y = 170
 SETTINGS_MAP_NAV_Y = 220
 SETTINGS_BATTLE_DISPLAY_Y = 270
 SETTINGS_PLAYER_SLIDER_Y = 400
@@ -55,9 +55,9 @@ SETTINGS_INFO_ROWS = (
      "unusual water for players who don't expect it."),
     (SETTINGS_FPS_TOGGLE_Y, "Show FPS",
      "Displays a live frames-per-second counter on screen."),
-    (SETTINGS_DRAG_KEY_Y, "Drag Key",
-     "Which mouse button drags/pans the map camera: Right, Left, or Both. "
-     "Click to cycle through the three."),
+    (SETTINGS_INTRO_POPUP_Y, "Show Intro Popup",
+     "Shows the map-navigation tutorial when a fresh game begins. Map panning "
+     "always uses the middle mouse button."),
     (SETTINGS_MAP_NAV_Y, "Map Navigation",
      "Classic: clicking a tile always opens the plain province menu, and the "
      "Resources/Blank/Units/Economy ui view buttons only switch "
@@ -100,7 +100,10 @@ def render_settings_buttons(settings_screen):
                f"Checkerboard Water: {'ON' if settings_screen.checkerboard_water else 'OFF'}", settings_screen.toggle_checkerboard_water),
         Button(keybind_x, SETTINGS_FPS_TOGGLE_Y, "setting_option", "green" if settings_screen.show_fps else "red",
                f"Show FPS: {'ON' if settings_screen.show_fps else 'OFF'}", settings_screen.toggle_fps),
-        Button(keybind_x, SETTINGS_DRAG_KEY_Y, "setting_option", "purple", f"Drag Key: {settings_screen.drag_mouse_toggle}", settings_screen.toggle_drag_button),
+        Button(keybind_x, SETTINGS_INTRO_POPUP_Y, "setting_option",
+               "green" if settings_screen.show_intro_popup else "red",
+               f"Show Intro Popup: {'ON' if settings_screen.show_intro_popup else 'OFF'}",
+               settings_screen.toggle_intro_popup),
         Button(keybind_x, SETTINGS_MAP_NAV_Y, "setting_option", "purple",
                f"Map Navigation: {settings_screen.map_navigation_mode.title()}",
                settings_screen.toggle_map_navigation_mode),
@@ -244,8 +247,7 @@ class Settings(GameState):
         for attr in self.editable_attrs():
             setattr(self, f"{attr}_text", getattr(self.controller, attr))
 
-        # Load dynamic mouse button config from controller, fallback to constants configuration setting
-        self.drag_mouse_toggle = self.controller.drag_mouse_toggle
+        self.show_intro_popup = self.controller.show_intro_popup
 
         self.active_input = None # Dynamically track which box is selected: "{MODE}_KEY" or "{MODE}_MOD"
 
@@ -323,18 +325,10 @@ class Settings(GameState):
     def open_keybinds(self):
         self.go_to("KEYBINDS")
 
-    def toggle_drag_button(self):
-        """Cycles the dynamic mouse button configuration toggle value string."""
-        options = ["RIGHT", "LEFT", "BOTH"]
-        current_idx = options.index(self.drag_mouse_toggle)
-        next_idx = (current_idx + 1) % len(options)
-        
-        self.drag_mouse_toggle = options[next_idx]
-        
-        # Inject the modification to the global fallback configuration value AND controller
-        c.apply_runtime_settings({"drag_mouse_toggle": self.drag_mouse_toggle})
-        self.controller.drag_mouse_toggle = self.drag_mouse_toggle
-        
+    def toggle_intro_popup(self):
+        """Persists whether a new game should explain map controls."""
+        self.show_intro_popup = not self.show_intro_popup
+        self.controller.show_intro_popup = self.show_intro_popup
         queries.save_global_settings(self.controller)
         self.refresh_ui()
 
@@ -375,6 +369,12 @@ class Settings(GameState):
         self.refresh_ui()
 
     def refresh_ui(self):
+        # The fresh-game tutorial can change this setting while Settings is
+        # closed, so re-read its cached persisted value whenever this screen
+        # rebuilds rather than showing a stale controller value.
+        self.show_intro_popup = queries.get_settings().get(
+            "show_intro_popup", self.controller.show_intro_popup)
+        self.controller.show_intro_popup = self.show_intro_popup
         render_settings_buttons(self)
 
     def toggle_ai_enabled(self):
@@ -403,9 +403,8 @@ class Settings(GameState):
         self.controller.checkerboard_water = False
         c.apply_runtime_settings({"checkerboard_water": False})
 
-        self.drag_mouse_toggle = c.DEFAULT_MOUSE_BUTTON_TOGGLE
-        c.apply_runtime_settings({"drag_mouse_toggle": c.DEFAULT_MOUSE_BUTTON_TOGGLE})
-        self.controller.drag_mouse_toggle = c.DEFAULT_MOUSE_BUTTON_TOGGLE
+        self.show_intro_popup = True
+        self.controller.show_intro_popup = True
 
         self.map_navigation_mode = c.DEFAULT_MAP_NAVIGATION_MODE
         c.apply_runtime_settings({"map_navigation_mode": c.DEFAULT_MAP_NAVIGATION_MODE})

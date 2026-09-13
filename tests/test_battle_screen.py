@@ -617,6 +617,21 @@ class OrdersScreenRegressionTests(BattleScreenTestCase):
         self.addCleanup(nation.__setitem__, "materials", before)
         return before
 
+    def test_leaving_orders_clears_the_map_unit_selection(self):
+        was_selection_mode = self.map.selection_mode
+        self.map.selection_mode = False
+        self.addCleanup(setattr, self.map, "selection_mode", was_selection_mode)
+        self.map.clear_map_unit_selection()
+        self.addCleanup(self.map.clear_map_unit_selection)
+
+        screen = self.orders_screen()
+        self.assertTrue(self.map.selected_unit_records())
+
+        screen.exit_screen()
+
+        self.assertEqual(self.map.selected_unit_ids, set())
+        self.assertIsNone(self.map.unit_selection_drag)
+
     def test_clear_orders_key_refunds_only_owned_orders(self):
         mine = next(unit for unit in self.province["units"]
                     if unit["owner"] == self.a)
@@ -698,7 +713,13 @@ class OrdersScreenRegressionTests(BattleScreenTestCase):
         self.assertIs(unit["order"], order)
         self.assertEqual(nation["materials"], materials_before)
 
-    def test_compact_rows_have_six_actions_and_stay_inside_the_panel(self):
+    def test_orders_roster_keeps_per_unit_actions_for_a_selected_group(self):
+        # The test harness starts in selection mode, which deliberately blocks
+        # map commands.  Orders' map-wide roster is exercised in the normal
+        # playable Units view instead.
+        was_selection_mode = self.map.selection_mode
+        self.map.selection_mode = False
+        self.addCleanup(setattr, self.map, "selection_mode", was_selection_mode)
         owned_indices = [index for index, unit in enumerate(self.province["units"])
                          if unit["owner"] == self.a]
         for index in owned_indices:
@@ -708,37 +729,25 @@ class OrdersScreenRegressionTests(BattleScreenTestCase):
         screen = self.orders_screen()
         screen.draw(self.surface)
 
-        # The roster lists every unit fog of war lets the player see on this
-        # tile, not just their own -- so at least one foreign row that still
-        # fits inside the (unscrolled) viewport is expected alongside all of
-        # the player's own rows.
+        # The roster now means exactly the current command selection, not all
+        # units sharing the province.  This is what lets it represent a group
+        # selected across many provinces without leaking foreign orders.
         visible_indices = set(screen.unit_row_icons)
-        self.assertTrue(set(owned_indices).issubset(visible_indices))
-        foreign_visible = visible_indices - set(owned_indices)
-        self.assertTrue(foreign_visible)
-
+        self.assertEqual(visible_indices, set(owned_indices))
         self.assertEqual(len(screen.action_buttons), len(owned_indices) * 6)
         self.assertLessEqual(screen.row_height, 80 * 0.75)
         self.assertLessEqual(screen.PANEL_WIDTH, 570 * 0.85)
 
-        for index in owned_indices:
-            with self.subTest(unit_index=index):
-                buttons = [button for button in screen.action_buttons
-                           if button.unit_index == index]
-                self.assertEqual(len(buttons), 6)
-                self.assertEqual({button.action_slot for button in buttons}, set(range(6)))
-                for button in buttons:
-                    self.assertTrue(screen.panel_rect.contains(button.rect))
-                    self.assertTrue(screen.scroll_content_rect.contains(button.rect))
+        for selected_index in owned_indices:
+            buttons = [button for button in screen.action_buttons
+                       if button.unit_index == selected_index]
+            self.assertEqual(len(buttons), 6)
+            self.assertEqual({button.action_slot for button in buttons}, set(range(6)))
+            for button in buttons:
+                self.assertTrue(screen.panel_rect.contains(button.rect))
+                self.assertTrue(screen.scroll_content_rect.contains(button.rect))
 
-        # A foreign unit's row is shown, but carries no command buttons of
-        # its own -- that's the part of the roster the player can't touch.
-        for index in foreign_visible:
-            with self.subTest(foreign_unit_index=index):
-                self.assertFalse(
-                    [b for b in screen.action_buttons if b.unit_index == index])
-
-        cancel_by_index = {index: rect for rect, index in screen.cancel_rects}
+        cancel_by_index = {index: rect for rect, index, _province in screen.cancel_rects}
         self.assertEqual(len(screen.cancel_rects), len(owned_indices))
         self.assertEqual(set(cancel_by_index), set(owned_indices))
         for rect in cancel_by_index.values():

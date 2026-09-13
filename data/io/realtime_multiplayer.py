@@ -1273,19 +1273,10 @@ class MapRealtimeDriver:
                            for province_id in path)):
                 raise RealtimeError("Invalid movement path.")
             previous = province
-            combat_owner = queries.get_unit_combat_owner(unit)
             for province_id in path:
                 destination = self._province(province_id)
-                if destination["id"] not in previous.get("neighbors", []):
-                    raise RealtimeError("Movement path contains non-adjacent provinces.")
-                unit_type = unit.get("type", "")
-                if unit_type.startswith("Convoy"):
-                    legal = queries.can_convoy_enter(previous, destination)
-                elif queries.is_naval_unit(unit_type):
-                    legal = queries.can_ships_enter(combat_owner, destination, self.map_ref.nation_data)
-                else:
-                    legal = queries.can_land_units_enter(combat_owner, destination, self.map_ref.nation_data)
-                if not legal:
+                if not queries.can_unit_move_step(
+                        unit, previous, destination, self.map_ref.nation_data):
                     raise RealtimeError("That unit cannot enter a province in this path.")
                 previous = destination
             return {"type": "MOVE", "path": list(path)}
@@ -1795,6 +1786,9 @@ def apply_authoritative_snapshot(map_ref, snapshot: dict[str, Any]) -> None:
     """Replace mutable game state on a client map after a server broadcast."""
     if not isinstance(snapshot, dict):
         return
+    clear_selection = getattr(map_ref, "clear_map_unit_selection", None)
+    if clear_selection:
+        clear_selection()
     # Message read and popup flags are local UI state, not game-state changes.
     # The server deliberately keeps inbound messages unread so a reconnecting
     # player can still discover them.  Retain a matching local message's flags

@@ -18,20 +18,10 @@ class MapCamera:
             max_zoom = c.MAX_CAMERA_ZOOM
             self.target_zoom = max(self_map.min_zoom, min(self.target_zoom + zoom_change, max_zoom))
 
-        # Check the current state of all mouse buttons
-        mouse_buttons = pygame.mouse.get_pressed()
-        
-        # Determine which button(s) are valid for dragging based on constants
-        drag_toggle = c.DRAG_MOUSE_BUTTON_TOGGLE
-        drag_active = False
-        
-        # Pygame mouse_buttons indices: 0=Left, 1=Middle, 2=Right
-        if drag_toggle == "LEFT":
-            drag_active = mouse_buttons[0]
-        elif drag_toggle == "BOTH":
-            drag_active = mouse_buttons[0] or mouse_buttons[2]
-        else: # "RIGHT"
-            drag_active = mouse_buttons[2]
+        # Pygame mouse_buttons indices: 0=Left, 1=Middle, 2=Right.  Camera
+        # panning is deliberately fixed to middle mouse so map selection can
+        # safely use left click and right-drag without competing for input.
+        drag_active = pygame.mouse.get_pressed()[1]
 
         if event.type == pygame.MOUSEMOTION and drag_active and not on_ui:
             self.pos.x -= event.rel[0] / self.zoom

@@ -104,8 +104,6 @@ Immediate concerns:
 
 - slider volume specifically?
 
-- ability to port gd4 saves into gd5
-
 maybe units deal less damage the less hp they have...
 this would mean that units basically swap out with other units when they have less hp...
 (the damage half of this is done -- lanes only spread damage across the enemy

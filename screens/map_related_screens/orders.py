@@ -6,7 +6,6 @@ from map_logic.rendering.font_manager import fonts
 from data import queries
 from ui.text_utils import fit_text
 from map_logic.rendering import symbol_loader
-from map_logic.rendering import province_select
 from map_logic.rendering import overlay_renderer
 from ui.bars import ui_bars, resource_hud, view_mode_buttons
 from ui import event_handler
@@ -118,12 +117,17 @@ class Orders_Screen(GameState):
         self.action_icons = {}
         self.battle_screen = None
         self.entered_from_combat_bubble = False
+        self.return_to_province_menu = True
 
         self.renaming_unit_index = None
+        self.renaming_unit_province = None
+        self.renaming_unit_actual_index = None
         self.rename_text = ""
 
         # Index of the unit currently waiting for the player to click a tile to shell
         self.bombarding_unit_index = None
+        self.bombarding_unit_province = None
+        self.bombarding_unit_actual_index = None
 
         # True on a province where the player commands nothing: every unit is
         # listed, none of them is editable. Set per province in
@@ -143,6 +147,10 @@ class Orders_Screen(GameState):
     def start_with_province(self, province, map_ref):
         self.target_province = province
         self.map_screen = map_ref
+        self.return_to_province_menu = getattr(
+            map_ref, "_orders_return_to_province_menu", True)
+        if hasattr(map_ref, "_orders_return_to_province_menu"):
+            delattr(map_ref, "_orders_return_to_province_menu")
         open_battle_on_entry = bool(
             getattr(map_ref, "_orders_entered_from_combat_bubble", False))
         self.entered_from_combat_bubble = open_battle_on_entry
@@ -151,10 +159,16 @@ class Orders_Screen(GameState):
         self.battle_screen = None
         self.scroll_y = 0
         self.bombarding_unit_index = None
+        self.bombarding_unit_province = None
+        self.bombarding_unit_actual_index = None
         self.renaming_unit_index = None
+        self.renaming_unit_province = None
+        self.renaming_unit_actual_index = None
         self.rename_text = ""
 
-        # Shift the camera left so this panel doesn't cover the unit it's showing orders for.
+        # Give the player an initially useful view when Orders is opened, but
+        # never keep recentering it afterwards: this is a map-wide command
+        # workspace, not a province-locked popup.
         camera_handler.center_camera_on_province(
             self.map_screen.camera, province["center"], c.SCREEN_WIDTH, c.SCREEN_HEIGHT,
             self.map_screen.total_ui_h, x_offset=c.ORDERS_PANEL_CAMERA_X_OFFSET)
@@ -188,24 +202,54 @@ class Orders_Screen(GameState):
 
         if self.read_only:
             self.selected_unit_index = None
+        elif self.map_screen.selected_unit_records():
+            # A map click or box drag may already have selected a group across
+            # several provinces.  Orders must retain that group verbatim.
+            self.selected_unit_index = None
+        elif self.selected_unit_index == "ALL":
+            self.map_screen.select_map_units(
+                [unit for unit in units if unit.get("owner") == self.map_screen.player_country])
+        elif isinstance(self.selected_unit_index, int):
+            self.map_screen.select_map_units([units[self.selected_unit_index]])
 
         self.refresh_ui()
         if (open_battle_on_entry and queries.is_province_in_active_combat(
                 self.target_province, self.map_screen.nation_data)):
             self.open_battle_panel()
 
+    def inspect_province(self, province):
+        """Retarget the live Orders workspace to another visible stack."""
+        self.target_province = province
+        self.map_screen.selected_province = province
+        self.battle_screen = None
+        self.scroll_y = 0
+        self.bombarding_unit_index = None
+        self.bombarding_unit_province = None
+        units = province.get("units", [])
+        own_indices = [i for i, unit in enumerate(units)
+                       if unit.get("owner") == self.map_screen.player_country]
+        selected_indices = [i for i in own_indices
+                            if self.map_screen.is_unit_selected(units[i])]
+        if len(selected_indices) > 1:
+            self.selected_unit_index = "ALL"
+        elif selected_indices:
+            self.selected_unit_index = selected_indices[0]
+        elif len(own_indices) > 1:
+            self.selected_unit_index = "ALL"
+        else:
+            self.selected_unit_index = own_indices[0] if own_indices else None
+        self.read_only = not self.map_screen.selected_unit_records()
+        self.refresh_ui()
+
     def exit_screen(self):
         # The battle inspector is an optional child panel now, so leaving
         # Orders removes both windows in one transition back to the map.
         self.battle_screen = None
-        # Undo the left shift applied in start_with_province so the map isn't
-        # left off-center once the orders panel is gone.
-        if self.map_screen and self.target_province:
-            camera_handler.center_camera_on_province(
-                self.map_screen.camera, self.target_province["center"], c.SCREEN_WIDTH, c.SCREEN_HEIGHT,
-                self.map_screen.total_ui_h)
-
-        if self.entered_from_combat_bubble:
+        # Selection belongs to this Orders session.  Returning to the map or
+        # province menu must not leave a group armed for an accidental move.
+        if self.map_screen:
+            self.map_screen.clear_map_unit_selection()
+        if self.entered_from_combat_bubble or not self.return_to_province_menu:
             # A combat bubble is a direct map entry point, so Back should
             # return to the map rather than reopen the selected province menu.
             if self.map_screen:
@@ -213,20 +257,8 @@ class Orders_Screen(GameState):
             super().exit_screen()
             return
 
-        if c.MAP_NAVIGATION_MODE == "CLASSIC":
-            # Classic: Back lands on the plain province menu, tile still
-            # selected. (The view-mode row only ever switches the map overlay
-            # in Classic -- see navigate_view_mode -- so this is the only path
-            # that leaves Orders at all.)
-            super().exit_screen()
-            return
-
-        # Preemptive: Back means leaving this province's screens entirely --
-        # land on the bare map, not back on its province menu. (Resources/Blank
-        # in the view-mode row go through navigate_view_mode instead, which
-        # keeps the tile selected -- that's the "regular province menu" path.)
-        if self.map_screen:
-            self.map_screen.deselect_province()
+        # Orders entered from the province menu deliberately keeps that menu
+        # alive regardless of the global navigation-mode preference.
         super().exit_screen()
 
     def go_to_battle(self):
@@ -299,7 +331,35 @@ class Orders_Screen(GameState):
         if self.map_screen.tactical_mode:
             self.map_screen.show_feedback("Tactical Mode: You can only command your specific unit!")
             return
-        self.selected_unit_index = index
+        units = self.target_province.get("units", [])
+        if index == "ALL":
+            local_units = [unit for unit in units
+                           if unit.get("owner") == self.map_screen.player_country]
+            if local_units and all(self.map_screen.is_unit_selected(unit) for unit in local_units):
+                self.map_screen.deselect_map_units(local_units)
+                self.selected_unit_index = None
+            else:
+                self.map_screen.select_map_units(local_units)
+                self.selected_unit_index = index
+        elif isinstance(index, int) and 0 <= index < len(units):
+            unit = units[index]
+            if self.map_screen.is_unit_selected(unit):
+                self.map_screen.deselect_map_units([unit])
+                self.selected_unit_index = None
+            else:
+                self.map_screen.select_map_units([unit])
+                self.selected_unit_index = index
+        self.bombarding_unit_index = None
+        self.refresh_ui()
+
+    def toggle_selected_unit(self, unit):
+        """Toggle one roster entry without dropping selections on other tiles."""
+        if getattr(self, "read_only", False) or self._command_blocked(unit):
+            return
+        if self.map_screen.is_unit_selected(unit):
+            self.map_screen.deselect_map_units([unit])
+        else:
+            self.map_screen.select_map_units([unit], additive=True)
         self.bombarding_unit_index = None
         self.refresh_ui()
 
@@ -364,7 +424,7 @@ class Orders_Screen(GameState):
         self.action_buttons.append(button)
         return button
 
-    def _build_unit_action_buttons(self, index, unit, row_y, row_guard,
+    def _build_unit_action_buttons(self, row_key, index, unit, province, row_y, row_guard,
                                    in_combat, is_water, is_coastal,
                                    is_factory, player_research):
         """Builds the six HOI-style icon commands for one visible roster row."""
@@ -381,7 +441,7 @@ class Orders_Screen(GameState):
 
         def add(slot, color, help_text, callback, icon_name, enabled=True):
             button = self._add_action_button(
-                index, row_y, slot, color, help_text, callback, icon_name,
+                row_key, row_y, slot, color, help_text, callback, icon_name,
                 row_guard, enabled=enabled)
             buttons.append(button)
             return button
@@ -398,28 +458,28 @@ class Orders_Screen(GameState):
 
         if order_type == "CONVERT":
             btn_conv = add(ACTION_COL_CONVERT, "red", "Cancel conversion",
-                           lambda idx=index: self.cancel_unit_order(idx), convert_icon)
+                           lambda idx=index, p=province: self.cancel_unit_order(idx, p), convert_icon)
         elif in_combat:
             btn_conv = add(ACTION_COL_CONVERT, "grey", "Convert: unavailable in combat",
                            lambda: None, convert_icon, enabled=False)
         elif is_convoy:
             if not is_water:
                 btn_conv = add(ACTION_COL_CONVERT, "blue", "Convert convoy to land unit",
-                               lambda idx=index: self.convert_unit(idx), convert_icon)
+                               lambda idx=index, p=province: self.convert_unit(idx, p), convert_icon)
             else:
                 btn_conv = add(ACTION_COL_CONVERT, "grey", "Convert: convoy needs land",
                                lambda: None, convert_icon, enabled=False)
         elif is_truck:
             if is_coastal or is_water:
                 btn_conv = add(ACTION_COL_CONVERT, "blue", "Convert truck to ship",
-                               lambda idx=index: self.convert_unit(idx), convert_icon)
+                               lambda idx=index, p=province: self.convert_unit(idx, p), convert_icon)
             else:
                 btn_conv = add(ACTION_COL_CONVERT, "grey", "Convert: requires a coast",
                                lambda: None, convert_icon, enabled=False)
         elif not is_naval:
             if is_coastal or is_water:
                 btn_conv = add(ACTION_COL_CONVERT, "blue", "Convert land unit to convoy",
-                               lambda idx=index: self.convert_unit(idx), convert_icon)
+                               lambda idx=index, p=province: self.convert_unit(idx, p), convert_icon)
             else:
                 btn_conv = add(ACTION_COL_CONVERT, "grey", "Convert: requires a coast",
                                lambda: None, convert_icon, enabled=False)
@@ -428,26 +488,26 @@ class Orders_Screen(GameState):
                            lambda: None, convert_icon, enabled=False)
         elif is_coastal or not is_water:
             btn_conv = add(ACTION_COL_CONVERT, "blue", "Convert ship to truck",
-                           lambda idx=index: self.convert_unit(idx), convert_icon)
+                           lambda idx=index, p=province: self.convert_unit(idx, p), convert_icon)
         else:
             btn_conv = add(ACTION_COL_CONVERT, "grey", "Convert: requires a coast",
                            lambda: None, convert_icon, enabled=False)
 
         if order_type == "DISBAND":
             btn_disband = add(ACTION_COL_DISBAND, "red", "Cancel disband order",
-                              lambda idx=index: self.cancel_unit_order(idx), "Disbanding")
+                              lambda idx=index, p=province: self.cancel_unit_order(idx, p), "Disbanding")
         elif is_tactical and unit is self.map_screen.player_unit:
             btn_disband = add(ACTION_COL_DISBAND, "grey", "Disband: unavailable in tactical mode",
                               lambda: None, "Disbanding", enabled=False)
         else:
             btn_disband = add(ACTION_COL_DISBAND, "red", "Disband unit",
-                              lambda idx=index: self.disband_unit(idx), "Disbanding")
+                              lambda idx=index, p=province: self.disband_unit(idx, p), "Disbanding")
 
         hp = int(unit.get("health", 0))
         max_hp = int(unit.get("max_health", 1))
         if order_type == "REPAIR":
             btn_repair = add(ACTION_COL_REPAIR, "orange", "Cancel repair order",
-                             lambda idx=index: self.cancel_unit_order(idx), "Repairing")
+                             lambda idx=index, p=province: self.cancel_unit_order(idx, p), "Repairing")
         elif hp >= max_hp:
             btn_repair = add(ACTION_COL_REPAIR, "grey", "Repair: unit is at full HP",
                              lambda: None, "Repairing", enabled=False)
@@ -459,18 +519,18 @@ class Orders_Screen(GameState):
                              lambda: None, "Repairing", enabled=False)
         else:
             btn_repair = add(ACTION_COL_REPAIR, "green", "Repair unit",
-                             lambda idx=index: self.repair_unit(idx), "Repairing")
+                             lambda idx=index, p=province: self.repair_unit(idx, p), "Repairing")
 
-        if self.renaming_unit_index == index:
+        if self.renaming_unit_index == row_key:
             btn_rename = add(ACTION_COL_CONVERT, "green", "Save unit name (Enter)",
-                             lambda idx=index: self.save_unit_name(idx), "Text")
+                             lambda idx=index, p=province: self.save_unit_name(idx, p), "Text")
         else:
             btn_rename = add(ACTION_COL_RENAME, "blue", "Rename unit",
-                             lambda idx=index: self.start_renaming(idx), "Text")
+                             lambda idx=index, p=province, key=row_key: self.start_renaming(idx, p, key), "Text")
 
         if order_type == "UPGRADE":
             btn_upgrade = add(ACTION_COL_UPGRADE, "red", "Cancel upgrade order",
-                              lambda idx=index: self.cancel_unit_order(idx), "Upgrading")
+                              lambda idx=index, p=province: self.cancel_unit_order(idx, p), "Upgrading")
         else:
             upgrade_target = queries.get_upgrade_target(
                 unit_name, player_research, self.unit_library, queries.get_tech_tree())
@@ -486,12 +546,12 @@ class Orders_Screen(GameState):
             else:
                 btn_upgrade = add(
                     ACTION_COL_UPGRADE, "orange", f"Upgrade to {upgrade_target}",
-                    lambda idx=index, target=upgrade_target: self.upgrade_unit(idx, target),
+                    lambda idx=index, target=upgrade_target, p=province: self.upgrade_unit(idx, target, p),
                     "Upgrading")
 
         if order_type == "BOMBARD":
             btn_bombard = add(ACTION_COL_BOMBARD, "red", "Cancel bombardment",
-                              lambda idx=index: self.cancel_unit_order(idx),
+                              lambda idx=index, p=province: self.cancel_unit_order(idx, p),
                               "Bombardment Arrows")
         elif not queries.can_bombard(unit_name):
             btn_bombard = add(ACTION_COL_BOMBARD, "grey", "Bombard: unit has no bombardment",
@@ -499,39 +559,40 @@ class Orders_Screen(GameState):
         elif is_water and not is_naval:
             btn_bombard = add(ACTION_COL_BOMBARD, "grey", "Bombard: land guns cannot fire at sea",
                               lambda: None, "Bombardment Arrows", enabled=False)
-        elif self.bombarding_unit_index == index:
+        elif self.bombarding_unit_index == row_key:
             btn_bombard = add(ACTION_COL_BOMBARD, "orange", "Choose target (click to cancel)",
                               self.cancel_bombard_targeting, "Bombardment Arrows")
         else:
             btn_bombard = add(ACTION_COL_BOMBARD, "yellow", "Choose bombardment target",
-                              lambda idx=index: self.start_bombard_targeting(idx),
+                              lambda idx=index, p=province, key=row_key: self.start_bombard_targeting(idx, p, key),
                               "Bombardment Arrows")
 
         # Rename gets the name field and one Save glyph to itself. This is the
         # compact counterpart of the old row hiding its other five buttons.
-        if self.renaming_unit_index == index:
+        if self.renaming_unit_index == row_key:
             for button in buttons:
                 if button is not btn_rename:
                     button.apply_state(visible=False)
 
     def _visible_rows(self):
-        """(index, unit) pairs to list on the roster: every unit fog of war
-        lets the player see on this tile. A tile fully hidden by fog still
-        lists the player's own units on it -- never hidden from their owner
-        -- but nothing belonging to anyone else.
-        """
-        units = self.target_province.get("units", [])
-        player_country = self.map_screen.player_country
-        is_visible = queries.is_province_visible(
-            self.map_screen, self.target_province["id"])
-        if not is_visible:
-            return [(i, u) for i, u in enumerate(units)
-                   if u.get("owner") == player_country]
+        """Selected commandable units, with their live province and index.
 
-        visible = queries.filter_visible_units(
-            units, player_country, self.target_province, self.map_screen.nation_data)
-        visible_ids = {id(u) for u in visible}
-        return [(i, u) for i, u in enumerate(units) if id(u) in visible_ids]
+        The selection owner already filters fog-hidden and foreign stacks, so
+        the Orders roster can safely span the whole visible map without
+        accidentally turning a province inspection into an intelligence leak.
+        The row key stays an integer for the focused province for compatibility
+        with its single-unit action controls; cross-province rows use a stable
+        tuple so identically numbered stack slots never collide in the UI.
+        """
+        rows = []
+        for unit, province in self.map_screen.selected_unit_records():
+            index = next((i for i, candidate in enumerate(province.get("units", []))
+                          if candidate is unit), None)
+            if index is None:
+                continue
+            row_key = index if province is self.target_province else (province["id"], index)
+            rows.append((row_key, unit, province, index))
+        return rows
 
     def refresh_ui(self):
         if getattr(self.map_screen, "realtime_multiplayer", False):
@@ -549,12 +610,22 @@ class Orders_Screen(GameState):
         self.action_buttons = []
         self.unit_row_icons = {}
 
-        units = self.target_province.get("units", [])
         is_tactical = self.map_screen.tactical_mode
         player_country = self.map_screen.player_country
         player_research = self.map_screen.nation_data.get(player_country, {}).get("research", {})
-        player_units = [u for u in units if u.get("owner") == player_country]
         rows = self._visible_rows()
+        player_units = [unit for _key, unit, _province, _index in rows]
+        target_player_units = [unit for unit in self.target_province.get("units", [])
+                               if unit.get("owner") == player_country]
+
+        # Keep a focused province for the battle pane and a single unit's
+        # targeting preview, but action buttons below always receive their
+        # own row province.  Multi-selection therefore remains safe.
+        single_row = rows[0] if len(rows) == 1 else None
+        if single_row and single_row[2] is not self.target_province:
+            self.target_province = single_row[2]
+            rows = self._visible_rows()
+            single_row = rows[0] if len(rows) == 1 else None
 
         # Battle is deliberately a child of Orders.  Keep this available for
         # observers as well as participants: a read-only Orders view can still
@@ -563,7 +634,7 @@ class Orders_Screen(GameState):
             self.target_province, self.map_screen.nation_data)
         if in_battle:
             battle_label = ("Close Battle" if self.battle_screen is not None else
-                            ("Manage Battle" if player_units else "View Battle"))
+                            ("Manage Battle" if target_player_units else "View Battle"))
             battle_callback = (self.close_battle_panel if self.battle_screen is not None
                                else self.go_to_battle)
             battle_button = Button(
@@ -583,7 +654,9 @@ class Orders_Screen(GameState):
 
         if player_units:
             button_x = self.PANEL_X + PANEL_INSET
-            if len(player_units) > 1:
+            local_units = [unit for unit in self.target_province.get("units", [])
+                           if unit.get("owner") == player_country]
+            if len(local_units) > 1:
                 all_color = "grey" if is_tactical else (
                     "blue" if self.selected_unit_index == "ALL" else "grey")
                 btn_all = Button(button_x, PANEL_Y + TOP_BTN_ROW_OFFSET_Y,
@@ -601,13 +674,7 @@ class Orders_Screen(GameState):
             btn_clear.disabled = is_tactical
             self.elements.append(btn_clear)
 
-        in_combat = queries.is_nation_in_combat_here(
-            player_country, self.target_province, self.map_screen.nation_data)
-        is_water = queries.is_water_province(self.target_province)
-        is_coastal = self.target_province.get("is_coastal", False)
-        is_factory = queries.has_industry(self.target_province)
-
-        for display_index, (index, unit) in enumerate(rows):
+        for display_index, (row_key, unit, province, index) in enumerate(rows):
             row_y = self.panel_top + (display_index * self.row_height) + self.scroll_y
             row_rect = pygame.Rect(
                 self.PANEL_X + UNIT_ROW_X_OFFSET, row_y,
@@ -623,7 +690,7 @@ class Orders_Screen(GameState):
             row_owner_color = self.map_screen.nation_colors.get(combat_owner, (200, 200, 200))
             icon = symbol_loader.get_symbol(
                 unit_name, zoom=UNIT_ICON_ZOOM, color=row_owner_color, country=combat_owner)
-            self.unit_row_icons[index] = self.fit_icon(
+            self.unit_row_icons[row_key] = self.fit_icon(
                 icon, "small_square", padding=8)
 
             # Not this player's unit, or (Tactical Mode) one of their own
@@ -639,26 +706,34 @@ class Orders_Screen(GameState):
                 pygame.Rect(row_rect.x, row_rect.y,
                             ACTION_START_OFFSET_X - UNIT_ROW_X_OFFSET - 2,
                             self.row_height),
-                lambda idx=index: self.select_unit(idx))
+                lambda selected_unit=unit: self.toggle_selected_unit(selected_unit))
             hitbox.is_scrollable = True
             hitbox.click_guard = row_guard
             self.elements.append(hitbox)
 
+            row_in_combat = queries.is_nation_in_combat_here(
+                player_country, province, self.map_screen.nation_data)
             self._build_unit_action_buttons(
-                index, unit, row_y, row_guard, in_combat, is_water,
-                is_coastal, is_factory, player_research)
+                row_key, index, unit, province, row_y, row_guard,
+                row_in_combat, queries.is_water_province(province),
+                province.get("is_coastal", False), queries.has_industry(province),
+                player_research)
 
-    def start_renaming(self, index):
-        units = self.target_province.get("units", [])
+    def start_renaming(self, index, province=None, row_key=None):
+        province = province or self.target_province
+        units = province.get("units", [])
         if 0 <= index < len(units):
             if self._command_blocked(units[index]):
                 return
             self.rename_text = units[index].get("custom_name", "")
-        self.renaming_unit_index = index
+        self.renaming_unit_index = index if row_key is None else row_key
+        self.renaming_unit_province = province
+        self.renaming_unit_actual_index = index
         self.refresh_ui()
 
-    def save_unit_name(self, index):
-        units = self.target_province.get("units", [])
+    def save_unit_name(self, index, province=None):
+        province = province or self.renaming_unit_province or self.target_province
+        units = province.get("units", [])
         if 0 <= index < len(units):
             if self._command_blocked(units[index]):
                 return
@@ -667,15 +742,18 @@ class Orders_Screen(GameState):
             else:
                 units[index].pop("custom_name", None)
         self.renaming_unit_index = None
+        self.renaming_unit_province = None
+        self.renaming_unit_actual_index = None
         self.refresh_ui()
 
-    def repair_unit(self, index):
-        in_combat = queries.is_nation_in_combat_here(self.map_screen.player_country, self.target_province, self.map_screen.nation_data)
+    def repair_unit(self, index, province=None):
+        province = province or self.target_province
+        in_combat = queries.is_nation_in_combat_here(self.map_screen.player_country, province, self.map_screen.nation_data)
         if in_combat:
             self.map_screen.show_feedback("Cannot repair during combat!")
             return
 
-        units = self.target_province.get("units", [])
+        units = province.get("units", [])
         if not (0 <= index < len(units)): return
 
         unit = units[index]
@@ -716,8 +794,9 @@ class Orders_Screen(GameState):
         else:
             self.map_screen.show_feedback("Cannot afford repair!")
 
-    def upgrade_unit(self, index, target_type):
-        in_combat = queries.is_nation_in_combat_here(self.map_screen.player_country, self.target_province, self.map_screen.nation_data)
+    def upgrade_unit(self, index, target_type, province=None):
+        province = province or self.target_province
+        in_combat = queries.is_nation_in_combat_here(self.map_screen.player_country, province, self.map_screen.nation_data)
         if in_combat:
             self.map_screen.show_feedback("Cannot upgrade during combat!")
             return
@@ -725,11 +804,11 @@ class Orders_Screen(GameState):
         # The button is already greyed out as "Needs Factory" without one; this
         # is the same check standing behind it, so the rule holds whatever
         # reaches this method.
-        if not queries.has_industry(self.target_province):
+        if not queries.has_industry(province):
             self.map_screen.show_feedback("Cannot upgrade without a factory!")
             return
 
-        units = self.target_province.get("units", [])
+        units = province.get("units", [])
         if not (0 <= index < len(units)): return
 
         unit = units[index]
@@ -744,26 +823,34 @@ class Orders_Screen(GameState):
         self.map_screen.show_feedback(f"Upgrade to {target_type} ordered (1 turn).")
         self.refresh_ui()
 
-    def start_bombard_targeting(self, index):
+    def start_bombard_targeting(self, index, province=None, row_key=None):
         """Arms a gun and waits for the player to click the tile it should shell."""
-        units = self.target_province.get("units", [])
+        province = province or self.target_province
+        units = province.get("units", [])
         if not (0 <= index < len(units)): return
 
         if self._command_blocked(units[index]):
             return
 
-        self.bombarding_unit_index = index
+        self.bombarding_unit_index = index if row_key is None else row_key
+        self.bombarding_unit_province = province
+        self.bombarding_unit_actual_index = index
         self.map_screen.show_feedback("Select a tile within range to bombard.")
         self.refresh_ui()
 
     def cancel_bombard_targeting(self):
         self.bombarding_unit_index = None
+        self.bombarding_unit_province = None
+        self.bombarding_unit_actual_index = None
         self.refresh_ui()
 
-    def set_bombard_target(self, index, dest):
-        units = self.target_province.get("units", [])
+    def set_bombard_target(self, index, dest, province=None):
+        province = province or self.bombarding_unit_province or self.target_province
+        units = province.get("units", [])
         if not (0 <= index < len(units)):
             self.bombarding_unit_index = None
+            self.bombarding_unit_province = None
+            self.bombarding_unit_actual_index = None
             return
 
         unit = units[index]
@@ -772,15 +859,17 @@ class Orders_Screen(GameState):
         # The same rule process_bombardments applies: guns fire from land, and
         # ships that carry them (Battleship, Dreadnought, Carrier) fire from the
         # water by design.
-        if (queries.is_water_province(self.target_province)
+        if (queries.is_water_province(province)
                 and not (unit.get("naval_unit") or queries.is_naval_unit(u_type))):
             self.map_screen.show_feedback("This unit cannot bombard from the water!")
             self.bombarding_unit_index = None
+            self.bombarding_unit_province = None
+            self.bombarding_unit_actual_index = None
             self.refresh_ui()
             return
 
         bomb_range = queries.get_bombardment_range(u_type)
-        in_range = queries.get_bombardment_targets(self.target_province, self.map_screen.id_to_province, bomb_range)
+        in_range = queries.get_bombardment_targets(province, self.map_screen.id_to_province, bomb_range)
 
         if dest["id"] not in in_range:
             self.map_screen.show_feedback("Target out of bombardment range!")
@@ -789,11 +878,14 @@ class Orders_Screen(GameState):
         # A gun that is firing stays put, so any queued movement is dropped
         unit["order"] = {"type": "BOMBARD", "target_id": dest["id"]}
         self.bombarding_unit_index = None
+        self.bombarding_unit_province = None
+        self.bombarding_unit_actual_index = None
         self.map_screen.show_feedback(f"Bombarding Province {dest['id']} (cannot move this turn)")
         self.refresh_ui()
 
-    def disband_unit(self, index):
-        units = self.target_province.get("units", [])
+    def disband_unit(self, index, province=None):
+        province = province or self.target_province
+        units = province.get("units", [])
         if 0 <= index < len(units):
             unit = units[index]
             if self._command_blocked(unit):
@@ -802,16 +894,17 @@ class Orders_Screen(GameState):
             self.map_screen.show_feedback(f"Disbanding {unit.get('type')} (1 turn)")
             self.refresh_ui()
 
-    def convert_unit(self, index):
+    def convert_unit(self, index, province=None):
+        province = province or self.target_province
         # --- Prevent conversion during combat just in case ---
         player_country = self.map_screen.player_country
-        in_combat = queries.is_nation_in_combat_here(player_country, self.target_province, self.map_screen.nation_data)
+        in_combat = queries.is_nation_in_combat_here(player_country, province, self.map_screen.nation_data)
         if in_combat:
             self.map_screen.show_feedback("Cannot convert during combat!")
             return
         # -----------------------------------------------------
 
-        units = self.target_province.get("units", [])
+        units = province.get("units", [])
         if 0 <= index < len(units):
             unit = units[index]
             if self._command_blocked(unit):
@@ -840,8 +933,9 @@ class Orders_Screen(GameState):
             self.map_screen.show_feedback(f"Converting to {target_type} ({turns} turns)")
             self.refresh_ui()
 
-    def cancel_unit_order(self, index):
-        units = self.target_province.get("units", [])
+    def cancel_unit_order(self, index, province=None):
+        province = province or self.target_province
+        units = province.get("units", [])
         if 0 <= index < len(units):
             if self._command_blocked(units[index]):
                 return
@@ -860,10 +954,17 @@ class Orders_Screen(GameState):
                 self.refresh_ui()
 
     def clear_all_orders(self):
-        units = self.target_province.get("units", [])
+        selected_records = self.map_screen.selected_unit_records()
+        # Orders normally clears exactly the units displayed in its roster.
+        # Retain the province fallback for a read-only inspection opened by an
+        # older caller that has no map selection.
+        units = ([unit for unit, _province in selected_records]
+                 if selected_records else self.target_province.get("units", []))
         cleared_any = False
         cancelled_targeting = self.bombarding_unit_index is not None
         self.bombarding_unit_index = None
+        self.bombarding_unit_province = None
+        self.bombarding_unit_actual_index = None
 
         for unit in units:
             if unit.get("owner") == self.map_screen.player_country and not self._command_blocked_silent(unit):
@@ -889,6 +990,8 @@ class Orders_Screen(GameState):
         # it is allowed to close the whole panel.
         if self.renaming_unit_index is not None:
             self.renaming_unit_index = None
+            self.renaming_unit_province = None
+            self.renaming_unit_actual_index = None
             self.refresh_ui()
         elif self.bombarding_unit_index is not None:
             self.cancel_bombard_targeting()
@@ -910,9 +1013,12 @@ class Orders_Screen(GameState):
 
             if event.type == pygame.KEYDOWN and self.renaming_unit_index is not None:
                 if event.key == pygame.K_RETURN:
-                    self.save_unit_name(self.renaming_unit_index)
+                    self.save_unit_name(self.renaming_unit_actual_index,
+                                        self.renaming_unit_province)
                 elif event.key == resolve_keybind(self, "BACK", pygame.K_ESCAPE):
                     self.renaming_unit_index = None
+                    self.renaming_unit_province = None
+                    self.renaming_unit_actual_index = None
                     self.refresh_ui()
                 else:
                     self.rename_text, _ = process_text_input(event, self.rename_text, max_length=c.UNIT_NAME_MAX_LENGTH)
@@ -923,9 +1029,9 @@ class Orders_Screen(GameState):
                 # the panel's edge (clipped, no longer drawn) can't fire.
                 panel_rect = getattr(self, 'scroll_content_rect', None)
                 if panel_rect is None or panel_rect.collidepoint(event.pos):
-                    for rect, idx in self.cancel_rects:
+                    for rect, idx, province in self.cancel_rects:
                         if rect.collidepoint(event.pos):
-                            self.cancel_unit_order(idx)
+                            self.cancel_unit_order(idx, province)
                             return
 
             # --- Scrollbar click/drag (grab the handle or jump via the track),
@@ -962,6 +1068,61 @@ class Orders_Screen(GameState):
         panel_rect = self.panel_rect
         on_ui = panel_rect.collidepoint(mx, my)
 
+        # The Orders panel is a live map workspace.  Stacks update the shared
+        # selection without opening another screen or recentering the camera.
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and not on_ui:
+            for stack in getattr(self.map_screen, "unit_stack_hitboxes", []):
+                if stack["rect"].collidepoint(event.pos):
+                    self.map_screen.select_map_units(
+                        stack["units"],
+                        additive=bool(pygame.key.get_mods() & pygame.KMOD_SHIFT))
+                    self.target_province = stack["province"]
+                    self.selected_unit_index = None
+                    self.read_only = not bool(self.map_screen.selected_unit_records())
+                    self.refresh_ui()
+                    return
+
+        if (event.type == pygame.MOUSEBUTTONDOWN and event.button == 3
+                and not on_ui and self.map_screen.can_select_map_units()):
+            self.map_screen.unit_selection_drag = {
+                "start": event.pos, "current": event.pos,
+                "additive": bool(pygame.key.get_mods() & pygame.KMOD_SHIFT),
+            }
+            return
+
+        if event.type == pygame.MOUSEMOTION and self.map_screen.unit_selection_drag:
+            self.map_screen.unit_selection_drag["current"] = event.pos
+            return
+
+        if event.type == pygame.MOUSEBUTTONUP and event.button == 3:
+            drag = self.map_screen.unit_selection_drag
+            self.map_screen.unit_selection_drag = None
+            if not drag:
+                return
+            rect = pygame.Rect(
+                drag["start"],
+                (event.pos[0] - drag["start"][0], event.pos[1] - drag["start"][1]))
+            rect.normalize()
+            if rect.width < 4 and rect.height < 4:
+                if not self.read_only:
+                    destination = queries.get_clicked_province(event.pos, self.map_screen)
+                    if destination and self.map_screen.selected_unit_records():
+                        if self.map_screen.issue_selected_move_orders(
+                                destination,
+                                append=bool(pygame.key.get_mods() & pygame.KMOD_SHIFT)):
+                            self.refresh_ui()
+                return
+            if rect.width >= 4 or rect.height >= 4:
+                selected = []
+                for stack in getattr(self.map_screen, "unit_stack_hitboxes", []):
+                    if rect.colliderect(stack["rect"]):
+                        selected.extend(stack["units"])
+                self.map_screen.select_map_units(selected, additive=drag["additive"])
+                self.selected_unit_index = None
+                self.read_only = not bool(self.map_screen.selected_unit_records())
+                self.refresh_ui()
+            return
+
         # Pass scroll and pan events to your centralized map camera
         if event.type in (pygame.MOUSEWHEEL, pygame.MOUSEMOTION):
             # Only allow camera zoom/pan if not scrolling the unit list
@@ -978,20 +1139,9 @@ class Orders_Screen(GameState):
 
             dest = queries.get_clicked_province(event.pos, self.map_screen)
             if dest:
-                self.set_bombard_target(self.bombarding_unit_index, dest)
+                self.set_bombard_target(self.bombarding_unit_actual_index, dest,
+                                        self.bombarding_unit_province)
             return
-
-        # --- Standard Order Placement Click ---
-        if getattr(self, "read_only", False):
-            return
-
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and self.selected_unit_index is not None:
-            # If the click is inside the panel, ignore it completely
-            if panel_rect.collidepoint(event.pos):
-                return
-
-            dest = queries.get_clicked_province(event.pos, self.map_screen)
-            if not dest: return
 
         # --- Dynamic Map Hover Update ---
         if event.type == pygame.MOUSEMOTION:
@@ -1009,132 +1159,17 @@ class Orders_Screen(GameState):
                 self.map_screen.last_hovered_id = None
                 self.map_screen.hover_glow_surf = None
 
-        # --- Standard Order Placement Click ---
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and self.selected_unit_index is not None:
-            dest = queries.get_clicked_province(event.pos, self.map_screen)
-            if not dest: return
-
-            units = self.target_province.get("units", [])
-
-            if self.selected_unit_index == "ALL":
-                target_units = [u for u in units if u.get("owner") == self.map_screen.player_country]
-            elif 0 <= self.selected_unit_index < len(units):
-                target_units = [units[self.selected_unit_index]]
-            else:
-                target_units = []
-
-            if not target_units: return
-
-            if any(isinstance(u.get("order"), dict) and u["order"].get("type") in c.ORDERS_BLOCKING_MOVEMENT for u in target_units):
-                self.map_screen.show_feedback("Cannot move while converting, disbanding, repairing, upgrading, or bombarding!")
-                return
-
-            for unit in target_units:
-                if "order" not in unit or not isinstance(unit["order"], dict):
-                    unit["order"] = {"type": "MOVE", "path": []}
-                if "path" not in unit["order"]:
-                    unit["order"]["path"] = []
-
-            current_path = target_units[0]["order"]["path"]
-
-            # Use the min() generator to find the slowest unit out of all selected
-            speed_limit = min(u.get("speed", 1) for u in target_units)
-
-            if not current_path:
-                start_node = self.target_province
-            else:
-                start_node = self.map_screen.id_to_province.get(current_path[-1])
-
-            # --- Unlimited Queueing Logic ---
-            if dest["id"] in start_node["neighbors"]:
-                if all(self.can_unit_enter(u, dest) for u in target_units):
-
-                    # --- TACTICAL FUEL LIMIT CHECK ---
-                    if self.map_screen.tactical_mode and self.selected_unit_index != "ALL":
-                        unit = target_units[0]
-                        if unit is self.map_screen.player_unit:
-                            speed = queries.get_tactical_speed(unit)
-                            # If this step would execute this turn
-                            if len(current_path) < speed:
-                                fuel_inc = self.map_screen.unit_economy.get("fuel_inc", 0)
-                                cost_per_tile = queries.get_tactical_fuel_cost_per_tile(unit, fuel_inc)
-                                if self.map_screen.player_fuel < cost_per_tile:
-                                    self.map_screen.show_feedback("Not enough fuel!")
-                                    return
-                    # ---------------------------------
-
-                    # Generate a single new path baseline so Python doesn't cross-contaminate lists in memory
-                    new_path = current_path.copy()
-                    new_path.append(dest["id"])
-
-                    for unit in target_units:
-                        unit["order"]["path"] = new_path.copy()
-
-                    # Feedback update based on if it's immediate or queued
-                    status_str = "Queued" if len(new_path) > speed_limit else "Added"
-                    self.map_screen.show_feedback(f"Path {status_str}: {len(new_path)} steps (Speed: {speed_limit})")
-                    self.refresh_ui()
-
     def can_unit_enter(self, unit, dest):
-        combat_owner = queries.get_unit_combat_owner(unit)
-        dest_is_water = queries.is_water_province(dest)
+        """Compatibility wrapper for callers of the former Orders-only rule.
 
-        # Look up the actual unit stats using its type name
-        u_type = unit.get("type", "")
-        is_convoy = u_type.startswith("Convoy")
-        is_truck = u_type.startswith("Truck")
-        is_naval = queries.is_naval_unit(u_type)
-
-        # Enforce Land Unit Rules
-        if not is_naval and dest_is_water:
-            self.map_screen.show_feedback("Land units cannot enter water!")
-            return False
-
-        # Enforce Naval Unit Rules
-        if is_naval and not dest_is_water:
-            if not dest.get("is_coastal"):
-                self.map_screen.show_feedback("Naval units blocked by land!")
-                return False
-
-            # Ships can only dock at friendly coasts
-            if not is_convoy and not queries.can_ships_enter(combat_owner, dest, self.map_screen.nation_data):
-                self.map_screen.show_feedback("Ships can only enter friendly/owned coastal tiles!")
-                return False
-
-        # Convoy Movement Rules
-        if is_convoy:
-            current_path = unit.get("order", {}).get("path", [])
-            if not current_path:
-                start_node = self.target_province
-            else:
-                start_node = self.map_screen.id_to_province.get(current_path[-1])
-
-            if start_node and not queries.can_convoy_enter(start_node, dest):
-                self.map_screen.show_feedback("Convoys on land can only move to ocean!")
-                return False
-
-            if not dest_is_water and not queries.can_land_units_enter(combat_owner, dest, self.map_screen.nation_data):
-                self.map_screen.show_feedback(f"Neutral territory!")
-                return False
-
-        # Enforce Diplomacy/Border Rules
-        dest_owner = dest.get("owner", "Unclaimed")
-
-        # Combat Lock (Player UI Check)
-        current_path = unit.get("order", {}).get("path", [])
-        if not current_path: # First step of the move order
-            in_combat = queries.is_nation_in_combat_here(combat_owner, self.target_province, self.map_screen.nation_data)
-            if in_combat and queries.is_hostile_territory(combat_owner, dest_owner, self.map_screen.nation_data):
-                self.map_screen.show_feedback("Cannot advance into enemy territory while in combat! (Retreat only)")
-                return False
-
-        if not is_naval and not queries.can_land_units_enter(combat_owner, dest, self.map_screen.nation_data):
-            self.map_screen.show_feedback(
-                "Neutral " + queries.get_country_display_name(
-                    dest_owner, self.map_screen.nation_data) + " territory!")
-            return False
-
-        return True
+        Map routing and real-time validation now share the canonical query;
+        retaining this narrow wrapper keeps integrations such as volunteers
+        from recreating the old local implementation.
+        """
+        order = unit.get("order", {})
+        path = order.get("path", []) if isinstance(order, dict) else []
+        current = self.map_screen.id_to_province.get(path[-1]) if path else self.target_province
+        return queries.can_unit_move_step(unit, current, dest, self.map_screen.nation_data)
 
     def _order_summary(self, unit_index, unit):
         """Short status text and color for a compact roster row."""
@@ -1169,8 +1204,8 @@ class Orders_Screen(GameState):
             return order_type.title(), c.UI_TEXT_LIGHT
         return "Order queued", c.UI_TEXT_LIGHT
 
-    def _draw_unit_row(self, surface, unit_index, unit, row_y, display_index,
-                       owner_color, small_font, tiny_font):
+    def _draw_unit_row(self, surface, row_key, unit, province, unit_index, row_y, display_index,
+                       owner_color, small_font, tiny_font, show_actions):
         """Draws one 40px roster row underneath its transparent hitbox/icons."""
         row_rect = pygame.Rect(
             self.PANEL_X + UNIT_ROW_X_OFFSET, row_y,
@@ -1178,7 +1213,7 @@ class Orders_Screen(GameState):
             self.row_height)
         is_own = unit.get("owner") == self.map_screen.player_country
         selectable = is_own and not self._command_blocked_silent(unit)
-        selected = selectable and self.selected_unit_index in (unit_index, "ALL")
+        selected = selectable and self.map_screen.is_unit_selected(unit)
 
         if selected:
             row_color = (45, 68, 68)
@@ -1203,7 +1238,7 @@ class Orders_Screen(GameState):
             32, 32)
         pygame.draw.rect(surface, (20, 22, 26), icon_box)
         pygame.draw.rect(surface, (90, 95, 105), icon_box, 1)
-        icon = self.unit_row_icons.get(unit_index)
+        icon = self.unit_row_icons.get(row_key)
         if icon:
             surface.blit(icon, icon.get_rect(center=icon_box.center))
 
@@ -1211,7 +1246,7 @@ class Orders_Screen(GameState):
         action_x = self.PANEL_X + ACTION_START_OFFSET_X
         text_width = action_x - name_x - 7
 
-        if self.renaming_unit_index == unit_index:
+        if self.renaming_unit_index == row_key:
             box_rect = pygame.Rect(
                 self.PANEL_X + RENAME_BOX_OFFSET_X,
                 row_y + RENAME_BOX_OFFSET_Y,
@@ -1238,7 +1273,7 @@ class Orders_Screen(GameState):
                 # is never shown -- that would leak private intel the player
                 # has no business seeing. Its owner is fair game, same as the
                 # map/sidebar already reveal.
-                summary, summary_color = self._order_summary(unit_index, unit)
+                summary, summary_color = self._order_summary(row_key, unit)
             else:
                 owner_id = unit.get("owner", "Unknown")
                 summary = queries.get_country_display_name(owner_id, self.map_screen.nation_data)
@@ -1246,7 +1281,8 @@ class Orders_Screen(GameState):
             volunteer_note = (" | Volunteer: " + queries.get_country_display_name(
                                   unit["volunteer_host"], self.map_screen.nation_data)
                               if unit.get("volunteer_host") else "")
-            status = fit_text(f"HP {int(hp_ratio * 100)}% | {summary}{volunteer_note}",
+            location = f"P{province['id']} | "
+            status = fit_text(f"{location}HP {int(hp_ratio * 100)}% | {summary}{volunteer_note}",
                               tiny_font, text_width)
             surface.blit(tiny_font.render(status, True, summary_color),
                          (name_x, row_y + UNIT_STATUS_OFFSET_Y))
@@ -1267,7 +1303,8 @@ class Orders_Screen(GameState):
 
         order = unit.get("order")
         has_order = isinstance(order, dict) and bool(order)
-        if is_own and has_order and not self._command_blocked_silent(unit):
+        if (show_actions and is_own and has_order
+                and not self._command_blocked_silent(unit)):
             cancel_x = (self.PANEL_X + ACTION_START_OFFSET_X
                         + (6 * ACTION_BUTTON_STEP_X) + CANCEL_BOX_GAP_X)
             cancel_rect = pygame.Rect(cancel_x, row_y + CANCEL_BOX_OFFSET_Y,
@@ -1276,25 +1313,21 @@ class Orders_Screen(GameState):
             pygame.draw.rect(surface, (230, 120, 120), cancel_rect, 1)
             x_label = tiny_font.render("X", True, (255, 255, 255))
             surface.blit(x_label, x_label.get_rect(center=cancel_rect.center))
-            self.cancel_rects.append((cancel_rect, unit_index))
+            self.cancel_rects.append((cancel_rect, unit_index, province))
 
     def _draw_panel_header(self, surface, rows, player_units, read_only):
         title_font = fonts.get("heading2")
         tiny_font = fonts.get("tiny")
-        title = fit_text(f"ORDERS | PROVINCE {self.target_province['id']}",
+        title = fit_text("ORDERS | MAP COMMAND",
                          title_font, self.PANEL_WIDTH - 62)
         surface.blit(title_font.render(title, True, (255, 255, 255)),
                      (self.PANEL_X + PANEL_INSET,
                       PANEL_Y + HEADER_TITLE_OFFSET_Y))
 
         if read_only:
-            meta = f"READ ONLY | {len(rows)} unit{'s' if len(rows) != 1 else ''}"
-        elif self.selected_unit_index == "ALL":
-            meta = f"{len(player_units)} UNITS | ALL SELECTED"
-        elif isinstance(self.selected_unit_index, int):
-            meta = f"{len(player_units)} UNITS | 1 SELECTED"
+            meta = "READ ONLY | NO COMMANDABLE UNITS SELECTED"
         else:
-            meta = f"{len(player_units)} UNIT{'S' if len(player_units) != 1 else ''}"
+            meta = f"{len(rows)} UNIT{'S' if len(rows) != 1 else ''} SELECTED"
         surface.blit(tiny_font.render(meta, True, c.UI_TEXT_LIGHT),
                      (self.PANEL_X + PANEL_INSET,
                       PANEL_Y + HEADER_META_OFFSET_Y))
@@ -1315,9 +1348,11 @@ class Orders_Screen(GameState):
             elif read_only:
                 help_text = "Intelligence view: orders cannot be changed here"
             elif not player_units:
-                help_text = "No commandable units in this province"
+                help_text = "Click a unit stack, or right-drag a box around stacks to select units"
+            elif len(player_units) > 1:
+                help_text = "Right-click a province to move the selected group | Shift+right-click queues a waypoint"
             else:
-                help_text = "Hover a command icon for details | click unit art/name to select"
+                help_text = "Click the map to move | click the row to deselect | hover a command icon for details"
 
         help_text = fit_text(help_text, tiny_font, self.PANEL_WIDTH - (PANEL_INSET * 2))
         surface.blit(tiny_font.render(help_text, True, c.UI_TEXT_MUTED),
@@ -1377,35 +1412,36 @@ class Orders_Screen(GameState):
         finally:
             self.map_screen.hide_flag = previous_hide_flag
 
-        province_select.draw_province_select(self.map_screen, surface)
+        # Do not draw the province inspector here.  Orders is deliberately a
+        # free-roaming map workspace; the left panel is driven by the current
+        # unit selection rather than whichever province happened to be opened.
 
         self.cancel_rects = []
         small_font = fonts.get("small")
         tiny_font = fonts.get("tiny")
 
-        units = self.target_province.get("units", [])
         read_only = getattr(self, "read_only", False)
-        player_units = [u for u in units if u.get("owner") == self.map_screen.player_country]
         owner_color = self.map_screen.nation_colors.get(self.map_screen.player_country, (255, 255, 0))
         rows = self._visible_rows()
+        player_units = [unit for _key, unit, _province, _index in rows]
 
-        # Force the selected province's orders through fog-of-war before the
-        # opaque roster is painted, so arrows stay visible on the map without
-        # ever drawing across the panel itself.
-        for unit in player_units:
+        # Force every selected unit's own path through fog-of-war before the
+        # opaque roster is painted.  Each path begins at its own province and
+        # keeps its own speed, even when the group spans the map.
+        for _key, unit, origin, _index in rows:
             order = unit.get("order", {})
             if not isinstance(order, dict):
                 continue
             path = order.get("path", [])
             if path:
                 overlay_renderer.draw_split_movement_path(
-                    surface, self.map_screen, self.target_province, path,
+                    surface, self.map_screen, origin, path,
                     unit.get("speed", 1), owner_color, force_visible=True)
             elif order.get("type") == "BOMBARD":
                 target_id = order.get("target_id")
                 bomb_range = queries.get_bombardment_range(unit.get("type", ""))
                 overlay_renderer.draw_bombardment_arrow(
-                    surface, self.map_screen, self.target_province, target_id,
+                    surface, self.map_screen, origin, target_id,
                     bomb_range, force_visible=True)
 
         ui_bars.draw_translucent_panel(
@@ -1424,12 +1460,11 @@ class Orders_Screen(GameState):
         with ui_bars.clip_scroll_region(surface, content_rect,
                                         draw_top=self.scroll_y != 0, draw_bottom=self.scroll_y > self.max_scroll_y):
             if not rows:
-                is_visible = queries.is_province_visible(self.map_screen, self.target_province["id"])
-                empty_text = "(Hidden by Fog of War)" if not is_visible else "(No units here)"
+                empty_text = "(No units selected)"
                 surface.blit(tiny_font.render(empty_text, True, c.UI_TEXT_MUTED),
                              (self.PANEL_X + PANEL_INSET, self.panel_top + self.scroll_y))
             else:
-                for display_index, (index, unit) in enumerate(rows):
+                for display_index, (row_key, unit, province, unit_index) in enumerate(rows):
                     y_pos = self.panel_top + (display_index * self.row_height) + self.scroll_y
                     row_rect = pygame.Rect(
                         self.PANEL_X + UNIT_ROW_X_OFFSET, y_pos,
@@ -1437,65 +1472,40 @@ class Orders_Screen(GameState):
                         self.row_height)
                     if row_rect.colliderect(content_rect):
                         self._draw_unit_row(
-                            surface, index, unit, y_pos, display_index,
-                            owner_color, small_font, tiny_font)
+                            surface, row_key, unit, province, unit_index, y_pos, display_index,
+                            owner_color, small_font, tiny_font, True)
 
         self.draw_list_scrollbar(
             surface, self.panel_rect.right - SCROLLBAR_WIDTH, self.panel_top,
             self.panel_max_h, width=SCROLLBAR_WIDTH, limit_attr="max_scroll_y")
 
         # --- Bombardment Targeting Preview ---
-        if self.bombarding_unit_index is not None and self.bombarding_unit_index < len(units):
-            aiming_unit = units[self.bombarding_unit_index]
+        aiming_province = self.bombarding_unit_province or self.target_province
+        focused_units = aiming_province.get("units", [])
+        aiming_index = self.bombarding_unit_actual_index
+        if (self.bombarding_unit_index is not None
+                and isinstance(aiming_index, int)
+                and 0 <= aiming_index < len(focused_units)):
+            aiming_unit = focused_units[aiming_index]
             bomb_range = queries.get_bombardment_range(aiming_unit.get("type", ""))
-            in_range = queries.get_bombardment_targets(self.target_province, self.map_screen.id_to_province, bomb_range)
-            self.draw_target_markers(surface, self.target_province, in_range, BOMBARD_TARGET_COLOR)
+            in_range = queries.get_bombardment_targets(aiming_province, self.map_screen.id_to_province, bomb_range)
+            self.draw_target_markers(surface, aiming_province, in_range, BOMBARD_TARGET_COLOR)
 
             hovered = queries.get_clicked_province(pygame.mouse.get_pos(), self.map_screen)
             if hovered and hovered["id"] in in_range:
-                overlay_renderer.draw_bombardment_arrow(surface, self.map_screen, self.target_province, hovered["id"], bomb_range, alpha=BOMBARD_PREVIEW_ALPHA, force_visible=True)
+                overlay_renderer.draw_bombardment_arrow(surface, self.map_screen, aiming_province, hovered["id"], bomb_range, alpha=BOMBARD_PREVIEW_ALPHA, force_visible=True)
 
-        # Hidden while aiming a barrage so the two previews don't fight over the same tiles
-        if self.selected_unit_index is not None and self.bombarding_unit_index is None:
-            if self.selected_unit_index == "ALL":
-                # Find the first player unit to act as the reference for drawing the path preview
-                active_unit = player_units[0] if player_units else None
-            else:
-                active_unit = units[self.selected_unit_index]
-
-            if active_unit:
-                active_path = active_unit.get("order", {}).get("path", [])
-
-                if not active_path:
-                    last_node = self.target_province
-                else:
-                    last_node = self.map_screen.id_to_province.get(active_path[-1])
-
-                if last_node:
-                    self.draw_target_markers(surface, last_node, last_node["neighbors"], MOVE_TARGET_COLOR)
-
-                    mouse_pos = pygame.mouse.get_pos()
-                    hovered = queries.get_clicked_province(mouse_pos, self.map_screen)
-                    if hovered and hovered["id"] in last_node["neighbors"]:
-
-                        # Calculate speed limit based on group or individual selection
-                        if self.selected_unit_index == "ALL":
-                            speed_limit = min(u.get("speed", 1) for u in player_units)
-                        else:
-                            speed_limit = active_unit.get("speed", 1)
-
-                        # Determine styling based on if this specific hover step exceeds the speed
-                        is_queued = len(active_path) >= speed_limit
-
-                        preview_color = owner_color
-                        preview_alpha = 255
-
-                        if is_queued:
-                            preview_color = (min(255, owner_color[0] + 150), min(255, owner_color[1] + 150), min(255, owner_color[2] + 150))
-                            preview_alpha = 120
-
-                        # Use the owner's color to draw the cursor hover with correct alpha logic
-                        overlay_renderer.draw_movement_path(surface, self.map_screen, last_node, [hovered["id"]], color=preview_color, alpha=preview_alpha, force_visible=True)
+        # Show the same live right-drag rectangle as the map screen.  The
+        # rectangle must be normalized in-place; pygame returns None from
+        # Rect.normalize().
+        if self.map_screen.unit_selection_drag:
+            drag = self.map_screen.unit_selection_drag
+            rect = pygame.Rect(
+                drag["start"],
+                (drag["current"][0] - drag["start"][0],
+                 drag["current"][1] - drag["start"][1]))
+            rect.normalize()
+            pygame.draw.rect(surface, (220, 210, 80), rect, 2)
 
         resource_hud.draw_resource_bar(surface, self.map_screen,
                                        start_x=view_mode_buttons.RESOURCE_BAR_OFFSET_X)

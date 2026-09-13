@@ -28,7 +28,7 @@ GOLDEN_ORDER = (
     "gemini_api_key", "chatgpt_api_key", "claude_api_key", "ollama_api_key",
     "gemini_model", "chatgpt_model", "claude_model", "ollama_model",
     "ai_immersion_level", "music_pitch", "sfx_pitch", "target_fps",
-    "ai_threads", "show_fps", "drag_mouse_toggle", "saves_dir",
+    "ai_threads", "show_fps", "show_intro_popup", "saves_dir",
     "custom_scenarios_dir", "ocean_light_color", "ocean_dark_color",
     "tournament_saves_dir", "checkerboard_water",
     "deepseek_api_key", "kimi_api_key", "deepseek_model", "kimi_model",
@@ -132,9 +132,7 @@ class SaveSignatureTests(unittest.TestCase):
     def test_save_settings_takes_exactly_the_schema_names(self):
         """queries.save_global_settings splats from_controller() into this, so
         the parameter names and the schema names have to stay in step. They
-        already disagreed once: the controller called the drag toggle
-        `drag_mouse_button_toggle` while everything else called it
-        `drag_mouse_toggle`."""
+        must stay in step whenever a persisted preference is added or replaced."""
         import inspect
         from data.io import keybind_io
 
@@ -221,6 +219,9 @@ class KeybindIoTests(unittest.TestCase):
 
     def test_battle_display_defaults_to_full(self):
         self.assertEqual(settings_schema.defaults()["battle_display_mode"], "FULL")
+
+    def test_intro_popup_defaults_to_enabled(self):
+        self.assertTrue(settings_schema.defaults()["show_intro_popup"])
 
 
 if __name__ == "__main__":

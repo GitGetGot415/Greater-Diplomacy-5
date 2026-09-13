@@ -477,6 +477,7 @@ class Controller:
                 render_buttons(realtime_map)
             elif previous_state == self.states["RANDOM_SETUP"]:
                 self.states["MAP"] = Map(is_scenario=True, is_random=True, random_settings=previous_state.random_settings, num_players=self.num_players)
+                self.states["MAP"].show_navigation_intro_when_ready = True
 
             elif hasattr(previous_state, 'selected_tournament_path'):
                 path = previous_state.selected_tournament_path
@@ -537,6 +538,7 @@ class Controller:
 
                 if path == "RANDOM":
                     self.states["MAP"] = Map(load_path=None, is_scenario=True, is_random=True, num_players=self.num_players)
+                    self.states["MAP"].show_navigation_intro_when_ready = previous_state == self.states["NEW_GAME"]
                 else:
                     is_scen = "scenarios" in path
                     is_map_editor = (previous_state == self.states["SELECT_BASE_MAP"])
@@ -544,6 +546,8 @@ class Controller:
                     history_turn = getattr(previous_state, 'selected_history_turn', None)
 
                     self.states["MAP"] = Map(load_path=path, is_scenario=is_scen, force_editor=is_map_editor, num_players=self.num_players, history_turn=history_turn)
+                    self.states["MAP"].show_navigation_intro_when_ready = (
+                        previous_state == self.states["NEW_GAME"] and is_scen and not is_map_editor)
 
             elif previous_state in [self.states["MENU"], self.states["NEW_GAME"]]:
                 self.states["MAP"] = Map(num_players=self.num_players)
@@ -551,6 +555,10 @@ class Controller:
         # 3. Load Game Refresh
         if next_state_name == "LOAD_GAME":
             self.states["LOAD_GAME"].refresh_ui()
+        elif next_state_name == "SETTINGS":
+            # The navigation tutorial may persist its opt-out while Settings
+            # is closed; rebuild so its toggle always reflects that value.
+            self.states["SETTINGS"].refresh_ui()
 
         if next_state_name == "REALTIME_SCENARIO_SELECT":
             selector = self.states["REALTIME_SCENARIO_SELECT"]

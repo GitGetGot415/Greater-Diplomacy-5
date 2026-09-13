@@ -1335,6 +1335,19 @@ def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,
         rect = final_surf.get_rect(center=(sx, int(current_sy)))
         surface.blit(final_surf, rect)
 
+        # Only visible, rendered owner stacks publish a hitbox.  The event
+        # layer additionally checks authority before selecting, but never
+        # publishing a hidden stack here prevents fog-of-war leakage.
+        if owner == map_screen.player_country:
+            map_screen.unit_stack_hitboxes.append({
+                "rect": pygame.Rect(rect), "province": province,
+                "units": list(owner_units),
+            })
+            is_selected = getattr(map_screen, "is_unit_selected", lambda _unit: False)
+            if any(is_selected(unit) for unit in owner_units):
+                pygame.draw.rect(surface, c.COLOR_GOLD_HIGHLIGHT, rect.inflate(4, 4),
+                                 max(2, int(2 * display_scale)), border_radius=3)
+
         # Move the offset down for the next owner's box in the stack
         current_sy += scaled_h + gap
 
