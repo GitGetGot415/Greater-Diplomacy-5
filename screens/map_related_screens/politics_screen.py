@@ -217,6 +217,8 @@ class Politics_Screen(GameState):
         after = politics.policy_state(self.map_screen.nation_data, self.player, policy_id)
         if before and before["status"] == politics.POLICY_CANCELLING:
             message = "%s cancellation undone." % definition["name"]
+        elif before and before["status"] == politics.POLICY_ACTIVATING and after is None:
+            message = "%s activation cancelled." % definition["name"]
         elif after and after["status"] == politics.POLICY_CANCELLING:
             message = "%s will cancel next turn." % definition["name"]
         else:

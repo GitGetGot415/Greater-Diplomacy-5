@@ -316,6 +316,16 @@ class PolicyTests(unittest.TestCase):
 
         self.assertIsNone(politics.policy_state(screen.nation_data, "A"))
 
+    def test_unprocessed_activation_cancels_immediately(self):
+        screen = self.screen_at(0)
+        politics.activate_or_cancel_policy(screen.nation_data, "A", "prioritize_industrial_needs")
+
+        politics.activate_or_cancel_policy(screen.nation_data, "A", "prioritize_industrial_needs")
+
+        self.assertIsNone(politics.policy_state(
+            screen.nation_data, "A", "prioritize_industrial_needs"))
+        self.assertNotIn(politics.POLICY_KEY, screen.nation_data["A"])
+
     def test_each_eligible_policy_has_its_own_activation_and_effect(self):
         screen = self.screen_at(0)
         politics.activate_or_cancel_policy(screen.nation_data, "A", "prioritize_civilian_needs")

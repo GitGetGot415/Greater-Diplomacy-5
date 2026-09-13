@@ -581,6 +581,21 @@ def _merge_player_nation_data(map_ref, country_id, nation_update):
         else:
             merged.pop(key, None)
 
+    # Tournament moves carry a full country record, but policy countdowns are
+    # host-owned turn state.  Read only the player's requested lifecycle
+    # statuses and rebuild the timers from the host's existing country record.
+    from map_logic import politics
+    try:
+        requested_policies = politics.policy_draft_projection({country_id: merged}, country_id)
+        canonical_policies = politics.canonicalize_policy_draft(
+            map_ref.nation_data, country_id, requested_policies)
+    except ValueError:
+        return False
+    if canonical_policies:
+        merged[politics.POLICY_KEY] = canonical_policies
+    else:
+        merged.pop(politics.POLICY_KEY, None)
+
     map_ref.nation_data[country_id] = merged
     if any(existing.get(key) != merged.get(key)
            for key in ("name", "adjective", "leader_name", "leader_title",

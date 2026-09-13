@@ -182,6 +182,15 @@ def activate_or_cancel_policy(nation_data, nation, policy_id):
     current = policy_state(nation_data, nation, policy_id)
 
     if current:
+        # The activation has not consumed a processed turn yet, so cancelling
+        # it is just withdrawing this turn's choice -- there is no programme
+        # to wind down and no one-turn cancellation delay to show.
+        if (current["status"] == POLICY_ACTIVATING
+                and current.get("turns_remaining") == POLICY_ACTIVATION_TURNS):
+            states.pop(policy_id, None)
+            if not states:
+                stats.pop(POLICY_KEY, None)
+            return True
         if current["status"] == POLICY_CANCELLING:
             states[policy_id] = {
                 "status": current.get("resume_status", POLICY_ACTIVE),
@@ -203,6 +212,74 @@ def activate_or_cancel_policy(nation_data, nation, policy_id):
         "turns_remaining": POLICY_ACTIVATION_TURNS,
     }
     return True
+
+
+def policy_draft_projection(nation_data, nation):
+    """The client-safe policy choices for a multiplayer turn draft.
+
+    Timers are authoritative turn state, so a draft names only each policy's
+    desired lifecycle status.  The host restores countdowns from its own map.
+    """
+    return {policy_id: {"status": state["status"]}
+            for policy_id, state in policy_states(nation_data, nation).items()}
+
+
+def canonicalize_policy_draft(nation_data, nation, requested):
+    """Validate a multiplayer policy draft against authoritative state.
+
+    The client may start a currently eligible policy, ask to cancel one, or
+    undo a recorded cancellation.  It may never choose an ACTIVE state or a
+    countdown directly.  Existing absent entries are retained: a normal UI
+    cancellation is represented explicitly as CANCELLING, while this protects
+    the server from a stale or forged omission deleting an active policy.
+    """
+    if not isinstance(requested, dict) or set(requested) - set(POLICIES_BY_ID):
+        raise ValueError("Invalid policy draft.")
+
+    for state in requested.values():
+        if not isinstance(state, dict) or set(state) != {"status"}:
+            raise ValueError("Invalid policy draft.")
+        if state["status"] not in (POLICY_ACTIVATING, POLICY_ACTIVE, POLICY_CANCELLING):
+            raise ValueError("Invalid policy draft.")
+
+    existing = policy_states(nation_data, nation)
+    canonical = {}
+    for definition in POLICIES:
+        policy_id = definition["id"]
+        current = existing.get(policy_id)
+        desired = requested.get(policy_id, {}).get("status")
+
+        if current is None:
+            if desired is None:
+                continue
+            if desired != POLICY_ACTIVATING or not requirements_met(nation_data, nation, policy_id):
+                raise ValueError("Invalid policy transition.")
+            canonical[policy_id] = {"status": POLICY_ACTIVATING,
+                                    "turns_remaining": POLICY_ACTIVATION_TURNS}
+            continue
+
+        if desired is None or desired == current["status"]:
+            canonical[policy_id] = dict(current)
+        elif (current["status"] in (POLICY_ACTIVATING, POLICY_ACTIVE)
+              and desired == POLICY_CANCELLING):
+            if (current["status"] == POLICY_ACTIVATING
+                    and current.get("turns_remaining") == POLICY_ACTIVATION_TURNS):
+                continue
+            canonical[policy_id] = {
+                "status": POLICY_CANCELLING,
+                "turns_remaining": POLICY_CANCELLATION_TURNS,
+                "resume_status": current["status"],
+                "resume_turns_remaining": current.get("turns_remaining", 0),
+            }
+        elif (current["status"] == POLICY_CANCELLING
+              and desired == current.get("resume_status", POLICY_ACTIVE)):
+            canonical[policy_id] = {
+                "status": current.get("resume_status", POLICY_ACTIVE),
+                "turns_remaining": current.get("resume_turns_remaining", 0),
+            }
+        else:
+            raise ValueError("Invalid policy transition.")
+    return canonical
 
 
 def active_policies(nation_data, nation):

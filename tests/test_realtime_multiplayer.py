@@ -1026,6 +1026,45 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
         with self.assertRaises(RealtimeError):
             driver.validate_draft("A", [offer])
 
+    def test_policy_drafts_are_authoritative_and_keep_same_turn_cancels_empty(self):
+        from map_logic import politics
+
+        map_ref = SimpleNamespace(
+            map_data={}, id_to_province={}, player_country="None",
+            nation_data={"A": {"political_value": -3, "research": {}}})
+        driver = MapRealtimeDriver(map_ref)
+        preferences = {
+            "type": "country_preferences", "political_drift": 0,
+            "automation": {}, "conscription_slider": 1.0,
+            "mat_to_fuel_slider": 0.0, "custom_production_units": [],
+            politics.POLICY_KEY: {"research_subsidies": {"status": politics.POLICY_ACTIVATING}},
+        }
+        canonical = driver.validate_draft("A", [preferences])[0]
+        self.assertEqual(canonical[politics.POLICY_KEY]["research_subsidies"]["turns_remaining"],
+                         politics.POLICY_ACTIVATION_TURNS)
+
+        async def no_op(*_args, **_kwargs):
+            pass
+
+        with mock.patch("map_logic.turn_processing.turn_processor.prepare_turn", new=no_op), \
+                mock.patch("map_logic.turn_processing.turn_processor.resolve_turn_logic", new=no_op):
+            driver.process_turn({"A": [canonical]})
+
+        self.assertEqual(politics.policy_state(map_ref.nation_data, "A", "research_subsidies")["status"],
+                         politics.POLICY_ACTIVATING)
+        with self.assertRaises(RealtimeError):
+            driver.validate_draft("A", [{**preferences, politics.POLICY_KEY: {
+                "research_subsidies": {"status": politics.POLICY_ACTIVE}}}])
+
+        # Activating and cancelling before submission serializes as no policy
+        # choice, so the authoritative server creates no countdown at all.
+        map_ref.nation_data["A"].pop(politics.POLICY_KEY)
+        empty = driver.validate_draft("A", [{**preferences, politics.POLICY_KEY: {}}])[0]
+        with mock.patch("map_logic.turn_processing.turn_processor.prepare_turn", new=no_op), \
+                mock.patch("map_logic.turn_processing.turn_processor.resolve_turn_logic", new=no_op):
+            driver.process_turn({"A": [empty]})
+        self.assertNotIn(politics.POLICY_KEY, map_ref.nation_data["A"])
+
 
 if __name__ == "__main__":
     unittest.main()

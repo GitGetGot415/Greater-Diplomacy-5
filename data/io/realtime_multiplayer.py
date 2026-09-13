@@ -29,6 +29,7 @@ from typing import Any, Callable
 
 import data.constants as c
 from data.platform import IS_WEB
+from map_logic import politics
 
 
 PROTOCOL_VERSION = 1
@@ -870,12 +871,18 @@ class MapRealtimeDriver:
         if any(name not in unit_library or not queries.is_unit_unlocked(name, research)
                for name in custom_units):
             raise RealtimeError("A selected custom unit is not researched.")
+        try:
+            policies = politics.canonicalize_policy_draft(
+                self.map_ref.nation_data, country_id, command.get(politics.POLICY_KEY, {}))
+        except ValueError as exc:
+            raise RealtimeError(str(exc)) from exc
         return {"type": "country_preferences", "political_drift": drift,
                 "automation": {key: bool(automation.get(key, False))
                                for key in self._AUTOMATION_KEYS},
                 "conscription_slider": float(conscription),
                 "mat_to_fuel_slider": float(fuel_conversion),
-                "custom_production_units": list(custom_units)}
+                "custom_production_units": list(custom_units),
+                politics.POLICY_KEY: policies}
 
     def _validate_claim_draft(self, country_id: str, command: dict[str, Any]) -> dict[str, Any]:
         """Validate a player's desired claim queue without trusting timers.
@@ -1545,6 +1552,10 @@ class MapRealtimeDriver:
                     country_data["conscription_slider"] = command["conscription_slider"]
                     country_data["mat_to_fuel_slider"] = command["mat_to_fuel_slider"]
                     country_data["custom_production_units"] = copy.deepcopy(command["custom_production_units"])
+                    if command[politics.POLICY_KEY]:
+                        country_data[politics.POLICY_KEY] = copy.deepcopy(command[politics.POLICY_KEY])
+                    else:
+                        country_data.pop(politics.POLICY_KEY, None)
                 elif command["type"] == "claim_draft":
                     country_data["claim_queue"] = copy.deepcopy(command["queue"])
                     country_data["revoke_queue"] = copy.deepcopy(command["revokes"])
@@ -1685,7 +1696,9 @@ def collect_map_commands(map_ref, country_id: str) -> list[dict[str, Any]]:
                      "automation": copy.deepcopy(country_data.get("automation", {})),
                      "conscription_slider": country_data.get("conscription_slider", 1.0),
                      "mat_to_fuel_slider": country_data.get("mat_to_fuel_slider", 0.0),
-                     "custom_production_units": copy.deepcopy(country_data.get("custom_production_units", []))})
+                     "custom_production_units": copy.deepcopy(country_data.get("custom_production_units", [])),
+                     politics.POLICY_KEY: politics.policy_draft_projection(
+                         map_ref.nation_data, country_id)})
     # Claim timers are server state. A client only says which existing/new
     # claims should remain queued; validation restores server timers and gives
     # new claims the standard fabrication time.

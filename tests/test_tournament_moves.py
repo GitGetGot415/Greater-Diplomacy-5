@@ -290,6 +290,26 @@ class TournamentMoveTests(unittest.TestCase):
             "manpower": 0.2, "materials": 0.4, "fuel": 0.5})
         self.assertNotIn("siphon_rates", host.nation_data["Outsider"])
 
+    def test_policy_activation_round_trips_without_trusting_player_timers(self):
+        from map_logic import politics
+
+        host = Host()
+        host.nation_data["Leader"]["political_value"] = -3
+        move = self.player_data("Leader", host)
+        move["nation_data"][politics.POLICY_KEY] = {
+            "research_subsidies": {"status": politics.POLICY_ACTIVATING,
+                                   "turns_remaining": 999},
+        }
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = self.write_move(directory, "policy.gd5move", "Leader", move)
+            summary = self.import_moves(host, [path])
+
+        state = politics.policy_state(host.nation_data, "Leader", "research_subsidies")
+        self.assertEqual(summary["loaded"], 1)
+        self.assertEqual(state["status"], politics.POLICY_ACTIVATING)
+        self.assertEqual(state["turns_remaining"], politics.POLICY_ACTIVATION_TURNS)
+
     def test_tournament_round_trip_and_malformed_key_entry(self):
         host = Host()
         host.player_country = "Leader"
