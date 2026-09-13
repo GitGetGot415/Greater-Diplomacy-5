@@ -7,11 +7,9 @@ hanskolmer suggestions:
 - ability to nationalize factories (ie take them back forcefully, should cause some diplomatic issues)
 - temporarially rent out factories to other countries via trade?
 - ADD HER FLAGS
-- VOLUNTEER DIVISIONS
 
 - it seems that when countries attempt to rename there faction (it willl literaly break the game, adding them to a separate alliance)
 (PLEASE CONFIRM IF ABOVE THING IS FIXED THEN REMOVE IF INDEED FIXED)
-- unable to edit research in map editor?
 - rebellion mechanics
 
 - faction betrayal
