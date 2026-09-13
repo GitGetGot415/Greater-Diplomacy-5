@@ -91,6 +91,24 @@ class PoliticsScreenEditGuardTests(unittest.TestCase):
         self.assertLess(screen.politics_rect.bottom, screen.policies_rect.y)
         self.assertEqual(screen.policies_rect.bottom, c.SCREEN_HEIGHT - 20)
 
+    def test_foreign_politics_view_is_read_only(self):
+        from screens.map_related_screens.politics_screen import Politics_Screen
+
+        map_screen = type("MapScreen", (), {})()
+        map_screen.player_country = "A"
+        map_screen.tactical_mode = False
+        map_screen.nation_data = {
+            "A": {"political_value": 0, "political_drift": 0},
+            "B": {"political_value": 4, "political_drift": 0},
+        }
+        screen = Politics_Screen(map_screen, country_id="B")
+
+        self.assertTrue(screen.is_read_only)
+        self.assertFalse(screen.can_edit)
+        self.assertEqual(len(screen.elements), 1, "foreign view has no policy or drift controls")
+        screen.set_drift(-1)
+        self.assertEqual(politics.drift(map_screen.nation_data, "B"), 0)
+
 
 def screen_with(**by_nation):
     """A nation_data holder where each nation is (value, drift)."""

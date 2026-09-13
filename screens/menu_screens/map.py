@@ -331,6 +331,17 @@ def render_buttons(map_screen):
             sub_screen_opener("screens.map_related_screens.politics_screen",
                               "Politics_Screen")()
 
+    def open_selected_country_politics():
+        """Open the selected foreign country's politics as a read-only view."""
+        province = map_screen.selected_province
+        owner = province.get("owner") if province else None
+        if (not owner or owner == map_screen.player_country
+                or owner not in map_screen.nation_data):
+            return
+        from screens.map_related_screens.politics_screen import Politics_Screen
+        from ui.screen_runner import _run_pygame_sub_screen
+        _run_pygame_sub_screen(map_screen, Politics_Screen(map_screen, country_id=owner))
+
     econ_callback = editor_or(editor_menus.open_starting_economy_editor, "ECONOMY")
     msgs_callback = editor_or(editor_menus.open_spectator_messages, "MESSAGES")
 
@@ -493,6 +504,10 @@ def render_buttons(map_screen):
     map_screen.btn_realtime_details = Button(TOP_RIGHT_BTN_X + 30, c.TOP_BAR_UI_CENTER_Y + 120,
                                               "tiny", "blue", "Details",
                                               lambda: realtime_status_panel.show_details(map_screen))
+    map_screen.btn_view_foreign_politics = Button(
+        *c.PROVINCE_UI["foreign_politics_button"][:2],
+        c.PROVINCE_UI["foreign_politics_button"][2:], "purple", "Politics",
+        open_selected_country_politics, font_preset="normal")
 
     # --- Append all explicitly defined buttons into the elements list ---
     map_screen.elements.extend([
@@ -515,6 +530,7 @@ def render_buttons(map_screen):
         map_screen.btn_accept_req, map_screen.btn_reject_req, map_screen.btn_force_war, map_screen.btn_force_peace,
         map_screen.btn_spec_create_fac, map_screen.btn_spec_join_fac, map_screen.btn_spec_invite_fac, map_screen.btn_spec_leave_fac,
         map_screen.btn_spec_disband_fac, map_screen.btn_spectator, map_screen.btn_tactical, map_screen.btn_close_info, map_screen.btn_exit_to_menu, map_screen.btn_realtime_details,
+        map_screen.btn_view_foreign_politics,
         map_screen.btn_spec_mp_manage, map_screen.btn_spec_mp_export, map_screen.btn_spec_mp_keys,
         map_screen.slider_camera_tilt
     ])
@@ -797,6 +813,12 @@ def update_button_states(map_screen):
     map_screen.btn_exit_to_menu.visible = not is_sel
     map_screen.btn_close_info.visible = is_sel
     map_screen.btn_realtime_details.visible = bool(getattr(map_screen, "realtime_multiplayer", False)) and not is_sel
+    selected_owner = (map_screen.selected_province or {}).get("owner")
+    map_screen.btn_view_foreign_politics.visible = bool(
+        is_sel and not map_screen.is_editor
+        and selected_owner != map_screen.player_country
+        and selected_owner in map_screen.nation_data
+        and selected_owner not in c.UNPLAYABLE_NATIONS)
 
     # ======================================================================== #
     #                        PROVINCE INTERACTION LOGIC                        #

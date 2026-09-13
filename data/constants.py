@@ -476,7 +476,10 @@ EDIT_COUNTRY_UI_X3 = 850
 
 # --- Province Menu UI Layout (X, Y, Width, Height) ---
 PROVINCE_UI = {
-    "diplomatic_box": (10, 150, 140, 450),
+    # Keep the diplomatic summary compact enough to leave a dedicated button
+    # beneath it for inspecting the selected foreign country's politics.
+    "diplomatic_box": (10, 150, 140, 390),
+    "foreign_politics_button": (10, 550, 140, 40),
     "mail_box": (400, 300, 150, 300)
 }
 

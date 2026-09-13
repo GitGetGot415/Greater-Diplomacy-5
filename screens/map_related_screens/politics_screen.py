@@ -57,12 +57,17 @@ POLICY_CARD_PADDING = 12
 
 
 class Politics_Screen(GameState):
-    def __init__(self, map_screen):
+    def __init__(self, map_screen, country_id=None):
         super().__init__()
         # Deep blue-grey; this is the domestic screen, not a war one.
         self.bg_color = (24, 26, 44)
         self.map_screen = map_screen
-        self.player = map_screen.player_country
+        # ``player`` remains the country whose data this screen displays so
+        # the rendering and policy helpers have one subject throughout.  A
+        # foreign subject is deliberately read-only: seeing a country's
+        # politics must never let an observer steer it or alter its policies.
+        self.player = country_id or map_screen.player_country
+        self.is_read_only = country_id is not None and country_id != map_screen.player_country
         self._set_panel_rects()
         self.policy_scroll_x = 0
         self.policy_scroll_min_x = 0
@@ -105,7 +110,8 @@ class Politics_Screen(GameState):
     @property
     def can_edit(self):
         """Whether this screen may change the player's political direction."""
-        if not (self.is_valid_player and not getattr(self.map_screen, "tactical_mode", False)):
+        if (self.is_read_only or not self.is_valid_player
+                or getattr(self.map_screen, "tactical_mode", False)):
             return False
         if getattr(self.map_screen, "realtime_multiplayer", False):
             session = getattr(self.map_screen, "realtime_session", None)
@@ -140,28 +146,31 @@ class Politics_Screen(GameState):
             return
 
         # Requirements may change outside this screen (for example, in the map
-        # editor), so opening or refreshing this page applies an immediate
-        # cancellation before it can be drawn as active.
-        politics.reconcile_policy(self.map_screen.nation_data, self.player)
+        # editor), so an editable country's panel reconciles them before it is
+        # drawn.  Inspection of a foreign country is strictly read-only.
+        if self.can_edit:
+            politics.reconcile_policy(self.map_screen.nation_data, self.player)
 
         current = self.drift
         centre_x = self.politics_rect.centerx
         y = self.politics_rect.y + POLITICS_BUTTON_OFFSET_Y
 
-        for direction, face, _caption in DRIFT_OPTIONS:
-            btn = Button(centre_x + BUTTON_STEP_X * direction - 25, y,
-                         "medium_square", "blue" if direction else "grey",
-                         face, lambda d=direction: self.set_drift(d))
-            btn.is_selected = (current == direction)
-            btn.disabled = not self.can_edit
-            self.elements.append(btn)
+        if not self.is_read_only:
+            for direction, face, _caption in DRIFT_OPTIONS:
+                btn = Button(centre_x + BUTTON_STEP_X * direction - 25, y,
+                             "medium_square", "blue" if direction else "grey",
+                             face, lambda d=direction: self.set_drift(d))
+                btn.is_selected = (current == direction)
+                btn.disabled = not self.can_edit
+                self.elements.append(btn)
 
-        for definition in politics.POLICIES:
-            button = self._make_policy_button(definition)
-            button.is_scrollable = True
-            viewport = self._policy_viewport_rect()
-            button.click_guard = lambda rect=viewport: rect.collidepoint(pygame.mouse.get_pos())
-            self.elements.append(button)
+        if not self.is_read_only:
+            for definition in politics.POLICIES:
+                button = self._make_policy_button(definition)
+                button.is_scrollable = True
+                viewport = self._policy_viewport_rect()
+                button.click_guard = lambda rect=viewport: rect.collidepoint(pygame.mouse.get_pos())
+                self.elements.append(button)
 
     def _policy_viewport_rect(self):
         return pygame.Rect(
@@ -246,13 +255,18 @@ class Politics_Screen(GameState):
         self._draw_panel(surface, self.politics_rect)
         self._draw_panel(surface, self.policies_rect)
 
-        title_surf = fonts.get("title").render("Politics", True, c.COLOR_GOLD_HIGHLIGHT)
+        title = ("%s Politics" % self.map_screen.nation_data.get(
+            self.player, {}).get("name", self.player)
+                 if self.is_read_only else "Politics")
+        title_surf = fonts.get("title").render(title, True, c.COLOR_GOLD_HIGHLIGHT)
         surface.blit(title_surf, (self.politics_rect.centerx - title_surf.get_width() // 2,
                                   self.politics_rect.y + POLITICS_TITLE_OFFSET_Y))
 
-        subtitle_surf = fonts.get("small").render(
-            "Liberalising raises research speed but weakens army damage; "
-            "centralising does the reverse.", True, c.UI_TEXT_DIM)
+        subtitle = ("Viewing this country's internal political position and policies."
+                    if self.is_read_only else
+                    "Liberalising raises research speed but weakens army damage; "
+                    "centralising does the reverse.")
+        subtitle_surf = fonts.get("small").render(subtitle, True, c.UI_TEXT_DIM)
         surface.blit(subtitle_surf, (self.politics_rect.centerx - subtitle_surf.get_width() // 2,
                                      self.politics_rect.y + POLITICS_TITLE_OFFSET_Y
                                      + title_surf.get_height() + 6))
@@ -415,12 +429,15 @@ class Politics_Screen(GameState):
         centre_x = self.politics_rect.centerx
         caption_y = self.politics_rect.y + POLITICS_CAPTION_OFFSET_Y
 
-        for direction, _face, caption in DRIFT_OPTIONS:
-            surf = small.render(caption, True, c.UI_TEXT_MUTED)
-            surface.blit(surf, (centre_x + BUTTON_STEP_X * direction - surf.get_width() // 2,
-                                caption_y))
+        if not self.is_read_only:
+            for direction, _face, caption in DRIFT_OPTIONS:
+                surf = small.render(caption, True, c.UI_TEXT_MUTED)
+                surface.blit(surf, (centre_x + BUTTON_STEP_X * direction - surf.get_width() // 2,
+                                    caption_y))
 
-        if getattr(self.map_screen, "tactical_mode", False):
+        if self.is_read_only:
+            note = "Read-only: this country's political choices cannot be changed here."
+        elif getattr(self.map_screen, "tactical_mode", False):
             note = "Political direction cannot be changed in Tactical Mode."
         elif self.drift:
             note = ("Moving %s one step per turn until you stop it or it reaches the end."
