@@ -735,6 +735,8 @@ class OrdersScreenRegressionTests(BattleScreenTestCase):
         visible_indices = set(screen.unit_row_icons)
         self.assertEqual(visible_indices, set(owned_indices))
         self.assertEqual(len(screen.action_buttons), len(owned_indices) * 6)
+        group_panel_height = screen.panel_rect.height
+        self.assertLess(group_panel_height, c.SCREEN_HEIGHT - 70)
         self.assertLessEqual(screen.row_height, 80 * 0.75)
         self.assertLessEqual(screen.PANEL_WIDTH, 570 * 0.85)
 
@@ -753,6 +755,12 @@ class OrdersScreenRegressionTests(BattleScreenTestCase):
         for rect in cancel_by_index.values():
             self.assertTrue(screen.panel_rect.contains(rect))
             self.assertTrue(screen.scroll_content_rect.contains(rect))
+
+        # Clicking one member of a group focuses it instead of deselecting it.
+        focused_unit = self.province["units"][owned_indices[0]]
+        screen.toggle_selected_unit(focused_unit)
+        self.assertEqual(self.map.selected_unit_records(), [(focused_unit, self.province)])
+        self.assertLess(screen.panel_rect.height, group_panel_height)
 
     def test_drawing_orders_suppresses_only_its_embedded_map_flag(self):
         from ui.bars import flag_renderer

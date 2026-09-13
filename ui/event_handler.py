@@ -26,8 +26,27 @@ def _panels_are_live(map_screen):
     return bool(map_screen.selected_province) and not map_screen.selection_mode
 
 
+def _unit_stack_at(map_screen, position):
+    """Return the topmost visible unit stack under a screen position.
+
+    Hover hitboxes deliberately include visible foreign stacks; selection
+    hitboxes remain owned-only.  This lets the UI highlight what the player is
+    pointing at without granting interaction with hidden or foreign units.
+    """
+    for stack in reversed(getattr(map_screen, "unit_hover_hitboxes", [])):
+        if stack["rect"].collidepoint(position):
+            return stack
+    return None
+
+
 def _handle_map_unit_selection(map_screen, event, on_ui):
     """Consume the HOI-style unit gestures while the map is in Units view."""
+    # A left-click starts a different interaction.  Clear only the transient
+    # rectangle (not the selected units) even if the right button is still
+    # held, so a cancelled box selection can never remain painted on screen.
+    if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+        map_screen.unit_selection_drag = None
+
     if (map_screen.secondary_mode != "UNITS" or on_ui
             or not map_screen.can_select_map_units()):
         return False
@@ -234,9 +253,15 @@ def handle_map_events(map_screen, event):
             map_screen.hovered_combat_bubble = overlay_renderer.combat_bubble_at_screen_pos(
                 map_screen, (mx, my))
 
-        # FIX: Pass the pre-calculated (mx, my) tuple instead of event.pos!
+        map_screen.hovered_unit_stack = (
+            None if (map_screen.hovered_combat_bubble
+                     or map_screen.secondary_mode != "UNITS")
+            else _unit_stack_at(map_screen, (mx, my)))
+
+        # A visible unit stack is the more precise hover target.  Suppress
+        # the province glow beneath it so the unit itself gets the feedback.
         map_screen.hovered_province = (
-            None if map_screen.hovered_combat_bubble
+            None if (map_screen.hovered_combat_bubble or map_screen.hovered_unit_stack)
             else queries.get_clicked_province((mx, my), map_screen))
 
         # Block interaction with extreme hidden tiles
@@ -256,6 +281,7 @@ def handle_map_events(map_screen, event):
             map_screen.hover_glow_surf = None
     else:
         map_screen.hovered_province = map_screen.hovered_combat_bubble = None
+        map_screen.hovered_unit_stack = None
         map_screen.hover_glow_surf = None
 
     # --- UNDO / REDO LOGIC (Ctrl + Z / Ctrl + Y) ---

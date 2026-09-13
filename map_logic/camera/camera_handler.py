@@ -10,6 +10,7 @@ class MapCamera:
         self.lerp_speed = 0.1
         self.tilt_factor = 1.0
         self.manual_tilt_factor = 1.0 # Added explicit manual control factor
+        self._middle_drag_last_pos = None
         # currently set to instant, but can be adjusted for smoother transitions
 
     def handle_input(self, event, self_map, on_ui):
@@ -21,12 +22,31 @@ class MapCamera:
         # Pygame mouse_buttons indices: 0=Left, 1=Middle, 2=Right.  Camera
         # panning is deliberately fixed to middle mouse so map selection can
         # safely use left click and right-drag without competing for input.
-        drag_active = pygame.mouse.get_pressed()[1]
+        # Use logical cursor positions rather than event.rel: on high-DPI
+        # displays rel can be reported in a different scale from the game
+        # surface, which makes a pan feel faster or slower than the drag.
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 2:
+            self._middle_drag_last_pos = event.pos if not on_ui else None
+            return
+        if event.type == pygame.MOUSEBUTTONUP and event.button == 2:
+            self._middle_drag_last_pos = None
+            return
 
+        buttons = getattr(event, "buttons", ())
+        drag_active = (len(buttons) > 1 and buttons[1]) or pygame.mouse.get_pressed()[1]
         if event.type == pygame.MOUSEMOTION and drag_active and not on_ui:
-            self.pos.x -= event.rel[0] / self.zoom
-            self.pos.y -= event.rel[1] / (self.zoom * self.tilt_factor)
+            current_pos = event.pos
+            if self._middle_drag_last_pos is None:
+                previous_pos = (current_pos[0] - event.rel[0],
+                                current_pos[1] - event.rel[1])
+            else:
+                previous_pos = self._middle_drag_last_pos
+            self.pos.x -= (current_pos[0] - previous_pos[0]) / self.zoom
+            self.pos.y -= (current_pos[1] - previous_pos[1]) / (self.zoom * self.tilt_factor)
             self.target_pos = pygame.Vector2(self.pos)
+            self._middle_drag_last_pos = current_pos
+        elif event.type == pygame.MOUSEMOTION and not drag_active:
+            self._middle_drag_last_pos = None
 
     def update(self, self_map, SCREEN_HEIGHT):
         # 0. Apply Manual Tilt Factor

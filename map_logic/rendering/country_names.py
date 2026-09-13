@@ -38,7 +38,8 @@ def draw_country_names(map_screen, surface):
                         f_shadow = name_font.render(fac, True, (20, 20, 20)).convert_alpha()
                         map_screen.faction_name_surfs[c_id] = (f_surf, f_shadow)
 
-        # 2 & 3. Draw the names with DYNAMIC alpha
+        # 2 & 3. Draw the names at full opacity whenever the player has
+        # enabled them.  Zoom changes their scale, never their visibility.
         if hasattr(map_screen, 'country_text_blobs'):
             import math
             
@@ -104,19 +105,7 @@ def draw_country_names(map_screen, surface):
                         land_scale = min(scale_by_length, scale_by_thickness)
                         land_scale = min(max(land_scale, 0.05), 1.0)
                         
-                        # --- UNIVERSAL LINEAR FADE LOGIC ---
-                        fade_start = c.NAME_FADE_START 
-                        fade_window = c.NAME_FADE_WINDOW  
-                        
-                        if map_screen.camera.zoom > fade_start:
-                            alpha_ratio = 1.0 - min(1.0, (map_screen.camera.zoom - fade_start) / fade_window)
-                        else:
-                            alpha_ratio = 1.0
-                            
-                        alpha = int(255 * alpha_ratio)
-
-                        if alpha <= 0:
-                            continue 
+                        alpha = 255
                         
                         scaled_w = int(surf.get_width() * map_screen.camera.zoom * land_scale)
                         scaled_h = int(surf.get_height() * map_screen.camera.zoom * land_scale)

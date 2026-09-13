@@ -1338,6 +1338,18 @@ def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,
         # Only visible, rendered owner stacks publish a hitbox.  The event
         # layer additionally checks authority before selecting, but never
         # publishing a hidden stack here prevents fog-of-war leakage.
+        hover_hitbox = {
+            "rect": pygame.Rect(rect), "province": province,
+            "units": list(owner_units),
+        }
+        map_screen.unit_hover_hitboxes.append(hover_hitbox)
+        hovered_stack = getattr(map_screen, "hovered_unit_stack", None)
+        if (hovered_stack and hovered_stack.get("province") is province
+                and {id(unit) for unit in hovered_stack.get("units", [])}
+                == {id(unit) for unit in owner_units}):
+            pygame.draw.rect(surface, (130, 220, 255), rect.inflate(4, 4),
+                             max(2, int(2 * display_scale)), border_radius=3)
+
         if owner == map_screen.player_country:
             map_screen.unit_stack_hitboxes.append({
                 "rect": pygame.Rect(rect), "province": province,
@@ -1347,6 +1359,20 @@ def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,
             if any(is_selected(unit) for unit in owner_units):
                 pygame.draw.rect(surface, c.COLOR_GOLD_HIGHLIGHT, rect.inflate(4, 4),
                                  max(2, int(2 * display_scale)), border_radius=3)
+
+            # Right-drag selection is a preview, not a second selection
+            # state.  Highlight precisely the owned stacks whose live rendered
+            # hitboxes will be included when the mouse button is released.
+            drag = getattr(map_screen, "unit_selection_drag", None)
+            if drag:
+                drag_rect = pygame.Rect(
+                    drag["start"],
+                    (drag["current"][0] - drag["start"][0],
+                     drag["current"][1] - drag["start"][1]))
+                drag_rect.normalize()
+                if drag_rect.colliderect(rect):
+                    pygame.draw.rect(surface, (110, 255, 170), rect.inflate(7, 7),
+                                     max(2, int(2 * display_scale)), border_radius=4)
 
         # Move the offset down for the next owner's box in the stack
         current_sy += scaled_h + gap

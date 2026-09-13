@@ -144,6 +144,7 @@ def draw_map_screen(map_screen, surface):
     # Unit-icon drawing publishes hitboxes for map-level selection.  Rebuild
     # them every frame so zoom, tilt, fog, and stacked owner order stay exact.
     map_screen.unit_stack_hitboxes = []
+    map_screen.unit_hover_hitboxes = []
     combat_records = overlay_renderer.draw_overlay_content(
         map_screen, surface, draw_combat=False)
     

@@ -20,6 +20,25 @@ def _map(loop_map):
 
 
 class MapCameraBoundsTests(unittest.TestCase):
+    def test_middle_drag_uses_cursor_distance_at_the_current_zoom_and_tilt(self):
+        camera = MapCamera(min_zoom=2)
+        camera.zoom = camera.target_zoom = 2
+        camera.tilt_factor = 0.5
+        self_map = _map(loop_map=False)
+
+        camera.handle_input(
+            pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(100, 100), button=2),
+            self_map, False)
+        camera.handle_input(
+            pygame.event.Event(pygame.MOUSEMOTION, pos=(130, 120), rel=(99, 99),
+                               buttons=(0, 1, 0)), self_map, False)
+
+        # The intentionally incorrect rel is ignored.  Moving the pointer by
+        # 30x20 screen pixels moves the rendered map by exactly 30x20 pixels.
+        self.assertEqual(camera.pos.x, -15)
+        self.assertEqual(camera.pos.y, -20)
+        self.assertEqual(camera.target_pos, camera.pos)
+
     def test_non_looping_pan_uses_direct_distance_instead_of_shortest_wrap(self):
         camera = MapCamera(min_zoom=2)
         camera.zoom = camera.target_zoom = 2

@@ -90,6 +90,7 @@ def confirm_player_country(map_screen):
             map_screen.selection_mode = False
             map_screen.pending_selection = None
             map_screen.pending_unit = None
+            map_screen.set_play_view_defaults()
             
             map_screen.show_feedback(f"Now playing as {map_screen.player_country}")
             from screens.menu_screens.map import render_buttons

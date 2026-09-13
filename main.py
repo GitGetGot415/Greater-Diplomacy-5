@@ -436,6 +436,7 @@ class Controller:
                 realtime_map.realtime_player_id = host_player.player_id
                 realtime_map.player_country = host_player.country_id
                 realtime_map.active_players = [p.country_id for p in session.players.values() if p.country_id]
+                realtime_map.set_play_view_defaults()
                 # Map construction initially suppresses fog while scenario
                 # country selection is active.  We disabled that mode above,
                 # so rebuild the player-dependent layers immediately instead
@@ -464,6 +465,7 @@ class Controller:
                 realtime_map.realtime_player_id = view.player_id
                 realtime_map.player_country = me.country_id
                 realtime_map.active_players = [p.country_id for p in view.players.values() if p.country_id]
+                realtime_map.set_play_view_defaults()
                 # The map was loaded before the remote player's country was
                 # known; initialize that player's visibility immediately.
                 realtime_map.refresh_map_layers("relations", "faction_territories", "fog")

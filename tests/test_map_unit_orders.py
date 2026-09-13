@@ -14,6 +14,7 @@ from data import queries
 from screens.menu_screens.map import Map
 from screens.map_related_screens.orders import Orders_Screen
 from ui import event_handler
+from map_logic.setup import player_setup
 
 
 def province(province_id, neighbors):
@@ -140,6 +141,14 @@ class OrdersSelectionRowsTests(unittest.TestCase):
 
 
 class MapOrderGestureTests(unittest.TestCase):
+    def test_unit_hover_prefers_the_topmost_visible_stack(self):
+        lower = {"rect": pygame.Rect(10, 10, 30, 30), "units": []}
+        upper = {"rect": pygame.Rect(10, 10, 30, 30), "units": []}
+        map_stub = type("MapStub", (), {"unit_hover_hitboxes": [lower, upper]})()
+
+        self.assertIs(event_handler._unit_stack_at(map_stub, (20, 20)), upper)
+        self.assertIsNone(event_handler._unit_stack_at(map_stub, (100, 100)))
+
     def test_short_right_click_orders_selected_units_and_left_click_does_not(self):
         unit = {"owner": "A", "type": "Infantry"}
         destination = province(2, [])
@@ -164,6 +173,57 @@ class MapOrderGestureTests(unittest.TestCase):
                 map_stub, pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(20, 20), button=1), False))
 
         self.assertEqual(calls, [(destination, False)])
+
+    def test_left_click_cancels_an_unfinished_right_drag_rectangle(self):
+        map_stub = type("MapStub", (), {
+            "secondary_mode": "UNITS",
+            "unit_selection_drag": {"start": (10, 10), "current": (80, 80)},
+            "unit_stack_hitboxes": [],
+            "selected_unit_ids": set(),
+            "can_select_map_units": lambda self: True,
+        })()
+
+        event_handler._handle_map_unit_selection(
+            map_stub, pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(20, 20), button=1), False)
+
+        self.assertIsNone(map_stub.unit_selection_drag)
+
+
+class MapViewDefaultTests(unittest.TestCase):
+    def test_play_view_defaults_keep_country_selection_presentation_separate(self):
+        map_screen = object.__new__(Map)
+        map_screen.secondary_modes = ["UNITS", "ECONOMY", "BLANK"]
+        map_screen.secondary_mode = "BLANK"
+        map_screen.sec_idx = 0
+        map_screen.show_country_names = True
+
+        Map.set_play_view_defaults(map_screen)
+
+        self.assertEqual(map_screen.secondary_mode, "UNITS")
+        self.assertEqual(map_screen.sec_idx, 0)
+        self.assertFalse(map_screen.show_country_names)
+
+    def test_confirming_a_country_applies_the_play_view_defaults(self):
+        applied = []
+        map_stub = type("MapStub", (), {
+            "pending_selection": "A",
+            "active_players": [],
+            "tactical_mode": False,
+            "selected_province": None,
+            "hovered_province": None,
+            "hover_glow_surf": None,
+            "num_players": 1,
+            "set_play_view_defaults": lambda self: applied.append(True),
+            "show_feedback": lambda self, _message: None,
+            "refresh_map_layers": lambda self, *_layers: None,
+        })()
+
+        with patch("screens.menu_screens.map.render_buttons"):
+            player_setup.confirm_player_country(map_stub)
+
+        self.assertEqual(map_stub.player_country, "A")
+        self.assertFalse(map_stub.selection_mode)
+        self.assertEqual(applied, [True])
 
 
 if __name__ == "__main__":

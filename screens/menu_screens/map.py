@@ -1233,6 +1233,9 @@ class Map(GameState):
         self.brush_unit = "None"
         self.editor_mode = "NATION"
 
+        # Country selection uses a clean political overview.  Once a player
+        # has confirmed a country, set_play_view_defaults switches to the
+        # operational Units view instead.
         self.show_country_names = True
 
         # --- 1. Basic State Variables ---
@@ -1301,11 +1304,13 @@ class Map(GameState):
 
         self.selected_province = self.hovered_province = self.last_hovered_id = None
         self.hover_glow_surf = self.hover_glow_rect = None
+        self.hovered_unit_stack = None
         # Map-unit selection is presentation state only. Unit dictionaries
         # remain the persisted source of truth; object identities are stable
         # for this map instance and are deliberately discarded on snapshots.
         self.selected_unit_ids = set()
         self.unit_stack_hitboxes = []
+        self.unit_hover_hitboxes = []
         self.unit_selection_drag = None
         self._unit_selection_turn = self.time_manager.total_turns
         self._unit_selection_player = self.player_country
@@ -1469,6 +1474,12 @@ class Map(GameState):
         self.secondary_mode = mode
         self.show_feedback(f"View: {mode}")
 
+    def set_play_view_defaults(self):
+        """Apply the player-facing map view after country selection finishes."""
+        self.sec_idx = self.secondary_modes.index("UNITS")
+        self.secondary_mode = "UNITS"
+        self.show_country_names = False
+
     def cycle_secondary_mode(self):
         self.sec_idx = (self.sec_idx + 1) % len(self.secondary_modes)
         self.secondary_mode = self.secondary_modes[self.sec_idx]
@@ -1598,6 +1609,7 @@ class Map(GameState):
                 self.mail_input_active = False
 
         self.selected_province = self.hovered_province = self.hover_glow_surf = self.last_hovered_id = None
+        self.hovered_unit_stack = None
         self.show_feedback("Map Unlocked")
 
     def save_map_data(self):

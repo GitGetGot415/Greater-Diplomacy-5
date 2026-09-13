@@ -22,6 +22,7 @@ from screens.map_related_screens import battle_screen
 # Select All is active.
 PANEL_Y = 5
 PANEL_HEIGHT = c.SCREEN_HEIGHT - 70
+PANEL_BOTTOM_INSET = 8
 PANEL_INSET = 8
 HEADER_TITLE_OFFSET_Y = 7
 HEADER_META_OFFSET_Y = 36
@@ -275,7 +276,9 @@ class Orders_Screen(GameState):
         """The clear right-hand space beside the compact Orders panel."""
         x = self.panel_rect.right + BATTLE_PANEL_GAP
         width = c.SCREEN_WIDTH - x - BATTLE_PANEL_RIGHT_MARGIN
-        return pygame.Rect(x, self.panel_rect.y, max(1, width), self.panel_rect.height)
+        # A battle inspector needs room for its lane rows even when Orders is
+        # currently compact because the selected roster is short.
+        return pygame.Rect(x, self.panel_rect.y, max(1, width), PANEL_HEIGHT)
 
     def open_battle_panel(self):
         """Creates the optional in-Orders battle panel for this province."""
@@ -353,11 +356,14 @@ class Orders_Screen(GameState):
         self.refresh_ui()
 
     def toggle_selected_unit(self, unit):
-        """Toggle one roster entry without dropping selections on other tiles."""
+        """Focus a group member, or deselect the sole selected unit."""
         if getattr(self, "read_only", False) or self._command_blocked(unit):
             return
         if self.map_screen.is_unit_selected(unit):
-            self.map_screen.deselect_map_units([unit])
+            if len(self.map_screen.selected_unit_records()) > 1:
+                self.map_screen.select_map_units([unit])
+            else:
+                self.map_screen.deselect_map_units([unit])
         else:
             self.map_screen.select_map_units([unit], additive=True)
         self.bombarding_unit_index = None
@@ -602,6 +608,16 @@ class Orders_Screen(GameState):
         self.view_mode_buttons = view_mode_buttons.build(
             lambda mode: event_handler.navigate_view_mode(self.map_screen, mode, origin=self))
         view_mode_buttons.sync_highlight(self.view_mode_buttons, self.map_screen.secondary_mode)
+
+        # Keep the command box no taller than its current roster requires.
+        # Once the roster reaches the normal map-panel limit it uses the
+        # existing scroll region exactly as before.
+        initial_rows = self._visible_rows()
+        desired_height = (LIST_TOP_OFFSET_Y
+                          + max(1, len(initial_rows)) * self.row_height
+                          + PANEL_BOTTOM_INSET)
+        self.panel_rect.height = min(PANEL_HEIGHT, desired_height)
+        self.panel_max_h = self.panel_rect.bottom - self.panel_top
 
         close_button = Button(self.panel_rect.right - 38, self.panel_rect.y + 7,
                               "tiny_square", "red", "X", self.exit_screen,
@@ -1068,6 +1084,12 @@ class Orders_Screen(GameState):
         panel_rect = self.panel_rect
         on_ui = panel_rect.collidepoint(mx, my)
 
+        # A left-click starts a stack selection, a province interaction, or a
+        # panel action.  It always cancels an unfinished right-drag rectangle
+        # without changing the existing unit selection.
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            self.map_screen.unit_selection_drag = None
+
         # The Orders panel is a live map workspace.  Stacks update the shared
         # selection without opening another screen or recentering the camera.
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and not on_ui:
@@ -1124,7 +1146,8 @@ class Orders_Screen(GameState):
             return
 
         # Pass scroll and pan events to your centralized map camera
-        if event.type in (pygame.MOUSEWHEEL, pygame.MOUSEMOTION):
+        if event.type in (pygame.MOUSEWHEEL, pygame.MOUSEMOTION,
+                          pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
             # Only allow camera zoom/pan if not scrolling the unit list
             if event.type == pygame.MOUSEWHEEL and on_ui:
                 pass
@@ -1145,7 +1168,11 @@ class Orders_Screen(GameState):
 
         # --- Dynamic Map Hover Update ---
         if event.type == pygame.MOUSEMOTION:
-            self.map_screen.hovered_province = queries.get_clicked_province(event.pos, self.map_screen)
+            self.map_screen.hovered_unit_stack = event_handler._unit_stack_at(
+                self.map_screen, event.pos)
+            self.map_screen.hovered_province = (
+                None if self.map_screen.hovered_unit_stack
+                else queries.get_clicked_province(event.pos, self.map_screen))
 
             if self.map_screen.hovered_province:
                 curr_id = self.map_screen.hovered_province["id"]
