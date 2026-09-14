@@ -28,7 +28,10 @@ def _map_image(map_screen, size, ocean_color):
     source = getattr(map_screen, "active_map", None)
     if source is None:
         return None
-    key = (id(source), source.get_size(), tuple(size), tuple(ocean_color))
+    fog = getattr(map_screen, "fog_map", None)
+    key = (id(source), source.get_size(), id(fog),
+           fog.get_size() if fog is not None else None,
+           tuple(size), tuple(ocean_color))
     cached = getattr(map_screen, "_minimap_image_cache", None)
     if not cached or cached[0] != key:
         # Composite the chroma-key source *before* smoothing. Smoothscale
@@ -37,6 +40,11 @@ def _map_image(map_screen, size, ocean_color):
         composite = pygame.Surface(source.get_size())
         composite.fill(ocean_color)
         composite.blit(source, (0, 0))
+        # The full-size renderer places this alpha-black layer immediately
+        # after the active map. Doing it before scaling gives the overview the
+        # same visibility information without revealing hidden provinces.
+        if fog is not None and fog.get_size() == source.get_size():
+            composite.blit(fog, (0, 0))
         image = pygame.transform.smoothscale(composite, size)
         cached = (key, image)
         map_screen._minimap_image_cache = cached

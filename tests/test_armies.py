@@ -155,3 +155,20 @@ class MinimapTests(unittest.TestCase):
         minimap.draw_minimap(map_ref, surface, c.SCREEN_WIDTH, c.SCREEN_HEIGHT)
         rect = minimap.minimap_rect(map_ref, c.SCREEN_WIDTH, c.SCREEN_HEIGHT)
         self.assertEqual(surface.get_at((rect.centerx, rect.centery))[:3], (17, 46, 83))
+
+    def test_minimap_composites_the_same_fog_layer_as_the_main_map(self):
+        active_map = pygame.Surface((40, 20))
+        active_map.fill((35, 140, 210))
+        fog = pygame.Surface((40, 20), pygame.SRCALPHA)
+        fog.fill((0, 0, 0, 180))
+        map_ref = SimpleNamespace(
+            map_w=40, map_h=20, active_map=active_map, fog_map=fog,
+            camera=SimpleNamespace(pos=SimpleNamespace(x=0, y=0), zoom=20, tilt_factor=1),
+            total_ui_h=c.TOTAL_UI_HEIGHT)
+        surface = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
+        minimap.draw_minimap(map_ref, surface, c.SCREEN_WIDTH, c.SCREEN_HEIGHT)
+        rect = minimap.minimap_rect(map_ref, c.SCREEN_WIDTH, c.SCREEN_HEIGHT)
+        pixel = surface.get_at((rect.centerx, rect.centery))[:3]
+        self.assertLess(pixel[0], 35)
+        self.assertLess(pixel[1], 140)
+        self.assertLess(pixel[2], 210)
