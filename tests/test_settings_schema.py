@@ -233,13 +233,27 @@ class NavigationIntroPopupTests(unittest.TestCase):
         save.assert_called_once_with("settings", {"show_intro_popup": False})
 
         popup.handle_event(pygame.event.Event(
-            pygame.MOUSEBUTTONDOWN, pos=popup.continue_rect.center, button=1))
-        self.assertIsNone(map_stub.navigation_intro_popup)
+            pygame.MOUSEBUTTONDOWN, pos=popup.next_rect.center, button=1))
+        self.assertEqual(popup.page_index, 1)
+        self.assertEqual(popup.PAGE_TITLES[popup.page_index], "Map UI")
+        self.assertEqual([label for label, _icon, _description in popup.MAP_UI_BUTTONS], [
+            "Terrain", "Political", "Relations", "Cores", "Factions",
+            "Resources", "Blank", "Units", "Economy", "Names",
+        ])
+        self.assertEqual([icon for _label, icon, _description in popup.MAP_UI_BUTTONS], [
+            "terrain", "political", "relations", "core", "faction",
+            "resource", "blank", "unit", "industry", "names",
+        ])
+        with mock.patch.object(message_box.ui_elements, "UI_ICONS", {
+                icon: image for _label, icon, _description in popup.MAP_UI_BUTTONS}):
+            popup.draw(surface)
 
-        closeable = message_box._NavigationIntroPopup(map_stub)
-        map_stub.navigation_intro_popup = closeable
-        closeable.handle_event(pygame.event.Event(
-            pygame.MOUSEBUTTONDOWN, pos=closeable.close_rect.center, button=1))
+        popup.handle_event(pygame.event.Event(
+            pygame.MOUSEBUTTONDOWN, pos=popup.prev_rect.center, button=1))
+        self.assertEqual(popup.page_index, 0)
+
+        popup.handle_event(pygame.event.Event(
+            pygame.MOUSEBUTTONDOWN, pos=popup.close_rect.center, button=1))
         self.assertIsNone(map_stub.navigation_intro_popup)
 
     def test_map_message_popups_hide_for_a_province_menu_without_being_cleared(self):

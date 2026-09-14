@@ -55,9 +55,9 @@ SETTINGS_INFO_ROWS = (
      "unusual water for players who don't expect it."),
     (SETTINGS_FPS_TOGGLE_Y, "Show FPS",
      "Displays a live frames-per-second counter on screen."),
-    (SETTINGS_INTRO_POPUP_Y, "Show Intro Popup",
-     "Shows the map-navigation tutorial when a fresh game begins. Map panning "
-     "always uses the middle mouse button."),
+    (SETTINGS_INTRO_POPUP_Y, "Show Tutorial Popup",
+     "Shows the map tutorial when a fresh game begins. It covers map navigation "
+     "and the bottom-left map UI buttons."),
     (SETTINGS_MAP_NAV_Y, "Map Navigation",
      "Classic: clicking a tile always opens the plain province menu, and the "
      "Resources/Blank/Units/Economy ui view buttons only switch "
@@ -102,7 +102,7 @@ def render_settings_buttons(settings_screen):
                f"Show FPS: {'ON' if settings_screen.show_fps else 'OFF'}", settings_screen.toggle_fps),
         Button(keybind_x, SETTINGS_INTRO_POPUP_Y, "setting_option",
                "green" if settings_screen.show_intro_popup else "red",
-               f"Show Intro Popup: {'ON' if settings_screen.show_intro_popup else 'OFF'}",
+               f"Show Tutorial Popup: {'ON' if settings_screen.show_intro_popup else 'OFF'}",
                settings_screen.toggle_intro_popup),
         Button(keybind_x, SETTINGS_MAP_NAV_Y, "setting_option", "purple",
                f"Map Navigation: {settings_screen.map_navigation_mode.title()}",

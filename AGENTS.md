@@ -222,6 +222,13 @@ Every code change needs proportionate verification.
 
 ## Keeping Information Current
 
+### Tutorial maintenance
+
+The fresh-game map tutorial in `ui/confirm_dialog/message_box.py` is player
+documentation, not decorative UI. Update its pages whenever a feature changes
+map navigation, unit selection/orders, or a button covered by the bottom-left
+map UI, and add or revise coverage for the new tutorial behavior.
+
 Update relevant documentation, comments, examples, tests, schemas, and UI copy
 in the same change as the implementation. In particular, keep
 `context/ai_stuff.txt` and `context/diplo_stuff.txt` synchronized with the rules

@@ -6,6 +6,7 @@ from ui.confirm_dialog.base import _BaseModal, _back_key, _lighten, _run_blockin
 from ui.bars import ui_bars
 import data.constants as c
 from map_logic.rendering.font_manager import fonts
+import ui_elements
 
 _KIND_ACCENTS = {
     "info": (80, 150, 220),
@@ -53,7 +54,7 @@ class _NavigationIntroPopup:
     HEADER_H = 46
     BORDER_COLOR = _KIND_ACCENTS["info"]
     MOUSE_DIR = os.path.join(c.ASSETS_ROOT_DIR, "mouse")
-    BUTTONS = (
+    NAVIGATION_BUTTONS = (
         ("Left.png", "LEFT MOUSE", (
             "Click a unit stack or province.",
             "Use Orders to toggle individual units.",
@@ -67,11 +68,25 @@ class _NavigationIntroPopup:
             "Right-click a province to move selected units.",
         )),
     )
+    MAP_UI_BUTTONS = (
+        ("Terrain", "terrain", "Shows the terrain map."),
+        ("Political", "political", "Shows country ownership."),
+        ("Relations", "relations", "Shows diplomatic relations."),
+        ("Cores", "core", "Shows national core claims."),
+        ("Factions", "faction", "Shows internal faction support."),
+        ("Resources", "resource", "Shows province resources."),
+        ("Blank", "blank", "Hides the secondary map overlay."),
+        ("Units", "unit", "Shows unit stacks and their commands."),
+        ("Economy", "industry", "Shows economic map information."),
+        ("Names", "names", "Shows or hides country names."),
+    )
+    PAGE_TITLES = ("Map Navigation", "Map UI")
 
     def __init__(self, map_screen):
         self.map_screen = map_screen
         self.rect = pygame.Rect(0, 0, self.WIDTH, self.HEIGHT)
         self.rect.center = (c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2)
+        self.page_index = 0
         self.dont_show_again = False
         self.is_dragging = False
         self.drag_offset = (0, 0)
@@ -87,8 +102,10 @@ class _NavigationIntroPopup:
                                       22, 22)
         self.checkbox_rect = pygame.Rect(self.rect.x + 30, self.rect.bottom - 43,
                                          20, 20)
-        self.continue_rect = pygame.Rect(self.rect.right - 150, self.rect.bottom - 51,
-                                         120, 32)
+        self.prev_rect = pygame.Rect(self.rect.right - 118, self.rect.bottom - 51,
+                                     36, 32)
+        self.next_rect = pygame.Rect(self.rect.right - 72, self.rect.bottom - 51,
+                                     36, 32)
 
     def _persist_checkbox(self):
         settings = dict(queries.get_settings() or {})
@@ -98,6 +115,10 @@ class _NavigationIntroPopup:
     def dismiss(self):
         if getattr(self.map_screen, "navigation_intro_popup", None) is self:
             self.map_screen.navigation_intro_popup = None
+
+    def change_page(self, direction):
+        self.page_index = max(0, min(
+            self.page_index + direction, len(self.PAGE_TITLES) - 1))
 
     def _move_to(self, x, y):
         self.rect.topleft = (x, y)
@@ -128,8 +149,11 @@ class _NavigationIntroPopup:
             if self.close_rect.collidepoint(event.pos):
                 self.dismiss()
                 return True
-            if self.continue_rect.collidepoint(event.pos):
-                self.dismiss()
+            if self.prev_rect.collidepoint(event.pos):
+                self.change_page(-1)
+                return True
+            if self.next_rect.collidepoint(event.pos):
+                self.change_page(1)
                 return True
             if self.checkbox_rect.collidepoint(event.pos):
                 self.dont_show_again = not self.dont_show_again
@@ -170,7 +194,11 @@ class _NavigationIntroPopup:
         pygame.draw.rect(surface, (34, 38, 49), self.rect, border_radius=6)
         pygame.draw.rect(surface, self.BORDER_COLOR, self.rect, 2, border_radius=6)
 
-        title = self.title_font.render("Map Navigation", True, (255, 255, 255))
+        page_number = self.body_font.render(
+            f"{self.page_index + 1}/{len(self.PAGE_TITLES)}", True, (190, 205, 220))
+        surface.blit(page_number, (self.rect.x + 14, self.rect.y + 16))
+
+        title = self.title_font.render(self.PAGE_TITLES[self.page_index], True, (255, 255, 255))
         surface.blit(title, title.get_rect(center=(self.rect.centerx, self.header_rect.centery)))
 
         pygame.draw.rect(surface, (150, 0, 0), self.close_rect)
@@ -178,28 +206,51 @@ class _NavigationIntroPopup:
         x_label = self.body_font.render("X", True, (255, 255, 255))
         surface.blit(x_label, x_label.get_rect(center=self.close_rect.center))
 
-        column_w = self.rect.width // 3
-        image_y = self.rect.y + 68
-        text_y = self.rect.y + 177
-        for index, (filename, heading, lines) in enumerate(self.BUTTONS):
-            center_x = self.rect.x + column_w * index + column_w // 2
-            image = ui_bars.get_ui_image(filename, directory=self.MOUSE_DIR)
-            # The supplied button images are deliberately tall and narrow;
-            # fit them into this slot with one scale factor, never stretch
-            # them to fill both dimensions.
-            scale = min(72 / image.get_width(), 84 / image.get_height())
-            scaled_size = (max(1, round(image.get_width() * scale)),
-                           max(1, round(image.get_height() * scale)))
-            image = pygame.transform.smoothscale(image, scaled_size)
-            surface.blit(image, image.get_rect(center=(center_x, image_y + 42)))
+        if self.page_index == 0:
+            column_w = self.rect.width // 3
+            image_y = self.rect.y + 68
+            text_y = self.rect.y + 177
+            for index, (filename, heading, lines) in enumerate(self.NAVIGATION_BUTTONS):
+                center_x = self.rect.x + column_w * index + column_w // 2
+                image = ui_bars.get_ui_image(filename, directory=self.MOUSE_DIR)
+                # The supplied button images are deliberately tall and narrow;
+                # fit them into this slot with one scale factor, never stretch
+                # them to fill both dimensions.
+                scale = min(72 / image.get_width(), 84 / image.get_height())
+                scaled_size = (max(1, round(image.get_width() * scale)),
+                               max(1, round(image.get_height() * scale)))
+                image = pygame.transform.smoothscale(image, scaled_size)
+                surface.blit(image, image.get_rect(center=(center_x, image_y + 42)))
 
-            heading_surf = self.label_font.render(heading, True, (130, 205, 255))
-            surface.blit(heading_surf, heading_surf.get_rect(center=(center_x, text_y)))
-            line_y = text_y + 24
-            for line in lines:
-                line_surf = self.body_font.render(line, True, (225, 225, 225))
-                surface.blit(line_surf, line_surf.get_rect(center=(center_x, line_y)))
-                line_y += self.body_font.get_height() + 3
+                heading_surf = self.label_font.render(heading, True, (130, 205, 255))
+                surface.blit(heading_surf, heading_surf.get_rect(center=(center_x, text_y)))
+                line_y = text_y + 24
+                for line in lines:
+                    line_surf = self.body_font.render(line, True, (225, 225, 225))
+                    surface.blit(line_surf, line_surf.get_rect(center=(center_x, line_y)))
+                    line_y += self.body_font.get_height() + 3
+        else:
+            column_x = (self.rect.x + 35, self.rect.centerx + 18)
+            row_h = 44
+            for index, (label, icon_name, description) in enumerate(self.MAP_UI_BUTTONS):
+                column, row = divmod(index, 5)
+                x = column_x[column]
+                y = self.rect.y + 72 + row * row_h
+                icon = ui_elements.UI_ICONS.get(icon_name)
+                if icon:
+                    scale = min(28 / icon.get_width(), 28 / icon.get_height())
+                    icon_size = (max(1, round(icon.get_width() * scale)),
+                                 max(1, round(icon.get_height() * scale)))
+                    icon = pygame.transform.smoothscale(icon, icon_size)
+                    surface.blit(icon, icon.get_rect(center=(x + 14, y + 18)))
+                else:
+                    # The registry is populated during game bootstrap. Keep a
+                    # stable reserved icon slot for lightweight test/tool views.
+                    pygame.draw.rect(surface, (75, 85, 100), (x, y + 4, 28, 28), 1)
+                label_surf = self.label_font.render(label, True, (130, 205, 255))
+                surface.blit(label_surf, (x + 36, y))
+                desc_surf = self.body_font.render(description, True, (225, 225, 225))
+                surface.blit(desc_surf, (x + 36, y + self.label_font.get_height() + 2))
 
         pygame.draw.rect(surface, (230, 230, 230), self.checkbox_rect, 2)
         if self.dont_show_again:
@@ -210,11 +261,15 @@ class _NavigationIntroPopup:
         label = self.body_font.render("Don't show this popup again", True, (225, 225, 225))
         surface.blit(label, (self.checkbox_rect.right + 9, self.checkbox_rect.y + 2))
 
-        hovered = self.continue_rect.collidepoint(pygame.mouse.get_pos())
-        color = _lighten(self.BORDER_COLOR) if hovered else self.BORDER_COLOR
-        pygame.draw.rect(surface, color, self.continue_rect, border_radius=4)
-        button = self.label_font.render("Continue", True, (255, 255, 255))
-        surface.blit(button, button.get_rect(center=self.continue_rect.center))
+        for rect, label, enabled in (
+                (self.prev_rect, "<", self.page_index > 0),
+                (self.next_rect, ">", self.page_index < len(self.PAGE_TITLES) - 1)):
+            hovered = enabled and rect.collidepoint(pygame.mouse.get_pos())
+            color = _lighten(self.BORDER_COLOR) if hovered else (
+                self.BORDER_COLOR if enabled else (70, 75, 85))
+            pygame.draw.rect(surface, color, rect, border_radius=4)
+            button = self.label_font.render(label, True, (255, 255, 255) if enabled else (145, 145, 145))
+            surface.blit(button, button.get_rect(center=rect.center))
 
 
 def _show_message_standalone(title, message, tk_parent, kind, on_result):
