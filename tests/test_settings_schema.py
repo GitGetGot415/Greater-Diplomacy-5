@@ -202,6 +202,14 @@ class NavigationIntroPopupTests(unittest.TestCase):
             ["Left.png", "Middle.png", "Right.png"])
         self.assertTrue(all(call.kwargs["directory"] == popup.MOUSE_DIR
                             for call in get_image.call_args_list))
+        self.assertEqual(popup.NAVIGATION_BUTTONS[0][2], (
+            "Click a unit stack to open Orders or deselect it.",
+            "Drag in Units view to box-select units.",
+        ))
+        self.assertEqual(popup.NAVIGATION_BUTTONS[2][2], (
+            "Right-click a province to move selected units.",
+            "Shift+right-click queues a waypoint.",
+        ))
 
         # Unit selection and map panning pass through the panel while active.
         self.assertFalse(popup.handle_event(pygame.event.Event(

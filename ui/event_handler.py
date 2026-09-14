@@ -39,10 +39,30 @@ def _unit_stack_at(map_screen, position):
     return None
 
 
+def _select_map_province(map_screen, position):
+    """Run the normal primary-click province selection after a box-select check."""
+    if map_screen.selected_province or map_screen.viewing_ai_moves:
+        return False
+    province = queries.get_clicked_province(position, map_screen)
+    if (province is None or province["id"] in getattr(
+            map_screen, "extreme_hidden_provinces", set())):
+        return False
+    map_screen.selected_province = province
+    camera_handler.center_camera_on_province(
+        map_screen.camera, province["center"], c.SCREEN_WIDTH, c.SCREEN_HEIGHT,
+        map_screen.total_ui_h)
+    owner = province.get("owner")
+    map_screen.mail_draft_text = queries.get_message_draft(
+        map_screen.player_country, owner, map_screen.nation_data)
+    if c.MAP_NAVIGATION_MODE != "CLASSIC":
+        navigate_view_mode(map_screen, map_screen.secondary_mode)
+    return True
+
+
 def resolve_map_mouse_gesture_conflict(map_screen, event):
     """Cancel a map drag when the other map mouse button is pressed.
 
-    Right-drag selects a rectangle and middle-drag pans.  Letting both run at
+    Left-drag selects a rectangle and middle-drag pans.  Letting both run at
     once leaves stale selection rectangles or resumes a pan after the player
     releases one button, so the later button cancels the earlier gesture and
     its own right-click is ignored until released.
@@ -52,21 +72,25 @@ def resolve_map_mouse_gesture_conflict(map_screen, event):
 
     if event.button == 2 and getattr(map_screen, "unit_selection_drag", None):
         map_screen.unit_selection_drag = None
-        map_screen._ignore_right_until_release = True
-    elif event.button == 3:
+        map_screen._ignore_left_until_release = True
+    elif event.button == 1:
         camera = getattr(map_screen, "camera", None)
         if camera and getattr(camera, "_middle_drag_last_pos", None) is not None:
             camera.cancel_middle_drag()
-            map_screen._ignore_right_until_release = True
+            map_screen._ignore_left_until_release = True
+    elif event.button == 3 and getattr(map_screen, "unit_selection_drag", None):
+        map_screen.unit_selection_drag = None
+        map_screen._ignore_right_until_release = True
 
 
 def _handle_map_unit_selection(map_screen, event, on_ui):
     """Consume the HOI-style unit gestures while the map is in Units view."""
-    # A left-click starts a different interaction.  Clear only the transient
-    # rectangle (not the selected units) even if the right button is still
-    # held, so a cancelled box selection can never remain painted on screen.
-    if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-        map_screen.unit_selection_drag = None
+    if getattr(map_screen, "_ignore_left_until_release", False):
+        if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+            map_screen._ignore_left_until_release = False
+            return True
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            return True
 
     if getattr(map_screen, "_ignore_right_until_release", False):
         if event.type == pygame.MOUSEBUTTONUP and event.button == 3:
@@ -79,10 +103,20 @@ def _handle_map_unit_selection(map_screen, event, on_ui):
             or not map_screen.can_select_map_units()):
         return False
 
-    if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
+    if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+        clicked_stack = next((stack for stack in reversed(
+            getattr(map_screen, "unit_stack_hitboxes", []))
+            if stack["rect"].collidepoint(event.pos)), None)
+        # Keep combat bubbles as their own interaction. Everywhere else, defer
+        # the primary click until release so a box can begin on either a unit
+        # or open map space without accidentally selecting a province first.
+        if (clicked_stack is None and getattr(map_screen, "map_data", None) is not None
+                and overlay_renderer.combat_bubble_at_screen_pos(map_screen, event.pos) is not None):
+            return False
         map_screen.unit_selection_drag = {
             "start": event.pos, "current": event.pos,
             "additive": bool(pygame.key.get_mods() & pygame.KMOD_SHIFT),
+            "stack": clicked_stack,
         }
         return True
 
@@ -90,23 +124,28 @@ def _handle_map_unit_selection(map_screen, event, on_ui):
         map_screen.unit_selection_drag["current"] = event.pos
         return True
 
-    if event.type == pygame.MOUSEBUTTONUP and event.button == 3:
+    if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
         drag = map_screen.unit_selection_drag
         map_screen.unit_selection_drag = None
         if not drag:
-            return True
+            return False
         rect = pygame.Rect(drag["start"],
                            (event.pos[0] - drag["start"][0],
                             event.pos[1] - drag["start"][1]))
         rect.normalize()
-        # A short right-click is the map-order gesture.  A real drag remains
-        # box selection, so both gestures can share the same mouse button.
+        # A short left-click retains the existing Orders entry point. A real
+        # drag mirrors HOI4's box selection gesture.
         if rect.width < 4 and rect.height < 4:
-            destination = queries.get_clicked_province(event.pos, map_screen)
-            if destination and map_screen.selected_unit_records():
-                map_screen.issue_selected_move_orders(
-                    destination,
-                    append=bool(pygame.key.get_mods() & pygame.KMOD_SHIFT))
+            stack = drag.get("stack")
+            if stack is None:
+                _select_map_province(map_screen, event.pos)
+                return True
+            units = stack["units"]
+            if all(map_screen.is_unit_selected(unit) for unit in units):
+                map_screen.deselect_map_units(units)
+            else:
+                map_screen.select_map_units(units, additive=drag["additive"])
+                map_screen.open_orders_for_unit_stack(stack["province"], units)
             return True
         selected, first_province = [], None
         for stack in getattr(map_screen, "unit_stack_hitboxes", []):
@@ -118,11 +157,16 @@ def _handle_map_unit_selection(map_screen, event, on_ui):
             map_screen.open_orders_for_unit_stack(first_province, selected)
         return True
 
-    if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-        for stack in getattr(map_screen, "unit_stack_hitboxes", []):
-            if stack["rect"].collidepoint(event.pos):
-                map_screen.open_orders_for_unit_stack(stack["province"], stack["units"])
-                return True
+    if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
+        return True
+
+    if event.type == pygame.MOUSEBUTTONUP and event.button == 3:
+        destination = queries.get_clicked_province(event.pos, map_screen)
+        if destination and map_screen.selected_unit_records():
+            map_screen.issue_selected_move_orders(
+                destination,
+                append=bool(pygame.key.get_mods() & pygame.KMOD_SHIFT))
+        return True
     return False
 
 
@@ -534,23 +578,8 @@ def handle_map_events(map_screen, event):
                         map_screen.mail_input_active = False
 
     # 6. STANDARD GAME SELECTION
-    # Ignore clicks if a province is already selected, or if we are watching AI moves
-    if map_screen.selected_province or map_screen.viewing_ai_moves:
-        return
-
     if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-        if map_screen.hovered_province:
-            map_screen.selected_province = map_screen.hovered_province
-            camera_handler.center_camera_on_province(map_screen.camera, map_screen.selected_province["center"], c.SCREEN_WIDTH, c.SCREEN_HEIGHT, map_screen.total_ui_h)
-
-            owner = map_screen.selected_province.get("owner")
-            map_screen.mail_draft_text = queries.get_message_draft(map_screen.player_country, owner, map_screen.nation_data)
-
-            # Classic: a click only ever opens the plain province menu -- see
-            # navigate_view_mode. Jumping straight into Orders/Production
-            # is a Preemptive-only shortcut.
-            if c.MAP_NAVIGATION_MODE != "CLASSIC":
-                navigate_view_mode(map_screen, map_screen.secondary_mode)
+        _select_map_province(map_screen, event.pos)
 
 
 def is_classic_navigation():

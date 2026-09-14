@@ -1107,6 +1107,12 @@ class Orders_Screen(GameState):
 
     def additional_events(self, event):
         event_handler.resolve_map_mouse_gesture_conflict(self.map_screen, event)
+        if getattr(self.map_screen, "_ignore_left_until_release", False):
+            if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+                self.map_screen._ignore_left_until_release = False
+                return
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                return
         if getattr(self.map_screen, "_ignore_right_until_release", False):
             if event.type == pygame.MOUSEBUTTONUP and event.button == 3:
                 self.map_screen._ignore_right_until_release = False
@@ -1131,32 +1137,21 @@ class Orders_Screen(GameState):
         event_pos = getattr(event, "pos", (mx, my))
         on_ui = panel_rect.collidepoint(event_pos)
 
-        # A left-click starts a stack selection, a province interaction, or a
-        # panel action.  It always cancels an unfinished right-drag rectangle
-        # without changing the existing unit selection.
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            self.map_screen.unit_selection_drag = None
-
-        # The Orders panel is a live map workspace.  Stacks update the shared
-        # selection without opening another screen or recentering the camera.
+        # The Orders panel is a live map workspace. A short left-click on a
+        # stack toggles it; an actual left-drag box-selects stacks, matching
+        # the map screen and HOI4's primary selection gesture.
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and not on_ui:
-            for stack in getattr(self.map_screen, "unit_stack_hitboxes", []):
-                if stack["rect"].collidepoint(event.pos):
-                    self.map_screen.select_map_units(
-                        stack["units"],
-                        additive=bool(pygame.key.get_mods() & pygame.KMOD_SHIFT))
-                    self.target_province = stack["province"]
-                    self.selected_unit_index = None
-                    self.read_only = not bool(self.map_screen.selected_unit_records())
-                    self._replace_roster_with_selection()
-                    self.refresh_ui()
-                    return
-
-        if (event.type == pygame.MOUSEBUTTONDOWN and event.button == 3
-                and not on_ui and self.map_screen.can_select_map_units()):
+            clicked_stack = next((stack for stack in reversed(
+                getattr(self.map_screen, "unit_stack_hitboxes", []))
+                if stack["rect"].collidepoint(event.pos)), None)
+            # Defer an empty-space click too: it is either the start of a
+            # box-selection or, if released without dragging, the request to
+            # leave Orders. This is what lets a selection rectangle begin
+            # anywhere on the live map workspace.
             self.map_screen.unit_selection_drag = {
                 "start": event.pos, "current": event.pos,
                 "additive": bool(pygame.key.get_mods() & pygame.KMOD_SHIFT),
+                "stack": clicked_stack,
             }
             return
 
@@ -1164,7 +1159,7 @@ class Orders_Screen(GameState):
             self.map_screen.unit_selection_drag["current"] = event.pos
             return
 
-        if event.type == pygame.MOUSEBUTTONUP and event.button == 3:
+        if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
             drag = self.map_screen.unit_selection_drag
             self.map_screen.unit_selection_drag = None
             if not drag:
@@ -1174,13 +1169,24 @@ class Orders_Screen(GameState):
                 (event.pos[0] - drag["start"][0], event.pos[1] - drag["start"][1]))
             rect.normalize()
             if rect.width < 4 and rect.height < 4:
-                if not self.read_only:
-                    destination = queries.get_clicked_province(event.pos, self.map_screen)
-                    if destination and self.map_screen.selected_unit_records():
-                        if self.map_screen.issue_selected_move_orders(
-                                destination,
-                                append=bool(pygame.key.get_mods() & pygame.KMOD_SHIFT)):
-                            self.refresh_ui()
+                stack = drag["stack"]
+                if stack is None:
+                    # A foreign stack is informational rather than an exit
+                    # target. Otherwise retain the documented quick exit.
+                    if event_handler._unit_stack_at(self.map_screen, event.pos) is None:
+                        self.exit_screen()
+                    return
+                self._remember_roster_selection()
+                self.roster_unit_ids.update(id(unit) for unit in stack["units"])
+                if all(self.map_screen.is_unit_selected(unit) for unit in stack["units"]):
+                    self.map_screen.deselect_map_units(stack["units"])
+                else:
+                    self.map_screen.select_map_units(
+                        stack["units"], additive=drag["additive"])
+                self.target_province = stack["province"]
+                self.selected_unit_index = None
+                self.read_only = not bool(self.map_screen.selected_unit_records())
+                self.refresh_ui()
                 return
             if rect.width >= 4 or rect.height >= 4:
                 selected = []
@@ -1192,6 +1198,19 @@ class Orders_Screen(GameState):
                 self.read_only = not bool(self.map_screen.selected_unit_records())
                 self._replace_roster_with_selection()
                 self.refresh_ui()
+            return
+
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
+            return
+
+        if event.type == pygame.MOUSEBUTTONUP and event.button == 3:
+            if not self.read_only:
+                destination = queries.get_clicked_province(event.pos, self.map_screen)
+                if destination and self.map_screen.selected_unit_records():
+                    if self.map_screen.issue_selected_move_orders(
+                            destination,
+                            append=bool(pygame.key.get_mods() & pygame.KMOD_SHIFT)):
+                        self.refresh_ui()
             return
 
         # Pass scroll and pan events to your centralized map camera
@@ -1214,15 +1233,6 @@ class Orders_Screen(GameState):
                 self.set_bombard_target(self.bombarding_unit_actual_index, dest,
                                         self.bombarding_unit_province)
             return
-
-        # Left-clicking open map space is the quick way out of the Orders
-        # workspace.  A visible unit stack remains an interaction target even
-        # when it belongs to another country, so it never accidentally closes
-        # the screen underneath the cursor.
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and not on_ui:
-            if event_handler._unit_stack_at(self.map_screen, event.pos) is None:
-                self.exit_screen()
-                return
 
         # --- Dynamic Map Hover Update ---
         if event.type == pygame.MOUSEMOTION:
@@ -1449,11 +1459,11 @@ class Orders_Screen(GameState):
             elif read_only:
                 help_text = "Intelligence view: orders cannot be changed here"
             elif not player_units:
-                help_text = "Click a unit stack, or right-drag a box around stacks to select units"
+                help_text = "Click a unit stack, or left-drag a box around stacks to select units"
             elif len(player_units) > 1:
                 help_text = "Right-click a province to move the selected group | Shift+right-click queues a waypoint"
             else:
-                help_text = "Click the map to move | click the row to deselect | hover a command icon for details"
+                help_text = "Right-click the map to move | click the row to deselect | hover a command icon for details"
 
         help_text = fit_text(help_text, tiny_font, self.PANEL_WIDTH - (PANEL_INSET * 2))
         surface.blit(tiny_font.render(help_text, True, c.UI_TEXT_MUTED),
@@ -1596,7 +1606,7 @@ class Orders_Screen(GameState):
             if hovered and hovered["id"] in in_range:
                 overlay_renderer.draw_bombardment_arrow(surface, self.map_screen, aiming_province, hovered["id"], bomb_range, alpha=BOMBARD_PREVIEW_ALPHA, force_visible=True)
 
-        # Show the same live right-drag rectangle as the map screen.  The
+        # Show the same live left-drag rectangle as the map screen.  The
         # rectangle must be normalized in-place; pygame returns None from
         # Rect.normalize().
         if self.map_screen.unit_selection_drag:

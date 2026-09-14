@@ -199,7 +199,7 @@ class MapOrderGestureTests(unittest.TestCase):
         self.assertIs(event_handler._unit_stack_at(map_stub, (20, 20)), upper)
         self.assertIsNone(event_handler._unit_stack_at(map_stub, (100, 100)))
 
-    def test_short_right_click_orders_selected_units_and_left_click_does_not(self):
+    def test_short_right_click_orders_selected_units(self):
         unit = {"owner": "A", "type": "Infantry"}
         destination = province(2, [])
         calls = []
@@ -219,42 +219,137 @@ class MapOrderGestureTests(unittest.TestCase):
                 map_stub, pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(20, 20), button=3), False))
             self.assertTrue(event_handler._handle_map_unit_selection(
                 map_stub, pygame.event.Event(pygame.MOUSEBUTTONUP, pos=(20, 20), button=3), False))
-            self.assertFalse(event_handler._handle_map_unit_selection(
-                map_stub, pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(20, 20), button=1), False))
 
         self.assertEqual(calls, [(destination, False)])
 
-    def test_left_click_cancels_an_unfinished_right_drag_rectangle(self):
+    def test_left_drag_box_selects_unit_stacks(self):
+        first = {"owner": "A", "type": "Infantry"}
+        second = {"owner": "A", "type": "Infantry"}
+        selected, opened = [], []
+        origin = province(1, [])
+        map_stub = type("MapStub", (), {
+            "secondary_mode": "UNITS",
+            "unit_selection_drag": None,
+            "unit_stack_hitboxes": [
+                {"rect": pygame.Rect(10, 10, 20, 20), "province": origin, "units": [first]},
+                {"rect": pygame.Rect(50, 10, 20, 20), "province": origin, "units": [second]},
+            ],
+            "can_select_map_units": lambda self: True,
+            "select_map_units": lambda self, units, additive=False: selected.extend(units),
+            "open_orders_for_unit_stack": lambda self, prov, units: opened.append((prov, units)),
+        })()
+
+        with patch("ui.event_handler.pygame.key.get_mods", return_value=0):
+            self.assertTrue(event_handler._handle_map_unit_selection(
+                map_stub, pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(15, 15), button=1), False))
+            self.assertTrue(event_handler._handle_map_unit_selection(
+                map_stub, pygame.event.Event(pygame.MOUSEMOTION, pos=(75, 35)), False))
+            self.assertTrue(event_handler._handle_map_unit_selection(
+                map_stub, pygame.event.Event(pygame.MOUSEBUTTONUP, pos=(75, 35), button=1), False))
+
+        self.assertEqual(selected, [first, second])
+        self.assertEqual(opened, [(origin, [first, second])])
+
+    def test_left_click_on_an_selected_stack_deselects_without_opening_orders(self):
+        unit = {"owner": "A", "type": "Infantry"}
+        origin = province(1, [])
+        deselected, reselected, opened = [], [], []
+        map_stub = type("MapStub", (), {
+            "secondary_mode": "UNITS",
+            "unit_selection_drag": None,
+            "unit_stack_hitboxes": [{
+                "rect": pygame.Rect(10, 10, 20, 20),
+                "province": origin, "units": [unit],
+            }],
+            "can_select_map_units": lambda self: True,
+            "is_unit_selected": lambda self, candidate: candidate is unit,
+            "deselect_map_units": lambda self, units: deselected.extend(units),
+            "select_map_units": lambda self, units, additive=False: reselected.extend(units),
+            "open_orders_for_unit_stack": lambda self, prov, units: opened.append((prov, units)),
+        })()
+
+        with patch("ui.event_handler.pygame.key.get_mods", return_value=0):
+            event_handler._handle_map_unit_selection(
+                map_stub, pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(15, 15), button=1), False)
+            self.assertTrue(event_handler._handle_map_unit_selection(
+                map_stub, pygame.event.Event(pygame.MOUSEBUTTONUP, pos=(15, 15), button=1), False))
+
+        self.assertEqual(deselected, [unit])
+        self.assertEqual(reselected, [])
+        self.assertEqual(opened, [])
+
+    def test_right_press_cancels_an_unfinished_left_drag_rectangle(self):
         map_stub = type("MapStub", (), {
             "secondary_mode": "UNITS",
             "unit_selection_drag": {"start": (10, 10), "current": (80, 80)},
             "unit_stack_hitboxes": [],
             "selected_unit_ids": set(),
             "can_select_map_units": lambda self: True,
+            "_ignore_right_until_release": False,
         })()
 
-        event_handler._handle_map_unit_selection(
-            map_stub, pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(20, 20), button=1), False)
+        event_handler.resolve_map_mouse_gesture_conflict(
+            map_stub, pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(20, 20), button=3))
 
         self.assertIsNone(map_stub.unit_selection_drag)
+        self.assertTrue(map_stub._ignore_right_until_release)
 
-    def test_middle_press_cancels_a_right_drag_without_ordering_on_release(self):
+    def test_middle_press_cancels_a_left_drag_without_selecting_on_release(self):
         map_stub = type("MapStub", (), {
             "unit_selection_drag": {"start": (10, 10), "current": (80, 80)},
-            "_ignore_right_until_release": False,
+            "_ignore_left_until_release": False,
         })()
 
         event_handler.resolve_map_mouse_gesture_conflict(
             map_stub, pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(20, 20), button=2))
 
         self.assertIsNone(map_stub.unit_selection_drag)
-        self.assertTrue(map_stub._ignore_right_until_release)
+        self.assertTrue(map_stub._ignore_left_until_release)
 
         map_stub.secondary_mode = "UNITS"
         map_stub.can_select_map_units = lambda: True
         self.assertTrue(event_handler._handle_map_unit_selection(
-            map_stub, pygame.event.Event(pygame.MOUSEBUTTONUP, pos=(40, 40), button=3), False))
-        self.assertFalse(map_stub._ignore_right_until_release)
+            map_stub, pygame.event.Event(pygame.MOUSEBUTTONUP, pos=(40, 40), button=1), False))
+        self.assertFalse(map_stub._ignore_left_until_release)
+
+    def test_orders_left_drag_can_begin_on_open_map_space(self):
+        first = {"owner": "A", "type": "Infantry"}
+        second = {"owner": "A", "type": "Infantry"}
+        selected = []
+        origin = province(1, [])
+        map_stub = type("MapStub", (), {
+            "unit_selection_drag": None,
+            "unit_stack_hitboxes": [
+                {"rect": pygame.Rect(20, 20, 20, 20), "province": origin, "units": [first]},
+                {"rect": pygame.Rect(60, 20, 20, 20), "province": origin, "units": [second]},
+            ],
+            "unit_hover_hitboxes": [],
+            "_ignore_left_until_release": False,
+            "_ignore_right_until_release": False,
+            "is_unit_selected": lambda self, unit: False,
+            "select_map_units": lambda self, units, additive=False: selected.extend(units),
+            "selected_unit_records": lambda self: [(unit, origin) for unit in selected],
+        })()
+        screen = object.__new__(Orders_Screen)
+        screen.map_screen = map_stub
+        screen.panel_rect = pygame.Rect(100, 100, 200, 200)
+        screen.is_dragging_scrollbar = False
+        screen.is_content_dragging = lambda _attr: False
+        screen.selected_unit_index = None
+        screen.read_only = False
+        screen._replace_roster_with_selection = lambda: None
+        screen.refresh_ui = lambda: None
+
+        with (patch("screens.map_related_screens.orders.pygame.key.get_mods", return_value=0),
+              patch("screens.map_related_screens.orders.pygame.mouse.get_pos", return_value=(5, 5))):
+            screen.additional_events(pygame.event.Event(
+                pygame.MOUSEBUTTONDOWN, pos=(5, 5), button=1))
+            screen.additional_events(pygame.event.Event(
+                pygame.MOUSEMOTION, pos=(90, 50)))
+            screen.additional_events(pygame.event.Event(
+                pygame.MOUSEBUTTONUP, pos=(90, 50), button=1))
+
+        self.assertEqual(selected, [first, second])
 
 
 class MapViewDefaultTests(unittest.TestCase):

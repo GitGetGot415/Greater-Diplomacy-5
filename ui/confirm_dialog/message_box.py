@@ -56,16 +56,16 @@ class _NavigationIntroPopup:
     MOUSE_DIR = os.path.join(c.ASSETS_ROOT_DIR, "mouse")
     NAVIGATION_BUTTONS = (
         ("Left.png", "LEFT MOUSE", (
-            "Click a unit stack or province.",
-            "Use Orders to toggle individual units.",
+            "Click a unit stack to open Orders or deselect it.",
+            "Drag in Units view to box-select units.",
         )),
         ("Middle.png", "MIDDLE MOUSE", (
             "Hold and drag to pan the map.",
             "Scroll up or down to zoom in or out."
         )),
         ("Right.png", "RIGHT MOUSE", (
-            "Drag in Units view to box-select units.",
             "Right-click a province to move selected units.",
+            "Shift+right-click queues a waypoint.",
         )),
     )
     MAP_UI_BUTTONS = (
