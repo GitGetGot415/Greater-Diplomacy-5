@@ -44,7 +44,11 @@ class CrashHandlerTests(unittest.TestCase):
     @mock.patch("tkinter.messagebox.showerror")
     @mock.patch("tkinter.Tk")
     def test_writes_traceback_and_shows_popup(self, mock_tk, mock_showerror):
-        self._simulate_crash()
+        # The popup is deliberately disabled on macOS because Tk can abort
+        # after SDL starts. Exercise the supported non-macOS desktop path;
+        # the macOS log-only path has its own test below.
+        with mock.patch.object(main.sys, "platform", "linux"):
+            self._simulate_crash()
 
         self.assertTrue(os.path.exists(self.crash_log_path))
         with open(self.crash_log_path, "r", encoding="utf-8") as f:
