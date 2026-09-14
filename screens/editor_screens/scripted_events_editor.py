@@ -491,7 +491,8 @@ class _EventEditScreen(_ModalScreen):
 
     def __init__(self, game_state, map_ref, target, event_idx=None):
         verb = "Edit" if event_idx is not None else "Add"
-        super().__init__(game_state, f"{verb} Event: {target}")
+        target_name = queries.get_country_display_name(target, map_ref.nation_data)
+        super().__init__(game_state, f"{verb} Event: {target_name}")
         self.map_ref = map_ref
         self.target = target
         self.event_idx = event_idx

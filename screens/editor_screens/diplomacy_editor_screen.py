@@ -233,7 +233,8 @@ class Diplomacy_Editor_Screen(ScrollPanes, MapOverlayScreen):
                 reasons.pop(target, None)
 
         self.map_screen.refresh_diplomacy_maps()
-        message = f"Diplomacy saved for {target}"
+        target_name = queries.get_country_display_name(target, nation_data)
+        message = f"Diplomacy saved for {target_name}"
         if rejected:
             message += "; could not set " + ", ".join(rejected)
         self.map_screen.show_feedback(message)

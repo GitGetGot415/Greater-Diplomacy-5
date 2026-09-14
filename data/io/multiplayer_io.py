@@ -2,8 +2,9 @@ import os
 import json
 import hashlib
 import base64
+import binascii
 import secrets
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, InvalidToken
 import data.constants as c
 from data import queries
 from data.platform import sync_persisted_dir
@@ -17,16 +18,6 @@ def active_owners_of(map_ref):
     if not getattr(map_ref, "map_data", None):
         return set()
     return set(p.get("owner") for p in map_ref.map_data.values() if p.get("owner"))
-
-
-def display_name(nation_data, cid):
-    """A country's readable name, falling back to its id.
-
-    The isinstance guard is what makes this safe on a nation table that holds
-    non-dict utility entries. Three key-listing loops repeated it.
-    """
-    entry = nation_data.get(cid)
-    return entry.get("name", cid) if isinstance(entry, dict) else cid
 
 
 def run_with_progress(jobs, worker, caption, on_result):
@@ -82,11 +73,18 @@ def decrypt_dict(encrypted_str, password):
     try:
         salt_b64, encrypted_token = encrypted_str.split(":", 1)
         salt = base64.urlsafe_b64decode(salt_b64.encode('utf-8'))
-        key = generate_fernet_key_from_password(password, salt)
+    except (AttributeError, ValueError, binascii.Error):
+        # A move/tournament file is untrusted input.  Deliberately reject only
+        # malformed encoded data; programming errors must remain visible.
+        return None
+
+    key = generate_fernet_key_from_password(password, salt)
+    try:
         f = Fernet(key)
         json_bytes = f.decrypt(encrypted_token.encode('utf-8'))
         return json.loads(json_bytes.decode('utf-8'))
-    except Exception:
+    except (InvalidToken, UnicodeDecodeError, json.JSONDecodeError):
+        # Bad ciphertext and non-JSON plaintext are malformed player data.
         return None
 
 def strip_sensitive_data_for_player(map_ref, country_id):
@@ -127,14 +125,14 @@ def write_host_keys(map_ref, keys_dict, output_dir=None):
     with open(all_keys_path, 'w') as f:
         f.write("Every key for every possible country:\n\n")
         for cid, key in keys_dict.items():
-            name = display_name(nation_data, cid)
+            name = queries.get_country_display_name(cid, nation_data)
             f.write(f"{name} (ID {cid}): {key}\n")
             
     with open(keys_path, 'w') as f:
         f.write("Distribute these keys to your players:\n\n")
         for cid, key in keys_dict.items():
             if cid in active_owners:
-                name = display_name(nation_data, cid)
+                name = queries.get_country_display_name(cid, nation_data)
                 f.write(f"{name} (ID {cid}): {key}\n")
 
     # Web only: mirror the whole tournament_saves tree into IndexedDB so it
@@ -162,7 +160,7 @@ def export_tournament(map_ref, file_path, master_key, keys_dict):
             if hasattr(map_ref, 'multiplayer_keys_dict'):
                 map_ref.multiplayer_keys_dict[cid] = new_key
             nation_data = getattr(map_ref, 'nation_data', {})
-            name = display_name(nation_data, cid)
+            name = queries.get_country_display_name(cid, nation_data)
             regenerated_keys[cid] = (name, new_key)
         map_ref.multiplayer_pending_key_regen.clear()
 
@@ -497,7 +495,7 @@ def _is_valid_map_color(color):
 
 
 def _sync_appearance_caches(map_ref, country_id, nation_data):
-    """Keep cached country colours and labels consistent with a move import."""
+    """Keep cached country colors and labels consistent with a move import."""
     color = nation_data.get("color")
     if _is_valid_map_color(color) and hasattr(map_ref, "nation_colors"):
         map_ref.nation_colors[country_id] = tuple(color)

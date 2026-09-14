@@ -701,12 +701,14 @@ class Battle_Screen(ModalScreen):
             owner = unit.get("owner", "?")
             counts[owner] = counts.get(owner, 0) + 1
         return "  +  ".join(
-            f"{nation} {count}" for nation, count in counts.items())
+            f"{queries.get_country_display_name(nation, self.map_screen.nation_data)} {count}"
+            for nation, count in counts.items())
 
     def get_panel_title(self):
         owner = self.province.get("owner", "Unclaimed")
         verb = "Manage" if self.my_units() else "View"
-        return f"{verb} Battle - Province {self.province.get('id')} ({owner})"
+        owner_name = queries.get_country_display_name(owner, self.map_screen.nation_data)
+        return f"{verb} Battle - Province {self.province.get('id')} ({owner_name})"
 
     def draw_body(self, surface):
         p = self.panel_rect

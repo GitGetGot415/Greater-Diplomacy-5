@@ -16,7 +16,7 @@ def load_multiplayer_moves(map_ref, on_result):
             map_ref, files, getattr(map_ref, 'multiplayer_keys_dict', {}))
         loaded, rejected = summary["loaded"], summary["rejected"]
         if loaded and hasattr(map_ref, "refresh_all_maps"):
-            # Move imports can change faction membership, country colours, and
+            # Move imports can change faction membership, country colors, and
             # province/unit orders.  Rebuild every cached layer before the host
             # sees the board or exports the next turn.
             map_ref.refresh_all_maps()
@@ -63,8 +63,14 @@ def export_next_turn(map_ref):
 def _playable_countries(map_ref):
     """Every playable nation still on the map, ordered by display name."""
     countries = queries.get_active_playable_nations(getattr(map_ref, 'map_data', None), map_ref.nation_data)
-    countries.sort(key=lambda cid: map_ref.nation_data[cid].get("name", cid))
+    countries.sort(key=lambda cid: queries.get_country_display_name(cid, map_ref.nation_data))
     return countries
+
+
+def _country_labels(country_ids, nation_data):
+    """Return picker-style labels without exposing IDs unless names collide."""
+    return {country_id: label
+            for label, country_id in queries.country_picker_items(country_ids, nation_data)}
 
 def manage_players_panel(map_ref):
     """Picks which countries skip the AI this turn, and loads their move files."""
@@ -75,10 +81,11 @@ def manage_players_panel(map_ref):
 
     def build_rows():
         rows = []
-        for cid in _playable_countries(map_ref):
-            name = map_ref.nation_data[cid].get("name", cid)
+        countries = _playable_countries(map_ref)
+        labels = _country_labels(countries, map_ref.nation_data)
+        for cid in countries:
             has_move = cid in map_ref.submitted_moves
-            rows.append(CheckboxItem(cid, f"{name} ({cid})",
+            rows.append(CheckboxItem(cid, labels[cid],
                                      checked=cid in map_ref.multiplayer_protected_countries,
                                      note="[SUBMITTED]" if has_move else "[WAITING]",
                                      note_color=(120, 230, 120) if has_move else (190, 190, 190)))
@@ -114,9 +121,11 @@ def manage_keys_panel(map_ref):
     if not hasattr(map_ref, 'multiplayer_pending_key_regen'):
         map_ref.multiplayer_pending_key_regen = set()
 
-    rows = [CheckboxItem(cid, f"{map_ref.nation_data[cid].get('name', cid)} ({cid})",
+    countries = _playable_countries(map_ref)
+    labels = _country_labels(countries, map_ref.nation_data)
+    rows = [CheckboxItem(cid, labels[cid],
                          checked=cid in map_ref.multiplayer_pending_key_regen)
-            for cid in _playable_countries(map_ref)]
+            for cid in countries]
 
     def on_queued(queued):
         if queued is None:

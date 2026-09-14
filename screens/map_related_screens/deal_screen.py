@@ -649,7 +649,8 @@ class Deal_Screen(MapOverlayScreen):
         pending = self._pending_ids(self.picking, receiver)
         if (prov["id"] not in self.picks_for(self.picking)
                 and not self.reach.reachable(receiver, prov, pending=pending)):
-            whose = "your" if receiver == self.player else f"{receiver}'s"
+            receiver_name = queries.get_country_display_name(receiver, self.map_screen.nation_data)
+            whose = "your" if receiver == self.player else f"{receiver_name}'s"
             self.map_screen.show_feedback(
                 f"Out of reach: it borders none of {whose} land and no water {whose} coast is on.")
             return

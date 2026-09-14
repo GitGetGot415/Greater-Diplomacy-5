@@ -2490,13 +2490,13 @@ def build_save_dict(map_screen):
             "year": map_screen.time_manager.year,
             "total_turns": map_screen.time_manager.total_turns
         },
-        "loop_map": getattr(map_screen, 'loop_map', False),
+        "loop_map": map_screen.loop_map,
         "player_country": map_screen.player_country,
         "active_players": map_screen.active_players,
-        "current_player_index": getattr(map_screen, 'current_player_index', 0),
+        "current_player_index": map_screen.current_player_index,
         "scenario_settings": scenario_settings,
-        "script_variables": getattr(map_screen, 'script_variables', []),
-        "default_research": getattr(map_screen, 'default_research', None),
+        "script_variables": map_screen.script_variables,
+        "default_research": map_screen.default_research,
         "nation_data": map_screen.nation_data,
         "provinces": {}
     }

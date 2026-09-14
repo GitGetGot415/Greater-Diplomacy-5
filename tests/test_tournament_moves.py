@@ -340,6 +340,13 @@ class TournamentMoveTests(unittest.TestCase):
         self.assertFalse(malformed[0])
         self.assertEqual(malformed[-1], "Invalid key")
 
+    def test_decrypt_rejects_bad_input_without_hiding_internal_errors(self):
+        self.assertIsNone(multiplayer_io.decrypt_dict("not an encrypted payload", "key"))
+        with mock.patch.object(multiplayer_io, "generate_fernet_key_from_password",
+                               side_effect=RuntimeError("broken implementation")):
+            with self.assertRaisesRegex(RuntimeError, "broken implementation"):
+                multiplayer_io.decrypt_dict("YWJjZA==:token", "key")
+
 
 if __name__ == "__main__":
     unittest.main()

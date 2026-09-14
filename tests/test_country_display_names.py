@@ -35,6 +35,14 @@ class CountryDisplayNameTests(unittest.TestCase):
         screen.select(("German Reich", "GER"))
         self.assertEqual(["GER"], picked)
 
+    def test_tournament_checkbox_labels_follow_the_picker_rule(self):
+        from ui.multiplayer_host_panel import _country_labels
+
+        self.assertEqual(
+            {"GER": "German Reich (GER)", "FRA": "French Republic",
+             "ALT_GER": "German Reich (ALT_GER)"},
+            _country_labels(["GER", "FRA", "ALT_GER"], self.nation_data))
+
 
 if __name__ == "__main__":
     unittest.main()
