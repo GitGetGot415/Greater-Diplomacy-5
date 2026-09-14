@@ -203,15 +203,28 @@ class NavigationIntroPopupTests(unittest.TestCase):
         self.assertTrue(all(call.kwargs["directory"] == popup.MOUSE_DIR
                             for call in get_image.call_args_list))
 
+        # Unit selection and map panning pass through the panel while active.
+        self.assertFalse(popup.handle_event(pygame.event.Event(
+            pygame.MOUSEBUTTONDOWN, pos=popup.rect.center, button=2)))
+        self.assertFalse(popup.handle_event(pygame.event.Event(
+            pygame.MOUSEMOTION, pos=popup.rect.center, rel=(5, 5), buttons=(0, 0, 1))))
+
         original = popup.rect.topleft
+        # Any non-control part of the panel can be grabbed, not just its title.
+        drag_point = popup.rect.center
         popup.handle_event(pygame.event.Event(
-            pygame.MOUSEBUTTONDOWN, pos=popup.header_rect.center, button=1))
+            pygame.MOUSEBUTTONDOWN, pos=drag_point, button=1))
         popup.handle_event(pygame.event.Event(
-            pygame.MOUSEMOTION, pos=(popup.header_rect.centerx + 45,
-                                     popup.header_rect.centery + 25)))
+            pygame.MOUSEMOTION, pos=(drag_point[0] + 45, drag_point[1] + 25)))
         popup.handle_event(pygame.event.Event(
-            pygame.MOUSEBUTTONUP, pos=popup.header_rect.center, button=1))
+            pygame.MOUSEBUTTONUP, pos=drag_point, button=1))
         self.assertNotEqual(popup.rect.topleft, original)
+
+        # Escape closes the province/menu underneath the live popup; it must
+        # not also discard the popup when the map receives that same key.
+        self.assertFalse(popup.handle_event(pygame.event.Event(
+            pygame.KEYDOWN, key=pygame.K_ESCAPE)))
+        self.assertIs(map_stub.navigation_intro_popup, popup)
 
         with mock.patch.object(message_box.queries, "get_settings", return_value={}), \
              mock.patch.object(message_box.queries, "save_cached_json") as save:
@@ -222,6 +235,24 @@ class NavigationIntroPopupTests(unittest.TestCase):
         popup.handle_event(pygame.event.Event(
             pygame.MOUSEBUTTONDOWN, pos=popup.continue_rect.center, button=1))
         self.assertIsNone(map_stub.navigation_intro_popup)
+
+        closeable = message_box._NavigationIntroPopup(map_stub)
+        map_stub.navigation_intro_popup = closeable
+        closeable.handle_event(pygame.event.Event(
+            pygame.MOUSEBUTTONDOWN, pos=closeable.close_rect.center, button=1))
+        self.assertIsNone(map_stub.navigation_intro_popup)
+
+    def test_map_message_popups_hide_for_a_province_menu_without_being_cleared(self):
+        from ui import diplomatic_popups
+
+        map_stub = type("MapStub", (), {"selected_province": None})()
+        self.assertTrue(diplomatic_popups.map_message_popups_visible(map_stub))
+
+        map_stub.selected_province = {"id": 1}
+        self.assertFalse(diplomatic_popups.map_message_popups_visible(map_stub))
+
+        map_stub.selected_province = None
+        self.assertTrue(diplomatic_popups.map_message_popups_visible(map_stub))
 
 
 class KeybindIoTests(unittest.TestCase):

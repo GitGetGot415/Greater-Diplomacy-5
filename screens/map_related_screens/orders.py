@@ -1106,6 +1106,14 @@ class Orders_Screen(GameState):
             self.additional_events(event)
 
     def additional_events(self, event):
+        event_handler.resolve_map_mouse_gesture_conflict(self.map_screen, event)
+        if getattr(self.map_screen, "_ignore_right_until_release", False):
+            if event.type == pygame.MOUSEBUTTONUP and event.button == 3:
+                self.map_screen._ignore_right_until_release = False
+                return
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
+                return
+
         # Dragging the scrollbar handle (or the panel's own content) takes
         # priority over camera panning/hover.
         if event.type == pygame.MOUSEMOTION and (getattr(self, "is_dragging_scrollbar", False)

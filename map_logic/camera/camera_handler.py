@@ -11,7 +11,13 @@ class MapCamera:
         self.tilt_factor = 1.0
         self.manual_tilt_factor = 1.0 # Added explicit manual control factor
         self._middle_drag_last_pos = None
+        self._ignore_middle_until_release = False
         # currently set to instant, but can be adjusted for smoother transitions
+
+    def cancel_middle_drag(self):
+        """Stop a pan when a conflicting right-button gesture begins."""
+        self._middle_drag_last_pos = None
+        self._ignore_middle_until_release = True
 
     def handle_input(self, event, self_map, on_ui):
         if event.type == pygame.MOUSEWHEEL:
@@ -26,10 +32,16 @@ class MapCamera:
         # displays rel can be reported in a different scale from the game
         # surface, which makes a pan feel faster or slower than the drag.
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 2:
+            if self._ignore_middle_until_release:
+                return
             self._middle_drag_last_pos = event.pos if not on_ui else None
             return
         if event.type == pygame.MOUSEBUTTONUP and event.button == 2:
             self._middle_drag_last_pos = None
+            self._ignore_middle_until_release = False
+            return
+
+        if self._ignore_middle_until_release:
             return
 
         buttons = getattr(event, "buttons", ())

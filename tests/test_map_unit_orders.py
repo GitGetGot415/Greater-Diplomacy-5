@@ -238,6 +238,24 @@ class MapOrderGestureTests(unittest.TestCase):
 
         self.assertIsNone(map_stub.unit_selection_drag)
 
+    def test_middle_press_cancels_a_right_drag_without_ordering_on_release(self):
+        map_stub = type("MapStub", (), {
+            "unit_selection_drag": {"start": (10, 10), "current": (80, 80)},
+            "_ignore_right_until_release": False,
+        })()
+
+        event_handler.resolve_map_mouse_gesture_conflict(
+            map_stub, pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(20, 20), button=2))
+
+        self.assertIsNone(map_stub.unit_selection_drag)
+        self.assertTrue(map_stub._ignore_right_until_release)
+
+        map_stub.secondary_mode = "UNITS"
+        map_stub.can_select_map_units = lambda: True
+        self.assertTrue(event_handler._handle_map_unit_selection(
+            map_stub, pygame.event.Event(pygame.MOUSEBUTTONUP, pos=(40, 40), button=3), False))
+        self.assertFalse(map_stub._ignore_right_until_release)
+
 
 class MapViewDefaultTests(unittest.TestCase):
     def test_play_view_defaults_keep_country_selection_presentation_separate(self):

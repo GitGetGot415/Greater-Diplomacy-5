@@ -204,8 +204,26 @@ def close_spent_popups(map_screen):
         return
     map_screen.diplomatic_popups = [p for p in popups if not is_spent(map_screen, p)]
 
+
+def map_message_popups_visible(map_screen):
+    """Whether map-level messages may sit above the current map workspace.
+
+    Province details and other in-map menus need their own clear working area.
+    Keep message popups alive while those menus are open, but neither draw nor
+    let them intercept clicks until the player returns to the open map.
+    """
+    return not any((
+        getattr(map_screen, "selected_province", None),
+        getattr(map_screen, "selection_mode", False),
+        getattr(map_screen, "show_player_ready_screen", False),
+        getattr(map_screen, "show_exit_confirmation", False),
+        getattr(map_screen, "is_saving", False),
+        getattr(map_screen, "thread_error", None),
+    ))
+
 def handle_events(map_screen, event):
-    if not hasattr(map_screen, 'diplomatic_popups'):
+    if (not hasattr(map_screen, 'diplomatic_popups')
+            or not map_message_popups_visible(map_screen)):
         return False
 
     # A popup that has been dealt with must not swallow the click that lands on
@@ -236,6 +254,8 @@ def draw(map_screen, surface):
     if not hasattr(map_screen, 'diplomatic_popups'):
         return
     close_spent_popups(map_screen)
+    if not map_message_popups_visible(map_screen):
+        return
     for popup in map_screen.diplomatic_popups:
         popup.draw(surface)
 

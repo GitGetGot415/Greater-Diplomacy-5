@@ -39,6 +39,27 @@ def _unit_stack_at(map_screen, position):
     return None
 
 
+def resolve_map_mouse_gesture_conflict(map_screen, event):
+    """Cancel a map drag when the other map mouse button is pressed.
+
+    Right-drag selects a rectangle and middle-drag pans.  Letting both run at
+    once leaves stale selection rectangles or resumes a pan after the player
+    releases one button, so the later button cancels the earlier gesture and
+    its own right-click is ignored until released.
+    """
+    if event.type != pygame.MOUSEBUTTONDOWN:
+        return
+
+    if event.button == 2 and getattr(map_screen, "unit_selection_drag", None):
+        map_screen.unit_selection_drag = None
+        map_screen._ignore_right_until_release = True
+    elif event.button == 3:
+        camera = getattr(map_screen, "camera", None)
+        if camera and getattr(camera, "_middle_drag_last_pos", None) is not None:
+            camera.cancel_middle_drag()
+            map_screen._ignore_right_until_release = True
+
+
 def _handle_map_unit_selection(map_screen, event, on_ui):
     """Consume the HOI-style unit gestures while the map is in Units view."""
     # A left-click starts a different interaction.  Clear only the transient
@@ -46,6 +67,13 @@ def _handle_map_unit_selection(map_screen, event, on_ui):
     # held, so a cancelled box selection can never remain painted on screen.
     if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
         map_screen.unit_selection_drag = None
+
+    if getattr(map_screen, "_ignore_right_until_release", False):
+        if event.type == pygame.MOUSEBUTTONUP and event.button == 3:
+            map_screen._ignore_right_until_release = False
+            return True
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
+            return True
 
     if (map_screen.secondary_mode != "UNITS" or on_ui
             or not map_screen.can_select_map_units()):

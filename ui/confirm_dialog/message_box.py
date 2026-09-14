@@ -83,6 +83,8 @@ class _NavigationIntroPopup:
     def _layout(self):
         self.header_rect = pygame.Rect(self.rect.x, self.rect.y,
                                        self.rect.width, self.HEADER_H)
+        self.close_rect = pygame.Rect(self.rect.right - 34, self.rect.y + 11,
+                                      22, 22)
         self.checkbox_rect = pygame.Rect(self.rect.x + 30, self.rect.bottom - 43,
                                          20, 20)
         self.continue_rect = pygame.Rect(self.rect.right - 150, self.rect.bottom - 51,
@@ -108,12 +110,24 @@ class _NavigationIntroPopup:
     def handle_event(self, event):
         """Handle popup-local input; True prevents that event reaching the map."""
         if event.type == pygame.KEYDOWN:
-            if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_ESCAPE, _back_key()):
+            # Escape is handled globally by the map.  In particular, it closes
+            # the province menu before this popup receives the same event; do
+            # not mistake that close for a request to dismiss the tutorial.
+            if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
                 self.dismiss()
                 return True
             return False
 
+        # Middle/right mouse belong to map pan and unit selection even when
+        # their drag crosses this popup.  Only left mouse operates its chrome.
+        if (event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP)
+                and getattr(event, "button", None) in (2, 3)):
+            return False
+
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            if self.close_rect.collidepoint(event.pos):
+                self.dismiss()
+                return True
             if self.continue_rect.collidepoint(event.pos):
                 self.dismiss()
                 return True
@@ -121,17 +135,27 @@ class _NavigationIntroPopup:
                 self.dont_show_again = not self.dont_show_again
                 self._persist_checkbox()
                 return True
-            if self.header_rect.collidepoint(event.pos):
+            if self.rect.collidepoint(event.pos):
                 self.is_dragging = True
                 self.drag_offset = (event.pos[0] - self.rect.x,
                                     event.pos[1] - self.rect.y)
                 return True
-            return self.rect.collidepoint(event.pos)
+            return False
 
-        if event.type == pygame.MOUSEMOTION and self.is_dragging:
-            self._move_to(event.pos[0] - self.drag_offset[0],
-                          event.pos[1] - self.drag_offset[1])
-            return True
+        if event.type == pygame.MOUSEMOTION:
+            if self.is_dragging:
+                self._move_to(event.pos[0] - self.drag_offset[0],
+                              event.pos[1] - self.drag_offset[1])
+                return True
+            buttons = getattr(event, "buttons", ())
+            middle_or_right_held = ((len(buttons) > 1 and buttons[1])
+                                    or (len(buttons) > 2 and buttons[2])
+                                    or getattr(self.map_screen, "unit_selection_drag", None)
+                                    or getattr(getattr(self.map_screen, "camera", None),
+                                               "_middle_drag_last_pos", None) is not None)
+            if middle_or_right_held:
+                return False
+            return self.rect.collidepoint(event.pos)
 
         if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
             was_dragging = self.is_dragging
@@ -148,6 +172,11 @@ class _NavigationIntroPopup:
 
         title = self.title_font.render("Map Navigation", True, (255, 255, 255))
         surface.blit(title, title.get_rect(center=(self.rect.centerx, self.header_rect.centery)))
+
+        pygame.draw.rect(surface, (150, 0, 0), self.close_rect)
+        pygame.draw.rect(surface, (255, 255, 255), self.close_rect, 1)
+        x_label = self.body_font.render("X", True, (255, 255, 255))
+        surface.blit(x_label, x_label.get_rect(center=self.close_rect.center))
 
         column_w = self.rect.width // 3
         image_y = self.rect.y + 68

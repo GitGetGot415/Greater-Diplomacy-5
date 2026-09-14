@@ -39,6 +39,27 @@ class MapCameraBoundsTests(unittest.TestCase):
         self.assertEqual(camera.pos.y, -20)
         self.assertEqual(camera.target_pos, camera.pos)
 
+    def test_conflicting_right_button_cancels_middle_drag_until_release(self):
+        camera = MapCamera(min_zoom=2)
+        camera.zoom = camera.target_zoom = 2
+        self_map = _map(loop_map=False)
+        camera.handle_input(
+            pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(100, 100), button=2),
+            self_map, False)
+
+        camera.cancel_middle_drag()
+        camera.handle_input(
+            pygame.event.Event(pygame.MOUSEMOTION, pos=(150, 150), rel=(50, 50),
+                               buttons=(0, 1, 1)), self_map, False)
+
+        self.assertEqual(camera.pos, pygame.Vector2(0, 0))
+        self.assertTrue(camera._ignore_middle_until_release)
+
+        camera.handle_input(
+            pygame.event.Event(pygame.MOUSEBUTTONUP, pos=(150, 150), button=2),
+            self_map, False)
+        self.assertFalse(camera._ignore_middle_until_release)
+
     def test_non_looping_pan_uses_direct_distance_instead_of_shortest_wrap(self):
         camera = MapCamera(min_zoom=2)
         camera.zoom = camera.target_zoom = 2

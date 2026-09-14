@@ -1313,6 +1313,7 @@ class Map(GameState):
         self.unit_stack_hitboxes = []
         self.unit_hover_hitboxes = []
         self.unit_selection_drag = None
+        self._ignore_right_until_release = False
         self._unit_selection_turn = self.time_manager.total_turns
         self._unit_selection_player = self.player_country
         self.feedback_text = ""
@@ -1804,8 +1805,11 @@ class Map(GameState):
     def handle_events(self, events):
         """Route the live navigation guide before HUD buttons and map input."""
         for event in events:
+            event_handler.resolve_map_mouse_gesture_conflict(self, event)
             popup = self.navigation_intro_popup
-            if popup is not None and popup.handle_event(event):
+            from ui import diplomatic_popups
+            if (popup is not None and diplomatic_popups.map_message_popups_visible(self)
+                    and popup.handle_event(event)):
                 continue
             super().handle_events([event])
 
@@ -2071,7 +2075,7 @@ class Map(GameState):
         diplomatic_popups.draw(self, surface)
 
         popup = self.navigation_intro_popup
-        if popup is not None:
+        if popup is not None and diplomatic_popups.map_message_popups_visible(self):
             popup.draw(surface)
 
         if self.thread_error:
