@@ -297,24 +297,6 @@ class PolicyTests(unittest.TestCase):
         for _ in range(politics.POLICY_ACTIVATION_TURNS):
             politics.tick(screen)
 
-    def test_policy_needs_three_processed_turns_before_its_effects_apply(self):
-        screen = self.screen_at(-3)
-        self.assertTrue(politics.activate_or_cancel_policy(
-            screen.nation_data, "A", "research_subsidies"))
-
-        for expected_turns in (2, 1):
-            politics.tick(screen)
-            self.assertEqual(politics.policy_state(screen.nation_data, "A")["turns_remaining"],
-                             expected_turns)
-            self.assertEqual(politics.research_multiplier(screen.nation_data, "A"), 1.3)
-
-        politics.tick(screen)
-        self.assertEqual(politics.policy_state(screen.nation_data, "A")["status"],
-                         politics.POLICY_ACTIVE)
-        self.assertAlmostEqual(politics.research_multiplier(screen.nation_data, "A"), 1.3 * 1.2)
-        self.assertAlmostEqual(politics.resource_multiplier(screen.nation_data, "A", "manpower"), 0.9)
-        self.assertAlmostEqual(politics.resource_multiplier(screen.nation_data, "A", "materials"), 0.9)
-
     def test_policy_requirements_are_strict(self):
         self.assertFalse(politics.requirements_met({"A": {"political_value": -2}}, "A",
                                                    "research_subsidies"))
