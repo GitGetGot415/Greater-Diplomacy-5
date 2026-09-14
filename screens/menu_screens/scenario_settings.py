@@ -66,8 +66,8 @@ TOGGLE_ROWS = [
     ("casus_belli_required", c.DEFAULT_CASUS_BELLI, "Casus Belli Required",
      "Requires a valid justification (casus belli) before a country can declare war on another."),
     ("free_repairs", c.DEFAULT_FREE_REPAIRS, "Free Repairs",
-     "Repairing a damaged unit costs nothing. Turn this off to make repair cost "
-     "materials, manpower, and fuel proportional to how much health is missing."),
+     "When enabled, repairing a damaged unit costs nothing. When disabled, repair "
+     "costs materials, manpower, and fuel proportional to missing health."),
     ("surprise_attack", c.DEFAULT_SURPRISE_ATTACK, "Surprise Attack",
      "Lets armies attack on the same turn as a war declaration instead of making them wait until the other size receives it, catching the enemy by surprise."),
     ("disable_factions", c.DEFAULT_DISABLE_FACTIONS, "Disable Factions",
