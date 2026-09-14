@@ -259,7 +259,7 @@ class _NavigationIntroPopup:
                 desc_surf = self.body_font.render(description, True, (225, 225, 225))
                 surface.blit(desc_surf, (x + 36, y + self.label_font.get_height() + 2))
             army_note = self.body_font.render(
-                "Top-right Army cards organize units; click one to select its members.",
+                "Army cards: click to select members; E edits their name and colored map emblem.",
                 True, (185, 215, 255))
             surface.blit(army_note, army_note.get_rect(center=(self.rect.centerx, self.rect.y + 316)))
 

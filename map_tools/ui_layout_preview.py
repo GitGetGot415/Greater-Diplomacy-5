@@ -49,13 +49,18 @@ def _set_armies(game_map, count):
                 for unit in province.get("units", [])
                 if unit.get("owner") == game_map.player_country]
     armies = []
+    emblems = queries.army_symbol_choices()
     for index in range(count):
         # The packed preview intentionally includes synthetic members after
         # the playable nation's real units run out. It is display-only data,
         # never serialized or submitted to a game.
         member = unit_ids[index] if index < len(unit_ids) else f"preview-unit-{index}"
         armies.append({"id": f"preview-army-{index}", "name": f"Army {index + 1}",
-                       "unit_ids": [member]})
+                       "unit_ids": [member],
+                       "symbol": emblems[index % len(emblems)] if emblems else "",
+                       "symbol_color": [80 + (index * 37) % 150,
+                                        80 + (index * 67) % 150,
+                                        80 + (index * 97) % 150]})
     game_map.nation_data[game_map.player_country]["armies"] = armies
 
 

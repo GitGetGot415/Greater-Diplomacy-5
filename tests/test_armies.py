@@ -49,7 +49,26 @@ class ArmyQueryTests(unittest.TestCase):
         ]
         queries.normalize_armies(self.nations, self.world)
         self.assertEqual(self.nations["A"]["armies"], [
-            {"id": "keep", "name": "Army 1", "unit_ids": [own_id]}])
+            {"id": "keep", "name": "Army 1", "unit_ids": [own_id],
+             "symbol": "", "symbol_color": list(c.DEFAULT_ARMY_SYMBOL_COLOR)}])
+
+    def test_army_presentation_round_trips_and_invalid_legacy_art_is_removed(self):
+        queries.normalize_armies(self.nations, self.world)
+        unit_id = self.first["units"][0]["unit_id"]
+        army = queries.create_army("A", [unit_id], self.nations, self.world)
+        symbol = queries.army_symbol_choices()[0]
+        updated = queries.update_army_presentation(
+            "A", army["id"], "Northern Command", symbol, [12, 90, 230],
+            self.nations, self.world)
+        self.assertEqual(updated["name"], "Northern Command")
+        self.assertEqual(updated["symbol"], symbol)
+        self.assertEqual(updated["symbol_color"], [12, 90, 230])
+        updated["symbol"] = "No Longer Installed"
+        updated["symbol_color"] = [999, 0, 0]
+        queries.normalize_armies(self.nations, self.world)
+        normalized = self.nations["A"]["armies"][0]
+        self.assertEqual(normalized["symbol"], "")
+        self.assertEqual(normalized["symbol_color"], list(c.DEFAULT_ARMY_SYMBOL_COLOR))
 
 
 class ArmyLayoutTests(unittest.TestCase):

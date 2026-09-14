@@ -84,9 +84,10 @@ def clear_caches():
 
 
 def load_symbols():
-    """Load flat icons, classic art, bubbles, buildings, and alternate styles."""
+    """Load flat icons, classic art, bubbles, army emblems, and alternate styles."""
     for path in (c.ASSETS_DIR, c.CLASSIC_UNIT_ART_DIR, c.COMBAT_BUBBLES_DIR):
         _load_flat_symbols(path)
+    _load_army_symbols(c.ARMY_SYMBOLS_DIR)
 
     # Factory/recruitment center building art lives in its own folder (see
     # c.BUILDINGS_DIR) but still resolves through the same flat name->Surface
@@ -119,6 +120,17 @@ def _load_flat_symbols(path):
             # Load and keep transparency
             img = pygame.image.load(os.path.join(path, file)).convert_alpha()
             SYMBOLS[name] = img
+
+
+def _load_army_symbols(path):
+    """Load army emblems without allowing their filenames to shadow game art."""
+    if not os.path.exists(path):
+        return
+    for file in os.listdir(path):
+        if file.lower().endswith(".png"):
+            name = os.path.splitext(file)[0]
+            SYMBOLS[f"{c.ARMY_SYMBOL_KEY_PREFIX}{name}"] = (
+                pygame.image.load(os.path.join(path, file)).convert_alpha())
 
 
 def _load_variant(style, style_dir, name_key, entry, cultures=None):

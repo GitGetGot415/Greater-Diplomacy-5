@@ -1302,6 +1302,39 @@ def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,
         reverse=True
     )
 
+    def draw_army_emblems(owner_units, box_rect):
+        """Draw one colored emblem per organized visible unit beside its stack.
+
+        A province's unit box intentionally combines all of one country's
+        divisions, so the emblems form a compact strip immediately to its left
+        rather than creating extra overlapping unit boxes.  This runs only for
+        the local player's already-rendered stack, preserving fog boundaries.
+        """
+        if owner != map_screen.player_country:
+            return
+        emblems = [queries.army_for_unit(unit, map_screen.nation_data)
+                   for unit in owner_units]
+        emblems = [army for army in emblems if army and army.get("symbol")]
+        if not emblems:
+            return
+        badge_size = max(7, min(15, int(scaled_h * 0.34)))
+        rows = min(3, len(emblems))
+        for index, army in enumerate(emblems):
+            key = f"{c.ARMY_SYMBOL_KEY_PREFIX}{army['symbol']}"
+            native_size = symbol_loader.get_native_size(key, style="classic")
+            if not native_size:
+                continue
+            zoom = (badge_size * 2) / max(native_size)
+            badge = symbol_loader.get_symbol(
+                key, zoom, color=tuple(army.get("symbol_color", c.DEFAULT_ARMY_SYMBOL_COLOR)),
+                style="classic")
+            if not badge:
+                continue
+            column, row = divmod(index, rows)
+            center = (box_rect.left - 5 - column * (badge_size + 2),
+                      box_rect.centery + (row - (rows - 1) / 2) * (badge_size + 1))
+            surface.blit(badge, badge.get_rect(center=(int(center[0]), int(center[1]))))
+
     for owner in sorted_owners:
         owner_units = units_by_owner[owner]
         
@@ -1334,6 +1367,7 @@ def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,
         # Blit using the stacked Y coordinate
         rect = final_surf.get_rect(center=(sx, int(current_sy)))
         surface.blit(final_surf, rect)
+        draw_army_emblems(owner_units, rect)
 
         # Only visible, rendered owner stacks publish a hitbox.  The event
         # layer additionally checks authority before selecting, but never

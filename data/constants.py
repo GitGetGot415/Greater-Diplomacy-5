@@ -2095,6 +2095,12 @@ ASSETS_DIR = "assets/images"
 # both are loaded into the shared symbol registry by symbol_loader.
 CLASSIC_UNIT_ART_DIR = "assets/classic"
 COMBAT_BUBBLES_DIR = "assets/combat_bubbles"
+# Small player-facing emblems used by persistent armies.  They are loaded
+# under an army-specific key, so a generic filename such as ``Star.png``
+# cannot replace normal unit or UI art.
+ARMY_SYMBOLS_DIR = "assets/symbols"
+ARMY_SYMBOL_KEY_PREFIX = "Army Symbol "
+DEFAULT_ARMY_SYMBOL_COLOR = (210, 70, 70)
 # Factory and recruitment center building art, kept out of the flat
 # assets/images set since building names/levels multiply fast. Loaded into
 # the same SYMBOLS name->Surface map as ASSETS_DIR -- see symbol_loader.load_symbols.

@@ -2230,6 +2230,31 @@ def _army_unit_ids_by_owner(map_data):
     return owners
 
 
+def army_symbol_choices():
+    """Return installed army-emblem names in a stable, display-ready order."""
+    try:
+        return sorted(
+            os.path.splitext(filename)[0]
+            for filename in os.listdir(c.ARMY_SYMBOLS_DIR)
+            if filename.lower().endswith(".png"))
+    except OSError:
+        return []
+
+
+def normalize_army_symbol(symbol):
+    """Return a usable emblem name, or the no-emblem value for stale saves."""
+    return symbol if isinstance(symbol, str) and symbol in army_symbol_choices() else ""
+
+
+def normalize_army_symbol_color(color):
+    """Return a JSON-safe RGB army-emblem color, with a safe legacy default."""
+    if (isinstance(color, (list, tuple)) and len(color) == 3
+            and all(isinstance(channel, int) and not isinstance(channel, bool)
+                    and 0 <= channel <= 255 for channel in color)):
+        return list(color)
+    return list(c.DEFAULT_ARMY_SYMBOL_COLOR)
+
+
 def normalize_armies(nation_data, map_data):
     """Repair persistent army rosters against the current owned-unit state.
 
@@ -2272,7 +2297,10 @@ def normalize_armies(nation_data, map_data):
             if not isinstance(name, str) or not name.strip():
                 name = f"Army {len(valid) + 1}"
             valid.append({"id": army_id, "name": name.strip()[:80],
-                          "unit_ids": unit_ids})
+                          "unit_ids": unit_ids,
+                          "symbol": normalize_army_symbol(raw.get("symbol", "")),
+                          "symbol_color": normalize_army_symbol_color(
+                              raw.get("symbol_color"))})
         country["armies"] = valid
 
 
@@ -2311,7 +2339,8 @@ def create_army(country_id, unit_ids, nation_data, map_data):
                              if unit_id not in member_set]
     armies[:] = [army for army in armies if army.get("unit_ids")]
     army = {"id": uuid.uuid4().hex, "name": _army_name(armies),
-            "unit_ids": members}
+            "unit_ids": members, "symbol": "",
+            "symbol_color": list(c.DEFAULT_ARMY_SYMBOL_COLOR)}
     armies.append(army)
     normalize_armies(nation_data, map_data)
     return next((item for item in nation_data[country_id]["armies"]
@@ -2362,6 +2391,42 @@ def disband_army(country_id, army_id, nation_data, map_data):
     original_len = len(armies)
     armies[:] = [army for army in armies if army.get("id") != army_id]
     return len(armies) != original_len
+
+
+def update_army_presentation(country_id, army_id, name, symbol, symbol_color,
+                             nation_data, map_data):
+    """Update an army's player-facing label and optional colored emblem.
+
+    Membership remains untouched.  This is the one mutation path used by the
+    map UI, while multiplayer validates the same schema before it reaches a
+    canonical nation record.
+    """
+    normalize_armies(nation_data, map_data)
+    army = next((item for item in get_armies(country_id, nation_data, map_data)
+                 if item.get("id") == army_id), None)
+    if army is None or not isinstance(name, str) or not name.strip():
+        return None
+    army["name"] = name.strip()[:80]
+    army["symbol"] = normalize_army_symbol(symbol)
+    army["symbol_color"] = normalize_army_symbol_color(symbol_color)
+    return army
+
+
+def army_for_unit(unit, nation_data):
+    """Return the owning army for a unit, if it has one.
+
+    The map only calls this for already-visible owned units, so it cannot leak
+    army organization through fog-of-war rendering.
+    """
+    if not isinstance(unit, dict):
+        return None
+    owner, unit_id = unit.get("owner"), unit.get("unit_id")
+    if not isinstance(owner, str) or not isinstance(unit_id, str):
+        return None
+    for army in get_armies(owner, nation_data, None):
+        if unit_id in army.get("unit_ids", []):
+            return army
+    return None
 
 def migrate_units_to_current_stats(map_data, unit_library):
     """

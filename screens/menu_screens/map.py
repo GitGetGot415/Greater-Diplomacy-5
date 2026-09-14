@@ -1322,6 +1322,9 @@ class Map(GameState):
         self.unit_stack_hitboxes = []
         self.unit_hover_hitboxes = []
         self.unit_selection_drag = None
+        # Army-card editing is local UI state like selection.  The edited
+        # record itself still lives in nation_data and is saved/synchronized.
+        self.army_editor_state = None
         self._ignore_left_until_release = False
         self._ignore_right_until_release = False
         self._unit_selection_turn = self.time_manager.total_turns
