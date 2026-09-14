@@ -112,6 +112,10 @@ class Orders_Screen(GameState):
         self.target_province = None
         self.map_screen = None
         self.selected_unit_index = None
+        # The panel remembers the group that opened (or was last box-selected
+        # in) this Orders session.  Its rows remain available when the player
+        # focuses one member, while map selection alone controls movement.
+        self.roster_unit_ids = set()
         self.cancel_rects = []
         self.action_buttons = []
         self.unit_row_icons = {}
@@ -213,6 +217,7 @@ class Orders_Screen(GameState):
         elif isinstance(self.selected_unit_index, int):
             self.map_screen.select_map_units([units[self.selected_unit_index]])
 
+        self._replace_roster_with_selection()
         self.refresh_ui()
         if (open_battle_on_entry and queries.is_province_in_active_combat(
                 self.target_province, self.map_screen.nation_data)):
@@ -240,7 +245,21 @@ class Orders_Screen(GameState):
         else:
             self.selected_unit_index = own_indices[0] if own_indices else None
         self.read_only = not self.map_screen.selected_unit_records()
+        self._replace_roster_with_selection()
         self.refresh_ui()
+
+    def _replace_roster_with_selection(self):
+        """Make the visible Orders roster match the current map selection."""
+        self.roster_unit_ids = {
+            id(unit) for unit, _province in self.map_screen.selected_unit_records()
+        }
+
+    def _remember_roster_selection(self):
+        """Keep the current group visible while focusing one of its members."""
+        if not hasattr(self, "roster_unit_ids"):
+            self.roster_unit_ids = set()
+        self.roster_unit_ids.update(
+            id(unit) for unit, _province in self.map_screen.selected_unit_records())
 
     def exit_screen(self):
         # The battle inspector is an optional child panel now, so leaving
@@ -353,12 +372,15 @@ class Orders_Screen(GameState):
                 self.map_screen.select_map_units([unit])
                 self.selected_unit_index = index
         self.bombarding_unit_index = None
+        self._replace_roster_with_selection()
         self.refresh_ui()
 
     def toggle_selected_unit(self, unit):
         """Focus a group member, or deselect the sole selected unit."""
         if getattr(self, "read_only", False) or self._command_blocked(unit):
             return
+        self._remember_roster_selection()
+        self.roster_unit_ids.add(id(unit))
         if self.map_screen.is_unit_selected(unit):
             if len(self.map_screen.selected_unit_records()) > 1:
                 self.map_screen.select_map_units([unit])
@@ -581,23 +603,36 @@ class Orders_Screen(GameState):
                     button.apply_state(visible=False)
 
     def _visible_rows(self):
-        """Selected commandable units, with their live province and index.
+        """Orders-session units, with their live province and index.
 
-        The selection owner already filters fog-hidden and foreign stacks, so
-        the Orders roster can safely span the whole visible map without
-        accidentally turning a province inspection into an intelligence leak.
+        The roster retains units that were selected together even after the
+        player focuses one of them.  That leaves the other rows visible and
+        unselected, while only the focused unit receives map move orders.
         The row key stays an integer for the focused province for compatibility
         with its single-unit action controls; cross-province rows use a stable
         tuple so identically numbered stack slots never collide in the UI.
         """
-        rows = []
-        for unit, province in self.map_screen.selected_unit_records():
-            index = next((i for i, candidate in enumerate(province.get("units", []))
-                          if candidate is unit), None)
-            if index is None:
-                continue
-            row_key = index if province is self.target_province else (province["id"], index)
-            rows.append((row_key, unit, province, index))
+        selected_records = self.map_screen.selected_unit_records()
+        if not getattr(self, "roster_unit_ids", set()):
+            self.roster_unit_ids = {id(unit) for unit, _province in selected_records}
+
+        map_data = getattr(self.map_screen, "map_data", None)
+        if map_data is None:
+            # Lightweight callers and focused tests can provide only the
+            # selected-record query; the live Map always provides map_data.
+            map_data = {province["id"]: province
+                        for _unit, province in selected_records}
+
+        rows, live_ids = [], set()
+        for province in map_data.values():
+            for index, unit in enumerate(province.get("units", [])):
+                unit_id = id(unit)
+                if unit_id not in self.roster_unit_ids:
+                    continue
+                live_ids.add(unit_id)
+                row_key = index if province is self.target_province else (province["id"], index)
+                rows.append((row_key, unit, province, index))
+        self.roster_unit_ids.intersection_update(live_ids)
         return rows
 
     def refresh_ui(self):
@@ -1082,7 +1117,8 @@ class Orders_Screen(GameState):
         # one rect for drawing, clipping and input prevents map clicks leaking
         # through a gap between the controls and roster.
         panel_rect = self.panel_rect
-        on_ui = panel_rect.collidepoint(mx, my)
+        event_pos = getattr(event, "pos", (mx, my))
+        on_ui = panel_rect.collidepoint(event_pos)
 
         # A left-click starts a stack selection, a province interaction, or a
         # panel action.  It always cancels an unfinished right-drag rectangle
@@ -1101,6 +1137,7 @@ class Orders_Screen(GameState):
                     self.target_province = stack["province"]
                     self.selected_unit_index = None
                     self.read_only = not bool(self.map_screen.selected_unit_records())
+                    self._replace_roster_with_selection()
                     self.refresh_ui()
                     return
 
@@ -1142,6 +1179,7 @@ class Orders_Screen(GameState):
                 self.map_screen.select_map_units(selected, additive=drag["additive"])
                 self.selected_unit_index = None
                 self.read_only = not bool(self.map_screen.selected_unit_records())
+                self._replace_roster_with_selection()
                 self.refresh_ui()
             return
 
@@ -1165,6 +1203,15 @@ class Orders_Screen(GameState):
                 self.set_bombard_target(self.bombarding_unit_actual_index, dest,
                                         self.bombarding_unit_province)
             return
+
+        # Left-clicking open map space is the quick way out of the Orders
+        # workspace.  A visible unit stack remains an interaction target even
+        # when it belongs to another country, so it never accidentally closes
+        # the screen underneath the cursor.
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and not on_ui:
+            if event_handler._unit_stack_at(self.map_screen, event.pos) is None:
+                self.exit_screen()
+                return
 
         # --- Dynamic Map Hover Update ---
         if event.type == pygame.MOUSEMOTION:
@@ -1204,7 +1251,7 @@ class Orders_Screen(GameState):
             return "Choose bombard target", BOMBARD_TARGET_COLOR
 
         order = unit.get("order", {})
-        if not isinstance(order, dict) or not order:
+        if not self._has_active_order(order):
             return "Ready", c.UI_TEXT_MUTED
 
         path = order.get("path", [])
@@ -1216,7 +1263,10 @@ class Orders_Screen(GameState):
         turns = order.get("turns_left")
         turn_suffix = f" | {turns}t" if turns is not None else ""
         if order_type == "MOVE":
-            return "Move: choose destination", (255, 225, 80)
+            # An empty MOVE is the engine's normal idle placeholder, not an
+            # order waiting for a destination.  _has_active_order filters it,
+            # but keep this fallback neutral for malformed legacy data.
+            return "Ready", c.UI_TEXT_MUTED
         if order_type == "BOMBARD":
             return f"Bombard: P{order.get('target_id', '?')}", BOMBARD_TARGET_COLOR
         if order_type == "CONVERT":
@@ -1230,6 +1280,18 @@ class Orders_Screen(GameState):
         if order_type:
             return order_type.title(), c.UI_TEXT_LIGHT
         return "Order queued", c.UI_TEXT_LIGHT
+
+    @staticmethod
+    def _has_active_order(order):
+        """Whether an order warrants status color and an individual cancel X.
+
+        Movement resolution retains an empty MOVE dictionary as an idle
+        placeholder.  It has no destination or effect, so it must look and
+        behave exactly like a unit with no order at all.
+        """
+        if not isinstance(order, dict) or not order:
+            return False
+        return order.get("type") != "MOVE" or bool(order.get("path"))
 
     def _draw_unit_row(self, surface, row_key, unit, province, unit_index, row_y, display_index,
                        owner_color, small_font, tiny_font, show_actions):
@@ -1329,7 +1391,7 @@ class Orders_Screen(GameState):
                 pygame.draw.rect(surface, health_color, fill_rect)
 
         order = unit.get("order")
-        has_order = isinstance(order, dict) and bool(order)
+        has_order = self._has_active_order(order)
         if (show_actions and is_own and has_order
                 and not self._command_blocked_silent(unit)):
             cancel_x = (self.PANEL_X + ACTION_START_OFFSET_X

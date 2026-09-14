@@ -749,18 +749,34 @@ class OrdersScreenRegressionTests(BattleScreenTestCase):
                 self.assertTrue(screen.panel_rect.contains(button.rect))
                 self.assertTrue(screen.scroll_content_rect.contains(button.rect))
 
-        cancel_by_index = {index: rect for rect, index, _province in screen.cancel_rects}
-        self.assertEqual(len(screen.cancel_rects), len(owned_indices))
-        self.assertEqual(set(cancel_by_index), set(owned_indices))
-        for rect in cancel_by_index.values():
-            self.assertTrue(screen.panel_rect.contains(rect))
-            self.assertTrue(screen.scroll_content_rect.contains(rect))
+        focused_unit = self.province["units"][owned_indices[0]]
+
+        # Empty MOVE dictionaries are the engine's idle placeholders, so they
+        # must not create a yellow status or a cancel control.
+        self.assertEqual(screen.cancel_rects, [])
+        summary, color = screen._order_summary(owned_indices[0], focused_unit)
+        self.assertEqual(summary, "Ready")
+        self.assertEqual(color, c.UI_TEXT_MUTED)
 
         # Clicking one member of a group focuses it instead of deselecting it.
-        focused_unit = self.province["units"][owned_indices[0]]
         screen.toggle_selected_unit(focused_unit)
         self.assertEqual(self.map.selected_unit_records(), [(focused_unit, self.province)])
-        self.assertLess(screen.panel_rect.height, group_panel_height)
+        # The rest of the group remains in the roster, visibly unselected, so
+        # it can be picked again without reopening Orders.
+        self.assertEqual(set(screen.unit_row_icons), set(owned_indices))
+        self.assertEqual(screen.panel_rect.height, group_panel_height)
+
+    def test_left_clicking_open_map_space_leaves_orders(self):
+        import pygame as pg
+
+        screen = self.orders_screen()
+        screen.exit_screen = mock.Mock()
+        self.map.unit_hover_hitboxes = []
+
+        screen.additional_events(
+            pg.event.Event(pg.MOUSEBUTTONDOWN, pos=(640, 360), button=1))
+
+        screen.exit_screen.assert_called_once_with()
 
     def test_drawing_orders_suppresses_only_its_embedded_map_flag(self):
         from ui.bars import flag_renderer
