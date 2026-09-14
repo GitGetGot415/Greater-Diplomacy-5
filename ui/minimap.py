@@ -12,17 +12,51 @@ MINIMAP_BG_COLOR = (10, 10, 10)
 MINIMAP_BORDER_COLOR = (100, 100, 100)
 MINIMAP_VIEWBOX_COLOR = (255, 255, 0)
 
-def draw_minimap(map_screen, surface, screen_width, screen_height):
+
+def minimap_rect(map_screen, screen_width, screen_height):
+    """Return the shared minimap bounds used by drawing and top-right layout."""
     map_aspect = map_screen.map_h / map_screen.map_w
     mini_w = MINIMAP_WIDTH
     mini_h = int(mini_w * map_aspect)
-    
-    # Position of the minimap background
-    mx, my = screen_width - mini_w - MINIMAP_MARGIN_X, screen_height - mini_h - MINIMAP_MARGIN_Y
+    return pygame.Rect(screen_width - mini_w - MINIMAP_MARGIN_X,
+                       screen_height - mini_h - MINIMAP_MARGIN_Y,
+                       mini_w, mini_h)
 
-    # Draw Background
-    pygame.draw.rect(surface, MINIMAP_BG_COLOR, (mx, my, mini_w, mini_h))
-    pygame.draw.rect(surface, MINIMAP_BORDER_COLOR, (mx, my, mini_w, mini_h), 1)
+
+def _map_image(map_screen, size, ocean_color):
+    """Return a cached miniaturized active map layer, refreshing on layer changes."""
+    source = getattr(map_screen, "active_map", None)
+    if source is None:
+        return None
+    key = (id(source), source.get_size(), tuple(size), tuple(ocean_color))
+    cached = getattr(map_screen, "_minimap_image_cache", None)
+    if not cached or cached[0] != key:
+        # Composite the chroma-key source *before* smoothing. Smoothscale
+        # turns #ff00ff into near-pink edge/interior pixels (#fd00fd, etc.),
+        # which a colorkey applied afterwards cannot remove.
+        composite = pygame.Surface(source.get_size())
+        composite.fill(ocean_color)
+        composite.blit(source, (0, 0))
+        image = pygame.transform.smoothscale(composite, size)
+        cached = (key, image)
+        map_screen._minimap_image_cache = cached
+    return cached[1]
+
+
+def draw_minimap(map_screen, surface, screen_width, screen_height):
+    rect = minimap_rect(map_screen, screen_width, screen_height)
+    mx, my, mini_w, mini_h = rect
+
+    # Match the main renderer: chroma-key water in political layers reveals
+    # the normal dynamic ocean color rather than a pink/black backing surface.
+    ocean_color = getattr(map_screen, "bg_color", c.OCEAN_DARK_BLUE)
+    pygame.draw.rect(surface, ocean_color, rect)
+    # Show the same political/terrain layer as the main map.  The fallback is
+    # retained for lightweight tools that do not construct an active surface.
+    image = _map_image(map_screen, rect.size, ocean_color)
+    if image is not None:
+        surface.blit(image, rect.topleft)
+    pygame.draw.rect(surface, MINIMAP_BORDER_COLOR, rect, 1)
     
     # --- UI Offset Logic ---
     visible_map_width = screen_width - c.UI_LEFT_OFFSET

@@ -3,6 +3,7 @@
 import pygame
 
 import data.constants as c
+from ui import minimap
 
 
 PANEL_WIDTH = 260
@@ -29,6 +30,11 @@ def army_tray_rect(map_screen, army_count=0):
         if details and details.visible:
             top = max(top, details.rect.bottom + PANEL_GAP)
     bottom = c.SCREEN_HEIGHT - c.BOT_UI_HEIGHT - PANEL_GAP
+    # The army tray shares the right edge with the minimap.  Reserve the
+    # minimap's complete rectangle, then let the card list scroll within the
+    # remaining space instead of ever covering the map overview.
+    mini_rect = minimap.minimap_rect(map_screen, c.SCREEN_WIDTH, c.SCREEN_HEIGHT)
+    bottom = min(bottom, mini_rect.top - PANEL_GAP)
     available_height = max(1, bottom - top)
     wanted_height = (TRAY_HEADER_HEIGHT + 8
                      + max(1, army_count) * (CARD_HEIGHT + 5))

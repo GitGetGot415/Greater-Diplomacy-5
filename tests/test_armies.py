@@ -8,7 +8,7 @@ import pygame
 import data.constants as c
 from data import queries
 from screens.map_related_screens.orders import Orders_Screen
-from ui import army_panel, map_top_right_layout
+from ui import army_panel, map_top_right_layout, minimap
 
 
 class ArmyQueryTests(unittest.TestCase):
@@ -89,12 +89,26 @@ class ArmyQueryTests(unittest.TestCase):
                          {first_unit["unit_id"], second_unit["unit_id"]})
         self.assertEqual(selected_ids, {first_unit["unit_id"]})
 
+    def test_army_order_is_player_managed_and_persistent(self):
+        queries.normalize_armies(self.nations, self.world)
+        first_id = self.first["units"][0]["unit_id"]
+        second_id = self.second["units"][0]["unit_id"]
+        first_army = queries.create_army("A", [first_id], self.nations, self.world)
+        second_army = queries.create_army("A", [second_id], self.nations, self.world)
+        self.assertTrue(queries.move_army("A", second_army["id"], -1,
+                                          self.nations, self.world))
+        self.assertEqual([army["id"] for army in self.nations["A"]["armies"]],
+                         [second_army["id"], first_army["id"]])
+        self.assertFalse(queries.move_army("A", second_army["id"], -1,
+                                           self.nations, self.world))
+
 
 class ArmyLayoutTests(unittest.TestCase):
     def test_one_army_uses_a_compact_tray_and_province_view_hides_it(self):
         map_ref = SimpleNamespace(realtime_multiplayer=False, selected_province=None,
                                   selection_mode=False, is_editor=False,
-                                  player_country="A", tactical_mode=False)
+                                  player_country="A", tactical_mode=False,
+                                  map_w=1000, map_h=500)
         tray = map_top_right_layout.army_tray_rect(map_ref, 1)
         self.assertLess(tray.height, 100)
         self.assertTrue(army_panel._visible(map_ref))
@@ -104,10 +118,40 @@ class ArmyLayoutTests(unittest.TestCase):
     def test_realtime_tray_reserves_status_details_and_bottom_bar(self):
         details = SimpleNamespace(rect=pygame.Rect(c.SCREEN_WIDTH - 120, 140, 80, 24), visible=True)
         map_ref = SimpleNamespace(realtime_multiplayer=True,
-                                  realtime_connection_error="", btn_realtime_details=details)
+                                  realtime_connection_error="", btn_realtime_details=details,
+                                  map_w=1000, map_h=500)
         tray = map_top_right_layout.army_tray_rect(map_ref, 5)
         status = map_top_right_layout.realtime_status_rect()
         self.assertGreaterEqual(tray.top, max(status.bottom, details.rect.bottom) +
                                 map_top_right_layout.PANEL_GAP)
         self.assertLessEqual(tray.bottom, c.SCREEN_HEIGHT - c.BOT_UI_HEIGHT -
                              map_top_right_layout.PANEL_GAP)
+        self.assertLessEqual(tray.bottom, minimap.minimap_rect(
+            map_ref, c.SCREEN_WIDTH, c.SCREEN_HEIGHT).top - map_top_right_layout.PANEL_GAP)
+
+
+class MinimapTests(unittest.TestCase):
+    def test_minimap_draws_the_active_map_layer(self):
+        active_map = pygame.Surface((40, 20))
+        active_map.fill((35, 140, 210))
+        map_ref = SimpleNamespace(
+            map_w=40, map_h=20, active_map=active_map,
+            camera=SimpleNamespace(pos=SimpleNamespace(x=0, y=0), zoom=20, tilt_factor=1),
+            total_ui_h=c.TOTAL_UI_HEIGHT)
+        surface = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
+        minimap.draw_minimap(map_ref, surface, c.SCREEN_WIDTH, c.SCREEN_HEIGHT)
+        rect = minimap.minimap_rect(map_ref, c.SCREEN_WIDTH, c.SCREEN_HEIGHT)
+        self.assertEqual(surface.get_at((rect.centerx, rect.centery))[:3], (35, 140, 210))
+
+    def test_minimap_replaces_chroma_key_water_with_ocean_color(self):
+        active_map = pygame.Surface((40, 20))
+        active_map.fill(c.COLOR_CHROMA_PINK)
+        active_map.set_colorkey(c.COLOR_CHROMA_PINK)
+        map_ref = SimpleNamespace(
+            map_w=40, map_h=20, active_map=active_map, bg_color=(17, 46, 83),
+            camera=SimpleNamespace(pos=SimpleNamespace(x=0, y=0), zoom=20, tilt_factor=1),
+            total_ui_h=c.TOTAL_UI_HEIGHT)
+        surface = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
+        minimap.draw_minimap(map_ref, surface, c.SCREEN_WIDTH, c.SCREEN_HEIGHT)
+        rect = minimap.minimap_rect(map_ref, c.SCREEN_WIDTH, c.SCREEN_HEIGHT)
+        self.assertEqual(surface.get_at((rect.centerx, rect.centery))[:3], (17, 46, 83))

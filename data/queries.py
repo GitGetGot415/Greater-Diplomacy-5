@@ -2393,6 +2393,21 @@ def disband_army(country_id, army_id, nation_data, map_data):
     return len(armies) != original_len
 
 
+def move_army(country_id, army_id, direction, nation_data, map_data):
+    """Move an army one display slot up or down in its owner's roster."""
+    normalize_armies(nation_data, map_data)
+    armies = get_armies(country_id, nation_data, map_data)
+    index = next((i for i, army in enumerate(armies)
+                  if army.get("id") == army_id), None)
+    if index is None or direction not in (-1, 1):
+        return False
+    target = index + direction
+    if not 0 <= target < len(armies):
+        return False
+    armies[index], armies[target] = armies[target], armies[index]
+    return True
+
+
 def update_army_presentation(country_id, army_id, name, symbol, symbol_color,
                              nation_data, map_data):
     """Update an army's player-facing label and optional colored emblem.

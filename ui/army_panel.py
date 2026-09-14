@@ -74,6 +74,14 @@ def _close_rect(card):
     return pygame.Rect(card.right - 25, card.y + 10, 17, 17)
 
 
+def _move_up_rect(card):
+    return pygame.Rect(card.right - 91, card.y + 10, 17, 17)
+
+
+def _move_down_rect(card):
+    return pygame.Rect(card.right - 69, card.y + 10, 17, 17)
+
+
 def _draw_emblem(surface, symbol, color, center, size):
     if not symbol:
         return
@@ -282,6 +290,14 @@ def handle_event(map_screen, event):
             queries.disband_army(map_screen.player_country, army["id"],
                                   map_screen.nation_data, map_screen.map_data)
             map_screen.show_feedback(f"Disbanded {army['name']}")
+        elif _move_up_rect(rect).collidepoint(event.pos):
+            if queries.move_army(map_screen.player_country, army["id"], -1,
+                                  map_screen.nation_data, map_screen.map_data):
+                map_screen.show_feedback(f"Moved {army['name']} up")
+        elif _move_down_rect(rect).collidepoint(event.pos):
+            if queries.move_army(map_screen.player_country, army["id"], 1,
+                                  map_screen.nation_data, map_screen.map_data):
+                map_screen.show_feedback(f"Moved {army['name']} down")
         elif _edit_rect(rect).collidepoint(event.pos):
             _open_editor(map_screen, army)
         else:
@@ -318,6 +334,13 @@ def draw(map_screen, surface):
         text_x = rect.x + (39 if army.get("symbol") else 9)
         surface.blit(name, (text_x, rect.y + 6))
         surface.blit(count, (text_x, rect.y + 23))
+        for arrow_rect, label, enabled in (
+                (_move_up_rect(rect), "^", index > 0),
+                (_move_down_rect(rect), "v", index < len(armies) - 1)):
+            pygame.draw.rect(surface, (62, 88, 135) if enabled else (45, 52, 67),
+                             arrow_rect, border_radius=3)
+            arrow = text_font.render(label, True, (230, 240, 255) if enabled else (120, 130, 145))
+            surface.blit(arrow, arrow.get_rect(center=arrow_rect.center))
         edit_rect = _edit_rect(rect)
         pygame.draw.rect(surface, (62, 88, 135), edit_rect, border_radius=3)
         edit = text_font.render("E", True, (230, 240, 255))
