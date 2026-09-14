@@ -12,6 +12,7 @@ import shutil
 import subprocess
 import sys
 import zipfile
+import uuid
 from data.platform import run_background, IS_WEB, download_file, downloads_dir, sync_persisted_dir
 from datetime import datetime
 
@@ -2180,6 +2181,10 @@ def create_unit_dict(unit_type, owner, unit_library):
     stats = unit_library.get(unit_type, {})
     hp = stats.get("health", c.DEFAULT_UNIT_HP)
     return {
+        # Unlike Python's ``id()``, this survives save/load, tournament files,
+        # and authoritative real-time snapshots.  UI selection remains local,
+        # but persistent army rosters refer to this stable identity.
+        "unit_id": uuid.uuid4().hex,
         "type": unit_type,
         "owner": owner,
         "health": hp,
@@ -2191,6 +2196,172 @@ def create_unit_dict(unit_type, owner, unit_library):
         "level": 0,
         "order": {"type": "MOVE", "path": []}
     }
+
+
+def ensure_unit_ids(map_data):
+    """Give every live unit one unique persistent ID and return the IDs added.
+
+    Old maps never had unit IDs.  This migration is intentionally tolerant of
+    malformed or duplicate values: the loaded map becomes safe before any
+    army roster can refer to it, and the repaired IDs are saved normally.
+    """
+    seen, added = set(), []
+    for province in (map_data or {}).values():
+        for unit in province.get("units", []) if isinstance(province, dict) else ():
+            unit_id = unit.get("unit_id")
+            if not isinstance(unit_id, str) or not unit_id or unit_id in seen:
+                unit_id = uuid.uuid4().hex
+                while unit_id in seen:
+                    unit_id = uuid.uuid4().hex
+                unit["unit_id"] = unit_id
+                added.append(unit_id)
+            seen.add(unit_id)
+    return added
+
+
+def _army_unit_ids_by_owner(map_data):
+    """Return the live persistent unit IDs indexed by their owning country."""
+    owners = {}
+    for province in (map_data or {}).values():
+        for unit in province.get("units", []) if isinstance(province, dict) else ():
+            owner, unit_id = unit.get("owner"), unit.get("unit_id")
+            if isinstance(owner, str) and isinstance(unit_id, str) and unit_id:
+                owners.setdefault(owner, set()).add(unit_id)
+    return owners
+
+
+def normalize_armies(nation_data, map_data):
+    """Repair persistent army rosters against the current owned-unit state.
+
+    An army is deliberately only an organizational collection.  It may not
+    retain dead, transferred, duplicate, or foreign units, and an empty army
+    has no useful UI representation.  This is the canonical cleanup path for
+    load, turn resolution, and multiplayer imports.
+    """
+    ensure_unit_ids(map_data)
+    live_by_owner = _army_unit_ids_by_owner(map_data)
+    for country_id, country in (nation_data or {}).items():
+        if (country_id in ("GLOBAL_EVENTS", "FACTION_WAR_MAPS")
+                or country_id in c.UNPLAYABLE_NATIONS or not isinstance(country, dict)):
+            continue
+        raw_armies = country.get("armies", [])
+        if not isinstance(raw_armies, list):
+            country["armies"] = []
+            continue
+        valid, assigned, army_ids = [], set(), set()
+        live = live_by_owner.get(country_id, set())
+        for raw in raw_armies:
+            if not isinstance(raw, dict):
+                continue
+            army_id = raw.get("id")
+            if not isinstance(army_id, str) or not army_id or army_id in army_ids:
+                army_id = uuid.uuid4().hex
+            army_ids.add(army_id)
+            requested = raw.get("unit_ids", [])
+            if not isinstance(requested, list):
+                requested = []
+            unit_ids = []
+            for unit_id in requested:
+                if (isinstance(unit_id, str) and unit_id in live
+                        and unit_id not in assigned):
+                    unit_ids.append(unit_id)
+                    assigned.add(unit_id)
+            if not unit_ids:
+                continue
+            name = raw.get("name")
+            if not isinstance(name, str) or not name.strip():
+                name = f"Army {len(valid) + 1}"
+            valid.append({"id": army_id, "name": name.strip()[:80],
+                          "unit_ids": unit_ids})
+        country["armies"] = valid
+
+
+def get_armies(country_id, nation_data, map_data):
+    """Return a country's current army records without doing frame-time scans."""
+    country = (nation_data or {}).get(country_id, {})
+    return country.get("armies", []) if isinstance(country, dict) else []
+
+
+def _army_name(armies):
+    used = {army.get("name") for army in armies if isinstance(army, dict)}
+    number = 1
+    while f"Army {number}" in used:
+        number += 1
+    return f"Army {number}"
+
+
+def create_army(country_id, unit_ids, nation_data, map_data):
+    """Create an automatically named army from owned unit IDs.
+
+    Selected units are reassigned out of prior armies.  Returns the new record
+    or ``None`` when no live owned unit was supplied.
+    """
+    normalize_armies(nation_data, map_data)
+    armies = get_armies(country_id, nation_data, map_data)
+    live = _army_unit_ids_by_owner(map_data).get(country_id, set())
+    members = []
+    for unit_id in unit_ids if isinstance(unit_ids, (list, tuple, set)) else ():
+        if isinstance(unit_id, str) and unit_id in live and unit_id not in members:
+            members.append(unit_id)
+    if not members:
+        return None
+    member_set = set(members)
+    for army in armies:
+        army["unit_ids"] = [unit_id for unit_id in army.get("unit_ids", [])
+                             if unit_id not in member_set]
+    armies[:] = [army for army in armies if army.get("unit_ids")]
+    army = {"id": uuid.uuid4().hex, "name": _army_name(armies),
+            "unit_ids": members}
+    armies.append(army)
+    normalize_armies(nation_data, map_data)
+    return next((item for item in nation_data[country_id]["armies"]
+                 if item["id"] == army["id"]), None)
+
+
+def assign_units_to_army(country_id, army_id, unit_ids, nation_data, map_data):
+    """Move owned units into an existing army and return whether it changed."""
+    normalize_armies(nation_data, map_data)
+    armies = get_armies(country_id, nation_data, map_data)
+    target = next((army for army in armies if army.get("id") == army_id), None)
+    if target is None:
+        return False
+    live = _army_unit_ids_by_owner(map_data).get(country_id, set())
+    members = []
+    for unit_id in unit_ids if isinstance(unit_ids, (list, tuple, set)) else ():
+        if isinstance(unit_id, str) and unit_id in live and unit_id not in members:
+            members.append(unit_id)
+    if not members:
+        return False
+    member_set = set(members)
+    for army in armies:
+        army["unit_ids"] = [unit_id for unit_id in army.get("unit_ids", [])
+                             if army is target or unit_id not in member_set]
+    target["unit_ids"] = list(dict.fromkeys([*target.get("unit_ids", []), *members]))
+    normalize_armies(nation_data, map_data)
+    return True
+
+
+def ungroup_units(country_id, unit_ids, nation_data, map_data):
+    """Remove selected owned units from every army without deleting units."""
+    normalize_armies(nation_data, map_data)
+    armies = get_armies(country_id, nation_data, map_data)
+    members = {unit_id for unit_id in unit_ids if isinstance(unit_id, str)}
+    changed = False
+    for army in armies:
+        before = army.get("unit_ids", [])
+        army["unit_ids"] = [unit_id for unit_id in before if unit_id not in members]
+        changed |= len(before) != len(army["unit_ids"])
+    normalize_armies(nation_data, map_data)
+    return changed
+
+
+def disband_army(country_id, army_id, nation_data, map_data):
+    """Delete an army organization record, never its member units."""
+    normalize_armies(nation_data, map_data)
+    armies = get_armies(country_id, nation_data, map_data)
+    original_len = len(armies)
+    armies[:] = [army for army in armies if army.get("id") != army_id]
+    return len(armies) != original_len
 
 def migrate_units_to_current_stats(map_data, unit_library):
     """

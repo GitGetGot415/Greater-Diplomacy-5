@@ -759,25 +759,24 @@ class OrdersScreenRegressionTests(BattleScreenTestCase):
         self.assertEqual(color, c.UI_TEXT_MUTED)
 
         # Clicking a selected row removes only that member from the live
-        # selection; the roster remains visible so it can be reselected.
+        # selection and it leaves the selection-only Orders panel immediately.
         screen.toggle_selected_unit(focused_unit)
         self.assertNotIn(id(focused_unit),
                          {id(unit) for unit, _province in self.map.selected_unit_records()})
-        # The rest of the group remains in the roster, visibly unselected, so
-        # it can be picked again without reopening Orders.
-        self.assertEqual(set(screen.unit_row_icons), set(owned_indices))
-        self.assertEqual(screen.panel_rect.height, group_panel_height)
+        screen.draw(self.surface)
+        self.assertEqual(set(screen.unit_row_icons), set(owned_indices[1:]))
+        self.assertLess(screen.panel_rect.height, group_panel_height)
 
         screen.toggle_selected_unit(focused_unit)
         self.assertIn(id(focused_unit),
                       {id(unit) for unit, _province in self.map.selected_unit_records()})
 
-        # Select All can clear the whole active selection without clearing
-        # the rows that make those units available for re-selection.
+        # Select All can clear the whole active selection; the compact shell
+        # remains, but selected-unit rows do not.
         screen.select_unit("ALL")
         self.assertEqual(self.map.selected_unit_records(), [])
         screen.draw(self.surface)
-        self.assertEqual(set(screen.unit_row_icons), set(owned_indices))
+        self.assertEqual(set(screen.unit_row_icons), set())
 
     def test_left_clicking_open_map_space_leaves_orders(self):
         import pygame as pg
@@ -788,6 +787,8 @@ class OrdersScreenRegressionTests(BattleScreenTestCase):
 
         screen.additional_events(
             pg.event.Event(pg.MOUSEBUTTONDOWN, pos=(640, 360), button=1))
+        screen.additional_events(
+            pg.event.Event(pg.MOUSEBUTTONUP, pos=(640, 360), button=1))
 
         screen.exit_screen.assert_called_once_with()
 

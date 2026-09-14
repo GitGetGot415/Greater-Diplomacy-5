@@ -938,6 +938,19 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
         self.assertEqual({command["queue"] for command in queues}, {"building_queue", "unit_queue"})
         self.assertTrue(all(command["items"] == [] for command in queues))
 
+    def test_army_roster_is_collected_and_server_validated(self):
+        map_ref = self.make_map()
+        commands = collect_map_commands(map_ref, "A")
+        roster = next(command for command in commands if command["type"] == "army_roster")
+        unit_id = map_ref.map_data["home"]["units"][0]["unit_id"]
+        roster["armies"] = [{"id": "army-a", "name": "Army 1", "unit_ids": [unit_id]}]
+        validated = MapRealtimeDriver(map_ref).validate_draft("A", [roster])
+        self.assertEqual(validated, [{"type": "army_roster", "armies": roster["armies"]}])
+        with self.assertRaises(RealtimeError):
+            MapRealtimeDriver(map_ref).validate_draft("A", [{
+                "type": "army_roster", "armies": [
+                    {"id": "army-a", "name": "Army 1", "unit_ids": ["foreign"]}]}])
+
     def test_an_idle_complete_draft_is_accepted(self):
         map_ref = self.make_map()
         # An ordinary player has many units with no order.  This regression

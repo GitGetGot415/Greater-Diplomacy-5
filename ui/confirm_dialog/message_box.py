@@ -84,7 +84,7 @@ class _NavigationIntroPopup:
     PAGE_TITLES = ("Map Navigation", "Map UI")
     PAGE_SUBTITLES = (
         "Learn how to move around the map and use the mouse controls.",
-        "Learn what the bottom-left map UI buttons do.",
+        "Learn the bottom-left map controls and top-right army cards.",
     )
 
     def __init__(self, map_screen):
@@ -258,6 +258,10 @@ class _NavigationIntroPopup:
                 surface.blit(label_surf, (x + 36, y))
                 desc_surf = self.body_font.render(description, True, (225, 225, 225))
                 surface.blit(desc_surf, (x + 36, y + self.label_font.get_height() + 2))
+            army_note = self.body_font.render(
+                "Top-right Army cards organize units; click one to select its members.",
+                True, (185, 215, 255))
+            surface.blit(army_note, army_note.get_rect(center=(self.rect.centerx, self.rect.y + 316)))
 
         pygame.draw.rect(surface, (230, 230, 230), self.checkbox_rect, 2)
         if self.dont_show_again:

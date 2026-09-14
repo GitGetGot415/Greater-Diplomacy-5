@@ -9,6 +9,7 @@ from gameState import GameState
 from map_logic.rendering.font_manager import fonts
 from ui_elements import make_back_button
 from ui.flag_icons import draw_flag
+from ui.map_top_right_layout import realtime_status_rect
 
 
 def _ping_text(player, host_id):
@@ -96,7 +97,7 @@ def draw(map_screen, surface):
         lines.append("CONNECTION LOST - actions disabled; rejoin from the menu")
     # The top-right map controls, including Exit, occupy the first toolbar
     # row. Keep live-match status immediately below that row instead.
-    rect = pygame.Rect(c.SCREEN_WIDTH - 330, 58, 320, 86 if connection_error else 67)
+    rect = realtime_status_rect(bool(connection_error))
     panel = pygame.Surface(rect.size, pygame.SRCALPHA)
     panel.fill((5, 10, 25, 220))
     surface.blit(panel, rect.topleft)

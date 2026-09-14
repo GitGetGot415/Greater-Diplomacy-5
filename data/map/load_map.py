@@ -555,6 +555,11 @@ def load_map_assets(map_screen, load_path):
             if not unit.get("custom_name"):
                 unit["custom_name"] = queries.generate_unit_custom_name(unit, unit_counters)
 
+    # Army rosters are saved on countries while their members live in
+    # provinces.  Repair both ends together after every map load, including
+    # legacy maps which need persistent unit IDs generated for the first time.
+    queries.normalize_armies(map_screen.nation_data, map_screen.map_data)
+
     # --- FORCE TIME-APPROPRIATE RESEARCH ---
     # Only when actually starting a fresh game from a scenario (selection_mode) --
     # never on a save already in progress, where research has since moved on

@@ -779,7 +779,7 @@ class MapRealtimeDriver:
             # conflicting value through the same update.
             if kind in seen and kind in {"research_queue", "country_preferences", "claim_draft",
                                         "country_appearance", "country_diplomacy", "puppet_draft",
-                                        "faction_rename", "ratification_response"}:
+                                        "faction_rename", "ratification_response", "army_roster"}:
                 raise RealtimeError("Only one command is allowed for that game action.")
             if kind == "unit_order":
                 canonical.append(self._validate_unit_order(country_id, command))
@@ -804,6 +804,8 @@ class MapRealtimeDriver:
                 canonical.append(self._validate_faction_rename(country_id, command))
             elif kind == "ratification_response":
                 canonical.append(self._validate_ratification_response(country_id, command))
+            elif kind == "army_roster":
+                canonical.append(self._validate_army_roster(country_id, command))
             elif kind == "volunteer_draft":
                 canonical.append(self._validate_volunteer_draft(country_id, command))
             else:
@@ -812,6 +814,35 @@ class MapRealtimeDriver:
         self._validate_queue_budget(country_id, canonical)
         self._validate_volunteer_commands(country_id, canonical)
         return canonical
+
+    def _validate_army_roster(self, country_id: str, command: dict[str, Any]) -> dict[str, Any]:
+        """Validate organization metadata without trusting client unit ownership."""
+        from data import queries
+        supplied = command.get("armies", [])
+        if not isinstance(supplied, list) or len(supplied) > 200:
+            raise RealtimeError("Invalid army roster.")
+        queries.ensure_unit_ids(self.map_ref.map_data)
+        owned = {unit.get("unit_id") for province in self.map_ref.map_data.values()
+                 for unit in province.get("units", []) if unit.get("owner") == country_id}
+        armies, army_ids, assigned = [], set(), set()
+        for raw in supplied:
+            if not isinstance(raw, dict):
+                raise RealtimeError("Invalid army roster.")
+            army_id, name, unit_ids = raw.get("id"), raw.get("name"), raw.get("unit_ids")
+            if (not isinstance(army_id, str) or not army_id or len(army_id) > 80
+                    or army_id in army_ids or not isinstance(name, str)
+                    or not name.strip() or len(name.strip()) > 80
+                    or not isinstance(unit_ids, list) or len(unit_ids) > len(owned)):
+                raise RealtimeError("Invalid army roster.")
+            if any(not isinstance(unit_id, str) or unit_id not in owned
+                   or unit_id in assigned for unit_id in unit_ids):
+                raise RealtimeError("Army members must be distinct owned units.")
+            army_ids.add(army_id)
+            assigned.update(unit_ids)
+            if unit_ids:
+                armies.append({"id": army_id, "name": name.strip(),
+                               "unit_ids": list(unit_ids)})
+        return {"type": "army_roster", "armies": armies}
 
     def _validate_volunteer_commands(self, country_id: str, commands: list[dict[str, Any]]) -> None:
         """Keep a volunteer request and its reserved divisions inseparable."""
@@ -1547,6 +1578,8 @@ class MapRealtimeDriver:
                         country_data[politics.POLICY_KEY] = copy.deepcopy(command[politics.POLICY_KEY])
                     else:
                         country_data.pop(politics.POLICY_KEY, None)
+                elif command["type"] == "army_roster":
+                    country_data["armies"] = copy.deepcopy(command["armies"])
                 elif command["type"] == "claim_draft":
                     country_data["claim_queue"] = copy.deepcopy(command["queue"])
                     country_data["revoke_queue"] = copy.deepcopy(command["revokes"])
@@ -1675,7 +1708,11 @@ def collect_map_commands(map_ref, country_id: str) -> list[dict[str, Any]]:
                 commands.append({"type": "province_queue", "province_id": province["id"],
                                  "queue": queue_name,
                                  "items": copy.deepcopy(province.get(queue_name, []))})
+    from data import queries
+    queries.normalize_armies(map_ref.nation_data, map_ref.map_data)
     country_data = map_ref.nation_data.get(country_id, {})
+    commands.append({"type": "army_roster",
+                     "armies": copy.deepcopy(country_data.get("armies", []))})
     research_queue = country_data.get("research_queue", []) if isinstance(country_data, dict) else []
     tech_names = [project.get("tech_name") for project in research_queue
                   if isinstance(project, dict) and isinstance(project.get("tech_name"), str)]

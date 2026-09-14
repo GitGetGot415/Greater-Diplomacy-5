@@ -20,7 +20,7 @@ from ui import event_handler
 # Game Logic & Rendering Submodules
 import ui_elements
 from ui_elements import Button, Slider
-from ui import diplomatic_popups, spectator_menus, editor_menus
+from ui import diplomatic_popups, spectator_menus, editor_menus, army_panel
 from map_logic.camera.camera_handler import MapCamera
 from map_logic.camera import camera_handler
 from map_logic.diplomacy import (diplomacy_logic, guarantees, military_attaches,
@@ -1826,6 +1826,8 @@ class Map(GameState):
             if (popup is not None and diplomatic_popups.map_message_popups_visible(self)
                     and popup.handle_event(event)):
                 continue
+            if army_panel.handle_event(self, event):
+                continue
             super().handle_events([event])
 
     # --- Map-level unit selection and movement ---------------------------------
@@ -1842,7 +1844,10 @@ class Map(GameState):
         return True
 
     def is_unit_selected(self, unit):
-        return id(unit) in getattr(self, "selected_unit_ids", set())
+        selected = getattr(self, "selected_unit_ids", set())
+        # ``id(unit)`` remains accepted for lightweight legacy test doubles,
+        # while live maps use the persistent identity introduced for armies.
+        return unit.get("unit_id") in selected or id(unit) in selected
 
     def clear_map_unit_selection(self):
         getattr(self, "selected_unit_ids", set()).clear()
@@ -1850,7 +1855,9 @@ class Map(GameState):
 
     def deselect_map_units(self, units):
         """Remove specific stacks without disturbing selections elsewhere."""
-        self.selected_unit_ids.difference_update(id(unit) for unit in units)
+        for unit in units:
+            self.selected_unit_ids.discard(unit.get("unit_id"))
+            self.selected_unit_ids.discard(id(unit))
 
     def select_map_units(self, units, additive=False):
         """Select commandable units represented by one or more visible stacks."""
@@ -1861,7 +1868,8 @@ class Map(GameState):
             eligible = [unit for unit in eligible if unit is self.player_unit]
         if not additive:
             self.selected_unit_ids.clear()
-        self.selected_unit_ids.update(id(unit) for unit in eligible)
+        queries.ensure_unit_ids(self.map_data)
+        self.selected_unit_ids.update(unit["unit_id"] for unit in eligible)
         self.show_feedback(f"{len(self.selected_unit_ids)} unit{'s' if len(self.selected_unit_ids) != 1 else ''} selected")
 
     def selected_unit_records(self):
@@ -1869,9 +1877,10 @@ class Map(GameState):
         records, live_ids = [], set()
         for province in self.map_data.values():
             for unit in province.get("units", []):
-                unit_id = id(unit)
-                if unit_id in self.selected_unit_ids:
-                    live_ids.add(unit_id)
+                unit_id = unit.get("unit_id")
+                legacy_id = id(unit)
+                if unit_id in self.selected_unit_ids or legacy_id in self.selected_unit_ids:
+                    live_ids.update((unit_id, legacy_id))
                     if unit.get("owner") == self.player_country:
                         records.append((unit, province))
         self.selected_unit_ids.intersection_update(live_ids)
@@ -1915,6 +1924,62 @@ class Map(GameState):
             else:
                 unit.pop("order", None)
         self.show_feedback(f"{len(planned)} unit{'s' if len(planned) != 1 else ''} routed to province {destination['id']}")
+        return True
+
+    def selected_map_unit_ids(self):
+        """Persistent IDs for the currently commandable selection."""
+        return [unit["unit_id"] for unit, _province in self.selected_unit_records()
+                if isinstance(unit.get("unit_id"), str)]
+
+    def create_army_from_selection(self):
+        if not self.can_select_map_units():
+            return None
+        army = queries.create_army(self.player_country, self.selected_map_unit_ids(),
+                                   self.nation_data, self.map_data)
+        if army:
+            self.show_feedback(f"Created {army['name']}")
+        return army
+
+    def assign_selection_to_army(self, army_id):
+        if not self.can_select_map_units():
+            return False
+        changed = queries.assign_units_to_army(
+            self.player_country, army_id, self.selected_map_unit_ids(),
+            self.nation_data, self.map_data)
+        if changed:
+            self.show_feedback("Selected units assigned to army")
+        return changed
+
+    def ungroup_selection(self):
+        if not self.can_select_map_units():
+            return False
+        changed = queries.ungroup_units(self.player_country,
+                                        self.selected_map_unit_ids(),
+                                        self.nation_data, self.map_data)
+        if changed:
+            self.show_feedback("Selected units removed from their armies")
+        return changed
+
+    def select_army(self, army_id, open_orders=True):
+        """Select all live members of one army, optionally opening Orders."""
+        if not self.can_select_map_units():
+            return False
+        armies = queries.get_armies(self.player_country, self.nation_data, self.map_data)
+        army = next((item for item in armies if item.get("id") == army_id), None)
+        if army is None:
+            return False
+        members = {unit_id for unit_id in army.get("unit_ids", [])}
+        records = [(unit, province) for province in self.map_data.values()
+                   for unit in province.get("units", [])
+                   if unit.get("unit_id") in members and unit.get("owner") == self.player_country]
+        if not records:
+            queries.normalize_armies(self.nation_data, self.map_data)
+            return False
+        self.select_map_units([unit for unit, _province in records])
+        self.selected_province = records[0][1]
+        if open_orders:
+            self._orders_return_to_province_menu = False
+            self.change_state("ORDERS")
         return True
 
     def open_orders_for_unit_stack(self, province, units, return_to_province_menu=False):
@@ -2086,6 +2151,7 @@ class Map(GameState):
 
         from ui import realtime_status_panel
         realtime_status_panel.draw(self, surface)
+        army_panel.draw(self, surface)
 
         diplomatic_popups.draw(self, surface)
 

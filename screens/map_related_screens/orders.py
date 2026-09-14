@@ -27,8 +27,8 @@ PANEL_INSET = 8
 HEADER_TITLE_OFFSET_Y = 7
 HEADER_META_OFFSET_Y = 36
 TOP_BTN_ROW_OFFSET_Y = 57
-HEADER_HELP_OFFSET_Y = 91
-LIST_TOP_OFFSET_Y = 110
+HEADER_HELP_OFFSET_Y = 121
+LIST_TOP_OFFSET_Y = 140
 
 TOP_BTN_GAP_X = 6
 
@@ -112,10 +112,9 @@ class Orders_Screen(GameState):
         self.target_province = None
         self.map_screen = None
         self.selected_unit_index = None
-        # The panel remembers the group that opened (or was last box-selected
-        # in) this Orders session.  Its rows remain available when the player
-        # focuses one member, while map selection alone controls movement.
-        self.roster_unit_ids = set()
+        # Rows are intentionally selection-only.  Persistent armies live on
+        # nation data and are represented by the top-right army cards, never
+        # by a hidden Orders-session roster.
         self.cancel_rects = []
         self.action_buttons = []
         self.unit_row_icons = {}
@@ -123,6 +122,7 @@ class Orders_Screen(GameState):
         self.battle_screen = None
         self.entered_from_combat_bubble = False
         self.return_to_province_menu = True
+        self.army_assignment_open = False
 
         self.renaming_unit_index = None
         self.renaming_unit_province = None
@@ -217,7 +217,6 @@ class Orders_Screen(GameState):
         elif isinstance(self.selected_unit_index, int):
             self.map_screen.select_map_units([units[self.selected_unit_index]])
 
-        self._replace_roster_with_selection()
         self.refresh_ui()
         if (open_battle_on_entry and queries.is_province_in_active_combat(
                 self.target_province, self.map_screen.nation_data)):
@@ -240,26 +239,10 @@ class Orders_Screen(GameState):
             self.selected_unit_index = "ALL"
         elif selected_indices:
             self.selected_unit_index = selected_indices[0]
-        elif len(own_indices) > 1:
-            self.selected_unit_index = "ALL"
         else:
-            self.selected_unit_index = own_indices[0] if own_indices else None
+            self.selected_unit_index = None
         self.read_only = not self.map_screen.selected_unit_records()
-        self._replace_roster_with_selection()
         self.refresh_ui()
-
-    def _replace_roster_with_selection(self):
-        """Make the visible Orders roster match the current map selection."""
-        self.roster_unit_ids = {
-            id(unit) for unit, _province in self.map_screen.selected_unit_records()
-        }
-
-    def _remember_roster_selection(self):
-        """Keep the current group visible while focusing one of its members."""
-        if not hasattr(self, "roster_unit_ids"):
-            self.roster_unit_ids = set()
-        self.roster_unit_ids.update(
-            id(unit) for unit, _province in self.map_screen.selected_unit_records())
 
     def exit_screen(self):
         # The battle inspector is an optional child panel now, so leaving
@@ -355,23 +338,19 @@ class Orders_Screen(GameState):
             return
         units = self.target_province.get("units", [])
         if index == "ALL":
-            # Orders is map-wide: Select All must use every row in this
-            # session's roster, not just the stack on target_province.
-            roster_units = [unit for _key, unit, _province, _unit_index
-                            in self._visible_rows()
-                            if unit.get("owner") == self.map_screen.player_country]
-            self._remember_roster_selection()
-            self.roster_unit_ids.update(id(unit) for unit in roster_units)
-            if roster_units and all(self.map_screen.is_unit_selected(unit) for unit in roster_units):
-                self.map_screen.deselect_map_units(roster_units)
+            # Orders is map-wide: all means every commandable owned unit, not
+            # merely the stack that opened this workspace.
+            all_units = [unit for province in self.map_screen.map_data.values()
+                         for unit in province.get("units", [])
+                         if unit.get("owner") == self.map_screen.player_country]
+            if all_units and all(self.map_screen.is_unit_selected(unit) for unit in all_units):
+                self.map_screen.deselect_map_units(all_units)
                 self.selected_unit_index = None
             else:
-                self.map_screen.select_map_units(roster_units)
+                self.map_screen.select_map_units(all_units)
                 self.selected_unit_index = index
         elif isinstance(index, int) and 0 <= index < len(units):
             unit = units[index]
-            self._remember_roster_selection()
-            self.roster_unit_ids.add(id(unit))
             if self.map_screen.is_unit_selected(unit):
                 self.map_screen.deselect_map_units([unit])
                 self.selected_unit_index = None
@@ -382,17 +361,35 @@ class Orders_Screen(GameState):
         self.refresh_ui()
 
     def toggle_selected_unit(self, unit):
-        """Toggle one unit without hiding the surrounding Orders roster."""
+        """Toggle one unit; deselected units leave the Orders list at once."""
         if getattr(self, "read_only", False) or self._command_blocked(unit):
             return
-        self._remember_roster_selection()
-        self.roster_unit_ids.add(id(unit))
         if self.map_screen.is_unit_selected(unit):
             self.map_screen.deselect_map_units([unit])
         else:
             self.map_screen.select_map_units([unit], additive=True)
         self.selected_unit_index = None
         self.bombarding_unit_index = None
+        self.refresh_ui()
+
+    def create_army(self):
+        army = self.map_screen.create_army_from_selection()
+        if army:
+            self.army_assignment_open = False
+        self.refresh_ui()
+
+    def toggle_army_assignment(self):
+        self.army_assignment_open = not self.army_assignment_open
+        self.refresh_ui()
+
+    def assign_to_army(self, army_id):
+        if self.map_screen.assign_selection_to_army(army_id):
+            self.army_assignment_open = False
+        self.refresh_ui()
+
+    def ungroup_selected(self):
+        self.map_screen.ungroup_selection()
+        self.army_assignment_open = False
         self.refresh_ui()
 
     def _command_blocked_silent(self, unit):
@@ -607,36 +604,19 @@ class Orders_Screen(GameState):
                     button.apply_state(visible=False)
 
     def _visible_rows(self):
-        """Orders-session units, with their live province and index.
-
-        The roster retains units that were selected together even after the
-        player focuses one of them.  That leaves the other rows visible and
-        unselected, while only the focused unit receives map move orders.
-        The row key stays an integer for the focused province for compatibility
-        with its single-unit action controls; cross-province rows use a stable
-        tuple so identically numbered stack slots never collide in the UI.
-        """
+        """Selected commandable units, with their live province and index."""
         selected_records = self.map_screen.selected_unit_records()
-        if not getattr(self, "roster_unit_ids", set()):
-            self.roster_unit_ids = {id(unit) for unit, _province in selected_records}
-
-        map_data = getattr(self.map_screen, "map_data", None)
-        if map_data is None:
-            # Lightweight callers and focused tests can provide only the
-            # selected-record query; the live Map always provides map_data.
-            map_data = {province["id"]: province
-                        for _unit, province in selected_records}
-
-        rows, live_ids = [], set()
-        for province in map_data.values():
-            for index, unit in enumerate(province.get("units", [])):
-                unit_id = id(unit)
-                if unit_id not in self.roster_unit_ids:
-                    continue
-                live_ids.add(unit_id)
-                row_key = index if province is self.target_province else (province["id"], index)
-                rows.append((row_key, unit, province, index))
-        self.roster_unit_ids.intersection_update(live_ids)
+        if getattr(self, "read_only", False) and not selected_records:
+            selected_records = [(unit, self.target_province)
+                                for unit in self.target_province.get("units", [])]
+        rows = []
+        for unit, province in selected_records:
+            try:
+                index = province.get("units", []).index(unit)
+            except ValueError:
+                continue
+            row_key = index if province is self.target_province else (province["id"], index)
+            rows.append((row_key, unit, province, index))
         return rows
 
     def refresh_ui(self):
@@ -670,6 +650,9 @@ class Orders_Screen(GameState):
         player_research = self.map_screen.nation_data.get(player_country, {}).get("research", {})
         rows = self._visible_rows()
         player_units = [unit for _key, unit, _province, _index in rows]
+        all_player_units = [unit for province in self.map_screen.map_data.values()
+                            for unit in province.get("units", [])
+                            if unit.get("owner") == player_country]
         target_player_units = [unit for unit in self.target_province.get("units", [])
                                if unit.get("owner") == player_country]
 
@@ -707,10 +690,10 @@ class Orders_Screen(GameState):
             self.PANEL_WIDTH - SCROLLBAR_WIDTH - 2, self.panel_max_h)
         row_guard = self.content_hover_guard()
 
-        if player_units:
+        if not self.read_only:
             button_x = self.PANEL_X + PANEL_INSET
-            all_selected = all(self.map_screen.is_unit_selected(unit)
-                               for unit in player_units)
+            all_selected = bool(all_player_units) and all(
+                self.map_screen.is_unit_selected(unit) for unit in all_player_units)
             all_color = "grey" if is_tactical else (
                 "blue" if all_selected else "grey")
             btn_all = Button(button_x, PANEL_Y + TOP_BTN_ROW_OFFSET_Y,
@@ -727,6 +710,29 @@ class Orders_Screen(GameState):
                                font_preset="tiny")
             btn_clear.disabled = is_tactical
             self.elements.append(btn_clear)
+
+            if player_units:
+                army_y = PANEL_Y + TOP_BTN_ROW_OFFSET_Y + 29
+                btn_create_army = Button(self.PANEL_X + PANEL_INSET, army_y,
+                                         "orders_header_button", "blue", "Create Army",
+                                         self.create_army, font_preset="tiny")
+                btn_assign_army = Button(btn_create_army.rect.right + TOP_BTN_GAP_X, army_y,
+                                         "orders_header_button", "grey", "Assign Army",
+                                         self.toggle_army_assignment, font_preset="tiny")
+                btn_ungroup = Button(btn_assign_army.rect.right + TOP_BTN_GAP_X, army_y,
+                                     "orders_header_button", "grey", "Ungroup",
+                                     self.ungroup_selected, font_preset="tiny")
+                self.elements.extend((btn_create_army, btn_assign_army, btn_ungroup))
+                if self.army_assignment_open:
+                    armies = queries.get_armies(player_country, self.map_screen.nation_data,
+                                                self.map_screen.map_data)
+                    for index, army in enumerate(armies):
+                        choice = Button(self.panel_rect.right + 8,
+                                        self.panel_rect.y + 50 + index * 30,
+                                        (190, 26), "blue", army["name"],
+                                        lambda target_id=army["id"]: self.assign_to_army(target_id),
+                                        font_preset="tiny")
+                        self.elements.append(choice)
 
         for display_index, (row_key, unit, province, index) in enumerate(rows):
             row_y = self.panel_top + (display_index * self.row_height) + self.scroll_y
@@ -1176,8 +1182,6 @@ class Orders_Screen(GameState):
                     if event_handler._unit_stack_at(self.map_screen, event.pos) is None:
                         self.exit_screen()
                     return
-                self._remember_roster_selection()
-                self.roster_unit_ids.update(id(unit) for unit in stack["units"])
                 if all(self.map_screen.is_unit_selected(unit) for unit in stack["units"]):
                     self.map_screen.deselect_map_units(stack["units"])
                 else:
@@ -1185,7 +1189,8 @@ class Orders_Screen(GameState):
                         stack["units"], additive=drag["additive"])
                 self.target_province = stack["province"]
                 self.selected_unit_index = None
-                self.read_only = not bool(self.map_screen.selected_unit_records())
+                self.read_only = not any(unit.get("owner") == self.map_screen.player_country
+                                         for unit in stack["province"].get("units", []))
                 self.refresh_ui()
                 return
             if rect.width >= 4 or rect.height >= 4:
@@ -1195,8 +1200,10 @@ class Orders_Screen(GameState):
                         selected.extend(stack["units"])
                 self.map_screen.select_map_units(selected, additive=drag["additive"])
                 self.selected_unit_index = None
-                self.read_only = not bool(self.map_screen.selected_unit_records())
-                self._replace_roster_with_selection()
+                target = getattr(self, "target_province", None)
+                self.read_only = bool(target) and not any(
+                    unit.get("owner") == self.map_screen.player_country
+                    for unit in target.get("units", []))
                 self.refresh_ui()
             return
 
@@ -1438,7 +1445,7 @@ class Orders_Screen(GameState):
             meta = "READ ONLY | NO COMMANDABLE UNITS SELECTED"
         else:
             selected_count = len(self.map_screen.selected_unit_records())
-            meta = (f"{selected_count} SELECTED | {len(rows)} IN ROSTER")
+            meta = f"{selected_count} SELECTED"
         surface.blit(tiny_font.render(meta, True, c.UI_TEXT_LIGHT),
                      (self.PANEL_X + PANEL_INSET,
                       PANEL_Y + HEADER_META_OFFSET_Y))

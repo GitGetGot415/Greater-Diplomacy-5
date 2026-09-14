@@ -220,6 +220,10 @@ async def resolve_turn_logic(map_screen): # Renamed from resolve_turn
 
     # Kill orphaned units and ghost wars
     movement_processor.process_dead_nations(map_screen)
+    # Disbands, combat losses, captures, and nation death can all change the
+    # set of live units.  Armies are organizational metadata, so prune their
+    # membership only after authoritative turn resolution has settled.
+    queries.normalize_armies(map_screen.nation_data, map_screen.map_data)
     await asyncio.sleep(0)
 
     # Process Morale updates

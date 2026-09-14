@@ -821,5 +821,13 @@ def load_move_files(map_ref, move_file_paths, keys_dict):
         
     if summary["loaded"] and hasattr(map_ref, 'sync_units_to_data'):
         map_ref.sync_units_to_data()
+    if summary["loaded"] and any(
+            isinstance(country, dict) and "armies" in country
+            for country in map_ref.nation_data.values()):
+        # Nation data carries army metadata while the move file replaces the
+        # submitting country's unit snapshot.  Normalize only after that
+        # replacement so valid incoming member IDs are retained and malformed
+        # or foreign references cannot survive host import.
+        queries.normalize_armies(map_ref.nation_data, map_ref.map_data)
 
     return summary

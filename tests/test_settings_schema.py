@@ -249,7 +249,7 @@ class NavigationIntroPopupTests(unittest.TestCase):
         self.assertEqual(popup.page_index, 1)
         self.assertEqual(popup.PAGE_TITLES[popup.page_index], "Map UI")
         self.assertEqual(popup.PAGE_SUBTITLES[popup.page_index],
-                         "Learn what the bottom-left map UI buttons do.")
+                         "Learn the bottom-left map controls and top-right army cards.")
         self.assertEqual([label for label, _icon, _description in popup.MAP_UI_BUTTONS], [
             "Terrain", "Political", "Relations", "Cores", "Factions",
             "Resources", "Blank", "Units", "Economy", "Names",

@@ -115,8 +115,8 @@ class OrdersSelectionRowsTests(unittest.TestCase):
         self.assertEqual(rows[0][0], 0)
         self.assertEqual(rows[1][0], (2, 0))
 
-    def test_select_all_uses_the_entire_cross_province_roster(self):
-        """Select All must not be limited to Orders' focused province."""
+    def test_select_all_uses_every_owned_unit_and_clears_the_selection(self):
+        """Select All is map-wide; clearing it leaves no stale Orders rows."""
         first = province(1, [])
         second = province(2, [])
         unit_a = {"owner": "A", "type": "Infantry"}
@@ -151,7 +151,6 @@ class OrdersSelectionRowsTests(unittest.TestCase):
         screen = object.__new__(Orders_Screen)
         screen.map_screen = MapStub()
         screen.target_province = first
-        screen.roster_unit_ids = {id(unit_a), id(unit_b)}
         screen.read_only = False
         screen.selected_unit_index = None
         screen.bombarding_unit_index = None
@@ -162,8 +161,7 @@ class OrdersSelectionRowsTests(unittest.TestCase):
 
         screen.select_unit("ALL")
         self.assertEqual(screen.map_screen.selected_ids, set())
-        self.assertEqual({id(unit) for _key, unit, _province, _index in screen._visible_rows()},
-                         {id(unit_a), id(unit_b)})
+        self.assertEqual(screen._visible_rows(), [])
 
     def test_per_unit_action_can_target_a_selected_unit_on_another_tile(self):
         """A row action must never fall back to the panel's focused province."""
