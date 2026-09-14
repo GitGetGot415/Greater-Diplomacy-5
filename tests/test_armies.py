@@ -7,6 +7,7 @@ import pygame
 
 import data.constants as c
 from data import queries
+from screens.map_related_screens.orders import Orders_Screen
 from ui import army_panel, map_top_right_layout
 
 
@@ -69,6 +70,24 @@ class ArmyQueryTests(unittest.TestCase):
         normalized = self.nations["A"]["armies"][0]
         self.assertEqual(normalized["symbol"], "")
         self.assertEqual(normalized["symbol_color"], list(c.DEFAULT_ARMY_SYMBOL_COLOR))
+
+    def test_orders_shows_unselected_peers_without_selecting_them(self):
+        queries.normalize_armies(self.nations, self.world)
+        first_unit, second_unit = self.first["units"]
+        queries.create_army("A", [first_unit["unit_id"], second_unit["unit_id"]],
+                            self.nations, self.world)
+        selected_ids = {first_unit["unit_id"]}
+        map_stub = SimpleNamespace(
+            player_country="A", nation_data=self.nations, map_data=self.world,
+            selected_unit_records=lambda: [(first_unit, self.first)])
+        orders = Orders_Screen.__new__(Orders_Screen)
+        orders.map_screen = map_stub
+        orders.target_province = self.first
+        orders.read_only = False
+        rows = orders._visible_rows()
+        self.assertEqual({unit["unit_id"] for _key, unit, _province, _index in rows},
+                         {first_unit["unit_id"], second_unit["unit_id"]})
+        self.assertEqual(selected_ids, {first_unit["unit_id"]})
 
 
 class ArmyLayoutTests(unittest.TestCase):

@@ -112,9 +112,10 @@ class Orders_Screen(GameState):
         self.target_province = None
         self.map_screen = None
         self.selected_unit_index = None
-        # Rows are intentionally selection-only.  Persistent armies live on
-        # nation data and are represented by the top-right army cards, never
-        # by a hidden Orders-session roster.
+        # Rows normally follow selection.  When any selected division belongs
+        # to an army, its unselected peers are included as read-only roster
+        # context so a player can see the army without accidentally ordering
+        # every member.
         self.cancel_rects = []
         self.action_buttons = []
         self.unit_row_icons = {}
@@ -604,13 +605,33 @@ class Orders_Screen(GameState):
                     button.apply_state(visible=False)
 
     def _visible_rows(self):
-        """Selected commandable units, with their live province and index."""
+        """Selected units plus unselected peers from their persistent armies."""
         selected_records = self.map_screen.selected_unit_records()
         if getattr(self, "read_only", False) and not selected_records:
             selected_records = [(unit, self.target_province)
                                 for unit in self.target_province.get("units", [])]
+        visible_records = list(selected_records)
+        if selected_records and not getattr(self, "read_only", False):
+            army_member_ids = set()
+            # Some lightweight Orders test doubles predate persistent army
+            # data. Live map screens always provide both owners below.
+            nation_data = getattr(self.map_screen, "nation_data", None)
+            map_data = getattr(self.map_screen, "map_data", None)
+            if isinstance(nation_data, dict) and isinstance(map_data, dict):
+                for unit, _province in selected_records:
+                    army = queries.army_for_unit(unit, nation_data)
+                    if army:
+                        army_member_ids.update(army.get("unit_ids", []))
+            selected_ids = {unit.get("unit_id") for unit, _province in selected_records}
+            if army_member_ids:
+                for province in map_data.values():
+                    for unit in province.get("units", []):
+                        if (unit.get("owner") == self.map_screen.player_country
+                                and unit.get("unit_id") in army_member_ids
+                                and unit.get("unit_id") not in selected_ids):
+                            visible_records.append((unit, province))
         rows = []
-        for unit, province in selected_records:
+        for unit, province in visible_records:
             try:
                 index = province.get("units", []).index(unit)
             except ValueError:
@@ -649,7 +670,8 @@ class Orders_Screen(GameState):
         player_country = self.map_screen.player_country
         player_research = self.map_screen.nation_data.get(player_country, {}).get("research", {})
         rows = self._visible_rows()
-        player_units = [unit for _key, unit, _province, _index in rows]
+        player_units = [unit for _key, unit, _province, _index in rows
+                        if self.map_screen.is_unit_selected(unit)]
         all_player_units = [unit for province in self.map_screen.map_data.values()
                             for unit in province.get("units", [])
                             if unit.get("owner") == player_country]
@@ -770,6 +792,12 @@ class Orders_Screen(GameState):
             hitbox.is_scrollable = True
             hitbox.click_guard = row_guard
             self.elements.append(hitbox)
+
+            # Army peers are intentionally visible but unselected.  Their
+            # row remains a selection target, while individual orders and
+            # clear buttons remain exclusive to actively selected divisions.
+            if not self.map_screen.is_unit_selected(unit):
+                continue
 
             row_in_combat = queries.is_nation_in_combat_here(
                 player_country, province, self.map_screen.nation_data)
@@ -1541,12 +1569,15 @@ class Orders_Screen(GameState):
         read_only = getattr(self, "read_only", False)
         owner_color = self.map_screen.nation_colors.get(self.map_screen.player_country, (255, 255, 0))
         rows = self._visible_rows()
-        player_units = [unit for _key, unit, _province, _index in rows]
+        player_units = [unit for _key, unit, _province, _index in rows
+                        if self.map_screen.is_unit_selected(unit)]
 
         # Force every selected unit's own path through fog-of-war before the
         # opaque roster is painted.  Each path begins at its own province and
         # keeps its own speed, even when the group spans the map.
         for _key, unit, origin, _index in rows:
+            if not self.map_screen.is_unit_selected(unit):
+                continue
             order = unit.get("order", {})
             if not isinstance(order, dict):
                 continue
@@ -1571,10 +1602,10 @@ class Orders_Screen(GameState):
             self.PANEL_X + 2, self.panel_top,
             self.PANEL_WIDTH - SCROLLBAR_WIDTH - 2, self.panel_max_h)
 
-        # One roster, always: every unit fog of war lets the player see on
-        # this tile gets a row (icon/name/health). Only rows for units the
-        # player can actually command -- built in refresh_ui -- carry a
-        # selection hitbox and the command column to their right.
+        # One roster, always: selected units appear alongside any unselected
+        # peers in their persistent armies. Every commandable row can be
+        # clicked to change selection, but only selected rows receive command
+        # controls on their right.
         with ui_bars.clip_scroll_region(surface, content_rect,
                                         draw_top=self.scroll_y != 0, draw_bottom=self.scroll_y > self.max_scroll_y):
             if not rows:
@@ -1591,7 +1622,8 @@ class Orders_Screen(GameState):
                     if row_rect.colliderect(content_rect):
                         self._draw_unit_row(
                             surface, row_key, unit, province, unit_index, y_pos, display_index,
-                            owner_color, small_font, tiny_font, True)
+                            owner_color, small_font, tiny_font,
+                            self.map_screen.is_unit_selected(unit))
 
         self.draw_list_scrollbar(
             surface, self.panel_rect.right - SCROLLBAR_WIDTH, self.panel_top,
