@@ -355,39 +355,43 @@ class Orders_Screen(GameState):
             return
         units = self.target_province.get("units", [])
         if index == "ALL":
-            local_units = [unit for unit in units
-                           if unit.get("owner") == self.map_screen.player_country]
-            if local_units and all(self.map_screen.is_unit_selected(unit) for unit in local_units):
-                self.map_screen.deselect_map_units(local_units)
+            # Orders is map-wide: Select All must use every row in this
+            # session's roster, not just the stack on target_province.
+            roster_units = [unit for _key, unit, _province, _unit_index
+                            in self._visible_rows()
+                            if unit.get("owner") == self.map_screen.player_country]
+            self._remember_roster_selection()
+            self.roster_unit_ids.update(id(unit) for unit in roster_units)
+            if roster_units and all(self.map_screen.is_unit_selected(unit) for unit in roster_units):
+                self.map_screen.deselect_map_units(roster_units)
                 self.selected_unit_index = None
             else:
-                self.map_screen.select_map_units(local_units)
+                self.map_screen.select_map_units(roster_units)
                 self.selected_unit_index = index
         elif isinstance(index, int) and 0 <= index < len(units):
             unit = units[index]
+            self._remember_roster_selection()
+            self.roster_unit_ids.add(id(unit))
             if self.map_screen.is_unit_selected(unit):
                 self.map_screen.deselect_map_units([unit])
                 self.selected_unit_index = None
             else:
-                self.map_screen.select_map_units([unit])
+                self.map_screen.select_map_units([unit], additive=True)
                 self.selected_unit_index = index
         self.bombarding_unit_index = None
-        self._replace_roster_with_selection()
         self.refresh_ui()
 
     def toggle_selected_unit(self, unit):
-        """Focus a group member, or deselect the sole selected unit."""
+        """Toggle one unit without hiding the surrounding Orders roster."""
         if getattr(self, "read_only", False) or self._command_blocked(unit):
             return
         self._remember_roster_selection()
         self.roster_unit_ids.add(id(unit))
         if self.map_screen.is_unit_selected(unit):
-            if len(self.map_screen.selected_unit_records()) > 1:
-                self.map_screen.select_map_units([unit])
-            else:
-                self.map_screen.deselect_map_units([unit])
+            self.map_screen.deselect_map_units([unit])
         else:
             self.map_screen.select_map_units([unit], additive=True)
+        self.selected_unit_index = None
         self.bombarding_unit_index = None
         self.refresh_ui()
 
@@ -705,18 +709,17 @@ class Orders_Screen(GameState):
 
         if player_units:
             button_x = self.PANEL_X + PANEL_INSET
-            local_units = [unit for unit in self.target_province.get("units", [])
-                           if unit.get("owner") == player_country]
-            if len(local_units) > 1:
-                all_color = "grey" if is_tactical else (
-                    "blue" if self.selected_unit_index == "ALL" else "grey")
-                btn_all = Button(button_x, PANEL_Y + TOP_BTN_ROW_OFFSET_Y,
-                                 "orders_header_button", all_color, "Select All",
-                                 lambda: self.select_unit("ALL"), font_preset="tiny")
-                btn_all.disabled = is_tactical
-                btn_all.is_selected = self.selected_unit_index == "ALL" and not is_tactical
-                self.elements.append(btn_all)
-                button_x = btn_all.rect.right + TOP_BTN_GAP_X
+            all_selected = all(self.map_screen.is_unit_selected(unit)
+                               for unit in player_units)
+            all_color = "grey" if is_tactical else (
+                "blue" if all_selected else "grey")
+            btn_all = Button(button_x, PANEL_Y + TOP_BTN_ROW_OFFSET_Y,
+                             "orders_header_button", all_color, "Select All",
+                             lambda: self.select_unit("ALL"), font_preset="tiny")
+            btn_all.disabled = is_tactical
+            btn_all.is_selected = all_selected and not is_tactical
+            self.elements.append(btn_all)
+            button_x = btn_all.rect.right + TOP_BTN_GAP_X
 
             btn_clear = Button(button_x, PANEL_Y + TOP_BTN_ROW_OFFSET_Y,
                                "orders_clear_button", "red",
@@ -1416,7 +1419,8 @@ class Orders_Screen(GameState):
         if read_only:
             meta = "READ ONLY | NO COMMANDABLE UNITS SELECTED"
         else:
-            meta = f"{len(rows)} UNIT{'S' if len(rows) != 1 else ''} SELECTED"
+            selected_count = len(self.map_screen.selected_unit_records())
+            meta = (f"{selected_count} SELECTED | {len(rows)} IN ROSTER")
         surface.blit(tiny_font.render(meta, True, c.UI_TEXT_LIGHT),
                      (self.PANEL_X + PANEL_INSET,
                       PANEL_Y + HEADER_META_OFFSET_Y))

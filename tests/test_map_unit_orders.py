@@ -115,6 +115,56 @@ class OrdersSelectionRowsTests(unittest.TestCase):
         self.assertEqual(rows[0][0], 0)
         self.assertEqual(rows[1][0], (2, 0))
 
+    def test_select_all_uses_the_entire_cross_province_roster(self):
+        """Select All must not be limited to Orders' focused province."""
+        first = province(1, [])
+        second = province(2, [])
+        unit_a = {"owner": "A", "type": "Infantry"}
+        unit_b = {"owner": "A", "type": "Infantry"}
+        first["units"] = [unit_a]
+        second["units"] = [unit_b]
+
+        class MapStub:
+            player_country = "A"
+            tactical_mode = False
+            map_data = {1: first, 2: second}
+
+            def __init__(self):
+                self.selected_ids = {id(unit_a)}
+
+            def selected_unit_records(self):
+                return [(unit, province)
+                        for province in self.map_data.values()
+                        for unit in province["units"] if id(unit) in self.selected_ids]
+
+            def is_unit_selected(self, unit):
+                return id(unit) in self.selected_ids
+
+            def select_map_units(self, units, additive=False):
+                if not additive:
+                    self.selected_ids.clear()
+                self.selected_ids.update(id(unit) for unit in units)
+
+            def deselect_map_units(self, units):
+                self.selected_ids.difference_update(id(unit) for unit in units)
+
+        screen = object.__new__(Orders_Screen)
+        screen.map_screen = MapStub()
+        screen.target_province = first
+        screen.roster_unit_ids = {id(unit_a), id(unit_b)}
+        screen.read_only = False
+        screen.selected_unit_index = None
+        screen.bombarding_unit_index = None
+        screen.refresh_ui = lambda: None
+
+        screen.select_unit("ALL")
+        self.assertEqual(screen.map_screen.selected_ids, {id(unit_a), id(unit_b)})
+
+        screen.select_unit("ALL")
+        self.assertEqual(screen.map_screen.selected_ids, set())
+        self.assertEqual({id(unit) for _key, unit, _province, _index in screen._visible_rows()},
+                         {id(unit_a), id(unit_b)})
+
     def test_per_unit_action_can_target_a_selected_unit_on_another_tile(self):
         """A row action must never fall back to the panel's focused province."""
         focused = province(1, [])

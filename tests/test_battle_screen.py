@@ -758,13 +758,26 @@ class OrdersScreenRegressionTests(BattleScreenTestCase):
         self.assertEqual(summary, "Ready")
         self.assertEqual(color, c.UI_TEXT_MUTED)
 
-        # Clicking one member of a group focuses it instead of deselecting it.
+        # Clicking a selected row removes only that member from the live
+        # selection; the roster remains visible so it can be reselected.
         screen.toggle_selected_unit(focused_unit)
-        self.assertEqual(self.map.selected_unit_records(), [(focused_unit, self.province)])
+        self.assertNotIn(id(focused_unit),
+                         {id(unit) for unit, _province in self.map.selected_unit_records()})
         # The rest of the group remains in the roster, visibly unselected, so
         # it can be picked again without reopening Orders.
         self.assertEqual(set(screen.unit_row_icons), set(owned_indices))
         self.assertEqual(screen.panel_rect.height, group_panel_height)
+
+        screen.toggle_selected_unit(focused_unit)
+        self.assertIn(id(focused_unit),
+                      {id(unit) for unit, _province in self.map.selected_unit_records()})
+
+        # Select All can clear the whole active selection without clearing
+        # the rows that make those units available for re-selection.
+        screen.select_unit("ALL")
+        self.assertEqual(self.map.selected_unit_records(), [])
+        screen.draw(self.surface)
+        self.assertEqual(set(screen.unit_row_icons), set(owned_indices))
 
     def test_left_clicking_open_map_space_leaves_orders(self):
         import pygame as pg
