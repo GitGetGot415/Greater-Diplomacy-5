@@ -125,6 +125,12 @@ feature working in one says nothing about the other.
 - Do not hardcode content, tuning values, or repeated magic numbers in behavior
   code. Use existing JSON data, local named constants, `data/constants.py`, or
   shared query helpers as appropriate.
+- Tests must derive gameplay expectations from the same canonical constants,
+  data definitions, or rule helpers as the implementation. Do not freeze a
+  balance value, cost, duration, multiplier, threshold, or capacity as a test
+  literal when the test is checking the rule rather than using a deliberately
+  artificial fixture. A tuning adjustment should change the rule's source of
+  truth without requiring unrelated test rewrites.
 - Non-LLM diplomatic/AI prose belongs in `data/json/ai_responses.json` and is
   accessed through `map_logic/ai/ai_prompts.py`; it must not be embedded at call
   sites.

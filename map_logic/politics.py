@@ -1,12 +1,11 @@
 """Domestic politics: an ideological axis and timed national policies.
 
 A country trades how hard its armies hit against how fast it researches, and it
-cannot do it quickly -- picking a direction moves the value one step per
-processed turn, so either extreme is ten turns away from the centre. Everyone
-starts centrist; the map editor can author a different starting position. A
-country may additionally pursue eligible policies. Each takes three processed
-turns to activate, and a cancellation takes one unless undone before that turn
-resolves.
+cannot do it quickly -- picking a direction moves it by ``POLITICS_STEP`` per
+processed turn. Everyone starts at ``POLITICS_START``; the map editor can
+author a different starting position. A country may additionally pursue
+eligible policies. Their activation and cancellation durations are the
+respective ``POLICY_*_TURNS`` values below.
 
 Damage means every point of damage a nation's units deal, attacking or
 defending, plus bombardment. A lane fight is a simultaneous exchange with no
