@@ -109,6 +109,30 @@ class PoliticsScreenEditGuardTests(unittest.TestCase):
         screen.set_drift(-1)
         self.assertEqual(politics.drift(map_screen.nation_data, "B"), 0)
 
+    def test_policy_scrollbar_moves_cards_opposite_to_handle(self):
+        screen = self.screen(False)
+        self.assertLess(screen.policy_scroll_min_x, 0)
+        screen.policy_scroll_track_rect = pygame.Rect(100, 100, 500, 14)
+
+        screen._snap_policy_scroll(screen.policy_scroll_track_rect.left)
+        self.assertEqual(screen.policy_scroll_x, 0,
+                         "dragging the scrollbar left moves the policy cards right")
+
+        screen._snap_policy_scroll(screen.policy_scroll_track_rect.right)
+        self.assertEqual(screen.policy_scroll_x, screen.policy_scroll_min_x,
+                         "dragging the scrollbar right moves the policy cards left")
+
+        # Directly dragging the cards retains the conventional, grab-and-pan
+        # direction. Only the dedicated scrollbar is reversed.
+        screen.policy_scroll_x = -100
+        viewport = screen._policy_viewport_rect()
+        start = viewport.center
+        screen.additional_events(pygame.event.Event(
+            pygame.MOUSEBUTTONDOWN, pos=start, button=1))
+        screen.additional_events(pygame.event.Event(
+            pygame.MOUSEMOTION, pos=(start[0] - 20, start[1]), rel=(-20, 0)))
+        self.assertEqual(screen.policy_scroll_x, -120)
+
 
 def screen_with(**by_nation):
     """A nation_data holder where each nation is (value, drift)."""

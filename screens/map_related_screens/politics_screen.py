@@ -337,7 +337,12 @@ class Politics_Screen(GameState):
                 self._draw_policy_card(surface, self._policy_card_rect(index), definition)
 
         track, handle = ui_bars.draw_standard_scrollbar_horizontal(
-            surface, self.policy_scroll_x, self.policy_scroll_min_x, 0,
+            # The policy cards themselves retain conventional direct-drag
+            # behavior, but the scrollbar is intentionally reversed: moving
+            # its handle left shifts the cards right, as requested for this
+            # horizontally arranged policy carousel.
+            surface, self.policy_scroll_min_x - self.policy_scroll_x,
+            self.policy_scroll_min_x, 0,
             viewport.x, self.policies_rect.bottom - POLICY_SCROLLBAR_HEIGHT - 10,
             viewport.width, POLICY_SCROLLBAR_HEIGHT)
         self.policy_scroll_track_rect = track
@@ -421,8 +426,9 @@ class Politics_Screen(GameState):
     def _snap_policy_scroll(self, mouse_x):
         track = self.policy_scroll_track_rect
         if track:
-            self.policy_scroll_x = ui_bars.calculate_scroll_snap_horizontal(
+            handle_value = ui_bars.calculate_scroll_snap_horizontal(
                 mouse_x, self.policy_scroll_min_x, 0, track.x, track.width)
+            self.policy_scroll_x = self.policy_scroll_min_x - handle_value
 
     def _draw_captions(self, surface):
         small = fonts.get("small")
