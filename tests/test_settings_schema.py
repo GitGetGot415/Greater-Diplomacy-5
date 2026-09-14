@@ -14,6 +14,7 @@ written out by hand on purpose: they have to fail loudly if the table moves.
 import os
 import sys
 import unittest
+from unittest import mock
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
@@ -177,6 +178,50 @@ class RuntimeMirrorTests(unittest.TestCase):
         before = c.SCENARIOS_CUSTOM_DIR
         c.apply_runtime_settings({"saves_dir": c.SAVES_DIR})
         self.assertEqual(c.SCENARIOS_CUSTOM_DIR, before)
+
+
+class NavigationIntroPopupTests(unittest.TestCase):
+    def test_intro_popup_uses_mouse_assets_and_is_draggable(self):
+        """The tutorial is a live map popup, not a snapshot modal screen."""
+        import pygame
+        from ui.confirm_dialog import message_box
+
+        pygame.init()
+        pygame.display.set_mode((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
+        map_stub = type("MapStub", (), {"navigation_intro_popup": None})()
+        popup = message_box._NavigationIntroPopup(map_stub)
+        map_stub.navigation_intro_popup = popup
+
+        image = pygame.Surface((64, 74), pygame.SRCALPHA)
+        surface = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
+        with mock.patch.object(message_box.ui_bars, "get_ui_image", return_value=image) as get_image:
+            popup.draw(surface)
+
+        self.assertEqual(
+            [call.args[0] for call in get_image.call_args_list],
+            ["Left.png", "Middle.png", "Right.png"])
+        self.assertTrue(all(call.kwargs["directory"] == popup.MOUSE_DIR
+                            for call in get_image.call_args_list))
+
+        original = popup.rect.topleft
+        popup.handle_event(pygame.event.Event(
+            pygame.MOUSEBUTTONDOWN, pos=popup.header_rect.center, button=1))
+        popup.handle_event(pygame.event.Event(
+            pygame.MOUSEMOTION, pos=(popup.header_rect.centerx + 45,
+                                     popup.header_rect.centery + 25)))
+        popup.handle_event(pygame.event.Event(
+            pygame.MOUSEBUTTONUP, pos=popup.header_rect.center, button=1))
+        self.assertNotEqual(popup.rect.topleft, original)
+
+        with mock.patch.object(message_box.queries, "get_settings", return_value={}), \
+             mock.patch.object(message_box.queries, "save_cached_json") as save:
+            popup.handle_event(pygame.event.Event(
+                pygame.MOUSEBUTTONDOWN, pos=popup.checkbox_rect.center, button=1))
+        save.assert_called_once_with("settings", {"show_intro_popup": False})
+
+        popup.handle_event(pygame.event.Event(
+            pygame.MOUSEBUTTONDOWN, pos=popup.continue_rect.center, button=1))
+        self.assertIsNone(map_stub.navigation_intro_popup)
 
 
 class KeybindIoTests(unittest.TestCase):

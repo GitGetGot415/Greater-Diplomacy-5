@@ -1162,6 +1162,7 @@ class Map(GameState):
         self.current_player_index = 0
         self.show_player_ready_screen = False
         self.show_navigation_intro_when_ready = False
+        self.navigation_intro_popup = None
 
        # --- UI DISPLAY OVERRIDES ---
         self.hide_raised_rect = False
@@ -1800,6 +1801,14 @@ class Map(GameState):
                 return
         event_handler.handle_map_events(self, event)
 
+    def handle_events(self, events):
+        """Route the live navigation guide before HUD buttons and map input."""
+        for event in events:
+            popup = self.navigation_intro_popup
+            if popup is not None and popup.handle_event(event):
+                continue
+            super().handle_events([event])
+
     # --- Map-level unit selection and movement ---------------------------------
 
     def can_select_map_units(self):
@@ -2061,6 +2070,10 @@ class Map(GameState):
 
         diplomatic_popups.draw(self, surface)
 
+        popup = self.navigation_intro_popup
+        if popup is not None:
+            popup.draw(surface)
+
         if self.thread_error:
             surface.fill((150, 0, 0))
             title = fonts.get("heading1").render("FATAL THREAD ERROR", True, (255, 255, 255))
@@ -2319,7 +2332,7 @@ class Map(GameState):
             self.show_navigation_intro_when_ready = False
             if queries.get_settings().get("show_intro_popup", True):
                 from ui import confirm_dialog
-                confirm_dialog.show_navigation_intro()
+                confirm_dialog.show_navigation_intro(self)
 
         if self.show_player_ready_screen:
             for el in self.elements: el.visible = False
