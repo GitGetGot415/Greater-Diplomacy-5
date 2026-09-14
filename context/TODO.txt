@@ -13,6 +13,7 @@ hanskolmer suggestions:
 - rebellion mechanics
 
 - faction betrayal
+- focus trees????? (created with scripted events?)
 
 curry suggestions
 - you should be able to do separate peace deals
@@ -39,6 +40,8 @@ exodus suggestions:
 - STATISTICS!!!
 - Under "claims on you" only show countries with claims on your territory that currently exist on the world map
 - devastation
+- straits and land bridges
+- railroads
 Also, filters!
 Filters for everything
 Country filters
@@ -72,12 +75,6 @@ for historical scenarios, ability to add in settings for every scenario in there
 - set a map for every scenario and a resource map for such 
 
 - ability to swap between a turn based game to a real time one, like paradox games (WARNING: VERY AMBITIOUS)
-
-- COMPLETE REWORK OF THE ORDERS SCREEN
-- instead of having to click a tile and then click the units, make it work like hoi4
-- you can just click the unit from the tile and then get a list of all units there
-(really complicated to explain, tldr make it work like hoi4)
-(THAT'S EXTREMELY VAGUE THOUGH)
 
 - lesser diplomacy
 - ...but it's publically available on github
@@ -163,7 +160,7 @@ disable saving for inputing tournament moves?????
 
 - review various TODO's
 
-- hoi4 entrenchment mechanic??? defense forts?
+- hoi4 entrenchment mechanic???
 
 Comprehension:
 - what is all the data associated with a country?
@@ -181,8 +178,6 @@ idk:
 
 Vague content ideas NOT THAT IMPORTANT BUT COULD PROBABLY BE LOOKED AT:
 - if ai has integrated puppets automatically siphon as many resources off them as possible???
-
-- focus trees????? (created with scripted events?)
 
 for random scenarios:
 add how valuable the resources are (rn this is between 20 - 80)
