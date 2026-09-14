@@ -33,7 +33,7 @@ POLICY_KEY = "domestic_policies"
 POLICY_ACTIVATING = "ACTIVATING"
 POLICY_ACTIVE = "ACTIVE"
 POLICY_CANCELLING = "CANCELLING"
-POLICY_ACTIVATION_TURNS = 3
+POLICY_ACTIVATION_TURNS = 2
 POLICY_CANCELLATION_TURNS = 1
 
 # Ordered left-to-right exactly as the Politics panel presents the cards.
