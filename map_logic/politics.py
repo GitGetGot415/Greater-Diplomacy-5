@@ -44,36 +44,39 @@ POLICIES = (
         "id": "research_subsidies",
         "name": "Research Subsidies",
         "max_politics": -2,
-        "effects": {"research": 1.20, "manpower": 0.90, "materials": 0.90},
-        "effect_lines": ("Research +20%", "Manpower -10%", "Materials -10%"),
+        "effects": {"research": 1.50, "manpower": 0.80, "materials": 0.90, "fuel": 0.90},
+        "effect_lines": ("Research +50%", "Manpower -20%", "Materials -10%", "Fuel -10%"),
     },
     {
         "id": "prioritize_civilian_needs",
         "name": "Prioritize Civilian Needs",
         "max_politics": 3,
-        "effects": {"research": 1.10, "manpower": 0.90},
-        "effect_lines": ("Research +10%", "Manpower -10%"),
+        "effects": {"research": 1.20, "manpower": 0.90},
+        "effect_lines": ("Research +20%", "Manpower -10%"),
     },
     {
         "id": "prioritize_industrial_needs",
         "name": "Prioritize Industrial Needs",
-        "effects": {"materials": 1.10, "fuel": 1.05, "research": 0.80, "manpower": 0.90},
-        "effect_lines": ("Materials +10%", "Fuel +5%", "Research -20%", "Manpower -10%"),
+        "effects": {"materials": 1.10, "fuel": 1.10, "research": 0.80, "manpower": 0.90},
+        "effect_lines": ("Materials +10%", "Fuel +10%", "Research -20%", "Manpower -10%"),
     },
     {
         "id": "national_service",
         "name": "National Service",
         "min_politics": -3,
-        "effects": {"manpower": 1.20, "materials": 0.90, "fuel": 0.90, "research": 0.80},
-        "effect_lines": ("Manpower +20%", "Materials -10%", "Fuel -10%", "Research -20%"),
+        "effects": {"damage": 1.10, "research": 0.80, "manpower": 0.90, "materials": 0.90},
+        "effect_lines": ("Army damage +10%", "Research -20%", "Manpower -10%", "Materials -10%"),
     },
     {
         "id": "total_mobilisation",
         "name": "Total Mobilisation",
         "min_politics": 2,
-        "effects": {"damage": 1.20, "research": 0.50, "materials": 0.80, "fuel": 0.90},
-        "effect_lines": ("Army damage +20%", "Research -50%", "Materials -20%", "Fuel -10%"),
+        "effects": {"damage": 1.20, "research": 0.50, "manpower": 0.80, "materials": 0.80, "fuel": 0.90},
+        "effect_lines": ("Army damage +20%", "Research -50%", "Manpower -20%", "Materials -20%", "Fuel -10%"),
     },
+
+    # maybe more stuff related to conscription...
+    # also maybe a description for each item
 )
 POLICIES_BY_ID = {policy["id"]: policy for policy in POLICIES}
 
