@@ -236,6 +236,8 @@ class NavigationIntroPopupTests(unittest.TestCase):
             pygame.MOUSEBUTTONDOWN, pos=popup.next_rect.center, button=1))
         self.assertEqual(popup.page_index, 1)
         self.assertEqual(popup.PAGE_TITLES[popup.page_index], "Map UI")
+        self.assertEqual(popup.PAGE_SUBTITLES[popup.page_index],
+                         "Learn what the bottom-left map UI buttons do.")
         self.assertEqual([label for label, _icon, _description in popup.MAP_UI_BUTTONS], [
             "Terrain", "Political", "Relations", "Cores", "Factions",
             "Resources", "Blank", "Units", "Economy", "Names",

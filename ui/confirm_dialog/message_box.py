@@ -70,10 +70,10 @@ class _NavigationIntroPopup:
     )
     MAP_UI_BUTTONS = (
         ("Terrain", "terrain", "Shows the terrain map."),
-        ("Political", "political", "Shows country ownership."),
+        ("Political", "political", "Shows the actual countries on the map."),
         ("Relations", "relations", "Shows diplomatic relations."),
-        ("Cores", "core", "Shows national core claims."),
-        ("Factions", "faction", "Shows internal faction support."),
+        ("Cores", "core", "Shows the territory each country has cores on."),
+        ("Factions", "faction", "Shows factions."),
         ("Resources", "resource", "Shows province resources."),
         ("Blank", "blank", "Hides the secondary map overlay."),
         ("Units", "unit", "Shows unit stacks and their commands."),
@@ -81,6 +81,10 @@ class _NavigationIntroPopup:
         ("Names", "names", "Shows or hides country names."),
     )
     PAGE_TITLES = ("Map Navigation", "Map UI")
+    PAGE_SUBTITLES = (
+        "Learn how to move around the map and use the mouse controls.",
+        "Learn what the bottom-left map UI buttons do.",
+    )
 
     def __init__(self, map_screen):
         self.map_screen = map_screen
@@ -200,6 +204,8 @@ class _NavigationIntroPopup:
 
         title = self.title_font.render(self.PAGE_TITLES[self.page_index], True, (255, 255, 255))
         surface.blit(title, title.get_rect(center=(self.rect.centerx, self.header_rect.centery)))
+        subtitle = self.body_font.render(self.PAGE_SUBTITLES[self.page_index], True, (205, 215, 225))
+        surface.blit(subtitle, subtitle.get_rect(center=(self.rect.centerx, self.rect.y + 55)))
 
         pygame.draw.rect(surface, (150, 0, 0), self.close_rect)
         pygame.draw.rect(surface, (255, 255, 255), self.close_rect, 1)
@@ -208,8 +214,8 @@ class _NavigationIntroPopup:
 
         if self.page_index == 0:
             column_w = self.rect.width // 3
-            image_y = self.rect.y + 68
-            text_y = self.rect.y + 177
+            image_y = self.rect.y + 88
+            text_y = self.rect.y + 197
             for index, (filename, heading, lines) in enumerate(self.NAVIGATION_BUTTONS):
                 center_x = self.rect.x + column_w * index + column_w // 2
                 image = ui_bars.get_ui_image(filename, directory=self.MOUSE_DIR)
@@ -235,7 +241,7 @@ class _NavigationIntroPopup:
             for index, (label, icon_name, description) in enumerate(self.MAP_UI_BUTTONS):
                 column, row = divmod(index, 5)
                 x = column_x[column]
-                y = self.rect.y + 72 + row * row_h
+                y = self.rect.y + 92 + row * row_h
                 icon = ui_elements.UI_ICONS.get(icon_name)
                 if icon:
                     scale = min(28 / icon.get_width(), 28 / icon.get_height())
@@ -258,7 +264,7 @@ class _NavigationIntroPopup:
                              self.checkbox_rect.bottomright, 3)
             pygame.draw.line(surface, (80, 190, 100), self.checkbox_rect.topright,
                              self.checkbox_rect.bottomleft, 3)
-        label = self.body_font.render("Don't show this popup again", True, (225, 225, 225))
+        label = self.body_font.render("Don't show this popup when starting a game", True, (225, 225, 225))
         surface.blit(label, (self.checkbox_rect.right + 9, self.checkbox_rect.y + 2))
 
         for rect, label, enabled in (

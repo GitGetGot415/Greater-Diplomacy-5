@@ -103,6 +103,25 @@ class ControllerConstructionTests(unittest.TestCase):
         self.assertEqual(defaults["CLEAR_ORDERS"], pygame.K_DELETE)
         self.assertIn("CLEAR_ORDERS", self.controller.keybinds)
 
+    def test_loaded_playable_maps_arm_the_navigation_tutorial(self):
+        """The map constructor is shared by new, save, and multiplayer loads,
+        so arming it here keeps all playable session types consistent."""
+        game_map = app_harness.boot_map()
+        self.assertTrue(game_map.show_navigation_intro_when_ready)
+
+        import main
+        editor_map = main.Map(load_path=app_harness.SCENARIO_PATH,
+                              is_scenario=True, force_editor=True)
+        self.assertFalse(editor_map.show_navigation_intro_when_ready)
+
+    def test_map_help_button_reopens_the_navigation_tutorial(self):
+        game_map = app_harness.boot_map()
+        with mock.patch("ui.confirm_dialog.show_navigation_intro") as show_tutorial:
+            game_map.btn_help.callback()
+        show_tutorial.assert_called_once_with(game_map)
+        self.assertLess(game_map.btn_help.rect.right,
+                        game_map.btn_refresh_all.rect.left)
+
 
 class GlobalKeyDispatchTests(unittest.TestCase):
     class State:

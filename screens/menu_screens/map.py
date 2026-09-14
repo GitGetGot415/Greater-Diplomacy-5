@@ -74,7 +74,8 @@ EDITOR_BOT_BTN_STEP_X = 110
 # --- Top bar, right-aligned ---
 TOP_RIGHT_BTN_X = c.SCREEN_WIDTH - 120
 REFRESH_BTN_X = c.SCREEN_WIDTH - 240
-GLOBAL_ECON_BTN_X = c.SCREEN_WIDTH - 380
+HELP_BTN_X = c.SCREEN_WIDTH - 360
+GLOBAL_ECON_BTN_X = c.SCREEN_WIDTH - 480
 
 # --- Mode buttons on the country-selection screen ---
 BTN_SPECTATOR_Y = c.SCREEN_HEIGHT - 55
@@ -114,6 +115,7 @@ def render_buttons(map_screen):
     # ==================================================================== #
     #                        MAP VIEW TOGGLES                              #
     # ==================================================================== #
+    map_screen.btn_help = Button(HELP_BTN_X, c.TOP_BAR_UI_CENTER_Y, "small", "blue", "Help", map_screen.show_navigation_tutorial, font_preset="normal")
     map_screen.btn_refresh_all = Button(REFRESH_BTN_X, c.TOP_BAR_UI_CENTER_Y, "small", "blue", "Refresh Maps", map_screen.refresh_all_maps, font_preset="normal")
     map_screen.btn_global_econ_overview = Button(GLOBAL_ECON_BTN_X, c.TOP_BAR_UI_CENTER_Y, "small", "pink", "Global Economy", lambda: editor_menus.open_editor_economy(map_screen), font_preset="normal")
 
@@ -511,7 +513,7 @@ def render_buttons(map_screen):
 
     # --- Append all explicitly defined buttons into the elements list ---
     map_screen.elements.extend([
-        map_screen.btn_refresh_all, map_screen.btn_global_econ_overview,
+        map_screen.btn_help, map_screen.btn_refresh_all, map_screen.btn_global_econ_overview,
         map_screen.btn_view_terrain, map_screen.btn_view_political, map_screen.btn_view_relations, map_screen.btn_view_cores, map_screen.btn_view_factions,
         map_screen.btn_view_resources, map_screen.btn_view_blank, map_screen.btn_view_units, map_screen.btn_view_economy, map_screen.btn_toggle_names,
         map_screen.btn_ed_load, map_screen.btn_ed_nation,
@@ -668,6 +670,7 @@ def update_button_states(map_screen):
     # ==================================================================== #
     #                        VIEW TOGGLES SELECTION                        #
     # ==================================================================== #
+    map_screen.btn_help.visible = True
     map_screen.btn_refresh_all.visible = True
     map_screen.btn_global_econ_overview.visible = map_screen.is_editor or map_screen.player_country == "Spectator"
 
@@ -1161,6 +1164,10 @@ class Map(GameState):
         self.active_players = [] # Usually empty on boot unless loaded from save
         self.current_player_index = 0
         self.show_player_ready_screen = False
+        # Every playable map session, including saves and multiplayer sessions,
+        # gets a chance to show the tutorial after it has finished loading.
+        # The persisted setting is checked when that moment arrives; editor
+        # maps deliberately never arm the player-facing tutorial.
         self.show_navigation_intro_when_ready = False
         self.navigation_intro_popup = None
 
@@ -1256,6 +1263,8 @@ class Map(GameState):
         if self.is_editor:
             self.player_country = "Editor"
             self.selection_mode = False
+        else:
+            self.show_navigation_intro_when_ready = True
 
         self.painting_active = False
         self.brush_nation = "Unclaimed"
@@ -1680,6 +1689,11 @@ class Map(GameState):
         self.refresh_map_layers(*self.ALL_MAP_LAYERS)
         self.update_country_centers()
         self.show_feedback("Maps refreshed!")
+
+    def show_navigation_tutorial(self):
+        """Open the map tutorial again from the persistent Help button."""
+        from ui import confirm_dialog
+        confirm_dialog.show_navigation_intro(self)
 
     def auto_assign_cores(self):
         from ui import confirm_dialog
@@ -2331,12 +2345,10 @@ class Map(GameState):
             from ui import diplomatic_popups
             diplomatic_popups.spawn_popups_for_player(self)
 
-        if (self.show_navigation_intro_when_ready and is_playing
-                and not getattr(self, "realtime_multiplayer", False)):
+        if self.show_navigation_intro_when_ready and is_playing:
             self.show_navigation_intro_when_ready = False
             if queries.get_settings().get("show_intro_popup", True):
-                from ui import confirm_dialog
-                confirm_dialog.show_navigation_intro(self)
+                self.show_navigation_tutorial()
 
         if self.show_player_ready_screen:
             for el in self.elements: el.visible = False
