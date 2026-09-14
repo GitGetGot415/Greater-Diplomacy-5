@@ -191,6 +191,10 @@ class NavigationIntroPopupTests(unittest.TestCase):
         map_stub = type("MapStub", (), {"navigation_intro_popup": None})()
         popup = message_box._NavigationIntroPopup(map_stub)
         map_stub.navigation_intro_popup = popup
+        self.assertEqual(popup.rect.center, (
+            c.SCREEN_WIDTH // 2,
+            c.SCREEN_HEIGHT // 2 + popup.INITIAL_CENTER_Y_OFFSET,
+        ))
 
         image = pygame.Surface((64, 74), pygame.SRCALPHA)
         surface = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))

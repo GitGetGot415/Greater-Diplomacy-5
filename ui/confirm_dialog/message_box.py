@@ -52,6 +52,7 @@ class _NavigationIntroPopup:
     WIDTH = 720
     HEIGHT = 370
     HEADER_H = 46
+    INITIAL_CENTER_Y_OFFSET = -16
     BORDER_COLOR = _KIND_ACCENTS["info"]
     MOUSE_DIR = os.path.join(c.ASSETS_ROOT_DIR, "mouse")
     NAVIGATION_BUTTONS = (
@@ -89,7 +90,7 @@ class _NavigationIntroPopup:
     def __init__(self, map_screen):
         self.map_screen = map_screen
         self.rect = pygame.Rect(0, 0, self.WIDTH, self.HEIGHT)
-        self.rect.center = (c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2)
+        self.rect.center = (c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2 + self.INITIAL_CENTER_Y_OFFSET)
         self.page_index = 0
         self.dont_show_again = False
         self.is_dragging = False
