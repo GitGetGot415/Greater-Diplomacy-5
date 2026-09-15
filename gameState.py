@@ -34,6 +34,9 @@ def dispatch_global_keys(state, event):
         or getattr(state, "renaming_unit_index", None) is not None
         or bool(getattr(state, "is_renaming", False))
         or bool(getattr(state, "text_input_active", False))
+        or bool(getattr(state, "army_editor_state", None))
+        or bool(getattr(getattr(state, "map_screen", None),
+                        "army_editor_state", None))
     )
     if event.type != pygame.KEYDOWN:
         return

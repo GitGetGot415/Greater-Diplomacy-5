@@ -186,6 +186,18 @@ class GlobalKeyDispatchTests(unittest.TestCase):
 
         self.assertEqual(state.back, 1)
 
+    def test_keybinds_do_not_fire_while_an_army_name_editor_is_open(self):
+        from gameState import dispatch_global_keys
+
+        state = self.State()
+        state.map_screen = mock.Mock(army_editor_state={"name": "Northern Command"})
+        event = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_DELETE)
+        with mock.patch("gameState.queries.get_keybind",
+                        side_effect=lambda _action, default: default):
+            dispatch_global_keys(state, event)
+
+        self.assertEqual(state.cleared, 0)
+
 
 if __name__ == "__main__":
     unittest.main()

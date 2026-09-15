@@ -198,6 +198,18 @@ class ArmyLayoutTests(unittest.TestCase):
             map_stub, pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=flip.center)))
         self.assertTrue(map_stub.army_editor_state["symbol_flipped"])
 
+    def test_back_closes_army_name_editor_before_its_parent_screen(self):
+        army = {"id": "army", "name": "Army 1", "unit_ids": ["unit"],
+                "symbol": "", "symbol_color": [210, 70, 70],
+                "symbol_rotation": 0, "symbol_flipped": False,
+                "custom_symbol": None}
+        map_stub = SimpleNamespace(player_country="A", nation_data={"A": {"armies": [army]}},
+                                   map_data={}, army_custom_symbol_state=None)
+        army_panel._open_editor(map_stub, army)
+
+        self.assertTrue(army_panel.handle_back_key(map_stub))
+        self.assertIsNone(map_stub.army_editor_state)
+
     def test_tray_card_color_is_a_less_saturated_army_rgb(self):
         source = (220, 60, 70)
         fill, border = army_panel._tray_card_colors(source, selected=False)

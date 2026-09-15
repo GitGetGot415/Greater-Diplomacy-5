@@ -2096,6 +2096,8 @@ class Map(GameState):
         print(f"[MAP SCRUBBER] {updated_count} entities updated, {removed_count} obsolete entities vaporized.")
 
     def handle_back_key(self):
+        if army_panel.handle_back_key(self):
+            return
         if self.selected_province:
             self.deselect_province()
 

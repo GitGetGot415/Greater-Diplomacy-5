@@ -1075,6 +1075,8 @@ class Orders_Screen(GameState):
     def handle_back_key(self):
         # Inline editing and bombardment targeting each consume Escape before
         # it is allowed to close the whole panel.
+        if self.map_screen and army_panel.handle_back_key(self.map_screen):
+            return
         if self.renaming_unit_index is not None:
             self.renaming_unit_index = None
             self.renaming_unit_province = None
