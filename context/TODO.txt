@@ -1,231 +1,169 @@
-hanskolmer suggestions:
-- hoi4 esque ordering system so moving units is easier
+# TODO
 
-- KAISERIN SUGGESTIONS:
-- gurella units? (kaiserin's suggestion)
-- give control of factories to other countries temporarially or permenantly
-- ability to nationalize factories (ie take them back forcefully, should cause some diplomatic issues)
-- temporarially rent out factories to other countries via trade?
-- ADD HER FLAGS
+## Check first
 
-- it seems that when countries attempt to rename there faction (it willl literaly break the game, adding them to a separate alliance)
-(PLEASE CONFIRM IF ABOVE THING IS FIXED THEN REMOVE IF INDEED FIXED)
-- rebellion mechanics
+- Faction renaming can break the game by creating a new faction.
+- Fast units can be given slow movement orders.
+- Annexed countries leave their factions immediately.
+- Revive a country when an ally retakes its land.
+- AI fallback responses may already be varied. Check where they are stored.
+- Spectator mode may skip scripted events when several turns are skipped.
+- Some countries may reject requests they should accept.
+- Custom country names may be wrong, especially for puppets.
+- Refreshing country data may show countries that no longer exist.
+- What are the refresh issues?
+- Is saving during tournament move entry allowed?
+- Review old TODOs.
 
-- faction betrayal
-- focus trees????? (created with scripted events?)
+## Suggestions
 
-- fix countries immediately leaving their factions once they get completely annexed
-- they should be able to be revived if an ally gets back their land
-- make fallback responses more... varied (isn't this already a thing?)
-(wait where are they even stored?)
+### Hanskolmer
 
-curry suggestions
-- you should be able to do separate peace deals
+- Add an HOI4-style order system to make unit movement easier.
+- Organize Hanskolmer's art more clearly.
+- Make the art UI show unit art names.
 
-- make a way to organize the hanskolmer art in a less confusing way
-- make sure this ui also shows the unit art names
+### Kaiserin
 
-Couple of diplomacy suggestion to make this game Greater for this fifth instalment:
-2- Non Aggression pact
-(after ww1 this seems kinda weird but sure) 4- Declaring someone as your rivals (it make your relation worse, but give you a free justification for humiliation war (you can only rival someone with similar power level))
-Also some more resources would be nice (like have other type of resources that are needed in the creation of  tanks/factory,etc)
+- Add guerrilla units.
+- Let countries control another country's factories for a set time or forever.
+- Let countries nationalize factories. This should hurt diplomacy.
+- Let countries rent factories through trade.
+- Add real country flags.
+- Add rebellions.
+- Add faction betrayal.
+- Add focus trees, possibly through scripted events.
 
-fatass suggestion:
-I mean, why not allow me to click on another province while I'm inside the menu for a province?
-I mean you let me see the map anyway, I should be able to click out if I'm not selecting any troops
+### Curry
 
-REWORK FOLDER UI SO IT USES THE BUILT IN VERSION YOUR OS HAS IF POSSIBLE
+- Allow separate peace deals.
 
-- see if the tank production buttons can be compressed like infantry or artillery
-- perhaps railroad guns could be a type of artillery
-- seperate artillery research section?
+### Fatass
 
-exodus suggestions:
-- STATISTICS!!!
-- Under "claims on you" only show countries with claims on your territory that currently exist on the world map
-- devastation
-- straits and land bridges
-- railroads
-Also, filters!
-Filters for everything
-Country filters
-Unit filters on world map
-Country filters on world map
-Everything!
+- Allow the player to click another province while a province menu is open, unless they are selecting troops.
 
-- why are there so many tests? are some of them even nessecary?
-- things that test visual aspects i think might not be needed, especially if they're in the menu
+### Exodus
 
-- possibly make convoying and unconvoying and trucking and untrucking all visible simultaneously? (this is kinda allot tbh)
+- Add statistics.
+- Under “claims on you,” show only countries that still exist.
+- Add devastation.
+- Add straits and land bridges.
+- Add railroads.
+- Add filters for everything:
+  - Countries
+  - Units on the world map
+  - Countries on the world map
 
-- combat width research? (ie increase combat width)
-- if multiple units are on a tile, controlled by multiple countries, fighting on the same side, then whatever
-country has the highest combat width level researched, that's the increase that will be implemented
+## Diplomacy and countries
 
-- combat width depends on number of connecting tiles (hey wait a minute)
+- Add non-aggression pacts.
+- Let countries declare rivals. Rivals should have worse relations and allow a free humiliation-war claim. Limit this by country power.
+- Let countries surrender and give up their claims to avoid war.
+- Add diplomacy rules from the board game.
+- Add a way to send military access and then declare war while the request is pending.
+- Add faction betrayal.
+- Let countries leave or rejoin factions correctly after annexation.
+- Let puppets take land where they have cores.
+- Prevent puppet border gore.
+- Decide whether a country with only puppets should form a faction.
+- Let players release a country and then play as it.
+- Check whether changing a country's appearance to itself restores the default appearance.
+- Add country custom names and make them work for puppets.
+- Add forts that stay when a country keeps the territory.
+- Add political power. Decide what it is used for first.
 
-- ADD REAL FLAGS SUGGESTED BY KAISERIN
+## Puppets and factories
 
-- puppets should take territory that has their cores...
-- prevent puppet bordergore
-- diplomacy rules option (the board game)
-- backrooms in gd5??????
+- Allow factories to be built on puppet territory.
+- Decide whether building cost uses the owner's factories or only factories on core land.
+- Make integrated puppets send everything to their master, except land where they have a core and the master does not.
+- Alternatively, give core land to an integrated puppet automatically when it captures it.
+- Make integrated puppets accept all trades from their master.
+- Give trades with integrated puppets a custom UI.
+- Let AI countries take resources from integrated puppets.
 
-- edit construction turns also allows for the editing of how much said unit costs to produce?
+## Economy and production
 
-for historical scenarios, ability to add in settings for every scenario in there, such as:
-- name of a country at what specific time
-- (note: germany should probably just use the germany tag)
-- set a map for every scenario and a resource map for such 
+- Add more resources for tanks, factories, and other production.
+- Add a resource storage limit, such as 100,000 manpower, materials, and fuel.
+- Let players edit unit production costs in the construction editor.
+- Let players save and load unit-cost presets.
+- Compress the tank production buttons like the infantry and artillery buttons.
+- Add a separate naval production queue.
+- Add ports that reduce naval unit build time.
+- Always show oil and defense on the production screen.
+- Redesign the production screen as a table.
+- Add a volume slider for each sound type.
 
-- ability to swap between a turn based game to a real time one, like paradox games (WARNING: VERY AMBITIOUS)
+## Combat and units
 
-- lesser diplomacy
-- ...but it's publically available on github
-- ...and the files for it can be integrated onto here...?????
-- idk figure it out
+- Make terrain affect combat and movement.
+- Add HOI4-style entrenchment.
+- Add combat-width research.
+- Decide whether combat width depends on the number of connecting tiles.
+- If several countries fight on the same side, use the highest combat-width research level.
+- Let artillery pierce defense, or deal percentage damage. If both are used, use the higher result.
+- Decide whether overkill can kill a unit before the rest of the damage is applied.
+- Make convoying, unconvoying, trucking, and untrucking visible at the same time.
+- Add large-unit categories and draw their map rectangles twice as large.
+- Make destroyers, dreadnoughts, battleships, and carriers help invasions.
+- Add real tank battles to tactical mode, possibly like HighFleet.
 
-- artillery should be able to pierce defense so it isn't made completely useless by it
-- or maybe artillery could do a percentage of damage instead of a set amount?
-- maybe percentage or set amount, whichever one is higher???
+### Lane combat follow-ups
 
-- also maybe if a unit does overkill it can kill a unit before it does other damage? (think about this)
+- Reallocate unused lane slots during the same turn.
+- A lane with too few units should give spare slots to other lanes.
+- Re-measure `AI_LINE_SPEND_RATIO` under the lane rules. The current `1.0` is derived, not measured.
 
-- please make the ai less... dumb? (very vague, gonna have to clarify on this)
+### Already partly done
 
-Immediate concerns:
-- newspaper events???
-- set newspaper events in seperate screen and then fire them from country actions???
+- Low-health units may deal less damage. Lane targeting already spreads damage across the front rank, and the AI already rotates badly damaged units out.
 
-- enable building factories on puppet territory? (note that there could be a meta where you make a puppet, build a factory on it, and then annex it to build said factory cheaply) (unless the cost to build is based on your factory count and not that of your pupets)
-- maybe factory count is only counted for factories on core territory
+## AI and scripted events
 
-- integrated puppets transfer everything to their master unless they capture territories they have a core on, and their master doesn't have a core on it
-- or maybe it could be that if a country captures territory that one of their integrated puppets has a core on, that land is automatically transferred to them
+- Make the AI less predictable and less foolish. Define specific failures first.
+- Add newspaper events.
+- Put newspaper event setup in a separate screen, then trigger it from country actions.
+- Let AI countries sign non-aggression pacts.
+- Add an AI setting that changes its difficulty.
+- Add an option for the AI to never accept peace deals.
+- Add an option to prevent core removal.
+- Add an option to prevent revolts when cores are removed.
+- Allow AI prompts to be edited in settings.
 
-- slider volume specifically?
+## Scenarios and maps
 
-maybe units deal less damage the less hp they have...
-this would mean that units basically swap out with other units when they have less hp...
-(the damage half of this is done -- lanes only spread damage across the enemy
-front rank in that lane. the hp half is now a one-liner: it is the sort key
-combat_rules._seat picks the front rank with. the AI already swaps its shot-up
-units out on a health threshold, AI_ROTATE_HEALTH_FRACTION.)
+- Make scenarios use less space.
+- For historical scenarios, allow settings for:
+  - Country names at a specific time
+  - A map for each scenario
+  - A resource map for each scenario
+- Keep Germany on the Germany tag in historical scenarios.
+- Add random-scenario sliders for minimum and maximum resource value. The current range is 20–80.
+- Allow the physical map to be edited while keeping countries and other data intact.
+- Splitting a province should copy the old province data to both new provinces.
+- Merging provinces should keep the needed province data.
+- Allow custom `unit_data.json` files.
+- Add a setting for how country names appear on the map.
+- Add a way to make a timelapse from a saved game history.
+- Add an HOI4-style timeline from 1910 to 1950.
 
-- lane combat follow-ups:
-  - within-turn reallocation of lane slots a lane cannot use. across turns this
-    already works for free (rout somebody, their lane stops existing and the
-    rest widen); within one turn it needs a two-pass water-fill, since demand
-    depends on the slot count and the slot count depends on demand.
-    (half of this landed with sides: allies now water-fill their share of one
-    side, combat_rules.share_slots. what is left is doing the same BETWEEN
-    lanes, where a nation short of men leaves one lane under-filled and the
-    others cannot borrow the room)
-  - re-measure AI_LINE_SPEND_RATIO under the lane rules. the old 2.0 came from
-    fighting armies built at each ratio against eleven fixed compositions, and
-    that harness was run offline and is not in tests/. 1.0 is derived, not
-    measured
+## UI and tools
 
-- figure out how to make scenarios take up less space
+- Use the operating system's built-in folder picker when possible.
+- Add a setting to group units when zoomed out.
+- Make the combat zone look better.
+- Add a way to inspect all data associated with a country.
+- Check the maximum country-data length. Search for `max_length`.
+- Question: are all current tests needed? Visual menu tests may not be useful.
+- Add an editor for construction turns and unit costs.
 
-- release a country and then play as them
-- if has only puppets maybe don't form a faction?
+## Multiplayer and other modes
 
-CUSTOMIZATION!!!
-- allow for more customization of the edit construction turns box, also the ability to save and load presets for unit costs
+- Check whether lesser diplomacy can be integrated from its public GitHub repository.
+- Add a setting to switch between turn-based and real-time play. This is very ambitious.
+- Add “backrooms” to GD5, if there is a clear use for them.
 
-- make it so that integrated puppets always accept any trade offer you make
-- maybe give trades with them a custom ui
+## Loose notes
 
-- production screen should always show oil and defense
-- and then organize it like a table???
-
-- category for large units, and on the map the rectangle for them is rendered twice as big as other units
-
-- add in a seperate queue for naval units specifically
-
-- check if countries having custom names is implemented correctly, especially for puppet names
-
-- make terrain ACTUALLY DO STUFF when in combat / moving troops across
-- option to allow construction in non-core territories (non-core construction)
-
-- ai seems really likely to just accept peacedeals...
-- option to make ai never accept peacedeals?
-- option to prevent core removal
-- option to disable revolts from spawning when removing cores
-- setting to make the ai more difficult (how so?)
-
-- send millitary access... then declare war while awaiting response... that would be so fucked up
-
-- port building to make naval units take less time to build
-- add in a way to make a timelapse of a saved game from the history
-
-disable saving for inputing tournament moves?????
-
-- review various TODO's
-
-- hoi4 entrenchment mechanic???
-
-Comprehension:
-- what is all the data associated with a country?
-max_length=(insert number here) (vscode search)
-
-idk:
-- FOR SOME REASON UNITS THAT ARE FAST CAN BE QUEUED TO MOVE SLOW?????
-(PLEASE CONFIRM IF THIS STILL EXISTS OR HAS BEEN FIXED)
-- GROUP UP UNITS IF YOU ZOOM OUT!!! (make this a togglable setting please)
-  (this is now a readability idea only -- the frame cost of drawing every unit
-  box zoomed out is dealt with, see the /rendering note in general_info.txt.
-  443ms a frame on a late-game army, 15ms now, so grouping is worth doing if
-  the map looks cluttered and worth nothing if it does not)
-- refresh issues need to be fixed (WHAT REFRESH ISSUES???)
-- 55815440+GitGetGot415@users.noreply.github.com
-
-Vague content ideas NOT THAT IMPORTANT BUT COULD PROBABLY BE LOOKED AT:
-- if ai has integrated puppets automatically siphon as many resources off them as possible???
-
-for random scenarios:
-add how valuable the resources are (rn this is between 20 - 80)
-so there could be 1 slider for minimum and 1 slider for maximum
-
-- make the combat zone look less awful (very vague)
-
-- add in a setting for how to show country names on the map (when does it start? end? should it be capitalized?)
-
-- allow for ai prompts to be edited from settings
-
-- ai should be able to sign non-agression pacts that prevent wars
-
-- destroyers, dreadnoughts, battleships, and aircraft carriers should be able to give a bonus to invasions (perhaps a % increase to damage or something)
-- forts (if country holds territory they keep forts) (this might make core removal on fortified territory... difficult)
-
-- for some reason skipping multiple turns in spectator mode seems to make scripted events not happen correctly?
-(does this still actually happen?)
-- countries that should've accepted certain requests don't accept them
-- what might be causing this and how can it be fixed
-(DOES THIS STILL ACTUALLY HAPPEN THOUGH)
-
-- oh my god what if you made a way to actually edit the physical map itself but in such a way as to keep the nations and everything intact
-- come up with a prompt for this
-
-- example: splitting a province in 2 should make those 2 new provinces keep the info of the old one
-- merging
-
-- refreshing data for each country should edit their metadata so it only shows countries that exist
-- add in a way to put in custom unit_data.json
-
-- add in a maximum amount of resources a country can store (say 100k manpower and materials and fuel)
-
-- countries can choose to just give up the claims immediately to avoid a war? (surrender)
-
-- should changing your country appearance to yourself set you to the default of what the country looks like?
-
-Difficult to implement content ideas:
-- EUROPA UNIVERSALLIS ESQUE TIMELIME 1910 - 1950
-- Ability to add the following to units and put them on a frontline like how it works for hoi4:
-    - Divisional Commanders (Officers)
-    - Generals
-    - Field Marshals
-- Implementation of actual tank battles for tactical mode (highfleet esque)
-- make political power a thing? (ok what would you even use it for)
+- Contact or identifier: `55815440+GitGetGot415@users.noreply.github.com`
