@@ -115,7 +115,9 @@ class ArmyQueryTests(unittest.TestCase):
     def test_orders_shows_unselected_peers_without_selecting_them(self):
         queries.normalize_armies(self.nations, self.world)
         first_unit, second_unit = self.first["units"]
-        queries.create_army("A", [first_unit["unit_id"], second_unit["unit_id"]],
+        # The army's saved order is intentionally the reverse of its map
+        # order, so a selected member proves it is not promoted to row one.
+        queries.create_army("A", [second_unit["unit_id"], first_unit["unit_id"]],
                             self.nations, self.world)
         selected_ids = {first_unit["unit_id"]}
         map_stub = SimpleNamespace(
@@ -126,8 +128,8 @@ class ArmyQueryTests(unittest.TestCase):
         orders.target_province = self.first
         orders.read_only = False
         rows = orders._visible_rows()
-        self.assertEqual({unit["unit_id"] for _key, unit, _province, _index in rows},
-                         {first_unit["unit_id"], second_unit["unit_id"]})
+        self.assertEqual([unit["unit_id"] for _key, unit, _province, _index in rows],
+                         [second_unit["unit_id"], first_unit["unit_id"]])
         self.assertEqual(selected_ids, {first_unit["unit_id"]})
 
     def test_orders_title_uses_the_selected_army_name(self):

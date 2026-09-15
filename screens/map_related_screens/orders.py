@@ -598,31 +598,49 @@ class Orders_Screen(GameState):
                     button.apply_state(visible=False)
 
     def _visible_rows(self):
-        """Selected units plus unselected peers from their persistent armies."""
+        """Selected units plus their army peers in each army's saved order."""
         selected_records = self.map_screen.selected_unit_records()
         if getattr(self, "read_only", False) and not selected_records:
             selected_records = [(unit, self.target_province)
                                 for unit in self.target_province.get("units", [])]
         visible_records = list(selected_records)
         if selected_records and not getattr(self, "read_only", False):
-            army_member_ids = set()
             # Some lightweight Orders test doubles predate persistent army
             # data. Live map screens always provide both owners below.
             nation_data = getattr(self.map_screen, "nation_data", None)
             map_data = getattr(self.map_screen, "map_data", None)
             if isinstance(nation_data, dict) and isinstance(map_data, dict):
+                records_by_id = {
+                    unit.get("unit_id"): (unit, province)
+                    for province in map_data.values()
+                    for unit in province.get("units", [])
+                    if (unit.get("owner") == self.map_screen.player_country
+                        and isinstance(unit.get("unit_id"), str))
+                }
+                ordered_records = []
+                visible_ids = set()
+
+                def include(record):
+                    unit, _province = record
+                    unit_id = unit.get("unit_id")
+                    record_id = unit_id if isinstance(unit_id, str) else id(unit)
+                    if record_id not in visible_ids:
+                        ordered_records.append(record)
+                        visible_ids.add(record_id)
+
                 for unit, _province in selected_records:
                     army = queries.army_for_unit(unit, nation_data)
                     if army:
-                        army_member_ids.update(army.get("unit_ids", []))
-            selected_ids = {unit.get("unit_id") for unit, _province in selected_records}
-            if army_member_ids:
-                for province in map_data.values():
-                    for unit in province.get("units", []):
-                        if (unit.get("owner") == self.map_screen.player_country
-                                and unit.get("unit_id") in army_member_ids
-                                and unit.get("unit_id") not in selected_ids):
-                            visible_records.append((unit, province))
+                        # Selection must not reorder a group's card roster:
+                        # a member stays at its persistent army position even
+                        # when it is the only selected division.
+                        for unit_id in army.get("unit_ids", []):
+                            record = records_by_id.get(unit_id)
+                            if record is not None:
+                                include(record)
+                    else:
+                        include((unit, _province))
+                visible_records = ordered_records
         rows = []
         for unit, province in visible_records:
             try:
