@@ -19,7 +19,7 @@ data.platform.run_background, so each turn is timed start to finish.
 
 `fps` opens the real game window with no frame cap and times every frame of
 each scene after it settles: the main menu, the map at the start, zoomed all
-the way out, zoomed all the way in, scrolling, the research screen, the map
+the way out, zoomed all the way in, scrolling, the largest nation's research screen, the map
 while a turn resolves in the background (as a player watches it), and the map
 again after --late-turns turns.
 
@@ -316,7 +316,7 @@ def run_fps(args):
         run_scene("map-pan", map_screen, surface, seconds, every_frame=pan)
 
         set_camera(map_screen, home_zoom, home_center)
-        run_scene("panel", controller.states["RESEARCH"], surface, seconds)
+        run_research_scene(controller, map_screen, surface, seconds)
 
         run_end_turn_scene(map_screen, surface)
 
@@ -328,6 +328,30 @@ def run_fps(args):
         set_camera(map_screen, home_zoom, home_center)
         run_scene("map-late", map_screen, surface, seconds)
     return 0
+
+
+def largest_nation(map_screen):
+    """The nation holding the most provinces, the busiest research screen."""
+    from data import queries
+    living = sorted(queries.get_living_nations(map_screen.map_data))
+    return max(living, key=lambda nation: len(queries.get_nation_provinces_and_units(nation, map_screen.map_data)[0]))
+
+
+def run_research_scene(controller, map_screen, surface, seconds):
+    """The research screen, as a spectator sees it after picking a nation.
+
+    A spectator has no research of its own: the screen shows the nation chosen
+    through `viewing_research_country`. Without one it draws nothing, which
+    would time an empty screen, so the largest nation is picked for it and
+    unpicked afterwards.
+    """
+    research = controller.states["RESEARCH"]
+    map_screen.viewing_research_country = largest_nation(map_screen)
+    try:
+        research.start_research(map_screen)
+        run_scene("panel", research, surface, seconds)
+    finally:
+        map_screen.viewing_research_country = ""
 
 
 def run_end_turn_scene(map_screen, surface):
