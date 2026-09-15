@@ -9,10 +9,8 @@
 
 ## Check first
 
-- Faction renaming can break the game by creating a new faction
 - Fast units can be given slow movement orders. For example, a unit that can be move 2 tiles at once only moves 1 tile because it was grouped up with another slower unit
 - Annexed countries leave their factions immediately. This should not happen if they're in a faction, since if another faction member takes their territory they should spawn back in on the map.
-- AI fallback responses are already be varied. Check where they are stored
 - Spectator mode may skip scripted events when several turns are skipped
 - Some countries may reject requests they should accept
 - Custom country names may be wrong, especially for puppets
@@ -24,7 +22,6 @@
 ### Hanskolmer
 
 - Organize Hanskolmer's art more clearly (wow what a vague suggestion)
-- Make the art UI show unit art names (wasn't this already implemented?)
 
 ### Kaiserin
 
@@ -37,10 +34,6 @@
 - Add rebellions
 - Add faction betrayal
 - Add focus trees, possibly through scripted events
-
-### Curry
-
-- Allow separate peace deals (i thought this was already added? why is this here)
 
 ### Fatass
 
@@ -82,7 +75,7 @@
 - Alternatively, give core land to an integrated puppet automatically when it captures it
 - Make integrated puppets accept all trades from their master
 - Give trades with integrated puppets a custom UI
-- Let AI countries take resources from integrated puppets (this is called siphoning resources. why is this here it's already completed)
+- Let AI countries take resources from integrated puppets (notice i specified AI countries, not just player countries)
 
 ## Economy and production
 
@@ -95,7 +88,6 @@
 - Add ports that reduce naval unit build time
 - Always show oil and defense on the production screen
 - Redesign the production screen as a table
-- Add a volume slider for each sound type
 
 ## Combat Width
 
@@ -110,7 +102,6 @@
 - Let artillery pierce defense, or deal percentage damage. If both are used, use the higher result (maybe, maybe, let me think about this)
 - Decide whether overkill can kill a unit before the rest of the damage is applied (is this added? genuine question because i really dont know)
 - Make convoying, unconvoying, trucking, and untrucking visible at the same time (basically seperate icons)
-- Add large-unit categories and draw their map rectangles twice as large (ALREADY ADDED WHY IS THIS HERE)
 - Make destroyers, dreadnoughts, battleships, and carriers help invasions? (idk maybe)
 - Add real tank battles to tactical mode, possibly like HighFleet (>GREATER DIPLOMACY 5 >LOOKS INSIDE >TACTICAL BATTLES SO DETAILED YOU FORGET POLITICS ARE A THING)
 
@@ -170,4 +161,4 @@
 - Add a way to inspect all data associated with a country
 - Check the maximum country-data length. Search for `max_length`
 - Question: are all current tests needed? Visual menu tests may not be useful
-- Add an editor for construction turns and unit costs
+- Add an editor for unit costs
