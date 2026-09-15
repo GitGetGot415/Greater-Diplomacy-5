@@ -207,7 +207,7 @@ class NavigationIntroPopupTests(unittest.TestCase):
         self.assertTrue(all(call.kwargs["directory"] == popup.MOUSE_DIR
                             for call in get_image.call_args_list))
         self.assertEqual(popup.NAVIGATION_BUTTONS[0][2], (
-            "Click a unit stack to open Orders or deselect it.",
+            "Click a unit stack to select it; Shift-click adds more.",
             "Drag in Units view to box-select units.",
         ))
         self.assertEqual(popup.NAVIGATION_BUTTONS[2][2], (

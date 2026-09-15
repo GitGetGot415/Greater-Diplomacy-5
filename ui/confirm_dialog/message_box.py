@@ -57,7 +57,7 @@ class _NavigationIntroPopup:
     MOUSE_DIR = os.path.join(c.ASSETS_ROOT_DIR, "mouse")
     NAVIGATION_BUTTONS = (
         ("Left.png", "LEFT MOUSE", (
-            "Click a unit stack to open Orders or deselect it.",
+            "Click a unit stack to select it; Shift-click adds more.",
             "Drag in Units view to box-select units.",
         )),
         ("Middle.png", "MIDDLE MOUSE", (

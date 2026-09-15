@@ -9,7 +9,7 @@ import pygame
 import data.constants as c
 from data import queries
 from map_logic.rendering import overlay_renderer
-from screens.map_related_screens.orders import Orders_Screen
+from screens.map_related_screens.orders import Orders_Screen, PANEL_INSET, TOP_BTN_GAP_X
 from ui import army_panel, map_top_right_layout, minimap
 
 
@@ -127,6 +127,24 @@ class ArmyQueryTests(unittest.TestCase):
 
 
 class ArmyLayoutTests(unittest.TestCase):
+    def test_orders_header_fits_ungroup_and_wraps_movement_guidance(self):
+        controls_width = (c.SIZES["orders_header_button"][0]
+                          + (2 * TOP_BTN_GAP_X)
+                          + c.SIZES["orders_clear_button"][0]
+                          + c.SIZES["orders_header_button"][0])
+        self.assertLessEqual(
+            controls_width + (2 * PANEL_INSET),
+            Orders_Screen.PANEL_WIDTH)
+
+        pygame.font.init()
+        font = pygame.font.Font(None, 18)
+        guidance = ("Right-click a province to move selected units. "
+                    "Shift+right-click queues a waypoint.")
+        lines = Orders_Screen._header_help_lines(guidance, font)
+        self.assertGreater(len(lines), 1)
+        self.assertTrue(all(font.size(line)[0] <= Orders_Screen.PANEL_WIDTH - (2 * PANEL_INSET)
+                            for line in lines))
+
     def test_map_army_bands_show_each_player_member_but_never_foreign_members(self):
         first = {"owner": "A", "unit_id": "first"}
         second = {"owner": "A", "unit_id": "second"}

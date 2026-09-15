@@ -804,9 +804,9 @@ SIZES = {
     "swap_hildehrand": (120, 30),
     "character_portrait_tile": (190, 190),
     "automation_option": (200, 30),
-    # Compact Orders roster: two header controls and six icon commands per row.
+    # Compact Orders roster: three header controls and six icon commands per row.
     "orders_header_button": (112, 30),
-    "orders_clear_button": (190, 30),
+    "orders_clear_button": (150, 30),
     "orders_action_icon": (28, 28),
     "left_ui_bar": (120, 50),
     "song": (700, 30),

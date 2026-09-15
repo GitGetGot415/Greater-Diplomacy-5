@@ -90,6 +90,19 @@ class MapOrderTests(unittest.TestCase):
         with patch("screens.menu_screens.map.map_renderer.draw_map_screen"):
             Map.additional_draw(game, pygame.Surface((400, 300)))
 
+    def test_plain_click_focuses_one_member_and_shift_click_adds_another(self):
+        game, slow, fast, _destination = self.make_map()
+
+        self.assertTrue(game.click_select_map_units([slow]))
+        self.assertEqual([unit for unit, _province in game.selected_unit_records()], [slow])
+        self.assertFalse(game.click_select_map_units([slow]))
+        self.assertEqual(game.selected_unit_records(), [])
+
+        game.selected_unit_ids = {id(slow)}
+        self.assertTrue(game.click_select_map_units([fast], additive=True))
+        self.assertEqual({id(unit) for unit, _province in game.selected_unit_records()},
+                         {id(slow), id(fast)})
+
 
 class OrdersSelectionRowsTests(unittest.TestCase):
     def test_roster_keeps_each_selected_unit_and_its_own_origin(self):
@@ -248,23 +261,30 @@ class MapOrderGestureTests(unittest.TestCase):
         self.assertEqual(selected, [first, second])
         self.assertEqual(opened, [(origin, [first, second])])
 
-    def test_left_click_on_an_selected_stack_deselects_without_opening_orders(self):
+    def test_left_click_on_a_member_of_a_group_focuses_it_and_opens_orders(self):
         unit = {"owner": "A", "type": "Infantry"}
+        other = {"owner": "A", "type": "Infantry"}
         origin = province(1, [])
-        deselected, reselected, opened = [], [], []
-        map_stub = type("MapStub", (), {
-            "secondary_mode": "UNITS",
-            "unit_selection_drag": None,
-            "unit_stack_hitboxes": [{
-                "rect": pygame.Rect(10, 10, 20, 20),
-                "province": origin, "units": [unit],
-            }],
-            "can_select_map_units": lambda self: True,
-            "is_unit_selected": lambda self, candidate: candidate is unit,
-            "deselect_map_units": lambda self, units: deselected.extend(units),
-            "select_map_units": lambda self, units, additive=False: reselected.extend(units),
-            "open_orders_for_unit_stack": lambda self, prov, units: opened.append((prov, units)),
-        })()
+        other_origin = province(2, [])
+        origin["units"] = [unit]
+        other_origin["units"] = [other]
+        map_stub = object.__new__(Map)
+        map_stub.secondary_mode = "UNITS"
+        map_stub.unit_selection_drag = None
+        map_stub.unit_stack_hitboxes = [{
+            "rect": pygame.Rect(10, 10, 20, 20),
+            "province": origin, "units": [unit],
+        }]
+        map_stub.map_data = {"one": origin, "two": other_origin}
+        map_stub.nation_data = {"A": {"at_war_with": []}}
+        map_stub.player_country = "A"
+        map_stub.selection_mode = map_stub.is_editor = False
+        map_stub.viewing_ai_moves = map_stub.ai_is_thinking = False
+        map_stub.tactical_mode = False
+        map_stub.selected_unit_ids = {id(unit), id(other)}
+        map_stub.show_feedback = lambda _text: None
+        opened = []
+        map_stub.open_orders_for_unit_stack = lambda prov, units: opened.append((prov, units))
 
         with patch("ui.event_handler.pygame.key.get_mods", return_value=0):
             event_handler._handle_map_unit_selection(
@@ -272,9 +292,8 @@ class MapOrderGestureTests(unittest.TestCase):
             self.assertTrue(event_handler._handle_map_unit_selection(
                 map_stub, pygame.event.Event(pygame.MOUSEBUTTONUP, pos=(15, 15), button=1), False))
 
-        self.assertEqual(deselected, [unit])
-        self.assertEqual(reselected, [])
-        self.assertEqual(opened, [])
+        self.assertEqual([member for member, _province in map_stub.selected_unit_records()], [unit])
+        self.assertEqual(opened, [(origin, [unit])])
 
     def test_right_press_cancels_an_unfinished_left_drag_rectangle(self):
         map_stub = type("MapStub", (), {

@@ -141,10 +141,7 @@ def _handle_map_unit_selection(map_screen, event, on_ui):
                 _select_map_province(map_screen, event.pos)
                 return True
             units = stack["units"]
-            if all(map_screen.is_unit_selected(unit) for unit in units):
-                map_screen.deselect_map_units(units)
-            else:
-                map_screen.select_map_units(units, additive=drag["additive"])
+            if map_screen.click_select_map_units(units, additive=drag["additive"]):
                 map_screen.open_orders_for_unit_stack(stack["province"], units)
             return True
         selected, first_province = [], None

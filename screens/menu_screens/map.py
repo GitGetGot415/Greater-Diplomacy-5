@@ -1875,6 +1875,37 @@ class Map(GameState):
         self.selected_unit_ids.update(unit["unit_id"] for unit in eligible)
         self.show_feedback(f"{len(self.selected_unit_ids)} unit{'s' if len(self.selected_unit_ids) != 1 else ''} selected")
 
+    def click_select_map_units(self, units, additive=False):
+        """Apply the shared plain-click/Shift-click unit-selection convention.
+
+        A plain click on a member of a larger selection focuses that member,
+        while a plain click on the only selected unit deselects it. Shift-click
+        adds units without disturbing the current selection, matching HOI4's
+        individual division-selection behavior.
+        """
+        if not self.can_select_map_units():
+            return False
+        eligible = [unit for unit in units if unit.get("owner") == self.player_country]
+        if self.tactical_mode:
+            eligible = [unit for unit in eligible if unit is self.player_unit]
+        if not eligible:
+            return False
+
+        target_is_selected = all(self.is_unit_selected(unit) for unit in eligible)
+        target_objects = {id(unit) for unit in eligible}
+        has_other_selected = any(
+            id(unit) not in target_objects
+            for unit, _province in self.selected_unit_records())
+        if additive:
+            self.select_map_units(eligible, additive=True)
+        elif target_is_selected and has_other_selected:
+            self.select_map_units(eligible)
+        elif target_is_selected:
+            self.deselect_map_units(eligible)
+        else:
+            self.select_map_units(eligible)
+        return all(self.is_unit_selected(unit) for unit in eligible)
+
     def selected_unit_records(self):
         """Return selected units with their current provinces, pruning stale IDs."""
         records, live_ids = [], set()

@@ -758,21 +758,20 @@ class OrdersScreenRegressionTests(BattleScreenTestCase):
         self.assertEqual(summary, "Ready")
         self.assertEqual(color, c.UI_TEXT_MUTED)
 
-        # Clicking a selected row removes only that member from the live
-        # selection and it leaves the selection-only Orders panel immediately.
+        # Clicking a selected member of a larger group focuses that member.
         screen.toggle_selected_unit(focused_unit)
-        self.assertNotIn(id(focused_unit),
-                         {id(unit) for unit, _province in self.map.selected_unit_records()})
+        self.assertEqual({id(unit) for unit, _province in self.map.selected_unit_records()},
+                         {id(focused_unit)})
         screen.draw(self.surface)
-        self.assertEqual(set(screen.unit_row_icons), set(owned_indices[1:]))
+        self.assertEqual(set(screen.unit_row_icons), {owned_indices[0]})
         self.assertLess(screen.panel_rect.height, group_panel_height)
 
+        # Clicking the sole selected member retains the normal deselect action.
         screen.toggle_selected_unit(focused_unit)
-        self.assertIn(id(focused_unit),
-                      {id(unit) for unit, _province in self.map.selected_unit_records()})
+        self.assertEqual(self.map.selected_unit_records(), [])
 
-        # Select All can clear the whole active selection; the compact shell
-        # remains, but selected-unit rows do not.
+        # Select All reselects the group, then clears it on a second click.
+        screen.select_unit("ALL")
         screen.select_unit("ALL")
         self.assertEqual(self.map.selected_unit_records(), [])
         screen.draw(self.surface)

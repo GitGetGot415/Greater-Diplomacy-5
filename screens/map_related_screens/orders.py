@@ -4,7 +4,7 @@ from gameState import GameState, resolve_keybind
 from ui_elements import Button, process_text_input, draw_text_box
 from map_logic.rendering.font_manager import fonts
 from data import queries
-from ui.text_utils import fit_text
+from ui.text_utils import fit_text, wrap_text
 from map_logic.rendering import symbol_loader
 from map_logic.rendering import overlay_renderer
 from ui.bars import ui_bars, resource_hud, view_mode_buttons
@@ -28,7 +28,9 @@ HEADER_TITLE_OFFSET_Y = 7
 HEADER_META_OFFSET_Y = 36
 TOP_BTN_ROW_OFFSET_Y = 57
 HEADER_HELP_OFFSET_Y = 121
-LIST_TOP_OFFSET_Y = 140
+HEADER_HELP_LINE_GAP = 2
+HEADER_HELP_MAX_LINES = 2
+LIST_TOP_OFFSET_Y = 155
 
 TOP_BTN_GAP_X = 6
 
@@ -355,23 +357,18 @@ class Orders_Screen(GameState):
                 self.selected_unit_index = index
         elif isinstance(index, int) and 0 <= index < len(units):
             unit = units[index]
-            if self.map_screen.is_unit_selected(unit):
-                self.map_screen.deselect_map_units([unit])
-                self.selected_unit_index = None
-            else:
-                self.map_screen.select_map_units([unit], additive=True)
-                self.selected_unit_index = index
+            selected = self.map_screen.click_select_map_units(
+                [unit], additive=bool(pygame.key.get_mods() & pygame.KMOD_SHIFT))
+            self.selected_unit_index = index if selected else None
         self.bombarding_unit_index = None
         self.refresh_ui()
 
     def toggle_selected_unit(self, unit):
-        """Toggle one unit; deselected units leave the Orders list at once."""
+        """Apply the shared map click behavior to one Orders roster row."""
         if getattr(self, "read_only", False) or self._command_blocked(unit):
             return
-        if self.map_screen.is_unit_selected(unit):
-            self.map_screen.deselect_map_units([unit])
-        else:
-            self.map_screen.select_map_units([unit], additive=True)
+        self.map_screen.click_select_map_units(
+            [unit], additive=bool(pygame.key.get_mods() & pygame.KMOD_SHIFT))
         self.selected_unit_index = None
         self.bombarding_unit_index = None
         self.refresh_ui()
@@ -719,10 +716,14 @@ class Orders_Screen(GameState):
                                font_preset="tiny")
             btn_clear.disabled = is_tactical
             self.elements.append(btn_clear)
+            button_x = btn_clear.rect.right + TOP_BTN_GAP_X
 
             if player_units:
-                army_y = PANEL_Y + TOP_BTN_ROW_OFFSET_Y + 29
-                btn_ungroup = Button(self.PANEL_X + PANEL_INSET, army_y,
+                # A battle command occupies the top-right slot only during
+                # combat. Keep the normal three controls on one line, while
+                # using the otherwise-empty row below in that exceptional view.
+                ungroup_y = PANEL_Y + TOP_BTN_ROW_OFFSET_Y + (31 if in_battle else 0)
+                btn_ungroup = Button(button_x, ungroup_y,
                                      "orders_header_button", "grey", "Ungroup",
                                      self.ungroup_selected, font_preset="tiny")
                 self.elements.append(btn_ungroup)
@@ -1184,16 +1185,13 @@ class Orders_Screen(GameState):
                     if event_handler._unit_stack_at(self.map_screen, event.pos) is None:
                         self.exit_screen()
                     return
-                if all(self.map_screen.is_unit_selected(unit) for unit in stack["units"]):
-                    self.map_screen.deselect_map_units(stack["units"])
-                else:
-                    self.map_screen.select_map_units(
-                        stack["units"], additive=drag["additive"])
-                self.target_province = stack["province"]
-                self.selected_unit_index = None
-                self.read_only = not any(unit.get("owner") == self.map_screen.player_country
-                                         for unit in stack["province"].get("units", []))
-                self.refresh_ui()
+                if self.map_screen.click_select_map_units(
+                        stack["units"], additive=drag["additive"]):
+                    self.target_province = stack["province"]
+                    self.selected_unit_index = None
+                    self.read_only = not any(unit.get("owner") == self.map_screen.player_country
+                                             for unit in stack["province"].get("units", []))
+                    self.refresh_ui()
                 return
             if rect.width >= 4 or rect.height >= 4:
                 selected = []
@@ -1322,6 +1320,13 @@ class Orders_Screen(GameState):
         if not isinstance(order, dict) or not order:
             return False
         return order.get("type") != "MOVE" or bool(order.get("path"))
+
+    @classmethod
+    def _header_help_lines(cls, help_text, font):
+        """Wrap header guidance without letting it intrude into the roster."""
+        return wrap_text(
+            help_text, font, cls.PANEL_WIDTH - (PANEL_INSET * 2),
+            max_lines=HEADER_HELP_MAX_LINES, ellipsis=c.ELLIPSIS)
 
     def _draw_unit_row(self, surface, row_key, unit, province, unit_index, row_y, display_index,
                        owner_color, small_font, tiny_font, show_actions):
@@ -1470,14 +1475,16 @@ class Orders_Screen(GameState):
             elif not player_units:
                 help_text = "Click a unit stack, or left-drag a box around stacks to select units"
             elif len(player_units) > 1:
-                help_text = "Right-click a province to move the selected group | Shift+right-click queues a waypoint"
+                help_text = "Right-click a province to move selected units. Shift+right-click queues a waypoint."
             else:
                 help_text = "Right-click the map to move | click the row to deselect | hover a command icon for details"
 
-        help_text = fit_text(help_text, tiny_font, self.PANEL_WIDTH - (PANEL_INSET * 2))
-        surface.blit(tiny_font.render(help_text, True, c.UI_TEXT_MUTED),
-                     (self.PANEL_X + PANEL_INSET,
-                      PANEL_Y + HEADER_HELP_OFFSET_Y))
+        help_lines = self._header_help_lines(help_text, tiny_font)
+        help_y = PANEL_Y + HEADER_HELP_OFFSET_Y
+        for line in help_lines:
+            surface.blit(tiny_font.render(line, True, c.UI_TEXT_MUTED),
+                         (self.PANEL_X + PANEL_INSET, help_y))
+            help_y += tiny_font.get_height() + HEADER_HELP_LINE_GAP
 
         pygame.draw.line(surface, (80, 85, 95),
                          (self.PANEL_X + 1, self.panel_top - 1),
