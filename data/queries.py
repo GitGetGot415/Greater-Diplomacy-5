@@ -2273,6 +2273,11 @@ def normalize_army_symbol_rotation(rotation):
     return c.DEFAULT_ARMY_SYMBOL_ROTATION
 
 
+def normalize_army_symbol_flipped(flipped):
+    """Return the saved horizontal-emblem mirror flag with a safe default."""
+    return flipped if isinstance(flipped, bool) else c.DEFAULT_ARMY_SYMBOL_FLIPPED
+
+
 def normalize_army_custom_symbol(custom_symbol):
     """Return a safe 20x20 red/black emblem, or no custom emblem.
 
@@ -2340,6 +2345,8 @@ def normalize_armies(nation_data, map_data):
                               raw.get("symbol_color")),
                           "symbol_rotation": normalize_army_symbol_rotation(
                               raw.get("symbol_rotation")),
+                          "symbol_flipped": normalize_army_symbol_flipped(
+                              raw.get("symbol_flipped")),
                           "custom_symbol": normalize_army_custom_symbol(
                               raw.get("custom_symbol"))})
         country["armies"] = valid
@@ -2383,6 +2390,7 @@ def create_army(country_id, unit_ids, nation_data, map_data):
             "unit_ids": members, "symbol": random_army_symbol(),
             "symbol_color": list(random.choice(c.ARMY_SYMBOL_COLOR_CHOICES)),
             "symbol_rotation": c.DEFAULT_ARMY_SYMBOL_ROTATION,
+            "symbol_flipped": c.DEFAULT_ARMY_SYMBOL_FLIPPED,
             "custom_symbol": None}
     armies.append(army)
     normalize_armies(nation_data, map_data)
@@ -2452,7 +2460,7 @@ def move_army(country_id, army_id, direction, nation_data, map_data):
 
 
 def update_army_presentation(country_id, army_id, name, symbol, symbol_color, symbol_rotation,
-                             custom_symbol,
+                             symbol_flipped, custom_symbol,
                              nation_data, map_data):
     """Update an army's player-facing label and optional emblem.
 
@@ -2469,6 +2477,7 @@ def update_army_presentation(country_id, army_id, name, symbol, symbol_color, sy
     army["symbol"] = normalize_army_symbol(symbol)
     army["symbol_color"] = normalize_army_symbol_color(symbol_color)
     army["symbol_rotation"] = normalize_army_symbol_rotation(symbol_rotation)
+    army["symbol_flipped"] = normalize_army_symbol_flipped(symbol_flipped)
     army["custom_symbol"] = normalize_army_custom_symbol(custom_symbol)
     if army["custom_symbol"]:
         army["symbol"] = ""

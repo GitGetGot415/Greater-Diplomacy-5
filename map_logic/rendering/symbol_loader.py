@@ -857,6 +857,17 @@ def get_custom_army_symbol(rows, size):
     return rendered
 
 
+def orient_army_symbol(emblem, rotation=0, flipped=False):
+    """Mirror an army emblem across its Y axis, then rotate it for display."""
+    if not emblem:
+        return emblem
+    if flipped:
+        emblem = pygame.transform.flip(emblem, True, False)
+    if rotation:
+        emblem = pygame.transform.rotate(emblem, rotation)
+    return emblem
+
+
 def _scaled_size(img, zoom, custom_scale=1.0):
     """The pixel size this symbol is drawn at, keeping its proportions."""
     orig_w, orig_h = img.get_size()

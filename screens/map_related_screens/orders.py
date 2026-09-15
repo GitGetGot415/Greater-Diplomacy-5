@@ -1650,7 +1650,8 @@ class Orders_Screen(GameState):
 
         resource_hud.draw_resource_bar(surface, self.map_screen,
                                        start_x=view_mode_buttons.RESOURCE_BAR_OFFSET_X)
-        army_panel.draw(self.map_screen, surface, orders_screen=self)
+        army_panel.draw(self.map_screen, surface, orders_screen=self,
+                        draw_editors=False)
 
         if self.battle_screen is not None:
             self.battle_screen.draw_embedded(surface)
@@ -1667,3 +1668,13 @@ class Orders_Screen(GameState):
         # even when the Orders screen is the active state
         if self.map_screen:
             self.map_screen.camera.update(self.map_screen, c.SCREEN_HEIGHT)
+
+    def draw(self, surface):
+        """Draw army editing modals after Orders' button elements.
+
+        GameState draws elements after ``additional_draw``.  The army tray is
+        map content, but its editor is modal UI and must sit over the command
+        buttons rather than behind them.
+        """
+        super().draw(surface)
+        army_panel.draw_editors_over_map(self.map_screen, surface)

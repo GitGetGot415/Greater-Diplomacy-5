@@ -1368,8 +1368,9 @@ def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,
                 continue
             rotation = queries.normalize_army_symbol_rotation(
                 army.get("symbol_rotation"))
-            if rotation:
-                badge = pygame.transform.rotate(badge, rotation)
+            flipped = queries.normalize_army_symbol_flipped(
+                army.get("symbol_flipped"))
+            badge = symbol_loader.orient_army_symbol(badge, rotation, flipped)
             column, row = divmod(index, rows)
             center = (indicator_left - 5 - column * (badge_size + 2),
                       box_rect.centery + (row - (rows - 1) / 2) * (badge_size + 1))

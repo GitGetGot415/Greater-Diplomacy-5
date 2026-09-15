@@ -29,6 +29,8 @@ SYMBOL_CONTROLS_GAP = 14
 ROTATION_BUTTON_X = 180
 ROTATION_BUTTON_WIDTH = 56
 ROTATION_BUTTON_GAP = 6
+FLIP_BUTTON_X = 435
+FLIP_BUTTON_WIDTH = 80
 CUSTOM_SYMBOL_CHOICE = object()
 CUSTOM_DIALOG_WIDTH = 500
 CUSTOM_DIALOG_HEIGHT = 440
@@ -94,6 +96,8 @@ def _open_editor(map_screen, army):
             army.get("symbol_color")),
         "symbol_rotation": queries.normalize_army_symbol_rotation(
             army.get("symbol_rotation")),
+        "symbol_flipped": queries.normalize_army_symbol_flipped(
+            army.get("symbol_flipped")),
         "custom_symbol": queries.normalize_army_custom_symbol(
             army.get("custom_symbol")),
         "color_channel": None,
@@ -135,6 +139,12 @@ def _rotation_button_rects(rect):
         rect.x + ROTATION_BUTTON_X + index * (ROTATION_BUTTON_WIDTH + ROTATION_BUTTON_GAP),
         sample.y + 8, ROTATION_BUTTON_WIDTH, 27))
             for index, rotation in enumerate(c.ARMY_SYMBOL_ROTATIONS)]
+
+
+def _flip_button_rect(rect):
+    sample = _sample_rect(rect)
+    return pygame.Rect(rect.x + FLIP_BUTTON_X, sample.y + 8,
+                       FLIP_BUTTON_WIDTH, 27)
 
 
 def _editor_height():
@@ -188,7 +198,7 @@ def _custom_symbol_rows(pixels):
     return queries.normalize_army_custom_symbol(["".join(row) for row in pixels])
 
 
-def _draw_emblem(surface, symbol, custom_symbol, color, rotation, center, size):
+def _draw_emblem(surface, symbol, custom_symbol, color, rotation, center, size, flipped=False):
     if custom_symbol:
         emblem = symbol_loader.get_custom_army_symbol(custom_symbol, size)
     elif not symbol:
@@ -202,8 +212,8 @@ def _draw_emblem(surface, symbol, custom_symbol, color, rotation, center, size):
         emblem = symbol_loader.get_symbol(key, zoom, color=tuple(color), style="classic")
     if emblem:
         rotation = queries.normalize_army_symbol_rotation(rotation)
-        if rotation:
-            emblem = pygame.transform.rotate(emblem, rotation)
+        flipped = queries.normalize_army_symbol_flipped(flipped)
+        emblem = symbol_loader.orient_army_symbol(emblem, rotation, flipped)
         surface.blit(emblem, emblem.get_rect(center=center))
 
 
@@ -213,7 +223,8 @@ def _save_editor(map_screen):
         return False
     army = queries.update_army_presentation(
         map_screen.player_country, state["army_id"], state["name"],
-        state["symbol"], state["symbol_color"], state["symbol_rotation"], state["custom_symbol"],
+        state["symbol"], state["symbol_color"], state["symbol_rotation"],
+        state["symbol_flipped"], state["custom_symbol"],
         map_screen.nation_data,
         map_screen.map_data)
     if army is None:
@@ -378,6 +389,10 @@ def _handle_editor_event(map_screen, event):
         if button.collidepoint(event.pos):
             state["symbol_rotation"] = rotation
             return True
+    flip = _flip_button_rect(rect)
+    if flip.collidepoint(event.pos):
+        state["symbol_flipped"] = not state["symbol_flipped"]
+        return True
     save = pygame.Rect(rect.right - 122, rect.bottom - 42, 98, 26)
     cancel = pygame.Rect(rect.right - 230, rect.bottom - 42, 98, 26)
     if save.collidepoint(event.pos):
@@ -428,7 +443,7 @@ def _draw_editor(map_screen, surface):
             surface.blit(caption, caption.get_rect(center=symbol_rect.center))
         elif symbol:
             _draw_emblem(surface, symbol, None, state["symbol_color"], state["symbol_rotation"],
-                         symbol_rect.center, 26)
+                         symbol_rect.center, 26, flipped=state["symbol_flipped"])
     component_names = ("Red", "Green", "Blue")
     component_colors = ((215, 75, 75), (75, 205, 105), (80, 140, 230))
     for channel, (name_text, component_color) in enumerate(zip(component_names, component_colors)):
@@ -448,7 +463,8 @@ def _draw_editor(map_screen, surface):
     pygame.draw.rect(surface, (12, 19, 34), sample, border_radius=4)
     pygame.draw.rect(surface, (110, 155, 215), sample, 1, border_radius=4)
     _draw_emblem(surface, state["symbol"], state["custom_symbol"], state["symbol_color"],
-                 state["symbol_rotation"], sample.center, 32)
+                 state["symbol_rotation"], sample.center, 32,
+                 flipped=state["symbol_flipped"])
     rotation_label = text_font.render("Rotation", True, (205, 220, 240))
     surface.blit(rotation_label, (sample.right + 12, sample.y + 15))
     for rotation, button in _rotation_button_rects(rect):
@@ -459,6 +475,13 @@ def _draw_editor(map_screen, surface):
                          button, 2 if selected else 1, border_radius=4)
         label = text_font.render(f"{rotation}", True, (235, 245, 255))
         surface.blit(label, label.get_rect(center=button.center))
+    flip = _flip_button_rect(rect)
+    pygame.draw.rect(surface, (66, 112, 175) if state["symbol_flipped"] else (39, 60, 95),
+                     flip, border_radius=4)
+    pygame.draw.rect(surface, (175, 215, 255) if state["symbol_flipped"] else (95, 135, 190),
+                     flip, 2 if state["symbol_flipped"] else 1, border_radius=4)
+    label = text_font.render("Flip", True, (235, 245, 255))
+    surface.blit(label, label.get_rect(center=flip.center))
     cancel = pygame.Rect(rect.right - 230, rect.bottom - 42, 98, 26)
     save = pygame.Rect(rect.right - 122, rect.bottom - 42, 98, 26)
     for button, text, color in ((cancel, "Cancel", (84, 100, 130)),
@@ -635,7 +658,7 @@ def handle_event(map_screen, event, orders_screen=None):
     return True
 
 
-def draw(map_screen, surface, orders_screen=None):
+def draw(map_screen, surface, orders_screen=None, draw_editors=True):
     show_create = orders_screen is not None
     tray, armies = _layout(map_screen, show_create=show_create)
     if not armies and not show_create:
@@ -665,7 +688,8 @@ def draw(map_screen, surface, orders_screen=None):
         _draw_emblem(surface, army.get("symbol", ""), army.get("custom_symbol"),
                      army.get("symbol_color", c.DEFAULT_ARMY_SYMBOL_COLOR),
                      army.get("symbol_rotation", c.DEFAULT_ARMY_SYMBOL_ROTATION),
-                     (rect.x + 21, rect.centery), 25)
+                     (rect.x + 21, rect.centery), 25,
+                     flipped=army.get("symbol_flipped"))
         name = text_font.render(army["name"], True, (245, 245, 250))
         count = text_font.render(f"{len(army.get('unit_ids', []))} units", True, (205, 220, 235))
         text_x = rect.x + (39 if army.get("symbol") or army.get("custom_symbol") else 9)
@@ -707,5 +731,11 @@ def draw(map_screen, surface, orders_screen=None):
         pygame.draw.rect(surface, (145, 175, 215),
                          (track.x, track.y + int(travel * ratio), track.width, handle_h),
                          border_radius=2)
+    if draw_editors:
+        draw_editors_over_map(map_screen, surface)
+
+
+def draw_editors_over_map(map_screen, surface):
+    """Draw army editing modals above any owning screen's normal controls."""
     _draw_editor(map_screen, surface)
     _draw_custom_symbol_editor(map_screen, surface)

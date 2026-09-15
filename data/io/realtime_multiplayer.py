@@ -832,6 +832,7 @@ class MapRealtimeDriver:
             symbol = raw.get("symbol", "")
             symbol_color = raw.get("symbol_color", list(c.DEFAULT_ARMY_SYMBOL_COLOR))
             symbol_rotation = raw.get("symbol_rotation", c.DEFAULT_ARMY_SYMBOL_ROTATION)
+            symbol_flipped = raw.get("symbol_flipped", c.DEFAULT_ARMY_SYMBOL_FLIPPED)
             custom_symbol = raw.get("custom_symbol")
             valid_symbol = (isinstance(symbol, str)
                             and (not symbol or queries.normalize_army_symbol(symbol) == symbol))
@@ -841,6 +842,9 @@ class MapRealtimeDriver:
                               and not isinstance(symbol_rotation, bool)
                               and queries.normalize_army_symbol_rotation(symbol_rotation)
                               == symbol_rotation)
+            valid_flipped = (isinstance(symbol_flipped, bool)
+                             and queries.normalize_army_symbol_flipped(symbol_flipped)
+                             == symbol_flipped)
             valid_custom_symbol = (custom_symbol is None
                                    or queries.normalize_army_custom_symbol(custom_symbol)
                                    == custom_symbol)
@@ -848,7 +852,7 @@ class MapRealtimeDriver:
                     or army_id in army_ids or not isinstance(name, str)
                     or not name.strip() or len(name.strip()) > 80
                     or not isinstance(unit_ids, list) or len(unit_ids) > len(owned)
-                    or not valid_symbol or not valid_color or not valid_rotation
+                    or not valid_symbol or not valid_color or not valid_rotation or not valid_flipped
                     or not valid_custom_symbol or (symbol and custom_symbol)):
                 raise RealtimeError("Invalid army roster.")
             if any(not isinstance(unit_id, str) or unit_id not in owned
@@ -861,6 +865,7 @@ class MapRealtimeDriver:
                                "unit_ids": list(unit_ids), "symbol": symbol,
                                "symbol_color": list(symbol_color),
                                "symbol_rotation": symbol_rotation,
+                               "symbol_flipped": symbol_flipped,
                                "custom_symbol": copy.deepcopy(custom_symbol)})
         return {"type": "army_roster", "armies": armies}
 

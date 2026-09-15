@@ -9,6 +9,8 @@ import pygame
 import data.constants as c
 from data import queries
 from map_logic.rendering import overlay_renderer
+from map_logic.rendering import symbol_loader
+from gameState import GameState
 from screens.map_related_screens.orders import Orders_Screen, PANEL_INSET, TOP_BTN_GAP_X
 from ui import army_panel, map_top_right_layout, minimap
 
@@ -55,6 +57,7 @@ class ArmyQueryTests(unittest.TestCase):
             {"id": "keep", "name": "Army 1", "unit_ids": [own_id],
              "symbol": "", "symbol_color": list(c.DEFAULT_ARMY_SYMBOL_COLOR),
              "symbol_rotation": c.DEFAULT_ARMY_SYMBOL_ROTATION,
+             "symbol_flipped": c.DEFAULT_ARMY_SYMBOL_FLIPPED,
              "custom_symbol": None}])
 
     def test_army_presentation_round_trips_and_invalid_legacy_art_is_removed(self):
@@ -66,21 +69,24 @@ class ArmyQueryTests(unittest.TestCase):
                          + [c.ARMY_CUSTOM_SYMBOL_EMPTY * 20] * 19)
         updated = queries.update_army_presentation(
             "A", army["id"], "Northern Command", symbol, [12, 90, 230], 90,
-            custom_symbol, self.nations, self.world)
+            True, custom_symbol, self.nations, self.world)
         self.assertEqual(updated["name"], "Northern Command")
         self.assertEqual(updated["symbol"], "")
         self.assertEqual(updated["symbol_color"], [12, 90, 230])
         self.assertEqual(updated["symbol_rotation"], 90)
+        self.assertTrue(updated["symbol_flipped"])
         self.assertEqual(updated["custom_symbol"], custom_symbol)
         updated["symbol"] = "No Longer Installed"
         updated["symbol_color"] = [999, 0, 0]
         updated["symbol_rotation"] = 45
+        updated["symbol_flipped"] = "yes"
         updated["custom_symbol"] = ["invalid"]
         queries.normalize_armies(self.nations, self.world)
         normalized = self.nations["A"]["armies"][0]
         self.assertEqual(normalized["symbol"], "")
         self.assertEqual(normalized["symbol_color"], list(c.DEFAULT_ARMY_SYMBOL_COLOR))
         self.assertEqual(normalized["symbol_rotation"], c.DEFAULT_ARMY_SYMBOL_ROTATION)
+        self.assertFalse(normalized["symbol_flipped"])
         self.assertIsNone(normalized["custom_symbol"])
 
     @patch("data.queries.random_army_symbol", return_value="Star")
@@ -95,6 +101,7 @@ class ArmyQueryTests(unittest.TestCase):
         choose_color.assert_called_once_with(c.ARMY_SYMBOL_COLOR_CHOICES)
         self.assertEqual(army["symbol"], "Star")
         self.assertEqual(army["symbol_color"], [12, 90, 230])
+        self.assertFalse(army["symbol_flipped"])
         self.assertEqual(queries.army_color_for_unit(member, self.nations), (12, 90, 230))
         self.assertIsNone(queries.army_color_for_unit(ungrouped, self.nations))
 
@@ -138,6 +145,40 @@ class ArmyQueryTests(unittest.TestCase):
 
 
 class ArmyLayoutTests(unittest.TestCase):
+    def test_orders_draws_army_editor_over_its_button_elements(self):
+        screen = object.__new__(Orders_Screen)
+        screen.map_screen = object()
+        draw_order = []
+
+        with (patch.object(GameState, "draw", side_effect=lambda *_args: draw_order.append("orders")),
+              patch("screens.map_related_screens.orders.army_panel.draw_editors_over_map",
+                    side_effect=lambda *_args: draw_order.append("editor"))):
+            screen.draw(pygame.Surface((100, 100)))
+
+        self.assertEqual(draw_order, ["orders", "editor"])
+
+    def test_army_flip_button_mirrors_the_y_axis_and_is_clickable(self):
+        emblem = pygame.Surface((2, 1))
+        emblem.set_at((0, 0), (220, 20, 20))
+        emblem.set_at((1, 0), (20, 20, 220))
+        mirrored = symbol_loader.orient_army_symbol(emblem, flipped=True)
+        self.assertEqual(mirrored.get_at((0, 0))[:3], (20, 20, 220))
+        self.assertEqual(mirrored.get_at((1, 0))[:3], (220, 20, 20))
+
+        army = {"id": "army", "name": "Army 1", "unit_ids": ["unit"],
+                "symbol": "", "symbol_color": [210, 70, 70],
+                "symbol_rotation": 0, "symbol_flipped": False,
+                "custom_symbol": None}
+        map_stub = SimpleNamespace(player_country="A", nation_data={"A": {"armies": [army]}},
+                                   map_data={})
+        army_panel._open_editor(map_stub, army)
+        rect = army_panel._editor_rect()
+        flip = army_panel._flip_button_rect(rect)
+        self.assertTrue(rect.contains(flip))
+        self.assertTrue(army_panel._handle_editor_event(
+            map_stub, pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=flip.center)))
+        self.assertTrue(map_stub.army_editor_state["symbol_flipped"])
+
     def test_tray_card_color_is_a_less_saturated_army_rgb(self):
         source = (220, 60, 70)
         fill, border = army_panel._tray_card_colors(source, selected=False)
