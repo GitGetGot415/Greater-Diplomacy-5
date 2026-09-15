@@ -34,3 +34,13 @@ xattr -dr com.apple.quarantine /path/to/the/GD5/main.app
 ## Real Time Multiplayer
 
 desktop real-time multiplayer hosts use TLS. Source and packaging environments need the `cryptography` Python package (`pip install cryptography`); the Windows and macOS build recipes bundle it automatically. Browser builds intentionally show real-time multiplayer as desktop-only.
+## Benchmarking with Objective Judge Horizon
+
+[Objective Judge Horizon](https://github.com/Pr1nted/objective-judge-horizon) compares turn-based strategy games on the same machine. `map_tools/ojh_benchmark.py` lets it measure Greater Diplomacy 5 through the game's own code rather than an outside driver:
+
+```bash
+python map_tools/ojh_benchmark.py turns --turns 250 --scenario scenarios/historical/1939
+python map_tools/ojh_benchmark.py fps --seconds 5 --late-turns 20 --scenario scenarios/historical/1939
+```
+
+`turns` plays every nation as AI with no window and times each whole turn through `turn_manager` (AI preparation, resolution and the map refresh passes). `fps` opens the real window with no frame cap and times the menu, the map (start, zoomed out, zoomed in, scrolling, late game), the research screen and the map while a turn resolves. Model-driven diplomacy is skipped, as with Force Skip. Results are printed as `OJH ...` lines on stdout; the tool's docstring lists them.
