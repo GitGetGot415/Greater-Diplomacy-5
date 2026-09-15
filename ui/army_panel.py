@@ -12,6 +12,10 @@ from ui import map_top_right_layout
 TRAY_BG = (15, 22, 42, 225)
 CARD_BG = (38, 67, 112)
 CARD_SELECTED = (62, 112, 175)
+TRAY_CARD_SATURATION = 0.45
+TRAY_CARD_DARKEN = 0.42
+TRAY_SELECTED_LIGHTEN = 0.18
+TRAY_BORDER_LIGHTEN = 0.35
 EDITOR_BG = (23, 35, 61, 245)
 EDITOR_BORDER = (125, 175, 240)
 EDITOR_WIDTH = 540
@@ -37,6 +41,29 @@ CUSTOM_BRUSHES = (
     ("black", c.ARMY_CUSTOM_SYMBOL_BLACK, (15, 15, 20)),
     ("erase", c.ARMY_CUSTOM_SYMBOL_EMPTY, (65, 75, 95)),
 )
+
+
+def _blend_color(first, second, second_weight):
+    """Return a rounded blend of two RGB colors."""
+    return tuple(round(start * (1 - second_weight) + end * second_weight)
+                 for start, end in zip(first, second))
+
+
+def _muted_army_color(color):
+    """Keep an army RGB's hue while making it suitable for a dark tray card."""
+    red, green, blue = queries.normalize_army_symbol_color(color)
+    neutral = round((red + green + blue) / 3)
+    muted = _blend_color((red, green, blue), (neutral, neutral, neutral),
+                          1 - TRAY_CARD_SATURATION)
+    return _blend_color(muted, (0, 0, 0), TRAY_CARD_DARKEN)
+
+
+def _tray_card_colors(color, selected):
+    """Return muted fill and readable border colors for an army tray card."""
+    muted = _muted_army_color(color)
+    fill = (_blend_color(muted, (255, 255, 255), TRAY_SELECTED_LIGHTEN)
+            if selected else muted)
+    return fill, _blend_color(muted, (255, 255, 255), TRAY_BORDER_LIGHTEN)
 
 
 def _editor_rect():
@@ -631,8 +658,10 @@ def draw(map_screen, surface, orders_screen=None):
         if not rect.colliderect(tray):
             continue
         selected = bool(selected_ids) and selected_ids == set(army.get("unit_ids", []))
-        pygame.draw.rect(surface, CARD_SELECTED if selected else CARD_BG, rect, border_radius=4)
-        pygame.draw.rect(surface, (135, 185, 245), rect, 1, border_radius=4)
+        card_color, border_color = _tray_card_colors(
+            army.get("symbol_color", c.DEFAULT_ARMY_SYMBOL_COLOR), selected)
+        pygame.draw.rect(surface, card_color, rect, border_radius=4)
+        pygame.draw.rect(surface, border_color, rect, 1, border_radius=4)
         _draw_emblem(surface, army.get("symbol", ""), army.get("custom_symbol"),
                      army.get("symbol_color", c.DEFAULT_ARMY_SYMBOL_COLOR),
                      army.get("symbol_rotation", c.DEFAULT_ARMY_SYMBOL_ROTATION),

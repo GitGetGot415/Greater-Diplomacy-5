@@ -7,6 +7,7 @@ from ui.bars import ui_bars
 import data.constants as c
 from map_logic.rendering.font_manager import fonts
 import ui_elements
+from ui.text_utils import wrap_text
 
 _KIND_ACCENTS = {
     "info": (80, 150, 220),
@@ -52,6 +53,9 @@ class _NavigationIntroPopup:
     WIDTH = 720
     HEIGHT = 370
     HEADER_H = 46
+    SUBTITLE_Y_OFFSET = 55
+    SUBTITLE_SIDE_PADDING = 24
+    SUBTITLE_LINE_GAP = 2
     INITIAL_CENTER_Y_OFFSET = -16
     BORDER_COLOR = _KIND_ACCENTS["info"]
     MOUSE_DIR = os.path.join(c.ASSETS_ROOT_DIR, "mouse")
@@ -89,8 +93,8 @@ class _NavigationIntroPopup:
     )
     PAGE_TITLES = ("Map Navigation", "Map UI", "Armies")
     PAGE_SUBTITLES = (
-        "Learn how to move around the map and use the mouse controls.",
-        "Learn the bottom-left map controls.",
+        "If you're familliar with how HOI4 map controls work then this should be very easy to understand",
+        "These buttons are important! Located on the bottom left of the screen, they edit the appearance of the map, giving you the information you need to play effectively.",
         "Learn how to create, organize, and personalize armies.",
     )
 
@@ -118,6 +122,12 @@ class _NavigationIntroPopup:
                                      36, 32)
         self.next_rect = pygame.Rect(self.rect.right - 72, self.rect.bottom - 51,
                                      36, 32)
+
+    def _subtitle_lines(self):
+        """Wrap the current page subtitle inside the draggable popup's bounds."""
+        return wrap_text(
+            self.PAGE_SUBTITLES[self.page_index], self.body_font,
+            self.rect.width - (2 * self.SUBTITLE_SIDE_PADDING))
 
     def _persist_checkbox(self):
         settings = dict(queries.get_settings() or {})
@@ -212,8 +222,14 @@ class _NavigationIntroPopup:
 
         title = self.title_font.render(self.PAGE_TITLES[self.page_index], True, (255, 255, 255))
         surface.blit(title, title.get_rect(center=(self.rect.centerx, self.header_rect.centery)))
-        subtitle = self.body_font.render(self.PAGE_SUBTITLES[self.page_index], True, (205, 215, 225))
-        surface.blit(subtitle, subtitle.get_rect(center=(self.rect.centerx, self.rect.y + 55)))
+        subtitle_lines = self._subtitle_lines()
+        subtitle_line_h = self.body_font.get_height() + self.SUBTITLE_LINE_GAP
+        subtitle_y = self.rect.y + self.SUBTITLE_Y_OFFSET
+        for line in subtitle_lines:
+            subtitle = self.body_font.render(line, True, (205, 215, 225))
+            surface.blit(subtitle, subtitle.get_rect(center=(self.rect.centerx, subtitle_y)))
+            subtitle_y += subtitle_line_h
+        content_y_offset = max(0, len(subtitle_lines) - 1) * subtitle_line_h
 
         pygame.draw.rect(surface, (150, 0, 0), self.close_rect)
         pygame.draw.rect(surface, (255, 255, 255), self.close_rect, 1)
@@ -222,8 +238,8 @@ class _NavigationIntroPopup:
 
         if self.page_index == 0:
             column_w = self.rect.width // 3
-            image_y = self.rect.y + 88
-            text_y = self.rect.y + 197
+            image_y = self.rect.y + 88 + content_y_offset
+            text_y = self.rect.y + 197 + content_y_offset
             for index, (filename, heading, lines) in enumerate(self.NAVIGATION_BUTTONS):
                 center_x = self.rect.x + column_w * index + column_w // 2
                 image = ui_bars.get_ui_image(filename, directory=self.MOUSE_DIR)
@@ -249,7 +265,7 @@ class _NavigationIntroPopup:
             for index, (label, icon_name, description) in enumerate(self.MAP_UI_BUTTONS):
                 column, row = divmod(index, 5)
                 x = column_x[column]
-                y = self.rect.y + 92 + row * row_h
+                y = self.rect.y + 92 + content_y_offset + row * row_h
                 icon = ui_elements.UI_ICONS.get(icon_name)
                 if icon:
                     scale = min(28 / icon.get_width(), 28 / icon.get_height())
@@ -267,7 +283,7 @@ class _NavigationIntroPopup:
                 surface.blit(desc_surf, (x + 36, y + self.label_font.get_height() + 2))
         else:
             step_x = self.rect.x + 56
-            step_y = self.rect.y + 91
+            step_y = self.rect.y + 91 + content_y_offset
             step_gap = 51
             for index, (heading, description) in enumerate(self.ARMY_STEPS, start=1):
                 y = step_y + (index - 1) * step_gap

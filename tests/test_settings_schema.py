@@ -248,8 +248,11 @@ class NavigationIntroPopupTests(unittest.TestCase):
             pygame.MOUSEBUTTONDOWN, pos=popup.next_rect.center, button=1))
         self.assertEqual(popup.page_index, 1)
         self.assertEqual(popup.PAGE_TITLES[popup.page_index], "Map UI")
-        self.assertEqual(popup.PAGE_SUBTITLES[popup.page_index],
-                         "Learn the bottom-left map controls.")
+        subtitle_lines = popup._subtitle_lines()
+        self.assertGreater(len(subtitle_lines), 1)
+        self.assertTrue(all(popup.body_font.size(line)[0] <= popup.rect.width -
+                            (2 * popup.SUBTITLE_SIDE_PADDING)
+                            for line in subtitle_lines))
         self.assertEqual([label for label, _icon, _description in popup.MAP_UI_BUTTONS], [
             "Terrain", "Political", "Relations", "Cores", "Factions",
             "Resources", "Blank", "Units", "Economy", "Names",
@@ -266,8 +269,9 @@ class NavigationIntroPopupTests(unittest.TestCase):
             pygame.MOUSEBUTTONDOWN, pos=popup.next_rect.center, button=1))
         self.assertEqual(popup.page_index, 2)
         self.assertEqual(popup.PAGE_TITLES[popup.page_index], "Armies")
-        self.assertEqual(popup.PAGE_SUBTITLES[popup.page_index],
-                         "Learn how to create, organize, and personalize armies.")
+        self.assertTrue(all(popup.body_font.size(line)[0] <= popup.rect.width -
+                            (2 * popup.SUBTITLE_SIDE_PADDING)
+                            for line in popup._subtitle_lines()))
         self.assertEqual(popup.ARMY_STEPS, (
             ("Select units", "Click stacks or drag in Units view."),
             ("Create an army", "In Orders, click + Create Army in the Army tray."),

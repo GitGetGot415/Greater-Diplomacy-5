@@ -83,16 +83,27 @@ class ArmyQueryTests(unittest.TestCase):
         self.assertEqual(normalized["symbol_rotation"], c.DEFAULT_ARMY_SYMBOL_ROTATION)
         self.assertIsNone(normalized["custom_symbol"])
 
+    @patch("data.queries.random_army_symbol", return_value="Star")
     @patch("data.queries.random.choice", return_value=(12, 90, 230))
-    def test_new_army_uses_a_random_persistent_color_for_member_bands(self, choose_color):
+    def test_new_army_uses_a_random_persistent_color_for_member_bands(
+            self, choose_color, choose_symbol):
         queries.normalize_armies(self.nations, self.world)
         member, ungrouped = self.first["units"]
         army = queries.create_army("A", [member["unit_id"]], self.nations, self.world)
 
+        choose_symbol.assert_called_once_with()
         choose_color.assert_called_once_with(c.ARMY_SYMBOL_COLOR_CHOICES)
+        self.assertEqual(army["symbol"], "Star")
         self.assertEqual(army["symbol_color"], [12, 90, 230])
         self.assertEqual(queries.army_color_for_unit(member, self.nations), (12, 90, 230))
         self.assertIsNone(queries.army_color_for_unit(ungrouped, self.nations))
+
+    @patch("data.queries.army_symbol_choices", return_value=["Banner", "Crown"])
+    @patch("data.queries.random.choice", return_value="Crown")
+    def test_random_army_symbol_chooses_only_installed_emblems(self, choose, choices):
+        self.assertEqual(queries.random_army_symbol(), "Crown")
+        choose.assert_called_once_with(["Banner", "Crown"])
+        choices.assert_called_once_with()
 
     def test_orders_shows_unselected_peers_without_selecting_them(self):
         queries.normalize_armies(self.nations, self.world)
@@ -127,6 +138,19 @@ class ArmyQueryTests(unittest.TestCase):
 
 
 class ArmyLayoutTests(unittest.TestCase):
+    def test_tray_card_color_is_a_less_saturated_army_rgb(self):
+        source = (220, 60, 70)
+        fill, border = army_panel._tray_card_colors(source, selected=False)
+        source_neutral = sum(source) / 3
+        fill_neutral = sum(fill) / 3
+
+        self.assertEqual(fill, army_panel._muted_army_color(source))
+        self.assertNotEqual(fill, source)
+        self.assertTrue(all(abs(channel - fill_neutral) < abs(original - source_neutral)
+                            for channel, original in zip(fill, source)))
+        self.assertTrue(all(channel < original for channel, original in zip(fill, source)))
+        self.assertTrue(all(edge >= channel for edge, channel in zip(border, fill)))
+
     def test_orders_header_fits_ungroup_and_wraps_movement_guidance(self):
         controls_width = (c.SIZES["orders_header_button"][0]
                           + (2 * TOP_BTN_GAP_X)

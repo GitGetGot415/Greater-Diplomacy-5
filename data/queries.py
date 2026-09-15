@@ -2241,6 +2241,16 @@ def army_symbol_choices():
         return []
 
 
+def random_army_symbol():
+    """Choose an installed emblem for a newly created army.
+
+    The empty and Custom choices are UI-only options, so they deliberately do
+    not appear in ``army_symbol_choices`` and can never be chosen here.
+    """
+    choices = army_symbol_choices()
+    return random.choice(choices) if choices else ""
+
+
 def normalize_army_symbol(symbol):
     """Return a usable emblem name, or the no-emblem value for stale saves."""
     return symbol if isinstance(symbol, str) and symbol in army_symbol_choices() else ""
@@ -2370,7 +2380,7 @@ def create_army(country_id, unit_ids, nation_data, map_data):
                              if unit_id not in member_set]
     armies[:] = [army for army in armies if army.get("unit_ids")]
     army = {"id": uuid.uuid4().hex, "name": _army_name(armies),
-            "unit_ids": members, "symbol": "",
+            "unit_ids": members, "symbol": random_army_symbol(),
             "symbol_color": list(random.choice(c.ARMY_SYMBOL_COLOR_CHOICES)),
             "symbol_rotation": c.DEFAULT_ARMY_SYMBOL_ROTATION,
             "custom_symbol": None}
