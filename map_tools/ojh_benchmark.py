@@ -66,14 +66,16 @@ PAN_STEP = 6.0
 TURN_TIMEOUT_SECONDS = 600.0
 
 
-# The real stdout, kept before any of the game's prints are sent to stderr, so
-# a protocol line written while that redirect is active still reaches OJH.
-PROTOCOL_OUT = sys.stdout
+# The stdout OJH reads, saved by main() before the game's own prints are sent to
+# stderr, so a protocol line written while that redirect is active still
+# reaches OJH. Unset (as in the tests), protocol lines go to sys.stdout.
+PROTOCOL_OUT = None
 
 
 def say(text):
-    PROTOCOL_OUT.write(text + "\n")
-    PROTOCOL_OUT.flush()
+    out = PROTOCOL_OUT or sys.stdout
+    out.write(text + "\n")
+    out.flush()
 
 
 def scene_statistics(frame_seconds):
@@ -382,6 +384,8 @@ def run_end_turn_scene(map_screen, surface):
 
 
 def main(argv=None):
+    global PROTOCOL_OUT
+    PROTOCOL_OUT = sys.stdout
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--scenario", default=DEFAULT_SCENARIO,
                         help="scenario or map directory to load (default: %(default)s)")
