@@ -1146,6 +1146,18 @@ class Orders_Screen(GameState):
         event_pos = getattr(event, "pos", (mx, my))
         on_ui = panel_rect.collidepoint(event_pos)
 
+        # Targeting is a modal map action. It must run before the normal
+        # left-click selection gesture below, otherwise every target click is
+        # consumed as the start of a selection rectangle.
+        if (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1
+                and getattr(self, "bombarding_unit_index", None) is not None):
+            if not on_ui:
+                dest = queries.get_clicked_province(event.pos, self.map_screen)
+                if dest:
+                    self.set_bombard_target(self.bombarding_unit_actual_index, dest,
+                                            self.bombarding_unit_province)
+            return
+
         # The Orders panel is a live map workspace. A short left-click on a
         # stack toggles it; an actual left-drag box-selects stacks, matching
         # the map screen and HOI4's primary selection gesture.
@@ -1228,18 +1240,6 @@ class Orders_Screen(GameState):
                 pass
             else:
                 self.map_screen.camera.handle_input(event, self.map_screen, on_ui)
-
-        # --- Bombardment Target Click ---
-        # Takes priority over move orders while a gun is armed
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and self.bombarding_unit_index is not None:
-            if panel_rect.collidepoint(event.pos):
-                return
-
-            dest = queries.get_clicked_province(event.pos, self.map_screen)
-            if dest:
-                self.set_bombard_target(self.bombarding_unit_actual_index, dest,
-                                        self.bombarding_unit_province)
-            return
 
         # --- Dynamic Map Hover Update ---
         if event.type == pygame.MOUSEMOTION:

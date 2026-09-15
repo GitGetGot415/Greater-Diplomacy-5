@@ -2,7 +2,7 @@
 import os
 import sys
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pygame
 
@@ -202,6 +202,31 @@ class OrdersSelectionRowsTests(unittest.TestCase):
 
 
 class MapOrderGestureTests(unittest.TestCase):
+    def test_armed_bombardment_click_sets_target_before_selection_gesture(self):
+        origin = province(1, [2])
+        destination = province(2, [1])
+        screen = object.__new__(Orders_Screen)
+        screen.panel_rect = pygame.Rect(0, 0, 100, 100)
+        screen.bombarding_unit_index = 0
+        screen.bombarding_unit_actual_index = 0
+        screen.bombarding_unit_province = origin
+        screen.set_bombard_target = Mock()
+        screen.map_screen = type("MapStub", (), {
+            "unit_selection_drag": None,
+            "unit_stack_hitboxes": [],
+        })()
+
+        with (patch("screens.map_related_screens.orders.event_handler.resolve_map_mouse_gesture_conflict"),
+              patch("screens.map_related_screens.orders.pygame.mouse.get_pos",
+                    return_value=(150, 150)),
+              patch("screens.map_related_screens.orders.queries.get_clicked_province",
+                    return_value=destination)):
+            screen.additional_events(
+                pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=(150, 150)))
+
+        screen.set_bombard_target.assert_called_once_with(0, destination, origin)
+        self.assertIsNone(screen.map_screen.unit_selection_drag)
+
     def test_unit_hover_prefers_the_topmost_visible_stack(self):
         lower = {"rect": pygame.Rect(10, 10, 30, 30), "units": []}
         upper = {"rect": pygame.Rect(10, 10, 30, 30), "units": []}
