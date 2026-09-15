@@ -30,6 +30,8 @@ CUSTOM_DIALOG_WIDTH = 500
 CUSTOM_DIALOG_HEIGHT = 440
 CUSTOM_CANVAS_PIXEL_SIZE = 14
 CUSTOM_CANVAS_SIZE = c.ARMY_CUSTOM_SYMBOL_SIZE * CUSTOM_CANVAS_PIXEL_SIZE
+CUSTOM_CANVAS_EMPTY_COLOR = (190, 202, 222)
+CUSTOM_CANVAS_GRID_COLOR = (130, 145, 170)
 CUSTOM_BRUSHES = (
     ("red", c.ARMY_CUSTOM_SYMBOL_RED, (215, 75, 75)),
     ("black", c.ARMY_CUSTOM_SYMBOL_BLACK, (15, 15, 20)),
@@ -428,7 +430,7 @@ def _draw_editor(map_screen, surface):
                          button, border_radius=4)
         pygame.draw.rect(surface, (175, 215, 255) if selected else (95, 135, 190),
                          button, 2 if selected else 1, border_radius=4)
-        label = text_font.render(f"{rotation}\N{DEGREE SIGN}", True, (235, 245, 255))
+        label = text_font.render(f"{rotation}", True, (235, 245, 255))
         surface.blit(label, label.get_rect(center=button.center))
     cancel = pygame.Rect(rect.right - 230, rect.bottom - 42, 98, 26)
     save = pygame.Rect(rect.right - 122, rect.bottom - 42, 98, 26)
@@ -455,21 +457,21 @@ def _draw_custom_symbol_editor(map_screen, surface):
     title_font, text_font = fonts.get("button"), fonts.get("tiny")
     title = title_font.render("DRAW CUSTOM EMBLEM", True, (235, 245, 255))
     surface.blit(title, (rect.x + 18, rect.y + 15))
-    instructions = text_font.render("20 x 20 pixels — red, black, or erase", True,
+    instructions = text_font.render("20 x 20 pixels; red, black, or erase", True,
                                     (205, 220, 240))
     surface.blit(instructions, (rect.x + 20, rect.y + 49))
     canvas = _custom_canvas_rect(rect)
-    pygame.draw.rect(surface, (10, 16, 28), canvas)
+    pygame.draw.rect(surface, CUSTOM_CANVAS_EMPTY_COLOR, canvas)
     pixel_colors = {c.ARMY_CUSTOM_SYMBOL_RED: c.DEFAULT_ARMY_SYMBOL_COLOR,
                     c.ARMY_CUSTOM_SYMBOL_BLACK: (0, 0, 0),
-                    c.ARMY_CUSTOM_SYMBOL_EMPTY: (28, 39, 59)}
+                    c.ARMY_CUSTOM_SYMBOL_EMPTY: CUSTOM_CANVAS_EMPTY_COLOR}
     for row, pixels in enumerate(custom_state["pixels"]):
         for column, pixel in enumerate(pixels):
             pixel_rect = pygame.Rect(canvas.x + column * CUSTOM_CANVAS_PIXEL_SIZE,
                                      canvas.y + row * CUSTOM_CANVAS_PIXEL_SIZE,
                                      CUSTOM_CANVAS_PIXEL_SIZE, CUSTOM_CANVAS_PIXEL_SIZE)
             pygame.draw.rect(surface, pixel_colors[pixel], pixel_rect)
-            pygame.draw.rect(surface, (56, 70, 96), pixel_rect, 1)
+            pygame.draw.rect(surface, CUSTOM_CANVAS_GRID_COLOR, pixel_rect, 1)
     pygame.draw.rect(surface, (150, 190, 245), canvas, 2)
     brush_label = text_font.render("Brush", True, (205, 220, 240))
     surface.blit(brush_label, (rect.x + 330, rect.y + 82))
