@@ -150,6 +150,14 @@ class Orders_Screen(GameState):
 
         self.unit_library = queries.get_unit_library()
 
+    def _panel_title(self, player_units):
+        """Name the selected army when its membership is unambiguous."""
+        army = queries.common_army_for_units(
+            player_units, self.map_screen.nation_data)
+        if army is not None and army.get("name"):
+            return f"ORDERS | {army['name']}"
+        return "ORDERS | MAP COMMAND"
+
     def start_with_province(self, province, map_ref):
         self.target_province = province
         self.map_screen = map_ref
@@ -1452,7 +1460,7 @@ class Orders_Screen(GameState):
     def _draw_panel_header(self, surface, rows, player_units, read_only):
         title_font = fonts.get("heading2")
         tiny_font = fonts.get("tiny")
-        title = fit_text("ORDERS | MAP COMMAND",
+        title = fit_text(self._panel_title(player_units),
                          title_font, self.PANEL_WIDTH - 62)
         surface.blit(title_font.render(title, True, (255, 255, 255)),
                      (self.PANEL_X + PANEL_INSET,

@@ -598,6 +598,13 @@ def handle_event(map_screen, event, orders_screen=None):
         return True
     if _handle_editor_event(map_screen, event):
         return True
+    # Orders uses right-button release to issue movement.  A press on an army
+    # card is instead an assignment action, so retain it through its matching
+    # release even when the pointer is now over the map behind the tray.
+    if (event.type == pygame.MOUSEBUTTONUP and event.button == 3
+            and getattr(map_screen, "_army_tray_right_click_active", False)):
+        map_screen._army_tray_right_click_active = False
+        return True
     show_create = orders_screen is not None
     tray, armies = _layout(map_screen, show_create=show_create)
     if not armies and not show_create:
@@ -612,6 +619,7 @@ def handle_event(map_screen, event, orders_screen=None):
     if event.button == 3:
         if orders_screen is None or not tray.collidepoint(event.pos):
             return False
+        map_screen._army_tray_right_click_active = True
         for index, army in enumerate(armies):
             rect = map_top_right_layout.card_rect(tray, index, map_screen.army_panel_scroll_y)
             if rect.colliderect(tray) and rect.collidepoint(event.pos):

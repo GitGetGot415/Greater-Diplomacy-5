@@ -22,9 +22,28 @@ def dispatch_global_keys(state, event):
     screen has to re-resolve the keybinds itself. Screen-specific actions are
     harmless elsewhere because their handler is optional.
     """
-    if event.type != pygame.KEYDOWN or getattr(state, "listening_for", None):
+    # A focused text bar owns every key press, including a character that has
+    # been rebound as a map command.  ``listening_for`` predates the shared
+    # UI fields, while the remaining flags cover the inline editors that do
+    # not use a Button instance for their input box.
+    typing_in_ui_bar = (
+        bool(getattr(state, "listening_for", None))
+        or bool(getattr(state, "active_input", None))
+        or bool(getattr(state, "mail_input_active", False))
+        or bool(getattr(state, "renaming_item", None))
+        or getattr(state, "renaming_unit_index", None) is not None
+        or bool(getattr(state, "is_renaming", False))
+        or bool(getattr(state, "text_input_active", False))
+    )
+    if event.type != pygame.KEYDOWN:
         return
-    if event.key == resolve_keybind(state, "BACK", pygame.K_ESCAPE):
+    back_key = resolve_keybind(state, "BACK", pygame.K_ESCAPE)
+    # Back remains available while editing so a field or screen can offer its
+    # normal cancel behavior; the remaining rebindable actions stay reserved
+    # for the text bar.
+    if typing_in_ui_bar and event.key != back_key:
+        return
+    if event.key == back_key:
         state.handle_back_key()
     elif event.key == resolve_keybind(state, "ORDERS", pygame.K_q):
         if hasattr(state, "handle_orders_key"):

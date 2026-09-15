@@ -78,6 +78,11 @@ class Messages_Screen(GameState):
         self.show_all_contacts = False
         self.refresh_ui()
 
+    @property
+    def text_input_active(self):
+        """The compose bar accepts keystrokes whenever a conversation is open."""
+        return self.selected_recipient is not None
+
     def accept_proposal(self, target):
         from map_logic.diplomacy import player_diplomacy_actions
         custom_msg = self.compose_text.strip()

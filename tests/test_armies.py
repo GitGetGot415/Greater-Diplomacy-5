@@ -130,6 +130,23 @@ class ArmyQueryTests(unittest.TestCase):
                          {first_unit["unit_id"], second_unit["unit_id"]})
         self.assertEqual(selected_ids, {first_unit["unit_id"]})
 
+    def test_orders_title_uses_the_selected_army_name(self):
+        queries.normalize_armies(self.nations, self.world)
+        first_unit, second_unit = self.first["units"]
+        army = queries.create_army(
+            "A", [first_unit["unit_id"], second_unit["unit_id"]],
+            self.nations, self.world)
+        army["name"] = "Northern Command"
+        orders = Orders_Screen.__new__(Orders_Screen)
+        orders.map_screen = SimpleNamespace(nation_data=self.nations)
+
+        self.assertEqual(orders._panel_title([first_unit]),
+                         "ORDERS | Northern Command")
+        self.assertEqual(orders._panel_title([first_unit, second_unit]),
+                         "ORDERS | Northern Command")
+        self.assertEqual(orders._panel_title([first_unit, self.second["units"][0]]),
+                         "ORDERS | MAP COMMAND")
+
     def test_army_order_is_player_managed_and_persistent(self):
         queries.normalize_armies(self.nations, self.world)
         first_id = self.first["units"][0]["unit_id"]
@@ -272,6 +289,10 @@ class ArmyLayoutTests(unittest.TestCase):
             orders_screen=orders)
         self.assertEqual(set(nations["A"]["armies"][0]["unit_ids"]), {first_id, second_id})
         orders.refresh_ui.assert_called_once()
+        self.assertTrue(army_panel.handle_event(
+            map_stub, pygame.event.Event(pygame.MOUSEBUTTONUP, button=3, pos=card.center),
+            orders_screen=orders))
+        self.assertFalse(map_stub._army_tray_right_click_active)
 
         selected_ids[:] = [first_id]
         tray, armies = army_panel._layout(map_stub, show_create=True)

@@ -129,9 +129,10 @@ class GlobalKeyDispatchTests(unittest.TestCase):
 
         def __init__(self):
             self.cleared = 0
+            self.back = 0
 
         def handle_back_key(self):
-            pass
+            self.back += 1
 
         def handle_clear_orders_key(self):
             self.cleared += 1
@@ -160,6 +161,30 @@ class GlobalKeyDispatchTests(unittest.TestCase):
             dispatch_global_keys(state, event)
 
         self.assertEqual(state.cleared, 1)
+
+    def test_keybinds_do_not_fire_while_a_text_bar_has_focus(self):
+        from gameState import dispatch_global_keys
+
+        state = self.State()
+        state.active_input = "MODEL"
+        event = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_DELETE)
+        with mock.patch("gameState.queries.get_keybind",
+                        side_effect=lambda _action, default: default):
+            dispatch_global_keys(state, event)
+
+        self.assertEqual(state.cleared, 0)
+
+    def test_back_key_still_reaches_a_focused_text_bar(self):
+        from gameState import dispatch_global_keys
+
+        state = self.State()
+        state.active_input = "MODEL"
+        event = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_ESCAPE)
+        with mock.patch("gameState.queries.get_keybind",
+                        side_effect=lambda _action, default: default):
+            dispatch_global_keys(state, event)
+
+        self.assertEqual(state.back, 1)
 
 
 if __name__ == "__main__":

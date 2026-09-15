@@ -2501,6 +2501,26 @@ def army_for_unit(unit, nation_data):
     return None
 
 
+def common_army_for_units(units, nation_data):
+    """Return the army shared by every supplied unit, or ``None``.
+
+    A partial selection still identifies its army, but one ungrouped unit or
+    units from different armies deliberately removes that shared identity.
+    This keeps selection labels and any future group actions on the same
+    membership rule as the map and Orders roster.
+    """
+    common_army = None
+    for unit in units:
+        army = army_for_unit(unit, nation_data)
+        if army is None:
+            return None
+        if common_army is None:
+            common_army = army
+        elif army.get("id") != common_army.get("id"):
+            return None
+    return common_army
+
+
 def army_color_for_unit(unit, nation_data):
     """Return a unit's persistent army color, or ``None`` when ungrouped.
 
