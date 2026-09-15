@@ -70,6 +70,11 @@ RESOLVED_NAMES = {}
 #: caller inherits it. Everything else here already copies before it mutates.
 SCALED_SYMBOLS = {}
 
+# Player-drawn army emblems use a tiny JSON pixel grid rather than a file on
+# disk. Cache their rendered forms by grid and destination size just like the
+# regular symbol path, because map rendering may request them every frame.
+CUSTOM_ARMY_SYMBOLS = {}
+
 #: Zoom is continuous, so every notch of it mints a new size. Emptied wholesale
 #: rather than evicted one at a time -- these are small surfaces and the cache
 #: refills from whatever is on screen inside a frame.
@@ -81,6 +86,7 @@ def clear_caches():
     RESOLVED_NAMES.clear()
     SCALED_SYMBOLS.clear()
     COLORED_SYMBOLS.clear()
+    CUSTOM_ARMY_SYMBOLS.clear()
 
 
 def load_symbols():
@@ -821,6 +827,34 @@ def get_symbol(name, zoom, color=None, alpha=255, style=None, country=None):
         SCALED_SYMBOLS.clear()
     SCALED_SYMBOLS[key] = scaled
     return scaled
+
+
+def get_custom_army_symbol(rows, size):
+    """Render a normalized player-drawn 20x20 army emblem at ``size`` pixels."""
+    if not isinstance(rows, list) or not isinstance(size, int) or size < 1:
+        return None
+    key = (tuple(rows), size)
+    cached = CUSTOM_ARMY_SYMBOLS.get(key)
+    if cached is not None:
+        return cached
+
+    grid_size = c.ARMY_CUSTOM_SYMBOL_SIZE
+    if len(rows) != grid_size or any(not isinstance(row, str) or len(row) != grid_size
+                                     for row in rows):
+        return None
+    image = pygame.Surface((grid_size, grid_size), pygame.SRCALPHA)
+    colors = {c.ARMY_CUSTOM_SYMBOL_RED: c.DEFAULT_ARMY_SYMBOL_COLOR,
+              c.ARMY_CUSTOM_SYMBOL_BLACK: (0, 0, 0)}
+    for y, row in enumerate(rows):
+        for x, pixel in enumerate(row):
+            color = colors.get(pixel)
+            if color:
+                image.set_at((x, y), color)
+    rendered = pygame.transform.scale(image, (size, size))
+    if len(CUSTOM_ARMY_SYMBOLS) >= SCALED_CACHE_LIMIT:
+        CUSTOM_ARMY_SYMBOLS.clear()
+    CUSTOM_ARMY_SYMBOLS[key] = rendered
+    return rendered
 
 
 def _scaled_size(img, zoom, custom_scale=1.0):

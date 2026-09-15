@@ -2103,6 +2103,10 @@ ARMY_SYMBOL_KEY_PREFIX = "Army Symbol "
 DEFAULT_ARMY_SYMBOL_COLOR = (210, 70, 70)
 ARMY_SYMBOL_ROTATIONS = (0, 90, 180, 270)
 DEFAULT_ARMY_SYMBOL_ROTATION = ARMY_SYMBOL_ROTATIONS[0]
+ARMY_CUSTOM_SYMBOL_SIZE = 20
+ARMY_CUSTOM_SYMBOL_RED = "R"
+ARMY_CUSTOM_SYMBOL_BLACK = "B"
+ARMY_CUSTOM_SYMBOL_EMPTY = "."
 # Factory and recruitment center building art, kept out of the flat
 # assets/images set since building names/levels multiply fast. Loaded into
 # the same SYMBOLS name->Surface map as ASSETS_DIR -- see symbol_loader.load_symbols.

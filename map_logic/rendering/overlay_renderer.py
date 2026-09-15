@@ -1314,20 +1314,25 @@ def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,
             return
         emblems = [queries.army_for_unit(unit, map_screen.nation_data)
                    for unit in owner_units]
-        emblems = [army for army in emblems if army and army.get("symbol")]
+        emblems = [army for army in emblems
+                   if army and (army.get("symbol") or army.get("custom_symbol"))]
         if not emblems:
             return
         badge_size = max(7, min(15, int(scaled_h * 0.34)))
         rows = min(3, len(emblems))
         for index, army in enumerate(emblems):
-            key = f"{c.ARMY_SYMBOL_KEY_PREFIX}{army['symbol']}"
-            native_size = symbol_loader.get_native_size(key, style="classic")
-            if not native_size:
-                continue
-            zoom = (badge_size * 2) / max(native_size)
-            badge = symbol_loader.get_symbol(
-                key, zoom, color=tuple(army.get("symbol_color", c.DEFAULT_ARMY_SYMBOL_COLOR)),
-                style="classic")
+            custom_symbol = army.get("custom_symbol")
+            if custom_symbol:
+                badge = symbol_loader.get_custom_army_symbol(custom_symbol, badge_size)
+            else:
+                key = f"{c.ARMY_SYMBOL_KEY_PREFIX}{army['symbol']}"
+                native_size = symbol_loader.get_native_size(key, style="classic")
+                if not native_size:
+                    continue
+                zoom = (badge_size * 2) / max(native_size)
+                badge = symbol_loader.get_symbol(
+                    key, zoom, color=tuple(army.get("symbol_color", c.DEFAULT_ARMY_SYMBOL_COLOR)),
+                    style="classic")
             if not badge:
                 continue
             rotation = queries.normalize_army_symbol_rotation(

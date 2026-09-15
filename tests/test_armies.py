@@ -53,28 +53,34 @@ class ArmyQueryTests(unittest.TestCase):
         self.assertEqual(self.nations["A"]["armies"], [
             {"id": "keep", "name": "Army 1", "unit_ids": [own_id],
              "symbol": "", "symbol_color": list(c.DEFAULT_ARMY_SYMBOL_COLOR),
-             "symbol_rotation": c.DEFAULT_ARMY_SYMBOL_ROTATION}])
+             "symbol_rotation": c.DEFAULT_ARMY_SYMBOL_ROTATION,
+             "custom_symbol": None}])
 
     def test_army_presentation_round_trips_and_invalid_legacy_art_is_removed(self):
         queries.normalize_armies(self.nations, self.world)
         unit_id = self.first["units"][0]["unit_id"]
         army = queries.create_army("A", [unit_id], self.nations, self.world)
         symbol = queries.army_symbol_choices()[0]
+        custom_symbol = ([c.ARMY_CUSTOM_SYMBOL_RED + c.ARMY_CUSTOM_SYMBOL_EMPTY * 19]
+                         + [c.ARMY_CUSTOM_SYMBOL_EMPTY * 20] * 19)
         updated = queries.update_army_presentation(
             "A", army["id"], "Northern Command", symbol, [12, 90, 230], 90,
-            self.nations, self.world)
+            custom_symbol, self.nations, self.world)
         self.assertEqual(updated["name"], "Northern Command")
-        self.assertEqual(updated["symbol"], symbol)
+        self.assertEqual(updated["symbol"], "")
         self.assertEqual(updated["symbol_color"], [12, 90, 230])
         self.assertEqual(updated["symbol_rotation"], 90)
+        self.assertEqual(updated["custom_symbol"], custom_symbol)
         updated["symbol"] = "No Longer Installed"
         updated["symbol_color"] = [999, 0, 0]
         updated["symbol_rotation"] = 45
+        updated["custom_symbol"] = ["invalid"]
         queries.normalize_armies(self.nations, self.world)
         normalized = self.nations["A"]["armies"][0]
         self.assertEqual(normalized["symbol"], "")
         self.assertEqual(normalized["symbol_color"], list(c.DEFAULT_ARMY_SYMBOL_COLOR))
         self.assertEqual(normalized["symbol_rotation"], c.DEFAULT_ARMY_SYMBOL_ROTATION)
+        self.assertIsNone(normalized["custom_symbol"])
 
     def test_orders_shows_unselected_peers_without_selecting_them(self):
         queries.normalize_armies(self.nations, self.world)
@@ -116,7 +122,8 @@ class ArmyLayoutTests(unittest.TestCase):
         rect = army_panel._editor_rect()
         tiles = army_panel._symbol_rects(rect)
 
-        self.assertEqual(len(tiles), army_panel.SYMBOLS_PER_ROW + 1)
+        self.assertEqual(len(tiles), army_panel.SYMBOLS_PER_ROW + 2)
+        self.assertIs(tiles[-1][0], army_panel.CUSTOM_SYMBOL_CHOICE)
         self.assertEqual(tiles[army_panel.SYMBOLS_PER_ROW][1].x,
                          tiles[0][1].x)
         self.assertGreater(tiles[army_panel.SYMBOLS_PER_ROW][1].y,
@@ -131,6 +138,20 @@ class ArmyLayoutTests(unittest.TestCase):
                          list(c.ARMY_SYMBOL_ROTATIONS))
         self.assertTrue(all(button.right <= rect.right
                             for _rotation, button in rotation_buttons))
+
+    def test_custom_emblem_canvas_is_exactly_twenty_pixels_square(self):
+        pixels = army_panel._blank_custom_symbol()
+        self.assertEqual(len(pixels), c.ARMY_CUSTOM_SYMBOL_SIZE)
+        self.assertTrue(all(len(row) == c.ARMY_CUSTOM_SYMBOL_SIZE for row in pixels))
+        canvas = pygame.Rect(50, 70, army_panel.CUSTOM_CANVAS_SIZE,
+                             army_panel.CUSTOM_CANVAS_SIZE)
+        state = {"pixels": pixels, "brush": c.ARMY_CUSTOM_SYMBOL_BLACK}
+        self.assertTrue(army_panel._set_custom_pixel(state, canvas, canvas.center))
+        custom_symbol = army_panel._custom_symbol_rows(pixels)
+        self.assertIsNotNone(custom_symbol)
+        self.assertEqual(len(custom_symbol), c.ARMY_CUSTOM_SYMBOL_SIZE)
+        self.assertTrue(all(len(row) == c.ARMY_CUSTOM_SYMBOL_SIZE
+                            for row in custom_symbol))
 
     def test_one_army_uses_a_compact_tray_and_province_view_hides_it(self):
         map_ref = SimpleNamespace(realtime_multiplayer=False, selected_province=None,

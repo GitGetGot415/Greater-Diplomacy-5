@@ -18,13 +18,23 @@ EDITOR_WIDTH = 540
 EDITOR_MIN_HEIGHT = 390
 SYMBOL_TILE_SIZE = 40
 SYMBOL_TILE_GAP = 8
-SYMBOLS_PER_ROW = 11
-SYMBOL_GRID_X = 10
+SYMBOLS_PER_ROW = 10
+SYMBOL_GRID_X = 35
 SYMBOL_GRID_Y = 118
 SYMBOL_CONTROLS_GAP = 14
 ROTATION_BUTTON_X = 180
 ROTATION_BUTTON_WIDTH = 56
 ROTATION_BUTTON_GAP = 6
+CUSTOM_SYMBOL_CHOICE = object()
+CUSTOM_DIALOG_WIDTH = 500
+CUSTOM_DIALOG_HEIGHT = 440
+CUSTOM_CANVAS_PIXEL_SIZE = 14
+CUSTOM_CANVAS_SIZE = c.ARMY_CUSTOM_SYMBOL_SIZE * CUSTOM_CANVAS_PIXEL_SIZE
+CUSTOM_BRUSHES = (
+    ("red", c.ARMY_CUSTOM_SYMBOL_RED, (215, 75, 75)),
+    ("black", c.ARMY_CUSTOM_SYMBOL_BLACK, (15, 15, 20)),
+    ("erase", c.ARMY_CUSTOM_SYMBOL_EMPTY, (65, 75, 95)),
+)
 
 
 def _editor_rect():
@@ -55,12 +65,14 @@ def _open_editor(map_screen, army):
             army.get("symbol_color")),
         "symbol_rotation": queries.normalize_army_symbol_rotation(
             army.get("symbol_rotation")),
+        "custom_symbol": queries.normalize_army_custom_symbol(
+            army.get("custom_symbol")),
         "color_channel": None,
     }
 
 
 def _symbol_rects(rect):
-    choices = [""] + queries.army_symbol_choices()
+    choices = [""] + queries.army_symbol_choices() + [CUSTOM_SYMBOL_CHOICE]
     rects = []
     for index, symbol in enumerate(choices):
         row, column = divmod(index, SYMBOLS_PER_ROW)
@@ -72,8 +84,8 @@ def _symbol_rects(rect):
 
 
 def _symbol_grid_rows():
-    """Return the picker rows, including the no-emblem choice."""
-    choice_count = len(queries.army_symbol_choices()) + 1
+    """Return the picker rows, including no-emblem and custom choices."""
+    choice_count = len(queries.army_symbol_choices()) + 2
     return (choice_count + SYMBOLS_PER_ROW - 1) // SYMBOLS_PER_ROW
 
 
@@ -132,15 +144,33 @@ def _move_down_rect(card):
     return pygame.Rect(card.right - 69, card.y + 10, 17, 17)
 
 
-def _draw_emblem(surface, symbol, color, rotation, center, size):
-    if not symbol:
+def _blank_custom_symbol():
+    return [[c.ARMY_CUSTOM_SYMBOL_EMPTY] * c.ARMY_CUSTOM_SYMBOL_SIZE
+            for _row in range(c.ARMY_CUSTOM_SYMBOL_SIZE)]
+
+
+def _custom_symbol_pixels(custom_symbol):
+    normalized = queries.normalize_army_custom_symbol(custom_symbol)
+    return ([list(row) for row in normalized]
+            if normalized else _blank_custom_symbol())
+
+
+def _custom_symbol_rows(pixels):
+    return queries.normalize_army_custom_symbol(["".join(row) for row in pixels])
+
+
+def _draw_emblem(surface, symbol, custom_symbol, color, rotation, center, size):
+    if custom_symbol:
+        emblem = symbol_loader.get_custom_army_symbol(custom_symbol, size)
+    elif not symbol:
         return
-    key = f"{c.ARMY_SYMBOL_KEY_PREFIX}{symbol}"
-    native_size = symbol_loader.get_native_size(key, style="classic")
-    if not native_size:
-        return
-    zoom = (size * 2) / max(native_size)
-    emblem = symbol_loader.get_symbol(key, zoom, color=tuple(color), style="classic")
+    else:
+        key = f"{c.ARMY_SYMBOL_KEY_PREFIX}{symbol}"
+        native_size = symbol_loader.get_native_size(key, style="classic")
+        if not native_size:
+            return
+        zoom = (size * 2) / max(native_size)
+        emblem = symbol_loader.get_symbol(key, zoom, color=tuple(color), style="classic")
     if emblem:
         rotation = queries.normalize_army_symbol_rotation(rotation)
         if rotation:
@@ -154,13 +184,112 @@ def _save_editor(map_screen):
         return False
     army = queries.update_army_presentation(
         map_screen.player_country, state["army_id"], state["name"],
-        state["symbol"], state["symbol_color"], state["symbol_rotation"], map_screen.nation_data,
+        state["symbol"], state["symbol_color"], state["symbol_rotation"], state["custom_symbol"],
+        map_screen.nation_data,
         map_screen.map_data)
     if army is None:
         map_screen.show_feedback("Army names cannot be blank")
         return False
     map_screen.army_editor_state = None
+    map_screen.army_custom_symbol_state = None
     map_screen.show_feedback(f"Updated {army['name']}")
+    return True
+
+
+def _open_custom_symbol_editor(map_screen, editor_state):
+    map_screen.army_custom_symbol_state = {
+        "army_id": editor_state["army_id"],
+        "pixels": _custom_symbol_pixels(editor_state["custom_symbol"]),
+        "brush": c.ARMY_CUSTOM_SYMBOL_RED,
+    }
+
+
+def _custom_symbol_editor_state(map_screen):
+    state = getattr(map_screen, "army_custom_symbol_state", None)
+    editor_state = _editor_state(map_screen)
+    if (not isinstance(state, dict) or editor_state is None
+            or state.get("army_id") != editor_state["army_id"]):
+        map_screen.army_custom_symbol_state = None
+        return None
+    return state
+
+
+def _custom_symbol_editor_rect():
+    return pygame.Rect((c.SCREEN_WIDTH - CUSTOM_DIALOG_WIDTH) // 2,
+                       (c.SCREEN_HEIGHT - CUSTOM_DIALOG_HEIGHT) // 2,
+                       CUSTOM_DIALOG_WIDTH, CUSTOM_DIALOG_HEIGHT)
+
+
+def _custom_canvas_rect(rect):
+    return pygame.Rect(rect.x + 20, rect.y + 82, CUSTOM_CANVAS_SIZE, CUSTOM_CANVAS_SIZE)
+
+
+def _custom_brush_rects(rect):
+    return [(name, value, color, pygame.Rect(rect.x + 330, rect.y + 114 + index * 43,
+                                               135, 32))
+            for index, (name, value, color) in enumerate(CUSTOM_BRUSHES)]
+
+
+def _set_custom_pixel(custom_state, canvas, position):
+    if not canvas.collidepoint(position):
+        return False
+    column = (position[0] - canvas.x) // CUSTOM_CANVAS_PIXEL_SIZE
+    row = (position[1] - canvas.y) // CUSTOM_CANVAS_PIXEL_SIZE
+    custom_state["pixels"][row][column] = custom_state["brush"]
+    return True
+
+
+def _handle_custom_symbol_event(map_screen, event):
+    custom_state = _custom_symbol_editor_state(map_screen)
+    if custom_state is None:
+        return False
+    rect = _custom_symbol_editor_rect()
+    canvas = _custom_canvas_rect(rect)
+    if event.type == pygame.KEYDOWN:
+        if event.key == pygame.K_ESCAPE:
+            map_screen.army_custom_symbol_state = None
+        elif event.key == pygame.K_RETURN:
+            custom_symbol = _custom_symbol_rows(custom_state["pixels"])
+            if custom_symbol is None:
+                map_screen.show_feedback("Draw at least one red or black pixel")
+            else:
+                editor_state = _editor_state(map_screen)
+                editor_state["symbol"] = ""
+                editor_state["custom_symbol"] = custom_symbol
+                map_screen.army_custom_symbol_state = None
+        return True
+    if event.type == pygame.MOUSEMOTION and event.buttons[0]:
+        _set_custom_pixel(custom_state, canvas, event.pos)
+        return True
+    if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+        return True
+    if event.type != pygame.MOUSEBUTTONDOWN or event.button != 1:
+        return False
+    if not rect.collidepoint(event.pos):
+        return True
+    if _set_custom_pixel(custom_state, canvas, event.pos):
+        return True
+    for _name, value, _color, button in _custom_brush_rects(rect):
+        if button.collidepoint(event.pos):
+            custom_state["brush"] = value
+            return True
+    clear = pygame.Rect(rect.x + 330, rect.y + 268, 135, 30)
+    if clear.collidepoint(event.pos):
+        custom_state["pixels"] = _blank_custom_symbol()
+        return True
+    cancel = pygame.Rect(rect.right - 224, rect.bottom - 42, 94, 26)
+    done = pygame.Rect(rect.right - 120, rect.bottom - 42, 94, 26)
+    if cancel.collidepoint(event.pos):
+        map_screen.army_custom_symbol_state = None
+    elif done.collidepoint(event.pos):
+        custom_symbol = _custom_symbol_rows(custom_state["pixels"])
+        if custom_symbol is None:
+            map_screen.show_feedback("Draw at least one red or black pixel")
+        else:
+            editor_state = _editor_state(map_screen)
+            editor_state["symbol"] = ""
+            editor_state["custom_symbol"] = custom_symbol
+            map_screen.army_custom_symbol_state = None
     return True
 
 
@@ -172,6 +301,7 @@ def _handle_editor_event(map_screen, event):
     if event.type == pygame.KEYDOWN:
         if event.key == pygame.K_ESCAPE:
             map_screen.army_editor_state = None
+            map_screen.army_custom_symbol_state = None
         elif event.key == pygame.K_RETURN:
             _save_editor(map_screen)
         elif event.key == pygame.K_a and event.mod & pygame.KMOD_CTRL:
@@ -200,10 +330,15 @@ def _handle_editor_event(map_screen, event):
     close = pygame.Rect(rect.right - 30, rect.y + 10, 18, 18)
     if close.collidepoint(event.pos):
         map_screen.army_editor_state = None
+        map_screen.army_custom_symbol_state = None
         return True
     for symbol, symbol_rect in _symbol_rects(rect):
         if symbol_rect.collidepoint(event.pos):
+            if symbol is CUSTOM_SYMBOL_CHOICE:
+                _open_custom_symbol_editor(map_screen, state)
+                return True
             state["symbol"] = symbol
+            state["custom_symbol"] = None
             return True
     for channel in range(3):
         if _color_bar_rect(rect, channel).inflate(0, 10).collidepoint(event.pos):
@@ -220,6 +355,7 @@ def _handle_editor_event(map_screen, event):
         _save_editor(map_screen)
     elif cancel.collidepoint(event.pos):
         map_screen.army_editor_state = None
+        map_screen.army_custom_symbol_state = None
     return True
 
 
@@ -252,13 +388,17 @@ def _draw_editor(map_screen, surface):
     symbol_label = text_font.render("Map emblem", True, (205, 220, 240))
     surface.blit(symbol_label, (rect.x + 20, rect.y + 98))
     for symbol, symbol_rect in _symbol_rects(rect):
-        selected = state["symbol"] == symbol
+        is_custom = symbol is CUSTOM_SYMBOL_CHOICE
+        selected = bool(state["custom_symbol"]) if is_custom else state["symbol"] == symbol
         pygame.draw.rect(surface, (66, 112, 175) if selected else (39, 60, 95),
                          symbol_rect, border_radius=4)
         pygame.draw.rect(surface, (175, 215, 255) if selected else (95, 135, 190),
                          symbol_rect, 2 if selected else 1, border_radius=4)
-        if symbol:
-            _draw_emblem(surface, symbol, state["symbol_color"], state["symbol_rotation"],
+        if is_custom:
+            caption = text_font.render("Custom", True, (225, 235, 250))
+            surface.blit(caption, caption.get_rect(center=symbol_rect.center))
+        elif symbol:
+            _draw_emblem(surface, symbol, None, state["symbol_color"], state["symbol_rotation"],
                          symbol_rect.center, 26)
     component_names = ("Red", "Green", "Blue")
     component_colors = ((215, 75, 75), (75, 205, 105), (80, 140, 230))
@@ -278,7 +418,7 @@ def _draw_editor(map_screen, surface):
     sample = _sample_rect(rect)
     pygame.draw.rect(surface, (12, 19, 34), sample, border_radius=4)
     pygame.draw.rect(surface, (110, 155, 215), sample, 1, border_radius=4)
-    _draw_emblem(surface, state["symbol"], state["symbol_color"],
+    _draw_emblem(surface, state["symbol"], state["custom_symbol"], state["symbol_color"],
                  state["symbol_rotation"], sample.center, 32)
     rotation_label = text_font.render("Rotation", True, (205, 220, 240))
     surface.blit(rotation_label, (sample.right + 12, sample.y + 15))
@@ -294,6 +434,63 @@ def _draw_editor(map_screen, surface):
     save = pygame.Rect(rect.right - 122, rect.bottom - 42, 98, 26)
     for button, text, color in ((cancel, "Cancel", (84, 100, 130)),
                                 (save, "Save", (55, 120, 78))):
+        pygame.draw.rect(surface, color, button, border_radius=4)
+        pygame.draw.rect(surface, (190, 215, 245), button, 1, border_radius=4)
+        label = text_font.render(text, True, (245, 245, 250))
+        surface.blit(label, label.get_rect(center=button.center))
+
+
+def _draw_custom_symbol_editor(map_screen, surface):
+    custom_state = _custom_symbol_editor_state(map_screen)
+    if custom_state is None:
+        return
+    rect = _custom_symbol_editor_rect()
+    shade = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+    shade.fill((0, 0, 0, 130))
+    surface.blit(shade, (0, 0))
+    panel = pygame.Surface(rect.size, pygame.SRCALPHA)
+    panel.fill(EDITOR_BG)
+    surface.blit(panel, rect.topleft)
+    pygame.draw.rect(surface, EDITOR_BORDER, rect, 2, border_radius=7)
+    title_font, text_font = fonts.get("button"), fonts.get("tiny")
+    title = title_font.render("DRAW CUSTOM EMBLEM", True, (235, 245, 255))
+    surface.blit(title, (rect.x + 18, rect.y + 15))
+    instructions = text_font.render("20 x 20 pixels — red, black, or erase", True,
+                                    (205, 220, 240))
+    surface.blit(instructions, (rect.x + 20, rect.y + 49))
+    canvas = _custom_canvas_rect(rect)
+    pygame.draw.rect(surface, (10, 16, 28), canvas)
+    pixel_colors = {c.ARMY_CUSTOM_SYMBOL_RED: c.DEFAULT_ARMY_SYMBOL_COLOR,
+                    c.ARMY_CUSTOM_SYMBOL_BLACK: (0, 0, 0),
+                    c.ARMY_CUSTOM_SYMBOL_EMPTY: (28, 39, 59)}
+    for row, pixels in enumerate(custom_state["pixels"]):
+        for column, pixel in enumerate(pixels):
+            pixel_rect = pygame.Rect(canvas.x + column * CUSTOM_CANVAS_PIXEL_SIZE,
+                                     canvas.y + row * CUSTOM_CANVAS_PIXEL_SIZE,
+                                     CUSTOM_CANVAS_PIXEL_SIZE, CUSTOM_CANVAS_PIXEL_SIZE)
+            pygame.draw.rect(surface, pixel_colors[pixel], pixel_rect)
+            pygame.draw.rect(surface, (56, 70, 96), pixel_rect, 1)
+    pygame.draw.rect(surface, (150, 190, 245), canvas, 2)
+    brush_label = text_font.render("Brush", True, (205, 220, 240))
+    surface.blit(brush_label, (rect.x + 330, rect.y + 82))
+    for name, value, color, button in _custom_brush_rects(rect):
+        selected = custom_state["brush"] == value
+        pygame.draw.rect(surface, color, button, border_radius=4)
+        pygame.draw.rect(surface, (215, 235, 255) if selected else (100, 135, 180),
+                         button, 2 if selected else 1, border_radius=4)
+        label = text_font.render(name.title(), True,
+                                 (245, 245, 250) if value != c.ARMY_CUSTOM_SYMBOL_BLACK
+                                 else (230, 230, 235))
+        surface.blit(label, label.get_rect(center=button.center))
+    clear = pygame.Rect(rect.x + 330, rect.y + 268, 135, 30)
+    pygame.draw.rect(surface, (72, 84, 110), clear, border_radius=4)
+    pygame.draw.rect(surface, (160, 190, 230), clear, 1, border_radius=4)
+    clear_label = text_font.render("Clear", True, (245, 245, 250))
+    surface.blit(clear_label, clear_label.get_rect(center=clear.center))
+    cancel = pygame.Rect(rect.right - 224, rect.bottom - 42, 94, 26)
+    done = pygame.Rect(rect.right - 120, rect.bottom - 42, 94, 26)
+    for button, text, color in ((cancel, "Cancel", (84, 100, 130)),
+                                (done, "Done", (55, 120, 78))):
         pygame.draw.rect(surface, color, button, border_radius=4)
         pygame.draw.rect(surface, (190, 215, 245), button, 1, border_radius=4)
         label = text_font.render(text, True, (245, 245, 250))
@@ -329,6 +526,8 @@ def _layout(map_screen):
 
 def handle_event(map_screen, event):
     """Consume army-card input before it can select a province underneath."""
+    if _handle_custom_symbol_event(map_screen, event):
+        return True
     if _handle_editor_event(map_screen, event):
         return True
     tray, armies = _layout(map_screen)
@@ -389,12 +588,13 @@ def draw(map_screen, surface):
         selected = bool(selected_ids) and selected_ids == set(army.get("unit_ids", []))
         pygame.draw.rect(surface, CARD_SELECTED if selected else CARD_BG, rect, border_radius=4)
         pygame.draw.rect(surface, (135, 185, 245), rect, 1, border_radius=4)
-        _draw_emblem(surface, army.get("symbol", ""), army.get("symbol_color", c.DEFAULT_ARMY_SYMBOL_COLOR),
+        _draw_emblem(surface, army.get("symbol", ""), army.get("custom_symbol"),
+                     army.get("symbol_color", c.DEFAULT_ARMY_SYMBOL_COLOR),
                      army.get("symbol_rotation", c.DEFAULT_ARMY_SYMBOL_ROTATION),
                      (rect.x + 21, rect.centery), 25)
         name = text_font.render(army["name"], True, (245, 245, 250))
         count = text_font.render(f"{len(army.get('unit_ids', []))} units", True, (205, 220, 235))
-        text_x = rect.x + (39 if army.get("symbol") else 9)
+        text_x = rect.x + (39 if army.get("symbol") or army.get("custom_symbol") else 9)
         surface.blit(name, (text_x, rect.y + 6))
         surface.blit(count, (text_x, rect.y + 23))
         for arrow_rect, label, enabled in (
@@ -423,3 +623,4 @@ def draw(map_screen, surface):
                          (track.x, track.y + int(travel * ratio), track.width, handle_h),
                          border_radius=2)
     _draw_editor(map_screen, surface)
+    _draw_custom_symbol_editor(map_screen, surface)

@@ -943,9 +943,11 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
         commands = collect_map_commands(map_ref, "A")
         roster = next(command for command in commands if command["type"] == "army_roster")
         unit_id = map_ref.map_data["home"]["units"][0]["unit_id"]
+        custom_symbol = ([c.ARMY_CUSTOM_SYMBOL_RED + c.ARMY_CUSTOM_SYMBOL_EMPTY * 19]
+                         + [c.ARMY_CUSTOM_SYMBOL_EMPTY * 20] * 19)
         roster["armies"] = [{"id": "army-a", "name": "Army 1", "unit_ids": [unit_id],
-                              "symbol": "Diamond", "symbol_color": [20, 120, 220],
-                              "symbol_rotation": 90}]
+                              "symbol": "", "symbol_color": [20, 120, 220],
+                              "symbol_rotation": 90, "custom_symbol": custom_symbol}]
         validated = MapRealtimeDriver(map_ref).validate_draft("A", [roster])
         self.assertEqual(validated, [{"type": "army_roster", "armies": roster["armies"]}])
         with self.assertRaises(RealtimeError):
