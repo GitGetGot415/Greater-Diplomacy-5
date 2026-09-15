@@ -1111,6 +1111,11 @@ UNIT_BOXES = {}
 #: it refills from what is on screen within a frame.
 UNIT_BOX_CACHE_LIMIT = 2000
 
+# Army organization is shown as a narrow segmented strip immediately beside a
+# player's map stack. Each segment represents one division that belongs to an
+# army, preserving the individual organization signal despite stack rendering.
+ARMY_UNIT_BAND_GAP = 2
+
 
 def unit_box_size(map_screen):
     """The on-screen size of one unit box at the current zoom and tilt."""
@@ -1251,6 +1256,32 @@ def unknown_box(size):
     return _cache_box(("?", (), 0, False, size), build)
 
 
+def draw_army_unit_bands(surface, owner_units, owner, player_country, nation_data,
+                          box_rect, scaled_width):
+    """Draw one army-color segment per local-player division beside a stack.
+
+    Map unit boxes combine all units owned by one country in a province. The
+    segmented strip preserves the player's individual army membership at a
+    glance without showing organizational information for other countries.
+    Returns the left edge reserved for any further stack-side indicators.
+    """
+    if owner != player_country:
+        return box_rect.left
+    colors = [queries.army_color_for_unit(unit, nation_data) for unit in owner_units]
+    colors = [color for color in colors if color is not None]
+    if not colors:
+        return box_rect.left
+
+    band_width = max(2, min(5, round(scaled_width * 0.1)))
+    band_left = box_rect.left - ARMY_UNIT_BAND_GAP - band_width
+    for index, color in enumerate(colors):
+        top = box_rect.top + round(index * box_rect.height / len(colors))
+        bottom = box_rect.top + round((index + 1) * box_rect.height / len(colors))
+        pygame.draw.rect(surface, color, (band_left, top, band_width,
+                                          max(1, bottom - top)))
+    return band_left
+
+
 def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,
                    units=None, units_are_visible=False):
     # Filtered up front: a lone hidden submarine must not even trip the "?"
@@ -1302,7 +1333,7 @@ def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,
         reverse=True
     )
 
-    def draw_army_emblems(owner_units, box_rect):
+    def draw_army_emblems(owner_units, box_rect, indicator_left):
         """Draw one colored emblem per organized visible unit beside its stack.
 
         A province's unit box intentionally combines all of one country's
@@ -1340,7 +1371,7 @@ def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,
             if rotation:
                 badge = pygame.transform.rotate(badge, rotation)
             column, row = divmod(index, rows)
-            center = (box_rect.left - 5 - column * (badge_size + 2),
+            center = (indicator_left - 5 - column * (badge_size + 2),
                       box_rect.centery + (row - (rows - 1) / 2) * (badge_size + 1))
             surface.blit(badge, badge.get_rect(center=(int(center[0]), int(center[1]))))
 
@@ -1376,7 +1407,10 @@ def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,
         # Blit using the stacked Y coordinate
         rect = final_surf.get_rect(center=(sx, int(current_sy)))
         surface.blit(final_surf, rect)
-        draw_army_emblems(owner_units, rect)
+        indicator_left = draw_army_unit_bands(
+            surface, owner_units, owner, map_screen.player_country,
+            map_screen.nation_data, rect, scaled_w)
+        draw_army_emblems(owner_units, rect, indicator_left)
 
         # Only visible, rendered owner stacks publish a hitbox.  The event
         # layer additionally checks authority before selecting, but never

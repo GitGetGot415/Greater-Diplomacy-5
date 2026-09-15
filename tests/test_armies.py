@@ -2,12 +2,13 @@
 
 import unittest
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pygame
 
 import data.constants as c
 from data import queries
+from map_logic.rendering import overlay_renderer
 from screens.map_related_screens.orders import Orders_Screen
 from ui import army_panel, map_top_right_layout, minimap
 
@@ -82,6 +83,17 @@ class ArmyQueryTests(unittest.TestCase):
         self.assertEqual(normalized["symbol_rotation"], c.DEFAULT_ARMY_SYMBOL_ROTATION)
         self.assertIsNone(normalized["custom_symbol"])
 
+    @patch("data.queries.random.choice", return_value=(12, 90, 230))
+    def test_new_army_uses_a_random_persistent_color_for_member_bands(self, choose_color):
+        queries.normalize_armies(self.nations, self.world)
+        member, ungrouped = self.first["units"]
+        army = queries.create_army("A", [member["unit_id"]], self.nations, self.world)
+
+        choose_color.assert_called_once_with(c.ARMY_SYMBOL_COLOR_CHOICES)
+        self.assertEqual(army["symbol_color"], [12, 90, 230])
+        self.assertEqual(queries.army_color_for_unit(member, self.nations), (12, 90, 230))
+        self.assertIsNone(queries.army_color_for_unit(ungrouped, self.nations))
+
     def test_orders_shows_unselected_peers_without_selecting_them(self):
         queries.normalize_armies(self.nations, self.world)
         first_unit, second_unit = self.first["units"]
@@ -115,6 +127,77 @@ class ArmyQueryTests(unittest.TestCase):
 
 
 class ArmyLayoutTests(unittest.TestCase):
+    def test_map_army_bands_show_each_player_member_but_never_foreign_members(self):
+        first = {"owner": "A", "unit_id": "first"}
+        second = {"owner": "A", "unit_id": "second"}
+        foreign = {"owner": "B", "unit_id": "foreign"}
+        nations = {
+            "A": {"armies": [
+                {"id": "one", "unit_ids": ["first"], "symbol_color": [220, 60, 70]},
+                {"id": "two", "unit_ids": ["second"], "symbol_color": [50, 140, 230]},
+            ]},
+            "B": {"armies": [
+                {"id": "other", "unit_ids": ["foreign"], "symbol_color": [70, 190, 100]},
+            ]},
+        }
+        surface = pygame.Surface((100, 100))
+        surface.fill((0, 0, 0))
+        box = pygame.Rect(40, 30, 40, 20)
+
+        band_left = overlay_renderer.draw_army_unit_bands(
+            surface, [first, second], "A", "A", nations, box, box.width)
+        self.assertLess(band_left, box.left)
+        self.assertEqual(surface.get_at((band_left + 1, box.top + 2))[:3], (220, 60, 70))
+        self.assertEqual(surface.get_at((band_left + 1, box.bottom - 2))[:3], (50, 140, 230))
+
+        foreign_surface = pygame.Surface((100, 100))
+        foreign_surface.fill((0, 0, 0))
+        self.assertEqual(overlay_renderer.draw_army_unit_bands(
+            foreign_surface, [foreign], "B", "A", nations, box, box.width), box.left)
+        self.assertEqual(foreign_surface.get_at((box.left - 3, box.centery))[:3], (0, 0, 0))
+
+    def test_orders_tray_creates_armies_and_right_click_assigns_selection(self):
+        world = {
+            "one": {"id": 1, "owner": "A", "units": [
+                {"owner": "A", "type": "Infantry"},
+                {"owner": "A", "type": "Tank"},
+            ]},
+        }
+        nations = {"A": {"armies": []}}
+        queries.normalize_armies(nations, world)
+        first_id, second_id = [unit["unit_id"] for unit in world["one"]["units"]]
+        army = queries.create_army("A", [first_id], nations, world)
+        selected_ids = [second_id]
+        map_stub = SimpleNamespace(
+            player_country="A", nation_data=nations, map_data=world,
+            selected_province=world["one"], army_panel_visible_in_orders=True,
+            selection_mode=False, is_editor=False, tactical_mode=False,
+            realtime_multiplayer=False, map_w=1000, map_h=500,
+            selected_map_unit_ids=lambda: selected_ids,
+            can_select_map_units=lambda: True,
+            assign_selection_to_army=lambda army_id: queries.assign_units_to_army(
+                "A", army_id, selected_ids, nations, world),
+            create_army_from_selection=lambda: queries.create_army(
+                "A", selected_ids, nations, world),
+            select_army=lambda *_args, **_kwargs: True,
+        )
+        orders = SimpleNamespace(read_only=False, refresh_ui=Mock())
+        tray, armies = army_panel._layout(map_stub, show_create=True)
+        card = map_top_right_layout.card_rect(tray, 0, map_stub.army_panel_scroll_y)
+        army_panel.handle_event(
+            map_stub, pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=3, pos=card.center),
+            orders_screen=orders)
+        self.assertEqual(set(nations["A"]["armies"][0]["unit_ids"]), {first_id, second_id})
+        orders.refresh_ui.assert_called_once()
+
+        selected_ids[:] = [first_id]
+        tray, armies = army_panel._layout(map_stub, show_create=True)
+        create = army_panel._create_rect(tray, armies, map_stub.army_panel_scroll_y)
+        army_panel.handle_event(
+            map_stub, pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=create.center),
+            orders_screen=orders)
+        self.assertEqual(len(nations["A"]["armies"]), 2)
+
     @patch("ui.army_panel.queries.army_symbol_choices")
     def test_emblem_picker_wraps_compact_tiles_before_controls(self, choices):
         choices.return_value = [f"Emblem {index}"
@@ -163,6 +246,8 @@ class ArmyLayoutTests(unittest.TestCase):
         self.assertTrue(army_panel._visible(map_ref))
         map_ref.selected_province = {"id": 1}
         self.assertFalse(army_panel._visible(map_ref))
+        map_ref.army_panel_visible_in_orders = True
+        self.assertTrue(army_panel._visible(map_ref))
 
     def test_realtime_tray_reserves_status_details_and_bottom_bar(self):
         details = SimpleNamespace(rect=pygame.Rect(c.SCREEN_WIDTH - 120, 140, 80, 24), visible=True)

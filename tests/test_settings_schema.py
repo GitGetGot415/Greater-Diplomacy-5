@@ -249,7 +249,7 @@ class NavigationIntroPopupTests(unittest.TestCase):
         self.assertEqual(popup.page_index, 1)
         self.assertEqual(popup.PAGE_TITLES[popup.page_index], "Map UI")
         self.assertEqual(popup.PAGE_SUBTITLES[popup.page_index],
-                         "Learn the bottom-left map controls and top-right army cards.")
+                         "Learn the bottom-left map controls.")
         self.assertEqual([label for label, _icon, _description in popup.MAP_UI_BUTTONS], [
             "Terrain", "Political", "Relations", "Cores", "Factions",
             "Resources", "Blank", "Units", "Economy", "Names",
@@ -263,8 +263,22 @@ class NavigationIntroPopupTests(unittest.TestCase):
             popup.draw(surface)
 
         popup.handle_event(pygame.event.Event(
+            pygame.MOUSEBUTTONDOWN, pos=popup.next_rect.center, button=1))
+        self.assertEqual(popup.page_index, 2)
+        self.assertEqual(popup.PAGE_TITLES[popup.page_index], "Armies")
+        self.assertEqual(popup.PAGE_SUBTITLES[popup.page_index],
+                         "Learn how to create, organize, and personalize armies.")
+        self.assertEqual(popup.ARMY_STEPS, (
+            ("Select units", "Click stacks or drag in Units view."),
+            ("Create an army", "In Orders, click + Create Army in the Army tray."),
+            ("Assign units", "With units selected, right-click an army card."),
+            ("Personalize", "Click a card to select members; E edits its name and emblem."),
+        ))
+        popup.draw(surface)
+
+        popup.handle_event(pygame.event.Event(
             pygame.MOUSEBUTTONDOWN, pos=popup.prev_rect.center, button=1))
-        self.assertEqual(popup.page_index, 0)
+        self.assertEqual(popup.page_index, 1)
 
         popup.handle_event(pygame.event.Event(
             pygame.MOUSEBUTTONDOWN, pos=popup.close_rect.center, button=1))

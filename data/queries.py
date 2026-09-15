@@ -2371,7 +2371,7 @@ def create_army(country_id, unit_ids, nation_data, map_data):
     armies[:] = [army for army in armies if army.get("unit_ids")]
     army = {"id": uuid.uuid4().hex, "name": _army_name(armies),
             "unit_ids": members, "symbol": "",
-            "symbol_color": list(c.DEFAULT_ARMY_SYMBOL_COLOR),
+            "symbol_color": list(random.choice(c.ARMY_SYMBOL_COLOR_CHOICES)),
             "symbol_rotation": c.DEFAULT_ARMY_SYMBOL_ROTATION,
             "custom_symbol": None}
     armies.append(army)
@@ -2480,6 +2480,19 @@ def army_for_unit(unit, nation_data):
         if unit_id in army.get("unit_ids", []):
             return army
     return None
+
+
+def army_color_for_unit(unit, nation_data):
+    """Return a unit's persistent army color, or ``None`` when ungrouped.
+
+    This deliberately follows the army presentation field so the Orders
+    roster band, army card, and map emblem cannot drift into separate colors.
+    Callers must only use it for units whose army membership they may reveal.
+    """
+    army = army_for_unit(unit, nation_data)
+    if army is None:
+        return None
+    return tuple(normalize_army_symbol_color(army.get("symbol_color")))
 
 def migrate_units_to_current_stats(map_data, unit_library):
     """

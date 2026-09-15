@@ -2101,6 +2101,14 @@ COMBAT_BUBBLES_DIR = "assets/combat_bubbles"
 ARMY_SYMBOLS_DIR = "assets/symbols"
 ARMY_SYMBOL_KEY_PREFIX = "Army Symbol "
 DEFAULT_ARMY_SYMBOL_COLOR = (210, 70, 70)
+# New armies choose one of these high-contrast colors.  Keeping the palette
+# bounded makes both their emblems and the matching Orders roster bands easy
+# to distinguish against the map and panel backgrounds.
+ARMY_SYMBOL_COLOR_CHOICES = (
+    DEFAULT_ARMY_SYMBOL_COLOR, (55, 145, 225), (70, 180, 105),
+    (225, 160, 45), (155, 100, 220), (45, 185, 180),
+    (225, 95, 155), (200, 120, 65),
+)
 ARMY_SYMBOL_ROTATIONS = (0, 90, 180, 270)
 DEFAULT_ARMY_SYMBOL_ROTATION = ARMY_SYMBOL_ROTATIONS[0]
 ARMY_CUSTOM_SYMBOL_SIZE = 20

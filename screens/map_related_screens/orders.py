@@ -8,7 +8,7 @@ from ui.text_utils import fit_text
 from map_logic.rendering import symbol_loader
 from map_logic.rendering import overlay_renderer
 from ui.bars import ui_bars, resource_hud, view_mode_buttons
-from ui import event_handler
+from ui import army_panel, event_handler, map_top_right_layout
 from map_logic.camera import camera_handler
 from screens.map_related_screens import battle_screen
 
@@ -33,7 +33,6 @@ LIST_TOP_OFFSET_Y = 140
 TOP_BTN_GAP_X = 6
 
 BATTLE_PANEL_GAP = 8
-BATTLE_PANEL_RIGHT_MARGIN = 8
 
 UNIT_ROW_X_OFFSET = 4
 UNIT_ICON_OFFSET_X = 7
@@ -123,8 +122,6 @@ class Orders_Screen(GameState):
         self.battle_screen = None
         self.entered_from_combat_bubble = False
         self.return_to_province_menu = True
-        self.army_assignment_open = False
-
         self.renaming_unit_index = None
         self.renaming_unit_province = None
         self.renaming_unit_actual_index = None
@@ -153,6 +150,7 @@ class Orders_Screen(GameState):
     def start_with_province(self, province, map_ref):
         self.target_province = province
         self.map_screen = map_ref
+        map_ref.army_panel_visible_in_orders = True
         self.return_to_province_menu = getattr(
             map_ref, "_orders_return_to_province_menu", True)
         if hasattr(map_ref, "_orders_return_to_province_menu"):
@@ -253,6 +251,7 @@ class Orders_Screen(GameState):
         # province menu must not leave a group armed for an accidental move.
         if self.map_screen:
             self.map_screen.clear_map_unit_selection()
+            self.map_screen.army_panel_visible_in_orders = False
         if self.entered_from_combat_bubble or not self.return_to_province_menu:
             # A combat bubble is a direct map entry point, so Back should
             # return to the map rather than reopen the selected province menu.
@@ -276,9 +275,13 @@ class Orders_Screen(GameState):
         self.open_battle_panel()
 
     def battle_panel_rect(self):
-        """The clear right-hand space beside the compact Orders panel."""
+        """The clear right-hand space beside Orders and its army tray."""
         x = self.panel_rect.right + BATTLE_PANEL_GAP
-        width = c.SCREEN_WIDTH - x - BATTLE_PANEL_RIGHT_MARGIN
+        armies = queries.get_armies(self.map_screen.player_country,
+                                    self.map_screen.nation_data,
+                                    self.map_screen.map_data)
+        tray = map_top_right_layout.army_tray_rect(self.map_screen, len(armies) + 1)
+        width = tray.left - BATTLE_PANEL_GAP - x
         # A battle inspector needs room for its lane rows even when Orders is
         # currently compact because the selected roster is short.
         return pygame.Rect(x, self.panel_rect.y, max(1, width), PANEL_HEIGHT)
@@ -373,24 +376,8 @@ class Orders_Screen(GameState):
         self.bombarding_unit_index = None
         self.refresh_ui()
 
-    def create_army(self):
-        army = self.map_screen.create_army_from_selection()
-        if army:
-            self.army_assignment_open = False
-        self.refresh_ui()
-
-    def toggle_army_assignment(self):
-        self.army_assignment_open = not self.army_assignment_open
-        self.refresh_ui()
-
-    def assign_to_army(self, army_id):
-        if self.map_screen.assign_selection_to_army(army_id):
-            self.army_assignment_open = False
-        self.refresh_ui()
-
     def ungroup_selected(self):
         self.map_screen.ungroup_selection()
-        self.army_assignment_open = False
         self.refresh_ui()
 
     def _command_blocked_silent(self, unit):
@@ -735,26 +722,10 @@ class Orders_Screen(GameState):
 
             if player_units:
                 army_y = PANEL_Y + TOP_BTN_ROW_OFFSET_Y + 29
-                btn_create_army = Button(self.PANEL_X + PANEL_INSET, army_y,
-                                         "orders_header_button", "blue", "Create Army",
-                                         self.create_army, font_preset="tiny")
-                btn_assign_army = Button(btn_create_army.rect.right + TOP_BTN_GAP_X, army_y,
-                                         "orders_header_button", "grey", "Assign Army",
-                                         self.toggle_army_assignment, font_preset="tiny")
-                btn_ungroup = Button(btn_assign_army.rect.right + TOP_BTN_GAP_X, army_y,
+                btn_ungroup = Button(self.PANEL_X + PANEL_INSET, army_y,
                                      "orders_header_button", "grey", "Ungroup",
                                      self.ungroup_selected, font_preset="tiny")
-                self.elements.extend((btn_create_army, btn_assign_army, btn_ungroup))
-                if self.army_assignment_open:
-                    armies = queries.get_armies(player_country, self.map_screen.nation_data,
-                                                self.map_screen.map_data)
-                    for index, army in enumerate(armies):
-                        choice = Button(self.panel_rect.right + 8,
-                                        self.panel_rect.y + 50 + index * 30,
-                                        (190, 26), "blue", army["name"],
-                                        lambda target_id=army["id"]: self.assign_to_army(target_id),
-                                        font_preset="tiny")
-                        self.elements.append(choice)
+                self.elements.append(btn_ungroup)
 
         for display_index, (row_key, unit, province, index) in enumerate(rows):
             row_y = self.panel_top + (display_index * self.row_height) + self.scroll_y
@@ -1098,6 +1069,9 @@ class Orders_Screen(GameState):
                 if self.battle_screen.panel_rect.collidepoint(event_pos):
                     self.battle_screen.handle_events([event])
                     continue
+
+            if army_panel.handle_event(self.map_screen, event, orders_screen=self):
+                continue
 
             if event.type == pygame.KEYDOWN and self.renaming_unit_index is not None:
                 if event.key == pygame.K_RETURN:
@@ -1659,6 +1633,7 @@ class Orders_Screen(GameState):
 
         resource_hud.draw_resource_bar(surface, self.map_screen,
                                        start_x=view_mode_buttons.RESOURCE_BAR_OFFSET_X)
+        army_panel.draw(self.map_screen, surface, orders_screen=self)
 
         if self.battle_screen is not None:
             self.battle_screen.draw_embedded(surface)

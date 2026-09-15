@@ -502,7 +502,8 @@ def _draw_custom_symbol_editor(map_screen, surface):
 def _visible(map_screen):
     return (not getattr(map_screen, "selection_mode", False)
             and not getattr(map_screen, "is_editor", False)
-            and not getattr(map_screen, "selected_province", None)
+            and (getattr(map_screen, "army_panel_visible_in_orders", False)
+                 or not getattr(map_screen, "selected_province", None))
             and getattr(map_screen, "player_country", "None") not in ("None", "Spectator")
             and not getattr(map_screen, "tactical_mode", False))
 
@@ -514,10 +515,11 @@ def _armies(map_screen):
                               map_screen.map_data)
 
 
-def _layout(map_screen):
+def _layout(map_screen, show_create=False):
     armies = _armies(map_screen)
-    tray = map_top_right_layout.army_tray_rect(map_screen, len(armies))
-    content_height = len(armies) * (map_top_right_layout.CARD_HEIGHT + 5)
+    row_count = len(armies) + int(show_create)
+    tray = map_top_right_layout.army_tray_rect(map_screen, row_count)
+    content_height = row_count * (map_top_right_layout.CARD_HEIGHT + 5)
     min_scroll = min(0, tray.height - map_top_right_layout.TRAY_HEADER_HEIGHT - content_height)
     scroll_y = getattr(map_screen, "army_panel_scroll_y", 0)
     map_screen.army_panel_scroll_y = max(min_scroll, min(0, scroll_y))
@@ -526,24 +528,59 @@ def _layout(map_screen):
     return tray, armies
 
 
-def handle_event(map_screen, event):
+def _create_rect(tray, armies, scroll_y):
+    return map_top_right_layout.card_rect(tray, len(armies), scroll_y)
+
+
+def _orders_can_manage_armies(map_screen, orders_screen):
+    return (orders_screen is not None and not getattr(orders_screen, "read_only", False)
+            and map_screen.can_select_map_units())
+
+
+def _orders_can_use_selection(map_screen, orders_screen):
+    return (_orders_can_manage_armies(map_screen, orders_screen)
+            and bool(map_screen.selected_map_unit_ids()))
+
+
+def handle_event(map_screen, event, orders_screen=None):
     """Consume army-card input before it can select a province underneath."""
     if _handle_custom_symbol_event(map_screen, event):
         return True
     if _handle_editor_event(map_screen, event):
         return True
-    tray, armies = _layout(map_screen)
-    if not armies:
+    show_create = orders_screen is not None
+    tray, armies = _layout(map_screen, show_create=show_create)
+    if not armies and not show_create:
         return False
     if event.type == pygame.MOUSEWHEEL and tray.collidepoint(pygame.mouse.get_pos()):
         map_screen.army_panel_scroll_y = max(
             map_screen.army_panel_min_scroll,
             min(0, map_screen.army_panel_scroll_y + event.y * 28))
         return True
-    if event.type != pygame.MOUSEBUTTONDOWN or event.button != 1:
+    if event.type != pygame.MOUSEBUTTONDOWN:
+        return False
+    if event.button == 3:
+        if orders_screen is None or not tray.collidepoint(event.pos):
+            return False
+        for index, army in enumerate(armies):
+            rect = map_top_right_layout.card_rect(tray, index, map_screen.army_panel_scroll_y)
+            if rect.colliderect(tray) and rect.collidepoint(event.pos):
+                if _orders_can_use_selection(map_screen, orders_screen):
+                    map_screen.assign_selection_to_army(army["id"])
+                    orders_screen.refresh_ui()
+                return True
+        return True
+    if event.button != 1:
         return False
     if not tray.collidepoint(event.pos):
         return False
+    if show_create:
+        create_rect = _create_rect(tray, armies, map_screen.army_panel_scroll_y)
+        if create_rect.colliderect(tray) and create_rect.collidepoint(event.pos):
+            if _orders_can_use_selection(map_screen, orders_screen):
+                map_screen.create_army_from_selection()
+                orders_screen.refresh_ui()
+            return True
     for index, army in enumerate(armies):
         rect = map_top_right_layout.card_rect(tray, index, map_screen.army_panel_scroll_y)
         if not rect.colliderect(tray) or not rect.collidepoint(event.pos):
@@ -564,14 +601,17 @@ def handle_event(map_screen, event):
         elif _edit_rect(rect).collidepoint(event.pos):
             _open_editor(map_screen, army)
         else:
-            map_screen.select_army(army["id"], open_orders=True)
+            map_screen.select_army(army["id"], open_orders=orders_screen is None)
+            if orders_screen is not None:
+                orders_screen.refresh_ui()
         return True
     return True
 
 
-def draw(map_screen, surface):
-    tray, armies = _layout(map_screen)
-    if not armies:
+def draw(map_screen, surface, orders_screen=None):
+    show_create = orders_screen is not None
+    tray, armies = _layout(map_screen, show_create=show_create)
+    if not armies and not show_create:
         return
     panel = pygame.Surface(tray.size, pygame.SRCALPHA)
     panel.fill(TRAY_BG)
@@ -580,6 +620,9 @@ def draw(map_screen, surface):
     title_font, text_font = fonts.get("tiny"), fonts.get("tiny")
     title = title_font.render("ARMIES", True, (185, 215, 255))
     surface.blit(title, (tray.x + 8, tray.y + 5))
+    if show_create:
+        hint = text_font.render("Right-click: assign", True, (165, 195, 235))
+        surface.blit(hint, (tray.x + 69, tray.y + 6))
     clip = surface.get_clip()
     surface.set_clip(tray)
     selected_ids = set(map_screen.selected_map_unit_ids())
@@ -614,6 +657,17 @@ def draw(map_screen, surface):
         pygame.draw.rect(surface, (130, 45, 45), close_rect, border_radius=3)
         x = text_font.render("X", True, (255, 235, 235))
         surface.blit(x, x.get_rect(center=close_rect.center))
+    if show_create:
+        create_rect = _create_rect(tray, armies, map_screen.army_panel_scroll_y)
+        if create_rect.colliderect(tray):
+            enabled = _orders_can_use_selection(map_screen, orders_screen)
+            pygame.draw.rect(surface, (42, 98, 73) if enabled else (45, 52, 67),
+                             create_rect, border_radius=4)
+            pygame.draw.rect(surface, (140, 205, 165) if enabled else (95, 115, 130),
+                             create_rect, 1, border_radius=4)
+            label = text_font.render("+ Create Army", True,
+                                     (235, 250, 240) if enabled else (135, 145, 155))
+            surface.blit(label, label.get_rect(center=create_rect.center))
     surface.set_clip(clip)
     if map_screen.army_panel_min_scroll < 0:
         track = pygame.Rect(tray.right - 5, tray.y + 4, 3, tray.height - 8)

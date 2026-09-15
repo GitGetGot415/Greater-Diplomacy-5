@@ -81,10 +81,17 @@ class _NavigationIntroPopup:
         ("Economy", "industry", "Shows economic map information."),
         ("Names", "names", "Shows or hides country names."),
     )
-    PAGE_TITLES = ("Map Navigation", "Map UI")
+    ARMY_STEPS = (
+        ("Select units", "Click stacks or drag in Units view."),
+        ("Create an army", "In Orders, click + Create Army in the Army tray."),
+        ("Assign units", "With units selected, right-click an army card."),
+        ("Personalize", "Click a card to select members; E edits its name and emblem."),
+    )
+    PAGE_TITLES = ("Map Navigation", "Map UI", "Armies")
     PAGE_SUBTITLES = (
         "Learn how to move around the map and use the mouse controls.",
-        "Learn the bottom-left map controls and top-right army cards.",
+        "Learn the bottom-left map controls.",
+        "Learn how to create, organize, and personalize armies.",
     )
 
     def __init__(self, map_screen):
@@ -236,7 +243,7 @@ class _NavigationIntroPopup:
                     line_surf = self.body_font.render(line, True, (225, 225, 225))
                     surface.blit(line_surf, line_surf.get_rect(center=(center_x, line_y)))
                     line_y += self.body_font.get_height() + 3
-        else:
+        elif self.page_index == 1:
             column_x = (self.rect.x + 35, self.rect.centerx + 18)
             row_h = 44
             for index, (label, icon_name, description) in enumerate(self.MAP_UI_BUTTONS):
@@ -258,10 +265,20 @@ class _NavigationIntroPopup:
                 surface.blit(label_surf, (x + 36, y))
                 desc_surf = self.body_font.render(description, True, (225, 225, 225))
                 surface.blit(desc_surf, (x + 36, y + self.label_font.get_height() + 2))
-            army_note = self.body_font.render(
-                "Army cards: click to select members; E edits their name and colored map emblem.",
-                True, (185, 215, 255))
-            surface.blit(army_note, army_note.get_rect(center=(self.rect.centerx, self.rect.y + 316)))
+        else:
+            step_x = self.rect.x + 56
+            step_y = self.rect.y + 91
+            step_gap = 51
+            for index, (heading, description) in enumerate(self.ARMY_STEPS, start=1):
+                y = step_y + (index - 1) * step_gap
+                pygame.draw.circle(surface, (70, 115, 160), (step_x, y + 13), 14)
+                number = self.label_font.render(str(index), True, (255, 255, 255))
+                surface.blit(number, number.get_rect(center=(step_x, y + 13)))
+                heading_surf = self.label_font.render(heading, True, (130, 205, 255))
+                surface.blit(heading_surf, (step_x + 25, y))
+                description_surf = self.body_font.render(description, True, (225, 225, 225))
+                surface.blit(description_surf,
+                             (step_x + 25, y + self.label_font.get_height() + 2))
 
         pygame.draw.rect(surface, (230, 230, 230), self.checkbox_rect, 2)
         if self.dont_show_again:
