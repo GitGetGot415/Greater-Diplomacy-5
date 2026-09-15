@@ -133,6 +133,7 @@ class Orders_Screen(GameState):
         self.bombarding_unit_index = None
         self.bombarding_unit_province = None
         self.bombarding_unit_actual_index = None
+        self._consume_bombard_target_release = False
 
         # True on a province where the player commands nothing: every unit is
         # listed, none of them is editable. Set per province in
@@ -1151,11 +1152,22 @@ class Orders_Screen(GameState):
         # consumed as the start of a selection rectangle.
         if (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1
                 and getattr(self, "bombarding_unit_index", None) is not None):
+            # A mouse press has a matching release. Consume both halves of
+            # this modal click so the release cannot fall through to the
+            # ordinary empty-map exit gesture after the target is assigned.
+            self._consume_bombard_target_release = True
+            self.map_screen.unit_selection_drag = None
             if not on_ui:
                 dest = queries.get_clicked_province(event.pos, self.map_screen)
                 if dest:
                     self.set_bombard_target(self.bombarding_unit_actual_index, dest,
                                             self.bombarding_unit_province)
+            return
+
+        if (event.type == pygame.MOUSEBUTTONUP and event.button == 1
+                and getattr(self, "_consume_bombard_target_release", False)):
+            self._consume_bombard_target_release = False
+            self.map_screen.unit_selection_drag = None
             return
 
         # The Orders panel is a live map workspace. A short left-click on a
@@ -1165,10 +1177,8 @@ class Orders_Screen(GameState):
             clicked_stack = next((stack for stack in reversed(
                 getattr(self.map_screen, "unit_stack_hitboxes", []))
                 if stack["rect"].collidepoint(event.pos)), None)
-            # Defer an empty-space click too: it is either the start of a
-            # box-selection or, if released without dragging, the request to
-            # leave Orders. This is what lets a selection rectangle begin
-            # anywhere on the live map workspace.
+            # Defer an empty-space click too, so a selection rectangle can
+            # begin anywhere on the live map workspace.
             self.map_screen.unit_selection_drag = {
                 "start": event.pos, "current": event.pos,
                 "additive": bool(pygame.key.get_mods() & pygame.KMOD_SHIFT),
@@ -1192,10 +1202,10 @@ class Orders_Screen(GameState):
             if rect.width < 4 and rect.height < 4:
                 stack = drag["stack"]
                 if stack is None:
-                    # A foreign stack is informational rather than an exit
-                    # target. Otherwise retain the documented quick exit.
-                    if event_handler._unit_stack_at(self.map_screen, event.pos) is None:
-                        self.exit_screen()
+                    # Outside an armed modal command, a short empty-map click
+                    # closes Orders. Bombardment is handled before this
+                    # selection gesture, so choosing its target stays open.
+                    self.exit_screen()
                     return
                 if self.map_screen.click_select_map_units(
                         stack["units"], additive=drag["additive"]):

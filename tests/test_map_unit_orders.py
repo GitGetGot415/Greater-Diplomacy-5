@@ -205,15 +205,20 @@ class MapOrderGestureTests(unittest.TestCase):
     def test_armed_bombardment_click_sets_target_before_selection_gesture(self):
         origin = province(1, [2])
         destination = province(2, [1])
+        gun = {"owner": "A", "type": "Artillery I"}
+        origin["units"] = [gun]
         screen = object.__new__(Orders_Screen)
         screen.panel_rect = pygame.Rect(0, 0, 100, 100)
         screen.bombarding_unit_index = 0
         screen.bombarding_unit_actual_index = 0
         screen.bombarding_unit_province = origin
-        screen.set_bombard_target = Mock()
+        screen.exit_screen = Mock()
+        screen.refresh_ui = lambda: None
         screen.map_screen = type("MapStub", (), {
             "unit_selection_drag": None,
             "unit_stack_hitboxes": [],
+            "id_to_province": {1: origin, 2: destination},
+            "show_feedback": lambda self, _message: None,
         })()
 
         with (patch("screens.map_related_screens.orders.event_handler.resolve_map_mouse_gesture_conflict"),
@@ -223,9 +228,13 @@ class MapOrderGestureTests(unittest.TestCase):
                     return_value=destination)):
             screen.additional_events(
                 pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=(150, 150)))
+            screen.additional_events(
+                pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=(150, 150)))
 
-        screen.set_bombard_target.assert_called_once_with(0, destination, origin)
+        self.assertEqual(gun["order"], {"type": "BOMBARD", "target_id": 2})
+        screen.exit_screen.assert_not_called()
         self.assertIsNone(screen.map_screen.unit_selection_drag)
+        self.assertFalse(screen._consume_bombard_target_release)
 
     def test_unit_hover_prefers_the_topmost_visible_stack(self):
         lower = {"rect": pygame.Rect(10, 10, 30, 30), "units": []}
@@ -353,6 +362,29 @@ class MapOrderGestureTests(unittest.TestCase):
         self.assertTrue(event_handler._handle_map_unit_selection(
             map_stub, pygame.event.Event(pygame.MOUSEBUTTONUP, pos=(40, 40), button=1), False))
         self.assertFalse(map_stub._ignore_left_until_release)
+
+    def test_orders_short_empty_map_click_exits(self):
+        screen = object.__new__(Orders_Screen)
+        screen.panel_rect = pygame.Rect(100, 100, 200, 200)
+        screen.bombarding_unit_index = None
+        screen.is_dragging_scrollbar = False
+        screen.is_content_dragging = lambda _attr: False
+        screen.exit_screen = Mock()
+        screen.map_screen = type("MapStub", (), {
+            "unit_selection_drag": None,
+            "unit_stack_hitboxes": [],
+        })()
+
+        with (patch("screens.map_related_screens.orders.event_handler.resolve_map_mouse_gesture_conflict"),
+              patch("screens.map_related_screens.orders.pygame.key.get_mods", return_value=0),
+              patch("screens.map_related_screens.orders.pygame.mouse.get_pos", return_value=(5, 5))):
+            screen.additional_events(
+                pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(5, 5), button=1))
+            screen.additional_events(
+                pygame.event.Event(pygame.MOUSEBUTTONUP, pos=(5, 5), button=1))
+
+        screen.exit_screen.assert_called_once_with()
+        self.assertIsNone(screen.map_screen.unit_selection_drag)
 
     def test_orders_left_drag_can_begin_on_open_map_space(self):
         first = {"owner": "A", "type": "Infantry"}
