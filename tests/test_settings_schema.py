@@ -273,10 +273,10 @@ class NavigationIntroPopupTests(unittest.TestCase):
                             (2 * popup.SUBTITLE_SIDE_PADDING)
                             for line in popup._subtitle_lines()))
         self.assertEqual(popup.ARMY_STEPS, (
-            ("Select units", "Click stacks or drag in Units view."),
-            ("Create an army", "In Orders, click + Create Army in the Army tray."),
-            ("Assign units", "With units selected, right-click an army card."),
-            ("Personalize", "Click a card to select members; E edits its name and emblem."),
+            ("Select units", "Click stacks or left-click and drag to select multiple stacks in Units view."),
+            ("Create an army", "In Orders, click + Create Army in the Army tray. (Located on the right side of the screen)"),
+            ("Personalize", "Click a card to select the units in said army. Pressing the E button edits its name and emblem."),
+            ("Need to Assign more units?", "With units selected, right-click an army card."),
         ))
         popup.draw(surface)
 
