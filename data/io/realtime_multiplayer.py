@@ -831,15 +831,20 @@ class MapRealtimeDriver:
             army_id, name, unit_ids = raw.get("id"), raw.get("name"), raw.get("unit_ids")
             symbol = raw.get("symbol", "")
             symbol_color = raw.get("symbol_color", list(c.DEFAULT_ARMY_SYMBOL_COLOR))
+            symbol_rotation = raw.get("symbol_rotation", c.DEFAULT_ARMY_SYMBOL_ROTATION)
             valid_symbol = (isinstance(symbol, str)
                             and (not symbol or queries.normalize_army_symbol(symbol) == symbol))
             valid_color = (isinstance(symbol_color, list)
                            and queries.normalize_army_symbol_color(symbol_color) == symbol_color)
+            valid_rotation = (isinstance(symbol_rotation, int)
+                              and not isinstance(symbol_rotation, bool)
+                              and queries.normalize_army_symbol_rotation(symbol_rotation)
+                              == symbol_rotation)
             if (not isinstance(army_id, str) or not army_id or len(army_id) > 80
                     or army_id in army_ids or not isinstance(name, str)
                     or not name.strip() or len(name.strip()) > 80
                     or not isinstance(unit_ids, list) or len(unit_ids) > len(owned)
-                    or not valid_symbol or not valid_color):
+                    or not valid_symbol or not valid_color or not valid_rotation):
                 raise RealtimeError("Invalid army roster.")
             if any(not isinstance(unit_id, str) or unit_id not in owned
                    or unit_id in assigned for unit_id in unit_ids):
@@ -849,7 +854,8 @@ class MapRealtimeDriver:
             if unit_ids:
                 armies.append({"id": army_id, "name": name.strip(),
                                "unit_ids": list(unit_ids), "symbol": symbol,
-                               "symbol_color": list(symbol_color)})
+                               "symbol_color": list(symbol_color),
+                               "symbol_rotation": symbol_rotation})
         return {"type": "army_roster", "armies": armies}
 
     def _validate_volunteer_commands(self, country_id: str, commands: list[dict[str, Any]]) -> None:

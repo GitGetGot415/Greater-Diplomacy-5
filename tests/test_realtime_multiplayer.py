@@ -944,7 +944,8 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
         roster = next(command for command in commands if command["type"] == "army_roster")
         unit_id = map_ref.map_data["home"]["units"][0]["unit_id"]
         roster["armies"] = [{"id": "army-a", "name": "Army 1", "unit_ids": [unit_id],
-                              "symbol": "Diamond", "symbol_color": [20, 120, 220]}]
+                              "symbol": "Diamond", "symbol_color": [20, 120, 220],
+                              "symbol_rotation": 90}]
         validated = MapRealtimeDriver(map_ref).validate_draft("A", [roster])
         self.assertEqual(validated, [{"type": "army_roster", "armies": roster["armies"]}])
         with self.assertRaises(RealtimeError):
@@ -956,6 +957,12 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
                 "type": "army_roster", "armies": [
                     {"id": "army-a", "name": "Army 1", "unit_ids": [unit_id],
                      "symbol": "Diamond", "symbol_color": [300, 0, 0]}]}])
+        with self.assertRaises(RealtimeError):
+            MapRealtimeDriver(map_ref).validate_draft("A", [{
+                "type": "army_roster", "armies": [
+                    {"id": "army-a", "name": "Army 1", "unit_ids": [unit_id],
+                     "symbol": "Diamond", "symbol_color": [20, 120, 220],
+                     "symbol_rotation": 45}]}])
 
     def test_an_idle_complete_draft_is_accepted(self):
         map_ref = self.make_map()

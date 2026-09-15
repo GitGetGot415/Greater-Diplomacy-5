@@ -2,6 +2,7 @@
 
 import unittest
 from types import SimpleNamespace
+from unittest.mock import patch
 
 import pygame
 
@@ -51,7 +52,8 @@ class ArmyQueryTests(unittest.TestCase):
         queries.normalize_armies(self.nations, self.world)
         self.assertEqual(self.nations["A"]["armies"], [
             {"id": "keep", "name": "Army 1", "unit_ids": [own_id],
-             "symbol": "", "symbol_color": list(c.DEFAULT_ARMY_SYMBOL_COLOR)}])
+             "symbol": "", "symbol_color": list(c.DEFAULT_ARMY_SYMBOL_COLOR),
+             "symbol_rotation": c.DEFAULT_ARMY_SYMBOL_ROTATION}])
 
     def test_army_presentation_round_trips_and_invalid_legacy_art_is_removed(self):
         queries.normalize_armies(self.nations, self.world)
@@ -59,17 +61,20 @@ class ArmyQueryTests(unittest.TestCase):
         army = queries.create_army("A", [unit_id], self.nations, self.world)
         symbol = queries.army_symbol_choices()[0]
         updated = queries.update_army_presentation(
-            "A", army["id"], "Northern Command", symbol, [12, 90, 230],
+            "A", army["id"], "Northern Command", symbol, [12, 90, 230], 90,
             self.nations, self.world)
         self.assertEqual(updated["name"], "Northern Command")
         self.assertEqual(updated["symbol"], symbol)
         self.assertEqual(updated["symbol_color"], [12, 90, 230])
+        self.assertEqual(updated["symbol_rotation"], 90)
         updated["symbol"] = "No Longer Installed"
         updated["symbol_color"] = [999, 0, 0]
+        updated["symbol_rotation"] = 45
         queries.normalize_armies(self.nations, self.world)
         normalized = self.nations["A"]["armies"][0]
         self.assertEqual(normalized["symbol"], "")
         self.assertEqual(normalized["symbol_color"], list(c.DEFAULT_ARMY_SYMBOL_COLOR))
+        self.assertEqual(normalized["symbol_rotation"], c.DEFAULT_ARMY_SYMBOL_ROTATION)
 
     def test_orders_shows_unselected_peers_without_selecting_them(self):
         queries.normalize_armies(self.nations, self.world)
@@ -104,6 +109,29 @@ class ArmyQueryTests(unittest.TestCase):
 
 
 class ArmyLayoutTests(unittest.TestCase):
+    @patch("ui.army_panel.queries.army_symbol_choices")
+    def test_emblem_picker_wraps_compact_tiles_before_controls(self, choices):
+        choices.return_value = [f"Emblem {index}"
+                                for index in range(army_panel.SYMBOLS_PER_ROW)]
+        rect = army_panel._editor_rect()
+        tiles = army_panel._symbol_rects(rect)
+
+        self.assertEqual(len(tiles), army_panel.SYMBOLS_PER_ROW + 1)
+        self.assertEqual(tiles[army_panel.SYMBOLS_PER_ROW][1].x,
+                         tiles[0][1].x)
+        self.assertGreater(tiles[army_panel.SYMBOLS_PER_ROW][1].y,
+                           tiles[0][1].y)
+        self.assertTrue(all(tile.right <= rect.right for _symbol, tile in tiles))
+        self.assertGreater(army_panel._color_section_y(rect),
+                           max(tile.bottom for _symbol, tile in tiles))
+        self.assertLessEqual(army_panel._sample_rect(rect).bottom,
+                             rect.bottom - 42)
+        rotation_buttons = army_panel._rotation_button_rects(rect)
+        self.assertEqual([rotation for rotation, _button in rotation_buttons],
+                         list(c.ARMY_SYMBOL_ROTATIONS))
+        self.assertTrue(all(button.right <= rect.right
+                            for _rotation, button in rotation_buttons))
+
     def test_one_army_uses_a_compact_tray_and_province_view_hides_it(self):
         map_ref = SimpleNamespace(realtime_multiplayer=False, selected_province=None,
                                   selection_mode=False, is_editor=False,

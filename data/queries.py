@@ -2255,6 +2255,14 @@ def normalize_army_symbol_color(color):
     return list(c.DEFAULT_ARMY_SYMBOL_COLOR)
 
 
+def normalize_army_symbol_rotation(rotation):
+    """Return a supported emblem rotation, defaulting old saves to upright."""
+    if (isinstance(rotation, int) and not isinstance(rotation, bool)
+            and rotation in c.ARMY_SYMBOL_ROTATIONS):
+        return rotation
+    return c.DEFAULT_ARMY_SYMBOL_ROTATION
+
+
 def normalize_armies(nation_data, map_data):
     """Repair persistent army rosters against the current owned-unit state.
 
@@ -2300,7 +2308,9 @@ def normalize_armies(nation_data, map_data):
                           "unit_ids": unit_ids,
                           "symbol": normalize_army_symbol(raw.get("symbol", "")),
                           "symbol_color": normalize_army_symbol_color(
-                              raw.get("symbol_color"))})
+                              raw.get("symbol_color")),
+                          "symbol_rotation": normalize_army_symbol_rotation(
+                              raw.get("symbol_rotation"))})
         country["armies"] = valid
 
 
@@ -2340,7 +2350,8 @@ def create_army(country_id, unit_ids, nation_data, map_data):
     armies[:] = [army for army in armies if army.get("unit_ids")]
     army = {"id": uuid.uuid4().hex, "name": _army_name(armies),
             "unit_ids": members, "symbol": "",
-            "symbol_color": list(c.DEFAULT_ARMY_SYMBOL_COLOR)}
+            "symbol_color": list(c.DEFAULT_ARMY_SYMBOL_COLOR),
+            "symbol_rotation": c.DEFAULT_ARMY_SYMBOL_ROTATION}
     armies.append(army)
     normalize_armies(nation_data, map_data)
     return next((item for item in nation_data[country_id]["armies"]
@@ -2408,9 +2419,9 @@ def move_army(country_id, army_id, direction, nation_data, map_data):
     return True
 
 
-def update_army_presentation(country_id, army_id, name, symbol, symbol_color,
+def update_army_presentation(country_id, army_id, name, symbol, symbol_color, symbol_rotation,
                              nation_data, map_data):
-    """Update an army's player-facing label and optional colored emblem.
+    """Update an army's player-facing label and optional colored, rotated emblem.
 
     Membership remains untouched.  This is the one mutation path used by the
     map UI, while multiplayer validates the same schema before it reaches a
@@ -2424,6 +2435,7 @@ def update_army_presentation(country_id, army_id, name, symbol, symbol_color,
     army["name"] = name.strip()[:80]
     army["symbol"] = normalize_army_symbol(symbol)
     army["symbol_color"] = normalize_army_symbol_color(symbol_color)
+    army["symbol_rotation"] = normalize_army_symbol_rotation(symbol_rotation)
     return army
 
 

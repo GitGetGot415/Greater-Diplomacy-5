@@ -15,14 +15,23 @@ CARD_SELECTED = (62, 112, 175)
 EDITOR_BG = (23, 35, 61, 245)
 EDITOR_BORDER = (125, 175, 240)
 EDITOR_WIDTH = 540
-EDITOR_HEIGHT = 390
-SYMBOL_TILE_SIZE = 62
+EDITOR_MIN_HEIGHT = 390
+SYMBOL_TILE_SIZE = 40
+SYMBOL_TILE_GAP = 8
+SYMBOLS_PER_ROW = 11
+SYMBOL_GRID_X = 10
+SYMBOL_GRID_Y = 118
+SYMBOL_CONTROLS_GAP = 14
+ROTATION_BUTTON_X = 180
+ROTATION_BUTTON_WIDTH = 56
+ROTATION_BUTTON_GAP = 6
 
 
 def _editor_rect():
+    height = _editor_height()
     return pygame.Rect((c.SCREEN_WIDTH - EDITOR_WIDTH) // 2,
-                       (c.SCREEN_HEIGHT - EDITOR_HEIGHT) // 2,
-                       EDITOR_WIDTH, EDITOR_HEIGHT)
+                       (c.SCREEN_HEIGHT - height) // 2,
+                       EDITOR_WIDTH, height)
 
 
 def _editor_state(map_screen):
@@ -44,20 +53,61 @@ def _open_editor(map_screen, army):
         "symbol": army.get("symbol", ""),
         "symbol_color": queries.normalize_army_symbol_color(
             army.get("symbol_color")),
+        "symbol_rotation": queries.normalize_army_symbol_rotation(
+            army.get("symbol_rotation")),
         "color_channel": None,
     }
 
 
 def _symbol_rects(rect):
     choices = [""] + queries.army_symbol_choices()
-    start_x, y = rect.x + 20, rect.y + 118
-    return [(symbol, pygame.Rect(start_x + index * (SYMBOL_TILE_SIZE + 8), y,
-                                 SYMBOL_TILE_SIZE, SYMBOL_TILE_SIZE))
-            for index, symbol in enumerate(choices)]
+    rects = []
+    for index, symbol in enumerate(choices):
+        row, column = divmod(index, SYMBOLS_PER_ROW)
+        rects.append((symbol, pygame.Rect(
+            rect.x + SYMBOL_GRID_X + column * (SYMBOL_TILE_SIZE + SYMBOL_TILE_GAP),
+            rect.y + SYMBOL_GRID_Y + row * (SYMBOL_TILE_SIZE + SYMBOL_TILE_GAP),
+            SYMBOL_TILE_SIZE, SYMBOL_TILE_SIZE)))
+    return rects
+
+
+def _symbol_grid_rows():
+    """Return the picker rows, including the no-emblem choice."""
+    choice_count = len(queries.army_symbol_choices()) + 1
+    return (choice_count + SYMBOLS_PER_ROW - 1) // SYMBOLS_PER_ROW
+
+
+def _color_section_y(rect):
+    rows = _symbol_grid_rows()
+    grid_height = rows * SYMBOL_TILE_SIZE + (rows - 1) * SYMBOL_TILE_GAP
+    return rect.y + SYMBOL_GRID_Y + grid_height + SYMBOL_CONTROLS_GAP
+
+
+def _sample_rect(rect):
+    color_bottom = _color_section_y(rect) + 2 * 33 + 18
+    return pygame.Rect(rect.x + 20, color_bottom + 16, 94, 44)
+
+
+def _rotation_button_rects(rect):
+    sample = _sample_rect(rect)
+    return [(rotation, pygame.Rect(
+        rect.x + ROTATION_BUTTON_X + index * (ROTATION_BUTTON_WIDTH + ROTATION_BUTTON_GAP),
+        sample.y + 8, ROTATION_BUTTON_WIDTH, 27))
+            for index, rotation in enumerate(c.ARMY_SYMBOL_ROTATIONS)]
+
+
+def _editor_height():
+    # Keep Save/Cancel beneath the preview when newly installed emblems add
+    # rows to the picker, rather than letting controls overlap or leave view.
+    rows = _symbol_grid_rows()
+    content_bottom = (SYMBOL_GRID_Y + rows * SYMBOL_TILE_SIZE
+                      + (rows - 1) * SYMBOL_TILE_GAP
+                      + SYMBOL_CONTROLS_GAP + 2 * 33 + 18 + 16 + 44)
+    return max(EDITOR_MIN_HEIGHT, content_bottom + 44)
 
 
 def _color_bar_rect(rect, channel):
-    return pygame.Rect(rect.x + 116, rect.y + 204 + channel * 33, 310, 18)
+    return pygame.Rect(rect.x + 116, _color_section_y(rect) + channel * 33, 310, 18)
 
 
 def _set_color_from_position(state, rect, channel, position):
@@ -82,7 +132,7 @@ def _move_down_rect(card):
     return pygame.Rect(card.right - 69, card.y + 10, 17, 17)
 
 
-def _draw_emblem(surface, symbol, color, center, size):
+def _draw_emblem(surface, symbol, color, rotation, center, size):
     if not symbol:
         return
     key = f"{c.ARMY_SYMBOL_KEY_PREFIX}{symbol}"
@@ -92,6 +142,9 @@ def _draw_emblem(surface, symbol, color, center, size):
     zoom = (size * 2) / max(native_size)
     emblem = symbol_loader.get_symbol(key, zoom, color=tuple(color), style="classic")
     if emblem:
+        rotation = queries.normalize_army_symbol_rotation(rotation)
+        if rotation:
+            emblem = pygame.transform.rotate(emblem, rotation)
         surface.blit(emblem, emblem.get_rect(center=center))
 
 
@@ -101,7 +154,7 @@ def _save_editor(map_screen):
         return False
     army = queries.update_army_presentation(
         map_screen.player_country, state["army_id"], state["name"],
-        state["symbol"], state["symbol_color"], map_screen.nation_data,
+        state["symbol"], state["symbol_color"], state["symbol_rotation"], map_screen.nation_data,
         map_screen.map_data)
     if army is None:
         map_screen.show_feedback("Army names cannot be blank")
@@ -157,6 +210,10 @@ def _handle_editor_event(map_screen, event):
             state["color_channel"] = channel
             _set_color_from_position(state, rect, channel, event.pos)
             return True
+    for rotation, button in _rotation_button_rects(rect):
+        if button.collidepoint(event.pos):
+            state["symbol_rotation"] = rotation
+            return True
     save = pygame.Rect(rect.right - 122, rect.bottom - 42, 98, 26)
     cancel = pygame.Rect(rect.right - 230, rect.bottom - 42, 98, 26)
     if save.collidepoint(event.pos):
@@ -201,18 +258,12 @@ def _draw_editor(map_screen, surface):
         pygame.draw.rect(surface, (175, 215, 255) if selected else (95, 135, 190),
                          symbol_rect, 2 if selected else 1, border_radius=4)
         if symbol:
-            _draw_emblem(surface, symbol, state["symbol_color"],
-                         symbol_rect.center, 28)
-            caption = text_font.render(symbol, True, (225, 235, 250))
-            surface.blit(caption, caption.get_rect(center=(symbol_rect.centerx,
-                                                           symbol_rect.bottom - 9)))
-        else:
-            caption = text_font.render("NONE", True, (225, 235, 250))
-            surface.blit(caption, caption.get_rect(center=symbol_rect.center))
+            _draw_emblem(surface, symbol, state["symbol_color"], state["symbol_rotation"],
+                         symbol_rect.center, 26)
     component_names = ("Red", "Green", "Blue")
     component_colors = ((215, 75, 75), (75, 205, 105), (80, 140, 230))
     for channel, (name_text, component_color) in enumerate(zip(component_names, component_colors)):
-        y = rect.y + 204 + channel * 33
+        y = _color_section_y(rect) + channel * 33
         label = text_font.render(name_text, True, component_color)
         surface.blit(label, (rect.x + 20, y + 2))
         bar = _color_bar_rect(rect, channel)
@@ -224,10 +275,21 @@ def _draw_editor(map_screen, surface):
         pygame.draw.rect(surface, (140, 175, 220), bar, 1, border_radius=3)
         value = text_font.render(str(state["symbol_color"][channel]), True, (240, 240, 245))
         surface.blit(value, (bar.right + 10, y + 2))
-    sample = pygame.Rect(rect.x + 20, rect.y + 314, 94, 44)
+    sample = _sample_rect(rect)
     pygame.draw.rect(surface, (12, 19, 34), sample, border_radius=4)
     pygame.draw.rect(surface, (110, 155, 215), sample, 1, border_radius=4)
-    _draw_emblem(surface, state["symbol"], state["symbol_color"], sample.center, 32)
+    _draw_emblem(surface, state["symbol"], state["symbol_color"],
+                 state["symbol_rotation"], sample.center, 32)
+    rotation_label = text_font.render("Rotation", True, (205, 220, 240))
+    surface.blit(rotation_label, (sample.right + 12, sample.y + 15))
+    for rotation, button in _rotation_button_rects(rect):
+        selected = state["symbol_rotation"] == rotation
+        pygame.draw.rect(surface, (66, 112, 175) if selected else (39, 60, 95),
+                         button, border_radius=4)
+        pygame.draw.rect(surface, (175, 215, 255) if selected else (95, 135, 190),
+                         button, 2 if selected else 1, border_radius=4)
+        label = text_font.render(f"{rotation}\N{DEGREE SIGN}", True, (235, 245, 255))
+        surface.blit(label, label.get_rect(center=button.center))
     cancel = pygame.Rect(rect.right - 230, rect.bottom - 42, 98, 26)
     save = pygame.Rect(rect.right - 122, rect.bottom - 42, 98, 26)
     for button, text, color in ((cancel, "Cancel", (84, 100, 130)),
@@ -328,6 +390,7 @@ def draw(map_screen, surface):
         pygame.draw.rect(surface, CARD_SELECTED if selected else CARD_BG, rect, border_radius=4)
         pygame.draw.rect(surface, (135, 185, 245), rect, 1, border_radius=4)
         _draw_emblem(surface, army.get("symbol", ""), army.get("symbol_color", c.DEFAULT_ARMY_SYMBOL_COLOR),
+                     army.get("symbol_rotation", c.DEFAULT_ARMY_SYMBOL_ROTATION),
                      (rect.x + 21, rect.centery), 25)
         name = text_font.render(army["name"], True, (245, 245, 250))
         count = text_font.render(f"{len(army.get('unit_ids', []))} units", True, (205, 220, 235))

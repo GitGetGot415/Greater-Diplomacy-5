@@ -2101,6 +2101,8 @@ COMBAT_BUBBLES_DIR = "assets/combat_bubbles"
 ARMY_SYMBOLS_DIR = "assets/symbols"
 ARMY_SYMBOL_KEY_PREFIX = "Army Symbol "
 DEFAULT_ARMY_SYMBOL_COLOR = (210, 70, 70)
+ARMY_SYMBOL_ROTATIONS = (0, 90, 180, 270)
+DEFAULT_ARMY_SYMBOL_ROTATION = ARMY_SYMBOL_ROTATIONS[0]
 # Factory and recruitment center building art, kept out of the flat
 # assets/images set since building names/levels multiply fast. Loaded into
 # the same SYMBOLS name->Surface map as ASSETS_DIR -- see symbol_loader.load_symbols.
