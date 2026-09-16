@@ -131,6 +131,11 @@ feature working in one says nothing about the other.
   literal when the test is checking the rule rather than using a deliberately
   artificial fixture. A tuning adjustment should change the rule's source of
   truth without requiring unrelated test rewrites.
+- Treat player-facing UI copy, tutorial prose, labels, and other editable text
+  as content rather than a test contract. Tests should verify structure,
+  navigation, callbacks, icon wiring, layout, and behavior without asserting
+  exact wording, unless that text is a protocol value, an identifier, or an
+  explicitly requested copy requirement.
 - Non-LLM diplomatic/AI prose belongs in `data/json/ai_responses.json` and is
   accessed through `map_logic/ai/ai_prompts.py`; it must not be embedded at call
   sites.

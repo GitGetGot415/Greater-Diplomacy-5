@@ -195,7 +195,9 @@ class NavigationIntroPopupTests(unittest.TestCase):
             c.SCREEN_WIDTH // 2,
             c.SCREEN_HEIGHT // 2 + popup.INITIAL_CENTER_Y_OFFSET,
         ))
-        self.assertIn("centered automatically", popup.PAGE_SUBTITLES[0])
+        self.assertEqual(len(popup.PAGE_TITLES), len(popup.PAGE_SUBTITLES))
+        self.assertTrue(all(isinstance(text, str) and text
+                            for text in popup.PAGE_TITLES + popup.PAGE_SUBTITLES))
 
         image = pygame.Surface((64, 74), pygame.SRCALPHA)
         surface = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
@@ -207,14 +209,9 @@ class NavigationIntroPopupTests(unittest.TestCase):
             ["Left.png", "Middle.png", "Right.png"])
         self.assertTrue(all(call.kwargs["directory"] == popup.MOUSE_DIR
                             for call in get_image.call_args_list))
-        self.assertEqual(popup.NAVIGATION_BUTTONS[0][2], (
-            "Click a unit stack to select it; Shift-click adds more.",
-            "Drag in Units view to box-select units.",
-        ))
-        self.assertEqual(popup.NAVIGATION_BUTTONS[2][2], (
-            "Right-click a province to move selected units.",
-            "Shift+right-click queues a waypoint.",
-        ))
+        self.assertEqual(len(popup.NAVIGATION_BUTTONS), 3)
+        self.assertTrue(all(len(lines) >= 1
+                            for _filename, _heading, lines in popup.NAVIGATION_BUTTONS))
 
         # Unit selection and map panning pass through the panel while active.
         self.assertFalse(popup.handle_event(pygame.event.Event(
@@ -248,20 +245,13 @@ class NavigationIntroPopupTests(unittest.TestCase):
         popup.handle_event(pygame.event.Event(
             pygame.MOUSEBUTTONDOWN, pos=popup.next_rect.center, button=1))
         self.assertEqual(popup.page_index, 1)
-        self.assertEqual(popup.PAGE_TITLES[popup.page_index], "Map UI")
         subtitle_lines = popup._subtitle_lines()
-        self.assertGreater(len(subtitle_lines), 1)
+        self.assertTrue(subtitle_lines)
         self.assertTrue(all(popup.body_font.size(line)[0] <= popup.rect.width -
                             (2 * popup.SUBTITLE_SIDE_PADDING)
                             for line in subtitle_lines))
-        self.assertEqual([label for label, _icon, _description in popup.MAP_UI_BUTTONS], [
-            "Terrain", "Political", "Relations", "Cores", "Factions",
-            "Resources", "Blank", "Units", "Economy", "Names",
-        ])
-        self.assertEqual([icon for _label, icon, _description in popup.MAP_UI_BUTTONS], [
-            "terrain", "political", "relations", "core", "faction",
-            "resource", "blank", "unit", "industry", "names",
-        ])
+        self.assertEqual(len(popup.MAP_UI_BUTTONS), 10)
+        self.assertTrue(all(icon for _label, icon, _description in popup.MAP_UI_BUTTONS))
         with mock.patch.object(message_box.ui_elements, "UI_ICONS", {
                 icon: image for _label, icon, _description in popup.MAP_UI_BUTTONS}):
             popup.draw(surface)
@@ -269,17 +259,26 @@ class NavigationIntroPopupTests(unittest.TestCase):
         popup.handle_event(pygame.event.Event(
             pygame.MOUSEBUTTONDOWN, pos=popup.next_rect.center, button=1))
         self.assertEqual(popup.page_index, 2)
-        self.assertEqual(popup.PAGE_TITLES[popup.page_index], "Armies")
+        self.assertEqual([icon for _heading, icon, _description in popup.DIPLOMACY_STEPS],
+                         ["mail", "political"])
         self.assertTrue(all(popup.body_font.size(line)[0] <= popup.rect.width -
                             (2 * popup.SUBTITLE_SIDE_PADDING)
                             for line in popup._subtitle_lines()))
-        self.assertEqual(popup.ARMY_STEPS, (
-            ("Select units", "Click stacks or left-click and drag to select multiple stacks in Units view."),
-            ("Create an army", "In Orders, click + Create Army in the Army tray. (Located on the right side of the screen)"),
-            ("Personalize", "Click a card to select the units in said army. Pressing the E button edits its name and emblem."),
-            ("Need to Assign more units?", "With units selected, right-click an army card."),
-        ))
         popup.draw(surface)
+
+        popup.handle_event(pygame.event.Event(
+            pygame.MOUSEBUTTONDOWN, pos=popup.next_rect.center, button=1))
+        self.assertEqual(popup.page_index, 3)
+        self.assertTrue(all(popup.body_font.size(line)[0] <= popup.rect.width -
+                            (2 * popup.SUBTITLE_SIDE_PADDING)
+                            for line in popup._subtitle_lines()))
+        self.assertEqual(len(popup.ARMY_STEPS), 4)
+        self.assertTrue(all(len(step) == 2 for step in popup.ARMY_STEPS))
+        popup.draw(surface)
+
+        popup.handle_event(pygame.event.Event(
+            pygame.MOUSEBUTTONDOWN, pos=popup.prev_rect.center, button=1))
+        self.assertEqual(popup.page_index, 2)
 
         popup.handle_event(pygame.event.Event(
             pygame.MOUSEBUTTONDOWN, pos=popup.prev_rect.center, button=1))

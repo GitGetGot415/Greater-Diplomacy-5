@@ -92,10 +92,15 @@ class _NavigationIntroPopup:
         ("Personalize", "Click a card to select the units in said army. Pressing the E button edits its name and emblem."),
         ("Need to Assign more units?", "With units selected, right-click an army card."),
     )
-    PAGE_TITLES = ("Map Navigation", "Map UI", "Armies")
+    DIPLOMACY_STEPS = (
+        ("Mail", "mail", "Open the Mail tab (located to the left) to read, reply to, or start conversations."),
+        ("Country actions", "relations", "Click another country's tile to see available diplomatic actions you can take against them."),
+    )
+    PAGE_TITLES = ("Map Navigation", "Map UI", "Other Countries", "Armies")
     PAGE_SUBTITLES = (
         "Your country is centered automatically when a game opens or after you choose it. If you're familiar with how HOI4 map controls work, then this should be very easy to understand.",
         "These buttons are important! Located on the bottom left of the screen, they edit the appearance of the map, giving you the information you need to play effectively.",
+        "Reach other countries through the Mail tab or directly from their territory on the map.",
         "Learn how to create, organize, and personalize armies. For now, this feature is purely decorative and serves only to organize your units.",
     )
 
@@ -282,6 +287,27 @@ class _NavigationIntroPopup:
                 surface.blit(label_surf, (x + 36, y))
                 desc_surf = self.body_font.render(description, True, (225, 225, 225))
                 surface.blit(desc_surf, (x + 36, y + self.label_font.get_height() + 2))
+        elif self.page_index == 2:
+            step_x = self.rect.x + 56
+            step_y = self.rect.y + 108 + content_y_offset
+            step_gap = 72
+            for index, (heading, icon_name, description) in enumerate(self.DIPLOMACY_STEPS, start=1):
+                y = step_y + (index - 1) * step_gap
+                icon = ui_elements.UI_ICONS.get(icon_name)
+                if icon:
+                    scale = min(28 / icon.get_width(), 28 / icon.get_height())
+                    icon_size = (max(1, round(icon.get_width() * scale)),
+                                 max(1, round(icon.get_height() * scale)))
+                    icon = pygame.transform.smoothscale(icon, icon_size)
+                    surface.blit(icon, icon.get_rect(center=(step_x, y + 13)))
+                else:
+                    pygame.draw.rect(surface, (75, 85, 100),
+                                     (step_x - 14, y - 1, 28, 28), 1)
+                heading_surf = self.label_font.render(heading, True, (130, 205, 255))
+                surface.blit(heading_surf, (step_x + 25, y))
+                description_surf = self.body_font.render(description, True, (225, 225, 225))
+                surface.blit(description_surf,
+                             (step_x + 25, y + self.label_font.get_height() + 2))
         else:
             step_x = self.rect.x + 56
             step_y = self.rect.y + 91 + content_y_offset
