@@ -56,22 +56,22 @@ POLICIES = (
     {
         "id": "prioritize_industrial_needs",
         "name": "Prioritize Industrial Needs",
-        "effects": {"materials": 1.10, "fuel": 1.10, "research": 0.80, "manpower": 0.90},
-        "effect_lines": ("Materials +10%", "Fuel +10%", "Research -20%", "Manpower -10%"),
+        "effects": {"materials": 1.10, "fuel": 1.10, "research": 0.80, "manpower": 0.80},
+        "effect_lines": ("Materials +10%", "Fuel +10%", "Research -20%", "Manpower -20%"),
     },
     {
-        "id": "national_service",
-        "name": "National Service",
+        "id": "recruitment_propaganda",
+        "name": "Recruitment Propaganda",
         "min_politics": -3,
-        "effects": {"damage": 1.10, "research": 0.80, "manpower": 0.90, "materials": 0.90},
-        "effect_lines": ("Army damage +10%", "Research -20%", "Manpower -10%", "Materials -10%"),
+        "effects": {"research": 0.80, "manpower": 1.10},
+        "effect_lines": ("Research -20%", "Manpower +10%"),
     },
     {
         "id": "total_mobilisation",
         "name": "Total Mobilisation",
         "min_politics": 2,
-        "effects": {"damage": 1.20, "research": 0.50, "manpower": 0.80, "materials": 0.80, "fuel": 0.90},
-        "effect_lines": ("Army damage +20%", "Research -50%", "Manpower -20%", "Materials -20%", "Fuel -10%"),
+        "effects": {"damage": 1.10, "research": 0.50, "manpower": 0.80, "materials": 0.80, "fuel": 0.80},
+        "effect_lines": ("Army damage +10%", "Research -50%", "Manpower -20%", "Materials -20%", "Fuel -20%"),
     },
 
     # maybe more stuff related to conscription...

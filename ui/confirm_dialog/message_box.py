@@ -63,8 +63,7 @@ class _NavigationIntroPopup:
     NAVIGATION_BUTTONS = (
         ("Left.png", "LEFT MOUSE", (
             "Click a unit stack to select it; Shift-click adds more.",
-            "Drag in Units view to box-select units.",
-            "From Orders, click a province to return to its province menu.",
+            "Drag in Units view to box-select units."
         )),
         ("Middle.png", "MIDDLE MOUSE", (
             "Hold and drag to pan the map.",

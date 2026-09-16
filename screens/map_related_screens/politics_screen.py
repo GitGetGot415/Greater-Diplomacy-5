@@ -54,6 +54,7 @@ POLICY_CARD_GAP = 16
 POLICY_SCROLL_WHEEL_STEP = 90
 POLICY_SCROLLBAR_HEIGHT = 14
 POLICY_CARD_PADDING = 12
+POLICY_TITLE_FONT = "normal"
 
 
 class Politics_Screen(GameState):
@@ -359,7 +360,7 @@ class Politics_Screen(GameState):
         pygame.draw.rect(surface, (27, 31, 49), card)
         pygame.draw.rect(surface, border, card, 2)
 
-        heading = fonts.get("heading2").render(definition["name"], True, c.UI_TEXT_LIGHT)
+        heading = fonts.get(POLICY_TITLE_FONT).render(definition["name"], True, c.UI_TEXT_LIGHT)
         surface.blit(heading, heading.get_rect(centerx=card.centerx,
                                                 y=card.y + POLICY_CARD_PADDING))
         y = card.y + POLICY_CARD_PADDING + heading.get_height() + 8

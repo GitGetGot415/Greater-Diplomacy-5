@@ -321,7 +321,7 @@ class PolicyTests(unittest.TestCase):
 
     def test_policy_requirements_are_strict(self):
         for policy_id in ("research_subsidies", "prioritize_civilian_needs",
-                          "national_service", "total_mobilisation"):
+                          "recruitment_propaganda", "total_mobilisation"):
             definition = politics.policy(policy_id)
             bound = definition.get("max_politics", definition.get("min_politics"))
             self.assertFalse(politics.requirements_met(
