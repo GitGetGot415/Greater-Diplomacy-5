@@ -17,6 +17,12 @@
 - Refreshing country data may show countries that no longer exist
 - What are the refresh issues?
 
+## Audio related suggestions
+
+- can it be made such so that being able to edit the pitch of a song also works on macos and web builds?
+- being able to add more songs to a custom album would be nice as well
+- please add specific audio lines for selecting specific types of units (maybe import the stuff from GD4)
+
 ## Suggestions
 
 ### Hanskolmer
