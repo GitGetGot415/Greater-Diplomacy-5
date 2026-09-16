@@ -1172,7 +1172,9 @@ def strategic_unit_fade_alphas(map_screen):
 
     Only the local player's organized armies have a public marker at this
     level.  Everything else fades away over the same interval used for an
-    army's move into that marker, then fades back in when leaving the level.
+    army's move into that marker, except selected local units which remain
+    readable and controllable.  Hidden units fade back in when leaving the
+    level.
     """
     states = getattr(map_screen, "strategic_unit_fade_states", None)
     if states is None:
@@ -1195,10 +1197,12 @@ def strategic_unit_fade_alphas(map_screen):
             for unit_id in army.get("unit_ids", [])
             if isinstance(unit_id, str)
         }
+        is_selected = getattr(map_screen, "is_unit_selected", lambda _unit: False)
         for unit in live_units:
             if unit.get("owner") != player_country:
                 hidden_unit_ids.add(id(unit))
-            elif unit.get("unit_id") not in organized_unit_ids:
+            elif (unit.get("unit_id") not in organized_unit_ids
+                  and not is_selected(unit)):
                 hidden_unit_ids.add(id(unit))
 
     alphas = {}

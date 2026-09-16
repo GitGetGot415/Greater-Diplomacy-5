@@ -393,6 +393,21 @@ class ArmyLayoutTests(unittest.TestCase):
         self.assertIn(halfway_in[id(unorganized)], (127, 128))
         self.assertIn(halfway_in[id(foreign)], (127, 128))
 
+    def test_strategic_zoom_keeps_a_selected_unorganized_local_unit_visible(self):
+        selected_unit = {"owner": "A", "unit_id": "selected", "type": "Infantry"}
+        foreign = {"owner": "B", "unit_id": "foreign", "type": "Infantry"}
+        map_screen = SimpleNamespace(
+            camera=SimpleNamespace(zoom=overlay_renderer.ARMY_GROUP_ICON_MAX_ZOOM),
+            player_country="A", nation_data={"A": {"armies": []}, "B": {}},
+            map_data={"province": {"units": [selected_unit, foreign]}},
+            is_unit_selected=lambda unit: unit is selected_unit)
+
+        with patch.object(pygame.time, "get_ticks", return_value=0):
+            alphas = overlay_renderer.strategic_unit_fade_alphas(map_screen)
+
+        self.assertNotIn(id(selected_unit), alphas)
+        self.assertEqual(alphas[id(foreign)], 255)
+
     def test_army_group_transition_moves_units_to_the_average_marker(self):
         first = {"unit_id": "first"}
         second = {"unit_id": "second"}
