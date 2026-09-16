@@ -9,7 +9,6 @@ from map_logic.rendering import symbol_loader
 from map_logic.rendering import overlay_renderer
 from ui.bars import ui_bars, resource_hud, view_mode_buttons
 from ui import army_panel, event_handler, map_top_right_layout
-from map_logic.camera import camera_handler
 from screens.map_related_screens import battle_screen
 
 # ==========================================
@@ -181,12 +180,9 @@ class Orders_Screen(GameState):
         self.renaming_unit_actual_index = None
         self.rename_text = ""
 
-        # Give the player an initially useful view when Orders is opened, but
-        # never keep recentering it afterwards: this is a map-wide command
-        # workspace, not a province-locked popup.
-        camera_handler.center_camera_on_province(
-            self.map_screen.camera, province["center"], c.SCREEN_WIDTH, c.SCREEN_HEIGHT,
-            self.map_screen.total_ui_h, x_offset=c.ORDERS_PANEL_CAMERA_X_OFFSET)
+        # Give the player an initially useful view when Orders is opened.
+        # Later stack, roster, and army selections reuse this same focus path.
+        self._focus_orders_target(province)
 
         # --- Auto-select logic ---
         units = self.target_province.get("units", [])
@@ -236,6 +232,7 @@ class Orders_Screen(GameState):
         """Retarget the live Orders workspace to another visible stack."""
         self.target_province = province
         self.map_screen.selected_province = province
+        self._focus_orders_target(province)
         self.battle_screen = None
         self.scroll_y = 0
         self.bombarding_unit_index = None
@@ -253,6 +250,14 @@ class Orders_Screen(GameState):
             self.selected_unit_index = None
         self.read_only = not self.map_screen.selected_unit_records()
         self.refresh_ui()
+
+    def _focus_orders_target(self, province):
+        """Keep a newly selected Orders target visible beside the command panel."""
+        # Orders unit tests use deliberately lightweight map doubles without a
+        # camera. A live Map always supplies this canonical focus method.
+        focus = getattr(self.map_screen, "focus_camera_on_orders_target", None)
+        if focus is not None:
+            focus(province)
 
     def exit_screen(self):
         # The battle inspector is an optional child panel now, so leaving
@@ -368,15 +373,18 @@ class Orders_Screen(GameState):
         self.bombarding_unit_index = None
         self.refresh_ui()
 
-    def toggle_selected_unit(self, unit):
+    def toggle_selected_unit(self, unit, province=None):
         """Apply the shared map click behavior to one Orders roster row."""
         if getattr(self, "read_only", False) or self._command_blocked(unit):
             return
-        self.map_screen.click_select_map_units(
+        selected = self.map_screen.click_select_map_units(
             [unit], additive=bool(pygame.key.get_mods() & pygame.KMOD_SHIFT))
         self.selected_unit_index = None
         self.bombarding_unit_index = None
-        self.refresh_ui()
+        if selected and province is not None:
+            self.inspect_province(province)
+        else:
+            self.refresh_ui()
 
     def ungroup_selected(self):
         self.map_screen.ungroup_selection()
@@ -783,7 +791,8 @@ class Orders_Screen(GameState):
                 pygame.Rect(row_rect.x, row_rect.y,
                             ACTION_START_OFFSET_X - UNIT_ROW_X_OFFSET - 2,
                             self.row_height),
-                lambda selected_unit=unit: self.toggle_selected_unit(selected_unit))
+                lambda selected_unit=unit, selected_province=province:
+                self.toggle_selected_unit(selected_unit, selected_province))
             hitbox.is_scrollable = True
             hitbox.click_guard = row_guard
             self.elements.append(hitbox)
@@ -1233,11 +1242,7 @@ class Orders_Screen(GameState):
                     return
                 if self.map_screen.click_select_map_units(
                         stack["units"], additive=drag["additive"]):
-                    self.target_province = stack["province"]
-                    self.selected_unit_index = None
-                    self.read_only = not any(unit.get("owner") == self.map_screen.player_country
-                                             for unit in stack["province"].get("units", []))
-                    self.refresh_ui()
+                    self.inspect_province(stack["province"])
                 return
             if rect.width >= 4 or rect.height >= 4:
                 selected = []

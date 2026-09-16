@@ -94,7 +94,7 @@ class _NavigationIntroPopup:
     )
     DIPLOMACY_STEPS = (
         ("Mail", "mail", "Open the Mail tab (located to the left) to read, reply to, or start conversations."),
-        ("Country actions", "relations", "Click another country's tile to see available diplomatic actions you can take against them."),
+        ("Country actions", "political", "Click another country's tile to see available diplomatic actions you can take against them."),
     )
     PAGE_TITLES = ("Map Navigation", "Map UI", "Other Countries", "Armies")
     PAGE_SUBTITLES = (

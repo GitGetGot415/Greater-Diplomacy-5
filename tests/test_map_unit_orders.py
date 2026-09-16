@@ -106,6 +106,24 @@ class MapOrderTests(unittest.TestCase):
         self.assertEqual({id(unit) for unit, _province in game.selected_unit_records()},
                          {id(slow), id(fast)})
 
+    def test_selecting_an_army_refocuses_the_orders_target(self):
+        unit = {"unit_id": "unit-a", "owner": "A", "type": "Infantry"}
+        origin = province(1, [])
+        origin["units"] = [unit]
+        game = object.__new__(Map)
+        game.player_country = "A"
+        game.nation_data = {"A": {"armies": [{"id": "army-a", "unit_ids": ["unit-a"]}]}}
+        game.map_data = {"origin": origin}
+        game.can_select_map_units = lambda: True
+        game.select_map_units = Mock()
+        game.focus_camera_on_orders_target = Mock()
+
+        self.assertTrue(Map.select_army(game, "army-a", open_orders=False))
+
+        game.select_map_units.assert_called_once_with([unit])
+        self.assertIs(game.selected_province, origin)
+        game.focus_camera_on_orders_target.assert_called_once_with(origin)
+
 
 class OrdersSelectionRowsTests(unittest.TestCase):
     def test_roster_keeps_each_selected_unit_and_its_own_origin(self):
@@ -444,6 +462,44 @@ class MapOrderGestureTests(unittest.TestCase):
                 pygame.MOUSEBUTTONUP, pos=(90, 50), button=1))
 
         self.assertEqual(selected, [first, second])
+
+    def test_orders_stack_click_refocuses_the_newly_selected_stack(self):
+        unit = {"owner": "A", "type": "Infantry"}
+        origin = province(1, [])
+        origin["units"] = [unit]
+        focus = Mock()
+        map_stub = type("MapStub", (), {
+            "unit_selection_drag": None,
+            "unit_stack_hitboxes": [{
+                "rect": pygame.Rect(10, 10, 20, 20),
+                "province": origin,
+                "units": [unit],
+            }],
+            "_ignore_left_until_release": False,
+            "_ignore_right_until_release": False,
+            "player_country": "A",
+            "click_select_map_units": lambda self, _units, additive=False: True,
+            "is_unit_selected": lambda self, candidate: candidate is unit,
+            "selected_unit_records": lambda self: [(unit, origin)],
+            "focus_camera_on_orders_target": focus,
+        })()
+        screen = object.__new__(Orders_Screen)
+        screen.map_screen = map_stub
+        screen.panel_rect = pygame.Rect(100, 100, 200, 200)
+        screen.is_dragging_scrollbar = False
+        screen.is_content_dragging = lambda _attr: False
+        screen.bombarding_unit_index = None
+        screen.refresh_ui = lambda: None
+
+        with (patch("screens.map_related_screens.orders.pygame.key.get_mods", return_value=0),
+              patch("screens.map_related_screens.orders.pygame.mouse.get_pos", return_value=(15, 15))):
+            screen.additional_events(pygame.event.Event(
+                pygame.MOUSEBUTTONDOWN, pos=(15, 15), button=1))
+            screen.additional_events(pygame.event.Event(
+                pygame.MOUSEBUTTONUP, pos=(15, 15), button=1))
+
+        self.assertIs(screen.target_province, origin)
+        focus.assert_called_once_with(origin)
 
 
 class MapViewDefaultTests(unittest.TestCase):

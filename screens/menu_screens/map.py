@@ -1542,6 +1542,15 @@ class Map(GameState):
             self.total_ui_h, target_zoom, animate)
         return True
 
+    def focus_camera_on_orders_target(self, province):
+        """Frame the current Orders selection without hiding it behind its panel."""
+        if not province or "center" not in province:
+            return False
+        camera_handler.center_camera_on_province(
+            self.camera, province["center"], c.SCREEN_WIDTH, c.SCREEN_HEIGHT,
+            self.total_ui_h, x_offset=c.ORDERS_PANEL_CAMERA_X_OFFSET)
+        return True
+
     def cycle_secondary_mode(self):
         self.sec_idx = (self.sec_idx + 1) % len(self.secondary_modes)
         self.secondary_mode = self.secondary_modes[self.sec_idx]
@@ -2058,6 +2067,7 @@ class Map(GameState):
             return False
         self.select_map_units([unit for unit, _province in records])
         self.selected_province = records[0][1]
+        self.focus_camera_on_orders_target(self.selected_province)
         if open_orders:
             self._orders_return_to_province_menu = False
             self.change_state("ORDERS")
