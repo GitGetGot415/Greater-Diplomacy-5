@@ -322,6 +322,44 @@ class ArmyLayoutTests(unittest.TestCase):
         self.assertEqual([stack["units"] for stack in map_screen.unit_stack_hitboxes],
                          [[first, second], [third]])
 
+    def test_map_splits_selected_members_from_their_unselected_stack_mates(self):
+        first_tile_units = [{"owner": "A", "unit_id": f"first-{index}",
+                             "type": "Infantry"} for index in range(9)]
+        second_tile_units = [{"owner": "A", "unit_id": f"second-{index}",
+                              "type": "Infantry"} for index in range(6)]
+        selected_ids = {unit["unit_id"] for unit in first_tile_units[:5]}
+        selected_ids.update(unit["unit_id"] for unit in second_tile_units[:3])
+        map_screen = SimpleNamespace(
+            camera=SimpleNamespace(zoom=4, tilt_factor=1), player_country="A",
+            nation_data={"A": {"armies": []}}, nation_colors={"A": (220, 60, 70)},
+            tactical_mode=False, player_unit=None, hovered_unit_stack=None,
+            unit_hover_hitboxes=[], unit_stack_hitboxes=[], unit_selection_drag=None,
+            is_unit_selected=lambda unit: unit["unit_id"] in selected_ids)
+        surface = pygame.Surface((200, 200), pygame.SRCALPHA)
+
+        with (patch.object(overlay_renderer, "unit_box",
+                           side_effect=lambda *_args, **kwargs: pygame.Surface(
+                               kwargs.get("size", _args[4]), pygame.SRCALPHA)) as boxes,
+              patch.object(overlay_renderer, "draw_army_unit_bands",
+                           side_effect=lambda _surface, _units, _owner, _player,
+                                              _nations, box, _width, army=None: box.left),
+              patch.object(overlay_renderer, "draw_army_emblem")):
+            overlay_renderer.draw_unit_icon(
+                map_screen, surface, 50, 50, {"units": first_tile_units},
+                units_are_visible=True)
+            overlay_renderer.draw_unit_icon(
+                map_screen, surface, 150, 50, {"units": second_tile_units},
+                units_are_visible=True)
+
+        self.assertEqual([call.args[2] for call in boxes.call_args_list], [5, 4, 3, 3])
+        self.assertEqual(
+            [{unit["unit_id"] for unit in stack["units"]}
+             for stack in map_screen.unit_stack_hitboxes],
+            [selected_ids.intersection(unit["unit_id"] for unit in first_tile_units),
+             {unit["unit_id"] for unit in first_tile_units[5:]},
+             selected_ids.intersection(unit["unit_id"] for unit in second_tile_units),
+             {unit["unit_id"] for unit in second_tile_units[3:]}])
+
     def test_zoomed_out_map_compresses_an_army_to_one_average_position_icon(self):
         first = {"owner": "A", "unit_id": "first", "type": "Infantry"}
         second = {"owner": "A", "unit_id": "second", "type": "Tank"}

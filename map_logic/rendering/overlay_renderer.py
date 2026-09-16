@@ -1809,6 +1809,20 @@ def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,
         else:
             unit_stacks.append((owner, None, owner_units))
 
+    # Selection is part of the map presentation, not merely a border color.
+    # Split every stack into its selected and unselected members so a mixed
+    # stack remains readable and the two groups can be clicked independently.
+    is_selected = getattr(map_screen, "is_unit_selected", lambda _unit: False)
+    split_stacks = []
+    for owner, army, stack_units in unit_stacks:
+        selected_units = [unit for unit in stack_units if is_selected(unit)]
+        unselected_units = [unit for unit in stack_units if not is_selected(unit)]
+        if selected_units:
+            split_stacks.append((owner, army, selected_units))
+        if unselected_units:
+            split_stacks.append((owner, army, unselected_units))
+    unit_stacks = split_stacks
+
     gap = max(2, int(4 * display_scale)) # Spacing between stacked boxes
 
     # 2. Calculate the vertical offset to perfectly center the entire stack over the province
@@ -1818,15 +1832,17 @@ def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,
     # Start drawing from the top of the stack and move down.
     current_sy = sy - (total_stack_height // 2) + (scaled_h // 2)
 
-    # --- NEW: Sort owners by Total HP descending, but keep Player Tactical Unit on top ---
+    # Sort selected stacks above their unselected neighbours, while keeping a
+    # tactical player's one controllable division above everything else.
     is_tactical = map_screen.tactical_mode
     player_unit = map_screen.player_unit
     
     def get_stack_sort_weight(stack):
         _owner, _army, owner_units = stack
         if is_tactical and any(u is player_unit for u in owner_units):
-            return (1, 0)
-        return (0, sum(u.get("health", 0) for u in owner_units))
+            return (2, 0)
+        return (1 if any(is_selected(unit) for unit in owner_units) else 0,
+                sum(u.get("health", 0) for u in owner_units))
 
     sorted_stacks = sorted(unit_stacks, key=get_stack_sort_weight, reverse=True)
 
