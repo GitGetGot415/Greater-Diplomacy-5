@@ -29,6 +29,11 @@
 
 - Organize Hanskolmer's art more clearly (wow what a vague suggestion)
 
+### Curry
+
+- could you make it so you can upgrade repair disband multiple units at a time
+- ability to change map controls so the mouse can be set to other mouse controls, other keys, or switch what each one of the 3 buttons does
+
 ### Kaiserin
 
 - Add guerrilla units
