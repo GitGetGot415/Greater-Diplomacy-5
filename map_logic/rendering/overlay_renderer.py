@@ -844,9 +844,9 @@ def draw_overlay_content(map_screen, surface, draw_combat=True):
         combat_unit_ids = {unit_id for record in combat_records
                            for unit_id in record.get("hidden_unit_ids", set())}
     # ---------------------------------------------
-    compact_groups = compact_army_groups(map_screen, combat_unit_ids)
-    compact_unit_object_ids = {id(unit) for group in compact_groups
-                               for unit in group["units"]}
+    desired_compact_groups = compact_army_groups(map_screen, combat_unit_ids)
+    compact_groups, transition_units, compact_unit_object_ids = army_group_presentation(
+        map_screen, desired_compact_groups, combat_unit_ids)
     # This is transient render state, consumed by map_renderer when it draws
     # movement arrows later in the same frame; it is never part of a save.
     map_screen.compact_army_unit_object_ids = compact_unit_object_ids
@@ -1103,6 +1103,7 @@ def draw_overlay_content(map_screen, surface, draw_combat=True):
                                     current_x += w_scaled + icon_spacing
 
     if map_screen.secondary_mode == "UNITS":
+        draw_army_group_transition_units(map_screen, surface, transition_units)
         draw_compact_army_groups(map_screen, surface, compact_groups)
 
     # Map rendering passes draw_combat=False and paints these after movement
@@ -1139,6 +1140,7 @@ ARMY_GROUP_ICON_MAX_ZOOM = 2.0
 ARMY_GROUP_ICON_MIN_SIZE = 16
 ARMY_GROUP_ICON_MAX_SIZE = 30
 ARMY_GROUP_ICON_HEIGHT_RATIO = 1.4
+ARMY_GROUP_TRANSITION_SECONDS = 0.1
 
 
 def unit_box_size(map_screen):
@@ -1446,7 +1448,11 @@ def compact_army_groups(map_screen, combat_unit_ids):
             continue
         if any(id(unit) in combat_unit_ids for unit, _province in records):
             continue
-        if all(is_selected(unit) for unit, _province in records):
+        # A partial selection remains visible and controllable; only the
+        # unselected members contribute to the strategic group marker.
+        records = [(unit, province) for unit, province in records
+                   if not is_selected(unit)]
+        if not records:
             continue
         units = [unit for unit, _province in records]
         best_unit = queries.get_best_unit_by_defense_then_attack_then_speed(units)
@@ -1461,6 +1467,91 @@ def compact_army_groups(map_screen, combat_unit_ids):
                        "province": records[0][1], "center": _army_average_center(records, map_screen),
                        "icon": icon})
     return groups
+
+
+def _interpolate_army_position(start, target, progress, map_screen):
+    """Move between two world positions, taking the short path across a seam."""
+    delta_x = target[0] - start[0]
+    if map_screen.loop_map:
+        if delta_x > map_screen.map_w / 2:
+            delta_x -= map_screen.map_w
+        elif delta_x < -map_screen.map_w / 2:
+            delta_x += map_screen.map_w
+    x = start[0] + (delta_x * progress)
+    if map_screen.loop_map:
+        x %= map_screen.map_w
+    return x, start[1] + ((target[1] - start[1]) * progress)
+
+
+def army_group_presentation(map_screen, desired_groups, combat_unit_ids):
+    """Animate army markers into and out of the expanded unit presentation."""
+    states = getattr(map_screen, "army_group_transition_states", None)
+    if states is None:
+        states = {}
+        map_screen.army_group_transition_states = states
+    now = pygame.time.get_ticks() / 1000.0
+    live_records = {id(unit): (unit, province)
+                    for province in map_screen.map_data.values()
+                    for unit in province.get("units", [])}
+    desired_by_army = {group["army"].get("id"): group for group in desired_groups}
+    presented_groups, transition_units, suppressed_unit_ids = [], [], set()
+
+    for army_id, group in desired_by_army.items():
+        unit_ids = tuple(id(unit) for unit in group["units"])
+        state = states.get(army_id)
+        if state is None or state["unit_ids"] != unit_ids:
+            start_centers = {unit_id: live_records[unit_id][1]["center"]
+                             for unit_id in unit_ids}
+            state = {"phase": "compress", "unit_ids": unit_ids,
+                     "starts": start_centers,
+                     "center": group["center"], "icon": group["icon"],
+                     "province": group["province"], "started_at": now}
+            states[army_id] = state
+        suppressed_unit_ids.update(unit_ids)
+        if state["phase"] == "compress":
+            progress = min(1.0, (now - state["started_at"])
+                           / ARMY_GROUP_TRANSITION_SECONDS)
+            if progress >= 1.0:
+                state["phase"] = "collapsed"
+                presented_groups.append(group)
+            else:
+                presented_groups.append(dict(group, alpha=round(255 * progress)))
+                for unit_id in unit_ids:
+                    unit, province = live_records[unit_id]
+                    transition_units.append({"unit": unit, "province": province,
+                                             "position": _interpolate_army_position(
+                                                 state["starts"][unit_id], state["center"],
+                                                 progress, map_screen)})
+        else:
+            presented_groups.append(group)
+
+    for army_id, state in list(states.items()):
+        if army_id in desired_by_army:
+            continue
+        records = [live_records[unit_id] for unit_id in state["unit_ids"]
+                   if unit_id in live_records]
+        if not records or any(id(unit) in combat_unit_ids for unit, _province in records):
+            del states[army_id]
+            continue
+        if state["phase"] != "expand":
+            state["phase"] = "expand"
+            state["started_at"] = now
+        progress = min(1.0, (now - state["started_at"])
+                       / ARMY_GROUP_TRANSITION_SECONDS)
+        if progress >= 1.0:
+            del states[army_id]
+            continue
+        suppressed_unit_ids.update(state["unit_ids"])
+        for unit, province in records:
+            transition_units.append({"unit": unit, "province": province,
+                                     "position": _interpolate_army_position(
+                                         state["center"], province["center"],
+                                         progress, map_screen)})
+        presented_groups.append({"army": None, "units": [unit for unit, _province in records],
+                                 "province": state["province"], "center": state["center"],
+                                 "icon": state["icon"],
+                                 "alpha": round(255 * (1.0 - progress))})
+    return presented_groups, transition_units, suppressed_unit_ids
 
 
 def _publish_unit_stack_hitbox(map_screen, surface, rect, province, units, owner,
@@ -1505,16 +1596,35 @@ def draw_compact_army_groups(map_screen, surface, groups):
     offsets = ([0, -map_screen.map_w, map_screen.map_w]
                if map_screen.loop_map else [0])
     for group in groups:
+        icon = group["icon"]
+        alpha = group.get("alpha", 255)
+        if alpha < 255:
+            icon = icon.copy()
+            icon.set_alpha(alpha)
         for offset in offsets:
             sx, sy = queries.world_to_screen(group["center"], map_screen, offset)
             if not (-CULL_MARGIN < sx < surface.get_width() + CULL_MARGIN
                     and -CULL_MARGIN < sy < surface.get_height() + CULL_MARGIN):
                 continue
-            rect = group["icon"].get_rect(center=(int(sx), int(sy)))
-            surface.blit(group["icon"], rect)
+            rect = icon.get_rect(center=(int(sx), int(sy)))
+            surface.blit(icon, rect)
             _publish_unit_stack_hitbox(
                 map_screen, surface, rect, group["province"], group["units"],
                 map_screen.player_country, display_scale)
+
+
+def draw_army_group_transition_units(map_screen, surface, transition_units):
+    """Draw individual units travelling between their stacks and army marker."""
+    offsets = ([0, -map_screen.map_w, map_screen.map_w]
+               if map_screen.loop_map else [0])
+    for record in transition_units:
+        for offset in offsets:
+            sx, sy = queries.world_to_screen(record["position"], map_screen, offset)
+            if (-CULL_MARGIN < sx < surface.get_width() + CULL_MARGIN
+                    and -CULL_MARGIN < sy < surface.get_height() + CULL_MARGIN):
+                draw_unit_icon(map_screen, surface, int(sx), int(sy),
+                               record["province"], units=[record["unit"]],
+                               units_are_visible=True)
 
 
 def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,

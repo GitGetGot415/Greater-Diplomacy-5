@@ -346,14 +346,55 @@ class ArmyLayoutTests(unittest.TestCase):
                            center)):
             groups = overlay_renderer.compact_army_groups(map_screen, set())
             overlay_renderer.draw_compact_army_groups(map_screen, surface, groups)
+            map_screen.is_unit_selected = lambda unit: unit is first
+            partial_groups = overlay_renderer.compact_army_groups(map_screen, set())
 
-        self.assertEqual([call.args[0]["id"] for call in icons.call_args_list], ["one"])
+        self.assertEqual([call.args[0]["id"] for call in icons.call_args_list], ["one", "one"])
         self.assertEqual(groups[0]["center"], (50, 30))
         self.assertEqual([stack["units"] for stack in map_screen.unit_stack_hitboxes],
                          [[first, second]])
+        self.assertEqual(partial_groups[0]["units"], [second])
 
         map_screen.is_unit_selected = lambda _unit: True
         self.assertEqual(overlay_renderer.compact_army_groups(map_screen, set()), [])
+
+    def test_army_group_transition_moves_units_to_the_average_marker(self):
+        first = {"unit_id": "first"}
+        second = {"unit_id": "second"}
+        first_province = {"center": (20, 20), "units": [first]}
+        second_province = {"center": (80, 40), "units": [second]}
+        map_screen = SimpleNamespace(
+            map_data={"first": first_province, "second": second_province},
+            loop_map=False, map_w=100)
+        desired = [{"army": {"id": "one"}, "units": [first, second],
+                    "province": first_province, "center": (50, 30),
+                    "icon": pygame.Surface((20, 20), pygame.SRCALPHA)}]
+
+        with patch.object(pygame.time, "get_ticks", side_effect=[0, 100, 250, 250, 350]):
+            groups, moving, suppressed = overlay_renderer.army_group_presentation(
+                map_screen, desired, set())
+            halfway_groups, halfway_moving, _suppressed = (
+                overlay_renderer.army_group_presentation(map_screen, desired, set()))
+            _finished_groups, finished_moving, _suppressed = (
+                overlay_renderer.army_group_presentation(map_screen, desired, set()))
+            expanding_groups, expanding_moving, _suppressed = (
+                overlay_renderer.army_group_presentation(map_screen, [], set()))
+            halfway_expanding_groups, halfway_expanding_moving, _suppressed = (
+                overlay_renderer.army_group_presentation(map_screen, [], set()))
+
+        self.assertEqual(suppressed, {id(first), id(second)})
+        self.assertEqual([record["position"] for record in moving], [(20, 20), (80, 40)])
+        self.assertEqual([record["position"] for record in halfway_moving],
+                         [(35, 25), (65, 35)])
+        self.assertEqual(groups[0]["alpha"], 0)
+        self.assertEqual(halfway_groups[0]["alpha"], 128)
+        self.assertEqual(finished_moving, [])
+        self.assertEqual([record["position"] for record in expanding_moving],
+                         [(50, 30), (50, 30)])
+        self.assertEqual([record["position"] for record in halfway_expanding_moving],
+                         [(35, 25), (65, 35)])
+        self.assertEqual(expanding_groups[0]["alpha"], 255)
+        self.assertEqual(halfway_expanding_groups[0]["alpha"], 128)
 
     def test_overlay_hides_every_compacted_army_member_from_its_provinces(self):
         first = {"owner": "A", "unit_id": "first", "type": "Infantry"}
@@ -381,7 +422,8 @@ class ArmyLayoutTests(unittest.TestCase):
               patch.object(overlay_renderer, "draw_compact_army_groups") as groups):
             overlay_renderer.draw_overlay_content(map_screen, surface)
 
-        unit_stacks.assert_not_called()
+        self.assertEqual([call.kwargs["units"] for call in unit_stacks.call_args_list],
+                         [[first], [second]])
         self.assertEqual(groups.call_args.args[2][0]["units"], [first, second])
         self.assertEqual(map_screen.compact_army_unit_object_ids, {id(first), id(second)})
 
