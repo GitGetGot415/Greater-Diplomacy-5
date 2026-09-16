@@ -1164,7 +1164,8 @@ def unit_box_size(map_screen):
 
 def uses_compact_army_icons(map_screen):
     """Whether the current strategic zoom replaces army stacks with icons."""
-    return map_screen.camera.zoom <= ARMY_GROUP_ICON_MAX_ZOOM
+    return (not getattr(map_screen, "tactical_mode", False)
+            and map_screen.camera.zoom <= ARMY_GROUP_ICON_MAX_ZOOM)
 
 
 def strategic_unit_fade_alphas(map_screen):
@@ -1180,6 +1181,11 @@ def strategic_unit_fade_alphas(map_screen):
     if states is None:
         states = {}
         map_screen.strategic_unit_fade_states = states
+    # Tactical mode is a unit-level view, including while a player is picking
+    # their division. Never retain a partial strategic fade between modes.
+    if getattr(map_screen, "tactical_mode", False):
+        states.clear()
+        return {}
     now = pygame.time.get_ticks() / 1000.0
     live_units = [unit for province in map_screen.map_data.values()
                   for unit in province.get("units", [])]

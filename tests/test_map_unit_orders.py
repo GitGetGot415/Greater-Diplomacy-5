@@ -11,6 +11,9 @@ os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from data import queries
+import data.constants as c
+from map_logic.camera import camera_handler
+from map_logic.rendering import overlay_renderer
 from screens.menu_screens.map import Map
 from screens.map_related_screens.orders import Orders_Screen
 from ui import event_handler
@@ -244,6 +247,23 @@ class MapOrderGestureTests(unittest.TestCase):
         self.assertIs(event_handler._unit_stack_at(map_stub, (20, 20)), upper)
         self.assertIsNone(event_handler._unit_stack_at(map_stub, (100, 100)))
 
+    def test_tactical_country_selection_can_click_a_rendered_unit_box(self):
+        unit = {"owner": "A", "type": "Infantry"}
+        origin = province(1, [])
+        origin["units"] = [unit]
+        map_stub = type("MapStub", (), {
+            "unit_hover_hitboxes": [{
+                "rect": pygame.Rect(10, 10, 20, 20),
+                "province": origin,
+                "units": [unit],
+            }],
+        })()
+
+        with patch("ui.event_handler.player_setup.select_tactical_unit") as select_unit:
+            self.assertTrue(event_handler._select_tactical_unit_stack(map_stub, (15, 15)))
+
+        select_unit.assert_called_once_with(map_stub, origin, candidate_units=[unit])
+
     def test_short_right_click_orders_selected_units(self):
         unit = {"owner": "A", "type": "Infantry"}
         destination = province(2, [])
@@ -440,7 +460,7 @@ class MapViewDefaultTests(unittest.TestCase):
         self.assertEqual(map_screen.sec_idx, 0)
         self.assertFalse(map_screen.show_country_names)
 
-    def test_country_selection_defaults_show_units_with_country_names(self):
+    def test_country_selection_defaults_show_names_without_unit_overlay(self):
         map_screen = object.__new__(Map)
         map_screen.secondary_modes = ["UNITS", "ECONOMY", "BLANK"]
         map_screen.secondary_mode = "BLANK"
@@ -449,12 +469,26 @@ class MapViewDefaultTests(unittest.TestCase):
 
         Map.set_country_selection_view_defaults(map_screen)
 
+        self.assertEqual(map_screen.secondary_mode, "BLANK")
+        self.assertEqual(map_screen.sec_idx, 2)
+        self.assertTrue(map_screen.show_country_names)
+
+    def test_tactical_view_defaults_show_units_without_country_names(self):
+        map_screen = object.__new__(Map)
+        map_screen.secondary_modes = ["UNITS", "ECONOMY", "BLANK"]
+        map_screen.secondary_mode = "BLANK"
+        map_screen.sec_idx = 2
+        map_screen.show_country_names = True
+
+        Map.set_tactical_view_defaults(map_screen)
+
         self.assertEqual(map_screen.secondary_mode, "UNITS")
         self.assertEqual(map_screen.sec_idx, 0)
-        self.assertTrue(map_screen.show_country_names)
+        self.assertFalse(map_screen.show_country_names)
 
     def test_confirming_a_country_applies_the_play_view_defaults(self):
         applied = []
+        focused = []
         map_stub = type("MapStub", (), {
             "pending_selection": "A",
             "active_players": [],
@@ -464,6 +498,8 @@ class MapViewDefaultTests(unittest.TestCase):
             "hover_glow_surf": None,
             "num_players": 1,
             "set_play_view_defaults": lambda self: applied.append(True),
+            "focus_camera_on_country": lambda self, country_id, animate=False: focused.append(
+                (country_id, animate)),
             "show_feedback": lambda self, _message: None,
             "refresh_map_layers": lambda self, *_layers: None,
         })()
@@ -474,6 +510,61 @@ class MapViewDefaultTests(unittest.TestCase):
         self.assertEqual(map_stub.player_country, "A")
         self.assertFalse(map_stub.selection_mode)
         self.assertEqual(applied, [True])
+        self.assertEqual(focused, [("A", True)])
+
+    def test_country_focus_uses_core_center_and_unit_visible_zoom(self):
+        map_screen = object.__new__(Map)
+        map_screen.map_data = {
+            "first": {"owner": "A", "cores": ["A"], "center": (100, 100)},
+            "second": {"owner": "A", "cores": ["A"], "center": (300, 200)},
+        }
+        map_screen.loop_map = False
+        map_screen.map_w = 1000
+        map_screen.min_zoom = 0.5
+        map_screen.total_ui_h = 120
+        map_screen.camera = type("CameraStub", (), {
+            "zoom": 0.5,
+            "target_zoom": 0.5,
+            "pos": pygame.Vector2(),
+            "target_pos": pygame.Vector2(),
+            "tilt_factor": 1.0,
+            "focus_animation": False,
+        })()
+
+        self.assertTrue(Map.focus_camera_on_country(map_screen, "A", animate=True))
+        self.assertTrue(map_screen.camera.focus_animation)
+        expected_zoom = overlay_renderer.ARMY_GROUP_ICON_MAX_ZOOM + 0.1
+        self.assertEqual(map_screen.camera.target_zoom, expected_zoom)
+        self.assertAlmostEqual(
+            map_screen.camera.target_pos.x,
+            200 - c.SCREEN_WIDTH / expected_zoom / 2,
+        )
+        self.assertAlmostEqual(
+            map_screen.camera.target_pos.y,
+            150 - (c.SCREEN_HEIGHT - map_screen.total_ui_h) / expected_zoom / 2,
+        )
+
+    def test_animated_focus_keeps_its_destination_while_zooming(self):
+        camera = camera_handler.MapCamera(0.5)
+        camera_handler.focus_camera_on_position(
+            camera, (2500, 1500), c.SCREEN_WIDTH, c.SCREEN_HEIGHT,
+            120, 2.1, animate=True)
+        expected_target = pygame.Vector2(camera.target_pos)
+        map_stub = type("MapStub", (), {
+            "loop_map": False,
+            "map_w": 5000,
+            "map_h": 5000,
+            "top_ui_height": 60,
+            "total_ui_h": 120,
+            "selection_mode": False,
+            "hide_raised_rect": False,
+        })()
+
+        camera.update(map_stub, c.SCREEN_HEIGHT)
+
+        self.assertEqual(camera.target_pos, expected_target)
+        self.assertGreater(camera.zoom, 0.5)
+        self.assertLess(camera.zoom, camera.target_zoom)
 
 
 if __name__ == "__main__":

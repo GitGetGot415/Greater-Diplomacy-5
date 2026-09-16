@@ -2,6 +2,7 @@
 
 from types import SimpleNamespace
 import unittest
+from unittest.mock import patch
 
 import pygame
 
@@ -20,6 +21,43 @@ def _map(loop_map):
 
 
 class MapCameraBoundsTests(unittest.TestCase):
+    def test_normal_zoom_keeps_the_world_point_under_the_cursor(self):
+        camera = MapCamera(min_zoom=2)
+        camera.zoom = 2
+        camera.target_zoom = 4
+        camera.pos = pygame.Vector2(100, 50)
+        self_map = _map(loop_map=False)
+        cursor = (640, 350)
+        expected_world = pygame.Vector2(
+            cursor[0] / camera.zoom + camera.pos.x,
+            ((cursor[1] - self_map.top_ui_height) / camera.zoom) + camera.pos.y,
+        )
+
+        with patch("map_logic.camera.camera_handler.pygame.mouse.get_pos", return_value=cursor):
+            camera.update(self_map, 720)
+
+        visible_world = pygame.Vector2(
+            cursor[0] / camera.zoom + camera.pos.x,
+            ((cursor[1] - self_map.top_ui_height) / camera.zoom) + camera.pos.y,
+        )
+        # Camera positions are intentionally rounded to hundredths after each
+        # update, so retain the world point within that display-level precision.
+        self.assertAlmostEqual(visible_world.x, expected_world.x, places=2)
+        self.assertAlmostEqual(visible_world.y, expected_world.y, places=2)
+
+    def test_manual_zoom_cancels_an_automatic_focus_animation(self):
+        camera = MapCamera(min_zoom=2)
+        camera.focus_animation = True
+        camera.target_zoom = 4
+        self_map = _map(False)
+        self_map.min_zoom = 2
+
+        with patch("map_logic.camera.camera_handler.pygame.mouse.get_pressed", return_value=(0, 0, 0)):
+            camera.handle_input(pygame.event.Event(pygame.MOUSEWHEEL, y=1), self_map, False)
+
+        self.assertFalse(camera.focus_animation)
+        self.assertGreater(camera.target_zoom, 4)
+
     def test_middle_drag_uses_cursor_distance_at_the_current_zoom_and_tilt(self):
         camera = MapCamera(min_zoom=2)
         camera.zoom = camera.target_zoom = 2

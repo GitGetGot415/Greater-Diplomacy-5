@@ -53,6 +53,38 @@ def country_picker_items(country_ids, nation_data):
     ]
 
 
+def get_country_map_center(country_id, map_data, loop_map=False, map_width=None):
+    """Return a country's focus point, preferring its core territory.
+
+    A country's geographic center is the average of the centers of every tile
+    that lists it as a core.  Countries without core data fall back to their
+    currently owned tiles.  On a looping map, calculate the horizontal average
+    in the nearest wrapped space so territory on both map edges stays together.
+    """
+    core_tiles = [province for province in map_data.values()
+                  if country_id in province.get("cores", []) and province.get("center")]
+    tiles = core_tiles or [province for province in map_data.values()
+                           if province.get("owner") == country_id and province.get("center")]
+    if not tiles:
+        return None
+
+    centers = [province["center"] for province in tiles]
+    average_y = sum(center[1] for center in centers) / len(centers)
+    if not loop_map or not map_width:
+        return (sum(center[0] for center in centers) / len(centers), average_y)
+
+    anchor_x = centers[0][0]
+    unwrapped_xs = []
+    for center_x, _center_y in centers:
+        delta_x = center_x - anchor_x
+        if delta_x > map_width / 2:
+            delta_x -= map_width
+        elif delta_x < -map_width / 2:
+            delta_x += map_width
+        unwrapped_xs.append(anchor_x + delta_x)
+    return (sum(unwrapped_xs) / len(unwrapped_xs) % map_width, average_y)
+
+
 @contextlib.contextmanager
 def diplomacy_snapshot(freeze_access=True):
     """Memoises faction/friendly lookups for the duration of a read-only pass.

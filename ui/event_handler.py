@@ -39,6 +39,16 @@ def _unit_stack_at(map_screen, position):
     return None
 
 
+def _select_tactical_unit_stack(map_screen, position):
+    """Select a tactical division through its rendered box, if one was clicked."""
+    stack = _unit_stack_at(map_screen, position)
+    if stack is None:
+        return False
+    player_setup.select_tactical_unit(
+        map_screen, stack["province"], candidate_units=stack["units"])
+    return True
+
+
 def _select_map_province(map_screen, position):
     """Run the normal primary-click province selection after a box-select check."""
     if map_screen.selected_province or map_screen.viewing_ai_moves:
@@ -506,8 +516,11 @@ def handle_map_events(map_screen, event):
                     player_setup.cancel_selection(map_screen)
                 return  # <--- CRITICAL FIX: Stops any clicks on the map behind the popup
 
+            # A unit box can extend beyond its small tile, so tactical box
+            # selection must not depend on the tile itself being hovered.
+            if map_screen.tactical_mode and _select_tactical_unit_stack(map_screen, event.pos):
+                return
             if map_screen.hovered_province:
-                # --- TACTICAL SELECTION ROUTING ---
                 if map_screen.tactical_mode:
                     player_setup.select_tactical_unit(map_screen, map_screen.hovered_province)
                 else:

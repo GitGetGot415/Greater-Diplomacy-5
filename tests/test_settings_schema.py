@@ -195,6 +195,7 @@ class NavigationIntroPopupTests(unittest.TestCase):
             c.SCREEN_WIDTH // 2,
             c.SCREEN_HEIGHT // 2 + popup.INITIAL_CENTER_Y_OFFSET,
         ))
+        self.assertIn("centered automatically", popup.PAGE_SUBTITLES[0])
 
         image = pygame.Surface((64, 74), pygame.SRCALPHA)
         surface = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))

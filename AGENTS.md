@@ -173,6 +173,15 @@ feature working in one says nothing about the other.
   Spectator editing abilities are controlled by the existing spectator feature
   flags. Do not infer either mode merely from the presence of a related
   attribute.
+- Map presentation has deliberate mode rules. Strategic country selection is
+  the Political base layer with country names visible and the Units overlay
+  off; tactical country selection and tactical play use the Units overlay with
+  country names suppressed. Normal strategic play and loaded games start with
+  Units on and country names off. Tactical unit rendering never uses
+  zoomed-out army compression or strategic unit fading: every visible division
+  remains drawn at every zoom. In tactical country selection, clicking a
+  rendered unit box must select from that box's divisions; clicking the tile
+  remains the fallback for a tile with no rendered box.
 - Layout tests should protect useful invariants such as non-overlap, containment,
   reachability, and consistent spacing. Avoid brittle tests whose only purpose
   is to freeze an arbitrary pixel coordinate.

@@ -9,10 +9,39 @@ import pygame
 import data.constants as c
 from data import queries
 from map_logic.rendering import overlay_renderer
+from map_logic.rendering import country_names
 from map_logic.rendering import symbol_loader
 from gameState import GameState
 from screens.map_related_screens.orders import Orders_Screen, PANEL_INSET, TOP_BTN_GAP_X
 from ui import army_panel, map_top_right_layout, minimap
+
+
+class CountryMapCenterTests(unittest.TestCase):
+    def test_core_tiles_define_country_center_before_owned_tiles(self):
+        world = {
+            "core_a": {"owner": "A", "cores": ["A"], "center": (20, 40)},
+            "core_b": {"owner": "B", "cores": ["A"], "center": (80, 60)},
+            "owned_not_core": {"owner": "A", "cores": [], "center": (400, 400)},
+        }
+
+        self.assertEqual(queries.get_country_map_center("A", world), (50, 50))
+
+    def test_owned_tiles_are_used_when_country_has_no_cores(self):
+        world = {
+            "first": {"owner": "A", "cores": [], "center": (20, 40)},
+            "second": {"owner": "A", "cores": [], "center": (80, 60)},
+            "foreign": {"owner": "B", "cores": [], "center": (400, 400)},
+        }
+
+        self.assertEqual(queries.get_country_map_center("A", world), (50, 50))
+
+    def test_looping_country_center_wraps_across_map_edges(self):
+        world = {
+            "west": {"owner": "A", "cores": ["A"], "center": (5, 40)},
+            "east": {"owner": "A", "cores": ["A"], "center": (95, 60)},
+        }
+
+        self.assertEqual(queries.get_country_map_center("A", world, True, 100), (0, 50))
 
 
 class ArmyQueryTests(unittest.TestCase):
@@ -445,6 +474,28 @@ class ArmyLayoutTests(unittest.TestCase):
 
         self.assertNotIn(id(selected_unit), alphas)
         self.assertEqual(alphas[id(foreign)], 255)
+
+    def test_tactical_zoom_never_compacts_or_fades_units(self):
+        local = {"owner": "A", "unit_id": "local", "type": "Infantry"}
+        foreign = {"owner": "B", "unit_id": "foreign", "type": "Infantry"}
+        map_screen = SimpleNamespace(
+            camera=SimpleNamespace(zoom=overlay_renderer.ARMY_GROUP_ICON_MAX_ZOOM),
+            player_country="A", nation_data={"A": {"armies": []}, "B": {}},
+            map_data={"province": {"units": [local, foreign]}}, tactical_mode=True,
+            strategic_unit_fade_states={id(local): {"target_alpha": 0}})
+
+        self.assertFalse(overlay_renderer.uses_compact_army_icons(map_screen))
+        self.assertEqual(overlay_renderer.strategic_unit_fade_alphas(map_screen), {})
+        self.assertEqual(map_screen.strategic_unit_fade_states, {})
+
+    def test_tactical_mode_suppresses_country_names_even_when_the_toggle_is_on(self):
+        map_screen = SimpleNamespace(show_country_names=True, tactical_mode=True)
+        surface = pygame.Surface((100, 100))
+
+        with patch.object(country_names.fonts, "get") as get_font:
+            country_names.draw_country_names(map_screen, surface)
+
+        get_font.assert_not_called()
 
     def test_army_group_transition_moves_units_to_the_average_marker(self):
         first = {"unit_id": "first"}

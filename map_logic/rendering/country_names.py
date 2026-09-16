@@ -14,7 +14,7 @@ def clear_country_name_cache(map_screen):
 def draw_country_names(map_screen, surface):
     # --- LAYER 3.5: COUNTRY NAMES ---
     # Only show names on the Political map to avoid cluttering other modes
-    if map_screen.show_country_names: 
+    if map_screen.show_country_names and not getattr(map_screen, "tactical_mode", False):
         
         # 1. Cache text surfaces once to save performance
         if not hasattr(map_screen, 'country_name_surfs'):

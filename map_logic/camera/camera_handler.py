@@ -8,6 +8,10 @@ class MapCamera:
         self.pos = pygame.Vector2(0, 0)
         self.target_pos = pygame.Vector2(0, 0)
         self.lerp_speed = 0.1
+        # An explicit map focus keeps its pan target intact while its zoom
+        # eases.  Ordinary mouse-wheel zoom deliberately continues to anchor
+        # beneath the cursor instead.
+        self.focus_animation = False
         self.tilt_factor = 1.0
         self.manual_tilt_factor = 1.0 # Added explicit manual control factor
         self._middle_drag_last_pos = None
@@ -21,6 +25,9 @@ class MapCamera:
 
     def handle_input(self, event, self_map, on_ui):
         if event.type == pygame.MOUSEWHEEL:
+            # Any manual zoom takes control away from the automatic country
+            # framing animation, restoring the ordinary cursor-anchored zoom.
+            self.focus_animation = False
             zoom_change = event.y * (0.1 * self.target_zoom)
             max_zoom = c.MAX_CAMERA_ZOOM
             self.target_zoom = max(self_map.min_zoom, min(self.target_zoom + zoom_change, max_zoom))
@@ -32,6 +39,7 @@ class MapCamera:
         # displays rel can be reported in a different scale from the game
         # surface, which makes a pan feel faster or slower than the drag.
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 2:
+            self.focus_animation = False
             if self._ignore_middle_until_release:
                 return
             self._middle_drag_last_pos = event.pos if not on_ui else None
@@ -66,20 +74,23 @@ class MapCamera:
 
         # 1. Smooth Zoom
         if abs(self.zoom - self.target_zoom) > 0.001:
-            mx, my = pygame.mouse.get_pos()
-            world_x = (mx / self.zoom) + self.pos.x
-            if self_map.loop_map:
-                world_x %= self_map.map_w
-            w_pre = pygame.Vector2(
-                world_x,
-                ((my - self_map.top_ui_height) / (self.zoom * self.tilt_factor)) + self.pos.y,
-            )
-            self.zoom += (self.target_zoom - self.zoom) * self.lerp_speed
-            self.pos.x = w_pre.x - (mx / self.zoom)
-            if self_map.loop_map:
-                self.pos.x %= self_map.map_w
-            self.pos.y = w_pre.y - ((my - self_map.top_ui_height) / (self.zoom * self.tilt_factor))
-            self.target_pos = pygame.Vector2(self.pos)
+            if self.focus_animation:
+                self.zoom += (self.target_zoom - self.zoom) * self.lerp_speed
+            else:
+                mx, my = pygame.mouse.get_pos()
+                world_x = (mx / self.zoom) + self.pos.x
+                if self_map.loop_map:
+                    world_x %= self_map.map_w
+                w_pre = pygame.Vector2(
+                    world_x,
+                    ((my - self_map.top_ui_height) / (self.zoom * self.tilt_factor)) + self.pos.y,
+                )
+                self.zoom += (self.target_zoom - self.zoom) * self.lerp_speed
+                self.pos.x = w_pre.x - (mx / self.zoom)
+                if self_map.loop_map:
+                    self.pos.x %= self_map.map_w
+                self.pos.y = w_pre.y - ((my - self_map.top_ui_height) / (self.zoom * self.tilt_factor))
+                self.target_pos = pygame.Vector2(self.pos)
 
         # 2. Smooth Pan
         if self.pos.distance_to(self.target_pos) > 0.1:
@@ -118,6 +129,9 @@ class MapCamera:
 
         self.pos.x = round(self.pos.x, 2)
         self.pos.y = round(self.pos.y, 2)
+        if (self.focus_animation and abs(self.zoom - self.target_zoom) <= 0.001
+                and self.pos.distance_to(self.target_pos) <= 0.1):
+            self.focus_animation = False
     
 def get_dynamic_ocean_color(camera, min_zoom):
     """Calculates the RGB value for the ocean background based on current zoom level."""
@@ -152,3 +166,20 @@ def center_camera_on_province(camera_obj, province_center, screen_width, screen_
     
     camera_obj.target_pos = pygame.Vector2(tx, ty)
     camera_obj.pos = pygame.Vector2(tx, ty)
+
+
+def focus_camera_on_position(camera_obj, world_position, screen_width, screen_height,
+                             total_ui_h, target_zoom, animate=False):
+    """Focus a camera on a world point, optionally easing pan and zoom together."""
+    cx, cy = world_position
+    tilt_factor = getattr(camera_obj, "tilt_factor", 1.0)
+    target_pos = pygame.Vector2(
+        cx - (screen_width / target_zoom / 2),
+        cy - ((screen_height - total_ui_h) / (target_zoom * tilt_factor) / 2),
+    )
+    camera_obj.target_zoom = target_zoom
+    camera_obj.target_pos = target_pos
+    camera_obj.focus_animation = animate
+    if not animate:
+        camera_obj.zoom = target_zoom
+        camera_obj.pos = pygame.Vector2(target_pos)

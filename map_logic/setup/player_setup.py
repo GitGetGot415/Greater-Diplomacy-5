@@ -10,14 +10,15 @@ def select_player_country(map_screen, province):
     else:
         map_screen.show_feedback("Cannot select unowned or non-playable territory")
 
-def select_tactical_unit(map_screen, province):
+def select_tactical_unit(map_screen, province, candidate_units=None):
+    """Choose a tactical division from a tile or one of its rendered stacks."""
     owner = province.get("owner", "Unclaimed")
     import data.constants as c
     if owner in c.UNPLAYABLE_NATIONS:
         map_screen.show_feedback("Cannot spawn in unplayable territory!")
         return
 
-    units = province.get("units", [])
+    units = list(candidate_units) if candidate_units is not None else province.get("units", [])
     
     if not units:
         # SPAWN A BLANK UNIT
@@ -91,6 +92,7 @@ def confirm_player_country(map_screen):
             map_screen.pending_selection = None
             map_screen.pending_unit = None
             map_screen.set_play_view_defaults()
+            map_screen.focus_camera_on_country(map_screen.player_country, animate=True)
             
             map_screen.show_feedback(f"Now playing as {map_screen.player_country}")
             from screens.menu_screens.map import render_buttons

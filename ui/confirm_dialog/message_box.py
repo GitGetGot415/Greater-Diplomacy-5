@@ -93,7 +93,7 @@ class _NavigationIntroPopup:
     )
     PAGE_TITLES = ("Map Navigation", "Map UI", "Armies")
     PAGE_SUBTITLES = (
-        "If you're familliar with how HOI4 map controls work, then this should be very easy to understand.",
+        "Your country is centered automatically when a game opens or after you choose it. If you're familiar with how HOI4 map controls work, then this should be very easy to understand.",
         "These buttons are important! Located on the bottom left of the screen, they edit the appearance of the map, giving you the information you need to play effectively.",
         "Learn how to create, organize, and personalize armies. For now, this feature is purely decorative and serves only to organize your units.",
     )

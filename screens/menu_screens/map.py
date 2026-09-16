@@ -26,7 +26,7 @@ from map_logic.camera import camera_handler
 from map_logic.diplomacy import (diplomacy_logic, guarantees, military_attaches,
                                  peace_scope, player_diplomacy_actions, volunteers, war_actions)
 from map_logic.random_map import random_map_generator
-from map_logic.rendering import map_renderer, refresh_map
+from map_logic.rendering import map_renderer, overlay_renderer, refresh_map
 from map_logic.rendering.font_manager import fonts
 from map_logic.rendering.country_names import update_country_centers as calc_country_centers
 from map_logic.setup import player_setup
@@ -66,6 +66,10 @@ LEFT_UI_BAR_START_Y = 75
 # collide, so test_editor_menu_layout would not have caught it.
 CAMERA_TILT_SLIDER_ROW = 14
 CAMERA_TILT_SLIDER_WIDTH = 120
+
+# Keep the initial country framing just above the strategic compression level:
+# ungrouped units remain visible without opening at an overly close zoom.
+COUNTRY_FOCUS_UNIT_ZOOM_MARGIN = 0.1
 
 # --- Bottom-right button strip (editor tools, turn controls) ---
 EDITOR_BOT_BTN_START_X = c.SCREEN_WIDTH - 120
@@ -490,11 +494,14 @@ def render_buttons(map_screen):
     def toggle_tactical_action():
         map_screen.tactical_mode = not map_screen.tactical_mode
 
-        # Auto-swap the view mode so the player can actually see the units
+        # Tactical selection needs division boxes, while strategic country
+        # selection remains a clean political view for choosing a nation.
         if map_screen.tactical_mode:
-            map_screen.set_view_mode("UNITS")
+            map_screen.set_tactical_view_defaults()
+        elif map_screen.selection_mode:
+            map_screen.set_country_selection_view_defaults()
         else:
-            map_screen.set_view_mode("BLANK")
+            map_screen.set_play_view_defaults()
 
         map_screen.show_feedback(f"Mode: {'TACTICAL' if map_screen.tactical_mode else 'STRATEGIC'}")
 
@@ -1314,6 +1321,8 @@ class Map(GameState):
         self.map_w, self.map_h = self.id_map.get_size()
         self.min_zoom = (c.SCREEN_HEIGHT - self.total_ui_h) / self.map_h
         self.camera = MapCamera(self.min_zoom)
+        if self.load_path and not self.selection_mode and not self.is_editor:
+            self.focus_camera_on_country(self.player_country)
 
         self.active_map = self.political_map if self.base_layer == "POLITICAL" else self.terrain_map
         self.map_mode = self.base_layer
@@ -1502,10 +1511,33 @@ class Map(GameState):
         self.show_country_names = False
 
     def set_country_selection_view_defaults(self):
-        """Apply the new-game country picker view without hiding its armies."""
+        """Apply the strategic country-picker's uncluttered political view."""
+        self.sec_idx = self.secondary_modes.index("BLANK")
+        self.secondary_mode = "BLANK"
+        self.show_country_names = True
+
+    def set_tactical_view_defaults(self):
+        """Apply the unit-focused view used while choosing or playing tactically."""
         self.sec_idx = self.secondary_modes.index("UNITS")
         self.secondary_mode = "UNITS"
-        self.show_country_names = True
+        self.show_country_names = False
+
+    def focus_camera_on_country(self, country_id, animate=False):
+        """Frame a country's core-territory center at the unit-visible zoom."""
+        center = queries.get_country_map_center(
+            country_id, self.map_data, self.loop_map, self.map_w)
+        if center is None:
+            return False
+
+        target_zoom = max(
+            self.min_zoom,
+            min(c.MAX_CAMERA_ZOOM,
+                overlay_renderer.ARMY_GROUP_ICON_MAX_ZOOM + COUNTRY_FOCUS_UNIT_ZOOM_MARGIN),
+        )
+        camera_handler.focus_camera_on_position(
+            self.camera, center, c.SCREEN_WIDTH, c.SCREEN_HEIGHT,
+            self.total_ui_h, target_zoom, animate)
+        return True
 
     def cycle_secondary_mode(self):
         self.sec_idx = (self.sec_idx + 1) % len(self.secondary_modes)
