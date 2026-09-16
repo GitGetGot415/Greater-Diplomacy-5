@@ -47,6 +47,10 @@
   - Units on the world map
   - Countries on the world map
 
+### barbarossa
+
+- add armored trains
+
 ## Diplomacy and countries
 
 - Let countries declare rivals (Rivals should have worse relations and allow a free humiliation-war claim. Limit this by country power)
