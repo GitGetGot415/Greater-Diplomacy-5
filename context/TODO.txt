@@ -34,6 +34,7 @@
 - Add rebellions
 - Add faction betrayal
 - Add focus trees, possibly through scripted events
+- Let countries declare rivals (Rivals should have worse relations and allow a free humiliation-war claim. Limit this by country power)
 
 ### Exodus
 
@@ -53,10 +54,9 @@
 
 ## Diplomacy and countries
 
-- Let countries declare rivals (Rivals should have worse relations and allow a free humiliation-war claim. Limit this by country power)
 - Let countries surrender and give up their claims to avoid war
 - Add diplomacy rules from the board game
-- Add a way to send military access and then declare war while the request is pending
+- What happens if you send military access and then declare war while the request is pending? does it work? does it not?
 - Let countries leave or rejoin factions correctly after annexation
 - Let puppets take land where they have cores
 - Prevent puppet border gore
@@ -64,17 +64,16 @@
 - Let players release a country and then play as it
 - Check whether changing a country's appearance to itself restores the default appearance
 - Add country custom names and make them work for puppets
-- Add forts that stay when a country keeps the territory
 - Add political power! (decide what it is used for first)
 
 ## Puppets and factories
 
 - Allow factories to be built on puppet territory
 - Decide whether building cost uses the owner's factories or only factories on core land
-- Make integrated puppets send everything to their master, except land where they have a core and the master does not
-- Alternatively, give core land to an integrated puppet automatically when it captures it
+- Let integrated puppets trade everything to their master, except land where they have a core and the master does not? (vague!!!)
+- Maybe give core land to an integrated puppet automatically when it captures it? (and prevent more puppets from being made in that area???)
 - Make integrated puppets accept all trades from their master
-- Give trades with integrated puppets a custom UI
+- Give trades with integrated puppets a custom UI perhaps
 - Let AI countries take resources from integrated puppets (notice i specified AI countries, not just player countries)
 
 ## Economy and production
@@ -107,8 +106,9 @@
 
 ### Lane combat follow-ups
 
-- Reallocate unused lane slots during the same turn.
-- A lane with too few units should give spare slots to other lanes.
+(??? please look into this before going further)
+- Reallocate unused lane slots during the same turn
+- A lane with too few units should give spare slots to other lanes
 - Re-measure `AI_LINE_SPEND_RATIO` under the lane rules. The current `1.0` is derived, not measured.
 
 ### Already partly done? (what even is this category)
