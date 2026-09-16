@@ -1414,7 +1414,7 @@ def _army_average_center(records, map_screen):
 
 
 def compact_army_groups(map_screen, combat_unit_ids):
-    """Build one strategic marker for each unselected local army.
+    """Build one strategic marker for each local army with unselected members.
 
     A marker is only created when every live member can be represented.  That
     keeps an army in its normal per-province view while one of its divisions is
@@ -1448,14 +1448,16 @@ def compact_army_groups(map_screen, combat_unit_ids):
             continue
         if any(id(unit) in combat_unit_ids for unit, _province in records):
             continue
-        # A partial selection remains visible and controllable; only the
-        # unselected members contribute to the strategic group marker.
-        records = [(unit, province) for unit, province in records
-                   if not is_selected(unit)]
-        if not records:
+        # A partial selection remains visible and controllable, but it must
+        # not displace the marker.  Its center and fallback art describe the
+        # complete army; only unselected members are hidden by the marker.
+        unselected_records = [(unit, province) for unit, province in records
+                              if not is_selected(unit)]
+        if not unselected_records:
             continue
-        units = [unit for unit, _province in records]
-        best_unit = queries.get_best_unit_by_defense_then_attack_then_speed(units)
+        units = [unit for unit, _province in unselected_records]
+        best_unit = queries.get_best_unit_by_defense_then_attack_then_speed(
+            [unit for unit, _province in records])
         if not best_unit:
             continue
         owner_color = map_screen.nation_colors.get(player_country, (200, 200, 200))
@@ -1499,14 +1501,46 @@ def army_group_presentation(map_screen, desired_groups, combat_unit_ids):
     for army_id, group in desired_by_army.items():
         unit_ids = tuple(id(unit) for unit in group["units"])
         state = states.get(army_id)
-        if state is None or state["unit_ids"] != unit_ids:
+        if state is None:
             start_centers = {unit_id: live_records[unit_id][1]["center"]
                              for unit_id in unit_ids}
             state = {"phase": "compress", "unit_ids": unit_ids,
+                     "member_ids": unit_ids,
                      "starts": start_centers,
                      "center": group["center"], "icon": group["icon"],
                      "province": group["province"], "started_at": now}
             states[army_id] = state
+        elif state["unit_ids"] != unit_ids:
+            if state["phase"] == "collapsed":
+                # The state remembers all members it has collapsed.  That
+                # lets a selection swap (A selected, then B selected) emit
+                # only B from the marker instead of rebuilding every other
+                # unit's compression animation.  Keep the existing center:
+                # partial selection must not make the marker jump.
+                member_ids = tuple(dict.fromkeys((*state.get("member_ids", ()),
+                                                  *unit_ids)))
+                selected_before = set(member_ids) - set(state["unit_ids"])
+                selected_now = set(member_ids) - set(unit_ids)
+                departing_ids = tuple(unit_id for unit_id in state["unit_ids"]
+                                      if unit_id in selected_now - selected_before)
+                if departing_ids:
+                    state.setdefault("departures", []).append({
+                        "unit_ids": departing_ids,
+                        "center": state["center"], "started_at": now,
+                    })
+                state["unit_ids"] = unit_ids
+                state["member_ids"] = member_ids
+                state["icon"] = group["icon"]
+                state["province"] = group["province"]
+            else:
+                start_centers = {unit_id: live_records[unit_id][1]["center"]
+                                 for unit_id in unit_ids}
+                state = {"phase": "compress", "unit_ids": unit_ids,
+                         "member_ids": unit_ids,
+                         "starts": start_centers,
+                         "center": group["center"], "icon": group["icon"],
+                         "province": group["province"], "started_at": now}
+                states[army_id] = state
         suppressed_unit_ids.update(unit_ids)
         if state["phase"] == "compress":
             progress = min(1.0, (now - state["started_at"])
@@ -1524,6 +1558,32 @@ def army_group_presentation(map_screen, desired_groups, combat_unit_ids):
                                                  progress, map_screen)})
         else:
             presented_groups.append(group)
+
+        active_departures = []
+        selected_unit_ids = set(state.get("member_ids", ())) - set(unit_ids)
+        for departure in state.get("departures", []):
+            # A unit that has been deselected since its departure started is
+            # back inside the marker and should not keep an old animation.
+            departure_unit_ids = tuple(unit_id for unit_id in departure["unit_ids"]
+                                       if unit_id in selected_unit_ids)
+            if not departure_unit_ids:
+                continue
+            progress = min(1.0, (now - departure["started_at"])
+                           / ARMY_GROUP_TRANSITION_SECONDS)
+            if progress >= 1.0:
+                continue
+            active_departures.append(dict(departure, unit_ids=departure_unit_ids))
+            suppressed_unit_ids.update(departure_unit_ids)
+            for unit_id in departure_unit_ids:
+                unit, province = live_records[unit_id]
+                transition_units.append({"unit": unit, "province": province,
+                                         "position": _interpolate_army_position(
+                                             departure["center"], province["center"],
+                                             progress, map_screen)})
+        if active_departures:
+            state["departures"] = active_departures
+        else:
+            state.pop("departures", None)
 
     for army_id, state in list(states.items()):
         if army_id in desired_by_army:

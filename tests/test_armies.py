@@ -354,6 +354,7 @@ class ArmyLayoutTests(unittest.TestCase):
         self.assertEqual([stack["units"] for stack in map_screen.unit_stack_hitboxes],
                          [[first, second]])
         self.assertEqual(partial_groups[0]["units"], [second])
+        self.assertEqual(partial_groups[0]["center"], (50, 30))
 
         map_screen.is_unit_selected = lambda _unit: True
         self.assertEqual(overlay_renderer.compact_army_groups(map_screen, set()), [])
@@ -369,8 +370,12 @@ class ArmyLayoutTests(unittest.TestCase):
         desired = [{"army": {"id": "one"}, "units": [first, second],
                     "province": first_province, "center": (50, 30),
                     "icon": pygame.Surface((20, 20), pygame.SRCALPHA)}]
+        transition_ms = round(overlay_renderer.ARMY_GROUP_TRANSITION_SECONDS * 1000)
+        halfway_ms = transition_ms // 2
 
-        with patch.object(pygame.time, "get_ticks", side_effect=[0, 100, 250, 250, 350]):
+        with patch.object(pygame.time, "get_ticks", side_effect=[
+                0, halfway_ms, transition_ms + 1, transition_ms + 1,
+                transition_ms + 1 + halfway_ms]):
             groups, moving, suppressed = overlay_renderer.army_group_presentation(
                 map_screen, desired, set())
             halfway_groups, halfway_moving, _suppressed = (
@@ -395,6 +400,78 @@ class ArmyLayoutTests(unittest.TestCase):
                          [(35, 25), (65, 35)])
         self.assertEqual(expanding_groups[0]["alpha"], 255)
         self.assertEqual(halfway_expanding_groups[0]["alpha"], 128)
+
+    def test_selecting_one_member_only_animates_that_member_out_of_marker(self):
+        first = {"unit_id": "first"}
+        second = {"unit_id": "second"}
+        first_province = {"center": (20, 20), "units": [first]}
+        second_province = {"center": (80, 40), "units": [second]}
+        map_screen = SimpleNamespace(
+            map_data={"first": first_province, "second": second_province},
+            loop_map=False, map_w=100)
+        icon = pygame.Surface((20, 20), pygame.SRCALPHA)
+        combined_group = [{"army": {"id": "one"}, "units": [first, second],
+                           "province": first_province, "center": (50, 30),
+                           "icon": icon}]
+        remaining_group = [{"army": {"id": "one"}, "units": [second],
+                            "province": second_province, "center": (80, 40),
+                            "icon": icon}]
+        transition_ms = round(overlay_renderer.ARMY_GROUP_TRANSITION_SECONDS * 1000)
+        halfway_ms = transition_ms // 2
+
+        with patch.object(pygame.time, "get_ticks", side_effect=[
+                0, transition_ms + 1, transition_ms + 1,
+                transition_ms + 1 + halfway_ms]):
+            overlay_renderer.army_group_presentation(map_screen, combined_group, set())
+            overlay_renderer.army_group_presentation(map_screen, combined_group, set())
+            groups, moving, suppressed = overlay_renderer.army_group_presentation(
+                map_screen, remaining_group, set())
+            _groups, halfway_moving, _suppressed = overlay_renderer.army_group_presentation(
+                map_screen, remaining_group, set())
+
+        self.assertEqual(groups[0]["units"], [second])
+        self.assertEqual(groups[0].get("alpha", 255), 255)
+        self.assertEqual(suppressed, {id(first), id(second)})
+        self.assertEqual([record["unit"] for record in moving], [first])
+        self.assertEqual([record["position"] for record in moving], [(50, 30)])
+        self.assertEqual([record["unit"] for record in halfway_moving], [first])
+        self.assertEqual([record["position"] for record in halfway_moving], [(35, 25)])
+
+    def test_switching_selected_member_only_animates_the_new_selection(self):
+        first = {"unit_id": "first"}
+        second = {"unit_id": "second"}
+        first_province = {"center": (20, 20), "units": [first]}
+        second_province = {"center": (80, 40), "units": [second]}
+        map_screen = SimpleNamespace(
+            map_data={"first": first_province, "second": second_province},
+            loop_map=False, map_w=100)
+        icon = pygame.Surface((20, 20), pygame.SRCALPHA)
+        combined_group = [{"army": {"id": "one"}, "units": [first, second],
+                           "province": first_province, "center": (50, 30),
+                           "icon": icon}]
+        first_selected = [{"army": {"id": "one"}, "units": [second],
+                           "province": first_province, "center": (50, 30),
+                           "icon": icon}]
+        second_selected = [{"army": {"id": "one"}, "units": [first],
+                            "province": first_province, "center": (50, 30),
+                            "icon": icon}]
+        transition_ms = round(overlay_renderer.ARMY_GROUP_TRANSITION_SECONDS * 1000)
+        halfway_ms = transition_ms // 2
+
+        with patch.object(pygame.time, "get_ticks", side_effect=[
+                0, transition_ms + 1, transition_ms + 1,
+                transition_ms + 1, transition_ms + 1 + halfway_ms]):
+            overlay_renderer.army_group_presentation(map_screen, combined_group, set())
+            overlay_renderer.army_group_presentation(map_screen, combined_group, set())
+            overlay_renderer.army_group_presentation(map_screen, first_selected, set())
+            overlay_renderer.army_group_presentation(map_screen, second_selected, set())
+            groups, moving, suppressed = overlay_renderer.army_group_presentation(
+                map_screen, second_selected, set())
+
+        self.assertEqual(groups[0]["center"], (50, 30))
+        self.assertEqual(suppressed, {id(first), id(second)})
+        self.assertEqual([record["unit"] for record in moving], [second])
+        self.assertEqual([record["position"] for record in moving], [(65, 35)])
 
     def test_overlay_hides_every_compacted_army_member_from_its_provinces(self):
         first = {"owner": "A", "unit_id": "first", "type": "Infantry"}
