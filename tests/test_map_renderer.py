@@ -8,9 +8,29 @@ import pygame
 
 from map_logic.camera.camera_handler import MapCamera
 from map_logic.rendering import hover_renderer, map_renderer
+from screens.menu_screens.map import Map
 
 
 class NonLoopingMapRendererTests(unittest.TestCase):
+    def test_editor_refresh_queue_coalesces_a_brush_stroke(self):
+        map_screen = SimpleNamespace(
+            _editor_visual_refresh_layers=set())
+        # A lightweight stand-in keeps this focused on the map screen's
+        # editor boundary rather than requiring a loaded scenario.
+        invalidations = []
+        refreshes = []
+        map_screen.invalidate_map_presentation_cache = lambda: invalidations.append(True)
+        map_screen.refresh_map_layers = lambda *layers: refreshes.append(layers)
+
+        Map.queue_editor_visual_refresh(map_screen, "political", "relations")
+        Map.queue_editor_visual_refresh(map_screen, "political")
+        Map.flush_editor_visual_refresh(map_screen)
+
+        self.assertEqual(len(invalidations), 2)
+        self.assertEqual(len(refreshes), 1)
+        self.assertEqual(set(refreshes[0]), {"political", "relations"})
+        self.assertFalse(map_screen._editor_visual_refresh_layers)
+
     def test_hover_glow_scale_reuses_unchanged_sticker(self):
         map_screen = SimpleNamespace(
             hover_glow_surf=pygame.Surface((10, 10), pygame.SRCALPHA))

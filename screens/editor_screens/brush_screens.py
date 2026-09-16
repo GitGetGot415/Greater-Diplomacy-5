@@ -67,6 +67,7 @@ class Convoy_Converter_Screen(MapOverlayScreen):
 
     def save(self):
         units = self.province.get("units", [])
+        changed = False
         for i, unit in enumerate(units):
             want = i in self.selected
             if want and "original_type" not in unit:
@@ -96,9 +97,13 @@ class Convoy_Converter_Screen(MapOverlayScreen):
                     unit["defense"] = c.TRUCK_DEF
 
                 unit["health"] = unit["max_health"] * pct
+                changed = True
             elif not want and "original_type" in unit:
                 queries.revert_transport(unit)
+                changed = True
 
+        if changed:
+            self.map_screen.queue_editor_visual_refresh()
         self.map_screen.show_feedback("Unit transport status updated!")
         self.done = True
 

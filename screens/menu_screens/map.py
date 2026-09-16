@@ -1191,6 +1191,11 @@ class Map(GameState):
         self.hide_resource_hud = False
         self.hide_minimap = False
         self.centers_need_update = False
+        # Editor brushes may touch many provinces in one drag.  Queue the
+        # expensive derived map surfaces and rebuild each affected layer once
+        # when the stroke ends, while invalidating the displayed cache at the
+        # first changed tile so it can never keep showing old pixels.
+        self._editor_visual_refresh_layers = set()
         self.error_copied = False
         self.random_settings = None
 
@@ -1747,6 +1752,23 @@ class Map(GameState):
         # A real-time draft is a state snapshot, not per-frame presentation.
         # The next update serializes it once after the action that changed it.
         self._realtime_draft_dirty = True
+
+    def queue_editor_visual_refresh(self, *layers):
+        """Record editor changes for one post-stroke visual-layer rebuild."""
+        self.invalidate_map_presentation_cache()
+        self._editor_visual_refresh_layers.update(layers)
+
+    def flush_editor_visual_refresh(self):
+        """Rebuild the visual layers changed by an editor stroke, once."""
+        if not self._editor_visual_refresh_layers:
+            return
+        layers = tuple(self._editor_visual_refresh_layers)
+        self._editor_visual_refresh_layers.clear()
+        # THIS IS INTENTIONALLY COMMENTED OUT FOR A REASON
+        # refreshing the map takes about a second
+        # by removing this we can prioritize speed over making the country appear perfect
+        # if the player really wants to they can hit the refresh maps button in the top right corner
+        # self.refresh_map_layers(*layers)
 
     def refresh_map_layers(self, *layers):
         """Rebuilds named visual layers in the caller-supplied order.
@@ -2525,10 +2547,14 @@ class Map(GameState):
         super().update()
         self.camera.update(self, c.SCREEN_HEIGHT)
 
-        # Defer editor map label updates until the user finishes their brush stroke
-        if self.centers_need_update and not pygame.mouse.get_pressed()[0]:
+        # Defer editor map label/layer updates until either brush button is up.
+        editor_mouse_buttons = pygame.mouse.get_pressed()
+        editor_stroke_active = (editor_mouse_buttons[0] or editor_mouse_buttons[2])
+        if self.centers_need_update and not editor_stroke_active:
             self.update_country_centers()
             self.centers_need_update = False
+        if self.is_editor and not editor_stroke_active:
+            self.flush_editor_visual_refresh()
 
         # Only spawn popups when the player is fully in control of the current turn
         is_playing = not self.viewing_ai_moves and \

@@ -381,6 +381,9 @@ def handle_map_events(map_screen, event):
     # 4. EDITOR PAINTING LOGIC
     # We do this AFTER hover logic so we know what we are hovering over
     if map_screen.is_editor and not on_ui:
+        editor_changed = False
+        editor_layers = set()
+
         # Capture the map state right before a new paint stroke begins
         if event.type == pygame.MOUSEBUTTONDOWN and event.button in (1, 3):
             queries.save_editor_state(map_screen)
@@ -392,30 +395,50 @@ def handle_map_events(map_screen, event):
                     if map_screen.hovered_province.get("owner") != map_screen.brush_nation:
                         if map_screen.hovered_province.get("owner") not in c.WATER_NATIONS:
                             edit_province_ownership.conquer_province(map_screen, map_screen.hovered_province, map_screen.brush_nation)
+                            editor_changed = True
+                            editor_layers.update(("political", "relations", "factions",
+                                                  "faction_territories"))
 
                 # --- CORE MODE ---
                 elif map_screen.editor_mode == "CORE":
                     if map_screen.hovered_province.get("owner") not in c.WATER_NATIONS:
                         # If painting with Unclaimed, wipe the tile
                         if map_screen.brush_nation in c.UNOWNED_LAND_OWNERS:
-                            edit_province_ownership.clear_cores(map_screen, map_screen.hovered_province)
+                            if map_screen.hovered_province.get("cores"):
+                                edit_province_ownership.clear_cores(map_screen, map_screen.hovered_province)
+                                editor_changed = True
                         else:
-                            edit_province_ownership.add_core(map_screen, map_screen.hovered_province, map_screen.brush_nation)
+                            if map_screen.brush_nation not in map_screen.hovered_province.get("cores", []):
+                                edit_province_ownership.add_core(map_screen, map_screen.hovered_province, map_screen.brush_nation)
+                                editor_changed = True
+                        if editor_changed:
+                            map_screen.centers_need_update = True
+                            editor_layers.add("cores")
 
                 # --- CLAIM MODE ---
                 elif map_screen.editor_mode == "CLAIM":
                     if map_screen.hovered_province.get("owner") not in c.WATER_NATIONS:
                         if map_screen.brush_nation in c.UNOWNED_LAND_OWNERS:
-                            edit_province_ownership.clear_claims(map_screen, map_screen.hovered_province)
+                            province_id = map_screen.hovered_province["id"]
+                            if any(province_id in data.get("claims", [])
+                                   for data in map_screen.nation_data.values()):
+                                edit_province_ownership.clear_claims(map_screen, map_screen.hovered_province)
+                                editor_changed = True
                         else:
-                            edit_province_ownership.add_claim(map_screen, map_screen.hovered_province, map_screen.brush_nation)
+                            claims = map_screen.nation_data.setdefault(
+                                map_screen.brush_nation, {}).setdefault("claims", [])
+                            if map_screen.hovered_province["id"] not in claims:
+                                edit_province_ownership.add_claim(map_screen, map_screen.hovered_province, map_screen.brush_nation)
+                                editor_changed = True
 
                 # --- BUILDING MODE ---
                 elif map_screen.editor_mode == "BUILDING":
                     current_buildings = map_screen.hovered_province.get("buildings", [])
 
                     if map_screen.brush_building == "None":
-                        map_screen.hovered_province["buildings"] = []
+                        if current_buildings:
+                            map_screen.hovered_province["buildings"] = []
+                            editor_changed = True
                     else:
                         # Stop Advanced Buildings on empty tiles
                         is_advanced = "Refinery" in map_screen.brush_building or "Recruitment" in map_screen.brush_building
@@ -446,28 +469,44 @@ def handle_map_events(map_screen, event):
                             if map_screen.brush_building not in new_list:
                                 new_list.append(map_screen.brush_building)
 
-                            map_screen.hovered_province["buildings"] = new_list
+                            if new_list != current_buildings:
+                                map_screen.hovered_province["buildings"] = new_list
+                                editor_changed = True
 
                 # --- RESOURCE MODE ---
                 elif map_screen.editor_mode == "RESOURCE":
                     if map_screen.brush_resource_type == "None":
                         # Wipe all resources if the "None" brush is used
-                        map_screen.hovered_province["resources"] = {}
+                        if map_screen.hovered_province.get("resources"):
+                            map_screen.hovered_province["resources"] = {}
+                            editor_changed = True
                     else:
                         # Ensure resources is a dictionary
                         if not isinstance(map_screen.hovered_province.get("resources"), dict):
                             map_screen.hovered_province["resources"] = {}
 
-                        map_screen.hovered_province["resources"][map_screen.brush_resource_type] = map_screen.brush_resource_amount
+                        if (map_screen.hovered_province["resources"].get(
+                                map_screen.brush_resource_type)
+                                != map_screen.brush_resource_amount):
+                            map_screen.hovered_province["resources"][map_screen.brush_resource_type] = map_screen.brush_resource_amount
+                            editor_changed = True
 
         if pygame.mouse.get_pressed()[2]: # Right Click
             if map_screen.hovered_province:
                 if map_screen.hovered_province.get("owner") not in c.WATER_NATIONS:
 
                     if map_screen.editor_mode == "CORE":
-                        edit_province_ownership.remove_core(map_screen, map_screen.hovered_province, map_screen.brush_nation)
+                        if map_screen.brush_nation in map_screen.hovered_province.get("cores", []):
+                            edit_province_ownership.remove_core(map_screen, map_screen.hovered_province, map_screen.brush_nation)
+                            map_screen.centers_need_update = True
+                            editor_changed = True
+                            editor_layers.add("cores")
                     elif map_screen.editor_mode == "CLAIM":
-                        edit_province_ownership.remove_claim(map_screen, map_screen.hovered_province, map_screen.brush_nation)
+                        claims = map_screen.nation_data.get(
+                            map_screen.brush_nation, {}).get("claims", [])
+                        if map_screen.hovered_province["id"] in claims:
+                            edit_province_ownership.remove_claim(map_screen, map_screen.hovered_province, map_screen.brush_nation)
+                            editor_changed = True
                     else:
                         map_screen.brush_nation = map_screen.hovered_province.get("owner", "Unclaimed")
                         map_screen.show_feedback("Picked: " + queries.get_country_display_name(
@@ -477,8 +516,10 @@ def handle_map_events(map_screen, event):
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             if map_screen.hovered_province and map_screen.editor_mode == "UNIT":
                 if map_screen.brush_unit == "None":
-                    map_screen.hovered_province["units"] = []
-                    map_screen.show_feedback("Units cleared from province")
+                    if map_screen.hovered_province.get("units"):
+                        map_screen.hovered_province["units"] = []
+                        editor_changed = True
+                        map_screen.show_feedback("Units cleared from province")
                 elif map_screen.brush_unit == "Convoy":
                     from ui.editor_menus import open_convoy_converter
                     open_convoy_converter(map_screen, map_screen.hovered_province)
@@ -491,7 +532,11 @@ def handle_map_events(map_screen, event):
                     else:
                         new_unit = queries.create_unit_dict(map_screen.brush_unit, owner, queries.get_unit_library())
                         map_screen.hovered_province.setdefault("units", []).append(new_unit)
+                        editor_changed = True
                         map_screen.show_feedback(f"Placed {map_screen.brush_unit} for {owner}")
+
+        if editor_changed:
+            map_screen.queue_editor_visual_refresh(*editor_layers)
 
         # RETURN HERE: This stops the code from reaching the "Select Province" logic below
         return
