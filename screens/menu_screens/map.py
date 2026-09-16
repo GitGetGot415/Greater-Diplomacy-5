@@ -1241,9 +1241,8 @@ class Map(GameState):
         self.brush_unit = "None"
         self.editor_mode = "NATION"
 
-        # Country selection uses a clean political overview.  Once a player
-        # has confirmed a country, set_play_view_defaults switches to the
-        # operational Units view instead.
+        # Country selection keeps country names visible, but still shows units
+        # so the player can assess the nation they are about to command.
         self.show_country_names = True
 
         # --- 1. Basic State Variables ---
@@ -1265,6 +1264,13 @@ class Map(GameState):
             self.selection_mode = False
         else:
             self.show_navigation_intro_when_ready = True
+
+        if self.selection_mode:
+            self.set_country_selection_view_defaults()
+        elif self.load_path and not self.is_editor:
+            # A resumed game is already operational; it should not reopen in
+            # the country-selection presentation.
+            self.set_play_view_defaults()
 
         self.painting_active = False
         self.brush_nation = "Unclaimed"
@@ -1494,6 +1500,12 @@ class Map(GameState):
         self.sec_idx = self.secondary_modes.index("UNITS")
         self.secondary_mode = "UNITS"
         self.show_country_names = False
+
+    def set_country_selection_view_defaults(self):
+        """Apply the new-game country picker view without hiding its armies."""
+        self.sec_idx = self.secondary_modes.index("UNITS")
+        self.secondary_mode = "UNITS"
+        self.show_country_names = True
 
     def cycle_secondary_mode(self):
         self.sec_idx = (self.sec_idx + 1) % len(self.secondary_modes)

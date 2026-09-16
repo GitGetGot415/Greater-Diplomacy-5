@@ -440,6 +440,19 @@ class MapViewDefaultTests(unittest.TestCase):
         self.assertEqual(map_screen.sec_idx, 0)
         self.assertFalse(map_screen.show_country_names)
 
+    def test_country_selection_defaults_show_units_with_country_names(self):
+        map_screen = object.__new__(Map)
+        map_screen.secondary_modes = ["UNITS", "ECONOMY", "BLANK"]
+        map_screen.secondary_mode = "BLANK"
+        map_screen.sec_idx = 2
+        map_screen.show_country_names = False
+
+        Map.set_country_selection_view_defaults(map_screen)
+
+        self.assertEqual(map_screen.secondary_mode, "UNITS")
+        self.assertEqual(map_screen.sec_idx, 0)
+        self.assertTrue(map_screen.show_country_names)
+
     def test_confirming_a_country_applies_the_play_view_defaults(self):
         applied = []
         map_stub = type("MapStub", (), {
