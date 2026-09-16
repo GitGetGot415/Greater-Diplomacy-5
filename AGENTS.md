@@ -159,6 +159,16 @@ feature working in one says nothing about the other.
 - Prefer existing caches over repeated disk reads in frame or turn loops.
   When adding a cache, define when it is populated and invalidated; mutate a
   shared cached dictionary in place if existing screens retain references to it.
+- **Planning-phase rendering must be cache-only.** Greater Diplomacy 5 is turn
+  based: while a completed turn is merely being presented for player orders,
+  do not run game-rule calculations, simulations, map-wide derived-state
+  sweeps, or AI work from a frame `draw`/`update` path. Compute those results
+  at a turn/state/input boundary, cache the presentation data, and invalidate
+  it explicitly when its source state, map layer, fog, camera-dependent
+  rendering parameters, or viewport changes. Per-frame work may position and
+  blit cached assets and handle active input/animations, but it must not
+  repeatedly derive static gameplay or map presentation state while the player
+  is deciding their move.
 - Remember the web build's virtual filesystem and persistence synchronization
   for saves, tournament files, imports, and user-created assets.
 
