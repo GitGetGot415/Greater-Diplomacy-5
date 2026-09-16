@@ -2501,6 +2501,43 @@ def army_for_unit(unit, nation_data):
     return None
 
 
+def group_units_by_army(units, nation_data):
+    """Return same-owner units split into their persistent army groups.
+
+    The result preserves the supplied unit order and contains ``(army, units)``
+    pairs.  Units outside an army share one ``None`` group, which lets map
+    rendering keep an unorganized force compact while giving each organized
+    army its own selectable stack.  Callers must pass units belonging to one
+    country; owner stacks are intentionally kept separate before this helper is
+    used.
+    """
+    if not units:
+        return []
+
+    owner = units[0].get("owner") if isinstance(units[0], dict) else None
+    armies_by_unit_id = {}
+    if isinstance(owner, str):
+        for army in get_armies(owner, nation_data, None):
+            if not isinstance(army, dict):
+                continue
+            for unit_id in army.get("unit_ids", []):
+                if isinstance(unit_id, str):
+                    armies_by_unit_id[unit_id] = army
+
+    groups, group_indexes = [], {}
+    for unit in units:
+        unit_id = unit.get("unit_id") if isinstance(unit, dict) else None
+        army = armies_by_unit_id.get(unit_id)
+        key = army.get("id") if army is not None else None
+        index = group_indexes.get(key)
+        if index is None:
+            group_indexes[key] = len(groups)
+            groups.append((army, [unit]))
+        else:
+            groups[index][1].append(unit)
+    return groups
+
+
 def common_army_for_units(units, nation_data):
     """Return the army shared by every supplied unit, or ``None``.
 

@@ -1111,10 +1111,14 @@ UNIT_BOXES = {}
 #: it refills from what is on screen within a frame.
 UNIT_BOX_CACHE_LIMIT = 2000
 
-# Army organization is shown as a narrow segmented strip immediately beside a
-# player's map stack. Each segment represents one division that belongs to an
-# army, preserving the individual organization signal despite stack rendering.
+# Army organization is shown immediately beside each of the player's map
+# stacks.  Organized forces render as separate stacks, while this narrow band
+# retains the army color at a glance.
 ARMY_UNIT_BAND_GAP = 2
+ARMY_EMBLEM_MIN_SIZE = 14
+ARMY_EMBLEM_MAX_SIZE = 32
+ARMY_EMBLEM_HEIGHT_RATIO = 0.8
+ARMY_EMBLEM_GAP = 6
 
 
 def unit_box_size(map_screen):
@@ -1257,17 +1261,19 @@ def unknown_box(size):
 
 
 def draw_army_unit_bands(surface, owner_units, owner, player_country, nation_data,
-                          box_rect, scaled_width):
-    """Draw one army-color segment per local-player division beside a stack.
+                          box_rect, scaled_width, army=None):
+    """Draw a local army-color marker beside a stack.
 
-    Map unit boxes combine all units owned by one country in a province. The
-    segmented strip preserves the player's individual army membership at a
-    glance without showing organizational information for other countries.
+    A grouped stack supplies ``army`` and therefore gets one solid marker;
+    the per-unit fallback retains the helper's behavior for any older caller.
+    Neither form reveals organization information for another country.
     Returns the left edge reserved for any further stack-side indicators.
     """
     if owner != player_country:
         return box_rect.left
-    colors = [queries.army_color_for_unit(unit, nation_data) for unit in owner_units]
+    colors = ([tuple(queries.normalize_army_symbol_color(army.get("symbol_color")))]
+              if army is not None else
+              [queries.army_color_for_unit(unit, nation_data) for unit in owner_units])
     colors = [color for color in colors if color is not None]
     if not colors:
         return box_rect.left
@@ -1280,6 +1286,37 @@ def draw_army_unit_bands(surface, owner_units, owner, player_country, nation_dat
         pygame.draw.rect(surface, color, (band_left, top, band_width,
                                           max(1, bottom - top)))
     return band_left
+
+
+def draw_army_emblem(surface, army, box_rect, indicator_left, scaled_height):
+    """Draw an organized stack's one large identifying emblem, if it has one."""
+    if army is None or not (army.get("symbol") or army.get("custom_symbol")):
+        return
+
+    badge_size = max(ARMY_EMBLEM_MIN_SIZE,
+                     min(ARMY_EMBLEM_MAX_SIZE,
+                         round(scaled_height * ARMY_EMBLEM_HEIGHT_RATIO)))
+    custom_symbol = army.get("custom_symbol")
+    if custom_symbol:
+        badge = symbol_loader.get_custom_army_symbol(custom_symbol, badge_size)
+    else:
+        key = f"{c.ARMY_SYMBOL_KEY_PREFIX}{army['symbol']}"
+        native_size = symbol_loader.get_native_size(key, style="classic")
+        if not native_size:
+            return
+        zoom = (badge_size * 2) / max(native_size)
+        badge = symbol_loader.get_symbol(
+            key, zoom,
+            color=tuple(army.get("symbol_color", c.DEFAULT_ARMY_SYMBOL_COLOR)),
+            style="classic")
+    if not badge:
+        return
+    rotation = queries.normalize_army_symbol_rotation(army.get("symbol_rotation"))
+    flipped = queries.normalize_army_symbol_flipped(army.get("symbol_flipped"))
+    badge = symbol_loader.orient_army_symbol(badge, rotation, flipped)
+    center = (indicator_left - ARMY_EMBLEM_GAP - badge.get_width() // 2,
+              box_rect.centery)
+    surface.blit(badge, badge.get_rect(center=center))
 
 
 def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,
@@ -1309,10 +1346,23 @@ def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,
         owner = u.get("owner", "Unclaimed")
         units_by_owner.setdefault(owner, []).append(u)
 
+    # Local players can see their own organization, so split their force by
+    # army.  Other countries stay as one owner stack: their army records are
+    # private information even when their units happen to be visible.
+    unit_stacks = []
+    for owner, owner_units in units_by_owner.items():
+        if owner == map_screen.player_country:
+            unit_stacks.extend((owner, army, army_units)
+                               for army, army_units in
+                               queries.group_units_by_army(owner_units,
+                                                            map_screen.nation_data))
+        else:
+            unit_stacks.append((owner, None, owner_units))
+
     gap = max(2, int(4 * display_scale)) # Spacing between stacked boxes
 
     # 2. Calculate the vertical offset to perfectly center the entire stack over the province
-    total_boxes = len(units_by_owner)
+    total_boxes = len(unit_stacks)
     total_stack_height = (scaled_h * total_boxes) + (gap * (total_boxes - 1))
     
     # Start drawing from the top of the stack and move down
@@ -1322,62 +1372,15 @@ def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,
     is_tactical = map_screen.tactical_mode
     player_unit = map_screen.player_unit
     
-    def get_owner_sort_weight(o):
-        if is_tactical and any(u is player_unit for u in units_by_owner[o]):
+    def get_stack_sort_weight(stack):
+        _owner, _army, owner_units = stack
+        if is_tactical and any(u is player_unit for u in owner_units):
             return (1, 0)
-        return (0, sum(u.get("health", 0) for u in units_by_owner[o]))
+        return (0, sum(u.get("health", 0) for u in owner_units))
 
-    sorted_owners = sorted(
-        units_by_owner.keys(), 
-        key=lambda o: get_owner_sort_weight(o),
-        reverse=True
-    )
+    sorted_stacks = sorted(unit_stacks, key=get_stack_sort_weight, reverse=True)
 
-    def draw_army_emblems(owner_units, box_rect, indicator_left):
-        """Draw one colored emblem per organized visible unit beside its stack.
-
-        A province's unit box intentionally combines all of one country's
-        divisions, so the emblems form a compact strip immediately to its left
-        rather than creating extra overlapping unit boxes.  This runs only for
-        the local player's already-rendered stack, preserving fog boundaries.
-        """
-        if owner != map_screen.player_country:
-            return
-        emblems = [queries.army_for_unit(unit, map_screen.nation_data)
-                   for unit in owner_units]
-        emblems = [army for army in emblems
-                   if army and (army.get("symbol") or army.get("custom_symbol"))]
-        if not emblems:
-            return
-        badge_size = max(7, min(15, int(scaled_h * 0.34)))
-        rows = min(3, len(emblems))
-        for index, army in enumerate(emblems):
-            custom_symbol = army.get("custom_symbol")
-            if custom_symbol:
-                badge = symbol_loader.get_custom_army_symbol(custom_symbol, badge_size)
-            else:
-                key = f"{c.ARMY_SYMBOL_KEY_PREFIX}{army['symbol']}"
-                native_size = symbol_loader.get_native_size(key, style="classic")
-                if not native_size:
-                    continue
-                zoom = (badge_size * 2) / max(native_size)
-                badge = symbol_loader.get_symbol(
-                    key, zoom, color=tuple(army.get("symbol_color", c.DEFAULT_ARMY_SYMBOL_COLOR)),
-                    style="classic")
-            if not badge:
-                continue
-            rotation = queries.normalize_army_symbol_rotation(
-                army.get("symbol_rotation"))
-            flipped = queries.normalize_army_symbol_flipped(
-                army.get("symbol_flipped"))
-            badge = symbol_loader.orient_army_symbol(badge, rotation, flipped)
-            column, row = divmod(index, rows)
-            center = (indicator_left - 5 - column * (badge_size + 2),
-                      box_rect.centery + (row - (rows - 1) / 2) * (badge_size + 1))
-            surface.blit(badge, badge.get_rect(center=(int(center[0]), int(center[1]))))
-
-    for owner in sorted_owners:
-        owner_units = units_by_owner[owner]
+    for owner, army, owner_units in sorted_stacks:
         
         if is_tactical and any(u is player_unit for u in owner_units):
             best_unit = player_unit
@@ -1410,8 +1413,8 @@ def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,
         surface.blit(final_surf, rect)
         indicator_left = draw_army_unit_bands(
             surface, owner_units, owner, map_screen.player_country,
-            map_screen.nation_data, rect, scaled_w)
-        draw_army_emblems(owner_units, rect, indicator_left)
+            map_screen.nation_data, rect, scaled_w, army=army)
+        draw_army_emblem(surface, army, rect, indicator_left, scaled_h)
 
         # Only visible, rendered owner stacks publish a hitbox.  The event
         # layer additionally checks authority before selecting, but never

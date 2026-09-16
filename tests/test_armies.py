@@ -105,6 +105,24 @@ class ArmyQueryTests(unittest.TestCase):
         self.assertEqual(queries.army_color_for_unit(member, self.nations), (12, 90, 230))
         self.assertIsNone(queries.army_color_for_unit(ungrouped, self.nations))
 
+    def test_map_stack_groups_each_army_and_keeps_ungrouped_units_together(self):
+        queries.normalize_armies(self.nations, self.world)
+        first, second = self.first["units"]
+        third = self.second["units"][0]
+        first_army = queries.create_army("A", [first["unit_id"]],
+                                         self.nations, self.world)
+        second_army = queries.create_army("A", [second["unit_id"]],
+                                          self.nations, self.world)
+
+        groups = queries.group_units_by_army([first, second, third], self.nations)
+
+        self.assertEqual([(army.get("id") if army else None, members)
+                          for army, members in groups], [
+                              (first_army["id"], [first]),
+                              (second_army["id"], [second]),
+                              (None, [third]),
+                          ])
+
     @patch("data.queries.army_symbol_choices", return_value=["Banner", "Crown"])
     @patch("data.queries.random.choice", return_value="Crown")
     def test_random_army_symbol_chooses_only_installed_emblems(self, choose, choices):
@@ -269,6 +287,40 @@ class ArmyLayoutTests(unittest.TestCase):
         self.assertEqual(overlay_renderer.draw_army_unit_bands(
             foreign_surface, [foreign], "B", "A", nations, box, box.width), box.left)
         self.assertEqual(foreign_surface.get_at((box.left - 3, box.centery))[:3], (0, 0, 0))
+
+    def test_map_renders_armies_as_distinct_stacks_with_one_emblem_each(self):
+        first = {"owner": "A", "unit_id": "first", "type": "Infantry"}
+        second = {"owner": "A", "unit_id": "second", "type": "Infantry"}
+        third = {"owner": "A", "unit_id": "third", "type": "Tank"}
+        first_army = {"id": "one", "unit_ids": ["first", "second"],
+                       "symbol": "Star", "symbol_color": [220, 60, 70]}
+        second_army = {"id": "two", "unit_ids": ["third"],
+                        "symbol": "Crown", "symbol_color": [50, 140, 230]}
+        nation_data = {"A": {"armies": [first_army, second_army]}}
+        map_screen = SimpleNamespace(
+            camera=SimpleNamespace(zoom=4, tilt_factor=1), player_country="A",
+            nation_data=nation_data, nation_colors={"A": (220, 60, 70)},
+            tactical_mode=False, player_unit=None, hovered_unit_stack=None,
+            unit_hover_hitboxes=[], unit_stack_hitboxes=[],
+            unit_selection_drag=None, is_unit_selected=lambda _unit: False)
+        province = {"units": [first, second, third]}
+        surface = pygame.Surface((200, 200), pygame.SRCALPHA)
+
+        with (patch.object(overlay_renderer, "unit_box",
+                           side_effect=lambda *_args, **kwargs: pygame.Surface(
+                               kwargs.get("size", _args[4]), pygame.SRCALPHA)) as boxes,
+              patch.object(overlay_renderer, "draw_army_unit_bands",
+                           side_effect=lambda _surface, _units, _owner, _player,
+                                              _nations, box, _width, army=None: box.left),
+              patch.object(overlay_renderer, "draw_army_emblem") as emblems):
+            overlay_renderer.draw_unit_icon(
+                map_screen, surface, 100, 100, province, units_are_visible=True)
+
+        self.assertEqual([call.args[2] for call in boxes.call_args_list], [2, 1])
+        self.assertEqual([call.args[1]["id"] for call in emblems.call_args_list],
+                         ["one", "two"])
+        self.assertEqual([stack["units"] for stack in map_screen.unit_stack_hitboxes],
+                         [[first, second], [third]])
 
     def test_orders_tray_creates_armies_and_right_click_assigns_selection(self):
         world = {
