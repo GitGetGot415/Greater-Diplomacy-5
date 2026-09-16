@@ -180,10 +180,6 @@ class Orders_Screen(GameState):
         self.renaming_unit_actual_index = None
         self.rename_text = ""
 
-        # Give the player an initially useful view when Orders is opened.
-        # Later stack, roster, and army selections reuse this same focus path.
-        self._focus_orders_target(province)
-
         # --- Auto-select logic ---
         units = self.target_province.get("units", [])
 
@@ -232,7 +228,6 @@ class Orders_Screen(GameState):
         """Retarget the live Orders workspace to another visible stack."""
         self.target_province = province
         self.map_screen.selected_province = province
-        self._focus_orders_target(province)
         self.battle_screen = None
         self.scroll_y = 0
         self.bombarding_unit_index = None
@@ -250,14 +245,6 @@ class Orders_Screen(GameState):
             self.selected_unit_index = None
         self.read_only = not self.map_screen.selected_unit_records()
         self.refresh_ui()
-
-    def _focus_orders_target(self, province):
-        """Keep a newly selected Orders target visible beside the command panel."""
-        # Orders unit tests use deliberately lightweight map doubles without a
-        # camera. A live Map always supplies this canonical focus method.
-        focus = getattr(self.map_screen, "focus_camera_on_orders_target", None)
-        if focus is not None:
-            focus(province)
 
     def exit_screen(self):
         # The battle inspector is an optional child panel now, so leaving

@@ -392,7 +392,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "8ce6d95c9ccf4f049cc7a33f4df625f7"
             }
         ],
         "building_queue": [],
@@ -538,7 +539,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "1c8c2d7a1b344fa7abae1b3069006d66"
             }
         ],
         "building_queue": [],
@@ -654,7 +656,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "6632e45766eb45e4bd4eb40821c028f2"
             }
         ],
         "building_queue": [],
@@ -867,7 +870,8 @@
                     "path": []
                 },
                 "custom_name": "4th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "1f69095f6d79418083ae6d59aef7ba96"
             }
         ],
         "building_queue": [],
@@ -1139,7 +1143,8 @@
                     "path": []
                 },
                 "custom_name": "1st Destroyer (VIII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "a37a9450729249839df08b5d1ceea9c8"
             }
         ],
         "building_queue": [],
@@ -1607,7 +1612,8 @@
                     "path": []
                 },
                 "custom_name": "5th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "d01783c7c39d4a97b3e54b4e90896f9e"
             }
         ],
         "building_queue": [],
@@ -1659,7 +1665,8 @@
                     "path": []
                 },
                 "custom_name": "6th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "3b239439aa884894aada23cc78f355ec"
             }
         ],
         "building_queue": [],
@@ -1869,7 +1876,8 @@
                     "path": []
                 },
                 "custom_name": "7th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "b9177d20ba9b48139a22344b0315b2f4"
             }
         ],
         "building_queue": [],
@@ -2301,7 +2309,8 @@
                     "path": []
                 },
                 "custom_name": "8th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "7be8ea75fee5403cbdaec18ee1dd239d"
             }
         ],
         "building_queue": [],
@@ -2442,7 +2451,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "2f83da678bbe473381a000ff7fe4655e"
             }
         ],
         "building_queue": [],
@@ -2653,7 +2663,8 @@
                     "path": []
                 },
                 "custom_name": "9th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "6e19972ef6de4bedbc8bc003aaa18240"
             }
         ],
         "building_queue": [],
@@ -2769,7 +2780,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "70e56dab8c6846c39eb1c5cb7f9b8b95"
             }
         ],
         "building_queue": [],
@@ -2979,7 +2991,8 @@
                     "path": []
                 },
                 "custom_name": "10th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "8b13c105b45f42f0a6f676148600658b"
             }
         ],
         "building_queue": [],
@@ -3225,7 +3238,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "49a23ccb71034f80ae13a06b4a8352f9"
             }
         ],
         "building_queue": [],
@@ -3276,7 +3290,8 @@
                     "path": []
                 },
                 "custom_name": "11th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "1c1df0470bc740aa8b72d913a6dde99a"
             }
         ],
         "building_queue": [],
@@ -4073,7 +4088,8 @@
                     "path": []
                 },
                 "custom_name": "12th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "41d5e5ca34b34fc1a6eddaf2df164732"
             }
         ],
         "building_queue": [],
@@ -4124,7 +4140,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "65b91297a0b44f8daff4dc45236c5be2"
             }
         ],
         "building_queue": [],
@@ -4302,7 +4319,8 @@
                     "path": []
                 },
                 "custom_name": "13th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "4075f26b7fdc48efa67228cdfbf86434"
             }
         ],
         "building_queue": [],
@@ -4714,7 +4732,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "42c7c64c767a4f398129b1cee3d03565"
             }
         ],
         "building_queue": [],
@@ -4829,7 +4848,8 @@
                     "path": []
                 },
                 "custom_name": "14th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "f6f2df5bc9f94d78881ca7f65b10b189"
             }
         ],
         "building_queue": [],
@@ -5086,7 +5106,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Destroyer (VIII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "956b3e8591624e25901c164844635071"
             }
         ],
         "building_queue": [],
@@ -5209,7 +5230,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "a8f3298deeca4166800cbbd1f3783be3"
             }
         ],
         "building_queue": [],
@@ -5425,7 +5447,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "e2fa88d930ec4c9bae136bca5dd83726"
             }
         ],
         "building_queue": [],
@@ -5541,7 +5564,8 @@
                     "path": []
                 },
                 "custom_name": "15th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "a7d98af79625448fbade505b69d03cef"
             }
         ],
         "building_queue": [],
@@ -5782,7 +5806,8 @@
                     "path": []
                 },
                 "custom_name": "1st Destroyer (VIII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "7e677e65dd8f4884812a61cb4e72d247"
             }
         ],
         "building_queue": [],
@@ -5936,7 +5961,8 @@
                     "path": []
                 },
                 "custom_name": "16th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "893063320c5f401d8bd1714a12e025a0"
             }
         ],
         "building_queue": [],
@@ -6020,7 +6046,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "65720b3a6c5a486b884f9ef811dce5f3"
             }
         ],
         "building_queue": [],
@@ -6362,7 +6389,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "280d0afb18ec4c98a2701af2ece950b2"
             }
         ],
         "building_queue": [],
@@ -6413,7 +6441,8 @@
                     "path": []
                 },
                 "custom_name": "1st Medium Tank Division (II)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "18a79b0f44864e649894bff21933aaed"
             },
             {
                 "type": "Medium Tank II",
@@ -6429,7 +6458,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Medium Tank Division (II)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "97968ba18a5843f58d96e777cc6706d7"
             },
             {
                 "type": "Medium Tank II",
@@ -6445,7 +6475,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Medium Tank Division (II)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "7d87d994b5a5491fa39d988182a9748f"
             },
             {
                 "type": "Motorized Infantry Type 1939",
@@ -6461,7 +6492,8 @@
                     "path": []
                 },
                 "custom_name": "1st Motorized Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "5a28f6c37bf34a819f83d562e8bbfc89"
             },
             {
                 "type": "Motorized Infantry Type 1939",
@@ -6477,7 +6509,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Motorized Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "4eb41d339c75442dab3873800256a96e"
             },
             {
                 "type": "Motorized Infantry Type 1939",
@@ -6493,7 +6526,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Motorized Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "b1f03f63d0cb4169b87aee139841e12d"
             }
         ],
         "building_queue": [],
@@ -7031,7 +7065,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "ecbc0d4e09f544b5970543caca4ed8ce"
             }
         ],
         "building_queue": [],
@@ -7113,7 +7148,8 @@
                     "path": []
                 },
                 "custom_name": "17th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "2062f0acf1574d8ba27b3ec1c84c0332"
             }
         ],
         "building_queue": [],
@@ -7694,7 +7730,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "4bc6d801eb964c15bfcdf887967fbdbd"
             }
         ],
         "building_queue": [],
@@ -7973,7 +8010,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Destroyer (VIII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "1c8360087ed649ddae71feb74cb41cb7"
             }
         ],
         "building_queue": [],
@@ -8128,7 +8166,8 @@
                     "path": []
                 },
                 "custom_name": "18th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "7fd1e480f4594343ad249c85a8330be9"
             }
         ],
         "building_queue": [],
@@ -8477,7 +8516,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "7287eee5baee4b01b8faa28277a85dc1"
             }
         ],
         "building_queue": [],
@@ -8596,7 +8636,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "8e7d5c3bad0640339d77ad69c570beee"
             }
         ],
         "building_queue": [],
@@ -8680,7 +8721,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "ef3b5e7287bd4b31bd4e9c1a70d91eab"
             }
         ],
         "building_queue": [],
@@ -8830,7 +8872,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "c6f53a4748b64f388d2d13cdaea28211"
             }
         ],
         "building_queue": [],
@@ -8980,7 +9023,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "b3b3fd29429446819d876bc87579f0d7"
             }
         ],
         "building_queue": [],
@@ -9353,7 +9397,8 @@
                     "path": []
                 },
                 "custom_name": "19th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "6b81cf4134154e709b597f582c0e5b6a"
             }
         ],
         "building_queue": [],
@@ -9597,7 +9642,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "eed8f6d027754a0b8d1b1c88aaa4732d"
             }
         ],
         "building_queue": [],
@@ -9772,7 +9818,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "424a9aa5c5524a39b1152ce0eea8ef2a"
             }
         ],
         "building_queue": [],
@@ -9855,7 +9902,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "7a30131893ec40049d2ba0fb349a9f40"
             }
         ],
         "building_queue": [],
@@ -9905,7 +9953,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Destroyer (VIII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "2860f9aa49074c5385706b3d5997f2f6"
             }
         ],
         "building_queue": [],
@@ -9954,7 +10003,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "f9f5c2aa7e4c41ef83082cd1551369cf"
             }
         ],
         "building_queue": [],
@@ -10039,7 +10089,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "06b046ec09a641869b2ee8fa98561761"
             }
         ],
         "building_queue": [],
@@ -10091,7 +10142,8 @@
                     "path": []
                 },
                 "custom_name": "20th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "cebd46aa01444ebf8338783f3e435522"
             }
         ],
         "building_queue": [],
@@ -10244,7 +10296,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "99965ec620ba4665b8644b274d4f06e0"
             }
         ],
         "building_queue": [],
@@ -10465,7 +10518,8 @@
                     "path": []
                 },
                 "custom_name": "4th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "c43a886f8c634b11bce122f82bec4efc"
             }
         ],
         "building_queue": [],
@@ -10588,7 +10642,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "1d2b7c2d244547b28703f842854cb2b9"
             }
         ],
         "building_queue": [],
@@ -10831,7 +10886,8 @@
                     "path": []
                 },
                 "custom_name": "21st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "bc607990673d49ca805e2093675d2899"
             }
         ],
         "building_queue": [],
@@ -10945,7 +11001,8 @@
                     "path": []
                 },
                 "custom_name": "22nd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "3ced5303e4d74fa4b4fb54631016dc8a"
             }
         ],
         "building_queue": [],
@@ -11161,7 +11218,8 @@
                     "path": []
                 },
                 "custom_name": "1st Destroyer (VIII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "69abd7f91967443ab5236c114495b87a"
             }
         ],
         "building_queue": [],
@@ -11212,7 +11270,8 @@
                     "path": []
                 },
                 "custom_name": "1st Motorized Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "a7fe526bd91a43f1ab2c24a86dada2e2"
             }
         ],
         "building_queue": [],
@@ -11261,7 +11320,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "37aafe126c134613b630fd5b7c612745"
             }
         ],
         "building_queue": [],
@@ -11412,7 +11472,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "03b775f1276d4bbabd6b6672d4bc3430"
             }
         ],
         "building_queue": [],
@@ -11495,7 +11556,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "f9571386b14740678d8ca969309ea282"
             }
         ],
         "building_queue": [],
@@ -11644,7 +11706,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Motorized Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "3118f09c08724c5a8b8406c4120e715b"
             }
         ],
         "building_queue": [],
@@ -11693,7 +11756,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "f14311f3bb9443c2b03331fba90c4cbf"
             }
         ],
         "building_queue": [],
@@ -11881,7 +11945,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "17add62317c7412e856834f1f06aa47d"
             }
         ],
         "building_queue": [],
@@ -11969,7 +12034,8 @@
                     "path": []
                 },
                 "custom_name": "4th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "48431b09fdc640dc8ee32024988b9d2e"
             }
         ],
         "building_queue": [],
@@ -12018,7 +12084,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "7035ca4b57954bc6ba24960d82b5a713"
             }
         ],
         "building_queue": [],
@@ -12133,7 +12200,8 @@
                     "path": []
                 },
                 "custom_name": "4th Destroyer (VIII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "8633ee73b69542b1937c7e9a5cd815b4"
             }
         ],
         "building_queue": [],
@@ -12357,7 +12425,8 @@
                     "path": []
                 },
                 "custom_name": "4th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "7ffde9c7980448b783555b677d89a8f7"
             }
         ],
         "building_queue": [],
@@ -12510,7 +12579,8 @@
                     "path": []
                 },
                 "custom_name": "5th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "3e03912b8d1e471889645775b1535d13"
             }
         ],
         "building_queue": [],
@@ -12560,7 +12630,8 @@
                     "path": []
                 },
                 "custom_name": "6th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "2d2feae379104a04adc8f89870807e2e"
             }
         ],
         "building_queue": [],
@@ -12611,7 +12682,8 @@
                     "path": []
                 },
                 "custom_name": "5th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "a65276ae22354512a82deb365837e317"
             }
         ],
         "building_queue": [],
@@ -12729,7 +12801,8 @@
                     "path": []
                 },
                 "custom_name": "4th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "62cafbc8d5e84f9ca3a5b194ca3d7854"
             }
         ],
         "building_queue": [],
@@ -12814,7 +12887,8 @@
                     "path": []
                 },
                 "custom_name": "23rd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "0771eef16881441a9f727a00c4ba3026"
             }
         ],
         "building_queue": [],
@@ -12898,7 +12972,8 @@
                     "path": []
                 },
                 "custom_name": "24th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "8935f821852b4448bc423348f50bdc35"
             }
         ],
         "building_queue": [],
@@ -13114,7 +13189,8 @@
                     "path": []
                 },
                 "custom_name": "7th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "f67dd35c7adf411784250fa290a69fc7"
             }
         ],
         "building_queue": [],
@@ -13296,7 +13372,8 @@
                     "path": []
                 },
                 "custom_name": "1st Light Tank Division (IV)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "db6f9516701745caba545c0acc1d3b5a"
             },
             {
                 "type": "Motorized Infantry Type 1939",
@@ -13312,7 +13389,8 @@
                     "path": []
                 },
                 "custom_name": "1st Motorized Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "113ec920b93e4211be9d1d25ad367f4f"
             },
             {
                 "type": "Motorized Infantry Type 1939",
@@ -13328,7 +13406,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Motorized Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "700d219dc30045a2bbf4693e0308f536"
             }
         ],
         "building_queue": [],
@@ -13440,7 +13519,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Motorized Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "b469e871d4214d7a9a56fbd54ae5d05f"
             }
         ],
         "building_queue": [],
@@ -13621,7 +13701,8 @@
                     "path": []
                 },
                 "custom_name": "25th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "badcb5c2a53a4620b9959aedd2b6b8e9"
             }
         ],
         "building_queue": [],
@@ -13771,7 +13852,8 @@
                     "path": []
                 },
                 "custom_name": "26th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "457b0cbffe774c0aaf844730f5b34d34"
             }
         ],
         "building_queue": [],
@@ -13852,7 +13934,8 @@
                     "path": []
                 },
                 "custom_name": "6th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "64dbe443c00546ce9e005a1a58a229e4"
             }
         ],
         "building_queue": [],
@@ -13903,7 +13986,8 @@
                     "path": []
                 },
                 "custom_name": "5th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "d307c255e5a54690963ecafe199760af"
             }
         ],
         "building_queue": [],
@@ -14391,7 +14475,8 @@
                     "path": []
                 },
                 "custom_name": "5th Destroyer (VIII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "29719660272049389a1a729df33e63bd"
             }
         ],
         "building_queue": [],
@@ -14574,7 +14659,8 @@
                     "path": []
                 },
                 "custom_name": "7th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "9b8c1635c3424befaaa3f665c783efd3"
             }
         ],
         "building_queue": [],
@@ -14625,7 +14711,8 @@
                     "path": []
                 },
                 "custom_name": "1st Light Tank Division (IV)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "5b5e35804c6040de999f49a9de66fe35"
             },
             {
                 "type": "Light Tank IV",
@@ -14641,7 +14728,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Light Tank Division (IV)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "e9abd59ef8574fd6baa27118da35bd22"
             },
             {
                 "type": "Light Tank IV",
@@ -14657,7 +14745,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Light Tank Division (IV)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "9c2c651b02114ba68e8a094e71819a37"
             },
             {
                 "type": "Motorized Infantry Type 1939",
@@ -14673,7 +14762,8 @@
                     "path": []
                 },
                 "custom_name": "4th Motorized Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "75643dac984b48e3bcf7dcef3ef4b6fb"
             },
             {
                 "type": "Motorized Infantry Type 1939",
@@ -14689,7 +14779,8 @@
                     "path": []
                 },
                 "custom_name": "5th Motorized Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "1f310971cd914756885e31cadf7a5182"
             },
             {
                 "type": "Motorized Infantry Type 1939",
@@ -14705,7 +14796,8 @@
                     "path": []
                 },
                 "custom_name": "6th Motorized Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "73bd5a02b0b3423f90c68a21c4d1b78d"
             }
         ],
         "building_queue": [],
@@ -14858,7 +14950,8 @@
                     "path": []
                 },
                 "custom_name": "8th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "6eef13689042425dbffa9bdd69beb72a"
             }
         ],
         "building_queue": [],
@@ -15173,7 +15266,8 @@
                     "path": []
                 },
                 "custom_name": "6th Destroyer (VIII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "f9a89a089cef4a7fb7911e6b402d0688"
             }
         ],
         "building_queue": [],
@@ -15294,7 +15388,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "420d988a95b34f0ba9b05dfdcc1a7fec"
             }
         ],
         "building_queue": [],
@@ -15446,7 +15541,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "daf42252b7f548f1b838926ec1cdaee7"
             }
         ],
         "building_queue": [],
@@ -15760,7 +15856,8 @@
                     "path": []
                 },
                 "custom_name": "7th Motorized Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "e7a4c247584b4889a164bff6e315fee8"
             }
         ],
         "building_queue": [],
@@ -15809,7 +15906,8 @@
                     "path": []
                 },
                 "custom_name": "27th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "70c4ee02f5344ecdb999bfb11904b4cb"
             }
         ],
         "building_queue": [],
@@ -15895,7 +15993,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "a89527a09675446d808f7f4fc2aab280"
             }
         ],
         "building_queue": [],
@@ -15944,7 +16043,8 @@
                     "path": []
                 },
                 "custom_name": "9th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "e9736c81b18c472ba9ff5e5aece3a233"
             }
         ],
         "building_queue": [],
@@ -16057,7 +16157,8 @@
                     "path": []
                 },
                 "custom_name": "4th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "0e41951279c245368770d78560c1d3f3"
             }
         ],
         "building_queue": [],
@@ -16109,7 +16210,8 @@
                     "path": []
                 },
                 "custom_name": "5th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "074593ecdbf440a7a872f52d4ad2ecdd"
             }
         ],
         "building_queue": [],
@@ -16355,7 +16457,8 @@
                     "path": []
                 },
                 "custom_name": "1st Heavy Tank Division (II)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "404437790f71473b8daaea0b2070115b"
             },
             {
                 "type": "Infantry Type 1939",
@@ -16371,7 +16474,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "a7d92e23e08a4150baa1be412bd73077"
             }
         ],
         "building_queue": [],
@@ -16456,7 +16560,8 @@
                     "path": []
                 },
                 "custom_name": "10th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "c0bf625898784b189bb9aae7dc823bcd"
             }
         ],
         "building_queue": [],
@@ -16913,7 +17018,8 @@
                     "path": []
                 },
                 "custom_name": "6th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "33ff8afa48ea425582484d0a2bda45c2"
             }
         ],
         "building_queue": [],
@@ -17237,7 +17343,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "667ec74803de4e769878997288d39794"
             }
         ],
         "building_queue": [],
@@ -17321,7 +17428,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "05f0a663b3f742c2bb3add545ed38c11"
             }
         ],
         "building_queue": [],
@@ -17371,7 +17479,8 @@
                     "path": []
                 },
                 "custom_name": "28th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "75a9680c1ab849c69be2eabdde96d461"
             }
         ],
         "building_queue": [],
@@ -17620,7 +17729,8 @@
                     "path": []
                 },
                 "custom_name": "8th Motorized Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "6aa5c4388de74fd185fc839536053def"
             }
         ],
         "building_queue": [],
@@ -17671,7 +17781,8 @@
                     "path": []
                 },
                 "custom_name": "11th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "3fda642ffaeb4ec2b236a618746c8e02"
             }
         ],
         "building_queue": [],
@@ -17724,7 +17835,8 @@
                     "path": []
                 },
                 "custom_name": "1st Destroyer (VIII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "6e075d5baec1474586a81cc38c530e43"
             }
         ],
         "building_queue": [],
@@ -17844,7 +17956,8 @@
                     "path": []
                 },
                 "custom_name": "29th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "44c5f7ba34ae4444a7e3a86753661522"
             }
         ],
         "building_queue": [],
@@ -18134,7 +18247,8 @@
                     "path": []
                 },
                 "custom_name": "7th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "771a09e720574bffa08c458ac002af4d"
             }
         ],
         "building_queue": [],
@@ -18357,7 +18471,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Light Tank Division (IV)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "2090e33a8d504905acfb872410f67aad"
             },
             {
                 "type": "Motorized Infantry Type 1939",
@@ -18373,7 +18488,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Motorized Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "8f5a0d852f7d4236ad52723faba69b57"
             }
         ],
         "building_queue": [],
@@ -18422,7 +18538,8 @@
                     "path": []
                 },
                 "custom_name": "30th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "7604bc5bb07741d69183de8d57b886a4"
             }
         ],
         "building_queue": [],
@@ -18471,7 +18588,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "d0cf92a2abe84c618ac383675758e284"
             }
         ],
         "building_queue": [],
@@ -18789,7 +18907,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "b7603dfa4906421eb9c9683f32fac371"
             }
         ],
         "building_queue": [],
@@ -18906,7 +19025,8 @@
                     "path": []
                 },
                 "custom_name": "31st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "6e26dcacee2f4773a32a5b81d76ec431"
             }
         ],
         "building_queue": [],
@@ -19016,7 +19136,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Destroyer (VIII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "8288f4cf34034176ad9ead2d8ea4b16a"
             }
         ],
         "building_queue": [],
@@ -19237,7 +19358,8 @@
                     "path": []
                 },
                 "custom_name": "32nd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "6df258ff74cb442faa8cafda59ee9909"
             }
         ],
         "building_queue": [],
@@ -19384,7 +19506,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Heavy Tank Division (II)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "e37065b23b7f4aa8affdc6a77019288d"
             },
             {
                 "type": "Infantry Type 1939",
@@ -19400,7 +19523,8 @@
                     "path": []
                 },
                 "custom_name": "4th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "15a15f02f7fe4f89a37264d04ce28332"
             },
             {
                 "type": "Infantry Type 1939",
@@ -19416,7 +19540,8 @@
                     "path": []
                 },
                 "custom_name": "5th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "a27ff7e3f2944dc6ac61dd22a23baa69"
             }
         ],
         "building_queue": [],
@@ -19468,7 +19593,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "00a9fa857ae34c8f839eb997d0cd3176"
             }
         ],
         "building_queue": [],
@@ -19655,7 +19781,8 @@
                     "path": []
                 },
                 "custom_name": "33rd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "0d597f2d0d7343b48ff6573c1361b320"
             }
         ],
         "building_queue": [],
@@ -19739,7 +19866,8 @@
                     "path": []
                 },
                 "custom_name": "6th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "b1733c2c807141118c7a770a7b8e28be"
             },
             {
                 "type": "Infantry Type 1939",
@@ -19755,7 +19883,8 @@
                     "path": []
                 },
                 "custom_name": "7th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "ed7dc4c888364f268d881adf907c8968"
             },
             {
                 "type": "Infantry Type 1939",
@@ -19771,7 +19900,8 @@
                     "path": []
                 },
                 "custom_name": "8th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "f31ea346dcb64d79ac125e5a420594c1"
             }
         ],
         "building_queue": [],
@@ -19822,7 +19952,8 @@
                     "path": []
                 },
                 "custom_name": "12th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "e13b5e1f8d914cb996ade63bbf1a570a"
             }
         ],
         "building_queue": [],
@@ -20007,7 +20138,8 @@
                     "path": []
                 },
                 "custom_name": "34th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "cbd59a2e1dc949b6bfaf4f7ab9fe5cbc"
             }
         ],
         "building_queue": [],
@@ -20059,7 +20191,8 @@
                     "path": []
                 },
                 "custom_name": "9th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "b9608e60aa964e3cab73cdff24d3fb63"
             }
         ],
         "building_queue": [],
@@ -20278,7 +20411,8 @@
                     "path": []
                 },
                 "custom_name": "8th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "90cdc3172c7a4a6694d96d6b2d976328"
             }
         ],
         "building_queue": [],
@@ -20397,7 +20531,8 @@
                     "path": []
                 },
                 "custom_name": "13th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "9a1752f6c577484d9b0fe2c3516fc306"
             }
         ],
         "building_queue": [],
@@ -20517,7 +20652,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "75a4c947d24344a3b07cbe3d43df5e50"
             }
         ],
         "building_queue": [],
@@ -20637,7 +20773,8 @@
                     "path": []
                 },
                 "custom_name": "10th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "b4ae120055014c1c9dfe73e7e2ac7391"
             },
             {
                 "type": "Infantry Type 1939",
@@ -20653,7 +20790,8 @@
                     "path": []
                 },
                 "custom_name": "11th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "d8464a0c8efa4601bc41e094507e4ed1"
             },
             {
                 "type": "Infantry Type 1939",
@@ -20669,7 +20807,8 @@
                     "path": []
                 },
                 "custom_name": "12th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "cd9d86e008094096b596f501118833ab"
             }
         ],
         "building_queue": [],
@@ -20817,7 +20956,8 @@
                     "path": []
                 },
                 "custom_name": "35th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "5d7de080820543e1aeeae1942daee4c6"
             }
         ],
         "building_queue": [],
@@ -20901,7 +21041,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "917b6cd8e60b42ee9c901e5f3a95b1e7"
             }
         ],
         "building_queue": [],
@@ -21632,7 +21773,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Heavy Tank Division (II)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "0a88be01dfa449bfa7a2f88eb63e6301"
             },
             {
                 "type": "Infantry Type 1939",
@@ -21648,7 +21790,8 @@
                     "path": []
                 },
                 "custom_name": "13th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "c8b4377f34b844c7830f8230dca8ef5a"
             }
         ],
         "building_queue": [],
@@ -21797,7 +21940,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "84764d3cdabc4041a92ac9163a159407"
             }
         ],
         "building_queue": [],
@@ -21848,7 +21992,8 @@
                     "path": []
                 },
                 "custom_name": "36th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "e35e71292c204365bf1d20494dfb8470"
             }
         ],
         "building_queue": [],
@@ -21898,7 +22043,8 @@
                     "path": []
                 },
                 "custom_name": "1st Destroyer (VIII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "148ea8546e164157a3ffecec9c62de8f"
             }
         ],
         "building_queue": [],
@@ -21984,7 +22130,8 @@
                     "path": []
                 },
                 "custom_name": "37th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "e2d8d0cbbbdb4903a364ef0a030a40c5"
             }
         ],
         "building_queue": [],
@@ -22168,7 +22315,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "c61320b6cba44028bc917fc87454f10f"
             }
         ],
         "building_queue": [],
@@ -22319,7 +22467,8 @@
                     "path": []
                 },
                 "custom_name": "38th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "bcef74576f2942b392da96a538094169"
             }
         ],
         "building_queue": [],
@@ -22434,7 +22583,8 @@
                     "path": []
                 },
                 "custom_name": "6th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "480562b11ca24500bcfd9852a58d0b97"
             }
         ],
         "building_queue": [],
@@ -22483,7 +22633,8 @@
                     "path": []
                 },
                 "custom_name": "5th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "16f29adbf20e4fff87a8c42e64434f9b"
             }
         ],
         "building_queue": [],
@@ -22661,7 +22812,8 @@
                     "path": []
                 },
                 "custom_name": "9th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "87edcda4694c4842b61c9de301cee8db"
             }
         ],
         "building_queue": [],
@@ -22710,7 +22862,8 @@
                     "path": []
                 },
                 "custom_name": "10th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "7a672c847a6e48719f5eceea8a1ad4c8"
             }
         ],
         "building_queue": [],
@@ -22797,7 +22950,8 @@
                     "path": []
                 },
                 "custom_name": "6th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "60505352a9394c4abe51d21087a8012f"
             }
         ],
         "building_queue": [],
@@ -22976,7 +23130,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "ae11a5ff2d8e40cf97c2f4a68120800e"
             }
         ],
         "building_queue": [],
@@ -23027,7 +23182,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "200974eb320848e49e80381a41d4efae"
             }
         ],
         "building_queue": [],
@@ -23247,7 +23403,8 @@
                     "path": []
                 },
                 "custom_name": "39th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "744894dcf43e486cb828c7c365903bde"
             }
         ],
         "building_queue": [],
@@ -23499,7 +23656,8 @@
                     "path": []
                 },
                 "custom_name": "4th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "7f807f938227467e90e48790fbd54776"
             }
         ],
         "building_queue": [],
@@ -23619,7 +23777,8 @@
                     "path": []
                 },
                 "custom_name": "14th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "30762185c637416fb60fa92595fdb7c4"
             }
         ],
         "building_queue": [],
@@ -23770,7 +23929,8 @@
                     "path": []
                 },
                 "custom_name": "40th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "d159a302784c486587bccfcbc835b33c"
             }
         ],
         "building_queue": [],
@@ -24181,7 +24341,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "938d15b9bd8c4294b0a87fb38ea98283"
             }
         ],
         "building_queue": [],
@@ -24426,7 +24587,8 @@
                     "path": []
                 },
                 "custom_name": "11th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "761bdb8e92cf4c37bf4e0d562baf5c2d"
             }
         ],
         "building_queue": [],
@@ -24539,7 +24701,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "758637bf08b148d9acda27c47fd1b552"
             }
         ],
         "building_queue": [],
@@ -24627,7 +24790,8 @@
                     "path": []
                 },
                 "custom_name": "41st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "09d1f4d87ee3497298aab1c9dcdf6250"
             }
         ],
         "building_queue": [],
@@ -24680,7 +24844,8 @@
                     "path": []
                 },
                 "custom_name": "5th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "07f5fb26f0444fc38152cbcc707b4e4e"
             }
         ],
         "building_queue": [],
@@ -24798,7 +24963,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Destroyer (VIII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "65a3483bfca24e339e5ecfd7f80afb90"
             }
         ],
         "building_queue": [],
@@ -24854,7 +25020,8 @@
                     "path": []
                 },
                 "custom_name": "42nd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "88365aa648ea4f7d83d1b014ac3b189a"
             }
         ],
         "building_queue": [],
@@ -24907,7 +25074,8 @@
                     "path": []
                 },
                 "custom_name": "15th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "c6721456e0ae48a183a2599d9ad82fa2"
             }
         ],
         "building_queue": [],
@@ -25188,7 +25356,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Destroyer (VIII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "5110e684b59b4d2cb9f9dc498bd6b0f4"
             }
         ],
         "building_queue": [],
@@ -25272,7 +25441,8 @@
                     "path": []
                 },
                 "custom_name": "12th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "36f9632009a641f781828675a9997615"
             }
         ],
         "building_queue": [],
@@ -25584,7 +25754,8 @@
                     "path": []
                 },
                 "custom_name": "7th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "0dd670adf90f481b8ce8ba59269a6c27"
             }
         ],
         "building_queue": [],
@@ -25635,7 +25806,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "5674b395c0294e64a53df3e3a8c7c5a6"
             }
         ],
         "building_queue": [],
@@ -26146,7 +26318,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Destroyer (VIII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "7cd1659b0c2145c089416be17d49e0f6"
             }
         ],
         "building_queue": [],
@@ -26299,7 +26472,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "5c55eb22abba4eee921fb10d49ce88ff"
             }
         ],
         "building_queue": [],
@@ -26383,7 +26557,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "59d1f18a9c5941108521e8c9846fa129"
             }
         ],
         "building_queue": [],
@@ -26431,7 +26606,8 @@
                     "path": []
                 },
                 "custom_name": "4th Destroyer (VIII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "cb40b222afad4329a302999546ec6e1b"
             }
         ],
         "building_queue": [],
@@ -26520,7 +26696,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "223892efd3e849b1b98ae228fd3c5f0d"
             }
         ],
         "building_queue": [],
@@ -26669,7 +26846,8 @@
                     "path": []
                 },
                 "custom_name": "43rd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "458f6a894e1d4b2cab295792f77555eb"
             }
         ],
         "building_queue": [],
@@ -26982,7 +27160,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "faaa577339e14ccfa17729296da263ee"
             }
         ],
         "building_queue": [],
@@ -27168,7 +27347,8 @@
                     "path": []
                 },
                 "custom_name": "16th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "165e79d89ea2496cad1db3821ee0e56e"
             },
             {
                 "type": "Infantry Type 1939",
@@ -27184,7 +27364,8 @@
                     "path": []
                 },
                 "custom_name": "17th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "5326bc26aefe4fe88e10f693c7992a30"
             }
         ],
         "building_queue": [],
@@ -27592,7 +27773,8 @@
                     "path": []
                 },
                 "custom_name": "7th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "4df9f5ee81bb4fe580c6b96a2d3d7583"
             }
         ],
         "building_queue": [],
@@ -27677,7 +27859,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "6b52ed36166d42ee90d10fa9a6358be3"
             }
         ],
         "building_queue": [],
@@ -27726,7 +27909,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "7b4cc18fff08438a826ffa689116220e"
             }
         ],
         "building_queue": [],
@@ -27847,7 +28031,8 @@
                     "path": []
                 },
                 "custom_name": "1st Light Tank Division (IV)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "d75d314dc92a41f3ab6c99d8a0e43168"
             }
         ],
         "building_queue": [],
@@ -27960,7 +28145,8 @@
                     "path": []
                 },
                 "custom_name": "4th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "9ba074afc68946f6a0dbd3a2e277784f"
             },
             {
                 "type": "Infantry Type 1939",
@@ -27976,7 +28162,8 @@
                     "path": []
                 },
                 "custom_name": "5th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "90ae2bd5369440c6a56b31935720f506"
             }
         ],
         "building_queue": [],
@@ -28326,7 +28513,8 @@
                     "path": []
                 },
                 "custom_name": "8th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "e0879980d74447628c9db129850c1b41"
             }
         ],
         "building_queue": [],
@@ -28511,7 +28699,8 @@
                     "path": []
                 },
                 "custom_name": "4th Heavy Tank Division (II)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "7a39f232e97e4964ac2b077d8d675c2c"
             },
             {
                 "type": "Infantry Type 1939",
@@ -28527,7 +28716,8 @@
                     "path": []
                 },
                 "custom_name": "18th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "70e6fc3e7eff47908134882b32a627d8"
             }
         ],
         "building_queue": [],
@@ -28712,7 +28902,8 @@
                     "path": []
                 },
                 "custom_name": "9th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "843815f4b680436b94b519936ab4f08c"
             }
         ],
         "building_queue": [],
@@ -28931,7 +29122,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Light Tank Division (IV)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "e9d595449c4b497189f08872b56b198b"
             }
         ],
         "building_queue": [],
@@ -29144,7 +29336,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "0ee111b43fc74535b111e628946fc7cc"
             }
         ],
         "building_queue": [],
@@ -29195,7 +29388,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "309a3982fe914a1190c2e2d3db75b5cd"
             }
         ],
         "building_queue": [],
@@ -29247,7 +29441,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Light Tank Division (IV)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "9eaf1b06c7d140e2a844e605b2886538"
             }
         ],
         "building_queue": [],
@@ -29463,7 +29658,8 @@
                     "path": []
                 },
                 "custom_name": "44th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "001e3b9b53a14117970645097a8f7968"
             }
         ],
         "building_queue": [],
@@ -29610,7 +29806,8 @@
                     "path": []
                 },
                 "custom_name": "19th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "244c72d0361e4994a84eb832a84b0319"
             }
         ],
         "building_queue": [],
@@ -29663,7 +29860,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "081fc39ce7ff42e591f1e8b01bc67079"
             }
         ],
         "building_queue": [],
@@ -29715,7 +29913,8 @@
                     "path": []
                 },
                 "custom_name": "45th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "66a9876d3e1e4837bdbfe69d118b8c8a"
             }
         ],
         "building_queue": [],
@@ -29969,7 +30168,8 @@
                     "path": []
                 },
                 "custom_name": "20th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "e03913cb16794b1eabd00c204865bcb4"
             },
             {
                 "type": "Infantry Type 1939",
@@ -29985,7 +30185,8 @@
                     "path": []
                 },
                 "custom_name": "21st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "e1a9808ba73e40c7b8d9bd850c1c6ffa"
             }
         ],
         "building_queue": [],
@@ -30071,7 +30272,8 @@
                     "path": []
                 },
                 "custom_name": "46th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "35594c9b443e402c90900116146a5510"
             }
         ],
         "building_queue": [],
@@ -30188,7 +30390,8 @@
                     "path": []
                 },
                 "custom_name": "4th Destroyer (VIII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "83ed0222da90402da82cf1b32a3252f3"
             }
         ],
         "building_queue": [],
@@ -30400,7 +30603,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "3579969aedb84c3fbe6bf0d78aa93cc4"
             }
         ],
         "building_queue": [],
@@ -30478,7 +30682,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Destroyer (VIII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "9349b73a93114c7cb425d7850f942190"
             }
         ],
         "building_queue": [],
@@ -30529,7 +30734,8 @@
                     "path": []
                 },
                 "custom_name": "22nd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "b769b42159c94d2cb4d51aae1756753d"
             }
         ],
         "building_queue": [],
@@ -30646,7 +30852,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "7743b32ee1c841be87a0cd28014a2ccb"
             }
         ],
         "building_queue": [],
@@ -30697,7 +30904,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "e125f1b672e648c0965d04fab10217e5"
             }
         ],
         "building_queue": [],
@@ -30915,7 +31123,8 @@
                     "path": []
                 },
                 "custom_name": "47th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "0ba98205c2a8469287eb37c444b75e94"
             }
         ],
         "building_queue": [],
@@ -31061,7 +31270,8 @@
                     "path": []
                 },
                 "custom_name": "23rd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "d514107913ac4aa8a562b49ffb6651f6"
             }
         ],
         "building_queue": [],
@@ -31144,7 +31354,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "ea9b361557084ad4bd336f01352c6bd8"
             }
         ],
         "building_queue": [],
@@ -31532,7 +31743,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "1f5e25be306740a4990d8292a8455c17"
             }
         ],
         "building_queue": [],
@@ -31681,7 +31893,8 @@
                     "path": []
                 },
                 "custom_name": "6th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "27246b2af85340e3975c4e8870a223ab"
             }
         ],
         "building_queue": [],
@@ -31799,7 +32012,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "71de2c02e3bd407e83ab1d8ae361c86c"
             }
         ],
         "building_queue": [],
@@ -31950,7 +32164,8 @@
                     "path": []
                 },
                 "custom_name": "4th Destroyer (VIII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "510f1a9393fa4b159d967f1830a4d20b"
             }
         ],
         "building_queue": [],
@@ -32065,7 +32280,8 @@
                     "path": []
                 },
                 "custom_name": "5th Destroyer (VIII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "c2bba489a2594de68d54fab236906e05"
             }
         ],
         "building_queue": [],
@@ -32219,7 +32435,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "445d9cac3aef43d0b13de46480f40095"
             }
         ],
         "building_queue": [],
@@ -32268,7 +32485,8 @@
                     "path": []
                 },
                 "custom_name": "24th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "dd4ec20bf7dd454fbc8906acde09868a"
             }
         ],
         "building_queue": [],
@@ -32384,7 +32602,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "40cc40081d414829935b8b7931d5c0fe"
             }
         ],
         "building_queue": [],
@@ -32469,7 +32688,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "36491d00317d4fc7a7dac5b7e8721f71"
             }
         ],
         "building_queue": [],
@@ -32848,7 +33068,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "eb22e04c21894fb480aa51fe9960b1d9"
             }
         ],
         "building_queue": [],
@@ -33101,7 +33322,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "f6581ba995be44598a3e29f8417b46ed"
             }
         ],
         "building_queue": [],
@@ -33538,7 +33760,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "1acb62c2445a4c83a00e5255e9f5f9e7"
             }
         ],
         "building_queue": [],
@@ -33690,7 +33913,8 @@
                     "path": []
                 },
                 "custom_name": "4th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "21484def00de4c57b2071e8052cb0738"
             },
             {
                 "type": "Infantry Type 1939",
@@ -33706,7 +33930,8 @@
                     "path": []
                 },
                 "custom_name": "5th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "4c975370c5e74e85b4eb1962c3cda52c"
             }
         ],
         "building_queue": [],
@@ -33858,7 +34083,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "d49bb521c52a4529a8e5a5dafea0dbd8"
             }
         ],
         "building_queue": [],
@@ -34102,7 +34328,8 @@
                     "path": []
                 },
                 "custom_name": "6th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "0343578809c448e194332c43cb90acdc"
             }
         ],
         "building_queue": [],
@@ -34254,7 +34481,8 @@
                     "path": []
                 },
                 "custom_name": "48th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "177a2db0d6204cf7b7c33ebae509a2d4"
             }
         ],
         "building_queue": [],
@@ -34309,7 +34537,8 @@
                     "path": []
                 },
                 "custom_name": "49th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "7cbe55abf6954a83aa3dca78bae172da"
             }
         ],
         "building_queue": [],
@@ -34464,7 +34693,8 @@
                     "path": []
                 },
                 "custom_name": "1st Destroyer (VIII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "f3bef059dbda4566a38404d1c987f26a"
             }
         ],
         "building_queue": [],
@@ -34616,7 +34846,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "5ce28b1131c04f67b2f7e36add8ab973"
             }
         ],
         "building_queue": [],
@@ -34701,7 +34932,8 @@
                     "path": []
                 },
                 "custom_name": "50th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "93d7a3544ca844709b9ffa3a908e03ed"
             }
         ],
         "building_queue": [],
@@ -35416,7 +35648,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "49247648a0cc43e89de21aa85990cbc2"
             }
         ],
         "building_queue": [],
@@ -35533,7 +35766,8 @@
                     "path": []
                 },
                 "custom_name": "51st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "bef436d5ea0441f5960cb9fe30f85ef0"
             }
         ],
         "building_queue": [],
@@ -35653,7 +35887,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "6ddcd89c62ce48348342ad0b2dae434c"
             }
         ],
         "building_queue": [],
@@ -35937,7 +36172,8 @@
                     "path": []
                 },
                 "custom_name": "4th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "d7aef9cf4cdb4206bbeeee90b121eb38"
             }
         ],
         "building_queue": [],
@@ -35986,7 +36222,8 @@
                     "path": []
                 },
                 "custom_name": "10th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "8b53520a7b6e4d668b5ff7ee696f9604"
             }
         ],
         "building_queue": [],
@@ -36173,7 +36410,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "216f69c0416547eeafdc2df80dc2abc8"
             }
         ],
         "building_queue": [],
@@ -36290,7 +36528,8 @@
                     "path": []
                 },
                 "custom_name": "52nd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "8e9eee8e96f74331b6347630946e91a3"
             }
         ],
         "building_queue": [],
@@ -36342,7 +36581,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "c1228d2cc0e6446ea065c14fe8d05b63"
             }
         ],
         "building_queue": [],
@@ -36590,7 +36830,8 @@
                     "path": []
                 },
                 "custom_name": "7th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "d47c8b58943d465e971155d59f3752de"
             }
         ],
         "building_queue": [],
@@ -36909,7 +37150,8 @@
                     "path": []
                 },
                 "custom_name": "7th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "b12888a45b914323b2fb5bea03ca8ec2"
             }
         ],
         "building_queue": [],
@@ -37166,7 +37408,8 @@
                     "path": []
                 },
                 "custom_name": "53rd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "62273e4bc5f9425fa561697ea71cee3b"
             }
         ],
         "building_queue": [],
@@ -37216,7 +37459,8 @@
                     "path": []
                 },
                 "custom_name": "6th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "1b1380481d874662be6b1f9ccd20c576"
             }
         ],
         "building_queue": [],
@@ -37269,7 +37513,8 @@
                     "path": []
                 },
                 "custom_name": "5th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "91687b33bfdf409f96e74a765ce3c9b9"
             }
         ],
         "building_queue": [],
@@ -37491,7 +37736,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "21f14e5b72624efa9b92a6260f2c816a"
             }
         ],
         "building_queue": [],
@@ -37739,7 +37985,8 @@
                     "path": []
                 },
                 "custom_name": "11th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "a560acf64c66443eabd6570deac0298d"
             }
         ],
         "building_queue": [],
@@ -37888,7 +38135,8 @@
                     "path": []
                 },
                 "custom_name": "8th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "59038b310aaf45039f68734232968552"
             }
         ],
         "building_queue": [],
@@ -38034,7 +38282,8 @@
                     "path": []
                 },
                 "custom_name": "7th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "2fb58d5b2e8045b3b77843af2c7241aa"
             }
         ],
         "building_queue": [],
@@ -38722,7 +38971,8 @@
                     "path": []
                 },
                 "custom_name": "54th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "3440f7e2bdcd4adb896f03d80ff664fa"
             }
         ],
         "building_queue": [],
@@ -38895,7 +39145,8 @@
                     "path": []
                 },
                 "custom_name": "55th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "44b13252b2ec41e6b1b7fd8749aaa540"
             }
         ],
         "building_queue": [],
@@ -38978,7 +39229,8 @@
                     "path": []
                 },
                 "custom_name": "4th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "b9997b8764f64d63a902333b64d7e3c3"
             }
         ],
         "building_queue": [],
@@ -39029,7 +39281,8 @@
                     "path": []
                 },
                 "custom_name": "8th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "c5fc26fbd7e1454db59e1e29f4c7d9b5"
             }
         ],
         "building_queue": [],
@@ -39080,7 +39333,8 @@
                     "path": []
                 },
                 "custom_name": "9th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "a4df0626714e4bc4955dca8c05a2ee6f"
             }
         ],
         "building_queue": [],
@@ -39130,7 +39384,8 @@
                     "path": []
                 },
                 "custom_name": "56th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "2981be1e526c438297a289ba61af3656"
             }
         ],
         "building_queue": [],
@@ -39285,7 +39540,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "a3d873ddf6694daeb75e9765175312c7"
             }
         ],
         "building_queue": [],
@@ -39370,7 +39626,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "2ce58d1b79f848dfa1d72e1b0c40754f"
             }
         ],
         "building_queue": [],
@@ -39684,7 +39941,8 @@
                     "path": []
                 },
                 "custom_name": "6th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "8337834a32a142f3b6cff421df6acac7"
             }
         ],
         "building_queue": [],
@@ -39768,7 +40026,8 @@
                     "path": []
                 },
                 "custom_name": "7th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "bbdb05c19e0e4c2e97866bc90f9f8dfa"
             }
         ],
         "building_queue": [],
@@ -39818,7 +40077,8 @@
                     "path": []
                 },
                 "custom_name": "5th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "4aa47d8906444008bd5d8b6b7c4be1a3"
             }
         ],
         "building_queue": [],
@@ -40331,7 +40591,8 @@
                     "path": []
                 },
                 "custom_name": "5th Destroyer (VIII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "a72ee854d37a4d7da5c35521d865c435"
             }
         ],
         "building_queue": [],
@@ -40511,7 +40772,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Destroyer (VIII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "fcbe50b4975445918809b6a92f6e4f1c"
             }
         ],
         "building_queue": [],
@@ -40732,7 +40994,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "85ec29856bd14378a796ce245a480951"
             }
         ],
         "building_queue": [],
@@ -40781,7 +41044,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "5755dc0264be4c2baab305204d1d2822"
             }
         ],
         "building_queue": [],
@@ -40863,7 +41127,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "8de35570211d46c4adb97e72410e5df8"
             }
         ],
         "building_queue": [],
@@ -40980,7 +41245,8 @@
                     "path": []
                 },
                 "custom_name": "57th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "c61a2896723f4a96bd393f355d17a8cb"
             }
         ],
         "building_queue": [],
@@ -41031,7 +41297,8 @@
                     "path": []
                 },
                 "custom_name": "8th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "89ea1d43527f48248feaa9adb9d922e7"
             }
         ],
         "building_queue": [],
@@ -41214,7 +41481,8 @@
                     "path": []
                 },
                 "custom_name": "58th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "5decee54d2f040bc89503087077f79a3"
             }
         ],
         "building_queue": [],
@@ -41266,7 +41534,8 @@
                     "path": []
                 },
                 "custom_name": "59th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "d21217cba9ff41a5a802644c8ab20442"
             }
         ],
         "building_queue": [],
@@ -41447,7 +41716,8 @@
                     "path": []
                 },
                 "custom_name": "9th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "abd7cd3b2fd6470281deb4da01fc754b"
             }
         ],
         "building_queue": [],
@@ -41603,7 +41873,8 @@
                     "path": []
                 },
                 "custom_name": "25th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "a1f23a3b2a6c416b895702209e895130"
             }
         ],
         "building_queue": [],
@@ -41654,7 +41925,8 @@
                     "path": []
                 },
                 "custom_name": "60th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "6336f186af614bd68c0feac02e5c391d"
             }
         ],
         "building_queue": [],
@@ -41765,7 +42037,8 @@
                     "path": []
                 },
                 "custom_name": "8th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "ef8ccf0b85ac42658762aa43ae23109c"
             }
         ],
         "building_queue": [],
@@ -41847,7 +42120,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "87531a19968f4df7b0ccc01ca739899a"
             }
         ],
         "building_queue": [],
@@ -42070,7 +42344,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "cdbd3b1dc98a40af93b2e99fd4639d98"
             }
         ],
         "building_queue": [],
@@ -42122,7 +42397,8 @@
                     "path": []
                 },
                 "custom_name": "10th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "cd3340c553214a059a7b803cf9feb319"
             }
         ],
         "building_queue": [],
@@ -42240,7 +42516,8 @@
                     "path": []
                 },
                 "custom_name": "4th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "3b076c5d7ee448419f61b53060aff07a"
             }
         ],
         "building_queue": [],
@@ -42390,7 +42667,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "3eda1598411445c1b22b7d522b60b1da"
             },
             {
                 "type": "Militia VI",
@@ -42406,7 +42684,8 @@
                     "path": []
                 },
                 "custom_name": "1st Militia Division (VI)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "bc491ac4bf9348fea60cf7c85ec85b8b"
             }
         ],
         "building_queue": [],
@@ -43012,7 +43291,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "034b05e966934a9bbf69403f10cc5922"
             }
         ],
         "building_queue": [],
@@ -43299,7 +43579,8 @@
                     "path": []
                 },
                 "custom_name": "12th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "253571814ef3466c9762aa68c05b9fda"
             }
         ],
         "building_queue": [],
@@ -43641,7 +43922,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "ef89bd8cc6454fbdbc3d00171702c9bc"
             },
             {
                 "type": "Militia VI",
@@ -43657,7 +43939,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Militia Division (VI)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "25590bffe6f143e4b793777fc656a083"
             }
         ],
         "building_queue": [],
@@ -43708,7 +43991,8 @@
                     "path": []
                 },
                 "custom_name": "1st Light Tank Division (IV)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "94b70e9f5a74411eaae9f2daa52f2acc"
             }
         ],
         "building_queue": [],
@@ -43758,7 +44042,8 @@
                     "path": []
                 },
                 "custom_name": "9th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "6974c70f26274870ae08e6f77af6c4f7"
             }
         ],
         "building_queue": [],
@@ -44040,7 +44325,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "445916d6d1ab462287a34e4639d1bd4e"
             }
         ],
         "building_queue": [],
@@ -44324,7 +44610,8 @@
                     "path": []
                 },
                 "custom_name": "11th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "869017edb1cf47309d0fce9fef25284a"
             },
             {
                 "type": "Light Tank IV",
@@ -44340,7 +44627,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Light Tank Division (IV)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "9c435676910649568e985bf9d27ff898"
             }
         ],
         "building_queue": [],
@@ -44424,7 +44712,8 @@
                     "path": []
                 },
                 "custom_name": "12th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "43a04486de864c74b0fc2890916e131d"
             }
         ],
         "building_queue": [],
@@ -44665,7 +44954,8 @@
                     "path": []
                 },
                 "custom_name": "1st Destroyer (VIII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "b04b2cfc3e0c4cedbf7c415afa72f2c2"
             }
         ],
         "building_queue": [],
@@ -45236,7 +45526,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "c709e743ce5d429999f2fdab201a5161"
             },
             {
                 "type": "Militia VI",
@@ -45252,7 +45543,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Militia Division (VI)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "6ca3e5059e264057ba9794e044c45ca1"
             },
             {
                 "type": "Militia VI",
@@ -45268,7 +45560,8 @@
                     "path": []
                 },
                 "custom_name": "4th Militia Division (VI)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "6755a67bc21c4240acc0b67c3ed3508c"
             }
         ],
         "building_queue": [],
@@ -45452,7 +45745,8 @@
                     "path": []
                 },
                 "custom_name": "13th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "f3fecfbb19f24bd7b4e12f0b24225cb3"
             }
         ],
         "building_queue": [],
@@ -45733,7 +46027,8 @@
                     "path": []
                 },
                 "custom_name": "6th Destroyer (VIII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "5cd62c7ec1c0443594ec8d9e89378b11"
             }
         ],
         "building_queue": [],
@@ -46390,7 +46685,8 @@
                     "path": []
                 },
                 "custom_name": "14th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "d18cbf136c4b407e968e8d1e983fc8cc"
             }
         ],
         "building_queue": [],
@@ -46439,7 +46735,8 @@
                     "path": []
                 },
                 "custom_name": "15th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "44377a1333c642c28f811c2d2f598b7a"
             }
         ],
         "building_queue": [],
@@ -46750,7 +47047,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "d408003b08a94c07931a1a452173b597"
             }
         ],
         "building_queue": [],
@@ -46870,7 +47168,8 @@
                     "path": []
                 },
                 "custom_name": "26th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "5ff885b854bf46769a3dfa137c862ffe"
             }
         ],
         "building_queue": [],
@@ -46988,7 +47287,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "75b8bbc4ea65474f845b36732e83a2f0"
             }
         ],
         "building_queue": [],
@@ -47104,7 +47404,8 @@
                     "path": []
                 },
                 "custom_name": "4th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "6470d549a3f145898b6783d73f6a8fda"
             },
             {
                 "type": "Militia VI",
@@ -47120,7 +47421,8 @@
                     "path": []
                 },
                 "custom_name": "5th Militia Division (VI)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "b50d73c35dbf46efab86d8cc08a43d31"
             }
         ],
         "building_queue": [],
@@ -47271,7 +47573,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "7a9b9cf27ea5479b86c61b3aebcc3f9a"
             }
         ],
         "building_queue": [],
@@ -47458,7 +47761,8 @@
                     "path": []
                 },
                 "custom_name": "27th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "07991941cd864a58b5cae3506a63d3e4"
             }
         ],
         "building_queue": [],
@@ -47568,7 +47872,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Destroyer (VIII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "46d133c8519c4fd6b7f7435276c66928"
             }
         ],
         "building_queue": [],
@@ -47649,7 +47954,8 @@
                     "path": []
                 },
                 "custom_name": "16th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "a23495f037994c2090040cdf8af6b652"
             },
             {
                 "type": "Light Tank IV",
@@ -47665,7 +47971,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Light Tank Division (IV)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "7c47e96c31fb486fa56e6711b3d7a543"
             }
         ],
         "building_queue": [],
@@ -47716,7 +48023,8 @@
                     "path": []
                 },
                 "custom_name": "5th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "8ff4b257866042bc9ee265ec5b3fe1a2"
             },
             {
                 "type": "Militia VI",
@@ -47732,7 +48040,8 @@
                     "path": []
                 },
                 "custom_name": "6th Militia Division (VI)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "18cccb86a9404c488aa2ceed364c1583"
             }
         ],
         "building_queue": [],
@@ -47984,7 +48293,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "fed5fb5c206d4892af13ac4b5af16253"
             }
         ],
         "building_queue": [],
@@ -48340,7 +48650,8 @@
                     "path": []
                 },
                 "custom_name": "17th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "bc6f064fe8064591aa5ec4032f2fe1b1"
             }
         ],
         "building_queue": [],
@@ -48390,7 +48701,8 @@
                     "path": []
                 },
                 "custom_name": "10th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "6e1b6a2608f54cc5ad24fb4bc45672e8"
             }
         ],
         "building_queue": [],
@@ -48694,7 +49006,8 @@
                     "path": []
                 },
                 "custom_name": "11th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "d2da9873742b4f20863f2bca0bf2d021"
             }
         ],
         "building_queue": [],
@@ -48742,7 +49055,8 @@
                     "path": []
                 },
                 "custom_name": "18th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "8a5bcde5ee4547e0b84c549e6b785631"
             }
         ],
         "building_queue": [],
@@ -48823,7 +49137,8 @@
                     "path": []
                 },
                 "custom_name": "28th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "ac751946b918499395bd0e262c2e5340"
             }
         ],
         "building_queue": [],
@@ -48873,7 +49188,8 @@
                     "path": []
                 },
                 "custom_name": "7th Militia Division (VI)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "453b4364659543a1be825e5825ad4ae0"
             }
         ],
         "building_queue": [],
@@ -49087,7 +49403,8 @@
                     "path": []
                 },
                 "custom_name": "5th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "e18cc49180da4975986dcd18cbf3fbcf"
             }
         ],
         "building_queue": [],
@@ -49205,7 +49522,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "f295a0388edb405883b2e36542b5a9f8"
             }
         ],
         "building_queue": [],
@@ -49319,7 +49637,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "990c6054ac18486db8d5aed2a0ee27f0"
             }
         ],
         "building_queue": [],
@@ -49406,7 +49725,8 @@
                     "path": []
                 },
                 "custom_name": "6th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "e229cf891969455fa5a7f37dc3d6e0e5"
             },
             {
                 "type": "Militia VI",
@@ -49422,7 +49742,8 @@
                     "path": []
                 },
                 "custom_name": "8th Militia Division (VI)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "e8db2bd868e3454ebe5f15bda65f2202"
             },
             {
                 "type": "Militia VI",
@@ -49438,7 +49759,8 @@
                     "path": []
                 },
                 "custom_name": "9th Militia Division (VI)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "99e22e1c28cb4cf3a7a94948c746d6ff"
             }
         ],
         "building_queue": [],
@@ -50053,7 +50375,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "f9adafecd3654101b40f3a51775a0fe3"
             }
         ],
         "building_queue": [],
@@ -50175,7 +50498,8 @@
                     "path": []
                 },
                 "custom_name": "10th Militia Division (VI)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "2c22bb13054b475ba79ee9f6cafd6757"
             }
         ],
         "building_queue": [],
@@ -50317,7 +50641,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "824a6e38843b42ea97bfbe68ee9f461c"
             }
         ],
         "building_queue": [],
@@ -50465,7 +50790,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Destroyer (VIII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "8ce54ca6c36748ab9dfef058ae9409ec"
             }
         ],
         "building_queue": [],
@@ -50619,7 +50945,8 @@
                     "path": []
                 },
                 "custom_name": "19th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "445a808ff9d64bdf87855b3766f25607"
             }
         ],
         "building_queue": [],
@@ -50703,7 +51030,8 @@
                     "path": []
                 },
                 "custom_name": "13th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "d131ade0342849fd9d50a73d3439a7f2"
             }
         ],
         "building_queue": [],
@@ -50990,7 +51318,8 @@
                     "path": []
                 },
                 "custom_name": "9th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "39717232751346bf88e6644ca09efe13"
             }
         ],
         "building_queue": [],
@@ -51169,7 +51498,8 @@
                     "path": []
                 },
                 "custom_name": "20th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "7490c2f036cf4d9d8ca6c08222499a91"
             },
             {
                 "type": "Light Tank IV",
@@ -51185,7 +51515,8 @@
                     "path": []
                 },
                 "custom_name": "4th Light Tank Division (IV)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "2296efa35c704b7e90985b08a28825ad"
             }
         ],
         "building_queue": [],
@@ -51271,7 +51602,8 @@
                     "path": []
                 },
                 "custom_name": "10th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "81685c5425084a2c824cd4b9375c9446"
             }
         ],
         "building_queue": [],
@@ -51450,7 +51782,8 @@
                     "path": []
                 },
                 "custom_name": "6th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "6a15ec076a7d43a0a4000840dc7f7cc5"
             }
         ],
         "building_queue": [],
@@ -51539,7 +51872,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "788e16c3da324f5cb403a8ec9bd5872d"
             }
         ],
         "building_queue": [],
@@ -51917,7 +52251,8 @@
                     "path": []
                 },
                 "custom_name": "7th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "adbf7a42c7454939bf31ea1cfca7a806"
             },
             {
                 "type": "Militia VI",
@@ -51933,7 +52268,8 @@
                     "path": []
                 },
                 "custom_name": "11th Militia Division (VI)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "40748b836a8c4e9391a1152aec9a1a41"
             }
         ],
         "building_queue": [],
@@ -52056,7 +52392,8 @@
                     "path": []
                 },
                 "custom_name": "8th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "0320321aeb49493c8d5859d9c7364318"
             },
             {
                 "type": "Militia VI",
@@ -52072,7 +52409,8 @@
                     "path": []
                 },
                 "custom_name": "12th Militia Division (VI)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "872e5aaa43d54dd9b4a0a079e8dc9f43"
             },
             {
                 "type": "Militia VI",
@@ -52088,7 +52426,8 @@
                     "path": []
                 },
                 "custom_name": "13th Militia Division (VI)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "3c14c9f22003454692c8a47d404ef156"
             }
         ],
         "building_queue": [],
@@ -52239,7 +52578,8 @@
                     "path": []
                 },
                 "custom_name": "9th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "ac778043d5f542ca8e36a4c4404c512b"
             },
             {
                 "type": "Militia VI",
@@ -52255,7 +52595,8 @@
                     "path": []
                 },
                 "custom_name": "14th Militia Division (VI)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "ef4e6f1206814631aa4e40b25bd3ea4d"
             },
             {
                 "type": "Militia VI",
@@ -52271,7 +52612,8 @@
                     "path": []
                 },
                 "custom_name": "15th Militia Division (VI)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "1181d5bf335142c9a868eadffadd8b6f"
             },
             {
                 "type": "Militia VI",
@@ -52287,7 +52629,8 @@
                     "path": []
                 },
                 "custom_name": "16th Militia Division (VI)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "a588fd25102f42eb9bdaf07ddd8a56ff"
             }
         ],
         "building_queue": [],
@@ -52407,7 +52750,8 @@
                     "path": []
                 },
                 "custom_name": "17th Militia Division (VI)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "48feecc05f24419690912881eeb9b198"
             }
         ],
         "building_queue": [],
@@ -52988,7 +53332,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "d4b00c37953942c29fe1e3e08c7adead"
             }
         ],
         "building_queue": [],
@@ -53074,7 +53419,8 @@
                     "path": []
                 },
                 "custom_name": "4th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "d4d77bd2fcc94a78b1cc4f23851eb657"
             }
         ],
         "building_queue": [],
@@ -53185,7 +53531,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "0c61ecf82f8c41a1b7d2146e253f953e"
             }
         ],
         "building_queue": [],
@@ -53330,7 +53677,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "e03d57dbf67c4a8390038ecf7f30e696"
             }
         ],
         "building_queue": [],
@@ -53740,7 +54088,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "f9e090ffbea642218b64587a0fbbf178"
             }
         ],
         "building_queue": [],
@@ -53792,7 +54141,8 @@
                     "path": []
                 },
                 "custom_name": "18th Militia Division (VI)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "9a11f75576b74617b04c12205872a4d8"
             }
         ],
         "building_queue": [],
@@ -53934,7 +54284,8 @@
                     "path": []
                 },
                 "custom_name": "7th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "007a8aa6b6ec4d3bb8fd0d2124fd6c4a"
             }
         ],
         "building_queue": [],
@@ -53984,7 +54335,8 @@
                     "path": []
                 },
                 "custom_name": "19th Militia Division (VI)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "83e7d218dcb04ac88281771500d30de1"
             }
         ],
         "building_queue": [],
@@ -54068,7 +54420,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "5d180094c82d4b4db2cddb3383eca8b6"
             }
         ],
         "building_queue": [],
@@ -54827,7 +55180,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "8be78e0ad9484a6c9be6a4916daaf436"
             }
         ],
         "building_queue": [],
@@ -55073,7 +55427,8 @@
                     "path": []
                 },
                 "custom_name": "4th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "d88da3c868a941efaf8c773dfcce4d72"
             }
         ],
         "building_queue": [],
@@ -55254,7 +55609,8 @@
                     "path": []
                 },
                 "custom_name": "10th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "a8271a2183fa42cf8298c271389a029c"
             },
             {
                 "type": "Militia VI",
@@ -55270,7 +55626,8 @@
                     "path": []
                 },
                 "custom_name": "20th Militia Division (VI)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "bc46b8b34e004fb69315f9251f4b72ea"
             }
         ],
         "building_queue": [],
@@ -55785,7 +56142,8 @@
                     "path": []
                 },
                 "custom_name": "21st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "a19f3118319b49538fd3652f11813cae"
             }
         ],
         "building_queue": [],
@@ -55898,7 +56256,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "e8dc83ee056b49eabeee70c52159f97f"
             }
         ],
         "building_queue": [],
@@ -56169,7 +56528,8 @@
                     "path": []
                 },
                 "custom_name": "21st Militia Division (VI)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "372cfeafad32415cafcd37da772f27c0"
             }
         ],
         "building_queue": [],
@@ -56518,7 +56878,8 @@
                     "path": []
                 },
                 "custom_name": "5th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "d30f898ad75543c4a4ee68209610710f"
             }
         ],
         "building_queue": [],
@@ -56663,7 +57024,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "67a33ef000d44bb69dc4bae08078c23a"
             }
         ],
         "building_queue": [],
@@ -56849,7 +57211,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "3df5284b0e0e46079ef2803bc6af8a17"
             }
         ],
         "building_queue": [],
@@ -57002,7 +57365,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "f01e3580a72f41a2bad362e37495b03a"
             }
         ],
         "building_queue": [],
@@ -57585,7 +57949,8 @@
                     "path": []
                 },
                 "custom_name": "11th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "c6c2bdf9a8de40ceb7aabb781becaba5"
             }
         ],
         "building_queue": [],
@@ -58219,7 +58584,8 @@
                     "path": []
                 },
                 "custom_name": "5th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "4c5f27bf91c14757b39a84edee3b7ffa"
             }
         ],
         "building_queue": [],
@@ -58508,7 +58874,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "fec9635eaae749989b18e4870a6fe44e"
             }
         ],
         "building_queue": [],
@@ -58887,7 +59254,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "500356383ded403fb53c626d3806754a"
             }
         ],
         "building_queue": [],
@@ -59037,7 +59405,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "163f9ca98eea444186e495b613a16965"
             }
         ],
         "building_queue": [],
@@ -59124,7 +59493,8 @@
                     "path": []
                 },
                 "custom_name": "6th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "d5c5cacd99de4d08ae4a240348e819cf"
             }
         ],
         "building_queue": [],
@@ -59340,7 +59710,8 @@
                     "path": []
                 },
                 "custom_name": "6th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "18a767bd3aac47efbac89defcd2d570d"
             }
         ],
         "building_queue": [],
@@ -59457,7 +59828,8 @@
                     "path": []
                 },
                 "custom_name": "4th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "e4d1452878704d488725ca965ac786b8"
             }
         ],
         "building_queue": [],
@@ -59671,7 +60043,8 @@
                     "path": []
                 },
                 "custom_name": "5th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "afcd58d574874c87815db0436a76a7af"
             }
         ],
         "building_queue": [],
@@ -59722,7 +60095,8 @@
                     "path": []
                 },
                 "custom_name": "29th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "4d1ab5a7631543bca87a909cda66f78b"
             }
         ],
         "building_queue": [],
@@ -59842,7 +60216,8 @@
                     "path": []
                 },
                 "custom_name": "6th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "6975f6737af44026aece22811ecf8f72"
             }
         ],
         "building_queue": [],
@@ -60017,7 +60392,8 @@
                     "path": []
                 },
                 "custom_name": "7th Destroyer (VIII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "52948cee3adf4e31863429894675f5b8"
             }
         ],
         "building_queue": [],
@@ -60068,7 +60444,8 @@
                     "path": []
                 },
                 "custom_name": "7th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "f18b857b79e44cea9f447211e2b6ea7f"
             }
         ],
         "building_queue": [],
@@ -60479,7 +60856,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "d8dbb81a80c64c2c86f4f12e8f32f747"
             }
         ],
         "building_queue": [],
@@ -60728,7 +61106,8 @@
                     "path": []
                 },
                 "custom_name": "7th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "d83d58149be245c2a1862450d3bf6b83"
             }
         ],
         "building_queue": [],
@@ -61137,7 +61516,8 @@
                     "path": []
                 },
                 "custom_name": "22nd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "b519ed11fa5a4152ad26b49142b6ea8a"
             }
         ],
         "building_queue": [],
@@ -61317,7 +61697,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "e09474ec1db5446988ef33d8acd56636"
             }
         ],
         "building_queue": [],
@@ -61943,7 +62324,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "1b560b0e0de74b91a524e2fac48ea32e"
             }
         ],
         "building_queue": [],
@@ -62217,7 +62599,8 @@
                     "path": []
                 },
                 "custom_name": "8th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "c7467fea63dc4e66b2aa5c4ce0bd9e19"
             }
         ],
         "building_queue": [],
@@ -62508,7 +62891,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "47e46a1b711e493fb96c2f9c2b4f4a29"
             }
         ],
         "building_queue": [],
@@ -63036,7 +63420,8 @@
                     "path": []
                 },
                 "custom_name": "9th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "6b95646c15f84ff485dbd71baaec6118"
             }
         ],
         "building_queue": [],
@@ -63783,7 +64168,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "aafb409e5cf5407cb8321f747eee9bdb"
             }
         ],
         "building_queue": [],
@@ -64289,7 +64675,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "96f94ab81af140559d7e0ccfd8fd0e4d"
             }
         ],
         "building_queue": [],
@@ -64438,7 +64825,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "ac37a35bc35f44a3b65fd0c1d7c3dd40"
             }
         ],
         "building_queue": [],
@@ -65040,7 +65428,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "458d067982f54dc0811a57f2629fb232"
             }
         ],
         "building_queue": [],
@@ -65417,7 +65806,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "dea3e0dfea9d48069fe05009ae09b739"
             }
         ],
         "building_queue": [],
@@ -66284,7 +66674,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "e01ac621aed94e0480a1819d32184bca"
             }
         ],
         "building_queue": [],
@@ -67046,7 +67437,8 @@
                     "path": []
                 },
                 "custom_name": "10th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "6a558a172ea74804970df5ebc689e8cd"
             }
         ],
         "building_queue": [],
@@ -67397,7 +67789,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "6979da557eb74cedba7e00122c604c5f"
             }
         ],
         "building_queue": [],
@@ -67737,7 +68130,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "7e50696ae46b425f87eab1898e659a0f"
             }
         ],
         "building_queue": [],
@@ -68179,7 +68573,8 @@
                     "path": []
                 },
                 "custom_name": "4th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "8391c2546bcd43ba8241e4dde76c6af1"
             }
         ],
         "building_queue": [],
@@ -68591,7 +68986,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "a96ea810a22947e29d9dfe34a82fa736"
             }
         ],
         "building_queue": [],
@@ -69026,7 +69422,8 @@
                     "path": []
                 },
                 "custom_name": "12th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "7cc324eb519e42398c3aaf67f8e362cd"
             }
         ],
         "building_queue": [],
@@ -69891,7 +70288,8 @@
                     "path": []
                 },
                 "custom_name": "5th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "258c569d1108402d86f183e956752596"
             }
         ],
         "building_queue": [],
@@ -70776,7 +71174,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "8f06c751b89d446cafb57911a9fff6dd"
             }
         ],
         "building_queue": [],
@@ -71311,7 +71710,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "08db6c8eb435455aa1d76f7cf6875248"
             }
         ],
         "building_queue": [],
@@ -71425,7 +71825,8 @@
                     "path": []
                 },
                 "custom_name": "13th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "144adfc000934383b050b755b1732211"
             }
         ],
         "building_queue": [],
@@ -71606,7 +72007,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "bd060f7003bd4b6788b83131408dc236"
             }
         ],
         "building_queue": [],
@@ -71692,7 +72094,8 @@
                     "path": []
                 },
                 "custom_name": "6th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "d6890c63306e45f1ae6ee23329c3ecbe"
             }
         ],
         "building_queue": [],
@@ -71905,7 +72308,8 @@
                     "path": []
                 },
                 "custom_name": "30th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "a4e72ab1f3cd4255afa2c074cfb79fdb"
             }
         ],
         "building_queue": [],
@@ -71954,7 +72358,8 @@
                     "path": []
                 },
                 "custom_name": "14th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "569a02f5d6e8432e8b8fca520d96d39f"
             }
         ],
         "building_queue": [],
@@ -73722,7 +74127,8 @@
                     "path": []
                 },
                 "custom_name": "7th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "cf6a1b91025f45aaadad1a5e0f26c8cb"
             }
         ],
         "building_queue": [],
@@ -75240,7 +75646,8 @@
                     "path": []
                 },
                 "custom_name": "31st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "901c0288e34f4349863d0df7427793f3"
             }
         ],
         "building_queue": [],
@@ -75876,7 +76283,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "9322f252f93a4fdd8dbfe2b6a95ece84"
             }
         ],
         "building_queue": [],
@@ -76514,7 +76922,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "8fe9da55fd9840b59022fb78516b4b64"
             }
         ],
         "building_queue": [],
@@ -76956,7 +77365,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "6b39b2c9615e48319fac5d2021a3c97b"
             }
         ],
         "building_queue": [],
@@ -77039,7 +77449,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "6609f6236b4d4e35922fc938c7f8d464"
             }
         ],
         "building_queue": [],
@@ -77526,7 +77937,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "842fc092fa8644afa2dab15bffd09343"
             }
         ],
         "building_queue": [],
@@ -77701,7 +78113,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "7d4ba42218df405d948b666210969c66"
             }
         ],
         "building_queue": [],
@@ -77852,7 +78265,8 @@
                     "path": []
                 },
                 "custom_name": "15th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "c0045bc927c94763a0a8451c3dd08a75"
             }
         ],
         "building_queue": [],
@@ -78739,7 +79153,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "a6bce4f206404b4f8255e27ea995e6cc"
             }
         ],
         "building_queue": [],
@@ -79832,7 +80247,8 @@
                     "path": []
                 },
                 "custom_name": "4th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "ae1e47e4a6d8432dbe5e90fa1b350142"
             }
         ],
         "building_queue": [],
@@ -80135,7 +80551,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "3bbd0dd5653f4afc891e213b682ee244"
             }
         ],
         "building_queue": [],
@@ -80856,7 +81273,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "a9734a44243d4a3cb7b1bce9ca3aee92"
             }
         ],
         "building_queue": [],
@@ -81388,7 +81806,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "5884e92c7e6c4bd6a758094d202e1287"
             }
         ],
         "building_queue": [],
@@ -81504,7 +81923,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "08f49c856d7e4182b2925abbd3751311"
             }
         ],
         "building_queue": [],
@@ -81875,7 +82295,8 @@
                     "path": []
                 },
                 "custom_name": "4th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "17c6548d60064365a91ad701759f920d"
             }
         ],
         "building_queue": [],
@@ -82113,7 +82534,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "f1d12b2e64df4834b1e6a44edfee4f34"
             }
         ],
         "building_queue": [],
@@ -83106,7 +83528,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "ea902ac266c9463486d5a211a8c91ea7"
             }
         ],
         "building_queue": [],
@@ -83394,7 +83817,8 @@
                     "path": []
                 },
                 "custom_name": "4th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "40655162ad6d428089c164d9b1880e84"
             }
         ],
         "building_queue": [],
@@ -84697,7 +85121,8 @@
                     "path": []
                 },
                 "custom_name": "16th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "56ab277570ca4534b54041f2e172e9f4"
             }
         ],
         "building_queue": [],
@@ -85378,7 +85803,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "3881fd25a0db48ea817b0a69171d50bd"
             }
         ],
         "building_queue": [],
@@ -85887,7 +86313,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "debfb780b01941a9afdc2e76d5b7a0eb"
             }
         ],
         "building_queue": [],
@@ -86319,7 +86746,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "6953f5414155437ab961e00a0b28419a"
             }
         ],
         "building_queue": [],
@@ -86369,7 +86797,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "09fb3e81d73f4d4591fc7a8480e8a0f0"
             }
         ],
         "building_queue": [],
@@ -87249,7 +87678,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "613b0a864b2f47e8b2361bcb649b6e42"
             }
         ],
         "building_queue": [],
@@ -87360,7 +87790,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "0c8c1aa9c3864889a14997067902638e"
             }
         ],
         "building_queue": [],
@@ -87825,7 +88256,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "c763d06e039f4d5194a956f21b257e0e"
             }
         ],
         "building_queue": [],
@@ -88518,7 +88950,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "2ad1e89a4aa146ff8c5f45dcee506364"
             }
         ],
         "building_queue": [],
@@ -88893,7 +89326,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "783d908ccb354138a8d34cd016295e10"
             }
         ],
         "building_queue": [],
@@ -89197,7 +89631,8 @@
                     "path": []
                 },
                 "custom_name": "4th Infantry Division (1939)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "aaee2a264a0e450c9bac13a6aba68f24"
             }
         ],
         "building_queue": [],

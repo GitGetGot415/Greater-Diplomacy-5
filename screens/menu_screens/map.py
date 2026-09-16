@@ -1542,12 +1542,14 @@ class Map(GameState):
             self.total_ui_h, target_zoom, animate)
         return True
 
-    def focus_camera_on_orders_target(self, province):
-        """Frame the current Orders selection without hiding it behind its panel."""
-        if not province or "center" not in province:
+    def focus_camera_on_army(self, records):
+        """Frame an explicitly selected army at the centre of its live units."""
+        center = queries.get_average_province_center(
+            [province for _unit, province in records], self.loop_map, self.map_w)
+        if center is None:
             return False
         camera_handler.center_camera_on_province(
-            self.camera, province["center"], c.SCREEN_WIDTH, c.SCREEN_HEIGHT,
+            self.camera, center, c.SCREEN_WIDTH, c.SCREEN_HEIGHT,
             self.total_ui_h, x_offset=c.ORDERS_PANEL_CAMERA_X_OFFSET)
         return True
 
@@ -2058,16 +2060,20 @@ class Map(GameState):
         army = next((item for item in armies if item.get("id") == army_id), None)
         if army is None:
             return False
-        members = {unit_id for unit_id in army.get("unit_ids", [])}
-        records = [(unit, province) for province in self.map_data.values()
-                   for unit in province.get("units", [])
-                   if unit.get("unit_id") in members and unit.get("owner") == self.player_country]
+        records_by_id = {
+            unit.get("unit_id"): (unit, province)
+            for province in self.map_data.values()
+            for unit in province.get("units", [])
+            if unit.get("owner") == self.player_country
+        }
+        records = [records_by_id[unit_id] for unit_id in army.get("unit_ids", [])
+                   if unit_id in records_by_id]
         if not records:
             queries.normalize_armies(self.nation_data, self.map_data)
             return False
         self.select_map_units([unit for unit, _province in records])
         self.selected_province = records[0][1]
-        self.focus_camera_on_orders_target(self.selected_province)
+        self.focus_camera_on_army(records)
         if open_orders:
             self._orders_return_to_province_menu = False
             self.change_state("ORDERS")

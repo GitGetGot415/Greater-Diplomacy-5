@@ -108,21 +108,47 @@ class MapOrderTests(unittest.TestCase):
 
     def test_selecting_an_army_refocuses_the_orders_target(self):
         unit = {"unit_id": "unit-a", "owner": "A", "type": "Infantry"}
+        second_unit = {"unit_id": "unit-b", "owner": "A", "type": "Infantry"}
         origin = province(1, [])
+        second_origin = province(2, [])
+        origin["center"] = (100, 100)
+        second_origin["center"] = (300, 200)
         origin["units"] = [unit]
+        second_origin["units"] = [second_unit]
         game = object.__new__(Map)
         game.player_country = "A"
-        game.nation_data = {"A": {"armies": [{"id": "army-a", "unit_ids": ["unit-a"]}]}}
-        game.map_data = {"origin": origin}
+        game.nation_data = {"A": {"armies": [{
+            "id": "army-a", "unit_ids": ["unit-a", "unit-b"]}]}}
+        game.map_data = {"origin": origin, "second": second_origin}
         game.can_select_map_units = lambda: True
         game.select_map_units = Mock()
-        game.focus_camera_on_orders_target = Mock()
+        game.focus_camera_on_army = Mock()
 
         self.assertTrue(Map.select_army(game, "army-a", open_orders=False))
 
-        game.select_map_units.assert_called_once_with([unit])
+        game.select_map_units.assert_called_once_with([unit, second_unit])
         self.assertIs(game.selected_province, origin)
-        game.focus_camera_on_orders_target.assert_called_once_with(origin)
+        game.focus_camera_on_army.assert_called_once_with([
+            (unit, origin), (second_unit, second_origin)])
+
+    def test_army_camera_focus_uses_the_average_member_position(self):
+        first = {"owner": "A"}
+        second = {"owner": "A"}
+        first_province = {"center": (100, 100)}
+        second_province = {"center": (300, 200)}
+        game = object.__new__(Map)
+        game.loop_map = False
+        game.map_w = 1000
+        game.camera = object()
+        game.total_ui_h = 120
+
+        with patch("screens.menu_screens.map.camera_handler.center_camera_on_province") as center:
+            self.assertTrue(Map.focus_camera_on_army(
+                game, [(first, first_province), (second, second_province)]))
+
+        center.assert_called_once_with(
+            game.camera, (200, 150), c.SCREEN_WIDTH, c.SCREEN_HEIGHT,
+            game.total_ui_h, x_offset=c.ORDERS_PANEL_CAMERA_X_OFFSET)
 
 
 class OrdersSelectionRowsTests(unittest.TestCase):
@@ -470,7 +496,7 @@ class MapOrderGestureTests(unittest.TestCase):
 
         self.assertEqual(selected, [first, second])
 
-    def test_orders_stack_click_refocuses_the_newly_selected_stack(self):
+    def test_orders_stack_click_does_not_refocus_an_individual_unit(self):
         unit = {"owner": "A", "type": "Infantry"}
         origin = province(1, [])
         origin["units"] = [unit]
@@ -488,7 +514,7 @@ class MapOrderGestureTests(unittest.TestCase):
             "click_select_map_units": lambda self, _units, additive=False: True,
             "is_unit_selected": lambda self, candidate: candidate is unit,
             "selected_unit_records": lambda self: [(unit, origin)],
-            "focus_camera_on_orders_target": focus,
+            "focus_camera_on_army": focus,
         })()
         screen = object.__new__(Orders_Screen)
         screen.map_screen = map_stub
@@ -506,7 +532,7 @@ class MapOrderGestureTests(unittest.TestCase):
                 pygame.MOUSEBUTTONUP, pos=(15, 15), button=1))
 
         self.assertIs(screen.target_province, origin)
-        focus.assert_called_once_with(origin)
+        focus.assert_not_called()
 
 
 class MapViewDefaultTests(unittest.TestCase):

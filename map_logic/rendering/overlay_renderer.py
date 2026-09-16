@@ -1477,25 +1477,9 @@ def compact_army_group_icon(army, best_unit, owner_color, owner, size):
 
 def _army_average_center(records, map_screen):
     """Return the average world position of an army's live unit records."""
-    centers = [province["center"] for _unit, province in records]
-    if not map_screen.loop_map:
-        return (sum(center[0] for center in centers) / len(centers),
-                sum(center[1] for center in centers) / len(centers))
-
-    # Unwrap each X coordinate around the first member before averaging, so an
-    # army straddling the map seam remains at the seam instead of jumping to
-    # the middle of the world.
-    anchor_x = centers[0][0]
-    unwrapped_x = []
-    for center_x, _center_y in centers:
-        delta = center_x - anchor_x
-        if delta > map_screen.map_w / 2:
-            delta -= map_screen.map_w
-        elif delta < -map_screen.map_w / 2:
-            delta += map_screen.map_w
-        unwrapped_x.append(anchor_x + delta)
-    return (sum(unwrapped_x) / len(unwrapped_x) % map_screen.map_w,
-            sum(center[1] for center in centers) / len(centers))
+    return queries.get_average_province_center(
+        [province for _unit, province in records], map_screen.loop_map,
+        map_screen.map_w)
 
 
 def compact_army_groups(map_screen, combat_unit_ids):

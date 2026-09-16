@@ -263,7 +263,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "e040c9d004634f3cac8ddd4e0b01a896"
             }
         ],
         "orders": [],
@@ -344,7 +345,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "2b905e1847b647889c782f9fa49a5474"
             }
         ],
         "orders": [],
@@ -463,7 +465,8 @@
                     "path": []
                 },
                 "custom_name": "1st Destroyer (VIII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "2435ba5fde2747ccbc3b24137b43af31"
             }
         ],
         "orders": [],
@@ -700,7 +703,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "a0c3e966b38c4e9b9fc49ab81c6bb157"
             }
         ],
         "orders": [],
@@ -751,7 +755,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "7078e273bef04f8097c346850d314b4f"
             }
         ],
         "orders": [],
@@ -834,7 +839,8 @@
                     "path": []
                 },
                 "custom_name": "1st Mechanized Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "40c6351ba85a484991903d90073d345a"
             },
             {
                 "type": "Light Tank IV",
@@ -850,7 +856,8 @@
                     "path": []
                 },
                 "custom_name": "1st Light Tank Division (IV)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "493116115f4743c0a5dc5a99de47462d"
             }
         ],
         "orders": [],
@@ -967,7 +974,8 @@
                     "path": []
                 },
                 "custom_name": "4th Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "2e718177eb4344d69dfc93a369d9de3c"
             }
         ],
         "orders": [],
@@ -1081,7 +1089,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Destroyer (VIII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "15399326e3cc4b8195947642416765c7"
             }
         ],
         "orders": [],
@@ -1133,7 +1142,8 @@
                     "path": []
                 },
                 "custom_name": "1st Mechanized Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "8d79f522a53745a9bc09497a1e62e192"
             },
             {
                 "type": "Light Tank IV",
@@ -1149,7 +1159,8 @@
                     "path": []
                 },
                 "custom_name": "1st Light Tank Division (IV)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "3721893121114ce79439477c369d2be3"
             },
             {
                 "type": "Mechanized Infantry Type 1940",
@@ -1165,7 +1176,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Mechanized Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "0c0b9ac15a3d4309a19905b666601151"
             }
         ],
         "orders": [],
@@ -1218,7 +1230,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "43721259eda34b6eb69a00aece645560"
             }
         ],
         "orders": [],
@@ -1270,7 +1283,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "f9f81acee5f441c4aefbc8e91f920d8c"
             }
         ],
         "orders": [],
@@ -1355,7 +1369,8 @@
                     "path": []
                 },
                 "custom_name": "5th Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "8c7b87c481ef490399622b3ff9a37797"
             }
         ],
         "orders": [],
@@ -1408,7 +1423,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Light Tank Division (IV)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "99ef61f107214d68aedf2870069aff79"
             },
             {
                 "type": "Mechanized Infantry Type 1940",
@@ -1424,7 +1440,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Mechanized Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "36be96c1da564b09aeb63c26764109df"
             },
             {
                 "type": "Mechanized Infantry Type 1940",
@@ -1440,7 +1457,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Mechanized Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "9ae8a4f5dcf3445580f3fef18d5c26b1"
             },
             {
                 "type": "Medium Tank II",
@@ -1456,7 +1474,8 @@
                     "path": []
                 },
                 "custom_name": "1st Medium Tank Division (II)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "8f9f77a0f5f84a6db710d6cc121372f8"
             }
         ],
         "orders": [],
@@ -1635,7 +1654,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "0b13382ecbe142dd8ca7366389aca04d"
             }
         ],
         "orders": [],
@@ -1718,7 +1738,8 @@
                     "path": []
                 },
                 "custom_name": "6th Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "248ce224737a460088bcbe5791a91552"
             }
         ],
         "orders": [],
@@ -1769,7 +1790,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Light Tank Division (IV)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "8226903eb462436e9b03c376b9583c16"
             },
             {
                 "type": "Mechanized Infantry Type 1940",
@@ -1785,7 +1807,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Mechanized Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "ba7df9790b51432298bcb89f25a69132"
             }
         ],
         "orders": [],
@@ -1938,7 +1961,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "9f92fc51c0a549a883671ba1b9a68072"
             }
         ],
         "orders": [],
@@ -2027,7 +2051,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "30cf0c5c009e425cabdcab92b004eb65"
             }
         ],
         "orders": [],
@@ -2106,7 +2131,8 @@
                     "path": []
                 },
                 "custom_name": "1st Destroyer (VIII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "3446be4f8cdd4d10a44192e7ff034292"
             },
             {
                 "type": "Mechanized Infantry Type 1940",
@@ -2122,7 +2148,8 @@
                     "path": []
                 },
                 "custom_name": "1st Mechanized Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "7808062d2d5f4331aad975d1cddb0648"
             },
             {
                 "type": "Light Tank IV",
@@ -2138,7 +2165,8 @@
                     "path": []
                 },
                 "custom_name": "1st Light Tank Division (IV)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "bc4454a35c60423fa86b47dc01f38f1f"
             },
             {
                 "type": "Destroyer VIII",
@@ -2154,7 +2182,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Destroyer (VIII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "e2a87e27b6084fd989f920646c8cd3ea"
             }
         ],
         "orders": [],
@@ -2210,7 +2239,8 @@
                     "path": []
                 },
                 "custom_name": "4th Mechanized Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "6b9b9ca1a3a848f8a8c622c1c11ae70c"
             },
             {
                 "type": "Light Tank IV",
@@ -2226,7 +2256,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Light Tank Division (IV)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "4b907edd72b64d479ed91419ea0ade94"
             }
         ],
         "orders": [],
@@ -2278,7 +2309,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "376fbe0453284e479d60aaff33ed1dea"
             }
         ],
         "orders": [],
@@ -2331,7 +2363,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Light Tank Division (IV)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "7cb1afae4cd941fcab976bfbf1b5e3e1"
             },
             {
                 "type": "Mechanized Infantry Type 1940",
@@ -2347,7 +2380,8 @@
                     "path": []
                 },
                 "custom_name": "4th Mechanized Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "ab18650b088f48428dc138ed107f37e4"
             }
         ],
         "orders": [],
@@ -2400,7 +2434,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "e0cc18859f8b4eeb85c5606b86b3def2"
             }
         ],
         "orders": [],
@@ -2481,7 +2516,8 @@
                     "path": []
                 },
                 "custom_name": "4th Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "f82d6f7ac68d44f99e462ed40c18f2e9"
             }
         ],
         "orders": [],
@@ -2564,7 +2600,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Destroyer (VIII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "93d6468779b444f4ad950ab4647c7b60"
             }
         ],
         "orders": [],
@@ -2616,7 +2653,8 @@
                     "path": []
                 },
                 "custom_name": "7th Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "2a7195fa6ec8494d83c9f29f294dd66b"
             },
             {
                 "type": "Infantry Type 1940",
@@ -2632,7 +2670,8 @@
                     "path": []
                 },
                 "custom_name": "8th Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "f0a02b7191d14ebbab331bafd0996ed2"
             }
         ],
         "orders": [],
@@ -2844,7 +2883,8 @@
                     "path": []
                 },
                 "custom_name": "4th Destroyer (VIII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "74cdbdf618cf49828110b9e78c33a9e8"
             }
         ],
         "orders": [],
@@ -2957,7 +2997,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "615e2381082445c0be93cf9ca7274d6e"
             }
         ],
         "orders": [],
@@ -3009,7 +3050,8 @@
                     "path": []
                 },
                 "custom_name": "1st Light Tank Division (IV)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "63824f12923e455d99d0980b36599ea5"
             },
             {
                 "type": "Mechanized Infantry Type 1940",
@@ -3025,7 +3067,8 @@
                     "path": []
                 },
                 "custom_name": "1st Mechanized Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "b385474cd6b640f38cfa142db495059a"
             },
             {
                 "type": "Mechanized Infantry Type 1940",
@@ -3041,7 +3084,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Mechanized Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "8653a83d9c5647f3bfa30e5dc8b7f152"
             }
         ],
         "orders": [],
@@ -3125,7 +3169,8 @@
                     "path": []
                 },
                 "custom_name": "1st Destroyer (VIII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "2fc5c9bd4ca74970b85cc57d3ee79161"
             }
         ],
         "orders": [],
@@ -3274,7 +3319,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Mechanized Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "1db4b7665e7a4899abd795b3a53aee8e"
             },
             {
                 "type": "Light Tank IV",
@@ -3290,7 +3336,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Light Tank Division (IV)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "f5907059db1b4d1f8f112c827bdff06c"
             }
         ],
         "orders": [],
@@ -3342,7 +3389,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "64f816969b124eb0a379c622d7b73bb6"
             }
         ],
         "orders": [],
@@ -3487,7 +3535,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "c88840dffd33484ebbd689484f8dd23a"
             }
         ],
         "orders": [],
@@ -3542,7 +3591,8 @@
                     "path": []
                 },
                 "custom_name": "1st Destroyer (VII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "be731b7700844d41bc2ff873b6172266"
             }
         ],
         "orders": [],
@@ -3596,7 +3646,8 @@
                     "path": []
                 },
                 "custom_name": "1st Mechanized Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "f599d301a502478f9d6dd6e355395ee3"
             }
         ],
         "orders": [],
@@ -3646,7 +3697,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Destroyer (VIII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "c0603619adef42909f0d12e221ac0e3c"
             }
         ],
         "orders": [],
@@ -3700,7 +3752,8 @@
                     "path": []
                 },
                 "custom_name": "1st Mechanized Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "4de61f3d2b2c4d14bfec06fb64399fa2"
             }
         ],
         "orders": [],
@@ -3752,7 +3805,8 @@
                     "path": []
                 },
                 "custom_name": "4th Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "533c522dc40b468e837a21d8ccb25a90"
             }
         ],
         "orders": [],
@@ -3838,7 +3892,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "8dca13a02a8644b0b3fda6f0374a9bc5"
             }
         ],
         "orders": [],
@@ -4048,7 +4103,8 @@
                     "path": []
                 },
                 "custom_name": "4th Mechanized Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "bac0aa95010f479b877817f725da1a9d"
             },
             {
                 "type": "Light Tank IV",
@@ -4064,7 +4120,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Light Tank Division (IV)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "29362add8258451f852413b3460a6e8e"
             }
         ],
         "orders": [],
@@ -4146,7 +4203,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Mechanized Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "3aacef295a9645dab648e5ef1f40b2cf"
             }
         ],
         "orders": [],
@@ -4259,7 +4317,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Mechanized Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "c7233066124f4da6845f32623312f0d2"
             },
             {
                 "type": "Light Tank IV",
@@ -4275,7 +4334,8 @@
                     "path": []
                 },
                 "custom_name": "1st Light Tank Division (IV)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "b4ae893df2e845a28cfc2a2457a49d92"
             }
         ],
         "orders": [],
@@ -4393,7 +4453,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "5da2e7ebae154f9b818571393c3e2dfa"
             }
         ],
         "orders": [],
@@ -4504,7 +4565,8 @@
                     "path": []
                 },
                 "custom_name": "1st Destroyer (VIII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "3ee6f2857fa14f4bad97dab339511147"
             }
         ],
         "orders": [],
@@ -4555,7 +4617,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Mechanized Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "8f6a9906bfa44a2fbff7df3a2497ca6b"
             },
             {
                 "type": "Light Tank IV",
@@ -4571,7 +4634,8 @@
                     "path": []
                 },
                 "custom_name": "1st Light Tank Division (IV)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "b2bbe40d7ab34c5780f8e892a65eee82"
             }
         ],
         "orders": [],
@@ -4655,7 +4719,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Destroyer (VIII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "1f01fdcc57904b4d9a22a83815501468"
             }
         ],
         "orders": [],
@@ -4741,7 +4806,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "f159dc511ad1471c92b92ef247df37b0"
             }
         ],
         "orders": [],
@@ -4793,7 +4859,8 @@
                     "path": []
                 },
                 "custom_name": "1st Destroyer (VIII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "184b8a31ab5e4fc880105850c2431d7a"
             }
         ],
         "orders": [],
@@ -4909,7 +4976,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "11b7dc8c40544c6db5bd5d8f52359b79"
             }
         ],
         "orders": [],
@@ -4960,7 +5028,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "5792c3ac8301434b81ae44fb4ff09921"
             }
         ],
         "orders": [],
@@ -5012,7 +5081,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "0190d631346042cab87860f572035734"
             }
         ],
         "orders": [],
@@ -5124,7 +5194,8 @@
                     "path": []
                 },
                 "custom_name": "1st Destroyer (VIII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "8f219d95c6ab401bb56587f2452f4c15"
             }
         ],
         "orders": [],
@@ -5269,7 +5340,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "3be460e524f9425588167d8546c6649a"
             }
         ],
         "orders": [],
@@ -5318,7 +5390,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "e39dad689e03492fbb1b5a29a187d1dc"
             }
         ],
         "orders": [],
@@ -5397,7 +5470,8 @@
                     "path": []
                 },
                 "custom_name": "1st Mechanized Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "2d781e8f46164e5a8032e17df8de2292"
             },
             {
                 "type": "Mechanized Infantry Type 1940",
@@ -5413,7 +5487,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Mechanized Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "45a4e0ec8d0744fd89155c9cfb95a1e7"
             },
             {
                 "type": "Light Tank IV",
@@ -5429,7 +5504,8 @@
                     "path": []
                 },
                 "custom_name": "1st Light Tank Division (IV)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "35d9e15b39e04a84af2eeeeb1bbe73ec"
             }
         ],
         "orders": [],
@@ -5609,7 +5685,8 @@
                     "path": []
                 },
                 "custom_name": "1st Mechanized Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "1b3ee1a4c53743dbaf939829dc2b069f"
             },
             {
                 "type": "Light Tank IV",
@@ -5625,7 +5702,8 @@
                     "path": []
                 },
                 "custom_name": "1st Light Tank Division (IV)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "ec47d51e7b92464c9b1d7abf65bea75f"
             }
         ],
         "orders": [],
@@ -5742,7 +5820,8 @@
                     "path": []
                 },
                 "custom_name": "1st Destroyer (VIII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "a919924e9ec74acbaa6d5df0b8ebe479"
             }
         ],
         "orders": [],
@@ -5888,7 +5967,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "ca37be07095d41b988d757a6b3d1e087"
             }
         ],
         "orders": [],
@@ -6063,7 +6143,8 @@
                     "path": []
                 },
                 "custom_name": "1st Destroyer (VIII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "dae4c3d64e134744abeb67686abba35e"
             }
         ],
         "orders": [],
@@ -6208,7 +6289,8 @@
                     "path": []
                 },
                 "custom_name": "1st Destroyer (VIII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "6880e2e367064a8ca3c0ae41c66806ac"
             }
         ],
         "orders": [],
@@ -6259,7 +6341,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "4172c916cadc4d209017176f16f029a2"
             }
         ],
         "orders": [],
@@ -6312,7 +6395,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "1f66ac0b85734036b91a0a38b2ea8e24"
             }
         ],
         "orders": [],
@@ -6364,7 +6448,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "5563c8d8fe394fd8bfdc20668dbef33c"
             },
             {
                 "type": "Infantry Type 1940",
@@ -6380,7 +6465,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "24696c07900648bda53634b658b9d677"
             }
         ],
         "orders": [],
@@ -6524,7 +6610,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "7c154534fb1c4fe9aa7297e6974baf38"
             }
         ],
         "orders": [],
@@ -6857,7 +6944,8 @@
                     "path": []
                 },
                 "custom_name": "1st Mechanized Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "a4a06d6984e14625bad86bb2075b222a"
             }
         ],
         "orders": [],
@@ -6904,7 +6992,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "261f63e1da2c4589bcc0a9adbdc1335c"
             }
         ],
         "orders": [],
@@ -6954,7 +7043,8 @@
                     "path": []
                 },
                 "custom_name": "1st Destroyer (VIII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "b08b951c1df6407f8d82addfe51252d8"
             }
         ],
         "orders": [],
@@ -7067,7 +7157,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Mechanized Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "e886e4efb8d94e6188580f6c88ceea46"
             },
             {
                 "type": "Light Tank IV",
@@ -7083,7 +7174,8 @@
                     "path": []
                 },
                 "custom_name": "1st Light Tank Division (IV)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "52e1e0d7c679407580a47d5a9f454857"
             }
         ],
         "orders": [],
@@ -7130,7 +7222,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Destroyer (VIII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "1aeef4bfb5c24329ab6b3368b81a7f03"
             }
         ],
         "orders": [],
@@ -7339,7 +7432,8 @@
                     "path": []
                 },
                 "custom_name": "1st Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "9988f2ae10484891a038ad5f73563a06"
             }
         ],
         "orders": [],
@@ -7387,7 +7481,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "cc24e3c046a54f749365636b43e3499a"
             }
         ],
         "orders": [],
@@ -7436,7 +7531,8 @@
                     "path": []
                 },
                 "custom_name": "1st Destroyer (VIII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "6a9eb0f9f62945cda5a8df34263cdbf0"
             }
         ],
         "orders": [],
@@ -7708,7 +7804,8 @@
                     "path": []
                 },
                 "custom_name": "2nd Destroyer (VIII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "df203b59eedb45f49fe0fad034d3b0e6"
             }
         ],
         "orders": [],
@@ -7818,7 +7915,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Destroyer (VIII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "e19315600efe4365b40d34fa3463bf88"
             }
         ],
         "orders": [],
@@ -7870,7 +7968,8 @@
                     "path": []
                 },
                 "custom_name": "1st Destroyer (VIII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "217fdd9e03a04ba5b7a763646304d746"
             }
         ],
         "orders": [],
@@ -7952,7 +8051,8 @@
                     "path": []
                 },
                 "custom_name": "3rd Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "870348fdba7e44a494d64fb212a4a9f0"
             }
         ],
         "orders": [],
@@ -8029,7 +8129,8 @@
                     "path": []
                 },
                 "custom_name": "1st Destroyer (VIII)",
-                "naval_unit": true
+                "naval_unit": true,
+                "unit_id": "00f1039d3e84401d81cce0e47d05281e"
             }
         ],
         "orders": [],
@@ -8229,7 +8330,8 @@
                     "path": []
                 },
                 "custom_name": "4th Infantry Division (1940)",
-                "naval_unit": false
+                "naval_unit": false,
+                "unit_id": "df5353bf6d234b0a8eb44826f09b2253"
             }
         ],
         "orders": [],

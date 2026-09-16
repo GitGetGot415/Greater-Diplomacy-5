@@ -53,22 +53,11 @@ def country_picker_items(country_ids, nation_data):
     ]
 
 
-def get_country_map_center(country_id, map_data, loop_map=False, map_width=None):
-    """Return a country's focus point, preferring its core territory.
-
-    A country's geographic center is the average of the centers of every tile
-    that lists it as a core.  Countries without core data fall back to their
-    currently owned tiles.  On a looping map, calculate the horizontal average
-    in the nearest wrapped space so territory on both map edges stays together.
-    """
-    core_tiles = [province for province in map_data.values()
-                  if country_id in province.get("cores", []) and province.get("center")]
-    tiles = core_tiles or [province for province in map_data.values()
-                           if province.get("owner") == country_id and province.get("center")]
-    if not tiles:
+def get_average_province_center(provinces, loop_map=False, map_width=None):
+    """Return the geographic centre of provinces, including across a map seam."""
+    centers = [province["center"] for province in provinces if province.get("center")]
+    if not centers:
         return None
-
-    centers = [province["center"] for province in tiles]
     average_y = sum(center[1] for center in centers) / len(centers)
     if not loop_map or not map_width:
         return (sum(center[0] for center in centers) / len(centers), average_y)
@@ -83,6 +72,21 @@ def get_country_map_center(country_id, map_data, loop_map=False, map_width=None)
             delta_x += map_width
         unwrapped_xs.append(anchor_x + delta_x)
     return (sum(unwrapped_xs) / len(unwrapped_xs) % map_width, average_y)
+
+
+def get_country_map_center(country_id, map_data, loop_map=False, map_width=None):
+    """Return a country's focus point, preferring its core territory.
+
+    A country's geographic center is the average of the centers of every tile
+    that lists it as a core.  Countries without core data fall back to their
+    currently owned tiles.  On a looping map, calculate the horizontal average
+    in the nearest wrapped space so territory on both map edges stays together.
+    """
+    core_tiles = [province for province in map_data.values()
+                  if country_id in province.get("cores", []) and province.get("center")]
+    tiles = core_tiles or [province for province in map_data.values()
+                           if province.get("owner") == country_id and province.get("center")]
+    return get_average_province_center(tiles, loop_map, map_width)
 
 
 @contextlib.contextmanager

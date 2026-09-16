@@ -43,6 +43,16 @@ class BattleScreenTestCase(unittest.TestCase):
 
     def setUp(self):
         game_map = self.map
+        # Orders no longer recentres ordinary unit selections. Keep this
+        # rendering fixture independent of camera state left by another test.
+        previous_camera_pos = pygame.Vector2(game_map.camera.pos)
+        previous_camera_target = pygame.Vector2(game_map.camera.target_pos)
+        self.addCleanup(game_map.camera.pos.update,
+                        previous_camera_pos.x, previous_camera_pos.y)
+        self.addCleanup(game_map.camera.target_pos.update,
+                        previous_camera_target.x, previous_camera_target.y)
+        game_map.camera.pos.update(0, 0)
+        game_map.camera.target_pos.update(0, 0)
         names = [n for n in game_map.nation_data
                  if queries.is_playable(n, game_map.nation_data)][:4]
         self.a, self.b, self.x, self.y = names

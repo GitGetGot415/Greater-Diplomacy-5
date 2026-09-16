@@ -45,6 +45,13 @@ def draw_map_screen(map_screen, surface):
     
     x1_world = map_screen.camera.pos.x
     y1_world = map_screen.camera.pos.y
+
+    # A looping map is continuous horizontally. Camera input normally keeps
+    # this in range, but direct screen handoffs can draw before that update;
+    # render the equivalent wrapped position instead of asking subsurface()
+    # for pixels outside the source map.
+    if map_screen.loop_map and map_screen.map_w:
+        x1_world %= map_screen.map_w
     
     # --- NEW: Extract negative Y for screen offset and skybox ---
     render_y_offset = 0
