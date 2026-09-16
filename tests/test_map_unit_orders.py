@@ -401,19 +401,23 @@ class MapOrderGestureTests(unittest.TestCase):
             map_stub, pygame.event.Event(pygame.MOUSEBUTTONUP, pos=(40, 40), button=1), False))
         self.assertFalse(map_stub._ignore_left_until_release)
 
-    def test_orders_short_empty_map_click_exits(self):
+    def test_orders_map_click_returns_to_the_clicked_province_menu(self):
         screen = object.__new__(Orders_Screen)
         screen.panel_rect = pygame.Rect(100, 100, 200, 200)
         screen.bombarding_unit_index = None
         screen.is_dragging_scrollbar = False
         screen.is_content_dragging = lambda _attr: False
         screen.exit_screen = Mock()
+        screen.return_to_province_menu = False
+        screen.entered_from_combat_bubble = True
         screen.map_screen = type("MapStub", (), {
             "unit_selection_drag": None,
             "unit_stack_hitboxes": [],
         })()
 
         with (patch("screens.map_related_screens.orders.event_handler.resolve_map_mouse_gesture_conflict"),
+              patch("screens.map_related_screens.orders.event_handler._select_map_province",
+                    return_value=True) as select_province,
               patch("screens.map_related_screens.orders.pygame.key.get_mods", return_value=0),
               patch("screens.map_related_screens.orders.pygame.mouse.get_pos", return_value=(5, 5))):
             screen.additional_events(
@@ -422,6 +426,9 @@ class MapOrderGestureTests(unittest.TestCase):
                 pygame.event.Event(pygame.MOUSEBUTTONUP, pos=(5, 5), button=1))
 
         screen.exit_screen.assert_called_once_with()
+        select_province.assert_called_once_with(screen.map_screen, (5, 5), navigate=False)
+        self.assertTrue(screen.return_to_province_menu)
+        self.assertFalse(screen.entered_from_combat_bubble)
         self.assertIsNone(screen.map_screen.unit_selection_drag)
 
     def test_orders_left_drag_can_begin_on_open_map_space(self):

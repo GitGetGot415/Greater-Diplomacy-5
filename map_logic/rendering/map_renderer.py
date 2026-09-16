@@ -135,7 +135,10 @@ def draw_map_screen(map_screen, surface):
         return
 
     # --- LAYER 2: SELECTION & HOVER ---
-    if not map_screen.selected_province:
+    # A selected province opens a transparent menu window over the map. Keep
+    # the normal hover glow in that visible window so another tile still has
+    # clear feedback before the player clicks it.
+    if map_screen.hovered_province:
         hover_renderer.draw_hover_glow(map_screen, surface)
 
     # --- LAYER 3: OVERLAYS (Units & Movement Arrows) ---
@@ -222,9 +225,7 @@ def draw_map_screen(map_screen, surface):
         else:
             # Use the custom transparent PNG for the actual province menu
             # Pass the backgrounds directory to the image loader!
-            province_bg = ui_bars.get_ui_image(c.PROVINCE_BG_FILE, directory=c.BACKGROUNDS_DIR)
-            if province_bg.get_size() != surface.get_size():
-                province_bg = pygame.transform.scale(province_bg, surface.get_size())
+            province_bg = ui_bars.get_province_menu_background(surface.get_size())
             surface.blit(province_bg, (0, 0))
             
         province_select.draw_province_select(map_screen, surface)

@@ -1235,9 +1235,14 @@ class Orders_Screen(GameState):
             if rect.width < 4 and rect.height < 4:
                 stack = drag["stack"]
                 if stack is None:
-                    # Outside an armed modal command, a short empty-map click
-                    # closes Orders. Bombardment is handled before this
-                    # selection gesture, so choosing its target stays open.
+                    # Outside an armed modal command, a short map click
+                    # returns to the clicked province's menu. Do not let the
+                    # ordinary Map view-mode navigation run here: this handoff
+                    # is explicitly back to the province inspector.
+                    if event_handler._select_map_province(
+                            self.map_screen, event.pos, navigate=False):
+                        self.return_to_province_menu = True
+                        self.entered_from_combat_bubble = False
                     self.exit_screen()
                     return
                 if self.map_screen.click_select_map_units(

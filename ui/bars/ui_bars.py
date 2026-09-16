@@ -6,6 +6,11 @@ import data.constants as c
 # Cache the images using a tuple (filename, scale, directory) as the key
 _ui_images_cache = {}
 
+# The province-menu artwork is a transparent full-screen PNG. Keep resized
+# copies here as well so rendering and map hit-testing consult identical alpha
+# pixels without scaling the background again for every mouse event.
+_province_menu_background_cache = {}
+
 # Recolored checkerboard tiles, cached by target bg_color so each screen only
 # pays the generation cost once
 _checkerboard_cache = {}
@@ -257,6 +262,26 @@ def get_ui_image(filename, scale=1.0, directory=c.ASSETS_DIR):
             _ui_images_cache[cache_key] = fallback
             
     return _ui_images_cache[cache_key]
+
+
+def get_province_menu_background(size):
+    """Return the province-menu art at ``size`` for drawing and input masks."""
+    size = tuple(size)
+    if size not in _province_menu_background_cache:
+        background = get_ui_image(c.PROVINCE_BG_FILE, directory=c.BACKGROUNDS_DIR)
+        if background.get_size() != size:
+            background = pygame.transform.scale(background, size)
+        _province_menu_background_cache[size] = background
+    return _province_menu_background_cache[size]
+
+
+def province_menu_occludes_map_position(position, size):
+    """Whether an opaque province-menu pixel covers a map click position."""
+    background = get_province_menu_background(size)
+    x, y = position
+    if not background.get_rect().collidepoint(x, y):
+        return True
+    return background.get_at((x, y)).a > 0
 
 def get_checkerboard_tile(base_color):
     """Builds (and caches) a checkerboard tile tinted to base_color.

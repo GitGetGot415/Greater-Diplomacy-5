@@ -12,6 +12,7 @@ from unittest import mock
 
 import pygame
 
+import data.constants as c
 from tests import app_harness
 from ui import event_handler
 
@@ -32,6 +33,9 @@ class MapPanelScrollTests(unittest.TestCase):
     def setUp(self):
         # The panels only exist with a province selected outside selection mode,
         # which is the state the map starts a scenario in.
+        self.map.selected_province = next(
+            province for province in self.map.map_data.values()
+            if province.get("owner") not in c.UNPLAYABLE_NATIONS)
         self.map.selection_mode = False
         self.map.refresh_ui()
         self.map.draw(self.surface)
@@ -111,9 +115,9 @@ class MapPanelScrollTests(unittest.TestCase):
         self.assertIsNone(self.map.hovered_province,
                           f"hover reached the map through a panel (was {before})")
 
-    def test_province_menu_blocks_hidden_combat_bubbles(self):
-        """The full-screen province background must also block bubble input."""
-        pos = (self.surface.get_width() // 2, self.surface.get_height() // 2)
+    def test_province_menu_blocks_combat_bubbles_behind_opaque_artwork(self):
+        """Only the opaque portion of the province background blocks a bubble."""
+        pos = (300, self.surface.get_height() // 2)
         pygame.mouse.get_pos = lambda: pos
         event = pygame.event.Event(pygame.MOUSEBUTTONDOWN,
                                    pos=pos, button=1)
@@ -125,6 +129,50 @@ class MapPanelScrollTests(unittest.TestCase):
             event_handler.handle_map_events(self.map, event)
 
         hit_test.assert_not_called()
+
+    def test_province_menu_keeps_its_transparent_map_window_clickable(self):
+        """A visible province replaces the current selection through clear artwork."""
+        current = self.map.selected_province
+        replacement = next(province for province in self.map.map_data.values()
+                           if (province is not current
+                               and province.get("owner") not in c.UNPLAYABLE_NATIONS))
+        original_mode = self.map.secondary_mode
+        original_pos = pygame.Vector2(self.map.camera.pos)
+        original_target_pos = pygame.Vector2(self.map.camera.target_pos)
+        self.addCleanup(setattr, self.map, "selected_province", current)
+        self.addCleanup(setattr, self.map, "secondary_mode", original_mode)
+        self.addCleanup(setattr, self.map.camera, "pos", original_pos)
+        self.addCleanup(setattr, self.map.camera, "target_pos", original_target_pos)
+        pos = (self.surface.get_width() // 2, self.surface.get_height() // 2)
+        pygame.mouse.get_pos = lambda: pos
+        self.map.secondary_mode = "BLANK"
+
+        with mock.patch.object(event_handler.queries, "get_clicked_province",
+                               return_value=replacement):
+            event_handler.handle_map_events(
+                self.map, pygame.event.Event(pygame.MOUSEBUTTONDOWN,
+                                             pos=pos, button=1))
+
+        self.assertIs(self.map.selected_province, replacement)
+
+    def test_province_menu_draws_hover_feedback_in_its_transparent_window(self):
+        """The visible map continues to show the normal province hover glow."""
+        from map_logic.rendering import map_renderer
+
+        previous_hovered = self.map.hovered_province
+        previous_glow = self.map.hover_glow_surf
+        previous_glow_rect = self.map.hover_glow_rect
+        self.addCleanup(setattr, self.map, "hovered_province", previous_hovered)
+        self.addCleanup(setattr, self.map, "hover_glow_surf", previous_glow)
+        self.addCleanup(setattr, self.map, "hover_glow_rect", previous_glow_rect)
+        self.map.hovered_province = self.map.selected_province
+        self.map.hover_glow_surf = pygame.Surface((1, 1), pygame.SRCALPHA)
+        self.map.hover_glow_rect = pygame.Rect(0, 0, 1, 1)
+
+        with mock.patch.object(map_renderer.hover_renderer, "draw_hover_glow") as draw_glow:
+            self.map.draw(self.surface)
+
+        draw_glow.assert_called_once_with(self.map, self.surface)
 
 
 

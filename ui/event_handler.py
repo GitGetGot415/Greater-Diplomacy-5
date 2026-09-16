@@ -8,6 +8,7 @@ from data import queries
 from ui_elements import process_text_input
 from map_logic.diplomacy import diplomacy_logic
 from screens.map_related_screens import battle_screen
+from ui.bars import ui_bars
 
 # The three panels that sit on the map at fixed screen rects: Buildings/Garrison,
 # Diplomatic Info and the production queue overlay. Each publishes a rect and a
@@ -49,9 +50,9 @@ def _select_tactical_unit_stack(map_screen, position):
     return True
 
 
-def _select_map_province(map_screen, position):
+def _select_map_province(map_screen, position, navigate=True):
     """Run the normal primary-click province selection after a box-select check."""
-    if map_screen.selected_province or map_screen.viewing_ai_moves:
+    if map_screen.viewing_ai_moves:
         return False
     province = queries.get_clicked_province(position, map_screen)
     if (province is None or province["id"] in getattr(
@@ -64,7 +65,7 @@ def _select_map_province(map_screen, position):
     owner = province.get("owner")
     map_screen.mail_draft_text = queries.get_message_draft(
         map_screen.player_country, owner, map_screen.nation_data)
-    if c.MAP_NAVIGATION_MODE != "CLASSIC":
+    if navigate and c.MAP_NAVIGATION_MODE != "CLASSIC":
         navigate_view_mode(map_screen, map_screen.secondary_mode)
     return True
 
@@ -255,10 +256,11 @@ def handle_map_events(map_screen, event):
         if action_rect and action_rect.collidepoint(mx, my):
             on_ui = True
 
-    # The province menu is painted over the entire map after the combat
-    # bubbles.  Treat it as an input layer too, otherwise a bubble hidden by
-    # that background can still win the later click hit-test.
-    if map_screen.selected_province:
+    # The province menu's transparent centre leaves part of the map visible
+    # and interactive. Its opaque artwork still blocks map clicks and combat
+    # bubbles exactly where it covers them.
+    if (map_screen.selected_province and ui_bars.province_menu_occludes_map_position(
+            (mx, my), (c.SCREEN_WIDTH, c.SCREEN_HEIGHT))):
         on_ui = True
 
     # Country-action buttons have their own short scroll pane. It is separate
