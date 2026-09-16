@@ -359,6 +359,40 @@ class ArmyLayoutTests(unittest.TestCase):
         map_screen.is_unit_selected = lambda _unit: True
         self.assertEqual(overlay_renderer.compact_army_groups(map_screen, set()), [])
 
+    def test_strategic_zoom_fades_unorganized_and_foreign_units(self):
+        organized = {"owner": "A", "unit_id": "organized", "type": "Infantry"}
+        unorganized = {"owner": "A", "unit_id": "unorganized", "type": "Infantry"}
+        foreign = {"owner": "B", "unit_id": "foreign", "type": "Infantry"}
+        province = {"center": (20, 20), "units": [organized, unorganized, foreign]}
+        map_screen = SimpleNamespace(
+            camera=SimpleNamespace(zoom=overlay_renderer.ARMY_GROUP_ICON_MAX_ZOOM),
+            player_country="A", nation_data={"A": {"armies": [
+                {"id": "one", "unit_ids": ["organized"]}]}, "B": {}},
+            map_data={"province": province})
+        transition_ms = round(overlay_renderer.ARMY_GROUP_TRANSITION_SECONDS * 1000)
+        halfway_ms = transition_ms // 2
+
+        with patch.object(pygame.time, "get_ticks", side_effect=[
+                0, halfway_ms, transition_ms + 1, transition_ms + 1,
+                transition_ms + 1 + halfway_ms]):
+            fading_in = overlay_renderer.strategic_unit_fade_alphas(map_screen)
+            halfway_out = overlay_renderer.strategic_unit_fade_alphas(map_screen)
+            faded_out = overlay_renderer.strategic_unit_fade_alphas(map_screen)
+            map_screen.camera.zoom = overlay_renderer.ARMY_GROUP_ICON_MAX_ZOOM + 1
+            reappearing = overlay_renderer.strategic_unit_fade_alphas(map_screen)
+            halfway_in = overlay_renderer.strategic_unit_fade_alphas(map_screen)
+
+        self.assertNotIn(id(organized), fading_in)
+        self.assertEqual(fading_in[id(unorganized)], 255)
+        self.assertEqual(fading_in[id(foreign)], 255)
+        self.assertEqual(halfway_out[id(unorganized)], 128)
+        self.assertEqual(halfway_out[id(foreign)], 128)
+        self.assertEqual(faded_out[id(unorganized)], 0)
+        self.assertEqual(faded_out[id(foreign)], 0)
+        self.assertEqual(reappearing[id(unorganized)], 0)
+        self.assertIn(halfway_in[id(unorganized)], (127, 128))
+        self.assertIn(halfway_in[id(foreign)], (127, 128))
+
     def test_army_group_transition_moves_units_to_the_average_marker(self):
         first = {"unit_id": "first"}
         second = {"unit_id": "second"}

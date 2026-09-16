@@ -847,6 +847,7 @@ def draw_overlay_content(map_screen, surface, draw_combat=True):
     desired_compact_groups = compact_army_groups(map_screen, combat_unit_ids)
     compact_groups, transition_units, compact_unit_object_ids = army_group_presentation(
         map_screen, desired_compact_groups, combat_unit_ids)
+    strategic_unit_alphas = strategic_unit_fade_alphas(map_screen)
     # This is transient render state, consumed by map_renderer when it draws
     # movement arrows later in the same frame; it is never part of a save.
     map_screen.compact_army_unit_object_ids = compact_unit_object_ids
@@ -904,34 +905,41 @@ def draw_overlay_content(map_screen, surface, draw_combat=True):
                         if id(unit) not in combat_unit_ids]
                     display_units = [unit for unit in visible_units
                                      if id(unit) not in compact_unit_object_ids]
-
-                    if display_units:
+                    units_by_alpha = {}
+                    for unit in display_units:
+                        alpha = strategic_unit_alphas.get(id(unit), 255)
+                        if alpha > 0:
+                            units_by_alpha.setdefault(alpha, []).append(unit)
+                    for alpha, alpha_units in units_by_alpha.items():
                         draw_unit_icon(map_screen, surface, sx, sy, province,
-                                       is_partial, units=display_units,
-                                       units_are_visible=True)
+                                       is_partial, units=alpha_units,
+                                       units_are_visible=True, alpha=alpha)
+                    status_units = [unit for unit in display_units
+                                    if strategic_unit_alphas.get(id(unit), 255) == 255]
 
-                    if not is_partial and queries.is_training_troops(province):
+                    if (not is_partial and status_units
+                            and queries.is_training_troops(province)):
                         training_sym = status_icon(map_screen, c.ICON_TRAINING)
                         if training_sym:
                             rect = training_sym.get_rect(center=(sx, sy))
                             surface.blit(training_sym, rect)
 
                     # --- Disband Indicator ---
-                    if not is_partial and any(u.get("order", {}).get("type") == "DISBAND" for u in display_units):
+                    if not is_partial and any(u.get("order", {}).get("type") == "DISBAND" for u in status_units):
                         disband_sym = status_icon(map_screen, c.ICON_DISBANDING)
                         if disband_sym:
                             rect = disband_sym.get_rect(center=(sx, sy))
                             surface.blit(disband_sym, rect)
 
                     # --- Repair Indicator ---
-                    if not is_partial and any(u.get("order", {}).get("type") == "REPAIR" for u in display_units):
+                    if not is_partial and any(u.get("order", {}).get("type") == "REPAIR" for u in status_units):
                         repair_sym = status_icon(map_screen, c.ICON_REPAIRING)
                         if repair_sym:
                             rect = repair_sym.get_rect(center=(sx, sy))
                             surface.blit(repair_sym, rect)
 
                     # --- Upgrade Indicator ---
-                    if not is_partial and any(u.get("order", {}).get("type") == "UPGRADE" for u in display_units):
+                    if not is_partial and any(u.get("order", {}).get("type") == "UPGRADE" for u in status_units):
                         upgrade_sym = status_icon(map_screen, c.ICON_UPGRADING)
                         if upgrade_sym:
                             rect = upgrade_sym.get_rect(center=(sx, sy))
@@ -939,7 +947,7 @@ def draw_overlay_content(map_screen, surface, draw_combat=True):
 
                     # --- Conversion Indicator (Convoy/Truck transformations) ---
                     if not is_partial:
-                        convert_order = next((u.get("order", {}) for u in display_units
+                        convert_order = next((u.get("order", {}) for u in status_units
                                                if u.get("order", {}).get("type") == "CONVERT"), None)
                         convert_icon = None
                         if convert_order:
@@ -1157,6 +1165,73 @@ def unit_box_size(map_screen):
 def uses_compact_army_icons(map_screen):
     """Whether the current strategic zoom replaces army stacks with icons."""
     return map_screen.camera.zoom <= ARMY_GROUP_ICON_MAX_ZOOM
+
+
+def strategic_unit_fade_alphas(map_screen):
+    """Return in-progress alpha values for units hidden at strategic zoom.
+
+    Only the local player's organized armies have a public marker at this
+    level.  Everything else fades away over the same interval used for an
+    army's move into that marker, then fades back in when leaving the level.
+    """
+    states = getattr(map_screen, "strategic_unit_fade_states", None)
+    if states is None:
+        states = {}
+        map_screen.strategic_unit_fade_states = states
+    now = pygame.time.get_ticks() / 1000.0
+    live_units = [unit for province in map_screen.map_data.values()
+                  for unit in province.get("units", [])]
+    live_unit_ids = {id(unit) for unit in live_units}
+    for unit_id in set(states) - live_unit_ids:
+        del states[unit_id]
+
+    hidden_unit_ids = set()
+    if uses_compact_army_icons(map_screen):
+        player_country = map_screen.player_country
+        organized_unit_ids = {
+            unit_id
+            for army in queries.get_armies(
+                player_country, map_screen.nation_data, map_screen.map_data)
+            for unit_id in army.get("unit_ids", [])
+            if isinstance(unit_id, str)
+        }
+        for unit in live_units:
+            if unit.get("owner") != player_country:
+                hidden_unit_ids.add(id(unit))
+            elif unit.get("unit_id") not in organized_unit_ids:
+                hidden_unit_ids.add(id(unit))
+
+    alphas = {}
+    for unit in live_units:
+        unit_id = id(unit)
+        target_alpha = 0 if unit_id in hidden_unit_ids else 255
+        state = states.get(unit_id)
+        if state is None:
+            if target_alpha == 255:
+                continue
+            state = {"start_alpha": 255, "target_alpha": target_alpha,
+                     "started_at": now}
+            states[unit_id] = state
+        elif state["target_alpha"] != target_alpha:
+            elapsed = min(1.0, (now - state["started_at"])
+                          / ARMY_GROUP_TRANSITION_SECONDS)
+            current_alpha = round(state["start_alpha"]
+                                  + ((state["target_alpha"] - state["start_alpha"])
+                                     * elapsed))
+            state = {"start_alpha": current_alpha, "target_alpha": target_alpha,
+                     "started_at": now}
+            states[unit_id] = state
+
+        progress = min(1.0, (now - state["started_at"])
+                       / ARMY_GROUP_TRANSITION_SECONDS)
+        alpha = round(state["start_alpha"]
+                      + ((state["target_alpha"] - state["start_alpha"])
+                         * progress))
+        if progress >= 1.0 and target_alpha == 255:
+            del states[unit_id]
+            continue
+        alphas[unit_id] = alpha
+    return alphas
 
 
 def compact_army_icon_size(scaled_height):
@@ -1688,7 +1763,7 @@ def draw_army_group_transition_units(map_screen, surface, transition_units):
 
 
 def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,
-                   units=None, units_are_visible=False):
+                   units=None, units_are_visible=False, alpha=255):
     # Filtered up front: a lone hidden submarine must not even trip the "?"
     # partial-fog blip, or its position leaks through despite being otherwise
     # invisible to anyone who isn't allied or already fighting it.
@@ -1704,6 +1779,9 @@ def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,
 
     if is_partial:
         final_surf = unknown_box((scaled_w, scaled_h))
+        if alpha < 255:
+            final_surf = final_surf.copy()
+            final_surf.set_alpha(alpha)
         surface.blit(final_surf, final_surf.get_rect(center=(sx, int(sy))))
         return
 
@@ -1767,17 +1845,29 @@ def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,
         final_surf = unit_box(unit_symbol_name(best_unit), owner_color, unit_count,
                               is_player_tactical, (scaled_w, scaled_h), owner=owner)
         rect = final_surf.get_rect(center=(sx, int(current_sy)))
-        surface.blit(final_surf, rect)
-        indicator_left = draw_army_unit_bands(
-            surface, owner_units, owner, map_screen.player_country,
-            map_screen.nation_data, rect, scaled_w, army=army)
-        draw_army_emblem(surface, army, rect, indicator_left, scaled_h)
+        if alpha < 255:
+            icon_surface = pygame.Surface(final_surf.get_size(), pygame.SRCALPHA)
+            local_rect = final_surf.get_rect()
+            icon_surface.blit(final_surf, local_rect)
+            indicator_left = draw_army_unit_bands(
+                icon_surface, owner_units, owner, map_screen.player_country,
+                map_screen.nation_data, local_rect, scaled_w, army=army)
+            draw_army_emblem(icon_surface, army, local_rect, indicator_left, scaled_h)
+            icon_surface.set_alpha(alpha)
+            surface.blit(icon_surface, rect)
+        else:
+            surface.blit(final_surf, rect)
+            indicator_left = draw_army_unit_bands(
+                surface, owner_units, owner, map_screen.player_country,
+                map_screen.nation_data, rect, scaled_w, army=army)
+            draw_army_emblem(surface, army, rect, indicator_left, scaled_h)
 
         # Only visible, rendered owner stacks publish a hitbox.  The event
         # layer additionally checks authority before selecting, but never
         # publishing a hidden stack here prevents fog-of-war leakage.
-        _publish_unit_stack_hitbox(map_screen, surface, rect, province,
-                                   owner_units, owner, display_scale)
+        if alpha == 255:
+            _publish_unit_stack_hitbox(map_screen, surface, rect, province,
+                                       owner_units, owner, display_scale)
 
         # Move the offset down for the next owner's box in the stack.
         current_sy += scaled_h + gap
