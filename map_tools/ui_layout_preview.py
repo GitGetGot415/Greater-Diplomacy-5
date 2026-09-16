@@ -2,7 +2,7 @@
 
 Run from the repository root with ``python map_tools/ui_layout_preview.py``.
 The preview uses a temporary in-memory historical map only; it never writes a
-scenario or save. Press 1-6 to change UI state, S to save a screenshot beneath
+scenario or save. Press 1-7 to change UI state, S to save a screenshot beneath
 the system temporary directory, and Esc to quit.
 """
 
@@ -30,6 +30,7 @@ MODE_LABELS = {
     4: "Spectator mode",
     5: "Tournament player",
     6: "Tournament host",
+    7: "Battle screen",
 }
 
 
@@ -64,6 +65,29 @@ def _set_armies(game_map, count):
     game_map.nation_data[game_map.player_country]["armies"] = armies
 
 
+def _battle_preview_orders(game_map, player_country):
+    """Build a live embedded battle inspector for the layout-only preview."""
+    from screens.map_related_screens.orders import Orders_Screen
+
+    opponent = next(country for country in game_map.nation_data
+                    if country != player_country
+                    and queries.is_playable(country, game_map.nation_data))
+    game_map.nation_data[player_country]["at_war_with"] = [opponent]
+    game_map.nation_data[opponent]["at_war_with"] = [player_country]
+    province = next(province for province in game_map.map_data.values()
+                    if not queries.is_water_province(province))
+    library = queries.get_unit_library()
+    province["units"] = [
+        queries.create_unit_dict("Infantry", country, library)
+        for country in (player_country, opponent) for _ in range(8)
+    ]
+    game_map.selected_province = province
+    orders = Orders_Screen()
+    orders.start_with_province(province, game_map)
+    orders.go_to_battle()
+    return orders
+
+
 def main():
     import main as game_main
 
@@ -71,7 +95,7 @@ def main():
     surface = pygame.display.set_mode((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
     pygame.display.set_caption(
         "GD5 UI Layout Preview -- 1 Normal | 2 Real-time | 3 Packed | "
-        "4 Spectator | 5 Tournament Player | 6 Tournament Host | S Screenshot")
+        "4 Spectator | 5 Tournament Player | 6 Tournament Host | 7 Battle | S Screenshot")
     game_main._import_project_modules()
     game_map = game_main.Map(load_path="scenarios/historical/1939", is_scenario=True, num_players=1)
     # Pick the country with the largest starting force so every preview mode
@@ -91,6 +115,7 @@ def main():
     game_map._realtime_submit = lambda: None
     game_map._realtime_unsubmit = lambda: None
     mode = 1
+    battle_orders = None
     clock = pygame.time.Clock()
     running = True
     while running:
@@ -99,7 +124,7 @@ def main():
                 running = False
             elif event.type == pygame.KEYDOWN and event.key in (
                     pygame.K_1, pygame.K_2, pygame.K_3,
-                    pygame.K_4, pygame.K_5, pygame.K_6):
+                    pygame.K_4, pygame.K_5, pygame.K_6, pygame.K_7):
                 mode = int(event.unicode)
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_s:
                 output = Path(tempfile.gettempdir()) / "gd5_ui_previews"
@@ -132,9 +157,14 @@ def main():
         # button-state path used by the live map without starting networking.
         from screens.menu_screens.map import update_button_states
         update_button_states(game_map)
-        game_map.draw(surface)
+        if mode == 7:
+            if battle_orders is None:
+                battle_orders = _battle_preview_orders(game_map, playable_country)
+            battle_orders.draw(surface)
+        else:
+            game_map.draw(surface)
         label = pygame.font.Font(None, 24).render(
-            f"{MODE_LABELS[mode]}  |  1-6 switch views  |  S saves screenshot",
+            f"{MODE_LABELS[mode]}  |  1-7 switch views  |  S saves screenshot",
             True, (255, 235, 150))
         surface.blit(label, (12, c.TOP_UI_HEIGHT + 8))
         pygame.display.flip()

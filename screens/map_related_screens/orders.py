@@ -286,13 +286,9 @@ class Orders_Screen(GameState):
         self.open_battle_panel()
 
     def battle_panel_rect(self):
-        """The clear right-hand space beside Orders and its army tray."""
+        """The clear right-hand space beside Orders while a battle is open."""
         x = self.panel_rect.right + BATTLE_PANEL_GAP
-        armies = queries.get_armies(self.map_screen.player_country,
-                                    self.map_screen.nation_data,
-                                    self.map_screen.map_data)
-        tray = map_top_right_layout.army_tray_rect(self.map_screen, len(armies) + 1)
-        width = tray.left - BATTLE_PANEL_GAP - x
+        width = c.SCREEN_WIDTH - map_top_right_layout.PANEL_RIGHT_MARGIN - x
         # A battle inspector needs room for its lane rows even when Orders is
         # currently compact because the selected roster is short.
         return pygame.Rect(x, self.panel_rect.y, max(1, width), PANEL_HEIGHT)

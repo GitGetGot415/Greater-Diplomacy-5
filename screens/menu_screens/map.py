@@ -76,10 +76,11 @@ EDITOR_BOT_BTN_START_X = c.SCREEN_WIDTH - 120
 EDITOR_BOT_BTN_STEP_X = 110
 
 # --- Top bar, right-aligned ---
+TOP_BAR_BUTTON_GAP = 5
 TOP_RIGHT_BTN_X = c.SCREEN_WIDTH - 120
-REFRESH_BTN_X = c.SCREEN_WIDTH - 240
-HELP_BTN_X = c.SCREEN_WIDTH - 360
-GLOBAL_ECON_BTN_X = c.SCREEN_WIDTH - 480
+REFRESH_BTN_X = TOP_RIGHT_BTN_X - c.SIZES["small"][0] - TOP_BAR_BUTTON_GAP
+HELP_BTN_X = REFRESH_BTN_X - c.SIZES["tiny"][0] - TOP_BAR_BUTTON_GAP
+GLOBAL_ECON_BTN_X = HELP_BTN_X - c.SIZES["small"][0] - TOP_BAR_BUTTON_GAP
 
 # --- Mode buttons on the country-selection screen ---
 BTN_SPECTATOR_Y = c.SCREEN_HEIGHT - 55
@@ -106,9 +107,11 @@ BTN_PRODUCTION_Y = 543
 
 # --- Multiplayer host strip ---
 MP_HOST_BTN_Y = 15
-MP_HOST_MANAGE_X = 380
-MP_HOST_EXPORT_X = 600
-MP_HOST_KEYS_X = 820
+MP_HOST_MANAGE_X = 350
+MP_HOST_MANAGE_SIZE = (180, 30)
+MP_HOST_EXPORT_X = MP_HOST_MANAGE_X + MP_HOST_MANAGE_SIZE[0] + TOP_BAR_BUTTON_GAP
+MP_HOST_EXPORT_SIZE = (150, 30)
+MP_HOST_KEYS_X = MP_HOST_EXPORT_X + MP_HOST_EXPORT_SIZE[0] + TOP_BAR_BUTTON_GAP
 
 
 def render_buttons(map_screen):
@@ -119,7 +122,7 @@ def render_buttons(map_screen):
     # ==================================================================== #
     #                        MAP VIEW TOGGLES                              #
     # ==================================================================== #
-    map_screen.btn_help = Button(HELP_BTN_X, c.TOP_BAR_UI_CENTER_Y, "small", "blue", "Help", map_screen.show_navigation_tutorial, font_preset="normal")
+    map_screen.btn_help = Button(HELP_BTN_X, c.TOP_BAR_UI_CENTER_Y, "tiny", "blue", "Help", map_screen.show_navigation_tutorial, font_preset="normal")
     map_screen.btn_refresh_all = Button(REFRESH_BTN_X, c.TOP_BAR_UI_CENTER_Y, "small", "blue", "Refresh Maps", map_screen.refresh_all_maps, font_preset="normal")
     map_screen.btn_global_econ_overview = Button(GLOBAL_ECON_BTN_X, c.TOP_BAR_UI_CENTER_Y, "small", "pink", "Global Economy", lambda: editor_menus.open_editor_economy(map_screen), font_preset="normal")
 
@@ -482,8 +485,8 @@ def render_buttons(map_screen):
         from ui.multiplayer_host_panel import manage_keys_panel
         manage_keys_panel(map_screen)
 
-    map_screen.btn_spec_mp_manage = Button(MP_HOST_MANAGE_X, MP_HOST_BTN_Y, "diplomatic", "blue", "Manage Players", host_manage_players)
-    map_screen.btn_spec_mp_export = Button(MP_HOST_EXPORT_X, MP_HOST_BTN_Y, "diplomatic", "green", "Export Turn", host_export_turn)
+    map_screen.btn_spec_mp_manage = Button(MP_HOST_MANAGE_X, MP_HOST_BTN_Y, MP_HOST_MANAGE_SIZE, "blue", "Manage Players", host_manage_players)
+    map_screen.btn_spec_mp_export = Button(MP_HOST_EXPORT_X, MP_HOST_BTN_Y, MP_HOST_EXPORT_SIZE, "green", "Export Turn", host_export_turn)
     map_screen.btn_spec_mp_keys = Button(MP_HOST_KEYS_X, MP_HOST_BTN_Y, "keys", "purple", "Keys", host_manage_keys)
 
     # General Controls

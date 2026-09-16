@@ -24,6 +24,7 @@ from data import queries
 from map_logic.turn_processing import combat_rules
 from screens.map_related_screens import battle_screen
 from tests import app_harness
+from ui import army_panel, map_top_right_layout
 
 
 class BattleScreenTestCase(unittest.TestCase):
@@ -111,6 +112,9 @@ class BuildAndPaintTests(BattleScreenTestCase):
         self.assertIsNotNone(orders.battle_screen)
         self.assertTrue(orders.battle_screen.embedded)
         self.assertGreater(orders.battle_screen.panel_rect.x, orders.panel_rect.right)
+        self.assertEqual(orders.battle_screen.panel_rect.right,
+                         c.SCREEN_WIDTH - map_top_right_layout.PANEL_RIGHT_MARGIN)
+        self.assertFalse(army_panel._visible(self.map, orders))
 
     def test_combat_bubble_entry_opens_the_battle_inspector(self):
         from screens.map_related_screens.orders import Orders_Screen

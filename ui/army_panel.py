@@ -560,7 +560,10 @@ def _draw_custom_symbol_editor(map_screen, surface):
         surface.blit(label, label.get_rect(center=button.center))
 
 
-def _visible(map_screen):
+def _visible(map_screen, orders_screen=None):
+    """Return whether the army tray may occupy the current map workspace."""
+    if orders_screen is not None and getattr(orders_screen, "battle_screen", None) is not None:
+        return False
     return (not getattr(map_screen, "selection_mode", False)
             and not getattr(map_screen, "is_editor", False)
             and (getattr(map_screen, "army_panel_visible_in_orders", False)
@@ -569,15 +572,15 @@ def _visible(map_screen):
             and not getattr(map_screen, "tactical_mode", False))
 
 
-def _armies(map_screen):
-    if not _visible(map_screen):
+def _armies(map_screen, orders_screen=None):
+    if not _visible(map_screen, orders_screen):
         return []
     return queries.get_armies(map_screen.player_country, map_screen.nation_data,
                               map_screen.map_data)
 
 
-def _layout(map_screen, show_create=False):
-    armies = _armies(map_screen)
+def _layout(map_screen, show_create=False, orders_screen=None):
+    armies = _armies(map_screen, orders_screen)
     row_count = len(armies) + int(show_create)
     tray = map_top_right_layout.army_tray_rect(map_screen, row_count)
     content_height = row_count * (map_top_right_layout.CARD_HEIGHT + 5)
@@ -616,8 +619,10 @@ def handle_event(map_screen, event, orders_screen=None):
             and getattr(map_screen, "_army_tray_right_click_active", False)):
         map_screen._army_tray_right_click_active = False
         return True
+    if orders_screen is not None and getattr(orders_screen, "battle_screen", None) is not None:
+        return False
     show_create = orders_screen is not None
-    tray, armies = _layout(map_screen, show_create=show_create)
+    tray, armies = _layout(map_screen, show_create=show_create, orders_screen=orders_screen)
     if not armies and not show_create:
         return False
     if event.type == pygame.MOUSEWHEEL and tray.collidepoint(pygame.mouse.get_pos()):
@@ -678,8 +683,10 @@ def handle_event(map_screen, event, orders_screen=None):
 
 
 def draw(map_screen, surface, orders_screen=None, draw_editors=True):
+    if orders_screen is not None and getattr(orders_screen, "battle_screen", None) is not None:
+        return
     show_create = orders_screen is not None
-    tray, armies = _layout(map_screen, show_create=show_create)
+    tray, armies = _layout(map_screen, show_create=show_create, orders_screen=orders_screen)
     if not armies and not show_create:
         return
     panel = pygame.Surface(tray.size, pygame.SRCALPHA)

@@ -122,6 +122,33 @@ class ControllerConstructionTests(unittest.TestCase):
         self.assertLess(game_map.btn_help.rect.right,
                         game_map.btn_refresh_all.rect.left)
 
+    def test_tournament_host_top_toolbar_controls_do_not_overlap(self):
+        from screens.menu_screens.map import update_button_states
+
+        game_map = app_harness.boot_map()
+        game_map.selection_mode = False
+        game_map.selected_province = None
+        game_map.player_country = "Spectator"
+        game_map.multiplayer_mode = True
+        game_map.multiplayer_host_mode = True
+        game_map.ai_is_thinking = False
+        update_button_states(game_map)
+
+        buttons = (
+            game_map.btn_spec_mp_manage,
+            game_map.btn_spec_mp_export,
+            game_map.btn_spec_mp_keys,
+            game_map.btn_global_econ_overview,
+            game_map.btn_help,
+            game_map.btn_refresh_all,
+            game_map.btn_exit_to_menu,
+        )
+        self.assertTrue(all(button.visible for button in buttons))
+        for index, button in enumerate(buttons):
+            for other in buttons[index + 1:]:
+                self.assertFalse(button.rect.colliderect(other.rect),
+                                 f"{button.text} overlaps {other.text}")
+
 
 class GlobalKeyDispatchTests(unittest.TestCase):
     class State:
