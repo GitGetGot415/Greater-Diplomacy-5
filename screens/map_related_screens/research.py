@@ -439,6 +439,12 @@ class Research_Screen(GameState):
         self.enforce_scroll_bounds()
         self.refresh_ui()
 
+    def _mark_draft_changed(self):
+        """Queue a single real-time sync after a research-queue edit."""
+        invalidate = getattr(self.map_screen, "invalidate_map_presentation_cache", None)
+        if invalidate:
+            invalidate()
+
     def refresh_ui(self):
         self.elements = []
         # "is the subject a real nation" rather than "is the player not None":
@@ -636,6 +642,7 @@ class Research_Screen(GameState):
             "tech_name": tech_name, 
             "points_remaining": points_remaining
         })
+        self._mark_draft_changed()
         self.refresh_ui()
 
     def pause_research(self, tech_name):
@@ -648,6 +655,7 @@ class Research_Screen(GameState):
             if project["tech_name"] == tech_name:
                 progress_cache[tech_name] = project["points_remaining"]
                 queue.pop(i)
+                self._mark_draft_changed()
                 break
         self.refresh_ui()
 

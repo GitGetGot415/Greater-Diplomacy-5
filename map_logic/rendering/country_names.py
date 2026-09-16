@@ -4,12 +4,65 @@ import data.constants as c
 from data import queries
 from map_logic.rendering.font_manager import fonts
 
+
+# A name's source surface, landmass geometry, zoom and tilt completely define
+# its transformed pixels.  Retain the modest set visible at nearby zoom levels
+# so an idle planning frame only blits text instead of scaling, rotating and
+# tilting every label again.
+_TRANSFORMED_NAME_CACHE_LIMIT = 512
+
 def clear_country_name_cache(map_screen):
     """Clears cached name surfaces so they are re-rendered on the next update."""
     if hasattr(map_screen, 'country_name_surfs'):
         delattr(map_screen, 'country_name_surfs')
     if hasattr(map_screen, 'faction_name_surfs'):
         delattr(map_screen, 'faction_name_surfs')
+    if hasattr(map_screen, '_country_name_transform_cache'):
+        map_screen._country_name_transform_cache.clear()
+    if hasattr(map_screen, '_country_name_blob_sort_cache'):
+        delattr(map_screen, '_country_name_blob_sort_cache')
+
+
+def _transformed_name_surfaces(map_screen, surf, shadow, blob):
+    """Return cached transformed text for a label at the current camera view."""
+    cache = getattr(map_screen, '_country_name_transform_cache', None)
+    if cache is None:
+        cache = {}
+        map_screen._country_name_transform_cache = cache
+
+    land_scale = min(blob['length'] / surf.get_width(),
+                     (blob['thickness'] * 0.8) / surf.get_height())
+    land_scale = min(max(land_scale, 0.05), 1.0)
+    scaled_w = int(surf.get_width() * map_screen.camera.zoom * land_scale)
+    scaled_h = int(surf.get_height() * map_screen.camera.zoom * land_scale)
+    if scaled_w <= 0 or scaled_h <= 0:
+        return None, None
+
+    angle = blob.get('angle', 0)
+    key = (id(surf), id(shadow), scaled_w, scaled_h, angle,
+           map_screen.camera.tilt_factor, c.APPLY_TILT_TO_TEXT)
+    cached = cache.get(key)
+    if cached is not None:
+        return cached
+
+    scaled_text = pygame.transform.scale(surf, (scaled_w, scaled_h))
+    scaled_shadow = pygame.transform.scale(shadow, (scaled_w, scaled_h))
+    if abs(angle) > 2:
+        scaled_text = pygame.transform.rotate(scaled_text, angle)
+        scaled_shadow = pygame.transform.rotate(scaled_shadow, angle)
+
+    from map_logic.rendering import map_utils
+    scaled_text = map_utils.apply_tilt(
+        scaled_text, map_screen.camera.tilt_factor, c.APPLY_TILT_TO_TEXT)
+    scaled_shadow = map_utils.apply_tilt(
+        scaled_shadow, map_screen.camera.tilt_factor, c.APPLY_TILT_TO_TEXT)
+    scaled_text.set_alpha(255)
+    scaled_shadow.set_alpha(255)
+
+    if len(cache) >= _TRANSFORMED_NAME_CACHE_LIMIT:
+        cache.clear()
+    cache[key] = (scaled_text, scaled_shadow)
+    return scaled_text, scaled_shadow
 
 def draw_country_names(map_screen, surface):
     # --- LAYER 3.5: COUNTRY NAMES ---
@@ -52,8 +105,16 @@ def draw_country_names(map_screen, surface):
             else:
                 active_blobs = map_screen.country_text_blobs
             
-            # Sort largest spatial spread to smallest so mainlands are always processed first!
-            sorted_blobs = sorted(active_blobs, key=lambda b: b["spread"], reverse=True)
+            # Sort largest spatial spread to smallest so mainlands are always
+            # processed first. Blob lists change only at explicit refreshes.
+            sort_cache = getattr(map_screen, '_country_name_blob_sort_cache', None)
+            sort_key = (id(active_blobs), map_screen.base_layer)
+            if sort_cache is not None and sort_cache[0] == sort_key:
+                sorted_blobs = sort_cache[1]
+            else:
+                sorted_blobs = tuple(sorted(
+                    active_blobs, key=lambda b: b["spread"], reverse=True))
+                map_screen._country_name_blob_sort_cache = (sort_key, sorted_blobs)
             
             for blob in sorted_blobs:
                 country = blob["owner"]
@@ -98,37 +159,9 @@ def draw_country_names(map_screen, surface):
                     # Frustum Culling: Only draw if it's actually on the screen
                     if -200 < sx < surface.get_width() + 200 and 0 < sy < surface.get_height():
                         
-                        # --- THE NEW SCALING LOGIC ---
-                        scale_by_length = blob["length"] / surf.get_width()
-                        scale_by_thickness = (blob["thickness"] * 0.8) / surf.get_height()
-                        
-                        land_scale = min(scale_by_length, scale_by_thickness)
-                        land_scale = min(max(land_scale, 0.05), 1.0)
-                        
-                        alpha = 255
-                        
-                        scaled_w = int(surf.get_width() * map_screen.camera.zoom * land_scale)
-                        scaled_h = int(surf.get_height() * map_screen.camera.zoom * land_scale)
-                        
-                        if scaled_w > 0 and scaled_h > 0:
-                            # 1. Apply Uniform Scaling First
-                            scaled_text = pygame.transform.scale(surf, (scaled_w, scaled_h))
-                            scaled_shadow = pygame.transform.scale(shadow, (scaled_w, scaled_h))
-                            
-                            # 2. Rotate the Text
-                            angle = blob.get("angle", 0)
-                            if abs(angle) > 2: 
-                                scaled_text = pygame.transform.rotate(scaled_text, angle)
-                                scaled_shadow = pygame.transform.rotate(scaled_shadow, angle)
-
-                            # 3. Apply Tilt Compression to Text AFTER Rotation
-                            from map_logic.rendering import map_utils
-                            scaled_text = map_utils.apply_tilt(scaled_text, map_screen.camera.tilt_factor, c.APPLY_TILT_TO_TEXT)
-                            scaled_shadow = map_utils.apply_tilt(scaled_shadow, map_screen.camera.tilt_factor, c.APPLY_TILT_TO_TEXT)
-                            
-                            scaled_text.set_alpha(alpha)
-                            scaled_shadow.set_alpha(alpha)
-                            
+                        scaled_text, scaled_shadow = _transformed_name_surfaces(
+                            map_screen, surf, shadow, blob)
+                        if scaled_text is not None:
                             # Center the rotated rect exactly on the calculated coordinates
                             txt_rect = scaled_text.get_rect(center=(int(sx), int(sy)))
                             
@@ -146,11 +179,8 @@ def update_country_centers(map_screen):
     
     timer = pygame.time.get_ticks()
 
-    # Clear name surface caches to force reconstruction with updated faction info
-    if hasattr(map_screen, 'country_name_surfs'):
-        delattr(map_screen, 'country_name_surfs')
-    if hasattr(map_screen, 'faction_name_surfs'):
-        delattr(map_screen, 'faction_name_surfs')
+    # Text source and landmass geometry have changed together.
+    clear_country_name_cache(map_screen)
 
     def get_blobs(grouping_key_func):
         blobs = []

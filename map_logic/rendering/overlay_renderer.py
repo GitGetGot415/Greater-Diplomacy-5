@@ -255,6 +255,22 @@ def combat_bubble_records(map_screen):
     hit-testing all consume this same list so a combat category or click target
     cannot drift away from the image actually painted on the map.
     """
+    # A combat forecast can simulate up to 100 volleys for every visible
+    # clash.  It is presentation data during a planning turn, not animation
+    # work: Map.invalidate_map_presentation_cache() advances this revision at
+    # every local-order, fog, map-layer, snapshot and turn boundary.  Small
+    # isolated render doubles intentionally have no revision and keep the
+    # straightforward uncached behaviour those callers expect.
+    revision = getattr(map_screen, '_presentation_cache_revision', None)
+    cache_key = None
+    if revision is not None:
+        cache_key = (revision, map_screen.player_country,
+                     id(getattr(map_screen, 'visible_provinces', None)),
+                     id(getattr(map_screen, 'partial_visible_provinces', None)))
+        cached = getattr(map_screen, '_combat_bubble_records_cache', None)
+        if cached is not None and cached[0] == cache_key:
+            return cached[1]
+
     player = map_screen.player_country
     friendly = _combat_friendly_nations(map_screen)
     records = []
@@ -305,6 +321,8 @@ def combat_bubble_records(map_screen):
             "orders_province_id": province["id"],
         })
 
+    if cache_key is not None:
+        map_screen._combat_bubble_records_cache = (cache_key, records)
     return records
 
 

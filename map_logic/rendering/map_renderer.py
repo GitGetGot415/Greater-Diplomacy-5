@@ -14,6 +14,44 @@ from ui.bars import resource_hud, top_bar_text, ui_bars
 from screens.map_related_screens import recruit_ui
 from ui import sidebar_info
 
+
+# The base and fog surfaces are immutable between explicit map-layer refreshes.
+# Panning/zooming changes the source rectangle and destination size, but an idle
+# planning screen otherwise asked pygame to rescale the same large surfaces on
+# every frame.  Keep a small working set for the settled camera positions; the
+# key deliberately includes every camera-derived input to a transform.
+_VIEWPORT_SCALE_CACHE_LIMIT = 16
+
+
+def _scaled_map_region(map_screen, source, source_rect, destination_size):
+    """Return a cached scale of one immutable map/fog source rectangle."""
+    cache = getattr(map_screen, "_viewport_scale_cache", None)
+    if cache is None:
+        cache = {}
+        map_screen._viewport_scale_cache = cache
+
+    rect_key = (source_rect.x, source_rect.y, source_rect.width, source_rect.height)
+    key = (id(source), rect_key, tuple(destination_size))
+    cached = cache.get(key)
+    if cached is not None:
+        return cached
+
+    scaled = pygame.transform.scale(source.subsurface(source_rect), destination_size)
+    if len(cache) >= _VIEWPORT_SCALE_CACHE_LIMIT:
+        # Camera movement produces a stream of one-use rectangles.  Dropping
+        # the tiny cache wholesale is predictable and bounds retained VRAM.
+        cache.clear()
+    cache[key] = scaled
+    return scaled
+
+
+def clear_viewport_scale_cache(map_screen):
+    """Invalidate derived map pixels after an explicit visual-layer change."""
+    cache = getattr(map_screen, "_viewport_scale_cache", None)
+    if cache is not None:
+        cache.clear()
+
+
 def draw_map_screen(map_screen, surface):
     # --- HOTSEAT MULTIPLAYER OVERRIDE ---
     if map_screen.show_player_ready_screen:
@@ -72,15 +110,18 @@ def draw_map_screen(map_screen, surface):
         h1 = int(min(vh, map_screen.map_h - y1))
         if w1 > 0 and h1 > 0:
             # Base Map
-            v1 = current_base.subsurface((x1, y1, w1, h1))
+            source_rect = pygame.Rect(x1, y1, w1, h1)
             scaled_w1 = int(w1*map_screen.camera.zoom)
             scaled_h1 = int(h1*map_screen.camera.zoom*map_screen.camera.tilt_factor)
-            surface.blit(pygame.transform.scale(v1, (scaled_w1, scaled_h1)), (0, map_screen.top_ui_height + int(render_y_offset)))
+            surface.blit(_scaled_map_region(map_screen, current_base, source_rect,
+                                             (scaled_w1, scaled_h1)),
+                         (0, map_screen.top_ui_height + int(render_y_offset)))
             
             # Fog Map
             if map_screen.fog_map:
-                f1 = map_screen.fog_map.subsurface((x1, y1, w1, h1))
-                surface.blit(pygame.transform.scale(f1, (scaled_w1, scaled_h1)), (0, map_screen.top_ui_height + int(render_y_offset)))
+                surface.blit(_scaled_map_region(map_screen, map_screen.fog_map,
+                                                 source_rect, (scaled_w1, scaled_h1)),
+                             (0, map_screen.top_ui_height + int(render_y_offset)))
                 
         if w1 < vw and h1 > 0:
             # Clamp to map_w: on a very wide/ultrawide viewport (e.g. the
@@ -96,13 +137,18 @@ def draw_map_screen(map_screen, surface):
                 scaled_h1 = int(h1*map_screen.camera.zoom*map_screen.camera.tilt_factor)
                 
                 # Base Map
-                v2 = current_base.subsurface((0, y1, wrap_w, h1))
-                surface.blit(pygame.transform.scale(v2, (scaled_wrap_w, scaled_h1)), (int(w1*map_screen.camera.zoom), map_screen.top_ui_height + int(render_y_offset)))
+                wrap_rect = pygame.Rect(0, y1, wrap_w, h1)
+                surface.blit(_scaled_map_region(map_screen, current_base, wrap_rect,
+                                                 (scaled_wrap_w, scaled_h1)),
+                             (int(w1*map_screen.camera.zoom),
+                              map_screen.top_ui_height + int(render_y_offset)))
                 
                 # Fog Map
                 if map_screen.fog_map:
-                    f2 = map_screen.fog_map.subsurface((0, y1, wrap_w, h1))
-                    surface.blit(pygame.transform.scale(f2, (scaled_wrap_w, scaled_h1)), (int(w1*map_screen.camera.zoom), map_screen.top_ui_height + int(render_y_offset)))
+                    surface.blit(_scaled_map_region(map_screen, map_screen.fog_map,
+                                                     wrap_rect, (scaled_wrap_w, scaled_h1)),
+                                 (int(w1*map_screen.camera.zoom),
+                                  map_screen.top_ui_height + int(render_y_offset)))
     else:
         src_rect = pygame.Rect(x1, y1, int(vw), int(vh))
         clipped = src_rect.clip(current_base.get_rect())
@@ -117,13 +163,13 @@ def draw_map_screen(map_screen, surface):
             render_position = (render_x_offset, map_screen.top_ui_height + int(render_y_offset))
             
             # Base Map
-            view = current_base.subsurface(clipped)
-            surface.blit(pygame.transform.scale(view, (scaled_w, scaled_h)), render_position)
+            surface.blit(_scaled_map_region(map_screen, current_base, clipped,
+                                             (scaled_w, scaled_h)), render_position)
             
             # Fog Map
             if map_screen.fog_map:
-                f_view = map_screen.fog_map.subsurface(clipped)
-                surface.blit(pygame.transform.scale(f_view, (scaled_w, scaled_h)), render_position)
+                surface.blit(_scaled_map_region(map_screen, map_screen.fog_map,
+                                                 clipped, (scaled_w, scaled_h)), render_position)
 
     # --- CPU BOTTLENECK OPTIMIZATION ---
     # Pygame's transform functions (scale, rotate, tilt) are extremely heavy.
@@ -354,19 +400,35 @@ def draw_map_screen(map_screen, surface):
 def draw_badges(map_screen, surface):
     """Draws notification badges on top of buttons after the main UI renders."""
     if not map_screen.selection_mode and not map_screen.hide_raised_rect:
-
-        # Get counts
-        unread_msgs = queries.get_unread_message_count(map_screen.player_country, map_screen.nation_data)
-        free_research = queries.has_free_research_slots(map_screen.player_country, map_screen.nation_data)
-        incoming_claims = queries.get_incoming_justifications_count(map_screen.player_country, map_screen.nation_data, map_screen.id_to_province)
-        # Everyone in the faction sees this, not only the leader and not only
-        # the challenger: a handover changes who negotiates for the bloc and who
-        # can put your provinces on the table, which is everybody's business.
-        # contenders reads the counter faction_leadership.tick already wrote, so
-        # this costs a dict lookup per member rather than a sweep of the map.
-        my_faction = map_screen.nation_data.get(map_screen.player_country, {}).get("faction", "")
-        leadership_contested = bool(
-            faction_leadership.contenders(map_screen.nation_data, my_faction))
+        # These are derived game-state queries, so keep the answers alongside
+        # the other planning presentation caches instead of asking them again
+        # after every frame's map blits.
+        revision = getattr(map_screen, '_presentation_cache_revision', None)
+        cache_key = (revision, map_screen.player_country)
+        cached = getattr(map_screen, '_badge_state_cache', None)
+        if cached is not None and cached[0] == cache_key:
+            (unread_msgs, free_research, incoming_claims,
+             leadership_contested, political_drift) = cached[1]
+        else:
+            unread_msgs = queries.get_unread_message_count(
+                map_screen.player_country, map_screen.nation_data)
+            free_research = queries.has_free_research_slots(
+                map_screen.player_country, map_screen.nation_data)
+            incoming_claims = queries.get_incoming_justifications_count(
+                map_screen.player_country, map_screen.nation_data,
+                map_screen.id_to_province)
+            # Everyone in the faction sees this, not only the leader and not
+            # only the challenger: a handover changes who negotiates for the
+            # bloc and who can put your provinces on the table.
+            my_faction = map_screen.nation_data.get(
+                map_screen.player_country, {}).get("faction", "")
+            leadership_contested = bool(
+                faction_leadership.contenders(map_screen.nation_data, my_faction))
+            political_drift = politics.drift(
+                map_screen.nation_data, map_screen.player_country)
+            map_screen._badge_state_cache = (
+                cache_key, (unread_msgs, free_research, incoming_claims,
+                            leadership_contested, political_drift))
 
         def draw_badge(btn, text):
             if not btn.visible: return
@@ -389,6 +451,5 @@ def draw_badges(map_screen, surface):
         # actually going somewhere. politics.tick clears the direction on
         # reaching either end of the axis, so "we have arrived" and "the player
         # chose to hold" are one condition rather than two.
-        political_drift = politics.drift(map_screen.nation_data, map_screen.player_country)
         if political_drift:
             draw_badge(map_screen.btn_gp_politics, "<" if political_drift < 0 else ">")

@@ -132,6 +132,12 @@ class Production_Screen(GameState):
         self.map_screen.show_feedback("Turn submitted or unavailable; unsubmit to change production.")
         return False
 
+    def _mark_draft_changed(self):
+        """Invalidate presentation and queue one real-time draft sync per edit."""
+        invalidate = getattr(self.map_screen, "invalidate_map_presentation_cache", None)
+        if invalidate:
+            invalidate()
+
     def exit_screen(self):
         if c.MAP_NAVIGATION_MODE == "CLASSIC":
             # Classic: Back lands on the plain province menu, tile still
@@ -689,6 +695,7 @@ class Production_Screen(GameState):
                 }
             }
             self.target_province.setdefault("building_queue", []).append(order)
+            self._mark_draft_changed()
             self.map_screen.show_feedback("Started Coring Territory")
             self.refresh_ui()
         else:
@@ -715,6 +722,7 @@ class Production_Screen(GameState):
                 }
             }
             self.target_province.setdefault("building_queue", []).append(order)
+            self._mark_draft_changed()
             self.map_screen.show_feedback("Started Core Removal")
             self.refresh_ui()
         else:
@@ -745,6 +753,7 @@ class Production_Screen(GameState):
                 }
             }
             self.target_province.setdefault("building_queue", []).append(order)
+            self._mark_draft_changed()
             self.map_screen.show_feedback(f"Started {b_name}")
             self.refresh_ui()
         else:
@@ -795,6 +804,7 @@ class Production_Screen(GameState):
                 }
             }
             self.target_province.setdefault("unit_queue", []).append(order)
+            self._mark_draft_changed()
             self.map_screen.show_feedback(f"Production started: {unit_name}")
             self.refresh_ui()
         else:
@@ -843,6 +853,7 @@ class Production_Screen(GameState):
             if picked is None:
                 return
             p_data["custom_production_units"] = picked
+            self._mark_draft_changed()
             self.refresh_ui()
 
         queries.open_checkbox_list(
@@ -864,6 +875,7 @@ class Production_Screen(GameState):
             
             queries.refund_queue_item(p_data, item, owner, self.map_screen.map_data)
 
+            self._mark_draft_changed()
             self.map_screen.show_feedback("Cancelled & Refunded")
             self.refresh_ui()
 

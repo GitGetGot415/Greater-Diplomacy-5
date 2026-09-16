@@ -1339,6 +1339,11 @@ class Map(GameState):
         self.selected_unit_ids = set()
         self.unit_stack_hitboxes = []
         self.unit_hover_hitboxes = []
+        # Presentation-derived data is valid only until an explicit state or
+        # order boundary.  Render helpers use this revision instead of
+        # re-running simulations on every planning frame.
+        self._presentation_cache_revision = 0
+        self._combat_bubble_records_cache = None
         self.unit_selection_drag = None
         # Army-card editing is local UI state like selection.  The edited
         # record itself still lives in nation_data and is saved/synchronized.
@@ -1727,6 +1732,22 @@ class Map(GameState):
     }
     ALL_MAP_LAYERS = tuple(MAP_LAYER_REFRESHERS)
 
+    def invalidate_map_presentation_cache(self):
+        """Discard state-derived map presentation after a player/world change.
+
+        Rendering remains free to position cached pixels as the camera moves,
+        but it must not derive combat forecasts or rescale an unchanged map
+        layer during a planning turn.  State-changing UI actions and visual
+        layer refreshes converge here so their caches cannot drift apart.
+        """
+        self._presentation_cache_revision = (
+            getattr(self, '_presentation_cache_revision', 0) + 1)
+        self._combat_bubble_records_cache = None
+        map_renderer.clear_viewport_scale_cache(self)
+        # A real-time draft is a state snapshot, not per-frame presentation.
+        # The next update serializes it once after the action that changed it.
+        self._realtime_draft_dirty = True
+
     def refresh_map_layers(self, *layers):
         """Rebuilds named visual layers in the caller-supplied order.
 
@@ -1734,6 +1755,7 @@ class Map(GameState):
         The renderer remains responsible for the actual image construction;
         callers no longer need six nearly identical forwarding methods.
         """
+        self.invalidate_map_presentation_cache()
         for layer in layers:
             try:
                 self.MAP_LAYER_REFRESHERS[layer](self)
@@ -2015,6 +2037,7 @@ class Map(GameState):
                 unit["order"] = {"type": "MOVE", "path": path}
             else:
                 unit.pop("order", None)
+        self.invalidate_map_presentation_cache()
         self.show_feedback(f"{len(planned)} unit{'s' if len(planned) != 1 else ''} routed to province {destination['id']}")
         return True
 
@@ -2029,6 +2052,7 @@ class Map(GameState):
         army = queries.create_army(self.player_country, self.selected_map_unit_ids(),
                                    self.nation_data, self.map_data)
         if army:
+            self.invalidate_map_presentation_cache()
             self.show_feedback(f"Created {army['name']}")
         return army
 
@@ -2039,6 +2063,7 @@ class Map(GameState):
             self.player_country, army_id, self.selected_map_unit_ids(),
             self.nation_data, self.map_data)
         if changed:
+            self.invalidate_map_presentation_cache()
             self.show_feedback("Selected units assigned to army")
         return changed
 
@@ -2049,6 +2074,7 @@ class Map(GameState):
                                         self.selected_map_unit_ids(),
                                         self.nation_data, self.map_data)
         if changed:
+            self.invalidate_map_presentation_cache()
             self.show_feedback("Selected units removed from their armies")
         return changed
 
@@ -2423,10 +2449,12 @@ class Map(GameState):
             session = self.realtime_session
             player = session.players.get(self.realtime_player_id)
             if (session.phase == "TURN" and player and not player.submitted and not player.eliminated
-                    and not getattr(self, "realtime_submission_pending", False)):
-                # Keep the server's last accepted draft current even before
-                # Submit. A deadline therefore resolves the latest legal work,
-                # while Submit only locks that draft.
+                    and not getattr(self, "realtime_submission_pending", False)
+                    and getattr(self, "_realtime_draft_dirty", True)):
+                # Keep the server's last accepted draft current after a real
+                # player/state boundary.  Serializing every province and army
+                # every frame made an idle planning turn do map-wide work just
+                # to rediscover an unchanged draft.
                 from data.io.realtime_multiplayer import collect_map_commands, RealtimeError
                 import json
                 commands = collect_map_commands(self, self.player_country)
@@ -2437,6 +2465,7 @@ class Map(GameState):
                             self._realtime_draft_fingerprint = fingerprint
                     except RealtimeError as error:
                         self.show_feedback(f"Order update rejected: {error}")
+                self._realtime_draft_dirty = False
         if getattr(self, "realtime_multiplayer", False) and getattr(self, "realtime_client", None):
             from data.io.realtime_multiplayer import apply_authoritative_snapshot
             events = self.realtime_client.poll()
@@ -2507,9 +2536,11 @@ class Map(GameState):
                      not self.show_player_ready_screen and \
                      not self.selection_mode
 
-        if is_playing:
+        if (is_playing and getattr(self, '_popup_presentation_revision', None)
+                != self._presentation_cache_revision):
             from ui import diplomatic_popups
             diplomatic_popups.spawn_popups_for_player(self)
+            self._popup_presentation_revision = self._presentation_cache_revision
 
         if self.show_navigation_intro_when_ready and is_playing:
             self.show_navigation_intro_when_ready = False

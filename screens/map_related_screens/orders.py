@@ -149,6 +149,12 @@ class Orders_Screen(GameState):
 
         self.unit_library = queries.get_unit_library()
 
+    def _mark_draft_changed(self):
+        """Publish one order-edit boundary to the hosting map cache/sync path."""
+        invalidate = getattr(self.map_screen, "invalidate_map_presentation_cache", None)
+        if invalidate:
+            invalidate()
+
     def _panel_title(self, player_units):
         """Name the selected army when its membership is unambiguous."""
         army = queries.common_army_for_units(
@@ -820,6 +826,7 @@ class Orders_Screen(GameState):
                 units[index]["custom_name"] = self.rename_text.strip()
             else:
                 units[index].pop("custom_name", None)
+            self._mark_draft_changed()
         self.renaming_unit_index = None
         self.renaming_unit_province = None
         self.renaming_unit_actual_index = None
@@ -868,6 +875,7 @@ class Orders_Screen(GameState):
                 "turns_left": 1,
                 "refund": costs
             }
+            self._mark_draft_changed()
             self.map_screen.show_feedback("Repair ordered (1 turn).")
             self.refresh_ui()
         else:
@@ -899,6 +907,7 @@ class Orders_Screen(GameState):
             "target_type": target_type,
             "refund": {}
         }
+        self._mark_draft_changed()
         self.map_screen.show_feedback(f"Upgrade to {target_type} ordered (1 turn).")
         self.refresh_ui()
 
@@ -956,6 +965,7 @@ class Orders_Screen(GameState):
 
         # A gun that is firing stays put, so any queued movement is dropped
         unit["order"] = {"type": "BOMBARD", "target_id": dest["id"]}
+        self._mark_draft_changed()
         self.bombarding_unit_index = None
         self.bombarding_unit_province = None
         self.bombarding_unit_actual_index = None
@@ -970,6 +980,7 @@ class Orders_Screen(GameState):
             if self._command_blocked(unit):
                 return
             unit["order"] = {"type": "DISBAND", "turns_left": 1}
+            self._mark_draft_changed()
             self.map_screen.show_feedback(f"Disbanding {unit.get('type')} (1 turn)")
             self.refresh_ui()
 
@@ -1009,6 +1020,7 @@ class Orders_Screen(GameState):
 
             unit["order"] = {"type": "CONVERT", "turns_left": turns, "to": target_type}
 
+            self._mark_draft_changed()
             self.map_screen.show_feedback(f"Converting to {target_type} ({turns} turns)")
             self.refresh_ui()
 
@@ -1029,6 +1041,7 @@ class Orders_Screen(GameState):
                         p_data = self.map_screen.nation_data[self.map_screen.player_country]
                     queries.refund_resources(p_data, order["refund"])
                 del units[index]["order"]
+                self._mark_draft_changed()
                 self.map_screen.show_feedback("Order Cancelled")
                 self.refresh_ui()
 
@@ -1060,6 +1073,7 @@ class Orders_Screen(GameState):
                     cleared_any = True
 
         if cleared_any:
+            self._mark_draft_changed()
             self.map_screen.show_feedback("All orders cleared")
         if cleared_any or cancelled_targeting:
             self.refresh_ui()

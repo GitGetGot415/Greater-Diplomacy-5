@@ -17,6 +17,29 @@ from ui import army_panel, map_top_right_layout, minimap
 
 
 class CountryMapCenterTests(unittest.TestCase):
+    def test_country_name_transform_cache_reuses_settled_camera_pixels(self):
+        map_screen = SimpleNamespace(
+            camera=SimpleNamespace(zoom=1.0, tilt_factor=1.0))
+        source = pygame.Surface((40, 12), pygame.SRCALPHA)
+        shadow = pygame.Surface((40, 12), pygame.SRCALPHA)
+        blob = {"length": 100, "thickness": 100, "angle": 0}
+
+        with patch.object(country_names.pygame.transform, "scale",
+                          wraps=pygame.transform.scale) as scale:
+            first = country_names._transformed_name_surfaces(
+                map_screen, source, shadow, blob)
+            second = country_names._transformed_name_surfaces(
+                map_screen, source, shadow, blob)
+
+        self.assertIs(first[0], second[0])
+        self.assertIs(first[1], second[1])
+        self.assertEqual(scale.call_count, 2)
+
+        map_screen.camera.zoom = 1.5
+        third = country_names._transformed_name_surfaces(
+            map_screen, source, shadow, blob)
+        self.assertIsNot(first[0], third[0])
+
     def test_core_tiles_define_country_center_before_owned_tiles(self):
         world = {
             "core_a": {"owner": "A", "cores": ["A"], "center": (20, 40)},

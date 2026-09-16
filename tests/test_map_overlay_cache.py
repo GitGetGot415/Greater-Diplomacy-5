@@ -36,6 +36,30 @@ from map_logic.rendering import overlay_renderer, symbol_loader
 from tests import app_harness
 
 
+class CombatBubbleRecordCacheTests(unittest.TestCase):
+    def test_records_are_reused_until_the_presentation_revision_changes(self):
+        map_screen = SimpleNamespace(
+            _presentation_cache_revision=1,
+            player_country="A",
+            visible_provinces=None,
+            partial_visible_provinces=None,
+            nation_data={"A": {}},
+            map_data={},
+            id_to_province={},
+            is_editor=False,
+        )
+
+        with mock.patch.object(queries, "get_combat_predictions", return_value=[]) as predictions:
+            first = overlay_renderer.combat_bubble_records(map_screen)
+            second = overlay_renderer.combat_bubble_records(map_screen)
+            map_screen._presentation_cache_revision += 1
+            third = overlay_renderer.combat_bubble_records(map_screen)
+
+        self.assertIs(first, second)
+        self.assertIsNot(first, third)
+        self.assertEqual(predictions.call_count, 2)
+
+
 class SymbolCacheTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
