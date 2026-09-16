@@ -1,6 +1,6 @@
 {
-    "version": "v34",
-    "generated_at": "2026-09-15T23:30:25.102283",
+    "version": "v35",
+    "generated_at": "2026-09-16T00:20:01.748720",
     "date": {
         "day": 15,
         "month": 2,
@@ -51291,7 +51291,7 @@
                 {
                     "type": "Infantry Type 1939",
                     "owner": "Italy",
-                    "health": 2450,
+                    "health": 2450.0,
                     "max_health": 2450,
                     "morale": 100.0,
                     "speed": 1,
@@ -51303,7 +51303,8 @@
                         "path": []
                     },
                     "custom_name": "1st Infantry Division (1939)",
-                    "unit_id": "ea08c399a732469594dae51535e274d0"
+                    "unit_id": "ea08c399a732469594dae51535e274d0",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -51363,7 +51364,7 @@
                 {
                     "type": "Infantry Type 1939",
                     "owner": "Italy",
-                    "health": 2450,
+                    "health": 2450.0,
                     "max_health": 2450,
                     "morale": 100.0,
                     "speed": 1,
@@ -51375,7 +51376,8 @@
                         "path": []
                     },
                     "custom_name": "2nd Infantry Division (1939)",
-                    "unit_id": "f94b160a8de24f25b2e28f56b402a941"
+                    "unit_id": "f94b160a8de24f25b2e28f56b402a941",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
@@ -51418,7 +51420,7 @@
                 {
                     "type": "Destroyer VIII",
                     "owner": "Italy",
-                    "health": 5200,
+                    "health": 5200.0,
                     "max_health": 5200,
                     "morale": 100.0,
                     "speed": 1,
@@ -51430,7 +51432,8 @@
                         "path": []
                     },
                     "custom_name": "1st Destroyer (VIII)",
-                    "unit_id": "0ef431f07ebd4820ab53dc17d7034b78"
+                    "unit_id": "0ef431f07ebd4820ab53dc17d7034b78",
+                    "naval_unit": true
                 }
             ],
             "building_queue": [],
@@ -51920,7 +51923,7 @@
                 {
                     "type": "Infantry Type 1939",
                     "owner": "Italy",
-                    "health": 2450,
+                    "health": 2450.0,
                     "max_health": 2450,
                     "morale": 100.0,
                     "speed": 1,
@@ -51932,7 +51935,8 @@
                         "path": []
                     },
                     "custom_name": "3rd Infantry Division (1939)",
-                    "unit_id": "65d8cb2ddb09455ea844c082f95f8c5c"
+                    "unit_id": "65d8cb2ddb09455ea844c082f95f8c5c",
+                    "naval_unit": false
                 }
             ],
             "building_queue": [],
