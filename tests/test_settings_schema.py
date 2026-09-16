@@ -260,7 +260,7 @@ class NavigationIntroPopupTests(unittest.TestCase):
             pygame.MOUSEBUTTONDOWN, pos=popup.next_rect.center, button=1))
         self.assertEqual(popup.page_index, 2)
         self.assertEqual([icon for _heading, icon, _description in popup.DIPLOMACY_STEPS],
-                         ["mail", "political"])
+                         ["mail", "relations"])
         self.assertTrue(all(popup.body_font.size(line)[0] <= popup.rect.width -
                             (2 * popup.SUBTITLE_SIDE_PADDING)
                             for line in popup._subtitle_lines()))
