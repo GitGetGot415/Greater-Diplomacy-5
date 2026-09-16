@@ -55,6 +55,9 @@ POLICY_SCROLL_WHEEL_STEP = 90
 POLICY_SCROLLBAR_HEIGHT = 14
 POLICY_CARD_PADDING = 12
 POLICY_TITLE_FONT = "normal"
+POLICY_BUTTON_WIDTH = POLICY_CARD_WIDTH - 2 * POLICY_CARD_PADDING
+POLICY_BUTTON_HEIGHT = c.SIZES["small"][1]
+POLICY_BUTTON_BOTTOM_GAP = 8
 
 
 class Politics_Screen(GameState):
@@ -200,7 +203,9 @@ class Politics_Screen(GameState):
         index = politics.POLICIES.index(definition)
         card = self._policy_card_rect(index)
         label, color, disabled = self._policy_button_appearance(definition)
-        button = Button(card.centerx - 50, card.bottom - 48, "small", color, label,
+        button = Button(card.x + POLICY_CARD_PADDING,
+                        card.bottom - POLICY_BUTTON_HEIGHT - POLICY_BUTTON_BOTTOM_GAP,
+                        (POLICY_BUTTON_WIDTH, POLICY_BUTTON_HEIGHT), color, label,
                         lambda policy_id=definition["id"]: self.toggle_policy(policy_id))
         button.disabled = disabled
         return button

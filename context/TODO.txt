@@ -35,10 +35,6 @@
 - Add faction betrayal
 - Add focus trees, possibly through scripted events
 
-### Fatass
-
-- Allow the player to click another province while a province menu is open, unless they are selecting troops (i swear to god this was added already)
-
 ### Exodus
 
 - Add statistics.
