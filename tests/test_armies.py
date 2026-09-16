@@ -322,6 +322,97 @@ class ArmyLayoutTests(unittest.TestCase):
         self.assertEqual([stack["units"] for stack in map_screen.unit_stack_hitboxes],
                          [[first, second], [third]])
 
+    def test_zoomed_out_map_compresses_an_army_to_one_average_position_icon(self):
+        first = {"owner": "A", "unit_id": "first", "type": "Infantry"}
+        second = {"owner": "A", "unit_id": "second", "type": "Tank"}
+        army = {"id": "one", "unit_ids": ["first", "second"], "symbol": "Star"}
+        first_province = {"center": (20, 20), "units": [first]}
+        second_province = {"center": (80, 40), "units": [second]}
+        map_screen = SimpleNamespace(
+            camera=SimpleNamespace(zoom=overlay_renderer.ARMY_GROUP_ICON_MAX_ZOOM,
+                                   tilt_factor=1),
+            player_country="A", nation_data={"A": {"armies": [army]}},
+            map_data={"first": first_province, "second": second_province},
+            map_w=100, loop_map=False,
+            nation_colors={"A": (220, 60, 70)}, tactical_mode=False,
+            player_unit=None, hovered_unit_stack=None, unit_hover_hitboxes=[],
+            unit_stack_hitboxes=[], unit_selection_drag=None,
+            is_unit_selected=lambda _unit: False)
+        surface = pygame.Surface((200, 200), pygame.SRCALPHA)
+
+        with (patch.object(overlay_renderer, "compact_army_group_icon",
+                           return_value=pygame.Surface((20, 20), pygame.SRCALPHA)) as icons,
+              patch.object(queries, "world_to_screen", side_effect=lambda center, *_args:
+                           center)):
+            groups = overlay_renderer.compact_army_groups(map_screen, set())
+            overlay_renderer.draw_compact_army_groups(map_screen, surface, groups)
+
+        self.assertEqual([call.args[0]["id"] for call in icons.call_args_list], ["one"])
+        self.assertEqual(groups[0]["center"], (50, 30))
+        self.assertEqual([stack["units"] for stack in map_screen.unit_stack_hitboxes],
+                         [[first, second]])
+
+        map_screen.is_unit_selected = lambda _unit: True
+        self.assertEqual(overlay_renderer.compact_army_groups(map_screen, set()), [])
+
+    def test_overlay_hides_every_compacted_army_member_from_its_provinces(self):
+        first = {"owner": "A", "unit_id": "first", "type": "Infantry"}
+        second = {"owner": "A", "unit_id": "second", "type": "Tank"}
+        army = {"id": "one", "unit_ids": ["first", "second"], "symbol": "Star"}
+        first_province = {"id": 1, "center": (20, 20), "units": [first]}
+        second_province = {"id": 2, "center": (80, 40), "units": [second]}
+        map_screen = SimpleNamespace(
+            secondary_mode="UNITS", visible_provinces=None,
+            camera=SimpleNamespace(zoom=overlay_renderer.ARMY_GROUP_ICON_MAX_ZOOM,
+                                   tilt_factor=1),
+            player_country="A", nation_data={"A": {"armies": [army]}},
+            map_data={"first": first_province, "second": second_province},
+            map_w=100, loop_map=False, nation_colors={"A": (220, 60, 70)},
+            hovered_unit_stack=None, unit_hover_hitboxes=[], unit_stack_hitboxes=[],
+            unit_selection_drag=None, is_unit_selected=lambda _unit: False)
+        surface = pygame.Surface((200, 200), pygame.SRCALPHA)
+
+        with (patch.object(overlay_renderer, "combat_bubble_records", return_value=[]),
+              patch.object(overlay_renderer, "compact_army_group_icon",
+                           return_value=pygame.Surface((20, 20), pygame.SRCALPHA)),
+              patch.object(queries, "world_to_screen", side_effect=lambda center, *_args:
+                           center),
+              patch.object(overlay_renderer, "draw_unit_icon") as unit_stacks,
+              patch.object(overlay_renderer, "draw_compact_army_groups") as groups):
+            overlay_renderer.draw_overlay_content(map_screen, surface)
+
+        unit_stacks.assert_not_called()
+        self.assertEqual(groups.call_args.args[2][0]["units"], [first, second])
+        self.assertEqual(map_screen.compact_army_unit_object_ids, {id(first), id(second)})
+
+    def test_blank_compact_army_icon_uses_its_normal_stack_leader(self):
+        army = {"id": "army", "symbol": ""}
+        best_unit = {"owner": "A", "type": "Tank"}
+        fallback = pygame.Surface((18, 18), pygame.SRCALPHA)
+
+        with (patch.object(overlay_renderer, "army_emblem_surface", return_value=None),
+              patch.object(symbol_loader, "get_native_size", return_value=(24, 12)),
+              patch.object(symbol_loader, "get_symbol", return_value=fallback) as symbol):
+            icon = overlay_renderer.compact_army_group_icon(
+                army, best_unit, (220, 60, 70), "A", 24)
+
+        self.assertIs(icon, fallback)
+        self.assertEqual(symbol.call_args.args[0], "Tank")
+        self.assertEqual(symbol.call_args.kwargs["color"], (220, 60, 70))
+        self.assertEqual(symbol.call_args.kwargs["country"], "A")
+
+    def test_compact_army_icon_prefers_the_army_emblem(self):
+        army = {"id": "army", "symbol": "Star"}
+        emblem = pygame.Surface((18, 18), pygame.SRCALPHA)
+
+        with (patch.object(overlay_renderer, "army_emblem_surface", return_value=emblem),
+              patch.object(symbol_loader, "get_native_size") as native_size):
+            icon = overlay_renderer.compact_army_group_icon(
+                army, {"owner": "A", "type": "Tank"}, (220, 60, 70), "A", 24)
+
+        self.assertIs(icon, emblem)
+        native_size.assert_not_called()
+
     def test_orders_tray_creates_armies_and_right_click_assigns_selection(self):
         world = {
             "one": {"id": 1, "owner": "A", "units": [

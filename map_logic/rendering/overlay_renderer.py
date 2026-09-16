@@ -844,6 +844,12 @@ def draw_overlay_content(map_screen, surface, draw_combat=True):
         combat_unit_ids = {unit_id for record in combat_records
                            for unit_id in record.get("hidden_unit_ids", set())}
     # ---------------------------------------------
+    compact_groups = compact_army_groups(map_screen, combat_unit_ids)
+    compact_unit_object_ids = {id(unit) for group in compact_groups
+                               for unit in group["units"]}
+    # This is transient render state, consumed by map_renderer when it draws
+    # movement arrows later in the same frame; it is never part of a save.
+    map_screen.compact_army_unit_object_ids = compact_unit_object_ids
 
     for color_key, province in map_screen.map_data.items():
         
@@ -896,9 +902,13 @@ def draw_overlay_content(map_screen, surface, draw_combat=True):
                         province.get("units", []), map_screen.player_country,
                         province, map_screen.nation_data)
                         if id(unit) not in combat_unit_ids]
+                    display_units = [unit for unit in visible_units
+                                     if id(unit) not in compact_unit_object_ids]
 
-                    if visible_units:
-                        draw_unit_icon(map_screen, surface, sx, sy, province, is_partial)
+                    if display_units:
+                        draw_unit_icon(map_screen, surface, sx, sy, province,
+                                       is_partial, units=display_units,
+                                       units_are_visible=True)
 
                     if not is_partial and queries.is_training_troops(province):
                         training_sym = status_icon(map_screen, c.ICON_TRAINING)
@@ -907,21 +917,21 @@ def draw_overlay_content(map_screen, surface, draw_combat=True):
                             surface.blit(training_sym, rect)
 
                     # --- Disband Indicator ---
-                    if not is_partial and any(u.get("order", {}).get("type") == "DISBAND" for u in visible_units):
+                    if not is_partial and any(u.get("order", {}).get("type") == "DISBAND" for u in display_units):
                         disband_sym = status_icon(map_screen, c.ICON_DISBANDING)
                         if disband_sym:
                             rect = disband_sym.get_rect(center=(sx, sy))
                             surface.blit(disband_sym, rect)
 
                     # --- Repair Indicator ---
-                    if not is_partial and any(u.get("order", {}).get("type") == "REPAIR" for u in visible_units):
+                    if not is_partial and any(u.get("order", {}).get("type") == "REPAIR" for u in display_units):
                         repair_sym = status_icon(map_screen, c.ICON_REPAIRING)
                         if repair_sym:
                             rect = repair_sym.get_rect(center=(sx, sy))
                             surface.blit(repair_sym, rect)
 
                     # --- Upgrade Indicator ---
-                    if not is_partial and any(u.get("order", {}).get("type") == "UPGRADE" for u in visible_units):
+                    if not is_partial and any(u.get("order", {}).get("type") == "UPGRADE" for u in display_units):
                         upgrade_sym = status_icon(map_screen, c.ICON_UPGRADING)
                         if upgrade_sym:
                             rect = upgrade_sym.get_rect(center=(sx, sy))
@@ -929,7 +939,7 @@ def draw_overlay_content(map_screen, surface, draw_combat=True):
 
                     # --- Conversion Indicator (Convoy/Truck transformations) ---
                     if not is_partial:
-                        convert_order = next((u.get("order", {}) for u in visible_units
+                        convert_order = next((u.get("order", {}) for u in display_units
                                                if u.get("order", {}).get("type") == "CONVERT"), None)
                         convert_icon = None
                         if convert_order:
@@ -1092,6 +1102,9 @@ def draw_overlay_content(map_screen, surface, draw_combat=True):
                                     pygame.draw.rect(surface, (255, 255, 255), rect, 1)
                                     current_x += w_scaled + icon_spacing
 
+    if map_screen.secondary_mode == "UNITS":
+        draw_compact_army_groups(map_screen, surface, compact_groups)
+
     # Map rendering passes draw_combat=False and paints these after movement
     # and bombardment arrows. Direct callers retain the old self-contained
     # behavior by leaving draw_combat at its default.
@@ -1119,6 +1132,13 @@ ARMY_EMBLEM_MIN_SIZE = 14
 ARMY_EMBLEM_MAX_SIZE = 32
 ARMY_EMBLEM_HEIGHT_RATIO = 0.8
 ARMY_EMBLEM_GAP = 6
+# At the widest strategic view, several division boxes make an army difficult
+# to read.  One compact icon keeps its identity visible until the player zooms
+# back into the normal stack view.
+ARMY_GROUP_ICON_MAX_ZOOM = 2.0
+ARMY_GROUP_ICON_MIN_SIZE = 16
+ARMY_GROUP_ICON_MAX_SIZE = 30
+ARMY_GROUP_ICON_HEIGHT_RATIO = 1.4
 
 
 def unit_box_size(map_screen):
@@ -1130,6 +1150,18 @@ def unit_box_size(map_screen):
     if map_screen.camera.tilt_factor < 0.99 and getattr(c, 'APPLY_TILT_TO_OVERLAYS', True):
         scaled_h = max(8, int(scaled_h * map_screen.camera.tilt_factor))
     return scaled_w, scaled_h, display_scale
+
+
+def uses_compact_army_icons(map_screen):
+    """Whether the current strategic zoom replaces army stacks with icons."""
+    return map_screen.camera.zoom <= ARMY_GROUP_ICON_MAX_ZOOM
+
+
+def compact_army_icon_size(scaled_height):
+    """Return the readable, bounded size of a zoomed-out army group icon."""
+    return max(ARMY_GROUP_ICON_MIN_SIZE,
+               min(ARMY_GROUP_ICON_MAX_SIZE,
+                   round(scaled_height * ARMY_GROUP_ICON_HEIGHT_RATIO)))
 
 
 def _cache_box(key, build):
@@ -1288,35 +1320,201 @@ def draw_army_unit_bands(surface, owner_units, owner, player_country, nation_dat
     return band_left
 
 
-def draw_army_emblem(surface, army, box_rect, indicator_left, scaled_height):
-    """Draw an organized stack's one large identifying emblem, if it has one."""
+def army_emblem_surface(army, size):
+    """Return an army's oriented emblem at ``size``, or ``None`` when blank."""
     if army is None or not (army.get("symbol") or army.get("custom_symbol")):
-        return
+        return None
 
-    badge_size = max(ARMY_EMBLEM_MIN_SIZE,
-                     min(ARMY_EMBLEM_MAX_SIZE,
-                         round(scaled_height * ARMY_EMBLEM_HEIGHT_RATIO)))
     custom_symbol = army.get("custom_symbol")
     if custom_symbol:
-        badge = symbol_loader.get_custom_army_symbol(custom_symbol, badge_size)
+        badge = symbol_loader.get_custom_army_symbol(custom_symbol, size)
     else:
         key = f"{c.ARMY_SYMBOL_KEY_PREFIX}{army['symbol']}"
         native_size = symbol_loader.get_native_size(key, style="classic")
         if not native_size:
-            return
-        zoom = (badge_size * 2) / max(native_size)
+            return None
+        zoom = (size * 2) / max(native_size)
         badge = symbol_loader.get_symbol(
             key, zoom,
             color=tuple(army.get("symbol_color", c.DEFAULT_ARMY_SYMBOL_COLOR)),
             style="classic")
     if not badge:
-        return
+        return None
     rotation = queries.normalize_army_symbol_rotation(army.get("symbol_rotation"))
     flipped = queries.normalize_army_symbol_flipped(army.get("symbol_flipped"))
-    badge = symbol_loader.orient_army_symbol(badge, rotation, flipped)
+    return symbol_loader.orient_army_symbol(badge, rotation, flipped)
+
+
+def draw_army_emblem(surface, army, box_rect, indicator_left, scaled_height):
+    """Draw an organized stack's one large identifying emblem, if it has one."""
+    badge_size = max(ARMY_EMBLEM_MIN_SIZE,
+                     min(ARMY_EMBLEM_MAX_SIZE,
+                         round(scaled_height * ARMY_EMBLEM_HEIGHT_RATIO)))
+    badge = army_emblem_surface(army, badge_size)
+    if not badge:
+        return
     center = (indicator_left - ARMY_EMBLEM_GAP - badge.get_width() // 2,
               box_rect.centery)
     surface.blit(badge, badge.get_rect(center=center))
+
+
+def unit_symbol_name(unit):
+    """Return the map-art name for a unit, including dynamic transports."""
+    unit_type = unit.get("type", "")
+    if unit_type.startswith("Convoy"):
+        return "Convoy"
+    if unit_type.startswith("Truck"):
+        return "Truck"
+    return unit_type
+
+
+def compact_army_group_icon(army, best_unit, owner_color, owner, size):
+    """Return an army's strategic icon, falling back to its best unit's art.
+
+    ``best_unit`` is chosen by the normal stack renderer first, so a blank
+    army emblem cannot disagree with the unit that would lead its expanded
+    stack.
+    """
+    emblem = army_emblem_surface(army, size)
+    if emblem:
+        return emblem
+
+    symbol_name = unit_symbol_name(best_unit)
+    native_size = symbol_loader.get_native_size(symbol_name, country=owner)
+    if not native_size:
+        return None
+    zoom = (size * 2) / max(native_size)
+    return symbol_loader.get_symbol(symbol_name, zoom, color=owner_color,
+                                    country=owner)
+
+
+def _army_average_center(records, map_screen):
+    """Return the average world position of an army's live unit records."""
+    centers = [province["center"] for _unit, province in records]
+    if not map_screen.loop_map:
+        return (sum(center[0] for center in centers) / len(centers),
+                sum(center[1] for center in centers) / len(centers))
+
+    # Unwrap each X coordinate around the first member before averaging, so an
+    # army straddling the map seam remains at the seam instead of jumping to
+    # the middle of the world.
+    anchor_x = centers[0][0]
+    unwrapped_x = []
+    for center_x, _center_y in centers:
+        delta = center_x - anchor_x
+        if delta > map_screen.map_w / 2:
+            delta -= map_screen.map_w
+        elif delta < -map_screen.map_w / 2:
+            delta += map_screen.map_w
+        unwrapped_x.append(anchor_x + delta)
+    return (sum(unwrapped_x) / len(unwrapped_x) % map_screen.map_w,
+            sum(center[1] for center in centers) / len(centers))
+
+
+def compact_army_groups(map_screen, combat_unit_ids):
+    """Build one strategic marker for each unselected local army.
+
+    A marker is only created when every live member can be represented.  That
+    keeps an army in its normal per-province view while one of its divisions is
+    in a combat bubble, and lets selecting all members expand it immediately.
+    """
+    if not uses_compact_army_icons(map_screen):
+        return []
+
+    player_country = map_screen.player_country
+    armies = queries.get_armies(player_country, map_screen.nation_data, map_screen.map_data)
+    if not armies:
+        return []
+    live_by_id = {
+        unit_id: (unit, province)
+        for province in map_screen.map_data.values()
+        for unit in province.get("units", [])
+        for unit_id in [unit.get("unit_id")]
+        if unit.get("owner") == player_country and isinstance(unit_id, str)
+    }
+    _scaled_w, scaled_h, _display_scale = unit_box_size(map_screen)
+    icon_size = compact_army_icon_size(scaled_h)
+    is_selected = getattr(map_screen, "is_unit_selected", lambda _unit: False)
+    groups = []
+    for army in armies:
+        member_ids = army.get("unit_ids", [])
+        if not isinstance(member_ids, list) or not member_ids:
+            continue
+        records = [live_by_id[unit_id] for unit_id in member_ids
+                   if unit_id in live_by_id]
+        if len(records) != len(member_ids):
+            continue
+        if any(id(unit) in combat_unit_ids for unit, _province in records):
+            continue
+        if all(is_selected(unit) for unit, _province in records):
+            continue
+        units = [unit for unit, _province in records]
+        best_unit = queries.get_best_unit_by_defense_then_attack_then_speed(units)
+        if not best_unit:
+            continue
+        owner_color = map_screen.nation_colors.get(player_country, (200, 200, 200))
+        icon = compact_army_group_icon(army, best_unit, owner_color,
+                                       player_country, icon_size)
+        if icon is None:
+            continue
+        groups.append({"army": army, "units": units,
+                       "province": records[0][1], "center": _army_average_center(records, map_screen),
+                       "icon": icon})
+    return groups
+
+
+def _publish_unit_stack_hitbox(map_screen, surface, rect, province, units, owner,
+                               display_scale):
+    """Publish and highlight one rendered unit stack or compact army marker."""
+    hover_hitbox = {"rect": pygame.Rect(rect), "province": province,
+                    "units": list(units)}
+    map_screen.unit_hover_hitboxes.append(hover_hitbox)
+    hovered_stack = getattr(map_screen, "hovered_unit_stack", None)
+    if (hovered_stack and hovered_stack.get("province") is province
+            and {id(unit) for unit in hovered_stack.get("units", [])}
+            == {id(unit) for unit in units}):
+        pygame.draw.rect(surface, (130, 220, 255), rect.inflate(4, 4),
+                         max(2, int(2 * display_scale)), border_radius=3)
+
+    if owner != map_screen.player_country:
+        return
+    map_screen.unit_stack_hitboxes.append({"rect": pygame.Rect(rect),
+                                            "province": province,
+                                            "units": list(units)})
+    is_selected = getattr(map_screen, "is_unit_selected", lambda _unit: False)
+    if any(is_selected(unit) for unit in units):
+        pygame.draw.rect(surface, c.COLOR_GOLD_HIGHLIGHT, rect.inflate(4, 4),
+                         max(2, int(2 * display_scale)), border_radius=3)
+
+    # Right-drag selection is a preview, not a second selection state.
+    drag = getattr(map_screen, "unit_selection_drag", None)
+    if drag:
+        drag_rect = pygame.Rect(
+            drag["start"],
+            (drag["current"][0] - drag["start"][0],
+             drag["current"][1] - drag["start"][1]))
+        drag_rect.normalize()
+        if drag_rect.colliderect(rect):
+            pygame.draw.rect(surface, (110, 255, 170), rect.inflate(7, 7),
+                             max(2, int(2 * display_scale)), border_radius=4)
+
+
+def draw_compact_army_groups(map_screen, surface, groups):
+    """Draw strategic army markers at the average positions of their units."""
+    _scaled_w, _scaled_h, display_scale = unit_box_size(map_screen)
+    offsets = ([0, -map_screen.map_w, map_screen.map_w]
+               if map_screen.loop_map else [0])
+    for group in groups:
+        for offset in offsets:
+            sx, sy = queries.world_to_screen(group["center"], map_screen, offset)
+            if not (-CULL_MARGIN < sx < surface.get_width() + CULL_MARGIN
+                    and -CULL_MARGIN < sy < surface.get_height() + CULL_MARGIN):
+                continue
+            rect = group["icon"].get_rect(center=(int(sx), int(sy)))
+            surface.blit(group["icon"], rect)
+            _publish_unit_stack_hitbox(
+                map_screen, surface, rect, group["province"], group["units"],
+                map_screen.player_country, display_scale)
 
 
 def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,
@@ -1364,8 +1562,8 @@ def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,
     # 2. Calculate the vertical offset to perfectly center the entire stack over the province
     total_boxes = len(unit_stacks)
     total_stack_height = (scaled_h * total_boxes) + (gap * (total_boxes - 1))
-    
-    # Start drawing from the top of the stack and move down
+
+    # Start drawing from the top of the stack and move down.
     current_sy = sy - (total_stack_height // 2) + (scaled_h // 2)
 
     # --- NEW: Sort owners by Total HP descending, but keep Player Tactical Unit on top ---
@@ -1391,24 +1589,13 @@ def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,
             continue
 
         unit_count = len(owner_units)
-        unit_type = best_unit.get("type", "")
         owner_color = map_screen.nation_colors.get(owner, (200, 200, 200))
-        
-        # Check if it's a dynamic convoy or truck
-        if unit_type.startswith("Convoy"):
-            symbol_name = "Convoy"
-        elif unit_type.startswith("Truck"):
-            symbol_name = "Truck"
-        else:
-            symbol_name = unit_type
 
         # --- TACTICAL MODE INVERSION ---
         is_player_tactical = map_screen.tactical_mode and map_screen.player_unit is best_unit
 
-        final_surf = unit_box(symbol_name, owner_color, unit_count,
+        final_surf = unit_box(unit_symbol_name(best_unit), owner_color, unit_count,
                               is_player_tactical, (scaled_w, scaled_h), owner=owner)
-
-        # Blit using the stacked Y coordinate
         rect = final_surf.get_rect(center=(sx, int(current_sy)))
         surface.blit(final_surf, rect)
         indicator_left = draw_army_unit_bands(
@@ -1419,43 +1606,10 @@ def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,
         # Only visible, rendered owner stacks publish a hitbox.  The event
         # layer additionally checks authority before selecting, but never
         # publishing a hidden stack here prevents fog-of-war leakage.
-        hover_hitbox = {
-            "rect": pygame.Rect(rect), "province": province,
-            "units": list(owner_units),
-        }
-        map_screen.unit_hover_hitboxes.append(hover_hitbox)
-        hovered_stack = getattr(map_screen, "hovered_unit_stack", None)
-        if (hovered_stack and hovered_stack.get("province") is province
-                and {id(unit) for unit in hovered_stack.get("units", [])}
-                == {id(unit) for unit in owner_units}):
-            pygame.draw.rect(surface, (130, 220, 255), rect.inflate(4, 4),
-                             max(2, int(2 * display_scale)), border_radius=3)
+        _publish_unit_stack_hitbox(map_screen, surface, rect, province,
+                                   owner_units, owner, display_scale)
 
-        if owner == map_screen.player_country:
-            map_screen.unit_stack_hitboxes.append({
-                "rect": pygame.Rect(rect), "province": province,
-                "units": list(owner_units),
-            })
-            is_selected = getattr(map_screen, "is_unit_selected", lambda _unit: False)
-            if any(is_selected(unit) for unit in owner_units):
-                pygame.draw.rect(surface, c.COLOR_GOLD_HIGHLIGHT, rect.inflate(4, 4),
-                                 max(2, int(2 * display_scale)), border_radius=3)
-
-            # Right-drag selection is a preview, not a second selection
-            # state.  Highlight precisely the owned stacks whose live rendered
-            # hitboxes will be included when the mouse button is released.
-            drag = getattr(map_screen, "unit_selection_drag", None)
-            if drag:
-                drag_rect = pygame.Rect(
-                    drag["start"],
-                    (drag["current"][0] - drag["start"][0],
-                     drag["current"][1] - drag["start"][1]))
-                drag_rect.normalize()
-                if drag_rect.colliderect(rect):
-                    pygame.draw.rect(surface, (110, 255, 170), rect.inflate(7, 7),
-                                     max(2, int(2 * display_scale)), border_radius=4)
-
-        # Move the offset down for the next owner's box in the stack
+        # Move the offset down for the next owner's box in the stack.
         current_sy += scaled_h + gap
 
 

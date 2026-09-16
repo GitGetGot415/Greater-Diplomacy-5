@@ -149,8 +149,14 @@ def draw_map_screen(map_screen, surface):
         map_screen, surface, draw_combat=False)
     
     if map_screen.secondary_mode == "UNITS":
+        # The overlay rebuilds this transient set every frame.  Lightweight
+        # screen doubles used by isolated render tests may not have drawn that
+        # layer, in which case no unit is compacted.
+        compacted_units = getattr(map_screen, "compact_army_unit_object_ids", set())
         for province in map_screen.map_data.values():
             for unit in province.get("units", []):
+                if id(unit) in compacted_units:
+                    continue
                 order = unit.get("order")
                 if not order:
                     continue

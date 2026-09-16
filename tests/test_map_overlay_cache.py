@@ -466,7 +466,7 @@ class CullingTests(unittest.TestCase):
         self.real_draw = overlay_renderer.draw_unit_icon
         self.drawn = []
 
-        def spy(map_screen, surface, sx, sy, province, is_partial=False):
+        def spy(map_screen, surface, sx, sy, province, is_partial=False, **_kwargs):
             self.drawn.append((sx, sy))
 
         overlay_renderer.draw_unit_icon = spy
