@@ -152,5 +152,975 @@
   "PUPPET_CANNOT_MAKE_PEACE": "A subject state cannot settle a war on its own authority. Take it up with our overlord.",
   "PUPPET_CANNOT_CHOOSE_FACTION": "A subject state does not choose its own alliances. Address our overlord.",
 
-  "NO_WAR_TO_JOIN": "There is no war between us to answer for. Whatever pact you think binds us here, it does not."
+  "NO_WAR_TO_JOIN": "There is no war between us to answer for. Whatever pact you think binds us here, it does not.",
+
+  "GD4_DENIED_FRIENDSHIP": [
+    {
+      "when": {
+        "strength": "weaker"
+      },
+      "lines": [
+        "We must decline. We can't accept friendship at the moment.",
+        "We can't commit to this friendship offer right now.",
+        "We apologize, but we must maintain our flexibility.",
+        "We need to decline. It's too risky for us.",
+        "We are not ready for such a deal.",
+        "Sorry, we don't really feel like it.",
+        "Your offer of friendship, while kind, isn't something we can accept at the moment.",
+        "How kind of you! Unfortunately, we can't accept.",
+        "Friendship is nice, but we can't accept it right now.",
+        "Thanks for the offer! However, we can't accept.",
+        "Friendship offer? Appreciated very much, but we can't accept.",
+        "Your offer of friendship is very generous! We have to decline though.",
+        "Friendship scares us.",
+        "You're kinda scary, we can't accept.",
+        "Our people would kill us if we accepted.",
+        "We can't accept a friendship. Not now.",
+        "We're busy with other stuff, we can't accept now.",
+        "Oh! Thanks, but we can't commit to this.",
+        "We're very sorry about having to decline.",
+        "Apologies, but while friendship is appreciated, we must decline."
+      ]
+    },
+    {
+      "when": {
+        "strength": "even"
+      },
+      "lines": [
+        "We will not be bound by a friendship.",
+        "We reject your proposal.",
+        "Your offer has arrived at a bad time. We decline.",
+        "No thanks. Our priorities lie elsewhere.",
+        "This offer of friendship is not in our interest.",
+        "We prefer to maintain our options.",
+        "Thanks, but no thanks.",
+        "We don't really see any reason to agree to a friendship.",
+        "We appreciate the friendship offer, but we're gonna say no.",
+        "Nice friendship offer! However, no.",
+        "Friendship. Appreciated, but unfortunately we reject it.",
+        "You seem too eager to become friends with us.",
+        "This seems rather suspicious.",
+        "You're weird.",
+        "We don't think a friendship is necessary for now.",
+        "You don't seem very trustworthy.",
+        "No. You're not stable enough.",
+        "We would rather pass on that offer.",
+        "A kind offer, but one we can reject.",
+        "A friendship is not something we need at the moment."
+      ]
+    },
+    {
+      "when": {
+        "strength": "stronger"
+      },
+      "lines": [
+        "Denied. We see no need for a friendship.",
+        "You're really naive.",
+        "You thought we would accept that?",
+        "No. We will not be bound by your terms.",
+        "You can't be serious.",
+        "You're weak. We decline.",
+        "You would be more of a crutch.",
+        "We would prefer not to do so.",
+        "How about no?",
+        "You're not really worth it.",
+        "This friendship offer we can refuse.",
+        "We would rather kill you.",
+        "Friendship? With you? Ha!",
+        "Aw, you wanted to be friends with us?",
+        "HAHAHAHAHAHAHAHAHAHA no.",
+        "You disgust us.",
+        "Pathetic.",
+        "You would not be a good friend.",
+        "You are not really something we should concern ourselves with.",
+        "You're irrelevant."
+      ]
+    }
+  ],
+
+  "GD4_ACCEPTED_FRIENDSHIP": [
+    {
+      "when": {
+        "strength": "weaker"
+      },
+      "lines": [
+        "We gratefully accept your offer of friendship.",
+        "Thank you! We accept.",
+        "We agree to this. Peace is vital.",
+        "We gladly accept your friendship offer.",
+        "Friendship!!!",
+        "A wise move. We accept.",
+        "Yippee!!!",
+        "You're very kind.",
+        "Yay!!!",
+        "Thanks for the friendship offer!",
+        "We are grateful for your partnership.",
+        "We thank you for your trust. We will not betray it.",
+        "We are grateful for this opportunity to avoid conflict.",
+        "We are honored by your willingness to partner with us.",
+        "You seem like a very reasonable kind of person.",
+        "Peace! Yeah!",
+        "Lovely!",
+        "<3",
+        "Our people love you!",
+        "You're so cool and awesome and epic"
+      ]
+    },
+    {
+      "when": {
+        "strength": "even"
+      },
+      "lines": [
+        "Sure, we can be friends.",
+        "An acceptable offer. We agree.",
+        "A sensible agreement. We accept.",
+        "This is mutually beneficial. We accept.",
+        "This is an acceptable arrangement.",
+        "We agree to this friendship offer.",
+        "Sure! Friendship is a nice thing to have.",
+        "Always good to have more friends.",
+        "No war shall happen between us.",
+        "We stand to gain nothing from a war between us.",
+        "Our cooperation will lead to mutual prosperity.",
+        "Let this be a sign of our mutual respect.",
+        "No war shall befall our nations.",
+        "War is bad, so this is probably a good idea.",
+        "Our nations are stronger together than apart.",
+        "We are pleased you chose cooperation.",
+        "We hope you honor this agreement.",
+        "This has been one of the deals of all time.",
+        "We are glad to be your partners.",
+        "Friendship with us? Good idea."
+      ]
+    },
+    {
+      "when": {
+        "strength": "stronger"
+      },
+      "lines": [
+        "We accept. Do not test our patience.",
+        "Very well. We accept.",
+        "This friendship is acceptable. For now.",
+        "We agree. Behave accordingly.",
+        "Yea sure, why not.",
+        "Accepted. Do not misinterpret our restraint.",
+        "Fine by us. We see no reason to harm you.",
+        "You look nice on the map, we would rather not kill you.",
+        "Friendship with you is acceptable.",
+        "We can be friends.",
+        "This friendship will ensure your safety, for the time being.",
+        "We will uphold this friendship as long as it benefits us.",
+        "We are pleased by your cooperation.",
+        "Enjoy this peace while it lasts.",
+        "Friendship with us will keep you safe from us. Remember that.",
+        "You're tolerable. We can agree to this.",
+        "Well, we like you, so we can agree to be friends.",
+        "Good move.",
+        "You seem smart.",
+        "Glad to see you taking initiative."
+      ]
+    }
+  ],
+
+  "GD4_DENIED_CEASEFIRE": [
+    {
+      "when": {
+        "strength": "weaker"
+      },
+      "lines": [
+        "We must fight for our survival. No ceasefire.",
+        "We've sacrificed too much. We refuse.",
+        "We won't stop defending ourselves.",
+        "We can't stop now. We reject your ceasefire.",
+        "Denied. We have too much at stake.",
+        "We would rather die than do anything civil with you.",
+        "You are a rat bastard and do not deserve peace.",
+        "Death is a preferable alternative to you.",
+        "You need to be stopped. You deserve no mercy.",
+        "What's to stop you from just attacking us later on?",
+        "We will not be broken so easily.",
+        "Our people would rather die free than live under your rule.",
+        "WE REFUSE!!!",
+        "Our nation will not bend to your will!",
+        "Not yet. You need to suffer just a bit more.",
+        "We can still win this!",
+        "We're not giving up that easily.",
+        "We will not let our land be taken.",
+        "You have no right to demand anything from us.",
+        "We will fight you to the last."
+      ]
+    },
+    {
+      "when": {
+        "strength": "even"
+      },
+      "lines": [
+        "We're not finished. Ceasefire denied.",
+        "There will be no ceasefire.",
+        "We will not stop now.",
+        "The war must go on.",
+        "We want to see how this plays out.",
+        "No.",
+        "We can continue the war. This ceasefire offer shows us that you can't.",
+        "You don't deserve mercy.",
+        "You want a ceasefire? That's a sign of weakness.",
+        "Not yet.",
+        "We will continue to push you back.",
+        "We've grown so used to war our industry relies on it now.",
+        "You want peace? Well you won't get it.",
+        "Never!",
+        "We will not let you gain the upper hand.",
+        "We're not done yet.",
+        "There will be no ceasefire until you cease to exist!",
+        "Let us annex you.",
+        "Amazing! A ceasefire offer! That means you're weak.",
+        "Ceasefire? Nah."
+      ]
+    },
+    {
+      "when": {
+        "strength": "stronger"
+      },
+      "lines": [
+        "Denied. This war ends on our terms.",
+        "Not until you're completely annexed.",
+        "We will not stop until you fall.",
+        "You thought we would accept that?",
+        "You can't be serious.",
+        "You seem desperate.",
+        "You're not in any position to beg for a ceasefire.",
+        "Really? You think we're going to let you live?",
+        "Skill issue.",
+        "There's nothing you can do to stop us.",
+        "We do not negotiate with the defeated.",
+        "This will end with your complete annihilation.",
+        "You will not get a second chance.",
+        "Your pitiful attempt to stop us is an insult.",
+        "Your desperate plea for peace is pathetic.",
+        "Nah. You don't deserve it.",
+        "We're going to steamroll you.",
+        "A ceasefire with you? Really?",
+        "You can't do anything to stop us.",
+        "We will not stop until your nation is nothing but a memory."
+      ]
+    }
+  ],
+
+  "GD4_ACCEPTED_CEASEFIRE": [
+    {
+      "when": {
+        "strength": "weaker"
+      },
+      "lines": [
+        "We must accept. We're too weak to continue.",
+        "We agree to the ceasefire.",
+        "We are weary of war. We accept.",
+        "This is a welcome relief. We accept.",
+        "A ceasefire is necessary. We accept.",
+        "Thank you! Your generosity is appreciated.",
+        "Thank you for showing mercy.",
+        "Your ceasefire offer has been happily accepted!",
+        "Your kindness is very much appreciated!",
+        "Thank you for sparing us!",
+        "We hope this is a step toward a more lasting peace.",
+        "Thank god that's over...",
+        "Oh... Mercy... Thank you...",
+        "We will honor this ceasefire.",
+        "We hope for a peaceful future.",
+        "We survive! Thanks to you!",
+        "You seem like a very kind person.",
+        "Your generosity will be remembered.",
+        "This kindness will be remembered.",
+        "Oh! You're offering a ceasefire! We accept!"
+      ]
+    },
+    {
+      "when": {
+        "strength": "even"
+      },
+      "lines": [
+        "A ceasefire is prudent. We accept.",
+        "We agree. The fighting will stop.",
+        "We accept. Too many people have died.",
+        "We will agree to the ceasefire.",
+        "This conflict needs a pause. We accept.",
+        "Sure. We can stop fighting for now.",
+        "War sucks. We'll accept your ceasefire offer.",
+        "Alright fine, we can have peace.",
+        "This war has gone on for too long. We can stop for now.",
+        "You're right, we should probably stop killing each other.",
+        "We are willing to end this conflict.",
+        "This war isn't helping either of us, we can accept a ceasefire.",
+        "Fine. Ceasefire it is, then.",
+        "We're not happy with this, but we can accept it.",
+        "This isn't over.",
+        "We will take back what's rightfully ours. Eventually",
+        "We don't fully trust you yet, but we can agree to a ceasefire.",
+        "Sure. A ceasefire would be nice.",
+        "This war has already ruined both of us. We can stop.",
+        "This ceasefire will benefit both of us."
+      ]
+    },
+    {
+      "when": {
+        "strength": "stronger"
+      },
+      "lines": [
+        "Wait, hold on. We're stronger than you. Why the hell are we agreeing to this?"
+      ]
+    }
+  ],
+
+  "GD4_GOT_DECLARED_ON": [
+    {
+      "when": {
+        "strength": "weaker"
+      },
+      "lines": [
+        "Coward.",
+        "What did we do to deserve this???",
+        "Fight someone your own size! not us!",
+        "You have no honor.",
+        "We really should have seen this coming...",
+        "Ok but why though",
+        "NOOOOOOOOOO!!!!!",
+        "Have you no shame?",
+        "NO! NO! NO! NOT LIKE THIS!!!",
+        "You will suffer for every inch you take.",
+        "Your victory will not come easily.",
+        "Our nation will not be extinguished without a struggle.",
+        "We did not seek this conflict, but we will not shy away from it.",
+        "So be it. We will not go down without a fight.",
+        "This isn't fair!",
+        "Heartless bastard.",
+        "HUH???",
+        "WHAT???",
+        "YOU WON'T GET AWAY WITH THIS!!!!!",
+        "whar?",
+        "😭😭😭",
+        "So this is how it ends...",
+        "You're going to hell for that.",
+        "Your sins will not go unpunished.",
+        "This will come back to haunt you. Eventually.",
+        "You seem like the kind of person who would unironically steal candy from a baby.",
+        "Kids like you should be burning in hell.",
+        "Warmonger.",
+        "I hope you die in a fire.",
+        "May god forgive you, because we won't.",
+        "You're pathetic and spineless.",
+        "Death would be a preferable alternative to you.",
+        "THE SPIRIT OF COMMUNISM WILL SAVE THIS NATION!!!!!",
+        "Being mean to weak nations is bad for your soul.",
+        "Was that a reference to something?",
+        "Comprehensible, but we still hate you.",
+        "Understandable have a horrible day",
+        "You're awful, what's your number?",
+        "This has been one of the worst trade deals we ever received.",
+        "Erm, this is awkward..."
+      ]
+    },
+    {
+      "when": {
+        "strength": "even"
+      },
+      "lines": [
+        "That was not a good idea.",
+        "You're going to regret that.",
+        "We trusted you!",
+        "We thought you were better than this.",
+        "Are you really that greedy?",
+        "Challenge Accepted!",
+        "So be it.",
+        "I think you should die.",
+        "May the battle of the gods finally commence!",
+        "Oh. Ok then.",
+        "Do not expect an easy victory.",
+        "Your aggression will be met with equal force.",
+        "You have picked a fight you cannot win.",
+        "Finally!",
+        "There's no turning back now.",
+        "You DARE challenge us?",
+        "The battlefield will decide who is superior.",
+        "You will suffer. You might even lose.",
+        "Nuts!",
+        "I thought we could live together in peace...",
+        "Bruh.mp3",
+        "I don't think god liked that.",
+        "Well this is definitely one of the war declarations of all time.",
+        "How many times have you done this before?",
+        "YOU SUCK!!!",
+        "oh ok sure declare war on us yea ok why not",
+        "Wack.",
+        "Holy moly!",
+        "Zamn.",
+        "So you're fighting us now.",
+        "This isn't how you flirt with someone!",
+        "This sucks. Also you suck too.",
+        "May you never again sleep peacefully after this.",
+        "BAD TOUCH!!!",
+        "You can't just going around telling people you want to fight them!",
+        "Very uncool.",
+        "I can't tell if you're being really smart or really dumb right now.",
+        "Riveting.",
+        "Fiddlesticks!",
+        "Declaring war? On us? How attractive."
+      ]
+    },
+    {
+      "when": {
+        "strength": "stronger"
+      },
+      "lines": [
+        "...You really think you can win this?",
+        "You have sealed your own fate.",
+        "Remember, you did this to yourself.",
+        "You do realize that we're stronger than you, right?",
+        "You're insane.",
+        "I can't believe you actually decided to do that.",
+        "I think you're a bit in over your head.",
+        "You can't be this stupid.",
+        "I think you have brain damage.",
+        "You're an idiot.",
+        "We were looking for a reason to expand. You just gave us one.",
+        "Your declaration is a gift. It gives us a reason to finally annex you.",
+        "We will put an end to this quickly.",
+        "We will make an example of your nation.",
+        "Your armies are nothing but a minor nuisance.",
+        "Let the blood flow. It will be the only thing of yours we do not take.",
+        "You can't be this dumb.",
+        "What kinda joke is this?",
+        "Excuse me?",
+        "You're weaker than us. This will be easy.",
+        "sybau",
+        "Do you know something that we don't?",
+        "LMAOOOOOOOOOOO",
+        "Ok buddy.",
+        "May god have mercy on you, because we won't.",
+        "Your insolence shall be punished. Hard.",
+        "HAHAHAHAHAHAHAHAHAHA",
+        "This is a really weird way of trying to kill yourself, but we're happy to oblige.",
+        "We've heard of suicide by cop, but this is ridiculous!",
+        "Music to my ears.",
+        "Delicious.",
+        "Looks like we're going to have to perform a late-term abortion on you.",
+        "What an unorthodox way of asking to join us.",
+        "We're going to whack you. Like a mole. Whack-a-mole, if you will.",
+        "You dare fight us? And with such a weak army too?",
+        "You need help.",
+        "Why are you deciding to fight a god?",
+        "How exactly do you think this is going to play out?",
+        "You're free real estate.",
+        "War crimes are only crimes if there's anyone left to report them."
+      ]
+    }
+  ],
+
+  "GD4_I_AM_ATTACKING_YOU": [
+    {
+      "when": {
+        "strength": "weaker"
+      },
+      "lines": [
+        "Your tyranny ends now. We declare war!",
+        "IT'S MILLER TIME",
+        "You're getting too powerful. We can't allow that.",
+        "Surprise!!!",
+        "Behold! A war!",
+        "Bet you wern't expecting this!!!",
+        "No one expects a declaration of war from us!!!",
+        "LETS GET READY TO RUMBLLLEEEEEEEE",
+        "BLOOD FOR THE BLOOD GOD",
+        "Our people want a war. You seemed like a good challenge.",
+        "Oops, did I accidentally a war?",
+        "Hi! We're here to talk to you about your car's extended warranty.",
+        "Forgive our betrayal, but our survival is at stake.",
+        "Hello! We're at war now.",
+        "If you would be so kind as to let us annex you, that would be very much appreciated.",
+        "Can we eat you? Please?",
+        "I'm so hungry I could eat a horse! (You are the horse)",
+        "Trust me, we know what we're doing.",
+        "We think it would be funny if you just let us win this war.",
+        "We need to do this. We're sorry.",
+        "SINNERS GET NO QUARTER.",
+        "Bad morning!!!",
+        "We hope this message finds you not well. We are at war.",
+        "You just got gnomed!!!",
+        "le war declaration jumpscare has arrived",
+        "HERE WE GO!!!",
+        "We are going to brick you.",
+        "I'm feeling lucky!!!",
+        "LETS GO GAMBLING!!!",
+        "YEA! YEA! YEA! YEAAAaauuauhhgghhh~",
+        "THE TIME HAS ARRIVED FOR... war.",
+        "WE HEREBY CLAIM YOU AND YOUR COUNTRY. Please submit.",
+        "Hello, I am the brother of Jesus Christ. Fight me.",
+        "GOD IS WITH US!!!",
+        "DEUS VULT!!!",
+        "Yeah! We're doing this now!",
+        "WAHOO!!!",
+        "This war declaration was sponsored by someone. We forgot who paid us to do this.",
+        "We lost our marbles. We think you stole them.",
+        "hehe~"
+      ]
+    },
+    {
+      "when": {
+        "strength": "even"
+      },
+      "lines": [
+        "You must be contained.",
+        "You're too dangerous to be left alive!",
+        "Fight me!!!",
+        "You don't deserve to exist.",
+        "Your mere presence is an insult to our power.",
+        "Die.",
+        "Sorry, but we can't allow you to continue on like this.",
+        "This world isn't big enough for the two of us.",
+        "One of us is going to die, and I fully intend for it to be you.",
+        "We need your land.",
+        "You have become a threat we can no longer ignore.",
+        "Our destiny is to crush you.",
+        "Do not expect any quarter.",
+        "No mercy.",
+        "You can't be allowed to grow any further.",
+        "You have overplayed your hand. Now we will take what is ours.",
+        "This war was inevitable.",
+        "We have watched you grow, and we will watch you fall.",
+        "A new age dawns, and we will be its masters.",
+        "Your presence is an unacceptable obstacle."
+      ]
+    },
+    {
+      "when": {
+        "strength": "stronger"
+      },
+      "lines": [
+        "It was nice knowing you.",
+        "We grow tired of your existence.",
+        "We are here to claim what is ours.",
+        "You will be erased.",
+        "Yeah. That's right. You're fighting us now.",
+        "You look submissive and conquerable.",
+        "Congratulations! You are being annexed! Please do not resist.",
+        "Your land looks valuable. We want it.",
+        "Honestly, We're just being greedy. You looked like a weak target.",
+        "You will join us whether you like it or not.",
+        "We are not here to negotiate. We are here to conquer.",
+        "Do not weep for your nation. It was always meant to be absorbed by us.",
+        "I want you.",
+        "Your time is up.",
+        "Your annihilation is at hand.",
+        "You are about to die. Scream if you must.",
+        "The age of your nation is over.",
+        "This will not be a war. This will be an execution.",
+        "You belong to us.",
+        "Resistance is futile."
+      ]
+    }
+  ],
+
+  "GD4_GOT_UNFRIENDED": [
+    {
+      "when": {
+        "strength": "weaker"
+      },
+      "lines": [
+        "Bastard.",
+        "Oh no.",
+        "But we trusted you!",
+        "Oh...",
+        "Why would you do this to us???",
+        "You're so mean...",
+        "This does not bode well...",
+        "Were we not good enough for you?",
+        "What did we do? Why don't you like us now?",
+        "Please don't do what we think you're going to do...",
+        "How could you do this to us?",
+        "Backstabber.",
+        "YOU LIED TO US!!!",
+        "We thought you were a friend...",
+        "You're scaring us...",
+        "We don't like this!",
+        "Your word is a lie.",
+        "You are not a good friend.",
+        "Please, have mercy...",
+        "The world will see your treachery."
+      ]
+    },
+    {
+      "when": {
+        "strength": "even"
+      },
+      "lines": [
+        "Wow, really?",
+        "I thought we were friends!",
+        "You have made an enemy of us.",
+        "This betrayal will be remembered.",
+        "I don't like what you're doing...",
+        "I think we all know where this is going.",
+        "Unfriending us? Bad idea.",
+        "We had a good thing going, but then you decided to ruin it???",
+        "But we were such good friends though!",
+        "We never thought you would do such a thing...",
+        "So this is how you choose to play.",
+        "The friendship is broken, and so is our trust.",
+        "We will not forget this slight.",
+        "Your name will be cursed in our histories.",
+        "Your cowardice is clear.",
+        "Your betrayal will be your downfall.",
+        "You will regret ever having done that.",
+        "You have just declared your own end.",
+        "You fiend!",
+        "Treacherous snake!"
+      ]
+    },
+    {
+      "when": {
+        "strength": "stronger"
+      },
+      "lines": [
+        "Your treachery is laughable.",
+        "Amusing.",
+        "What exactly are you trying to do?",
+        "Our friendship meant nothing anyway.",
+        "Do you think this will make you stronger?",
+        "Do you want to fight us?",
+        "Do you have a death wish?",
+        "It's funny how you thought that unfriending us was a good idea.",
+        "You dare betray us like this?",
+        "We will retaliate. Eventually.",
+        "Friendship was a kindness. You have just chosen to reject our mercy.",
+        "We were going to break it anyway. You just saved us the trouble.",
+        "You have just signed your own death warrant.",
+        "So you want a fight?",
+        "Do not think we will not use this as a pretext for war.",
+        "Your betrayal is a pathetic attempt at relevance.",
+        "You are now our enemy.",
+        "Funny.",
+        "That was a mistake.",
+        "Your betrayal has been noted."
+      ]
+    }
+  ],
+
+  "GD4_I_AM_UNFRIENDING_YOU": [
+    {
+      "when": {
+        "strength": "weaker"
+      },
+      "lines": [
+        "Sorry, but we have to do this.",
+        "You're getting too powerful.",
+        "We regret this, but it is nessecary.",
+        "Our people really don't like you.",
+        "We don't trust you.",
+        "We would rather not say why we're doing this...",
+        "We don't want to be associated with you.",
+        "Apologies, but this can't continue.",
+        "You're a nice person and all, We just don't feel like maintaining this relationship.",
+        "You did nothing wrong. I'm still unfriending you though.",
+        "Our people have demanded it. Sorry.",
+        "We talked to god, and he said we should unfriend you.",
+        "We will not be friends with a nation that seeks to undermine us.",
+        "We have no choice but to unfriend you.",
+        "We won't be friends with a scrub. (You are a scrub)",
+        "The whispers of our people demand action.",
+        "You're a bad influence.",
+        "We have considered the cost of this betrayal. It's worth it.",
+        "It is time for us to pursue our own destiny.",
+        "We had to do it. Please forgive us."
+      ]
+    },
+    {
+      "when": {
+        "strength": "even"
+      },
+      "lines": [
+        "Our interests have shifted.",
+        "The friendship has served its purpose.",
+        "We don't think this is really useful anymore.",
+        "We will no longer be restricted by this friendship.",
+        "We don't want to limit ourselves.",
+        "You're not really worth it anymore.",
+        "We can't go on like this anymore.",
+        "This was bound to happen sooner or later...",
+        "Our friendship is done.",
+        "You don't deserve us.",
+        " It's time for a new world order.",
+        "The time for diplomacy is over.",
+        "Your ambitions have grown too great.",
+        "This friendship was always a temporary solution.",
+        "The friendship between us has become a cage.",
+        "We can't go on pretending to want peace with you any longer.",
+        "This alliance has run its course.",
+        "It had to be done.",
+        "Peace between us is not guaranteed anymore.",
+        "This was going to happen eventually. We just decided to do it now."
+      ]
+    },
+    {
+      "when": {
+        "strength": "stronger"
+      },
+      "lines": [
+        "You are a nuisance.",
+        "We can't limit ourselves.",
+        "We broke it. What are you gonna do about it?",
+        "Soon...",
+        "You are no longer protected from us.",
+        "We don't need you anymore.",
+        "You're weak.",
+        "This was inevitable.",
+        "Be grateful that this isn't a war declaration.",
+        "This can't continue.",
+        "Don't be surprised. This was always the plan.",
+        "You are a threat to our dominance.",
+        "Our empire grows. Your nation is in the way of our empire.",
+        "You have outlived your usefulness.",
+        "You no longer serve our interests.",
+        "We will no longer pretend to be your ally.",
+        "The time for your removal will come soon.",
+        "We are no longer bound by a friendship with you.",
+        "Be grateful that we're giving you a chance to adjust to this new state of affairs.",
+        "We cannot be held back by this friendship."
+      ]
+    }
+  ],
+
+  "GD4_GENERIC_MESSAGE": [
+    {
+      "lines": [
+        "Your message has been duly noted, and promptly ignored.",
+        "I'm sure what you said was very nice, but I can't read.",
+        "I ain't reading allat",
+        "Our country has a literacy rate of 0%. Sorry.",
+        "Your messages are nice to look at. We can't read them though.",
+        "Thank you for the message! Please don't do that again.",
+        "Oh my god please shut up",
+        "Don't talk to us. It's not going to go anywhere.",
+        "No.",
+        "Talking with us isn't going to get you anywhere.",
+        "We can't understand what you're saying, but thank you!",
+        "Literally incomprehensible. We can't read this.",
+        "Wow! A message! Thank you for that!",
+        "You want to talk? Really?",
+        "No one here wants to read your messages.",
+        "Don't speak to us.",
+        "Your attempt at diplomacy is appreciated.",
+        "Could you not?",
+        "We can't talk back to you. Apologies.",
+        "We can't read. We can write back to you, but we can't read.",
+        "On god?",
+        "Are you being fr",
+        "Idk about that one",
+        "Debatable.",
+        "idk lol",
+        "Perhaps Perchance Permayhaps.",
+        "We're not going to dignify that with a response.",
+        "Your messages are great for warming up our fireplaces at night!",
+        "Interesting statement.",
+        "Are you drunk?",
+        "kys",
+        "Your message has been lost in the mail. Please try again.",
+        "I think you're undiagnosed for something.",
+        "You should go see a therapist.",
+        "Ew.",
+        "May god strike you down for forcing me to read this.",
+        "What were you thinking when you wrote this?",
+        "Where did you think sending that message would get you?",
+        "We would rather have nothing to do with you.",
+        "..."
+      ]
+    }
+  ],
+
+  "GD4_WEAK_BAD_NEWS": [
+    {
+      "lines": [
+        "😭😭😭",
+        "So this is how it ends...",
+        "You're going to hell for that.",
+        "Your sins will not go unpunished.",
+        "This will come back to haunt you. Eventually.",
+        "You seem like the kind of person who would unironically steal candy from a baby.",
+        "Kids like you should be burning in hell.",
+        "Warmonger.",
+        "I hope you die in a fire.",
+        "May god forgive you, because we won't.",
+        "You're pathetic and spineless.",
+        "Death would be a preferable alternative to you.",
+        "THE SPIRIT OF COMMUNISM WILL SAVE THIS NATION!!!!!",
+        "Being mean to weak nations is bad for your soul.",
+        "Was that a reference to something?",
+        "Comprehensible, but we still hate you.",
+        "Understandable have a horrible day",
+        "You're awful, what's your number?",
+        "This has been one of the worst trade deals we ever received.",
+        "Erm, this is awkward..."
+      ]
+    }
+  ],
+
+  "GD4_LONG_DENIED_FRIENDSHIP": [
+    {
+      "when": {
+        "strength": "weaker"
+      },
+      "lines": [
+        "My apologies, but our current security needs prevent us from committing to such an agreement at this time.",
+        "We appreciate the offer, but we must maintain our flexibility. Perhaps in the future.",
+        "We must decline your offer. Our position is simply too precarious for any binding agreements.",
+        "While we value peace, a formal pact is not something we can agree to. We hope our decision is understood.",
+        "Thank you for the kind offer, but we are not prepared to commit to such an action at this moment.",
+        "Lovely offer you've given us, but we don't really feel like committing to such a deal at the moment."
+      ]
+    },
+    {
+      "when": {
+        "strength": "even"
+      },
+      "lines": [
+        "We find your offer... premature. Let's see how our relationship develops before we commit to anything so permanent.",
+        "I'm afraid we'll have to pass. We're not ready to tie our hands with such a proposal.",
+        "While we appreciate the offer, we find that it would be too limiting for us. We'll respectfully decline.",
+        "No thanks. Our priorities lie elsewhere.",
+        "We have no intention of signing such an agreement. Your proposal is rejected.",
+        "While we do appreciate the gesture, we're not going to be agreeing to this."
+      ]
+    },
+    {
+      "when": {
+        "strength": "stronger"
+      },
+      "lines": [
+        "Your proposal for a non-aggression pact is rejected. We see no need for one.",
+        "Your offer is naive.",
+        "You have nothing that we covet. No such agreement is necessary.",
+        "Our destiny is not to be constrained by treaties with lesser powers.",
+        "You can't be serious.",
+        "What makes you think we would want to limit ourselves by agreeing to such a proposal?"
+      ]
+    }
+  ],
+
+  "GD4_LONG_ACCEPTED_FRIENDSHIP": [
+    {
+      "when": {
+        "strength": "weaker"
+      },
+      "lines": [
+        "This is a wise decision. We accept your offer and look forward to a peaceful coexistence.",
+        "We are grateful for this peace and gladly accept your proposal. May this pact bring stability to our lands.",
+        "\"Peace is a precious thing. We accept your offer and will honor this agreement.",
+        "We gladly accept your proposal. This pact provides much-needed security for our people.",
+        "Friendship? Hell yea!",
+        "Fantastic! Now we don't have to worry about you deciding to kill us!"
+      ]
+    },
+    {
+      "when": {
+        "strength": "even"
+      },
+      "lines": [
+        "It would be prudent to formalize our peaceful intentions. We accept your proposal.",
+        "The potential for conflict is great. This pact is a sensible way to prevent it. We accept.",
+        "An alliance of peace is in both our interests. We accept your offer.",
+        "Friendship? Hell yea!",
+        "This is an acceptable arrangement.",
+        "We find your proposal mutually beneficial."
+      ]
+    },
+    {
+      "when": {
+        "strength": "stronger"
+      },
+      "lines": [
+        "We will agree to this. As long as you remain a minor inconvenience, your borders are safe.",
+        "Very well. Your security is not our concern, but we will not threaten it... for now.",
+        "We will accept your proposal. Rest easy, for we will not be the source of your downfall.",
+        "Consider this a temporary convenience. We accept your proposal.",
+        "Yea sure, why not.",
+        "Fine, we can be friends. Do not mistake our restraint for weakness."
+      ]
+    }
+  ],
+
+  "GD4_LONG_DENIED_CEASEFIRE": [
+    {
+      "when": {
+        "strength": "weaker"
+      },
+      "lines": [
+        "We must continue to fight for our survival. Your ceasefire is rejected.",
+        "We don't trust you. We can't accept this ceasefire.",
+        "we cannot afford to stop fighting while our fate hangs in the balance.",
+        "We've sacrificed too much to give up now. We refuse your ceasefire.",
+        "Denied. We will not cease our defense until our sovereignty is secured.",
+        "We would rather die than do anything civil with you."
+      ]
+    },
+    {
+      "when": {
+        "strength": "even"
+      },
+      "lines": [
+        "A ceasefire would only be a temporary pause. We will not accept your offer.",
+        "We're not finished. Your proposal is denied.",
+        "We see no benefit in a ceasefire at this time.",
+        "We have no intention of signing such an agreement. Your proposal is rejected.",
+        "No.",
+        "No."
+      ]
+    },
+    {
+      "when": {
+        "strength": "stronger"
+      },
+      "lines": [
+        "This war ends when we say it does. You have no say in the matter.",
+        "There will be no ceasefire. We will not grant you a moment's rest.",
+        "This war will only end when you are completely destroyed.",
+        "Really? You thought we would accept that?",
+        "You can't be serious.",
+        "While we do appreciate the desperation, we unfortunately cannot accept. You need to die."
+      ]
+    }
+  ],
+
+  "GD4_LONG_ACCEPTED_CEASEFIRE": [
+    {
+      "when": {
+        "strength": "weaker"
+      },
+      "lines": [
+        "We accept your offer of a ceasefire. We are in no position to continue this conflict.",
+        "For the good of our people, we must agree to this. We accept your ceasefire.",
+        "We are weary of this war and will agree to your ceasefire.",
+        "This is a welcome relief. We will agree to your ceasefire.",
+        "We have no choice but to accept. We can't possibly win this.",
+        "Thank you! We are very relieved that you've decided to spare us."
+      ]
+    },
+    {
+      "when": {
+        "strength": "even"
+      },
+      "lines": [
+        "A ceasefire is in the best interest of both our nations. We accept.",
+        "We will agree to a ceasefire. It's time to let our forces recuperate.",
+        "This conflict has gone on long enough. We accept your ceasefire proposal.",
+        "An acceptable offer. We will agree to a ceasefire.",
+        "We accept. The fighting will stop for now.",
+        "Fine. We can stop fighting for now."
+      ]
+    },
+    {
+      "when": {
+        "strength": "stronger"
+      },
+      "lines": [
+        "Wait, hold on. We're stronger than you. Why the hell are we agreeing to this?"
+      ]
+    }
+  ]
 }

@@ -1,0 +1,793 @@
+Greater Diplomacy 4 AI response reference
+==========================================
+
+Source: TEMP_GD4/project.json, target 'AI Message Processor'.
+The normal processor compared Type and Status. Status maps to the GD5
+strength names as follows: We are Weak = weaker; Roughly Equal = even;
+We are Strong = stronger. A line was selected randomly from the eligible
+Example Responses pool.
+
+The GD4 export also contains a separate uncalled stack labelled
+'Really Really long responses'. It is included at the end and marked as
+uncalled so every preserved response is accounted for without claiming it
+was reachable through the broadcast handler.
+
+GD4_DENIED_FRIENDSHIP: Type = Denied Friendship; selected by military strength.
+------------------------------------------------------------------------------
+when strength = weaker:
+  1. We must decline. We can't accept friendship at the moment.
+  2. We can't commit to this friendship offer right now.
+  3. We apologize, but we must maintain our flexibility.
+  4. We need to decline. It's too risky for us.
+  5. We are not ready for such a deal.
+  6. Sorry, we don't really feel like it.
+  7. Your offer of friendship, while kind, isn't something we can accept at the moment.
+  8. How kind of you! Unfortunately, we can't accept.
+  9. Friendship is nice, but we can't accept it right now.
+  10. Thanks for the offer! However, we can't accept.
+  11. Friendship offer? Appreciated very much, but we can't accept.
+  12. Your offer of friendship is very generous! We have to decline though.
+  13. Friendship scares us.
+  14. You're kinda scary, we can't accept.
+  15. Our people would kill us if we accepted.
+  16. We can't accept a friendship. Not now.
+  17. We're busy with other stuff, we can't accept now.
+  18. Oh! Thanks, but we can't commit to this.
+  19. We're very sorry about having to decline.
+  20. Apologies, but while friendship is appreciated, we must decline.
+
+when strength = even:
+  1. We will not be bound by a friendship.
+  2. We reject your proposal.
+  3. Your offer has arrived at a bad time. We decline.
+  4. No thanks. Our priorities lie elsewhere.
+  5. This offer of friendship is not in our interest.
+  6. We prefer to maintain our options.
+  7. Thanks, but no thanks.
+  8. We don't really see any reason to agree to a friendship.
+  9. We appreciate the friendship offer, but we're gonna say no.
+  10. Nice friendship offer! However, no.
+  11. Friendship. Appreciated, but unfortunately we reject it.
+  12. You seem too eager to become friends with us.
+  13. This seems rather suspicious.
+  14. You're weird.
+  15. We don't think a friendship is necessary for now.
+  16. You don't seem very trustworthy.
+  17. No. You're not stable enough.
+  18. We would rather pass on that offer.
+  19. A kind offer, but one we can reject.
+  20. A friendship is not something we need at the moment.
+
+when strength = stronger:
+  1. Denied. We see no need for a friendship.
+  2. You're really naive.
+  3. You thought we would accept that?
+  4. No. We will not be bound by your terms.
+  5. You can't be serious.
+  6. You're weak. We decline.
+  7. You would be more of a crutch.
+  8. We would prefer not to do so.
+  9. How about no?
+  10. You're not really worth it.
+  11. This friendship offer we can refuse.
+  12. We would rather kill you.
+  13. Friendship? With you? Ha!
+  14. Aw, you wanted to be friends with us?
+  15. HAHAHAHAHAHAHAHAHAHA no.
+  16. You disgust us.
+  17. Pathetic.
+  18. You would not be a good friend.
+  19. You are not really something we should concern ourselves with.
+  20. You're irrelevant.
+
+GD4_ACCEPTED_FRIENDSHIP: Type = Accepted Friendship; selected by military strength.
+------------------------------------------------------------------------------
+when strength = weaker:
+  1. We gratefully accept your offer of friendship.
+  2. Thank you! We accept.
+  3. We agree to this. Peace is vital.
+  4. We gladly accept your friendship offer.
+  5. Friendship!!!
+  6. A wise move. We accept.
+  7. Yippee!!!
+  8. You're very kind.
+  9. Yay!!!
+  10. Thanks for the friendship offer!
+  11. We are grateful for your partnership.
+  12. We thank you for your trust. We will not betray it.
+  13. We are grateful for this opportunity to avoid conflict.
+  14. We are honored by your willingness to partner with us.
+  15. You seem like a very reasonable kind of person.
+  16. Peace! Yeah!
+  17. Lovely!
+  18. <3
+  19. Our people love you!
+  20. You're so cool and awesome and epic
+
+when strength = even:
+  1. Sure, we can be friends.
+  2. An acceptable offer. We agree.
+  3. A sensible agreement. We accept.
+  4. This is mutually beneficial. We accept.
+  5. This is an acceptable arrangement.
+  6. We agree to this friendship offer.
+  7. Sure! Friendship is a nice thing to have.
+  8. Always good to have more friends.
+  9. No war shall happen between us.
+  10. We stand to gain nothing from a war between us.
+  11. Our cooperation will lead to mutual prosperity.
+  12. Let this be a sign of our mutual respect.
+  13. No war shall befall our nations.
+  14. War is bad, so this is probably a good idea.
+  15. Our nations are stronger together than apart.
+  16. We are pleased you chose cooperation.
+  17. We hope you honor this agreement.
+  18. This has been one of the deals of all time.
+  19. We are glad to be your partners.
+  20. Friendship with us? Good idea.
+
+when strength = stronger:
+  1. We accept. Do not test our patience.
+  2. Very well. We accept.
+  3. This friendship is acceptable. For now.
+  4. We agree. Behave accordingly.
+  5. Yea sure, why not.
+  6. Accepted. Do not misinterpret our restraint.
+  7. Fine by us. We see no reason to harm you.
+  8. You look nice on the map, we would rather not kill you.
+  9. Friendship with you is acceptable.
+  10. We can be friends.
+  11. This friendship will ensure your safety, for the time being.
+  12. We will uphold this friendship as long as it benefits us.
+  13. We are pleased by your cooperation.
+  14. Enjoy this peace while it lasts.
+  15. Friendship with us will keep you safe from us. Remember that.
+  16. You're tolerable. We can agree to this.
+  17. Well, we like you, so we can agree to be friends.
+  18. Good move.
+  19. You seem smart.
+  20. Glad to see you taking initiative.
+
+GD4_DENIED_CEASEFIRE: Type = Denied Ceasefire; selected by military strength.
+-----------------------------------------------------------------------------
+when strength = weaker:
+  1. We must fight for our survival. No ceasefire.
+  2. We've sacrificed too much. We refuse.
+  3. We won't stop defending ourselves.
+  4. We can't stop now. We reject your ceasefire.
+  5. Denied. We have too much at stake.
+  6. We would rather die than do anything civil with you.
+  7. You are a rat bastard and do not deserve peace.
+  8. Death is a preferable alternative to you.
+  9. You need to be stopped. You deserve no mercy.
+  10. What's to stop you from just attacking us later on?
+  11. We will not be broken so easily.
+  12. Our people would rather die free than live under your rule.
+  13. WE REFUSE!!!
+  14. Our nation will not bend to your will!
+  15. Not yet. You need to suffer just a bit more.
+  16. We can still win this!
+  17. We're not giving up that easily.
+  18. We will not let our land be taken.
+  19. You have no right to demand anything from us.
+  20. We will fight you to the last.
+
+when strength = even:
+  1. We're not finished. Ceasefire denied.
+  2. There will be no ceasefire.
+  3. We will not stop now.
+  4. The war must go on.
+  5. We want to see how this plays out.
+  6. No.
+  7. We can continue the war. This ceasefire offer shows us that you can't.
+  8. You don't deserve mercy.
+  9. You want a ceasefire? That's a sign of weakness.
+  10. Not yet.
+  11. We will continue to push you back.
+  12. We've grown so used to war our industry relies on it now.
+  13. You want peace? Well you won't get it.
+  14. Never!
+  15. We will not let you gain the upper hand.
+  16. We're not done yet.
+  17. There will be no ceasefire until you cease to exist!
+  18. Let us annex you.
+  19. Amazing! A ceasefire offer! That means you're weak.
+  20. Ceasefire? Nah.
+
+when strength = stronger:
+  1. Denied. This war ends on our terms.
+  2. Not until you're completely annexed.
+  3. We will not stop until you fall.
+  4. You thought we would accept that?
+  5. You can't be serious.
+  6. You seem desperate.
+  7. You're not in any position to beg for a ceasefire.
+  8. Really? You think we're going to let you live?
+  9. Skill issue.
+  10. There's nothing you can do to stop us.
+  11. We do not negotiate with the defeated.
+  12. This will end with your complete annihilation.
+  13. You will not get a second chance.
+  14. Your pitiful attempt to stop us is an insult.
+  15. Your desperate plea for peace is pathetic.
+  16. Nah. You don't deserve it.
+  17. We're going to steamroll you.
+  18. A ceasefire with you? Really?
+  19. You can't do anything to stop us.
+  20. We will not stop until your nation is nothing but a memory.
+
+GD4_ACCEPTED_CEASEFIRE: Type = Accepted Ceasefire; selected by military strength.
+------------------------------------------------------------------------------
+when strength = weaker:
+  1. We must accept. We're too weak to continue.
+  2. We agree to the ceasefire.
+  3. We are weary of war. We accept.
+  4. This is a welcome relief. We accept.
+  5. A ceasefire is necessary. We accept.
+  6. Thank you! Your generosity is appreciated.
+  7. Thank you for showing mercy.
+  8. Your ceasefire offer has been happily accepted!
+  9. Your kindness is very much appreciated!
+  10. Thank you for sparing us!
+  11. We hope this is a step toward a more lasting peace.
+  12. Thank god that's over...
+  13. Oh... Mercy... Thank you...
+  14. We will honor this ceasefire.
+  15. We hope for a peaceful future.
+  16. We survive! Thanks to you!
+  17. You seem like a very kind person.
+  18. Your generosity will be remembered.
+  19. This kindness will be remembered.
+  20. Oh! You're offering a ceasefire! We accept!
+
+when strength = even:
+  1. A ceasefire is prudent. We accept.
+  2. We agree. The fighting will stop.
+  3. We accept. Too many people have died.
+  4. We will agree to the ceasefire.
+  5. This conflict needs a pause. We accept.
+  6. Sure. We can stop fighting for now.
+  7. War sucks. We'll accept your ceasefire offer.
+  8. Alright fine, we can have peace.
+  9. This war has gone on for too long. We can stop for now.
+  10. You're right, we should probably stop killing each other.
+  11. We are willing to end this conflict.
+  12. This war isn't helping either of us, we can accept a ceasefire.
+  13. Fine. Ceasefire it is, then.
+  14. We're not happy with this, but we can accept it.
+  15. This isn't over.
+  16. We will take back what's rightfully ours. Eventually
+  17. We don't fully trust you yet, but we can agree to a ceasefire.
+  18. Sure. A ceasefire would be nice.
+  19. This war has already ruined both of us. We can stop.
+  20. This ceasefire will benefit both of us.
+
+when strength = stronger:
+  1. Wait, hold on. We're stronger than you. Why the hell are we agreeing to this?
+
+GD4_GOT_DECLARED_ON: Type = Got Declared On; selected by military strength, with a random alternate pool within each band.
+------------------------------------------------------------------------------
+when strength = weaker:
+  1. Coward.
+  2. What did we do to deserve this???
+  3. Fight someone your own size! not us!
+  4. You have no honor.
+  5. We really should have seen this coming...
+  6. Ok but why though
+  7. NOOOOOOOOOO!!!!!
+  8. Have you no shame?
+  9. NO! NO! NO! NOT LIKE THIS!!!
+  10. You will suffer for every inch you take.
+  11. Your victory will not come easily.
+  12. Our nation will not be extinguished without a struggle.
+  13. We did not seek this conflict, but we will not shy away from it.
+  14. So be it. We will not go down without a fight.
+  15. This isn't fair!
+  16. Heartless bastard.
+  17. HUH???
+  18. WHAT???
+  19. YOU WON'T GET AWAY WITH THIS!!!!!
+  20. whar?
+  21. 😭😭😭
+  22. So this is how it ends...
+  23. You're going to hell for that.
+  24. Your sins will not go unpunished.
+  25. This will come back to haunt you. Eventually.
+  26. You seem like the kind of person who would unironically steal candy from a baby.
+  27. Kids like you should be burning in hell.
+  28. Warmonger.
+  29. I hope you die in a fire.
+  30. May god forgive you, because we won't.
+  31. You're pathetic and spineless.
+  32. Death would be a preferable alternative to you.
+  33. THE SPIRIT OF COMMUNISM WILL SAVE THIS NATION!!!!!
+  34. Being mean to weak nations is bad for your soul.
+  35. Was that a reference to something?
+  36. Comprehensible, but we still hate you.
+  37. Understandable have a horrible day
+  38. You're awful, what's your number?
+  39. This has been one of the worst trade deals we ever received.
+  40. Erm, this is awkward...
+
+when strength = even:
+  1. That was not a good idea.
+  2. You're going to regret that.
+  3. We trusted you!
+  4. We thought you were better than this.
+  5. Are you really that greedy?
+  6. Challenge Accepted!
+  7. So be it.
+  8. I think you should die.
+  9. May the battle of the gods finally commence!
+  10. Oh. Ok then.
+  11. Do not expect an easy victory.
+  12. Your aggression will be met with equal force.
+  13. You have picked a fight you cannot win.
+  14. Finally!
+  15. There's no turning back now.
+  16. You DARE challenge us?
+  17. The battlefield will decide who is superior.
+  18. You will suffer. You might even lose.
+  19. Nuts!
+  20. I thought we could live together in peace...
+  21. Bruh.mp3
+  22. I don't think god liked that.
+  23. Well this is definitely one of the war declarations of all time.
+  24. How many times have you done this before?
+  25. YOU SUCK!!!
+  26. oh ok sure declare war on us yea ok why not
+  27. Wack.
+  28. Holy moly!
+  29. Zamn.
+  30. So you're fighting us now.
+  31. This isn't how you flirt with someone!
+  32. This sucks. Also you suck too.
+  33. May you never again sleep peacefully after this.
+  34. BAD TOUCH!!!
+  35. You can't just going around telling people you want to fight them!
+  36. Very uncool.
+  37. I can't tell if you're being really smart or really dumb right now.
+  38. Riveting.
+  39. Fiddlesticks!
+  40. Declaring war? On us? How attractive.
+
+when strength = stronger:
+  1. ...You really think you can win this?
+  2. You have sealed your own fate.
+  3. Remember, you did this to yourself.
+  4. You do realize that we're stronger than you, right?
+  5. You're insane.
+  6. I can't believe you actually decided to do that.
+  7. I think you're a bit in over your head.
+  8. You can't be this stupid.
+  9. I think you have brain damage.
+  10. You're an idiot.
+  11. We were looking for a reason to expand. You just gave us one.
+  12. Your declaration is a gift. It gives us a reason to finally annex you.
+  13. We will put an end to this quickly.
+  14. We will make an example of your nation.
+  15. Your armies are nothing but a minor nuisance.
+  16. Let the blood flow. It will be the only thing of yours we do not take.
+  17. You can't be this dumb.
+  18. What kinda joke is this?
+  19. Excuse me?
+  20. You're weaker than us. This will be easy.
+  21. sybau
+  22. Do you know something that we don't?
+  23. LMAOOOOOOOOOOO
+  24. Ok buddy.
+  25. May god have mercy on you, because we won't.
+  26. Your insolence shall be punished. Hard.
+  27. HAHAHAHAHAHAHAHAHAHA
+  28. This is a really weird way of trying to kill yourself, but we're happy to oblige.
+  29. We've heard of suicide by cop, but this is ridiculous!
+  30. Music to my ears.
+  31. Delicious.
+  32. Looks like we're going to have to perform a late-term abortion on you.
+  33. What an unorthodox way of asking to join us.
+  34. We're going to whack you. Like a mole. Whack-a-mole, if you will.
+  35. You dare fight us? And with such a weak army too?
+  36. You need help.
+  37. Why are you deciding to fight a god?
+  38. How exactly do you think this is going to play out?
+  39. You're free real estate.
+  40. War crimes are only crimes if there's anyone left to report them.
+
+GD4_I_AM_ATTACKING_YOU: Type = I am attacking you; selected by military strength, with a random alternate pool when weak.
+------------------------------------------------------------------------------
+when strength = weaker:
+  1. Your tyranny ends now. We declare war!
+  2. IT'S MILLER TIME
+  3. You're getting too powerful. We can't allow that.
+  4. Surprise!!!
+  5. Behold! A war!
+  6. Bet you wern't expecting this!!!
+  7. No one expects a declaration of war from us!!!
+  8. LETS GET READY TO RUMBLLLEEEEEEEE
+  9. BLOOD FOR THE BLOOD GOD
+  10. Our people want a war. You seemed like a good challenge.
+  11. Oops, did I accidentally a war?
+  12. Hi! We're here to talk to you about your car's extended warranty.
+  13. Forgive our betrayal, but our survival is at stake.
+  14. Hello! We're at war now.
+  15. If you would be so kind as to let us annex you, that would be very much appreciated.
+  16. Can we eat you? Please?
+  17. I'm so hungry I could eat a horse! (You are the horse)
+  18. Trust me, we know what we're doing.
+  19. We think it would be funny if you just let us win this war.
+  20. We need to do this. We're sorry.
+  21. SINNERS GET NO QUARTER.
+  22. Bad morning!!!
+  23. We hope this message finds you not well. We are at war.
+  24. You just got gnomed!!!
+  25. le war declaration jumpscare has arrived
+  26. HERE WE GO!!!
+  27. We are going to brick you.
+  28. I'm feeling lucky!!!
+  29. LETS GO GAMBLING!!!
+  30. YEA! YEA! YEA! YEAAAaauuauhhgghhh~
+  31. THE TIME HAS ARRIVED FOR... war.
+  32. WE HEREBY CLAIM YOU AND YOUR COUNTRY. Please submit.
+  33. Hello, I am the brother of Jesus Christ. Fight me.
+  34. GOD IS WITH US!!!
+  35. DEUS VULT!!!
+  36. Yeah! We're doing this now!
+  37. WAHOO!!!
+  38. This war declaration was sponsored by someone. We forgot who paid us to do this.
+  39. We lost our marbles. We think you stole them.
+  40. hehe~
+
+when strength = even:
+  1. You must be contained.
+  2. You're too dangerous to be left alive!
+  3. Fight me!!!
+  4. You don't deserve to exist.
+  5. Your mere presence is an insult to our power.
+  6. Die.
+  7. Sorry, but we can't allow you to continue on like this.
+  8. This world isn't big enough for the two of us.
+  9. One of us is going to die, and I fully intend for it to be you.
+  10. We need your land.
+  11. You have become a threat we can no longer ignore.
+  12. Our destiny is to crush you.
+  13. Do not expect any quarter.
+  14. No mercy.
+  15. You can't be allowed to grow any further.
+  16. You have overplayed your hand. Now we will take what is ours.
+  17. This war was inevitable.
+  18. We have watched you grow, and we will watch you fall.
+  19. A new age dawns, and we will be its masters.
+  20. Your presence is an unacceptable obstacle.
+
+when strength = stronger:
+  1. It was nice knowing you.
+  2. We grow tired of your existence.
+  3. We are here to claim what is ours.
+  4. You will be erased.
+  5. Yeah. That's right. You're fighting us now.
+  6. You look submissive and conquerable.
+  7. Congratulations! You are being annexed! Please do not resist.
+  8. Your land looks valuable. We want it.
+  9. Honestly, We're just being greedy. You looked like a weak target.
+  10. You will join us whether you like it or not.
+  11. We are not here to negotiate. We are here to conquer.
+  12. Do not weep for your nation. It was always meant to be absorbed by us.
+  13. I want you.
+  14. Your time is up.
+  15. Your annihilation is at hand.
+  16. You are about to die. Scream if you must.
+  17. The age of your nation is over.
+  18. This will not be a war. This will be an execution.
+  19. You belong to us.
+  20. Resistance is futile.
+
+GD4_GOT_UNFRIENDED: Type = Got Unfriended; selected by military strength.
+-------------------------------------------------------------------------
+when strength = weaker:
+  1. Bastard.
+  2. Oh no.
+  3. But we trusted you!
+  4. Oh...
+  5. Why would you do this to us???
+  6. You're so mean...
+  7. This does not bode well...
+  8. Were we not good enough for you?
+  9. What did we do? Why don't you like us now?
+  10. Please don't do what we think you're going to do...
+  11. How could you do this to us?
+  12. Backstabber.
+  13. YOU LIED TO US!!!
+  14. We thought you were a friend...
+  15. You're scaring us...
+  16. We don't like this!
+  17. Your word is a lie.
+  18. You are not a good friend.
+  19. Please, have mercy...
+  20. The world will see your treachery.
+
+when strength = even:
+  1. Wow, really?
+  2. I thought we were friends!
+  3. You have made an enemy of us.
+  4. This betrayal will be remembered.
+  5. I don't like what you're doing...
+  6. I think we all know where this is going.
+  7. Unfriending us? Bad idea.
+  8. We had a good thing going, but then you decided to ruin it???
+  9. But we were such good friends though!
+  10. We never thought you would do such a thing...
+  11. So this is how you choose to play.
+  12. The friendship is broken, and so is our trust.
+  13. We will not forget this slight.
+  14. Your name will be cursed in our histories.
+  15. Your cowardice is clear.
+  16. Your betrayal will be your downfall.
+  17. You will regret ever having done that.
+  18. You have just declared your own end.
+  19. You fiend!
+  20. Treacherous snake!
+
+when strength = stronger:
+  1. Your treachery is laughable.
+  2. Amusing.
+  3. What exactly are you trying to do?
+  4. Our friendship meant nothing anyway.
+  5. Do you think this will make you stronger?
+  6. Do you want to fight us?
+  7. Do you have a death wish?
+  8. It's funny how you thought that unfriending us was a good idea.
+  9. You dare betray us like this?
+  10. We will retaliate. Eventually.
+  11. Friendship was a kindness. You have just chosen to reject our mercy.
+  12. We were going to break it anyway. You just saved us the trouble.
+  13. You have just signed your own death warrant.
+  14. So you want a fight?
+  15. Do not think we will not use this as a pretext for war.
+  16. Your betrayal is a pathetic attempt at relevance.
+  17. You are now our enemy.
+  18. Funny.
+  19. That was a mistake.
+  20. Your betrayal has been noted.
+
+GD4_I_AM_UNFRIENDING_YOU: Type = I am unfriending you; selected by military strength.
+------------------------------------------------------------------------------
+when strength = weaker:
+  1. Sorry, but we have to do this.
+  2. You're getting too powerful.
+  3. We regret this, but it is nessecary.
+  4. Our people really don't like you.
+  5. We don't trust you.
+  6. We would rather not say why we're doing this...
+  7. We don't want to be associated with you.
+  8. Apologies, but this can't continue.
+  9. You're a nice person and all, We just don't feel like maintaining this relationship.
+  10. You did nothing wrong. I'm still unfriending you though.
+  11. Our people have demanded it. Sorry.
+  12. We talked to god, and he said we should unfriend you.
+  13. We will not be friends with a nation that seeks to undermine us.
+  14. We have no choice but to unfriend you.
+  15. We won't be friends with a scrub. (You are a scrub)
+  16. The whispers of our people demand action.
+  17. You're a bad influence.
+  18. We have considered the cost of this betrayal. It's worth it.
+  19. It is time for us to pursue our own destiny.
+  20. We had to do it. Please forgive us.
+
+when strength = even:
+  1. Our interests have shifted.
+  2. The friendship has served its purpose.
+  3. We don't think this is really useful anymore.
+  4. We will no longer be restricted by this friendship.
+  5. We don't want to limit ourselves.
+  6. You're not really worth it anymore.
+  7. We can't go on like this anymore.
+  8. This was bound to happen sooner or later...
+  9. Our friendship is done.
+  10. You don't deserve us.
+  11.  It's time for a new world order.
+  12. The time for diplomacy is over.
+  13. Your ambitions have grown too great.
+  14. This friendship was always a temporary solution.
+  15. The friendship between us has become a cage.
+  16. We can't go on pretending to want peace with you any longer.
+  17. This alliance has run its course.
+  18. It had to be done.
+  19. Peace between us is not guaranteed anymore.
+  20. This was going to happen eventually. We just decided to do it now.
+
+when strength = stronger:
+  1. You are a nuisance.
+  2. We can't limit ourselves.
+  3. We broke it. What are you gonna do about it?
+  4. Soon...
+  5. You are no longer protected from us.
+  6. We don't need you anymore.
+  7. You're weak.
+  8. This was inevitable.
+  9. Be grateful that this isn't a war declaration.
+  10. This can't continue.
+  11. Don't be surprised. This was always the plan.
+  12. You are a threat to our dominance.
+  13. Our empire grows. Your nation is in the way of our empire.
+  14. You have outlived your usefulness.
+  15. You no longer serve our interests.
+  16. We will no longer pretend to be your ally.
+  17. The time for your removal will come soon.
+  18. We are no longer bound by a friendship with you.
+  19. Be grateful that we're giving you a chance to adjust to this new state of affairs.
+  20. We cannot be held back by this friendship.
+
+GD4_GENERIC_MESSAGE: Generic AI message response; one of the two random response pools.
+------------------------------------------------------------------------------
+unconditional within this entry:
+  1. Your message has been duly noted, and promptly ignored.
+  2. I'm sure what you said was very nice, but I can't read.
+  3. I ain't reading allat
+  4. Our country has a literacy rate of 0%. Sorry.
+  5. Your messages are nice to look at. We can't read them though.
+  6. Thank you for the message! Please don't do that again.
+  7. Oh my god please shut up
+  8. Don't talk to us. It's not going to go anywhere.
+  9. No.
+  10. Talking with us isn't going to get you anywhere.
+  11. We can't understand what you're saying, but thank you!
+  12. Literally incomprehensible. We can't read this.
+  13. Wow! A message! Thank you for that!
+  14. You want to talk? Really?
+  15. No one here wants to read your messages.
+  16. Don't speak to us.
+  17. Your attempt at diplomacy is appreciated.
+  18. Could you not?
+  19. We can't talk back to you. Apologies.
+  20. We can't read. We can write back to you, but we can't read.
+  21. On god?
+  22. Are you being fr
+  23. Idk about that one
+  24. Debatable.
+  25. idk lol
+  26. Perhaps Perchance Permayhaps.
+  27. We're not going to dignify that with a response.
+  28. Your messages are great for warming up our fireplaces at night!
+  29. Interesting statement.
+  30. Are you drunk?
+  31. kys
+  32. Your message has been lost in the mail. Please try again.
+  33. I think you're undiagnosed for something.
+  34. You should go see a therapist.
+  35. Ew.
+  36. May god strike you down for forcing me to read this.
+  37. What were you thinking when you wrote this?
+  38. Where did you think sending that message would get you?
+  39. We would rather have nothing to do with you.
+  40. ...
+
+GD4_WEAK_BAD_NEWS: Fallback used by GD4's random bad-news branches.
+-------------------------------------------------------------------
+unconditional within this entry:
+  1. 😭😭😭
+  2. So this is how it ends...
+  3. You're going to hell for that.
+  4. Your sins will not go unpunished.
+  5. This will come back to haunt you. Eventually.
+  6. You seem like the kind of person who would unironically steal candy from a baby.
+  7. Kids like you should be burning in hell.
+  8. Warmonger.
+  9. I hope you die in a fire.
+  10. May god forgive you, because we won't.
+  11. You're pathetic and spineless.
+  12. Death would be a preferable alternative to you.
+  13. THE SPIRIT OF COMMUNISM WILL SAVE THIS NATION!!!!!
+  14. Being mean to weak nations is bad for your soul.
+  15. Was that a reference to something?
+  16. Comprehensible, but we still hate you.
+  17. Understandable have a horrible day
+  18. You're awful, what's your number?
+  19. This has been one of the worst trade deals we ever received.
+  20. Erm, this is awkward...
+
+GD4_LONG_DENIED_FRIENDSHIP: Present in the uncalled 'Really Really long responses' stack; Type = Denied Friendship.
+------------------------------------------------------------------------------
+when strength = weaker:
+  1. My apologies, but our current security needs prevent us from committing to such an agreement at this time.
+  2. We appreciate the offer, but we must maintain our flexibility. Perhaps in the future.
+  3. We must decline your offer. Our position is simply too precarious for any binding agreements.
+  4. While we value peace, a formal pact is not something we can agree to. We hope our decision is understood.
+  5. Thank you for the kind offer, but we are not prepared to commit to such an action at this moment.
+  6. Lovely offer you've given us, but we don't really feel like committing to such a deal at the moment.
+
+when strength = even:
+  1. We find your offer... premature. Let's see how our relationship develops before we commit to anything so permanent.
+  2. I'm afraid we'll have to pass. We're not ready to tie our hands with such a proposal.
+  3. While we appreciate the offer, we find that it would be too limiting for us. We'll respectfully decline.
+  4. No thanks. Our priorities lie elsewhere.
+  5. We have no intention of signing such an agreement. Your proposal is rejected.
+  6. While we do appreciate the gesture, we're not going to be agreeing to this.
+
+when strength = stronger:
+  1. Your proposal for a non-aggression pact is rejected. We see no need for one.
+  2. Your offer is naive.
+  3. You have nothing that we covet. No such agreement is necessary.
+  4. Our destiny is not to be constrained by treaties with lesser powers.
+  5. You can't be serious.
+  6. What makes you think we would want to limit ourselves by agreeing to such a proposal?
+
+GD4_LONG_ACCEPTED_FRIENDSHIP: Present in the uncalled 'Really Really long responses' stack; Type = Accepted Friendship.
+------------------------------------------------------------------------------
+when strength = weaker:
+  1. This is a wise decision. We accept your offer and look forward to a peaceful coexistence.
+  2. We are grateful for this peace and gladly accept your proposal. May this pact bring stability to our lands.
+  3. "Peace is a precious thing. We accept your offer and will honor this agreement.
+  4. We gladly accept your proposal. This pact provides much-needed security for our people.
+  5. Friendship? Hell yea!
+  6. Fantastic! Now we don't have to worry about you deciding to kill us!
+
+when strength = even:
+  1. It would be prudent to formalize our peaceful intentions. We accept your proposal.
+  2. The potential for conflict is great. This pact is a sensible way to prevent it. We accept.
+  3. An alliance of peace is in both our interests. We accept your offer.
+  4. Friendship? Hell yea!
+  5. This is an acceptable arrangement.
+  6. We find your proposal mutually beneficial.
+
+when strength = stronger:
+  1. We will agree to this. As long as you remain a minor inconvenience, your borders are safe.
+  2. Very well. Your security is not our concern, but we will not threaten it... for now.
+  3. We will accept your proposal. Rest easy, for we will not be the source of your downfall.
+  4. Consider this a temporary convenience. We accept your proposal.
+  5. Yea sure, why not.
+  6. Fine, we can be friends. Do not mistake our restraint for weakness.
+
+GD4_LONG_DENIED_CEASEFIRE: Present in the uncalled 'Really Really long responses' stack; Type = Denied Ceasefire.
+------------------------------------------------------------------------------
+when strength = weaker:
+  1. We must continue to fight for our survival. Your ceasefire is rejected.
+  2. We don't trust you. We can't accept this ceasefire.
+  3. we cannot afford to stop fighting while our fate hangs in the balance.
+  4. We've sacrificed too much to give up now. We refuse your ceasefire.
+  5. Denied. We will not cease our defense until our sovereignty is secured.
+  6. We would rather die than do anything civil with you.
+
+when strength = even:
+  1. A ceasefire would only be a temporary pause. We will not accept your offer.
+  2. We're not finished. Your proposal is denied.
+  3. We see no benefit in a ceasefire at this time.
+  4. We have no intention of signing such an agreement. Your proposal is rejected.
+  5. No.
+  6. No.
+
+when strength = stronger:
+  1. This war ends when we say it does. You have no say in the matter.
+  2. There will be no ceasefire. We will not grant you a moment's rest.
+  3. This war will only end when you are completely destroyed.
+  4. Really? You thought we would accept that?
+  5. You can't be serious.
+  6. While we do appreciate the desperation, we unfortunately cannot accept. You need to die.
+
+GD4_LONG_ACCEPTED_CEASEFIRE: Present in the uncalled 'Really Really long responses' stack; Type = Accepted Ceasefire.
+------------------------------------------------------------------------------
+when strength = weaker:
+  1. We accept your offer of a ceasefire. We are in no position to continue this conflict.
+  2. For the good of our people, we must agree to this. We accept your ceasefire.
+  3. We are weary of this war and will agree to your ceasefire.
+  4. This is a welcome relief. We will agree to your ceasefire.
+  5. We have no choice but to accept. We can't possibly win this.
+  6. Thank you! We are very relieved that you've decided to spare us.
+
+when strength = even:
+  1. A ceasefire is in the best interest of both our nations. We accept.
+  2. We will agree to a ceasefire. It's time to let our forces recuperate.
+  3. This conflict has gone on long enough. We accept your ceasefire proposal.
+  4. An acceptable offer. We will agree to a ceasefire.
+  5. We accept. The fighting will stop for now.
+  6. Fine. We can stop fighting for now.
+
+when strength = stronger:
+  1. Wait, hold on. We're stronger than you. Why the hell are we agreeing to this?
+
+Notes
+-----
+GD4's 'Got Declared On' and weak 'I am attacking you' branches used random
+alternate pools; the corresponding GD5 entries combine those pools under the
+same strength condition.
+The long-response entries were data in the GD4 export but were not connected
+to the live AI Message Processor broadcast path.
