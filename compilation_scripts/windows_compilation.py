@@ -40,15 +40,18 @@ def main():
     # the frozen game would fail at ctypes.CDLL with the library missing --
     # green CI, dead Translate screen, and nothing in between to notice.
     # --collect-all takes the module, its submodules and its binaries together.
-    cmd = ('pyinstaller --clean --onefile '
-           '--collect-all dragoman '
-           '--collect-all cryptography '
-           '--hidden-import screens.map_related_screens.automation_screen '
-           '--hidden-import screens.map_related_screens.declare_independence '
-           '--hidden-import screens.map_related_screens.politics_screen '
-           '--add-binary "win64-libsoloud.dll;." --add-binary "mac64-libsoloud.dylib;." --add-binary "lin64-libsoloud.so;." main.py')
+    cmd = [sys.executable, "-m", "PyInstaller", "--clean", "--onefile",
+           "--collect-all", "dragoman",
+           "--collect-all", "cryptography",
+           "--hidden-import", "screens.map_related_screens.automation_screen",
+           "--hidden-import", "screens.map_related_screens.declare_independence",
+           "--hidden-import", "screens.map_related_screens.politics_screen",
+           "--add-binary", "win64-libsoloud.dll;.",
+           "--add-binary", "mac64-libsoloud.dylib;.",
+           "--add-binary", "lin64-libsoloud.so;.",
+           "main.py"]
 
-    result = subprocess.run(cmd, shell=True)
+    result = subprocess.run(cmd)
     if result.returncode != 0:
         print("PyInstaller failed.")
         sys.exit(result.returncode)

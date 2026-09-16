@@ -106,9 +106,16 @@ def _windows_pyinstaller_hidden_imports(tree):
         try:
             cmd = ast.literal_eval(node.value)
         except (ValueError, SyntaxError):
-            continue
+            if isinstance(node.value, ast.List):
+                cmd = [item.value if isinstance(item, ast.Constant) else None
+                       for item in node.value.elts]
+            else:
+                continue
         if isinstance(cmd, str):
             return re.findall(r"--hidden-import (\S+)", cmd)
+        if isinstance(cmd, list):
+            return [cmd[index + 1] for index, value in enumerate(cmd[:-1])
+                    if value == "--hidden-import"]
     return []
 
 
@@ -293,11 +300,20 @@ class BuildManifestTests(unittest.TestCase):
 
     def test_desktop_builds_include_realtime_tls_dependency(self):
         """Frozen desktop builds need certificate generation at runtime."""
-        windows_cmd = next(ast.literal_eval(node.value) for node in ast.walk(self.windows)
-                           if isinstance(node, ast.Assign)
-                           and any(isinstance(target, ast.Name) and target.id == "cmd"
-                                   for target in node.targets))
-        self.assertIn("--collect-all cryptography", windows_cmd)
+        windows_cmd_node = next(node for node in ast.walk(self.windows)
+                                if isinstance(node, ast.Assign)
+                                and any(isinstance(target, ast.Name) and target.id == "cmd"
+                                        for target in node.targets))
+        try:
+            windows_cmd = ast.literal_eval(windows_cmd_node.value)
+        except (ValueError, SyntaxError):
+            windows_cmd = [item.value for item in windows_cmd_node.value.elts
+                           if isinstance(item, ast.Constant)]
+        if isinstance(windows_cmd, str):
+            self.assertIn("--collect-all cryptography", windows_cmd)
+        else:
+            self.assertIn("--collect-all", windows_cmd)
+            self.assertIn("cryptography", windows_cmd)
         packages = set(_dict_key_lists(self.setup, "OPTIONS", {"packages"}).get("packages", []))
         self.assertIn("cryptography", packages)
 

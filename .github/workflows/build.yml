@@ -47,17 +47,14 @@ jobs:
         shell: bash
         run: |
           set -e
-          found=$(find dist -iname "libdragoman*" 2>/dev/null | head -3 || true)
-          if [ -z "$found" ]; then
-            echo "::error title=No translation layer in the build::dist/ contains \
-            no libdragoman library, so Translate would fail for everyone who \
-            downloads this. Check --collect-all dragoman (PyInstaller) or the \
-            'dragoman' entry in compilation_scripts/setup.py (py2app)."
-            find dist -maxdepth 3 -type d | head -20
+          # PyInstaller --onefile embeds package data inside main.exe rather
+          # than leaving a loose DLL beside it. Inspect that archive directly.
+          if ! python -m PyInstaller.utils.cliutils.archive_viewer \
+              -l -b dist/main.exe | grep -Eiq 'dragoman\.(dll|dylib|so)'; then
+            echo "::error title=No translation layer in the build::main.exe does not contain a dragoman shared library, so Translate would fail for everyone who downloads this. Check --collect-all dragoman."
             exit 1
           fi
-          echo "translation layer found in:"
-          echo "$found"
+          echo "translation layer found inside dist/main.exe"
 
       - name: Upload Windows build
         uses: actions/upload-artifact@v4
