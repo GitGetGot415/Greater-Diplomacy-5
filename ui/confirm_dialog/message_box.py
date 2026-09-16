@@ -56,7 +56,8 @@ class _NavigationIntroPopup:
     SUBTITLE_Y_OFFSET = 55
     SUBTITLE_SIDE_PADDING = 24
     SUBTITLE_LINE_GAP = 2
-    INITIAL_CENTER_Y_OFFSET = -16
+    # This is what edits how offset the tutorial popup is when it spawns!
+    INITIAL_CENTER_Y_OFFSET = -32
     BORDER_COLOR = _KIND_ACCENTS["info"]
     MOUSE_DIR = os.path.join(c.ASSETS_ROOT_DIR, "mouse")
     NAVIGATION_BUTTONS = (
