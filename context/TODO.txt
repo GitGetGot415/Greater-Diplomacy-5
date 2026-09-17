@@ -1,6 +1,7 @@
 # TODO
 
 would it be possible to use vectorized loops anywhere in this project in order to speed up the project?
+bring back right click to move across the map but only when not giving orders
 
 ## Random thoughts with no real goal
 
@@ -35,6 +36,7 @@ would it be possible to use vectorized loops anywhere in this project in order t
 
 - could you make it so you can upgrade repair disband multiple units at a time
 - ability to change map controls so the mouse can be set to other mouse controls, other keys, or switch what each one of the 3 buttons does
+- arrow keys to move
 
 ### Kaiserin
 
