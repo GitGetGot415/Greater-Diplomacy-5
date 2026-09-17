@@ -1,5 +1,7 @@
 # TODO
 
+would it be possible to use vectorized loops anywhere in this project in order to speed up the project?
+
 ## Random thoughts with no real goal
 
 - Is saving during tournament move entry allowed?

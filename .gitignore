@@ -35,6 +35,7 @@ main.spec
 mods
 TEMP_GD4
 TEMP_GDHEX
+TEMP_OTHER
 
 *.pyc
 !countries_data.json
