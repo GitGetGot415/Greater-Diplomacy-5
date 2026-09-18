@@ -149,6 +149,38 @@ class ControllerConstructionTests(unittest.TestCase):
                 self.assertFalse(button.rect.colliderect(other.rect),
                                  f"{button.text} overlaps {other.text}")
 
+    def test_map_with_no_assigned_country_is_read_only_until_selection_recovers(self):
+        """An interrupted map handoff must not treat the ``None`` sentinel as
+        a country when a province is already selected.
+
+        The player-facing diplomacy branch requires a nation_data record.  The
+        fallback preserves map navigation and the close control, while keeping
+        all country-owned actions unavailable until the assignment completes.
+        """
+        from screens.menu_screens.map import update_button_states
+
+        game_map = app_harness.boot_map()
+        original_player = game_map.player_country
+        original_selected = game_map.selected_province
+        original_selection_mode = game_map.selection_mode
+        try:
+            game_map.player_country = "None"
+            game_map.selection_mode = False
+            game_map.selected_province = next(
+                province for province in game_map.map_data.values()
+                if province.get("owner") in game_map.nation_data)
+
+            update_button_states(game_map)
+
+            self.assertTrue(game_map.btn_close_info.visible)
+            self.assertFalse(game_map.btn_declare_war.visible)
+            self.assertFalse(game_map.btn_gp_edit.visible)
+        finally:
+            game_map.player_country = original_player
+            game_map.selected_province = original_selected
+            game_map.selection_mode = original_selection_mode
+            update_button_states(game_map)
+
 
 class GlobalKeyDispatchTests(unittest.TestCase):
     class State:

@@ -700,6 +700,22 @@ def update_button_states(map_screen):
         btn.visible = True
         btn.is_selected = is_active
 
+    # A map can briefly be displayed after country selection has ended but
+    # before a playable country has been assigned (for example, while a saved
+    # or networked session is being handed off).  "None" is a sentinel, not a
+    # nation_data key, so it must not enter the player diplomacy UI below.
+    # Leave the map controls and a way to close the selection/exit available,
+    # but expose no country-owned actions until the state has a real owner.
+    has_player_country = map_screen.player_country in map_screen.nation_data
+    if (not map_screen.is_editor
+            and map_screen.player_country != "Spectator"
+            and not has_player_country):
+        map_screen.btn_exit_to_menu.visible = not is_sel
+        map_screen.btn_close_info.visible = is_sel
+        map_screen.btn_realtime_details.visible = bool(
+            getattr(map_screen, "realtime_multiplayer", False)) and not is_sel
+        return
+
     # ==================================================================== #
     #                        EDITOR & GAMEPLAY TOOLS                       #
     # ==================================================================== #
