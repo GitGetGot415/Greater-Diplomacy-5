@@ -212,6 +212,10 @@ class NavigationIntroPopupTests(unittest.TestCase):
         self.assertEqual(len(popup.NAVIGATION_BUTTONS), 3)
         self.assertTrue(all(len(lines) >= 1
                             for _filename, _heading, lines in popup.NAVIGATION_BUTTONS))
+        self.assertEqual(popup.KEYBOARD_NAVIGATION[0], "ARROW KEYS")
+        self.assertTrue(popup.KEYBOARD_NAVIGATION[1])
+        self.assertLess(popup.keyboard_navigation_rect.bottom,
+                        popup.checkbox_rect.top)
 
         # Unit selection and map panning pass through the panel while active.
         self.assertFalse(popup.handle_event(pygame.event.Event(

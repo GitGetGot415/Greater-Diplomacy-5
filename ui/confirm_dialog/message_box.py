@@ -56,6 +56,8 @@ class _NavigationIntroPopup:
     SUBTITLE_Y_OFFSET = 55
     SUBTITLE_SIDE_PADDING = 24
     SUBTITLE_LINE_GAP = 2
+    KEYBOARD_NAVIGATION_BOX_Y = 264
+    KEYBOARD_NAVIGATION_BOX_H = 36
     # This is what edits how offset the tutorial popup is when it spawns!
     INITIAL_CENTER_Y_OFFSET = -32
     BORDER_COLOR = _KIND_ACCENTS["info"]
@@ -70,9 +72,13 @@ class _NavigationIntroPopup:
             "Scroll up or down to zoom in or out."
         )),
         ("Right.png", "RIGHT MOUSE", (
-            "Right-click a province to move selected units.",
-            "Shift+right-click queues a waypoint.",
+            "Drag to pan the map outside Orders.",
+            "Right-click moves selected units; Shift queues a waypoint.",
         )),
+    )
+    KEYBOARD_NAVIGATION = (
+        "ARROW KEYS",
+        "Use the arrow keys to pan the map.",
     )
     MAP_UI_BUTTONS = (
         ("Terrain", "terrain", "Shows the terrain map."),
@@ -265,6 +271,26 @@ class _NavigationIntroPopup:
                     line_surf = self.body_font.render(line, True, (225, 225, 225))
                     surface.blit(line_surf, line_surf.get_rect(center=(center_x, line_y)))
                     line_y += self.body_font.get_height() + 3
+
+            # Keyboard navigation is deliberately its own panel below the
+            # mouse controls, so it is discoverable without being mistaken for
+            # another mouse-button gesture.
+            self.keyboard_navigation_rect = pygame.Rect(
+                self.rect.x + 40, self.rect.y + self.KEYBOARD_NAVIGATION_BOX_Y
+                + content_y_offset, self.rect.width - 80,
+                self.KEYBOARD_NAVIGATION_BOX_H)
+            pygame.draw.rect(surface, (25, 31, 43), self.keyboard_navigation_rect,
+                             border_radius=4)
+            pygame.draw.rect(surface, (70, 115, 160), self.keyboard_navigation_rect,
+                             1, border_radius=4)
+            heading, description = self.KEYBOARD_NAVIGATION
+            heading_surf = self.label_font.render(heading, True, (130, 205, 255))
+            description_surf = self.body_font.render(description, True, (225, 225, 225))
+            text_center_y = self.keyboard_navigation_rect.centery
+            surface.blit(heading_surf, (self.keyboard_navigation_rect.x + 15,
+                                        text_center_y - heading_surf.get_height() // 2))
+            surface.blit(description_surf, (self.keyboard_navigation_rect.x + 125,
+                                            text_center_y - description_surf.get_height() // 2))
         elif self.page_index == 1:
             column_x = (self.rect.x + 35, self.rect.centerx + 18)
             row_h = 44

@@ -77,6 +77,50 @@ class MapCameraBoundsTests(unittest.TestCase):
         self.assertEqual(camera.pos.y, -20)
         self.assertEqual(camera.target_pos, camera.pos)
 
+    def test_right_drag_pans_only_when_the_caller_allows_it(self):
+        camera = MapCamera(min_zoom=2)
+        camera.zoom = camera.target_zoom = 2
+        self_map = _map(loop_map=False)
+
+        with patch("map_logic.camera.camera_handler.pygame.mouse.get_pressed",
+                   return_value=(0, 0, 0)):
+            camera.handle_input(
+                pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(100, 100), button=3),
+                self_map, False, allow_right_drag=True)
+            camera.handle_input(
+                pygame.event.Event(pygame.MOUSEMOTION, pos=(130, 120), rel=(99, 99),
+                                   buttons=(0, 0, 1)), self_map, False,
+                allow_right_drag=True)
+
+        self.assertEqual(camera.pos, pygame.Vector2(-15, -10))
+        self.assertTrue(camera.finish_right_drag())
+
+        with patch("map_logic.camera.camera_handler.pygame.mouse.get_pressed",
+                   return_value=(0, 0, 0)):
+            camera.handle_input(
+                pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(130, 120), button=3),
+                self_map, False)
+            camera.handle_input(
+                pygame.event.Event(pygame.MOUSEMOTION, pos=(160, 140), rel=(30, 20),
+                                   buttons=(0, 0, 1)), self_map, False)
+
+        self.assertEqual(camera.pos, pygame.Vector2(-15, -10))
+
+    def test_arrow_keys_pan_by_the_shared_screen_distance(self):
+        camera = MapCamera(min_zoom=2)
+        camera.zoom = camera.target_zoom = 2
+        camera.tilt_factor = 0.5
+        self_map = _map(loop_map=False)
+
+        camera.handle_input(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RIGHT),
+                            self_map, False)
+        camera.handle_input(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_DOWN),
+                            self_map, False)
+
+        self.assertEqual(camera.target_pos.x, c.CAMERA_KEYBOARD_PAN_PIXELS / camera.zoom)
+        self.assertEqual(camera.target_pos.y,
+                         c.CAMERA_KEYBOARD_PAN_PIXELS / (camera.zoom * camera.tilt_factor))
+
     def test_conflicting_right_button_cancels_middle_drag_until_release(self):
         camera = MapCamera(min_zoom=2)
         camera.zoom = camera.target_zoom = 2

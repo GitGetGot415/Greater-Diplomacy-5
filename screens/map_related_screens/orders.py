@@ -1278,7 +1278,7 @@ class Orders_Screen(GameState):
             return
 
         # Pass scroll and pan events to your centralized map camera
-        if event.type in (pygame.MOUSEWHEEL, pygame.MOUSEMOTION,
+        if event.type in (pygame.MOUSEWHEEL, pygame.MOUSEMOTION, pygame.KEYDOWN,
                           pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
             # Only allow camera zoom/pan if not scrolling the unit list
             if event.type == pygame.MOUSEWHEEL and on_ui:

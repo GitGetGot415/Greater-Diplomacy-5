@@ -721,7 +721,7 @@ class MapOverlayScreen(GameState):
             if self.handle_list_scroll(event, content_rect_attr="scroll_content_rect"):
                 return
 
-        if event.type not in (pygame.MOUSEWHEEL, pygame.MOUSEMOTION):
+        if event.type not in (pygame.MOUSEWHEEL, pygame.MOUSEMOTION, pygame.KEYDOWN):
             return
 
         if event.type == pygame.MOUSEMOTION and (getattr(self, "is_dragging_scrollbar", False)

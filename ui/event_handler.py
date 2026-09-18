@@ -321,7 +321,15 @@ def handle_map_events(map_screen, event):
             camera_handler.center_camera_on_province(map_screen.camera, map_screen.selected_province["center"], c.SCREEN_WIDTH, c.SCREEN_HEIGHT, map_screen.total_ui_h)
         return
 
-    map_screen.camera.handle_input(event, map_screen, on_ui)
+    # Main-map right drags pan, while a short right-click still reaches the
+    # selected-unit order gesture below.  Orders owns its own right-click
+    # routing, and editor right-click is its brush, so neither enables this.
+    allow_right_drag = not map_screen.is_editor
+    map_screen.camera.handle_input(event, map_screen, on_ui,
+                                   allow_right_drag=allow_right_drag)
+    if (allow_right_drag and event.type == pygame.MOUSEBUTTONUP
+            and event.button == 3 and map_screen.camera.finish_right_drag()):
+        return
 
     # 3. HOVER LOGIC (CRITICAL: Must run before painting)
     if not on_ui:

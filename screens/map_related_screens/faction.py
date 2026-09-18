@@ -360,7 +360,7 @@ class Faction_Territories_Screen(GameState):
     def additional_events(self, event):
         if not self.map_screen: return
         
-        if event.type in (pygame.MOUSEWHEEL, pygame.MOUSEMOTION):
+        if event.type in (pygame.MOUSEWHEEL, pygame.MOUSEMOTION, pygame.KEYDOWN):
             mx, my = pygame.mouse.get_pos()
             on_ui = self.map_screen.top_bar_rect.collidepoint(mx, my) or self.map_screen.bot_bar_rect.collidepoint(mx, my)
             self.map_screen.camera.handle_input(event, self.map_screen, on_ui)

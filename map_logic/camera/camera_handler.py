@@ -16,6 +16,10 @@ class MapCamera:
         self.manual_tilt_factor = 1.0 # Added explicit manual control factor
         self._middle_drag_last_pos = None
         self._ignore_middle_until_release = False
+        # Right drag is available on the main map only.  Its release is kept
+        # separate from the normal short right-click movement-order gesture.
+        self._right_drag_last_pos = None
+        self._right_drag_moved = False
         # currently set to instant, but can be adjusted for smoother transitions
 
     def cancel_middle_drag(self):
@@ -23,7 +27,43 @@ class MapCamera:
         self._middle_drag_last_pos = None
         self._ignore_middle_until_release = True
 
-    def handle_input(self, event, self_map, on_ui):
+    def finish_right_drag(self):
+        """Clear a main-map right drag and report whether it panned.
+
+        A short right-click must keep reaching the movement-order handler;
+        only a drag consumes its matching release.
+        """
+        moved = self._right_drag_moved
+        self._right_drag_last_pos = None
+        self._right_drag_moved = False
+        return moved
+
+    def _pan_from_drag(self, current_pos, previous_pos):
+        """Move the camera by a logical cursor displacement at the live zoom."""
+        self.pos.x -= (current_pos[0] - previous_pos[0]) / self.zoom
+        self.pos.y -= ((current_pos[1] - previous_pos[1])
+                       / (self.zoom * self.tilt_factor))
+        self.target_pos = pygame.Vector2(self.pos)
+
+    def handle_input(self, event, self_map, on_ui, allow_right_drag=False):
+        if event.type == pygame.KEYDOWN and event.key in (
+                pygame.K_LEFT, pygame.K_RIGHT, pygame.K_UP, pygame.K_DOWN):
+            # KEYDOWN repeats are configured centrally in main.py.  Convert
+            # the screen-distance tuning value to world space, keeping each
+            # key press equally responsive at every zoom level.
+            self.focus_animation = False
+            step_x = c.CAMERA_KEYBOARD_PAN_PIXELS / self.zoom
+            step_y = c.CAMERA_KEYBOARD_PAN_PIXELS / (self.zoom * self.tilt_factor)
+            if event.key == pygame.K_LEFT:
+                self.target_pos.x -= step_x
+            elif event.key == pygame.K_RIGHT:
+                self.target_pos.x += step_x
+            elif event.key == pygame.K_UP:
+                self.target_pos.y -= step_y
+            else:
+                self.target_pos.y += step_y
+            return
+
         if event.type == pygame.MOUSEWHEEL:
             # Any manual zoom takes control away from the automatic country
             # framing animation, restoring the ordinary cursor-anchored zoom.
@@ -49,23 +89,41 @@ class MapCamera:
             self._ignore_middle_until_release = False
             return
 
+        if allow_right_drag and event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
+            self.focus_animation = False
+            self._right_drag_last_pos = event.pos if not on_ui else None
+            self._right_drag_moved = False
+            return
+
         if self._ignore_middle_until_release:
             return
 
         buttons = getattr(event, "buttons", ())
-        drag_active = (len(buttons) > 1 and buttons[1]) or pygame.mouse.get_pressed()[1]
-        if event.type == pygame.MOUSEMOTION and drag_active and not on_ui:
+        middle_drag_active = ((len(buttons) > 1 and buttons[1])
+                              or pygame.mouse.get_pressed()[1])
+        right_drag_active = (allow_right_drag and ((len(buttons) > 2 and buttons[2])
+                             or pygame.mouse.get_pressed()[2]))
+        if event.type == pygame.MOUSEMOTION and middle_drag_active and not on_ui:
             current_pos = event.pos
             if self._middle_drag_last_pos is None:
                 previous_pos = (current_pos[0] - event.rel[0],
                                 current_pos[1] - event.rel[1])
             else:
                 previous_pos = self._middle_drag_last_pos
-            self.pos.x -= (current_pos[0] - previous_pos[0]) / self.zoom
-            self.pos.y -= (current_pos[1] - previous_pos[1]) / (self.zoom * self.tilt_factor)
-            self.target_pos = pygame.Vector2(self.pos)
+            self._pan_from_drag(current_pos, previous_pos)
             self._middle_drag_last_pos = current_pos
-        elif event.type == pygame.MOUSEMOTION and not drag_active:
+        elif event.type == pygame.MOUSEMOTION and right_drag_active and not on_ui:
+            current_pos = event.pos
+            if self._right_drag_last_pos is None:
+                previous_pos = (current_pos[0] - event.rel[0],
+                                current_pos[1] - event.rel[1])
+            else:
+                previous_pos = self._right_drag_last_pos
+            if current_pos != previous_pos:
+                self._pan_from_drag(current_pos, previous_pos)
+                self._right_drag_moved = True
+            self._right_drag_last_pos = current_pos
+        elif event.type == pygame.MOUSEMOTION and not middle_drag_active:
             self._middle_drag_last_pos = None
 
     def update(self, self_map, SCREEN_HEIGHT):
