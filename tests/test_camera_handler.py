@@ -121,6 +121,32 @@ class MapCameraBoundsTests(unittest.TestCase):
         self.assertEqual(camera.target_pos.y,
                          c.CAMERA_KEYBOARD_PAN_PIXELS / (camera.zoom * camera.tilt_factor))
 
+    def test_held_arrow_key_pans_continuously_without_key_repeat_delay(self):
+        camera = MapCamera(min_zoom=2)
+        camera.zoom = camera.target_zoom = 2
+        self_map = _map(loop_map=False)
+
+        class PressedKeys:
+            def __getitem__(self, key):
+                return key == pygame.K_RIGHT
+
+        with (patch("map_logic.camera.camera_handler.pygame.display.get_surface",
+                    return_value=object()),
+              patch("map_logic.camera.camera_handler.pygame.key.get_pressed",
+                    return_value=PressedKeys()),
+              patch("map_logic.camera.camera_handler.pygame.time.get_ticks",
+                    side_effect=(1000, 1050))):
+            camera.handle_input(
+                pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RIGHT),
+                self_map, False)
+            camera.update(self_map, 720)
+
+        expected_screen_distance = (
+            c.CAMERA_KEYBOARD_PAN_PIXELS
+            + c.CAMERA_KEYBOARD_PAN_PIXELS_PER_SECOND * 0.05)
+        self.assertEqual(camera.target_pos.x,
+                         expected_screen_distance / camera.zoom)
+
     def test_conflicting_right_button_cancels_middle_drag_until_release(self):
         camera = MapCamera(min_zoom=2)
         camera.zoom = camera.target_zoom = 2

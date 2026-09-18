@@ -20,6 +20,7 @@ class MapCamera:
         # separate from the normal short right-click movement-order gesture.
         self._right_drag_last_pos = None
         self._right_drag_moved = False
+        self._last_arrow_pan_tick = None
         # currently set to instant, but can be adjusted for smoother transitions
 
     def cancel_middle_drag(self):
@@ -45,23 +46,54 @@ class MapCamera:
                        / (self.zoom * self.tilt_factor))
         self.target_pos = pygame.Vector2(self.pos)
 
+    def _pan_with_arrow_keys(self, left, right, up, down, screen_distance):
+        """Move the camera target by a screen-space keyboard distance."""
+        self.focus_animation = False
+        step_x = screen_distance / self.zoom
+        step_y = screen_distance / (self.zoom * self.tilt_factor)
+        self.target_pos.x += (right - left) * step_x
+        self.target_pos.y += (down - up) * step_y
+
+    def _pan_held_arrow_keys(self):
+        """Continue navigation while an arrow key is held.
+
+        Pygame's global key-repeat delay is appropriate for text fields but
+        makes camera panning pause after the first press.  Polling here keeps
+        only map navigation continuous and avoids changing text input.
+        """
+        if pygame.display.get_surface() is None:
+            # Lightweight tests and headless map tools can update a camera
+            # without a display or keyboard device.
+            self._last_arrow_pan_tick = None
+            return
+        pressed = pygame.key.get_pressed()
+        left = bool(pressed[pygame.K_LEFT])
+        right = bool(pressed[pygame.K_RIGHT])
+        up = bool(pressed[pygame.K_UP])
+        down = bool(pressed[pygame.K_DOWN])
+        if not (left or right or up or down):
+            self._last_arrow_pan_tick = None
+            return
+        now = pygame.time.get_ticks()
+        if self._last_arrow_pan_tick is None:
+            self._last_arrow_pan_tick = now
+            return
+        elapsed_seconds = min(0.1, max(0, now - self._last_arrow_pan_tick) / 1000)
+        self._last_arrow_pan_tick = now
+        self._pan_with_arrow_keys(
+            left, right, up, down,
+            c.CAMERA_KEYBOARD_PAN_PIXELS_PER_SECOND * elapsed_seconds)
+
     def handle_input(self, event, self_map, on_ui, allow_right_drag=False):
         if event.type == pygame.KEYDOWN and event.key in (
                 pygame.K_LEFT, pygame.K_RIGHT, pygame.K_UP, pygame.K_DOWN):
-            # KEYDOWN repeats are configured centrally in main.py.  Convert
-            # the screen-distance tuning value to world space, keeping each
-            # key press equally responsive at every zoom level.
-            self.focus_animation = False
-            step_x = c.CAMERA_KEYBOARD_PAN_PIXELS / self.zoom
-            step_y = c.CAMERA_KEYBOARD_PAN_PIXELS / (self.zoom * self.tilt_factor)
-            if event.key == pygame.K_LEFT:
-                self.target_pos.x -= step_x
-            elif event.key == pygame.K_RIGHT:
-                self.target_pos.x += step_x
-            elif event.key == pygame.K_UP:
-                self.target_pos.y -= step_y
-            else:
-                self.target_pos.y += step_y
+            # Move once immediately; update() continues while the key remains
+            # down, rather than waiting for the application's text-key delay.
+            self._pan_with_arrow_keys(
+                event.key == pygame.K_LEFT, event.key == pygame.K_RIGHT,
+                event.key == pygame.K_UP, event.key == pygame.K_DOWN,
+                c.CAMERA_KEYBOARD_PAN_PIXELS)
+            self._last_arrow_pan_tick = pygame.time.get_ticks()
             return
 
         if event.type == pygame.MOUSEWHEEL:
@@ -129,6 +161,7 @@ class MapCamera:
     def update(self, self_map, SCREEN_HEIGHT):
         # 0. Apply Manual Tilt Factor
         self.tilt_factor = self.manual_tilt_factor
+        self._pan_held_arrow_keys()
 
         # 1. Smooth Zoom
         if abs(self.zoom - self.target_zoom) > 0.001:

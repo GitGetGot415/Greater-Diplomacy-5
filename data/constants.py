@@ -1004,10 +1004,11 @@ MSG_NOTIFICATION_COLOR = (255, 50, 50)
 # ==========================================
 
 MAX_CAMERA_ZOOM = 10.0
-# Screen pixels traversed by one arrow-key navigation repeat.  The camera
-# converts this to world distance at its current zoom, so it feels consistent
-# whether the player is looking at a continent or a single province.
+# Screen pixels traversed by the initial arrow-key press.  Held keys use the
+# rate below instead of pygame's delayed key-repeat events, so camera movement
+# starts immediately and stays continuous without changing text-entry repeat.
 CAMERA_KEYBOARD_PAN_PIXELS = 80
+CAMERA_KEYBOARD_PAN_PIXELS_PER_SECOND = 1200
 MAX_Y_TILT_FACTOR = 0.0 # The maximum compression of the Y axis (0.6 = 60% of original height)
 APPLY_TILT_TO_OVERLAYS = False # Whether the tilt compresses icons and text overlays
 APPLY_TILT_TO_ARROWS = True # Whether the tilt compresses movement arrows
