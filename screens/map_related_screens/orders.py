@@ -1335,7 +1335,8 @@ class Orders_Screen(GameState):
         # through a gap between the controls and roster.
         panel_rect = self.panel_rect
         event_pos = getattr(event, "pos", (mx, my))
-        on_ui = panel_rect.collidepoint(event_pos)
+        on_ui = (panel_rect.collidepoint(event_pos)
+                 or event_handler.map_ui_bar_at_position(self.map_screen, event_pos))
 
         # Exclude Orders turns a map-pan binding into main-map-only panning,
         # leaving that button free for the normal Orders move gesture.
@@ -1449,7 +1450,7 @@ class Orders_Screen(GameState):
 
         if (event.type == pygame.MOUSEBUTTONUP
                 and event_handler.mouse_button_has_action(event.button, "issue_orders")):
-            if not self.read_only:
+            if not on_ui and not self.read_only:
                 destination = queries.get_clicked_province(event.pos, self.map_screen)
                 if destination and self.map_screen.selected_unit_records():
                     if self.map_screen.issue_selected_move_orders(

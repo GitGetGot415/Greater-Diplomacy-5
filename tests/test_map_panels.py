@@ -115,6 +115,22 @@ class MapPanelScrollTests(unittest.TestCase):
         self.assertIsNone(self.map.hovered_province,
                           f"hover reached the map through a panel (was {before})")
 
+    def test_click_in_a_bar_uses_event_position_not_current_cursor(self):
+        """A queued click on a bar cannot select the stale tile under the cursor."""
+        self.map.selection_mode = True
+        map_position = (self.surface.get_width() // 2,
+                        self.surface.get_height() // 2)
+        bar_position = self.map.top_bar_rect.center
+        pygame.mouse.get_pos = lambda: map_position
+        event = pygame.event.Event(pygame.MOUSEBUTTONDOWN,
+                                   pos=bar_position, button=1)
+
+        with mock.patch.object(event_handler.player_setup,
+                               "select_player_country") as select_country:
+            event_handler.handle_map_events(self.map, event)
+
+        select_country.assert_not_called()
+
     def test_province_menu_blocks_combat_bubbles_behind_opaque_artwork(self):
         """Only the opaque portion of the province background blocks a bubble."""
         pos = (300, self.surface.get_height() // 2)

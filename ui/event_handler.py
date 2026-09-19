@@ -27,6 +27,26 @@ def _panels_are_live(map_screen):
     return bool(map_screen.selected_province) and not map_screen.selection_mode
 
 
+def map_ui_bar_at_position(map_screen, position):
+    """Return whether a screen position is covered by one of the map UI bars."""
+    # Optional rects only support lightweight screens used at compatibility/test
+    # boundaries; a live map publishes all four during construction.
+    top_bar = getattr(map_screen, "top_bar_rect", None)
+    bottom_bar = getattr(map_screen, "bot_bar_rect", None)
+    if ((top_bar and top_bar.collidepoint(position))
+            or (bottom_bar and bottom_bar.collidepoint(position))):
+        return True
+
+    # Both flags exist on a live Map; Orders unit tests use smaller map doubles.
+    if (getattr(map_screen, "selection_mode", False)
+            or getattr(map_screen, "hide_raised_rect", False)):
+        return False
+    raised = getattr(map_screen, "raised_rect", None)
+    background = getattr(map_screen, "ui_background_rect", None)
+    return bool((raised and raised.collidepoint(position))
+                or (background and background.collidepoint(position)))
+
+
 def _unit_stack_at(map_screen, position):
     """Return the topmost visible unit stack under a screen position.
 
@@ -52,7 +72,8 @@ def _select_tactical_unit_stack(map_screen, position):
 
 def _select_map_province(map_screen, position, navigate=True):
     """Run the normal primary-click province selection after a box-select check."""
-    if map_screen.viewing_ai_moves:
+    if (map_screen.viewing_ai_moves
+            or map_ui_bar_at_position(map_screen, position)):
         return False
     province = queries.get_clicked_province(position, map_screen)
     if (province is None or province["id"] in getattr(
@@ -213,7 +234,10 @@ def _handle_map_unit_selection(map_screen, event, on_ui):
 
 
 def handle_map_events(map_screen, event):
-    mx, my = pygame.mouse.get_pos()
+    event_pos = getattr(event, "pos", None)
+    if event_pos is None:
+        event_pos = pygame.mouse.get_pos()
+    mx, my = event_pos
 
     # --- POPUP INTERCEPT ---
     from ui import diplomatic_popups
@@ -270,15 +294,7 @@ def handle_map_events(map_screen, event):
 
     # 1. UI Check (make sure the mouse can't go through the ui bars)
 
-    # Always check the top and bottom bars
-    on_ui = map_screen.top_bar_rect.collidepoint(mx, my) or map_screen.bot_bar_rect.collidepoint(mx, my)
-
-    # Only check the side bars if they are actually being rendered
-    side_ui_hidden = map_screen.selection_mode or map_screen.hide_raised_rect
-
-    if not side_ui_hidden:
-        if map_screen.raised_rect.collidepoint(mx, my) or map_screen.ui_background_rect.collidepoint(mx, my):
-            on_ui = True
+    on_ui = map_ui_bar_at_position(map_screen, event_pos)
 
     # Buildings/Garrison, Diplomatic Info and the queue overlay sit on top of the
     # map at fixed screen rects, so treat them like any other UI bar: mousedown/
@@ -609,6 +625,8 @@ def handle_map_events(map_screen, event):
 
             # A unit box can extend beyond its small tile, so tactical box
             # selection must not depend on the tile itself being hovered.
+            if on_ui:
+                return
             if map_screen.tactical_mode and _select_tactical_unit_stack(map_screen, event.pos):
                 return
             if map_screen.hovered_province:

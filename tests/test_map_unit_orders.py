@@ -425,6 +425,34 @@ class OrdersBatchCommandsTests(unittest.TestCase):
 
 
 class MapOrderGestureTests(unittest.TestCase):
+    def test_orders_move_release_on_a_map_bar_does_not_target_a_tile(self):
+        map_stub = type("MapStub", (), {
+            "top_bar_rect": pygame.Rect(0, 0, 800, 60),
+            "bot_bar_rect": pygame.Rect(0, 540, 800, 60),
+            "selection_mode": False,
+            "hide_raised_rect": False,
+            "unit_selection_drag": None,
+            "unit_stack_hitboxes": [],
+            "selected_unit_records": lambda self: [(object(), object())],
+        })()
+        screen = object.__new__(Orders_Screen)
+        screen.map_screen = map_stub
+        screen.panel_rect = pygame.Rect(800, 100, 200, 300)
+        screen.is_dragging_scrollbar = False
+        screen.is_content_dragging = lambda _attr: False
+        screen.read_only = False
+
+        with (patch("screens.map_related_screens.orders.event_handler.resolve_map_mouse_gesture_conflict"),
+              patch("screens.map_related_screens.orders.event_handler.mouse_button_has_action",
+                    return_value=True),
+              patch("screens.map_related_screens.orders.pygame.mouse.get_pos",
+                    return_value=(400, 300)),
+              patch("screens.map_related_screens.orders.queries.get_clicked_province") as hit_test):
+            screen.additional_events(pygame.event.Event(
+                pygame.MOUSEBUTTONUP, pos=(400, 550), button=3))
+
+        hit_test.assert_not_called()
+
     def test_armed_bombardment_click_sets_target_before_selection_gesture(self):
         origin = province(1, [2])
         destination = province(2, [1])
