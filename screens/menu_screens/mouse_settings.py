@@ -17,7 +17,7 @@ CARD_GAP_X = 18
 CARD_TOP_Y = 88
 CARD_HEIGHT = 390
 CARD_HEADER_Y = CARD_TOP_Y + 18
-CARD_IMAGE_CENTER_Y = CARD_TOP_Y + 108
+CARD_IMAGE_CENTER_Y = CARD_TOP_Y + 90
 CARD_ACTION_START_Y = CARD_TOP_Y + 145
 CARD_ACTION_GAP_Y = 60
 WARNING_TOP_Y = CARD_TOP_Y + CARD_HEIGHT + 22
@@ -27,6 +27,7 @@ MOUSE_PAN_BUTTON_SIZE = (160, 32)
 MOUSE_EXCLUDE_BUTTON_SIZE = (32, 32)
 MOUSE_PAN_INDENT_X = 8
 MOUSE_PAN_EXCLUDE_GAP_X = 6
+MOUSE_ACTION_HELP_GAP_Y = 8
 PAN_ACTION = "pan_map"
 EXCLUDE_ORDERS_ACTION = "exclude_orders"
 EXCLUDE_ORDERS_LABEL = "Exclude Orders"
@@ -139,7 +140,7 @@ class Mouse_Settings(GameState):
                 button_height = (MOUSE_PAN_BUTTON_SIZE[1] if _action == PAN_ACTION
                                  else MOUSE_ACTION_BUTTON_SIZE[1])
                 y = (CARD_ACTION_START_Y + row * CARD_ACTION_GAP_Y
-                     + button_height + 2)
+                     + button_height + MOUSE_ACTION_HELP_GAP_Y)
                 surface.blit(help_surface, help_surface.get_rect(center=(card.centerx, y)))
                 if _action == PAN_ACTION:
                     exclude_color = ((185, 195, 207) if actions[button][PAN_ACTION]
