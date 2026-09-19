@@ -431,6 +431,31 @@ class Orders_Screen(GameState):
             "cost_fuel": int(stats.get("cost_fuel", 0) * missing_pct),
         }
 
+    def _selected_units_with_order(self, order_type):
+        """Selected commandable units currently carrying one named order."""
+        return [
+            (unit, province)
+            for unit, province in self.map_screen.selected_unit_records()
+            if (unit.get("owner") == self.map_screen.player_country
+                and not self._command_blocked_silent(unit)
+                and isinstance(unit.get("order"), dict)
+                and unit["order"].get("type") == order_type)
+        ]
+
+    def cancel_selected_batch_orders(self, order_type):
+        """Cancel one matching order across the current selection at once."""
+        ordered_units = self._selected_units_with_order(order_type)
+        if not ordered_units:
+            return
+        self._refund_batch_orders(ordered_units)
+        for unit, _province in ordered_units:
+            del unit["order"]
+        self._mark_draft_changed()
+        self.map_screen.show_feedback(
+            f"Cancelled {order_type.lower()} for {len(ordered_units)} selected "
+            f"unit{'s' if len(ordered_units) != 1 else ''}.")
+        self.refresh_ui()
+
     def disband_selected_units(self):
         candidates = self._batch_command_candidates("DISBAND")
         self._refund_batch_orders(candidates)
@@ -873,23 +898,39 @@ class Orders_Screen(GameState):
 
             if len(player_units) > 1:
                 batch_actions = (
-                    ("Disband", self.disband_selected_units,
-                     self._batch_command_candidates("DISBAND")),
-                    ("Repair", self.repair_selected_units,
-                     self._batch_command_candidates("REPAIR")),
-                    ("Upgrade", self.upgrade_selected_units,
-                     self._batch_command_candidates("UPGRADE")),
+                    ("Disband", "DISBAND", self.disband_selected_units),
+                    ("Repair", "REPAIR", self.repair_selected_units),
+                    ("Upgrade", "UPGRADE", self.upgrade_selected_units),
                 )
                 batch_x = self.PANEL_X + PANEL_INSET
-                for label, callback, candidates in batch_actions:
-                    count = len(candidates)
+                for label, order_type, start_order in batch_actions:
+                    active_orders = self._selected_units_with_order(order_type)
+                    candidates = self._batch_command_candidates(order_type)
+                    active_ids = {id(unit) for unit, _province in active_orders}
+                    action_scope_ids = active_ids | {
+                        id(candidate[0]) for candidate in candidates}
+                    # A mixed selection can include units which cannot repair
+                    # or upgrade. Once every unit that this action covers is
+                    # already carrying it, offer the matching batch cancel.
+                    is_active_for_every_selection = bool(active_ids) and all(
+                        unit_id in active_ids for unit_id in action_scope_ids)
+                    count = len(active_orders) if is_active_for_every_selection else len(candidates)
+                    button_label = (f"Cancel {label} ({count})"
+                                    if is_active_for_every_selection
+                                    else f"{label} ({count})")
+                    callback = (
+                        (lambda action=order_type: self.cancel_selected_batch_orders(action))
+                        if is_active_for_every_selection else start_order)
+                    color = ("red" if is_active_for_every_selection else
+                             "green" if count else "grey")
                     button = Button(batch_x, PANEL_Y + BATCH_BTN_ROW_OFFSET_Y,
-                                    "orders_header_button",
-                                    "orange" if count else "grey",
-                                    f"{label} ({count})", callback,
+                                    "orders_header_button", color,
+                                    button_label, callback,
                                     font_preset="tiny")
-                    button.apply_state(enabled=bool(count))
+                    button.apply_state(enabled=bool(count), color=color)
                     button.help_text = (
+                        f"Cancel {label.lower()} for {count} selected units."
+                        if is_active_for_every_selection else
                         f"{label} every eligible selected unit, replacing its current order.")
                     self.elements.append(button)
                     batch_x = button.rect.right + TOP_BTN_GAP_X

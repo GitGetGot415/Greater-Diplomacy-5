@@ -335,6 +335,44 @@ class OrdersBatchCommandsTests(unittest.TestCase):
         self.assertEqual(second["order"]["target_type"], "Infantry Type 1940")
         self.assertIn("2 selected units", feedback[-1])
 
+    def test_cancel_selected_disband_removes_every_selected_disband_order(self):
+        first = {"owner": "A", "type": "Infantry", "order": {"type": "DISBAND"}}
+        second = {"owner": "A", "type": "Infantry", "order": {"type": "DISBAND"}}
+        screen, _map_stub, feedback = self._screen(first, second)
+
+        screen.cancel_selected_batch_orders("DISBAND")
+
+        self.assertNotIn("order", first)
+        self.assertNotIn("order", second)
+        self.assertIn("Cancelled disband", feedback[-1])
+
+    def test_cancel_selected_repair_refunds_every_selected_repair_order(self):
+        refund = {"cost_materials": 100, "cost_manpower": 50, "cost_fuel": 0}
+        first = {"owner": "A", "type": "Infantry",
+                 "order": {"type": "REPAIR", "refund": refund}}
+        second = {"owner": "A", "type": "Infantry",
+                  "order": {"type": "REPAIR", "refund": refund}}
+        screen, map_stub, _feedback = self._screen(first, second)
+        map_stub.nation_data["A"]["materials"] = 800
+        map_stub.nation_data["A"]["manpower"] = 900
+
+        screen.cancel_selected_batch_orders("REPAIR")
+
+        self.assertNotIn("order", first)
+        self.assertNotIn("order", second)
+        self.assertEqual(map_stub.nation_data["A"]["materials"], 1000)
+        self.assertEqual(map_stub.nation_data["A"]["manpower"], 1000)
+
+    def test_cancel_selected_upgrade_removes_every_selected_upgrade_order(self):
+        first = {"owner": "A", "type": "Infantry", "order": {"type": "UPGRADE"}}
+        second = {"owner": "A", "type": "Infantry", "order": {"type": "UPGRADE"}}
+        screen, _map_stub, _feedback = self._screen(first, second)
+
+        screen.cancel_selected_batch_orders("UPGRADE")
+
+        self.assertNotIn("order", first)
+        self.assertNotIn("order", second)
+
 
 class MapOrderGestureTests(unittest.TestCase):
     def test_armed_bombardment_click_sets_target_before_selection_gesture(self):
