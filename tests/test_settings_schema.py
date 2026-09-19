@@ -210,6 +210,8 @@ class NavigationIntroPopupTests(unittest.TestCase):
             c.SCREEN_WIDTH // 2,
             c.SCREEN_HEIGHT // 2 + popup.INITIAL_CENTER_Y_OFFSET,
         ))
+        self.assertGreater(popup.rect.width, 720)
+        self.assertGreater(popup.rect.height, 370)
         self.assertEqual(len(popup.PAGE_TITLES), len(popup.PAGE_SUBTITLES))
         self.assertTrue(all(isinstance(text, str) and text
                             for text in popup.PAGE_TITLES + popup.PAGE_SUBTITLES))
@@ -229,8 +231,23 @@ class NavigationIntroPopupTests(unittest.TestCase):
                             for _filename, _heading, lines in popup.NAVIGATION_BUTTONS))
         self.assertEqual(popup.KEYBOARD_NAVIGATION[0], "ARROW KEYS")
         self.assertTrue(popup.KEYBOARD_NAVIGATION[1])
+        self.assertNotIn("mouse gestures", popup.KEYBOARD_NAVIGATION[1].lower())
+        self.assertIn("mouse gestures", popup.MOUSE_GESTURE_SETTINGS_NOTE.lower())
+        self.assertTrue(all(
+            popup.body_font.size(line)[0] <= popup.navigation_caption_width
+            for captions in popup.navigation_caption_lines
+            for wrapped_lines in captions
+            for line in wrapped_lines
+        ))
         self.assertLess(popup.keyboard_navigation_rect.bottom,
                         popup.checkbox_rect.top)
+        self.assertGreaterEqual(popup.mouse_gesture_note_rect.top,
+                                popup.keyboard_navigation_rect.bottom)
+        self.assertFalse(popup.mouse_gesture_note_rect.colliderect(
+            popup.keyboard_navigation_rect))
+        self.assertLessEqual(popup.mouse_gesture_note_rect.bottom,
+                             popup.checkbox_rect.top)
+        self.assertTrue(popup.rect.contains(popup.mouse_gesture_note_rect))
 
         # Unit selection and map panning pass through the panel while active.
         self.assertFalse(popup.handle_event(pygame.event.Event(

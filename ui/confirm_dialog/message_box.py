@@ -50,14 +50,18 @@ class _NavigationIntroPopup:
     player can still see the map and HUD behind it, and clicks outside the
     panel continue to use the normal map controls.
     """
-    WIDTH = 720
-    HEIGHT = 370
+    WIDTH = 900
+    HEIGHT = 480
     HEADER_H = 46
     SUBTITLE_Y_OFFSET = 55
     SUBTITLE_SIDE_PADDING = 24
     SUBTITLE_LINE_GAP = 2
-    KEYBOARD_NAVIGATION_BOX_Y = 264
+    KEYBOARD_NAVIGATION_BOX_Y = 320
     KEYBOARD_NAVIGATION_BOX_H = 36
+    NAVIGATION_COLUMN_SIDE_PADDING = 18
+    KEYBOARD_NAVIGATION_GAP = 18
+    MOUSE_GESTURE_NOTE_GAP = 8
+    MOUSE_GESTURE_SETTINGS_NOTE = "Customize mouse gestures in Settings > Mouse Settings."
     # This is what edits how offset the tutorial popup is when it spawns!
     INITIAL_CENTER_Y_OFFSET = -32
     BORDER_COLOR = _KIND_ACCENTS["info"]
@@ -78,7 +82,7 @@ class _NavigationIntroPopup:
     )
     KEYBOARD_NAVIGATION = (
         "ARROW KEYS",
-        "Arrows pan. Customize mouse gestures in Settings > Mouse Settings.",
+        "Use the arrow keys to pan the map. You can customize these in Settings > Keybinds.",
     )
     MAP_UI_BUTTONS = (
         ("Terrain", "terrain", "Shows the terrain map."),
@@ -104,7 +108,7 @@ class _NavigationIntroPopup:
     )
     PAGE_TITLES = ("Map Navigation", "Map UI", "Other Countries", "Armies")
     PAGE_SUBTITLES = (
-        "Your country is centered automatically when a game opens or after you choose it. If you're familiar with how HOI4 map controls work, then this should be very easy to understand.",
+        "Your country is centered automatically when a game opens or after you choose it. If you're familiar with how HOI4 map controls work, then the default map controls for GD5 should be very easy to understand.",
         "These buttons are important! Located on the bottom left of the screen, they edit the appearance of the map, giving you the information you need to play effectively.",
         "Reach other countries through the Mail tab or directly from their territory on the map.",
         "Learn how to create, organize, and personalize armies. For now, this feature is purely decorative and serves only to organize your units.",
@@ -121,6 +125,19 @@ class _NavigationIntroPopup:
         self.title_font = fonts.get("heading2")
         self.label_font = fonts.get("small")
         self.body_font = fonts.get("tiny")
+        column_width = self.WIDTH // len(self.NAVIGATION_BUTTONS)
+        self.navigation_caption_width = max(
+            1, column_width - 2 * self.NAVIGATION_COLUMN_SIDE_PADDING)
+        self.navigation_caption_lines = tuple(
+            tuple(tuple(wrap_text(line, self.body_font,
+                                  self.navigation_caption_width))
+                  for line in descriptions)
+            for _filename, _heading, descriptions in self.NAVIGATION_BUTTONS
+        )
+        self.navigation_caption_line_counts = tuple(
+            sum(len(lines) for lines in captions)
+            for captions in self.navigation_caption_lines
+        )
         self._layout()
 
     def _layout(self):
@@ -252,7 +269,7 @@ class _NavigationIntroPopup:
             column_w = self.rect.width // 3
             image_y = self.rect.y + 88 + content_y_offset
             text_y = self.rect.y + 197 + content_y_offset
-            for index, (filename, heading, lines) in enumerate(self.NAVIGATION_BUTTONS):
+            for index, (filename, heading, _lines) in enumerate(self.NAVIGATION_BUTTONS):
                 center_x = self.rect.x + column_w * index + column_w // 2
                 image = ui_bars.get_ui_image(filename, directory=self.MOUSE_DIR)
                 # The supplied button images are deliberately tall and narrow;
@@ -267,17 +284,27 @@ class _NavigationIntroPopup:
                 heading_surf = self.label_font.render(heading, True, (130, 205, 255))
                 surface.blit(heading_surf, heading_surf.get_rect(center=(center_x, text_y)))
                 line_y = text_y + 24
-                for line in lines:
-                    line_surf = self.body_font.render(line, True, (225, 225, 225))
-                    surface.blit(line_surf, line_surf.get_rect(center=(center_x, line_y)))
-                    line_y += self.body_font.get_height() + 3
+                for caption_lines in self.navigation_caption_lines[index]:
+                    for line in caption_lines:
+                        line_surf = self.body_font.render(line, True, (225, 225, 225))
+                        surface.blit(line_surf, line_surf.get_rect(center=(center_x, line_y)))
+                        line_y += self.body_font.get_height() + 3
 
             # Keyboard navigation is deliberately its own panel below the
             # mouse controls, so it is discoverable without being mistaken for
             # another mouse-button gesture.
+            caption_line_h = self.body_font.get_height() + 3
+            max_caption_lines = max(self.navigation_caption_line_counts, default=0)
+            text_y = self.rect.y + 197 + content_y_offset
+            caption_bottom = (text_y + 24
+                              + max(0, max_caption_lines - 1) * caption_line_h
+                              + self.body_font.get_height())
+            keyboard_top = max(
+                self.rect.y + self.KEYBOARD_NAVIGATION_BOX_Y + content_y_offset,
+                caption_bottom + self.KEYBOARD_NAVIGATION_GAP,
+            )
             self.keyboard_navigation_rect = pygame.Rect(
-                self.rect.x + 40, self.rect.y + self.KEYBOARD_NAVIGATION_BOX_Y
-                + content_y_offset, self.rect.width - 80,
+                self.rect.x + 40, keyboard_top, self.rect.width - 80,
                 self.KEYBOARD_NAVIGATION_BOX_H)
             pygame.draw.rect(surface, (25, 31, 43), self.keyboard_navigation_rect,
                              border_radius=4)
@@ -291,6 +318,12 @@ class _NavigationIntroPopup:
                                         text_center_y - heading_surf.get_height() // 2))
             surface.blit(description_surf, (self.keyboard_navigation_rect.x + 125,
                                             text_center_y - description_surf.get_height() // 2))
+            mouse_note = self.body_font.render(
+                self.MOUSE_GESTURE_SETTINGS_NOTE, True, (205, 215, 225))
+            self.mouse_gesture_note_rect = mouse_note.get_rect(
+                midtop=(self.rect.centerx,
+                        self.keyboard_navigation_rect.bottom + self.MOUSE_GESTURE_NOTE_GAP))
+            surface.blit(mouse_note, self.mouse_gesture_note_rect)
         elif self.page_index == 1:
             column_x = (self.rect.x + 35, self.rect.centerx + 18)
             row_h = 44
