@@ -1,6 +1,6 @@
 {
     "version": "v35",
-    "generated_at": "2026-09-18T23:04:45.802196",
+    "generated_at": "2026-09-19T12:31:11.263150",
     "date": {
         "day": 15,
         "month": 0,
@@ -48114,6 +48114,8 @@
         "(199, 2, 0)": {
             "owner": "Romania",
             "cores": [
+                "Soviet Union",
+                "Moldova",
                 "Romania"
             ],
             "is_coastal": false,
@@ -48181,6 +48183,8 @@
         "(204, 2, 0)": {
             "owner": "Romania",
             "cores": [
+                "Soviet Union",
+                "Moldova",
                 "Romania"
             ],
             "is_coastal": false,
@@ -48536,6 +48540,8 @@
         "(230, 2, 0)": {
             "owner": "Romania",
             "cores": [
+                "Soviet Union",
+                "Moldova",
                 "Romania"
             ],
             "is_coastal": false,
@@ -48896,6 +48902,8 @@
         "(1, 3, 0)": {
             "owner": "Romania",
             "cores": [
+                "Soviet Union",
+                "Moldova",
                 "Romania"
             ],
             "is_coastal": false,
@@ -49336,6 +49344,8 @@
         "(33, 3, 0)": {
             "owner": "Romania",
             "cores": [
+                "Soviet Union",
+                "Moldova",
                 "Romania"
             ],
             "is_coastal": false,
@@ -49736,6 +49746,8 @@
         "(63, 3, 0)": {
             "owner": "Romania",
             "cores": [
+                "Soviet Union",
+                "Moldova",
                 "Romania"
             ],
             "is_coastal": false,
@@ -49749,6 +49761,8 @@
         "(64, 3, 0)": {
             "owner": "Romania",
             "cores": [
+                "Soviet Union",
+                "Ukraine",
                 "Romania"
             ],
             "is_coastal": true,
@@ -50025,6 +50039,8 @@
         "(85, 3, 0)": {
             "owner": "Romania",
             "cores": [
+                "Soviet Union",
+                "Ukraine",
                 "Romania"
             ],
             "is_coastal": false,
