@@ -5,29 +5,31 @@ from data import queries
 from map_logic.turn_processing import combat_processor, edit_province_ownership
 
 def process_dead_nations(map_screen):
-    """Removes units belonging to nations that no longer control any territory and updates wars."""
-    living_nations = queries.get_living_nations(map_screen.map_data)
+    """Removes defunct units and updates wars, preserving faction exiles."""
+    active_nations = queries.get_politically_active_nations(
+        map_screen.map_data, map_screen.nation_data)
 
-    # 1. Disband orphaned units of dead nations
+    # 1. Disband units whose owners are genuinely defunct.
     for province in map_screen.map_data.values():
         surviving_units = []
         for unit in province.get("units", []):
             owner = unit.get("owner")
-            # Keep the unit if it belongs to an unplayable faction (like Ocean) or an alive nation
-            if owner in c.UNPLAYABLE_NATIONS or owner in living_nations:
+            # Faction-backed governments in exile retain their armies. They
+            # remain on the map until a faction member restores their land.
+            if owner in c.UNPLAYABLE_NATIONS or owner in active_nations:
                 surviving_units.append(unit)
 
         # Overwrite the province units with only the survivors
         province["units"] = surviving_units
 
-    # 2. Instantly clean up ghost wars so surviving nations stop treating them as active threats
-    # (We run this again here because check_for_post_combat_captures just changed who is alive)
-    queries.cleanup_ghost_wars(map_screen.nation_data, living_nations)
+    # 2. Instantly clean up ghost wars after post-combat captures changed who
+    # remains politically active.
+    queries.cleanup_ghost_wars(map_screen.nation_data, active_nations)
 
     for nation, data in list(map_screen.nation_data.items()):
-        # --- NEW: Master Independence on Death ---
+        # --- Master Independence on Collapse ---
         master = data.get("master", "")
-        if master and master not in living_nations:
+        if master and master not in active_nations:
             from map_logic.diplomacy.diplomacy_agreements import break_puppet_link
             break_puppet_link(map_screen.nation_data, master, nation)
             from map_logic.diplomacy.diplomacy_events import log_global_event

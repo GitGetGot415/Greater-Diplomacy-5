@@ -10,14 +10,17 @@ from data import queries
 from data.platform import sync_persisted_dir
 
 def active_owners_of(map_ref):
-    """Every nation that actually holds a province right now.
+    """Every nation entitled to a tournament move right now.
 
-    Empty when there is no map loaded, which callers read as "no filter".
-    Written out twice before.
+    This includes faction-backed governments in exile: their units and
+    diplomatic choices are still authoritative player state even while they
+    hold no province. Empty when there is no map loaded, which callers read as
+    "no filter".
     """
     if not getattr(map_ref, "map_data", None):
         return set()
-    return set(p.get("owner") for p in map_ref.map_data.values() if p.get("owner"))
+    return queries.get_politically_active_nations(
+        map_ref.map_data, getattr(map_ref, "nation_data", {}))
 
 
 def run_with_progress(jobs, worker, caption, on_result):

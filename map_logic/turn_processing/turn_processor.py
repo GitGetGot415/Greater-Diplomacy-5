@@ -168,8 +168,9 @@ async def resolve_turn_logic(map_screen): # Renamed from resolve_turn
         prov["_turn_start_owner"] = prov.get("owner", "Unclaimed")
         
     # Ghost War Cleanup
-    living_nations = queries.get_living_nations(map_screen.map_data)
-    queries.cleanup_ghost_wars(map_screen.nation_data, living_nations)
+    active_nations = queries.get_politically_active_nations(
+        map_screen.map_data, map_screen.nation_data)
+    queries.cleanup_ghost_wars(map_screen.nation_data, active_nations)
 
     days_to_advance = queries.get_days_per_turn(map_screen.scenario_settings)
     map_screen.time_manager.process_time(days_to_advance)

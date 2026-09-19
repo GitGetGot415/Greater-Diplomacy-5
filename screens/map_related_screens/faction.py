@@ -290,7 +290,7 @@ class Faction_Screen(GameState):
             for member in members:
                 text_x = draw_flag_centered(surface, member, nation_data, left + 4,
                                              y, ROSTER_ROW_HEIGHT)
-                name = queries.get_country_display_name(member, nation_data)
+                name = self._member_label(member, nation_data)
                 txt = font_normal.render(name, True, (255, 255, 255))
                 surface.blit(txt, (text_x, y))
                 y += ROSTER_ROW_HEIGHT
@@ -299,6 +299,14 @@ class Faction_Screen(GameState):
             self.draw_list_scrollbar(surface, self.scroll_content_rect.right - 15,
                                      self.scroll_content_rect.top,
                                      self.scroll_content_rect.height, width=12)
+
+    def _member_label(self, member, nation_data):
+        """Return a player-facing roster label for a faction member."""
+        name = queries.get_country_display_name(member, nation_data)
+        if queries.is_government_in_exile(member, self.map_screen.map_data,
+                                          nation_data):
+            return f"{name} (Government in Exile)"
+        return name
 
     def handle_back_key(self):
         # Escape cancels an in-progress rename before it leaves the screen.

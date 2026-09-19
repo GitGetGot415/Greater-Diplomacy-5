@@ -329,33 +329,33 @@ class SuccessionTests(Bloc):
             if prov.get("owner") == "Leader":
                 edit_province_ownership.conquer_province(self.game, prov, "Outsider")
 
-    def test_the_chair_moves_the_moment_the_last_province_falls(self):
+    def test_the_chair_stays_with_the_exiled_leader(self):
         self.weigh("Rival", 5000)
         self.orphan()
-        self.assertEqual(self.leader(), "Rival")
+        self.assertEqual(self.leader(), "Leader")
 
-    def test_it_goes_to_the_strongest_survivor(self):
+    def test_an_exiled_leader_does_not_yield_to_the_strongest_member(self):
         self.weigh("Loyal", 5000)
         self.orphan()
-        self.assertEqual(self.leader(), "Loyal")
+        self.assertEqual(self.leader(), "Leader")
 
-    def test_the_conquered_leader_is_no_longer_in_the_faction(self):
+    def test_the_conquered_leader_remains_in_the_faction(self):
         self.orphan()
-        self.assertEqual(self.game.nation_data["Leader"]["faction"], "")
-        self.assertFalse(self.game.nation_data["Leader"]["is_faction_leader"])
+        self.assertEqual(self.game.nation_data["Leader"]["faction"], "The Pact")
+        self.assertTrue(self.game.nation_data["Leader"]["is_faction_leader"])
 
     def test_exactly_one_nation_leads_afterwards(self):
         self.orphan()
-        leaders = [n for n in ("Rival", "Loyal")
+        leaders = [n for n in ("Leader", "Rival", "Loyal")
                    if self.game.nation_data[n].get("is_faction_leader")]
         self.assertEqual(len(leaders), 1)
 
-    def test_the_new_leader_is_a_new_bar_for_everyone_else(self):
+    def test_existing_challenges_are_not_reset_by_exile(self):
         self.weigh("Rival", 5000)
         self.tick(3)
         self.orphan()
         self.assertEqual(self.held("Loyal"), 0)
-        self.assertEqual(self.held("Rival"), 0)
+        self.assertEqual(self.held("Rival"), 3)
 
     def test_a_save_already_left_leaderless_heals_on_the_next_turn(self):
         """tick used to name this state in a comment and step over it."""
@@ -367,7 +367,7 @@ class SuccessionTests(Bloc):
 
         self.assertEqual(self.leader(), "Loyal")
 
-    def test_a_faction_with_nobody_left_to_lead_it_is_let_go_of(self):
+    def test_a_faction_with_no_territory_remains_in_exile(self):
         from map_logic.turn_processing import edit_province_ownership
 
         for prov in list(self.game.map_data.values()):
@@ -375,7 +375,7 @@ class SuccessionTests(Bloc):
                 edit_province_ownership.conquer_province(self.game, prov, "Outsider")
 
         for member in ("Leader", "Rival", "Loyal"):
-            self.assertEqual(self.game.nation_data[member]["faction"], "")
+            self.assertEqual(self.game.nation_data[member]["faction"], "The Pact")
 
 
 class StrengthTests(unittest.TestCase):

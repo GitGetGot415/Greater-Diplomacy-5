@@ -118,6 +118,16 @@ class TournamentMoveTests(unittest.TestCase):
         result.update(extra)
         return result
 
+    def test_a_faction_exile_still_receives_a_tournament_move(self):
+        host = Host()
+        host.map_data = {"1": {"owner": "Leader"}}
+
+        active = multiplayer_io.active_owners_of(host)
+
+        self.assertIn("Leader", active)
+        self.assertIn("Member", active)
+        self.assertNotIn("Outsider", active)
+
     def test_faction_rename_keeps_every_member_together(self):
         host = Host()
         leader_move = self.player_data(

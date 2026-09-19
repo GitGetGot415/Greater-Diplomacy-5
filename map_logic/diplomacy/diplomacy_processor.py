@@ -1569,7 +1569,8 @@ def process_diplomacy_turn(map_screen):
     _flush_queued_ai_actions(map_screen)
 
     # --- 0. FIND ALIVE NATIONS ---
-    active_nations = queries.get_living_nations(map_screen.map_data)
+    active_nations = queries.get_politically_active_nations(
+        map_screen.map_data, map_screen.nation_data)
     active_nations_list = sorted(list(active_nations))
 
     # --- 1. SIMULTANEOUS ACTION CLASH RESOLUTION ---

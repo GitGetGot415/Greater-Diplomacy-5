@@ -2738,6 +2738,33 @@ def get_living_nations(map_data):
             active_nations.add(owner)
     return active_nations
 
+def is_government_in_exile(nation, map_data, nation_data):
+    """Whether a faction member has lost its territory but still exists politically.
+
+    Exile is deliberately derived instead of saved.  A faction member becomes a
+    government in exile the moment its last province changes hands and ceases
+    to be one immediately when an allied capture restores a province.  Keeping
+    no duplicate flag avoids a stale ``in_exile`` value after either event.
+    """
+    return (nation not in c.UNPLAYABLE_NATIONS
+            and bool(nation_data.get(nation, {}).get("faction", ""))
+            and nation not in get_living_nations(map_data))
+
+def get_politically_active_nations(map_data, nation_data):
+    """Returns territorial nations plus faction-backed governments in exile.
+
+    Territorial ownership still controls economy, production, and ordinary AI
+    activity.  This broader set is only for state that an exiled government
+    continues to own: its faction membership, wars, diplomacy, and units.
+    """
+    active_nations = get_living_nations(map_data)
+    active_nations.update(
+        nation for nation, data in nation_data.items()
+        if isinstance(data, dict)
+        and nation not in c.UNPLAYABLE_NATIONS
+        and data.get("faction", ""))
+    return active_nations
+
 def get_active_playable_nations(map_data, nation_data):
     """Returns the sorted-by-id list of playable nations that currently own at least one province."""
     if not map_data:
@@ -2745,14 +2772,14 @@ def get_active_playable_nations(map_data, nation_data):
     active_owners = set(p.get("owner") for p in map_data.values())
     return [cid for cid, data in nation_data.items() if data.get("is_playable") and cid in active_owners]
 
-def cleanup_ghost_wars(nation_data, living_nations):
-    """Wipes at_war_with lists for dead nations and strips dead enemies from living nations' lists."""
+def cleanup_ghost_wars(nation_data, active_nations):
+    """Wipes wars for defunct nations while retaining faction governments in exile."""
     for nation, data in nation_data.items():
         if "at_war_with" in data:
-            if nation not in living_nations:
+            if nation not in active_nations:
                 data["at_war_with"] = []
             else:
-                data["at_war_with"] = [enemy for enemy in data["at_war_with"] if enemy in living_nations]
+                data["at_war_with"] = [enemy for enemy in data["at_war_with"] if enemy in active_nations]
 
 def is_occupying_all_cores(nation, target_nation, map_data):
     """Returns True if 'nation' occupies ALL cores of 'target_nation'."""

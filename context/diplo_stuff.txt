@@ -89,3 +89,13 @@ another example, [A] inviting [B] to their faction, and [B] requesting to join t
 
 however, do keep in mind that things like [A] requesting millitary access from [B] and [B] requesting millitary access from [A] don't lead to the same outcome because millitary access is a one way thing
 it's possible for a country to let another country into it's borders but also not be allowed into the other countries borders
+
+Government in exile:
+When a faction member loses its last province, it remains in the faction as a
+government in exile. It keeps its units, faction wars, diplomacy, faction
+leadership (if applicable), and the faction pre-war border record. The status
+is derived from having faction membership and no territory; a country stops
+being exiled immediately when it regains a province. A faction member's normal
+core/pre-war-territory capture transfer can therefore restore territory to the
+exiled member. A landless country outside a faction remains defunct under the
+ordinary cleanup rules.

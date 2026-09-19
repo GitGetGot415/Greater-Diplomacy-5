@@ -1,4 +1,4 @@
-"""A puppet's alignment is its master's, and a dead nation is nobody's ally.
+"""A puppet's alignment is its master's, and faction exiles retain their bloc.
 
 Two states nothing checked. A subject could join a faction on its own authority
 -- saves/Madagascar but not France has French Madagascar in the Axis while Vichy
@@ -24,7 +24,7 @@ import data.constants as c
 from data import queries
 from data.map import load_map
 from map_logic.diplomacy import faction_actions, puppet_actions, treaty_effects
-from map_logic.turn_processing import edit_province_ownership as own
+from map_logic.turn_processing import edit_province_ownership as own, movement_processor
 
 
 def nation(**over):
@@ -148,7 +148,7 @@ class EngineBackstopTests(unittest.TestCase):
 
 
 class RetireLandlessTests(unittest.TestCase):
-    """Losing your last province takes you off everyone's books."""
+    """Losing land creates a faction-backed government in exile."""
 
     def build(self, **over):
         self.nation_data = {
@@ -163,39 +163,59 @@ class RetireLandlessTests(unittest.TestCase):
                          "2": province(2, "Empire", cores=["Doomed"])}
         return Screen(self.nation_data, self.map_data)
 
-    def test_a_landless_nation_leaves_its_faction(self):
+    def test_a_landless_faction_member_becomes_a_government_in_exile(self):
         screen = self.build()
         own.retire_landless_nation(screen, "Doomed")
-        self.assertNotIn("Doomed", queries.get_faction_members("Pact", self.nation_data))
+        self.assertIn("Doomed", queries.get_faction_members("Pact", self.nation_data))
+        self.assertTrue(queries.is_government_in_exile(
+            "Doomed", self.map_data, self.nation_data))
 
-    def test_its_wars_stop_being_anyone_elses_problem(self):
+    def test_its_wars_remain_the_factions_problem(self):
         screen = self.build()
         own.retire_landless_nation(screen, "Doomed")
-        self.assertEqual(self.nation_data["Empire"]["at_war_with"], [])
-        self.assertEqual(self.nation_data["Bystander"]["at_war_with"], [])
+        self.assertEqual(self.nation_data["Empire"]["at_war_with"], ["Doomed"])
+        self.assertEqual(self.nation_data["Bystander"]["at_war_with"], ["Doomed"])
 
-    def test_pending_offers_to_it_are_dropped(self):
+    def test_pending_offers_to_an_exile_are_preserved(self):
         screen = self.build()
         own.retire_landless_nation(screen, "Doomed")
-        self.assertEqual(self.nation_data["Bystander"]["pending_diplomacy"], {})
+        self.assertIn("Doomed", self.nation_data["Bystander"]["pending_diplomacy"])
 
-    def test_its_own_proposals_die_with_it(self):
-        """Territory changes hands in phase 2 and diplomacy resolves in phase 1,
-        so an offer queued before the last province fell would still land the
-        turn after -- which is how a dead Luxembourg founded "The Luxembourg
-        Pact" on turn 15 and reappeared on a roster it had just left."""
+    def test_its_own_proposals_survive_with_the_government(self):
         screen = self.build()
         self.nation_data["Doomed"]["pending_diplomacy"] = {
             "Bystander": {"action": "CREATE_FACTION", "turns": 1}}
         self.nation_data["Doomed"]["diplo_responses"] = {"Empire": {"verdict": "ACCEPT"}}
         own.retire_landless_nation(screen, "Doomed")
-        self.assertEqual(self.nation_data["Doomed"]["pending_diplomacy"], {})
-        self.assertEqual(self.nation_data["Doomed"]["diplo_responses"], {})
+        self.assertIn("Bystander", self.nation_data["Doomed"]["pending_diplomacy"])
+        self.assertIn("Empire", self.nation_data["Doomed"]["diplo_responses"])
 
-    def test_the_master_stops_listing_it_as_a_puppet(self):
+    def test_the_master_keeps_listing_an_exiled_puppet(self):
         screen = self.build()
         own.retire_landless_nation(screen, "Doomed")
-        self.assertEqual(self.nation_data["Empire"]["puppets"], [])
+        self.assertEqual(self.nation_data["Empire"]["puppets"], ["Doomed"])
+
+    def test_an_exiled_governments_units_are_not_deleted(self):
+        screen = self.build()
+        army = {"owner": "Doomed", "type": "Infantry"}
+        self.map_data["1"]["units"].append(army)
+        own.retire_landless_nation(screen, "Doomed")
+        movement_processor.process_dead_nations(screen)
+        self.assertEqual(self.map_data["1"]["units"], [army])
+
+    def test_restored_territory_ends_exile_without_a_saved_flag(self):
+        screen = self.build()
+        own.retire_landless_nation(screen, "Doomed")
+        own.conquer_province(screen, self.map_data["1"], "Doomed")
+        self.assertFalse(queries.is_government_in_exile(
+            "Doomed", self.map_data, self.nation_data))
+
+    def test_a_faction_member_restores_an_exiles_prewar_territory(self):
+        screen = self.build()
+        self.nation_data["FACTION_WAR_MAPS"] = {"Pact": {"1": "Doomed"}}
+        own.retire_landless_nation(screen, "Doomed")
+        self.assertEqual(queries.get_faction_core_transfer_target(
+            "Empire", self.map_data["1"], self.nation_data), "Doomed")
 
     def test_a_nation_the_scenario_shipped_with_keeps_its_cores(self):
         """The requested rule: annexing an integrated puppet that existed at the
@@ -206,18 +226,18 @@ class RetireLandlessTests(unittest.TestCase):
         self.assertIn("Doomed", self.map_data["2"]["cores"])
         self.assertIn("Doomed", self.nation_data, "it is retired, not erased")
 
-    def test_a_puppet_you_created_loses_its_cores_when_you_re_annex_it(self):
+    def test_a_faction_backed_created_puppet_remains_in_exile(self):
         screen = self.build(puppet_type=c.PUPPET_TYPE_INTEGRATED,
                             is_created_integrated_puppet=True)
         own.retire_landless_nation(screen, "Doomed")
-        self.assertNotIn("Doomed", self.map_data["1"]["cores"])
-        self.assertNotIn("Doomed", self.map_data["2"]["cores"])
-        self.assertNotIn("Doomed", self.nation_data)
+        self.assertIn("Doomed", self.map_data["1"]["cores"])
+        self.assertIn("Doomed", self.map_data["2"]["cores"])
+        self.assertIn("Doomed", self.nation_data)
 
-    def test_a_rebellion_put_down_mid_war_is_erased(self):
+    def test_a_faction_backed_rebellion_remains_in_exile(self):
         screen = self.build(is_rebellion=True)
         own.retire_landless_nation(screen, "Doomed")
-        self.assertNotIn("Doomed", self.nation_data)
+        self.assertIn("Doomed", self.nation_data)
 
     def test_a_rebellion_that_settled_by_treaty_is_not(self):
         """No war still running means it ended at a table, not on a field."""
@@ -233,12 +253,12 @@ class RetireLandlessTests(unittest.TestCase):
         own.conquer_province(screen, map_data["1"], "Taker")
         self.assertEqual(nation_data["Victim"]["faction"], "Pact")
 
-    def test_the_last_province_is_what_retires_it(self):
+    def test_the_last_province_creates_an_exile_when_it_has_a_faction(self):
         nation_data = {"Victim": nation(faction="Pact"), "Taker": nation()}
         map_data = {"1": province(1, "Victim")}
         screen = Screen(nation_data, map_data)
         own.conquer_province(screen, map_data["1"], "Taker")
-        self.assertEqual(nation_data["Victim"]["faction"], "")
+        self.assertEqual(nation_data["Victim"]["faction"], "Pact")
 
     def test_the_editor_does_not_dissolve_a_nation_you_are_repainting(self):
         """Zero provinces is what half of a repaint looks like. Losing the
@@ -305,8 +325,10 @@ class RosterRepairTests(unittest.TestCase):
     def test_a_puppet_whose_master_is_not_in_the_faction_is_dropped(self):
         self.assertNotIn("Madagascar", self.repair())
 
-    def test_a_landless_nation_is_dropped(self):
-        self.assertNotIn("Ghost", self.repair())
+    def test_a_landless_nation_is_kept_as_a_government_in_exile(self):
+        self.assertIn("Ghost", self.repair())
+        self.assertTrue(queries.is_government_in_exile(
+            "Ghost", self.map_data, self.nation_data))
 
     def test_a_puppet_in_its_masters_faction_is_kept(self):
         self.assertIn("Loyal", self.repair())
@@ -321,12 +343,13 @@ class RosterRepairTests(unittest.TestCase):
         self.assertEqual(self.nation_data["Loyal"]["faction"], "")
 
     def test_ordinary_members_are_kept(self):
-        self.assertEqual(self.repair(), {"Reich", "Italy", "Loyal"})
+        self.assertEqual(self.repair(), {"Reich", "Ghost", "Italy", "Loyal"})
 
-    def test_it_clears_leadership_too(self):
+    def test_an_exile_can_remain_the_faction_leader(self):
+        self.nation_data["Reich"]["is_faction_leader"] = False
         self.nation_data["Ghost"]["is_faction_leader"] = True
         self.repair()
-        self.assertFalse(self.nation_data["Ghost"]["is_faction_leader"])
+        self.assertTrue(self.nation_data["Ghost"]["is_faction_leader"])
 
     def test_nothing_but_membership_changes(self):
         self.repair()
@@ -337,7 +360,7 @@ class RosterRepairTests(unittest.TestCase):
         self.repair()
         log = " ".join(self.nation_data.get("GLOBAL_EVENTS", {}).get("log", []))
         self.assertIn("Madagascar", log)
-        self.assertIn("Ghost", log)
+        self.assertNotIn("Ghost", log)
 
     def test_a_clean_save_is_left_exactly_as_it_was(self):
         del self.nation_data["Madagascar"]

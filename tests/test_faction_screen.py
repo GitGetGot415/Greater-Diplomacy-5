@@ -79,6 +79,18 @@ class FactionScreenTests(unittest.TestCase):
         drawn_members = [call.args[1] for call in flags.call_args_list]
         self.assertEqual(drawn_members, [nations[1], nations[2], nations[0]])
 
+    def test_roster_identifies_a_landless_member_as_a_government_in_exile(self):
+        game, nations = self.make_game()
+        exile = nations[1]
+        province = game.home_of(exile)
+        del game.map_data[str(province["id"])]
+        del game.id_to_province[province["id"]]
+        screen = Faction_Screen()
+        screen.start_faction(game)
+
+        self.assertEqual(screen._member_label(exile, game.nation_data),
+                         f"{exile} (Government in Exile)")
+
 
 if __name__ == "__main__":
     unittest.main()

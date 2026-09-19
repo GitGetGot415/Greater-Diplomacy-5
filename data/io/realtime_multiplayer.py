@@ -1685,7 +1685,8 @@ class MapRealtimeDriver:
 
     def is_eliminated(self, country_id: str) -> bool:
         from data import queries
-        return country_id not in queries.get_living_nations(self.map_ref.map_data)
+        return country_id not in queries.get_politically_active_nations(
+            self.map_ref.map_data, self.map_ref.nation_data)
 
     def snapshot(self) -> dict[str, Any]:
         from data import queries

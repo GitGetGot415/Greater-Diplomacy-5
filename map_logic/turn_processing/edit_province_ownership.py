@@ -57,7 +57,7 @@ def conquer_province(map_screen, province, new_owner):
 
 
 def retire_landless_nation(map_screen, nation):
-    """Takes a nation that holds no territory out of everyone else's business.
+    """Retires a landless nation unless its faction sustains it in exile.
 
     Two jobs used to be one, behind a gate that only opened for a puppet the
     player had created or a rebellion put down mid-war. Everything else -- an
@@ -65,11 +65,14 @@ def retire_landless_nation(map_screen, nation):
     landless nation sitting on its faction's roster forever: saves/Tannu Tuva
     Gone but not forgotten had three of them, only one of which was a puppet.
 
-    So the diplomatic tidy-up now runs for anyone who runs out of land, and only
-    the harder half -- erasing cores and the nation itself -- stays behind the
-    original gate. That is the distinction the two kinds of integrated puppet
-    are meant to have: one the scenario authored keeps its cores when you annex
-    it, one you created and re-annexed does not.
+    A faction member is the exception: it remains as a government in exile.
+    Faction membership is the canonical backing for that status, so it retains
+    its wars, diplomacy, pre-war border record, and units until it regains
+    territory.  Only the harder half -- erasing cores and the nation itself --
+    stays behind the original gate for non-faction countries. That is the
+    distinction the two kinds of integrated puppet are meant to have: one the
+    scenario authored keeps its cores when you annex it, one you created and
+    re-annexed does not.
     """
     data = map_screen.nation_data.get(nation)
     if data is None:
@@ -80,6 +83,12 @@ def retire_landless_nation(map_screen, nation):
     # for it would be destructive rather than tidy. Only the erase-entirely
     # half below still runs there, as it always has.
     if not getattr(map_screen, "is_editor", False):
+        # A faction can restore territory to its original member through the
+        # normal faction-core transfer rule. Do not dissolve the very
+        # membership and historical border record that make that possible.
+        if data.get("faction", ""):
+            return
+
         # Nobody is still allied with, at war with, or in a bloc with a nation
         # that no longer holds any ground.
         from map_logic.diplomacy.faction_actions import leave_faction

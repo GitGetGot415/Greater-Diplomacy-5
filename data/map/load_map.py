@@ -26,17 +26,13 @@ def _load_default_images(map_obj):
 def repair_faction_rosters(nation_data, map_data):
     """Drops from every faction roster the members who should never have been on it.
 
-    Three states the engine now prevents but older saves are already in, because
+    Two states the engine now prevents but older saves are already in, because
     nothing checked them:
 
       - a puppet in a faction its master is not in. A subject holds whatever its
         master holds; it does not sign its own pacts. saves/Madagascar but not
         France has French Madagascar in the Axis while Vichy France, its master,
         is in nothing at all.
-      - a nation holding no territory still on a roster. The cleanup that took a
-        defeated nation off one only ever ran for a puppet the player had
-        created, so an ordinary conquest left a ghost: saves/Tannu Tuva Gone but
-        not forgotten carries three, of which only Tannu Tuva is a puppet.
       - two members of the same faction at war. This was possible when a master
         attacked its own puppet: the puppet became independent, but the normal
         faction-leave guard had refused to move it first.
@@ -47,12 +43,6 @@ def repair_faction_rosters(nation_data, map_data):
     """
     from map_logic.diplomacy.diplomacy_events import log_global_event
 
-    has_land = set()
-    for prov in map_data.values():
-        owner = prov.get("owner")
-        if owner:
-            has_land.add(owner)
-
     for name, data in list(nation_data.items()):
         if not isinstance(data, dict) or not data.get("faction"):
             continue
@@ -60,8 +50,6 @@ def repair_faction_rosters(nation_data, map_data):
         master = data.get("master", "")
         if master and nation_data.get(master, {}).get("faction", "") != data["faction"]:
             reason = f"its master {master} is not in it"
-        elif name not in has_land:
-            reason = "it holds no territory"
         else:
             continue
 

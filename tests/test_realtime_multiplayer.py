@@ -938,6 +938,15 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
         self.assertEqual({command["queue"] for command in queues}, {"building_queue", "unit_queue"})
         self.assertTrue(all(command["items"] == [] for command in queues))
 
+    def test_a_faction_exile_is_not_eliminated_from_a_realtime_match(self):
+        map_ref = self.make_map()
+        map_ref.map_data["home"]["owner"] = "B"
+        driver = MapRealtimeDriver(map_ref)
+
+        self.assertFalse(driver.is_eliminated("A"))
+        map_ref.nation_data["A"]["faction"] = ""
+        self.assertTrue(driver.is_eliminated("A"))
+
     def test_army_roster_is_collected_and_server_validated(self):
         map_ref = self.make_map()
         commands = collect_map_commands(map_ref, "A")
