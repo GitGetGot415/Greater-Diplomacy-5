@@ -71,8 +71,8 @@ RESOLVED_NAMES = {}
 SCALED_SYMBOLS = {}
 
 # Player-drawn army emblems use a tiny JSON pixel grid rather than a file on
-# disk. Cache their rendered forms by grid and destination size just like the
-# regular symbol path, because map rendering may request them every frame.
+# disk. Cache their rendered forms by grid, army RGB, and destination size just
+# like the regular symbol path, because map rendering may request them every frame.
 CUSTOM_ARMY_SYMBOLS = {}
 
 #: Zoom is continuous, so every notch of it mints a new size. Emptied wholesale
@@ -829,11 +829,12 @@ def get_symbol(name, zoom, color=None, alpha=255, style=None, country=None):
     return scaled
 
 
-def get_custom_army_symbol(rows, size):
-    """Render a normalized player-drawn 20x20 army emblem at ``size`` pixels."""
+def get_custom_army_symbol(rows, size, color=c.DEFAULT_ARMY_SYMBOL_COLOR):
+    """Render a player-drawn army emblem, tinting red pixels with its army RGB."""
     if not isinstance(rows, list) or not isinstance(size, int) or size < 1:
         return None
-    key = (tuple(rows), size)
+    color = tuple(color)
+    key = (tuple(rows), color, size)
     cached = CUSTOM_ARMY_SYMBOLS.get(key)
     if cached is not None:
         return cached
@@ -843,13 +844,13 @@ def get_custom_army_symbol(rows, size):
                                      for row in rows):
         return None
     image = pygame.Surface((grid_size, grid_size), pygame.SRCALPHA)
-    colors = {c.ARMY_CUSTOM_SYMBOL_RED: c.DEFAULT_ARMY_SYMBOL_COLOR,
+    colors = {c.ARMY_CUSTOM_SYMBOL_RED: color,
               c.ARMY_CUSTOM_SYMBOL_BLACK: (0, 0, 0)}
     for y, row in enumerate(rows):
         for x, pixel in enumerate(row):
-            color = colors.get(pixel)
-            if color:
-                image.set_at((x, y), color)
+            pixel_color = colors.get(pixel)
+            if pixel_color is not None:
+                image.set_at((x, y), pixel_color)
     rendered = pygame.transform.scale(image, (size, size))
     if len(CUSTOM_ARMY_SYMBOLS) >= SCALED_CACHE_LIMIT:
         CUSTOM_ARMY_SYMBOLS.clear()

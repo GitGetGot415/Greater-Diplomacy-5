@@ -200,7 +200,8 @@ def _custom_symbol_rows(pixels):
 
 def _draw_emblem(surface, symbol, custom_symbol, color, rotation, center, size, flipped=False):
     if custom_symbol:
-        emblem = symbol_loader.get_custom_army_symbol(custom_symbol, size)
+        emblem = symbol_loader.get_custom_army_symbol(
+            custom_symbol, size, tuple(queries.normalize_army_symbol_color(color)))
     elif not symbol:
         return
     else:

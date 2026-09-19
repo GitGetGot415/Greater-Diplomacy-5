@@ -1432,7 +1432,9 @@ def army_emblem_surface(army, size):
 
     custom_symbol = army.get("custom_symbol")
     if custom_symbol:
-        badge = symbol_loader.get_custom_army_symbol(custom_symbol, size)
+        color = tuple(queries.normalize_army_symbol_color(
+            army.get("symbol_color", c.DEFAULT_ARMY_SYMBOL_COLOR)))
+        badge = symbol_loader.get_custom_army_symbol(custom_symbol, size, color)
     else:
         key = f"{c.ARMY_SYMBOL_KEY_PREFIX}{army['symbol']}"
         native_size = symbol_loader.get_native_size(key, style="classic")

@@ -268,6 +268,36 @@ class ArmyLayoutTests(unittest.TestCase):
             map_stub, pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=flip.center)))
         self.assertTrue(map_stub.army_editor_state["symbol_flipped"])
 
+    def test_custom_emblem_red_uses_army_rgb_in_preview_and_map(self):
+        size = c.ARMY_CUSTOM_SYMBOL_SIZE
+        custom_symbol = [
+            c.ARMY_CUSTOM_SYMBOL_RED + c.ARMY_CUSTOM_SYMBOL_BLACK
+            + c.ARMY_CUSTOM_SYMBOL_EMPTY * (size - 2),
+            *([c.ARMY_CUSTOM_SYMBOL_EMPTY * size] * (size - 1)),
+        ]
+        army_color = [25, 120, 225]
+        other_color = (230, 45, 35)
+
+        emblem = symbol_loader.get_custom_army_symbol(
+            custom_symbol, size, tuple(army_color))
+        other_emblem = symbol_loader.get_custom_army_symbol(
+            custom_symbol, size, other_color)
+        self.assertEqual(emblem.get_at((0, 0))[:3], tuple(army_color))
+        self.assertEqual(emblem.get_at((1, 0))[:3], (0, 0, 0))
+        self.assertEqual(other_emblem.get_at((0, 0))[:3], other_color)
+        self.assertIsNot(emblem, other_emblem)
+
+        army = {"symbol": "", "custom_symbol": custom_symbol,
+                "symbol_color": army_color, "symbol_rotation": 0,
+                "symbol_flipped": False}
+        map_emblem = overlay_renderer.army_emblem_surface(army, size)
+        self.assertEqual(map_emblem.get_at((0, 0))[:3], tuple(army_color))
+
+        preview = pygame.Surface((size, size), pygame.SRCALPHA)
+        army_panel._draw_emblem(preview, "", custom_symbol, army_color, 0,
+                                (size // 2, size // 2), size)
+        self.assertEqual(preview.get_at((0, 0))[:3], tuple(army_color))
+
     def test_back_closes_army_name_editor_before_its_parent_screen(self):
         army = {"id": "army", "name": "Army 1", "unit_ids": ["unit"],
                 "symbol": "", "symbol_color": [210, 70, 70],
