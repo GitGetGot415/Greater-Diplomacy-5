@@ -4,6 +4,7 @@ from ui_elements import Button, make_back_button, make_info_button
 import data.constants as c
 from data import queries
 from ui import confirm_dialog
+from ui import text_utils
 from map_logic.rendering.font_manager import fonts
 
 # --- Keybinds screen layout ---
@@ -13,6 +14,8 @@ KEYBINDS_ROW_START_Y = 150
 KEYBINDS_ROW_GAP_Y = 70
 KEYBINDS_RESET_GAP_Y = 30
 KEYBINDS_COLUMN_HEADING_Y = KEYBINDS_ROW_START_Y - 35
+KEYBINDS_WARNING_TOP_Y = 600
+KEYBINDS_WARNING_SIDE_MARGIN = 55
 # The "change screen with this keybind" toggle sits directly right of the
 # keybind button, on the same row -- the keybind button itself stays exactly
 # where it already was. The info button sits right of that toggle in turn.
@@ -55,6 +58,14 @@ ALL_KEYBIND_ACTIONS = MAP_PANNING_KEYBIND_ACTIONS + KEYBIND_ACTIONS
 def default_keybinds():
     """The one default map used by startup and either reset control."""
     return {action: default for action, _label, default in ALL_KEYBIND_ACTIONS}
+
+
+def keybind_conflicts(keybinds):
+    """Return every shared key and its user-facing actions, without rejecting it."""
+    by_key = {}
+    for action, label, default in ALL_KEYBIND_ACTIONS:
+        by_key.setdefault(keybinds.get(action, default), []).append(label)
+    return [(key, labels) for key, labels in by_key.items() if len(labels) > 1]
 
 #: Actions that carry the "change screen with this keybind" toggle -- the two
 #: that also switch the map's view mode, and so have a screen the keybind
@@ -161,10 +172,26 @@ class Keybinds(GameState):
             self.exit_screen()
 
     def additional_draw(self, surface):
-        """Label the two keybind columns without making either a button."""
+        """Label the columns and expose non-blocking duplicate-key warnings."""
         font = fonts.get("small")
         for x, heading in ((KEYBINDS_NAVIGATION_COLUMN_X, "Map Panning"),
                            (KEYBINDS_ROW_X, "Other Keybinds")):
             label = font.render(heading, True, c.UI_TEXT_DIM)
             surface.blit(label, label.get_rect(
                 center=(x + c.SIZES["medium"][0] // 2, KEYBINDS_COLUMN_HEADING_Y)))
+
+        conflicts = keybind_conflicts(self.controller.keybinds)
+        if not conflicts:
+            return
+        warning_font = fonts.get("tiny")
+        heading = font.render("Keybind warning", True, (255, 195, 85))
+        surface.blit(heading, (KEYBINDS_WARNING_SIDE_MARGIN, KEYBINDS_WARNING_TOP_Y))
+        y = KEYBINDS_WARNING_TOP_Y + heading.get_height() + 3
+        max_width = c.SCREEN_WIDTH - (2 * KEYBINDS_WARNING_SIDE_MARGIN)
+        for key, labels in conflicts:
+            message = (f"{pygame.key.name(key).upper()} is assigned to "
+                       f"{', '.join(labels)}. Both actions may trigger together.")
+            for line in text_utils.wrap_text(message, warning_font, max_width):
+                text = warning_font.render(line, True, (255, 220, 155))
+                surface.blit(text, (KEYBINDS_WARNING_SIDE_MARGIN, y))
+                y += text.get_height() + 2
