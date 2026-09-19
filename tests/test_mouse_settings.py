@@ -10,7 +10,10 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import pygame
 
 import data.constants as c
-from screens.menu_screens.mouse_settings import Mouse_Settings, mouse_control_warnings
+from screens.menu_screens.mouse_settings import (
+    MOUSE_ACTION_BUTTON_SIZE, MOUSE_EXCLUDE_BUTTON_SIZE, MOUSE_PAN_BUTTON_SIZE,
+    Mouse_Settings, mouse_control_warnings,
+)
 from ui import event_handler
 
 
@@ -52,6 +55,24 @@ class MouseSettingsTests(unittest.TestCase):
         left_exclude = next(element for element in screen.elements
                             if element.text == "" and element.callback is not None)
         self.assertFalse(left_exclude.disabled)
+
+    def test_compact_pan_and_exclude_controls_stay_inside_the_action_button_bounds(self):
+        controller = type("Controller", (), {
+            "mouse_button_actions": c.default_mouse_button_actions(),
+        })()
+        screen = Mouse_Settings(controller)
+        card = screen._card_rect(0)
+        action_left = card.centerx - MOUSE_ACTION_BUTTON_SIZE[0] // 2
+        action_right = action_left + MOUSE_ACTION_BUTTON_SIZE[0]
+        pan = next(element for element in screen.elements
+                   if element.text.startswith("Pan the map"))
+        exclude = next(element for element in screen.elements
+                       if element.text == "" and element.callback is not None)
+
+        self.assertEqual(pan.rect.size, MOUSE_PAN_BUTTON_SIZE)
+        self.assertEqual(exclude.rect.size, MOUSE_EXCLUDE_BUTTON_SIZE)
+        self.assertGreaterEqual(pan.rect.left, action_left)
+        self.assertLessEqual(exclude.rect.right, action_right)
 
     def test_toggle_updates_controller_runtime_actions_and_persists(self):
         controller = type("Controller", (), {

@@ -19,9 +19,14 @@ CARD_HEIGHT = 390
 CARD_HEADER_Y = CARD_TOP_Y + 18
 CARD_IMAGE_CENTER_Y = CARD_TOP_Y + 108
 CARD_ACTION_START_Y = CARD_TOP_Y + 145
-CARD_ACTION_GAP_Y = 58
+CARD_ACTION_GAP_Y = 60
 WARNING_TOP_Y = CARD_TOP_Y + CARD_HEIGHT + 22
 MOUSE_IMAGE_DIR = os.path.join(c.ASSETS_ROOT_DIR, "mouse")
+MOUSE_ACTION_BUTTON_SIZE = (250, 32)
+MOUSE_PAN_BUTTON_SIZE = (160, 32)
+MOUSE_EXCLUDE_BUTTON_SIZE = (32, 32)
+MOUSE_PAN_INDENT_X = 8
+MOUSE_PAN_EXCLUDE_GAP_X = 6
 PAN_ACTION = "pan_map"
 EXCLUDE_ORDERS_ACTION = "exclude_orders"
 EXCLUDE_ORDERS_LABEL = "Exclude Orders"
@@ -85,9 +90,11 @@ class Mouse_Settings(GameState):
                 enabled = actions[button][action]
                 pan_label = "Pan outside Orders" if (
                     action == PAN_ACTION and actions[button][EXCLUDE_ORDERS_ACTION]) else label
-                option_x = (card.x + 18 if action == PAN_ACTION
-                            else card.centerx - c.SIZES["setting_option"][0] // 2)
-                option_size = "medium" if action == PAN_ACTION else "setting_option"
+                action_x = card.centerx - MOUSE_ACTION_BUTTON_SIZE[0] // 2
+                option_x = (action_x + MOUSE_PAN_INDENT_X if action == PAN_ACTION
+                            else action_x)
+                option_size = (MOUSE_PAN_BUTTON_SIZE if action == PAN_ACTION
+                               else MOUSE_ACTION_BUTTON_SIZE)
                 self.elements.append(
                     Button(option_x,
                            CARD_ACTION_START_Y + row * CARD_ACTION_GAP_Y,
@@ -97,9 +104,10 @@ class Mouse_Settings(GameState):
                            font_preset="tiny"))
                 if action == PAN_ACTION:
                     exclude = Button(
-                        option_x + c.SIZES["medium"][0] + 5,
+                        option_x + MOUSE_PAN_BUTTON_SIZE[0] + MOUSE_PAN_EXCLUDE_GAP_X,
                         CARD_ACTION_START_Y + row * CARD_ACTION_GAP_Y,
-                        "small_square", "green" if actions[button][EXCLUDE_ORDERS_ACTION] else "red",
+                        MOUSE_EXCLUDE_BUTTON_SIZE,
+                        "green" if actions[button][EXCLUDE_ORDERS_ACTION] else "red",
                         "X" if actions[button][EXCLUDE_ORDERS_ACTION] else "",
                         lambda b=button: self.toggle_action(b, EXCLUDE_ORDERS_ACTION),
                         font_preset="tiny")
@@ -128,18 +136,22 @@ class Mouse_Settings(GameState):
 
             for row, (_action, _name, help_text) in enumerate(c.MOUSE_CONTROL_ACTIONS):
                 help_surface = body_font.render(help_text, True, (185, 195, 207))
-                button_height = (c.SIZES["medium"][1] if _action == PAN_ACTION
-                                 else c.SIZES["setting_option"][1])
+                button_height = (MOUSE_PAN_BUTTON_SIZE[1] if _action == PAN_ACTION
+                                 else MOUSE_ACTION_BUTTON_SIZE[1])
                 y = (CARD_ACTION_START_Y + row * CARD_ACTION_GAP_Y
                      + button_height + 2)
                 surface.blit(help_surface, help_surface.get_rect(center=(card.centerx, y)))
                 if _action == PAN_ACTION:
                     exclude_color = ((185, 195, 207) if actions[button][PAN_ACTION]
                                      else (105, 110, 120))
-                    exclude_label = body_font.render(EXCLUDE_ORDERS_LABEL, True, exclude_color)
-                    exclude_x = card.x + 18 + c.SIZES["medium"][0] + 50
-                    surface.blit(exclude_label, (exclude_x, CARD_ACTION_START_Y + row * CARD_ACTION_GAP_Y
-                                                 + (c.SIZES["small_square"][1] - exclude_label.get_height()) // 2))
+                    exclude_x = (card.centerx - MOUSE_ACTION_BUTTON_SIZE[0] // 2
+                                 + MOUSE_PAN_INDENT_X + MOUSE_PAN_BUTTON_SIZE[0]
+                                 + MOUSE_PAN_EXCLUDE_GAP_X + MOUSE_EXCLUDE_BUTTON_SIZE[0] + 5)
+                    label_y = CARD_ACTION_START_Y + row * CARD_ACTION_GAP_Y + 1
+                    for line in EXCLUDE_ORDERS_LABEL.split():
+                        exclude_label = body_font.render(line, True, exclude_color)
+                        surface.blit(exclude_label, (exclude_x, label_y))
+                        label_y += exclude_label.get_height() - 1
 
         warnings = mouse_control_warnings(actions)
         if warnings:
