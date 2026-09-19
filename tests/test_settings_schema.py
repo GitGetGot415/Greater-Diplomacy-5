@@ -36,6 +36,7 @@ GOLDEN_ORDER = (
     "ai_turn_budget_seconds", "unit_art_style", "map_navigation_mode",
     "orders_key_changes_screen", "economy_key_changes_screen",
     "battle_display_mode",
+    "mouse_button_actions",
 )
 
 GOLDEN_JSON_KEYS = set(GOLDEN_ORDER)
@@ -92,6 +93,17 @@ class RoundTripTests(unittest.TestCase):
     def test_missing_keys_fall_back_to_defaults(self):
         values = settings_schema.from_json_dict({})
         self.assertEqual(values, settings_schema.defaults())
+
+    def test_mouse_actions_migrate_partial_or_invalid_saved_data(self):
+        values = settings_schema.from_json_dict({
+            "mouse_button_actions": {
+                "left": {"box_select_units": False, "unknown": True},
+                "middle": "not an action mapping",
+            }})
+        actions = values["mouse_button_actions"]
+        self.assertFalse(actions["left"]["box_select_units"])
+        self.assertTrue(actions["left"]["select_units"])
+        self.assertTrue(actions["middle"]["pan_map"])
 
     def test_legacy_key_names_are_still_read(self):
         """Settings files in the wild still use these older names."""

@@ -1337,6 +1337,20 @@ class Orders_Screen(GameState):
         event_pos = getattr(event, "pos", (mx, my))
         on_ui = panel_rect.collidepoint(event_pos)
 
+        # Unlike the main map, Orders honours only the all-workspaces pan
+        # action. "Pan outside Orders" remains intentionally unavailable here
+        # so a normal right-click can keep assigning a movement order.
+        pan_buttons = event_handler.mouse_buttons_with_actions("pan_map")
+        # ``camera`` is optional only for lightweight Orders test doubles;
+        # every playable map supplies it.
+        camera = getattr(self.map_screen, "camera", None)
+        if camera is not None and not (event.type == pygame.MOUSEWHEEL and on_ui):
+            camera.handle_input(event, self.map_screen, on_ui, pan_buttons=pan_buttons)
+            if (event.type == pygame.MOUSEBUTTONUP
+                    and camera.finish_pan_drag(event.button)
+                    and event_handler.mouse_button_has_action(event.button, "issue_orders")):
+                return
+
         # Targeting is a modal map action. It must run before the normal
         # left-click selection gesture below, otherwise every target click is
         # consumed as the start of a selection rectangle.
@@ -1363,7 +1377,9 @@ class Orders_Screen(GameState):
         # The Orders panel is a live map workspace. A short left-click on a
         # stack toggles it; an actual left-drag box-selects stacks, matching
         # the map screen and HOI4's primary selection gesture.
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and not on_ui:
+        if (event.type == pygame.MOUSEBUTTONDOWN and not on_ui
+                and (event_handler.mouse_button_has_action(event.button, "select_units")
+                     or event_handler.mouse_button_has_action(event.button, "box_select_units"))):
             clicked_stack = next((stack for stack in reversed(
                 getattr(self.map_screen, "unit_stack_hitboxes", []))
                 if stack["rect"].collidepoint(event.pos)), None)
@@ -1373,6 +1389,11 @@ class Orders_Screen(GameState):
                 "start": event.pos, "current": event.pos,
                 "additive": bool(pygame.key.get_mods() & pygame.KMOD_SHIFT),
                 "stack": clicked_stack,
+                "button": event.button,
+                "select_units": event_handler.mouse_button_has_action(
+                    event.button, "select_units"),
+                "box_select_units": event_handler.mouse_button_has_action(
+                    event.button, "box_select_units"),
             }
             return
 
@@ -1380,7 +1401,8 @@ class Orders_Screen(GameState):
             self.map_screen.unit_selection_drag["current"] = event.pos
             return
 
-        if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+        if (event.type == pygame.MOUSEBUTTONUP and self.map_screen.unit_selection_drag
+                and event.button == self.map_screen.unit_selection_drag.get("button")):
             drag = self.map_screen.unit_selection_drag
             self.map_screen.unit_selection_drag = None
             if not drag:
@@ -1390,6 +1412,8 @@ class Orders_Screen(GameState):
                 (event.pos[0] - drag["start"][0], event.pos[1] - drag["start"][1]))
             rect.normalize()
             if rect.width < 4 and rect.height < 4:
+                if not drag["select_units"]:
+                    return
                 stack = drag["stack"]
                 if stack is None:
                     # Outside an armed modal command, a short map click
@@ -1406,7 +1430,7 @@ class Orders_Screen(GameState):
                         stack["units"], additive=drag["additive"]):
                     self.inspect_province(stack["province"])
                 return
-            if rect.width >= 4 or rect.height >= 4:
+            if (rect.width >= 4 or rect.height >= 4) and drag["box_select_units"]:
                 selected = []
                 for stack in getattr(self.map_screen, "unit_stack_hitboxes", []):
                     if rect.colliderect(stack["rect"]):
@@ -1420,10 +1444,12 @@ class Orders_Screen(GameState):
                 self.refresh_ui()
             return
 
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
+        if (event.type == pygame.MOUSEBUTTONDOWN
+                and event_handler.mouse_button_has_action(event.button, "issue_orders")):
             return
 
-        if event.type == pygame.MOUSEBUTTONUP and event.button == 3:
+        if (event.type == pygame.MOUSEBUTTONUP
+                and event_handler.mouse_button_has_action(event.button, "issue_orders")):
             if not self.read_only:
                 destination = queries.get_clicked_province(event.pos, self.map_screen)
                 if destination and self.map_screen.selected_unit_records():
@@ -1432,15 +1458,6 @@ class Orders_Screen(GameState):
                             append=bool(pygame.key.get_mods() & pygame.KMOD_SHIFT)):
                         self.refresh_ui()
             return
-
-        # Pass scroll and pan events to your centralized map camera
-        if event.type in (pygame.MOUSEWHEEL, pygame.MOUSEMOTION, pygame.KEYDOWN,
-                          pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
-            # Only allow camera zoom/pan if not scrolling the unit list
-            if event.type == pygame.MOUSEWHEEL and on_ui:
-                pass
-            else:
-                self.map_screen.camera.handle_input(event, self.map_screen, on_ui)
 
         # --- Dynamic Map Hover Update ---
         if event.type == pygame.MOUSEMOTION:

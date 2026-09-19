@@ -24,6 +24,7 @@ SETTINGS_SLIDER_WIDTH = 200
 SETTINGS_RESET_Y = 650
 SETTINGS_UNIT_ART_GAP_X = 20
 SETTINGS_KEYBINDS_Y = 520
+SETTINGS_MOUSE_SETTINGS_Y = 580
 SETTINGS_AI_TOGGLE_POS = (10, c.SCREEN_HEIGHT - 60)
 SETTINGS_AI_PROVIDER_Y = c.SCREEN_HEIGHT - 250
 SETTINGS_AI_PROVIDER_START_X = 10
@@ -182,6 +183,10 @@ def render_settings_buttons(settings_screen):
         Button(keybind_x, SETTINGS_KEYBINDS_Y, "medium", "purple", "Keybinds",
                settings_screen.open_keybinds, image=ui_bars.get_ui_image("Keybind.png"))
     )
+    settings_screen.elements.append(
+        Button(keybind_x, SETTINGS_MOUSE_SETTINGS_Y, "medium", "purple", "Mouse Settings",
+               settings_screen.open_mouse_settings)
+    )
 
     # Edit/Reset pair for each path and color row, driven off the screen's own table
     for y, _kind, key, _label in settings_screen.PATH_ROWS:
@@ -325,6 +330,9 @@ class Settings(GameState):
     def open_keybinds(self):
         self.go_to("KEYBINDS")
 
+    def open_mouse_settings(self):
+        self.go_to("MOUSE_SETTINGS")
+
     def toggle_intro_popup(self):
         """Persists whether a new game should explain map controls."""
         self.show_intro_popup = not self.show_intro_popup
@@ -413,6 +421,9 @@ class Settings(GameState):
         self.battle_display_mode = c.DEFAULT_BATTLE_DISPLAY_MODE
         c.apply_runtime_settings({"battle_display_mode": c.DEFAULT_BATTLE_DISPLAY_MODE})
         self.controller.battle_display_mode = c.DEFAULT_BATTLE_DISPLAY_MODE
+
+        self.controller.mouse_button_actions = c.default_mouse_button_actions()
+        c.apply_runtime_settings({"mouse_button_actions": self.controller.mouse_button_actions})
 
         for key in self.COLOR_FIELDS:
             self.reset_setting(key, refresh=False)

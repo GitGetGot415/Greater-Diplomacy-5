@@ -47,7 +47,7 @@ def _import_project_modules():
     """
     global IS_WEB, restore_persisted_dir, platform, pygame
     global Messages_Screen, dispatch_global_keys, fonts, ui_elements, c, queries
-    global Load_Game, Map, Menu, New_Game, Settings, Credits, Music_Player, View_Assets, Mods, Unit_Art, Keybinds
+    global Load_Game, Map, Menu, New_Game, Settings, Credits, Music_Player, View_Assets, Mods, Unit_Art, Keybinds, Mouse_Settings
     global Translate, Translation_Menu, Greater_Diplomacy_4_Translation, Greater_Diplomacy_Hex_Translation
     global Orders_Screen, keybind_io, settings_schema, symbol_loader, modal_stack
     global Research_Screen, Economy_Screen, Edit_Country_Screen, Production_Screen
@@ -109,6 +109,7 @@ def _import_project_modules():
     from screens.menu_screens.mods import Mods
     from screens.menu_screens.unit_art import Unit_Art
     from screens.menu_screens.keybinds import Keybinds
+    from screens.menu_screens.mouse_settings import Mouse_Settings
     from screens.map_related_screens.orders import Orders_Screen
     from data.io import keybind_io, settings_schema
     from map_logic.rendering import symbol_loader
@@ -329,6 +330,7 @@ class Controller:
             "SETTINGS": Settings(self),
             "UNIT_ART": Unit_Art(self),
             "KEYBINDS": Keybinds(self),
+            "MOUSE_SETTINGS": Mouse_Settings(self),
             "CREDITS": Credits(),
             "MUSIC_PLAYER": Music_Player(self),
             "VIEW_ASSETS": View_Assets(),
@@ -405,7 +407,8 @@ class Controller:
             # MAP/MENU back_state Settings already picked up when it was
             # first opened, or Back from the sub-screen would dump the
             # player at the menu even when they opened Settings from a live game.
-            elif previous_state not in (self.states.get("UNIT_ART"), self.states.get("KEYBINDS")):
+            elif previous_state not in (self.states.get("UNIT_ART"), self.states.get("KEYBINDS"),
+                                        self.states.get("MOUSE_SETTINGS")):
                 self.states[next_state_name].back_state = "MENU"
 
         # 2. Map Persistence

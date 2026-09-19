@@ -2210,8 +2210,60 @@ HISTORY_GZIP_LEVEL = 1
 # does not redo identical work for every turn it has ever recorded.
 HISTORY_SCRUBBED_KEY = "_scrubbed"
 
-# Map navigation is intentionally fixed: middle-mouse drags the camera.  This
-# leaves left and right mouse available for the strategy-map selection model.
+# Mouse controls are a per-button action map rather than three hard-coded
+# gestures.  The defaults are the tutorial's original HOI-style layout.  Keep
+# the names/data here so the settings screen, camera and map interactions all
+# share one definition.
+MOUSE_BUTTONS = ((1, "left", "Left"), (2, "middle", "Middle"),
+                 (3, "right", "Right"))
+MOUSE_CONTROL_ACTIONS = (
+    ("select_units", "Select unit stacks", "Click a visible stack to select it."),
+    ("box_select_units", "Box-select unit stacks", "Hold and drag to select multiple stacks."),
+    ("pan_map", "Pan the map", "Hold and drag to pan in every map workspace."),
+    ("pan_map_outside_orders", "Pan outside Orders", "Hold and drag to pan on the main map only."),
+    ("issue_orders", "Give move orders", "Click a destination for selected units."),
+)
+DEFAULT_MOUSE_BUTTON_ACTIONS = {
+    "left": {
+        "select_units": True, "box_select_units": True,
+        "pan_map": False, "pan_map_outside_orders": False, "issue_orders": False,
+    },
+    "middle": {
+        "select_units": False, "box_select_units": False,
+        "pan_map": True, "pan_map_outside_orders": False, "issue_orders": False,
+    },
+    "right": {
+        "select_units": False, "box_select_units": False,
+        "pan_map": False, "pan_map_outside_orders": True, "issue_orders": True,
+    },
+}
+
+
+def default_mouse_button_actions():
+    """Return an independent copy suitable for a controller or save default."""
+    return {button: dict(actions)
+            for button, actions in DEFAULT_MOUSE_BUTTON_ACTIONS.items()}
+
+
+def normalize_mouse_button_actions(value):
+    """Safely migrate a partial or malformed saved mouse-control mapping."""
+    normalized = default_mouse_button_actions()
+    if not isinstance(value, dict):
+        return normalized
+    valid_actions = {action for action, _label, _help in MOUSE_CONTROL_ACTIONS}
+    for _number, button, _label in MOUSE_BUTTONS:
+        saved_actions = value.get(button)
+        if not isinstance(saved_actions, dict):
+            continue
+        for action in valid_actions:
+            if action in saved_actions and isinstance(saved_actions[action], bool):
+                normalized[button][action] = saved_actions[action]
+    return normalized
+
+
+# Mirrored at startup and whenever Mouse Settings changes; direct map-input
+# paths deliberately use this cached mapping rather than reading a file/event.
+MOUSE_BUTTON_ACTIONS = default_mouse_button_actions()
 
 # ==========================================
 # RUNTIME SETTINGS
@@ -2232,6 +2284,7 @@ RUNTIME_SETTINGS = {
     "unit_art_style": "UNIT_ART_STYLE",
     "map_navigation_mode": "MAP_NAVIGATION_MODE",
     "battle_display_mode": "BATTLE_DISPLAY_MODE",
+    "mouse_button_actions": "MOUSE_BUTTON_ACTIONS",
 }
 
 
@@ -2246,4 +2299,6 @@ def apply_runtime_settings(values):
     """
     for name, constant in RUNTIME_SETTINGS.items():
         if name in values:
-            globals()[constant] = values[name]
+            globals()[constant] = (
+                normalize_mouse_button_actions(values[name])
+                if name == "mouse_button_actions" else values[name])

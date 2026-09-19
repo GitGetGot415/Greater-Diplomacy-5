@@ -78,7 +78,7 @@ class _NavigationIntroPopup:
     )
     KEYBOARD_NAVIGATION = (
         "ARROW KEYS",
-        "Use the arrow keys to pan the map.",
+        "Arrows pan. Customize mouse gestures in Settings > Mouse Settings.",
     )
     MAP_UI_BUTTONS = (
         ("Terrain", "terrain", "Shows the terrain map."),

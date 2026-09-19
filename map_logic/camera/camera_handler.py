@@ -16,15 +16,26 @@ class MapCamera:
         self.manual_tilt_factor = 1.0 # Added explicit manual control factor
         self._middle_drag_last_pos = None
         self._ignore_middle_until_release = False
-        # Right drag is available on the main map only.  Its release is kept
-        # separate from the normal short right-click movement-order gesture.
+        # Compatibility mirrors for the original middle/right gestures. The
+        # active gesture itself is now tracked independently of button number.
         self._right_drag_last_pos = None
         self._right_drag_moved = False
+        # Mouse Settings can assign map panning to any of the three buttons.
+        # The old middle/right attributes remain as compatibility mirrors for
+        # map overlays and focused camera tests.
+        self._pan_drag_button = None
+        self._pan_drag_last_pos = None
+        self._pan_drag_moved = False
+        self._finished_pan_drags = {}
         self._last_arrow_pan_tick = None
         # currently set to instant, but can be adjusted for smoother transitions
 
     def cancel_middle_drag(self):
-        """Stop a pan when a conflicting right-button gesture begins."""
+        """Stop the original middle-button pan when another gesture takes over."""
+        if self._pan_drag_button == 2:
+            self._pan_drag_button = None
+            self._pan_drag_last_pos = None
+            self._pan_drag_moved = False
         self._middle_drag_last_pos = None
         self._ignore_middle_until_release = True
 
@@ -34,10 +45,25 @@ class MapCamera:
         A short right-click must keep reaching the movement-order handler;
         only a drag consumes its matching release.
         """
-        moved = self._right_drag_moved
-        self._right_drag_last_pos = None
-        self._right_drag_moved = False
-        return moved
+        return self.finish_pan_drag(3)
+
+    def finish_pan_drag(self, button):
+        """Finish one configurable pan gesture and report whether it moved."""
+        if self._pan_drag_button == button:
+            moved = self._pan_drag_moved
+            self._clear_pan_drag(button)
+            return moved
+        return self._finished_pan_drags.pop(button, False)
+
+    def _clear_pan_drag(self, button):
+        self._pan_drag_button = None
+        self._pan_drag_last_pos = None
+        self._pan_drag_moved = False
+        if button == 2:
+            self._middle_drag_last_pos = None
+        elif button == 3:
+            self._right_drag_last_pos = None
+            self._right_drag_moved = False
 
     def _pan_from_drag(self, current_pos, previous_pos):
         """Move the camera by a logical cursor displacement at the live zoom."""
@@ -84,7 +110,8 @@ class MapCamera:
             left, right, up, down,
             c.CAMERA_KEYBOARD_PAN_PIXELS_PER_SECOND * elapsed_seconds)
 
-    def handle_input(self, event, self_map, on_ui, allow_right_drag=False):
+    def handle_input(self, event, self_map, on_ui, allow_right_drag=False,
+                     pan_buttons=None):
         if event.type == pygame.KEYDOWN and event.key in (
                 pygame.K_LEFT, pygame.K_RIGHT, pygame.K_UP, pygame.K_DOWN):
             # Move once immediately; update() continues while the key remains
@@ -104,59 +131,67 @@ class MapCamera:
             max_zoom = c.MAX_CAMERA_ZOOM
             self.target_zoom = max(self_map.min_zoom, min(self.target_zoom + zoom_change, max_zoom))
 
-        # Pygame mouse_buttons indices: 0=Left, 1=Middle, 2=Right.  Camera
-        # panning is deliberately fixed to middle mouse so map selection can
-        # safely use left click and right-drag without competing for input.
+        # Pygame mouse_buttons indices: 0=Left, 1=Middle, 2=Right.  The
+        # default preserves the original middle-only gesture; map screens may
+        # supply Mouse Settings' enabled buttons.
         # Use logical cursor positions rather than event.rel: on high-DPI
         # displays rel can be reported in a different scale from the game
         # surface, which makes a pan feel faster or slower than the drag.
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 2:
-            self.focus_animation = False
-            if self._ignore_middle_until_release:
-                return
-            self._middle_drag_last_pos = event.pos if not on_ui else None
-            return
-        if event.type == pygame.MOUSEBUTTONUP and event.button == 2:
-            self._middle_drag_last_pos = None
-            self._ignore_middle_until_release = False
-            return
+        if pan_buttons is None:
+            pan_buttons = {2}
+            if allow_right_drag:
+                pan_buttons.add(3)
+        else:
+            pan_buttons = set(pan_buttons)
 
-        if allow_right_drag and event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button in pan_buttons:
             self.focus_animation = False
-            self._right_drag_last_pos = event.pos if not on_ui else None
-            self._right_drag_moved = False
+            if event.button == 2 and self._ignore_middle_until_release:
+                return
+            self._pan_drag_button = event.button
+            self._pan_drag_last_pos = event.pos if not on_ui else None
+            self._pan_drag_moved = False
+            if event.button == 2:
+                self._middle_drag_last_pos = self._pan_drag_last_pos
+            elif event.button == 3:
+                self._right_drag_last_pos = self._pan_drag_last_pos
+                self._right_drag_moved = False
+            return
+        if event.type == pygame.MOUSEBUTTONUP:
+            if event.button == 2:
+                self._ignore_middle_until_release = False
+            if self._pan_drag_button == event.button:
+                self._finished_pan_drags[event.button] = self._pan_drag_moved
+                self._clear_pan_drag(event.button)
             return
 
         if self._ignore_middle_until_release:
             return
 
         buttons = getattr(event, "buttons", ())
-        middle_drag_active = ((len(buttons) > 1 and buttons[1])
-                              or pygame.mouse.get_pressed()[1])
-        right_drag_active = (allow_right_drag and ((len(buttons) > 2 and buttons[2])
-                             or pygame.mouse.get_pressed()[2]))
-        if event.type == pygame.MOUSEMOTION and middle_drag_active and not on_ui:
+        button = self._pan_drag_button
+        button_index = button - 1 if button else None
+        drag_active = (button_index is not None and (
+            (len(buttons) > button_index and buttons[button_index])
+            or pygame.mouse.get_pressed()[button_index]))
+        if event.type == pygame.MOUSEMOTION and drag_active and not on_ui:
             current_pos = event.pos
-            if self._middle_drag_last_pos is None:
+            if self._pan_drag_last_pos is None:
                 previous_pos = (current_pos[0] - event.rel[0],
                                 current_pos[1] - event.rel[1])
             else:
-                previous_pos = self._middle_drag_last_pos
-            self._pan_from_drag(current_pos, previous_pos)
-            self._middle_drag_last_pos = current_pos
-        elif event.type == pygame.MOUSEMOTION and right_drag_active and not on_ui:
-            current_pos = event.pos
-            if self._right_drag_last_pos is None:
-                previous_pos = (current_pos[0] - event.rel[0],
-                                current_pos[1] - event.rel[1])
-            else:
-                previous_pos = self._right_drag_last_pos
+                previous_pos = self._pan_drag_last_pos
             if current_pos != previous_pos:
                 self._pan_from_drag(current_pos, previous_pos)
                 self._right_drag_moved = True
-            self._right_drag_last_pos = current_pos
-        elif event.type == pygame.MOUSEMOTION and not middle_drag_active:
-            self._middle_drag_last_pos = None
+                self._pan_drag_moved = True
+            self._pan_drag_last_pos = current_pos
+            if button == 2:
+                self._middle_drag_last_pos = current_pos
+            elif button == 3:
+                self._right_drag_last_pos = current_pos
+        elif event.type == pygame.MOUSEMOTION and button == 2 and not drag_active:
+            self._clear_pan_drag(button)
 
     def update(self, self_map, SCREEN_HEIGHT):
         # 0. Apply Manual Tilt Factor

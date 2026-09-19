@@ -85,6 +85,8 @@ SETTINGS_FIELDS = (
     _field("orders_key_changes_screen", "orders_key_changes_screen", lambda: True),
     _field("economy_key_changes_screen", "economy_key_changes_screen", lambda: True),
     _field("battle_display_mode", "battle_display_mode", lambda: c.DEFAULT_BATTLE_DISPLAY_MODE),
+    _field("mouse_button_actions", "mouse_button_actions",
+           c.default_mouse_button_actions, coerce=c.normalize_mouse_button_actions),
 )
 
 SETTINGS_ORDER = tuple(field.name for field in SETTINGS_FIELDS)

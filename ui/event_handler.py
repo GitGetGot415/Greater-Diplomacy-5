@@ -70,6 +70,20 @@ def _select_map_province(map_screen, position, navigate=True):
     return True
 
 
+def mouse_button_has_action(button_number, action):
+    """Read one enabled Mouse Settings action from the live runtime mapping."""
+    button = next((name for number, name, _label in c.MOUSE_BUTTONS
+                   if number == button_number), None)
+    return bool(button and c.MOUSE_BUTTON_ACTIONS[button].get(action, False))
+
+
+def mouse_buttons_with_actions(*actions):
+    """Return physical buttons that carry any requested map-pan action."""
+    return {number for number, button, _label in c.MOUSE_BUTTONS
+            if any(c.MOUSE_BUTTON_ACTIONS[button].get(action, False)
+                   for action in actions)}
+
+
 def resolve_map_mouse_gesture_conflict(map_screen, event):
     """Cancel a map drag when the other map mouse button is pressed.
 
@@ -95,7 +109,7 @@ def resolve_map_mouse_gesture_conflict(map_screen, event):
 
 
 def _handle_map_unit_selection(map_screen, event, on_ui):
-    """Consume the HOI-style unit gestures while the map is in Units view."""
+    """Consume configurable unit selection and selected-unit order gestures."""
     if getattr(map_screen, "_ignore_left_until_release", False):
         if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
             map_screen._ignore_left_until_release = False
@@ -114,7 +128,9 @@ def _handle_map_unit_selection(map_screen, event, on_ui):
             or not map_screen.can_select_map_units()):
         return False
 
-    if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+    if (event.type == pygame.MOUSEBUTTONDOWN and (
+            mouse_button_has_action(event.button, "select_units")
+            or mouse_button_has_action(event.button, "box_select_units"))):
         clicked_stack = next((stack for stack in reversed(
             getattr(map_screen, "unit_stack_hitboxes", []))
             if stack["rect"].collidepoint(event.pos)), None)
@@ -128,6 +144,9 @@ def _handle_map_unit_selection(map_screen, event, on_ui):
             "start": event.pos, "current": event.pos,
             "additive": bool(pygame.key.get_mods() & pygame.KMOD_SHIFT),
             "stack": clicked_stack,
+            "button": event.button,
+            "select_units": mouse_button_has_action(event.button, "select_units"),
+            "box_select_units": mouse_button_has_action(event.button, "box_select_units"),
         }
         return True
 
@@ -135,7 +154,8 @@ def _handle_map_unit_selection(map_screen, event, on_ui):
         map_screen.unit_selection_drag["current"] = event.pos
         return True
 
-    if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+    if (event.type == pygame.MOUSEBUTTONUP and map_screen.unit_selection_drag
+            and event.button == map_screen.unit_selection_drag.get("button")):
         drag = map_screen.unit_selection_drag
         map_screen.unit_selection_drag = None
         if not drag:
@@ -147,6 +167,8 @@ def _handle_map_unit_selection(map_screen, event, on_ui):
         # A short left-click retains the existing Orders entry point. A real
         # drag mirrors HOI4's box selection gesture.
         if rect.width < 4 and rect.height < 4:
+            if not drag["select_units"]:
+                return True
             stack = drag.get("stack")
             if stack is None:
                 _select_map_province(map_screen, event.pos)
@@ -154,6 +176,8 @@ def _handle_map_unit_selection(map_screen, event, on_ui):
             units = stack["units"]
             if map_screen.click_select_map_units(units, additive=drag["additive"]):
                 map_screen.open_orders_for_unit_stack(stack["province"], units)
+            return True
+        if not drag["box_select_units"]:
             return True
         selected, first_province = [], None
         for stack in getattr(map_screen, "unit_stack_hitboxes", []):
@@ -165,10 +189,12 @@ def _handle_map_unit_selection(map_screen, event, on_ui):
             map_screen.open_orders_for_unit_stack(first_province, selected)
         return True
 
-    if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
+    if (event.type == pygame.MOUSEBUTTONDOWN
+            and mouse_button_has_action(event.button, "issue_orders")):
         return True
 
-    if event.type == pygame.MOUSEBUTTONUP and event.button == 3:
+    if (event.type == pygame.MOUSEBUTTONUP
+            and mouse_button_has_action(event.button, "issue_orders")):
         destination = queries.get_clicked_province(event.pos, map_screen)
         if destination and map_screen.selected_unit_records():
             map_screen.issue_selected_move_orders(
@@ -321,14 +347,17 @@ def handle_map_events(map_screen, event):
             camera_handler.center_camera_on_province(map_screen.camera, map_screen.selected_province["center"], c.SCREEN_WIDTH, c.SCREEN_HEIGHT, map_screen.total_ui_h)
         return
 
-    # Main-map right drags pan, while a short right-click still reaches the
-    # selected-unit order gesture below.  Orders owns its own right-click
-    # routing, and editor right-click is its brush, so neither enables this.
-    allow_right_drag = not map_screen.is_editor
-    map_screen.camera.handle_input(event, map_screen, on_ui,
-                                   allow_right_drag=allow_right_drag)
-    if (allow_right_drag and event.type == pygame.MOUSEBUTTONUP
-            and event.button == 3 and map_screen.camera.finish_right_drag()):
+    # Full map panning works in every map workspace; the context-limited
+    # variant deliberately stops at Orders. A panned order click is consumed,
+    # while a deliberate overlapping selection/pan setup is allowed to run
+    # both gestures and is called out by Mouse Settings' warning.
+    pan_actions = ("pan_map", "pan_map_outside_orders")
+    pan_buttons = (mouse_buttons_with_actions(*pan_actions)
+                   if not map_screen.is_editor else set())
+    map_screen.camera.handle_input(event, map_screen, on_ui, pan_buttons=pan_buttons)
+    if (event.type == pygame.MOUSEBUTTONUP
+            and map_screen.camera.finish_pan_drag(event.button)
+            and mouse_button_has_action(event.button, "issue_orders")):
         return
 
     # 3. HOVER LOGIC (CRITICAL: Must run before painting)
