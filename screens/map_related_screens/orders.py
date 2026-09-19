@@ -231,12 +231,13 @@ class Orders_Screen(GameState):
                 self.target_province, self.map_screen.nation_data)):
             self.open_battle_panel()
 
-    def inspect_province(self, province):
+    def inspect_province(self, province, preserve_scroll=False):
         """Retarget the live Orders workspace to another visible stack."""
         self.target_province = province
         self.map_screen.selected_province = province
         self.battle_screen = None
-        self.scroll_y = 0
+        if not preserve_scroll:
+            self.scroll_y = 0
         self.bombarding_unit_index = None
         self.bombarding_unit_province = None
         units = province.get("units", [])
@@ -376,7 +377,9 @@ class Orders_Screen(GameState):
         self.selected_unit_index = None
         self.bombarding_unit_index = None
         if selected and province is not None:
-            self.inspect_province(province)
+            # Selecting another roster member keeps the same army roster open,
+            # so preserve its current scroll position while refreshing rows.
+            self.inspect_province(province, preserve_scroll=True)
         else:
             self.refresh_ui()
 

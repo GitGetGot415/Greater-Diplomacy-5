@@ -175,6 +175,56 @@ class OrdersSelectionRowsTests(unittest.TestCase):
         self.assertEqual(rows[0][0], 0)
         self.assertEqual(rows[1][0], (2, 0))
 
+    def test_clicking_another_army_member_preserves_roster_scroll(self):
+        origin = province(1, [])
+        first = {"unit_id": "first", "owner": "A", "type": "Infantry"}
+        second = {"unit_id": "second", "owner": "A", "type": "Infantry"}
+        origin["units"] = [first, second]
+
+        class MapStub:
+            player_country = "A"
+            tactical_mode = False
+
+            def __init__(self):
+                self.selected_ids = {id(first)}
+                self.selected_province = None
+                self.nation_data = {"A": {"armies": [{
+                    "id": "army", "unit_ids": ["first", "second"]}]}}
+                self.map_data = {1: origin}
+
+            def click_select_map_units(self, units, additive=False):
+                unit_ids = {id(unit) for unit in units}
+                self.selected_ids = (self.selected_ids | unit_ids
+                                     if additive else unit_ids)
+                return bool(self.selected_ids & unit_ids)
+
+            def is_unit_selected(self, unit):
+                return id(unit) in self.selected_ids
+
+            def selected_unit_records(self):
+                return [(unit, origin) for unit in origin["units"]
+                        if id(unit) in self.selected_ids]
+
+        screen = object.__new__(Orders_Screen)
+        screen.map_screen = MapStub()
+        screen.target_province = origin
+        screen.read_only = False
+        screen.scroll_y = -80
+        screen.selected_unit_index = 0
+        screen.bombarding_unit_index = None
+        screen.refresh_ui = lambda: None
+
+        self.assertEqual([unit for _key, unit, _province, _index in screen._visible_rows()],
+                         [first, second])
+        with patch("screens.map_related_screens.orders.pygame.key.get_mods", return_value=0):
+            screen.toggle_selected_unit(second, origin)
+
+        self.assertEqual(screen.scroll_y, -80)
+        self.assertIs(screen.target_province, origin)
+        self.assertEqual(screen.map_screen.selected_ids, {id(second)})
+        self.assertEqual([unit for _key, unit, _province, _index in screen._visible_rows()],
+                         [first, second])
+
     def test_select_all_uses_every_owned_unit_and_clears_the_selection(self):
         """Select All is map-wide; clearing it leaves no stale Orders rows."""
         first = province(1, [])
