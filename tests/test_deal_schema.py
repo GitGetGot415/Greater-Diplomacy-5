@@ -321,6 +321,18 @@ class DescriptionTests(unittest.TestCase):
         self.assertIn("B cede", line)
         self.assertIn("to A", line)
 
+    def test_trade_terms_use_country_display_names_when_available(self):
+        agreement = deal.new(deal.KIND_TRADE, ["alpha_id"], ["beta_id"],
+                             [deal.resources_clause("alpha_id", "beta_id",
+                                                    "materials", 500)])
+        names = {"alpha_id": {"name": "Alpha Republic"},
+                 "beta_id": {"name": "Kingdom of Beta"}}
+
+        line = deal.describe(agreement, nation_data=names)[0]
+
+        self.assertIn("Alpha Republic pay", line)
+        self.assertIn("to Kingdom of Beta", line)
+
     def test_a_bloc_deal_names_who_else_is_bound(self):
         agreement = deal.new(deal.KIND_PEACE, ["A"], ["B", "C"], [deal.white_peace()])
         self.assertTrue(any("Against: B, C" in line

@@ -35,6 +35,7 @@ Stdlib and `data` only, so the AI layers and the screens can both import it.
 """
 
 import data.constants as c
+from data import queries
 
 VERSION = 1
 
@@ -881,7 +882,7 @@ def describe(deal, viewer=None, nation_data=None):
     def name(nation):
         if viewer and nation == viewer:
             return "you"
-        return nation
+        return queries.get_country_display_name(nation, nation_data)
 
     lines = []
     for clause in clauses(deal):
@@ -923,7 +924,9 @@ def describe(deal, viewer=None, nation_data=None):
     for key, label in (("a", "Signed by"), ("b", "Against")):
         members = [n for n in deal["sides"].get(key, []) if n != viewer]
         if len(members) > 1:
-            lines.append(f"{label}: {roster(members, tail='and {n} others')}.")
+            display_members = [queries.get_country_display_name(n, nation_data)
+                               for n in members]
+            lines.append(f"{label}: {roster(display_members, tail='and {n} others')}.")
 
     return lines
 

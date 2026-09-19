@@ -73,6 +73,13 @@ class DescribeTradeTests(unittest.TestCase):
         lines = dm.describe_trade({"give_materials": 500, "give_fuel": 0})
         self.assertEqual(lines[0], "You receive: 500 Materials")
 
+    def test_a_forwarded_legacy_trade_uses_the_subjects_display_name(self):
+        lines = dm.describe_trade(
+            {"give_materials": 500}, subject="alpha_id",
+            nation_data={"alpha_id": {"name": "Alpha Republic"}})
+
+        self.assertEqual(lines[0], "Alpha Republic receives: 500 Materials")
+
 
 if __name__ == "__main__":
     unittest.main()

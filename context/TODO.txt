@@ -1,5 +1,7 @@
 # TODO
 
+maybe if a country has cores on another country, they're not going to join their faction...
+
 would it be possible to use vectorized loops anywhere in this project in order to speed up the project?
 
 fuel deficit should do something
@@ -37,10 +39,7 @@ bring back right click to move across the map but only when not giving orders
 
 ### Curry
 
-- could you make it so you can upgrade repair disband multiple units at a time
 - ability to change map controls so the mouse can be set to other mouse controls, other keys, or switch what each one of the 3 buttons does
-- arrow keys to move
-- trade deals show the ID of a country, not their actual name (they should show their name)
 
 ### Kaiserin
 
@@ -57,6 +56,7 @@ bring back right click to move across the map but only when not giving orders
 
 ### Exodus
 
+- let Allies see your active movement arrows
 - QUEUE UNITS ACROSS OCEANS
 - Add statistics.
 - Under “claims on you,” show only countries that still exist

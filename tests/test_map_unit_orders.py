@@ -248,6 +248,94 @@ class OrdersSelectionRowsTests(unittest.TestCase):
         self.assertEqual(remote_unit["order"]["type"], "DISBAND")
 
 
+class OrdersBatchCommandsTests(unittest.TestCase):
+    def _screen(self, first, second):
+        origin = province(1, [])
+        remote = province(2, [])
+        origin["buildings"] = ["Basic Factory"]
+        remote["buildings"] = ["Basic Factory"]
+        origin["units"] = [first]
+        remote["units"] = [second]
+        feedback = []
+        map_stub = type("MapStub", (), {
+            "player_country": "A",
+            "tactical_mode": False,
+            "nation_data": {"A": {"materials": 1000, "manpower": 1000,
+                                    "fuel": 1000, "research": {}}},
+            "scenario_settings": {"free_repairs": False},
+            "selected_unit_records": lambda self: [(first, origin), (second, remote)],
+            "show_feedback": lambda self, message: feedback.append(message),
+        })()
+        screen = object.__new__(Orders_Screen)
+        screen.map_screen = map_stub
+        screen.unit_library = {"Infantry": {"cost_materials": 100,
+                                             "cost_manpower": 50,
+                                             "cost_fuel": 0}}
+        screen.refresh_ui = lambda: None
+        screen._mark_draft_changed = Mock()
+        return screen, map_stub, feedback
+
+    def test_disband_selected_orders_every_ready_selected_unit(self):
+        first = {"owner": "A", "type": "Infantry"}
+        second = {"owner": "A", "type": "Infantry"}
+        screen, _map_stub, feedback = self._screen(first, second)
+
+        screen.disband_selected_units()
+
+        self.assertEqual(first["order"]["type"], "DISBAND")
+        self.assertEqual(second["order"]["type"], "DISBAND")
+        self.assertIn("2 selected units", feedback[-1])
+
+    def test_disband_selected_replaces_existing_movement_orders(self):
+        first = {"owner": "A", "type": "Infantry", "order": {"path": [2]}}
+        second = {"owner": "A", "type": "Infantry", "order": {"path": [3]}}
+        screen, _map_stub, _feedback = self._screen(first, second)
+
+        screen.disband_selected_units()
+
+        self.assertEqual(first["order"]["type"], "DISBAND")
+        self.assertEqual(second["order"]["type"], "DISBAND")
+
+    def test_repair_selected_is_atomic_when_the_group_is_unaffordable(self):
+        first = {"owner": "A", "type": "Infantry", "health": 0, "max_health": 100}
+        second = {"owner": "A", "type": "Infantry", "health": 0, "max_health": 100}
+        screen, map_stub, feedback = self._screen(first, second)
+        map_stub.nation_data["A"]["materials"] = 150
+
+        screen.repair_selected_units()
+
+        self.assertNotIn("order", first)
+        self.assertNotIn("order", second)
+        self.assertEqual(map_stub.nation_data["A"]["materials"], 150)
+        self.assertIn("Cannot afford repairs", feedback[-1])
+
+    def test_repair_selected_replaces_existing_movement_orders(self):
+        first = {"owner": "A", "type": "Infantry", "health": 0, "max_health": 100,
+                 "order": {"path": [2]}}
+        second = {"owner": "A", "type": "Infantry", "health": 0, "max_health": 100,
+                  "order": {"path": [3]}}
+        screen, map_stub, _feedback = self._screen(first, second)
+
+        screen.repair_selected_units()
+
+        self.assertEqual(first["order"]["type"], "REPAIR")
+        self.assertEqual(second["order"]["type"], "REPAIR")
+        self.assertEqual(map_stub.nation_data["A"]["materials"], 800)
+
+    def test_upgrade_selected_uses_each_units_legal_upgrade_target(self):
+        first = {"owner": "A", "type": "Infantry", "order": {"path": [2]}}
+        second = {"owner": "A", "type": "Infantry", "order": {"path": [3]}}
+        screen, _map_stub, feedback = self._screen(first, second)
+
+        with patch("screens.map_related_screens.orders.queries.get_upgrade_target",
+                   return_value="Infantry Type 1940"):
+            screen.upgrade_selected_units()
+
+        self.assertEqual(first["order"]["target_type"], "Infantry Type 1940")
+        self.assertEqual(second["order"]["target_type"], "Infantry Type 1940")
+        self.assertIn("2 selected units", feedback[-1])
+
+
 class MapOrderGestureTests(unittest.TestCase):
     def test_armed_bombardment_click_sets_target_before_selection_gesture(self):
         origin = province(1, [2])

@@ -705,7 +705,8 @@ class Messages_Screen(GameState):
                 for line in diplomacy_messages.describe_trade(
                         msg.get("parameters"),
                         viewer_is_proposer=trade_viewer_is_proposer,
-                        subject=trade_subject):
+                        subject=trade_subject,
+                        nation_data=self.map_screen.nation_data):
                     archived_terms = True
                     display_thread.append({
                         "content": line, "is_player": is_player, "is_draft": False,
@@ -720,7 +721,9 @@ class Messages_Screen(GameState):
             self.map_screen.nation_data, self.selected_recipient, self.map_screen.player_country)
         if (not archived_terms and their_offer.get("action") == "TRADE"
                 and their_offer.get("turns", 0) > 0):
-            for line in diplomacy_messages.describe_trade(their_offer.get("parameters")):
+            for line in diplomacy_messages.describe_trade(
+                    their_offer.get("parameters"),
+                    nation_data=self.map_screen.nation_data):
                 display_thread.append({
                     "content": line, "is_player": False, "is_draft": False,
                     "is_diplo": True, "date": "", "forwarded_header": [],

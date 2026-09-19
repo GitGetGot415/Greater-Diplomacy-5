@@ -3,6 +3,7 @@ import copy
 import uuid
 
 import data.constants as c
+from data import queries
 
 # ==========================================
 # PENDING DIPLOMACY ACCESS
@@ -65,7 +66,8 @@ def describe_trade(params, viewer_is_proposer=False, subject=None, viewer=None,
                          for res, qty in side.items() if qty > 0)
 
     given, wanted = amounts(incoming), amounts(outgoing)
-    who = subject or "You"
+    who = (queries.get_country_display_name(subject, nation_data)
+           if subject else "You")
     receives, gives = ("receives", "gives") if subject else ("receive", "give")
     lines = []
     lines.append(f"{who} {receives}: {given or 'nothing'}")

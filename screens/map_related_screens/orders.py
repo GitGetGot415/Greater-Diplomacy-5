@@ -15,10 +15,9 @@ from screens.map_related_screens import battle_screen
 # COMPACT ORDERS PANEL LAYOUT
 # ==========================================
 
-# The reference layout gets its density from a shallow command header and one
-# narrow roster row per unit. Commands stay on their unit's row, so none of the
-# existing per-unit semantics need to become ambiguous batch actions when
-# Select All is active.
+# The reference layout gets its density from a compact command header and one
+# narrow roster row per unit. The second header row holds the unambiguous batch
+# commands which operate on the current map selection.
 PANEL_Y = 5
 PANEL_HEIGHT = c.SCREEN_HEIGHT - 70
 PANEL_BOTTOM_INSET = 8
@@ -26,12 +25,14 @@ PANEL_INSET = 8
 HEADER_TITLE_OFFSET_Y = 7
 HEADER_META_OFFSET_Y = 36
 TOP_BTN_ROW_OFFSET_Y = 57
-HEADER_HELP_OFFSET_Y = 121
+HEADER_HELP_OFFSET_Y = 151
 HEADER_HELP_LINE_GAP = 2
 HEADER_HELP_MAX_LINES = 2
-LIST_TOP_OFFSET_Y = 155
+LIST_TOP_OFFSET_Y = 185
 
 TOP_BTN_GAP_X = 6
+BATCH_BTN_ROW_OFFSET_Y = TOP_BTN_ROW_OFFSET_Y + 31
+BATTLE_UNGROUP_ROW_OFFSET_Y = BATCH_BTN_ROW_OFFSET_Y + 31
 
 BATTLE_PANEL_GAP = 8
 
@@ -381,6 +382,123 @@ class Orders_Screen(GameState):
 
     def ungroup_selected(self):
         self.map_screen.ungroup_selection()
+        self.refresh_ui()
+
+    def _batch_command_candidates(self, command):
+        """Return currently selected units which can start one batch command.
+
+        Every batch action replaces an existing order, matching its individual
+        row icon. Paid repair escrow is refunded before the replacement.
+        """
+        candidates = []
+        player_research = self.map_screen.nation_data.get(
+            self.map_screen.player_country, {}).get("research", {})
+        for unit, province in self.map_screen.selected_unit_records():
+            if (unit.get("owner") != self.map_screen.player_country
+                    or self._command_blocked_silent(unit)):
+                continue
+            in_combat = queries.is_nation_in_combat_here(
+                self.map_screen.player_country, province,
+                self.map_screen.nation_data)
+            if command == "DISBAND":
+                candidates.append((unit, province))
+            elif command == "REPAIR":
+                if (not in_combat and queries.has_industry(province)
+                        and unit.get("health", 0) < unit.get("max_health", 1)):
+                    candidates.append((unit, province))
+            elif command == "UPGRADE":
+                target = queries.get_upgrade_target(
+                    unit.get("type", ""), player_research, self.unit_library,
+                    queries.get_tech_tree())
+                if not in_combat and queries.has_industry(province) and target:
+                    candidates.append((unit, province, target))
+        return candidates
+
+    def _repair_costs(self, unit):
+        """The canonical per-unit repair price used by single and batch orders."""
+        if queries.get_scenario_flag(
+                "free_repairs", c.DEFAULT_FREE_REPAIRS,
+                self.map_screen.scenario_settings):
+            return {"cost_materials": 0, "cost_manpower": 0, "cost_fuel": 0}
+
+        stats = self.unit_library.get(
+            unit.get("original_type", unit.get("type", "")), {})
+        missing_pct = ((unit.get("max_health", 1) - unit.get("health", 0))
+                       / max(1, unit.get("max_health", 1)))
+        return {
+            "cost_materials": int(stats.get("cost_materials", 0) * missing_pct),
+            "cost_manpower": int(stats.get("cost_manpower", 0) * missing_pct),
+            "cost_fuel": int(stats.get("cost_fuel", 0) * missing_pct),
+        }
+
+    def disband_selected_units(self):
+        candidates = self._batch_command_candidates("DISBAND")
+        self._refund_batch_orders(candidates)
+        for unit, _province in candidates:
+            unit["order"] = {"type": "DISBAND", "turns_left": 1}
+        self._finish_batch_command("Disband", len(candidates))
+
+    def _batch_order_refunds(self, candidates):
+        """Combined paid escrow for a pending batch replacement."""
+        return {
+            key: sum(
+                candidate[0].get("order", {}).get("refund", {}).get(key, 0)
+                if isinstance(candidate[0].get("order"), dict) else 0
+                for candidate in candidates)
+            for key in ("cost_materials", "cost_manpower", "cost_fuel")
+        }
+
+    def _refund_batch_orders(self, candidates):
+        refunds = self._batch_order_refunds(candidates)
+        if any(refunds.values()):
+            player_data = self.map_screen.nation_data[self.map_screen.player_country]
+            queries.refund_resources(player_data, refunds)
+
+    def _refund_unit_order(self, unit):
+        """Return a replaced paid order's escrow to the unit's controller."""
+        order = unit.get("order")
+        if not isinstance(order, dict) or "refund" not in order:
+            return
+        if self.map_screen.tactical_mode and unit is self.map_screen.player_unit:
+            player_data = self.map_screen.unit_economy
+        else:
+            player_data = self.map_screen.nation_data[self.map_screen.player_country]
+        queries.refund_resources(player_data, order["refund"])
+
+    def repair_selected_units(self):
+        candidates = self._batch_command_candidates("REPAIR")
+        costs = {key: sum(self._repair_costs(unit)[key]
+                          for unit, _province in candidates)
+                 for key in ("cost_materials", "cost_manpower", "cost_fuel")}
+        player_data = self.map_screen.nation_data[self.map_screen.player_country]
+        available_after_refunds = dict(player_data)
+        queries.refund_resources(available_after_refunds,
+                                 self._batch_order_refunds(candidates))
+        if candidates and not queries.can_afford(available_after_refunds, costs):
+            self.map_screen.show_feedback("Cannot afford repairs for all selected units!")
+            return
+        if candidates:
+            self._refund_batch_orders(candidates)
+            queries.deduct_resources(player_data, costs)
+            for unit, _province in candidates:
+                unit["order"] = {"type": "REPAIR", "turns_left": 1,
+                                 "refund": self._repair_costs(unit)}
+        self._finish_batch_command("Repair", len(candidates))
+
+    def upgrade_selected_units(self):
+        candidates = self._batch_command_candidates("UPGRADE")
+        self._refund_batch_orders(candidates)
+        for unit, _province, target in candidates:
+            unit["order"] = {"type": "UPGRADE", "turns_left": 1,
+                             "target_type": target, "refund": {}}
+        self._finish_batch_command("Upgrade", len(candidates))
+
+    def _finish_batch_command(self, label, count):
+        if not count:
+            self.map_screen.show_feedback(f"No selected units can {label.lower()} now.")
+            return
+        self._mark_draft_changed()
+        self.map_screen.show_feedback(f"{label} ordered for {count} selected unit{'s' if count != 1 else ''}.")
         self.refresh_ui()
 
     def _command_blocked_silent(self, unit):
@@ -745,12 +863,36 @@ class Orders_Screen(GameState):
             if player_units:
                 # A battle command occupies the top-right slot only during
                 # combat. Keep the normal three controls on one line, while
-                # using the otherwise-empty row below in that exceptional view.
-                ungroup_y = PANEL_Y + TOP_BTN_ROW_OFFSET_Y + (31 if in_battle else 0)
+                # using a third header row in that exceptional view.
+                ungroup_y = PANEL_Y + (BATTLE_UNGROUP_ROW_OFFSET_Y if in_battle
+                                        else TOP_BTN_ROW_OFFSET_Y)
                 btn_ungroup = Button(button_x, ungroup_y,
                                      "orders_header_button", "grey", "Ungroup",
                                      self.ungroup_selected, font_preset="tiny")
                 self.elements.append(btn_ungroup)
+
+            if len(player_units) > 1:
+                batch_actions = (
+                    ("Disband", self.disband_selected_units,
+                     self._batch_command_candidates("DISBAND")),
+                    ("Repair", self.repair_selected_units,
+                     self._batch_command_candidates("REPAIR")),
+                    ("Upgrade", self.upgrade_selected_units,
+                     self._batch_command_candidates("UPGRADE")),
+                )
+                batch_x = self.PANEL_X + PANEL_INSET
+                for label, callback, candidates in batch_actions:
+                    count = len(candidates)
+                    button = Button(batch_x, PANEL_Y + BATCH_BTN_ROW_OFFSET_Y,
+                                    "orders_header_button",
+                                    "orange" if count else "grey",
+                                    f"{label} ({count})", callback,
+                                    font_preset="tiny")
+                    button.apply_state(enabled=bool(count))
+                    button.help_text = (
+                        f"{label} every eligible selected unit, replacing its current order.")
+                    self.elements.append(button)
+                    batch_x = button.rect.right + TOP_BTN_GAP_X
 
         for display_index, (row_key, unit, province, index) in enumerate(rows):
             row_y = self.panel_top + (display_index * self.row_height) + self.scroll_y
@@ -845,22 +987,7 @@ class Orders_Screen(GameState):
         unit = units[index]
         if self._command_blocked(unit):
             return
-        u_type = unit.get("original_type", unit.get("type", ""))
-        stats = self.unit_library.get(u_type, {})
-
-        if queries.get_scenario_flag("free_repairs", c.DEFAULT_FREE_REPAIRS, self.map_screen.scenario_settings):
-            costs = {"cost_materials": 0, "cost_manpower": 0, "cost_fuel": 0}
-        else:
-            hp = unit.get("health", 0)
-            m_hp = unit.get("max_health", 1)
-
-            missing_pct = (m_hp - hp) / max(1, m_hp)
-
-            cost_mat = int(stats.get("cost_materials", 0) * missing_pct)
-            cost_man = int(stats.get("cost_manpower", 0) * missing_pct)
-            cost_fuel = int(stats.get("cost_fuel", 0) * missing_pct)
-
-            costs = {"cost_materials": cost_mat, "cost_manpower": cost_man, "cost_fuel": cost_fuel}
+        costs = self._repair_costs(unit)
 
         is_tactical = self.map_screen.tactical_mode and unit is self.map_screen.player_unit
         if is_tactical:
@@ -1030,16 +1157,8 @@ class Orders_Screen(GameState):
         if 0 <= index < len(units):
             if self._command_blocked(units[index]):
                 return
-            order = units[index].get("order", {})
             if "order" in units[index]:
-                if isinstance(order, dict) and "refund" in order:
-                    unit = units[index]
-                    is_tactical = self.map_screen.tactical_mode and unit is self.map_screen.player_unit
-                    if is_tactical:
-                        p_data = self.map_screen.unit_economy
-                    else:
-                        p_data = self.map_screen.nation_data[self.map_screen.player_country]
-                    queries.refund_resources(p_data, order["refund"])
+                self._refund_unit_order(units[index])
                 del units[index]["order"]
                 self._mark_draft_changed()
                 self.map_screen.show_feedback("Order Cancelled")
@@ -1061,14 +1180,7 @@ class Orders_Screen(GameState):
         for unit in units:
             if unit.get("owner") == self.map_screen.player_country and not self._command_blocked_silent(unit):
                 if "order" in unit:
-                    order = unit["order"]
-                    if isinstance(order, dict) and "refund" in order:
-                        is_tactical = self.map_screen.tactical_mode and unit is self.map_screen.player_unit
-                        if is_tactical:
-                            p_data = self.map_screen.unit_economy
-                        else:
-                            p_data = self.map_screen.nation_data[self.map_screen.player_country]
-                        queries.refund_resources(p_data, order["refund"])
+                    self._refund_unit_order(unit)
                     del unit["order"]
                     cleared_any = True
 
