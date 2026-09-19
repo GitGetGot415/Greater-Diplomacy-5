@@ -21,6 +21,7 @@ CARD_IMAGE_CENTER_Y = CARD_TOP_Y + 90
 CARD_ACTION_START_Y = CARD_TOP_Y + 145
 CARD_ACTION_GAP_Y = 60
 WARNING_TOP_Y = CARD_TOP_Y + CARD_HEIGHT + 22
+MOUSE_SETTINGS_RESET_Y = c.SCREEN_HEIGHT - 70
 MOUSE_IMAGE_DIR = os.path.join(c.ASSETS_ROOT_DIR, "mouse")
 MOUSE_ACTION_BUTTON_SIZE = (250, 32)
 MOUSE_PAN_BUTTON_SIZE = (160, 32)
@@ -79,6 +80,13 @@ class Mouse_Settings(GameState):
         queries.save_global_settings(self.controller)
         self.refresh_ui()
 
+    def reset_defaults(self):
+        """Restore the tutorial's original left/middle/right mouse layout."""
+        self.controller.mouse_button_actions = c.default_mouse_button_actions()
+        c.apply_runtime_settings({"mouse_button_actions": self.controller.mouse_button_actions})
+        queries.save_global_settings(self.controller)
+        self.refresh_ui()
+
     def refresh_ui(self):
         actions = c.normalize_mouse_button_actions(self.controller.mouse_button_actions)
         # A save loaded from an older build receives its new defaults before
@@ -114,6 +122,11 @@ class Mouse_Settings(GameState):
                         font_preset="tiny")
                     exclude.disabled = not enabled
                     self.elements.append(exclude)
+        self.elements.append(
+            Button(c.SCREEN_WIDTH // 2 - c.SIZES["medium"][0] // 2,
+                   MOUSE_SETTINGS_RESET_Y, "medium", "red", "Reset Defaults",
+                   self.reset_defaults)
+        )
 
     def additional_draw(self, surface):
         title_font = fonts.get("heading2")

@@ -85,7 +85,21 @@ class MouseSettingsTests(unittest.TestCase):
         self.assertTrue(controller.mouse_button_actions["middle"]["issue_orders"])
         self.assertTrue(c.MOUSE_BUTTON_ACTIONS["middle"]["issue_orders"])
         save.assert_called_once_with(controller)
-        self.assertEqual(len(screen.elements), 16)  # Back, four rows, and one exclude square per mouse button.
+        self.assertEqual(len(screen.elements), 17)  # Back, four rows, an exclude square per mouse button, and reset.
+
+    def test_reset_defaults_restores_and_persists_the_tutorial_layout(self):
+        actions = c.default_mouse_button_actions()
+        actions["left"]["pan_map"] = True
+        actions["middle"]["issue_orders"] = True
+        controller = type("Controller", (), {"mouse_button_actions": actions})()
+        screen = Mouse_Settings(controller)
+
+        with mock.patch("screens.menu_screens.mouse_settings.queries.save_global_settings") as save:
+            screen.reset_defaults()
+
+        self.assertEqual(controller.mouse_button_actions, c.default_mouse_button_actions())
+        self.assertEqual(c.MOUSE_BUTTON_ACTIONS, c.default_mouse_button_actions())
+        save.assert_called_once_with(controller)
 
     def test_runtime_lookup_uses_the_custom_assignment(self):
         actions = c.default_mouse_button_actions()
