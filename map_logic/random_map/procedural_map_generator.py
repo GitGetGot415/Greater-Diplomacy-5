@@ -3,6 +3,8 @@ import random
 import numpy as np
 import data.constants as c
 
+# vectorized loops make generating maps faster!
+
 def generate_new_world(map_screen):
     """Generates the geometric map surfaces and data structures from scratch."""
     
@@ -84,6 +86,29 @@ def _generate_tectonic(map_screen, width, height, num_provinces):
         
     _process_grid_to_map(map_screen, grid, width, height, num_provinces)
 
+def _summarize_grid_provinces(grid, num_provinces):
+    """Collect province pixel counts, centers, and edge contact in one grid pass."""
+    ys, xs = np.nonzero(grid)
+    pixel_ids = grid[ys, xs]
+    min_size = num_provinces + 1
+
+    pixel_counts = np.bincount(pixel_ids, minlength=min_size)
+    x_totals = np.bincount(pixel_ids, weights=xs, minlength=min_size)
+    y_totals = np.bincount(pixel_ids, weights=ys, minlength=min_size)
+
+    centers = np.zeros((min_size, 2), dtype=np.int64)
+    occupied = pixel_counts[:min_size] > 0
+    centers[occupied, 0] = (
+        x_totals[:min_size][occupied] / pixel_counts[:min_size][occupied]
+    ).astype(np.int64)
+    centers[occupied, 1] = (
+        y_totals[:min_size][occupied] / pixel_counts[:min_size][occupied]
+    ).astype(np.int64)
+
+    edge_ids = np.concatenate((grid[0, :], grid[-1, :], grid[:, 0], grid[:, -1]))
+    touches_edge = np.bincount(edge_ids, minlength=min_size) > 0
+    return pixel_counts[:min_size], centers, touches_edge[:min_size]
+
 def _process_grid_to_map(map_screen, grid, width, height, num_provinces):
     """Takes a generated ID map and securely converts it to Pygame surfarrays & game dictionaries."""
     colors = {}
@@ -112,7 +137,11 @@ def _process_grid_to_map(map_screen, grid, width, height, num_provinces):
     border_mask = (grid != shift_r) | (grid != shift_d)
     grid[border_mask] = 0
                 
-    # 2. Extract base province properties
+    # 2. Extract base province properties. Aggregating labels once avoids
+    # rescanning the full pixel grid separately for every province.
+    pixel_counts, province_centers, touches_edge = _summarize_grid_provinces(
+        grid, num_provinces)
+
     for i in range(1, num_provinces + 1):
         # Prevent completely black colors matching Ocean
         r = max(1, (i & 0x0000FF))
@@ -120,10 +149,9 @@ def _process_grid_to_map(map_screen, grid, width, height, num_provinces):
         b = (i & 0xFF0000) >> 16
         colors[i] = (r, g, b)
         
-        ys, xs = np.where(grid == i)
-        if len(ys) > 0:
-            centers[i] = (int(np.mean(xs)), int(np.mean(ys)))
-            if np.any(xs == 0) or np.any(xs == width - 1) or np.any(ys == 0) or np.any(ys == height - 1):
+        if pixel_counts[i] > 0:
+            centers[i] = tuple(int(value) for value in province_centers[i])
+            if touches_edge[i]:
                 terrains[i] = "ocean"
                 ocean_ids.add(i)
             else:

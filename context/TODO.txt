@@ -2,8 +2,6 @@
 
 maybe if a country has cores on another country, they're not going to join their faction...
 
-would it be possible to use vectorized loops anywhere in this project in order to speed up the project?
-
 fuel deficit should do something
 
 ## Random thoughts with no real goal
