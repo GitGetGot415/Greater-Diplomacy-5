@@ -40,6 +40,7 @@ bring back right click to move across the map but only when not giving orders
 - could you make it so you can upgrade repair disband multiple units at a time
 - ability to change map controls so the mouse can be set to other mouse controls, other keys, or switch what each one of the 3 buttons does
 - arrow keys to move
+- trade deals show the ID of a country, not their actual name (they should show their name)
 
 ### Kaiserin
 
@@ -56,6 +57,7 @@ bring back right click to move across the map but only when not giving orders
 
 ### Exodus
 
+- QUEUE UNITS ACROSS OCEANS
 - Add statistics.
 - Under “claims on you,” show only countries that still exist
 - Add devastation

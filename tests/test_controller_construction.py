@@ -114,6 +114,24 @@ class ControllerConstructionTests(unittest.TestCase):
                               is_scenario=True, force_editor=True)
         self.assertFalse(editor_map.show_navigation_intro_when_ready)
 
+    def test_editor_paint_selection_never_uses_the_unassigned_player_sentinel(self):
+        """The loader must preserve editor mode and its UI must not expose
+        player diplomacy when a paint stroke selects an ordinary province."""
+        from screens.menu_screens.map import update_button_states
+        import main
+
+        editor_map = main.Map(load_path=app_harness.SCENARIO_PATH,
+                              is_scenario=True, force_editor=True)
+        editor_map.selected_province = next(
+            province for province in editor_map.map_data.values()
+            if province.get("owner") in editor_map.nation_data)
+
+        self.assertEqual(editor_map.player_country, "Editor")
+        update_button_states(editor_map)
+
+        self.assertTrue(editor_map.btn_ed_nation.visible)
+        self.assertFalse(editor_map.btn_declare_war.visible)
+
     def test_map_help_button_reopens_the_navigation_tutorial(self):
         game_map = app_harness.boot_map()
         with mock.patch("ui.confirm_dialog.show_navigation_intro") as show_tutorial:

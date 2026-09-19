@@ -742,6 +742,14 @@ def update_button_states(map_screen):
                           ("UNIT", map_screen.btn_ed_unit)):
             btn.is_selected = (map_screen.editor_mode == mode)
 
+        # A painted province may be selected, but the editor is not a player
+        # nation.  Do not let that selection fall through into the gameplay
+        # diplomacy controls, which require a nation_data player record.
+        map_screen.btn_exit_to_menu.visible = True
+        map_screen.btn_close_info.visible = is_sel
+        map_screen.btn_realtime_details.visible = False
+        return
+
     else:
         viewing_ai = map_screen.viewing_ai_moves
         is_thinking = map_screen.ai_is_thinking or map_screen.is_refreshing or map_screen.is_saving

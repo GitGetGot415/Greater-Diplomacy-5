@@ -428,6 +428,16 @@ def load_map_assets(map_screen, load_path):
         map_screen.script_variables = []
         map_screen.time_manager = TimeHandler(start_year=c.START_YEAR)
 
+    # Loading a scenario supplies its saved/default player metadata, which is
+    # deliberately ``None`` for an unstarted map.  The editor is not an
+    # unstarted player session, though: it owns no nation and must retain its
+    # distinct sentinel after both its initial load and a later Load action.
+    if map_screen.is_editor:
+        map_screen.player_country = "Editor"
+        map_screen.active_players = []
+        map_screen.current_player_index = 0
+        map_screen.selection_mode = False
+
     # --- HISTORICAL LEADERS TIMELINE ---
     # Only scenarios launched straight out of scenarios/historical get the
     # Historical Leaders Editor's dated overrides -- alternate/custom/random
