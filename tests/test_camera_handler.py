@@ -121,6 +121,22 @@ class MapCameraBoundsTests(unittest.TestCase):
         self.assertEqual(camera.target_pos.y,
                          c.CAMERA_KEYBOARD_PAN_PIXELS / (camera.zoom * camera.tilt_factor))
 
+    def test_rebound_pan_key_moves_in_its_configured_direction(self):
+        camera = MapCamera(min_zoom=2)
+        camera.zoom = camera.target_zoom = 2
+        self_map = _map(loop_map=False)
+
+        def keybind(action, default):
+            return pygame.K_a if action == "PAN_LEFT" else default
+
+        with patch("map_logic.camera.camera_handler.queries.get_keybind",
+                   side_effect=keybind):
+            camera.handle_input(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_a),
+                                self_map, False)
+
+        self.assertEqual(camera.target_pos.x,
+                         -c.CAMERA_KEYBOARD_PAN_PIXELS / camera.zoom)
+
     def test_held_arrow_key_pans_continuously_without_key_repeat_delay(self):
         camera = MapCamera(min_zoom=2)
         camera.zoom = camera.target_zoom = 2

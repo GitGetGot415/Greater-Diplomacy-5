@@ -1,5 +1,14 @@
 import pygame
 import data.constants as c
+from data import queries
+
+
+PAN_KEYBIND_DEFAULTS = {
+    "left": ("PAN_LEFT", pygame.K_LEFT),
+    "right": ("PAN_RIGHT", pygame.K_RIGHT),
+    "up": ("PAN_UP", pygame.K_UP),
+    "down": ("PAN_DOWN", pygame.K_DOWN),
+}
 
 class MapCamera:
     def __init__(self, min_zoom):
@@ -27,7 +36,7 @@ class MapCamera:
         self._pan_drag_last_pos = None
         self._pan_drag_moved = False
         self._finished_pan_drags = {}
-        self._last_arrow_pan_tick = None
+        self._last_keyboard_pan_tick = None
         # currently set to instant, but can be adjusted for smoother transitions
 
     def cancel_middle_drag(self):
@@ -80,8 +89,14 @@ class MapCamera:
         self.target_pos.x += (right - left) * step_x
         self.target_pos.y += (down - up) * step_y
 
-    def _pan_held_arrow_keys(self):
-        """Continue navigation while an arrow key is held.
+    @staticmethod
+    def _configured_pan_keys():
+        """Resolve all four persisted map-pan bindings at one input boundary."""
+        return {direction: queries.get_keybind(action, default)
+                for direction, (action, default) in PAN_KEYBIND_DEFAULTS.items()}
+
+    def _pan_held_navigation_keys(self):
+        """Continue navigation while a configured map-pan key is held.
 
         Pygame's global key-repeat delay is appropriate for text fields but
         makes camera panning pause after the first press.  Polling here keeps
@@ -90,37 +105,38 @@ class MapCamera:
         if pygame.display.get_surface() is None:
             # Lightweight tests and headless map tools can update a camera
             # without a display or keyboard device.
-            self._last_arrow_pan_tick = None
+            self._last_keyboard_pan_tick = None
             return
         pressed = pygame.key.get_pressed()
-        left = bool(pressed[pygame.K_LEFT])
-        right = bool(pressed[pygame.K_RIGHT])
-        up = bool(pressed[pygame.K_UP])
-        down = bool(pressed[pygame.K_DOWN])
+        keys = self._configured_pan_keys()
+        left = bool(pressed[keys["left"]])
+        right = bool(pressed[keys["right"]])
+        up = bool(pressed[keys["up"]])
+        down = bool(pressed[keys["down"]])
         if not (left or right or up or down):
-            self._last_arrow_pan_tick = None
+            self._last_keyboard_pan_tick = None
             return
         now = pygame.time.get_ticks()
-        if self._last_arrow_pan_tick is None:
-            self._last_arrow_pan_tick = now
+        if self._last_keyboard_pan_tick is None:
+            self._last_keyboard_pan_tick = now
             return
-        elapsed_seconds = min(0.1, max(0, now - self._last_arrow_pan_tick) / 1000)
-        self._last_arrow_pan_tick = now
+        elapsed_seconds = min(0.1, max(0, now - self._last_keyboard_pan_tick) / 1000)
+        self._last_keyboard_pan_tick = now
         self._pan_with_arrow_keys(
             left, right, up, down,
             c.CAMERA_KEYBOARD_PAN_PIXELS_PER_SECOND * elapsed_seconds)
 
     def handle_input(self, event, self_map, on_ui, allow_right_drag=False,
                      pan_buttons=None):
-        if event.type == pygame.KEYDOWN and event.key in (
-                pygame.K_LEFT, pygame.K_RIGHT, pygame.K_UP, pygame.K_DOWN):
+        pan_keys = self._configured_pan_keys()
+        if event.type == pygame.KEYDOWN and event.key in pan_keys.values():
             # Move once immediately; update() continues while the key remains
             # down, rather than waiting for the application's text-key delay.
             self._pan_with_arrow_keys(
-                event.key == pygame.K_LEFT, event.key == pygame.K_RIGHT,
-                event.key == pygame.K_UP, event.key == pygame.K_DOWN,
+                event.key == pan_keys["left"], event.key == pan_keys["right"],
+                event.key == pan_keys["up"], event.key == pan_keys["down"],
                 c.CAMERA_KEYBOARD_PAN_PIXELS)
-            self._last_arrow_pan_tick = pygame.time.get_ticks()
+            self._last_keyboard_pan_tick = pygame.time.get_ticks()
             return
 
         if event.type == pygame.MOUSEWHEEL:
@@ -196,7 +212,7 @@ class MapCamera:
     def update(self, self_map, SCREEN_HEIGHT):
         # 0. Apply Manual Tilt Factor
         self.tilt_factor = self.manual_tilt_factor
-        self._pan_held_arrow_keys()
+        self._pan_held_navigation_keys()
 
         # 1. Smooth Zoom
         if abs(self.zoom - self.target_zoom) > 0.001:

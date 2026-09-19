@@ -47,7 +47,7 @@ def _import_project_modules():
     """
     global IS_WEB, restore_persisted_dir, platform, pygame
     global Messages_Screen, dispatch_global_keys, fonts, ui_elements, c, queries
-    global Load_Game, Map, Menu, New_Game, Settings, Credits, Music_Player, View_Assets, Mods, Unit_Art, Keybinds, Mouse_Settings
+    global Load_Game, Map, Menu, New_Game, Settings, Credits, Music_Player, View_Assets, Mods, Unit_Art, Keybinds, Mouse_Settings, default_keybinds
     global Translate, Translation_Menu, Greater_Diplomacy_4_Translation, Greater_Diplomacy_Hex_Translation
     global Orders_Screen, keybind_io, settings_schema, symbol_loader, modal_stack
     global Research_Screen, Economy_Screen, Edit_Country_Screen, Production_Screen
@@ -108,7 +108,7 @@ def _import_project_modules():
     from screens.menu_screens.view_assets import View_Assets
     from screens.menu_screens.mods import Mods
     from screens.menu_screens.unit_art import Unit_Art
-    from screens.menu_screens.keybinds import Keybinds
+    from screens.menu_screens.keybinds import Keybinds, default_keybinds
     from screens.menu_screens.mouse_settings import Mouse_Settings
     from screens.map_related_screens.orders import Orders_Screen
     from data.io import keybind_io, settings_schema
@@ -273,13 +273,7 @@ class Controller:
         }
 
         # 1. Define Hardcoded Defaults
-        default_keys = {
-            "BACK": pygame.K_ESCAPE,
-            "ORDERS": pygame.K_q,
-            "FULLSCREEN": pygame.K_F11,
-            "ECONOMY": pygame.K_w,
-            "CLEAR_ORDERS": pygame.K_DELETE,
-        }
+        default_keys = default_keybinds()
 
         # 2. Load settings (Safely handle old saves that might not have pitch/speed)
         loaded_data = keybind_io.load_settings(default_keys, c.DEFAULT_SFX_VOLUME, c.DEFAULT_MUSIC_VOLUME)

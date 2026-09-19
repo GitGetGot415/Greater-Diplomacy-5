@@ -393,9 +393,8 @@ class Settings(GameState):
             self.set_ai_mode("OFF")
 
     def reset_defaults(self):
-        default_keys = {"BACK": pygame.K_ESCAPE, "ORDERS": pygame.K_q, "FULLSCREEN": pygame.K_F11,
-                        "ECONOMY": pygame.K_w, "CLEAR_ORDERS": pygame.K_DELETE}
-        self.controller.keybinds = default_keys
+        from screens.menu_screens.keybinds import default_keybinds
+        self.controller.keybinds = default_keybinds()
         self.controller.target_fps = c.TARGET_FPS
 
         self.controller.ai_threads = c.DEFAULT_AI_THREADS

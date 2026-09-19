@@ -6,8 +6,6 @@ would it be possible to use vectorized loops anywhere in this project in order t
 
 fuel deficit should do something
 
-bring back right click to move across the map but only when not giving orders
-
 ## Random thoughts with no real goal
 
 - Is saving during tournament move entry allowed?

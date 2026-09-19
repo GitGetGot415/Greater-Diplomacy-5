@@ -4,12 +4,15 @@ from ui_elements import Button, make_back_button, make_info_button
 import data.constants as c
 from data import queries
 from ui import confirm_dialog
+from map_logic.rendering.font_manager import fonts
 
 # --- Keybinds screen layout ---
 KEYBINDS_ROW_X = c.SCREEN_WIDTH // 2 - 100
+KEYBINDS_NAVIGATION_COLUMN_X = KEYBINDS_ROW_X - c.SIZES["medium"][0] - 60
 KEYBINDS_ROW_START_Y = 150
 KEYBINDS_ROW_GAP_Y = 70
 KEYBINDS_RESET_GAP_Y = 30
+KEYBINDS_COLUMN_HEADING_Y = KEYBINDS_ROW_START_Y - 35
 # The "change screen with this keybind" toggle sits directly right of the
 # keybind button, on the same row -- the keybind button itself stays exactly
 # where it already was. The info button sits right of that toggle in turn.
@@ -36,6 +39,22 @@ KEYBIND_ACTIONS = (
     ("ECONOMY", "Production", pygame.K_w),
     ("CLEAR_ORDERS", "Clear Orders", pygame.K_DELETE),
 )
+
+# Map-camera bindings get their own left column: they are all related and
+# keeping them beside each other makes a remapped directional layout legible.
+MAP_PANNING_KEYBIND_ACTIONS = (
+    ("PAN_LEFT", "Pan Left", pygame.K_LEFT),
+    ("PAN_RIGHT", "Pan Right", pygame.K_RIGHT),
+    ("PAN_UP", "Pan Up", pygame.K_UP),
+    ("PAN_DOWN", "Pan Down", pygame.K_DOWN),
+)
+
+ALL_KEYBIND_ACTIONS = MAP_PANNING_KEYBIND_ACTIONS + KEYBIND_ACTIONS
+
+
+def default_keybinds():
+    """The one default map used by startup and either reset control."""
+    return {action: default for action, _label, default in ALL_KEYBIND_ACTIONS}
 
 #: Actions that carry the "change screen with this keybind" toggle -- the two
 #: that also switch the map's view mode, and so have a screen the keybind
@@ -64,16 +83,12 @@ class Keybinds(GameState):
     def refresh_ui(self):
         self.elements = [make_back_button(self.exit_screen)]
 
+        self._add_binding_column(MAP_PANNING_KEYBIND_ACTIONS,
+                                 KEYBINDS_NAVIGATION_COLUMN_X)
+
         y = KEYBINDS_ROW_START_Y
         for action, label, default_key in KEYBIND_ACTIONS:
-            if self.listening_for == action:
-                text = "Press any key..."
-            else:
-                key_name = pygame.key.name(self.controller.keybinds.get(action, default_key)).upper()
-                text = f"{label} Key: {key_name}"
-            self.elements.append(
-                Button(KEYBINDS_ROW_X, y, "medium", "grey", text, lambda a=action: self.start_listening(a))
-            )
+            self._add_binding_button(action, label, default_key, KEYBINDS_ROW_X, y)
 
             if action in SCREEN_TOGGLE_ACTIONS:
                 on = getattr(self.controller, self.screen_toggle_attr(action))
@@ -96,6 +111,25 @@ class Keybinds(GameState):
             Button(KEYBINDS_ROW_X, y + KEYBINDS_RESET_GAP_Y, "medium", "red", "Reset Keybinds", self.reset_defaults)
         )
 
+    def _add_binding_column(self, actions, x):
+        """Build one vertical keybind column from the canonical action list."""
+        y = KEYBINDS_ROW_START_Y
+        for action, label, default_key in actions:
+            self._add_binding_button(action, label, default_key, x, y)
+            y += KEYBINDS_ROW_GAP_Y
+
+    def _add_binding_button(self, action, label, default_key, x, y):
+        """Build a button that either shows or captures one binding."""
+        if self.listening_for == action:
+            text = "Press any key..."
+        else:
+            key_name = pygame.key.name(self.controller.keybinds.get(action, default_key)).upper()
+            text = f"{label} Key: {key_name}"
+        self.elements.append(
+            Button(x, y, "medium", "grey", text,
+                   lambda a=action: self.start_listening(a))
+        )
+
     def screen_toggle_attr(self, action):
         """Controller attribute backing `action`'s "change screen with this
         keybind" toggle -- see data.io.settings_schema."""
@@ -108,7 +142,7 @@ class Keybinds(GameState):
         self.refresh_ui()
 
     def reset_defaults(self):
-        self.controller.keybinds = {action: default for action, _label, default in KEYBIND_ACTIONS}
+        self.controller.keybinds = default_keybinds()
         for action in SCREEN_TOGGLE_ACTIONS:
             setattr(self.controller, self.screen_toggle_attr(action), True)
         queries.save_global_settings(self.controller)
@@ -125,3 +159,12 @@ class Keybinds(GameState):
         # Ignore Escape while a key is being rebound; it belongs to the capture.
         if not self.listening_for:
             self.exit_screen()
+
+    def additional_draw(self, surface):
+        """Label the two keybind columns without making either a button."""
+        font = fonts.get("small")
+        for x, heading in ((KEYBINDS_NAVIGATION_COLUMN_X, "Map Panning"),
+                           (KEYBINDS_ROW_X, "Other Keybinds")):
+            label = font.render(heading, True, c.UI_TEXT_DIM)
+            surface.blit(label, label.get_rect(
+                center=(x + c.SIZES["medium"][0] // 2, KEYBINDS_COLUMN_HEADING_Y)))

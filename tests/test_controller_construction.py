@@ -97,11 +97,18 @@ class ControllerConstructionTests(unittest.TestCase):
             controller.states["MUSIC_PLAYER"].back_state = original_music_back
 
     def test_clear_orders_keybind_is_available_by_default(self):
-        from screens.menu_screens.keybinds import KEYBIND_ACTIONS
+        from screens.menu_screens.keybinds import KEYBIND_ACTIONS, MAP_PANNING_KEYBIND_ACTIONS, default_keybinds
 
         defaults = {action: default for action, _label, default in KEYBIND_ACTIONS}
         self.assertEqual(defaults["CLEAR_ORDERS"], pygame.K_DELETE)
         self.assertIn("CLEAR_ORDERS", self.controller.keybinds)
+        self.assertEqual(default_keybinds()["PAN_LEFT"], pygame.K_LEFT)
+        self.assertEqual(default_keybinds()["PAN_RIGHT"], pygame.K_RIGHT)
+        self.assertEqual(default_keybinds()["PAN_UP"], pygame.K_UP)
+        self.assertEqual(default_keybinds()["PAN_DOWN"], pygame.K_DOWN)
+        self.assertEqual(len(MAP_PANNING_KEYBIND_ACTIONS), 4)
+        self.assertTrue(all(action in self.controller.keybinds
+                            for action, _label, _default in MAP_PANNING_KEYBIND_ACTIONS))
 
     def test_loaded_playable_maps_arm_the_navigation_tutorial(self):
         """The map constructor is shared by new, save, and multiplayer loads,
