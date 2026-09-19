@@ -2220,21 +2220,20 @@ MOUSE_CONTROL_ACTIONS = (
     ("select_units", "Select unit stacks", "Click a visible stack to select it."),
     ("box_select_units", "Box-select unit stacks", "Hold and drag to select multiple stacks."),
     ("pan_map", "Pan the map", "Hold and drag to pan in every map workspace."),
-    ("pan_map_outside_orders", "Pan outside Orders", "Hold and drag to pan on the main map only."),
     ("issue_orders", "Give move orders", "Click a destination for selected units."),
 )
 DEFAULT_MOUSE_BUTTON_ACTIONS = {
     "left": {
         "select_units": True, "box_select_units": True,
-        "pan_map": False, "pan_map_outside_orders": False, "issue_orders": False,
+        "pan_map": False, "exclude_orders": False, "issue_orders": False,
     },
     "middle": {
         "select_units": False, "box_select_units": False,
-        "pan_map": True, "pan_map_outside_orders": False, "issue_orders": False,
+        "pan_map": True, "exclude_orders": False, "issue_orders": False,
     },
     "right": {
         "select_units": False, "box_select_units": False,
-        "pan_map": False, "pan_map_outside_orders": True, "issue_orders": True,
+        "pan_map": True, "exclude_orders": True, "issue_orders": True,
     },
 }
 
@@ -2250,7 +2249,8 @@ def normalize_mouse_button_actions(value):
     normalized = default_mouse_button_actions()
     if not isinstance(value, dict):
         return normalized
-    valid_actions = {action for action, _label, _help in MOUSE_CONTROL_ACTIONS}
+    valid_actions = ({action for action, _label, _help in MOUSE_CONTROL_ACTIONS}
+                     | {"exclude_orders"})
     for _number, button, _label in MOUSE_BUTTONS:
         saved_actions = value.get(button)
         if not isinstance(saved_actions, dict):
@@ -2258,6 +2258,17 @@ def normalize_mouse_button_actions(value):
         for action in valid_actions:
             if action in saved_actions and isinstance(saved_actions[action], bool):
                 normalized[button][action] = saved_actions[action]
+        # ``pan_map_outside_orders`` was the first shipped representation of
+        # this setting. Its enabled value maps exactly to Pan + Exclude Orders.
+        # An explicit new-format checkbox takes precedence if both are present.
+        legacy_outside_orders = saved_actions.get("pan_map_outside_orders")
+        if (isinstance(legacy_outside_orders, bool)
+                and "exclude_orders" not in saved_actions):
+            normalized[button]["exclude_orders"] = legacy_outside_orders
+            if legacy_outside_orders:
+                normalized[button]["pan_map"] = True
+        if not normalized[button]["pan_map"]:
+            normalized[button]["exclude_orders"] = False
     return normalized
 
 

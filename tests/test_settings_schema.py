@@ -99,11 +99,14 @@ class RoundTripTests(unittest.TestCase):
             "mouse_button_actions": {
                 "left": {"box_select_units": False, "unknown": True},
                 "middle": "not an action mapping",
+                "right": {"pan_map_outside_orders": True},
             }})
         actions = values["mouse_button_actions"]
         self.assertFalse(actions["left"]["box_select_units"])
         self.assertTrue(actions["left"]["select_units"])
         self.assertTrue(actions["middle"]["pan_map"])
+        self.assertTrue(actions["right"]["pan_map"])
+        self.assertTrue(actions["right"]["exclude_orders"])
 
     def test_legacy_key_names_are_still_read(self):
         """Settings files in the wild still use these older names."""

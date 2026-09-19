@@ -15,13 +15,16 @@ from ui_elements import Button, make_back_button
 CARD_MARGIN_X = 32
 CARD_GAP_X = 18
 CARD_TOP_Y = 88
-CARD_HEIGHT = 450
+CARD_HEIGHT = 390
 CARD_HEADER_Y = CARD_TOP_Y + 18
 CARD_IMAGE_CENTER_Y = CARD_TOP_Y + 108
 CARD_ACTION_START_Y = CARD_TOP_Y + 145
 CARD_ACTION_GAP_Y = 58
 WARNING_TOP_Y = CARD_TOP_Y + CARD_HEIGHT + 22
 MOUSE_IMAGE_DIR = os.path.join(c.ASSETS_ROOT_DIR, "mouse")
+PAN_ACTION = "pan_map"
+EXCLUDE_ORDERS_ACTION = "exclude_orders"
+EXCLUDE_ORDERS_LABEL = "Exclude Orders"
 
 
 def mouse_control_warnings(actions):
@@ -29,14 +32,13 @@ def mouse_control_warnings(actions):
     warnings = []
     for _number, button, label in c.MOUSE_BUTTONS:
         assigned = actions[button]
-        if assigned["box_select_units"] and (
-                assigned["pan_map"] or assigned["pan_map_outside_orders"]):
+        if assigned["box_select_units"] and assigned[PAN_ACTION]:
             warnings.append(
                 f"{label} mouse: box-selecting also pans the map, which can make selection difficult.")
-        # ``pan_map_outside_orders`` cannot overlap an order click because the
-        # two actions deliberately apply in different workspaces. Full map pan
-        # can, so only that combination warrants a warning.
-        if assigned["issue_orders"] and assigned["pan_map"]:
+        # Excluding Orders makes the two gestures context-exclusive; full map
+        # pan can overlap a move click, so only that combination warrants a warning.
+        if (assigned["issue_orders"] and assigned[PAN_ACTION]
+                and not assigned[EXCLUDE_ORDERS_ACTION]):
             warnings.append(
                 f"{label} mouse: giving move orders also pans the map, which can make orders difficult.")
     return warnings
@@ -64,6 +66,8 @@ class Mouse_Settings(GameState):
     def toggle_action(self, button, action):
         actions = c.normalize_mouse_button_actions(self.controller.mouse_button_actions)
         actions[button][action] = not actions[button][action]
+        if action == PAN_ACTION and not actions[button][action]:
+            actions[button][EXCLUDE_ORDERS_ACTION] = False
         self.controller.mouse_button_actions = actions
         c.apply_runtime_settings({"mouse_button_actions": actions})
         queries.save_global_settings(self.controller)
@@ -79,13 +83,28 @@ class Mouse_Settings(GameState):
             card = self._card_rect(index)
             for row, (action, label, _help) in enumerate(c.MOUSE_CONTROL_ACTIONS):
                 enabled = actions[button][action]
+                pan_label = "Pan outside Orders" if (
+                    action == PAN_ACTION and actions[button][EXCLUDE_ORDERS_ACTION]) else label
+                option_x = (card.x + 18 if action == PAN_ACTION
+                            else card.centerx - c.SIZES["setting_option"][0] // 2)
+                option_size = "medium" if action == PAN_ACTION else "setting_option"
                 self.elements.append(
-                    Button(card.centerx - c.SIZES["setting_option"][0] // 2,
+                    Button(option_x,
                            CARD_ACTION_START_Y + row * CARD_ACTION_GAP_Y,
-                           "setting_option", "green" if enabled else "red",
-                           f"{label}: {'ON' if enabled else 'OFF'}",
+                           option_size, "green" if enabled else "red",
+                           f"{pan_label}: {'ON' if enabled else 'OFF'}",
                            lambda b=button, a=action: self.toggle_action(b, a),
                            font_preset="tiny"))
+                if action == PAN_ACTION:
+                    exclude = Button(
+                        option_x + c.SIZES["medium"][0] + 5,
+                        CARD_ACTION_START_Y + row * CARD_ACTION_GAP_Y,
+                        "small_square", "green" if actions[button][EXCLUDE_ORDERS_ACTION] else "red",
+                        "X" if actions[button][EXCLUDE_ORDERS_ACTION] else "",
+                        lambda b=button: self.toggle_action(b, EXCLUDE_ORDERS_ACTION),
+                        font_preset="tiny")
+                    exclude.disabled = not enabled
+                    self.elements.append(exclude)
 
     def additional_draw(self, surface):
         title_font = fonts.get("heading2")
@@ -109,9 +128,18 @@ class Mouse_Settings(GameState):
 
             for row, (_action, _name, help_text) in enumerate(c.MOUSE_CONTROL_ACTIONS):
                 help_surface = body_font.render(help_text, True, (185, 195, 207))
+                button_height = (c.SIZES["medium"][1] if _action == PAN_ACTION
+                                 else c.SIZES["setting_option"][1])
                 y = (CARD_ACTION_START_Y + row * CARD_ACTION_GAP_Y
-                     + c.SIZES["setting_option"][1] + 2)
+                     + button_height + 2)
                 surface.blit(help_surface, help_surface.get_rect(center=(card.centerx, y)))
+                if _action == PAN_ACTION:
+                    exclude_color = ((185, 195, 207) if actions[button][PAN_ACTION]
+                                     else (105, 110, 120))
+                    exclude_label = body_font.render(EXCLUDE_ORDERS_LABEL, True, exclude_color)
+                    exclude_x = card.x + 18 + c.SIZES["medium"][0] + 50
+                    surface.blit(exclude_label, (exclude_x, CARD_ACTION_START_Y + row * CARD_ACTION_GAP_Y
+                                                 + (c.SIZES["small_square"][1] - exclude_label.get_height()) // 2))
 
         warnings = mouse_control_warnings(actions)
         if warnings:

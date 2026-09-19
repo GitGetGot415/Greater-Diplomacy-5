@@ -84,6 +84,14 @@ def mouse_buttons_with_actions(*actions):
                    for action in actions)}
 
 
+def mouse_buttons_for_map_panning(in_orders=False):
+    """Return pan buttons, optionally respecting their Exclude Orders toggle."""
+    return {number for number, button, _label in c.MOUSE_BUTTONS
+            if c.MOUSE_BUTTON_ACTIONS[button].get("pan_map", False)
+            and (not in_orders or not c.MOUSE_BUTTON_ACTIONS[button].get(
+                "exclude_orders", False))}
+
+
 def resolve_map_mouse_gesture_conflict(map_screen, event):
     """Cancel a map drag when the other map mouse button is pressed.
 
@@ -351,8 +359,7 @@ def handle_map_events(map_screen, event):
     # variant deliberately stops at Orders. A panned order click is consumed,
     # while a deliberate overlapping selection/pan setup is allowed to run
     # both gestures and is called out by Mouse Settings' warning.
-    pan_actions = ("pan_map", "pan_map_outside_orders")
-    pan_buttons = (mouse_buttons_with_actions(*pan_actions)
+    pan_buttons = (mouse_buttons_for_map_panning()
                    if not map_screen.is_editor else set())
     map_screen.camera.handle_input(event, map_screen, on_ui, pan_buttons=pan_buttons)
     if (event.type == pygame.MOUSEBUTTONUP

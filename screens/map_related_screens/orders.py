@@ -1337,10 +1337,9 @@ class Orders_Screen(GameState):
         event_pos = getattr(event, "pos", (mx, my))
         on_ui = panel_rect.collidepoint(event_pos)
 
-        # Unlike the main map, Orders honours only the all-workspaces pan
-        # action. "Pan outside Orders" remains intentionally unavailable here
-        # so a normal right-click can keep assigning a movement order.
-        pan_buttons = event_handler.mouse_buttons_with_actions("pan_map")
+        # Exclude Orders turns a map-pan binding into main-map-only panning,
+        # leaving that button free for the normal Orders move gesture.
+        pan_buttons = event_handler.mouse_buttons_for_map_panning(in_orders=True)
         # ``camera`` is optional only for lightweight Orders test doubles;
         # every playable map supplies it.
         camera = getattr(self.map_screen, "camera", None)

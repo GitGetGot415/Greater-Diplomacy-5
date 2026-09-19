@@ -25,7 +25,8 @@ class MouseSettingsTests(unittest.TestCase):
         self.assertTrue(actions["left"]["select_units"])
         self.assertTrue(actions["left"]["box_select_units"])
         self.assertTrue(actions["middle"]["pan_map"])
-        self.assertTrue(actions["right"]["pan_map_outside_orders"])
+        self.assertTrue(actions["right"]["pan_map"])
+        self.assertTrue(actions["right"]["exclude_orders"])
         self.assertTrue(actions["right"]["issue_orders"])
         self.assertEqual(mouse_control_warnings(actions), [])
 
@@ -36,6 +37,21 @@ class MouseSettingsTests(unittest.TestCase):
         self.assertEqual(len(warnings), 1)
         self.assertTrue(actions["left"]["box_select_units"])
         self.assertTrue(actions["left"]["pan_map"])
+
+    def test_exclude_orders_square_is_disabled_until_map_panning_is_enabled(self):
+        controller = type("Controller", (), {
+            "mouse_button_actions": c.default_mouse_button_actions(),
+        })()
+        screen = Mouse_Settings(controller)
+        left_exclude = next(element for element in screen.elements
+                            if element.text == "" and element.callback is not None)
+        self.assertTrue(left_exclude.disabled)
+
+        with mock.patch("screens.menu_screens.mouse_settings.queries.save_global_settings"):
+            screen.toggle_action("left", "pan_map")
+        left_exclude = next(element for element in screen.elements
+                            if element.text == "" and element.callback is not None)
+        self.assertFalse(left_exclude.disabled)
 
     def test_toggle_updates_controller_runtime_actions_and_persists(self):
         controller = type("Controller", (), {
@@ -48,7 +64,7 @@ class MouseSettingsTests(unittest.TestCase):
         self.assertTrue(controller.mouse_button_actions["middle"]["issue_orders"])
         self.assertTrue(c.MOUSE_BUTTON_ACTIONS["middle"]["issue_orders"])
         save.assert_called_once_with(controller)
-        self.assertEqual(len(screen.elements), 16)  # Back plus five actions per mouse button.
+        self.assertEqual(len(screen.elements), 16)  # Back, four rows, and one exclude square per mouse button.
 
     def test_runtime_lookup_uses_the_custom_assignment(self):
         actions = c.default_mouse_button_actions()
