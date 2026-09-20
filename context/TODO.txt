@@ -14,12 +14,7 @@ fuel deficit should do something
 ## Check first
 
 - Fast units can be given slow movement orders. For example, a unit that can be move 2 tiles at once only moves 1 tile because it was grouped up with another slower unit
-- Annexed countries leave their factions immediately. This should not happen if they're in a faction, since if another faction member takes their territory they should spawn back in on the map.
-- Spectator mode may skip scripted events when several turns are skipped
-- Some countries may reject requests they should accept
-- Custom country names may be wrong, especially for puppets
-- Refreshing country data may show countries that no longer exist
-- What are the refresh issues?
+- Refreshing country data in the map editormay show countries that no longer exist
 
 ## Audio related suggestions
 

@@ -155,7 +155,8 @@ class Puppets_Screen(MapOverlayScreen):
 
         master = self.map_screen.nation_data.get(self.player, {}).get("master", "")
         if master:
-            master_name = self.map_screen.nation_data.get(master, {}).get("name", master)
+            master_name = queries.get_country_display_name(
+                master, self.map_screen.nation_data)
             p_type = self.map_screen.nation_data.get(self.player, {}).get("puppet_type", c.PUPPET_TYPE_AUTONOMOUS)
             prefix = "an" if p_type.lower().startswith(('a', 'e', 'i', 'o', 'u')) else "a"
             master_txt = fonts.get("normal").render(f"You are {prefix} {p_type.lower()} puppet of: {master_name}", True, (255, 150, 150))
@@ -174,7 +175,8 @@ class Puppets_Screen(MapOverlayScreen):
                 y_pos = self.panel_rect.y + 100 + self.scroll_y
                 for p in puppets:
                     p_data = self.map_screen.nation_data.get(p, {})
-                    p_name = p_data.get("name", p)
+                    p_name = queries.get_country_display_name(
+                        p, self.map_screen.nation_data)
                     p_type = p_data.get("puppet_type", c.PUPPET_TYPE_AUTONOMOUS)
 
                     # Formatted Puppet Sub-text
@@ -360,14 +362,15 @@ class Create_Integrated_Puppet_Screen(MapOverlayScreen):
                                             draw_top=self.scroll_y != 0, draw_bottom=self.scroll_y > self.max_scroll):
                 y_off = self.panel_rect.y + 120 + self.scroll_y
                 for subject in self.valid_subjects:
-                    try:
-                        if subject in self.map_screen.nation_data:
-                            subject_name = self.map_screen.nation_data[subject].get("name", subject)
-                        else:
-                            from data.io import country_io
-                            subject_name = country_io.get_country_stats(subject).get("name", subject)
-                    except Exception:
-                        subject_name = subject
+                    subject_name = queries.get_country_display_name(
+                        subject, self.map_screen.nation_data)
+                    # A core can name a country that has not yet been created
+                    # on this scenario. Its authored library name is still
+                    # player-facing; only an unknown legacy ID falls through.
+                    if subject not in self.map_screen.nation_data:
+                        from data.io import country_io
+                        subject_name = country_io.get_country_stats(subject).get(
+                            "name", subject_name)
 
                     is_queued = subject in queued_cores
                     color = c.COLOR_GOLD_HIGHLIGHT if is_queued else (200, 200, 200)
