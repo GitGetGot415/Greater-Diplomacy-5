@@ -1438,24 +1438,35 @@ def unit_symbol_name(unit):
     return unit_type
 
 
-def compact_army_group_icon(army, best_unit, owner_color, owner, size):
-    """Return an army's strategic icon, falling back to its best unit's art.
+def compact_army_group_icon(army, best_unit, owner_color, owner, size, count):
+    """Return a compact unit-style box with its stack count and army emblem.
 
-    ``best_unit`` is chosen by the normal stack renderer first, so a blank
-    army emblem cannot disagree with the unit that would lead its expanded
-    stack.
+    The fallback area groups have no authored army emblem, so they retain the
+    best unit's ordinary symbol.  An actual army replaces that left-side symbol
+    with its emblem while keeping the same rectangular box and readable count.
     """
+    box_size = (round(size * c.UNIT_BOX_WIDTH / c.UNIT_BOX_HEIGHT), size)
+    icon = unit_box(unit_symbol_name(best_unit), owner_color, count, False,
+                    box_size, owner)
     emblem = army_emblem_surface(army, size)
-    if emblem:
-        return emblem
+    if not emblem:
+        return icon
 
-    symbol_name = unit_symbol_name(best_unit)
-    native_size = symbol_loader.get_native_size(symbol_name, country=owner)
-    if not native_size:
-        return None
-    zoom = (size * 2) / max(native_size)
-    return symbol_loader.get_symbol(symbol_name, zoom, color=owner_color,
-                                    country=owner)
+    icon = icon.copy()
+    # Unit boxes reserve their left half for the unit symbol and their right
+    # side for the number.  Clear that symbol area before placing the army's
+    # custom emblem so the two icons never overlap.
+    emblem_area = pygame.Rect(3, 3, max(1, icon.get_width() // 2 - 5),
+                              max(1, icon.get_height() - 6))
+    pygame.draw.rect(icon, c.UNIT_BOX_BG_COLOR, emblem_area)
+    if emblem.get_width() > emblem_area.width or emblem.get_height() > emblem_area.height:
+        scale = min(emblem_area.width / emblem.get_width(),
+                    emblem_area.height / emblem.get_height())
+        emblem = pygame.transform.smoothscale(
+            emblem, (max(1, round(emblem.get_width() * scale)),
+                     max(1, round(emblem.get_height() * scale))))
+    icon.blit(emblem, emblem.get_rect(center=emblem_area.center))
+    return icon
 
 
 def _army_average_center(records, map_screen):
@@ -1514,9 +1525,7 @@ def compact_army_groups(map_screen, combat_unit_ids):
             continue
         owner_color = map_screen.nation_colors.get(player_country, (200, 200, 200))
         icon = compact_army_group_icon(army, best_unit, owner_color,
-                                       player_country, icon_size)
-        if icon is None:
-            continue
+                                       player_country, icon_size, len(units))
         groups.append({"army": army, "units": units,
                        "province": records[0][1], "center": _army_average_center(records, map_screen),
                        "icon": icon})
@@ -1609,12 +1618,12 @@ def compact_area_unit_groups(map_screen, combat_unit_ids, organized_unit_object_
             if not best_unit:
                 continue
             owner_color = map_screen.nation_colors.get(owner, (200, 200, 200))
-            icon = compact_army_group_icon(None, best_unit, owner_color, owner, icon_size)
-            if icon is not None:
-                groups.append({"army": None, "units": units,
-                               "province": cluster_records[0][1],
-                               "center": _army_average_center(cluster_records, map_screen),
-                               "icon": icon})
+            icon = compact_army_group_icon(None, best_unit, owner_color, owner,
+                                           icon_size, len(units))
+            groups.append({"army": None, "units": units,
+                           "province": cluster_records[0][1],
+                           "center": _army_average_center(cluster_records, map_screen),
+                           "icon": icon})
 
     # Several countries can still produce a marker at exactly the same map
     # point.  Separate only those collisions, instead of offsetting all area
