@@ -479,54 +479,58 @@ class ArmyLayoutTests(unittest.TestCase):
         map_screen.is_unit_selected = lambda _unit: True
         self.assertEqual(overlay_renderer.compact_army_groups(map_screen, set()), [])
 
-    def test_strategic_zoom_fades_unorganized_and_foreign_units(self):
+    def test_strategic_zoom_groups_unorganized_and_foreign_units_by_visible_area(self):
         organized = {"owner": "A", "unit_id": "organized", "type": "Infantry"}
-        unorganized = {"owner": "A", "unit_id": "unorganized", "type": "Infantry"}
+        unorganized_one = {"owner": "A", "unit_id": "unorganized-one", "type": "Infantry"}
+        unorganized_two = {"owner": "A", "unit_id": "unorganized-two", "type": "Tank"}
         foreign = {"owner": "B", "unit_id": "foreign", "type": "Infantry"}
-        province = {"center": (20, 20), "units": [organized, unorganized, foreign]}
+        province = {"id": 1, "center": (20, 20), "units": [
+            organized, unorganized_one, foreign]}
+        nearby_province = {"id": 2, "center": (50, 20), "units": [unorganized_two]}
         map_screen = SimpleNamespace(
-            camera=SimpleNamespace(zoom=overlay_renderer.ARMY_GROUP_ICON_MAX_ZOOM),
+            camera=SimpleNamespace(zoom=overlay_renderer.ARMY_GROUP_ICON_MAX_ZOOM,
+                                   tilt_factor=1),
             player_country="A", nation_data={"A": {"armies": [
                 {"id": "one", "unit_ids": ["organized"]}]}, "B": {}},
-            map_data={"province": province})
-        transition_ms = round(overlay_renderer.ARMY_GROUP_TRANSITION_SECONDS * 1000)
-        halfway_ms = transition_ms // 2
+            map_data={"province": province, "nearby": nearby_province},
+            map_w=100, loop_map=False,
+            nation_colors={"A": (220, 60, 70), "B": (70, 120, 220)})
 
-        with patch.object(pygame.time, "get_ticks", side_effect=[
-                0, halfway_ms, transition_ms + 1, transition_ms + 1,
-                transition_ms + 1 + halfway_ms]):
-            fading_in = overlay_renderer.strategic_unit_fade_alphas(map_screen)
-            halfway_out = overlay_renderer.strategic_unit_fade_alphas(map_screen)
-            faded_out = overlay_renderer.strategic_unit_fade_alphas(map_screen)
-            map_screen.camera.zoom = overlay_renderer.ARMY_GROUP_ICON_MAX_ZOOM + 1
-            reappearing = overlay_renderer.strategic_unit_fade_alphas(map_screen)
-            halfway_in = overlay_renderer.strategic_unit_fade_alphas(map_screen)
+        marker = pygame.Surface((20, 20), pygame.SRCALPHA)
+        with patch.object(overlay_renderer, "compact_army_group_icon", return_value=marker):
+            groups = overlay_renderer.compact_area_unit_groups(
+                map_screen, set(), {id(organized)})
 
-        self.assertNotIn(id(organized), fading_in)
-        self.assertEqual(fading_in[id(unorganized)], 255)
-        self.assertEqual(fading_in[id(foreign)], 255)
-        self.assertEqual(halfway_out[id(unorganized)], 128)
-        self.assertEqual(halfway_out[id(foreign)], 128)
-        self.assertEqual(faded_out[id(unorganized)], 0)
-        self.assertEqual(faded_out[id(foreign)], 0)
-        self.assertEqual(reappearing[id(unorganized)], 0)
-        self.assertIn(halfway_in[id(unorganized)], (127, 128))
-        self.assertIn(halfway_in[id(foreign)], (127, 128))
+        self.assertEqual([group["units"] for group in groups], [
+            [unorganized_one, unorganized_two], [foreign]])
+        self.assertEqual(groups[0]["center"], (35, 20))
+        self.assertEqual(groups[1]["center"], (20, 20))
 
-    def test_strategic_zoom_keeps_a_selected_unorganized_local_unit_visible(self):
+        map_screen.visible_provinces = set()
+        self.assertEqual(overlay_renderer.compact_area_unit_groups(
+            map_screen, set(), {id(organized)}), [])
+
+    def test_strategic_zoom_keeps_a_selected_unorganized_local_stack_expanded(self):
         selected_unit = {"owner": "A", "unit_id": "selected", "type": "Infantry"}
+        other_local = {"owner": "A", "unit_id": "other", "type": "Tank"}
         foreign = {"owner": "B", "unit_id": "foreign", "type": "Infantry"}
         map_screen = SimpleNamespace(
-            camera=SimpleNamespace(zoom=overlay_renderer.ARMY_GROUP_ICON_MAX_ZOOM),
+            camera=SimpleNamespace(zoom=overlay_renderer.ARMY_GROUP_ICON_MAX_ZOOM,
+                                   tilt_factor=1),
             player_country="A", nation_data={"A": {"armies": []}, "B": {}},
-            map_data={"province": {"units": [selected_unit, foreign]}},
-            is_unit_selected=lambda unit: unit is selected_unit)
+            map_data={"province": {"id": 1, "center": (20, 20), "units": [
+                selected_unit, other_local, foreign]}}, map_w=100, loop_map=False,
+            nation_colors={"A": (220, 60, 70), "B": (70, 120, 220)},
+            is_unit_selected=lambda unit: unit is selected_unit,
+            strategic_unit_fade_states={id(foreign): {"target_alpha": 0}})
 
-        with patch.object(pygame.time, "get_ticks", return_value=0):
-            alphas = overlay_renderer.strategic_unit_fade_alphas(map_screen)
+        marker = pygame.Surface((20, 20), pygame.SRCALPHA)
+        with patch.object(overlay_renderer, "compact_army_group_icon", return_value=marker):
+            groups = overlay_renderer.compact_area_unit_groups(map_screen, set(), set())
 
-        self.assertNotIn(id(selected_unit), alphas)
-        self.assertEqual(alphas[id(foreign)], 255)
+        self.assertEqual([group["units"] for group in groups], [[foreign]])
+        self.assertEqual(overlay_renderer.strategic_unit_fade_alphas(map_screen), {})
+        self.assertEqual(map_screen.strategic_unit_fade_states, {})
 
     def test_tactical_zoom_never_compacts_or_fades_units(self):
         local = {"owner": "A", "unit_id": "local", "type": "Infantry"}

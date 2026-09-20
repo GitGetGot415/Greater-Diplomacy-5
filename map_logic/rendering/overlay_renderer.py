@@ -865,6 +865,25 @@ def draw_overlay_content(map_screen, surface, draw_combat=True):
     desired_compact_groups = compact_army_groups(map_screen, combat_unit_ids)
     compact_groups, transition_units, compact_unit_object_ids = army_group_presentation(
         map_screen, desired_compact_groups, combat_unit_ids)
+    organized_unit_ids = {
+        unit_id
+        for army in queries.get_armies(
+            map_screen.player_country, map_screen.nation_data, map_screen.map_data)
+        for unit_id in army.get("unit_ids", [])
+        if isinstance(unit_id, str)
+    }
+    organized_unit_object_ids = {
+        id(unit)
+        for province in map_screen.map_data.values()
+        for unit in province.get("units", [])
+        if (unit.get("owner") == map_screen.player_country
+            and unit.get("unit_id") in organized_unit_ids)
+    }
+    area_groups = compact_area_unit_groups(
+        map_screen, combat_unit_ids, organized_unit_object_ids)
+    compact_groups.extend(area_groups)
+    compact_unit_object_ids.update(
+        id(unit) for group in area_groups for unit in group["units"])
     strategic_unit_alphas = strategic_unit_fade_alphas(map_screen)
     # This is transient render state, consumed by map_renderer when it draws
     # movement arrows later in the same frame; it is never part of a save.
@@ -1167,6 +1186,10 @@ ARMY_GROUP_ICON_MIN_SIZE = 16
 ARMY_GROUP_ICON_MAX_SIZE = 30
 ARMY_GROUP_ICON_HEIGHT_RATIO = 1.4
 ARMY_GROUP_TRANSITION_SECONDS = 0.1
+# A group should replace several nearby division displays, not recreate one
+# marker per province.  This is screen-space so it naturally gathers more
+# forces as the player zooms farther out.
+AREA_UNIT_GROUP_SCREEN_RADIUS = 90
 
 
 def unit_box_size(map_screen):
@@ -1187,79 +1210,19 @@ def uses_compact_army_icons(map_screen):
 
 
 def strategic_unit_fade_alphas(map_screen):
-    """Return in-progress alpha values for units hidden at strategic zoom.
+    """Clear legacy strategic-fade state and leave unit opacity unchanged.
 
-    Only the local player's organized armies have a public marker at this
-    level.  Everything else fades away over the same interval used for an
-    army's move into that marker, except selected local units which remain
-    readable and controllable.  Hidden units fade back in when leaving the
-    level.
+    Strategic zoom now represents every fully visible non-combat unit with an
+    army or area marker, rather than fading unorganized and foreign units out.
+    The marker presentation owns its own short compression animation, so this
+    compatibility helper intentionally returns no per-unit opacity overrides.
     """
     states = getattr(map_screen, "strategic_unit_fade_states", None)
     if states is None:
         states = {}
         map_screen.strategic_unit_fade_states = states
-    # Tactical mode is a unit-level view, including while a player is picking
-    # their division. Never retain a partial strategic fade between modes.
-    if getattr(map_screen, "tactical_mode", False):
-        states.clear()
-        return {}
-    now = pygame.time.get_ticks() / 1000.0
-    live_units = [unit for province in map_screen.map_data.values()
-                  for unit in province.get("units", [])]
-    live_unit_ids = {id(unit) for unit in live_units}
-    for unit_id in set(states) - live_unit_ids:
-        del states[unit_id]
-
-    hidden_unit_ids = set()
-    if uses_compact_army_icons(map_screen):
-        player_country = map_screen.player_country
-        organized_unit_ids = {
-            unit_id
-            for army in queries.get_armies(
-                player_country, map_screen.nation_data, map_screen.map_data)
-            for unit_id in army.get("unit_ids", [])
-            if isinstance(unit_id, str)
-        }
-        is_selected = getattr(map_screen, "is_unit_selected", lambda _unit: False)
-        for unit in live_units:
-            if unit.get("owner") != player_country:
-                hidden_unit_ids.add(id(unit))
-            elif (unit.get("unit_id") not in organized_unit_ids
-                  and not is_selected(unit)):
-                hidden_unit_ids.add(id(unit))
-
-    alphas = {}
-    for unit in live_units:
-        unit_id = id(unit)
-        target_alpha = 0 if unit_id in hidden_unit_ids else 255
-        state = states.get(unit_id)
-        if state is None:
-            if target_alpha == 255:
-                continue
-            state = {"start_alpha": 255, "target_alpha": target_alpha,
-                     "started_at": now}
-            states[unit_id] = state
-        elif state["target_alpha"] != target_alpha:
-            elapsed = min(1.0, (now - state["started_at"])
-                          / ARMY_GROUP_TRANSITION_SECONDS)
-            current_alpha = round(state["start_alpha"]
-                                  + ((state["target_alpha"] - state["start_alpha"])
-                                     * elapsed))
-            state = {"start_alpha": current_alpha, "target_alpha": target_alpha,
-                     "started_at": now}
-            states[unit_id] = state
-
-        progress = min(1.0, (now - state["started_at"])
-                       / ARMY_GROUP_TRANSITION_SECONDS)
-        alpha = round(state["start_alpha"]
-                      + ((state["target_alpha"] - state["start_alpha"])
-                         * progress))
-        if progress >= 1.0 and target_alpha == 255:
-            del states[unit_id]
-            continue
-        alphas[unit_id] = alpha
-    return alphas
+    states.clear()
+    return {}
 
 
 def compact_army_icon_size(scaled_height):
@@ -1560,6 +1523,113 @@ def compact_army_groups(map_screen, combat_unit_ids):
     return groups
 
 
+def _province_is_fully_visible(map_screen, province):
+    """Whether strategic markers may reveal this province's unit details."""
+    visible_provinces = getattr(map_screen, "visible_provinces", None)
+    return (visible_provinces is None
+            or province.get("id") in visible_provinces)
+
+
+def _area_group_distance(first, second, map_screen):
+    """Return map distance while taking a looping map's seam into account."""
+    delta_x = second[0] - first[0]
+    if map_screen.loop_map:
+        if delta_x > map_screen.map_w / 2:
+            delta_x -= map_screen.map_w
+        elif delta_x < -map_screen.map_w / 2:
+            delta_x += map_screen.map_w
+    return math.hypot(delta_x, second[1] - first[1])
+
+
+def _nearby_area_clusters(records, map_screen):
+    """Partition one country's unit records into compact nearby map areas."""
+    if not records:
+        return []
+    radius = AREA_UNIT_GROUP_SCREEN_RADIUS / max(0.01, map_screen.camera.zoom)
+    clusters = []
+    # Stable spatial ordering keeps markers from changing merely because units
+    # happen to be stored in a different province-dictionary order.
+    ordered_records = sorted(
+        records,
+        key=lambda record: (record[1]["center"][0], record[1]["center"][1],
+                            str(record[0].get("unit_id", ""))))
+    for record in ordered_records:
+        center = record[1]["center"]
+        nearby = [cluster for cluster in clusters
+                  if _area_group_distance(cluster["anchor"], center, map_screen) <= radius]
+        if nearby:
+            min(nearby, key=lambda cluster: _area_group_distance(
+                cluster["anchor"], center, map_screen))["records"].append(record)
+        else:
+            clusters.append({"anchor": center, "records": [record]})
+    return [cluster["records"] for cluster in clusters]
+
+
+def compact_area_unit_groups(map_screen, combat_unit_ids, organized_unit_object_ids):
+    """Build fog-safe strategic markers for ungrouped and foreign units.
+
+    Persistent armies retain their existing average-position markers.  Units
+    outside those armies are instead clustered by owner and nearby map
+    position.  That gives every visible force a map presence without exposing
+    another country's private army organization or making one marker per
+    scattered division.  Partially visible provinces keep their ordinary ``?``
+    presentation.
+    """
+    if not uses_compact_army_icons(map_screen):
+        return []
+
+    player_country = map_screen.player_country
+    is_selected = getattr(map_screen, "is_unit_selected", lambda _unit: False)
+    _scaled_w, scaled_h, _display_scale = unit_box_size(map_screen)
+    icon_size = compact_army_icon_size(scaled_h)
+    groups = []
+
+    records_by_owner = {}
+    for province in map_screen.map_data.values():
+        if not _province_is_fully_visible(map_screen, province):
+            continue
+        for unit in queries.filter_visible_units(
+                province.get("units", []), player_country, province,
+                map_screen.nation_data):
+            if id(unit) in combat_unit_ids or id(unit) in organized_unit_object_ids:
+                continue
+            owner = unit.get("owner")
+            if not isinstance(owner, str):
+                continue
+            records_by_owner.setdefault(owner, []).append((unit, province))
+
+    for owner, records in records_by_owner.items():
+        for cluster_records in _nearby_area_clusters(records, map_screen):
+            units = [unit for unit, _province in cluster_records]
+            # A selected local area stays expanded, so the selection remains
+            # obvious and can be manipulated without a marker covering it.
+            if owner == player_country and any(is_selected(unit) for unit in units):
+                continue
+            best_unit = queries.get_best_unit_by_defense_then_attack_then_speed(units)
+            if not best_unit:
+                continue
+            owner_color = map_screen.nation_colors.get(owner, (200, 200, 200))
+            icon = compact_army_group_icon(None, best_unit, owner_color, owner, icon_size)
+            if icon is not None:
+                groups.append({"army": None, "units": units,
+                               "province": cluster_records[0][1],
+                               "center": _army_average_center(cluster_records, map_screen),
+                               "icon": icon})
+
+    # Several countries can still produce a marker at exactly the same map
+    # point.  Separate only those collisions, instead of offsetting all area
+    # groups by their source province.
+    groups_by_center = {}
+    for group in groups:
+        groups_by_center.setdefault(tuple(group["center"]), []).append(group)
+    for colliding_groups in groups_by_center.values():
+        spacing = icon_size + 3
+        for index, group in enumerate(colliding_groups):
+            group["screen_offset"] = (0, round((index - (len(colliding_groups) - 1) / 2)
+                                                * spacing))
+    return groups
+
+
 def _interpolate_army_position(start, target, progress, map_screen):
     """Move between two world positions, taking the short path across a seam."""
     delta_x = target[0] - start[0]
@@ -1752,6 +1822,9 @@ def draw_compact_army_groups(map_screen, surface, groups):
             icon.set_alpha(alpha)
         for offset in offsets:
             sx, sy = queries.world_to_screen(group["center"], map_screen, offset)
+            screen_offset = group.get("screen_offset", (0, 0))
+            sx += screen_offset[0]
+            sy += screen_offset[1]
             if not (-CULL_MARGIN < sx < surface.get_width() + CULL_MARGIN
                     and -CULL_MARGIN < sy < surface.get_height() + CULL_MARGIN):
                 continue

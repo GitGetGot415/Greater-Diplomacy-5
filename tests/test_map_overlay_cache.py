@@ -484,15 +484,6 @@ class CullingTests(unittest.TestCase):
         self.addCleanup(setattr, cam, "zoom", cam.zoom)
         self.addCleanup(setattr, cam, "target_zoom", cam.target_zoom)
         self.addCleanup(cam.pos.update, cam.pos.x, cam.pos.y)
-        # Strategic zoom fades units back in over several frames. This test
-        # measures culling, so it must start from fully visible icon state
-        # instead of inheriting an in-progress fade from another shared-map
-        # test.
-        previous_fade_states = getattr(self.map, "strategic_unit_fade_states", None)
-        self.map.strategic_unit_fade_states = {}
-        self.addCleanup(setattr, self.map, "strategic_unit_fade_states",
-                        previous_fade_states)
-
         self.map.set_view_mode("UNITS")
         self.map.selected_province = None
         self.real_draw = overlay_renderer.draw_unit_icon
@@ -548,7 +539,9 @@ class CullingTests(unittest.TestCase):
 
         self.look_at(garrison, self.map.min_zoom)
         overlay_renderer.draw_overlay_content(self.map, self.surface)
-        zoomed_out = len(self.drawn)
+        # At strategic zoom these are marker members, not individual boxes.
+        # The marker path records every unit it replaces for movement arrows.
+        zoomed_out = len(self.map.compact_army_unit_object_ids)
 
         self.drawn = []
         self.look_at(garrison, 6.0)
