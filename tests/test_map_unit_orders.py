@@ -15,7 +15,7 @@ import data.constants as c
 from map_logic.camera import camera_handler
 from map_logic.rendering import overlay_renderer
 from screens.menu_screens.map import Map
-from screens.map_related_screens.orders import Orders_Screen
+from screens.map_related_screens.orders import Orders_Screen, _OrdersRowHitbox
 from ui import event_handler
 from map_logic.setup import player_setup
 
@@ -152,6 +152,63 @@ class MapOrderTests(unittest.TestCase):
 
 
 class OrdersSelectionRowsTests(unittest.TestCase):
+    def test_right_clicking_an_orders_row_toggles_only_that_unit(self):
+        selected_unit = {"owner": "A", "type": "Infantry"}
+        other_selected_unit = {"owner": "A", "type": "Infantry"}
+
+        class MapStub:
+            def __init__(self):
+                self.selected_ids = {id(other_selected_unit)}
+                self.tactical_mode = False
+                self.last_selection_additive = None
+
+            def is_unit_selected(self, unit):
+                return id(unit) in self.selected_ids
+
+            def can_select_map_units(self):
+                return True
+
+            def select_map_units(self, units, additive=False):
+                self.last_selection_additive = additive
+                self.selected_ids.update(id(unit) for unit in units)
+
+            def deselect_map_units(self, units):
+                self.selected_ids.difference_update(id(unit) for unit in units)
+
+        map_stub = MapStub()
+        screen = object.__new__(Orders_Screen)
+        screen.map_screen = map_stub
+        screen.read_only = False
+        screen.selected_unit_index = 0
+        screen.bombarding_unit_index = None
+        screen._command_blocked = lambda _unit: False
+        screen.refresh_ui = lambda: None
+
+        screen.toggle_selected_unit(selected_unit, additive=True)
+        self.assertEqual(map_stub.selected_ids,
+                         {id(selected_unit), id(other_selected_unit)})
+        self.assertTrue(map_stub.last_selection_additive)
+
+        screen.toggle_selected_unit(selected_unit, additive=True)
+        self.assertEqual(map_stub.selected_ids, {id(other_selected_unit)})
+
+    def test_orders_row_right_click_dispatches_its_secondary_action(self):
+        pygame.font.init()
+        callback = Mock()
+        row = _OrdersRowHitbox(
+            pygame.Rect(10, 10, 100, 40), Mock(), secondary_callback=callback)
+        screen = object.__new__(Orders_Screen)
+        screen.battle_screen = None
+        screen.map_screen = object()
+        screen.elements = [row]
+
+        with patch("screens.map_related_screens.orders.army_panel.handle_event",
+                   return_value=False):
+            screen.handle_events([pygame.event.Event(
+                pygame.MOUSEBUTTONDOWN, button=3, pos=(20, 20))])
+
+        callback.assert_called_once_with()
+
     def test_roster_keeps_each_selected_unit_and_its_own_origin(self):
         """The Orders panel must not collapse a cross-province group to one tile."""
         first = province(1, [])

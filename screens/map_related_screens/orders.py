@@ -93,10 +93,11 @@ class _OrdersRowHitbox(Button):
     rendering to Orders_Screen.additional_draw.
     """
 
-    def __init__(self, rect, callback):
+    def __init__(self, rect, callback, secondary_callback=None):
         super().__init__(rect.x, rect.y, "tiny_square", "grey", "", callback,
                          show_text=False)
         self.rect = pygame.Rect(rect)
+        self.secondary_callback = secondary_callback
 
     def draw(self, surface):
         pass
@@ -368,12 +369,21 @@ class Orders_Screen(GameState):
         self.bombarding_unit_index = None
         self.refresh_ui()
 
-    def toggle_selected_unit(self, unit, province=None):
+    def toggle_selected_unit(self, unit, province=None, additive=False):
         """Apply the shared map click behavior to one Orders roster row."""
         if getattr(self, "read_only", False) or self._command_blocked(unit):
             return
-        selected = self.map_screen.click_select_map_units(
-            [unit], additive=bool(pygame.key.get_mods() & pygame.KMOD_SHIFT))
+        if additive:
+            if not self.map_screen.can_select_map_units():
+                return
+            if self.map_screen.is_unit_selected(unit):
+                self.map_screen.deselect_map_units([unit])
+            else:
+                self.map_screen.select_map_units([unit], additive=True)
+            selected = self.map_screen.is_unit_selected(unit)
+        else:
+            selected = self.map_screen.click_select_map_units(
+                [unit], additive=bool(pygame.key.get_mods() & pygame.KMOD_SHIFT))
         self.selected_unit_index = None
         self.bombarding_unit_index = None
         if selected and province is not None:
@@ -971,7 +981,10 @@ class Orders_Screen(GameState):
                             ACTION_START_OFFSET_X - UNIT_ROW_X_OFFSET - 2,
                             self.row_height),
                 lambda selected_unit=unit, selected_province=province:
-                self.toggle_selected_unit(selected_unit, selected_province))
+                self.toggle_selected_unit(selected_unit, selected_province),
+                lambda selected_unit=unit, selected_province=province:
+                self.toggle_selected_unit(selected_unit, selected_province,
+                                          additive=True))
             hitbox.is_scrollable = True
             hitbox.click_guard = row_guard
             self.elements.append(hitbox)
@@ -1264,6 +1277,21 @@ class Orders_Screen(GameState):
 
             if army_panel.handle_event(self.map_screen, event, orders_screen=self):
                 continue
+
+            # A right-click on a visible roster row toggles only that unit's
+            # membership in the map-wide selection. Right-clicks elsewhere
+            # retain their normal map movement-order behavior.
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
+                row_hitbox = next((element for element in self.elements
+                                   if isinstance(element, _OrdersRowHitbox)
+                                   and element.secondary_callback is not None
+                                   and element.visible
+                                   and element.rect.collidepoint(event.pos)), None)
+                if row_hitbox is not None:
+                    if (row_hitbox.click_guard is None
+                            or row_hitbox.click_guard()):
+                        row_hitbox.secondary_callback()
+                    continue
 
             if event.type == pygame.KEYDOWN and self.renaming_unit_index is not None:
                 if event.key == pygame.K_RETURN:

@@ -97,7 +97,9 @@ class _NavigationIntroPopup:
         ("Names", "names", "Shows or hides country names."),
     )
     ARMY_STEPS = (
-        ("Select units", "Click stacks or left-click and drag to select multiple stacks in Units view."),
+        ("Select units", "Left-click stacks or drag in Units view. "
+         "In Orders, right-click a unit row to add or remove it without "
+         "changing the other selected units."),
         ("Create an army", "In Orders, click + Create Army in the Army tray. (Located on the right side of the screen)"),
         ("Personalize", "Click a card to select the units in said army. Pressing the E button edits its name and emblem."),
         ("Need to Assign more units?", "With units selected, right-click an army card."),
