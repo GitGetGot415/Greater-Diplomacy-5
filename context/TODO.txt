@@ -3,6 +3,7 @@
 maybe if a country has cores on another country, they're not going to join their faction...
 
 fuel deficit should do something
+give armies the ability to set defensive lines or area defense
 
 ## Random thoughts with no real goal
 
@@ -47,6 +48,8 @@ fuel deficit should do something
 
 ### Exodus
 
+- allow right clicking on the unit orders menu to remove a unit from being selected
+- Box selection of units in the unit orders menu
 - let Allies see your active movement arrows
 - QUEUE UNITS ACROSS OCEANS
 - Add statistics.
