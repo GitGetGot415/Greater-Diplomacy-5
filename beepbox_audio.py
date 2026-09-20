@@ -1,4 +1,4 @@
-"""Buffered native playback for songs saved in BeepBox's JSON format."""
+"""BeepBox song playback for desktop and browser builds."""
 
 import base64
 import importlib
@@ -274,6 +274,116 @@ class BeepBoxStream:
         self._worker.join(timeout=0.05)
 
 
+class WebBeepBoxStream:
+    """Play a BeepBox song through the vendor synth's browser Web Audio API."""
+
+    def __init__(self, song_path, volume=1.0, speed=1.0, start_time=0.0):
+        import platform
+
+        self._window = platform.window
+        self.song_path = song_path
+        self.volume = max(0.0, min(1.0, float(volume)))
+        self.speed = max(0.25, min(2.0, float(speed)))
+        self._error = None
+        self._stopped = False
+
+        assets_dir = os.path.dirname(os.path.dirname(os.path.dirname(
+            os.path.abspath(song_path)
+        )))
+        synth_path = os.path.join(assets_dir, "beepbox", "beepbox_synth.min.js")
+        with open(synth_path, "r", encoding="utf-8") as source_file:
+            synth_source = source_file.read()
+        with open(song_path, "r", encoding="utf-8") as song_file:
+            song_json = song_file.read()
+
+        # The bridge and vendor bundle are evaluated once per page. The synth's
+        # own activateAudio() method creates/resumes AudioContext on the user's
+        # first input event, which is where the controller starts this stream.
+        if not getattr(self._window, "__gd5_beepbox_ready", False):
+            self._window.eval(synth_source)
+            self._window.eval(_WEB_JS_BRIDGE)
+            setattr(self._window, "__gd5_beepbox_ready", True)
+
+        getattr(self._window, "__gd5_beepbox_load")(
+            song_json, self.speed, max(0.0, float(start_time)), self.volume
+        )
+
+    @property
+    def length(self):
+        if self._stopped:
+            return 0.0
+        try:
+            return float(getattr(self._window, "__gd5_beepbox_length")())
+        except Exception as exc:
+            self._error = exc
+            return 0.0
+
+    @property
+    def position(self):
+        if self._stopped:
+            return 0.0
+        try:
+            return float(getattr(self._window, "__gd5_beepbox_position")())
+        except Exception as exc:
+            self._error = exc
+            return 0.0
+
+    @property
+    def error(self):
+        return self._error
+
+    @property
+    def finished(self):
+        if self._stopped or self._error is not None:
+            return False
+        try:
+            return bool(getattr(self._window, "__gd5_beepbox_finished")())
+        except Exception as exc:
+            self._error = exc
+            return False
+
+    def update(self):
+        """Keep the stream interface aligned with the native implementation."""
+
+    def pause(self, paused):
+        if self._stopped:
+            return
+        try:
+            getattr(self._window, "__gd5_beepbox_pause")(bool(paused))
+        except Exception as exc:
+            self._error = exc
+
+    def set_volume(self, volume):
+        self.volume = max(0.0, min(1.0, float(volume)))
+        if self._stopped:
+            return
+        try:
+            getattr(self._window, "__gd5_beepbox_set_volume")(self.volume)
+        except Exception as exc:
+            self._error = exc
+
+    def seek(self, position, speed=None):
+        if self._stopped:
+            return
+        if speed is not None:
+            self.speed = max(0.25, min(2.0, float(speed)))
+        try:
+            getattr(self._window, "__gd5_beepbox_seek")(
+                max(0.0, float(position)), self.speed
+            )
+        except Exception as exc:
+            self._error = exc
+
+    def stop(self):
+        if self._stopped:
+            return
+        try:
+            getattr(self._window, "__gd5_beepbox_stop")()
+        except Exception as exc:
+            self._error = exc
+        self._stopped = True
+
+
 _JS_BRIDGE = r"""
 globalThis.gd5Synth = null;
 globalThis.gd5Length = 0;
@@ -322,5 +432,85 @@ globalThis.gd5Render = function(frameCount) {
         parts.push(encoded);
     }
     return parts;
+};
+"""
+
+
+_WEB_JS_BRIDGE = r"""
+window.__gd5_beepbox_synth = null;
+window.__gd5_beepbox_gain = null;
+window.__gd5_beepbox_speed = 1;
+window.__gd5_beepbox_volume = 1;
+window.__gd5_beepbox_output_rate = 44100;
+window.__gd5_beepbox_length = function() {
+    const synth = window.__gd5_beepbox_synth;
+    return synth ? synth.song.barCount * synth.getSamplesPerBar() / window.__gd5_beepbox_output_rate : 0;
+};
+window.__gd5_beepbox_position = function() {
+    const synth = window.__gd5_beepbox_synth;
+    return synth ? synth.playhead * synth.getSamplesPerBar() / window.__gd5_beepbox_output_rate : 0;
+};
+window.__gd5_beepbox_finished = function() {
+    const synth = window.__gd5_beepbox_synth;
+    return !!synth && synth.playhead >= synth.song.barCount;
+};
+window.__gd5_beepbox_load = function(songJson, speed, startTime, volume) {
+    const previous = window.__gd5_beepbox_synth;
+    if (previous) {
+        previous.pause();
+        previous.deactivateAudio();
+    }
+    const song = new beepbox.Song();
+    song.fromJsonObject(JSON.parse(songJson));
+    const synth = new beepbox.Synth(song);
+    window.__gd5_beepbox_synth = synth;
+    window.__gd5_beepbox_speed = speed;
+    window.__gd5_beepbox_volume = volume;
+    synth.loopRepeatCount = 0;
+    const activateAudio = synth.activateAudio.bind(synth);
+    synth.activateAudio = function() {
+        activateAudio();
+        if (!this.audioCtx || !this.scriptNode) return;
+        window.__gd5_beepbox_output_rate = this.audioCtx.sampleRate;
+        this.samplesPerSecond = window.__gd5_beepbox_output_rate / window.__gd5_beepbox_speed;
+        this.computeDelayBufferSizes();
+        if (!window.__gd5_beepbox_gain ||
+                window.__gd5_beepbox_gain.context !== this.audioCtx) {
+            window.__gd5_beepbox_gain = this.audioCtx.createGain();
+            this.scriptNode.disconnect();
+            this.scriptNode.connect(window.__gd5_beepbox_gain);
+            window.__gd5_beepbox_gain.connect(this.audioCtx.destination);
+        }
+        window.__gd5_beepbox_gain.gain.value = window.__gd5_beepbox_volume;
+    };
+    synth.play();
+    synth.playhead = startTime * window.__gd5_beepbox_output_rate / synth.getSamplesPerBar();
+    synth.resetEffects();
+};
+window.__gd5_beepbox_pause = function(paused) {
+    const synth = window.__gd5_beepbox_synth;
+    if (!synth) return;
+    if (paused) synth.pause(); else synth.play();
+};
+window.__gd5_beepbox_set_volume = function(volume) {
+    window.__gd5_beepbox_volume = volume;
+    if (window.__gd5_beepbox_gain) window.__gd5_beepbox_gain.gain.value = volume;
+};
+window.__gd5_beepbox_seek = function(position, speed) {
+    const synth = window.__gd5_beepbox_synth;
+    if (!synth) return;
+    window.__gd5_beepbox_speed = speed;
+    synth.samplesPerSecond = window.__gd5_beepbox_output_rate / speed;
+    synth.computeDelayBufferSizes();
+    synth.playhead = position * window.__gd5_beepbox_output_rate / synth.getSamplesPerBar();
+    synth.resetEffects();
+};
+window.__gd5_beepbox_stop = function() {
+    const synth = window.__gd5_beepbox_synth;
+    if (!synth) return;
+    synth.pause();
+    synth.deactivateAudio();
+    window.__gd5_beepbox_synth = null;
+    window.__gd5_beepbox_gain = null;
 };
 """

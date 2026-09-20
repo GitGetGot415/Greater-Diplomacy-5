@@ -582,7 +582,9 @@ class Controller:
         # Scan the hard drive to find whatever is actually there!
         synced_albums = {}
         self.track_start_times = {} # Clear start times whenever we scan
-        prefer_beepbox = not IS_WEB and beepbox_audio.is_available()
+        # Web uses BeepBox's bundled Web Audio synth; desktop renders through
+        # QuickJS into the native mixer.
+        prefer_beepbox = IS_WEB or beepbox_audio.is_available()
 
         if os.path.exists(c.MUSIC_DIR):
             for item in os.listdir(c.MUSIC_DIR):
@@ -721,6 +723,13 @@ class Controller:
         buf = (ctypes.c_ubyte * len(data)).from_buffer_copy(data)
         self.music_stream.load_mem(buf, len(data), aCopy=True, aTakeOwnership=False)
 
+    @staticmethod
+    def _beepbox_audio_fallback(song_path):
+        """Find a packaged audio counterpart when a BeepBox synth cannot start."""
+        extensions = (".ogg", ".mp3", ".wav") if IS_WEB else (".mp3", ".wav", ".ogg")
+        stem = os.path.splitext(song_path)[0]
+        return next((stem + ext for ext in extensions if os.path.exists(stem + ext)), None)
+
     def play_specific_song(self, track_path):
         try:
             # Fetch the defined start time, default to 0.0 if not listed
@@ -736,7 +745,11 @@ class Controller:
                     self.music_handle = None
                 elif not c.USE_SOLOUD:
                     pygame.mixer.music.stop()
-                self.beepbox_stream = beepbox_audio.BeepBoxStream(
+                stream_type = (
+                    beepbox_audio.WebBeepBoxStream if IS_WEB
+                    else beepbox_audio.BeepBoxStream
+                )
+                self.beepbox_stream = stream_type(
                     track_path,
                     volume=self.music_volume,
                     speed=0.5 + self.music_pitch,
@@ -774,9 +787,10 @@ class Controller:
         except Exception as e:
             print(f"Error playing track {track_path}: {e}")
             if track_path.lower().endswith(".json"):
-                fallback = os.path.splitext(track_path)[0] + ".mp3"
-                if os.path.exists(fallback):
-                    print("Falling back to the matching MP3 track.")
+                fallback = self._beepbox_audio_fallback(track_path)
+                if fallback:
+                    extension = os.path.splitext(fallback)[1][1:].upper()
+                    print(f"Falling back to the matching {extension} track.")
                     self.play_specific_song(fallback)
                 else:
                     self._failed_beepbox_tracks.add(track_path)
@@ -817,9 +831,10 @@ class Controller:
                     stream.stop()
                     self.beepbox_stream = None
                     self._failed_beepbox_tracks.add(failed_track)
-                    fallback = os.path.splitext(failed_track)[0] + ".mp3"
-                    if os.path.exists(fallback):
-                        print(f"BeepBox playback failed ({stream.error}); using the MP3 fallback.")
+                    fallback = self._beepbox_audio_fallback(failed_track)
+                    if fallback:
+                        extension = os.path.splitext(fallback)[1][1:].upper()
+                        print(f"BeepBox playback failed ({stream.error}); using the {extension} fallback.")
                         self.play_specific_song(fallback)
                     else:
                         print(f"BeepBox playback failed: {stream.error}")

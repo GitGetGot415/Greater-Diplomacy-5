@@ -7,10 +7,12 @@ import unittest
 
 from beepbox_audio import (
     _JS_BRIDGE,
+    _WEB_JS_BRIDGE,
     has_beepbox_replacement,
     is_available,
     is_beepbox_song,
 )
+from compilation_scripts.html_compilation import _ignore_web_asset
 from data.constants import CREDITS_DATA
 
 
@@ -29,6 +31,12 @@ class BeepBoxAudioTests(unittest.TestCase):
         self.assertTrue(os.path.isfile(SYNTH_PATH))
         tools = next(section for section in CREDITS_DATA if section["main_text"] == "Tools: ")
         self.assertTrue(any(person.get("link_text") == "BeepBox" for person in tools["people"]))
+
+    def test_web_build_stages_synth_and_song_but_drops_matching_audio(self):
+        song_mp3 = os.path.splitext(SONG_PATH)[0] + ".mp3"
+        self.assertFalse(_ignore_web_asset(SONG_PATH))
+        self.assertFalse(_ignore_web_asset(SYNTH_PATH))
+        self.assertTrue(_ignore_web_asset(song_mp3))
 
     @unittest.skipUnless(is_available(), "native QuickJS dependency is not installed")
     def test_beepbox_source_synthesizes_pcm_from_the_song_json(self):
@@ -64,6 +72,60 @@ class BeepBoxAudioTests(unittest.TestCase):
         self.assertAlmostEqual(fast_length, normal_length / 1.5, places=3)
         context.eval(f"gd5Init({json.dumps(song_json)}, 44100, 1.5, 10)")
         self.assertAlmostEqual(context.eval("gd5Synth.playhead"), 7.5, places=4)
+
+    @unittest.skipUnless(is_available(), "native QuickJS dependency is not installed")
+    def test_browser_bridge_uses_web_audio_and_supports_controls(self):
+        import importlib
+
+        quickjs = importlib.import_module("quickjs")
+        with open(SONG_PATH, encoding="utf-8") as song_file:
+            song_json = song_file.read()
+        with open(SYNTH_PATH, encoding="utf-8") as source_file:
+            synth_source = source_file.read()
+
+        context = quickjs.Context()
+        context.eval(r"""
+            globalThis.window = globalThis;
+            globalThis.performance = {now: function() { return 0; }};
+            globalThis.AudioContext = class {
+                constructor() { this.sampleRate = 44100; this.destination = {}; }
+                createScriptProcessor(size) {
+                    return {
+                        bufferSize: size,
+                        connect: function() {},
+                        disconnect: function() {},
+                    };
+                }
+                createGain() {
+                    return {context: this, gain: {value: 1}, connect: function() {}};
+                }
+                resume() {}
+                close() {}
+            };
+        """)
+        context.eval(synth_source)
+        context.eval(_WEB_JS_BRIDGE)
+        context.eval(
+            f"window.__gd5_beepbox_load({json.dumps(song_json)}, 1, 2.5, 0.4)"
+        )
+        self.assertAlmostEqual(context.eval("window.__gd5_beepbox_position()"), 2.5, places=3)
+        normal_length = context.eval("window.__gd5_beepbox_length()")
+        self.assertGreater(normal_length, 2.5)
+
+        context.eval("window.__gd5_beepbox_pause(true)")
+        self.assertFalse(context.eval("window.__gd5_beepbox_synth.playing"))
+        context.eval("window.__gd5_beepbox_pause(false)")
+        self.assertTrue(context.eval("window.__gd5_beepbox_synth.playing"))
+        context.eval("window.__gd5_beepbox_set_volume(0.25)")
+        self.assertAlmostEqual(context.eval("window.__gd5_beepbox_gain.gain.value"), 0.25)
+
+        context.eval("window.__gd5_beepbox_seek(10, 1.5)")
+        self.assertAlmostEqual(context.eval("window.__gd5_beepbox_position()"), 10, places=3)
+        self.assertAlmostEqual(
+            context.eval("window.__gd5_beepbox_length()"), normal_length / 1.5, places=3
+        )
+        context.eval("window.__gd5_beepbox_stop()")
+        self.assertEqual(context.eval("window.__gd5_beepbox_length()"), 0)
 
     @unittest.skipUnless(is_available(), "native QuickJS dependency is not installed")
     def test_buffered_pygame_stream_supports_play_pause_and_seek(self):

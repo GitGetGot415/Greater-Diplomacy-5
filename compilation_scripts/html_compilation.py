@@ -11,7 +11,7 @@ sys.path.insert(0, REPO_ROOT)
 os.chdir(REPO_ROOT)
 
 import data.constants as c
-from beepbox_audio import is_beepbox_song
+from beepbox_audio import has_beepbox_replacement
 
 # Build-time only tools (not needed to run the game itself, so not in requirements.txt,
 # same convention as PyInstaller/py2app for the other two platform builds):
@@ -33,6 +33,24 @@ SOURCE_FILES = ["main.py", "mod_loader.py", "gameState.py", "ui_elements.py",
 # this whole-package copy, so it stays available in the web build automatically.
 SOURCE_PACKAGES = ["data", "ui", "screens", "map_logic"]
 DATA_DIRS = ["assets", "base_maps", "scenarios", "tournament_saves"]
+
+
+def _is_git_ignored(path):
+    try:
+        return subprocess.run(["git", "check-ignore", "-q", path]).returncode == 0
+    except Exception as e:
+        print(f"Error checking git ignore for {path}: {e}")
+        return False
+
+
+def _ignore_web_asset(path):
+    """Filter gitignored assets and audio replaced by a shipped BeepBox JSON."""
+    if _is_git_ignored(path):
+        return True
+    if has_beepbox_replacement(path):
+        song_json = os.path.splitext(path)[0] + ".json"
+        return not _is_git_ignored(song_json)
+    return False
 
 
 def main():
@@ -75,23 +93,8 @@ def main():
     # windows_compilation.py uses so the web bundle's music/scenario footprint matches
     # the desktop builds (gitignored local-only OSTs, etc. aren't shipped).
     def assets_ignore_func(dir_name, contents):
-        ignored = []
-        for entry in contents:
-            path = os.path.join(dir_name, entry)
-            if os.path.normpath(path).startswith(os.path.join("assets", "beepbox")):
-                ignored.append(entry)
-                continue
-            if entry.lower().endswith(".json") and is_beepbox_song(path):
-                ignored.append(entry)
-                continue
-            try:
-                # git check-ignore returns 0 if ignored, 1 if not ignored
-                res = subprocess.run(["git", "check-ignore", "-q", path])
-                if res.returncode == 0:
-                    ignored.append(entry)
-            except Exception as e:
-                print(f"Error checking git ignore for {path}: {e}")
-        return ignored
+        return [entry for entry in contents
+                if _ignore_web_asset(os.path.join(dir_name, entry))]
 
     def scenarios_ignore_func(dir_name, contents):
         parts = os.path.normpath(dir_name).split(os.sep)
@@ -120,11 +123,12 @@ def main():
         else:
             shutil.copytree(src, dst)
 
-    # 2b. Transcode the official soundtrack from MP3 to OGG for the web bundle only.
+    # 2b. Transcode remaining soundtrack MP3s to OGG for the web bundle only.
     # Confirmed via real browser testing: this pygame-ce/SDL_mixer WASM build cannot
     # decode MP3 at all ("Unrecognized audio format"), matching pygame-web's own docs
     # (https://pygame-web.github.io/wiki/pygbag/ -- only WAV/OGG are reliably
-    # supported). Desktop builds are untouched; only the staged copy is converted.
+    # supported). Matching BeepBox tracks are played from their JSON instead. Desktop
+    # builds are untouched; only the staged copy is converted.
     music_dir = os.path.join(STAGE_DIR, "assets", "music")
     if os.path.exists(music_dir):
         try:
@@ -132,11 +136,12 @@ def main():
             ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
         except ImportError:
             print("Warning: imageio-ffmpeg not installed (pip install imageio-ffmpeg) -- "
-                  "skipping MP3->OGG transcode. Music will not play in the web build.")
+                  "skipping MP3->OGG transcode. Non-BeepBox MP3 music will not play "
+                  "in the web build.")
             ffmpeg_exe = None
 
         if ffmpeg_exe:
-            print("Transcoding soundtrack from MP3 to OGG for the web build...")
+            print("Transcoding non-BeepBox soundtrack MP3s to OGG for the web build...")
             for dirpath, _, filenames in os.walk(music_dir):
                 for fname in filenames:
                     if not fname.lower().endswith(".mp3"):
@@ -192,8 +197,8 @@ def main():
         "--archive",
         "--template", template_path,
         "--app_name", "Greater Diplomacy 5",
-        # The soundtrack itself is transcoded to OGG above (confirmed required -- this
-        # WASM build can't decode MP3 at all). This flag just covers any other stray
+        # Remaining soundtrack MP3s are transcoded to OGG above (confirmed required --
+        # this WASM build can't decode MP3 at all). This flag just covers any other stray
         # .mp3 that isn't under assets/music (e.g. an unused leftover asset file) so
         # the build doesn't fail outright over something that was never played anyway.
         "--disable-sound-format-error",
