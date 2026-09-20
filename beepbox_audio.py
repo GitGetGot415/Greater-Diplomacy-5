@@ -468,6 +468,18 @@ window.__gd5_beepbox_load = function(songJson, speed, startTime, volume) {
     window.__gd5_beepbox_volume = volume;
     synth.loopRepeatCount = 0;
     const activateAudio = synth.activateAudio.bind(synth);
+    const deactivateAudio = synth.deactivateAudio.bind(synth);
+    synth.deactivateAudio = function() {
+        const gain = window.__gd5_beepbox_gain;
+        if (this.audioCtx && this.scriptNode && gain && gain.context === this.audioCtx) {
+            // BeepBox's original teardown disconnects scriptNode directly from
+            // the destination. Restore that edge before calling it, since GD5
+            // routes playback through a GainNode for the music volume control.
+            this.scriptNode.disconnect(gain);
+            this.scriptNode.connect(this.audioCtx.destination);
+        }
+        deactivateAudio();
+    };
     synth.activateAudio = function() {
         activateAudio();
         if (!this.audioCtx || !this.scriptNode) return;

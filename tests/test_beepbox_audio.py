@@ -90,10 +90,16 @@ class BeepBoxAudioTests(unittest.TestCase):
             globalThis.AudioContext = class {
                 constructor() { this.sampleRate = 44100; this.destination = {}; }
                 createScriptProcessor(size) {
+                    const connections = [];
                     return {
                         bufferSize: size,
-                        connect: function() {},
-                        disconnect: function() {},
+                        connect: function(node) { connections.push(node); },
+                        disconnect: function(node) {
+                            if (arguments.length === 0) { connections.length = 0; return; }
+                            const index = connections.indexOf(node);
+                            if (index < 0) throw new Error("node is not connected");
+                            connections.splice(index, 1);
+                        },
                     };
                 }
                 createGain() {
@@ -114,8 +120,19 @@ class BeepBoxAudioTests(unittest.TestCase):
 
         context.eval("window.__gd5_beepbox_pause(true)")
         self.assertFalse(context.eval("window.__gd5_beepbox_synth.playing"))
+        context.eval(r"""
+            const synth = window.__gd5_beepbox_synth;
+            const left = new Float32Array(128);
+            const right = new Float32Array(128);
+            synth.audioProcessCallback({outputBuffer: {
+                length: 128,
+                getChannelData: function(channel) { return channel === 0 ? left : right; }
+            }});
+        """)
+        self.assertTrue(context.eval("window.__gd5_beepbox_synth.audioCtx === null"))
         context.eval("window.__gd5_beepbox_pause(false)")
         self.assertTrue(context.eval("window.__gd5_beepbox_synth.playing"))
+        self.assertTrue(context.eval("window.__gd5_beepbox_synth.audioCtx !== null"))
         context.eval("window.__gd5_beepbox_set_volume(0.25)")
         self.assertAlmostEqual(context.eval("window.__gd5_beepbox_gain.gain.value"), 0.25)
 
