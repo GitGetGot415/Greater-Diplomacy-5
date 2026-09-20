@@ -261,6 +261,28 @@ class ArmyQueryTests(unittest.TestCase):
         self.assertEqual(queries.queue_idle_army_defense_orders(map_ref), 1)
         self.assertEqual(unit["order"]["path"], [self.second["id"]])
 
+    def test_defense_area_fills_gaps_before_balancing_reinforcements(self):
+        third = {"id": 3, "owner": "A", "units": [], "neighbors": [1, 2]}
+        fourth = {"id": 4, "owner": "A", "units": [], "neighbors": [1, 2]}
+        self.first["neighbors"] = [third["id"], fourth["id"]]
+        self.second["neighbors"] = [third["id"], fourth["id"]]
+        self.world.update({"three": third, "four": fourth})
+        queries.normalize_armies(self.nations, self.world)
+        members = self.first["units"] + self.second["units"]
+        army = queries.create_army(
+            "A", [unit["unit_id"] for unit in members], self.nations, self.world)
+        queries.set_army_defense_area(
+            "A", army["id"], [third["id"], fourth["id"]], self.nations, self.world)
+        map_ref = SimpleNamespace(
+            nation_data=self.nations, map_data=self.world,
+            id_to_province={province["id"]: province for province in self.world.values()})
+
+        self.assertEqual(queries.queue_army_defense_orders(map_ref, "A", army["id"]), 3)
+        destinations = [unit["order"]["path"][-1] for unit in members]
+        self.assertEqual(set(destinations), {third["id"], fourth["id"]})
+        self.assertLessEqual(abs(destinations.count(third["id"])
+                                 - destinations.count(fourth["id"])), 1)
+
 
 class ArmyLayoutTests(unittest.TestCase):
     def test_defense_picker_keeps_its_controls_at_the_top_of_the_map(self):

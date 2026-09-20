@@ -2561,71 +2561,131 @@ def unit_has_active_order(unit):
             and (order.get("type") != "MOVE" or bool(order.get("path"))))
 
 
-def find_unit_move_path_to_any(unit, start_province, destination_ids,
-                               id_to_province, nation_data):
-    """Return the shortest legal route from ``start_province`` to any target.
+def find_unit_move_paths_to_destinations(unit, start_province, destination_ids,
+                                         id_to_province, nation_data):
+    """Return each legal route from ``start_province`` to a defense target.
 
-    The existing single-destination path helper remains the movement rule
-    owner.  Selecting the shortest of its deterministic results keeps a
-    defense order legal under exactly the same land, naval, and diplomacy
-    restrictions as a player-issued route.
+    ``find_unit_move_path`` remains the movement-rule owner.  Keeping the
+    routes separate lets the defense planner choose a destination that fills
+    an uncovered tile instead of independently selecting every unit's nearest
+    tile.
     """
     if not isinstance(start_province, dict):
-        return None
-    choices = []
-    for destination_id in sorted(set(destination_ids or ())):
+        return {}
+    paths = {}
+    for destination_id in destination_ids or ():
+        if destination_id in paths:
+            continue
         if destination_id not in id_to_province:
             continue
         path = find_unit_move_path(unit, start_province, destination_id,
                                    id_to_province, nation_data)
         if path is not None:
-            choices.append((len(path), path, destination_id))
-    return min(choices)[1] if choices else None
+            paths[destination_id] = path
+    return paths
 
 
 def queue_army_defense_orders(map_screen, country_id, army_id, only_idle=False,
                               excluded_unit_object_ids=()):
-    """Queue legal return routes for one army's members.
+    """Queue balanced legal return routes for one army's members.
 
     Setting an area applies routes immediately; the post-turn fallback passes
     ``only_idle`` so it cannot replace an order the player issued.  Blocking
-    multi-turn orders are never overwritten by either path.
+    multi-turn orders are never overwritten by either path.  Existing members
+    already on an area tile count as its defenders.  The planner then assigns
+    reachable units to empty tiles before reinforcing the least-defended tile.
     """
     army = next((item for item in get_armies(
         country_id, map_screen.nation_data, map_screen.map_data)
                  if item.get("id") == army_id), None)
     if army is None:
         return 0
-    defense_area = army.get("defense_area", [])
+    defense_area = list(dict.fromkeys(army.get("defense_area", [])))
+    defense_area = [province_id for province_id in defense_area
+                    if province_id in map_screen.id_to_province]
     if not defense_area:
         return 0
     excluded = set(excluded_unit_object_ids)
     members = set(army.get("unit_ids", []))
-    queued = 0
+    coverage = {province_id: 0 for province_id in defense_area}
+    candidates = []
     for province in map_screen.map_data.values():
         for unit in province.get("units", []):
             if (unit.get("owner") != country_id
-                    or unit.get("unit_id") not in members
-                    or id(unit) in excluded
-                    or (only_idle and unit_has_active_order(unit))):
+                    or unit.get("unit_id") not in members):
                 continue
             order = unit.get("order")
+            province_id = province.get("id")
+            if province_id in coverage:
+                coverage[province_id] += 1
+                if (not only_idle and isinstance(order, dict)
+                        and order.get("type") == "MOVE"):
+                    # A member already within the new area should remain a
+                    # defender rather than continue along an old route.
+                    unit.pop("order", None)
+                continue
+            if (id(unit) in excluded
+                    or (only_idle and unit_has_active_order(unit))):
+                continue
             if (not only_idle and isinstance(order, dict)
                     and order.get("type") in c.ORDERS_BLOCKING_MOVEMENT):
                 continue
-            path = find_unit_move_path_to_any(
+            paths = find_unit_move_paths_to_destinations(
                 unit, province, defense_area, map_screen.id_to_province,
                 map_screen.nation_data)
-            if path is None:
+            if not paths:
                 continue
-            if path:
-                unit["order"] = {"type": "MOVE", "path": path}
-                queued += 1
-            elif isinstance(order, dict) and order.get("type") == "MOVE":
-                # A unit already inside the area is defending in place; an
-                # obsolete route would pull it away again.
-                unit.pop("order", None)
-    return queued
+            candidates.append((unit, paths))
+
+    assignments = []
+    remaining = list(enumerate(candidates))
+    target_rank = {province_id: index for index, province_id
+                   in enumerate(defense_area)}
+
+    # Prefer a globally closest unit for every reachable gap.  Choosing from
+    # all candidates, rather than one unit at a time, prevents an early unit
+    # from taking a nearby occupied tile while another tile remains empty.
+    while remaining:
+        empty_targets = [province_id for province_id in defense_area
+                         if coverage[province_id] == 0]
+        if not empty_targets:
+            break
+        choices = []
+        for candidate_index, (unit, paths) in remaining:
+            for province_id in empty_targets:
+                path = paths.get(province_id)
+                if path is not None:
+                    choices.append((len(path), target_rank[province_id],
+                                    candidate_index, province_id, unit, path))
+        if not choices:
+            break
+        _length, _rank, candidate_index, province_id, unit, path = min(choices)
+        assignments.append((unit, path))
+        coverage[province_id] += 1
+        remaining = [(index, candidate) for index, candidate in remaining
+                     if index != candidate_index]
+
+    # Spread remaining eligible units across the currently least-defended
+    # targets.  Route length only breaks ties after defender counts, so the
+    # defense stays balanced whenever movement legality permits it.
+    while remaining:
+        choices = []
+        for candidate_index, (unit, paths) in remaining:
+            for province_id, path in paths.items():
+                choices.append((coverage[province_id], len(path),
+                                target_rank[province_id], candidate_index,
+                                province_id, unit, path))
+        if not choices:
+            break
+        _count, _length, _rank, candidate_index, province_id, unit, path = min(choices)
+        assignments.append((unit, path))
+        coverage[province_id] += 1
+        remaining = [(index, candidate) for index, candidate in remaining
+                     if index != candidate_index]
+
+    for unit, path in assignments:
+        unit["order"] = {"type": "MOVE", "path": path}
+    return len(assignments)
 
 
 def queue_idle_army_defense_orders(map_screen):
