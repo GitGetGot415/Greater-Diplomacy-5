@@ -150,7 +150,9 @@ CREDITS_DATA = [
                 "- Kaiserreich 1936\n"
                 "- 1939 fixed schizo scenario\n"
                 "- 2000\n"
-                "- 2000 world"),
+                "- 2000 world\n"
+                "- 1914 world (simplified)\n"
+                "- 1914 worls (detailed)\n"),
                 "align": "left",
             },
         ]
