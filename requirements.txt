@@ -9,3 +9,4 @@ setuptools==81.0.0
 cryptography==44.0.0
 google-genai
 open-dragoman==0.4.1
+quickjs-ng==0.16.2.1

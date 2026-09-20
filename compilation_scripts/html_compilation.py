@@ -11,6 +11,7 @@ sys.path.insert(0, REPO_ROOT)
 os.chdir(REPO_ROOT)
 
 import data.constants as c
+from beepbox_audio import is_beepbox_song
 
 # Build-time only tools (not needed to run the game itself, so not in requirements.txt,
 # same convention as PyInstaller/py2app for the other two platform builds):
@@ -27,7 +28,7 @@ STAGE_DIR = "web_stage"
 # exactly what happened: the library was committed, the web build had no copy
 # of it, and the Translate screen reported it missing from web_stage/assets.
 SOURCE_FILES = ["main.py", "mod_loader.py", "gameState.py", "ui_elements.py",
-                "libdragoman.so"]
+                "libdragoman.so", "beepbox_audio.py"]
 # The multiplayer menu screen lives in screens/menu_screens and is included by
 # this whole-package copy, so it stays available in the web build automatically.
 SOURCE_PACKAGES = ["data", "ui", "screens", "map_logic"]
@@ -77,6 +78,12 @@ def main():
         ignored = []
         for entry in contents:
             path = os.path.join(dir_name, entry)
+            if os.path.normpath(path).startswith(os.path.join("assets", "beepbox")):
+                ignored.append(entry)
+                continue
+            if entry.lower().endswith(".json") and is_beepbox_song(path):
+                ignored.append(entry)
+                continue
             try:
                 # git check-ignore returns 0 if ignored, 1 if not ignored
                 res = subprocess.run(["git", "check-ignore", "-q", path])

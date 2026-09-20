@@ -295,6 +295,8 @@ class Controller:
         self.active_albums = []
         self.playlist = []
         self.now_playing = "None"
+        self.beepbox_stream = None
+        self._failed_beepbox_tracks = set()
         self.starting_song = None
         self.track_start_times = {} # Keeps track of offsets specified in start_times.json
 
@@ -576,9 +578,11 @@ class Controller:
 
     def load_music_data(self):
         import os, json
+        import beepbox_audio
         # Scan the hard drive to find whatever is actually there!
         synced_albums = {}
         self.track_start_times = {} # Clear start times whenever we scan
+        prefer_beepbox = not IS_WEB and beepbox_audio.is_available()
 
         if os.path.exists(c.MUSIC_DIR):
             for item in os.listdir(c.MUSIC_DIR):
@@ -596,12 +600,27 @@ class Controller:
                         except Exception as e:
                             print(f"Error loading start_times.json for {item}: {e}")
 
-                    for file in os.listdir(album_dir):
-                        if file.lower().endswith(('.mp3', '.wav', '.ogg')):
+                    files = os.listdir(album_dir)
+                    beepbox_stems = {
+                        os.path.splitext(file)[0].casefold()
+                        for file in files
+                        if prefer_beepbox and file.lower().endswith(".json")
+                        and beepbox_audio.is_beepbox_song(os.path.join(album_dir, file))
+                    }
+                    for file in files:
+                        file_path = os.path.join(album_dir, file)
+                        track_path = None
+                        if (prefer_beepbox and file.lower().endswith(".json")
+                                and beepbox_audio.is_beepbox_song(file_path)):
+                            track_path = file_path.replace("\\", "/")
+                        elif file.lower().endswith(('.mp3', '.wav', '.ogg')):
+                            if prefer_beepbox and os.path.splitext(file)[0].casefold() in beepbox_stems:
+                                continue
                             track_path = os.path.join(album_dir, file).replace("\\", "/")
+                        if track_path is not None:
                             synced_albums[item].append(track_path)
 
-                            # Map the start time if defined
+                            # Map the start time if defined for either audio or JSON tracks.
                             file_stem = os.path.splitext(file)[0]
                             if file in album_start_times:
                                 self.track_start_times[track_path] = float(album_start_times[file])
@@ -625,7 +644,13 @@ class Controller:
         self.starting_song = queries.get_starting_song()
         all_tracks = {track for tracks in self.all_albums.values() for track in tracks}
         if self.starting_song not in all_tracks:
-            self.starting_song = None
+            previous_track = (self.starting_song or "").replace("\\", "/")
+            replacement = os.path.splitext(previous_track)[0] + ".json"
+            if replacement in all_tracks:
+                self.starting_song = replacement
+                self.save_starting_song()
+            else:
+                self.starting_song = None
 
     def save_active_albums(self):
         queries.save_cached_json("active_albums", self.active_albums)
@@ -656,8 +681,15 @@ class Controller:
                 self.playlist.extend(self.all_albums[album])
 
     def play_random_song(self):
-        if not self.playlist:
+        available_tracks = [
+            track for track in self.playlist
+            if track not in self._failed_beepbox_tracks
+        ]
+        if not available_tracks:
             self.now_playing = "None"
+            if self.beepbox_stream is not None:
+                self.beepbox_stream.stop()
+                self.beepbox_stream = None
             if c.USE_SOLOUD and hasattr(self, 'music_handle') and self.music_handle is not None:
                 self.soloud.stop(self.music_handle)
             elif not c.USE_SOLOUD:
@@ -667,13 +699,13 @@ class Controller:
         import random
 
         # Check if we have more than one song and if the current song is in the playlist
-        if len(self.playlist) > 1 and self.now_playing in self.playlist:
+        if len(available_tracks) > 1 and self.now_playing in available_tracks:
             # Create a temporary list of all songs EXCEPT the one that just played
-            available_tracks = [track for track in self.playlist if track != self.now_playing]
-            track = random.choice(available_tracks)
+            other_tracks = [track for track in available_tracks if track != self.now_playing]
+            track = random.choice(other_tracks)
         else:
             # Fallback for playlists with only 1 song, or if nothing is playing yet
-            track = random.choice(self.playlist)
+            track = random.choice(available_tracks)
 
         self.play_specific_song(track)
 
@@ -693,6 +725,29 @@ class Controller:
         try:
             # Fetch the defined start time, default to 0.0 if not listed
             start_time = self.track_start_times.get(track_path, 0.0)
+
+            import beepbox_audio
+            if track_path.lower().endswith(".json") and beepbox_audio.is_beepbox_song(track_path):
+                if self.beepbox_stream is not None:
+                    self.beepbox_stream.stop()
+                    self.beepbox_stream = None
+                if c.USE_SOLOUD and getattr(self, "music_handle", None) is not None:
+                    self.soloud.stop(self.music_handle)
+                    self.music_handle = None
+                elif not c.USE_SOLOUD:
+                    pygame.mixer.music.stop()
+                self.beepbox_stream = beepbox_audio.BeepBoxStream(
+                    track_path,
+                    volume=self.music_volume,
+                    speed=0.5 + self.music_pitch,
+                    start_time=start_time,
+                )
+                self.now_playing = track_path
+                return
+
+            if self.beepbox_stream is not None:
+                self.beepbox_stream.stop()
+                self.beepbox_stream = None
 
             if c.USE_SOLOUD:
                 if hasattr(self, 'music_handle') and self.music_handle is not None:
@@ -718,6 +773,14 @@ class Controller:
             self.now_playing = track_path
         except Exception as e:
             print(f"Error playing track {track_path}: {e}")
+            if track_path.lower().endswith(".json"):
+                fallback = os.path.splitext(track_path)[0] + ".mp3"
+                if os.path.exists(fallback):
+                    print("Falling back to the matching MP3 track.")
+                    self.play_specific_song(fallback)
+                else:
+                    self._failed_beepbox_tracks.add(track_path)
+                    self.play_random_song()
 
     def toggle_fullscreen(self):
         current_time = pygame.time.get_ticks()
@@ -746,7 +809,30 @@ class Controller:
             self.clock.tick(self.target_fps)
 
             # --- HYBRID SONG END CHECK ---
-            if c.USE_SOLOUD:
+            if self.beepbox_stream is not None:
+                stream = self.beepbox_stream
+                stream.update()
+                if stream.error is not None:
+                    failed_track = self.now_playing
+                    stream.stop()
+                    self.beepbox_stream = None
+                    self._failed_beepbox_tracks.add(failed_track)
+                    fallback = os.path.splitext(failed_track)[0] + ".mp3"
+                    if os.path.exists(fallback):
+                        print(f"BeepBox playback failed ({stream.error}); using the MP3 fallback.")
+                        self.play_specific_song(fallback)
+                    else:
+                        print(f"BeepBox playback failed: {stream.error}")
+                        self.play_random_song()
+                    if self.active_state == self.states.get("MUSIC_PLAYER"):
+                        self.states["MUSIC_PLAYER"].refresh_ui()
+                elif stream.finished:
+                    stream.stop()
+                    self.beepbox_stream = None
+                    self.play_random_song()
+                    if self.active_state == self.states.get("MUSIC_PLAYER"):
+                        self.states["MUSIC_PLAYER"].refresh_ui()
+            elif c.USE_SOLOUD:
                 # FIX: Check self.now_playing != "None" to prevent infinite loops when playlist is empty
                 if hasattr(self, 'music_handle') and self.music_handle is not None and self.now_playing != "None":
                     if not self.soloud.is_valid_voice_handle(self.music_handle):
@@ -772,6 +858,8 @@ class Controller:
             for event in events:
                 if event.type == pygame.QUIT:
                     # Clean up safely before closing
+                    if self.beepbox_stream is not None:
+                        self.beepbox_stream.stop()
                     if c.USE_SOLOUD and hasattr(self, 'soloud'):
                         self.soloud.deinit()
                     elif not c.USE_SOLOUD:

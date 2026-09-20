@@ -290,7 +290,9 @@ class Music_Player(ScrollPanes, GameState):
         self._last_playing_track = self.controller.now_playing
         
         self.controller.is_paused = False
-        self._awaiting_seek_confirm = True # Restored for Pygame compatibility
+        self._awaiting_seek_confirm = (
+            not c.USE_SOLOUD and self.controller.beepbox_stream is None
+        )
         self.refresh_ui()
 
     def toggle_pause(self):
@@ -299,7 +301,9 @@ class Music_Player(ScrollPanes, GameState):
             
         self.controller.is_paused = not self.controller.is_paused
         
-        if c.USE_SOLOUD:
+        if self.controller.beepbox_stream is not None:
+            self.controller.beepbox_stream.pause(self.controller.is_paused)
+        elif c.USE_SOLOUD:
             if self.controller.music_handle is not None:
                 self.controller.soloud.set_pause(self.controller.music_handle, self.controller.is_paused)
         else:
@@ -323,7 +327,10 @@ class Music_Player(ScrollPanes, GameState):
         safe_length = max(0, length - 0.5)
         target_time = val * safe_length
         
-        if c.USE_SOLOUD:
+        if self.controller.beepbox_stream is not None:
+            self.controller.beepbox_stream.seek(target_time)
+            self.controller._frozen_time = target_time
+        elif c.USE_SOLOUD:
             if self.controller.music_handle is not None:
                 was_paused = getattr(self.controller, 'is_paused', False)
                 
@@ -394,6 +401,9 @@ class Music_Player(ScrollPanes, GameState):
     def get_current_track_length(self):
         track = self.controller.now_playing
         if not track or track == "None": return 0
+
+        if self.controller.beepbox_stream is not None:
+            return self.controller.beepbox_stream.length
         
         if track not in self._track_lengths:
             length = 0
@@ -419,6 +429,10 @@ class Music_Player(ScrollPanes, GameState):
         return self._track_lengths[track]
 
     def get_current_track_pos(self):
+        if self.controller.beepbox_stream is not None:
+            self.controller._frozen_time = self.controller.beepbox_stream.position
+            return self.controller._frozen_time
+
         # ----------------------------------------------------
         # PYGAME: Uses original offset logic
         # ----------------------------------------------------
@@ -498,7 +512,9 @@ class Music_Player(ScrollPanes, GameState):
             
             # Retrieve actual elapsed time from backend so scrubber doesn't start at 0:00
             actual_pos = 0.0
-            if c.USE_SOLOUD and self.controller.music_handle is not None:
+            if self.controller.beepbox_stream is not None:
+                actual_pos = self.controller.beepbox_stream.position
+            elif c.USE_SOLOUD and self.controller.music_handle is not None:
                 try:
                     if hasattr(self.controller.soloud, 'get_stream_position'):
                         actual_pos = self.controller.soloud.get_stream_position(self.controller.music_handle)
@@ -522,7 +538,8 @@ class Music_Player(ScrollPanes, GameState):
             self.refresh_ui()
             
         # Capture Pygame's raw stream position one frame after seeking
-        if self._awaiting_seek_confirm and not c.USE_SOLOUD:
+        if (self._awaiting_seek_confirm and not c.USE_SOLOUD
+                and self.controller.beepbox_stream is None):
             self._awaiting_seek_confirm = False
             self.controller._scrub_base_pos = pygame.mixer.music.get_pos() / 1000.0
             
@@ -549,7 +566,9 @@ class Music_Player(ScrollPanes, GameState):
 
     def set_music_volume(self, val):
         self.controller.music_volume = val
-        if c.USE_SOLOUD:
+        if self.controller.beepbox_stream is not None:
+            self.controller.beepbox_stream.set_volume(val)
+        elif c.USE_SOLOUD:
             if self.controller.music_handle is not None:
                 self.controller.soloud.set_volume(self.controller.music_handle, val)
         else:
@@ -558,7 +577,10 @@ class Music_Player(ScrollPanes, GameState):
 
     def set_music_pitch(self, val):
         self.controller.music_pitch = val
-        if self.controller.music_handle is not None:
+        if self.controller.beepbox_stream is not None:
+            position = self.controller.beepbox_stream.position
+            self.controller.beepbox_stream.seek(position, speed=0.5 + val)
+        elif c.USE_SOLOUD and self.controller.music_handle is not None:
             speed_mult = 0.5 + val 
             self.controller.soloud.set_relative_play_speed(self.controller.music_handle, speed_mult)
         self.save_audio_settings()

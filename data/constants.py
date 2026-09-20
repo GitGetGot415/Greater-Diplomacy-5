@@ -187,6 +187,12 @@ CREDITS_DATA = [
                 "info": "Update dependencies for conversion between OpenDoctrines and GD5",
                 "align": "left",
                 "links": [{"text": "GitHub", "url": "https://github.com/dependabot"}]
+            },
+            {
+                "link_text": "BeepBox",
+                "info": "Music editor and synthesizer used to create GD5's BeepBox-format tracks",
+                "align": "left",
+                "links": [{"text": "GitHub", "url": "https://github.com/johnnesky/beepbox"}]
             }
         ]
     }

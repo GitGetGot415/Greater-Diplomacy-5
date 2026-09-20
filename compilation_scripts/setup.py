@@ -1,6 +1,7 @@
 from setuptools import setup
 import os
 import subprocess
+from beepbox_audio import has_beepbox_replacement
 
 APP = ['main.py']
 
@@ -34,6 +35,11 @@ def not_git_ignored(path):
         print(f"Error checking git ignore for {path}: {e}")
         return True
 
+def include_native_audio_asset(path):
+    if has_beepbox_replacement(path):
+        return False
+    return not_git_ignored(path)
+
 def not_under_map_editor(path):
     # Mirrors windows_compilation.py's scenarios_ignore_func: map_editor
     # scenarios are dev/test scratch, not meant to ship.
@@ -44,7 +50,7 @@ def is_py_file(path):
 
 # ONLY raw assets go here — use tuples of (target_dir, [files]) for py2app.
 DATA_FILES = []
-DATA_FILES += find_data_files('assets', file_filter=not_git_ignored)
+DATA_FILES += find_data_files('assets', file_filter=include_native_audio_asset)
 DATA_FILES += find_data_files('base_maps')
 DATA_FILES += find_data_files('scenarios', file_filter=not_under_map_editor)
 DATA_FILES += find_data_files('data/json', 'data/json')
@@ -61,7 +67,7 @@ DATA_FILES += find_data_files('screens', file_filter=is_py_file)
 DATA_FILES += find_data_files('map_logic', file_filter=is_py_file)
 DATA_FILES += find_data_files('ui', file_filter=is_py_file)
 DATA_FILES += find_data_files('data', 'data', file_filter=is_py_file)
-DATA_FILES.append(('.', ['mod_loader.py', 'gameState.py', 'ui_elements.py', 'soloud.py']))
+DATA_FILES.append(('.', ['mod_loader.py', 'gameState.py', 'ui_elements.py', 'soloud.py', 'beepbox_audio.py']))
 
 OPTIONS = {
     # All packages and sub-packages must be listed explicitly for py2app.
@@ -77,6 +83,7 @@ OPTIONS = {
         # where a graph-discovered dependency brings only the modules.
         'dragoman',
         'cryptography',
+        'quickjs',
     ],
     # Standalone modules that aren't packages but are imported by the app.
     'includes': ['gameState', 'ui_elements', 'soloud', 'pygame', 'tkinter'],

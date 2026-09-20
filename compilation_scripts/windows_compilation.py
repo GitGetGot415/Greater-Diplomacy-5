@@ -11,6 +11,7 @@ sys.path.insert(0, REPO_ROOT)
 os.chdir(REPO_ROOT)
 
 import data.constants as c
+from beepbox_audio import has_beepbox_replacement
 
 def main():
     dist_dir = "dist"
@@ -43,6 +44,7 @@ def main():
     cmd = [sys.executable, "-m", "PyInstaller", "--clean", "--onefile",
            "--collect-all", "dragoman",
            "--collect-all", "cryptography",
+           "--collect-all", "quickjs",
            "--hidden-import", "screens.map_related_screens.automation_screen",
            "--hidden-import", "screens.map_related_screens.declare_independence",
            "--hidden-import", "screens.map_related_screens.politics_screen",
@@ -96,6 +98,9 @@ def main():
         ignored = []
         for entry in contents:
             path = os.path.join(dir_name, entry)
+            if has_beepbox_replacement(path):
+                ignored.append(entry)
+                continue
             try:
                 # git check-ignore returns 0 if ignored, 1 if not ignored
                 res = subprocess.run(["git", "check-ignore", "-q", path])
@@ -150,7 +155,7 @@ def main():
     # Standalone top-level modules, alongside the package dirs above, so
     # mod_loader can find and patch them too (e.g. a mod targeting
     # "gameState.py" or "ui_elements.py" directly).
-    for py_file in ("main.py", "mod_loader.py", "gameState.py", "ui_elements.py", "soloud.py"):
+    for py_file in ("main.py", "mod_loader.py", "gameState.py", "ui_elements.py", "soloud.py", "beepbox_audio.py"):
         if os.path.isfile(py_file):
             shutil.copy2(py_file, os.path.join(dist_dir, py_file))
 

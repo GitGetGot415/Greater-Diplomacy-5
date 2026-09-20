@@ -317,6 +317,18 @@ class BuildManifestTests(unittest.TestCase):
         packages = set(_dict_key_lists(self.setup, "OPTIONS", {"packages"}).get("packages", []))
         self.assertIn("cryptography", packages)
 
+    def test_desktop_builds_include_native_beepbox_runtime(self):
+        windows_cmd_node = next(node for node in ast.walk(self.windows)
+                                if isinstance(node, ast.Assign)
+                                and any(isinstance(target, ast.Name) and target.id == "cmd"
+                                        for target in node.targets))
+        windows_cmd = [item.value for item in windows_cmd_node.value.elts
+                       if isinstance(item, ast.Constant)]
+        quickjs_index = windows_cmd.index("quickjs")
+        self.assertEqual(windows_cmd[quickjs_index - 1], "--collect-all")
+        packages = set(_dict_key_lists(self.setup, "OPTIONS", {"packages"}).get("packages", []))
+        self.assertIn("quickjs", packages)
+
     def test_web_exclusions_are_the_documented_ones(self):
         """Guards the one intentional asymmetry: data/editors is tkinter-only and
         dropped from the web build, so mods targeting it work on desktop only."""
