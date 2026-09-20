@@ -103,7 +103,7 @@ class _NavigationIntroPopup:
         ("Create an army", "In Orders, click + Create Army in the Army tray. (Located on the right side of the screen)"),
         ("Personalize", "Click a card to select the units in said army. Pressing the E button edits its name and emblem."),
         ("Defense areas", "Press D on an army card, select its defense tiles, and confirm. The army fills uncovered tiles first, then balances its defenders."),
-        ("Frontlines and offensives", "Press F to face a neighboring country, then O to choose an objective in it. The army spreads along that border and advances toward its objective."),
+        ("Frontlines and offensives", "Press F, then click two adjacent tiles across a border to form a frontline. Press O to mark one or more target tiles; the army spreads its advance across that objective line."),
         ("Need to Assign more units?", "With units selected, right-click an army card."),
     )
     DIPLOMACY_STEPS = (

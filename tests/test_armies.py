@@ -12,7 +12,7 @@ from map_logic.rendering import overlay_renderer
 from map_logic.rendering import country_names
 from map_logic.rendering import symbol_loader
 from gameState import GameState
-from screens.map_related_screens.defense_area_screen import DefenseAreaScreen
+from screens.map_related_screens.defense_area_screen import DefenseAreaScreen, FrontlineScreen
 from screens.map_related_screens.orders import Orders_Screen, PANEL_INSET, TOP_BTN_GAP_X
 from ui import army_panel, map_top_right_layout, minimap
 
@@ -114,7 +114,7 @@ class ArmyQueryTests(unittest.TestCase):
              "custom_symbol": None,
              "defense_area": [],
              "frontline_country": None,
-             "offensive_target": None,
+             "offensive_area": [],
              "order_mode": None}])
 
     def test_army_presentation_round_trips_and_invalid_legacy_art_is_removed(self):
@@ -315,13 +315,16 @@ class ArmyQueryTests(unittest.TestCase):
         self.assertLessEqual(abs(frontline_destinations.count(1)
                                  - frontline_destinations.count(2)), 1)
 
-        saved = queries.set_army_offensive_target(
-            "A", army["id"], enemy_two["id"], self.nations, self.world)
-        self.assertEqual(saved["offensive_target"], enemy_two["id"])
+        saved = queries.set_army_offensive_area(
+            "A", army["id"], [enemy_one["id"], enemy_two["id"]],
+            self.nations, self.world)
+        self.assertEqual(saved["offensive_area"], [enemy_one["id"], enemy_two["id"]])
         self.assertEqual(saved["order_mode"], c.ARMY_ORDER_OFFENSIVE)
         self.assertEqual(queries.queue_army_offensive_orders(map_ref, "A", army["id"]), 3)
-        self.assertTrue(all(unit["order"]["path"][-1] == enemy_two["id"]
-                            for unit in members))
+        offensive_destinations = [unit["order"]["path"][-1] for unit in members]
+        self.assertEqual(set(offensive_destinations), {enemy_one["id"], enemy_two["id"]})
+        self.assertLessEqual(abs(offensive_destinations.count(enemy_one["id"])
+                                 - offensive_destinations.count(enemy_two["id"])), 1)
 
     def test_frontline_rejects_non_neighbors_and_clears_stale_objectives(self):
         self.first["neighbors"] = [3]
@@ -334,20 +337,43 @@ class ArmyQueryTests(unittest.TestCase):
             "A", army["id"], "Missing", self.nations, self.world))
         self.assertIsNotNone(queries.set_army_frontline(
             "A", army["id"], "B", self.nations, self.world))
-        self.assertIsNone(queries.set_army_offensive_target(
-            "A", army["id"], self.first["id"], self.nations, self.world))
-        self.assertIsNotNone(queries.set_army_offensive_target(
-            "A", army["id"], enemy["id"], self.nations, self.world))
+        self.assertIsNone(queries.set_army_offensive_area(
+            "A", army["id"], [self.first["id"]], self.nations, self.world))
+        self.assertIsNotNone(queries.set_army_offensive_area(
+            "A", army["id"], [enemy["id"]], self.nations, self.world))
+
+        # Saves made with the original single-province objective field migrate
+        # to a one-tile offensive line instead of losing their plan.
+        army.pop("offensive_area")
+        army["offensive_target"] = enemy["id"]
+        queries.normalize_armies(self.nations, self.world)
+        self.assertEqual(self.nations["A"]["armies"][0]["offensive_area"], [enemy["id"]])
 
         enemy["owner"] = "A"
         queries.normalize_armies(self.nations, self.world)
         normalized = self.nations["A"]["armies"][0]
         self.assertIsNone(normalized["frontline_country"])
-        self.assertIsNone(normalized["offensive_target"])
+        self.assertEqual(normalized["offensive_area"], [])
         self.assertIsNone(normalized["order_mode"])
 
 
 class ArmyLayoutTests(unittest.TestCase):
+    def test_frontline_picker_selects_two_adjacent_border_tiles(self):
+        home = {"id": 1, "owner": "A", "neighbors": [2], "units": []}
+        foreign = {"id": 2, "owner": "B", "neighbors": [1], "units": []}
+        map_ref = SimpleNamespace(
+            player_country="A", nation_data={"A": {"armies": [
+                {"id": "army", "name": "Army 1", "unit_ids": [],
+                 "frontline_country": None, "offensive_area": []}]}, "B": {}},
+            map_data={"home": home, "foreign": foreign},
+            id_to_province={1: home, 2: foreign})
+        screen = FrontlineScreen(map_ref, "army")
+
+        screen._set_border_side(foreign)
+        self.assertEqual((screen.home_id, screen.target_id), (None, foreign["id"]))
+        screen._set_border_side(home)
+        self.assertEqual((screen.home_id, screen.target_id), (home["id"], foreign["id"]))
+
     def test_army_order_controls_are_vertical_and_non_overlapping(self):
         card = pygame.Rect(100, 100, map_top_right_layout.PANEL_WIDTH,
                            map_top_right_layout.CARD_HEIGHT)

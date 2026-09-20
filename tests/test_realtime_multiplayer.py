@@ -960,7 +960,7 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
                               "custom_symbol": custom_symbol,
                               "defense_area": [map_ref.map_data["home"]["id"]],
                               "frontline_country": "B",
-                              "offensive_target": map_ref.map_data["foreign"]["id"],
+                              "offensive_area": [map_ref.map_data["foreign"]["id"]],
                               "order_mode": c.ARMY_ORDER_OFFENSIVE}]
         validated = MapRealtimeDriver(map_ref).validate_draft("A", [roster])
         self.assertEqual(validated, [{"type": "army_roster", "armies": roster["armies"]}])
@@ -994,7 +994,7 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
             MapRealtimeDriver(map_ref).validate_draft("A", [{
                 "type": "army_roster", "armies": [
                     {"id": "army-a", "name": "Army 1", "unit_ids": [unit_id],
-                     "frontline_country": "P", "offensive_target": None,
+                     "frontline_country": "P", "offensive_area": [],
                      "order_mode": c.ARMY_ORDER_FRONTLINE}]}])
 
     def test_an_idle_complete_draft_is_accepted(self):

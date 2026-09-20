@@ -208,43 +208,13 @@ def _open_defense_area(map_screen, army):
 
 
 def _open_frontline_picker(map_screen, army):
-    """Choose a neighboring country for the army's persistent frontline."""
+    """Open the map picker for the two sides of a frontline border."""
     if not map_screen.can_select_map_units():
         map_screen.show_feedback("Turn submitted or unavailable; unsubmit to edit army orders.")
         return
-    candidates = queries.get_army_frontline_countries(
-        map_screen.player_country, map_screen.map_data)
-    current = army.get("frontline_country")
-    if not candidates and not current:
-        map_screen.show_feedback("This army's country has no neighboring land border to frontline.")
-        return
-    items = ([] if not current else [("Clear frontline", None)])
-    items.extend(queries.country_picker_items(candidates, map_screen.nation_data))
-
-    def choose(target_country):
-        saved = queries.set_army_frontline(
-            map_screen.player_country, army["id"], target_country,
-            map_screen.nation_data, map_screen.map_data)
-        if saved is None:
-            map_screen.show_feedback("That country no longer shares a valid frontline.")
-            return
-        if target_country is None:
-            queued = (queries.queue_army_defense_orders(
-                map_screen, map_screen.player_country, army["id"])
-                      if saved.get("order_mode") == c.ARMY_ORDER_DEFENSE else 0)
-            map_screen.show_feedback(
-                f"Frontline cleared; {queued} defense route(s) queued.")
-        else:
-            queued = queries.queue_army_frontline_orders(
-                map_screen, map_screen.player_country, army["id"])
-            country_name = queries.get_country_display_name(
-                target_country, map_screen.nation_data)
-            map_screen.show_feedback(
-                f"Frontline set against {country_name}; {queued} route(s) queued.")
-        map_screen.invalidate_map_presentation_cache()
-
-    queries.open_listbox_selector(
-        map_screen, "Set Frontline", "Choose a neighboring country:", items, choose)
+    from screens.map_related_screens.defense_area_screen import FrontlineScreen
+    from ui.screen_runner import _run_pygame_sub_screen
+    _run_pygame_sub_screen(map_screen, FrontlineScreen(map_screen, army["id"]))
 
 
 def _open_offensive_order(map_screen, army):
@@ -815,7 +785,7 @@ def draw(map_screen, surface, orders_screen=None, draw_editors=True):
         frontline = text_font.render("F", True, (235, 247, 255))
         surface.blit(frontline, frontline.get_rect(center=frontline_rect.center))
         offensive_rect = _offensive_rect(rect)
-        has_offensive_order = army.get("offensive_target") is not None
+        has_offensive_order = bool(army.get("offensive_area"))
         offensive_active = army.get("order_mode") == c.ARMY_ORDER_OFFENSIVE
         pygame.draw.rect(surface,
                          (154, 83, 45) if offensive_active else

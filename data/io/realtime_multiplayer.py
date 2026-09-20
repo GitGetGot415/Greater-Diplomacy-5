@@ -836,7 +836,11 @@ class MapRealtimeDriver:
             custom_symbol = raw.get("custom_symbol")
             defense_area = raw.get("defense_area", [])
             frontline_country = raw.get("frontline_country")
-            offensive_target = raw.get("offensive_target")
+            if "offensive_area" in raw:
+                offensive_area = raw.get("offensive_area")
+            else:
+                legacy_target = raw.get("offensive_target")
+                offensive_area = [] if legacy_target is None else [legacy_target]
             order_mode = raw.get("order_mode")
             valid_symbol = (isinstance(symbol, str)
                             and (not symbol or queries.normalize_army_symbol(symbol) == symbol))
@@ -861,21 +865,21 @@ class MapRealtimeDriver:
                 queries.normalize_army_frontline_country(
                     country_id, frontline_country, self.map_ref.nation_data,
                     self.map_ref.map_data) == frontline_country)
-            valid_offensive_target = (
-                offensive_target is None or
-                queries.normalize_army_offensive_target(
-                    frontline_country, offensive_target,
-                    self.map_ref.map_data) == offensive_target)
+            valid_offensive_area = (
+                isinstance(offensive_area, list)
+                and queries.normalize_army_offensive_area(
+                    frontline_country, offensive_area,
+                    self.map_ref.map_data) == offensive_area)
             valid_order_mode = order_mode is None or order_mode in c.ARMY_ORDER_MODES
             canonical_order_mode = queries.normalize_army_order_mode(
-                order_mode, defense_area, frontline_country, offensive_target)
+                order_mode, defense_area, frontline_country, offensive_area)
             if (not isinstance(army_id, str) or not army_id or len(army_id) > 80
                     or army_id in army_ids or not isinstance(name, str)
                     or not name.strip() or len(name.strip()) > 80
                     or not isinstance(unit_ids, list) or len(unit_ids) > len(owned)
                     or not valid_symbol or not valid_color or not valid_rotation or not valid_flipped
                     or not valid_custom_symbol or not valid_defense_area or not valid_frontline
-                    or not valid_offensive_target or not valid_order_mode
+                    or not valid_offensive_area or not valid_order_mode
                     or ("order_mode" in raw and canonical_order_mode != order_mode)
                     or (symbol and custom_symbol)):
                 raise RealtimeError("Invalid army roster.")
@@ -893,7 +897,7 @@ class MapRealtimeDriver:
                                "custom_symbol": copy.deepcopy(custom_symbol),
                                "defense_area": list(defense_area),
                                "frontline_country": frontline_country,
-                               "offensive_target": offensive_target,
+                               "offensive_area": list(offensive_area),
                                "order_mode": canonical_order_mode})
         return {"type": "army_roster", "armies": armies}
 

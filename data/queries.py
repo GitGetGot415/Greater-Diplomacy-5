@@ -2401,21 +2401,27 @@ def normalize_army_frontline_country(country_id, target_country, nation_data, ma
         country_id, target_country, map_data) else None)
 
 
-def normalize_army_offensive_target(frontline_country, province_id, map_data):
-    """Return a live province owned by the army's current frontline country."""
-    if (not isinstance(province_id, int) or isinstance(province_id, bool)):
-        return None
-    province = next((item for item in (map_data or {}).values()
-                     if isinstance(item, dict) and item.get("id") == province_id), None)
-    if (province is None or is_water_province(province)
-            or province.get("owner") != frontline_country):
-        return None
-    return province_id
+def normalize_army_offensive_area(frontline_country, province_ids, map_data):
+    """Return the live target tiles for an army's offensive objective line."""
+    if not isinstance(province_ids, list):
+        return []
+    id_to_province = {province.get("id"): province
+                      for province in (map_data or {}).values()
+                      if isinstance(province, dict)}
+    normalized = []
+    for province_id in province_ids:
+        province = id_to_province.get(province_id)
+        if (isinstance(province_id, int) and not isinstance(province_id, bool)
+                and province is not None and not is_water_province(province)
+                and province.get("owner") == frontline_country
+                and province_id not in normalized):
+            normalized.append(province_id)
+    return normalized
 
 
-def normalize_army_order_mode(order_mode, defense_area, frontline_country, offensive_target):
+def normalize_army_order_mode(order_mode, defense_area, frontline_country, offensive_area):
     """Choose a valid active directive while preserving any inactive plans."""
-    if order_mode == c.ARMY_ORDER_OFFENSIVE and offensive_target is not None:
+    if order_mode == c.ARMY_ORDER_OFFENSIVE and offensive_area:
         return c.ARMY_ORDER_OFFENSIVE
     if order_mode in (c.ARMY_ORDER_FRONTLINE, c.ARMY_ORDER_OFFENSIVE) and frontline_country:
         return c.ARMY_ORDER_FRONTLINE
@@ -2468,8 +2474,13 @@ def normalize_armies(nation_data, map_data):
             defense_area = normalize_army_defense_area(raw.get("defense_area", []), map_data)
             frontline_country = normalize_army_frontline_country(
                 country_id, raw.get("frontline_country"), nation_data, map_data)
-            offensive_target = normalize_army_offensive_target(
-                frontline_country, raw.get("offensive_target"), map_data)
+            raw_offensive_area = raw.get("offensive_area")
+            if raw_offensive_area is None and "offensive_target" in raw:
+                # The first frontline release stored one objective. Preserve it
+                # as a one-tile objective line when loading those saves.
+                raw_offensive_area = [raw.get("offensive_target")]
+            offensive_area = normalize_army_offensive_area(
+                frontline_country, raw_offensive_area or [], map_data)
             valid.append({"id": army_id, "name": name.strip()[:80],
                           "unit_ids": unit_ids,
                           "symbol": normalize_army_symbol(raw.get("symbol", "")),
@@ -2483,10 +2494,10 @@ def normalize_armies(nation_data, map_data):
                               raw.get("custom_symbol")),
                           "defense_area": defense_area,
                           "frontline_country": frontline_country,
-                          "offensive_target": offensive_target,
+                          "offensive_area": offensive_area,
                           "order_mode": normalize_army_order_mode(
                               raw.get("order_mode"), defense_area,
-                              frontline_country, offensive_target)})
+                              frontline_country, offensive_area)})
         country["armies"] = valid
 
 
@@ -2532,7 +2543,7 @@ def create_army(country_id, unit_ids, nation_data, map_data):
             "custom_symbol": None,
             "defense_area": [],
             "frontline_country": None,
-            "offensive_target": None,
+            "offensive_area": [],
             "order_mode": None}
     armies.append(army)
     normalize_armies(nation_data, map_data)
@@ -2639,7 +2650,7 @@ def set_army_defense_area(country_id, army_id, province_ids, nation_data, map_da
     elif army.get("order_mode") == c.ARMY_ORDER_DEFENSE:
         army["order_mode"] = normalize_army_order_mode(
             c.ARMY_ORDER_FRONTLINE, army["defense_area"],
-            army.get("frontline_country"), army.get("offensive_target"))
+            army.get("frontline_country"), army.get("offensive_area", []))
     return army
 
 
@@ -2657,7 +2668,7 @@ def set_army_frontline(country_id, army_id, target_country, nation_data, map_dat
         return None
     if target_country is None:
         army["frontline_country"] = None
-        army["offensive_target"] = None
+        army["offensive_area"] = []
         army["order_mode"] = normalize_army_order_mode(
             c.ARMY_ORDER_DEFENSE, army.get("defense_area", []), None, None)
         return army
@@ -2666,15 +2677,14 @@ def set_army_frontline(country_id, army_id, target_country, nation_data, map_dat
     if normalized is None:
         return None
     army["frontline_country"] = normalized
-    if normalize_army_offensive_target(
-            normalized, army.get("offensive_target"), map_data) is None:
-        army["offensive_target"] = None
+    army["offensive_area"] = normalize_army_offensive_area(
+        normalized, army.get("offensive_area", []), map_data)
     army["order_mode"] = c.ARMY_ORDER_FRONTLINE
     return army
 
 
-def set_army_offensive_target(country_id, army_id, province_id, nation_data, map_data):
-    """Set or clear an objective within an army's selected frontline country."""
+def set_army_offensive_area(country_id, army_id, province_ids, nation_data, map_data):
+    """Set or clear an objective line within an army's frontline country."""
     normalize_armies(nation_data, map_data)
     army = next((item for item in get_armies(country_id, nation_data, map_data)
                  if item.get("id") == army_id), None)
@@ -2683,16 +2693,20 @@ def set_army_offensive_target(country_id, army_id, province_id, nation_data, map
     frontline_country = army.get("frontline_country")
     if not frontline_country:
         return None
-    if province_id is None:
-        army["offensive_target"] = None
-        army["order_mode"] = c.ARMY_ORDER_FRONTLINE
-        return army
-    target = normalize_army_offensive_target(frontline_country, province_id, map_data)
-    if target is None:
+    area = normalize_army_offensive_area(frontline_country, province_ids, map_data)
+    if province_ids is not None and area != province_ids:
         return None
-    army["offensive_target"] = target
-    army["order_mode"] = c.ARMY_ORDER_OFFENSIVE
+    army["offensive_area"] = area
+    army["order_mode"] = (c.ARMY_ORDER_OFFENSIVE if area
+                           else c.ARMY_ORDER_FRONTLINE)
     return army
+
+
+def set_army_offensive_target(country_id, army_id, province_id, nation_data, map_data):
+    """Compatibility wrapper for callers from the single-objective release."""
+    area = None if province_id is None else [province_id]
+    return set_army_offensive_area(
+        country_id, army_id, area, nation_data, map_data)
 
 
 def unit_has_active_order(unit):
@@ -2728,7 +2742,7 @@ def find_unit_move_paths_to_destinations(unit, start_province, destination_ids,
 
 def _queue_army_balanced_area_orders(map_screen, country_id, army, destination_ids,
                                      only_idle=False, excluded_unit_object_ids=()):
-    """Queue balanced legal routes to the given owned strategic destinations.
+    """Queue balanced legal routes to the given strategic destinations.
 
     Defense areas and country frontlines share the same formation rule:
     existing members count as defenders, reachable gaps are filled first, then
@@ -2860,46 +2874,23 @@ def queue_army_frontline_orders(map_screen, country_id, army_id, only_idle=False
 
 def queue_army_offensive_orders(map_screen, country_id, army_id, only_idle=False,
                                 excluded_unit_object_ids=()):
-    """Queue every eligible member's legal route to its army's objective.
+    """Queue balanced routes to an army's offensive objective line.
 
-    The target belongs to the selected frontline country, so every route is an
-    offensive plan that advances from that border toward the same objective.
-    The normal movement-path helper remains responsible for war, access, and
-    terrain legality.
+    Every target belongs to the selected frontline country. Reusing the shared
+    formation planner keeps units from converging on one province: it fills
+    reachable gaps in the objective line before reinforcing one of its tiles.
     """
     army = _army_record(map_screen, country_id, army_id)
     if army is None:
         return 0
-    target = normalize_army_offensive_target(
-        army.get("frontline_country"), army.get("offensive_target"),
+    targets = normalize_army_offensive_area(
+        army.get("frontline_country"), army.get("offensive_area", []),
         map_screen.map_data)
-    if target is None:
+    if not targets:
         return 0
-    excluded = set(excluded_unit_object_ids)
-    members = set(army.get("unit_ids", []))
-    assignments = []
-    for province in map_screen.map_data.values():
-        for unit in province.get("units", []):
-            if (unit.get("owner") != country_id
-                    or unit.get("unit_id") not in members
-                    or id(unit) in excluded):
-                continue
-            order = unit.get("order")
-            if only_idle and unit_has_active_order(unit):
-                continue
-            if (not only_idle and isinstance(order, dict)
-                    and order.get("type") in c.ORDERS_BLOCKING_MOVEMENT):
-                continue
-            path = find_unit_move_path(unit, province, target,
-                                       map_screen.id_to_province,
-                                       map_screen.nation_data)
-            if path:
-                assignments.append((unit, path))
-            elif isinstance(order, dict) and order.get("type") == "MOVE":
-                unit.pop("order", None)
-    for unit, path in assignments:
-        unit["order"] = {"type": "MOVE", "path": path}
-    return len(assignments)
+    return _queue_army_balanced_area_orders(
+        map_screen, country_id, army, targets, only_idle,
+        excluded_unit_object_ids)
 
 
 def queue_idle_army_defense_orders(map_screen):
