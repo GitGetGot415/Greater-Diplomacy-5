@@ -248,6 +248,15 @@ def _combat_information_available(map_screen, province_id):
     return visible is None or province_id in visible
 
 
+def combat_bubbles_are_visible(map_screen):
+    """Whether combat bubbles belong in the current unit-overlay detail level."""
+    # Lightweight query/render doubles without a camera retain the ordinary
+    # detailed presentation.  A live strategic map instead replaces combat
+    # detail with formation markers once it reaches army-group zoom.
+    return (getattr(map_screen, "camera", None) is None
+            or not uses_compact_army_icons(map_screen))
+
+
 def combat_bubble_records(map_screen):
     """Describe every visible combat bubble and its Orders-screen destination.
 
@@ -255,6 +264,9 @@ def combat_bubble_records(map_screen):
     hit-testing all consume this same list so a combat category or click target
     cannot drift away from the image actually painted on the map.
     """
+    if not combat_bubbles_are_visible(map_screen):
+        return []
+
     # A combat forecast can simulate up to 100 volleys for every visible
     # clash.  It is presentation data during a planning turn, not animation
     # work: Map.invalidate_map_presentation_cache() advances this revision at
@@ -266,7 +278,8 @@ def combat_bubble_records(map_screen):
     if revision is not None:
         cache_key = (revision, map_screen.player_country,
                      id(getattr(map_screen, 'visible_provinces', None)),
-                     id(getattr(map_screen, 'partial_visible_provinces', None)))
+                     id(getattr(map_screen, 'partial_visible_provinces', None)),
+                     c.BATTLE_DISPLAY_MODE)
         cached = getattr(map_screen, '_combat_bubble_records_cache', None)
         if cached is not None and cached[0] == cache_key:
             return cached[1]
@@ -449,7 +462,8 @@ def _draw_combat_bubble(surface, map_screen, record):
 
 def draw_combat_bubbles(map_screen, surface, records=None):
     """Draw asset-backed combat bubbles and return their shared records."""
-    if map_screen.secondary_mode != "UNITS":
+    if (map_screen.secondary_mode != "UNITS"
+            or not combat_bubbles_are_visible(map_screen)):
         return []
     records = combat_bubble_records(map_screen) if records is None else records
     for record in records:
@@ -465,7 +479,8 @@ def combat_bubble_at_screen_pos(map_screen, screen_pos):
     corners of the source PNG are not clickable.
     """
     if (map_screen.viewing_ai_moves
-            or map_screen.secondary_mode != "UNITS"):
+            or map_screen.secondary_mode != "UNITS"
+            or not combat_bubbles_are_visible(map_screen)):
         return None
     click_x, click_y = screen_pos
     for record in reversed(combat_bubble_records(map_screen)):

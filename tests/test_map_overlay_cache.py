@@ -262,12 +262,33 @@ class CombatDisplayTests(unittest.TestCase):
             return overlay_renderer.combat_bubble_records(self.map)
 
     def test_full_display_keeps_active_battle_units_visible(self):
+        # Switching the option must invalidate the presentation cache even
+        # while the map itself has not changed.
+        self.map._presentation_cache_revision = 1
         compact = self.records("COMPACT")[0]
         full = self.records("FULL")[0]
 
         self.assertEqual(compact["hidden_unit_ids"],
                          {id(self.mine), id(self.enemy)})
         self.assertEqual(full["hidden_unit_ids"], set())
+
+    def test_army_group_zoom_suppresses_combat_bubbles_and_forecasts(self):
+        self.map.camera = SimpleNamespace(
+            zoom=overlay_renderer.ARMY_GROUP_ICON_MAX_ZOOM)
+        self.map.tactical_mode = False
+        self.map.secondary_mode = "UNITS"
+        surface = pygame.Surface((200, 200), pygame.SRCALPHA)
+
+        with mock.patch.object(queries, "get_combat_predictions") as predictions, \
+             mock.patch.object(overlay_renderer, "_draw_combat_bubble") as draw:
+            records = overlay_renderer.combat_bubble_records(self.map)
+            drawn = overlay_renderer.draw_combat_bubbles(
+                self.map, surface, [{"kind": "province"}])
+
+        self.assertEqual(records, [])
+        self.assertEqual(drawn, [])
+        predictions.assert_not_called()
+        draw.assert_not_called()
 
     def test_informed_uninvolved_battle_uses_muted_expected_owner_color(self):
         attacker = dict(self.mine, owner="A", health=100, max_health=100,
