@@ -1253,8 +1253,10 @@ _BOX_TEMPLATES = {}
 _BOX_TEMPLATE_CACHE_LIMIT = 500
 
 
-def _get_box_template(symbol_name, border_color, inverted, owner=None):
-    key = (symbol_name, tuple(border_color), inverted, c.UNIT_ART_STYLE, owner)
+def _get_box_template(symbol_name, border_color, inverted, owner=None,
+                      reserve_symbol_space=False):
+    key = (symbol_name, tuple(border_color), inverted, c.UNIT_ART_STYLE, owner,
+           reserve_symbol_space)
     cached = _BOX_TEMPLATES.get(key)
     if cached is not None:
         return cached
@@ -1266,11 +1268,13 @@ def _get_box_template(symbol_name, border_color, inverted, owner=None):
     if inverted:
         box_surf.fill((255, 255, 255))
         pygame.draw.rect(box_surf, (0, 0, 0), box_surf.get_rect(), 4)
-        symbol = symbol_loader.get_symbol(symbol_name, 2.5, color=(0, 0, 0), country=owner)
+        symbol = (symbol_loader.get_symbol(symbol_name, 2.5, color=(0, 0, 0), country=owner)
+                  if symbol_name else None)
     else:
         box_surf.fill(c.UNIT_BOX_BG_COLOR)
         pygame.draw.rect(box_surf, border_color, box_surf.get_rect(), 4)
-        symbol = symbol_loader.get_symbol(symbol_name, 2.5, color=border_color, country=owner)
+        symbol = (symbol_loader.get_symbol(symbol_name, 2.5, color=border_color, country=owner)
+                  if symbol_name else None)
 
     text_x = 10
     if symbol:
@@ -1284,6 +1288,10 @@ def _get_box_template(symbol_name, border_color, inverted, owner=None):
         sym_rect = symbol.get_rect(midleft=(8, internal_h // 2))
         box_surf.blit(symbol, sym_rect)
         text_x = sym_rect.right + 8
+    elif reserve_symbol_space:
+        # Army markers deliberately start with no unit fallback icon, but
+        # their emblems still occupy the same left-side area.
+        text_x = (internal_w // 2) + 4
 
     if len(_BOX_TEMPLATES) >= _BOX_TEMPLATE_CACHE_LIMIT:
         _BOX_TEMPLATES.clear()
@@ -1292,7 +1300,8 @@ def _get_box_template(symbol_name, border_color, inverted, owner=None):
     return result
 
 
-def unit_box(symbol_name, border_color, count, inverted, size, owner=None):
+def unit_box(symbol_name, border_color, count, inverted, size, owner=None,
+             reserve_symbol_space=False):
     """One nation's box: its color, the unit it leads with, and how many.
 
     Drawn at UNIT_BOX_WIDTH x UNIT_BOX_HEIGHT and supersampled down to `size`,
@@ -1304,7 +1313,8 @@ def unit_box(symbol_name, border_color, count, inverted, size, owner=None):
     def build():
         internal_h = c.UNIT_BOX_HEIGHT
         internal_w = c.UNIT_BOX_WIDTH
-        template, text_x = _get_box_template(symbol_name, border_color, inverted, owner)
+        template, text_x = _get_box_template(
+            symbol_name, border_color, inverted, owner, reserve_symbol_space)
         box_surf = template.copy()
 
         if inverted:
@@ -1339,7 +1349,8 @@ def unit_box(symbol_name, border_color, count, inverted, size, owner=None):
         # Supersampling/Anti-aliasing final stretch down
         return pygame.transform.smoothscale(box_surf, size)
 
-    return _cache_box((symbol_name, tuple(border_color), count, inverted, size, c.UNIT_ART_STYLE, owner), build)
+    return _cache_box((symbol_name, tuple(border_color), count, inverted, size,
+                       c.UNIT_ART_STYLE, owner, reserve_symbol_space), build)
 
 
 def unknown_box(size):
@@ -1442,20 +1453,21 @@ def compact_army_group_icon(army, best_unit, owner_color, owner, size, count):
     """Return a compact unit-style box with its stack count and army emblem.
 
     The fallback area groups have no authored army emblem, so they retain the
-    best unit's ordinary symbol.  An actual army replaces that left-side symbol
-    with its emblem while keeping the same rectangular box and readable count.
+    best unit's ordinary symbol.  An actual army starts with an empty symbol
+    slot, then draws its emblem there, so no fallback unit art can show behind
+    or beyond the army icon.
     """
     box_size = (round(size * c.UNIT_BOX_WIDTH / c.UNIT_BOX_HEIGHT), size)
-    icon = unit_box(unit_symbol_name(best_unit), owner_color, count, False,
-                    box_size, owner)
     emblem = army_emblem_surface(army, size)
+    symbol_name = None if emblem else unit_symbol_name(best_unit)
+    icon = unit_box(symbol_name, owner_color, count, False, box_size, owner,
+                    reserve_symbol_space=bool(emblem))
     if not emblem:
         return icon
 
     icon = icon.copy()
     # Unit boxes reserve their left half for the unit symbol and their right
-    # side for the number.  Clear that symbol area before placing the army's
-    # custom emblem so the two icons never overlap.
+    # side for the number.  Keep the army emblem inside that reserved region.
     emblem_area = pygame.Rect(3, 3, max(1, icon.get_width() // 2 - 5),
                               max(1, icon.get_height() - 6))
     pygame.draw.rect(icon, c.UNIT_BOX_BG_COLOR, emblem_area)

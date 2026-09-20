@@ -725,7 +725,9 @@ class ArmyLayoutTests(unittest.TestCase):
                 army, {"owner": "A", "type": "Tank"}, (220, 60, 70), "A", 24, 2)
 
         self.assertIsNot(icon, box_surface)
+        self.assertIsNone(box.call_args.args[0])
         self.assertEqual(box.call_args.args[2], 2)
+        self.assertTrue(box.call_args.kwargs["reserve_symbol_space"])
         self.assertEqual(icon.get_at((12, 12))[:3], (255, 0, 0))
 
     def test_orders_tray_creates_armies_and_right_click_assigns_selection(self):
