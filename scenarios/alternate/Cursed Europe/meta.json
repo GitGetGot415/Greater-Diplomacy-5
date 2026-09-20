@@ -1,6 +1,6 @@
 {
     "version": "v36",
-    "generated_at": "2026-09-19T21:30:07.330800",
+    "generated_at": "2026-09-19T21:35:14.116387",
     "date": {
         "day": 15,
         "month": 0,
@@ -46472,7 +46472,9 @@
             "unit_queue": [],
             "orders": [],
             "resources": {},
-            "buildings": []
+            "buildings": [
+                "Factory Lvl 1"
+            ]
         },
         "(80, 2, 0)": {
             "owner": "Soviet Union",

@@ -19741,7 +19741,9 @@
         "building_queue": [],
         "unit_queue": [],
         "orders": [],
-        "buildings": [],
+        "buildings": [
+            "Factory Lvl 1"
+        ],
         "resources": {},
         "cores": [
             "German Reich",
