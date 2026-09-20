@@ -1193,7 +1193,10 @@ ARMY_EMBLEM_GAP = 6
 ARMY_GROUP_ICON_MAX_ZOOM = 2.0
 ARMY_GROUP_TRANSITION_SECONDS = 0.1
 # Compact markers must read as a formation rather than an ordinary division.
-COMPACT_GROUP_MARKER_SCALE = 1.2
+COMPACT_GROUP_MARKER_SCALE = 1.4
+# Unit boxes have a readability floor. This applies an additional bounded zoom factor
+# to formation circles so they still visibly shrink at the widest map view.
+COMPACT_GROUP_MIN_ZOOM_SCALE = 0.25
 # A group should replace several nearby division displays, not recreate one
 # marker per province.  This fixed map-space radius keeps group membership and
 # marker positions stable while the player changes strategic zoom.
@@ -1441,13 +1444,17 @@ def unit_symbol_name(unit):
     return unit_type
 
 
-def compact_army_group_icon(army, best_unit, owner_color, owner, size, count):
+def compact_army_group_icon(army, best_unit, owner_color, owner, size, count,
+                            zoom=ARMY_GROUP_ICON_MAX_ZOOM):
     """Return a larger circular formation marker with its icon and count."""
     if isinstance(size, tuple):
         box_size = size
     else:
         box_size = (round(size * c.UNIT_BOX_WIDTH / c.UNIT_BOX_HEIGHT), size)
-    diameter = max(12, round(max(box_size) * COMPACT_GROUP_MARKER_SCALE))
+    zoom_fraction = min(1.0, max(0.0, zoom / ARMY_GROUP_ICON_MAX_ZOOM))
+    zoom_scale = (COMPACT_GROUP_MIN_ZOOM_SCALE
+                  + ((1.0 - COMPACT_GROUP_MIN_ZOOM_SCALE) * zoom_fraction))
+    diameter = max(8, round(max(box_size) * COMPACT_GROUP_MARKER_SCALE * zoom_scale))
     army_signature = None
     if army is not None:
         army_signature = (
@@ -1562,7 +1569,8 @@ def compact_army_groups(map_screen, combat_unit_ids):
             continue
         owner_color = map_screen.nation_colors.get(player_country, (200, 200, 200))
         icon = compact_army_group_icon(army, best_unit, owner_color,
-                                       player_country, box_size, len(units))
+                                       player_country, box_size, len(units),
+                                       zoom=map_screen.camera.zoom)
         groups.append({"army": army, "units": units,
                        "province": records[0][1], "center": _army_average_center(records, map_screen),
                        "icon": icon})
@@ -1656,7 +1664,8 @@ def compact_area_unit_groups(map_screen, combat_unit_ids, organized_unit_object_
                 continue
             owner_color = map_screen.nation_colors.get(owner, (200, 200, 200))
             icon = compact_army_group_icon(None, best_unit, owner_color, owner,
-                                           box_size, len(units))
+                                           box_size, len(units),
+                                           zoom=map_screen.camera.zoom)
             anchor_province = cluster_records[0][1]
             anchor_id = anchor_province.get("id", anchor_province["center"])
             groups.append({"army": None, "units": units,
@@ -1674,7 +1683,7 @@ def compact_area_unit_groups(map_screen, combat_unit_ids, organized_unit_object_
     for group in groups:
         groups_by_center.setdefault(tuple(group["center"]), []).append(group)
     for colliding_groups in groups_by_center.values():
-        spacing = scaled_h + 3
+        spacing = max(group["icon"].get_height() for group in colliding_groups) + 3
         for index, group in enumerate(colliding_groups):
             group["screen_offset"] = (0, round((index - (len(colliding_groups) - 1) / 2)
                                                 * spacing))

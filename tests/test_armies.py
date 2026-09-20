@@ -804,8 +804,11 @@ class ArmyLayoutTests(unittest.TestCase):
               patch.object(overlay_renderer.fonts, "get", return_value=count_font)):
             icon = overlay_renderer.compact_army_group_icon(
                 army, best_unit, (220, 60, 70), "A", 24, 3)
+            zoomed_out_icon = overlay_renderer.compact_army_group_icon(
+                army, best_unit, (220, 60, 70), "A", 24, 3, zoom=0.5)
 
-        self.assertEqual(icon.get_size(), (58, 58))
+        self.assertEqual(icon.get_size(), (67, 67))
+        self.assertLess(zoomed_out_icon.get_width(), icon.get_width())
         self.assertEqual(icon.get_at((0, 0))[3], 0)
         self.assertEqual(symbol.call_args.args[0], "Tank")
         self.assertEqual(symbol.call_args.kwargs["color"], (220, 60, 70))
@@ -822,9 +825,9 @@ class ArmyLayoutTests(unittest.TestCase):
             icon = overlay_renderer.compact_army_group_icon(
                 army, {"owner": "A", "type": "Tank"}, (220, 60, 70), "A", 24, 2)
 
-        self.assertEqual(icon.get_size(), (58, 58))
+        self.assertEqual(icon.get_size(), (67, 67))
         self.assertEqual(icon.get_at((0, 0))[3], 0)
-        self.assertEqual(icon.get_at((21, 29))[:3], (255, 0, 0))
+        self.assertEqual(icon.get_at((24, 33))[:3], (255, 0, 0))
         symbol.assert_not_called()
 
     def test_orders_tray_creates_armies_and_right_click_assigns_selection(self):
