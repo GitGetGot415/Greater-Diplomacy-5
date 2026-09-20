@@ -2130,6 +2130,10 @@ ARMY_CUSTOM_SYMBOL_SIZE = 20
 ARMY_CUSTOM_SYMBOL_RED = "R"
 ARMY_CUSTOM_SYMBOL_BLACK = "B"
 ARMY_CUSTOM_SYMBOL_EMPTY = "."
+ARMY_ORDER_DEFENSE = "DEFENSE"
+ARMY_ORDER_FRONTLINE = "FRONTLINE"
+ARMY_ORDER_OFFENSIVE = "OFFENSIVE"
+ARMY_ORDER_MODES = (ARMY_ORDER_DEFENSE, ARMY_ORDER_FRONTLINE, ARMY_ORDER_OFFENSIVE)
 # Factory and recruitment center building art, kept out of the flat
 # assets/images set since building names/levels multiply fast. Loaded into
 # the same SYMBOLS name->Surface map as ASSETS_DIR -- see symbol_loader.load_symbols.

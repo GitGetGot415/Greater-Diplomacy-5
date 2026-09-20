@@ -967,11 +967,11 @@ def draw_overlay_content(map_screen, surface, draw_combat=True):
                     display_units = [unit for unit in visible_units
                                      if id(unit) not in compact_unit_object_ids]
                     units_by_alpha = {}
-                    defense_picker_alpha = getattr(
-                        map_screen, "_defense_area_unit_box_alpha", 255)
+                    army_order_picker_alpha = getattr(
+                        map_screen, "_army_order_picker_unit_box_alpha", 255)
                     for unit in display_units:
                         alpha = min(strategic_unit_alphas.get(id(unit), 255),
-                                    defense_picker_alpha)
+                                    army_order_picker_alpha)
                         if alpha > 0:
                             units_by_alpha.setdefault(alpha, []).append(unit)
                     for alpha, alpha_units in units_by_alpha.items():
@@ -1956,10 +1956,10 @@ def draw_army_group_transition_units(map_screen, surface, transition_units):
 
 def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,
                    units=None, units_are_visible=False, alpha=255):
-    # Defense-area selection is a map-only picker: force boxes become
-    # translucent there so their tiles remain selectable underneath.  The flag
-    # is transient and absent during ordinary map rendering.
-    alpha = min(alpha, getattr(map_screen, "_defense_area_unit_box_alpha", 255))
+    # Army map-order pickers make force boxes translucent so their tiles remain
+    # selectable underneath. The flag is transient and absent during ordinary
+    # map rendering.
+    alpha = min(alpha, getattr(map_screen, "_army_order_picker_unit_box_alpha", 255))
     # Filtered up front: a lone hidden submarine must not even trip the "?"
     # partial-fog blip, or its position leaks through despite being otherwise
     # invisible to anyone who isn't allied or already fighting it.
