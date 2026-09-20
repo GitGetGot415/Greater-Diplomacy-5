@@ -10,7 +10,10 @@ import time
 
 
 SAMPLE_RATE = 44100
-CHUNK_FRAMES = 44100  # One second keeps channel handoffs infrequent.
+# Keep render calls short so a seek can pre-empt synthesis promptly. Four
+# 4096-frame buffers still provide a useful background queue for uninterrupted
+# playback without making each new seek wait on a full second of PCM.
+CHUNK_FRAMES = 4096
 BUFFERED_CHUNKS = 4
 
 
