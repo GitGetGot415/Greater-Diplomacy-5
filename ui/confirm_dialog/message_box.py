@@ -102,7 +102,7 @@ class _NavigationIntroPopup:
          "changing the other selected units."),
         ("Create an army", "In Orders, click + Create Army in the Army tray. (Located on the right side of the screen)"),
         ("Personalize", "Click a card to select the units in said army. Pressing the E button edits its name and emblem."),
-        ("Defense areas", "Press D on an army card, select its defense tiles, and confirm. The army fills uncovered tiles first, then balances its defenders; idle members return after a turn."),
+        ("Defense areas", "Press D on an army card, select its defense tiles, and confirm. The army fills uncovered tiles first, then balances its defenders."),
         ("Need to Assign more units?", "With units selected, right-click an army card."),
     )
     DIPLOMACY_STEPS = (
