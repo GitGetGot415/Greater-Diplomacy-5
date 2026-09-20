@@ -61,6 +61,11 @@ class _NavigationIntroPopup:
     NAVIGATION_COLUMN_SIDE_PADDING = 18
     KEYBOARD_NAVIGATION_GAP = 18
     MOUSE_GESTURE_NOTE_GAP = 8
+    ARMY_STEP_NUMBER_X = 56
+    ARMY_STEP_TEXT_X_OFFSET = 25
+    ARMY_STEP_SIDE_PADDING = 30
+    ARMY_STEP_LINE_GAP = 2
+    ARMY_STEP_GAP = 8
     MOUSE_GESTURE_SETTINGS_NOTE = "Customize mouse gestures in Settings > Mouse Settings."
     # This is what edits how offset the tutorial popup is when it spawns!
     INITIAL_CENTER_Y_OFFSET = -32
@@ -102,7 +107,7 @@ class _NavigationIntroPopup:
          "changing the other selected units."),
         ("Create an army", "In Orders, click + Create Army in the Army tray. (Located on the right side of the screen)"),
         ("Personalize", "Click a card to select the units in said army. Pressing the E button edits its name and emblem."),
-        ("Target areas", "Press T on an army card, select its target tiles, and confirm. The army fills uncovered tiles first, then balances its units. Idle members return after a turn."),
+        ("Target areas", "Press T on an army card, select its target tiles, and confirm. The army fills uncovered tiles first, then balances its units. Units that have no orders given will automatically be ordered to fill in the target area next turn."),
         ("Need to Assign more units?", "With units selected, right-click an army card."),
     )
     DIPLOMACY_STEPS = (
@@ -141,6 +146,7 @@ class _NavigationIntroPopup:
             sum(len(lines) for lines in captions)
             for captions in self.navigation_caption_lines
         )
+        self.army_step_lines = self._army_step_lines()
         self._layout()
 
     def _layout(self):
@@ -160,6 +166,14 @@ class _NavigationIntroPopup:
         return wrap_text(
             self.PAGE_SUBTITLES[self.page_index], self.body_font,
             self.rect.width - (2 * self.SUBTITLE_SIDE_PADDING))
+
+    def _army_step_lines(self):
+        """Wrap army instructions to the usable content width of their page."""
+        max_width = (self.rect.width - self.ARMY_STEP_NUMBER_X
+                     - self.ARMY_STEP_TEXT_X_OFFSET
+                     - self.ARMY_STEP_SIDE_PADDING)
+        return tuple((heading, tuple(wrap_text(description, self.body_font, max_width)))
+                     for heading, description in self.ARMY_STEPS)
 
     def _persist_checkbox(self):
         settings = dict(queries.get_settings() or {})
@@ -371,19 +385,23 @@ class _NavigationIntroPopup:
                 surface.blit(description_surf,
                              (step_x + 25, y + self.label_font.get_height() + 2))
         else:
-            step_x = self.rect.x + 56
+            step_x = self.rect.x + self.ARMY_STEP_NUMBER_X
             step_y = self.rect.y + 91 + content_y_offset
-            step_gap = 51
-            for index, (heading, description) in enumerate(self.ARMY_STEPS, start=1):
-                y = step_y + (index - 1) * step_gap
+            description_x = step_x + self.ARMY_STEP_TEXT_X_OFFSET
+            line_height = self.body_font.get_height() + self.ARMY_STEP_LINE_GAP
+            y = step_y
+            for index, (heading, description_lines) in enumerate(self.army_step_lines, start=1):
                 pygame.draw.circle(surface, (70, 115, 160), (step_x, y + 13), 14)
                 number = self.label_font.render(str(index), True, (255, 255, 255))
                 surface.blit(number, number.get_rect(center=(step_x, y + 13)))
                 heading_surf = self.label_font.render(heading, True, (130, 205, 255))
-                surface.blit(heading_surf, (step_x + 25, y))
-                description_surf = self.body_font.render(description, True, (225, 225, 225))
-                surface.blit(description_surf,
-                             (step_x + 25, y + self.label_font.get_height() + 2))
+                surface.blit(heading_surf, (description_x, y))
+                description_y = y + self.label_font.get_height() + 2
+                for line in description_lines:
+                    description_surf = self.body_font.render(line, True, (225, 225, 225))
+                    surface.blit(description_surf, (description_x, description_y))
+                    description_y += line_height
+                y = description_y + self.ARMY_STEP_GAP
 
         pygame.draw.rect(surface, (230, 230, 230), self.checkbox_rect, 2)
         if self.dont_show_again:

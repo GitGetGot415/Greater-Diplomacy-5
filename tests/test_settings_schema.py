@@ -337,7 +337,15 @@ class NavigationIntroPopupTests(unittest.TestCase):
                                   if heading == "Target areas")
         self.assertIn("T", target_description)
         self.assertIn("balances", target_description)
-        self.assertIn("Idle", target_description)
+        target_lines = next(lines for heading, lines in popup.army_step_lines
+                            if heading == "Target areas")
+        self.assertGreater(len(target_lines), 1)
+        army_text_width = (popup.rect.width - popup.ARMY_STEP_NUMBER_X
+                           - popup.ARMY_STEP_TEXT_X_OFFSET
+                           - popup.ARMY_STEP_SIDE_PADDING)
+        self.assertTrue(all(popup.body_font.size(line)[0] <= army_text_width
+                            for _heading, lines in popup.army_step_lines
+                            for line in lines))
         popup.draw(surface)
 
         popup.handle_event(pygame.event.Event(
