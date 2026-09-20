@@ -2333,6 +2333,26 @@ def normalize_army_custom_symbol(custom_symbol):
                               for row in normalized for pixel in row) else None)
 
 
+def normalize_army_defense_area(province_ids, map_data):
+    """Return a unique, live list of province IDs for an army defense area.
+
+    Army records are saved on countries, while province records own the map's
+    IDs.  Keeping this validation beside the rest of the army schema means old
+    saves, multiplayer rosters, and normal play all agree about what an area
+    may contain.
+    """
+    if not isinstance(province_ids, list):
+        return []
+    valid_ids = {province.get("id") for province in (map_data or {}).values()
+                 if isinstance(province, dict)}
+    normalized = []
+    for province_id in province_ids:
+        if (isinstance(province_id, int) and not isinstance(province_id, bool)
+                and province_id in valid_ids and province_id not in normalized):
+            normalized.append(province_id)
+    return normalized
+
+
 def normalize_armies(nation_data, map_data):
     """Repair persistent army rosters against the current owned-unit state.
 
@@ -2384,7 +2404,9 @@ def normalize_armies(nation_data, map_data):
                           "symbol_flipped": normalize_army_symbol_flipped(
                               raw.get("symbol_flipped")),
                           "custom_symbol": normalize_army_custom_symbol(
-                              raw.get("custom_symbol"))})
+                              raw.get("custom_symbol")),
+                          "defense_area": normalize_army_defense_area(
+                              raw.get("defense_area", []), map_data)})
         country["armies"] = valid
 
 
@@ -2427,7 +2449,8 @@ def create_army(country_id, unit_ids, nation_data, map_data):
             "symbol_color": list(random.choice(c.ARMY_SYMBOL_COLOR_CHOICES)),
             "symbol_rotation": c.DEFAULT_ARMY_SYMBOL_ROTATION,
             "symbol_flipped": c.DEFAULT_ARMY_SYMBOL_FLIPPED,
-            "custom_symbol": None}
+            "custom_symbol": None,
+            "defense_area": []}
     armies.append(army)
     normalize_armies(nation_data, map_data)
     return next((item for item in nation_data[country_id]["armies"]
@@ -2518,6 +2541,110 @@ def update_army_presentation(country_id, army_id, name, symbol, symbol_color, sy
     if army["custom_symbol"]:
         army["symbol"] = ""
     return army
+
+
+def set_army_defense_area(country_id, army_id, province_ids, nation_data, map_data):
+    """Save one army's selected defense tiles and return its canonical record."""
+    normalize_armies(nation_data, map_data)
+    army = next((item for item in get_armies(country_id, nation_data, map_data)
+                 if item.get("id") == army_id), None)
+    if army is None:
+        return None
+    army["defense_area"] = normalize_army_defense_area(province_ids, map_data)
+    return army
+
+
+def unit_has_active_order(unit):
+    """Whether a unit has an order that should prevent automatic reassignment."""
+    order = unit.get("order") if isinstance(unit, dict) else None
+    return (isinstance(order, dict) and bool(order)
+            and (order.get("type") != "MOVE" or bool(order.get("path"))))
+
+
+def find_unit_move_path_to_any(unit, start_province, destination_ids,
+                               id_to_province, nation_data):
+    """Return the shortest legal route from ``start_province`` to any target.
+
+    The existing single-destination path helper remains the movement rule
+    owner.  Selecting the shortest of its deterministic results keeps a
+    defense order legal under exactly the same land, naval, and diplomacy
+    restrictions as a player-issued route.
+    """
+    if not isinstance(start_province, dict):
+        return None
+    choices = []
+    for destination_id in sorted(set(destination_ids or ())):
+        if destination_id not in id_to_province:
+            continue
+        path = find_unit_move_path(unit, start_province, destination_id,
+                                   id_to_province, nation_data)
+        if path is not None:
+            choices.append((len(path), path, destination_id))
+    return min(choices)[1] if choices else None
+
+
+def queue_army_defense_orders(map_screen, country_id, army_id, only_idle=False,
+                              excluded_unit_object_ids=()):
+    """Queue legal return routes for one army's members.
+
+    Setting an area applies routes immediately; the post-turn fallback passes
+    ``only_idle`` so it cannot replace an order the player issued.  Blocking
+    multi-turn orders are never overwritten by either path.
+    """
+    army = next((item for item in get_armies(
+        country_id, map_screen.nation_data, map_screen.map_data)
+                 if item.get("id") == army_id), None)
+    if army is None:
+        return 0
+    defense_area = army.get("defense_area", [])
+    if not defense_area:
+        return 0
+    excluded = set(excluded_unit_object_ids)
+    members = set(army.get("unit_ids", []))
+    queued = 0
+    for province in map_screen.map_data.values():
+        for unit in province.get("units", []):
+            if (unit.get("owner") != country_id
+                    or unit.get("unit_id") not in members
+                    or id(unit) in excluded
+                    or (only_idle and unit_has_active_order(unit))):
+                continue
+            order = unit.get("order")
+            if (not only_idle and isinstance(order, dict)
+                    and order.get("type") in c.ORDERS_BLOCKING_MOVEMENT):
+                continue
+            path = find_unit_move_path_to_any(
+                unit, province, defense_area, map_screen.id_to_province,
+                map_screen.nation_data)
+            if path is None:
+                continue
+            if path:
+                unit["order"] = {"type": "MOVE", "path": path}
+                queued += 1
+            elif isinstance(order, dict) and order.get("type") == "MOVE":
+                # A unit already inside the area is defending in place; an
+                # obsolete route would pull it away again.
+                unit.pop("order", None)
+    return queued
+
+
+def queue_idle_army_defense_orders(map_screen):
+    """Prepare next-turn returns for idle units after this turn has resolved."""
+    moved_or_ordered = getattr(map_screen, "_units_with_move_order_this_turn", set())
+    queued = 0
+    for country_id, country in map_screen.nation_data.items():
+        if not isinstance(country, dict):
+            continue
+        for army in country.get("armies", []):
+            if isinstance(army, dict):
+                queued += queue_army_defense_orders(
+                    map_screen, country_id, army.get("id"), only_idle=True,
+                    excluded_unit_object_ids=moved_or_ordered)
+    # This is turn-local evidence, not saved game state.  Clearing it here
+    # makes the next resolution evaluate only the moves actually submitted for
+    # that next turn.
+    map_screen._units_with_move_order_this_turn = set()
+    return queued
 
 
 def army_for_unit(unit, nation_data):

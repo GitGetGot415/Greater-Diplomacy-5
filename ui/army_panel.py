@@ -176,11 +176,26 @@ def _close_rect(card):
 
 
 def _move_up_rect(card):
-    return pygame.Rect(card.right - 91, card.y + 10, 17, 17)
+    return pygame.Rect(card.right - 91, card.y + 4, 17, 17)
 
 
 def _move_down_rect(card):
+    return pygame.Rect(card.right - 91, card.y + 23, 17, 17)
+
+
+def _defense_rect(card):
+    """The defense-area control sits between vertical reorder arrows and Edit."""
     return pygame.Rect(card.right - 69, card.y + 10, 17, 17)
+
+
+def _open_defense_area(map_screen, army):
+    """Open an editable map picker without allowing submitted turns to mutate."""
+    if not map_screen.can_select_map_units():
+        map_screen.show_feedback("Turn submitted or unavailable; unsubmit to edit defense areas.")
+        return
+    from screens.map_related_screens.defense_area_screen import DefenseAreaScreen
+    from ui.screen_runner import _run_pygame_sub_screen
+    _run_pygame_sub_screen(map_screen, DefenseAreaScreen(map_screen, army["id"]))
 
 
 def _blank_custom_symbol():
@@ -673,6 +688,8 @@ def handle_event(map_screen, event, orders_screen=None):
             if queries.move_army(map_screen.player_country, army["id"], 1,
                                   map_screen.nation_data, map_screen.map_data):
                 map_screen.show_feedback(f"Moved {army['name']} down")
+        elif _defense_rect(rect).collidepoint(event.pos):
+            _open_defense_area(map_screen, army)
         elif _edit_rect(rect).collidepoint(event.pos):
             _open_editor(map_screen, army)
         else:
@@ -729,6 +746,12 @@ def draw(map_screen, surface, orders_screen=None, draw_editors=True):
                              arrow_rect, border_radius=3)
             arrow = text_font.render(label, True, (230, 240, 255) if enabled else (120, 130, 145))
             surface.blit(arrow, arrow.get_rect(center=arrow_rect.center))
+        defense_rect = _defense_rect(rect)
+        has_defense_area = bool(army.get("defense_area"))
+        pygame.draw.rect(surface, (50, 108, 83) if has_defense_area else (62, 88, 135),
+                         defense_rect, border_radius=3)
+        defense = text_font.render("D", True, (235, 255, 240))
+        surface.blit(defense, defense.get_rect(center=defense_rect.center))
         edit_rect = _edit_rect(rect)
         pygame.draw.rect(surface, (62, 88, 135), edit_rect, border_radius=3)
         edit = text_font.render("E", True, (230, 240, 255))

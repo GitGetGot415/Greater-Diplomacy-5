@@ -50,7 +50,6 @@ please figure out a way to make scenarios take up less space for gods sake
 
 ### Exodus
 
-- allow right clicking on the unit orders menu to remove a unit from being selected
 - Box selection of units in the unit orders menu
 - let Allies see your active movement arrows
 - QUEUE UNITS ACROSS OCEANS

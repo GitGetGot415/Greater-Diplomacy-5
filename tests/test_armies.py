@@ -110,7 +110,8 @@ class ArmyQueryTests(unittest.TestCase):
              "symbol": "", "symbol_color": list(c.DEFAULT_ARMY_SYMBOL_COLOR),
              "symbol_rotation": c.DEFAULT_ARMY_SYMBOL_ROTATION,
              "symbol_flipped": c.DEFAULT_ARMY_SYMBOL_FLIPPED,
-             "custom_symbol": None}])
+             "custom_symbol": None,
+             "defense_area": []}])
 
     def test_army_presentation_round_trips_and_invalid_legacy_art_is_removed(self):
         queries.normalize_armies(self.nations, self.world)
@@ -231,6 +232,33 @@ class ArmyQueryTests(unittest.TestCase):
                          [second_army["id"], first_army["id"]])
         self.assertFalse(queries.move_army("A", second_army["id"], -1,
                                            self.nations, self.world))
+
+    def test_defense_area_queues_routes_now_and_only_returns_idle_units_later(self):
+        self.first["neighbors"] = [self.second["id"]]
+        self.second["neighbors"] = [self.first["id"]]
+        queries.normalize_armies(self.nations, self.world)
+        unit = self.first["units"][0]
+        army = queries.create_army("A", [unit["unit_id"]], self.nations, self.world)
+        saved = queries.set_army_defense_area(
+            "A", army["id"], [self.second["id"], self.second["id"], 999],
+            self.nations, self.world)
+        self.assertEqual(saved["defense_area"], [self.second["id"]])
+
+        map_ref = SimpleNamespace(
+            nation_data=self.nations, map_data=self.world,
+            id_to_province={province["id"]: province for province in self.world.values()},
+            _units_with_move_order_this_turn=set())
+        self.assertEqual(queries.queue_army_defense_orders(map_ref, "A", army["id"]), 1)
+        self.assertEqual(unit["order"], {"type": "MOVE", "path": [self.second["id"]]})
+
+        # A submitted route must not be replaced after its resolution, even if
+        # movement stopped before reaching the area.  An idle later turn may.
+        unit.pop("order")
+        map_ref._units_with_move_order_this_turn = {id(unit)}
+        self.assertEqual(queries.queue_idle_army_defense_orders(map_ref), 0)
+        self.assertNotIn("order", unit)
+        self.assertEqual(queries.queue_idle_army_defense_orders(map_ref), 1)
+        self.assertEqual(unit["order"]["path"], [self.second["id"]])
 
 
 class ArmyLayoutTests(unittest.TestCase):

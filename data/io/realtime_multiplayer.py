@@ -834,6 +834,7 @@ class MapRealtimeDriver:
             symbol_rotation = raw.get("symbol_rotation", c.DEFAULT_ARMY_SYMBOL_ROTATION)
             symbol_flipped = raw.get("symbol_flipped", c.DEFAULT_ARMY_SYMBOL_FLIPPED)
             custom_symbol = raw.get("custom_symbol")
+            defense_area = raw.get("defense_area", [])
             valid_symbol = (isinstance(symbol, str)
                             and (not symbol or queries.normalize_army_symbol(symbol) == symbol))
             valid_color = (isinstance(symbol_color, list)
@@ -848,12 +849,17 @@ class MapRealtimeDriver:
             valid_custom_symbol = (custom_symbol is None
                                    or queries.normalize_army_custom_symbol(custom_symbol)
                                    == custom_symbol)
+            valid_defense_area = (
+                isinstance(defense_area, list)
+                and queries.normalize_army_defense_area(
+                    defense_area, self.map_ref.map_data) == defense_area)
             if (not isinstance(army_id, str) or not army_id or len(army_id) > 80
                     or army_id in army_ids or not isinstance(name, str)
                     or not name.strip() or len(name.strip()) > 80
                     or not isinstance(unit_ids, list) or len(unit_ids) > len(owned)
                     or not valid_symbol or not valid_color or not valid_rotation or not valid_flipped
-                    or not valid_custom_symbol or (symbol and custom_symbol)):
+                    or not valid_custom_symbol or not valid_defense_area
+                    or (symbol and custom_symbol)):
                 raise RealtimeError("Invalid army roster.")
             if any(not isinstance(unit_id, str) or unit_id not in owned
                    or unit_id in assigned for unit_id in unit_ids):
@@ -866,7 +872,8 @@ class MapRealtimeDriver:
                                "symbol_color": list(symbol_color),
                                "symbol_rotation": symbol_rotation,
                                "symbol_flipped": symbol_flipped,
-                               "custom_symbol": copy.deepcopy(custom_symbol)})
+                               "custom_symbol": copy.deepcopy(custom_symbol),
+                               "defense_area": list(defense_area)})
         return {"type": "army_roster", "armies": armies}
 
     def _validate_volunteer_commands(self, country_id: str, commands: list[dict[str, Any]]) -> None:
