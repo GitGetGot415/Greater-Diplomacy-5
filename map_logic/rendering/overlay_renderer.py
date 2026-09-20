@@ -1175,14 +1175,10 @@ ARMY_EMBLEM_MIN_SIZE = 14
 ARMY_EMBLEM_MAX_SIZE = 32
 ARMY_EMBLEM_HEIGHT_RATIO = 0.8
 ARMY_EMBLEM_GAP = 6
-# At the widest strategic view, several division boxes make an army difficult
-# to read.  One compact icon keeps its identity visible until the player zooms
-# back into the normal stack view.
 ARMY_GROUP_ICON_MAX_ZOOM = 2.0
-ARMY_GROUP_ICON_MIN_SIZE = 16
-ARMY_GROUP_ICON_MAX_SIZE = 30
-ARMY_GROUP_ICON_HEIGHT_RATIO = 1.4
 ARMY_GROUP_TRANSITION_SECONDS = 0.1
+# Compact markers must read as a formation rather than an ordinary division.
+COMPACT_GROUP_MARKER_SCALE = 1.2
 # A group should replace several nearby division displays, not recreate one
 # marker per province.  This fixed map-space radius keeps group membership and
 # marker positions stable while the player changes strategic zoom.
@@ -1222,13 +1218,6 @@ def strategic_unit_fade_alphas(map_screen):
     return {}
 
 
-def compact_army_icon_size(scaled_height):
-    """Return the readable, bounded size of a zoomed-out army group icon."""
-    return max(ARMY_GROUP_ICON_MIN_SIZE,
-               min(ARMY_GROUP_ICON_MAX_SIZE,
-                   round(scaled_height * ARMY_GROUP_ICON_HEIGHT_RATIO)))
-
-
 def _cache_box(key, build):
     box = UNIT_BOXES.get(key)
     if box is None:
@@ -1250,10 +1239,8 @@ _BOX_TEMPLATES = {}
 _BOX_TEMPLATE_CACHE_LIMIT = 500
 
 
-def _get_box_template(symbol_name, border_color, inverted, owner=None,
-                      reserve_symbol_space=False):
-    key = (symbol_name, tuple(border_color), inverted, c.UNIT_ART_STYLE, owner,
-           reserve_symbol_space)
+def _get_box_template(symbol_name, border_color, inverted, owner=None):
+    key = (symbol_name, tuple(border_color), inverted, c.UNIT_ART_STYLE, owner)
     cached = _BOX_TEMPLATES.get(key)
     if cached is not None:
         return cached
@@ -1285,11 +1272,6 @@ def _get_box_template(symbol_name, border_color, inverted, owner=None,
         sym_rect = symbol.get_rect(midleft=(8, internal_h // 2))
         box_surf.blit(symbol, sym_rect)
         text_x = sym_rect.right + 8
-    elif reserve_symbol_space:
-        # Army markers deliberately start with no unit fallback icon, but
-        # their emblems still occupy the same left-side area.
-        text_x = (internal_w // 2) + 4
-
     if len(_BOX_TEMPLATES) >= _BOX_TEMPLATE_CACHE_LIMIT:
         _BOX_TEMPLATES.clear()
     result = (box_surf, text_x)
@@ -1297,8 +1279,7 @@ def _get_box_template(symbol_name, border_color, inverted, owner=None,
     return result
 
 
-def unit_box(symbol_name, border_color, count, inverted, size, owner=None,
-             reserve_symbol_space=False):
+def unit_box(symbol_name, border_color, count, inverted, size, owner=None):
     """One nation's box: its color, the unit it leads with, and how many.
 
     Drawn at UNIT_BOX_WIDTH x UNIT_BOX_HEIGHT and supersampled down to `size`,
@@ -1310,8 +1291,7 @@ def unit_box(symbol_name, border_color, count, inverted, size, owner=None,
     def build():
         internal_h = c.UNIT_BOX_HEIGHT
         internal_w = c.UNIT_BOX_WIDTH
-        template, text_x = _get_box_template(
-            symbol_name, border_color, inverted, owner, reserve_symbol_space)
+        template, text_x = _get_box_template(symbol_name, border_color, inverted, owner)
         box_surf = template.copy()
 
         if inverted:
@@ -1347,7 +1327,7 @@ def unit_box(symbol_name, border_color, count, inverted, size, owner=None,
         return pygame.transform.smoothscale(box_surf, size)
 
     return _cache_box((symbol_name, tuple(border_color), count, inverted, size,
-                       c.UNIT_ART_STYLE, owner, reserve_symbol_space), build)
+                       c.UNIT_ART_STYLE, owner), build)
 
 
 def unknown_box(size):
@@ -1447,35 +1427,68 @@ def unit_symbol_name(unit):
 
 
 def compact_army_group_icon(army, best_unit, owner_color, owner, size, count):
-    """Return a compact unit-style box with its stack count and army emblem.
+    """Return a larger circular formation marker with its icon and count."""
+    if isinstance(size, tuple):
+        box_size = size
+    else:
+        box_size = (round(size * c.UNIT_BOX_WIDTH / c.UNIT_BOX_HEIGHT), size)
+    diameter = max(12, round(max(box_size) * COMPACT_GROUP_MARKER_SCALE))
+    army_signature = None
+    if army is not None:
+        army_signature = (
+            army.get("id"), army.get("symbol"), army.get("custom_symbol"),
+            tuple(army.get("symbol_color") or ()), army.get("symbol_rotation"),
+            army.get("symbol_flipped"))
+    key = ("compact-group", army_signature, unit_symbol_name(best_unit),
+           tuple(owner_color), owner, count, diameter, c.UNIT_ART_STYLE)
 
-    The fallback area groups have no authored army emblem, so they retain the
-    best unit's ordinary symbol.  An actual army starts with an empty symbol
-    slot, then draws its emblem there, so no fallback unit art can show behind
-    or beyond the army icon.
-    """
-    box_size = (round(size * c.UNIT_BOX_WIDTH / c.UNIT_BOX_HEIGHT), size)
-    emblem = army_emblem_surface(army, size)
-    symbol_name = None if emblem else unit_symbol_name(best_unit)
-    icon = unit_box(symbol_name, owner_color, count, False, box_size, owner,
-                    reserve_symbol_space=bool(emblem))
-    if not emblem:
-        return icon
+    def build():
+        marker = pygame.Surface((diameter, diameter), pygame.SRCALPHA)
+        center = (diameter // 2, diameter // 2)
+        radius = max(1, diameter // 2 - 1)
+        pygame.draw.circle(marker, c.UNIT_BOX_BG_COLOR, center, radius)
+        pygame.draw.circle(marker, owner_color, center, radius,
+                           max(1, round(diameter * 0.08)))
 
-    icon = icon.copy()
-    # Unit boxes reserve their left half for the unit symbol and their right
-    # side for the number.  Keep the army emblem inside that reserved region.
-    emblem_area = pygame.Rect(3, 3, max(1, icon.get_width() // 2 - 5),
-                              max(1, icon.get_height() - 6))
-    pygame.draw.rect(icon, c.UNIT_BOX_BG_COLOR, emblem_area)
-    if emblem.get_width() > emblem_area.width or emblem.get_height() > emblem_area.height:
-        scale = min(emblem_area.width / emblem.get_width(),
-                    emblem_area.height / emblem.get_height())
-        emblem = pygame.transform.smoothscale(
-            emblem, (max(1, round(emblem.get_width() * scale)),
-                     max(1, round(emblem.get_height() * scale))))
-    icon.blit(emblem, emblem.get_rect(center=emblem_area.center))
-    return icon
+        has_authored_emblem = bool(army and (army.get("symbol")
+                                               or army.get("custom_symbol")))
+        formation_icon = army_emblem_surface(army, max(8, round(diameter * 0.58)))
+        if formation_icon is None and not has_authored_emblem:
+            formation_icon = symbol_loader.get_symbol(
+                unit_symbol_name(best_unit), 2.5, color=owner_color, country=owner)
+        if formation_icon:
+            max_icon_size = max(1, round(diameter * 0.46))
+            if (formation_icon.get_width() > max_icon_size
+                    or formation_icon.get_height() > max_icon_size):
+                scale = min(max_icon_size / formation_icon.get_width(),
+                            max_icon_size / formation_icon.get_height())
+                formation_icon = pygame.transform.smoothscale(
+                    formation_icon,
+                    (max(1, round(formation_icon.get_width() * scale)),
+                     max(1, round(formation_icon.get_height() * scale))))
+            marker.blit(formation_icon, formation_icon.get_rect(
+                center=(round(diameter * 0.36), center[1])))
+
+        font = fonts.get("button")
+        count_text = font.render(str(count), True, c.UNIT_BOX_TEXT_COLOR)
+        count_shadow = font.render(str(count), True, (0, 0, 0))
+        max_count_size = max(1, round(diameter * 0.34))
+        if (count_text.get_width() > max_count_size
+                or count_text.get_height() > max_count_size):
+            scale = min(max_count_size / count_text.get_width(),
+                        max_count_size / count_text.get_height())
+            count_text = pygame.transform.smoothscale(
+                count_text, (max(1, round(count_text.get_width() * scale)),
+                             max(1, round(count_text.get_height() * scale))))
+            count_shadow = pygame.transform.smoothscale(
+                count_shadow, count_text.get_size())
+        count_center = (round(diameter * 0.68), center[1])
+        marker.blit(count_shadow, count_shadow.get_rect(
+            center=(count_center[0] + 1, count_center[1] + 1)))
+        marker.blit(count_text, count_text.get_rect(center=count_center))
+        return marker
+
+    return _cache_box(key, build)
 
 
 def _army_average_center(records, map_screen):
@@ -1506,8 +1519,8 @@ def compact_army_groups(map_screen, combat_unit_ids):
         for unit_id in [unit.get("unit_id")]
         if unit.get("owner") == player_country and isinstance(unit_id, str)
     }
-    _scaled_w, scaled_h, _display_scale = unit_box_size(map_screen)
-    icon_size = compact_army_icon_size(scaled_h)
+    scaled_w, scaled_h, _display_scale = unit_box_size(map_screen)
+    box_size = (scaled_w, scaled_h)
     is_selected = getattr(map_screen, "is_unit_selected", lambda _unit: False)
     groups = []
     for army in armies:
@@ -1534,7 +1547,7 @@ def compact_army_groups(map_screen, combat_unit_ids):
             continue
         owner_color = map_screen.nation_colors.get(player_country, (200, 200, 200))
         icon = compact_army_group_icon(army, best_unit, owner_color,
-                                       player_country, icon_size, len(units))
+                                       player_country, box_size, len(units))
         groups.append({"army": army, "units": units,
                        "province": records[0][1], "center": _army_average_center(records, map_screen),
                        "icon": icon})
@@ -1598,8 +1611,8 @@ def compact_area_unit_groups(map_screen, combat_unit_ids, organized_unit_object_
 
     player_country = map_screen.player_country
     is_selected = getattr(map_screen, "is_unit_selected", lambda _unit: False)
-    _scaled_w, scaled_h, _display_scale = unit_box_size(map_screen)
-    icon_size = compact_army_icon_size(scaled_h)
+    scaled_w, scaled_h, _display_scale = unit_box_size(map_screen)
+    box_size = (scaled_w, scaled_h)
     groups = []
 
     records_by_owner = {}
@@ -1628,7 +1641,7 @@ def compact_area_unit_groups(map_screen, combat_unit_ids, organized_unit_object_
                 continue
             owner_color = map_screen.nation_colors.get(owner, (200, 200, 200))
             icon = compact_army_group_icon(None, best_unit, owner_color, owner,
-                                           icon_size, len(units))
+                                           box_size, len(units))
             anchor_province = cluster_records[0][1]
             anchor_id = anchor_province.get("id", anchor_province["center"])
             groups.append({"army": None, "units": units,
@@ -1646,7 +1659,7 @@ def compact_area_unit_groups(map_screen, combat_unit_ids, organized_unit_object_
     for group in groups:
         groups_by_center.setdefault(tuple(group["center"]), []).append(group)
     for colliding_groups in groups_by_center.values():
-        spacing = icon_size + 3
+        spacing = scaled_h + 3
         for index, group in enumerate(colliding_groups):
             group["screen_offset"] = (0, round((index - (len(colliding_groups) - 1) / 2)
                                                 * spacing))

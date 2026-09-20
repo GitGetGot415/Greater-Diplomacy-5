@@ -470,6 +470,8 @@ class ArmyLayoutTests(unittest.TestCase):
             partial_groups = overlay_renderer.compact_army_groups(map_screen, set())
 
         self.assertEqual([call.args[0]["id"] for call in icons.call_args_list], ["one", "one"])
+        self.assertEqual(icons.call_args_list[0].args[4],
+                         overlay_renderer.unit_box_size(map_screen)[:2])
         self.assertEqual(groups[0]["center"], (50, 30))
         self.assertEqual([stack["units"] for stack in map_screen.unit_stack_hitboxes],
                          [[first, second]])
@@ -736,36 +738,39 @@ class ArmyLayoutTests(unittest.TestCase):
         self.assertEqual(groups.call_args.args[2][0]["units"], [first, second])
         self.assertEqual(map_screen.compact_army_unit_object_ids, {id(first), id(second)})
 
-    def test_blank_compact_army_icon_uses_a_unit_style_box_with_its_count(self):
+    def test_blank_compact_army_icon_uses_a_larger_circular_marker(self):
         army = {"id": "army", "symbol": ""}
         best_unit = {"owner": "A", "type": "Tank"}
         fallback = pygame.Surface((48, 24), pygame.SRCALPHA)
+        count_font = Mock(render=lambda *_args: pygame.Surface((8, 8), pygame.SRCALPHA))
 
         with (patch.object(overlay_renderer, "army_emblem_surface", return_value=None),
-              patch.object(overlay_renderer, "unit_box", return_value=fallback) as box):
+              patch.object(symbol_loader, "get_symbol", return_value=fallback) as symbol,
+              patch.object(overlay_renderer.fonts, "get", return_value=count_font)):
             icon = overlay_renderer.compact_army_group_icon(
                 army, best_unit, (220, 60, 70), "A", 24, 3)
 
-        self.assertIs(icon, fallback)
-        self.assertEqual(box.call_args.args,
-                         ("Tank", (220, 60, 70), 3, False, (48, 24), "A"))
+        self.assertEqual(icon.get_size(), (58, 58))
+        self.assertEqual(icon.get_at((0, 0))[3], 0)
+        self.assertEqual(symbol.call_args.args[0], "Tank")
+        self.assertEqual(symbol.call_args.kwargs["color"], (220, 60, 70))
 
-    def test_compact_army_icon_replaces_the_box_symbol_with_the_army_emblem(self):
+    def test_compact_army_icon_uses_only_the_army_emblem_inside_its_circle(self):
         army = {"id": "army", "symbol": "Star"}
         emblem = pygame.Surface((18, 18), pygame.SRCALPHA)
         emblem.fill((255, 0, 0, 255))
-        box_surface = pygame.Surface((48, 24), pygame.SRCALPHA)
+        count_font = Mock(render=lambda *_args: pygame.Surface((8, 8), pygame.SRCALPHA))
 
         with (patch.object(overlay_renderer, "army_emblem_surface", return_value=emblem),
-              patch.object(overlay_renderer, "unit_box", return_value=box_surface) as box):
+              patch.object(symbol_loader, "get_symbol") as symbol,
+              patch.object(overlay_renderer.fonts, "get", return_value=count_font)):
             icon = overlay_renderer.compact_army_group_icon(
                 army, {"owner": "A", "type": "Tank"}, (220, 60, 70), "A", 24, 2)
 
-        self.assertIsNot(icon, box_surface)
-        self.assertIsNone(box.call_args.args[0])
-        self.assertEqual(box.call_args.args[2], 2)
-        self.assertTrue(box.call_args.kwargs["reserve_symbol_space"])
-        self.assertEqual(icon.get_at((12, 12))[:3], (255, 0, 0))
+        self.assertEqual(icon.get_size(), (58, 58))
+        self.assertEqual(icon.get_at((0, 0))[3], 0)
+        self.assertEqual(icon.get_at((21, 29))[:3], (255, 0, 0))
+        symbol.assert_not_called()
 
     def test_orders_tray_creates_armies_and_right_click_assigns_selection(self):
         world = {
