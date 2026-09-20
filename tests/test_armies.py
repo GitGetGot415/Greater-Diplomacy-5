@@ -632,6 +632,32 @@ class ArmyLayoutTests(unittest.TestCase):
         self.assertEqual(expanding_groups[0]["alpha"], 255)
         self.assertEqual(halfway_expanding_groups[0]["alpha"], 128)
 
+    def test_disabling_army_group_animations_switches_markers_immediately(self):
+        first = {"unit_id": "first"}
+        second = {"unit_id": "second"}
+        first_province = {"center": (20, 20), "units": [first]}
+        second_province = {"center": (80, 40), "units": [second]}
+        map_screen = SimpleNamespace(
+            map_data={"first": first_province, "second": second_province},
+            loop_map=False, map_w=100,
+            army_group_transition_states={"stale": {"phase": "compress"}})
+        desired = [{"army": {"id": "one"}, "units": [first, second],
+                    "province": first_province, "center": (50, 30),
+                    "icon": pygame.Surface((20, 20), pygame.SRCALPHA)}]
+        previous_setting = c.ARMY_GROUP_ANIMATIONS
+        self.addCleanup(setattr, c, "ARMY_GROUP_ANIMATIONS", previous_setting)
+        c.ARMY_GROUP_ANIMATIONS = False
+
+        with patch.object(pygame.time, "get_ticks") as get_ticks:
+            groups, moving, suppressed = overlay_renderer.army_group_presentation(
+                map_screen, desired, set())
+
+        self.assertEqual(groups, desired)
+        self.assertEqual(moving, [])
+        self.assertEqual(suppressed, {id(first), id(second)})
+        self.assertEqual(map_screen.army_group_transition_states, {})
+        get_ticks.assert_not_called()
+
     def test_nearby_unit_area_uses_the_same_compression_animation(self):
         first = {"unit_id": "first"}
         second = {"unit_id": "second"}

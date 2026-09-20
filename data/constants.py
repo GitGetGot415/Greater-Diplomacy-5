@@ -220,6 +220,11 @@ MAP_NAVIGATION_MODE = DEFAULT_MAP_NAVIGATION_MODE
 DEFAULT_BATTLE_DISPLAY_MODE = "FULL"
 BATTLE_DISPLAY_MODE = DEFAULT_BATTLE_DISPLAY_MODE
 
+# Whether army markers animate while compacting or expanding on the strategic
+# map.  This is a presentation preference only; it never changes unit state.
+DEFAULT_ARMY_GROUP_ANIMATIONS = True
+ARMY_GROUP_ANIMATIONS = DEFAULT_ARMY_GROUP_ANIMATIONS
+
 # Which unit art set map_logic.rendering.symbol_loader draws unit icons from.
 # "classic" is the flat assets/images set every icon has always shipped with;
 # any other style (e.g. "hanskolmer") discovers unit art from filenames under
@@ -2295,6 +2300,7 @@ RUNTIME_SETTINGS = {
     "unit_art_style": "UNIT_ART_STYLE",
     "map_navigation_mode": "MAP_NAVIGATION_MODE",
     "battle_display_mode": "BATTLE_DISPLAY_MODE",
+    "army_group_animations": "ARMY_GROUP_ANIMATIONS",
     "mouse_button_actions": "MOUSE_BUTTON_ACTIONS",
 }
 

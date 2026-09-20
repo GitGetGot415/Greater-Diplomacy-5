@@ -1731,6 +1731,18 @@ def army_group_presentation(map_screen, desired_groups, combat_unit_ids):
     if states is None:
         states = {}
         map_screen.army_group_transition_states = states
+    if not c.ARMY_GROUP_ANIMATIONS:
+        # The setting is allowed to change while a marker is moving. Drop any
+        # in-flight state so it cannot resume later, then publish exactly the
+        # groups requested for this frame with no transitional unit displays.
+        states.clear()
+        suppressed_unit_ids = {
+            id(unit)
+            for group in desired_groups
+            for unit in group["units"]
+        }
+        return list(desired_groups), [], suppressed_unit_ids
+
     now = pygame.time.get_ticks() / 1000.0
     live_records = {id(unit): (unit, province)
                     for province in map_screen.map_data.values()

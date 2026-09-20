@@ -37,6 +37,7 @@ GOLDEN_ORDER = (
     "orders_key_changes_screen", "economy_key_changes_screen",
     "battle_display_mode",
     "mouse_button_actions",
+    "army_group_animations",
 )
 
 GOLDEN_JSON_KEYS = set(GOLDEN_ORDER)
@@ -193,6 +194,28 @@ class RuntimeMirrorTests(unittest.TestCase):
         before = c.SCENARIOS_CUSTOM_DIR
         c.apply_runtime_settings({"saves_dir": c.SAVES_DIR})
         self.assertEqual(c.SCENARIOS_CUSTOM_DIR, before)
+
+
+class SettingsScreenTests(unittest.TestCase):
+    def test_army_group_animation_toggle_updates_runtime_and_persists(self):
+        from screens.menu_screens.settings import Settings
+
+        previous_setting = c.ARMY_GROUP_ANIMATIONS
+        self.addCleanup(setattr, c, "ARMY_GROUP_ANIMATIONS", previous_setting)
+        controller = type("Controller", (), {"army_group_animations": True})()
+        screen = object.__new__(Settings)
+        screen.controller = controller
+        screen.army_group_animations = True
+
+        with mock.patch.object(Settings, "refresh_ui") as refresh, \
+                mock.patch("screens.menu_screens.settings.queries.save_global_settings") as save:
+            screen.toggle_army_group_animations()
+
+        self.assertFalse(screen.army_group_animations)
+        self.assertFalse(controller.army_group_animations)
+        self.assertFalse(c.ARMY_GROUP_ANIMATIONS)
+        save.assert_called_once_with(controller)
+        refresh.assert_called_once()
 
 
 class NavigationIntroPopupTests(unittest.TestCase):
@@ -377,6 +400,9 @@ class KeybindIoTests(unittest.TestCase):
 
     def test_battle_display_defaults_to_full(self):
         self.assertEqual(settings_schema.defaults()["battle_display_mode"], "FULL")
+
+    def test_army_group_animations_default_to_enabled(self):
+        self.assertTrue(settings_schema.defaults()["army_group_animations"])
 
     def test_intro_popup_defaults_to_enabled(self):
         self.assertTrue(settings_schema.defaults()["show_intro_popup"])

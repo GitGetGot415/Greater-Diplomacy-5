@@ -87,6 +87,8 @@ SETTINGS_FIELDS = (
     _field("battle_display_mode", "battle_display_mode", lambda: c.DEFAULT_BATTLE_DISPLAY_MODE),
     _field("mouse_button_actions", "mouse_button_actions",
            c.default_mouse_button_actions, coerce=c.normalize_mouse_button_actions),
+    _field("army_group_animations", "army_group_animations",
+           lambda: c.DEFAULT_ARMY_GROUP_ANIMATIONS),
 )
 
 SETTINGS_ORDER = tuple(field.name for field in SETTINGS_FIELDS)

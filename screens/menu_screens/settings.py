@@ -15,8 +15,9 @@ SETTINGS_FULLSCREEN_Y = 20
 SETTINGS_CHECKERBOARD_WATER_Y = 70
 SETTINGS_FPS_TOGGLE_Y = 120
 SETTINGS_INTRO_POPUP_Y = 170
-SETTINGS_MAP_NAV_Y = 220
-SETTINGS_BATTLE_DISPLAY_Y = 270
+SETTINGS_ARMY_GROUP_ANIMATIONS_Y = 220
+SETTINGS_MAP_NAV_Y = 270
+SETTINGS_BATTLE_DISPLAY_Y = 320
 SETTINGS_PLAYER_SLIDER_Y = 400
 SETTINGS_FPS_SLIDER_Y = 460
 SETTINGS_AI_THREAD_SLIDER_POS = (60, 400)
@@ -72,6 +73,9 @@ SETTINGS_INFO_ROWS = (
      "Compact hides units that are currently fighting beneath an opaque combat "
      "bubble. Full keeps those units visible and makes the bubble translucent. "
      "Click to switch between them."),
+    (SETTINGS_ARMY_GROUP_ANIMATIONS_Y, "Army Group Animations",
+     "Controls the compression and expansion animation when units become or "
+     "leave a strategic army-group marker. Disabling it switches immediately."),
 )
 
 
@@ -111,6 +115,10 @@ def render_settings_buttons(settings_screen):
         Button(keybind_x, SETTINGS_BATTLE_DISPLAY_Y, "setting_option", "purple",
                f"Battle Display: {settings_screen.battle_display_mode.title()}",
                settings_screen.toggle_battle_display_mode),
+        Button(keybind_x, SETTINGS_ARMY_GROUP_ANIMATIONS_Y, "setting_option",
+               "green" if settings_screen.army_group_animations else "red",
+               f"Army Group Animations: {'ON' if settings_screen.army_group_animations else 'OFF'}",
+               settings_screen.toggle_army_group_animations),
     ]
     settings_screen.elements.extend(
         make_info_button(SETTINGS_INFO_X, y,
@@ -261,6 +269,7 @@ class Settings(GameState):
         self.checkerboard_water = self.controller.checkerboard_water
         self.map_navigation_mode = self.controller.map_navigation_mode
         self.battle_display_mode = self.controller.battle_display_mode
+        self.army_group_animations = self.controller.army_group_animations
 
         for key in list(self.DIR_FIELDS) + list(self.COLOR_FIELDS):
             setattr(self, key, getattr(self.controller, key))
@@ -337,6 +346,14 @@ class Settings(GameState):
         """Persists whether a new game should explain map controls."""
         self.show_intro_popup = not self.show_intro_popup
         self.controller.show_intro_popup = self.show_intro_popup
+        queries.save_global_settings(self.controller)
+        self.refresh_ui()
+
+    def toggle_army_group_animations(self):
+        """Persist whether strategic army markers animate between presentations."""
+        self.army_group_animations = not self.army_group_animations
+        self.controller.army_group_animations = self.army_group_animations
+        c.apply_runtime_settings({"army_group_animations": self.army_group_animations})
         queries.save_global_settings(self.controller)
         self.refresh_ui()
 
@@ -420,6 +437,10 @@ class Settings(GameState):
         self.battle_display_mode = c.DEFAULT_BATTLE_DISPLAY_MODE
         c.apply_runtime_settings({"battle_display_mode": c.DEFAULT_BATTLE_DISPLAY_MODE})
         self.controller.battle_display_mode = c.DEFAULT_BATTLE_DISPLAY_MODE
+
+        self.army_group_animations = c.DEFAULT_ARMY_GROUP_ANIMATIONS
+        c.apply_runtime_settings({"army_group_animations": c.DEFAULT_ARMY_GROUP_ANIMATIONS})
+        self.controller.army_group_animations = c.DEFAULT_ARMY_GROUP_ANIMATIONS
 
         self.controller.mouse_button_actions = c.default_mouse_button_actions()
         c.apply_runtime_settings({"mouse_button_actions": self.controller.mouse_button_actions})
