@@ -57,7 +57,8 @@ class BouncePreviewTests(unittest.TestCase):
 
         self.screen.id_to_province = self.screen.map_data
         self.screen.camera = SimpleNamespace(
-            zoom=1.0, tilt_factor=1.0, pos=Vector2(0, 0))
+            zoom=overlay_renderer.ARMY_GROUP_ICON_MAX_ZOOM + 0.1,
+            tilt_factor=1.0, pos=Vector2(0, 0))
         self.screen.visible_provinces = None
         self.screen.partial_visible_provinces = set()
         self.screen.map_w = 400
@@ -112,6 +113,20 @@ class BouncePreviewTests(unittest.TestCase):
             for y in range(surface.get_height())
             if surface.get_at((x, y)).a)
         self.assertGreater(marker_pixels, 0)
+
+    def test_army_group_zoom_hides_bounce_and_overrun_previews(self):
+        self.screen.viewing_ai_moves = True
+        self.screen.camera.zoom = overlay_renderer.ARMY_GROUP_ICON_MAX_ZOOM
+        surface = pygame.Surface((400, 300), pygame.SRCALPHA)
+
+        self.assertEqual(overlay_renderer.midpoint_bounce_pairs(self.screen), [])
+        self.assertEqual(overlay_renderer.midpoint_bounce_outcomes(self.screen), [])
+        overlay_renderer.draw_midpoint_bounces(self.screen, surface)
+
+        self.assertFalse(any(
+            surface.get_at((x, y)).a
+            for x in range(surface.get_width())
+            for y in range(surface.get_height())))
 
 
 if __name__ == "__main__":

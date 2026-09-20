@@ -248,13 +248,19 @@ def _combat_information_available(map_screen, province_id):
     return visible is None or province_id in visible
 
 
-def combat_bubbles_are_visible(map_screen):
-    """Whether combat bubbles belong in the current unit-overlay detail level."""
+def strategic_detail_markers_are_visible(map_screen):
+    """Whether unit-level strategic markers belong at the current zoom."""
     # Lightweight query/render doubles without a camera retain the ordinary
     # detailed presentation.  A live strategic map instead replaces combat
-    # detail with formation markers once it reaches army-group zoom.
+    # and movement detail with formation markers once it reaches army-group
+    # zoom.
     return (getattr(map_screen, "camera", None) is None
             or not uses_compact_army_icons(map_screen))
+
+
+def combat_bubbles_are_visible(map_screen):
+    """Whether combat bubbles belong in the current unit-overlay detail level."""
+    return strategic_detail_markers_are_visible(map_screen)
 
 
 def combat_bubble_records(map_screen):
@@ -599,6 +605,9 @@ def midpoint_bounce_pairs(map_screen):
     resolver query prevents an enemy order from leaking through this preview.
     Spectators and the editor can inspect the whole board at any time.
     """
+    if not strategic_detail_markers_are_visible(map_screen):
+        return []
+
     player = getattr(map_screen, "player_country", None)
     full_board = (getattr(map_screen, "viewing_ai_moves", False)
                   or player in ("Spectator", "Editor")
@@ -617,6 +626,9 @@ def midpoint_bounce_outcomes(map_screen):
     fights still use the ordinary bounce marker because both sides survive the
     first exchange and are stopped there for the turn.
     """
+    if not strategic_detail_markers_are_visible(map_screen):
+        return []
+
     player = getattr(map_screen, "player_country", None)
     full_board = (getattr(map_screen, "viewing_ai_moves", False)
                   or player in ("Spectator", "Editor")
@@ -1193,14 +1205,14 @@ ARMY_EMBLEM_GAP = 6
 ARMY_GROUP_ICON_MAX_ZOOM = 2.0
 ARMY_GROUP_TRANSITION_SECONDS = 0.1
 # Compact markers must read as a formation rather than an ordinary division.
-COMPACT_GROUP_MARKER_SCALE = 1.4
+COMPACT_GROUP_MARKER_SCALE = 1.2
 # Unit boxes have a readability floor. This applies an additional bounded zoom factor
 # to formation circles so they still visibly shrink at the widest map view.
 COMPACT_GROUP_MIN_ZOOM_SCALE = 0.25
 # A group should replace several nearby division displays, not recreate one
 # marker per province.  This fixed map-space radius keeps group membership and
 # marker positions stable while the player changes strategic zoom.
-AREA_UNIT_GROUP_WORLD_RADIUS = 45
+AREA_UNIT_GROUP_WORLD_RADIUS = 90
 
 
 def unit_box_size(map_screen):
@@ -1626,8 +1638,8 @@ def compact_area_unit_groups(map_screen, combat_unit_ids, organized_unit_object_
     outside those armies are instead clustered by owner and nearby map
     position.  That gives every visible force a map presence without exposing
     another country's private army organization or making one marker per
-    scattered division.  Partially visible provinces keep their ordinary ``?``
-    presentation.
+    scattered division.  Partially visible provinces do not reveal a marker at
+    this formation-level detail.
     """
     if not uses_compact_army_icons(map_screen):
         return []
@@ -1938,6 +1950,13 @@ def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,
         units = queries.filter_visible_units(
             units, map_screen.player_country, province, map_screen.nation_data)
     if not units:
+        return
+
+    # At army-group zoom a partially visible tile has no safely identifiable
+    # formation to summarize.  Leaving its ``?`` box on the map would add
+    # unit-level clutter after every known force has been compacted, so hide it
+    # until the player returns to the detailed unit view.
+    if is_partial and uses_compact_army_icons(map_screen):
         return
 
     scaled_w, scaled_h, display_scale = unit_box_size(map_screen)

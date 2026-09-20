@@ -478,6 +478,31 @@ class ArmyLayoutTests(unittest.TestCase):
         self.assertEqual(partial_groups[0]["units"], [second])
         self.assertEqual(partial_groups[0]["center"], (50, 30))
 
+    def test_army_group_zoom_hides_partial_fog_unit_markers(self):
+        map_screen = SimpleNamespace(
+            camera=SimpleNamespace(
+                zoom=overlay_renderer.ARMY_GROUP_ICON_MAX_ZOOM,
+                tilt_factor=1),
+            tactical_mode=False, player_country="A", nation_data={})
+        surface = pygame.Surface((100, 100), pygame.SRCALPHA)
+        unit = {"owner": "B", "type": "Infantry"}
+
+        with patch.object(overlay_renderer, "unknown_box") as unknown:
+            overlay_renderer.draw_unit_icon(
+                map_screen, surface, 50, 50, {"units": [unit]},
+                is_partial=True, units=[unit], units_are_visible=True)
+
+        unknown.assert_not_called()
+
+        map_screen.camera.zoom = overlay_renderer.ARMY_GROUP_ICON_MAX_ZOOM + 0.1
+        with patch.object(overlay_renderer, "unknown_box",
+                          return_value=pygame.Surface((10, 10), pygame.SRCALPHA)) as unknown:
+            overlay_renderer.draw_unit_icon(
+                map_screen, surface, 50, 50, {"units": [unit]},
+                is_partial=True, units=[unit], units_are_visible=True)
+
+        unknown.assert_called_once()
+
         map_screen.is_unit_selected = lambda _unit: True
         self.assertEqual(overlay_renderer.compact_army_groups(map_screen, set()), [])
 
@@ -807,7 +832,9 @@ class ArmyLayoutTests(unittest.TestCase):
             zoomed_out_icon = overlay_renderer.compact_army_group_icon(
                 army, best_unit, (220, 60, 70), "A", 24, 3, zoom=0.5)
 
-        self.assertEqual(icon.get_size(), (67, 67))
+        self.assertEqual(icon.get_width(), icon.get_height())
+        self.assertGreater(icon.get_width(), round(
+            24 * c.UNIT_BOX_WIDTH / c.UNIT_BOX_HEIGHT))
         self.assertLess(zoomed_out_icon.get_width(), icon.get_width())
         self.assertEqual(icon.get_at((0, 0))[3], 0)
         self.assertEqual(symbol.call_args.args[0], "Tank")
@@ -825,7 +852,9 @@ class ArmyLayoutTests(unittest.TestCase):
             icon = overlay_renderer.compact_army_group_icon(
                 army, {"owner": "A", "type": "Tank"}, (220, 60, 70), "A", 24, 2)
 
-        self.assertEqual(icon.get_size(), (67, 67))
+        self.assertEqual(icon.get_width(), icon.get_height())
+        self.assertGreater(icon.get_width(), round(
+            24 * c.UNIT_BOX_WIDTH / c.UNIT_BOX_HEIGHT))
         self.assertEqual(icon.get_at((0, 0))[3], 0)
         self.assertEqual(icon.get_at((24, 33))[:3], (255, 0, 0))
         symbol.assert_not_called()
