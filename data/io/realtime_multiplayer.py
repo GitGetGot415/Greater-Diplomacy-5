@@ -28,6 +28,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 import data.constants as c
+from data.map import history_io
 from data.platform import IS_WEB
 from map_logic import politics
 
@@ -1922,11 +1923,13 @@ def materialize_map_bundle(bundle: dict[str, Any]) -> str:
         raise RealtimeError("Incomplete host map bundle.")
     destination = tempfile.mkdtemp(prefix="gd5-realtime-client-")
     try:
-        Path(destination, "map_data.json").write_text(json.dumps(bundle["raw_map_data"]), encoding="utf-8")
+        Path(destination, "map_data.json").write_text(
+            history_io.dump_compact_text(bundle["raw_map_data"]), encoding="utf-8")
         snapshot = bundle.get("snapshot")
         if not isinstance(snapshot, dict):
             raise RealtimeError("Invalid host game state.")
-        Path(destination, "meta.json").write_text(json.dumps(snapshot), encoding="utf-8")
+        Path(destination, "meta.json").write_text(
+            history_io.dump_compact_text(snapshot), encoding="utf-8")
         allowed = {"terrain.png", "id_map.png", "political.png", "cores.png"}
         for name, encoded in images.items():
             if name not in allowed or not isinstance(encoded, str):

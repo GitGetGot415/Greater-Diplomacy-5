@@ -515,14 +515,19 @@ def translate_file(source_path, saves_dir=None, base_map_dir=None):
 
     base_map_dir = base_map_dir or os.path.join(c.BASE_MAPS_DIR, "GD4")
     payload, notes = build_save_payload(parsed, base_map_dir)
+    with open(os.path.join(base_map_dir, "map_data.json"), encoding="utf-8") as handle:
+        raw_map = json.load(handle)
+    raw_map = queries.map_data_with_saved_provinces(
+        raw_map, payload.pop("provinces"))
     saves_dir = saves_dir or c.SAVES_DIR
     os.makedirs(saves_dir, exist_ok=True)
     destination = _destination_path(source_path, saves_dir)
     os.makedirs(destination)
     try:
         with open(os.path.join(destination, "meta.json"), "w", encoding="utf-8") as handle:
-            handle.write(history_io.dump_text(payload, indent=c.SAVE_INDENT))
-        shutil.copy2(os.path.join(base_map_dir, "map_data.json"), os.path.join(destination, "map_data.json"))
+            handle.write(history_io.dump_compact_text(payload))
+        with open(os.path.join(destination, "map_data.json"), "w", encoding="utf-8") as handle:
+            handle.write(history_io.dump_compact_text(raw_map))
         for asset in ("terrain.png", "id_map.png", "political.png", "cores.png"):
             shutil.copy2(os.path.join(base_map_dir, asset), os.path.join(destination, asset))
     except Exception:

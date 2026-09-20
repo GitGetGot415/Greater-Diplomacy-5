@@ -1,4 +1,3 @@
-import json
 import pygame
 import os
 import asyncio
@@ -31,21 +30,21 @@ async def save_map_data(self, save_name=None):
             os.makedirs(save_path)
 
         # 1. Consolidated Data Structure
-        save_dict = queries.build_save_dict(self)
+        # map_data.json now carries the full current province state. Keep the
+        # separate meta.json province block only in multiplayer snapshots.
+        save_dict = queries.build_save_dict(self, include_provinces=False)
         self.save_progress_completed = 1
         await asyncio.sleep(0)
 
-        # Actual map data. json.dump writes through the text layer in many
-        # small chunks; one buffered write of the same bytes is several times
-        # faster, and history.json is large enough that it dominated the save.
+        # Compact JSON keeps map folders smaller without changing their schema.
         with open(os.path.join(save_path, "meta.json"), "w") as f:
-            f.write(history_io.dump_text(save_dict, indent=c.SAVE_INDENT))
+            f.write(history_io.dump_compact_text(save_dict))
         self.save_progress_completed = 2
         await asyncio.sleep(0)
 
-        # Raw structural geometry (so this save is completely self-contained)
+        # Structural map and current province state, so the save is self-contained.
         with open(os.path.join(save_path, "map_data.json"), "w") as f:
-            f.write(history_io.dump_text(self.raw_json_data, indent=c.SAVE_INDENT))
+            f.write(history_io.dump_compact_text(queries.build_map_data_save(self)))
         self.save_progress_completed = 3
         await asyncio.sleep(0)
 

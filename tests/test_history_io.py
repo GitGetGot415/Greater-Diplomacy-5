@@ -77,6 +77,12 @@ class HistoryIOTests(unittest.TestCase):
         self.assertEqual(json.loads(history_io.dump_text(obj, indent=c.SAVE_INDENT)), obj)
         self.assertEqual(history_io.dump_text(obj), json.dumps(obj))
 
+    def test_compact_dump_preserves_json_values_without_optional_whitespace(self):
+        obj = sample_history()
+        text = history_io.dump_compact_text(obj)
+        self.assertEqual(json.loads(text), obj)
+        self.assertEqual(text, json.dumps(obj, separators=(",", ":")))
+
 
 if __name__ == "__main__":
     unittest.main()

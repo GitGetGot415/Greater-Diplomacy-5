@@ -1,5 +1,6 @@
 import collections
 import contextlib
+import copy
 import json
 import os
 import re
@@ -2829,8 +2830,51 @@ def migrate_units_to_current_stats(map_data, unit_library):
 
             unit["health"] = unit["max_health"] * hp_pct
 
-def build_save_dict(map_screen):
-    """Standardizes the construction of the map save state dictionary."""
+def build_saved_province_data(data):
+    """Build the mutable province fields shared by map and save serializers."""
+    return {
+        "owner": data["owner"],
+        "cores": data.get("cores", []),
+        "is_coastal": data.get("is_coastal", False),
+        "units": data.get("units", []),
+        "building_queue": data.get("building_queue", []),
+        "unit_queue": data.get("unit_queue", []),
+        "orders": data.get("orders", []),
+        "resources": data.get("resources", []),
+        "buildings": data.get("buildings", []),
+    }
+
+
+def build_map_data_save(map_screen):
+    """Return a self-contained map snapshot with current province state.
+
+    Province state is stored in map_data.json for new saves. This makes the
+    separate meta.json province overlay unnecessary while retaining the
+    structural and unknown fields already attached to each live province.
+    """
+    return {
+        data["json_key"]: copy.deepcopy(data)
+        for data in map_screen.map_data.values()
+    }
+
+
+def overlay_saved_province_data(map_data, saved_provinces):
+    """Apply legacy or history province overlays to their map-data records."""
+    for json_key, saved_province in saved_provinces.items():
+        province = map_data.get(json_key)
+        if province is not None and saved_province:
+            province.update(saved_province)
+
+
+def map_data_with_saved_provinces(map_data, saved_provinces):
+    """Return map geometry with a legacy province snapshot embedded in it."""
+    result = copy.deepcopy(map_data)
+    overlay_saved_province_data(result, saved_provinces)
+    return result
+
+
+def build_save_dict(map_screen, *, include_provinces=True):
+    """Standardize save state; multiplayer snapshots retain province overlays."""
     scenario_settings = getattr(map_screen, 'scenario_settings', {}) or {}
     # Keep this setting explicit in every new save. Older base maps omit it,
     # but their effective default is OFF and that default should survive the
@@ -2857,26 +2901,18 @@ def build_save_dict(map_screen):
         "script_variables": map_screen.script_variables,
         "default_research": map_screen.default_research,
         "nation_data": map_screen.nation_data,
-        "provinces": {}
     }
+    if include_provinces:
+        save_dict["provinces"] = {}
     realtime_metadata = getattr(map_screen, "realtime_match_metadata", None)
     if isinstance(realtime_metadata, dict):
         # Additive metadata keeps the normal save/load format compatible with
         # old single-player and tournament files.
         save_dict["realtime_match"] = realtime_metadata
     
-    for data in map_screen.map_data.values():
-        save_dict["provinces"][data["json_key"]] = {
-            "owner": data["owner"],
-            "cores": data.get("cores", []),
-            "is_coastal": data.get("is_coastal", False),
-            "units": data.get("units", []),
-            "building_queue": data.get("building_queue", []),
-            "unit_queue": data.get("unit_queue", []),
-            "orders": data.get("orders", []),
-            "resources": data.get("resources", []),
-            "buildings": data.get("buildings", [])
-        }
+    if include_provinces:
+        for data in map_screen.map_data.values():
+            save_dict["provinces"][data["json_key"]] = build_saved_province_data(data)
     return save_dict
 
 def get_clicked_province(mouse_pos, map_screen):
@@ -4308,16 +4344,19 @@ def refresh_map_directories(screen, dirs_to_check, success_message="Data refresh
                 # ----------------------------------------------------------
 
                 # 4. Reconstruct the exact structural configuration payload
-                save_dict = build_save_dict(temp_map_context)
+                # map_data.json carries current province state in new files;
+                # the meta overlay remains only in legacy and multiplayer data.
+                save_dict = build_save_dict(temp_map_context, include_provinces=False)
 
                 # 5. Perform the manual write operations in-place
                 from data.map import history_io
 
                 with open(os.path.join(scenario_path, "meta.json"), "w") as f:
-                    f.write(history_io.dump_text(save_dict, indent=c.SAVE_INDENT))
+                    f.write(history_io.dump_compact_text(save_dict))
 
                 with open(map_json_path, "w") as f:
-                    f.write(history_io.dump_text(temp_map_context.raw_json_data, indent=c.SAVE_INDENT))
+                    f.write(history_io.dump_compact_text(
+                        build_map_data_save(temp_map_context)))
 
                 if hasattr(temp_map_context, 'history'):
                     history_io.write(scenario_path, temp_map_context.history)

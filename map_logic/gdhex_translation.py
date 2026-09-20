@@ -531,10 +531,12 @@ def translate_file(source_path, saves_dir=None):
     destination = _destination_path(source_path, saves_dir)
     os.makedirs(destination)
     try:
+        saved_provinces = payload.pop("provinces")
+        raw_map = queries.map_data_with_saved_provinces(raw_map, saved_provinces)
         with open(os.path.join(destination, "meta.json"), "w", encoding="utf-8") as handle:
-            handle.write(history_io.dump_text(payload, indent=c.SAVE_INDENT))
+            handle.write(history_io.dump_compact_text(payload))
         with open(os.path.join(destination, "map_data.json"), "w", encoding="utf-8") as handle:
-            handle.write(history_io.dump_text(raw_map, indent=c.SAVE_INDENT))
+            handle.write(history_io.dump_compact_text(raw_map))
         for name, surface in zip(("terrain.png", "id_map.png", "political.png", "cores.png"), assets):
             pygame.image.save(surface, os.path.join(destination, name))
     except Exception:

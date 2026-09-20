@@ -34,6 +34,11 @@ def dump_text(obj, indent=None):
     return json.dumps(obj, indent=indent)
 
 
+def dump_compact_text(obj):
+    """Serialize JSON without indentation or optional whitespace."""
+    return json.dumps(obj, separators=(",", ":"))
+
+
 def write(save_path, history, compress=True):
     """Writes the history into `save_path`, returning the file actually written.
 

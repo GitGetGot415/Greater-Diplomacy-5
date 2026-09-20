@@ -7,6 +7,7 @@ import secrets
 from cryptography.fernet import Fernet, InvalidToken
 import data.constants as c
 from data import queries
+from data.map import history_io
 from data.platform import sync_persisted_dir
 
 def active_owners_of(map_ref):
@@ -276,7 +277,7 @@ def export_tournament(map_ref, file_path, master_key, keys_dict):
     
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
     with open(file_path, 'w') as f:
-        json.dump(payload, f, indent=c.SAVE_INDENT)
+        f.write(history_io.dump_compact_text(payload))
 
     # Web only: mirror the .gd5tour (and any regen-keys txt above) into
     # IndexedDB so it survives closing the tab. No-op on desktop.
@@ -359,7 +360,7 @@ def load_tournament(file_path, key):
     try:
         if raw_map_data:
             with open(os.path.join(temp_dir, "map_data.json"), 'w') as f:
-                json.dump(raw_map_data, f)
+                f.write(history_io.dump_compact_text(raw_map_data))
 
         expected_image_names = {"terrain.png", "id_map.png", "political.png", "cores.png"}
         for name, b64_str in images.items():
@@ -370,11 +371,11 @@ def load_tournament(file_path, key):
                 f.write(base64.b64decode(b64_str, validate=True))
 
         with open(os.path.join(temp_dir, "meta.json"), 'w') as f:
-            json.dump(game_data, f)
+            f.write(history_io.dump_compact_text(game_data))
 
         if history:
             with open(os.path.join(temp_dir, "history.json"), 'w') as f:
-                json.dump(history, f)
+                f.write(history_io.dump_compact_text(history))
     except (OSError, TypeError, ValueError):
         return False, None, None, None, None, "Invalid tournament data"
 
@@ -464,7 +465,7 @@ def export_move_file(map_ref, file_path, player_key):
     
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
     with open(file_path, 'w') as f:
-        json.dump(payload, f, indent=c.SAVE_INDENT)
+        f.write(history_io.dump_compact_text(payload))
 
     # Web only: mirror the .gd5move into IndexedDB so it survives closing the
     # tab. No-op on desktop.

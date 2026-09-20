@@ -132,6 +132,14 @@ class GDHEXTranslationTests(unittest.TestCase):
             destination = Path(destination)
             for name in ("meta.json", "map_data.json", "terrain.png", "id_map.png", "political.png", "cores.png"):
                 self.assertTrue((destination / name).is_file())
+            with open(destination / "meta.json", encoding="utf-8") as handle:
+                saved_meta = json.load(handle)
+            with open(destination / "map_data.json", encoding="utf-8") as handle:
+                saved_map_data = json.load(handle)
+            self.assertNotIn("provinces", saved_meta)
+            player_provinces = {province["id"] for province in saved_map_data.values()
+                                if province["owner"] == "Player"}
+            self.assertEqual(player_provinces, {1, 5})
             loaded = main.Map(load_path=str(destination), is_scenario=False, num_players=1)
             self.assertEqual(len(loaded.id_to_province), 6)
             self.assertEqual(loaded.player_country, "Player")

@@ -117,6 +117,31 @@ def _saved_player_view(save_meta):
     return player_country, [] if loaded_players == ["None"] else loaded_players
 
 
+def _apply_history_snapshot(save_meta, history, history_turn):
+    """Apply a selected turn to metadata before province state is loaded."""
+    turn_key = str(history_turn)
+    if turn_key not in history:
+        return False
+
+    snap = history[turn_key]
+    save_meta["nation_data"] = snap.get("nation_data", save_meta.get("nation_data", {}))
+    if "provinces" in snap:
+        save_meta["provinces"] = snap["provinces"]
+
+    if "date" not in save_meta:
+        save_meta["date"] = {}
+    save_meta["date"]["day"] = snap.get("day", save_meta["date"].get("day", 1))
+    save_meta["date"]["month"] = snap.get("month", save_meta["date"].get("month", 0))
+    save_meta["date"]["year"] = snap.get("year", save_meta["date"].get("year", 1910))
+    save_meta["date"]["total_turns"] = int(history_turn)
+
+    # Branch the timeline by discarding future turns, as before.
+    keys_to_delete = [key for key in history if int(key) > int(history_turn)]
+    for key in keys_to_delete:
+        del history[key]
+    return True
+
+
 def load_map_assets(map_screen, load_path):
     # Ensure no residual data from a previous map persists during the load
     map_screen.map_data = {}
@@ -302,24 +327,7 @@ def load_map_assets(map_screen, load_path):
         map_screen.history = history_io.read(load_path)
 
     if map_screen.history_turn is not None and save_meta:
-        turn_key = str(map_screen.history_turn)
-        if turn_key in map_screen.history:
-            snap = map_screen.history[turn_key]
-            save_meta["nation_data"] = snap.get("nation_data", save_meta.get("nation_data", {}))
-            if "provinces" in snap:
-                save_meta["provinces"] = snap["provinces"]
-
-            if "date" not in save_meta:
-                save_meta["date"] = {}
-            save_meta["date"]["day"] = snap.get("day", save_meta["date"].get("day", 1))
-            save_meta["date"]["month"] = snap.get("month", save_meta["date"].get("month", 0))
-            save_meta["date"]["year"] = snap.get("year", save_meta["date"].get("year", 1910))
-            save_meta["date"]["total_turns"] = int(map_screen.history_turn)
-
-            # Branches timeline by truncating future history to prevent paradoxes
-            keys_to_delete = [k for k in map_screen.history.keys() if int(k) > int(map_screen.history_turn)]
-            for k in keys_to_delete:
-                del map_screen.history[k]
+        _apply_history_snapshot(save_meta, map_screen.history, map_screen.history_turn)
 
     # --- 3. Load Nation Data (The Critical Fix) ---
     base_nation_data = copy.deepcopy(country_io.load_all_country_data())
@@ -455,14 +463,15 @@ def load_map_assets(map_screen, load_path):
                 u_type = match.group(1).strip()
         return queries.get_base_item_name(u_type)
 
+    # Older saves kept mutable province values in meta.json. New saves store
+    # those values directly in map_data.json; this overlay remains for old saves
+    # and history snapshots that still include a per-turn province block.
+    if save_meta and "provinces" in save_meta:
+        queries.overlay_saved_province_data(
+            map_screen.raw_json_data, save_meta["provinces"])
+
     for k, v in map_screen.raw_json_data.items():
         color_tuple = tuple(map(int, k.strip("()").split(",")))
-
-        # Overlay save data onto provinces if it exists
-        if save_meta and "provinces" in save_meta:
-            saved_province = save_meta["provinces"].get(k)
-            if saved_province:
-                v.update(saved_province)
 
         # --- THE WATER FIX ---
         terrain = v.get("terrain", "plains")

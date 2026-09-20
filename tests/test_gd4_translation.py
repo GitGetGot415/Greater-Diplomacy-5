@@ -250,6 +250,14 @@ class GD4TranslationTests(unittest.TestCase):
             self.assertNotEqual(destination, second_destination)
             self.assertTrue((Path(destination) / "meta.json").is_file())
             self.assertTrue((Path(destination) / "political.png").is_file())
+            with open(Path(destination) / "meta.json", encoding="utf-8") as handle:
+                saved_meta = json.load(handle)
+            with open(Path(destination) / "map_data.json", encoding="utf-8") as handle:
+                saved_map_data = json.load(handle)
+            self.assertNotIn("provinces", saved_meta)
+            first_key = next(key for key, province in saved_map_data.items()
+                             if province["id"] == gd4.GD4_PROVINCE_TO_GD5[0])
+            self.assertEqual(saved_map_data[first_key]["owner"], "United States of America")
 
             loaded = main.Map(load_path=destination, is_scenario=False, num_players=1)
             self.assertEqual(loaded.time_manager.year, 1939)
