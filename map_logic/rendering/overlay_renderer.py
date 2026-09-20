@@ -862,9 +862,7 @@ def draw_overlay_content(map_screen, surface, draw_combat=True):
         combat_unit_ids = {unit_id for record in combat_records
                            for unit_id in record.get("hidden_unit_ids", set())}
     # ---------------------------------------------
-    desired_compact_groups = compact_army_groups(map_screen, combat_unit_ids)
-    compact_groups, transition_units, compact_unit_object_ids = army_group_presentation(
-        map_screen, desired_compact_groups, combat_unit_ids)
+    army_groups = compact_army_groups(map_screen, combat_unit_ids)
     organized_unit_ids = {
         unit_id
         for army in queries.get_armies(
@@ -881,9 +879,8 @@ def draw_overlay_content(map_screen, surface, draw_combat=True):
     }
     area_groups = compact_area_unit_groups(
         map_screen, combat_unit_ids, organized_unit_object_ids)
-    compact_groups.extend(area_groups)
-    compact_unit_object_ids.update(
-        id(unit) for group in area_groups for unit in group["units"])
+    compact_groups, transition_units, compact_unit_object_ids = army_group_presentation(
+        map_screen, [*army_groups, *area_groups], combat_unit_ids)
     strategic_unit_alphas = strategic_unit_fade_alphas(map_screen)
     # This is transient render state, consumed by map_renderer when it draws
     # movement arrows later in the same frame; it is never part of a save.
@@ -1632,8 +1629,13 @@ def compact_area_unit_groups(map_screen, combat_unit_ids, organized_unit_object_
             owner_color = map_screen.nation_colors.get(owner, (200, 200, 200))
             icon = compact_army_group_icon(None, best_unit, owner_color, owner,
                                            icon_size, len(units))
+            anchor_province = cluster_records[0][1]
+            anchor_id = anchor_province.get("id", anchor_province["center"])
             groups.append({"army": None, "units": units,
-                           "province": cluster_records[0][1],
+                           # A stable cluster identity lets this virtual stack
+                           # use the same compression animation as a real army.
+                           "presentation_id": ("area", owner, anchor_id),
+                           "province": anchor_province,
                            "center": _army_average_center(cluster_records, map_screen),
                            "icon": icon})
 
@@ -1665,6 +1667,15 @@ def _interpolate_army_position(start, target, progress, map_screen):
     return x, start[1] + ((target[1] - start[1]) * progress)
 
 
+def _compact_group_presentation_id(group):
+    """Return the stable transition key for a real army or virtual area."""
+    presentation_id = group.get("presentation_id")
+    if presentation_id is not None:
+        return presentation_id
+    army = group.get("army")
+    return army.get("id") if army else None
+
+
 def army_group_presentation(map_screen, desired_groups, combat_unit_ids):
     """Animate army markers into and out of the expanded unit presentation."""
     states = getattr(map_screen, "army_group_transition_states", None)
@@ -1675,7 +1686,12 @@ def army_group_presentation(map_screen, desired_groups, combat_unit_ids):
     live_records = {id(unit): (unit, province)
                     for province in map_screen.map_data.values()
                     for unit in province.get("units", [])}
-    desired_by_army = {group["army"].get("id"): group for group in desired_groups}
+    desired_by_army = {
+        presentation_id: group
+        for group in desired_groups
+        for presentation_id in [_compact_group_presentation_id(group)]
+        if presentation_id is not None
+    }
     presented_groups, transition_units, suppressed_unit_ids = [], [], set()
 
     for army_id, group in desired_by_army.items():

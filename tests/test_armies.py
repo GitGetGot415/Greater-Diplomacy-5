@@ -503,6 +503,7 @@ class ArmyLayoutTests(unittest.TestCase):
 
         self.assertEqual([group["units"] for group in groups], [
             [unorganized_one, unorganized_two], [foreign]])
+        self.assertEqual(groups[0]["presentation_id"], ("area", "A", 1))
         self.assertEqual(groups[0]["center"], (35, 20))
         self.assertEqual(groups[1]["center"], (20, 20))
 
@@ -603,6 +604,34 @@ class ArmyLayoutTests(unittest.TestCase):
                          [(35, 25), (65, 35)])
         self.assertEqual(expanding_groups[0]["alpha"], 255)
         self.assertEqual(halfway_expanding_groups[0]["alpha"], 128)
+
+    def test_nearby_unit_area_uses_the_same_compression_animation(self):
+        first = {"unit_id": "first"}
+        second = {"unit_id": "second"}
+        first_province = {"id": 1, "center": (20, 20), "units": [first]}
+        second_province = {"id": 2, "center": (50, 20), "units": [second]}
+        map_screen = SimpleNamespace(
+            map_data={"first": first_province, "second": second_province},
+            loop_map=False, map_w=100)
+        desired = [{"army": None, "presentation_id": ("area", "A", 1),
+                    "units": [first, second], "province": first_province,
+                    "center": (35, 20),
+                    "icon": pygame.Surface((20, 20), pygame.SRCALPHA)}]
+        transition_ms = round(overlay_renderer.ARMY_GROUP_TRANSITION_SECONDS * 1000)
+        halfway_ms = transition_ms // 2
+
+        with patch.object(pygame.time, "get_ticks", side_effect=[0, halfway_ms]):
+            groups, moving, suppressed = overlay_renderer.army_group_presentation(
+                map_screen, desired, set())
+            halfway_groups, halfway_moving, _suppressed = (
+                overlay_renderer.army_group_presentation(map_screen, desired, set()))
+
+        self.assertEqual(suppressed, {id(first), id(second)})
+        self.assertEqual(groups[0]["alpha"], 0)
+        self.assertEqual([record["position"] for record in moving], [(20, 20), (50, 20)])
+        self.assertEqual(halfway_groups[0]["alpha"], 128)
+        self.assertEqual([record["position"] for record in halfway_moving],
+                         [(27.5, 20), (42.5, 20)])
 
     def test_selecting_one_member_only_animates_that_member_out_of_marker(self):
         first = {"unit_id": "first"}
