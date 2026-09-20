@@ -958,10 +958,7 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
                               "symbol": "", "symbol_color": [20, 120, 220],
                               "symbol_rotation": 90, "symbol_flipped": True,
                               "custom_symbol": custom_symbol,
-                              "defense_area": [map_ref.map_data["home"]["id"]],
-                              "frontline_country": "B",
-                              "offensive_area": [map_ref.map_data["foreign"]["id"]],
-                              "order_mode": c.ARMY_ORDER_OFFENSIVE}]
+                              "defense_area": [map_ref.map_data["home"]["id"]]}]
         validated = MapRealtimeDriver(map_ref).validate_draft("A", [roster])
         self.assertEqual(validated, [{"type": "army_roster", "armies": roster["armies"]}])
         with self.assertRaises(RealtimeError):
@@ -990,12 +987,14 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
                 "type": "army_roster", "armies": [
                     {"id": "army-a", "name": "Army 1", "unit_ids": [unit_id],
                      "defense_area": [999999]}]}])
-        with self.assertRaises(RealtimeError):
-            MapRealtimeDriver(map_ref).validate_draft("A", [{
-                "type": "army_roster", "armies": [
-                    {"id": "army-a", "name": "Army 1", "unit_ids": [unit_id],
-                     "frontline_country": "P", "offensive_area": [],
-                     "order_mode": c.ARMY_ORDER_FRONTLINE}]}])
+        legacy_roster = {"type": "army_roster", "armies": [
+            {"id": "army-a", "name": "Army 1", "unit_ids": [unit_id],
+             "frontline_country": "P", "offensive_area": [],
+             "order_mode": "FRONTLINE"}]}
+        validated = MapRealtimeDriver(map_ref).validate_draft("A", [legacy_roster])
+        self.assertNotIn("frontline_country", validated[0]["armies"][0])
+        self.assertNotIn("offensive_area", validated[0]["armies"][0])
+        self.assertNotIn("order_mode", validated[0]["armies"][0])
 
     def test_an_idle_complete_draft_is_accepted(self):
         map_ref = self.make_map()

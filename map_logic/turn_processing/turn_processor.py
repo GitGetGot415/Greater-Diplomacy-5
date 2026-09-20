@@ -225,12 +225,12 @@ async def resolve_turn_logic(map_screen): # Renamed from resolve_turn
     # set of live units.  Armies are organizational metadata, so prune their
     # membership only after authoritative turn resolution has settled.
     queries.normalize_armies(map_screen.nation_data, map_screen.map_data)
-    # Army directives are deliberately queued only after every submitted
+    # Target-area returns are deliberately queued only after every submitted
     # movement order has resolved. They therefore become choices for the next
     # planning phase, never a hidden edit to a turn a player already submitted.
-    queued_army_directives = queries.queue_idle_army_directive_orders(map_screen)
-    if queued_army_directives:
-        print(f"[SYSTEM] Queued {queued_army_directives} army directive order(s).")
+    queued_target_returns = queries.queue_idle_army_defense_orders(map_screen)
+    if queued_target_returns:
+        print(f"[SYSTEM] Queued {queued_target_returns} army target-area return order(s).")
     await asyncio.sleep(0)
 
     # Process Morale updates

@@ -331,16 +331,13 @@ class NavigationIntroPopupTests(unittest.TestCase):
         self.assertTrue(all(popup.body_font.size(line)[0] <= popup.rect.width -
                             (2 * popup.SUBTITLE_SIDE_PADDING)
                             for line in popup._subtitle_lines()))
-        self.assertEqual(len(popup.ARMY_STEPS), 6)
+        self.assertEqual(len(popup.ARMY_STEPS), 5)
         self.assertTrue(all(len(step) == 2 for step in popup.ARMY_STEPS))
-        defense_description = next(description for heading, description in popup.ARMY_STEPS
-                                   if heading == "Defense areas")
-        self.assertIn("D", defense_description)
-        self.assertIn("balances", defense_description)
-        frontline_description = next(description for heading, description in popup.ARMY_STEPS
-                                    if heading == "Frontlines and offensives")
-        self.assertIn("F", frontline_description)
-        self.assertIn("O", frontline_description)
+        target_description = next(description for heading, description in popup.ARMY_STEPS
+                                  if heading == "Target areas")
+        self.assertIn("T", target_description)
+        self.assertIn("balances", target_description)
+        self.assertIn("Idle", target_description)
         popup.draw(surface)
 
         popup.handle_event(pygame.event.Event(

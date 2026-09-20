@@ -102,8 +102,7 @@ class _NavigationIntroPopup:
          "changing the other selected units."),
         ("Create an army", "In Orders, click + Create Army in the Army tray. (Located on the right side of the screen)"),
         ("Personalize", "Click a card to select the units in said army. Pressing the E button edits its name and emblem."),
-        ("Defense areas", "Press D on an army card, select its defense tiles, and confirm. The army fills uncovered tiles first, then balances its defenders."),
-        ("Frontlines and offensives", "Press F, then click two adjacent tiles across a border to form a frontline. Press O to mark one or more target tiles; the army spreads its advance across that objective line."),
+        ("Target areas", "Press T on an army card, select its target tiles, and confirm. The army fills uncovered tiles first, then balances its units. Idle members return after a turn."),
         ("Need to Assign more units?", "With units selected, right-click an army card."),
     )
     DIPLOMACY_STEPS = (
@@ -115,7 +114,7 @@ class _NavigationIntroPopup:
         "Your country is centered automatically when a game opens or after you choose it. If you're familiar with how HOI4 map controls work, then the default map controls for GD5 should be very easy to understand.",
         "These buttons are important! Located on the bottom left of the screen, they edit the appearance of the map, giving you the information you need to play effectively.",
         "Reach other countries through the Mail tab or directly from their territory on the map.",
-        "Learn how to create, organize, and command armies, including defense areas, frontlines, and offensive orders.",
+        "Learn how to create, organize, and command armies, including target areas.",
     )
 
     def __init__(self, map_screen):

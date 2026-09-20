@@ -183,51 +183,19 @@ def _move_down_rect(card):
     return pygame.Rect(card.right - 91, card.y + 23, 17, 17)
 
 
-def _defense_rect(card):
-    """The defense-area control sits between vertical reorder arrows and Edit."""
+def _target_area_rect(card):
+    """The target-area control sits between vertical reorder arrows and Edit."""
     return pygame.Rect(card.right - 69, card.y + 10, 17, 17)
 
 
-def _frontline_rect(card):
-    """The F/O pair sits beside the vertical army-order controls."""
-    return pygame.Rect(card.right - 113, card.y + 4, 17, 17)
-
-
-def _offensive_rect(card):
-    return pygame.Rect(card.right - 113, card.y + 23, 17, 17)
-
-
-def _open_defense_area(map_screen, army):
+def _open_target_area(map_screen, army):
     """Open an editable map picker without allowing submitted turns to mutate."""
     if not map_screen.can_select_map_units():
-        map_screen.show_feedback("Turn submitted or unavailable; unsubmit to edit defense areas.")
+        map_screen.show_feedback("Turn submitted or unavailable; unsubmit to edit target areas.")
         return
     from screens.map_related_screens.defense_area_screen import DefenseAreaScreen
     from ui.screen_runner import _run_pygame_sub_screen
     _run_pygame_sub_screen(map_screen, DefenseAreaScreen(map_screen, army["id"]))
-
-
-def _open_frontline_picker(map_screen, army):
-    """Open the map picker for the two sides of a frontline border."""
-    if not map_screen.can_select_map_units():
-        map_screen.show_feedback("Turn submitted or unavailable; unsubmit to edit army orders.")
-        return
-    from screens.map_related_screens.defense_area_screen import FrontlineScreen
-    from ui.screen_runner import _run_pygame_sub_screen
-    _run_pygame_sub_screen(map_screen, FrontlineScreen(map_screen, army["id"]))
-
-
-def _open_offensive_order(map_screen, army):
-    """Open the objective picker only after a country-facing frontline exists."""
-    if not map_screen.can_select_map_units():
-        map_screen.show_feedback("Turn submitted or unavailable; unsubmit to edit army orders.")
-        return
-    if not army.get("frontline_country"):
-        map_screen.show_feedback("Set a frontline before choosing an offensive order.")
-        return
-    from screens.map_related_screens.defense_area_screen import OffensiveOrderScreen
-    from ui.screen_runner import _run_pygame_sub_screen
-    _run_pygame_sub_screen(map_screen, OffensiveOrderScreen(map_screen, army["id"]))
 
 
 def _blank_custom_symbol():
@@ -712,10 +680,6 @@ def handle_event(map_screen, event, orders_screen=None):
             queries.disband_army(map_screen.player_country, army["id"],
                                   map_screen.nation_data, map_screen.map_data)
             map_screen.show_feedback(f"Disbanded {army['name']}")
-        elif _frontline_rect(rect).collidepoint(event.pos):
-            _open_frontline_picker(map_screen, army)
-        elif _offensive_rect(rect).collidepoint(event.pos):
-            _open_offensive_order(map_screen, army)
         elif _move_up_rect(rect).collidepoint(event.pos):
             if queries.move_army(map_screen.player_country, army["id"], -1,
                                   map_screen.nation_data, map_screen.map_data):
@@ -724,8 +688,8 @@ def handle_event(map_screen, event, orders_screen=None):
             if queries.move_army(map_screen.player_country, army["id"], 1,
                                   map_screen.nation_data, map_screen.map_data):
                 map_screen.show_feedback(f"Moved {army['name']} down")
-        elif _defense_rect(rect).collidepoint(event.pos):
-            _open_defense_area(map_screen, army)
+        elif _target_area_rect(rect).collidepoint(event.pos):
+            _open_target_area(map_screen, army)
         elif _edit_rect(rect).collidepoint(event.pos):
             _open_editor(map_screen, army)
         else:
@@ -775,24 +739,6 @@ def draw(map_screen, surface, orders_screen=None, draw_editors=True):
         text_x = rect.x + (39 if army.get("symbol") or army.get("custom_symbol") else 9)
         surface.blit(name, (text_x, rect.y + 6))
         surface.blit(count, (text_x, rect.y + 23))
-        frontline_rect = _frontline_rect(rect)
-        has_frontline = bool(army.get("frontline_country"))
-        frontline_active = army.get("order_mode") == c.ARMY_ORDER_FRONTLINE
-        pygame.draw.rect(surface,
-                         (49, 99, 158) if frontline_active else
-                         ((47, 92, 125) if has_frontline else (62, 88, 135)),
-                         frontline_rect, border_radius=3)
-        frontline = text_font.render("F", True, (235, 247, 255))
-        surface.blit(frontline, frontline.get_rect(center=frontline_rect.center))
-        offensive_rect = _offensive_rect(rect)
-        has_offensive_order = bool(army.get("offensive_area"))
-        offensive_active = army.get("order_mode") == c.ARMY_ORDER_OFFENSIVE
-        pygame.draw.rect(surface,
-                         (154, 83, 45) if offensive_active else
-                         ((116, 74, 48) if has_offensive_order else (62, 88, 135)),
-                         offensive_rect, border_radius=3)
-        offensive = text_font.render("O", True, (255, 242, 225))
-        surface.blit(offensive, offensive.get_rect(center=offensive_rect.center))
         for arrow_rect, label, enabled in (
                 (_move_up_rect(rect), "^", index > 0),
                 (_move_down_rect(rect), "v", index < len(armies) - 1)):
@@ -800,12 +746,12 @@ def draw(map_screen, surface, orders_screen=None, draw_editors=True):
                              arrow_rect, border_radius=3)
             arrow = text_font.render(label, True, (230, 240, 255) if enabled else (120, 130, 145))
             surface.blit(arrow, arrow.get_rect(center=arrow_rect.center))
-        defense_rect = _defense_rect(rect)
-        has_defense_area = bool(army.get("defense_area"))
-        pygame.draw.rect(surface, (50, 108, 83) if has_defense_area else (62, 88, 135),
-                         defense_rect, border_radius=3)
-        defense = text_font.render("D", True, (235, 255, 240))
-        surface.blit(defense, defense.get_rect(center=defense_rect.center))
+        target_area_rect = _target_area_rect(rect)
+        has_target_area = bool(army.get("defense_area"))
+        pygame.draw.rect(surface, (50, 108, 83) if has_target_area else (62, 88, 135),
+                         target_area_rect, border_radius=3)
+        target_area = text_font.render("T", True, (235, 255, 240))
+        surface.blit(target_area, target_area.get_rect(center=target_area_rect.center))
         edit_rect = _edit_rect(rect)
         pygame.draw.rect(surface, (62, 88, 135), edit_rect, border_radius=3)
         edit = text_font.render("E", True, (230, 240, 255))
