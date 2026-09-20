@@ -182,6 +182,21 @@ try:
     assert stream.error is None, stream.error
     assert stream.length < normal_length
     assert stream.position >= 12.1
+
+    # The short seek prefill should hand off to long steady-state buffers
+    # without leaving gaps on the Pygame channel.
+    channel = pygame.mixer.Channel(0)
+    saw_audio = False
+    idle_frames = 0
+    playback_deadline = time.monotonic() + 0.6
+    while time.monotonic() < playback_deadline:
+        stream.update()
+        if channel.get_busy():
+            saw_audio = True
+        elif saw_audio and stream.position < stream.length - 0.1:
+            idle_frames += 1
+        time.sleep(0.005)
+    assert idle_frames == 0, f"mixer channel underruns: {idle_frames}"
 finally:
     stream.stop()
     pygame.mixer.quit()

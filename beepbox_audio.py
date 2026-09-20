@@ -10,10 +10,12 @@ import time
 
 
 SAMPLE_RATE = 44100
-# Keep render calls short so a seek can pre-empt synthesis promptly. Four
-# 4096-frame buffers still provide a useful background queue for uninterrupted
-# playback without making each new seek wait on a full second of PCM.
-CHUNK_FRAMES = 4096
+# Prime short buffers after startup and seeks for responsive playback. Once the
+# stream is underway, longer buffers reduce mixer handoffs and tolerate delays
+# in the game's frame loop.
+CHUNK_FRAMES = 44100
+PREFILL_CHUNK_FRAMES = 4096
+PREFILL_CHUNKS = 4
 BUFFERED_CHUNKS = 4
 
 
@@ -89,6 +91,7 @@ class BeepBoxStream:
         self._queued = None
         self._active_started_at = None
         self._active_elapsed = 0.0
+        self._priming = True
         self._worker_done_generation = -1
         self._worker_error = None
         self._worker = threading.Thread(
@@ -146,6 +149,7 @@ class BeepBoxStream:
             while not self._stop_event.is_set():
                 try:
                     generation, cursor, speed = self._commands.get(timeout=0.01)
+                    chunks_rendered = 0
                     initialized = json.loads(context.eval(
                         f"gd5Init({song_json_literal}, {SAMPLE_RATE}, {speed}, {cursor})"
                     ))
@@ -160,7 +164,12 @@ class BeepBoxStream:
                     self._stop_event.wait(0.02)
                     continue
 
-                frames = min(CHUNK_FRAMES, max(1, int((self._length - cursor) * SAMPLE_RATE)))
+                chunk_limit = (
+                    PREFILL_CHUNK_FRAMES
+                    if chunks_rendered < PREFILL_CHUNKS
+                    else CHUNK_FRAMES
+                )
+                frames = min(chunk_limit, max(1, int((self._length - cursor) * SAMPLE_RATE)))
                 result = context.eval(f"gd5Render({frames})")
                 pcm_parts = json.loads(result.json())
                 pcm = base64.b64decode("".join(pcm_parts))
@@ -170,6 +179,7 @@ class BeepBoxStream:
                 try:
                     self._ready.put(chunk, timeout=0.05)
                     cursor += frames / SAMPLE_RATE
+                    chunks_rendered += 1
                 except queue.Full:
                     # Let control requests pre-empt a full playback buffer.
                     continue
@@ -210,6 +220,12 @@ class BeepBoxStream:
             self._queued = None
             self._active_started_at = None
             self._active_elapsed = 0.0
+            if self._priming:
+                enough_prefill = self._ready.qsize() >= PREFILL_CHUNKS
+                generation_done = self._worker_done_generation == self._generation
+                if not enough_prefill and not generation_done:
+                    return
+                self._priming = False
             chunk = self._next_current_chunk()
             if chunk is not None:
                 sound = self._pygame.mixer.Sound(buffer=chunk[3])
@@ -254,6 +270,7 @@ class BeepBoxStream:
         self._queued = None
         self._active_started_at = None
         self._active_elapsed = 0.0
+        self._priming = True
         self._channel.stop()
         _drain(self._ready)
         self._worker_done_generation = -1
