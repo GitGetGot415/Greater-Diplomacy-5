@@ -123,6 +123,10 @@ def start_spectator(map_screen):
     map_screen.selected_province = None
     map_screen.hovered_province = None
     map_screen.hover_glow_surf = None
+    # Spectator mode exits the same country-selection presentation as a
+    # confirmed nation.  Keep its global permissions separate, but restore the
+    # normal operational map layer (units on, country names off).
+    map_screen.set_play_view_defaults()
     map_screen.show_feedback("Entered Spectator Mode")
 
     from screens.menu_screens.map import render_buttons

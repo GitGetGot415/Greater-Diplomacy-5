@@ -1205,10 +1205,10 @@ ARMY_EMBLEM_GAP = 6
 ARMY_GROUP_ICON_MAX_ZOOM = 2.0
 ARMY_GROUP_TRANSITION_SECONDS = 0.1
 # Compact markers must read as a formation rather than an ordinary division.
-COMPACT_GROUP_MARKER_SCALE = 1.2
+COMPACT_GROUP_MARKER_SCALE = 1.4
 # Unit boxes have a readability floor. This applies an additional bounded zoom factor
 # to formation circles so they still visibly shrink at the widest map view.
-COMPACT_GROUP_MIN_ZOOM_SCALE = 0.25
+COMPACT_GROUP_MIN_ZOOM_SCALE = 0.5
 # A group should replace several nearby division displays, not recreate one
 # marker per province.  This fixed map-space radius keeps group membership and
 # marker positions stable while the player changes strategic zoom.

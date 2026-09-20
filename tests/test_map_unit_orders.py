@@ -805,6 +805,28 @@ class MapViewDefaultTests(unittest.TestCase):
         self.assertEqual(applied, [True])
         self.assertEqual(focused, [("A", True)])
 
+    def test_starting_spectator_applies_the_play_view_defaults(self):
+        applied = []
+        map_stub = type("MapStub", (), {
+            "active_players": [],
+            "selection_mode": True,
+            "pending_selection": None,
+            "pending_unit": None,
+            "selected_province": None,
+            "hovered_province": None,
+            "hover_glow_surf": None,
+            "set_play_view_defaults": lambda self: applied.append(True),
+            "show_feedback": lambda self, _message: None,
+            "refresh_map_layers": lambda self, *_layers: None,
+        })()
+
+        with patch("screens.menu_screens.map.render_buttons"):
+            player_setup.start_spectator(map_stub)
+
+        self.assertEqual(map_stub.player_country, "Spectator")
+        self.assertFalse(map_stub.selection_mode)
+        self.assertEqual(applied, [True])
+
     def test_country_focus_uses_core_center_and_unit_visible_zoom(self):
         map_screen = object.__new__(Map)
         map_screen.map_data = {
