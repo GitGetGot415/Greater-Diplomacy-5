@@ -1187,9 +1187,9 @@ ARMY_GROUP_ICON_MAX_SIZE = 30
 ARMY_GROUP_ICON_HEIGHT_RATIO = 1.4
 ARMY_GROUP_TRANSITION_SECONDS = 0.1
 # A group should replace several nearby division displays, not recreate one
-# marker per province.  This is screen-space so it naturally gathers more
-# forces as the player zooms farther out.
-AREA_UNIT_GROUP_SCREEN_RADIUS = 90
+# marker per province.  This fixed map-space radius keeps group membership and
+# marker positions stable while the player changes strategic zoom.
+AREA_UNIT_GROUP_WORLD_RADIUS = 45
 
 
 def unit_box_size(map_screen):
@@ -1566,7 +1566,7 @@ def _nearby_area_clusters(records, map_screen):
     """Partition one country's unit records into compact nearby map areas."""
     if not records:
         return []
-    radius = AREA_UNIT_GROUP_SCREEN_RADIUS / max(0.01, map_screen.camera.zoom)
+    radius = AREA_UNIT_GROUP_WORLD_RADIUS
     clusters = []
     # Stable spatial ordering keeps markers from changing merely because units
     # happen to be stored in a different province-dictionary order.

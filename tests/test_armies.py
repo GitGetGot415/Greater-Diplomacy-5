@@ -506,6 +506,14 @@ class ArmyLayoutTests(unittest.TestCase):
         self.assertEqual(groups[0]["center"], (35, 20))
         self.assertEqual(groups[1]["center"], (20, 20))
 
+        map_screen.camera.zoom = 0.5
+        with patch.object(overlay_renderer, "compact_army_group_icon", return_value=marker):
+            zoomed_out_groups = overlay_renderer.compact_area_unit_groups(
+                map_screen, set(), {id(organized)})
+        self.assertEqual(
+            [(group["units"], group["center"]) for group in zoomed_out_groups],
+            [(group["units"], group["center"]) for group in groups])
+
         map_screen.visible_provinces = set()
         self.assertEqual(overlay_renderer.compact_area_unit_groups(
             map_screen, set(), {id(organized)}), [])
