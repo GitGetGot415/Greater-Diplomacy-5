@@ -12,6 +12,7 @@ from map_logic.rendering import overlay_renderer
 from map_logic.rendering import country_names
 from map_logic.rendering import symbol_loader
 from gameState import GameState
+from screens.map_related_screens.defense_area_screen import DefenseAreaScreen
 from screens.map_related_screens.orders import Orders_Screen, PANEL_INSET, TOP_BTN_GAP_X
 from ui import army_panel, map_top_right_layout, minimap
 
@@ -262,6 +263,18 @@ class ArmyQueryTests(unittest.TestCase):
 
 
 class ArmyLayoutTests(unittest.TestCase):
+    def test_defense_picker_keeps_its_controls_at_the_top_of_the_map(self):
+        pygame.font.init()
+        map_ref = SimpleNamespace(
+            player_country="A", nation_data={"A": {"armies": [
+                {"id": "army", "name": "Army 1", "unit_ids": [], "defense_area": []}]}},
+            map_data={})
+        screen = DefenseAreaScreen(map_ref, "army")
+
+        self.assertEqual(screen.panel_rect.top, DefenseAreaScreen.PANEL_TOP)
+        self.assertEqual(screen.panel_rect.centerx, c.SCREEN_WIDTH // 2)
+        self.assertLess(DefenseAreaScreen.SELECTION_MARKER_RADIUS, 14)
+
     def test_orders_draws_army_editor_over_its_button_elements(self):
         screen = object.__new__(Orders_Screen)
         screen.map_screen = object()

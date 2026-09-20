@@ -14,13 +14,18 @@ class DefenseAreaScreen(MapOverlayScreen):
     """Select the tiles an army should return to when it has been left idle."""
 
     overlay_alpha = 0
+    CENTER_PANEL = False
     PANEL_TITLE = "Create Defense Area"
     PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_INFO
     PANEL_SIZE = (540, 145)
+    PANEL_TOP = 25
+    SELECTION_MARKER_RADIUS = 7
     UNIT_BOX_ALPHA = 150
 
     def __init__(self, map_screen, army_id):
-        super().__init__(map_screen, pygame.Rect(0, 0, *self.PANEL_SIZE))
+        panel = pygame.Rect(0, self.PANEL_TOP, *self.PANEL_SIZE)
+        panel.centerx = c.SCREEN_WIDTH // 2
+        super().__init__(map_screen, panel)
         self.army_id = army_id
         army = self._army()
         self.selected_ids = set(army.get("defense_area", [])) if army else set()
@@ -95,7 +100,8 @@ class DefenseAreaScreen(MapOverlayScreen):
     def draw_content(self, surface):
         for province_id in self.selected_ids:
             overlay_renderer.draw_map_highlight(
-                surface, self.map_screen, province_id, (70, 220, 135), base_radius=14)
+                surface, self.map_screen, province_id, (70, 220, 135),
+                base_radius=self.SELECTION_MARKER_RADIUS)
         self.draw_panel(surface)
         text_font = fonts.get("normal")
         army = self._army()
