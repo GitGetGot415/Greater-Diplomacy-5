@@ -152,7 +152,7 @@ CREDITS_DATA = [
                 "- 2000\n"
                 "- 2000 world\n"
                 "- 1914 world (simplified)\n"
-                "- 1914 worls (detailed)\n"),
+                "- 1914 world (detailed)\n"),
                 "align": "left",
             },
         ]
