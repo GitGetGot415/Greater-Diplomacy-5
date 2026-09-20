@@ -635,6 +635,61 @@ class ArmyLayoutTests(unittest.TestCase):
         self.assertEqual([record["position"] for record in halfway_moving],
                          [(27.5, 20), (42.5, 20)])
 
+    def test_nearby_area_member_changes_restart_its_animation_without_departures(self):
+        first = {"unit_id": "first"}
+        second = {"unit_id": "second"}
+        first_province = {"id": 1, "center": (20, 20), "units": [first]}
+        second_province = {"id": 2, "center": (50, 20), "units": [second]}
+        map_screen = SimpleNamespace(
+            map_data={"first": first_province, "second": second_province},
+            loop_map=False, map_w=100)
+        icon = pygame.Surface((20, 20), pygame.SRCALPHA)
+        combined_area = [{"army": None, "presentation_id": ("area", "A", 1),
+                          "units": [first, second], "province": first_province,
+                          "center": (35, 20), "icon": icon}]
+        remaining_area = [{"army": None, "presentation_id": ("area", "A", 1),
+                           "units": [first], "province": first_province,
+                           "center": (20, 20), "icon": icon}]
+        transition_ms = round(overlay_renderer.ARMY_GROUP_TRANSITION_SECONDS * 1000)
+
+        with patch.object(pygame.time, "get_ticks", side_effect=[
+                0, transition_ms + 1, transition_ms + 1]):
+            overlay_renderer.army_group_presentation(map_screen, combined_area, set())
+            overlay_renderer.army_group_presentation(map_screen, combined_area, set())
+            _groups, moving, suppressed = overlay_renderer.army_group_presentation(
+                map_screen, remaining_area, set())
+
+        self.assertEqual(suppressed, {id(first)})
+        self.assertEqual([record["unit"] for record in moving], [first])
+
+    def test_deleted_army_departure_is_discarded_before_its_transition_draws(self):
+        first = {"unit_id": "first"}
+        second = {"unit_id": "second"}
+        first_province = {"center": (20, 20), "units": [first]}
+        second_province = {"center": (80, 40), "units": [second]}
+        map_screen = SimpleNamespace(
+            map_data={"first": first_province, "second": second_province},
+            loop_map=False, map_w=100)
+        icon = pygame.Surface((20, 20), pygame.SRCALPHA)
+        combined_group = [{"army": {"id": "one"}, "units": [first, second],
+                           "province": first_province, "center": (50, 30),
+                           "icon": icon}]
+        first_only_group = [{"army": {"id": "one"}, "units": [first],
+                             "province": first_province, "center": (50, 30),
+                             "icon": icon}]
+        transition_ms = round(overlay_renderer.ARMY_GROUP_TRANSITION_SECONDS * 1000)
+
+        with patch.object(pygame.time, "get_ticks", side_effect=[
+                0, transition_ms + 1, transition_ms + 1, transition_ms + 2]):
+            overlay_renderer.army_group_presentation(map_screen, combined_group, set())
+            overlay_renderer.army_group_presentation(map_screen, combined_group, set())
+            overlay_renderer.army_group_presentation(map_screen, first_only_group, set())
+            second_province["units"].remove(second)
+            _groups, moving, _suppressed = overlay_renderer.army_group_presentation(
+                map_screen, first_only_group, set())
+
+        self.assertNotIn(second, [record["unit"] for record in moving])
+
     def test_selecting_one_member_only_animates_that_member_out_of_marker(self):
         first = {"unit_id": "first"}
         second = {"unit_id": "second"}

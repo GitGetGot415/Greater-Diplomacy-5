@@ -1735,12 +1735,15 @@ def army_group_presentation(map_screen, desired_groups, combat_unit_ids):
                      "province": group["province"], "started_at": now}
             states[army_id] = state
         elif state["unit_ids"] != unit_ids:
-            if state["phase"] == "collapsed":
+            if state["phase"] == "collapsed" and group.get("army") is not None:
                 # The state remembers all members it has collapsed.  That
                 # lets a selection swap (A selected, then B selected) emit
                 # only B from the marker instead of rebuilding every other
-                # unit's compression animation.  Keep the existing center:
-                # partial selection must not make the marker jump.
+                # unit's compression animation.  This is only meaningful for
+                # a persistent army: an automatic area changing membership
+                # means units moved or disappeared, not that they were
+                # selected. Keep the existing center so a partial selection
+                # does not make the marker jump.
                 member_ids = tuple(dict.fromkeys((*state.get("member_ids", ()),
                                                   *unit_ids)))
                 selected_before = set(member_ids) - set(state["unit_ids"])
@@ -1788,8 +1791,9 @@ def army_group_presentation(map_screen, desired_groups, combat_unit_ids):
         for departure in state.get("departures", []):
             # A unit that has been deselected since its departure started is
             # back inside the marker and should not keep an old animation.
-            departure_unit_ids = tuple(unit_id for unit_id in departure["unit_ids"]
-                                       if unit_id in selected_unit_ids)
+            departure_unit_ids = tuple(
+                unit_id for unit_id in departure["unit_ids"]
+                if unit_id in selected_unit_ids and unit_id in live_records)
             if not departure_unit_ids:
                 continue
             progress = min(1.0, (now - departure["started_at"])
