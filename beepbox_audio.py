@@ -6,15 +6,17 @@ import json
 import os
 import queue
 import threading
-import time
 
 
 SAMPLE_RATE = 44100
-# Mid-sized buffers keep seeks much faster than one-second renders while
-# reducing Pygame channel handoffs compared with tiny 4096-frame buffers.
-CHUNK_FRAMES = 16384
-PREFILL_CHUNKS = 1
-BUFFERED_CHUNKS = 4
+# Keep synth calls short enough that the producer does not hold Python's GIL
+# across a large fraction of an output buffer. Pygame consumes these blocks
+# from its post-mix callback, so chunk boundaries are not playback boundaries.
+CHUNK_FRAMES = 512
+BUFFERED_CHUNKS = 64
+
+_POST_MIX_LOCK = threading.Lock()
+_POST_MIX_OWNER = None
 
 
 def is_beepbox_song(path):
@@ -54,7 +56,7 @@ def _drain(q):
 
 
 class BeepBoxStream:
-    """Synthesize BeepBox JSON on a worker and feed PCM chunks to a Pygame channel."""
+    """Synthesize BeepBox JSON on a worker and mix PCM into Pygame's stream."""
 
     def __init__(self, song_path, volume=1.0, speed=1.0, start_time=0.0):
         import pygame
@@ -68,14 +70,17 @@ class BeepBoxStream:
                 "BeepBox playback needs a 44100 Hz, signed 16-bit stereo Pygame mixer"
             )
 
-        self._pygame = pygame
-        self._channel = pygame.mixer.Channel(0)
-        pygame.mixer.set_reserved(1)
-        self._channel.stop()
-        self._channel.set_volume(volume)
+        try:
+            from pygame._sdl2.mixer import set_post_mix
+        except ImportError as exc:
+            raise RuntimeError(
+                "BeepBox playback requires pygame-ce's post-mix audio callback"
+            ) from exc
+
+        self._set_post_mix = set_post_mix
 
         self.song_path = song_path
-        self.volume = volume
+        self.volume = max(0.0, min(1.0, float(volume)))
         self.speed = max(0.25, min(2.0, float(speed)))
         self._position = max(0.0, float(start_time))
         self._length = 0.0
@@ -86,21 +91,24 @@ class BeepBoxStream:
         self._state_lock = threading.RLock()
         self._paused = False
         self._active = None
-        self._queued = None
-        self._active_started_at = None
-        self._active_elapsed = 0.0
-        self._priming = True
+        self._active_offset = 0
+        self._started = False
+        self._mixed_frames = 0
+        self._underrun_frames = 0
         self._worker_done_generation = -1
         self._worker_error = None
         self._worker = threading.Thread(
             target=self._produce, name="BeepBoxSynth", daemon=True
         )
         self._request_render(self._position, self.speed)
+        self._post_mix_callback = self._mix_post_mix
+        global _POST_MIX_OWNER
+        with _POST_MIX_LOCK:
+            if _POST_MIX_OWNER is not None:
+                raise RuntimeError("A BeepBox audio stream is already active")
+            self._set_post_mix(self._post_mix_callback)
+            _POST_MIX_OWNER = self
         self._worker.start()
-        self._playback_worker = threading.Thread(
-            target=self._feed_audio_loop, name="BeepBoxAudioQueue", daemon=True
-        )
-        self._playback_worker.start()
 
     @property
     def length(self):
@@ -109,12 +117,6 @@ class BeepBoxStream:
     @property
     def position(self):
         with self._state_lock:
-            if self._active is not None:
-                _, start, frames, _sound = self._active
-                elapsed = self._active_elapsed
-                if not self._paused and self._active_started_at is not None:
-                    elapsed += max(0.0, time.monotonic() - self._active_started_at)
-                self._position = start + min(elapsed, frames / SAMPLE_RATE)
             return self._position
 
     @property
@@ -123,11 +125,9 @@ class BeepBoxStream:
 
     @property
     def finished(self):
-        self.update()
         with self._state_lock:
             return (self._worker_done_generation == self._generation
-                    and not self._channel.get_busy() and self._active is None
-                    and self._queued is None and self._ready.empty())
+                    and self._active is None and self._ready.empty())
 
     def _produce(self):
         try:
@@ -148,18 +148,31 @@ class BeepBoxStream:
             song_json_literal = json.dumps(song_json)
             generation = -1
             cursor = 0.0
+            initialized = False
 
             while not self._stop_event.is_set():
                 try:
-                    generation, cursor, speed = self._commands.get(timeout=0.01)
-                    initialized = json.loads(context.eval(
-                        f"gd5Init({song_json_literal}, {SAMPLE_RATE}, {speed}, {cursor})"
-                    ))
-                    self._length = initialized["length"]
+                    if generation < 0:
+                        command = self._commands.get(timeout=0.01)
+                    else:
+                        command = self._commands.get_nowait()
+                    generation, cursor, speed = command
+                    if initialized:
+                        result = context.eval(f"gd5Seek({cursor}, {speed})")
+                    else:
+                        result = context.eval(
+                            f"gd5Init({song_json_literal}, {SAMPLE_RATE}, {speed}, {cursor})"
+                        )
+                        initialized = True
+                    initialized_song = json.loads(result)
+                    self._length = initialized_song["length"]
                     self._worker_done_generation = -1
                 except queue.Empty:
                     if generation < 0:
                         continue
+
+                if generation != self._generation:
+                    continue
 
                 if cursor >= self._length:
                     self._worker_done_generation = generation
@@ -177,7 +190,7 @@ class BeepBoxStream:
                         cursor += frames / SAMPLE_RATE
                         break
                     except queue.Full:
-                        # Keep this rendered PCM while waiting for the feeder;
+                        # Keep this rendered PCM while waiting for playback;
                         # rendering it again wastes CPU and can starve playback.
                         continue
         except Exception as exc:
@@ -185,63 +198,54 @@ class BeepBoxStream:
             self._worker_done_generation = self._generation
 
     def update(self):
-        """Help the background feeder while keeping the controller API stable."""
-        self._feed_audio()
+        """Keep the public stream interface aligned with the browser stream."""
 
-    def _feed_audio_loop(self):
-        while not self._stop_event.wait(0.005):
-            self._feed_audio()
+    def _mix_post_mix(self, _post_mix, audio_buffer):
+        """Add available BeepBox PCM to the live Pygame mixer output buffer."""
+        if self._stop_event.is_set():
+            return
+        try:
+            output = memoryview(audio_buffer).cast("h")
+            with self._state_lock:
+                if self._paused or self._stop_event.is_set():
+                    return
 
-    def _feed_audio(self):
-        """Start and queue synthesized buffers independently of frame timing."""
-        with self._state_lock:
-            if self._stop_event.is_set():
-                return
-            channel_busy = self._channel.get_busy()
-            if (self._queued is not None and channel_busy
-                    and self._channel.get_queue() is None):
-                if self._active is not None and self._active_started_at is not None:
-                    remaining = max(
-                        0.0,
-                        self._active[2] / SAMPLE_RATE - self._active_elapsed,
-                    )
-                    self._active_started_at += remaining
-                else:
-                    self._active_started_at = time.monotonic()
-                self._active = self._queued
-                self._queued = None
-                self._active_elapsed = 0.0
+                output_offset = 0
+                volume = self.volume
+                while output_offset < len(output):
+                    if self._active is None:
+                        self._active = self._next_current_chunk()
+                        self._active_offset = 0
+                    if self._active is None:
+                        break
 
-            if channel_busy:
-                if self._queued is None:
-                    chunk = self._next_current_chunk()
-                    if chunk is not None:
-                        sound = self._pygame.mixer.Sound(buffer=chunk[3])
-                        self._channel.queue(sound)
-                        self._queued = (chunk[0], chunk[1], chunk[2], sound)
-            else:
-                if self._queued is not None:
-                    self._position = self._queued[1] + self._queued[2] / SAMPLE_RATE
-                elif self._active is not None:
-                    self._position = self.position
-                self._active = None
-                self._queued = None
-                self._active_started_at = None
-                self._active_elapsed = 0.0
-                if self._priming:
-                    enough_prefill = self._ready.qsize() >= PREFILL_CHUNKS
-                    generation_done = self._worker_done_generation == self._generation
-                    if not enough_prefill and not generation_done:
-                        return
-                    self._priming = False
-                chunk = self._next_current_chunk()
-                if chunk is not None:
-                    sound = self._pygame.mixer.Sound(buffer=chunk[3])
-                    self._channel.play(sound)
-                    self._active_started_at = time.monotonic()
-                    if self._paused:
-                        self._channel.pause()
-                    self._active = (chunk[0], chunk[1], chunk[2], sound)
+                    _generation, start, frames, pcm = self._active
+                    source = memoryview(pcm).cast("h")
+                    available = len(source) - self._active_offset
+                    count = min(available, len(output) - output_offset)
+                    for index in range(count):
+                        sample = int(source[self._active_offset + index] * volume)
+                        mixed = output[output_offset + index] + sample
+                        output[output_offset + index] = max(-32768, min(32767, mixed))
+
+                    output_offset += count
+                    self._active_offset += count
+                    self._position = start + self._active_offset / (SAMPLE_RATE * 2)
+                    if self._active_offset >= len(source):
+                        self._active = None
+                        self._active_offset = 0
+
+                if output_offset:
+                    self._started = True
+                    self._mixed_frames += output_offset // 2
+                missing_samples = len(output) - output_offset
+                if (missing_samples and self._started
+                        and self._worker_done_generation != self._generation):
+                    self._underrun_frames += missing_samples // 2
+        except Exception as exc:
+            # Pygame reports but suppresses exceptions from this audio-thread
+            # callback, so retain failures for the controller's normal fallback.
+            self._worker_error = exc
 
     def _next_current_chunk(self):
         while True:
@@ -254,22 +258,11 @@ class BeepBoxStream:
 
     def pause(self, paused):
         with self._state_lock:
-            paused = bool(paused)
-            if paused and not self._paused:
-                if self._active is not None and self._active_started_at is not None:
-                    self._active_elapsed += max(0.0, time.monotonic() - self._active_started_at)
-                    self._active_started_at = None
-                self._channel.pause()
-            elif not paused and self._paused:
-                if self._active is not None:
-                    self._active_started_at = time.monotonic()
-                self._channel.unpause()
-            self._paused = paused
+            self._paused = bool(paused)
 
     def set_volume(self, volume):
         with self._state_lock:
             self.volume = max(0.0, min(1.0, float(volume)))
-            self._channel.set_volume(self.volume)
 
     def seek(self, position, speed=None):
         with self._state_lock:
@@ -278,11 +271,7 @@ class BeepBoxStream:
                 self.speed = max(0.25, min(2.0, float(speed)))
             self._generation += 1
             self._active = None
-            self._queued = None
-            self._active_started_at = None
-            self._active_elapsed = 0.0
-            self._priming = True
-            self._channel.stop()
+            self._active_offset = 0
             _drain(self._ready)
             self._worker_done_generation = -1
             self._request_render(self._position, self.speed)
@@ -301,10 +290,12 @@ class BeepBoxStream:
 
     def stop(self):
         self._stop_event.set()
-        with self._state_lock:
-            self._channel.stop()
-        self._worker.join(timeout=0.05)
-        self._playback_worker.join(timeout=0.05)
+        global _POST_MIX_OWNER
+        with _POST_MIX_LOCK:
+            if _POST_MIX_OWNER is self:
+                self._set_post_mix(None)
+                _POST_MIX_OWNER = None
+        self._worker.join(timeout=0.5)
 
 
 class WebBeepBoxStream:
@@ -420,6 +411,7 @@ class WebBeepBoxStream:
 _JS_BRIDGE = r"""
 globalThis.gd5Synth = null;
 globalThis.gd5Length = 0;
+globalThis.gd5OutputRate = 44100;
 globalThis.gd5Init = function(songJson, outputRate, speed, seekSeconds) {
     const song = new beepbox.Song();
     song.fromJsonObject(JSON.parse(songJson));
@@ -429,8 +421,18 @@ globalThis.gd5Init = function(songJson, outputRate, speed, seekSeconds) {
     synth.loopRepeatCount = 0;
     synth.playhead = seekSeconds * outputRate / synth.getSamplesPerBar();
     synth.resetEffects();
+    gd5OutputRate = outputRate;
     gd5Synth = synth;
     gd5Length = song.barCount * synth.getSamplesPerBar() / outputRate;
+    return JSON.stringify({length: gd5Length});
+};
+globalThis.gd5Seek = function(seekSeconds, speed) {
+    if (!gd5Synth) return JSON.stringify({length: 0});
+    gd5Synth.samplesPerSecond = gd5OutputRate / speed;
+    gd5Synth.computeDelayBufferSizes();
+    gd5Synth.playhead = seekSeconds * gd5OutputRate / gd5Synth.getSamplesPerBar();
+    gd5Synth.resetEffects();
+    gd5Length = gd5Synth.song.barCount * gd5Synth.getSamplesPerBar() / gd5OutputRate;
     return JSON.stringify({length: gd5Length});
 };
 globalThis.gd5Render = function(frameCount) {

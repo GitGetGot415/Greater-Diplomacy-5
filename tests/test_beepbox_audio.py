@@ -72,6 +72,13 @@ class BeepBoxAudioTests(unittest.TestCase):
         self.assertAlmostEqual(fast_length, normal_length / 1.5, places=3)
         context.eval(f"gd5Init({json.dumps(song_json)}, 44100, 1.5, 10)")
         self.assertAlmostEqual(context.eval("gd5Synth.playhead"), 7.5, places=4)
+        context.eval("gd5Seek(12, 1.5)")
+        self.assertAlmostEqual(context.eval("gd5Synth.playhead"), 9.0, places=4)
+        self.assertAlmostEqual(
+            json.loads(context.eval("JSON.stringify({length: gd5Length})"))["length"],
+            fast_length,
+            places=3,
+        )
 
     @unittest.skipUnless(is_available(), "native QuickJS dependency is not installed")
     def test_browser_bridge_uses_web_audio_and_supports_controls(self):
@@ -145,7 +152,7 @@ class BeepBoxAudioTests(unittest.TestCase):
         self.assertEqual(context.eval("window.__gd5_beepbox_length()"), 0)
 
     @unittest.skipUnless(is_available(), "native QuickJS dependency is not installed")
-    def test_buffered_pygame_stream_supports_play_pause_and_seek(self):
+    def test_pygame_postmix_stream_supports_play_pause_and_seek_without_underruns(self):
         script = r"""
 import sys
 import time
@@ -160,6 +167,7 @@ try:
         stream.update()
         time.sleep(0.02)
     assert stream.error is None, stream.error
+    assert stream._mixed_frames > 0
     assert stream.position >= 0.1
     normal_length = stream.length
 
@@ -168,6 +176,8 @@ try:
     time.sleep(0.08)
     assert abs(stream.position - paused_at) < 0.03
 
+    stream.seek(4.0)
+    stream.seek(8.0)
     stream.seek(12.0, speed=1.5)
     deadline = time.monotonic() + 8
     while (stream.length >= normal_length and stream.error is None
@@ -183,19 +193,20 @@ try:
     assert stream.length < normal_length
     assert stream.position >= 12.1
 
-    # The short seek prefill should hand off to long steady-state buffers
-    # without leaving gaps on the Pygame channel.
-    channel = pygame.mixer.Channel(0)
-    saw_audio = False
-    idle_frames = 0
+    # Pygame post-mix keeps the stream attached to its live device buffer.
+    # After the seek has settled, playback should not fall back to silence.
+    with stream._state_lock:
+        underruns_before = stream._underrun_frames
     playback_deadline = time.monotonic() + 0.6
     while time.monotonic() < playback_deadline:
-        if channel.get_busy():
-            saw_audio = True
-        elif saw_audio and stream.position < stream.length - 0.1:
-            idle_frames += 1
+        assert stream.error is None, stream.error
         time.sleep(0.005)
-    assert idle_frames == 0, f"mixer channel underruns: {idle_frames}"
+    with stream._state_lock:
+        underruns_after = stream._underrun_frames
+    assert underruns_after == underruns_before, (
+        f"Pygame post-mix stream underruns: "
+        f"{underruns_after - underruns_before} frames"
+    )
 finally:
     stream.stop()
     pygame.mixer.quit()
