@@ -46,9 +46,12 @@ def main():
     # its DATA_FILES (assets, base_maps, etc.) relative to the CWD it's invoked from --
     # which is REPO_ROOT thanks to the os.chdir() above, so this still lands dist/build
     # at the project root exactly like before.
-    cmd = "python3 compilation_scripts/setup.py py2app"
-    
-    result = subprocess.run(cmd, shell=True)
+    # Keep using the interpreter that started this wrapper.  In particular,
+    # invoking this file with venv/bin/python must not silently switch to a
+    # system ``python3`` without py2app or the BeepBox runtime installed.
+    cmd = [sys.executable, "compilation_scripts/setup.py", "py2app"]
+
+    result = subprocess.run(cmd)
     if result.returncode != 0:
         print("py2app failed.")
         sys.exit(result.returncode)

@@ -20,6 +20,8 @@ sys.path.insert and os.chdir at module scope.
 import ast
 import os
 import re
+import subprocess
+import sys
 import unittest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -260,6 +262,21 @@ class BuildManifestTests(unittest.TestCase):
                          "missing these sub_screen_opener() targets")
 
     # --- macOS -------------------------------------------------------------
+
+    def test_py2app_setup_runs_from_the_project_root(self):
+        """The macOS wrapper executes setup.py by path, not from its directory.
+
+        setup.py imports the root-level BeepBox asset filter, so this cheap
+        setuptools metadata command catches a broken repository-root sys.path
+        setup before a long py2app build is attempted.
+        """
+        result = subprocess.run(
+            [sys.executable, os.path.join(SCRIPTS, "setup.py"), "--name"],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_py2app_lists_every_runtime_package(self):
         """py2app bundles nothing it isn't told about, so OPTIONS['packages'] has
