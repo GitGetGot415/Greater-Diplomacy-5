@@ -51,7 +51,7 @@ class ShuffleExclusionTests(unittest.TestCase):
             ("shuffle_disabled_tracks", []),
         )
 
-    def test_track_toggle_is_right_of_the_manual_song_button_and_is_green_when_excluded(self):
+    def test_excluded_song_button_is_disabled_and_toggle_is_right_and_green(self):
         pygame.font.init()
         track_path = "assets/music/Album/track.mp3"
         controller = SimpleNamespace(
@@ -76,9 +76,36 @@ class ShuffleExclusionTests(unittest.TestCase):
 
         song_button = next(button for button in player.elements if button.text == "track.mp3")
         exclusion_button = next(button for button in player.elements if button.text == "X")
+        self.assertTrue(song_button.disabled)
         self.assertEqual(exclusion_button.rect.left,
                          song_button.rect.right + TRACK_SHUFFLE_TOGGLE_GAP)
         self.assertEqual(exclusion_button.color, c.UI_COLORS["green"][0])
+
+    def test_non_excluded_song_button_remains_selectable(self):
+        pygame.font.init()
+        track_path = "assets/music/Album/track.mp3"
+        controller = SimpleNamespace(
+            all_albums={},
+            playlist=[track_path],
+            now_playing="None",
+            is_shuffle_disabled=lambda path: False,
+            sfx_volume=0.5,
+            sfx_pitch=0.5,
+            music_volume=0.5,
+            music_pitch=0.5,
+            starting_song=None,
+            is_paused=False,
+        )
+        player = object.__new__(Music_Player)
+        player.controller = controller
+        player._scroll_album = 0
+        player._scroll_track = 0
+        player.handle_back_key = lambda: None
+
+        player.refresh_ui()
+
+        song_button = next(button for button in player.elements if button.text == "track.mp3")
+        self.assertFalse(song_button.disabled)
 
     def test_ui_toggle_delegates_to_the_controller(self):
         player = object.__new__(Music_Player)
