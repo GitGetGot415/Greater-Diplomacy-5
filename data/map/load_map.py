@@ -8,6 +8,7 @@ from data.io import country_io
 import data.constants as c
 from data import queries
 from data.map import history_io
+from data.map.map_cache import OPTIONAL_LAYER_FILES
 
 def _load_default_images(map_obj):
     """Helper to ensure image data keys exist."""
@@ -208,12 +209,14 @@ def load_map_assets(map_screen, load_path):
     map_screen.min_zoom = (c.SCREEN_HEIGHT - 120) / map_screen.map_h
 
     try:
-        map_screen.political_map = pygame.image.load(os.path.join(load_path, "political.png")).convert()
+        map_screen.political_map = pygame.image.load(
+            os.path.join(load_path, OPTIONAL_LAYER_FILES["political"])).convert()
     except:
         map_screen.political_map = pygame.image.load(os.path.join(load_path, "id_map.png")).convert()
 
     try:
-        map_screen.cores_map = pygame.image.load(os.path.join(load_path, "cores.png")).convert()
+        map_screen.cores_map = pygame.image.load(
+            os.path.join(load_path, OPTIONAL_LAYER_FILES["cores"])).convert()
     except:
         map_screen.cores_map = map_screen.id_map.copy()
 

@@ -6,6 +6,7 @@ from datetime import datetime
 import data.constants as c
 from data import queries
 from data.map import history_io
+from data.map.map_cache import remove_optional_layer_files
 from data.platform import sync_persisted_dir
 
 async def save_map_data(self, save_name=None):
@@ -63,11 +64,12 @@ async def save_map_data(self, save_name=None):
         self.save_progress_completed = 4
         await asyncio.sleep(0)
 
-        # Visual states
-        pygame.image.save(self.political_map, os.path.join(save_path, "political.png"))
+        # Political and cores surfaces are derived from map/province data and
+        # regenerated during Map initialization. Remove stale cache files when
+        # overwriting an older save, and persist only the required map images.
+        remove_optional_layer_files(save_path)
         pygame.image.save(self.terrain_map, os.path.join(save_path, "terrain.png"))
         pygame.image.save(self.id_map, os.path.join(save_path, "id_map.png"))
-        pygame.image.save(self.cores_map, os.path.join(save_path, "cores.png"))
         self.save_progress_completed = 5
 
         if not self.is_editor:

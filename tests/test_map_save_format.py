@@ -88,6 +88,7 @@ class MapSaveFormatTests(unittest.TestCase):
     def test_disk_save_writes_current_state_compactly_without_meta_overlay(self):
         map_screen = sample_map_screen()
         map_screen.is_editor = False
+        map_screen.history = {"1": {"nation_data": {}, "provinces": {}}}
         map_screen.political_map = object()
         map_screen.terrain_map = object()
         map_screen.id_map = object()
@@ -95,19 +96,26 @@ class MapSaveFormatTests(unittest.TestCase):
         map_screen.show_feedback = lambda _message: None
 
         with tempfile.TemporaryDirectory() as temporary:
+            save_dir = os.path.join(temporary, "compact-save")
+            os.makedirs(save_dir)
+            for filename in ("political.png", "cores.png"):
+                with open(os.path.join(save_dir, filename), "wb") as handle:
+                    handle.write(b"stale cached overlay")
             with mock.patch.object(c, "SAVES_DIR", temporary), \
                  mock.patch.object(save_map.queries, "scrub_default_images"), \
-                 mock.patch.object(save_map.pygame.image, "save"), \
+                 mock.patch.object(save_map.pygame.image, "save") as image_save, \
                  mock.patch.object(save_map, "sync_persisted_dir"):
                 asyncio.run(save_map.save_map_data(map_screen, "compact-save"))
 
-            save_dir = os.path.join(temporary, "compact-save")
             with open(os.path.join(save_dir, "meta.json"), encoding="utf-8") as handle:
                 meta_text = handle.read()
             with open(os.path.join(save_dir, "map_data.json"), encoding="utf-8") as handle:
                 map_data_text = handle.read()
             meta = json.loads(meta_text)
             map_data = json.loads(map_data_text)
+            saved_history = history_io.read(save_dir)
+            has_political_cache = os.path.exists(os.path.join(save_dir, "political.png"))
+            has_cores_cache = os.path.exists(os.path.join(save_dir, "cores.png"))
 
         self.assertNotIn("provinces", meta)
         self.assertEqual(meta["nation_data"], map_screen.nation_data)
@@ -117,7 +125,27 @@ class MapSaveFormatTests(unittest.TestCase):
         self.assertEqual(map_data["(7, 0, 0)"], map_screen.map_data[(7, 0, 0)])
         self.assertEqual(meta_text, json.dumps(meta, separators=(",", ":")))
         self.assertEqual(map_data_text, json.dumps(map_data, separators=(",", ":")))
+        self.assertEqual(saved_history, map_screen.history)
+        self.assertFalse(has_political_cache)
+        self.assertFalse(has_cores_cache)
+        self.assertCountEqual(
+            [os.path.basename(call.args[1]) for call in image_save.call_args_list],
+            ["terrain.png", "id_map.png"],
+        )
         self.assertFalse(map_screen.is_saving)
+
+    def test_built_in_maps_omit_regenerable_layers_and_empty_histories(self):
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        for map_root in (os.path.join(project_root, "base_maps"),
+                         os.path.join(project_root, "scenarios")):
+            for current, dirnames, filenames in os.walk(map_root):
+                # Custom editor maps are gitignored user data, outside this cleanup.
+                dirnames[:] = [name for name in dirnames if name != "map_editor"]
+                self.assertFalse(
+                    {"political.png", "cores.png", "history.json", "history.json.gz"}
+                    & set(filenames),
+                    f"unexpected generated map artifact in {current}",
+                )
 
     def test_legacy_meta_and_history_province_overlays_still_apply(self):
         map_data = {

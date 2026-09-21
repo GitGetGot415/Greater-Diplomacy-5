@@ -4350,6 +4350,7 @@ def refresh_map_directories(screen, dirs_to_check, success_message="Data refresh
 
                 # 5. Perform the manual write operations in-place
                 from data.map import history_io
+                from data.map.map_cache import remove_optional_layer_files
 
                 with open(os.path.join(scenario_path, "meta.json"), "w") as f:
                     f.write(history_io.dump_compact_text(save_dict))
@@ -4361,10 +4362,11 @@ def refresh_map_directories(screen, dirs_to_check, success_message="Data refresh
                 if hasattr(temp_map_context, 'history'):
                     history_io.write(scenario_path, temp_map_context.history)
 
-                pygame.image.save(temp_map_context.political_map, os.path.join(scenario_path, "political.png"))
+                # These overlays are rebuilt from map state when the scenario
+                # loads. Remove any copies left by older refreshes.
+                remove_optional_layer_files(scenario_path)
                 pygame.image.save(temp_map_context.terrain_map, os.path.join(scenario_path, "terrain.png"))
                 pygame.image.save(temp_map_context.id_map, os.path.join(scenario_path, "id_map.png"))
-                pygame.image.save(temp_map_context.cores_map, os.path.join(scenario_path, "cores.png"))
 
                 maps_processed += 1
                 screen.refresh_completed = maps_processed

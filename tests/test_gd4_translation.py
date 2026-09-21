@@ -249,7 +249,10 @@ class GD4TranslationTests(unittest.TestCase):
             second_destination, _notes = gd4.translate_file(str(source), saves_dir=temporary)
             self.assertNotEqual(destination, second_destination)
             self.assertTrue((Path(destination) / "meta.json").is_file())
-            self.assertTrue((Path(destination) / "political.png").is_file())
+            self.assertTrue((Path(destination) / "terrain.png").is_file())
+            self.assertTrue((Path(destination) / "id_map.png").is_file())
+            self.assertFalse((Path(destination) / "political.png").exists())
+            self.assertFalse((Path(destination) / "cores.png").exists())
             with open(Path(destination) / "meta.json", encoding="utf-8") as handle:
                 saved_meta = json.load(handle)
             with open(Path(destination) / "map_data.json", encoding="utf-8") as handle:

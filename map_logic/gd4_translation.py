@@ -528,7 +528,7 @@ def translate_file(source_path, saves_dir=None, base_map_dir=None):
             handle.write(history_io.dump_compact_text(payload))
         with open(os.path.join(destination, "map_data.json"), "w", encoding="utf-8") as handle:
             handle.write(history_io.dump_compact_text(raw_map))
-        for asset in ("terrain.png", "id_map.png", "political.png", "cores.png"):
+        for asset in ("terrain.png", "id_map.png"):
             shutil.copy2(os.path.join(base_map_dir, asset), os.path.join(destination, asset))
     except Exception:
         shutil.rmtree(destination, ignore_errors=True)

@@ -81,7 +81,7 @@ class GDHEXTranslationTests(unittest.TestCase):
         navy = provinces[2]["units"]
         self.assertEqual([unit["type"] for unit in navy], ["Destroyer I", "Dreadnought"])
         self.assertTrue(all(unit["naval_unit"] for unit in navy))
-        self.assertEqual(len(assets), 4)
+        self.assertEqual(len(assets), 2)
         self.assertTrue(any("3 x 2" in note for note in notes))
 
     def test_known_numeric_owner_tokens_use_country_identities(self):
@@ -130,8 +130,10 @@ class GDHEXTranslationTests(unittest.TestCase):
             source.write_text(self.source, encoding="utf-8")
             destination, _notes = gdhex.translate_file(str(source), saves_dir=temporary)
             destination = Path(destination)
-            for name in ("meta.json", "map_data.json", "terrain.png", "id_map.png", "political.png", "cores.png"):
+            for name in ("meta.json", "map_data.json", "terrain.png", "id_map.png"):
                 self.assertTrue((destination / name).is_file())
+            self.assertFalse((destination / "political.png").exists())
+            self.assertFalse((destination / "cores.png").exists())
             with open(destination / "meta.json", encoding="utf-8") as handle:
                 saved_meta = json.load(handle)
             with open(destination / "map_data.json", encoding="utf-8") as handle:

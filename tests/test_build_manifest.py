@@ -79,6 +79,16 @@ def _parse_path(path):
         return ast.parse(fh.read())
 
 
+def _nested_function(tree, name):
+    """Compile one simple nested build filter without running its build script."""
+    function = next(node for node in ast.walk(tree)
+                    if isinstance(node, ast.FunctionDef) and node.name == name)
+    isolated = ast.Module(body=[function], type_ignores=[])
+    namespace = {"os": os}
+    exec(compile(ast.fix_missing_locations(isolated), "<build-filter>", "exec"), namespace)
+    return namespace[name]
+
+
 def _sub_screen_opener_module_paths(tree):
     """First-arg string literals passed to every sub_screen_opener() call."""
     paths = []
@@ -211,6 +221,30 @@ class BuildManifestTests(unittest.TestCase):
         staged = set(_literal_lists(self.windows, {"dirs_to_copy"}).get("dirs_to_copy", []))
         roots = {p.split(".")[0] for p in first_party_packages()}
         self.assertEqual(roots - staged, set(), "windows_compilation.dirs_to_copy is incomplete")
+
+    def test_build_filters_exclude_local_saves_and_custom_editor_maps(self):
+        windows_dirs = set(_literal_lists(self.windows, {"dirs_to_copy"})["dirs_to_copy"])
+        self.assertIn("saves", windows_dirs)
+        windows_save_filter = _nested_function(self.windows, "saves_ignore_func")
+        self.assertEqual(windows_save_filter("saves", ["local-save"]), ["local-save"])
+
+        web_dirs = _literal_lists(self.html, {"DATA_DIRS"})["DATA_DIRS"]
+        self.assertNotIn("saves", web_dirs)
+
+        for tree in (self.windows, self.html):
+            scenario_filter = _nested_function(tree, "scenarios_ignore_func")
+            self.assertEqual(
+                scenario_filter(os.path.join("scenarios", "map_editor"), ["custom-map"]),
+                ["custom-map"],
+            )
+            self.assertEqual(
+                scenario_filter(os.path.join("scenarios", "historical"), ["built-in-map"]),
+                [],
+            )
+
+        mac_filter = _nested_function(self.setup, "not_under_map_editor")
+        self.assertFalse(mac_filter(os.path.join("scenarios", "map_editor", "custom-map")))
+        self.assertTrue(mac_filter(os.path.join("scenarios", "historical", "built-in-map")))
 
     def test_windows_hidden_imports_cover_sub_screen_opener(self):
         """sub_screen_opener() (screens/menu_screens/map.py) late-imports a screen

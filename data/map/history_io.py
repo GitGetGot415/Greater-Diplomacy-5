@@ -44,8 +44,17 @@ def write(save_path, history, compress=True):
 
     Removes the other form so a folder never holds a stale plain history beside
     a fresh compressed one -- `read` prefers the compressed file, and a leftover
-    would otherwise sit there confusing anyone looking at the folder.
+    would otherwise sit there confusing anyone looking at the folder. Empty
+    history has no timeline to preserve, so it is represented by no file.
     """
+    if not history:
+        for filename in (GZ_NAME, PLAIN_NAME):
+            try:
+                os.remove(os.path.join(save_path, filename))
+            except FileNotFoundError:
+                pass
+        return None
+
     payload = dump_text(history, indent=c.HISTORY_INDENT)
 
     if compress:

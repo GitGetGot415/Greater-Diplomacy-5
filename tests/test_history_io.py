@@ -57,6 +57,16 @@ class HistoryIOTests(unittest.TestCase):
     def test_no_history_reads_as_empty(self):
         self.assertEqual(history_io.read(self.dir), {})
 
+    def test_writing_empty_history_removes_old_files_and_writes_nothing(self):
+        for filename in (history_io.GZ_NAME, history_io.PLAIN_NAME):
+            with open(os.path.join(self.dir, filename), "w", encoding="utf-8") as f:
+                f.write("{}")
+
+        self.assertIsNone(history_io.write(self.dir, {}))
+        self.assertFalse(os.path.exists(os.path.join(self.dir, history_io.GZ_NAME)))
+        self.assertFalse(os.path.exists(os.path.join(self.dir, history_io.PLAIN_NAME)))
+        self.assertEqual(history_io.read(self.dir), {})
+
     def test_a_corrupt_history_costs_the_timeline_not_the_save(self):
         with gzip.open(os.path.join(self.dir, history_io.GZ_NAME), "wt") as f:
             f.write("{not json")

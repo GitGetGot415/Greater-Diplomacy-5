@@ -369,24 +369,18 @@ def _color_for_id(province_id):
     return (province_id & 0xFF, (province_id >> 8) & 0xFF, (province_id >> 16) & 0xFF)
 
 
-def _build_map_assets(raw_map, nation_data, width, height):
+def _build_map_assets(raw_map, width, height):
     size = _map_size(width, height)
     terrain = pygame.Surface(size, depth=24)
     id_map = pygame.Surface(size, depth=24)
-    political = pygame.Surface(size, depth=24)
-    cores = pygame.Surface(size, depth=24)
-    for surface in (terrain, id_map, political, cores):
+    for surface in (terrain, id_map):
         surface.fill((0, 0, 0))
     for province in raw_map.values():
         points = _hex_points(province["center"])
         is_water = province["terrain"] in c.WATER_TERRAINS
         pygame.draw.polygon(terrain, OCEAN_COLOR if is_water else LAND_COLOR, points)
         pygame.draw.polygon(id_map, province["map_color"], points)
-        owner_color = nation_data[province["owner"]]["color"]
-        pygame.draw.polygon(political, owner_color, points)
-        core_color = owner_color if province["cores"] else nation_data["Unclaimed"]["color"]
-        pygame.draw.polygon(cores, core_color, points)
-    return terrain, id_map, political, cores
+    return terrain, id_map
 
 
 def build_save_payload(parsed):
@@ -503,7 +497,7 @@ def build_save_payload(parsed):
     ]
     if skipped:
         notes.append("Skipped unsupported Hex units: " + ", ".join(sorted(skipped)) + ".")
-    return payload, raw_map, _build_map_assets(raw_map, nation_data, width, height), notes
+    return payload, raw_map, _build_map_assets(raw_map, width, height), notes
 
 
 def _destination_path(source_path, saves_dir):
@@ -537,7 +531,7 @@ def translate_file(source_path, saves_dir=None):
             handle.write(history_io.dump_compact_text(payload))
         with open(os.path.join(destination, "map_data.json"), "w", encoding="utf-8") as handle:
             handle.write(history_io.dump_compact_text(raw_map))
-        for name, surface in zip(("terrain.png", "id_map.png", "political.png", "cores.png"), assets):
+        for name, surface in zip(("terrain.png", "id_map.png"), assets):
             pygame.image.save(surface, os.path.join(destination, name))
     except Exception:
         shutil.rmtree(destination, ignore_errors=True)
