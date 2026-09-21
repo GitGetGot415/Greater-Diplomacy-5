@@ -168,6 +168,7 @@ def main():
     # web build doesn't carry over whatever local settings the dev machine had
     for rel, content in [
         (os.path.join("data", "json", "active_albums.json"), "[]"),
+        (os.path.join("data", "json", "shuffle_disabled_tracks.json"), "[]"),
         (os.path.join("data", "json", "scenario_settings.json"), "{}"),
         (os.path.join("data", "json", "settings_config.json"), "{}"),
         (os.path.join("data", "json", "starting_song.json"), "{}"),

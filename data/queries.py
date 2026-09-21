@@ -322,6 +322,7 @@ _JSON_CACHE = {
     "tech_tree": {"path": c.RESEARCH_TEMPLATE_PATH, "data": None},
     "country_data": {"path": c.COUNTRIES_DATA_PATH, "data": None},
     "active_albums": {"path": c.ACTIVE_ALBUMS_PATH, "data": None},
+    "shuffle_disabled_tracks": {"path": c.SHUFFLE_DISABLED_TRACKS_PATH, "data": None},
     "starting_song": {"path": c.STARTING_SONG_PATH, "data": None},
     "hildehrand_choice": {"path": c.HILDEHRAND_CHOICE_PATH, "data": None},
     "historical_leaders": {"path": c.HISTORICAL_LEADERS_PATH, "data": None},
@@ -646,6 +647,11 @@ def apply_historical_leader_timeline(nation_data, year, month, day):
                     data[field] = value
                     break
 def get_active_albums(): return _load_cached_json("active_albums")
+
+def get_shuffle_disabled_tracks():
+    """Returns tracks excluded from automatic shuffle, never manual playback."""
+    data = _load_cached_json("shuffle_disabled_tracks")
+    return data if isinstance(data, list) else []
 
 def get_starting_song():
     """Returns the pinned boot-up track path, or None if it's set to random."""

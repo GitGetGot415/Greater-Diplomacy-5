@@ -192,6 +192,7 @@ class BuildManifestTests(unittest.TestCase):
     def setUpClass(cls):
         cls.html = _parse("html_compilation.py")
         cls.windows = _parse("windows_compilation.py")
+        cls.macos = _parse("macos_compilation.py")
         cls.setup = _parse("setup.py")
         cls.map_screen = _parse_path(os.path.join(ROOT, "screens", "menu_screens", "map.py"))
 
@@ -247,6 +248,13 @@ class BuildManifestTests(unittest.TestCase):
         mac_filter = _nested_function(self.setup, "not_under_map_editor")
         self.assertFalse(mac_filter(os.path.join("scenarios", "map_editor", "custom-map")))
         self.assertTrue(mac_filter(os.path.join("scenarios", "historical", "built-in-map")))
+
+    def test_all_builds_reset_local_shuffle_exclusions(self):
+        """A packaged game must not inherit the developer's song preferences."""
+        for build_tree in (self.html, self.windows, self.macos):
+            strings = {node.value for node in ast.walk(build_tree)
+                       if isinstance(node, ast.Constant) and isinstance(node.value, str)}
+            self.assertIn("shuffle_disabled_tracks.json", strings)
 
     def test_windows_hidden_imports_cover_sub_screen_opener(self):
         """sub_screen_opener() (screens/menu_screens/map.py) late-imports a screen

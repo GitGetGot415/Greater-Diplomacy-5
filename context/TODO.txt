@@ -8,6 +8,8 @@ could you make it such so that the actual json for saves / scenarios is human re
 the exported zip file is what i'm most concerned about, so as long as that doesn't affect the export size too much then that's fine
 
 - make it so that you can disable songs from being played, which means that the random shuffle won't select that song
+- add in a spectator code so other players can see tournaments
+- if every country in a faction is exiled then the faction should be disbanded and everyone in the faction is removed from the game
 - when switching the pitch there should be an option to display how the length of the song changes
 option 1 - the song length stays the same, and the position that you're at also remains the same, it's just that the movement speed of the slider slows down or speeds up depending on the pitch
 option 2 - how it currently works now

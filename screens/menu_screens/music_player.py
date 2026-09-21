@@ -15,6 +15,8 @@ import data.constants as c
 
 MUSIC_LEFT_PANE_W = 250
 song_y = 32
+TRACK_SHUFFLE_TOGGLE_SIZE = (26, 26)
+TRACK_SHUFFLE_TOGGLE_GAP = 4
 
 # ==========================================
 # PYGAME MIXER PAUSE BUG PATCH
@@ -223,6 +225,22 @@ class Music_Player(ScrollPanes, GameState):
             track_btn.click_guard = lambda: pygame.mouse.get_pos()[1] >= 200
             track_btn.pane = "track"
             self.elements.append(track_btn)
+
+            # Green means this track is excluded from automatic random play;
+            # it remains a normal, manually playable song button beside it.
+            excluded_from_shuffle = self.controller.is_shuffle_disabled(track_path)
+            shuffle_toggle = Button(
+                track_btn.rect.right + TRACK_SHUFFLE_TOGGLE_GAP,
+                track_y + (song_y - TRACK_SHUFFLE_TOGGLE_SIZE[1]) // 2,
+                TRACK_SHUFFLE_TOGGLE_SIZE,
+                "green" if excluded_from_shuffle else "red",
+                "X",
+                lambda p=track_path: self.toggle_shuffle_exclusion(p),
+                font_preset="tiny",
+            )
+            shuffle_toggle.click_guard = lambda: pygame.mouse.get_pos()[1] >= 200
+            shuffle_toggle.pane = "track"
+            self.elements.append(shuffle_toggle)
             track_y += song_y
             track_content_h += song_y
 
@@ -642,6 +660,10 @@ class Music_Player(ScrollPanes, GameState):
         self.controller.build_playlist()
         self.refresh_ui()
 
+    def toggle_shuffle_exclusion(self, track_path):
+        self.controller.toggle_shuffle_disabled_track(track_path)
+        self.refresh_ui()
+
     # The two panes are ordinary scrollable lists, so they both go through
     # GameState.handle_list_scroll / draw_list_scrollbar with their own attrs.
     def pane_rects(self):
@@ -687,4 +709,3 @@ class Music_Player(ScrollPanes, GameState):
                                  c.SCREEN_HEIGHT - 120, width=10)
         self.draw_pane_scrollbar(surface, "track", c.SCREEN_WIDTH - 280, 200,
                                  c.SCREEN_HEIGHT - 200, width=10)
-

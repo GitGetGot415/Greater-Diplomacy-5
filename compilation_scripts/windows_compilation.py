@@ -167,17 +167,19 @@ def main():
     # meant to ship enabled.
     os.makedirs(os.path.join(dist_dir, "mods"), exist_ok=True)
 
-    # Overwrite active_albums.json with [] so the build doesn't carry over local settings
-    active_albums_path = os.path.join(dist_dir, "data", "json", "active_albums.json")
-    if os.path.exists(os.path.dirname(active_albums_path)):
-        with open(active_albums_path, "w") as f:
-            f.write("[]")
+    # Reset local playlist choices so the build doesn't carry over developer
+    # album selections or per-song shuffle exclusions.
+    resources_json_dir = os.path.join(dist_dir, "data", "json")
+    if os.path.exists(resources_json_dir):
+        for playlist_file in ("active_albums.json", "shuffle_disabled_tracks.json"):
+            with open(os.path.join(resources_json_dir, playlist_file), "w") as f:
+                f.write("[]")
 
     # Reset scenario/global settings to {} so the build falls back to the game's
     # built-in defaults instead of carrying over whatever the dev machine had set
     for settings_file in ("scenario_settings.json", "settings_config.json", "starting_song.json", "hildehrand_choice.json"):
-        settings_path = os.path.join(dist_dir, "data", "json", settings_file)
-        if os.path.exists(os.path.dirname(settings_path)):
+        settings_path = os.path.join(resources_json_dir, settings_file)
+        if os.path.exists(resources_json_dir):
             with open(settings_path, "w") as f:
                 f.write("{}")
 

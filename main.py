@@ -294,6 +294,7 @@ class Controller:
         self.all_albums = {}
         self.active_albums = []
         self.playlist = []
+        self.shuffle_disabled_tracks = set()
         self.now_playing = "None"
         self.beepbox_stream = None
         self._failed_beepbox_tracks = set()
@@ -640,6 +641,16 @@ class Controller:
         self.active_albums = [a for a in self.active_albums if a in self.all_albums]
         self.build_playlist()
 
+        # Exclusions are independent of album membership. Keep entries for a
+        # temporarily absent custom track so it stays excluded if the player
+        # puts that album back later. They affect automatic shuffle only;
+        # selecting a song in the music player always remains allowed.
+        self.shuffle_disabled_tracks = {
+            track.replace("\\", "/")
+            for track in queries.get_shuffle_disabled_tracks()
+            if isinstance(track, str) and track
+        }
+
         # Load the pinned boot-up track, if any, and drop it if its file has
         # since been deleted or renamed. Independent of active_albums, since
         # it's meant to play at boot regardless of which albums are toggled on.
@@ -656,6 +667,23 @@ class Controller:
 
     def save_active_albums(self):
         queries.save_cached_json("active_albums", self.active_albums)
+
+    def save_shuffle_disabled_tracks(self):
+        queries.save_cached_json(
+            "shuffle_disabled_tracks", sorted(self.shuffle_disabled_tracks)
+        )
+
+    def is_shuffle_disabled(self, track_path):
+        return track_path.replace("\\", "/") in self.shuffle_disabled_tracks
+
+    def toggle_shuffle_disabled_track(self, track_path):
+        """Exclude/include one track in automatic random selection."""
+        track_path = track_path.replace("\\", "/")
+        if track_path in self.shuffle_disabled_tracks:
+            self.shuffle_disabled_tracks.remove(track_path)
+        else:
+            self.shuffle_disabled_tracks.add(track_path)
+        self.save_shuffle_disabled_tracks()
 
     def save_starting_song(self):
         queries.save_cached_json("starting_song", {"track": self.starting_song})
@@ -685,7 +713,8 @@ class Controller:
     def play_random_song(self):
         available_tracks = [
             track for track in self.playlist
-            if track not in self._failed_beepbox_tracks
+            if (track not in self._failed_beepbox_tracks
+                and not self.is_shuffle_disabled(track))
         ]
         if not available_tracks:
             self.now_playing = "None"
