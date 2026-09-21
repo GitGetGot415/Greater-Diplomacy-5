@@ -796,6 +796,20 @@ class Controller:
                     self._failed_beepbox_tracks.add(track_path)
                     self.play_random_song()
 
+    def _shutdown_audio(self):
+        if not IS_WEB:
+            # Desktop audio backends can block while synchronously stopping
+            # their audio thread. This process already exits with os._exit, so
+            # skip teardown that can deadlock and terminate directly instead.
+            os._exit(0)
+
+        if self.beepbox_stream is not None:
+            self.beepbox_stream.stop()
+        if c.USE_SOLOUD and hasattr(self, 'soloud'):
+            self.soloud.deinit()
+        elif not c.USE_SOLOUD:
+            pygame.mixer.quit()
+
     def toggle_fullscreen(self):
         current_time = pygame.time.get_ticks()
         # Debounce: prevent toggling if less than 500ms has elapsed since the last toggle finished
@@ -872,17 +886,10 @@ class Controller:
 
             for event in events:
                 if event.type == pygame.QUIT:
-                    # Clean up safely before closing
-                    if self.beepbox_stream is not None:
-                        self.beepbox_stream.stop()
-                    if c.USE_SOLOUD and hasattr(self, 'soloud'):
-                        self.soloud.deinit()
-                    elif not c.USE_SOLOUD:
-                        pygame.mixer.quit()
-                    if IS_WEB:
-                        # os._exit() isn't meaningful in a browser tab; just stop the loop.
-                        return
-                    os._exit(0) # Instantly kills hanging background threads
+                    self._shutdown_audio()
+                    # In a browser, os._exit() isn't meaningful; cleanup above
+                    # and stop the game loop instead.
+                    return
 
             # MODAL STACK: dialogs/prompts/sub-screens (ui/modal_stack.py) take over
             # events/update/draw from active_state while any are open, instead of
