@@ -1,6 +1,7 @@
 """BeepBox song playback for desktop and browser builds."""
 
 import base64
+from contextlib import contextmanager
 import importlib
 import json
 import os
@@ -32,12 +33,37 @@ def is_beepbox_song(path):
 
 
 def is_available():
-    """QuickJS is needed only for native BeepBox rendering."""
+    """Return whether an embedded JavaScript runtime is available natively."""
+    return any(_can_import_runtime(module) for module in ("py_mini_racer", "quickjs"))
+
+
+def _can_import_runtime(module):
     try:
-        importlib.import_module("quickjs")
+        importlib.import_module(module)
     except (ImportError, OSError):
         return False
     return True
+
+
+@contextmanager
+def _native_js_context():
+    """Prefer V8's JIT; retain QuickJS as a small-runtime fallback."""
+    try:
+        from py_mini_racer import mini_racer
+        context_manager = mini_racer()
+        context = context_manager.__enter__()
+    except (ImportError, OSError):
+        quickjs = importlib.import_module("quickjs")
+        yield quickjs.Context(), "quickjs"
+        return
+
+    try:
+        yield context, "v8"
+    except BaseException as exc:
+        context_manager.__exit__(type(exc), exc, exc.__traceback__)
+        raise
+    else:
+        context_manager.__exit__(None, None, None)
 
 
 def has_beepbox_replacement(path):
@@ -131,8 +157,6 @@ class BeepBoxStream:
 
     def _produce(self):
         try:
-            quickjs = importlib.import_module("quickjs")
-
             assets_dir = os.path.dirname(os.path.dirname(os.path.dirname(
                 os.path.abspath(self.song_path)
             )))
@@ -142,57 +166,56 @@ class BeepBoxStream:
             with open(self.song_path, "r", encoding="utf-8") as song_file:
                 song_json = song_file.read()
 
-            context = quickjs.Context()
-            context.eval(source)
-            context.eval(_JS_BRIDGE)
-            song_json_literal = json.dumps(song_json)
-            generation = -1
-            cursor = 0.0
-            initialized = False
+            with _native_js_context() as (context, self._engine_name):
+                context.eval(source)
+                context.eval(_JS_BRIDGE)
+                song_json_literal = json.dumps(song_json)
+                generation = -1
+                cursor = 0.0
+                initialized = False
 
-            while not self._stop_event.is_set():
-                try:
-                    if generation < 0:
-                        command = self._commands.get(timeout=0.01)
-                    else:
-                        command = self._commands.get_nowait()
-                    generation, cursor, speed = command
-                    if initialized:
-                        result = context.eval(f"gd5Seek({cursor}, {speed})")
-                    else:
-                        result = context.eval(
-                            f"gd5Init({song_json_literal}, {SAMPLE_RATE}, {speed}, {cursor})"
-                        )
-                        initialized = True
-                    initialized_song = json.loads(result)
-                    self._length = initialized_song["length"]
-                    self._worker_done_generation = -1
-                except queue.Empty:
-                    if generation < 0:
-                        continue
-
-                if generation != self._generation:
-                    continue
-
-                if cursor >= self._length:
-                    self._worker_done_generation = generation
-                    self._stop_event.wait(0.02)
-                    continue
-
-                frames = min(CHUNK_FRAMES, max(1, int((self._length - cursor) * SAMPLE_RATE)))
-                result = context.eval(f"gd5Render({frames})")
-                pcm_parts = json.loads(result.json())
-                pcm = base64.b64decode("".join(pcm_parts))
-                chunk = (generation, cursor, frames, pcm)
-                while not self._stop_event.is_set() and generation == self._generation:
+                while not self._stop_event.is_set():
                     try:
-                        self._ready.put(chunk, timeout=0.05)
-                        cursor += frames / SAMPLE_RATE
-                        break
-                    except queue.Full:
-                        # Keep this rendered PCM while waiting for playback;
-                        # rendering it again wastes CPU and can starve playback.
+                        if generation < 0:
+                            command = self._commands.get(timeout=0.01)
+                        else:
+                            command = self._commands.get_nowait()
+                        generation, cursor, speed = command
+                        if initialized:
+                            result = context.eval(f"gd5Seek({cursor}, {speed})")
+                        else:
+                            result = context.eval(
+                                f"gd5Init({song_json_literal}, {SAMPLE_RATE}, {speed}, {cursor})"
+                            )
+                            initialized = True
+                        initialized_song = json.loads(result)
+                        self._length = initialized_song["length"]
+                        self._worker_done_generation = -1
+                    except queue.Empty:
+                        if generation < 0:
+                            continue
+
+                    if generation != self._generation:
                         continue
+
+                    if cursor >= self._length:
+                        self._worker_done_generation = generation
+                        self._stop_event.wait(0.02)
+                        continue
+
+                    frames = min(CHUNK_FRAMES, max(1, int((self._length - cursor) * SAMPLE_RATE)))
+                    encoded_pcm = context.eval(f"gd5Render({frames})")
+                    pcm = base64.b64decode(encoded_pcm)
+                    chunk = (generation, cursor, frames, pcm)
+                    while not self._stop_event.is_set() and generation == self._generation:
+                        try:
+                            self._ready.put(chunk, timeout=0.05)
+                            cursor += frames / SAMPLE_RATE
+                            break
+                        except queue.Full:
+                            # Keep this rendered PCM while waiting for playback;
+                            # rendering it again wastes CPU and can starve playback.
+                            continue
         except Exception as exc:
             self._worker_error = exc
             self._worker_done_generation = self._generation
@@ -466,7 +489,7 @@ globalThis.gd5Render = function(frameCount) {
         }
         parts.push(encoded);
     }
-    return parts;
+    return parts.join("");
 };
 """
 

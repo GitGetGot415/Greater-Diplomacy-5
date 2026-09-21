@@ -45,6 +45,7 @@ def main():
            "--collect-all", "dragoman",
            "--collect-all", "cryptography",
            "--collect-all", "quickjs",
+           "--collect-all", "py_mini_racer",
            "--hidden-import", "screens.map_related_screens.automation_screen",
            "--hidden-import", "screens.map_related_screens.declare_independence",
            "--hidden-import", "screens.map_related_screens.politics_screen",

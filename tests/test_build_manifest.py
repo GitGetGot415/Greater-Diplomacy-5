@@ -326,8 +326,11 @@ class BuildManifestTests(unittest.TestCase):
                        if isinstance(item, ast.Constant)]
         quickjs_index = windows_cmd.index("quickjs")
         self.assertEqual(windows_cmd[quickjs_index - 1], "--collect-all")
+        mini_racer_index = windows_cmd.index("py_mini_racer")
+        self.assertEqual(windows_cmd[mini_racer_index - 1], "--collect-all")
         packages = set(_dict_key_lists(self.setup, "OPTIONS", {"packages"}).get("packages", []))
         self.assertIn("quickjs", packages)
+        self.assertIn("py_mini_racer", packages)
 
     def test_web_exclusions_are_the_documented_ones(self):
         """Guards the one intentional asymmetry: data/editors is tkinter-only and

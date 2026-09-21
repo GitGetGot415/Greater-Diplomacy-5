@@ -193,6 +193,12 @@ CREDITS_DATA = [
                 "info": "Music editor and synthesizer used to create GD5's BeepBox-format tracks",
                 "align": "left",
                 "links": [{"text": "GitHub", "url": "https://github.com/johnnesky/beepbox"}]
+            },
+            {
+                "link_text": "PyMiniRacer",
+                "info": "Embedded V8 JavaScript runtime used for native BeepBox playback",
+                "align": "left",
+                "links": [{"text": "GitHub", "url": "https://github.com/bpcreech/PyMiniRacer"}]
             }
         ]
     }

@@ -32,6 +32,13 @@ class BeepBoxAudioTests(unittest.TestCase):
         tools = next(section for section in CREDITS_DATA if section["main_text"] == "Tools: ")
         self.assertTrue(any(person.get("link_text") == "BeepBox" for person in tools["people"]))
 
+    def test_embedded_v8_licenses_are_shipped(self):
+        with open(os.path.join(ROOT, "assets", "mini_racer", "LICENSES.txt"),
+                  encoding="utf-8") as license_file:
+            licenses = license_file.read()
+        self.assertIn("PyMiniRacer", licenses)
+        self.assertIn("V8 JavaScript Engine", licenses)
+
     def test_web_build_stages_synth_and_song_but_drops_matching_audio(self):
         song_mp3 = os.path.splitext(SONG_PATH)[0] + ".mp3"
         self.assertFalse(_ignore_web_asset(SONG_PATH))
@@ -58,8 +65,8 @@ class BeepBoxAudioTests(unittest.TestCase):
         context.eval(f"gd5Init({json.dumps(song_json)}, 44100, 1, 10)")
         self.assertAlmostEqual(context.eval("gd5Synth.playhead"), 5.0, places=4)
 
-        pcm_parts = json.loads(context.eval("gd5Render(2048)").json())
-        pcm = base64.b64decode("".join(pcm_parts))
+        encoded_pcm = context.eval("gd5Render(2048)")
+        pcm = base64.b64decode(encoded_pcm)
         self.assertEqual(len(pcm), 2048 * 2 * 2)
         self.assertTrue(any(pcm), "the synthesized song should contain audible samples")
 
@@ -151,7 +158,7 @@ class BeepBoxAudioTests(unittest.TestCase):
         context.eval("window.__gd5_beepbox_stop()")
         self.assertEqual(context.eval("window.__gd5_beepbox_length()"), 0)
 
-    @unittest.skipUnless(is_available(), "native QuickJS dependency is not installed")
+    @unittest.skipUnless(is_available(), "native JavaScript dependency is not installed")
     def test_pygame_postmix_stream_supports_play_pause_and_seek_without_underruns(self):
         script = r"""
 import sys
@@ -168,6 +175,7 @@ try:
         time.sleep(0.02)
     assert stream.error is None, stream.error
     assert stream._mixed_frames > 0
+    assert stream._engine_name == "v8"
     assert stream.position >= 0.1
     normal_length = stream.length
 
@@ -220,6 +228,62 @@ finally:
             capture_output=True,
             text=True,
             timeout=20,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_v8_playback_stays_ahead_in_reported_late_song_sections(self):
+        script = r"""
+import sys
+import time
+import pygame
+from beepbox_audio import BeepBoxStream
+
+pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=1024)
+for song_path, target in ((sys.argv[1], 247.0), (sys.argv[2], 173.0)):
+    stream = BeepBoxStream(song_path, volume=0.0)
+    try:
+        deadline = time.monotonic() + 10
+        while stream.length <= 0 and stream.error is None and time.monotonic() < deadline:
+            time.sleep(0.01)
+        assert stream.error is None, stream.error
+        assert stream._engine_name == "v8"
+
+        stream.pause(True)
+        stream.seek(target)
+        deadline = time.monotonic() + 10
+        while stream._ready.qsize() < 8 and stream.error is None and time.monotonic() < deadline:
+            time.sleep(0.01)
+        assert stream.error is None, stream.error
+        stream.pause(False)
+        while stream.position < target + 0.2 and stream.error is None and time.monotonic() < deadline:
+            time.sleep(0.01)
+        assert stream.error is None, stream.error
+        assert stream.position >= target + 0.2
+
+        with stream._state_lock:
+            underruns_before = stream._underrun_frames
+        time.sleep(1.0)
+        with stream._state_lock:
+            underruns_after = stream._underrun_frames
+        assert underruns_after == underruns_before, (
+            f"{song_path} underruns at {target}s: "
+            f"{underruns_after - underruns_before} frames"
+        )
+    finally:
+        stream.stop()
+pygame.mixer.quit()
+"""
+        environment = os.environ.copy()
+        environment["SDL_AUDIODRIVER"] = "dummy"
+        result = subprocess.run(
+            [sys.executable, "-c", script,
+             os.path.join(ROOT, "assets", "music", "Greater Diplomacy 5", "Under the Rainbow Redux.json"),
+             SONG_PATH],
+            cwd=ROOT,
+            env=environment,
+            capture_output=True,
+            text=True,
+            timeout=30,
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 

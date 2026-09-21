@@ -84,6 +84,7 @@ OPTIONS = {
         'dragoman',
         'cryptography',
         'quickjs',
+        'py_mini_racer',
     ],
     # Standalone modules that aren't packages but are imported by the app.
     'includes': ['gameState', 'ui_elements', 'soloud', 'pygame', 'tkinter'],
