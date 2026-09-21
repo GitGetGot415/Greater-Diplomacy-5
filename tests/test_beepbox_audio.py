@@ -190,7 +190,6 @@ try:
     idle_frames = 0
     playback_deadline = time.monotonic() + 0.6
     while time.monotonic() < playback_deadline:
-        stream.update()
         if channel.get_busy():
             saw_audio = True
         elif saw_audio and stream.position < stream.length - 0.1:

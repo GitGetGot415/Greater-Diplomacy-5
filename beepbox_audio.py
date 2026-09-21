@@ -10,12 +10,10 @@ import time
 
 
 SAMPLE_RATE = 44100
-# Prime short buffers after startup and seeks for responsive playback. Once the
-# stream is underway, longer buffers reduce mixer handoffs and tolerate delays
-# in the game's frame loop.
-CHUNK_FRAMES = 44100
-PREFILL_CHUNK_FRAMES = 4096
-PREFILL_CHUNKS = 4
+# Mid-sized buffers keep seeks much faster than one-second renders while
+# reducing Pygame channel handoffs compared with tiny 4096-frame buffers.
+CHUNK_FRAMES = 16384
+PREFILL_CHUNKS = 1
 BUFFERED_CHUNKS = 4
 
 
@@ -60,7 +58,6 @@ class BeepBoxStream:
 
     def __init__(self, song_path, volume=1.0, speed=1.0, start_time=0.0):
         import pygame
-        import threading
 
         mixer_format = pygame.mixer.get_init()
         if mixer_format is None:
@@ -86,6 +83,7 @@ class BeepBoxStream:
         self._ready = queue.Queue(maxsize=BUFFERED_CHUNKS)
         self._commands = queue.Queue(maxsize=1)
         self._stop_event = threading.Event()
+        self._state_lock = threading.RLock()
         self._paused = False
         self._active = None
         self._queued = None
@@ -99,6 +97,10 @@ class BeepBoxStream:
         )
         self._request_render(self._position, self.speed)
         self._worker.start()
+        self._playback_worker = threading.Thread(
+            target=self._feed_audio_loop, name="BeepBoxAudioQueue", daemon=True
+        )
+        self._playback_worker.start()
 
     @property
     def length(self):
@@ -106,13 +108,14 @@ class BeepBoxStream:
 
     @property
     def position(self):
-        if self._active is not None:
-            _, start, frames, _sound = self._active
-            elapsed = self._active_elapsed
-            if not self._paused and self._active_started_at is not None:
-                elapsed += max(0.0, time.monotonic() - self._active_started_at)
-            self._position = start + min(elapsed, frames / SAMPLE_RATE)
-        return self._position
+        with self._state_lock:
+            if self._active is not None:
+                _, start, frames, _sound = self._active
+                elapsed = self._active_elapsed
+                if not self._paused and self._active_started_at is not None:
+                    elapsed += max(0.0, time.monotonic() - self._active_started_at)
+                self._position = start + min(elapsed, frames / SAMPLE_RATE)
+            return self._position
 
     @property
     def error(self):
@@ -120,11 +123,11 @@ class BeepBoxStream:
 
     @property
     def finished(self):
-        if self._worker_done_generation != self._generation:
-            return False
         self.update()
-        return (not self._channel.get_busy() and self._active is None
-                and self._queued is None and self._ready.empty())
+        with self._state_lock:
+            return (self._worker_done_generation == self._generation
+                    and not self._channel.get_busy() and self._active is None
+                    and self._queued is None and self._ready.empty())
 
     def _produce(self):
         try:
@@ -149,7 +152,6 @@ class BeepBoxStream:
             while not self._stop_event.is_set():
                 try:
                     generation, cursor, speed = self._commands.get(timeout=0.01)
-                    chunks_rendered = 0
                     initialized = json.loads(context.eval(
                         f"gd5Init({song_json_literal}, {SAMPLE_RATE}, {speed}, {cursor})"
                     ))
@@ -164,76 +166,82 @@ class BeepBoxStream:
                     self._stop_event.wait(0.02)
                     continue
 
-                chunk_limit = (
-                    PREFILL_CHUNK_FRAMES
-                    if chunks_rendered < PREFILL_CHUNKS
-                    else CHUNK_FRAMES
-                )
-                frames = min(chunk_limit, max(1, int((self._length - cursor) * SAMPLE_RATE)))
+                frames = min(CHUNK_FRAMES, max(1, int((self._length - cursor) * SAMPLE_RATE)))
                 result = context.eval(f"gd5Render({frames})")
                 pcm_parts = json.loads(result.json())
                 pcm = base64.b64decode("".join(pcm_parts))
                 chunk = (generation, cursor, frames, pcm)
-                if generation != self._generation:
-                    continue
-                try:
-                    self._ready.put(chunk, timeout=0.05)
-                    cursor += frames / SAMPLE_RATE
-                    chunks_rendered += 1
-                except queue.Full:
-                    # Let control requests pre-empt a full playback buffer.
-                    continue
+                while not self._stop_event.is_set() and generation == self._generation:
+                    try:
+                        self._ready.put(chunk, timeout=0.05)
+                        cursor += frames / SAMPLE_RATE
+                        break
+                    except queue.Full:
+                        # Keep this rendered PCM while waiting for the feeder;
+                        # rendering it again wastes CPU and can starve playback.
+                        continue
         except Exception as exc:
             self._worker_error = exc
             self._worker_done_generation = self._generation
 
     def update(self):
-        """Start and queue synthesized buffers on the dedicated channel."""
-        channel_busy = self._channel.get_busy()
-        if (self._queued is not None and channel_busy
-                and self._channel.get_queue() is None):
-            if self._active is not None and self._active_started_at is not None:
-                remaining = max(
-                    0.0,
-                    self._active[2] / SAMPLE_RATE - self._active_elapsed,
-                )
-                self._active_started_at += remaining
-            else:
-                self._active_started_at = time.monotonic()
-            self._active = self._queued
-            self._queued = None
-            self._active_elapsed = 0.0
+        """Help the background feeder while keeping the controller API stable."""
+        self._feed_audio()
 
-        if channel_busy:
-            if self._queued is None:
+    def _feed_audio_loop(self):
+        while not self._stop_event.wait(0.005):
+            self._feed_audio()
+
+    def _feed_audio(self):
+        """Start and queue synthesized buffers independently of frame timing."""
+        with self._state_lock:
+            if self._stop_event.is_set():
+                return
+            channel_busy = self._channel.get_busy()
+            if (self._queued is not None and channel_busy
+                    and self._channel.get_queue() is None):
+                if self._active is not None and self._active_started_at is not None:
+                    remaining = max(
+                        0.0,
+                        self._active[2] / SAMPLE_RATE - self._active_elapsed,
+                    )
+                    self._active_started_at += remaining
+                else:
+                    self._active_started_at = time.monotonic()
+                self._active = self._queued
+                self._queued = None
+                self._active_elapsed = 0.0
+
+            if channel_busy:
+                if self._queued is None:
+                    chunk = self._next_current_chunk()
+                    if chunk is not None:
+                        sound = self._pygame.mixer.Sound(buffer=chunk[3])
+                        self._channel.queue(sound)
+                        self._queued = (chunk[0], chunk[1], chunk[2], sound)
+            else:
+                if self._queued is not None:
+                    self._position = self._queued[1] + self._queued[2] / SAMPLE_RATE
+                elif self._active is not None:
+                    self._position = self.position
+                self._active = None
+                self._queued = None
+                self._active_started_at = None
+                self._active_elapsed = 0.0
+                if self._priming:
+                    enough_prefill = self._ready.qsize() >= PREFILL_CHUNKS
+                    generation_done = self._worker_done_generation == self._generation
+                    if not enough_prefill and not generation_done:
+                        return
+                    self._priming = False
                 chunk = self._next_current_chunk()
                 if chunk is not None:
                     sound = self._pygame.mixer.Sound(buffer=chunk[3])
-                    self._channel.queue(sound)
-                    self._queued = (chunk[0], chunk[1], chunk[2], sound)
-        else:
-            if self._queued is not None:
-                self._position = self._queued[1] + self._queued[2] / SAMPLE_RATE
-            elif self._active is not None:
-                self._position = self.position
-            self._active = None
-            self._queued = None
-            self._active_started_at = None
-            self._active_elapsed = 0.0
-            if self._priming:
-                enough_prefill = self._ready.qsize() >= PREFILL_CHUNKS
-                generation_done = self._worker_done_generation == self._generation
-                if not enough_prefill and not generation_done:
-                    return
-                self._priming = False
-            chunk = self._next_current_chunk()
-            if chunk is not None:
-                sound = self._pygame.mixer.Sound(buffer=chunk[3])
-                self._channel.play(sound)
-                self._active_started_at = time.monotonic()
-                if self._paused:
-                    self._channel.pause()
-                self._active = (chunk[0], chunk[1], chunk[2], sound)
+                    self._channel.play(sound)
+                    self._active_started_at = time.monotonic()
+                    if self._paused:
+                        self._channel.pause()
+                    self._active = (chunk[0], chunk[1], chunk[2], sound)
 
     def _next_current_chunk(self):
         while True:
@@ -245,36 +253,39 @@ class BeepBoxStream:
                 return chunk
 
     def pause(self, paused):
-        paused = bool(paused)
-        if paused and not self._paused:
-            if self._active is not None and self._active_started_at is not None:
-                self._active_elapsed += max(0.0, time.monotonic() - self._active_started_at)
-                self._active_started_at = None
-            self._channel.pause()
-        elif not paused and self._paused:
-            if self._active is not None:
-                self._active_started_at = time.monotonic()
-            self._channel.unpause()
-        self._paused = paused
+        with self._state_lock:
+            paused = bool(paused)
+            if paused and not self._paused:
+                if self._active is not None and self._active_started_at is not None:
+                    self._active_elapsed += max(0.0, time.monotonic() - self._active_started_at)
+                    self._active_started_at = None
+                self._channel.pause()
+            elif not paused and self._paused:
+                if self._active is not None:
+                    self._active_started_at = time.monotonic()
+                self._channel.unpause()
+            self._paused = paused
 
     def set_volume(self, volume):
-        self.volume = max(0.0, min(1.0, float(volume)))
-        self._channel.set_volume(self.volume)
+        with self._state_lock:
+            self.volume = max(0.0, min(1.0, float(volume)))
+            self._channel.set_volume(self.volume)
 
     def seek(self, position, speed=None):
-        self._position = max(0.0, float(position))
-        if speed is not None:
-            self.speed = max(0.25, min(2.0, float(speed)))
-        self._generation += 1
-        self._active = None
-        self._queued = None
-        self._active_started_at = None
-        self._active_elapsed = 0.0
-        self._priming = True
-        self._channel.stop()
-        _drain(self._ready)
-        self._worker_done_generation = -1
-        self._request_render(self._position, self.speed)
+        with self._state_lock:
+            self._position = max(0.0, float(position))
+            if speed is not None:
+                self.speed = max(0.25, min(2.0, float(speed)))
+            self._generation += 1
+            self._active = None
+            self._queued = None
+            self._active_started_at = None
+            self._active_elapsed = 0.0
+            self._priming = True
+            self._channel.stop()
+            _drain(self._ready)
+            self._worker_done_generation = -1
+            self._request_render(self._position, self.speed)
 
     def _request_render(self, position, speed):
         command = (self._generation, position, speed)
@@ -290,8 +301,10 @@ class BeepBoxStream:
 
     def stop(self):
         self._stop_event.set()
-        self._channel.stop()
+        with self._state_lock:
+            self._channel.stop()
         self._worker.join(timeout=0.05)
+        self._playback_worker.join(timeout=0.05)
 
 
 class WebBeepBoxStream:
