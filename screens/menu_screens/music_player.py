@@ -333,6 +333,8 @@ class Music_Player(ScrollPanes, GameState):
         elif c.USE_SOLOUD:
             if self.controller.music_handle is not None:
                 was_paused = getattr(self.controller, 'is_paused', False)
+                speed_mult = 0.5 + self.controller.music_pitch
+                source_target_time = target_time * speed_mult
                 
                 # WORKAROUND: This SoLoud DLL's seek() has a bug where it
                 # resets mStreamPosition to 0 before the skip loop, so after
@@ -358,10 +360,11 @@ class Music_Player(ScrollPanes, GameState):
                 # loop internally uses getAudio() which consumes samples at
                 # the current play speed. At 1.5x it would overshoot; at
                 # 0.75x it would undershoot. Seeking at default 1.0x is exact.
-                self.controller.soloud.seek(self.controller.music_handle, target_time)
+                self.controller.soloud.seek(
+                    self.controller.music_handle, source_target_time
+                )
                 
                 # NOW apply pitch/speed after the seek is complete
-                speed_mult = 0.5 + self.controller.music_pitch
                 self.controller.soloud.set_relative_play_speed(
                     self.controller.music_handle, speed_mult
                 )
@@ -426,7 +429,12 @@ class Music_Player(ScrollPanes, GameState):
             
             self._track_lengths[track] = length
                 
-        return self._track_lengths[track]
+        length = self._track_lengths[track]
+        if c.USE_SOLOUD:
+            # SoLoud reports source-track seconds. The scrubber displays elapsed
+            # playback seconds, so duration grows when playback is slowed down.
+            length /= 0.5 + self.controller.music_pitch
+        return length
 
     def get_current_track_pos(self):
         if self.controller.beepbox_stream is not None:
@@ -471,6 +479,7 @@ class Music_Player(ScrollPanes, GameState):
             try:
                 if hasattr(self.controller.soloud, 'get_stream_position'):
                     current = self.controller.soloud.get_stream_position(self.controller.music_handle)
+                    current /= 0.5 + self.controller.music_pitch
                     self.controller._frozen_time = current
                     self._last_ticks = pygame.time.get_ticks()
                     return current
@@ -490,10 +499,8 @@ class Music_Player(ScrollPanes, GameState):
             if wall_delta > 0.5 or wall_delta < 0:
                 wall_delta = 0.0
 
-            speed_mult = 0.5 + self.controller.music_pitch
-            
             current = self.controller._frozen_time
-            current += (wall_delta * speed_mult)
+            current += wall_delta
             
             max_len = self.get_current_track_length()
             if max_len > 0:
@@ -518,6 +525,7 @@ class Music_Player(ScrollPanes, GameState):
                 try:
                     if hasattr(self.controller.soloud, 'get_stream_position'):
                         actual_pos = self.controller.soloud.get_stream_position(self.controller.music_handle)
+                        actual_pos /= 0.5 + self.controller.music_pitch
                 except Exception:
                     pass
             elif not c.USE_SOLOUD:
@@ -576,13 +584,31 @@ class Music_Player(ScrollPanes, GameState):
         self.save_audio_settings()
 
     def set_music_pitch(self, val):
-        self.controller.music_pitch = val
+        new_speed = 0.5 + val
         if self.controller.beepbox_stream is not None:
-            position = self.controller.beepbox_stream.position
-            self.controller.beepbox_stream.seek(position, speed=0.5 + val)
+            stream = self.controller.beepbox_stream
+            old_speed = stream.speed
+            # BeepBox's position is elapsed playback time. Scale it by the
+            # speed ratio so its underlying musical playhead stays in place.
+            position = stream.position * old_speed / new_speed
+            stream.seek(position, speed=new_speed)
+            self.controller._frozen_time = position
         elif c.USE_SOLOUD and self.controller.music_handle is not None:
-            speed_mult = 0.5 + val 
-            self.controller.soloud.set_relative_play_speed(self.controller.music_handle, speed_mult)
+            old_speed = 0.5 + self.controller.music_pitch
+            if hasattr(self.controller.soloud, 'get_stream_position'):
+                # SoLoud's stream position is source time and remains stable
+                # when its playback speed changes.
+                source_position = self.controller.soloud.get_stream_position(
+                    self.controller.music_handle
+                )
+            else:
+                source_position = self.controller._frozen_time * old_speed
+            self.controller.soloud.set_relative_play_speed(
+                self.controller.music_handle, new_speed
+            )
+            self.controller._frozen_time = source_position / new_speed
+            self._last_ticks = pygame.time.get_ticks()
+        self.controller.music_pitch = val
         self.save_audio_settings()
         
     def set_sfx_pitch(self, val):
