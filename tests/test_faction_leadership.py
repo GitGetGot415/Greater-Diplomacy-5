@@ -202,6 +202,45 @@ class TurnTests(Bloc):
         self.game.run_turn()
         self.assertEqual(self.leader(), "Rival")
 
+    def test_strongest_simultaneous_claimant_wins_even_if_processed_later(self):
+        """The earlier nation_data entry must not beat a stronger challenger."""
+        self.weigh("Rival", 2000)
+        self.weigh("Loyal", 3000)
+        self.tick(c.FACTION_CHALLENGE_TURNS)
+        self.assertTrue(faction_leadership.can_claim(self.game, "Rival"))
+        self.assertTrue(faction_leadership.can_claim(self.game, "Loyal"))
+
+        self.claim()
+        self.game.propose("Loyal", "Loyal", "CLAIM_FACTION_LEADERSHIP")
+        self.game.run_turn()
+
+        strongest = max(("Rival", "Loyal"),
+                        key=lambda nation: faction_leadership.power_of(self.game, nation))
+        self.assertEqual(self.leader(), strongest)
+        self.assertEqual(faction_leadership.turns_held("Rival", self.game.nation_data), 0)
+
+    def test_equal_power_simultaneous_claims_choose_randomly_among_the_strongest(self):
+        from random import choice as real_choice
+        from unittest.mock import patch
+
+        self.weigh("Rival", 2000)
+        self.weigh("Loyal", 2000)
+        self.tick(c.FACTION_CHALLENGE_TURNS)
+
+        self.claim()
+        self.game.propose("Loyal", "Loyal", "CLAIM_FACTION_LEADERSHIP")
+        def choose_claimant(options):
+            if set(options) == {"Rival", "Loyal"}:
+                return "Loyal"
+            return real_choice(options)
+
+        with patch.object(faction_leadership.random, "choice", side_effect=choose_claimant) as choose:
+            self.game.run_turn()
+
+        self.assertEqual(self.leader(), "Loyal")
+        self.assertTrue(any(set(call.args[0]) == {"Rival", "Loyal"}
+                            for call in choose.call_args_list))
+
     def test_and_tells_the_rest_of_the_faction(self):
         self.qualify()
         self.claim()

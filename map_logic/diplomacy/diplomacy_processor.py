@@ -965,6 +965,24 @@ def _process_queued_responses(map_screen):
 def _process_pass1_immediate_actions(map_screen):
     """PASS 1: executes every action that fires the instant it's queued (turns == 0),
     and advances everything else to turns == 1 for Pass 2 to pick up."""
+    # Leadership claims that execute in this pass are a single contest. Choose
+    # winners before iterating nations so dictionary order cannot hand the
+    # faction to a weaker claimant first.
+    leadership_claimants = []
+    for nation, data in map_screen.nation_data.items():
+        if not isinstance(data, dict):
+            continue
+        for info in data.get("pending_diplomacy", {}).values():
+            if not isinstance(info, dict) or info.get("action") != "CLAIM_FACTION_LEADERSHIP":
+                continue
+            timer = info.get("timer", 0)
+            if (0 < timer <= 1
+                    or (timer <= 0 and info.get("turns", 0) == 0)):
+                leadership_claimants.append(nation)
+                break
+    leadership_winners = faction_leadership.strongest_claimants(
+        map_screen, leadership_claimants, getattr(map_screen, "ai_world", None))
+
     for country_name, data in list(map_screen.nation_data.items()):
         if not isinstance(data, dict):
             continue
@@ -1230,6 +1248,10 @@ def _process_pass1_immediate_actions(map_screen):
                     if not faction_leadership.can_claim(map_screen, country_name):
                         print(f"[GUARDRAIL] {country_name} no longer has a claim on "
                               f"{fac or 'any faction'}'s leadership.")
+                        actions_to_clear.append(target)
+                    elif leadership_winners.get(fac) != country_name:
+                        print(f"[GUARDRAIL] {country_name} lost the simultaneous "
+                              f"leadership contest for {fac}.")
                         actions_to_clear.append(target)
                     else:
                         members = queries.get_faction_members(fac, map_screen.nation_data)

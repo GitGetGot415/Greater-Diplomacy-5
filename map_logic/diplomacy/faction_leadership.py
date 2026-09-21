@@ -22,6 +22,8 @@ enough.
 Stdlib, `data` and war_score only.
 """
 
+import random
+
 import data.constants as c
 from data import queries
 from map_logic.diplomacy import war_score
@@ -78,6 +80,30 @@ def can_claim(map_screen, nation):
     """Whether the claim would succeed if it were made this turn."""
     return (eligible(nation, map_screen.nation_data)
             and turns_held(nation, map_screen.nation_data) >= c.FACTION_CHALLENGE_TURNS)
+
+
+def strongest_claimants(map_screen, nations, world=None):
+    """Pick one winner per faction from claims resolving in the same turn.
+
+    Only currently qualified members are considered. Power uses the same
+    nation_power measure as the challenge rule. If powers tie exactly, choose
+    randomly among the strongest members.
+    """
+    grouped = {}
+    for nation in set(nations):
+        if not can_claim(map_screen, nation):
+            continue
+        faction = map_screen.nation_data.get(nation, {}).get("faction", "")
+        if faction:
+            grouped.setdefault(faction, []).append(nation)
+
+    winners = {}
+    for faction, members in grouped.items():
+        strongest_power = max(power_of(map_screen, nation, world) for nation in members)
+        strongest = [nation for nation in members
+                     if power_of(map_screen, nation, world) == strongest_power]
+        winners[faction] = random.choice(strongest)
+    return winners
 
 
 def standing(map_screen, nation, world=None):

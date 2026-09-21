@@ -53,6 +53,14 @@ MAYBE. MAYBE is reserved for human-controlled targets, whose response cannot
 be forecast. The indicator is informational; it neither changes eligibility
 nor queues the proposal.
 
+Faction members may challenge leadership after outweighing the current leader
+by the required margin for six consecutive turns. If several qualified members
+submit leadership claims that resolve in the same turn, the member with the
+highest nation power takes the chair, regardless of nation-data order. Nation
+power is military strength plus one hundredth of economic power, shared with
+the peace-table strength calculation. An exact tie is resolved randomly among
+the strongest claimants.
+
 declarations requiring response:
 turn 0: msg1 is written
 turn 0.5: msg1 is sent
