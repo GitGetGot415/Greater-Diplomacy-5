@@ -13,6 +13,41 @@ import asyncio
 import os
 import sys
 
+
+def _relaunch_with_project_venv():
+    """Run source launches with this checkout's dependency-complete venv.
+
+    macOS commonly opens a ``.py`` file with the framework ``python3`` rather
+    than VS Code's selected project interpreter.  That Python can launch most
+    of GD5 but lacks the optional native BeepBox runtimes, making every JSON
+    album appear empty.  Re-exec before importing project modules so opening
+    or running main.py directly behaves the same as ``venv/bin/python main.py``.
+    Frozen desktop builds and the web build have no source-tree venv and are
+    deliberately left alone.
+    """
+    if getattr(sys, "frozen", False) or os.environ.get("GD5_VENV_REEXEC"):
+        return
+
+    project_root = os.path.dirname(os.path.abspath(__file__))
+    venv_python = os.path.join(
+        project_root,
+        "venv",
+        "Scripts" if os.name == "nt" else "bin",
+        "python.exe" if os.name == "nt" else "python",
+    )
+    if not os.path.isfile(venv_python):
+        return
+    if os.path.normcase(os.path.abspath(sys.executable)) == os.path.normcase(venv_python):
+        return
+
+    environment = os.environ.copy()
+    environment["GD5_VENV_REEXEC"] = "1"
+    os.execve(venv_python, [venv_python, os.path.abspath(__file__), *sys.argv[1:]], environment)
+
+
+if __name__ == "__main__":
+    _relaunch_with_project_venv()
+
 # Only the module object, not install() -- see _import_project_modules()
 # below for why that call had to move.
 import mod_loader
@@ -586,6 +621,12 @@ class Controller:
         # Web uses BeepBox's bundled Web Audio synth; desktop renders through
         # QuickJS into the native mixer.
         prefer_beepbox = IS_WEB or beepbox_audio.is_available()
+        if not prefer_beepbox:
+            print(
+                "BeepBox JSON tracks are unavailable because this Python interpreter "
+                f"has no supported JavaScript runtime: {sys.executable}. "
+                "Select the project venv or install requirements.txt."
+            )
 
         if os.path.exists(c.MUSIC_DIR):
             for item in os.listdir(c.MUSIC_DIR):
