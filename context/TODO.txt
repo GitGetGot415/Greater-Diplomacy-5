@@ -62,6 +62,7 @@ Ultimatums: Kind of like how diplomatic plays work, ultimatums essentially allow
 
 ### Exodus
 
+- add keybinds for mouse
 - Box selection of units in the unit orders menu
 - let Allies see your active movement arrows
 - QUEUE UNITS ACROSS OCEANS
