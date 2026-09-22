@@ -1,4 +1,5 @@
 import base64
+from array import array
 import json
 import os
 import subprocess
@@ -8,6 +9,7 @@ import unittest
 from beepbox_audio import (
     _JS_BRIDGE,
     _WEB_JS_BRIDGE,
+    BeepBoxStream,
     has_beepbox_replacement,
     is_available,
     is_beepbox_song,
@@ -22,6 +24,20 @@ SYNTH_PATH = os.path.join(ROOT, "assets", "beepbox", "beepbox_synth.min.js")
 
 
 class BeepBoxAudioTests(unittest.TestCase):
+    def test_pcm_mixing_is_saturated_and_uses_the_requested_volume(self):
+        output = array("h", [30000, -30000, 1000, -1000])
+        source = array("h", [10000, -10000, 10000, -10000]).tobytes()
+
+        BeepBoxStream._mix_pcm_samples(
+            memoryview(output), 0, source, 0, len(output), 1.0,
+        )
+        self.assertEqual(output.tolist(), [32767, -32768, 11000, -11000])
+
+        BeepBoxStream._mix_pcm_samples(
+            memoryview(output), 2, source, 2, 2, 0.5,
+        )
+        self.assertEqual(output.tolist(), [32767, -32768, 16000, -16000])
+
     def test_added_song_is_recognized_and_upstream_license_is_shipped(self):
         self.assertTrue(is_beepbox_song(SONG_PATH))
         self.assertTrue(has_beepbox_replacement(os.path.splitext(SONG_PATH)[0] + ".mp3"))
@@ -223,6 +239,49 @@ finally:
         environment["SDL_AUDIODRIVER"] = "dummy"
         result = subprocess.run(
             [sys.executable, "-c", script, SONG_PATH],
+            cwd=ROOT,
+            env=environment,
+            capture_output=True,
+            text=True,
+            timeout=20,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    @unittest.skipUnless(is_available(), "native JavaScript dependency is not installed")
+    def test_rapid_track_switching_keeps_the_latest_stream_playing(self):
+        script = r"""
+import sys
+import time
+import pygame
+from beepbox_audio import BeepBoxStream
+
+pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=1024)
+stream = None
+try:
+    for song_path in sys.argv[1:]:
+        if stream is not None:
+            stream.stop()
+        stream = BeepBoxStream(song_path, volume=0.0)
+
+    deadline = time.monotonic() + 8
+    while stream.position < 0.1 and stream.error is None and time.monotonic() < deadline:
+        time.sleep(0.01)
+    assert stream.error is None, stream.error
+    assert stream.position >= 0.1
+finally:
+    if stream is not None:
+        stream.stop()
+    pygame.mixer.quit()
+"""
+        environment = os.environ.copy()
+        environment["SDL_AUDIODRIVER"] = "dummy"
+        result = subprocess.run(
+            [sys.executable, "-c", script,
+             SONG_PATH,
+             os.path.join(ROOT, "assets", "music", "Greater Diplomacy 5", "Under the Rainbow Redux.json"),
+             SONG_PATH,
+             os.path.join(ROOT, "assets", "music", "Experimental", "Sensory Overload Rainbow.json"),
+             SONG_PATH],
             cwd=ROOT,
             env=environment,
             capture_output=True,

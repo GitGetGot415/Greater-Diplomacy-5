@@ -8,16 +8,37 @@ import os
 import queue
 import threading
 
+import numpy as np
+
 
 SAMPLE_RATE = 44100
-# Keep synth calls short enough that the producer does not hold Python's GIL
-# across a large fraction of an output buffer. Pygame consumes these blocks
-# from its post-mix callback, so chunk boundaries are not playback boundaries.
-CHUNK_FRAMES = 512
+# Rendering a 512-frame block made the producer cross the Python/JavaScript
+# boundary about 86 times per second. That overhead is especially costly for
+# dense songs and leaves too little time for the real-time audio callback.
+# A 2048-frame block does not increase audio-callback latency, while V8 spends
+# markedly less time holding the GIL per second.
+CHUNK_FRAMES = 2048
+# Keep roughly three seconds of rendered PCM available. This absorbs ordinary
+# frame spikes and short V8 stalls without making the audio callback wait for
+# synthesis. The data is 16-bit stereo, so this is only about half a megabyte.
 BUFFERED_CHUNKS = 64
 
 _POST_MIX_LOCK = threading.Lock()
 _POST_MIX_OWNER = None
+_POST_MIX_CALLBACK_INSTALLED = False
+
+
+def _mix_current_stream(post_mix, audio_buffer):
+    """Dispatch SDL's long-lived post-mix callback to the current song.
+
+    Replacing or unregistering a post-mix callback while SDL's audio thread is
+    inside it can wait on the audio lock. Track buttons run on the UI thread,
+    so that wait can freeze the whole game during rapid song changes. Keep one
+    callback for the mixer lifetime and swap only this Python reference.
+    """
+    stream = _POST_MIX_OWNER
+    if stream is not None:
+        stream._mix_post_mix(post_mix, audio_buffer)
 
 
 def is_beepbox_song(path):
@@ -33,8 +54,13 @@ def is_beepbox_song(path):
 
 
 def is_available():
-    """Return whether an embedded JavaScript runtime is available natively."""
-    return any(_can_import_runtime(module) for module in ("py_mini_racer", "quickjs"))
+    """Return whether the real-time-capable native BeepBox runtime is available.
+
+    QuickJS is retained only for tests and tooling that evaluate BeepBox data.
+    It is an interpreter and cannot synthesize dense tracks at playback speed,
+    so treating it as a desktop playback fallback causes permanent underruns.
+    """
+    return _can_import_runtime("py_mini_racer")
 
 
 def _can_import_runtime(module):
@@ -47,15 +73,16 @@ def _can_import_runtime(module):
 
 @contextmanager
 def _native_js_context():
-    """Prefer V8's JIT; retain QuickJS as a small-runtime fallback."""
+    """Create the V8 context required for real-time desktop synthesis."""
     try:
         from py_mini_racer import mini_racer
         context_manager = mini_racer()
         context = context_manager.__enter__()
-    except (ImportError, OSError):
-        quickjs = importlib.import_module("quickjs")
-        yield quickjs.Context(), "quickjs"
-        return
+    except (ImportError, OSError) as exc:
+        raise RuntimeError(
+            "BeepBox desktop playback requires the bundled V8 runtime "
+            "(mini-racer); QuickJS is too slow for real-time music synthesis"
+        ) from exc
 
     try:
         yield context, "v8"
@@ -127,12 +154,13 @@ class BeepBoxStream:
             target=self._produce, name="BeepBoxSynth", daemon=True
         )
         self._request_render(self._position, self.speed)
-        self._post_mix_callback = self._mix_post_mix
-        global _POST_MIX_OWNER
+        global _POST_MIX_CALLBACK_INSTALLED, _POST_MIX_OWNER
         with _POST_MIX_LOCK:
             if _POST_MIX_OWNER is not None:
                 raise RuntimeError("A BeepBox audio stream is already active")
-            self._set_post_mix(self._post_mix_callback)
+            if not _POST_MIX_CALLBACK_INSTALLED:
+                self._set_post_mix(_mix_current_stream)
+                _POST_MIX_CALLBACK_INSTALLED = True
             _POST_MIX_OWNER = self
         self._worker.start()
 
@@ -246,10 +274,10 @@ class BeepBoxStream:
                     source = memoryview(pcm).cast("h")
                     available = len(source) - self._active_offset
                     count = min(available, len(output) - output_offset)
-                    for index in range(count):
-                        sample = int(source[self._active_offset + index] * volume)
-                        mixed = output[output_offset + index] + sample
-                        output[output_offset + index] = max(-32768, min(32767, mixed))
+                    self._mix_pcm_samples(
+                        output, output_offset, pcm, self._active_offset,
+                        count, volume,
+                    )
 
                     output_offset += count
                     self._active_offset += count
@@ -269,6 +297,24 @@ class BeepBoxStream:
             # Pygame reports but suppresses exceptions from this audio-thread
             # callback, so retain failures for the controller's normal fallback.
             self._worker_error = exc
+
+    @staticmethod
+    def _mix_pcm_samples(output, output_offset, pcm, source_offset, count, volume):
+        """Mix and saturate one interleaved PCM span without a Python sample loop."""
+        source = np.frombuffer(
+            pcm, dtype="<i2", count=count, offset=source_offset * 2,
+        )
+        destination = np.frombuffer(
+            output, dtype="<i2", count=count, offset=output_offset * 2,
+        )
+        # Mix in int32 so adding two int16 samples cannot wrap before clipping.
+        mixed = destination.astype(np.int32)
+        if volume == 1.0:
+            mixed += source
+        else:
+            mixed += (source.astype(np.float32) * volume).astype(np.int32)
+        np.clip(mixed, -32768, 32767, out=mixed)
+        destination[:] = mixed
 
     def _next_current_chunk(self):
         while True:
@@ -312,13 +358,16 @@ class BeepBoxStream:
                     pass
 
     def stop(self):
+        """Detach this song immediately without waiting on audio or V8 threads."""
         self._stop_event.set()
         global _POST_MIX_OWNER
         with _POST_MIX_LOCK:
             if _POST_MIX_OWNER is self:
-                self._set_post_mix(None)
                 _POST_MIX_OWNER = None
-        self._worker.join(timeout=0.5)
+        # The worker is a daemon and checks _stop_event while rendering and
+        # while waiting for queue space. Joining here used to block a music
+        # button for up to half a second; more importantly, it could contend
+        # with SDL's active post-mix callback during rapid track changes.
 
 
 class WebBeepBoxStream:
