@@ -238,14 +238,14 @@ class Music_Player(ScrollPanes, GameState):
             # Only registers a click (sound included) when below the clipping header!
             track_cb = lambda p=track_path: self.play_track(p)
 
+            # Excluding a track only removes it from automatic random
+            # selection; it must remain available for deliberate playback.
             track_btn = Button(MUSIC_LEFT_PANE_W + 20, track_y, "song", color, track_name, track_cb)
-            track_btn.disabled = excluded_from_shuffle
             track_btn.click_guard = lambda: pygame.mouse.get_pos()[1] >= 200
             track_btn.pane = "track"
             self.elements.append(track_btn)
 
-            # Keep this toggle active even when the song button is disabled, so
-            # the player can re-enable the track from the same row.
+            # Keep the shuffle toggle separate from the manual playback button.
             shuffle_toggle = Button(
                 track_btn.rect.right + TRACK_SHUFFLE_TOGGLE_GAP,
                 track_y + (song_y - TRACK_SHUFFLE_TOGGLE_SIZE[1]) // 2,

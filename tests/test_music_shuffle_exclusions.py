@@ -58,7 +58,7 @@ class ShuffleExclusionTests(unittest.TestCase):
             ("shuffle_disabled_tracks", []),
         )
 
-    def test_excluded_song_button_is_disabled_and_toggle_is_right_and_green(self):
+    def test_excluded_song_button_remains_selectable_and_toggle_is_right_and_green(self):
         pygame.font.init()
         track_path = "assets/music/Album/track.mp3"
         controller = SimpleNamespace(
@@ -84,7 +84,7 @@ class ShuffleExclusionTests(unittest.TestCase):
 
         song_button = next(button for button in player.elements if button.text == "track.mp3")
         exclusion_button = next(button for button in player.elements if button.text == "X")
-        self.assertTrue(song_button.disabled)
+        self.assertFalse(song_button.disabled)
         self.assertEqual(exclusion_button.rect.left,
                          song_button.rect.right + TRACK_SHUFFLE_TOGGLE_GAP)
         self.assertEqual(exclusion_button.color, c.UI_COLORS["green"][0])

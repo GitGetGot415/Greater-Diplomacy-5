@@ -687,8 +687,8 @@ class Controller:
 
         # Exclusions are independent of album membership. Keep entries for a
         # temporarily absent custom track so it stays excluded if the player
-        # puts that album back later. The music player also disables manual
-        # selection for excluded tracks until they are re-enabled.
+        # puts that album back later. They only affect automatic random play;
+        # manual selection remains available for every playlist track.
         self.shuffle_disabled_tracks = {
             track.replace("\\", "/")
             for track in queries.get_shuffle_disabled_tracks()
