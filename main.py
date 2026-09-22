@@ -553,6 +553,9 @@ class Controller:
                     elif role == "PLAYER":
                         self.states["MAP"].multiplayer_player_key = key
                         multiplayer_io.strip_sensitive_data_for_player(self.states["MAP"], cid)
+                    elif role == c.TOURNAMENT_SPECTATOR_ROLE:
+                        multiplayer_io.strip_sensitive_data_for_tournament_spectator(
+                            self.states["MAP"])
 
                     import shutil
                     shutil.rmtree(temp_dir, ignore_errors=True)

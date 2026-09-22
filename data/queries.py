@@ -223,6 +223,12 @@ def get_visible_provinces(map_screen):
     nation_data = map_screen.nation_data
     id_to_province = map_screen.id_to_province
 
+    if player_country == c.TOURNAMENT_SPECTATOR:
+        # This is a deliberately countryless tournament viewer, not the
+        # normal all-seeing Spectator mode. Empty sets use each fog intensity's
+        # normal no-vision rendering behavior.
+        return set(), set()
+
     if player_country in ["Spectator", "Editor", "None"] or player_country not in nation_data:
         return None, None # Returns None to signify "Full Visibility / Ignore Fog"
         
@@ -857,6 +863,8 @@ def is_unit_visible_to(unit, viewer_nation, province, nation_data):
     """
     if not is_submarine_unit(unit.get("type", "")):
         return True
+    if viewer_nation == c.TOURNAMENT_SPECTATOR:
+        return False
     if viewer_nation not in nation_data:
         # Spectator/Editor/no-country views ignore fog of war entirely, same as
         # get_visible_provinces -- there's no nation here to keep a secret from.

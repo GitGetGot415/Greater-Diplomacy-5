@@ -277,6 +277,13 @@ DEFAULT_FOG_OF_WAR = True
 DEFAULT_FOG_OF_WAR_STRENGTH = "normal"
 FOG_OF_WAR_ALPHA = 160 # How dark unseen provinces get (0-255)
 
+# Tournament spectators authenticate with this deliberately public key, but
+# receive the same no-territory fog perspective as a nation with no vision.
+# Keep this distinct from the ordinary all-seeing ``Spectator`` game mode.
+TOURNAMENT_SPECTATOR = "Tournament Spectator"
+TOURNAMENT_SPECTATOR_KEY = "Spectator"
+TOURNAMENT_SPECTATOR_ROLE = "TOURNAMENT_SPECTATOR"
+
 # --- CASUS BELLI ---
 CASUS_BELLI_REQUIRED = True
 DEFAULT_CASUS_BELLI = True

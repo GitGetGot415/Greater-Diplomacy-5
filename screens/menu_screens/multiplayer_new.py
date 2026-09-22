@@ -75,6 +75,13 @@ class Multiplayer_New(GameState):
                 if not master_key:
                     return
 
+                if multiplayer_io.is_reserved_tournament_key(master_key):
+                    confirm_dialog.show_error(
+                        "Reserved Key",
+                        "'Spectator' is reserved for tournament spectator access. Choose a different Master Key.")
+                    ask_master_key(safe_tour_name, tournament_dir)
+                    return
+
                 os.makedirs(tournament_dir, exist_ok=True)
 
                 map_settings = queries.get_scenario_settings()

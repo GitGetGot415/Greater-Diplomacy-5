@@ -11,6 +11,7 @@ import sys
 import tempfile
 import unittest
 from unittest import mock
+from types import SimpleNamespace
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
@@ -349,6 +350,67 @@ class TournamentMoveTests(unittest.TestCase):
 
         self.assertFalse(malformed[0])
         self.assertEqual(malformed[-1], "Invalid key")
+
+    def test_public_spectator_key_loads_as_a_distinct_fog_limited_role(self):
+        host = Host()
+        host.player_country = "Leader"
+        host.active_players = ["Leader"]
+        host.current_player_index = 0
+        host.loop_map = False
+        host.scenario_settings = {}
+        host.script_variables = []
+        host.default_research = None
+        host.map_data = {
+            (1, 1): {"id": 1, "json_key": "P1", "owner": "Leader", "units": [
+                {"owner": "Leader", "type": "Infantry", "order": {"type": "MOVE"}},
+            ]},
+        }
+
+        with tempfile.TemporaryDirectory() as directory:
+            tour_path = os.path.join(directory, "turn.gd5tour")
+            with mock.patch.object(multiplayer_io.c, "TOURNAMENT_SAVES_DIR", directory), \
+                    mock.patch.object(multiplayer_io, "run_with_progress", synchronous_progress):
+                multiplayer_io.export_tournament(host, tour_path, "host-key", self.keys)
+                with open(tour_path, "r") as file:
+                    payload = json.load(file)
+                loaded = multiplayer_io.load_tournament(tour_path, "Spectator")
+
+        self.assertTrue(loaded[0])
+        self.assertEqual(loaded[1], c.TOURNAMENT_SPECTATOR_ROLE)
+        self.assertIsNone(loaded[2])
+        self.assertEqual(loaded[4], {})
+        spectator_entry = payload["verification_table"][
+            multiplayer_io.hash_key(c.TOURNAMENT_SPECTATOR_KEY)]
+        self.assertNotIn("sk", multiplayer_io.decrypt_dict(
+            spectator_entry["enc_session"], c.TOURNAMENT_SPECTATOR_KEY))
+        spectator_save = multiplayer_io.decrypt_dict(
+            payload["spectator_game_data"], c.TOURNAMENT_SPECTATOR_KEY)
+        self.assertEqual(spectator_save["nation_data"]["Leader"]["materials"], 0)
+        self.assertNotIn("order", spectator_save["provinces"]["P1"]["units"][0])
+
+        spectator_map = Host()
+        spectator_map.map_data = host.map_data
+        multiplayer_io.strip_sensitive_data_for_tournament_spectator(spectator_map)
+        self.assertEqual(spectator_map.player_country, c.TOURNAMENT_SPECTATOR)
+        self.assertEqual(spectator_map.active_players, [c.TOURNAMENT_SPECTATOR])
+        self.assertEqual(spectator_map.nation_data["Leader"]["inbox"], [])
+        self.assertNotIn("order", spectator_map.map_data[(1, 1)]["units"][0])
+
+        visibility_screen = SimpleNamespace(
+            player_country=c.TOURNAMENT_SPECTATOR,
+            map_data={}, nation_data=spectator_map.nation_data,
+            id_to_province={})
+        self.assertEqual(multiplayer_io.queries.get_visible_provinces(visibility_screen),
+                         (set(), set()))
+        self.assertFalse(multiplayer_io.queries.is_unit_visible_to(
+            {"type": "Submarine"}, c.TOURNAMENT_SPECTATOR, {}, spectator_map.nation_data))
+
+    def test_spectator_is_reserved_and_cannot_be_a_master_key(self):
+        host = Host()
+        with tempfile.TemporaryDirectory() as directory, \
+                self.assertRaisesRegex(ValueError, "reserved"):
+            multiplayer_io.export_tournament(
+                host, os.path.join(directory, "turn.gd5tour"), "  spectator  ", self.keys)
 
     def test_decrypt_rejects_bad_input_without_hiding_internal_errors(self):
         self.assertIsNone(multiplayer_io.decrypt_dict("not an encrypted payload", "key"))

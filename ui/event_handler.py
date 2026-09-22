@@ -79,6 +79,12 @@ def _select_map_province(map_screen, position, navigate=True):
     if (province is None or province["id"] in getattr(
             map_screen, "extreme_hidden_provinces", set())):
         return False
+    # A Tournament Spectator owns no territory. Never let a click through a
+    # fogged tile reveal its sidebar data; Lite still keeps its intended visual
+    # map treatment, but this role has no fully visible province to inspect.
+    if (map_screen.player_country == c.TOURNAMENT_SPECTATOR
+            and not queries.is_province_visible(map_screen, province["id"])):
+        return False
     map_screen.selected_province = province
     camera_handler.center_camera_on_province(
         map_screen.camera, province["center"], c.SCREEN_WIDTH, c.SCREEN_HEIGHT,
@@ -409,6 +415,12 @@ def handle_map_events(map_screen, event):
         if map_screen.hovered_province and hasattr(map_screen, 'extreme_hidden_provinces'):
             if map_screen.hovered_province["id"] in map_screen.extreme_hidden_provinces:
                 map_screen.hovered_province = None
+
+        if (map_screen.hovered_province
+                and map_screen.player_country == c.TOURNAMENT_SPECTATOR
+                and not queries.is_province_visible(
+                    map_screen, map_screen.hovered_province["id"])):
+            map_screen.hovered_province = None
 
         if map_screen.hovered_province:
             curr_id = map_screen.hovered_province["id"]

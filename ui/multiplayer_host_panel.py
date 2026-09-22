@@ -53,7 +53,13 @@ def export_next_turn(map_ref):
         map_ref.show_feedback("Error: Host keys missing. Did you init multiplayer?")
         return
 
-    multiplayer_io.export_tournament(map_ref, export_path, master_key, keys_dict)
+    try:
+        multiplayer_io.export_tournament(map_ref, export_path, master_key, keys_dict)
+    except ValueError as error:
+        # This also protects a tournament created by an older build before
+        # the public ``Spectator`` key became reserved.
+        map_ref.show_feedback(f"Tournament export blocked: {error}")
+        return
 
     # Reset protected countries for next turn
     map_ref.multiplayer_protected_countries = set()

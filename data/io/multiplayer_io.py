@@ -4,6 +4,7 @@ import hashlib
 import base64
 import binascii
 import secrets
+import copy
 from cryptography.fernet import Fernet, InvalidToken
 import data.constants as c
 from data import queries
@@ -54,6 +55,11 @@ def run_with_progress(jobs, worker, caption, on_result):
 
 def hash_key(key):
     return hashlib.sha256(key.encode('utf-8')).hexdigest()
+
+
+def is_reserved_tournament_key(key):
+    """Whether a host key collides with the public tournament spectator key."""
+    return isinstance(key, str) and key.strip().casefold() == c.TOURNAMENT_SPECTATOR_KEY.casefold()
 
 def generate_fernet_key_from_password(password, salt):
     derived_key = hashlib.pbkdf2_hmac(
@@ -115,6 +121,101 @@ def strip_sensitive_data_for_player(map_ref, country_id):
             country["current_research"] = None
             country["research_queue"] = []
 
+
+def strip_sensitive_data_for_tournament_spectator(map_ref):
+    """Project a tournament archive into the fog-limited spectator view.
+
+    A tournament archive necessarily contains the canonical world so it can be
+    resolved by the host.  This local projection removes every nation's private
+    planning/economy data and gives the viewer no country, so all remaining map
+    presentation flows through the existing no-territory fog rules.
+    """
+    map_ref.multiplayer_mode = True
+    map_ref.player_country = c.TOURNAMENT_SPECTATOR
+    map_ref.active_players = [c.TOURNAMENT_SPECTATOR]
+    map_ref.current_player_index = 0
+
+    for country in map_ref.nation_data.values():
+        # ``nation_data`` also contains shared metadata such as faction war
+        # maps. It is not a country record and must retain its own schema.
+        if not isinstance(country, dict) or "is_playable" not in country:
+            continue
+        country["production_queue"] = []
+        country["manpower_pool"] = 0
+        country["materials_pool"] = 0
+        country["fuel_pool"] = 0
+        country["orders"] = []
+        country["current_research"] = None
+        country["research_queue"] = []
+        country["inbox"] = []
+        country["pending_diplomacy"] = {}
+        country["diplo_responses"] = {}
+
+    for province in map_ref.map_data.values():
+        for unit in province.get("units", []):
+            unit.pop("order", None)
+
+
+def build_tournament_spectator_save(save_dict):
+    """Return the public, fog-limited projection stored for spectators.
+
+    The spectator key must never disclose the session key that decrypts the
+    host's complete snapshot. This companion save therefore preserves only the
+    map data necessary to draw the board, with private plans and economy data
+    removed before it is encrypted with the public spectator key.
+    """
+    spectator_save = copy.deepcopy(save_dict)
+    spectator_save["player_country"] = c.TOURNAMENT_SPECTATOR
+    spectator_save["active_players"] = [c.TOURNAMENT_SPECTATOR]
+    spectator_save["current_player_index"] = 0
+
+    nation_data = spectator_save.get("nation_data", {})
+    if isinstance(nation_data, dict):
+        for country in nation_data.values():
+            if not isinstance(country, dict) or "is_playable" not in country:
+                continue
+            country["production_queue"] = []
+            country["manpower_pool"] = 0
+            country["materials_pool"] = 0
+            country["fuel_pool"] = 0
+            country["manpower"] = 0
+            country["materials"] = 0
+            country["fuel"] = 0
+            country["orders"] = []
+            country["current_research"] = None
+            country["research_queue"] = []
+            country["research"] = {}
+            country["inbox"] = []
+            country["pending_diplomacy"] = {}
+            country["diplo_responses"] = {}
+
+    for province in spectator_save.get("provinces", {}).values():
+        if not isinstance(province, dict):
+            continue
+        province["building_queue"] = []
+        province["unit_queue"] = []
+        province["orders"] = []
+        for unit in province.get("units", []):
+            if isinstance(unit, dict):
+                unit.pop("order", None)
+
+    # A self-contained tournament also includes raw geometry. Older maps may
+    # have mutable province fields mixed into that geometry, so scrub the same
+    # fields defensively before writing the public projection.
+    raw_map_data = spectator_save.get("_raw_map_data")
+    if isinstance(raw_map_data, dict):
+        for province in raw_map_data.values():
+            if not isinstance(province, dict):
+                continue
+            province["building_queue"] = []
+            province["unit_queue"] = []
+            province["orders"] = []
+            for unit in province.get("units", []):
+                if isinstance(unit, dict):
+                    unit.pop("order", None)
+
+    return spectator_save
+
 def write_host_keys(map_ref, keys_dict, output_dir=None):
     if output_dir is None:
         output_dir = c.TOURNAMENT_SAVES_DIR
@@ -131,6 +232,8 @@ def write_host_keys(map_ref, keys_dict, output_dir=None):
         for cid, key in keys_dict.items():
             name = queries.get_country_display_name(cid, nation_data)
             f.write(f"{name} (ID {cid}): {key}\n")
+        f.write("\nTournament Spectator (fog-limited): "
+                f"{c.TOURNAMENT_SPECTATOR_KEY}\n")
             
     with open(keys_path, 'w') as f:
         f.write("Distribute these keys to your players:\n\n")
@@ -138,6 +241,8 @@ def write_host_keys(map_ref, keys_dict, output_dir=None):
             if cid in active_owners:
                 name = queries.get_country_display_name(cid, nation_data)
                 f.write(f"{name} (ID {cid}): {key}\n")
+        f.write("\nTournament Spectator (fog-limited): "
+                f"{c.TOURNAMENT_SPECTATOR_KEY}\n")
 
     # Web only: mirror the whole tournament_saves tree into IndexedDB so it
     # survives closing the tab (output_dir is always somewhere under this
@@ -150,6 +255,9 @@ def export_tournament(map_ref, file_path, master_key, keys_dict):
     """
     keys_dict maps Country_ID -> Country_Key
     """
+    if is_reserved_tournament_key(master_key):
+        raise ValueError("'Spectator' is reserved for tournament spectator access and cannot be a Master Key.")
+
     import shutil
     output_dir = os.path.dirname(file_path)
     os.makedirs(output_dir, exist_ok=True)
@@ -235,7 +343,14 @@ def export_tournament(map_ref, file_path, master_key, keys_dict):
         m_hash: {
             "role": "HOST",
             "enc_session": encrypt_dict({"sk": session_key, "keys_dict": keys_dict}, master_key)
-        }
+        },
+        hash_key(c.TOURNAMENT_SPECTATOR_KEY): {
+            "role": c.TOURNAMENT_SPECTATOR_ROLE,
+            # Deliberately lacks ``sk``: the public spectator key can decrypt
+            # only ``spectator_game_data``, never the host's game session.
+            "enc_session": encrypt_dict({"role": c.TOURNAMENT_SPECTATOR_ROLE},
+                                          c.TOURNAMENT_SPECTATOR_KEY)
+        },
     }
 
     for cid, (cached_ckey, r_hash, r_enc) in list(player_enc_cache.items()):
@@ -267,11 +382,14 @@ def export_tournament(map_ref, file_path, master_key, keys_dict):
     map_ref.multiplayer_player_enc_cache = player_enc_cache
             
     game_data_enc = encrypt_dict(save_dict, session_key)
+    spectator_game_data_enc = encrypt_dict(
+        build_tournament_spectator_save(save_dict), c.TOURNAMENT_SPECTATOR_KEY)
     history_enc = None # History omitted for tournament saves to reduce file size
     
     payload = {
         "verification_table": verification_table,
         "game_data": game_data_enc,
+        "spectator_game_data": spectator_game_data_enc,
         "history": history_enc
     }
     
@@ -314,32 +432,44 @@ def load_tournament(file_path, key):
     if not isinstance(entry, dict):
         return False, None, None, None, None, "Invalid key"
 
-    encrypted_session = entry.get("enc_session")
-    if not isinstance(encrypted_session, str):
-        return False, None, None, None, None, "Invalid key payload"
-
-    decrypted_session = decrypt_dict(encrypted_session, key)
-    if not isinstance(decrypted_session, dict) or "sk" not in decrypted_session:
-        return False, None, None, None, None, "Decryption failed (corrupt key payload)"
-
-    session_key = decrypted_session["sk"]
-    if not isinstance(session_key, str):
-        return False, None, None, None, None, "Invalid key payload"
-
-    game_data = decrypt_dict(payload.get("game_data"), session_key)
-    if not isinstance(game_data, dict):
-        return False, None, None, None, None, "Failed to decrypt game data"
-
-    history = decrypt_dict(payload.get("history"), session_key) if payload.get("history") else []
-    if history is None:
-        history = []
-
     role = entry.get("role")
     cid = entry.get("country_id")
-    if role not in ("HOST", "PLAYER"):
+    if role not in ("HOST", "PLAYER", c.TOURNAMENT_SPECTATOR_ROLE):
         return False, None, None, None, None, "Invalid tournament role"
     if role == "PLAYER" and cid is None:
         return False, None, None, None, None, "Invalid player entry"
+    if role == c.TOURNAMENT_SPECTATOR_ROLE and cid is not None:
+        return False, None, None, None, None, "Invalid tournament spectator entry"
+
+    if role == c.TOURNAMENT_SPECTATOR_ROLE:
+        # The public key decrypts only the pre-scrubbed spectator projection;
+        # it never receives the session key for the host's canonical snapshot.
+        decrypted_session = {}
+        session_key = None
+        game_data = decrypt_dict(payload.get("spectator_game_data"), key)
+        if not isinstance(game_data, dict):
+            return False, None, None, None, None, "Tournament does not include spectator data"
+        history = []
+    else:
+        encrypted_session = entry.get("enc_session")
+        if not isinstance(encrypted_session, str):
+            return False, None, None, None, None, "Invalid key payload"
+
+        decrypted_session = decrypt_dict(encrypted_session, key)
+        if not isinstance(decrypted_session, dict) or "sk" not in decrypted_session:
+            return False, None, None, None, None, "Decryption failed (corrupt key payload)"
+
+        session_key = decrypted_session["sk"]
+        if not isinstance(session_key, str):
+            return False, None, None, None, None, "Invalid key payload"
+
+        game_data = decrypt_dict(payload.get("game_data"), session_key)
+        if not isinstance(game_data, dict):
+            return False, None, None, None, None, "Failed to decrypt game data"
+
+        history = decrypt_dict(payload.get("history"), session_key) if payload.get("history") else []
+        if history is None:
+            history = []
 
     keys_dict = decrypted_session.get("keys_dict", {})
     if not isinstance(keys_dict, dict):
@@ -391,8 +521,11 @@ def export_move_file(map_ref, file_path, player_key):
     host.  They live inside the encrypted player payload so they cannot be
     altered without that player's key.
     """
-    save_dict = queries.build_save_dict(map_ref)
     cid = map_ref.player_country
+    if cid not in map_ref.nation_data:
+        raise ValueError("Only a tournament country player may export a move file.")
+
+    save_dict = queries.build_save_dict(map_ref)
     
     player_data = {
         "nation_data": save_dict.get("nation_data", {}).get(cid, {}),

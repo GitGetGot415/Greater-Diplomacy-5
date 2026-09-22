@@ -1963,7 +1963,8 @@ class Map(GameState):
 
     def can_select_map_units(self):
         if (self.selection_mode or self.is_editor or self.viewing_ai_moves
-                or self.ai_is_thinking or self.player_country in ("None", "Spectator")):
+                or self.ai_is_thinking or self.player_country in (
+                    "None", "Spectator", c.TOURNAMENT_SPECTATOR)):
             return False
         if getattr(self, "realtime_multiplayer", False):
             player = self.realtime_session.players.get(self.realtime_player_id)
@@ -2246,7 +2247,7 @@ class Map(GameState):
         Not gated on owning anything here: both screens read a province you have
         no units in, and refuse to edit units you do not command.
         """
-        if self.selection_mode:
+        if self.selection_mode or self.player_country == c.TOURNAMENT_SPECTATOR:
             return
         event_handler.handle_view_mode_keybind(self, "UNITS", "ORDERS")
 
@@ -2256,7 +2257,7 @@ class Map(GameState):
         Keybinds screen's "change screen with this keybind" toggle is on for
         this key -- see handle_orders_key.
         """
-        if self.selection_mode:
+        if self.selection_mode or self.player_country == c.TOURNAMENT_SPECTATOR:
             return
         event_handler.handle_view_mode_keybind(self, "ECONOMY", "ECONOMY")
 
