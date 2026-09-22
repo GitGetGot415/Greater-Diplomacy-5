@@ -6,8 +6,13 @@ import main as game_main
 import pygame
 import data.constants as c
 from data import queries
+from ui_elements import Button
 from screens.menu_screens.music_player import (
     MUSIC_LEFT_PANE_W,
+    MUSIC_PROGRESS_X,
+    MUSIC_PROGRESS_SIZE,
+    MUSIC_TIMELINE_BUTTON_GAP,
+    MUSIC_TIMELINE_BUTTON_X,
     TRACK_SHUFFLE_TOGGLE_GAP,
     Music_Player,
 )
@@ -63,6 +68,7 @@ class ShuffleExclusionTests(unittest.TestCase):
             sfx_pitch=0.5,
             music_volume=0.5,
             music_pitch=0.5,
+            music_pitch_timeline=c.MUSIC_PITCH_TIMELINE_STATIC,
             starting_song=None,
             is_paused=False,
         )
@@ -81,6 +87,18 @@ class ShuffleExclusionTests(unittest.TestCase):
                          song_button.rect.right + TRACK_SHUFFLE_TOGGLE_GAP)
         self.assertEqual(exclusion_button.color, c.UI_COLORS["green"][0])
 
+        static_button = next(button for button in player.elements
+                             if isinstance(button, Button) and button.text == "Static")
+        dynamic_button = next(button for button in player.elements
+                              if isinstance(button, Button) and button.text == "Dynamic")
+        self.assertEqual(static_button.rect.left, MUSIC_TIMELINE_BUTTON_X)
+        self.assertGreaterEqual(static_button.rect.left,
+                                MUSIC_PROGRESS_X + MUSIC_PROGRESS_SIZE[0])
+        self.assertEqual(dynamic_button.rect.left,
+                         static_button.rect.right + MUSIC_TIMELINE_BUTTON_GAP)
+        self.assertTrue(static_button.is_selected)
+        self.assertFalse(dynamic_button.is_selected)
+
     def test_non_excluded_song_button_remains_selectable(self):
         pygame.font.init()
         track_path = "assets/music/Album/track.mp3"
@@ -93,6 +111,7 @@ class ShuffleExclusionTests(unittest.TestCase):
             sfx_pitch=0.5,
             music_volume=0.5,
             music_pitch=0.5,
+            music_pitch_timeline=c.MUSIC_PITCH_TIMELINE_STATIC,
             starting_song=None,
             is_paused=False,
         )

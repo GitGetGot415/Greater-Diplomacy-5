@@ -38,6 +38,13 @@ def _field(name, json_key, default, coerce=None, legacy=()):
     return SettingField(name, json_key, default, coerce, legacy)
 
 
+def _coerce_music_pitch_timeline(value):
+    """Keep malformed or future timeline settings safe at the static default."""
+    if value in (c.MUSIC_PITCH_TIMELINE_STATIC, c.MUSIC_PITCH_TIMELINE_DYNAMIC):
+        return value
+    return c.DEFAULT_MUSIC_PITCH_TIMELINE
+
+
 # ORDER IS THE PERSISTED CONTRACT. main.py unpacks load_settings' return by
 # index, so appending is safe and reordering is not.
 SETTINGS_FIELDS = (
@@ -89,6 +96,9 @@ SETTINGS_FIELDS = (
            c.default_mouse_button_actions, coerce=c.normalize_mouse_button_actions),
     _field("army_group_animations", "army_group_animations",
            lambda: c.DEFAULT_ARMY_GROUP_ANIMATIONS),
+    _field("music_pitch_timeline", "music_pitch_timeline",
+           lambda: c.DEFAULT_MUSIC_PITCH_TIMELINE,
+           coerce=_coerce_music_pitch_timeline),
 )
 
 SETTINGS_ORDER = tuple(field.name for field in SETTINGS_FIELDS)

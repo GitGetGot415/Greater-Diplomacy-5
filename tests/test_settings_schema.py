@@ -38,6 +38,7 @@ GOLDEN_ORDER = (
     "battle_display_mode",
     "mouse_button_actions",
     "army_group_animations",
+    "music_pitch_timeline",
 )
 
 GOLDEN_JSON_KEYS = set(GOLDEN_ORDER)
@@ -116,6 +117,10 @@ class RoundTripTests(unittest.TestCase):
         self.assertEqual(values["gemini_api_key"], "legacy-gemini")
         self.assertEqual(values["music_pitch"], 0.9)
         self.assertEqual(values["sfx_pitch"], 0.1)
+
+    def test_invalid_music_pitch_timeline_falls_back_to_static(self):
+        values = settings_schema.from_json_dict({"music_pitch_timeline": "FAST"})
+        self.assertEqual(values["music_pitch_timeline"], c.MUSIC_PITCH_TIMELINE_STATIC)
 
     def test_short_tuple_from_an_older_build_is_tolerated(self):
         """Replaces main.py's chain of `len(loaded_data) > N` guards."""

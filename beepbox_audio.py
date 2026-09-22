@@ -9,6 +9,7 @@ import queue
 import threading
 
 import numpy as np
+import data.constants as c
 
 
 SAMPLE_RATE = 44100
@@ -26,6 +27,20 @@ BUFFERED_CHUNKS = 64
 _POST_MIX_LOCK = threading.Lock()
 _POST_MIX_OWNER = None
 _POST_MIX_CALLBACK_INSTALLED = False
+
+
+def timeline_seconds_from_source(source_seconds, speed, timeline_mode):
+    """Convert source-track seconds to the selected music timeline."""
+    if timeline_mode == c.MUSIC_PITCH_TIMELINE_DYNAMIC:
+        return source_seconds / speed
+    return source_seconds
+
+
+def source_seconds_from_timeline(timeline_seconds, speed, timeline_mode):
+    """Convert a scrubber position in the selected timeline to source seconds."""
+    if timeline_mode == c.MUSIC_PITCH_TIMELINE_DYNAMIC:
+        return timeline_seconds * speed
+    return timeline_seconds
 
 
 def _mix_current_stream(post_mix, audio_buffer):

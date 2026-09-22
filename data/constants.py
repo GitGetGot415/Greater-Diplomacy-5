@@ -459,6 +459,9 @@ USE_SOLOUD = not IS_WEB # SoLoud has no browser build; Pygame Mixer is forced on
 DEFAULT_SFX_VOLUME = 1.0
 DEFAULT_MUSIC_VOLUME = 1.0
 DEFAULT_AUDIO_PITCH = 0.5 # Updated from 0.3 to make 50% the new true default playback speed
+MUSIC_PITCH_TIMELINE_STATIC = "STATIC"
+MUSIC_PITCH_TIMELINE_DYNAMIC = "DYNAMIC"
+DEFAULT_MUSIC_PITCH_TIMELINE = MUSIC_PITCH_TIMELINE_STATIC
 
 # ==========================================
 # UI BARS

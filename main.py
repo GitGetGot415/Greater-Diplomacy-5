@@ -820,11 +820,17 @@ class Controller:
                     beepbox_audio.WebBeepBoxStream if IS_WEB
                     else beepbox_audio.BeepBoxStream
                 )
+                # start_times.json is authored in the source track's seconds.
+                # BeepBox's stream position is elapsed playback seconds, which
+                # differs when the user elected the static source-time timeline.
+                beepbox_start_time = start_time
+                if self.music_pitch_timeline == c.MUSIC_PITCH_TIMELINE_STATIC:
+                    beepbox_start_time /= 0.5 + self.music_pitch
                 self.beepbox_stream = stream_type(
                     track_path,
                     volume=self.music_volume,
                     speed=0.5 + self.music_pitch,
-                    start_time=start_time,
+                    start_time=beepbox_start_time,
                 )
                 self.now_playing = track_path
                 return

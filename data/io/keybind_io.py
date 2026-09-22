@@ -22,7 +22,8 @@ def save_settings(keybind_dict, sfx_volume, music_volume, num_players=1, ai_mode
                   orders_key_changes_screen=True, economy_key_changes_screen=True,
                   battle_display_mode=c.DEFAULT_BATTLE_DISPLAY_MODE,
                   mouse_button_actions=c.DEFAULT_MOUSE_BUTTON_ACTIONS,
-                  army_group_animations=c.DEFAULT_ARMY_GROUP_ANIMATIONS):
+                  army_group_animations=c.DEFAULT_ARMY_GROUP_ANIMATIONS,
+                  music_pitch_timeline=c.DEFAULT_MUSIC_PITCH_TIMELINE):
     """Converts key codes to strings and saves all config data to JSON.
 
     The explicit signature is kept -- callers (and any mod) pass these

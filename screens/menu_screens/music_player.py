@@ -8,6 +8,7 @@ from ui.scroll_panes import ScrollPanes
 from ui_elements import Button, Slider, make_back_button
 from map_logic.rendering.font_manager import fonts
 import data.constants as c
+from beepbox_audio import source_seconds_from_timeline, timeline_seconds_from_source
 
 # ==========================================
 # LAYOUT
@@ -17,6 +18,13 @@ MUSIC_LEFT_PANE_W = 250
 song_y = 32
 TRACK_SHUFFLE_TOGGLE_SIZE = (26, 26)
 TRACK_SHUFFLE_TOGGLE_GAP = 4
+MUSIC_PROGRESS_X = MUSIC_LEFT_PANE_W + 20
+MUSIC_PROGRESS_Y = 155
+MUSIC_PROGRESS_SIZE = (400, 15)
+MUSIC_TIMELINE_BUTTON_SIZE = (100, 40)
+MUSIC_TIMELINE_BUTTON_GAP = 10
+MUSIC_TIMELINE_BUTTON_X = MUSIC_PROGRESS_X + MUSIC_PROGRESS_SIZE[0] + 20
+MUSIC_TIMELINE_BUTTON_Y = MUSIC_PROGRESS_Y - (MUSIC_TIMELINE_BUTTON_SIZE[1] - MUSIC_PROGRESS_SIZE[1]) // 2
 
 # ==========================================
 # PYGAME MIXER PAUSE BUG PATCH
@@ -260,8 +268,28 @@ class Music_Player(ScrollPanes, GameState):
         self.elements.append(Button(MUSIC_LEFT_PANE_W + 240, 80, "medium", "orange", pause_text, self.toggle_pause))
         
         # Add Progress Slider (Custom MusicScrubber)
-        self.progress_slider = MusicScrubber(MUSIC_LEFT_PANE_W + 20, 155, 400, 15, self.scrub_music)
+        self.progress_slider = MusicScrubber(
+            MUSIC_PROGRESS_X, MUSIC_PROGRESS_Y, *MUSIC_PROGRESS_SIZE,
+            self.scrub_music,
+        )
         self.elements.append(self.progress_slider)
+        timeline_mode = self.controller.music_pitch_timeline
+        static_button = Button(
+            MUSIC_TIMELINE_BUTTON_X, MUSIC_TIMELINE_BUTTON_Y,
+            MUSIC_TIMELINE_BUTTON_SIZE,
+            "green" if timeline_mode == c.MUSIC_PITCH_TIMELINE_STATIC else "grey",
+            "Static", self.set_static_pitch_timeline, font_preset="tiny",
+        )
+        static_button.is_selected = timeline_mode == c.MUSIC_PITCH_TIMELINE_STATIC
+        self.elements.append(static_button)
+        dynamic_button = Button(
+            MUSIC_TIMELINE_BUTTON_X + MUSIC_TIMELINE_BUTTON_SIZE[0] + MUSIC_TIMELINE_BUTTON_GAP,
+            MUSIC_TIMELINE_BUTTON_Y, MUSIC_TIMELINE_BUTTON_SIZE,
+            "green" if timeline_mode == c.MUSIC_PITCH_TIMELINE_DYNAMIC else "grey",
+            "Dynamic", self.set_dynamic_pitch_timeline, font_preset="tiny",
+        )
+        dynamic_button.is_selected = timeline_mode == c.MUSIC_PITCH_TIMELINE_DYNAMIC
+        self.elements.append(dynamic_button)
         
         # --- 4. Top Layer: Audio Sliders ---
         slider_x = c.SCREEN_WIDTH - 250
@@ -271,11 +299,12 @@ class Music_Player(ScrollPanes, GameState):
             self.elements.append(Slider(slider_x, 100, 200, "SFX Pitch", self.controller.sfx_pitch, self.set_sfx_pitch))
 
         self.elements.append(Slider(slider_x, 180, 200, "Music Vol", self.controller.music_volume, self.set_music_volume))
-        if c.USE_SOLOUD:
-            self.elements.append(Slider(slider_x, 240, 200, "Music Pitch", self.controller.music_pitch, self.set_music_pitch))
+        # BeepBox supports pitch in both desktop and web builds, independent
+        # of whether native SoLoud happens to power other audio formats.
+        self.elements.append(Slider(slider_x, 240, 200, "Music Pitch", self.controller.music_pitch, self.set_music_pitch))
 
         # --- 5. Reset Audio Button ---
-        reset_y = 300 if c.USE_SOLOUD else 240
+        reset_y = 300
         self.elements.append(Button(slider_x, reset_y, "medium", "red", "Reset to Default", self.reset_audio_defaults))
 
         # --- 6. Starting Song Selector (Bottom Right) ---
@@ -345,15 +374,18 @@ class Music_Player(ScrollPanes, GameState):
         # Clamp slightly to prevent End-of-File crashes
         safe_length = max(0, length - 0.5)
         target_time = val * safe_length
+        speed = 0.5 + self.controller.music_pitch
+        source_target_time = source_seconds_from_timeline(
+            target_time, speed, self.controller.music_pitch_timeline,
+        )
         
         if self.controller.beepbox_stream is not None:
-            self.controller.beepbox_stream.seek(target_time)
+            self.controller.beepbox_stream.seek(source_target_time / speed)
             self.controller._frozen_time = target_time
         elif c.USE_SOLOUD:
             if self.controller.music_handle is not None:
                 was_paused = getattr(self.controller, 'is_paused', False)
-                speed_mult = 0.5 + self.controller.music_pitch
-                source_target_time = target_time * speed_mult
+                speed_mult = speed
                 
                 # WORKAROUND: This SoLoud DLL's seek() has a bug where it
                 # resets mStreamPosition to 0 before the skip loop, so after
@@ -425,7 +457,11 @@ class Music_Player(ScrollPanes, GameState):
         if not track or track == "None": return 0
 
         if self.controller.beepbox_stream is not None:
-            return self.controller.beepbox_stream.length
+            stream = self.controller.beepbox_stream
+            return timeline_seconds_from_source(
+                stream.length * stream.speed, stream.speed,
+                self.controller.music_pitch_timeline,
+            )
         
         if track not in self._track_lengths:
             length = 0
@@ -450,14 +486,19 @@ class Music_Player(ScrollPanes, GameState):
                 
         length = self._track_lengths[track]
         if c.USE_SOLOUD:
-            # SoLoud reports source-track seconds. The scrubber displays elapsed
-            # playback seconds, so duration grows when playback is slowed down.
-            length /= 0.5 + self.controller.music_pitch
+            return timeline_seconds_from_source(
+                length, 0.5 + self.controller.music_pitch,
+                self.controller.music_pitch_timeline,
+            )
         return length
 
     def get_current_track_pos(self):
         if self.controller.beepbox_stream is not None:
-            self.controller._frozen_time = self.controller.beepbox_stream.position
+            stream = self.controller.beepbox_stream
+            self.controller._frozen_time = timeline_seconds_from_source(
+                stream.position * stream.speed, stream.speed,
+                self.controller.music_pitch_timeline,
+            )
             return self.controller._frozen_time
 
         # ----------------------------------------------------
@@ -497,8 +538,13 @@ class Music_Player(ScrollPanes, GameState):
             # internal position and our accumulated delta diverge.
             try:
                 if hasattr(self.controller.soloud, 'get_stream_position'):
-                    current = self.controller.soloud.get_stream_position(self.controller.music_handle)
-                    current /= 0.5 + self.controller.music_pitch
+                    source_position = self.controller.soloud.get_stream_position(
+                        self.controller.music_handle
+                    )
+                    current = timeline_seconds_from_source(
+                        source_position, 0.5 + self.controller.music_pitch,
+                        self.controller.music_pitch_timeline,
+                    )
                     self.controller._frozen_time = current
                     self._last_ticks = pygame.time.get_ticks()
                     return current
@@ -519,7 +565,9 @@ class Music_Player(ScrollPanes, GameState):
                 wall_delta = 0.0
 
             current = self.controller._frozen_time
-            current += wall_delta
+            speed = 0.5 + self.controller.music_pitch
+            current += wall_delta * (speed if self.controller.music_pitch_timeline
+                                     == c.MUSIC_PITCH_TIMELINE_STATIC else 1.0)
             
             max_len = self.get_current_track_length()
             if max_len > 0:
@@ -539,12 +587,21 @@ class Music_Player(ScrollPanes, GameState):
             # Retrieve actual elapsed time from backend so scrubber doesn't start at 0:00
             actual_pos = 0.0
             if self.controller.beepbox_stream is not None:
-                actual_pos = self.controller.beepbox_stream.position
+                stream = self.controller.beepbox_stream
+                actual_pos = timeline_seconds_from_source(
+                    stream.position * stream.speed, stream.speed,
+                    self.controller.music_pitch_timeline,
+                )
             elif c.USE_SOLOUD and self.controller.music_handle is not None:
                 try:
                     if hasattr(self.controller.soloud, 'get_stream_position'):
-                        actual_pos = self.controller.soloud.get_stream_position(self.controller.music_handle)
-                        actual_pos /= 0.5 + self.controller.music_pitch
+                        actual_pos = timeline_seconds_from_source(
+                            self.controller.soloud.get_stream_position(
+                                self.controller.music_handle
+                            ),
+                            0.5 + self.controller.music_pitch,
+                            self.controller.music_pitch_timeline,
+                        )
                 except Exception:
                     pass
             elif not c.USE_SOLOUD:
@@ -583,7 +640,8 @@ class Music_Player(ScrollPanes, GameState):
         self.set_music_volume(1.0)
         if c.USE_SOLOUD:
             self.set_sfx_pitch(0.5)
-            self.set_music_pitch(0.5)
+        self.set_music_pitch(0.5)
+        self.set_music_pitch_timeline(c.DEFAULT_MUSIC_PITCH_TIMELINE)
         self.refresh_ui()
 
     def set_sfx_volume(self, val):
@@ -607,11 +665,12 @@ class Music_Player(ScrollPanes, GameState):
         if self.controller.beepbox_stream is not None:
             stream = self.controller.beepbox_stream
             old_speed = stream.speed
-            # BeepBox's position is elapsed playback time. Scale it by the
-            # speed ratio so its underlying musical playhead stays in place.
-            position = stream.position * old_speed / new_speed
-            stream.seek(position, speed=new_speed)
-            self.controller._frozen_time = position
+            source_position = stream.position * old_speed
+            playback_position = source_position / new_speed
+            stream.seek(playback_position, speed=new_speed)
+            self.controller._frozen_time = timeline_seconds_from_source(
+                source_position, new_speed, self.controller.music_pitch_timeline,
+            )
         elif c.USE_SOLOUD and self.controller.music_handle is not None:
             old_speed = 0.5 + self.controller.music_pitch
             if hasattr(self.controller.soloud, 'get_stream_position'):
@@ -625,10 +684,29 @@ class Music_Player(ScrollPanes, GameState):
             self.controller.soloud.set_relative_play_speed(
                 self.controller.music_handle, new_speed
             )
-            self.controller._frozen_time = source_position / new_speed
+            self.controller._frozen_time = timeline_seconds_from_source(
+                source_position, new_speed, self.controller.music_pitch_timeline,
+            )
             self._last_ticks = pygame.time.get_ticks()
         self.controller.music_pitch = val
         self.save_audio_settings()
+
+    def set_static_pitch_timeline(self):
+        self.set_music_pitch_timeline(c.MUSIC_PITCH_TIMELINE_STATIC)
+
+    def set_dynamic_pitch_timeline(self):
+        self.set_music_pitch_timeline(c.MUSIC_PITCH_TIMELINE_DYNAMIC)
+
+    def set_music_pitch_timeline(self, timeline_mode):
+        """Choose whether the scrubber shows source or elapsed playback time."""
+        if timeline_mode not in (
+                c.MUSIC_PITCH_TIMELINE_STATIC, c.MUSIC_PITCH_TIMELINE_DYNAMIC):
+            return
+        self.controller.music_pitch_timeline = timeline_mode
+        if self.controller.now_playing != "None":
+            self.controller._frozen_time = self.get_current_track_pos()
+        self.save_audio_settings()
+        self.refresh_ui()
         
     def set_sfx_pitch(self, val):
         self.controller.sfx_pitch = val
