@@ -13,6 +13,8 @@ the exported zip file is what i'm most concerned about, so as long as that doesn
 - Review old TODOs
 - Add a setting to switch between turn-based and real-time play (this is very ambitious, especially because this is a turn based game)
 - Add the backrooms as a map
+- infantry conversion mechanic where any infantry type can be downgraded to regular infantry
+- useful if infantry runs out of fuel or something and cant move but you want it to be able to move?
 
 ## Check first
 
