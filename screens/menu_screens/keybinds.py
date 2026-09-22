@@ -8,7 +8,11 @@ from ui import text_utils
 from map_logic.rendering.font_manager import fonts
 
 # --- Keybinds screen layout ---
-KEYBINDS_ROW_X = c.SCREEN_WIDTH // 2 - 100
+KEYBINDS_RESET_X = c.SCREEN_WIDTH // 2 - 100
+# Keep the Back and Reset controls in their established positions while
+# centering the three-column binding group more comfortably on the screen.
+KEYBINDS_BINDING_COLUMNS_SHIFT_X = 100
+KEYBINDS_ROW_X = KEYBINDS_RESET_X + KEYBINDS_BINDING_COLUMNS_SHIFT_X
 KEYBINDS_NAVIGATION_COLUMN_X = KEYBINDS_ROW_X - c.SIZES["medium"][0] - 60
 KEYBINDS_MOUSE_COLUMN_X = KEYBINDS_NAVIGATION_COLUMN_X - c.SIZES["medium"][0] - 60
 KEYBINDS_ROW_START_Y = 150
@@ -138,7 +142,7 @@ class Keybinds(GameState):
             y += KEYBINDS_ROW_GAP_Y
 
         self.elements.append(
-            Button(KEYBINDS_ROW_X, y + KEYBINDS_RESET_GAP_Y, "medium", "red", "Reset Keybinds", self.reset_defaults)
+            Button(KEYBINDS_RESET_X, y + KEYBINDS_RESET_GAP_Y, "medium", "red", "Reset Keybinds", self.reset_defaults)
         )
 
     def _add_binding_column(self, actions, x):
