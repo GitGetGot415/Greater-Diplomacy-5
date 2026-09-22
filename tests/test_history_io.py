@@ -93,6 +93,14 @@ class HistoryIOTests(unittest.TestCase):
         self.assertEqual(json.loads(text), obj)
         self.assertEqual(text, json.dumps(obj, separators=(",", ":")))
 
+    def test_saved_history_is_readably_indented_before_compression(self):
+        obj = sample_history()
+        path = history_io.write(self.dir, obj, compress=False)
+        with open(path, encoding="utf-8") as handle:
+            text = handle.read()
+        self.assertEqual(text, json.dumps(obj, indent=c.HISTORY_INDENT))
+        self.assertGreater(text.count("\n"), 1)
+
 
 if __name__ == "__main__":
     unittest.main()

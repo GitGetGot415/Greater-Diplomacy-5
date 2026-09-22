@@ -5,6 +5,7 @@ import json
 import os
 import tempfile
 import unittest
+import zipfile
 from types import SimpleNamespace
 from unittest import mock
 
@@ -67,8 +68,8 @@ class MapSaveFormatTests(unittest.TestCase):
         self.assertEqual(disk_meta["scenario_settings"]["days_per_turn"], 30)
 
         # These are the actual text forms written by map save paths.
-        self.assertEqual(json.loads(history_io.dump_compact_text(disk_meta)), disk_meta)
-        self.assertEqual(json.loads(history_io.dump_compact_text(map_data)), map_data)
+        self.assertEqual(json.loads(history_io.dump_text(disk_meta, indent=c.SAVE_INDENT)), disk_meta)
+        self.assertEqual(json.loads(history_io.dump_text(map_data, indent=c.SAVE_INDENT)), map_data)
         self.assertEqual(map_screen.raw_json_data, {key: {"id": 7, "terrain": "plains"}})
 
     def test_full_save_dictionary_still_carries_multiplayer_province_snapshot(self):
@@ -85,7 +86,7 @@ class MapSaveFormatTests(unittest.TestCase):
             "buildings": ["Factory"],
         })
 
-    def test_disk_save_writes_current_state_compactly_without_meta_overlay(self):
+    def test_disk_save_writes_current_state_readably_without_meta_overlay(self):
         map_screen = sample_map_screen()
         map_screen.is_editor = False
         map_screen.history = {"1": {"nation_data": {}, "provinces": {}}}
@@ -123,8 +124,10 @@ class MapSaveFormatTests(unittest.TestCase):
             "day": 15, "month": 5, "year": 1939, "total_turns": 12,
         })
         self.assertEqual(map_data["(7, 0, 0)"], map_screen.map_data[(7, 0, 0)])
-        self.assertEqual(meta_text, json.dumps(meta, separators=(",", ":")))
-        self.assertEqual(map_data_text, json.dumps(map_data, separators=(",", ":")))
+        self.assertEqual(meta_text, json.dumps(meta, indent=c.SAVE_INDENT))
+        self.assertEqual(map_data_text, json.dumps(map_data, indent=c.SAVE_INDENT))
+        self.assertGreater(meta_text.count("\n"), 1)
+        self.assertGreater(map_data_text.count("\n"), 1)
         self.assertEqual(saved_history, map_screen.history)
         self.assertFalse(has_political_cache)
         self.assertFalse(has_cores_cache)
@@ -146,6 +149,35 @@ class MapSaveFormatTests(unittest.TestCase):
                     & set(filenames),
                     f"unexpected generated map artifact in {current}",
                 )
+
+    def test_zip_export_pretty_prints_existing_compact_json_files(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            source_dir = os.path.join(temporary, "source")
+            os.makedirs(source_dir)
+            with open(os.path.join(source_dir, "meta.json"), "w", encoding="utf-8") as handle:
+                handle.write('{"nation_data":{"Avaria":{"materials":200}},"date":{"year":1939}}')
+            with open(os.path.join(source_dir, "terrain.png"), "wb") as handle:
+                handle.write(b"not json")
+
+            archive_path = os.path.join(temporary, "export.zip")
+
+            def export_without_ui(_name, produce, _parent=None):
+                produce(archive_path)
+                return archive_path
+
+            with mock.patch.object(queries, "_export_to_downloads", export_without_ui):
+                queries.export_dir_as_zip(source_dir, "export.zip")
+
+            with zipfile.ZipFile(archive_path) as archive:
+                payload = archive.read("meta.json").decode("utf-8")
+                binary_payload = archive.read("terrain.png")
+
+        self.assertEqual(json.loads(payload), {
+            "nation_data": {"Avaria": {"materials": 200}},
+            "date": {"year": 1939},
+        })
+        self.assertGreater(payload.count("\n"), 1)
+        self.assertEqual(binary_payload, b"not json")
 
     def test_legacy_meta_and_history_province_overlays_still_apply(self):
         map_data = {

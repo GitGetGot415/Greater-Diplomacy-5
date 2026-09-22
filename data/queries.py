@@ -4370,11 +4370,11 @@ def refresh_map_directories(screen, dirs_to_check, success_message="Data refresh
                 from data.map.map_cache import remove_optional_layer_files
 
                 with open(os.path.join(scenario_path, "meta.json"), "w") as f:
-                    f.write(history_io.dump_compact_text(save_dict))
+                    f.write(history_io.dump_text(save_dict, indent=c.SAVE_INDENT))
 
                 with open(map_json_path, "w") as f:
-                    f.write(history_io.dump_compact_text(
-                        build_map_data_save(temp_map_context)))
+                    f.write(history_io.dump_text(
+                        build_map_data_save(temp_map_context), indent=c.SAVE_INDENT))
 
                 if hasattr(temp_map_context, 'history'):
                     history_io.write(scenario_path, temp_map_context.history)
@@ -4688,18 +4688,46 @@ def _export_to_downloads(file_name, produce, parent=None):
         confirm_dialog.show_error("Export Error", str(e), tk_parent=parent)
         return None
 
+
+def _readable_json_payload(file_path):
+    """Return a pretty JSON export payload, or ``None`` for other/unreadable files.
+
+    Existing scenarios and saves may still contain compact JSON. Formatting the
+    entry while building the ZIP makes those exports readable too, without
+    rewriting the user's source folder just to change whitespace.
+    """
+    # Current histories are gzip files. Leave legacy plain history.json alone
+    # so exporting an old, potentially very large timeline stays streaming and
+    # does not require loading the whole history just to change whitespace.
+    if (not file_path.lower().endswith(".json")
+            or os.path.basename(file_path).lower() == "history.json"):
+        return None
+    try:
+        with open(file_path, "r", encoding="utf-8") as file:
+            value = json.load(file)
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return None
+    return json.dumps(value, indent=c.SAVE_INDENT).encode("utf-8")
+
+
 def export_dir_as_zip(source_dir, zip_name, parent=None):
     """Zips a folder and sends it to the user.
 
     Counterpart to extract_and_flatten_zip, and the single implementation
-    behind every "Export" button (saves, scenarios).
+    behind every "Export" button (saves, scenarios). JSON entries are formatted
+    in the archive so older compact saves are readable too.
     """
     def zip_it(dest_path):
         with zipfile.ZipFile(dest_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
             for root_dir, _dirs, files in os.walk(source_dir):
                 for file in files:
                     full = os.path.join(root_dir, file)
-                    zipf.write(full, os.path.relpath(full, source_dir))
+                    archive_name = os.path.relpath(full, source_dir)
+                    readable_json = _readable_json_payload(full)
+                    if readable_json is None:
+                        zipf.write(full, archive_name)
+                    else:
+                        zipf.writestr(archive_name, readable_json)
 
     return _export_to_downloads(zip_name, zip_it, parent)
 

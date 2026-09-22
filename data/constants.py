@@ -2235,7 +2235,9 @@ HISTORICAL_LEADERS_DEFAULT_PATH = "data/json/historical_leaders_DEFAULT.json"
 # ==========================================
 
 RECORD_HISTORY = True
-HISTORY_INDENT = None # this used to be 4
+# History is compressed on disk, so readable JSON adds little to exported save
+# size while making the payload inspectable after decompressing it.
+HISTORY_INDENT = 4
 SAVE_INDENT = 4
 # Level 1 gets ~13x on history's very repetitive JSON for a third of level 6's
 # CPU, and the write it saves is bigger than the compression it costs.

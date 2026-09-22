@@ -37,15 +37,18 @@ async def save_map_data(self, save_name=None):
         self.save_progress_completed = 1
         await asyncio.sleep(0)
 
-        # Compact JSON keeps map folders smaller without changing their schema.
+        # Pretty JSON makes saves and scenario exports easy to inspect and diff.
+        # The export path compresses these files with ZIP_DEFLATED, so the
+        # whitespace has only a small effect on the exported archive size.
         with open(os.path.join(save_path, "meta.json"), "w") as f:
-            f.write(history_io.dump_compact_text(save_dict))
+            f.write(history_io.dump_text(save_dict, indent=c.SAVE_INDENT))
         self.save_progress_completed = 2
         await asyncio.sleep(0)
 
         # Structural map and current province state, so the save is self-contained.
         with open(os.path.join(save_path, "map_data.json"), "w") as f:
-            f.write(history_io.dump_compact_text(queries.build_map_data_save(self)))
+            f.write(history_io.dump_text(
+                queries.build_map_data_save(self), indent=c.SAVE_INDENT))
         self.save_progress_completed = 3
         await asyncio.sleep(0)
 
