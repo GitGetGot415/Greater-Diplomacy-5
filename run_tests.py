@@ -17,6 +17,15 @@ def main():
     # Works no matter which directory the editor launched us from
     sys.path.insert(0, ROOT)
     os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
+    if os.name == "nt":
+        # Inherit a non-modal native error policy in test subprocesses. A
+        # crashing dependency still returns a failing exit code, but cannot
+        # strand the test runner behind a Windows Application Error dialog.
+        import ctypes
+        ctypes.windll.kernel32.SetErrorMode(0x0001 | 0x0002 | 0x8000)
+    # Native V8/SDL audio stress tests are opt-in via
+    # GD5_RUN_NATIVE_AUDIO_TESTS=1; ordinary test runs avoid native audio
+    # stress processes.
 
     suite = unittest.defaultTestLoader.discover(start_dir=TESTS_DIR, top_level_dir=ROOT)
     result = unittest.TextTestRunner(verbosity=2).run(suite)

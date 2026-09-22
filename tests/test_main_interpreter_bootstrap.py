@@ -8,7 +8,10 @@ import main as game_main
 class MainInterpreterBootstrapTests(unittest.TestCase):
     def test_system_python_relaunches_source_with_the_project_venv(self):
         expected_python = os.path.join(
-            os.path.dirname(game_main.__file__), "venv", "bin", "python"
+            os.path.dirname(game_main.__file__),
+            "venv",
+            "Scripts" if os.name == "nt" else "bin",
+            "python.exe" if os.name == "nt" else "python",
         )
         with patch.object(game_main.sys, "executable", "/usr/bin/python3"), \
                 patch.object(game_main.sys, "argv", [game_main.__file__, "--debug"]), \

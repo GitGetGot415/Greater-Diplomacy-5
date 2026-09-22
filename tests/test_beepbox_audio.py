@@ -21,6 +21,32 @@ from data.constants import CREDITS_DATA
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SONG_PATH = os.path.join(ROOT, "assets", "music", "Greater Diplomacy 5", "Dschungel.json")
 SYNTH_PATH = os.path.join(ROOT, "assets", "beepbox", "beepbox_synth.min.js")
+RUN_NATIVE_AUDIO_TESTS = os.environ.get("GD5_RUN_NATIVE_AUDIO_TESTS") == "1"
+
+
+def _native_audio_tests_available():
+    return RUN_NATIVE_AUDIO_TESTS and is_available()
+
+
+def _disable_windows_native_error_dialogs():
+    """Keep a crashing native test child from blocking the test runner.
+
+    The child still exits nonzero and the parent reports that failure. This
+    only prevents Windows from opening a modal Application Error dialog when a
+    native audio dependency aborts.
+    """
+    if sys.platform != "win32":
+        return
+    import ctypes
+
+    sem_fail_critical_errors = 0x0001
+    sem_no_gp_fault_errorbox = 0x0002
+    sem_no_open_file_errorbox = 0x8000
+    ctypes.windll.kernel32.SetErrorMode(
+        sem_fail_critical_errors
+        | sem_no_gp_fault_errorbox
+        | sem_no_open_file_errorbox
+    )
 
 
 class BeepBoxAudioTests(unittest.TestCase):
@@ -174,11 +200,16 @@ class BeepBoxAudioTests(unittest.TestCase):
         context.eval("window.__gd5_beepbox_stop()")
         self.assertEqual(context.eval("window.__gd5_beepbox_length()"), 0)
 
-    @unittest.skipUnless(is_available(), "native JavaScript dependency is not installed")
+    @unittest.skipUnless(
+        _native_audio_tests_available(),
+        "set GD5_RUN_NATIVE_AUDIO_TESTS=1 to run native audio integration tests",
+    )
     def test_pygame_postmix_stream_supports_play_pause_and_seek_without_underruns(self):
         script = r"""
 import sys
 import time
+from tests.test_beepbox_audio import _disable_windows_native_error_dialogs
+_disable_windows_native_error_dialogs()
 import pygame
 from beepbox_audio import BeepBoxStream
 
@@ -232,13 +263,13 @@ try:
         f"{underruns_after - underruns_before} frames"
     )
 finally:
-    stream.stop()
+    stream.stop(wait=True)
     pygame.mixer.quit()
 """
         environment = os.environ.copy()
         environment["SDL_AUDIODRIVER"] = "dummy"
         result = subprocess.run(
-            [sys.executable, "-c", script, SONG_PATH],
+            [sys.executable, "-X", "faulthandler", "-c", script, SONG_PATH],
             cwd=ROOT,
             env=environment,
             capture_output=True,
@@ -247,11 +278,16 @@ finally:
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
-    @unittest.skipUnless(is_available(), "native JavaScript dependency is not installed")
+    @unittest.skipUnless(
+        _native_audio_tests_available(),
+        "set GD5_RUN_NATIVE_AUDIO_TESTS=1 to run native audio integration tests",
+    )
     def test_rapid_track_switching_keeps_the_latest_stream_playing(self):
         script = r"""
 import sys
 import time
+from tests.test_beepbox_audio import _disable_windows_native_error_dialogs
+_disable_windows_native_error_dialogs()
 import pygame
 from beepbox_audio import BeepBoxStream
 
@@ -260,7 +296,7 @@ stream = None
 try:
     for song_path in sys.argv[1:]:
         if stream is not None:
-            stream.stop()
+            stream.stop(wait=True)
         stream = BeepBoxStream(song_path, volume=0.0)
 
     deadline = time.monotonic() + 8
@@ -270,13 +306,13 @@ try:
     assert stream.position >= 0.1
 finally:
     if stream is not None:
-        stream.stop()
+        stream.stop(wait=True)
     pygame.mixer.quit()
 """
         environment = os.environ.copy()
         environment["SDL_AUDIODRIVER"] = "dummy"
         result = subprocess.run(
-            [sys.executable, "-c", script,
+            [sys.executable, "-X", "faulthandler", "-c", script,
              SONG_PATH,
              os.path.join(ROOT, "assets", "music", "Greater Diplomacy 5", "Under the Rainbow Redux.json"),
              SONG_PATH,
@@ -290,10 +326,16 @@ finally:
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
+    @unittest.skipUnless(
+        _native_audio_tests_available(),
+        "set GD5_RUN_NATIVE_AUDIO_TESTS=1 to run native audio integration tests",
+    )
     def test_v8_playback_stays_ahead_in_reported_late_song_sections(self):
         script = r"""
 import sys
 import time
+from tests.test_beepbox_audio import _disable_windows_native_error_dialogs
+_disable_windows_native_error_dialogs()
 import pygame
 from beepbox_audio import BeepBoxStream
 
@@ -329,13 +371,13 @@ for song_path, target in ((sys.argv[1], 247.0), (sys.argv[2], 173.0)):
             f"{underruns_after - underruns_before} frames"
         )
     finally:
-        stream.stop()
+        stream.stop(wait=True)
 pygame.mixer.quit()
 """
         environment = os.environ.copy()
         environment["SDL_AUDIODRIVER"] = "dummy"
         result = subprocess.run(
-            [sys.executable, "-c", script,
+            [sys.executable, "-X", "faulthandler", "-c", script,
              os.path.join(ROOT, "assets", "music", "Greater Diplomacy 5", "Under the Rainbow Redux.json"),
              SONG_PATH],
             cwd=ROOT,

@@ -30,6 +30,39 @@ def make_controller():
 
 
 class ShuffleExclusionTests(unittest.TestCase):
+    def test_albums_are_displayed_in_reverse_alphabetical_order(self):
+        pygame.font.init()
+        controller = SimpleNamespace(
+            all_albums={"Alpha": [], "Zulu": [], "Bravo": []},
+            active_albums=[],
+            playlist=[],
+            now_playing="None",
+            is_shuffle_disabled=lambda path: False,
+            sfx_volume=0.5,
+            sfx_pitch=0.5,
+            music_volume=0.5,
+            music_pitch=0.5,
+            music_pitch_timeline=c.MUSIC_PITCH_TIMELINE_STATIC,
+            starting_song=None,
+            is_paused=False,
+        )
+        player = object.__new__(Music_Player)
+        player.controller = controller
+        player._scroll_album = 0
+        player._scroll_track = 0
+        player.handle_back_key = lambda: None
+
+        player.refresh_ui()
+
+        album_buttons = [
+            button for button in player.elements
+            if getattr(button, "pane", None) == "album"
+        ]
+        self.assertEqual(
+            [button.text for button in album_buttons],
+            ["Zulu", "Bravo", "Alpha"],
+        )
+
     def test_random_selection_skips_excluded_tracks(self):
         controller = make_controller()
         controller.playlist = ["skip.mp3", "play.mp3"]

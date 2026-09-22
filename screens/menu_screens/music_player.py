@@ -185,7 +185,7 @@ class Music_Player(ScrollPanes, GameState):
         y_offset = 120 + self._scroll_album
         album_content_h = 0
         
-        for album in sorted(self.controller.all_albums.keys()):
+        for album in sorted(self.controller.all_albums.keys(), reverse=True):
             is_active = album in self.controller.active_albums
             color = "green" if is_active else "grey"
             

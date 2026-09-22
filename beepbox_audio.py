@@ -372,8 +372,13 @@ class BeepBoxStream:
                 except queue.Empty:
                     pass
 
-    def stop(self):
-        """Detach this song immediately without waiting on audio or V8 threads."""
+    def stop(self, wait=False):
+        """Detach this song and optionally wait for its synth worker to exit.
+
+        Normal track changes stay non-blocking so the UI never waits on V8.
+        Controlled teardown, such as an isolated audio test, can pass
+        ``wait=True`` before shutting down the Pygame mixer.
+        """
         self._stop_event.set()
         global _POST_MIX_OWNER
         with _POST_MIX_LOCK:
@@ -383,6 +388,8 @@ class BeepBoxStream:
         # while waiting for queue space. Joining here used to block a music
         # button for up to half a second; more importantly, it could contend
         # with SDL's active post-mix callback during rapid track changes.
+        if wait and threading.current_thread() is not self._worker:
+            self._worker.join()
 
 
 class WebBeepBoxStream:
