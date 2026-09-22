@@ -11,6 +11,8 @@ the exported zip file is what i'm most concerned about, so as long as that doesn
 
 - add in more chess symbols as icons for armies
 
+- add keybinds for mouse
+
 - THE JSON SEEMS TO STUTTER (longer songs specifically) WHEN TESTING OUT THE DISTRIBUTED VERSIONS!!! (however when testing it out by running main.py in vscode it works fine?)
 
 ## Random thoughts with no real goal
@@ -59,7 +61,6 @@ Ultimatums: Kind of like how diplomatic plays work, ultimatums essentially allow
 
 ### Exodus
 
-- add keybinds for mouse
 - Box selection of units in the unit orders menu
 - let Allies see your active movement arrows
 - QUEUE UNITS ACROSS OCEANS
