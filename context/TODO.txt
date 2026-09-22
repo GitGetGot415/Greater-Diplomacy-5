@@ -18,9 +18,6 @@ the exported zip file is what i'm most concerned about, so as long as that doesn
 - useful if infantry runs out of fuel or something and cant move but you want it to be able to move?
 - if a country tries to give up land in a peace deal make sure it can’t transfer territory it doesn’t control unless the controller of said land agrees to it
 
-- gitgetgot’s gratuit grid grafter 
-- attempt to one shot something like this
-
 ## Check first
 
 - Refreshing country data in the map editor may show countries that no longer exist
