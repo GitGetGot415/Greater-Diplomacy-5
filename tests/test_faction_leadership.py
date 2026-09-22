@@ -406,7 +406,7 @@ class SuccessionTests(Bloc):
 
         self.assertEqual(self.leader(), "Loyal")
 
-    def test_a_faction_with_no_territory_remains_in_exile(self):
+    def test_a_faction_with_no_territory_is_disbanded(self):
         from map_logic.turn_processing import edit_province_ownership
 
         for prov in list(self.game.map_data.values()):
@@ -414,7 +414,9 @@ class SuccessionTests(Bloc):
                 edit_province_ownership.conquer_province(self.game, prov, "Outsider")
 
         for member in ("Leader", "Rival", "Loyal"):
-            self.assertEqual(self.game.nation_data[member]["faction"], "The Pact")
+            self.assertEqual(self.game.nation_data[member]["faction"], "")
+            self.assertNotIn(member, queries.get_politically_active_nations(
+                self.game.map_data, self.game.nation_data))
 
 
 class StrengthTests(unittest.TestCase):

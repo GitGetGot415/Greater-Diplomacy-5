@@ -8,7 +8,6 @@ could you make it such so that the actual json for saves / scenarios is human re
 the exported zip file is what i'm most concerned about, so as long as that doesn't affect the export size too much then that's fine
 
 - add in a spectator code so other players can see tournaments
-- if every country in a faction is exiled then the faction should be disbanded and everyone in the faction is removed from the game
 
 - add in more chess symbols as icons for armies
 

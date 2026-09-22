@@ -56,6 +56,25 @@ def conquer_province(map_screen, province, new_owner):
                 retire_landless_nation(map_screen, old_owner)
 
 
+def retire_exhausted_factions(map_screen):
+    """Retire every member of a faction that no longer has any territory.
+
+    The faction action clears shared membership and border history; routing the
+    former members back through ``retire_landless_nation`` then applies the
+    ordinary per-nation cleanup consistently, whether collapse happened after
+    a capture or was discovered while loading a save.
+    """
+    from map_logic.diplomacy.faction_actions import disband_exhausted_factions
+
+    dissolved = disband_exhausted_factions(
+        map_screen.map_data, map_screen.nation_data)
+    for _faction, members in dissolved:
+        for member in members:
+            if member in map_screen.nation_data:
+                retire_landless_nation(map_screen, member)
+    return dissolved
+
+
 def retire_landless_nation(map_screen, nation):
     """Retires a landless nation unless its faction sustains it in exile.
 
@@ -85,8 +104,15 @@ def retire_landless_nation(map_screen, nation):
     if not getattr(map_screen, "is_editor", False):
         # A faction can restore territory to its original member through the
         # normal faction-core transfer rule. Do not dissolve the very
-        # membership and historical border record that make that possible.
+        # membership and historical border record that make that possible --
+        # unless every member is already landless. In that case there is no
+        # possible restorer, so retire the whole exhausted roster now instead
+        # of allowing a dead bloc to remain at war indefinitely.
         if data.get("faction", ""):
+            retire_exhausted_factions(map_screen)
+            # Either the roster was exhausted and this nation has already been
+            # retired by the helper, or another member still owns land and it
+            # remains a valid government in exile.
             return
 
         # Nobody is still allied with, at war with, or in a bloc with a nation

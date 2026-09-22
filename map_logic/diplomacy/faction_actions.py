@@ -154,19 +154,59 @@ def finalize_disband_faction(nation_data, leader):
     from map_logic.diplomacy.puppet_actions import pull_puppets_out_of_faction
 
     fac = nation_data[leader].get("faction", "")
-    if not fac: return
+    if not fac:
+        return
 
-    if "FACTION_WAR_MAPS" in nation_data and fac in nation_data["FACTION_WAR_MAPS"]:
-        del nation_data["FACTION_WAR_MAPS"][fac]
-
-    for n, d in list(nation_data.items()):
-        if d.get("faction") == fac:
-            d["faction"] = ""
-            d["is_faction_leader"] = False
-            d.pop("faction_pressure", None)
-            d.pop("faction_tenure", None)
+    disband_faction(nation_data, fac)
 
     pull_puppets_out_of_faction(leader, nation_data)
+
+
+def disband_faction(nation_data, faction):
+    """Clear one faction roster and its faction-wide historical border record.
+
+    A faction is represented by its members' shared string, rather than a
+    separate object.  Keeping this mutation here makes voluntary disbands and
+    collapse after every member enters exile clean up exactly the same state.
+    Returns the roster as it existed before the disband.
+    """
+    if not faction:
+        return []
+
+    members = queries.get_faction_members(faction, nation_data)
+    if not members:
+        return []
+
+    faction_war_maps = nation_data.get("FACTION_WAR_MAPS")
+    if isinstance(faction_war_maps, dict):
+        faction_war_maps.pop(faction, None)
+
+    for member in members:
+        data = nation_data[member]
+        data["faction"] = ""
+        data["is_faction_leader"] = False
+        data.pop("faction_pressure", None)
+        data.pop("faction_tenure", None)
+    return members
+
+
+def disband_exhausted_factions(map_data, nation_data):
+    """Disband factions whose entire roster has become governments in exile.
+
+    Exile exists only because a territorial faction member can recover the
+    defeated member's land.  Once no member owns a province, that possibility
+    is gone: the roster must stop keeping its members politically active.  The
+    normal defunct-nation cleanup can then remove their units and wars.
+    """
+    living_nations = queries.get_living_nations(map_data)
+    factions = sorted({data.get("faction", "") for data in nation_data.values()
+                       if isinstance(data, dict) and data.get("faction")})
+    dissolved = []
+    for faction in factions:
+        members = queries.get_faction_members(faction, nation_data)
+        if members and all(member not in living_nations for member in members):
+            dissolved.append((faction, disband_faction(nation_data, faction)))
+    return dissolved
 
 def finalize_faction_join(map_data, nation_data, host, joiner):
     """Returns True if the join happened, False if it was skipped."""

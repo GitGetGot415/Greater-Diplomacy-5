@@ -253,12 +253,31 @@ class RetireLandlessTests(unittest.TestCase):
         own.conquer_province(screen, map_data["1"], "Taker")
         self.assertEqual(nation_data["Victim"]["faction"], "Pact")
 
-    def test_the_last_province_creates_an_exile_when_it_has_a_faction(self):
-        nation_data = {"Victim": nation(faction="Pact"), "Taker": nation()}
+    def test_a_faction_with_no_territorial_members_is_disbanded(self):
+        nation_data = {
+            "Victim": nation(faction="Pact", is_faction_leader=True,
+                              at_war_with=["Taker"]),
+            "Already Exiled": nation(faction="Pact", at_war_with=["Taker"]),
+            "Taker": nation(at_war_with=["Victim", "Already Exiled"]),
+            "FACTION_WAR_MAPS": {"Pact": {"1": "Victim"}},
+        }
         map_data = {"1": province(1, "Victim")}
+        map_data["1"]["units"] = [{"owner": "Victim", "type": "Infantry"},
+                                 {"owner": "Already Exiled", "type": "Infantry"}]
         screen = Screen(nation_data, map_data)
         own.conquer_province(screen, map_data["1"], "Taker")
-        self.assertEqual(nation_data["Victim"]["faction"], "Pact")
+
+        self.assertEqual(nation_data["Victim"]["faction"], "")
+        self.assertEqual(nation_data["Already Exiled"]["faction"], "")
+        self.assertNotIn("Pact", nation_data["FACTION_WAR_MAPS"])
+        self.assertEqual(nation_data["Taker"]["at_war_with"], [])
+        self.assertNotIn("Victim", queries.get_politically_active_nations(
+            map_data, nation_data))
+        self.assertNotIn("Already Exiled", queries.get_politically_active_nations(
+            map_data, nation_data))
+
+        movement_processor.process_dead_nations(screen)
+        self.assertEqual(map_data["1"]["units"], [])
 
     def test_the_editor_does_not_dissolve_a_nation_you_are_repainting(self):
         """Zero provinces is what half of a repaint looks like. Losing the

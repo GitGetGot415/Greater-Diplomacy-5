@@ -6,6 +6,13 @@ from map_logic.turn_processing import combat_processor, edit_province_ownership
 
 def process_dead_nations(map_screen):
     """Removes defunct units and updates wars, preserving faction exiles."""
+    # A government in exile survives only while another member still has land
+    # from which it could restore the defeated country. Do this before deriving
+    # political activity so an exhausted faction's units and wars are cleaned
+    # in this same turn.
+    from map_logic.diplomacy.faction_actions import disband_exhausted_factions
+    disband_exhausted_factions(map_screen.map_data, map_screen.nation_data)
+
     active_nations = queries.get_politically_active_nations(
         map_screen.map_data, map_screen.nation_data)
 

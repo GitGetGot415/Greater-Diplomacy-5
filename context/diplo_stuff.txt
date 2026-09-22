@@ -105,5 +105,8 @@ leadership (if applicable), and the faction pre-war border record. The status
 is derived from having faction membership and no territory; a country stops
 being exiled immediately when it regains a province. A faction member's normal
 core/pre-war-territory capture transfer can therefore restore territory to the
-exiled member. A landless country outside a faction remains defunct under the
-ordinary cleanup rules.
+exiled member. If every member of the faction is landless, the faction is
+disbanded immediately: its historical border record is removed and every former
+member becomes defunct under the ordinary cleanup rules, so no country remains
+at war with a bloc that can no longer restore territory. A landless country
+outside a faction remains defunct under the ordinary cleanup rules.

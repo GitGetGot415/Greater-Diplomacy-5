@@ -535,6 +535,17 @@ def load_map_assets(map_screen, load_path):
     # Runs before the pre-war maps below, which are built off the rosters.
     repair_faction_rosters(map_screen.nation_data, map_screen.map_data)
 
+    # A saved game can be written immediately after the last territorial
+    # faction member falls. Do not revive that exhausted bloc on load: without
+    # a member that owns land, its exiles have no path back into the world.
+    if not map_screen.is_editor:
+        from map_logic.turn_processing import edit_province_ownership, movement_processor
+        exhausted_factions = edit_province_ownership.retire_exhausted_factions(map_screen)
+        if exhausted_factions:
+            # Retiring a normal nation removes its diplomacy immediately; this
+            # completes the other half of ordinary cleanup for former exiles.
+            movement_processor.process_dead_nations(map_screen)
+
     # A faction needs a chair before any screen, peace negotiation, or AI can
     # reason about it.  Turn processing heals this state too, but a loaded save
     # must already be internally consistent before its first turn.
