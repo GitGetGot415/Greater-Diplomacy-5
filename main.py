@@ -232,8 +232,10 @@ class Controller:
         if not c.USE_SOLOUD and not IS_WEB:
             pygame.mixer.init()
             try:
-                ui_elements.pygame_click_sound = pygame.mixer.Sound(c.SOUND_CLICK_PATH)
-                ui_elements.pygame_slider_sound = pygame.mixer.Sound(c.SOUND_SLIDER_PATH)
+                ui_elements.set_pygame_ui_sounds(
+                    pygame.mixer.Sound(c.SOUND_CLICK_PATH),
+                    pygame.mixer.Sound(c.SOUND_SLIDER_PATH),
+                )
             except:
                 print("Warning: Sound files not found in assets folder")
 
@@ -741,8 +743,10 @@ class Controller:
         """Deferred pygame.mixer bootstrap for web -- see the IS_WEB guard in __init__."""
         pygame.mixer.init()
         try:
-            ui_elements.pygame_click_sound = pygame.mixer.Sound(c.SOUND_CLICK_PATH)
-            ui_elements.pygame_slider_sound = pygame.mixer.Sound(c.SOUND_SLIDER_PATH)
+            ui_elements.set_pygame_ui_sounds(
+                pygame.mixer.Sound(c.SOUND_CLICK_PATH),
+                pygame.mixer.Sound(c.SOUND_SLIDER_PATH),
+            )
         except:
             print("Warning: Sound files not found in assets folder")
 

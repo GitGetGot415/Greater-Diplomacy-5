@@ -1,6 +1,8 @@
 import subprocess
 import sys
+from collections import OrderedDict
 
+import numpy as np
 import pygame
 try:
     # Not available in pygame-ce's WASM build; clipboard calls elsewhere already
@@ -20,6 +22,15 @@ pygame_click_sound = None
 pygame_slider_sound = None
 global_sfx_volume = 0.5
 global_sfx_pitch = 0.5
+
+# pygame.mixer has no playback-rate control.  UI sounds are short, so keeping a
+# few resampled PCM copies gives the web build the same pitch response as the
+# native SoLoud path without doing audio work every time a button is clicked.
+PYGAME_SFX_PITCH_CACHE_SIZE = 24
+_pygame_sfx_pitch_cache = {
+    "click": OrderedDict(),
+    "slider": OrderedDict(),
+}
 
 UI_ICONS = {}
 
@@ -51,10 +62,69 @@ def play_ui_sound(kind="click"):
             # Centres the speed variance directly on a 0.5 pitch input
             soloud_engine.set_relative_play_speed(handle, 0.5 + global_sfx_pitch)
     else:
-        sound = pygame_click_sound if kind == "click" else pygame_slider_sound
+        sound = _pygame_sound_at_pitch(kind)
         if sound:
             sound.set_volume(global_sfx_volume)
             sound.play()
+
+def set_pygame_ui_sounds(click, slider):
+    """Sets pygame UI sound sources and invalidates their pitch variants."""
+    global pygame_click_sound, pygame_slider_sound
+    pygame_click_sound = click
+    pygame_slider_sound = slider
+    for cache in _pygame_sfx_pitch_cache.values():
+        cache.clear()
+
+def _resample_pygame_sound(sound, speed):
+    """Returns a pygame sound whose duration is adjusted for ``speed``.
+
+    Resampling changes both duration and pitch, matching the SoLoud relative
+    playback-speed control used on desktop.  pygame.sndarray preserves the
+    active mixer format, including mono versus stereo samples.
+    """
+    samples = pygame.sndarray.array(sound)
+    source_frames = samples.shape[0]
+    target_frames = max(1, round(source_frames / speed))
+    positions = np.linspace(0, source_frames - 1, target_frames)
+    source_positions = np.arange(source_frames)
+
+    if samples.ndim == 1:
+        resampled = np.interp(positions, source_positions, samples)
+    else:
+        resampled = np.column_stack([
+            np.interp(positions, source_positions, samples[:, channel])
+            for channel in range(samples.shape[1])
+        ])
+
+    if np.issubdtype(samples.dtype, np.integer):
+        limits = np.iinfo(samples.dtype)
+        resampled = np.clip(np.rint(resampled), limits.min, limits.max)
+    return pygame.sndarray.make_sound(resampled.astype(samples.dtype))
+
+def _pygame_sound_at_pitch(kind):
+    """Gets a cached pygame UI sound at the selected SFX playback speed."""
+    sound = pygame_click_sound if kind == "click" else pygame_slider_sound
+    if sound is None:
+        return None
+
+    speed = 0.5 + global_sfx_pitch
+    if speed == 1.0:
+        return sound
+
+    # Quantising very slightly lets a dragged slider reuse neighbouring cached
+    # variants while retaining a smooth audible response.
+    cache_key = round(speed, 2)
+    cache = _pygame_sfx_pitch_cache["click" if kind == "click" else "slider"]
+    cached_sound = cache.get(cache_key)
+    if cached_sound is not None:
+        cache.move_to_end(cache_key)
+        return cached_sound
+
+    pitched_sound = _resample_pygame_sound(sound, cache_key)
+    cache[cache_key] = pitched_sound
+    if len(cache) > PYGAME_SFX_PITCH_CACHE_SIZE:
+        cache.popitem(last=False)
+    return pitched_sound
 
 def set_sfx_volume(val):
     """Applies a new sfx volume to the shared state and both audio backends."""
@@ -64,6 +134,11 @@ def set_sfx_volume(val):
         for sound in (pygame_click_sound, pygame_slider_sound):
             if sound:
                 sound.set_volume(val)
+
+def set_sfx_pitch(val):
+    """Updates the shared SFX pitch used by either audio backend."""
+    global global_sfx_pitch
+    global_sfx_pitch = max(0.0, min(1.0, float(val)))
 
 def scale_icon(icon_name, size):
     """Fetches a symbol and scales it to a square of `size`, or None if missing."""

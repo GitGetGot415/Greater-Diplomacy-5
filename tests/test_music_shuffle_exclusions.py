@@ -6,7 +6,7 @@ import main as game_main
 import pygame
 import data.constants as c
 from data import queries
-from ui_elements import Button
+from ui_elements import Button, Slider
 from screens.menu_screens.music_player import (
     MUSIC_LEFT_PANE_W,
     MUSIC_PROGRESS_X,
@@ -98,6 +98,11 @@ class ShuffleExclusionTests(unittest.TestCase):
                          static_button.rect.right + MUSIC_TIMELINE_BUTTON_GAP)
         self.assertTrue(static_button.is_selected)
         self.assertFalse(dynamic_button.is_selected)
+
+        sfx_pitch_slider = next(element for element in player.elements
+                                if isinstance(element, Slider)
+                                and element.text == "SFX Pitch")
+        self.assertEqual(sfx_pitch_slider.value, controller.sfx_pitch)
 
     def test_non_excluded_song_button_remains_selectable(self):
         pygame.font.init()

@@ -295,8 +295,7 @@ class Music_Player(ScrollPanes, GameState):
         slider_x = c.SCREEN_WIDTH - 250
         
         self.elements.append(Slider(slider_x, 40, 200, "SFX Vol", self.controller.sfx_volume, self.set_sfx_volume))
-        if c.USE_SOLOUD:
-            self.elements.append(Slider(slider_x, 100, 200, "SFX Pitch", self.controller.sfx_pitch, self.set_sfx_pitch))
+        self.elements.append(Slider(slider_x, 100, 200, "SFX Pitch", self.controller.sfx_pitch, self.set_sfx_pitch))
 
         self.elements.append(Slider(slider_x, 180, 200, "Music Vol", self.controller.music_volume, self.set_music_volume))
         # BeepBox supports pitch in both desktop and web builds, independent
@@ -638,8 +637,7 @@ class Music_Player(ScrollPanes, GameState):
         """Resets sliders to 100% Volume, and 50% Pitch (1.0x multiplier)"""
         self.set_sfx_volume(1.0)
         self.set_music_volume(1.0)
-        if c.USE_SOLOUD:
-            self.set_sfx_pitch(0.5)
+        self.set_sfx_pitch(0.5)
         self.set_music_pitch(0.5)
         self.set_music_pitch_timeline(c.DEFAULT_MUSIC_PITCH_TIMELINE)
         self.refresh_ui()
@@ -710,7 +708,7 @@ class Music_Player(ScrollPanes, GameState):
         
     def set_sfx_pitch(self, val):
         self.controller.sfx_pitch = val
-        ui_elements.global_sfx_pitch = val
+        ui_elements.set_sfx_pitch(val)
         self.save_audio_settings()
         
     def save_audio_settings(self):
