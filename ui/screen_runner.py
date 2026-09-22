@@ -14,7 +14,8 @@ returning. See ui/modal_stack.py's docstring for why the non-blocking path exist
 """
 import pygame
 import data.constants as c
-from gameState import dispatch_global_keys
+from gameState import (dispatch_global_keys, synthesize_keybind_mouse_events,
+                       keyboard_input_is_captured)
 from ui import modal_stack
 from ui.bars import ui_bars
 
@@ -68,6 +69,8 @@ def _run_screen_standalone(screen, on_done, tk_parent, surface):
     try:
         while not screen.done:
             events = pygame.event.get()
+            events = synthesize_keybind_mouse_events(
+                events, allow_keydown=not keyboard_input_is_captured(screen))
             for event in events:
                 if event.type == pygame.QUIT:
                     import sys

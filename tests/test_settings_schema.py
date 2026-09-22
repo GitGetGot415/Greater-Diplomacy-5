@@ -406,6 +406,16 @@ class KeybindIoTests(unittest.TestCase):
         self.assertEqual(loaded["BACK"], pygame.K_q)
         self.assertEqual(loaded["CLEAR_ORDERS"], pygame.K_DELETE)
 
+    def test_explicitly_unassigned_keybind_survives_load(self):
+        """A clear control must not let load restore the action's default."""
+        from data.io import keybind_io
+        import pygame
+
+        loaded = keybind_io._load_keybinds(
+            {"keybinds": {"BACK": None}}, {"BACK": pygame.K_ESCAPE})
+
+        self.assertIsNone(loaded["BACK"])
+
     def test_defaults_track_the_runtime_constants(self):
         """Several defaults live on data.constants and are overwritten at
         startup, so they have to be read when asked for, not at import."""

@@ -9,8 +9,6 @@ the exported zip file is what i'm most concerned about, so as long as that doesn
 
 - add in a spectator code so other players can see tournaments
 
-- add keybinds for mouse
-
 - THE JSON SEEMS TO STUTTER (longer songs specifically) WHEN TESTING OUT THE DISTRIBUTED VERSIONS!!! (however when testing it out by running main.py in vscode it works fine?)
 
 ## Random thoughts with no real goal

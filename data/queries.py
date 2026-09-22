@@ -549,9 +549,12 @@ def get_keybind(action, default):
     Reads the persisted keybind rather than any particular screen's in-memory
     controller, since most screens never get a controller reference wired up.
     """
-    name = get_settings().get("keybinds", {}).get(action)
-    if not name:
+    keybinds = get_settings().get("keybinds", {})
+    if action not in keybinds:
         return default
+    name = keybinds[action]
+    if name is None:
+        return None
     try:
         return pygame.key.key_code(name)
     except Exception:

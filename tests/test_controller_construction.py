@@ -98,8 +98,8 @@ class ControllerConstructionTests(unittest.TestCase):
 
     def test_clear_orders_keybind_is_available_by_default(self):
         from screens.menu_screens.keybinds import (
-            KEYBIND_ACTIONS, MAP_PANNING_KEYBIND_ACTIONS, default_keybinds,
-            keybind_conflicts,
+            KEYBIND_ACTIONS, MAP_PANNING_KEYBIND_ACTIONS,
+            MOUSE_CLICK_KEYBIND_ACTIONS, default_keybinds, keybind_conflicts,
         )
 
         defaults = {action: default for action, _label, default in KEYBIND_ACTIONS}
@@ -110,6 +110,9 @@ class ControllerConstructionTests(unittest.TestCase):
         self.assertEqual(default_keybinds()["PAN_UP"], pygame.K_UP)
         self.assertEqual(default_keybinds()["PAN_DOWN"], pygame.K_DOWN)
         self.assertEqual(len(MAP_PANNING_KEYBIND_ACTIONS), 4)
+        self.assertEqual(len(MOUSE_CLICK_KEYBIND_ACTIONS), 3)
+        self.assertTrue(all(default_keybinds()[action] is None
+                            for action, _label, _default in MOUSE_CLICK_KEYBIND_ACTIONS))
         self.assertTrue(all(action in self.controller.keybinds
                             for action, _label, _default in MAP_PANNING_KEYBIND_ACTIONS))
 
@@ -117,6 +120,40 @@ class ControllerConstructionTests(unittest.TestCase):
         duplicate["PAN_LEFT"] = duplicate["ORDERS"]
         self.assertEqual(keybind_conflicts(duplicate),
                          [(pygame.K_q, ["Pan Left", "Orders"])])
+
+    def test_keybind_mouse_events_preserve_physical_mouse_input(self):
+        from gameState import synthesize_keybind_mouse_events
+
+        physical_click = pygame.event.Event(pygame.MOUSEBUTTONDOWN,
+                                            button=1, pos=(20, 30))
+        events = [physical_click,
+                  pygame.event.Event(pygame.KEYDOWN, key=pygame.K_a),
+                  pygame.event.Event(pygame.KEYUP, key=pygame.K_a)]
+        with mock.patch("gameState.pygame.mouse.get_pos", return_value=(80, 90)):
+            translated = synthesize_keybind_mouse_events(
+                events, {"MOUSE_LEFT_CLICK": pygame.K_a})
+
+        self.assertIs(translated[0], physical_click)
+        self.assertEqual(
+            [(event.type, getattr(event, "button", None)) for event in translated],
+            [(pygame.MOUSEBUTTONDOWN, 1), (pygame.KEYDOWN, None),
+             (pygame.MOUSEBUTTONDOWN, 1), (pygame.KEYUP, None),
+             (pygame.MOUSEBUTTONUP, 1)])
+        self.assertEqual(translated[2].pos, (80, 90))
+        self.assertTrue(translated[2].keybind_mouse)
+
+    def test_keybind_screen_exposes_mouse_bindings_and_clear_controls(self):
+        from screens.menu_screens.keybinds import ALL_KEYBIND_ACTIONS
+
+        screen = self.controller.states["KEYBINDS"]
+        button_text = [element.text for element in screen.elements
+                       if hasattr(element, "text")]
+
+        self.assertIn("Left Click Key: UNASSIGNED", button_text)
+        self.assertIn("Middle Click Key: UNASSIGNED", button_text)
+        self.assertIn("Right Click Key: UNASSIGNED", button_text)
+        self.assertEqual(button_text.count("x"), len(ALL_KEYBIND_ACTIONS))
+        self.assertIn("Change Screen\nWith This Keybind", button_text)
 
     def test_loaded_playable_maps_arm_the_navigation_tutorial(self):
         """The map constructor is shared by new, save, and multiplayer loads,

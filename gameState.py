@@ -15,18 +15,61 @@ def resolve_keybind(state, action, default):
     """
     return queries.get_keybind(action, default)
 
-def dispatch_global_keys(state, event):
-    """Routes rebindable key presses to a state's matching handlers.
 
-    Shared by the main loop and the blocking sub-screen loop so no individual
-    screen has to re-resolve the keybinds itself. Screen-specific actions are
-    harmless elsewhere because their handler is optional.
+# Keys currently acting as held mouse buttons.  This suppresses repeated
+# KEYDOWN events and lets a key release produce the matching mouse release
+# even if its binding changes while it is held.
+_MOUSE_KEYBIND_PRESSES = {}
+
+
+def synthesize_keybind_mouse_events(events, keybinds=None, allow_keydown=True):
+    """Add normal mouse down/up events for configured keyboard mouse clicks.
+
+    Physical mouse input remains in ``events`` unchanged.  Keybinds receive
+    the cursor's current position and otherwise follow the same UI, map, and
+    drag paths as their physical button counterparts. ``allow_keydown`` keeps
+    focused text fields from receiving new synthetic clicks while still
+    releasing a click that began before a screen change.
     """
-    # A focused text bar owns every key press, including a character that has
-    # been rebound as a map command.  ``listening_for`` predates the shared
-    # UI fields, while the remaining flags cover the inline editors that do
-    # not use a Button instance for their input box.
-    typing_in_ui_bar = (
+    if keybinds is None:
+        keybinds = {
+            action: queries.get_keybind(action, None)
+            for action in c.KEYBIND_MOUSE_BUTTONS
+        }
+
+    cursor_pos = pygame.mouse.get_pos()
+    translated = []
+    focus_lost = getattr(pygame, "WINDOWFOCUSLOST", None)
+    for event in events:
+        translated.append(event)
+        if event.type == pygame.KEYDOWN and allow_keydown:
+            if event.key in _MOUSE_KEYBIND_PRESSES:
+                continue
+            buttons = tuple(button for action, button in c.KEYBIND_MOUSE_BUTTONS.items()
+                            if keybinds.get(action) == event.key)
+            if buttons:
+                _MOUSE_KEYBIND_PRESSES[event.key] = buttons
+                translated.extend(
+                    pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=cursor_pos,
+                                       button=button, keybind_mouse=True)
+                    for button in buttons)
+        elif event.type == pygame.KEYUP:
+            for button in _MOUSE_KEYBIND_PRESSES.pop(event.key, ()):
+                translated.append(
+                    pygame.event.Event(pygame.MOUSEBUTTONUP, pos=cursor_pos,
+                                       button=button, keybind_mouse=True))
+        elif focus_lost is not None and event.type == focus_lost:
+            for buttons in _MOUSE_KEYBIND_PRESSES.values():
+                translated.extend(
+                    pygame.event.Event(pygame.MOUSEBUTTONUP, pos=cursor_pos,
+                                       button=button, keybind_mouse=True)
+                    for button in buttons)
+            _MOUSE_KEYBIND_PRESSES.clear()
+    return translated
+
+def keyboard_input_is_captured(state):
+    """Whether keyboard input belongs to an active text or key-capture field."""
+    return (
         bool(getattr(state, "listening_for", None))
         or bool(getattr(state, "active_input", None))
         or bool(getattr(state, "mail_input_active", False))
@@ -38,6 +81,19 @@ def dispatch_global_keys(state, event):
         or bool(getattr(getattr(state, "map_screen", None),
                         "army_editor_state", None))
     )
+
+
+def dispatch_global_keys(state, event):
+    """Routes rebindable key presses to a state's matching handlers.
+
+    Shared by the main loop and the blocking sub-screen loop so no individual
+    screen has to re-resolve the keybinds itself. Screen-specific actions are
+    harmless elsewhere because their handler is optional.
+    """
+    # A focused text bar owns every key press, including a character that has
+    # been rebound as a map command. ``keyboard_input_is_captured`` also
+    # prevents those keys from synthesizing mouse clicks at the event boundary.
+    typing_in_ui_bar = keyboard_input_is_captured(state)
     if event.type != pygame.KEYDOWN:
         return
     back_key = resolve_keybind(state, "BACK", pygame.K_ESCAPE)

@@ -242,6 +242,22 @@ class Button:
         `anchor` takes any pygame rect keyword (center=, midleft=, midtop=...),
         which is what lets every layout branch below share one blit path.
         """
+        if "\n" in text:
+            lines = [(line, self.font.render(line, True, (255, 255, 255)))
+                     for line in text.splitlines()]
+            block_rect = pygame.Rect(0, 0,
+                                     max(line.get_width() for _text, line in lines),
+                                     sum(line.get_height() for _text, line in lines))
+            anchor_name, anchor_value = next(iter(anchor.items()))
+            setattr(block_rect, anchor_name, anchor_value)
+            y = block_rect.y
+            for line_text, line in lines:
+                line_rect = line.get_rect(centerx=block_rect.centerx, y=y)
+                shadow = self.font.render(line_text, True, (0, 0, 0))
+                surface.blit(shadow, (line_rect.x + 1, line_rect.y + 1))
+                surface.blit(line, line_rect)
+                y += line.get_height()
+            return block_rect
         text_surf = self.font.render(text, True, (255, 255, 255))
         text_rect = text_surf.get_rect(**anchor)
         surface.blit(self.font.render(text, True, (0, 0, 0)), (text_rect.x + 1, text_rect.y + 1))

@@ -33,7 +33,11 @@ def save_settings(keybind_dict, sfx_volume, music_volume, num_players=1, ai_mode
     values = {name: value for name, value in locals().items()
               if name in settings_schema.SETTINGS_ORDER}
 
-    data_to_save = {"keybinds": {action: pygame.key.name(code)
+    # ``None`` is an intentional, persistent "unassigned" binding.  Omitting
+    # it would make load restore the action's default, which prevents players
+    # from clearing an existing default keybind.
+    data_to_save = {"keybinds": {action: (pygame.key.name(code)
+                                             if code is not None else None)
                                  for action, code in keybind_dict.items()}}
     data_to_save.update(settings_schema.to_json_dict(values))
     queries.save_cached_json("settings", data_to_save)
@@ -45,6 +49,9 @@ def _load_keybinds(saved_data, default_binds):
     saved_binds = saved_data if "keybinds" not in saved_data else saved_data.get("keybinds", {})
     binds = dict(default_binds)
     for action, key_name in saved_binds.items():
+        if key_name is None:
+            binds[action] = None
+            continue
         # Deliberately unguarded: an unparseable key name propagates to
         # load_settings' handler, which falls back to defaults for the whole
         # file. Preserved from the original -- treating a corrupt keybind as

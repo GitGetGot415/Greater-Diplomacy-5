@@ -81,7 +81,7 @@ def _import_project_modules():
     the enclosing class statement first executes.
     """
     global IS_WEB, restore_persisted_dir, platform, pygame
-    global Messages_Screen, dispatch_global_keys, fonts, ui_elements, c, queries
+    global Messages_Screen, dispatch_global_keys, synthesize_keybind_mouse_events, keyboard_input_is_captured, fonts, ui_elements, c, queries
     global Load_Game, Map, Menu, New_Game, Settings, Credits, Music_Player, View_Assets, Mods, Unit_Art, Keybinds, Mouse_Settings, default_keybinds
     global Translate, Translation_Menu, Greater_Diplomacy_4_Translation, Greater_Diplomacy_Hex_Translation
     global Orders_Screen, keybind_io, settings_schema, symbol_loader, modal_stack
@@ -122,7 +122,8 @@ def _import_project_modules():
         os.add_dll_directory(os.path.dirname(os.path.abspath(__file__)))
 
     from screens.map_related_screens.messages import Messages_Screen
-    from gameState import dispatch_global_keys
+    from gameState import (dispatch_global_keys, synthesize_keybind_mouse_events,
+                           keyboard_input_is_captured)
     from map_logic.rendering.font_manager import fonts
     import ui_elements
     import data.constants as c
@@ -985,6 +986,9 @@ class Controller:
             # top -- gated on *that* screen's listening_for, same as modal_stack.push
             # resolves the real screen out of a _ScreenModal wrapper.
             listening_screen = self.active_state if top_modal is None else getattr(top_modal, "screen", top_modal)
+            events = synthesize_keybind_mouse_events(
+                events, self.keybinds,
+                allow_keydown=not keyboard_input_is_captured(listening_screen))
             for event in events:
                 if (event.type == pygame.KEYDOWN and not getattr(listening_screen, "listening_for", None)
                         and event.key == self.keybinds.get("FULLSCREEN", pygame.K_F11)):

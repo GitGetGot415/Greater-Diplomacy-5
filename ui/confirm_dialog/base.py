@@ -4,6 +4,7 @@ dialog in this package -- see ui/confirm_dialog/__init__.py for the overview.
 import pygame
 import data.constants as c
 from data import queries
+from gameState import synthesize_keybind_mouse_events
 from map_logic.rendering.font_manager import fonts
 from ui import modal_stack
 from ui import text_utils
@@ -184,6 +185,7 @@ def _run_blocking(make_modal, tk_parent, default_result=None):
     try:
         while True:
             events = pygame.event.get()
+            events = synthesize_keybind_mouse_events(events)
             if any(event.type == pygame.QUIT for event in events):
                 break
             modal.handle_events(events)

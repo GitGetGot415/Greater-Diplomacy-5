@@ -10,19 +10,25 @@ from map_logic.rendering.font_manager import fonts
 # --- Keybinds screen layout ---
 KEYBINDS_ROW_X = c.SCREEN_WIDTH // 2 - 100
 KEYBINDS_NAVIGATION_COLUMN_X = KEYBINDS_ROW_X - c.SIZES["medium"][0] - 60
+KEYBINDS_MOUSE_COLUMN_X = KEYBINDS_NAVIGATION_COLUMN_X - c.SIZES["medium"][0] - 60
 KEYBINDS_ROW_START_Y = 150
 KEYBINDS_ROW_GAP_Y = 70
 KEYBINDS_RESET_GAP_Y = 30
 KEYBINDS_COLUMN_HEADING_Y = KEYBINDS_ROW_START_Y - 35
 KEYBINDS_WARNING_TOP_Y = 600
 KEYBINDS_WARNING_SIDE_MARGIN = 55
-# The "change screen with this keybind" toggle sits directly right of the
-# keybind button, on the same row -- the keybind button itself stays exactly
-# where it already was. The info button sits right of that toggle in turn.
+# Each binding gets an adjacent clear button. The compact two-line
+# Orders/Production toggle leaves room for it without moving the columns.
+KEYBINDS_REMOVE_GAP_X = 5
+KEYBINDS_REMOVE_SIZE = (30, 30)
+KEYBINDS_REMOVE_Y_NUDGE = (c.SIZES["medium"][1] - KEYBINDS_REMOVE_SIZE[1]) // 2
 KEYBINDS_TOGGLE_GAP_X = 10
-KEYBINDS_TOGGLE_X = KEYBINDS_ROW_X + c.SIZES["medium"][0] + KEYBINDS_TOGGLE_GAP_X
-KEYBINDS_TOGGLE_INFO_X = KEYBINDS_TOGGLE_X + c.SIZES["keybind_toggle"][0] + KEYBINDS_TOGGLE_GAP_X
-KEYBINDS_INFO_Y_NUDGE = (c.SIZES["keybind_toggle"][1] - c.SIZES["scenario_setting_info"][1]) // 2
+KEYBINDS_TOGGLE_SIZE = (150, 50)
+KEYBINDS_TOGGLE_X = (KEYBINDS_ROW_X + c.SIZES["medium"][0]
+                     + KEYBINDS_REMOVE_GAP_X + KEYBINDS_REMOVE_SIZE[0]
+                     + KEYBINDS_TOGGLE_GAP_X)
+KEYBINDS_TOGGLE_INFO_X = KEYBINDS_TOGGLE_X + KEYBINDS_TOGGLE_SIZE[0] + KEYBINDS_TOGGLE_GAP_X
+KEYBINDS_INFO_Y_NUDGE = (KEYBINDS_TOGGLE_SIZE[1] - c.SIZES["scenario_setting_info"][1]) // 2
 
 TOGGLE_INFO_TEXT = (
     "When on, pressing this key also jumps straight to the screen its view "
@@ -52,7 +58,16 @@ MAP_PANNING_KEYBIND_ACTIONS = (
     ("PAN_DOWN", "Pan Down", pygame.K_DOWN),
 )
 
-ALL_KEYBIND_ACTIONS = MAP_PANNING_KEYBIND_ACTIONS + KEYBIND_ACTIONS
+# Keyboard mouse clicks sit to the left of map panning. None is meaningful:
+# unlike the other actions, they intentionally start with no assigned key.
+MOUSE_CLICK_KEYBIND_ACTIONS = (
+    ("MOUSE_LEFT_CLICK", "Left Click", None),
+    ("MOUSE_MIDDLE_CLICK", "Middle Click", None),
+    ("MOUSE_RIGHT_CLICK", "Right Click", None),
+)
+
+ALL_KEYBIND_ACTIONS = (MOUSE_CLICK_KEYBIND_ACTIONS
+                       + MAP_PANNING_KEYBIND_ACTIONS + KEYBIND_ACTIONS)
 
 
 def default_keybinds():
@@ -64,7 +79,9 @@ def keybind_conflicts(keybinds):
     """Return every shared key and its user-facing actions, without rejecting it."""
     by_key = {}
     for action, label, default in ALL_KEYBIND_ACTIONS:
-        by_key.setdefault(keybinds.get(action, default), []).append(label)
+        key = keybinds.get(action, default)
+        if key is not None:
+            by_key.setdefault(key, []).append(label)
     return [(key, labels) for key, labels in by_key.items() if len(labels) > 1]
 
 #: Actions that carry the "change screen with this keybind" toggle -- the two
@@ -94,6 +111,8 @@ class Keybinds(GameState):
     def refresh_ui(self):
         self.elements = [make_back_button(self.exit_screen)]
 
+        self._add_binding_column(MOUSE_CLICK_KEYBIND_ACTIONS,
+                                 KEYBINDS_MOUSE_COLUMN_X)
         self._add_binding_column(MAP_PANNING_KEYBIND_ACTIONS,
                                  KEYBINDS_NAVIGATION_COLUMN_X)
 
@@ -104,8 +123,8 @@ class Keybinds(GameState):
             if action in SCREEN_TOGGLE_ACTIONS:
                 on = getattr(self.controller, self.screen_toggle_attr(action))
                 self.elements.append(
-                    Button(KEYBINDS_TOGGLE_X, y, "keybind_toggle", "green" if on else "red",
-                          "Change Screen With This Keybind",
+                    Button(KEYBINDS_TOGGLE_X, y, KEYBINDS_TOGGLE_SIZE, "green" if on else "red",
+                          "Change Screen\nWith This Keybind",
                           lambda a=action: self.toggle_screen_change(a),
                           font_preset="tiny")
                 )
@@ -134,12 +153,25 @@ class Keybinds(GameState):
         if self.listening_for == action:
             text = "Press any key..."
         else:
-            key_name = pygame.key.name(self.controller.keybinds.get(action, default_key)).upper()
+            key = self.controller.keybinds.get(action, default_key)
+            key_name = pygame.key.name(key).upper() if key is not None else "UNASSIGNED"
             text = f"{label} Key: {key_name}"
         self.elements.append(
             Button(x, y, "medium", "grey", text,
                    lambda a=action: self.start_listening(a))
         )
+        self.elements.append(
+            Button(x + c.SIZES["medium"][0] + KEYBINDS_REMOVE_GAP_X,
+                   y + KEYBINDS_REMOVE_Y_NUDGE, KEYBINDS_REMOVE_SIZE, "red", "x",
+                   lambda a=action: self.remove_binding(a), font_preset="tiny")
+        )
+
+    def remove_binding(self, action):
+        """Persist an explicitly unassigned key without affecting other bindings."""
+        self.controller.keybinds[action] = None
+        self.listening_for = None
+        queries.save_global_settings(self.controller)
+        self.refresh_ui()
 
     def screen_toggle_attr(self, action):
         """Controller attribute backing `action`'s "change screen with this
@@ -174,7 +206,8 @@ class Keybinds(GameState):
     def additional_draw(self, surface):
         """Label the columns and expose non-blocking duplicate-key warnings."""
         font = fonts.get("small")
-        for x, heading in ((KEYBINDS_NAVIGATION_COLUMN_X, "Map Panning"),
+        for x, heading in ((KEYBINDS_MOUSE_COLUMN_X, "Mouse Clicks"),
+                           (KEYBINDS_NAVIGATION_COLUMN_X, "Map Panning"),
                            (KEYBINDS_ROW_X, "Other Keybinds")):
             label = font.render(heading, True, c.UI_TEXT_DIM)
             surface.blit(label, label.get_rect(

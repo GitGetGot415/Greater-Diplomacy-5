@@ -26,6 +26,15 @@ UNPLAYABLE_NATIONS = ["None", "Unclaimed", "The Rot", "Ocean", "Lakes", "Spectat
 SCREEN_WIDTH = 1280
 SCREEN_HEIGHT = 720
 
+# Keybind actions which synthesize the matching physical mouse-button event.
+# The keybind screen owns their player-facing labels and layout; this mapping
+# is shared input behavior, so it belongs with the other global constants.
+KEYBIND_MOUSE_BUTTONS = {
+    "MOUSE_LEFT_CLICK": 1,
+    "MOUSE_MIDDLE_CLICK": 2,
+    "MOUSE_RIGHT_CLICK": 3,
+}
+
 # --- Text Input Limits ---
 MAX_API_KEY_LENGTH = 200
 MAX_MODEL_NAME_LENGTH = 150
@@ -863,11 +872,6 @@ SIZES = {
     # Editor forms (unit/country editors, turn overrides).
     "form_row": (420, 30),
     "form_tool": (130, 32),
-    # Keybinds screen: the small "change screen with this keybind" toggle
-    # beside the Orders/Production rows. Same height as "medium" (the keybind
-    # button itself) so the two line up; narrower, with small text, so the row
-    # doesn't visually dominate the screen.
-    "keybind_toggle": (240, 50),
 }
 
 COLOR_GOLD_HIGHLIGHT = (255, 215, 0)

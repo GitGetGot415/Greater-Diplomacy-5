@@ -109,10 +109,13 @@ class MapCamera:
             return
         pressed = pygame.key.get_pressed()
         keys = self._configured_pan_keys()
-        left = bool(pressed[keys["left"]])
-        right = bool(pressed[keys["right"]])
-        up = bool(pressed[keys["up"]])
-        down = bool(pressed[keys["down"]])
+        # A cleared map-pan binding is intentionally ``None``; it must not be
+        # used as an index into pygame's pressed-key sequence.
+        is_held = lambda key: bool(key is not None and pressed[key])
+        left = is_held(keys["left"])
+        right = is_held(keys["right"])
+        up = is_held(keys["up"])
+        down = is_held(keys["down"])
         if not (left or right or up or down):
             self._last_keyboard_pan_tick = None
             return

@@ -163,6 +163,21 @@ class MapCameraBoundsTests(unittest.TestCase):
         self.assertEqual(camera.target_pos.x,
                          expected_screen_distance / camera.zoom)
 
+    def test_cleared_pan_bindings_do_not_index_the_pressed_key_state(self):
+        camera = MapCamera(min_zoom=2)
+
+        class PressedKeys:
+            def __getitem__(self, key):
+                raise AssertionError(f"cleared keybind was indexed: {key!r}")
+
+        with (patch("map_logic.camera.camera_handler.pygame.display.get_surface",
+                    return_value=object()),
+              patch("map_logic.camera.camera_handler.pygame.key.get_pressed",
+                    return_value=PressedKeys()),
+              patch("map_logic.camera.camera_handler.queries.get_keybind",
+                    return_value=None)):
+            camera._pan_held_navigation_keys()
+
     def test_conflicting_right_button_cancels_middle_drag_until_release(self):
         camera = MapCamera(min_zoom=2)
         camera.zoom = camera.target_zoom = 2
