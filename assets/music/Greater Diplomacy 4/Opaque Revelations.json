@@ -4,7 +4,7 @@
 	"scale": "expert",
 	"key": "C",
 	"introBars": 0,
-	"loopBars": 20,
+	"loopBars": 18,
 	"beatsPerBar": 8,
 	"ticksPerBeat": 4,
 	"beatsPerMinute": 90,
@@ -868,8 +868,6 @@
 				14,
 				0,
 				0,
-				0,
-				0,
 				0
 			],
 			"octaveScrollBar": 3
@@ -949,8 +947,6 @@
 				}
 			],
 			"sequence": [
-				0,
-				0,
 				0,
 				0,
 				0,
@@ -1085,8 +1081,6 @@
 				}
 			],
 			"sequence": [
-				0,
-				0,
 				0,
 				0,
 				0,
@@ -1336,8 +1330,6 @@
 				0,
 				0,
 				0,
-				0,
-				0,
 				0
 			]
 		},
@@ -1570,8 +1562,6 @@
 				}
 			],
 			"sequence": [
-				0,
-				0,
 				0,
 				0,
 				0,
