@@ -13,6 +13,8 @@ from screens.menu_screens.music_player import (
     MUSIC_PROGRESS_SIZE,
     MUSIC_TIMELINE_BUTTON_GAP,
     MUSIC_TIMELINE_BUTTON_X,
+    MUSIC_TIMELINE_HELP_BUTTON_X,
+    MUSIC_TIMELINE_HELP_BUTTON_Y,
     TRACK_SHUFFLE_TOGGLE_GAP,
     Music_Player,
 )
@@ -99,10 +101,29 @@ class ShuffleExclusionTests(unittest.TestCase):
         self.assertTrue(static_button.is_selected)
         self.assertFalse(dynamic_button.is_selected)
 
+        help_button = next(button for button in player.elements
+                           if isinstance(button, Button) and button.text == "?")
+        self.assertEqual(help_button.rect.left, MUSIC_TIMELINE_HELP_BUTTON_X)
+        self.assertEqual(help_button.rect.top, MUSIC_TIMELINE_HELP_BUTTON_Y)
+        self.assertEqual(help_button.rect.left,
+                         dynamic_button.rect.right + MUSIC_TIMELINE_BUTTON_GAP)
+
         sfx_pitch_slider = next(element for element in player.elements
                                 if isinstance(element, Slider)
                                 and element.text == "SFX Pitch")
         self.assertEqual(sfx_pitch_slider.value, controller.sfx_pitch)
+
+    def test_timeline_help_explains_modes_and_shuffle_exclusions(self):
+        player = object.__new__(Music_Player)
+
+        with patch("ui.confirm_dialog.show_info") as show_info:
+            player.show_timeline_and_queue_help()
+
+        title, message = show_info.call_args.args
+        self.assertEqual(title, "Music Player Help")
+        self.assertIn("Static", message)
+        self.assertIn("Dynamic", message)
+        self.assertIn("X", message)
 
     def test_non_excluded_song_button_remains_selectable(self):
         pygame.font.init()

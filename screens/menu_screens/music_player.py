@@ -5,7 +5,7 @@ import ui_elements
 from gameState import GameState, ScreenLayer
 from ui.bars import ui_bars
 from ui.scroll_panes import ScrollPanes
-from ui_elements import Button, Slider, make_back_button
+from ui_elements import Button, Slider, make_back_button, make_info_button
 from map_logic.rendering.font_manager import fonts
 import data.constants as c
 from beepbox_audio import source_seconds_from_timeline, timeline_seconds_from_source
@@ -25,6 +25,14 @@ MUSIC_TIMELINE_BUTTON_SIZE = (100, 40)
 MUSIC_TIMELINE_BUTTON_GAP = 10
 MUSIC_TIMELINE_BUTTON_X = MUSIC_PROGRESS_X + MUSIC_PROGRESS_SIZE[0] + 20
 MUSIC_TIMELINE_BUTTON_Y = MUSIC_PROGRESS_Y - (MUSIC_TIMELINE_BUTTON_SIZE[1] - MUSIC_PROGRESS_SIZE[1]) // 2
+MUSIC_TIMELINE_HELP_BUTTON_X = (
+    MUSIC_TIMELINE_BUTTON_X + (2 * MUSIC_TIMELINE_BUTTON_SIZE[0])
+    + MUSIC_TIMELINE_BUTTON_GAP + MUSIC_TIMELINE_BUTTON_GAP
+)
+MUSIC_TIMELINE_HELP_BUTTON_Y = (
+    MUSIC_TIMELINE_BUTTON_Y
+    + (MUSIC_TIMELINE_BUTTON_SIZE[1] - c.SIZES["scenario_setting_info"][1]) // 2
+)
 
 # ==========================================
 # PYGAME MIXER PAUSE BUG PATCH
@@ -290,6 +298,11 @@ class Music_Player(ScrollPanes, GameState):
         )
         dynamic_button.is_selected = timeline_mode == c.MUSIC_PITCH_TIMELINE_DYNAMIC
         self.elements.append(dynamic_button)
+        self.elements.append(make_info_button(
+            MUSIC_TIMELINE_HELP_BUTTON_X,
+            MUSIC_TIMELINE_HELP_BUTTON_Y,
+            self.show_timeline_and_queue_help,
+        ))
         
         # --- 4. Top Layer: Audio Sliders ---
         slider_x = c.SCREEN_WIDTH - 250
@@ -694,6 +707,22 @@ class Music_Player(ScrollPanes, GameState):
 
     def set_dynamic_pitch_timeline(self):
         self.set_music_pitch_timeline(c.MUSIC_PITCH_TIMELINE_DYNAMIC)
+
+    def show_timeline_and_queue_help(self):
+        """Explain pitch timeline options and random-song exclusions."""
+        from ui import confirm_dialog
+
+        confirm_dialog.show_info(
+            "Music Player Help",
+            "Static keeps the displayed song length and your current progress "
+            "position unchanged when you adjust pitch. Higher pitch moves the "
+            "progress slider faster; lower pitch moves it slower.\n\n"
+            "Dynamic changes the displayed song length with the pitch. Higher "
+            "pitch shortens the displayed duration and lower pitch lengthens it.\n\n"
+            "Use the X beside a song to exclude it from Skip / Random Song. "
+            "A green X means the song is excluded; click it again to restore "
+            "the song to the random queue.",
+        )
 
     def set_music_pitch_timeline(self, timeline_mode):
         """Choose whether the scrubber shows source or elapsed playback time."""
