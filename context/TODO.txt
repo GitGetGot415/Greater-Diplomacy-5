@@ -16,8 +16,9 @@ the exported zip file is what i'm most concerned about, so as long as that doesn
 
 ## Check first
 
-- Can fast units can be given slow movement orders? For example, a unit that can be move 2 tiles at once only moves 1 tile because it was grouped up with another slower unit
 - Refreshing country data in the map editor may show countries that no longer exist
+
+- DIPLOMATIC PLAYS FROM VICTORIA 3
 
 ## Audio related suggestions
 
