@@ -1,5 +1,6 @@
 import pygame
 import math
+import numpy as np
 import data.constants as c
 from data import queries
 from map_logic.rendering import map_utils, symbol_loader
@@ -11,6 +12,100 @@ from map_logic.turn_processing import combat_processor, combat_rules
 #: a point: a stack of unit boxes for six nations at full zoom is a few hundred
 #: pixels tall, and cropping one at the screen edge would make it pop.
 CULL_MARGIN = 250
+
+
+class _UnitRenderIndex:
+    """Cached dense view of unit-bearing provinces for strategic rendering.
+
+    The game state remains the province/unit dictionaries.  This index only
+    stores references into that state plus compact NumPy arrays for province
+    centers and unit counts.  Building it at a presentation boundary avoids
+    repeatedly walking every empty province and lets viewport culling happen
+    in one vectorized operation before the per-stack drawing code runs.
+    """
+
+    def __init__(self, map_data):
+        occupied = []
+        records = []
+        centers = []
+        counts = []
+
+        for province in map_data.values():
+            units = province.get("units", [])
+            if not units:
+                continue
+            occupied.append(province)
+            records.extend((unit, province) for unit in units)
+            centers.append(province.get("center", (0.0, 0.0)))
+            counts.append(len(units))
+
+        self.occupied_provinces = tuple(occupied)
+        self.records = tuple(records)
+        self.live_by_object_id = {
+            id(unit): (unit, province) for unit, province in self.records
+        }
+        self.centers = np.asarray(centers, dtype=np.float64)
+        if not self.centers.size:
+            self.centers = np.empty((0, 2), dtype=np.float64)
+        else:
+            self.centers = self.centers.reshape((-1, 2))
+        self.unit_counts = np.asarray(counts, dtype=np.int32)
+        self.total_units = int(self.unit_counts.sum(dtype=np.int64))
+
+    def culled_candidates(self, map_screen, surface):
+        """Return occupied provinces whose centres are near this viewport."""
+        if not self.occupied_provinces:
+            return ()
+
+        cam = map_screen.camera
+        # Lightweight map doubles used by editor/tests may only expose zoom
+        # and tilt.  Keep their established per-province path; real Map
+        # instances always provide camera.pos and take the vectorized route.
+        if not hasattr(cam, "pos"):
+            candidates = []
+            for province in self.occupied_provinces:
+                sx, sy = queries.world_to_screen(
+                    province["center"], map_screen)
+                sx, sy = int(sx), int(sy)
+                if (-CULL_MARGIN < sx < surface.get_width() + CULL_MARGIN
+                        and -CULL_MARGIN < sy < surface.get_height() + CULL_MARGIN):
+                    candidates.append((province, float(sx), float(sy)))
+            return tuple(candidates)
+
+        centers = self.centers
+        screen_x = (centers[:, 0] - cam.pos.x) * cam.zoom
+        screen_y = ((centers[:, 1] - cam.pos.y) * cam.zoom
+                     * cam.tilt_factor + map_screen.top_ui_height)
+        visible = (
+            (screen_x > -CULL_MARGIN)
+            & (screen_x < surface.get_width() + CULL_MARGIN)
+            & (screen_y > -CULL_MARGIN)
+            & (screen_y < surface.get_height() + CULL_MARGIN)
+        )
+        indexes = np.flatnonzero(visible)
+        return tuple(
+            (self.occupied_provinces[int(index)],
+             float(screen_x[index]), float(screen_y[index]))
+            for index in indexes
+        )
+
+
+def _unit_render_index(map_screen):
+    """Return the unit index for the current presentation revision."""
+    revision = getattr(map_screen, "_presentation_cache_revision", None)
+    # A real Map owns explicit invalidation boundaries.  Small test/editor
+    # doubles do not, so rebuild for them and reflect direct list mutations
+    # rather than retaining stale unit references.
+    if revision is None:
+        return _UnitRenderIndex(map_screen.map_data)
+
+    cached = getattr(map_screen, "_unit_render_index_cache", None)
+    if cached is not None and cached[0] == revision:
+        return cached[1]
+
+    index = _UnitRenderIndex(map_screen.map_data)
+    map_screen._unit_render_index_cache = (revision, index)
+    return index
 
 # The images are deliberately separate from outcome color.  A known battle
 # gets the expected winner's muted country color, while a generic battle uses
@@ -889,6 +984,10 @@ def draw_overlay_content(map_screen, surface, draw_combat=True):
         combat_unit_ids = {unit_id for record in combat_records
                            for unit_id in record.get("hidden_unit_ids", set())}
     # ---------------------------------------------
+    # The compact-marker helpers are shared with the economy/resource views
+    # while a transition is settling, so keep one index for the whole overlay
+    # pass even when the final map layer is not the unit layer.
+    unit_index = _unit_render_index(map_screen)
     army_groups = compact_army_groups(map_screen, combat_unit_ids)
     organized_unit_ids = {
         unit_id
@@ -899,8 +998,7 @@ def draw_overlay_content(map_screen, surface, draw_combat=True):
     }
     organized_unit_object_ids = {
         id(unit)
-        for province in map_screen.map_data.values()
-        for unit in province.get("units", [])
+        for unit, _province in unit_index.records
         if (unit.get("owner") == map_screen.player_country
             and unit.get("unit_id") in organized_unit_ids)
     }
@@ -913,7 +1011,18 @@ def draw_overlay_content(map_screen, surface, draw_combat=True):
     # movement arrows later in the same frame; it is never part of a save.
     map_screen.compact_army_unit_object_ids = compact_unit_object_ids
 
-    for color_key, province in map_screen.map_data.items():
+    if map_screen.secondary_mode == "UNITS":
+        # Unit overlays are the only mode that needs every live unit-bearing
+        # province.  Use NumPy culling to skip empty and off-screen provinces
+        # before entering the fog, stack, and icon logic below.
+        render_candidates = unit_index.culled_candidates(map_screen, surface)
+    else:
+        render_candidates = (
+            (province, None, None)
+            for province in map_screen.map_data.values()
+        )
+
+    for province, culled_sx, culled_sy in render_candidates:
         
         # --- FOG OF WAR VISIBILITY CHECK ---
         is_vis = True
@@ -933,12 +1042,16 @@ def draw_overlay_content(map_screen, surface, draw_combat=True):
                     continue # Completely hidden
             
         cx, cy = province["center"]
-        
-        # Wrapping logic for screen coordinates
+
+        # Wrapping logic for screen coordinates.  For the common non-looping
+        # unit view, the vectorized cull already calculated the screen centre.
         offsets = [0, -map_screen.map_w, map_screen.map_w] if map_screen.loop_map else [0]
         
         for offset in offsets:
-            sx, sy = queries.world_to_screen((cx, cy), map_screen, offset)
+            if culled_sx is not None and not offset:
+                sx, sy = culled_sx, culled_sy
+            else:
+                sx, sy = queries.world_to_screen((cx, cy), map_screen, offset)
             sx, sy = int(sx), int(sy)
 
             # Culling. The height half of this was missing, so a zoomed-in map
@@ -1549,12 +1662,12 @@ def compact_army_groups(map_screen, combat_unit_ids):
     armies = queries.get_armies(player_country, map_screen.nation_data, map_screen.map_data)
     if not armies:
         return []
+    unit_index = _unit_render_index(map_screen)
     live_by_id = {
-        unit_id: (unit, province)
-        for province in map_screen.map_data.values()
-        for unit in province.get("units", [])
-        for unit_id in [unit.get("unit_id")]
-        if unit.get("owner") == player_country and isinstance(unit_id, str)
+        unit.get("unit_id"): (unit, province)
+        for unit, province in unit_index.records
+        if unit.get("owner") == player_country
+        and isinstance(unit.get("unit_id"), str)
     }
     scaled_w, scaled_h, _display_scale = unit_box_size(map_screen)
     box_size = (scaled_w, scaled_h)
@@ -1654,7 +1767,8 @@ def compact_area_unit_groups(map_screen, combat_unit_ids, organized_unit_object_
     groups = []
 
     records_by_owner = {}
-    for province in map_screen.map_data.values():
+    unit_index = _unit_render_index(map_screen)
+    for province in unit_index.occupied_provinces:
         if not _province_is_fully_visible(map_screen, province):
             continue
         for unit in queries.filter_visible_units(
@@ -1747,9 +1861,7 @@ def army_group_presentation(map_screen, desired_groups, combat_unit_ids):
         return list(desired_groups), [], suppressed_unit_ids
 
     now = pygame.time.get_ticks() / 1000.0
-    live_records = {id(unit): (unit, province)
-                    for province in map_screen.map_data.values()
-                    for unit in province.get("units", [])}
+    live_records = _unit_render_index(map_screen).live_by_object_id
     desired_by_army = {
         presentation_id: group
         for group in desired_groups

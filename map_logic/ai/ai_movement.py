@@ -2,6 +2,7 @@
 import heapq
 import data.constants as c
 from data import queries
+from map_logic.ai import ai_world
 from map_logic.turn_processing import combat_rules
 
 def build_neighbor_index(id_to_province):
@@ -191,12 +192,13 @@ def process_ai_unit_orders(map_screen):
 def _build_shared_pathing_caches(map_screen):
     """Water-tile lookup and neighbour index: identical for every nation this
     pass, so built once rather than per-nation."""
-    allowed_prov_ids_cache = set()
-    for prov in map_screen.map_data.values():
-        if queries.is_water_province(prov):
-            allowed_prov_ids_cache.add(prov["id"])
-    water_ids = allowed_prov_ids_cache
-    neighbor_ids = build_neighbor_index(map_screen.id_to_province)
+    world = ai_world.for_screen(map_screen)
+    # AIWorld builds these structural indexes once for the whole AI phase.
+    # Keep returning the same three values so the pathing helpers remain
+    # usable by isolated tests and older callers.
+    allowed_prov_ids_cache = set(world.water_ids)
+    water_ids = world.water_ids
+    neighbor_ids = world.neighbor_ids
     return allowed_prov_ids_cache, water_ids, neighbor_ids
 
 
@@ -216,9 +218,14 @@ def _reset_orders_and_collect_units(map_screen, ai_nations):
     """
     nation_units = {}
     nation_provs = {}
+    world = ai_world.for_screen(map_screen)
 
     for ai_name in ai_nations:
-        provs, units = queries.get_nation_provinces_and_units(ai_name, map_screen.map_data)
+        # AIWorld already indexed both dimensions during the turn snapshot.
+        # This avoids scanning every province once per AI nation, which becomes
+        # the dominant cost when late-game unit counts are high.
+        provs = world.provs_by_owner.get(ai_name, ())
+        units = world.units_by_owner.get(ai_name, ())
         nation_provs[ai_name] = provs
         nation_units[ai_name] = []
 
@@ -258,17 +265,17 @@ def _compute_unsafe_waters(map_screen, ai_name):
     """Pre-calculates areas heavily patrolled by enemies so Convoys and weak
     ships don't suicide into them."""
     unsafe_waters = {}
-    for p in map_screen.map_data.values():
-        if queries.is_water_province(p):
-            # Hidden enemy submarines don't make a water tile read as patrolled --
-            # an AI that routed convoys around them would be reacting to a fleet
-            # it has no way of knowing is there.
-            visible_units = queries.filter_visible_units(p.get("units", []), ai_name, p, map_screen.nation_data)
-            enemy_str = sum(u.get("attack", c.DEFAULT_UNIT_ATK) + u.get("defense", 0) for u in visible_units
-                            if queries.are_at_war(ai_name, u.get("owner"), map_screen.nation_data)
-                            and queries.is_naval_unit(u.get("type", "")))
-            if enemy_str > 0:
-                unsafe_waters[p["id"]] = enemy_str
+    world = ai_world.for_screen(map_screen)
+    for p in world.water_provinces:
+        # Hidden enemy submarines don't make a water tile read as patrolled --
+        # an AI that routed convoys around them would be reacting to a fleet
+        # it has no way of knowing is there.
+        visible_units = queries.filter_visible_units(p.get("units", []), ai_name, p, map_screen.nation_data)
+        enemy_str = sum(u.get("attack", c.DEFAULT_UNIT_ATK) + u.get("defense", 0) for u in visible_units
+                        if queries.are_at_war(ai_name, u.get("owner"), map_screen.nation_data)
+                        and queries.is_naval_unit(u.get("type", "")))
+        if enemy_str > 0:
+            unsafe_waters[p["id"]] = enemy_str
     return unsafe_waters
 
 
@@ -286,8 +293,12 @@ def _discover_borders_and_targets(map_screen, ai_name, my_provs, enemies, friend
     all_unclaimed_coasts = set()
     expedition_targets = set()
 
-    # Locate coastal provinces globally for naval targeting and island hopping
-    for prov in map_screen.map_data.values():
+    world = ai_world.for_screen(map_screen)
+
+    # Locate coastal provinces globally for naval targeting and island hopping.
+    # The structural coastal index avoids revisiting inland provinces for each
+    # AI nation; the legality and diplomacy decisions remain live queries.
+    for prov in world.coastal_provinces:
         owner = prov.get("owner", "Unclaimed")
 
         if prov.get("is_coastal", False):
@@ -304,19 +315,22 @@ def _discover_borders_and_targets(map_screen, ai_name, my_provs, enemies, friend
             elif owner in c.UNOWNED_LAND_OWNERS:
                 all_unclaimed_coasts.add(prov["id"])
 
-        # --- Distant Allied Wars / Expedition Targets ---
-        if enemies:
-            # 1. Reinforce allied battles
-            if queries.is_province_in_active_combat(prov, map_screen.nation_data):
-                units_here = prov.get("units", [])
-                if any(u.get("owner") in friendly_nations for u in units_here):
-                    expedition_targets.add(prov["id"])
+    if enemies:
+        # 1. Reinforce allied battles.  Only combat provinces can satisfy this
+        # condition, so avoid checking every map tile.
+        for prov in world.combat_provinces:
+            units_here = prov.get("units", [])
+            if any(u.get("owner") in friendly_nations for u in units_here):
+                expedition_targets.add(prov["id"])
 
-            # 2. Reinforce allied borders touching mutual enemies
-            if owner in enemies:
+        # 2. Reinforce allied borders touching mutual enemies.  The owner
+        # index narrows this to provinces actually held by an enemy nation.
+        for enemy in enemies:
+            for prov in world.provs_by_owner.get(enemy, ()):
                 for n_id in prov.get("neighbors", []):
                     n_prov = map_screen.id_to_province.get(n_id)
-                    if n_prov and n_prov.get("owner") in friendly_nations and n_prov.get("owner") != ai_name:
+                    if (n_prov and n_prov.get("owner") in friendly_nations
+                            and n_prov.get("owner") != ai_name):
                         expedition_targets.add(prov["id"])
                         break
 
@@ -1356,6 +1370,7 @@ def _cancel_opposing_transitions(ai_nations, nation_units, contested=None):
 
 def _generate_unit_orders(map_screen):
     ai_nations = queries.get_active_ai_nations(map_screen)
+    world = ai_world.for_screen(map_screen)
 
     # --- NEW: Pre-calculate allowed pathing IDs to include water for convoys ---
     # Doubles as the water lookup the pathfinder uses per tile.
@@ -1377,9 +1392,7 @@ def _generate_unit_orders(map_screen):
         # Combine land and water IDs so BFS can route overseas
         # Include ALL legally passable tiles so the AI isn't blind!
         allowed_prov_ids = set(allowed_prov_ids_cache)
-        for p in map_screen.map_data.values():
-            if queries.can_land_units_enter(ai_name, p, map_screen.nation_data):
-                allowed_prov_ids.add(p["id"])
+        allowed_prov_ids.update(world.land_entry_ids(ai_name))
 
         enemies = _gather_enemies(map_screen, ai_name)
 

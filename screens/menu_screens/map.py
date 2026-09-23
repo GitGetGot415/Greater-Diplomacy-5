@@ -1373,6 +1373,7 @@ class Map(GameState):
         # re-running simulations on every planning frame.
         self._presentation_cache_revision = 0
         self._combat_bubble_records_cache = None
+        self._unit_render_index_cache = None
         self.unit_selection_drag = None
         # Army-card editing is local UI state like selection.  The edited
         # record itself still lives in nation_data and is saved/synchronized.
@@ -1772,6 +1773,7 @@ class Map(GameState):
         self._presentation_cache_revision = (
             getattr(self, '_presentation_cache_revision', 0) + 1)
         self._combat_bubble_records_cache = None
+        self._unit_render_index_cache = None
         map_renderer.clear_viewport_scale_cache(self)
         # A real-time draft is a state snapshot, not per-frame presentation.
         # The next update serializes it once after the action that changed it.

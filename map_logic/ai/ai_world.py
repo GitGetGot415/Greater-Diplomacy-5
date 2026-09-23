@@ -56,6 +56,25 @@ class AIWorld:
         #: nation -> [province]. Every province with a truthy owner, including
         #: the unplayable pseudo-owners; callers filter as their query does.
         self.provs_by_owner = collections.defaultdict(list)
+        #: nation -> [(unit, province)].  The movement pass used to rebuild
+        #: this list by scanning every province once per AI nation.  Keep the
+        #: live dictionaries here, rather than copying units, so order writes
+        #: made later in the AI phase remain authoritative.
+        self.units_by_owner = collections.defaultdict(list)
+        #: A stable view of the map for passes that only need to inspect a
+        #: subset of provinces.  The tuple is cheap to reuse and avoids
+        #: repeatedly materialising equivalent filtered lists.
+        self.all_provinces = tuple(map_data.values())
+        self.water_provinces = []
+        self.coastal_provinces = []
+        self.combat_provinces = []
+        self.water_ids = set()
+        self.neighbor_ids = {
+            prov_id: [neighbor_id for neighbor_id in prov.get("neighbors", ())
+                      if neighbor_id in id_to_province]
+            for prov_id, prov in id_to_province.items()
+        }
+        self._land_entry_ids = {}
         #: nation -> set of bordering nations, unplayable owners excluded
         #: (get_neighboring_nations drops them, so this must too).
         self.neighbors = collections.defaultdict(set)
@@ -101,18 +120,26 @@ class AIWorld:
         nation_data = self.nation_data
         id_to_province = self.id_to_province
 
-        for prov in self.map_data.values():
+        for prov in self.all_provinces:
             owner = prov.get("owner")
             prov_id = prov["id"]
+
+            if queries.is_water_province(prov):
+                self.water_provinces.append(prov)
+                self.water_ids.add(prov_id)
+            if prov.get("is_coastal", False):
+                self.coastal_provinces.append(prov)
 
             for u in prov.get("units", []):
                 u_owner = u.get("owner")
                 if u_owner:
+                    self.units_by_owner[u_owner].append((u, prov))
                     self._military[u_owner] = (self._military.get(u_owner, 0)
                                                + queries.calculate_unit_strength(u))
 
             if queries.is_province_in_active_combat(prov, nation_data):
                 self.combat_tiles.add(prov_id)
+                self.combat_provinces.append(prov)
 
             for cored_by in prov.get("cores", []):
                 if owner and cored_by != owner:
@@ -353,6 +380,24 @@ class AIWorld:
                                                  self.id_to_province, self.nation_data,
                                                  borders=self.border_graph)
             self._reachable[key] = cached
+        return cached
+
+    def land_entry_ids(self, nation):
+        """Return land provinces currently legal for this nation's pathing.
+
+        Entry depends on the diplomatic snapshot and on the turn-start owner
+        marker, both of which stay fixed throughout the AI movement pass.  A
+        cached set therefore replaces the same full-map eligibility sweep in
+        every movement-planning entry point without changing the canonical
+        ``queries.can_land_units_enter`` rule.
+        """
+        cached = self._land_entry_ids.get(nation)
+        if cached is None:
+            cached = {
+                prov["id"] for prov in self.all_provinces
+                if queries.can_land_units_enter(nation, prov, self.nation_data)
+            }
+            self._land_entry_ids[nation] = cached
         return cached
 
     # ------------------------------------------------------------------
