@@ -568,6 +568,7 @@ globalThis.gd5Render = function(frameCount) {
 _WEB_JS_BRIDGE = r"""
 window.__gd5_beepbox_synth = null;
 window.__gd5_beepbox_gain = null;
+window.__gd5_beepbox_pause_requested = false;
 window.__gd5_beepbox_speed = 1;
 window.__gd5_beepbox_volume = 1;
 window.__gd5_beepbox_output_rate = 44100;
@@ -581,7 +582,10 @@ window.__gd5_beepbox_position = function() {
 };
 window.__gd5_beepbox_finished = function() {
     const synth = window.__gd5_beepbox_synth;
-    return !!synth && synth.playhead >= synth.song.barCount;
+    // BeepBox pauses and wraps its playhead to bar 0 when a non-looping song
+    // ends, so the playhead never remains at barCount for the bridge to poll.
+    // A separate flag keeps an intentional user pause from looking like EOF.
+    return !!synth && !synth.playing && !window.__gd5_beepbox_pause_requested;
 };
 window.__gd5_beepbox_load = function(songJson, speed, startTime, volume) {
     const previous = window.__gd5_beepbox_synth;
@@ -593,6 +597,7 @@ window.__gd5_beepbox_load = function(songJson, speed, startTime, volume) {
     song.fromJsonObject(JSON.parse(songJson));
     const synth = new beepbox.Synth(song);
     window.__gd5_beepbox_synth = synth;
+    window.__gd5_beepbox_pause_requested = false;
     window.__gd5_beepbox_speed = speed;
     window.__gd5_beepbox_volume = volume;
     synth.loopRepeatCount = 0;
@@ -631,6 +636,7 @@ window.__gd5_beepbox_load = function(songJson, speed, startTime, volume) {
 window.__gd5_beepbox_pause = function(paused) {
     const synth = window.__gd5_beepbox_synth;
     if (!synth) return;
+    window.__gd5_beepbox_pause_requested = !!paused;
     if (paused) synth.pause(); else synth.play();
 };
 window.__gd5_beepbox_set_volume = function(volume) {

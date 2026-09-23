@@ -176,6 +176,7 @@ class BeepBoxAudioTests(unittest.TestCase):
 
         context.eval("window.__gd5_beepbox_pause(true)")
         self.assertFalse(context.eval("window.__gd5_beepbox_synth.playing"))
+        self.assertFalse(context.eval("window.__gd5_beepbox_finished()"))
         context.eval(r"""
             const synth = window.__gd5_beepbox_synth;
             const left = new Float32Array(128);
@@ -197,6 +198,21 @@ class BeepBoxAudioTests(unittest.TestCase):
         self.assertAlmostEqual(
             context.eval("window.__gd5_beepbox_length()"), normal_length / 1.5, places=3
         )
+
+        # The vendor synth pauses and wraps its playhead when it crosses the
+        # final bar. The bridge must still expose that as EOF for auto-advance.
+        context.eval(r"""
+            {
+            const endingSynth = window.__gd5_beepbox_synth;
+            endingSynth.playhead = endingSynth.song.barCount - 0.000001;
+            const left = new Float32Array(4096);
+            const right = new Float32Array(4096);
+            endingSynth.synthesize(left, right, 4096, true);
+            }
+        """)
+        self.assertFalse(context.eval("window.__gd5_beepbox_synth.playing"))
+        self.assertTrue(context.eval("window.__gd5_beepbox_finished()"))
+
         context.eval("window.__gd5_beepbox_stop()")
         self.assertEqual(context.eval("window.__gd5_beepbox_length()"), 0)
 
