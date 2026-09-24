@@ -135,7 +135,7 @@ CREDITS_DATA = [
                     "Added:\n"
                     "- Submarines\n"
                     "- Terrain art\n"
-                    "- Icons for: Credits, Load Game, Map Editor, New Game"
+                    "- Icons for Credits, Load Game, Map Editor, New Game"
                 ),
                 "align": "left",
                 "links": [{"text": "GitHub", "url": "https://github.com/litbrb"}]
@@ -143,7 +143,9 @@ CREDITS_DATA = [
             {
                 "link_text": "Pr1nted",
                 "info": (
-                    "Added conversion between OpenDoctrines and GD5"
+                    "Added:\n"
+                    "- Conversion between OpenDoctrines and GD5\n"
+                    "- OJH Benchmark"
                 ),
                 "align": "left",
                 "links": [{"text": "GitHub", "url": "https://github.com/Pr1nted"}]
