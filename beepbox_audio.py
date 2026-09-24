@@ -7,26 +7,30 @@ import json
 import os
 import queue
 import threading
+import time
 
-import numpy as np
 import data.constants as c
 
 
 SAMPLE_RATE = 44100
 # Rendering a 512-frame block made the producer cross the Python/JavaScript
-# boundary about 86 times per second. That overhead is especially costly for
-# dense songs and leaves too little time for the real-time audio callback.
-# A 2048-frame block does not increase audio-callback latency, while V8 spends
-# markedly less time holding the GIL per second.
+# boundary about 86 times per second. A 2048-frame synthesis step substantially
+# reduces that overhead while still yielding the GIL often enough for the game.
 CHUNK_FRAMES = 2048
-# Keep roughly three seconds of rendered PCM available. This absorbs ordinary
-# frame spikes and short V8 stalls without making the audio callback wait for
-# synthesis. The data is 16-bit stereo, so this is only about half a megabyte.
-BUFFERED_CHUNKS = 64
+# SDL_mixer plays these rolling half-second blocks entirely in native code. A
+# second block is queued behind the current one, so turn processing only has to
+# let the regular game loop run once per half second to keep playback seamless.
+# This is deliberately not a whole-song render: switching tracks still starts
+# after only the first small block has been synthesized.
+PLAYBACK_BLOCK_FRAMES = SAMPLE_RATE // 2
+# Keep about sixteen seconds of incrementally rendered PCM ready. The producer
+# can fill this while the player is issuing orders, giving unusually expensive
+# turn resolution plenty of headroom without delaying track changes or creating
+# a temporary WAV file.
+BUFFERED_BLOCKS = 32
 
-_POST_MIX_LOCK = threading.Lock()
-_POST_MIX_OWNER = None
-_POST_MIX_CALLBACK_INSTALLED = False
+_MIXER_STREAM_LOCK = threading.Lock()
+_MIXER_STREAM_OWNER = None
 
 
 def timeline_seconds_from_source(source_seconds, speed, timeline_mode):
@@ -41,19 +45,6 @@ def source_seconds_from_timeline(timeline_seconds, speed, timeline_mode):
     if timeline_mode == c.MUSIC_PITCH_TIMELINE_DYNAMIC:
         return timeline_seconds * speed
     return timeline_seconds
-
-
-def _mix_current_stream(post_mix, audio_buffer):
-    """Dispatch SDL's long-lived post-mix callback to the current song.
-
-    Replacing or unregistering a post-mix callback while SDL's audio thread is
-    inside it can wait on the audio lock. Track buttons run on the UI thread,
-    so that wait can freeze the whole game during rapid song changes. Keep one
-    callback for the mixer lifetime and swap only this Python reference.
-    """
-    stream = _POST_MIX_OWNER
-    if stream is not None:
-        stream._mix_post_mix(post_mix, audio_buffer)
 
 
 def is_beepbox_song(path):
@@ -124,7 +115,13 @@ def _drain(q):
 
 
 class BeepBoxStream:
-    """Synthesize BeepBox JSON on a worker and mix PCM into Pygame's stream."""
+    """Synthesize BeepBox JSON incrementally into native SDL_mixer blocks.
+
+    Synthesis remains on a worker, but the time-critical playback path contains
+    no Python callback. That distinction matters during large turns: a Pygame
+    post-mix callback has to reacquire the GIL for every audio buffer and can
+    therefore make fully buffered music stutter while game logic is busy.
+    """
 
     def __init__(self, song_path, volume=1.0, speed=1.0, start_time=0.0):
         import pygame
@@ -138,45 +135,44 @@ class BeepBoxStream:
                 "BeepBox playback needs a 44100 Hz, signed 16-bit stereo Pygame mixer"
             )
 
-        try:
-            from pygame._sdl2.mixer import set_post_mix
-        except ImportError as exc:
-            raise RuntimeError(
-                "BeepBox playback requires pygame-ce's post-mix audio callback"
-            ) from exc
-
-        self._set_post_mix = set_post_mix
-
         self.song_path = song_path
         self.volume = max(0.0, min(1.0, float(volume)))
         self.speed = max(0.25, min(2.0, float(speed)))
         self._position = max(0.0, float(start_time))
         self._length = 0.0
         self._generation = 0
-        self._ready = queue.Queue(maxsize=BUFFERED_CHUNKS)
+        self._ready = queue.Queue(maxsize=BUFFERED_BLOCKS)
         self._commands = queue.Queue(maxsize=1)
         self._stop_event = threading.Event()
         self._state_lock = threading.RLock()
         self._paused = False
-        self._active = None
-        self._active_offset = 0
         self._started = False
         self._mixed_frames = 0
         self._underrun_frames = 0
         self._worker_done_generation = -1
         self._worker_error = None
+        self._pygame = pygame
+        # Sound.play() uses only unreserved channels. Keep channel zero for the
+        # rolling music blocks so a UI click during first-block synthesis cannot
+        # occupy it and make the song queue behind an unrelated sound effect.
+        pygame.mixer.set_reserved(1)
+        self._channel = pygame.mixer.Channel(0)
+        self._current_sound = None
+        self._queued_sound = None
+        self._playback_origin_time = None
+        self._playback_origin_position = self._position
+        self._scheduled_end_position = self._position
+        self._last_update_time = time.monotonic()
         self._worker = threading.Thread(
             target=self._produce, name="BeepBoxSynth", daemon=True
         )
         self._request_render(self._position, self.speed)
-        global _POST_MIX_CALLBACK_INSTALLED, _POST_MIX_OWNER
-        with _POST_MIX_LOCK:
-            if _POST_MIX_OWNER is not None:
+        global _MIXER_STREAM_OWNER
+        with _MIXER_STREAM_LOCK:
+            if _MIXER_STREAM_OWNER is not None:
                 raise RuntimeError("A BeepBox audio stream is already active")
-            if not _POST_MIX_CALLBACK_INSTALLED:
-                self._set_post_mix(_mix_current_stream)
-                _POST_MIX_CALLBACK_INSTALLED = True
-            _POST_MIX_OWNER = self
+            self._channel.stop()
+            _MIXER_STREAM_OWNER = self
         self._worker.start()
 
     @property
@@ -186,6 +182,7 @@ class BeepBoxStream:
     @property
     def position(self):
         with self._state_lock:
+            self._refresh_position_locked(time.monotonic())
             return self._position
 
     @property
@@ -196,7 +193,7 @@ class BeepBoxStream:
     def finished(self):
         with self._state_lock:
             return (self._worker_done_generation == self._generation
-                    and self._active is None and self._ready.empty())
+                    and not self._channel.get_busy() and self._ready.empty())
 
     def _produce(self):
         try:
@@ -216,6 +213,9 @@ class BeepBoxStream:
                 generation = -1
                 cursor = 0.0
                 initialized = False
+                block_start = 0.0
+                block_frames = 0
+                block_pcm = bytearray()
 
                 while not self._stop_event.is_set():
                     try:
@@ -234,6 +234,9 @@ class BeepBoxStream:
                         initialized_song = json.loads(result)
                         self._length = initialized_song["length"]
                         self._worker_done_generation = -1
+                        block_start = cursor
+                        block_frames = 0
+                        block_pcm.clear()
                     except queue.Empty:
                         if generation < 0:
                             continue
@@ -249,87 +252,120 @@ class BeepBoxStream:
                     frames = min(CHUNK_FRAMES, max(1, int((self._length - cursor) * SAMPLE_RATE)))
                     encoded_pcm = context.eval(f"gd5Render({frames})")
                     pcm = base64.b64decode(encoded_pcm)
-                    chunk = (generation, cursor, frames, pcm)
-                    while not self._stop_event.is_set() and generation == self._generation:
-                        try:
-                            self._ready.put(chunk, timeout=0.05)
-                            cursor += frames / SAMPLE_RATE
-                            break
-                        except queue.Full:
-                            # Keep this rendered PCM while waiting for playback;
-                            # rendering it again wastes CPU and can starve playback.
-                            continue
+                    block_pcm.extend(pcm)
+                    block_frames += frames
+                    cursor += frames / SAMPLE_RATE
+
+                    if (block_frames >= PLAYBACK_BLOCK_FRAMES
+                            or cursor >= self._length):
+                        chunk = (generation, block_start, block_frames, bytes(block_pcm))
+                        while (not self._stop_event.is_set()
+                               and generation == self._generation):
+                            try:
+                                self._ready.put(chunk, timeout=0.05)
+                                block_start = cursor
+                                block_frames = 0
+                                block_pcm.clear()
+                                break
+                            except queue.Full:
+                                # Keep this rendered PCM while waiting for playback;
+                                # rendering it again wastes CPU and can starve playback.
+                                continue
         except Exception as exc:
             self._worker_error = exc
             self._worker_done_generation = self._generation
 
     def update(self):
-        """Keep the public stream interface aligned with the browser stream."""
-
-    def _mix_post_mix(self, _post_mix, audio_buffer):
-        """Add available BeepBox PCM to the live Pygame mixer output buffer."""
+        """Keep one native PCM block queued behind the block SDL is playing."""
         if self._stop_event.is_set():
             return
         try:
-            output = memoryview(audio_buffer).cast("h")
             with self._state_lock:
-                if self._paused or self._stop_event.is_set():
+                now = time.monotonic()
+                self._refresh_position_locked(now)
+
+                busy = self._channel.get_busy()
+                native_queue = self._channel.get_queue()
+                if busy and self._current_sound is None:
+                    # Channel.stop() is asynchronous with respect to SDL's
+                    # mixer thread. Immediately after a seek it can therefore
+                    # still report the discarded pre-seek block as busy. If a
+                    # fresh block is merely queued behind that stale status,
+                    # audio resumes but _play_chunk() never establishes the
+                    # new position clock, leaving the progress bar frozen.
+                    # Channel zero is reserved for this stream, so anything
+                    # playing here without _current_sound is stale and safe to
+                    # replace with the first block of the new generation.
+                    self._channel.stop()
+                    busy = False
+                    native_queue = None
+                if self._queued_sound is not None and native_queue is None:
+                    # SDL has promoted the queued Sound to the playing slot (or
+                    # both blocks ended before this frame got interpreter time).
+                    self._current_sound = self._queued_sound if busy else None
+                    self._queued_sound = None
+                elif not busy and native_queue is None:
+                    self._current_sound = None
+                    self._queued_sound = None
+
+                if self._paused:
+                    self._last_update_time = now
                     return
 
-                output_offset = 0
-                volume = self.volume
-                while output_offset < len(output):
-                    if self._active is None:
-                        self._active = self._next_current_chunk()
-                        self._active_offset = 0
-                    if self._active is None:
-                        break
+                # SDL can briefly report the current sound as finished before
+                # promoting its queued successor. Do not call play() in that
+                # window: it would discard the queued block and jump the song
+                # forward by half a second.
+                if not busy and native_queue is None:
+                    chunk = self._next_current_chunk()
+                    if chunk is not None:
+                        self._play_chunk(chunk, now)
+                        busy = True
+                    elif (self._started
+                          and self._worker_done_generation != self._generation):
+                        elapsed = max(0.0, now - self._last_update_time)
+                        self._underrun_frames += int(elapsed * SAMPLE_RATE)
+                        self._playback_origin_time = None
 
-                    _generation, start, frames, pcm = self._active
-                    source = memoryview(pcm).cast("h")
-                    available = len(source) - self._active_offset
-                    count = min(available, len(output) - output_offset)
-                    self._mix_pcm_samples(
-                        output, output_offset, pcm, self._active_offset,
-                        count, volume,
-                    )
+                if busy and self._channel.get_queue() is None:
+                    chunk = self._next_current_chunk()
+                    if chunk is not None:
+                        generation, start, frames, pcm = chunk
+                        sound = self._pygame.mixer.Sound(buffer=pcm)
+                        self._channel.queue(sound)
+                        self._queued_sound = sound
+                        self._scheduled_end_position = max(
+                            self._scheduled_end_position,
+                            start + frames / SAMPLE_RATE,
+                        )
 
-                    output_offset += count
-                    self._active_offset += count
-                    self._position = start + self._active_offset / (SAMPLE_RATE * 2)
-                    if self._active_offset >= len(source):
-                        self._active = None
-                        self._active_offset = 0
-
-                if output_offset:
-                    self._started = True
-                    self._mixed_frames += output_offset // 2
-                missing_samples = len(output) - output_offset
-                if (missing_samples and self._started
-                        and self._worker_done_generation != self._generation):
-                    self._underrun_frames += missing_samples // 2
+                self._last_update_time = now
         except Exception as exc:
-            # Pygame reports but suppresses exceptions from this audio-thread
-            # callback, so retain failures for the controller's normal fallback.
             self._worker_error = exc
 
-    @staticmethod
-    def _mix_pcm_samples(output, output_offset, pcm, source_offset, count, volume):
-        """Mix and saturate one interleaved PCM span without a Python sample loop."""
-        source = np.frombuffer(
-            pcm, dtype="<i2", count=count, offset=source_offset * 2,
+    def _play_chunk(self, chunk, now):
+        _generation, start, frames, pcm = chunk
+        sound = self._pygame.mixer.Sound(buffer=pcm)
+        self._channel.set_volume(self.volume)
+        self._channel.play(sound)
+        self._current_sound = sound
+        self._queued_sound = None
+        self._position = start
+        self._playback_origin_position = start
+        self._playback_origin_time = now
+        self._scheduled_end_position = start + frames / SAMPLE_RATE
+        self._started = True
+
+    def _refresh_position_locked(self, now):
+        if self._paused or self._playback_origin_time is None:
+            return
+        previous = self._position
+        self._position = min(
+            self._scheduled_end_position,
+            self._playback_origin_position + now - self._playback_origin_time,
         )
-        destination = np.frombuffer(
-            output, dtype="<i2", count=count, offset=output_offset * 2,
-        )
-        # Mix in int32 so adding two int16 samples cannot wrap before clipping.
-        mixed = destination.astype(np.int32)
-        if volume == 1.0:
-            mixed += source
-        else:
-            mixed += (source.astype(np.float32) * volume).astype(np.int32)
-        np.clip(mixed, -32768, 32767, out=mixed)
-        destination[:] = mixed
+        if self._position > previous:
+            self._mixed_frames += int((self._position - previous) * SAMPLE_RATE)
 
     def _next_current_chunk(self):
         while True:
@@ -342,20 +378,39 @@ class BeepBoxStream:
 
     def pause(self, paused):
         with self._state_lock:
-            self._paused = bool(paused)
+            paused = bool(paused)
+            if paused == self._paused:
+                return
+            now = time.monotonic()
+            self._refresh_position_locked(now)
+            self._paused = paused
+            if paused:
+                self._channel.pause()
+                self._playback_origin_time = None
+            else:
+                self._channel.unpause()
+                if self._channel.get_busy():
+                    self._playback_origin_position = self._position
+                    self._playback_origin_time = now
 
     def set_volume(self, volume):
         with self._state_lock:
             self.volume = max(0.0, min(1.0, float(volume)))
+            self._channel.set_volume(self.volume)
 
     def seek(self, position, speed=None):
         with self._state_lock:
             self._position = max(0.0, float(position))
             if speed is not None:
                 self.speed = max(0.25, min(2.0, float(speed)))
+            self._channel.stop()
             self._generation += 1
-            self._active = None
-            self._active_offset = 0
+            self._current_sound = None
+            self._queued_sound = None
+            self._playback_origin_position = self._position
+            self._playback_origin_time = None
+            self._scheduled_end_position = self._position
+            self._started = False
             _drain(self._ready)
             self._worker_done_generation = -1
             self._request_render(self._position, self.speed)
@@ -380,14 +435,14 @@ class BeepBoxStream:
         ``wait=True`` before shutting down the Pygame mixer.
         """
         self._stop_event.set()
-        global _POST_MIX_OWNER
-        with _POST_MIX_LOCK:
-            if _POST_MIX_OWNER is self:
-                _POST_MIX_OWNER = None
+        global _MIXER_STREAM_OWNER
+        with _MIXER_STREAM_LOCK:
+            if _MIXER_STREAM_OWNER is self:
+                self._channel.stop()
+                _MIXER_STREAM_OWNER = None
         # The worker is a daemon and checks _stop_event while rendering and
-        # while waiting for queue space. Joining here used to block a music
-        # button for up to half a second; more importantly, it could contend
-        # with SDL's active post-mix callback during rapid track changes.
+        # while waiting for queue space. Normal track changes must not wait for
+        # an in-progress V8 synthesis call before the next song can start.
         if wait and threading.current_thread() is not self._worker:
             self._worker.join()
 

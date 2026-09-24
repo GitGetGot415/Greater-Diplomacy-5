@@ -1,5 +1,4 @@
 import base64
-from array import array
 import json
 import os
 import subprocess
@@ -50,20 +49,6 @@ def _disable_windows_native_error_dialogs():
 
 
 class BeepBoxAudioTests(unittest.TestCase):
-    def test_pcm_mixing_is_saturated_and_uses_the_requested_volume(self):
-        output = array("h", [30000, -30000, 1000, -1000])
-        source = array("h", [10000, -10000, 10000, -10000]).tobytes()
-
-        BeepBoxStream._mix_pcm_samples(
-            memoryview(output), 0, source, 0, len(output), 1.0,
-        )
-        self.assertEqual(output.tolist(), [32767, -32768, 11000, -11000])
-
-        BeepBoxStream._mix_pcm_samples(
-            memoryview(output), 2, source, 2, 2, 0.5,
-        )
-        self.assertEqual(output.tolist(), [32767, -32768, 16000, -16000])
-
     def test_added_song_is_recognized_and_upstream_license_is_shipped(self):
         self.assertTrue(is_beepbox_song(SONG_PATH))
         self.assertTrue(has_beepbox_replacement(os.path.splitext(SONG_PATH)[0] + ".mp3"))
@@ -220,7 +205,7 @@ class BeepBoxAudioTests(unittest.TestCase):
         _native_audio_tests_available(),
         "set GD5_RUN_NATIVE_AUDIO_TESTS=1 to run native audio integration tests",
     )
-    def test_pygame_postmix_stream_supports_play_pause_and_seek_without_underruns(self):
+    def test_pygame_native_stream_supports_play_pause_and_seek_without_underruns(self):
         script = r"""
 import sys
 import time
@@ -241,6 +226,21 @@ try:
     assert stream._engine_name == "v8"
     assert stream.position >= 0.1
     normal_length = stream.length
+
+    # SDL may briefly keep reporting a stopped block as busy. Repeated seeks
+    # during playback must start both the new audio and its visual position
+    # clock instead of queuing behind that stale status.
+    for target in (20.0, 40.0, 60.0):
+        stream.seek(target)
+        seek_deadline = time.monotonic() + 3
+        while (stream.position < target + 0.1 and stream.error is None
+               and time.monotonic() < seek_deadline):
+            stream.update()
+            time.sleep(0.005)
+        assert stream.error is None, stream.error
+        assert stream.position >= target + 0.1, (
+            f"visual position froze at {stream.position} after seeking to {target}"
+        )
 
     stream.pause(True)
     paused_at = stream.position
@@ -264,8 +264,8 @@ try:
     assert stream.length < normal_length
     assert stream.position >= 12.1
 
-    # Pygame post-mix keeps the stream attached to its live device buffer.
-    # After the seek has settled, playback should not fall back to silence.
+    # Two native blocks should keep playing after the seek even when the game
+    # loop does not pump another block for more than one block duration.
     with stream._state_lock:
         underruns_before = stream._underrun_frames
     playback_deadline = time.monotonic() + 0.6
@@ -275,7 +275,7 @@ try:
     with stream._state_lock:
         underruns_after = stream._underrun_frames
     assert underruns_after == underruns_before, (
-        f"Pygame post-mix stream underruns: "
+        f"Pygame native stream underruns: "
         f"{underruns_after - underruns_before} frames"
     )
 finally:
@@ -317,6 +317,7 @@ try:
 
     deadline = time.monotonic() + 8
     while stream.position < 0.1 and stream.error is None and time.monotonic() < deadline:
+        stream.update()
         time.sleep(0.01)
     assert stream.error is None, stream.error
     assert stream.position >= 0.1
@@ -373,6 +374,7 @@ for song_path, target in ((sys.argv[1], 247.0), (sys.argv[2], 173.0)):
         assert stream.error is None, stream.error
         stream.pause(False)
         while stream.position < target + 0.2 and stream.error is None and time.monotonic() < deadline:
+            stream.update()
             time.sleep(0.01)
         assert stream.error is None, stream.error
         assert stream.position >= target + 0.2
@@ -401,6 +403,73 @@ pygame.mixer.quit()
             capture_output=True,
             text=True,
             timeout=30,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    @unittest.skipUnless(
+        _native_audio_tests_available(),
+        "set GD5_RUN_NATIVE_AUDIO_TESTS=1 to run native audio integration tests",
+    )
+    def test_native_stream_keeps_time_during_heavy_python_turn_work(self):
+        script = r"""
+import sys
+import threading
+import time
+from tests.test_beepbox_audio import _disable_windows_native_error_dialogs
+_disable_windows_native_error_dialogs()
+import pygame
+from beepbox_audio import BeepBoxStream
+
+pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=1024)
+stream = BeepBoxStream(sys.argv[1], volume=0.0)
+try:
+    deadline = time.monotonic() + 8
+    while stream.position < 0.2 and stream.error is None and time.monotonic() < deadline:
+        stream.update()
+        time.sleep(0.005)
+    assert stream.error is None, stream.error
+    assert stream.position >= 0.2
+
+    position_before = stream.position
+    started_at = time.monotonic()
+    load_ends_at = started_at + 3.0
+
+    def simulate_heavy_turn():
+        value = 1
+        while time.monotonic() < load_ends_at:
+            for _ in range(200000):
+                value = (value * 1664525 + 1013904223) & 0xffffffff
+
+    worker = threading.Thread(target=simulate_heavy_turn)
+    worker.start()
+    while worker.is_alive():
+        # The actual controller continues drawing its loading screen and calls
+        # update once per frame while turn resolution runs on its worker.
+        stream.update()
+        time.sleep(0.02)
+    worker.join()
+    stream.update()
+
+    wall_time = time.monotonic() - started_at
+    music_time = stream.position - position_before
+    assert stream.error is None, stream.error
+    assert stream._underrun_frames == 0, stream._underrun_frames
+    assert wall_time - 0.25 <= music_time <= wall_time + 0.25, (
+        f"music advanced {music_time:.3f}s during {wall_time:.3f}s of turn work"
+    )
+finally:
+    stream.stop(wait=True)
+    pygame.mixer.quit()
+"""
+        environment = os.environ.copy()
+        environment["SDL_AUDIODRIVER"] = "dummy"
+        result = subprocess.run(
+            [sys.executable, "-X", "faulthandler", "-c", script, SONG_PATH],
+            cwd=ROOT,
+            env=environment,
+            capture_output=True,
+            text=True,
+            timeout=15,
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
