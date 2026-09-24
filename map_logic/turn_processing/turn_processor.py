@@ -115,19 +115,22 @@ def snapshot_history(map_screen):
     if not hasattr(map_screen, 'history'):
         map_screen.history = {}
     turn_idx = str(map_screen.time_manager.total_turns)
-    
-    # --- Manual copy of nation_data (avoids slow copy.deepcopy) ---
-    nation_snap = {}
-    for nation, ndata in map_screen.nation_data.items():
-        nd = {}
-        for k, v in ndata.items():
-            if isinstance(v, list):
-                nd[k] = list(v)           # shallow list copy (items are strings/ints)
-            elif isinstance(v, dict):
-                nd[k] = dict(v)           # shallow dict copy
-            else:
-                nd[k] = v                 # immutable scalar
-        nation_snap[nation] = nd
+
+    # History is JSON data, so recursively copy its lists and dictionaries.
+    # A shallow copy is not sufficient: province resources are dictionaries,
+    # and nation data can contain lists of dictionaries (for example queued
+    # deals).  Sharing either with live state lets later turn processing rewrite
+    # an older history entry.
+    def copy_history_value(value):
+        if isinstance(value, dict):
+            return {key: copy_history_value(item) for key, item in value.items()}
+        if isinstance(value, list):
+            return [copy_history_value(item) for item in value]
+        if isinstance(value, tuple):
+            return tuple(copy_history_value(item) for item in value)
+        return value
+
+    nation_snap = copy_history_value(map_screen.nation_data)
     
     snapshot = {
         "date_str": map_screen.time_manager.get_date_string(),
@@ -138,21 +141,12 @@ def snapshot_history(map_screen):
         "provinces": {}
     }
     
-    # --- Manual copy of province data (avoids copy.deepcopy per-province) ---
-    _copy_list = lambda lst: [dict(item) if isinstance(item, dict) else item for item in lst] if lst else []
-    
+    # Use the shared save serializer so history and normal saves agree on the
+    # province schema.  In particular, resources are a {name: amount} mapping,
+    # not a list of resource names.
     for data in map_screen.map_data.values():
-        snapshot["provinces"][data["json_key"]] = {
-            "owner": data["owner"],
-            "cores": list(data.get("cores", [])),
-            "is_coastal": data.get("is_coastal", False),
-            "units": _copy_list(data.get("units", [])),
-            "building_queue": _copy_list(data.get("building_queue", [])),
-            "unit_queue": _copy_list(data.get("unit_queue", [])),
-            "orders": _copy_list(data.get("orders", [])),
-            "resources": _copy_list(data.get("resources", [])),
-            "buildings": _copy_list(data.get("buildings", []))
-        }
+        saved_province = queries.build_saved_province_data(data)
+        snapshot["provinces"][data["json_key"]] = copy_history_value(saved_province)
     map_screen.history[turn_idx] = snapshot
 
 async def resolve_turn_logic(map_screen): # Renamed from resolve_turn

@@ -2857,7 +2857,7 @@ def build_saved_province_data(data):
         "building_queue": data.get("building_queue", []),
         "unit_queue": data.get("unit_queue", []),
         "orders": data.get("orders", []),
-        "resources": data.get("resources", []),
+        "resources": data.get("resources", {}),
         "buildings": data.get("buildings", []),
     }
 
@@ -2877,10 +2877,25 @@ def build_map_data_save(map_screen):
 
 def overlay_saved_province_data(map_data, saved_provinces):
     """Apply legacy or history province overlays to their map-data records."""
+    malformed_resources = 0
     for json_key, saved_province in saved_provinces.items():
         province = map_data.get(json_key)
         if province is not None and saved_province:
-            province.update(saved_province)
+            if not isinstance(saved_province, dict):
+                continue
+            # A pre-fix history snapshot could contain resource names as a
+            # list: snapshot_history used a list copier on the resources dict.
+            # Do not replace a valid current resource mapping with that known
+            # malformed value.  There is no amount data to recover from it,
+            # but preserving the current mapping avoids silent resource loss.
+            overlay = copy.deepcopy(saved_province)
+            resources = overlay.get("resources")
+            if "resources" in overlay and not isinstance(resources, dict):
+                malformed_resources += 1
+                del overlay["resources"]
+            province.update(overlay)
+    if malformed_resources:
+        print(f"[WARN] Ignored malformed saved resources in {malformed_resources} province overlay(s).")
 
 
 def map_data_with_saved_provinces(map_data, saved_provinces):

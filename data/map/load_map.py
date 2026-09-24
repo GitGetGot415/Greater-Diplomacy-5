@@ -125,9 +125,16 @@ def _apply_history_snapshot(save_meta, history, history_turn):
         return False
 
     snap = history[turn_key]
-    save_meta["nation_data"] = snap.get("nation_data", save_meta.get("nation_data", {}))
-    if "provinces" in snap:
-        save_meta["provinces"] = snap["provinces"]
+    if not isinstance(snap, dict):
+        return False
+
+    # Keep the selected turn immutable.  Loading a snapshot adds defaults and
+    # may later resolve a turn, so sharing these objects with history would
+    # silently rewrite the timeline that the player selected.
+    if isinstance(snap.get("nation_data"), dict):
+        save_meta["nation_data"] = copy.deepcopy(snap["nation_data"])
+    if isinstance(snap.get("provinces"), dict):
+        save_meta["provinces"] = copy.deepcopy(snap["provinces"])
 
     if "date" not in save_meta:
         save_meta["date"] = {}

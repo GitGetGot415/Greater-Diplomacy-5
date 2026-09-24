@@ -86,14 +86,19 @@ def read(load_path):
     plain_path = os.path.join(load_path, PLAIN_NAME)
 
     for path, opener in ((gz_path, lambda p: gzip.open(p, "rt", encoding="utf-8")),
-                         (plain_path, lambda p: open(p, "r"))):
+                         (plain_path, lambda p: open(p, "r", encoding="utf-8"))):
         if not os.path.exists(path):
             continue
         try:
             with opener(path) as f:
-                return json.load(f)
-        except Exception as e:
+                history = json.load(f)
+            if not isinstance(history, dict):
+                raise ValueError("history root must be an object")
+            return history
+        except (OSError, EOFError, UnicodeError, ValueError) as e:
             print(f"Error loading {os.path.basename(path)}: {e}")
-            return {}
+            # A partially written compressed file should not hide a valid
+            # legacy history.json beside it.  Try the next supported format.
+            continue
 
     return {}

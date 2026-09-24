@@ -7,6 +7,8 @@ fuel deficit should do something
 could you make it such so that the actual json for saves / scenarios is human readable so if anything changes there i can easily see what changed
 the exported zip file is what i'm most concerned about, so as long as that doesn't affect the export size too much then that's fine
 
+exodus: SONGS ARE LAGGY WHEN PROCESSING TURNS
+
 ## Random thoughts with no real goal
 
 - Is saving during tournament move entry allowed?

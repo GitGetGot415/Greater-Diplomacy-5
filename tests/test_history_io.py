@@ -72,6 +72,20 @@ class HistoryIOTests(unittest.TestCase):
             f.write("{not json")
         self.assertEqual(history_io.read(self.dir), {})
 
+    def test_a_corrupt_compressed_history_falls_back_to_a_valid_legacy_file(self):
+        with gzip.open(os.path.join(self.dir, history_io.GZ_NAME), "wt") as f:
+            f.write("{not json")
+        with open(os.path.join(self.dir, history_io.PLAIN_NAME), "w", encoding="utf-8") as f:
+            json.dump(sample_history(), f)
+
+        self.assertEqual(history_io.read(self.dir), sample_history())
+
+    def test_a_non_object_history_payload_is_treated_as_unavailable(self):
+        with open(os.path.join(self.dir, history_io.PLAIN_NAME), "w", encoding="utf-8") as f:
+            json.dump(["not", "a", "timeline"], f)
+
+        self.assertEqual(history_io.read(self.dir), {})
+
     def test_it_actually_compresses(self):
         """A guard on the gzip level: repetitive snapshots should shrink a lot."""
         repetitive = {str(t): {"date_str": "d", "nation_data": {f"N{i}": {"materials": 5, "fuel": 5}
