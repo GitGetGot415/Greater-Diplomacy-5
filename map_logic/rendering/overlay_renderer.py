@@ -64,11 +64,16 @@ class _UnitRenderIndex:
         if not hasattr(cam, "pos"):
             candidates = []
             for province in self.occupied_provinces:
-                sx, sy = queries.world_to_screen(
-                    province["center"], map_screen)
+                offsets = ([0, -map_screen.map_w, map_screen.map_w]
+                           if map_screen.loop_map and map_screen.map_w else [0])
+                positions = [queries.world_to_screen(
+                    province["center"], map_screen, offset)
+                    for offset in offsets]
+                sx, sy = positions[0]
                 sx, sy = int(sx), int(sy)
-                if (-CULL_MARGIN < sx < surface.get_width() + CULL_MARGIN
-                        and -CULL_MARGIN < sy < surface.get_height() + CULL_MARGIN):
+                if any(-CULL_MARGIN < int(copy_sx) < surface.get_width() + CULL_MARGIN
+                       and -CULL_MARGIN < int(copy_sy) < surface.get_height() + CULL_MARGIN
+                       for copy_sx, copy_sy in positions):
                     candidates.append((province, float(sx), float(sy)))
             return tuple(candidates)
 
@@ -82,6 +87,20 @@ class _UnitRenderIndex:
             & (screen_y > -CULL_MARGIN)
             & (screen_y < surface.get_height() + CULL_MARGIN)
         )
+        if map_screen.loop_map and map_screen.map_w:
+            # The overlay later draws the copies at x +/- map_w. Include a
+            # province when any copy is on screen, especially on narrow looped
+            # maps where the viewport can straddle the seam.
+            wrapped_screen_x = map_screen.map_w * cam.zoom
+            for offset_x in (-wrapped_screen_x, wrapped_screen_x):
+                copy_x = screen_x + offset_x
+                visible |= (
+                    (copy_x > -CULL_MARGIN)
+                    & (copy_x < surface.get_width() + CULL_MARGIN)
+                ) & (
+                    (screen_y > -CULL_MARGIN)
+                    & (screen_y < surface.get_height() + CULL_MARGIN)
+                )
         indexes = np.flatnonzero(visible)
         return tuple(
             (self.occupied_provinces[int(index)],
