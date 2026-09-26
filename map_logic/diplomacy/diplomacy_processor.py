@@ -5,7 +5,7 @@ from data import queries
 # Import from our newly created submodules
 from map_logic.diplomacy.diplomacy_events import log_global_event
 from map_logic.diplomacy import (
-    faction_leadership, guarantees, military_attaches, peace_scope, ratification, restrictions, treaty_effects, volunteers, war_actions, war_calls
+    faction_actions, faction_leadership, guarantees, military_attaches, peace_scope, ratification, restrictions, treaty_effects, volunteers, war_actions, war_calls
 )
 from map_logic.diplomacy.diplomacy_messages import (
     get_pending_action, send_message, send_treaty_message, forward_message,
@@ -1259,6 +1259,10 @@ def _process_pass1_immediate_actions(map_screen):
                                          f"FACTION LEADERSHIP: {country_name} has taken "
                                          f"command of {fac} from {old}.")
                         faction_leadership.transfer(map_screen.nation_data, old, country_name)
+                        if (country_name not in map_screen.active_players
+                                and country_name != map_screen.player_country):
+                            faction_actions.rename_generic_faction_for_leader(
+                                map_screen.nation_data, country_name, fac)
                         for m in members:
                             if m != country_name:
                                 send_treaty_message(map_screen, country_name, m, action,

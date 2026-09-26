@@ -50,6 +50,22 @@ def rename_faction(nation_data, leader, old_name, new_name):
     return True
 
 
+def rename_generic_faction_for_leader(nation_data, leader, faction):
+    """Rename a generic country-named pact after its new leader.
+
+    Factions created by the game use ``The <country name> Pact``.  Preserve
+    custom names on leadership changes, and use :func:`rename_faction` so the
+    roster and any pre-war map snapshot move together.
+    """
+    if (not isinstance(faction, str) or not faction.startswith("The ")
+            or not faction.endswith(" Pact") or not faction[4:-5].strip()):
+        return False
+
+    leader_data = nation_data.get(leader, {})
+    leader_name = leader_data.get("name", leader)
+    return rename_faction(nation_data, leader, faction, f"The {leader_name} Pact")
+
+
 def settle_with_faction(nation_data, joiner, fac):
     """Makes peace with everyone already in `fac` and drops passage rights.
 

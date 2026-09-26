@@ -67,6 +67,11 @@ power is military strength plus one hundredth of economic power, shared with
 the peace-table strength calculation. An exact tie is resolved randomly among
 the strongest claimants.
 
+When an AI member takes faction leadership, a generic name in the form "The
+country name Pact" changes to use the new leader's country name. Custom faction
+names are kept as they are. Player-led leadership changes do not rename the
+faction.
+
 declarations requiring response:
 turn 0: msg1 is written
 turn 0.5: msg1 is sent
