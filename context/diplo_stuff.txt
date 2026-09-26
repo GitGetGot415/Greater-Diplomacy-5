@@ -98,6 +98,11 @@ another example, [A] inviting [B] to their faction, and [B] requesting to join t
 however, do keep in mind that things like [A] requesting millitary access from [B] and [B] requesting millitary access from [A] don't lead to the same outcome because millitary access is a one way thing
 it's possible for a country to let another country into it's borders but also not be allowed into the other countries borders
 
+Puppet hierarchies must remain acyclic. The map editor rejects an assignment
+that would make a country its own ancestor. Shared puppet-state propagation
+visits each country at most once, so malformed older scenario data cannot
+recurse forever.
+
 Government in exile:
 When a faction member loses its last province, it remains in the faction as a
 government in exile. It keeps its units, faction wars, diplomacy, faction

@@ -23,6 +23,7 @@ from map_logic.diplomacy.war_actions import (
 from map_logic.diplomacy.puppet_actions import (
     break_puppet_link,
     apply_to_puppets_recursively,
+    would_create_puppet_cycle,
     pull_master_into_war,
     assign_puppet,
     pull_puppets_into_war,

@@ -8,7 +8,7 @@ from ui_elements import Button, TextField, make_back_button
 from ui.scroll_panes import ScrollPanes
 from ui.table_screen import truncate
 from map_logic.rendering.font_manager import fonts
-from map_logic.diplomacy.diplomacy_agreements import assign_puppet
+from map_logic.diplomacy.diplomacy_agreements import assign_puppet, would_create_puppet_cycle
 from map_logic.diplomacy import guarantees, military_attaches
 
 # ==========================================
@@ -162,6 +162,14 @@ class Diplomacy_Editor_Screen(ScrollPanes, MapOverlayScreen):
         nation_data = self.map_screen.nation_data
         target = self.target
         data = nation_data.get(target, {})
+
+        if (self.master and self.master != "None" and
+                would_create_puppet_cycle(self.master, target, nation_data)):
+            target_name = queries.get_country_display_name(target, nation_data)
+            master_name = queries.get_country_display_name(self.master, nation_data)
+            self.map_screen.show_feedback(
+                f"Cannot make {target_name} a puppet of {master_name}: that would create a puppet cycle.")
+            return
 
         # 1. Wars, kept bidirectional -- drop target from everyone, then re-add the picks.
         for name in self.countries:

@@ -22,10 +22,41 @@ def break_puppet_link(nation_data, master, puppet):
             del nation_data[puppet]["is_created_integrated_puppet"]
 
 def apply_to_puppets_recursively(master, nation_data, action_func):
-    """Generic helper to recursively apply diplomatic states down a puppet hierarchy."""
-    for puppet in nation_data.get(master, {}).get("puppets", []):
+    """Apply a diplomatic state down a puppet tree, visiting each country once.
+
+    The editor and old saves can contain malformed cycles. An iterative walk
+    prevents both repeated visits and recursion-depth crashes on long trees.
+    """
+    visited = {master}
+    pending = list(reversed(nation_data.get(master, {}).get("puppets", [])))
+    while pending:
+        puppet = pending.pop()
+        if puppet in visited:
+            continue
+        visited.add(puppet)
         action_func(puppet)
-        apply_to_puppets_recursively(puppet, nation_data, action_func)
+        children = nation_data.get(puppet, {}).get("puppets", [])
+        pending.extend(reversed(children))
+
+
+def would_create_puppet_cycle(master, puppet, nation_data):
+    """Return whether assigning ``puppet`` beneath ``master`` creates a cycle."""
+    if master == puppet:
+        return True
+
+    # Check the child links used by hierarchy propagation. The visited set
+    # also makes this safe when the existing hierarchy is already malformed.
+    visited = set()
+    pending = [puppet]
+    while pending:
+        country = pending.pop()
+        if country == master:
+            return True
+        if country in visited:
+            continue
+        visited.add(country)
+        pending.extend(nation_data.get(country, {}).get("puppets", []))
+    return False
 
 def pull_master_into_war(puppet, target, map_data, nation_data):
     master = nation_data.get(puppet, {}).get("master", "")
@@ -41,6 +72,9 @@ def pull_master_into_war(puppet, target, map_data, nation_data):
         log_global_event(nation_data, f"{master} has joined the war on the side of {puppet}!")
 
 def assign_puppet(map_data, nation_data, master, puppet, puppet_type=c.PUPPET_TYPE_AUTONOMOUS):
+    if would_create_puppet_cycle(master, puppet, nation_data):
+        return False
+
     p_data = nation_data.get(puppet, {})
     m_data = nation_data.get(master, {})
 
@@ -86,6 +120,7 @@ def assign_puppet(map_data, nation_data, master, puppet, puppet_type=c.PUPPET_TY
 
     # Puppet and master already have free passage, so any grant or request is moot.
     sever_military_access(nation_data, master, puppet)
+    return True
 
 def pull_puppets_into_war(master, target, map_data, nation_data):
     def _add_war(p):
