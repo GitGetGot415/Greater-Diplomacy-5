@@ -53,6 +53,12 @@ MAYBE. MAYBE is reserved for human-controlled targets, whose response cannot
 be forecast. The indicator is informational; it neither changes eligibility
 nor queues the proposal.
 
+When scripted events are enabled, outgoing diplomacy indicators and the deal
+acceptance forecast also check the target's matching scripted Accept/Reject
+actions and their conditions.
+Randomly conditioned responses show as uncertain rather than consuming game
+randomness during UI rendering.
+
 Faction members may challenge leadership after outweighing the current leader
 by the required margin for six consecutive turns. If several qualified members
 submit leadership claims that resolve in the same turn, the member with the

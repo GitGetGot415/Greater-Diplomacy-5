@@ -606,9 +606,9 @@ def bilateral_response_indicator(map_screen, target, action):
     """Return the response icon an outgoing bilateral proposal should show.
 
     This is deliberately a view of ``evaluate_verdict`` rather than a second
-    set of UI rules. The result therefore remains in step with the decision
-    the target AI receives at turn processing time. A country controlled by a
-    player is inherently unpredictable, including in multiplayer/hotseat.
+    set of AI rules. Matching scripted responses take precedence, as they do
+    when the event runs. A country controlled by a player is inherently
+    unpredictable, including in multiplayer/hotseat.
     """
     human_players = set(getattr(map_screen, "active_players", ()) or ())
     if target in human_players:
@@ -616,12 +616,40 @@ def bilateral_response_indicator(map_screen, target, action):
     if target not in map_screen.nation_data:
         return None
 
+    scenario_settings = getattr(map_screen, "scenario_settings", None)
+    scripted_events_enabled = queries.get_scenario_flag(
+        "use_scripted_events", c.DEFAULT_USE_SCRIPTED_EVENTS,
+        scenario_settings)
+    if (map_screen.nation_data[target].get("scripted_events")
+            and scripted_events_enabled):
+        turns = queries.get_total_turns(map_screen.time_manager)
+        events = map_screen.nation_data[target]["scripted_events"]
+        fired = tuple(map_screen.nation_data[target].get("fired_scripted_events", []))
+        variables = tuple((item["name"], item["type"], item["value"])
+                          for item in getattr(map_screen, "script_variables", []))
+        cache_stamp = (getattr(map_screen, "_presentation_cache_revision", None), turns,
+                       tuple(id(event) for event in events), fired, variables,
+                       scripted_events_enabled)
+        cache = getattr(map_screen, "_scripted_response_indicator_cache", None)
+        if cache is None or cache.get("stamp") != cache_stamp:
+            cache = {"stamp": cache_stamp, "responses": {}}
+            map_screen._scripted_response_indicator_cache = cache
+
+        cache_key = (target, map_screen.player_country, action)
+        if cache_key not in cache["responses"]:
+            from map_logic.ai.ai_diplomacy import scripted_event_response_preview
+
+            cache["responses"][cache_key] = scripted_event_response_preview(
+                map_screen, target, map_screen.player_country, action)
+        scripted_response = cache["responses"][cache_key]
+        if scripted_response is not None:
+            return scripted_response
+
     from map_logic.ai.ai_evaluation import evaluate_verdict
 
     verdict = evaluate_verdict(map_screen.nation_data, map_screen.map_data,
                                target, map_screen.player_country, action,
-                               scenario_settings=getattr(
-                                   map_screen, "scenario_settings", None))
+                               scenario_settings=scenario_settings)
     return "YES" if verdict.accepted else "NO"
 
 

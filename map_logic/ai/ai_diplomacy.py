@@ -1270,22 +1270,95 @@ def _run_basic_proactive_ai(map_screen):
         map_screen.proactive_tasks_completed += 1
         map_screen.loading_status_text = f"Evaluating AI Grand Strategy ({map_screen.proactive_tasks_completed}/{map_screen.proactive_tasks_total})..."
 
-def process_scripted_events(map_screen):
+_SCRIPTED_RESPONSE_ACTIONS = {
+    "Accept Military Attaché": ("SEND_MILITARY_ATTACHE", diplomacy_messages.RESPONSE_ACCEPT),
+    "Reject Military Attaché": ("SEND_MILITARY_ATTACHE", diplomacy_messages.RESPONSE_REJECT),
+    "Accept Military Access": ("REQ_MILITARY_ACCESS", diplomacy_messages.RESPONSE_ACCEPT),
+    "Reject Military Access": ("REQ_MILITARY_ACCESS", diplomacy_messages.RESPONSE_REJECT),
+    "Accept Volunteer Divisions": ("SEND_VOLUNTEERS", diplomacy_messages.RESPONSE_ACCEPT),
+    "Reject Volunteer Divisions": ("SEND_VOLUNTEERS", diplomacy_messages.RESPONSE_REJECT),
+}
+
+
+def _scripted_event_response(actions, sender_nation, request_action):
+    """Return the last scripted answer matching this hypothetical request."""
+    response = None
+    matched = False
+    for action in actions:
+        action_type = action.get("type")
+        if action_type in ("Accept Proposal", "Reject Proposal"):
+            expected_action = request_action
+            verdict = (diplomacy_messages.RESPONSE_ACCEPT
+                       if action_type == "Accept Proposal"
+                       else diplomacy_messages.RESPONSE_REJECT)
+            if request_action not in c.BILATERAL_ACTIONS:
+                continue
+        else:
+            expected_action, verdict = _SCRIPTED_RESPONSE_ACTIONS.get(
+                action_type, (None, None))
+
+        if expected_action != request_action:
+            continue
+        targets = [target.strip() for target in
+                   str(action.get("target", "None")).split(",") if target.strip()]
+        if sender_nation in targets:
+            response = verdict
+            matched = True
+    return matched, response
+
+
+def scripted_event_response_preview(map_screen, nation, sender, action):
+    """Predict a scripted response without mutating state or consuming RNG."""
+    return process_scripted_events(
+        map_screen, preview_request=(nation, sender, action))
+
+
+def _chain_condition_result(previous, current, chain):
+    """Combine conditions with three-valued support for random previews."""
+    if chain in ("AND", "NAND"):
+        if previous is False or current is False:
+            result = False
+        elif previous is True and current is True:
+            result = True
+        else:
+            result = None
+        return not result if chain == "NAND" and result is not None else result
+    if chain in ("OR", "NOR"):
+        if previous is True or current is True:
+            result = True
+        elif previous is False and current is False:
+            result = False
+        else:
+            result = None
+        return not result if chain == "NOR" and result is not None else result
+    if chain == "XOR":
+        return (previous ^ current
+                if previous is not None and current is not None else None)
+    return previous
+
+
+def process_scripted_events(map_screen, preview_request=None):
     """Processes scenario-specific scripted events for AI nations."""
     if not queries.get_scenario_flag("use_scripted_events", c.DEFAULT_USE_SCRIPTED_EVENTS, map_screen.scenario_settings):
-        return
+        return None
         
     active_nations = set(queries.get_living_nations(map_screen.map_data))
     human_players = map_screen.active_players
     current_turn = queries.get_total_turns(map_screen.time_manager)
+    preview_response = None
+    preview_unknown = False
     
     for nation_name in active_nations:
+        if preview_request is not None and nation_name != preview_request[0]:
+            continue
         data = map_screen.nation_data.get(nation_name, {})
         events = data.get("scripted_events", [])
         if not events:
             continue
             
-        fired_events = data.setdefault("fired_scripted_events", [])
+        fired_events = (data.get("fired_scripted_events", [])
+                        if preview_request is not None
+                        else data.setdefault("fired_scripted_events", []))
         
         for i, evt in enumerate(events):
             if i in fired_events and evt.get("fire_once", True):
@@ -1300,15 +1373,22 @@ def process_scripted_events(map_screen):
             
             # Backwards compatibility parser
             if "conditions" not in evt:
-                evt["conditions"] = [{
+                legacy_conditions = [{
                     "type": evt.get("condition_type", "Turn Number"),
                     "operator": "==",
                     "value": evt.get("condition_val", ""),
                     "chain": "AND"
                 }]
-                evt["fire_once"] = True
+                if preview_request is None:
+                    evt["conditions"] = legacy_conditions
+                    evt["fire_once"] = True
+                    evt_conditions = evt["conditions"]
+                else:
+                    evt_conditions = legacy_conditions
+            else:
+                evt_conditions = evt["conditions"]
 
-            conditions = evt.get("conditions", [])
+            conditions = evt_conditions
             if not conditions:
                 continue
 
@@ -1344,6 +1424,13 @@ def process_scripted_events(map_screen):
                 
                 # Random Generation
                 elif c_type == "Random (0.00 - 1.00)":
+                    if preview_request is not None:
+                        res = None
+                        if c_idx == 0:
+                            overall_met = res
+                        else:
+                            overall_met = _chain_condition_result(overall_met, res, chain)
+                        continue
                     rand_val = random.random()
                     try:
                         if "BETWEEN" in c_op:
@@ -1479,8 +1566,12 @@ def process_scripted_events(map_screen):
                 elif c_type == "False":
                     res = False
                 elif c_type == "Received Action":
-                    pend_act, pend_turns = queries.get_diplomatic_status(c_val, nation_name, map_screen.nation_data)
-                    res = (pend_act == c_op and pend_turns > 0)
+                    if (preview_request is not None
+                            and c_val == preview_request[1]):
+                        res = c_op == preview_request[2]
+                    else:
+                        pend_act, pend_turns = queries.get_diplomatic_status(c_val, nation_name, map_screen.nation_data)
+                        res = (pend_act == c_op and pend_turns > 0)
                 elif c_type == "Occupying All Cores Of":
                     res = queries.is_occupying_all_cores(nation_name, c_val, map_screen.map_data)
                 elif c_type == "Occupying Tile":
@@ -1516,6 +1607,8 @@ def process_scripted_events(map_screen):
                     
                 if c_idx == 0:
                     overall_met = res
+                elif preview_request is not None:
+                    overall_met = _chain_condition_result(overall_met, res, chain)
                 else:
                     if chain == "AND": overall_met = overall_met and res
                     elif chain == "OR": overall_met = overall_met or res
@@ -1523,6 +1616,21 @@ def process_scripted_events(map_screen):
                     elif chain == "NOR": overall_met = not (overall_met or res)
                     elif chain == "NAND": overall_met = not (overall_met and res)
                     
+            if preview_request is not None:
+                actions = evt.get("actions", [])
+                if not actions and "action_type" in evt:
+                    actions = [{"type": evt["action_type"],
+                                "target": evt.get("action_target", "None")}]
+                matched, response = _scripted_event_response(
+                    actions, preview_request[1], preview_request[2])
+                if matched and overall_met is None:
+                    preview_response = None
+                    preview_unknown = True
+                elif matched and overall_met:
+                    preview_response = response
+                    preview_unknown = False
+                continue
+
             if overall_met:
                 actions = evt.get("actions", [])
                 if not actions and "action_type" in evt:
@@ -1681,16 +1789,8 @@ def process_scripted_events(map_screen):
                         # a glance, while retaining the generic accept/reject
                         # actions for old scenarios and deliberately broad
                         # event logic.  They can never answer the wrong offer.
-                        response_actions = {
-                            "Accept Military Attaché": ("SEND_MILITARY_ATTACHE", diplomacy_messages.RESPONSE_ACCEPT),
-                            "Reject Military Attaché": ("SEND_MILITARY_ATTACHE", diplomacy_messages.RESPONSE_REJECT),
-                            "Accept Military Access": ("REQ_MILITARY_ACCESS", diplomacy_messages.RESPONSE_ACCEPT),
-                            "Reject Military Access": ("REQ_MILITARY_ACCESS", diplomacy_messages.RESPONSE_REJECT),
-                            "Accept Volunteer Divisions": ("SEND_VOLUNTEERS", diplomacy_messages.RESPONSE_ACCEPT),
-                            "Reject Volunteer Divisions": ("SEND_VOLUNTEERS", diplomacy_messages.RESPONSE_REJECT),
-                        }
-                        if a_type in response_actions:
-                            expected_action, verdict = response_actions[a_type]
+                        if a_type in _SCRIPTED_RESPONSE_ACTIONS:
+                            expected_action, verdict = _SCRIPTED_RESPONSE_ACTIONS[a_type]
                             pend_act, pend_turns = queries.get_diplomatic_status(
                                 a_target, nation_name, map_screen.nation_data)
                             if pend_turns > 0 and pend_act == expected_action:
@@ -1791,3 +1891,12 @@ def process_scripted_events(map_screen):
                             
                 if evt.get("fire_once", True) and i not in fired_events:
                     fired_events.append(i)
+
+    if preview_request is not None:
+        if preview_unknown:
+            return "MAYBE"
+        if preview_response == diplomacy_messages.RESPONSE_ACCEPT:
+            return "YES"
+        if preview_response == diplomacy_messages.RESPONSE_REJECT:
+            return "NO"
+        return None

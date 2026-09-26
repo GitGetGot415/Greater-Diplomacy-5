@@ -875,6 +875,29 @@ class Deal_Screen(MapOverlayScreen):
             self.verdict_color = c.UI_TEXT_MUTED
             return
 
+        if (self.map_screen.nation_data[self.target_nation].get("scripted_events")
+                and queries.get_scenario_flag(
+                    "use_scripted_events", c.DEFAULT_USE_SCRIPTED_EVENTS,
+                    self.map_screen.scenario_settings)):
+            from map_logic.ai.ai_diplomacy import scripted_event_response_preview
+
+            action = "PEACE_TREATY" if self.is_peace else "TRADE"
+            scripted_response = scripted_event_response_preview(
+                self.map_screen, self.target_nation, self.player, action)
+            if scripted_response is not None:
+                if not self.is_peace:
+                    self.balance_reading = self._balance_reading(agreement)
+                if scripted_response == "MAYBE":
+                    self.verdict_text = "A random scripted event may decide their response."
+                    self.verdict_color = c.UI_TEXT_MUTED
+                else:
+                    self.verdict_accepted = (scripted_response == "YES")
+                    response = "accept" if self.verdict_accepted else "reject"
+                    self.verdict_text = f"A scripted event will {response} this proposal."
+                    self.verdict_color = (c.COLOR_SUCCESS_GREEN if self.verdict_accepted
+                                          else (255, 110, 110))
+                return
+
         # The same call the engine makes when the answer comes back, which is
         # the whole point -- two implementations is how the old screen ended up
         # predicting the opposite of what happened.
