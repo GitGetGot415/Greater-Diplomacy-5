@@ -1506,6 +1506,10 @@ def process_scripted_events(map_screen):
                 elif c_type == "Is In Faction":
                     target_check = c_val if c_val else nation_name
                     res = map_screen.nation_data.get(target_check, {}).get("faction", "") != ""
+                elif c_type == "Not In Faction":
+                    target_check = c_val if c_val else nation_name
+                    res = (target_check in active_nations and
+                           map_screen.nation_data.get(target_check, {}).get("faction", "") == "")
                 elif c_type == "Is Faction Leader":
                     target_check = c_val if c_val else nation_name
                     res = queries.is_faction_leader(target_check, map_screen.nation_data)

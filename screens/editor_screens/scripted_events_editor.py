@@ -28,7 +28,7 @@ from ui_elements import Button, TextField, make_back_button
 
 COND_TYPES = [
     "Turn Number", "Variable", "At War With", "Is At War", "In Faction With",
-    "Not In Faction With", "Is In Faction", "Is Faction Leader", "Has Truce With",
+    "Not In Faction With", "Is In Faction", "Not In Faction", "Is Faction Leader", "Has Truce With",
     "At Peace With", "Is At Peace", "Random (0.00 - 1.00)", "Received Action",
     "Country Exists", "Country Doesn't Exist", "Occupying Core Of",
     "Occupying All Cores Of", "Occupying Claims Of", "Occupying All Claims",
@@ -62,7 +62,7 @@ TARGET_LIST_TYPES = ["At War With", "In Faction With", "Not In Faction With", "H
 SELF_NUMERIC_CONDITION_TYPES = ["Volunteer Divisions Sent", "Volunteer Capacity Remaining"]
 # Condition types that take a single nation ID, or blank to mean the event's owner.
 SELF_OR_TARGET_TYPES = ["Is AI Controlled", "Is Player Controlled", "Is At War",
-                        "Is At Peace", "Is In Faction", "Is Faction Leader"]
+                        "Is At Peace", "Is In Faction", "Not In Faction", "Is Faction Leader"]
 
 EDIT_ACTIONS = ["Edit Name", "Edit Leader Name", "Edit Leader Title",
                 "Edit Color", "Edit Flag", "Edit Portrait"]
@@ -94,6 +94,7 @@ HELP_TEXT = """ === EVENT TYPE ===
 - In Faction With: Checks if the nation shares a faction with the target(s)
 - Not In Faction With: Checks if the nation does NOT share a faction with the target(s)
 - Is In Faction: Checks if the target nation (or self if blank) is currently in any faction
+- Not In Faction: Checks if the target nation (or self if blank) is currently outside every faction
 - Is Faction Leader: Checks if the target nation (or self if blank) is the leader of their faction
 - Has Truce With: Checks if the nation has an active truce with the specified target(s) (comma-separated)
 - At Peace With: Checks if the nation is explicitly NOT at war with the target(s)
