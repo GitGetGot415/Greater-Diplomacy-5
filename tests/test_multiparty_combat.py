@@ -66,7 +66,7 @@ class StubMapScreen:
         }
         return self.nation_data[name]
 
-    def add_province(self, pid, owner, units=(), terrain="Plains"):
+    def add_province(self, pid, owner, units=(), terrain="hills"):
         prov = {
             "id": pid,
             "owner": owner,

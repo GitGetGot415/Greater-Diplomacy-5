@@ -802,7 +802,8 @@ def get_border_strength(nation_a, nation_b, map_data, id_to_province, nation_dat
                 
                 # What this tile can actually bring to bear: a lane's front rank
                 # and the relief wave behind it, best units first.
-                top_units = get_front_and_relief(friendly_units)
+                top_units = get_front_and_relief(
+                    friendly_units, terrain=prov.get("terrain"))
                 
                 tile_strength = 0
                 for u in top_units:
@@ -1356,7 +1357,8 @@ def get_combat_location_category(province, perspective_nation, nation_data,
 
     from map_logic.turn_processing import combat_rules
 
-    battle = combat_rules.build_battle([battle_units], nation_data)
+    battle = combat_rules.build_battle(
+        [battle_units], nation_data, terrain=province.get("terrain"))
     if not battle.lanes:
         return COMBAT_LOCATION_GENERIC
 
@@ -1732,15 +1734,20 @@ def get_group_attack_sum(units, count=None):
     """Combined attack of a typical front rank. An estimate -- see get_top_attackers."""
     return sum(u.get("attack", c.DEFAULT_UNIT_ATK) for u in get_top_attackers(units, count))
 
-def get_front_and_relief(units, count=None):
+def get_front_and_relief(units, count=None, terrain=None):
     """The front rank plus one relief wave: what a tile is worth reinforcing to.
 
-    Measuring a tile by its top LANE_SLOTS_TYPICAL alone undercounts it, since
+    Measuring a tile by its front rank alone undercounts it, since
     the units behind the front are what replace it as it dies. Measuring by the
     whole stack overcounts it, since everything past the relief wave will not
     reach a slot before the tile resolves.
     """
-    if count is None: count = int(c.LANE_SLOTS_TYPICAL * c.AI_RESERVE_DEPTH)
+    if count is None:
+        from map_logic.turn_processing import combat_rules
+
+        slots = combat_rules.lane_slots(
+            1, combat_rules.combat_width_for_terrain(terrain))
+        count = int(slots * c.AI_RESERVE_DEPTH)
     return sorted(units, key=calculate_unit_strength, reverse=True)[:count]
 
 def is_warship(unit_type):

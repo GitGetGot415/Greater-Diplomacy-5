@@ -136,6 +136,29 @@ class AIWorldParityTests(unittest.TestCase):
                 queries.get_border_strength(a, b, self.map_data, self.id_to_province, self.nation_data),
                 f"{a} vs {b}")
 
+    def test_border_strength_caps_front_and_relief_by_each_tiles_terrain(self):
+        from map_logic.turn_processing import combat_rules
+
+        for terrain in ("mountain", "plains", "hills"):
+            with self.subTest(terrain=terrain):
+                for prov in self.map_data.values():
+                    prov["units"] = []
+                prov = self.id_to_province[2]
+                prov["terrain"] = terrain
+                prov["units"] = [unit("Avaria")
+                                 for _ in range(c.COMBAT_WIDTH * 3)]
+                slots = combat_rules.lane_slots(
+                    1, combat_rules.combat_width_for_terrain(terrain))
+                expected = queries.calculate_unit_strength(prov["units"][0])
+                expected *= int(slots * c.AI_RESERVE_DEPTH)
+                world = ai_world.AIWorld(
+                    self.map_data, self.nation_data, self.id_to_province)
+                self.assertEqual(world.border_strength("Avaria", "Borland"),
+                                 (expected, 0))
+                self.assertEqual(queries.get_border_strength(
+                    "Avaria", "Borland", self.map_data,
+                    self.id_to_province, self.nation_data), (expected, 0))
+
     def test_border_strength_is_symmetric_when_swapped(self):
         """The cache fills both orderings from one computation; they must agree."""
         for a, b in self.pairs():

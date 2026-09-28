@@ -152,13 +152,19 @@ data/constants.py, the AI blocks. The ones worth knowing:
                               too small or too large -- UPKEEP_MODIFIERS["fuel"]
                               is 0.50 against 0.05 for materials, so fuel is
                               what actually binds
-  COMBAT_WIDTH                units that fire on one tile, across every lane on
-                              it. Not an AI setting, but the AI reads what
-                              follows from it everywhere, so raising it buys
-                              roughly proportionally more assault units per
-                              frontline tile and lets fronts hold proportionally
-                              more. Source-only: no scenario field, no editor
-                              field
+  COMBAT_WIDTH                default units that fire on one tile, across every
+                              lane on it. Mountain tiles use 12, plains use 20,
+                              and every other terrain uses this default of 16.
+                              Not an AI setting, but the AI reads what follows
+                              from it everywhere, so raising it buys roughly
+                              proportionally more assault units per frontline
+                              tile and lets fronts hold proportionally more.
+                              Source-only: no scenario field, no editor field
+  COMBAT_WIDTH_BY_TERRAIN      terrain overrides for that shared tile budget.
+                              Battle management, sidebar front/reserve counts,
+                              forecasts, and resolution read the same width.
+                              Head-on crossings use the narrower endpoint's
+                              width regardless of direction of travel.
   MIN_LANE_SLOTS_PER_SIDE     floor on a lane's per-side allowance. A side is a
                               coalition and shares that allowance between its
                               members (share_slots), so this is the floor on
@@ -167,9 +173,10 @@ data/constants.py, the AI blocks. The ones worth knowing:
                               floor bites, it wins and the tile fields more than
                               the width
   LANE_SLOTS_TYPICAL          slots per side in a one-enemy fight, which is what
-                              most fights are. The number the AI reasons with,
-                              since it cannot know in advance how many ways a
-                              tile will split
+                              most fights are, on default terrain. Used for
+                              general purchase/research estimates without a
+                              battle location. Per-tile movement, border strength
+                              and enemy-front estimates read the terrain width
   AI_REINFORCE_COMBAT_WEIGHT  how hard a battle pulls units in, at full
                               strength on an empty tile and fading to nothing
                               once the front and its relief are full
@@ -245,11 +252,11 @@ together, merged from the columns that are on the same side, not at war, and
 friendly both ways round. Two allies facing two allies is therefore ONE lane
 with four nations in it, not two duels and not four; where nobody is allied a
 coalition is one nation and it collapses to one duel per hostile pair, which is
-the free-for-all case. COMBAT_WIDTH is divided among the lanes, with
-MIN_LANE_SLOTS_PER_SIDE as a floor. This is the whole point of the model: under
-the pot it replaced, the width was applied per nation column, so five countries
-on a tile fired five times the width, and damage divided across every hostile
-unit present, so bodies were a way to thin somebody else's volley.
+the free-for-all case. The terrain-adjusted combat width is divided among the
+lanes, with MIN_LANE_SLOTS_PER_SIDE as a floor. This is the whole point of the
+model: under the pot it replaced, the width was applied per nation column, so
+five countries on a tile fired five times the width, and damage divided across
+every hostile unit present, so bodies were a way to thin somebody else's volley.
 
 Two earlier versions of the pairing rule were wrong and are worth naming, since
 both look reasonable. Pairing on raw hostility edges gives the alliance case

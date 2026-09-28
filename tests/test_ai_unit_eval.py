@@ -426,6 +426,29 @@ class EffectiveAttackTests(unittest.TestCase):
 
 
 class ThreatProfileTests(unittest.TestCase):
+    def test_enemy_front_and_volley_use_border_terrain(self):
+        from types import SimpleNamespace
+        from map_logic.turn_processing import combat_rules
+        from tests.test_multiparty_combat import StubMapScreen, unit
+
+        screen = StubMapScreen()
+        screen.add_nation("A", at_war_with=["B"])
+        screen.add_nation("B", at_war_with=["A"])
+        prov = screen.add_province(
+            "p1", "A", units=[unit("B", attack=10)
+                              for _ in range(c.COMBAT_WIDTH * 3)])
+        world = SimpleNamespace(
+            nation_data=screen.nation_data,
+            border_tiles={frozenset(("A", "B")): {"p1"}},
+            id_to_province=screen.id_to_province)
+        for terrain in ("mountain", "plains", "hills"):
+            with self.subTest(terrain=terrain):
+                prov["terrain"] = terrain
+                slots = combat_rules.lane_slots(
+                    1, combat_rules.combat_width_for_terrain(terrain))
+                self.assertEqual(ue.threat_profile(world, "A", LIBRARY, []),
+                                 (10.0 * slots, 0.0, slots))
+
     def test_peacetime_falls_back_to_what_it_could_face(self):
         """Not zero -- a zero volley makes every unit immortal and defense free."""
         volley, enemy_def, enemy_stack = ue.threat_profile(

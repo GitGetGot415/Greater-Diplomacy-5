@@ -5,7 +5,7 @@ The rule, from the request that specified it:
     Instead of all units on a tile rolling attacks against one another in a big
     formulaic pot, the tile acts as a container that dynamically creates lanes
     between specific factions based on their diplomatic relationships. The
-    global tile combat width is distributed among active lanes. Damage dealt by
+    terrain-adjusted tile combat width is distributed among active lanes. Damage dealt by
     A in lane 1 strictly applies to X; B in lane 2 takes zero. Only so many
     units can enter a lane at a time; the rest wait in reserve until active
     units shatter or retreat.
@@ -142,6 +142,93 @@ class TheFixturesFromTheRequestTests(unittest.TestCase):
 
 
 class WidthTests(unittest.TestCase):
+    def test_meeting_engagement_uses_the_narrower_terrain_in_either_direction(self):
+        for terrains in (("mountain", "plains"), ("plains", "mountain"),
+                         ("plains", "plains"), ("hills", "hills")):
+            with self.subTest(terrains=terrains):
+                screen = StubMapScreen()
+                screen.add_nation("A", at_war_with=["B"])
+                screen.add_nation("B", at_war_with=["A"])
+                width = min(combat_rules.combat_width_for_terrain(t)
+                            for t in terrains)
+                slots = combat_rules.lane_slots(1, width)
+                troops = [[unit(n, attack=10) for _ in range(width + 1)]
+                          for n in ("A", "B")]
+                provinces = [screen.add_province(
+                    pid, n, units=side, terrain=terrain)
+                    for pid, n, side, terrain in zip(
+                        ("p1", "p2"), ("A", "B"), troops, terrains)]
+
+                combat_processor.resolve_meeting_engagement(
+                    *provinces, *troops, screen.nation_data)
+
+                for side in troops:
+                    self.assertAlmostEqual(damage_taken(side), 10.0 * slots)
+                    self.assertEqual(sum(bool(u.get("_in_combat_this_turn"))
+                                         for u in side), slots)
+
+    def test_explicit_width_overrides_terrain_and_unknown_terrain_uses_default(self):
+        screen, prov, _ = alliance_tile(per_nation=c.COMBAT_WIDTH)
+        for terrain in (None, "unknown", "mountain", "plains"):
+            with self.subTest(terrain=terrain):
+                battle = combat_rules.build_battle(
+                    [prov["units"]], screen.nation_data,
+                    width=c.COMBAT_WIDTH, terrain=terrain)
+                self.assertEqual(battle.lanes[0].slots,
+                                 combat_rules.lane_slots(1, c.COMBAT_WIDTH))
+        for terrain in (None, "unknown"):
+            self.assertEqual(combat_rules.combat_width_for_terrain(terrain),
+                             c.COMBAT_WIDTH)
+
+    def test_prediction_and_resolution_apply_the_same_terrain_width(self):
+        from map_logic.rendering import overlay_renderer
+
+        for terrain in ("mountain", "plains", "hills"):
+            with self.subTest(terrain=terrain):
+                screen, prov, _ = alliance_tile(per_nation=c.COMBAT_WIDTH)
+                prov["terrain"] = terrain
+                estimate = overlay_renderer._simulate_combat(
+                    [prov["units"]], screen.nation_data, province=prov,
+                    max_turns=0)
+                combat_processor.process_combat(screen)
+                self.assertEqual([u["health"] for u in estimate["sides"][0]],
+                                 [u["health"] for u in prov["units"]])
+
+    def test_terrain_selects_the_shared_combat_width(self):
+        for terrain, expected in (
+                ("mountain", c.COMBAT_WIDTH_BY_TERRAIN["mountain"]),
+                ("plains", c.COMBAT_WIDTH_BY_TERRAIN["plains"]),
+                ("hills", c.COMBAT_WIDTH)):
+            with self.subTest(terrain=terrain):
+                self.assertEqual(
+                    combat_rules.combat_width_for_terrain(terrain), expected)
+
+        self.assertEqual(combat_rules.combat_width_for_terrain("Plains"),
+                         c.COMBAT_WIDTH_BY_TERRAIN["plains"])
+
+    def test_tile_battle_uses_its_terrain_width(self):
+        for terrain in ("mountain", "plains", "hills"):
+            with self.subTest(terrain=terrain):
+                screen = StubMapScreen()
+                screen.add_nation("A", at_war_with=["B"])
+                screen.add_nation("B", at_war_with=["A"])
+                squad = [unit("A", attack=10) for _ in range(30)]
+                target = [unit("B", attack=0)]
+                province = screen.add_province(
+                    "p1", "A", units=squad + target, terrain=terrain)
+                width = combat_rules.combat_width_for_terrain(terrain)
+                side_slots = max(c.MIN_LANE_SLOTS_PER_SIDE, width // 2)
+
+                battle = combat_rules.build_battle(
+                    [province["units"]], screen.nation_data,
+                    terrain=province["terrain"])
+                self.assertEqual(len(side_for(battle, "A").front), side_slots)
+                self.assertEqual(battle.width, side_slots + 1)
+
+                combat_processor.process_combat(screen)
+                self.assertAlmostEqual(
+                    damage_taken(target), 10.0 * side_slots, places=6)
+
     def test_width_is_split_between_lanes(self):
         for lanes, expected in ((1, c.COMBAT_WIDTH // 2), (2, c.COMBAT_WIDTH // 4)):
             self.assertEqual(combat_rules.lane_slots(lanes), expected)

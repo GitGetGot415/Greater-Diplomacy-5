@@ -484,6 +484,8 @@ def threat_profile(world, nation, unit_library, candidates):
     collapsing to zero and making every unit look immortal and every attack
     look devastating.
     """
+    from map_logic.turn_processing import combat_rules
+
     volleys, defenses, stacks = [], [], []
 
     if world is not None:
@@ -496,14 +498,16 @@ def threat_profile(world, nation, unit_library, candidates):
                 hostile = [u for u in visible_units if u.get("owner") == enemy]
                 if not hostile:
                     continue
-                volleys.append(queries.get_group_attack_sum(hostile))
+                slots = combat_rules.lane_slots(
+                    1, combat_rules.combat_width_for_terrain(prov.get("terrain")))
+                volleys.append(queries.get_group_attack_sum(hostile, count=slots))
                 defenses.append(_mean(float(u.get("defense", 0)) for u in hostile))
                 # A FRONT size, not a headcount: the volley is divided across
                 # the enemy's front rank in one lane, and everything behind it
                 # is out of reach. Handing the whole stack over reported each
                 # body eating a share the lane never divides that far, which
                 # made deep enemy stacks look safe to walk into.
-                stacks.append(min(len(hostile), c.LANE_SLOTS_TYPICAL))
+                stacks.append(min(len(hostile), slots))
 
     if volleys:
         return (max(1.0, _mean(volleys)), max(0.0, _mean(defenses)), max(1.0, _mean(stacks)))

@@ -30,10 +30,10 @@ A tile is not one pot. It is a container that splits into *lanes*: one duel per
 pair of hostile **sides**. A side is a coalition -- everyone here who is fighting
 this particular enemy together -- not a single nation, which is why two allies
 facing two allies is one battle rather than four separate quarrels.
-`c.COMBAT_WIDTH` is a budget for the whole tile, divided among the lanes, and
-damage never crosses a lane boundary. Units past a side's allowance wait in
-reserve, where they neither deal damage nor take it -- bombardment is the only
-thing that reaches them.
+The terrain-adjusted combat width is a budget for the whole tile, divided
+among the lanes, and damage never crosses a lane boundary. Units past a side's
+allowance wait in reserve, where they neither deal damage nor take it --
+bombardment is the only thing that reaches them.
 
 The invariants the rest of the game is entitled to assume:
 
@@ -48,10 +48,10 @@ The invariants the rest of the game is entitled to assume:
    on what a member gets, not a cap on what the side fields: if the split
    leaves a slot that nobody's allowance covers and somebody present has a
    unit spare, `_topup` seats it. An empty slot helps nobody.
-4. Total front units across every lane equals `c.COMBAT_WIDTH`, unless a floor
-   forced it higher -- `c.MIN_LANE_SLOTS_PER_SIDE` per side, or the one unit
-   every member nation present is guaranteed -- or there were not enough units
-   present to fill the tile.
+4. Total front units across every lane equals the terrain's combat width,
+   unless a floor forced it higher -- `c.MIN_LANE_SLOTS_PER_SIDE` per side,
+   or the one unit every member nation present is guaranteed -- or there were
+   not enough units present to fill the tile.
 5. A nation is in *every* lane it is in. It seats one unit in each before any
    lane gets a second, and if it runs out it doubles units up rather than
    abandoning a front. Nobody dodges a fight by looking the other way, and
@@ -197,6 +197,22 @@ def coalitions(owners, nation_data):
     columns = _columns([[{"owner": owner} for owner in owners]])
     return [[columns[i][1] for i in group]
             for group in _coalition_groups(columns, nation_data)]
+
+
+def combat_width_for_terrain(terrain):
+    """Return the shared tile width for a terrain name.
+
+    Mountain and plains have scenario-independent terrain widths; every other
+    terrain uses the global combat width.
+    """
+    terrain_key = str(terrain).lower() if terrain is not None else None
+    return c.COMBAT_WIDTH_BY_TERRAIN.get(terrain_key, c.COMBAT_WIDTH)
+
+
+def meeting_combat_width(province1, province2):
+    """A crossing is limited by its narrower endpoint, in either direction."""
+    return min(combat_width_for_terrain(province.get("terrain"))
+               for province in (province1, province2))
 
 
 def lane_slots(num_lanes, width=None):
@@ -499,7 +515,7 @@ def _lane_shares(seats):
     return shares
 
 
-def build_battle(sides, nation_data, width=None, full_rank_for=None):
+def build_battle(sides, nation_data, width=None, full_rank_for=None, terrain=None):
     """Who duels whom, and who is in the front rank, for one fight.
 
     `sides` is a list of unit lists. One side is a tile: everyone standing here
@@ -518,6 +534,9 @@ def build_battle(sides, nation_data, width=None, full_rank_for=None):
     `full_rank_for` is a nation whose *allowance* is worked out as though it had
     brought a full rank -- see _caps. It changes no unit's seat, only the width
     that nation is credited with, and exists for nation_front_capacity.
+
+    `terrain` selects the tile's shared width; an explicit `width` overrides it.
+    Missing or unknown terrain uses the global default.
     """
     hostile = _hostile(nation_data)
     columns = _columns(sides)
@@ -529,6 +548,8 @@ def build_battle(sides, nation_data, width=None, full_rank_for=None):
 
     groups = _coalition_groups(columns, nation_data)
     duels = _duels(columns, groups, hostile, across_only)
+    if width is None:
+        width = combat_width_for_terrain(terrain)
     slots = lane_slots(len(duels), width)
     lanes_of, foes = _lane_membership(columns, groups, duels, can_fight)
     available = _availability(columns)
@@ -769,9 +790,12 @@ def nation_front_capacity(nation, province, nation_data, width=None):
     width fairly against allies who are actually here; it only stops our own
     absence from being the thing that makes the tile look full.
     """
+    if width is None:
+        width = combat_width_for_terrain(province.get("terrain"))
     battle = build_battle([list(province.get("units", ()))], nation_data, width,
                           full_rank_for=nation)
-    return slots_held(battle, nation) or c.LANE_SLOTS_TYPICAL
+    typical_slots = lane_slots(1, width)
+    return slots_held(battle, nation) or typical_slots
 
 
 def movers_into(province, dest_id, visible_to=None):

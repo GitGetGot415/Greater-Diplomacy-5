@@ -222,14 +222,14 @@ class CapacityIsRoomNotGarrisonTests(unittest.TestCase):
     quiet border worth twelve -- saves/THEYRE NOT PUTTING IN THEIR RESERVES.
     """
 
-    def tile(self, mine, theirs):
+    def tile(self, mine, theirs, terrain="hills"):
         from tests.test_multiparty_combat import StubMapScreen, unit
         screen = StubMapScreen()
         screen.add_nation("A", at_war_with=["B"])
         screen.add_nation("B", at_war_with=["A"])
         units = [unit("A", attack=10) for _ in range(mine)]
         units += [unit("B", attack=10) for _ in range(theirs)]
-        return screen, screen.add_province("p1", "A", units=units)
+        return screen, screen.add_province("p1", "A", units=units, terrain=terrain)
 
     def capacity(self, mine, theirs):
         from map_logic.turn_processing import combat_rules
@@ -238,6 +238,34 @@ class CapacityIsRoomNotGarrisonTests(unittest.TestCase):
 
     def test_a_lone_defender_is_told_the_whole_lane_is_open_to_it(self):
         self.assertEqual(self.capacity(1, 8), c.LANE_SLOTS_TYPICAL)
+
+    def test_an_empty_front_uses_its_terrain_width(self):
+        from map_logic.turn_processing import combat_rules
+
+        for terrain in ("mountain", "plains", "hills"):
+            with self.subTest(terrain=terrain):
+                screen, prov = self.tile(1, 0, terrain=terrain)
+                expected = max(
+                    c.MIN_LANE_SLOTS_PER_SIDE,
+                    combat_rules.combat_width_for_terrain(terrain) // 2)
+                self.assertEqual(
+                    combat_rules.nation_front_capacity(
+                        "A", prov, screen.nation_data),
+                    expected)
+
+    def test_a_contested_front_and_its_relief_use_terrain_capacity(self):
+        from map_logic.turn_processing import combat_rules
+
+        for terrain in ("mountain", "plains", "hills"):
+            with self.subTest(terrain=terrain):
+                screen, prov = self.tile(1, c.COMBAT_WIDTH, terrain=terrain)
+                slots = combat_rules.lane_slots(
+                    1, combat_rules.combat_width_for_terrain(terrain))
+                capacity = combat_rules.nation_front_capacity(
+                    "A", prov, screen.nation_data)
+                self.assertEqual(capacity, slots)
+                self.assertEqual(ai_movement._tile_depth({"p1": capacity}, "p1"),
+                                 slots * c.AI_RESERVE_DEPTH)
 
     def test_the_answer_does_not_depend_on_how_many_we_brought(self):
         """The bug in one assertion: capacity used to track the garrison."""

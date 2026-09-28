@@ -202,7 +202,8 @@ def process_pinning(map_screen):
         # apart the moment either is tuned.
         attacker_units_only = [a_unit for a_unit, _ in hostile_attackers]
         probe = combat_rules.build_battle(
-            [friendly_defenders, attacker_units_only], map_screen.nation_data)
+            [friendly_defenders, attacker_units_only], map_screen.nation_data,
+            terrain=dest_prov.get("terrain"))
 
         # Use the same non-mutating damage projection the AI uses when it
         # decides whether this charge is worth issuing. The actual exchange is
@@ -311,7 +312,11 @@ def resolve_meeting_engagement(prov1, prov2, units1, units2, nation_data):
     it handed in to find the dead. `fought` is the id()s of the units that were
     actually in a firing line, which is what the callers gate "stop here" on.
     """
-    battle = combat_rules.build_battle([units1, units2], nation_data)
+    # Both armies are crossing the same boundary: its narrower terrain limits
+    # the fight, independent of which endpoint the caller happens to list first.
+    battle = combat_rules.build_battle(
+        [units1, units2], nation_data,
+        width=combat_rules.meeting_combat_width(prov1, prov2))
 
     # Front *and* reserve. `fought` is what stops a unit here, and a reserve that
     # walked on through the tile its own army is fighting over would be absurd --
@@ -380,11 +385,11 @@ def process_combat(map_screen):
     """Fights everyone sharing a province, lane by lane.
 
     The tile splits into duels -- one per pair of hostile powers standing on it
-    -- and c.COMBAT_WIDTH front slots are divided among them. Each side of a
-    lane fires the attack of its front rank, split across the *opposing front
-    rank in that lane* and nothing else. Damage never crosses a lane boundary,
-    so an ally fighting its own enemy beside you takes none of your fire and
-    none of your enemy's.
+    -- and terrain-adjusted combat-width front slots are divided among them.
+    Each side of a lane fires the attack of its front rank, split across the
+    *opposing front rank in that lane* and nothing else. Damage never crosses a
+    lane boundary, so an ally fighting its own enemy beside you takes none of
+    your fire and none of your enemy's.
 
     Units past a lane's allowance are in reserve: they deal no damage and take
     none. Depth stopped being a way to thin somebody else's volley -- the
@@ -403,7 +408,8 @@ def process_combat(map_screen):
 
         is_land = not queries.is_water_province(province)
 
-        battle = combat_rules.build_battle([units], map_screen.nation_data)
+        battle = combat_rules.build_battle(
+            [units], map_screen.nation_data, terrain=province.get("terrain"))
         fighters = set(battle.engaged)
 
         # Unpack Convoys Caught on Land -- only the ones in the battle.

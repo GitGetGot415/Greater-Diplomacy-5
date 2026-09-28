@@ -47,7 +47,8 @@ def draw_unit_roster(map_screen, surface, province, units, is_visible, x, y, wid
     # resolves by. A nation can stand in the middle of a battle on military
     # access without being in it, and listing it as a side -- with its top
     # units highlighted as the ones dealing damage -- was simply untrue.
-    battle = combat_rules.build_battle([units], map_screen.nation_data)
+    battle = combat_rules.build_battle(
+        [units], map_screen.nation_data, terrain=province.get("terrain"))
 
     # --- Active Garrison / Combat Zone ---
     # While a fight is active, the Combat Zone display (grouped by side) fully

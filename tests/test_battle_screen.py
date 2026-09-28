@@ -83,7 +83,9 @@ class BattleScreenTestCase(unittest.TestCase):
         return battle_screen.Battle_Screen(self.map, self.province)
 
     def battle(self):
-        return combat_rules.build_battle([self.province["units"]], self.map.nation_data)
+        return combat_rules.build_battle(
+            [self.province["units"]], self.map.nation_data,
+            terrain=self.province.get("terrain"))
 
     def mine(self, battle):
         """The player's own half of the first side it fights on."""
@@ -95,6 +97,44 @@ class BattleScreenTestCase(unittest.TestCase):
 
 
 class BuildAndPaintTests(BattleScreenTestCase):
+    def test_battle_and_sidebar_field_the_terrain_front_rank(self):
+        from ui import sidebar_info
+        from tests.test_multiparty_combat import unit
+
+        previous_terrain = self.province["terrain"]
+        self.addCleanup(self.province.__setitem__, "terrain", previous_terrain)
+        self.province["units"] = [unit(n, attack=10)
+                                  for n in (self.a, self.x)
+                                  for _ in range(c.COMBAT_WIDTH)]
+        for terrain in ("mountain", "plains", "hills"):
+            with self.subTest(terrain=terrain):
+                self.province["terrain"] = terrain
+                width = combat_rules.combat_width_for_terrain(terrain)
+                slots = combat_rules.lane_slots(1, width)
+                screen = self.screen()
+                self.assertEqual(screen.battle.lanes[0].slots, slots)
+                self.assertEqual(len(screen.battle.lanes[0].a.front), slots)
+
+                with mock.patch.object(screen, "label") as label:
+                    screen.draw_body(self.surface)
+                summary = label.call_args_list[0].args[1]
+                self.assertIn(f"{screen.battle.width} of {width}", summary)
+
+                roster_battles = []
+                build_battle = combat_rules.build_battle
+
+                def record_battle(*args, **kwargs):
+                    battle = build_battle(*args, **kwargs)
+                    roster_battles.append(battle)
+                    return battle
+
+                with mock.patch.object(combat_rules, "build_battle",
+                                       side_effect=record_battle):
+                    sidebar_info.draw_unit_roster(
+                        self.map, self.surface, self.province,
+                        self.province["units"], True, 0, 0, 370)
+                self.assertEqual(roster_battles[0].lanes[0].slots, slots)
+
     def test_the_screen_builds_and_paints(self):
         screen = self.screen()
         screen.refresh_ui()

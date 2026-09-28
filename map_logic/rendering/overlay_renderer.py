@@ -152,7 +152,8 @@ COMBAT_BUBBLE_UNKNOWN_COLOR = (150, 150, 150)
 COMBAT_BUBBLE_OUTCOME_COLOR_SATURATION = 0.75
 
 
-def combat_strengths(sides, nation_data, friendly_nations, player_nation=None):
+def combat_strengths(sides, nation_data, friendly_nations, player_nation=None,
+                    province=None):
     """What a predicted fight is worth to the player: (friendly, enemy, involved).
 
     Read off combat_rules.build_battle, the same rule the turn resolver fights
@@ -175,7 +176,9 @@ def combat_strengths(sides, nation_data, friendly_nations, player_nation=None):
     enemy_atk = 0.0
     involved = False
 
-    battle = combat_rules.build_battle(sides, nation_data)
+    battle = combat_rules.build_battle(
+        sides, nation_data,
+        terrain=province.get("terrain") if province is not None else None)
     for lane in battle.lanes:
         # A volunteer fights on its host's military side, but remains the
         # donor's division for control and presentation.  Treat that side as
@@ -290,7 +293,9 @@ def _simulate_combat(sides, nation_data, province=None, max_turns=100):
             province, unit, nation_data, combat_active=True)
 
     for turns in range(max_turns + 1):
-        battle = combat_rules.build_battle(simulated_sides, nation_data)
+        battle = combat_rules.build_battle(
+            simulated_sides, nation_data,
+            terrain=province.get("terrain") if province is not None else None)
         if not battle.lanes:
             live_side_indexes = [index for index, side in enumerate(simulated_sides)
                                  if side]

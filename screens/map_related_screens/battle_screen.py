@@ -123,8 +123,11 @@ class Battle_Screen(ModalScreen):
     def rebuild(self):
         """Re-reads the battle. Called after every change, so slot counts and
         lane membership update as the player edits rather than on close."""
+        self.combat_width = combat_rules.combat_width_for_terrain(
+            self.province.get("terrain"))
         self.battle = combat_rules.build_battle(
-            [self.province.get("units", [])], self.map_screen.nation_data)
+            [self.province.get("units", [])], self.map_screen.nation_data,
+            width=self.combat_width)
         if self.selected_lane >= len(self.battle.lanes):
             self.selected_lane = 0
 
@@ -724,7 +727,7 @@ class Battle_Screen(ModalScreen):
             return
 
         lane, near, far = self.current()
-        summary = (f"Combat width {self.battle.width} of {c.COMBAT_WIDTH}   |   "
+        summary = (f"Combat width {self.battle.width} of {self.combat_width}   |   "
                    f"{len(self.battle.lanes)} lane(s)   |   {lane.slots} slots per side")
         if not (self.is_mine(near) or self.is_mine(far)):
             summary += "   |   OBSERVING - you have no units in this duel"

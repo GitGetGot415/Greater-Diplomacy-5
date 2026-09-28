@@ -389,7 +389,8 @@ def _tile_is_lost(map_screen, ai_name, prov, friendly_nations):
     and a rout, which is the distinction the retreat is supposed to be making.
     """
     units = list(prov.get("units", ()))
-    battle = combat_rules.build_battle([units], map_screen.nation_data)
+    battle = combat_rules.build_battle(
+        [units], map_screen.nation_data, terrain=prov.get("terrain"))
 
     ours, incoming = [], {}
     for lane in battle.lanes:
@@ -435,7 +436,8 @@ def _attackers_would_survive(map_screen, ai_name, target_prov, attackers):
 
     target_units = list(target_prov.get("units", ()))
     battle = combat_rules.build_battle(
-        [target_units, attackers], map_screen.nation_data)
+        [target_units, attackers], map_screen.nation_data,
+        terrain=target_prov.get("terrain"))
     if not battle.lanes:
         return True
 
@@ -1290,7 +1292,9 @@ def _rotate_damaged_units(map_screen, ai_name, active_battles):
         for unit in mine:
             unit.pop("combat_stance", None)
 
-        battle = combat_rules.build_battle([province.get("units", ())], map_screen.nation_data)
+        battle = combat_rules.build_battle(
+            [province.get("units", ())], map_screen.nation_data,
+            terrain=province.get("terrain"))
         slots = combat_rules.slots_held(battle, ai_name)
         if not slots:
             continue
