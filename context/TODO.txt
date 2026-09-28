@@ -26,6 +26,9 @@ the exported zip file is what i'm most concerned about, so as long as that doesn
 
 - DIPLOMATIC PLAYS FROM VICTORIA 3
 
+- it looks like the ai would rather die than be vassalized, which is weird because the text would imply otherwise
+- maybe the ai could release other countries as an integrated puppet
+
 ## Audio related suggestions
 
 - can it be made such so that being able to edit the pitch of a song also works on macos and web builds?
