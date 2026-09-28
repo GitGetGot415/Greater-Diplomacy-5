@@ -6,7 +6,7 @@ def conquer_province(map_screen, province, new_owner):
     """Annexes a specific province to a specific country and updates visuals."""
     if province:
         # --- NEW: Integrated Puppet Capture Reroute ---
-        if new_owner in map_screen.nation_data:
+        if not map_screen.is_editor and new_owner in map_screen.nation_data:
             nd = map_screen.nation_data[new_owner]
             if nd.get("puppet_type") == c.PUPPET_TYPE_INTEGRATED:
                 if province["id"] not in nd.get("spawned_territories", []):

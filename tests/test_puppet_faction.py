@@ -163,6 +163,25 @@ class RetireLandlessTests(unittest.TestCase):
                          "2": province(2, "Empire", cores=["Doomed"])}
         return Screen(self.nation_data, self.map_data)
 
+    def test_map_editor_can_paint_integrated_puppet_territory(self):
+        screen = self.build(puppet_type=c.PUPPET_TYPE_INTEGRATED)
+        screen.is_editor = True
+        province_to_paint = self.map_data["1"]
+        province_to_paint["owner"] = "Unclaimed"
+
+        own.conquer_province(screen, province_to_paint, "Doomed")
+
+        self.assertEqual(province_to_paint["owner"], "Doomed")
+
+    def test_gameplay_still_routes_integrated_puppet_territory_to_master(self):
+        screen = self.build(puppet_type=c.PUPPET_TYPE_INTEGRATED)
+        province_to_capture = self.map_data["1"]
+        province_to_capture["owner"] = "Unclaimed"
+
+        own.conquer_province(screen, province_to_capture, "Doomed")
+
+        self.assertEqual(province_to_capture["owner"], "Empire")
+
     def test_a_landless_faction_member_becomes_a_government_in_exile(self):
         screen = self.build()
         own.retire_landless_nation(screen, "Doomed")
