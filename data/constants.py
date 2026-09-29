@@ -104,6 +104,8 @@ REMOVE_CORE_TURNS = 2
 # (a list of {"text", "url"} shown as clickable lines below the info text).
 # Optional "images" entries {"path", "text"} display an image beside a label;
 # omitting "text" uses the image filename as its label.
+# {"directory": "assets/..."} includes its PNGs; "recursive": True includes
+# subfolders, and "exclude": ["file.png", "prefix_*.png"] filters them out.
 # A person without info, links, or images is plain, non-clickable text.
 CREDITS_DATA = [
     {
@@ -141,17 +143,7 @@ CREDITS_DATA = [
                 ),
                 "images": [
                     {"path": "assets/classic/Submarine.png"},
-                    {"path": "assets/terrains/coastal_sea.png"},
-                    {"path": "assets/terrains/Desert.png"},
-                    {"path": "assets/terrains/Forest.png"},
-                    {"path": "assets/terrains/Hills.png"},
-                    {"path": "assets/terrains/inland_sea.png"},
-                    {"path": "assets/terrains/Jungle.png"},
-                    {"path": "assets/terrains/lakes.png"},
-                    {"path": "assets/terrains/Mountain.png"},
-                    {"path": "assets/terrains/Ocean.png"},
-                    {"path": "assets/terrains/Plains.png"},
-                    {"path": "assets/terrains/Swamp.png"},
+                    {"directory": "assets/terrains", "exclude": ["Unknown.png"]},
                     {"path": "assets/images/New Game.png"},
                     {"path": "assets/images/Load Game.png"},
                     {"path": "assets/images/Map Editor.png"},
@@ -189,12 +181,20 @@ CREDITS_DATA = [
         ]
     },
     {
-        "main_text": "Hanskolmer Unit Art: ",
+        "main_text": "Unit Art: ",
         "people": [
             {
                 "link_text": "hanskolmer",
-                "info": "Added hanskolmer unit art",
+                "info": "Hanskolmer unit art:",
+                "images": [{"directory": "assets/hanskolmer", "recursive": True}],
                 "align": "left",
+            },
+            {
+                "link_text": "GitGetGot415",
+                "info": "Classic unit art:",
+                "images": [{"directory": "assets/classic", "recursive": True}],
+                "align": "left",
+                "links": [{"text": "GitHub", "url": "https://github.com/GitGetGot415"}]
             },
         ]
     },
@@ -216,9 +216,10 @@ CREDITS_DATA = [
                 },
                 {
                     "link_text": "GitGetGot415",
-                    "info": ("Icons Added:\n"
-                    "- Everything else not drawn by Randomly"),
+                    "info": "Icons Added:",
+                    "images": [{"directory": "assets/symbols", "exclude": ["Randomly_*.png"]}],
                     "align": "left",
+                    "links": [{"text": "GitHub", "url": "https://github.com/GitGetGot415"}]
                 },
             ]
         },

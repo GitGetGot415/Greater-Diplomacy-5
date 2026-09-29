@@ -1,4 +1,6 @@
 import os
+from fnmatch import fnmatchcase
+from pathlib import Path
 import webbrowser
 import pygame
 import data.constants as c
@@ -22,6 +24,40 @@ _SCROLLBAR_WIDTH = 15
 _SCROLLBAR_GAP = 12
 
 
+def expand_credit_images(images):
+    """Expand PNG directories at popup creation, preserving descriptor order.
+
+    Directory entries optionally recurse and exclude filename or relative-path
+    glob patterns. Relative labels distinguish identically named art in culture
+    subfolders. Explicit image paths and their custom labels remain supported.
+    Reopening the popup discovers newly added files; drawing never scans disk.
+    """
+    expanded = []
+    for image in images or []:
+        if ("path" in image) == ("directory" in image):
+            raise ValueError("A credits image entry needs exactly one of 'path' or 'directory'.")
+        if "path" in image:
+            expanded.append(dict(image))
+            continue
+        directory = Path(image["directory"])
+        if not directory.is_dir():
+            raise NotADirectoryError(f"Credits image directory does not exist: {directory}")
+        patterns = image.get("exclude", [])
+        if isinstance(patterns, str):
+            patterns = [patterns]
+        patterns = [pattern.replace("\\", "/") for pattern in patterns]
+        files = directory.rglob("*") if image.get("recursive", False) else directory.iterdir()
+        files = sorted((path for path in files if path.is_file() and path.suffix.lower() == ".png"),
+                       key=lambda path: (path.relative_to(directory).as_posix().casefold(),
+                                         path.relative_to(directory).as_posix()))
+        for path in files:
+            relative = path.relative_to(directory).as_posix()
+            if any(fnmatchcase(path.name, pattern) or fnmatchcase(relative, pattern) for pattern in patterns):
+                continue
+            expanded.append({"path": path.as_posix(), "text": relative})
+    return expanded
+
+
 class _PersonInfoModal(_BaseModal):
     """Popup for a Credits entry: a title, an optional free-text info section,
     optional labeled images, and clickable links below it."""
@@ -41,7 +77,8 @@ class _PersonInfoModal(_BaseModal):
         self.image_rows = []
         self.scroll_y = 0
         self._scroll_drag_offset = None
-        self.image_columns = min(_IMAGE_COLUMNS, len(images or []))
+        images = expand_credit_images(images)
+        self.image_columns = min(_IMAGE_COLUMNS, len(images))
 
         # Load and fit images/labels once when opening the popup, keeping draw
         # cache-only. Nearest-neighbor scaling preserves the pixel artwork.
@@ -50,7 +87,7 @@ class _PersonInfoModal(_BaseModal):
         cell_w = (box_w - 2 * _CONTENT_MARGIN - _IMAGE_COLUMN_GAP * (columns - 1)) // columns
         label_w = max(1, cell_w - _IMAGE_SIZE - _IMAGE_TEXT_GAP)
         loaded_images = {}
-        for image in images or []:
+        for image in images:
             path = image["path"]
             if path not in loaded_images:
                 source = pygame.image.load(path)
@@ -229,7 +266,9 @@ def show_person_info(name, info_text="", links=None, align="center", tk_parent=N
     clickable line and opens its url in a browser when clicked. align controls
     the info text's horizontal alignment: "left", "center" (default), or "right".
     images is a list of {"path": str, "text": str} entries displayed in two
-    columns between the info and links. Labels default to filenames. Overflow
+    columns between the info and links. Entries may instead use "directory",
+    optional "recursive": True and "exclude": [filename/relative-path globs].
+    Only PNG files are discovered. Labels default to filenames/relative paths. Overflow
     content scrolls with a draggable scrollbar, mouse wheel or arrow keys while
     Close stays visible.
     """

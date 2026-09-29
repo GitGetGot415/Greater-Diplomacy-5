@@ -10,6 +10,7 @@ path only runs when no display exists, which is the opposite of a test run.
 
 import unittest
 from pathlib import Path
+import tempfile
 from unittest import mock
 
 import pygame
@@ -224,10 +225,103 @@ class DialogTests(unittest.TestCase):
 
     def credited_images(self):
         from data import constants as c
-        return next(person["images"] for entry in c.CREDITS_DATA
-                    for person in entry.get("people", []) if person.get("images")
+        from ui.confirm_dialog.person_info import expand_credit_images
+        return next(images for entry in c.CREDITS_DATA
+                    for person in entry.get("people", [])
+                    for images in [expand_credit_images(person.get("images"))] if images
                     and all(Path(image["path"]).parent == Path(c.ARMY_SYMBOLS_DIR)
-                            for image in person["images"]))
+                            for image in images))
+
+    def save_credit_test_image(self, directory, filename):
+        path = Path(directory) / filename
+        path.parent.mkdir(parents=True, exist_ok=True)
+        pygame.image.save(pygame.Surface((20, 30), pygame.SRCALPHA), str(path))
+        return path
+
+    def test_credit_directory_lists_only_png_files_in_stable_order(self):
+        from ui.confirm_dialog.person_info import expand_credit_images
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            second = self.save_credit_test_image(root, "zeta.PNG")
+            first = self.save_credit_test_image(root, "Alpha.png")
+            self.save_credit_test_image(root, "nested/child.png")
+            (root / "metadata.json").write_text("{}", encoding="utf-8")
+            (root / "folder.png").mkdir()
+            images = expand_credit_images([{"directory": directory}])
+        self.assertEqual(images, [{"path": first.as_posix(), "text": first.name},
+                                  {"path": second.as_posix(), "text": second.name}])
+
+    def test_credit_directory_supports_recursive_and_pattern_exclusions(self):
+        from ui.confirm_dialog.person_info import expand_credit_images
+        with tempfile.TemporaryDirectory() as directory:
+            for name in ("keep.png", "skip.png", "Randomly_A.png", "culture/same.png",
+                         "other/same.png", "culture/skip.png"):
+                self.save_credit_test_image(directory, name)
+            descriptor = {"directory": directory, "recursive": True,
+                          "exclude": ["skip.png", "Randomly_*.png", "culture/same.png"]}
+            images = expand_credit_images([descriptor])
+            self.assertEqual([image["text"] for image in images], ["keep.png", "other/same.png"])
+            self.assertEqual([image["path"] for image in images],
+                             [(Path(directory) / name).as_posix() for name in ("keep.png", "other/same.png")])
+            self.assertEqual(descriptor["exclude"], ["skip.png", "Randomly_*.png", "culture/same.png"])
+
+    def test_credit_directories_mix_with_explicit_images_and_keep_custom_labels(self):
+        from ui.confirm_dialog.person_info import expand_credit_images
+        with tempfile.TemporaryDirectory() as directory:
+            first = self.save_credit_test_image(directory, "a.png")
+            second = self.save_credit_test_image(directory, "b.png")
+            entries = [{"path": first.as_posix(), "text": "Custom label"},
+                       {"directory": directory, "exclude": "a.png"},
+                       {"path": first.as_posix(), "text": "Second appearance"}]
+            images = expand_credit_images(entries)
+            self.assertEqual(images, [entries[0], {"path": second.as_posix(), "text": second.name}, entries[2]])
+            images[0]["text"] = "Changed in copy"
+            self.assertEqual(entries[0]["text"], "Custom label")
+
+    def test_credit_directories_expand_only_on_open_and_detect_new_images_on_reopen(self):
+        from ui.confirm_dialog import person_info
+        with tempfile.TemporaryDirectory() as directory:
+            self.save_credit_test_image(directory, "first.png")
+            entries = [{"directory": directory}]
+            with mock.patch.object(person_info, "expand_credit_images", wraps=person_info.expand_credit_images) as expand:
+                modal = person_info._PersonInfoModal(self.surface, "Artist", "Art", [], None, images=entries)
+                self.assertEqual(len(modal.image_rows), 1)
+                modal.draw(self.surface)
+                modal.draw(self.surface)
+                self.assertEqual(expand.call_count, 1)
+                self.save_credit_test_image(directory, "second.png")
+                reopened = person_info._PersonInfoModal(self.surface, "Artist", "Art", [], None, images=entries)
+                self.assertEqual(len(reopened.image_rows), 2)
+                self.assertEqual(expand.call_count, 2)
+
+    def test_credit_directory_validation_exposes_bad_content(self):
+        from ui.confirm_dialog.person_info import expand_credit_images
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaises(NotADirectoryError):
+                expand_credit_images([{"directory": str(Path(directory) / "missing")}])
+        for entry in ({}, {"path": "x.png", "directory": "folder"}):
+            with self.subTest(entry=entry), self.assertRaises(ValueError):
+                expand_credit_images([entry])
+
+    def test_credit_directory_entries_cover_the_attributed_asset_collections(self):
+        from data import constants as c
+        from ui.confirm_dialog.person_info import expand_credit_images
+        people = [person for section in c.CREDITS_DATA for person in section.get("people", [])]
+        specs = [image for person in people for image in person.get("images", []) if "directory" in image]
+        expected = {
+            "assets/hanskolmer": {path.as_posix() for path in Path("assets/hanskolmer").rglob("*.png")},
+            c.ARMY_SYMBOLS_DIR: {path.as_posix() for path in Path(c.ARMY_SYMBOLS_DIR).glob("*.png")
+                                 if not path.name.startswith("Randomly_")},
+            c.TERRAINS_DIR: {path.as_posix() for path in Path(c.TERRAINS_DIR).glob("*.png")
+                            if path.name != "Unknown.png"},
+        }
+        for directory, paths in expected.items():
+            with self.subTest(directory=directory):
+                spec = next(image for image in specs if image["directory"] == directory)
+                expanded = expand_credit_images([spec])
+                self.assertEqual({image["path"] for image in expanded}, paths)
+                for image in expanded:
+                    self.assertEqual(Path(image["path"]).read_bytes()[:8], b"\x89PNG\r\n\x1a\n")
 
     def test_credit_images_load_once_and_preserve_aspect_ratio(self):
         images = self.credited_images()
