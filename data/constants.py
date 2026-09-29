@@ -173,11 +173,33 @@ CREDITS_DATA = [
         "people": [
             {
                 "link_text": "hanskolmer",
-                "info": "added hanskolmer unit art",
+                "info": "Added hanskolmer unit art",
                 "align": "left",
             },
         ]
     },
+    {
+            "main_text": "Army Icons: ",
+            "people": [
+                {
+                    "link_text": "Randomly",
+                    "info": ("Icons Added:\n"
+                    "- Randomly_King.png\n"
+                    "- Randomly_Queen.png\n"
+                    "- Randomly_Rook.png\n"
+                    "- Randomly_Bishop.png\n"
+                    "- Randomly_Knight.png\n"
+                    "- Randomly_Pawn.png\n"),
+                    "align": "left",
+                },
+                {
+                    "link_text": "GitGetGot415",
+                    "info": ("Icons Added:\n"
+                    "- Everything else not drawn by Randomly"),
+                    "align": "left",
+                },
+            ]
+        },
     {
         "main_text": "Tools: ",
         "people": [
