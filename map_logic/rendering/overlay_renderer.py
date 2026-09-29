@@ -1609,8 +1609,10 @@ def compact_army_group_icon(army, best_unit, owner_color, owner, size, count,
     diameter = max(8, round(max(box_size) * COMPACT_GROUP_MARKER_SCALE * zoom_scale))
     army_signature = None
     if army is not None:
+        # Custom emblems are JSON row lists; snapshot their contents for the
+        # hashable cache key so edits also produce a fresh marker.
         army_signature = (
-            army.get("id"), army.get("symbol"), army.get("custom_symbol"),
+            army.get("id"), army.get("symbol"), tuple(army.get("custom_symbol") or ()),
             tuple(army.get("symbol_color") or ()), army.get("symbol_rotation"),
             army.get("symbol_flipped"))
     key = ("compact-group", army_signature, unit_symbol_name(best_unit),

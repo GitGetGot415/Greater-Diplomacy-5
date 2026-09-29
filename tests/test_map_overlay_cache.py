@@ -18,6 +18,7 @@ is a function of its key. That is what these pin:
     whether it is the tactical player's own, and its size
 """
 
+import json
 import os
 import sys
 import unittest
@@ -484,6 +485,62 @@ class UnitBoxCacheTests(unittest.TestCase):
         self.box()
 
         self.assertEqual(len(overlay_renderer.UNIT_BOXES), 1)
+
+
+class CompactArmyIconCacheTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        app_harness.boot()
+
+    def setUp(self):
+        overlay_renderer.UNIT_BOXES.clear()
+        grid_size = c.ARMY_CUSTOM_SYMBOL_SIZE
+        self.army = {
+            "id": "custom-army", "symbol": "",
+            "custom_symbol": [
+                c.ARMY_CUSTOM_SYMBOL_RED + c.ARMY_CUSTOM_SYMBOL_BLACK
+                + c.ARMY_CUSTOM_SYMBOL_EMPTY * (grid_size - 2),
+                *([c.ARMY_CUSTOM_SYMBOL_EMPTY * grid_size] * (grid_size - 1)),
+            ],
+            "symbol_color": [25, 120, 225],
+            "symbol_rotation": 0, "symbol_flipped": False,
+        }
+
+    def icon(self, army):
+        return overlay_renderer.compact_army_group_icon(
+            army, {"type": "Infantry"}, (200, 30, 30), "A", (40, 20), 3)
+
+    def test_json_custom_emblem_renders_and_reuses_cache_by_content(self):
+        first = self.icon(self.army)
+        restored = json.loads(json.dumps(self.army))
+
+        self.assertIsInstance(first, pygame.Surface)
+        self.assertIsInstance(self.army["custom_symbol"], list)
+        self.assertIsInstance(restored["custom_symbol"], list)
+        self.assertIsNot(restored["custom_symbol"], self.army["custom_symbol"])
+        self.assertIs(first, self.icon(restored))
+        self.assertIs(first, self.icon(self.army))
+
+    def test_custom_emblem_edits_rebuild_marker_without_reusing_stale_art(self):
+        for field in ("custom_symbol", "symbol_color", "symbol_rotation", "symbol_flipped"):
+            with self.subTest(field=field):
+                army = json.loads(json.dumps(self.army))
+                first = self.icon(army)
+                if field == "custom_symbol":
+                    army[field][0] = army[field][0][::-1]
+                elif field == "symbol_color":
+                    army[field][:] = [230, 45, 35]
+                elif field == "symbol_rotation":
+                    army[field] = next(rotation for rotation in c.ARMY_SYMBOL_ROTATIONS
+                                       if rotation != army[field])
+                else:
+                    army[field] = not army[field]
+                edited = self.icon(army)
+
+                self.assertIsNot(first, edited)
+                self.assertNotEqual(pygame.image.tobytes(first, "RGBA"),
+                                    pygame.image.tobytes(edited, "RGBA"))
+                self.assertIs(edited, self.icon(army))
 
 
 class CullingTests(unittest.TestCase):
