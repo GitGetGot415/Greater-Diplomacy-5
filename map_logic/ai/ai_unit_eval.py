@@ -35,7 +35,6 @@ heuristic AI.
 """
 
 import collections
-import re
 
 import data.constants as c
 from data import queries
@@ -168,19 +167,9 @@ def unit_pain(stats, prices):
 # Candidate set
 # ----------------------------------------------------------------------------
 
-_ROMAN_TAIL = re.compile(r'\s+[IVXLCDM]+$')
-_YEAR_TAIL = re.compile(r'\s+\d{4}$')
-
-
 def _tier_of(unit_name):
     """Sort key for 'which tier of this family is this', years and numerals alike."""
-    year = _YEAR_TAIL.search(unit_name)
-    if year:
-        return int(year.group().strip())
-    roman = _ROMAN_TAIL.search(unit_name)
-    if roman:
-        return queries.roman_to_int(roman.group().strip())
-    return 0
+    return queries.get_unit_tier(unit_name)
 
 
 #: Memo for buildable_units, keyed on the research that produced the answer.
@@ -203,31 +192,29 @@ def buildable_units(research, unit_library):
     """
     global _BUILDABLE_CACHE, _BUILDABLE_CACHE_LIBRARY
 
-    # `!=`, not `is not`: id() returns a large int and Python only interns small
-    # ones, so an identity test here is true even when the library is the same
-    # object -- which cleared the cache on every single call and made the whole
-    # thing a no-op.
-    if _BUILDABLE_CACHE_LIBRARY != id(unit_library):
+    # Compare the parsed index itself, not id() integers (identity tests on
+    # large integers previously wiped this cache every call). Its identity
+    # also changes when library names or research rules are edited in place.
+    index = queries.get_unit_research_index(unit_library)
+    if _BUILDABLE_CACHE_LIBRARY is not index:
         _BUILDABLE_CACHE = {}
-        _BUILDABLE_CACHE_LIBRARY = id(unit_library)
+        _BUILDABLE_CACHE_LIBRARY = index
 
     key = tuple(sorted((tech, lvl) for tech, lvl in research.items() if lvl))
     cached = _BUILDABLE_CACHE.get(key)
     if cached is not None:
         return cached
 
-    best = {}
-    for name in unit_library:
-        base = queries.get_base_unit_name(name)
+    best = []
+    for base, tiers in index:
         if queries.is_unit_obsolete(base, research):
             continue
-        if not queries.is_unit_unlocked(name, research):
-            continue
-        tier = _tier_of(name)
-        if base not in best or tier > best[base][0]:
-            best[base] = (tier, name)
+        for name, _tier, requirement in tiers:
+            if queries.unit_requirement_is_met(requirement, research):
+                best.append(name)
+                break
 
-    result = sorted(name for _, name in best.values())
+    result = sorted(best)
     _BUILDABLE_CACHE[key] = result
     return result
 

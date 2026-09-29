@@ -1,6 +1,6 @@
 import data.constants as c
 from data.io import country_io
-from map_logic.rendering import map_utils
+from map_logic.rendering import map_utils, refresh_map
 
 def conquer_province(map_screen, province, new_owner):
     """Annexes a specific province to a specific country and updates visuals."""
@@ -33,6 +33,7 @@ def conquer_province(map_screen, province, new_owner):
             
             new_color = map_utils.avoid_chroma(new_color)
             
+            refresh_map.invalidate_map_surface_cache(map_screen, "political_map")
             map_utils.update_single_province_surface(
                 map_screen.political_map, 
                 map_screen.id_map, 
@@ -222,6 +223,7 @@ def refresh_core_tint(map_screen, province, cores=None):
     if map_screen.viewing_ai_moves or map_screen.ai_is_thinking:
         return
     color = get_mixed_core_color(cores) if cores is not None else (255, 255, 255)
+    refresh_map.invalidate_map_surface_cache(map_screen, "cores_map")
     map_utils.update_single_province_surface(
         map_screen.cores_map, map_screen.id_map, province["map_color"], color)
     if map_screen.map_mode == "CORES":

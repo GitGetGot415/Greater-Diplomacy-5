@@ -1,5 +1,12 @@
 diplomacy requirements
 
+Simultaneous-action clashes inspect only pairs referenced by current pending
+actions, in the same nation insertion order as the former all-pairs scan.
+One-way declarations remain included because they can cancel queued responses
+even without a counter-proposal. Each pair re-reads its actions after previous
+effects, so removed proposals cannot resolve from a stale snapshot. Dormant
+country records do not add pairwise work; diplomatic timing is unchanged.
+
 unilateral declarations:
 turn 0: msg is written
 turn 0.5: msg is sent

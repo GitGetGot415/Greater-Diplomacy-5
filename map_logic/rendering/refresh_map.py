@@ -106,6 +106,28 @@ def _cached_shading_levels(id_map, layout_key, build_owner_2d, water_ids):
     return level
 
 
+def invalidate_map_surface_cache(map_screen, *attrs):
+    """Invalidate incrementally painted layers, or force a complete rebuild.
+
+    Incremental editor/capture painting mutates a cached surface's pixels, so
+    input comparison alone cannot certify that surface on its next refresh.
+    With no attrs this also drops geometry shading for the manual Refresh Maps
+    action, including externally edited map assets.
+    """
+    # Optional for editor/test screens that have not rendered a layer yet.
+    cache = getattr(map_screen, "_map_surface_cache", None)
+    if cache is not None:
+        if attrs:
+            for attr in attrs:
+                cache.pop(attr, None)
+        else:
+            cache.clear()
+    if not attrs or "fog_map" in attrs:
+        map_screen._fog_surface_cache = None
+    if not attrs:
+        _LEVEL_CACHE.clear()
+
+
 def get_id_2d_array(id_map):
     """Helper to avoid duplicating the 3D-to-2D bitwise array extraction."""
     id_array = pygame.surfarray.pixels3d(id_map)
@@ -115,16 +137,15 @@ def get_id_2d_array(id_map):
     return id_array, id_2d
 
 
-def _build_map_surface(map_screen, get_owner_and_color):
-    """Unified helper to build NumPy map surfaces to prevent array calculation duplication."""
-    id_array, id_2d = get_id_2d_array(map_screen.id_map)
-    shape_3d = id_array.shape
-    lut = np.zeros(16777216, dtype=np.uint32)
-    owner_lut = np.zeros(16777216, dtype=np.uint32)
-    owner_to_int = {}
-    next_owner_id = 1
-    owner_seq = []
+def _map_surface_inputs(map_screen, get_owner_and_color):
+    """Resolve the exact grouping and color inputs at a state boundary.
 
+    Keys include province colors and iteration order as well as their resolved
+    owners/colors. This follows each mode's real color rule, so changes to cores,
+    leaders, relations, perspective or pre-war borders cannot miss invalidation.
+    No rule queries or map sweeps are added to frame rendering.
+    """
+    inputs = []
     for color_key, data in map_screen.map_data.items():
         terrain_type = data.get("terrain", "plains")
 
@@ -137,6 +158,24 @@ def _build_map_surface(map_screen, get_owner_and_color):
             # THE FIX: Properly indent the colorkey collision check so it ONLY runs on land!
             if tuple(color) == c.COLOR_CHROMA_PINK:
                 color = (254, 0, 255)
+
+        inputs.append((color_key, owner, tuple(color)))
+    return tuple(inputs)
+
+
+def _build_map_surface(map_screen, get_owner_and_color, inputs=None):
+    """Unified helper to build NumPy map surfaces to prevent array calculation duplication."""
+    if inputs is None:
+        inputs = _map_surface_inputs(map_screen, get_owner_and_color)
+    id_array, id_2d = get_id_2d_array(map_screen.id_map)
+    shape_3d = id_array.shape
+    lut = np.zeros(16777216, dtype=np.uint32)
+    owner_lut = np.zeros(16777216, dtype=np.uint32)
+    owner_to_int = {}
+    next_owner_id = 1
+    owner_seq = []
+
+    for color_key, owner, color in inputs:
 
         if owner not in owner_to_int:
             owner_to_int[owner] = next_owner_id
@@ -153,7 +192,8 @@ def _build_map_surface(map_screen, get_owner_and_color):
 
     # Process Shading
     water_ids = [owner_to_int.get("Ocean", -1), owner_to_int.get("Lakes", -1), owner_to_int.get("Unclaimed", -1)]
-    layout_key = (tuple(owner_seq), tuple(water_ids))
+    layout_key = (tuple((row[0], owner) for row, owner in zip(inputs, owner_seq)),
+                  tuple(water_ids))
     level = _cached_shading_levels(map_screen.id_map, layout_key, lambda: owner_lut[id_2d], water_ids)
     out_3d = shade_packed_colors(out_2d, shape_3d, level)
 
@@ -179,7 +219,19 @@ def _refresh_mode(map_screen, label, attr, mode, get_data):
     remembering to change both strings.
     """
     timer = pygame.time.get_ticks()
-    surface = _build_map_surface(map_screen, get_data)
+    inputs = _map_surface_inputs(map_screen, get_data)
+    # Screen-local, bounded to one surface per mode. Lightweight screen doubles
+    # and callers outside Map.__init__ can initialize this cache on first use.
+    cache = getattr(map_screen, "_map_surface_cache", None)
+    if cache is None:
+        cache = map_screen._map_surface_cache = {}
+    cached = cache.get(attr)
+    if (cached is not None and cached[0] is map_screen.id_map and cached[1] == inputs
+            and getattr(map_screen, attr, None) is cached[2]):
+        surface = cached[2]
+    else:
+        surface = _build_map_surface(map_screen, get_data, inputs=inputs)
+        cache[attr] = (map_screen.id_map, inputs, surface)
     setattr(map_screen, attr, surface)
     if map_screen.map_mode == mode:
         map_screen.active_map = surface
@@ -257,11 +309,14 @@ def refresh_factions_map(map_screen):
         elif not fac:
             color = (150, 150, 150) # Neutral grey for non-faction countries
         else:
-            leader = queries.get_faction_leader(fac, map_screen.nation_data)
-            if leader and leader in map_screen.nation_colors:
-                faction_colors[fac] = map_screen.nation_colors[leader]
-            elif fac not in faction_colors:
-                faction_colors[fac] = get_faction_color(fac)
+            # Membership cannot change while collecting this layer's inputs.
+            # Resolve leaders once per faction, not once per province, even
+            # when unchanged pixels let the whole surface be reused.
+            if fac not in faction_colors:
+                leader = queries.get_faction_leader(fac, map_screen.nation_data)
+                faction_colors[fac] = (map_screen.nation_colors[leader]
+                                      if leader and leader in map_screen.nation_colors
+                                      else get_faction_color(fac))
             color = faction_colors[fac]
         return owner, color
         
@@ -390,24 +445,37 @@ def refresh_fog_map(map_screen):
                     extreme_hidden.add(p_id)
     map_screen.extreme_hidden_provinces = extreme_hidden
 
-    id_array, id_2d = get_id_2d_array(map_screen.id_map)
-    lut = np.full(16777216, c.FOG_OF_WAR_ALPHA, dtype=np.uint8)
-
+    # Vision above must still be evaluated and published at every boundary,
+    # including hotseat handoffs and client projections. Only the unchanged
+    # pixel surface is reused; visibility is never inferred from a cache hit.
+    inputs = []
     for color_key, data in map_screen.map_data.items():
-        packed_key = (color_key[0] << 16) | (color_key[1] << 8) | color_key[2]
         p_id = data["id"]
-        
+        alpha = c.FOG_OF_WAR_ALPHA
         if p_id in map_screen.visible_provinces:
-            lut[packed_key] = 0 # 0 Alpha = Completely visible
+            alpha = 0 # 0 Alpha = Completely visible
         elif p_id in map_screen.partial_visible_provinces:
-            lut[packed_key] = c.FOG_OF_WAR_ALPHA // 2 # Slightly darker for radius 2
+            alpha = c.FOG_OF_WAR_ALPHA // 2 # Slightly darker for radius 2
         else:
             if fog_strength == "lite":
-                lut[packed_key] = c.FOG_OF_WAR_ALPHA // 2
+                alpha = c.FOG_OF_WAR_ALPHA // 2
             elif fog_strength == "extreme" and p_id in extreme_hidden:
-                lut[packed_key] = 255
+                alpha = 255
             # else remains c.FOG_OF_WAR_ALPHA
-            
+        inputs.append((color_key, alpha))
+
+    inputs = tuple(inputs)
+    # Optional for lightweight screen doubles; Map owns the live cache.
+    cached = getattr(map_screen, "_fog_surface_cache", None)
+    if cached is not None and cached[0] is map_screen.id_map and cached[1] == inputs:
+        map_screen.fog_map = cached[2]
+        return
+
+    id_array, id_2d = get_id_2d_array(map_screen.id_map)
+    lut = np.full(16777216, c.FOG_OF_WAR_ALPHA, dtype=np.uint8)
+    for color_key, alpha in inputs:
+        packed_key = (color_key[0] << 16) | (color_key[1] << 8) | color_key[2]
+        lut[packed_key] = alpha
     alpha_2d = lut[id_2d]
 
     fog_surf = pygame.Surface(map_screen.id_map.get_size(), pygame.SRCALPHA)
@@ -424,4 +492,5 @@ def refresh_fog_map(map_screen):
     del rgb_array
 
     map_screen.fog_map = fog_surf
+    map_screen._fog_surface_cache = (map_screen.id_map, inputs, fog_surf)
     print(f"Fog map refreshed in {pygame.time.get_ticks() - timer} ms")

@@ -54,10 +54,12 @@ def units_unlocked_by(tech_key, research, unit_library):
     """The units one more level of `tech_key` would newly make buildable."""
     global _UNLOCK_CACHE, _UNLOCK_CACHE_LIBRARY
 
-    # `!=`, not `is not` -- see the same note in ai_unit_eval.buildable_units.
-    if _UNLOCK_CACHE_LIBRARY != id(unit_library):
+    # Use the same schema identity as buildable_units, including in-place
+    # library/rule edits and JSON refreshes, rather than just the library id.
+    index = queries.get_unit_research_index(unit_library)
+    if _UNLOCK_CACHE_LIBRARY is not index:
         _UNLOCK_CACHE = {}
-        _UNLOCK_CACHE_LIBRARY = id(unit_library)
+        _UNLOCK_CACHE_LIBRARY = index
 
     key = (_research_key(research), tech_key)
     cached = _UNLOCK_CACHE.get(key)

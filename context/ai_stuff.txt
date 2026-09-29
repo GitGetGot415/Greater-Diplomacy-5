@@ -58,6 +58,25 @@ the global log so the pressure is still visible.
 THE HEURISTIC LAYER
 -------------------
 
+Non-LLM turn work shares transient results without sharing decisions. AI
+movement caches candidate paths during one nation's order pass, then picks
+from them again against the current destination assignments and headcounts.
+Equivalent single attackers share first-exchange survival previews only while
+that nation's defenders, terrain and diplomatic rules stay fixed. The caches
+are discarded before the next nation's pass or any turn resolution.
+
+Unit research requirements and family tiers are indexed through data/queries.py,
+using the same unlock checks as production. New research levels use that index
+without reparsing the unit library. Library-name edits, research-year changes,
+gate/obsolescence rules and JSON refresh invalidate it, including in-place edits.
+These indexes and caches are presentation/planning data, never save fields.
+
+Map refreshes still evaluate their real layer inputs at state boundaries, but
+reuse unchanged pixel surfaces. Fog always republishes current visibility even
+when its pixels can be reused; hotseat blanking and player changes still apply.
+Incremental editor painting invalidates the affected surface, and Refresh Maps
+forces a full rebuild. No map sweeps were added to planning-frame rendering.
+
 map_logic/ai/
   ai_world.py        one snapshot of the map per turn; every strength, border
                      and relation query answers from it

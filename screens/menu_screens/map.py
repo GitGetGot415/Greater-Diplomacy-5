@@ -1295,6 +1295,10 @@ class Map(GameState):
 
         # Initialize variables previously hidden by getattr
         self.fog_map = None
+        # Transient surfaces keyed by their resolved pixel inputs. Refreshes
+        # reuse unchanged layers; saves and multiplayer state omit these.
+        self._map_surface_cache = {}
+        self._fog_surface_cache = None
         self.visible_provinces = None
         self.mail_draft_text = ""
         self.mail_input_active = False
@@ -1846,6 +1850,7 @@ class Map(GameState):
         """Unified method to refresh all visual map layers and text at once."""
         # do note that for larger maps this might take over 1000 ms to complete, this is NOT instant by any means
         # TODO: maybe add the ability to ignore certain refresh actions (example: refresh all except for faction territories)
+        refresh_map.invalidate_map_surface_cache(self)
         self.refresh_map_layers(*self.ALL_MAP_LAYERS)
         self.update_country_centers()
         self.show_feedback("Maps refreshed!")

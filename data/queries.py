@@ -478,6 +478,8 @@ def save_scenario_settings(data):
 
 def clear_json_caches():
     """Forces the game to fetch the updated files on the next read."""
+    global _UNIT_RESEARCH_INDEX_CACHE
+    _UNIT_RESEARCH_INDEX_CACHE = None
     for key in _JSON_CACHE:
         # Prevent the Data Refresh button from wiping active session configurations
         if key not in ["settings", "scenario_settings"]:
@@ -3638,21 +3640,80 @@ def get_unit_research_requirement(unit_name):
     lvl_str = unit_name.replace(base_name, "").strip()
     return tech_key, max(1, roman_to_int(lvl_str))
 
+def get_unit_unlock_requirement(unit_name):
+    """Parse one unit's unlock rule into (tech, level, vehicle-infantry year).
+
+    Vehicle infantry depends on its transport gate plus the infantry year,
+    rather than one research level. A missing year remains unbuildable.
+    """
+    base_name = get_base_unit_name(unit_name)
+    tech_key = get_unit_tech_key(base_name)
+    if tech_key in c.VEHICLE_INFANTRY_GATES:
+        year_match = re.search(r'(\d{4})$', unit_name)
+        return tech_key, None, int(year_match.group(1)) if year_match else None
+    tech_key, required_lvl = get_unit_research_requirement(unit_name)
+    return tech_key, required_lvl, None
+
+
+def unit_requirement_is_met(requirement, player_research):
+    """Evaluate a parsed rule; shared by exact-tier UI checks and AI indexes."""
+    tech_key, required_lvl, year = requirement
+    if required_lvl is None:
+        unlocked_year = get_infantry_family_year(tech_key, player_research, get_tech_tree())
+        return year is not None and unlocked_year is not None and year <= unlocked_year
+    return player_research.get(tech_key, 0) >= required_lvl
+
+
 def is_unit_unlocked(unit_name, player_research):
     """Returns True if player_research meets the requirement for this exact unit tier,
     independent of whether it's the group's currently-highest tier (see Custom production)."""
-    base_name = get_base_unit_name(unit_name)
-    tech_key = get_unit_tech_key(base_name)
+    return unit_requirement_is_met(get_unit_unlock_requirement(unit_name), player_research)
 
-    if tech_key in c.VEHICLE_INFANTRY_GATES:
-        unlocked_year = get_infantry_family_year(tech_key, player_research, get_tech_tree())
-        year_match = re.search(r'(\d{4})$', unit_name)
-        if unlocked_year is None or not year_match:
-            return False
-        return int(year_match.group(1)) <= unlocked_year
 
-    tech_key, required_lvl = get_unit_research_requirement(unit_name)
-    return player_research.get(tech_key, 0) >= required_lvl
+def get_unit_tier(unit_name):
+    """Sort a unit family's tiers by trailing year or roman numeral."""
+    year = re.search(r'\s+(\d{4})$', unit_name)
+    if year:
+        return int(year.group(1))
+    roman = re.search(r'\s+([IVXLCDM]+)$', unit_name)
+    return roman_to_int(roman.group(1)) if roman else 0
+
+
+_UNIT_RESEARCH_INDEX_CACHE = None
+
+
+def get_unit_research_index(unit_library):
+    """Families with tiers and canonical unlock rules, parsed once per schema.
+
+    The library's names and the rules' contents detect in-place editor/mod
+    changes, not just replacement dictionaries. Retain the library itself to
+    avoid recycled id() values. JSON refresh also discards the index. Sorted
+    tiers are stable: equal-tier names retain the library's original priority.
+    This is transient derived state and never enters a save or snapshot.
+    """
+    global _UNIT_RESEARCH_INDEX_CACHE
+    schema = (
+        tuple(unit_library),
+        tuple(get_tech_tree().get("infantry_type", {}).get("years", ())),
+        tuple(sorted(c.VEHICLE_INFANTRY_GATES.items())),
+        tuple(sorted(c.UNIT_TECH_KEY_OVERRIDES.items())),
+        tuple(sorted((base, tuple(techs)) for base, techs in c.OBSOLESCENCE_RULES.items())),
+    )
+    cached = _UNIT_RESEARCH_INDEX_CACHE
+    if cached is not None and cached[0] is unit_library and cached[1] == schema:
+        return cached[2]
+
+    families = {}
+    for name in unit_library:
+        families.setdefault(get_base_unit_name(name), []).append(
+            (name, get_unit_tier(name), get_unit_unlock_requirement(name)))
+    index = tuple(
+        (base, tuple(sorted(tiers, key=lambda tier: tier[1], reverse=True)))
+        for base, tiers in families.items()
+    )
+    _UNIT_RESEARCH_INDEX_CACHE = (unit_library, schema, index)
+    return index
+
 
 def is_naval_unit(unit_type):
     """Checks if a unit is a naval unit based on its type name or unit library stats."""

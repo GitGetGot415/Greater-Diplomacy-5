@@ -515,6 +515,19 @@ def _lane_shares(seats):
     return shares
 
 
+def single_attacker_signature(unit):
+    """Inputs to a one-unit charge preview against a fixed defender stack.
+
+    Keep this beside the battle/volley rules that consume these fields. Identity,
+    cosmetic text and movement orders do not affect that preview. The caller
+    must scope cached verdicts to unchanged defenders, terrain and nation rules.
+    """
+    return (unit.get("owner"), unit.get("volunteer_host"),
+            unit.get("attack", c.DEFAULT_UNIT_ATK), unit.get("defense", 0),
+            unit.get("health"), unit.get("max_health") or c.DEFAULT_UNIT_HP,
+            unit.get("combat_stance"), unit.get("lane_target"))
+
+
 def build_battle(sides, nation_data, width=None, full_rank_for=None, terrain=None):
     """Who duels whom, and who is in the front rank, for one fight.
 

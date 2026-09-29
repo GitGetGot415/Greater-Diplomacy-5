@@ -334,71 +334,86 @@ def _war_cancels_response(map_screen, declarer, victim):
     clear_response(map_screen.nation_data, victim, declarer)
 
 
+def _pending_clash_pairs(nation_data):
+    """Pairs with an action, in the original nation-pair resolution order.
+
+    Include one-way declarations: a war can cancel a response even if the
+    recipient has no pending proposal. Dormant nations and delayed/legacy
+    entries cannot clash this turn. Effects below can remove other proposals,
+    so only snapshot the pairs and re-read each action when its pair is reached.
+    """
+    positions = {nation: index for index, nation in enumerate(nation_data)}
+    pairs = set()
+    for sender, data in nation_data.items():
+        for target, info in data.get("pending_diplomacy", {}).items():
+            if (target == sender or target not in positions
+                    or not isinstance(info, dict) or info.get("turns", 0) != 0):
+                continue
+            pairs.add(tuple(sorted((positions[sender], positions[target]))))
+    nations = list(nation_data)
+    return [(nations[left], nations[right]) for left, right in sorted(pairs)]
+
+
 def _resolve_simultaneous_clashes(map_screen):
     """Settles every pair of nations that queued contradictory actions against
     each other this turn (e.g. both requesting to join each other's faction,
     or one declaring war while the other proposed something a war voids)."""
-    nations = list(map_screen.nation_data.keys())
+    for nation_a, nation_b in _pending_clash_pairs(map_screen.nation_data):
 
-    for i in range(len(nations)):
-        for j in range(i + 1, len(nations)):
-            nation_a = nations[i]
-            nation_b = nations[j]
+        a_data = map_screen.nation_data[nation_a].get("pending_diplomacy", {})
+        b_data = map_screen.nation_data[nation_b].get("pending_diplomacy", {})
 
-            a_data = map_screen.nation_data[nation_a].get("pending_diplomacy", {})
-            b_data = map_screen.nation_data[nation_b].get("pending_diplomacy", {})
+        a_info = a_data.get(nation_b)
+        b_info = b_data.get(nation_a)
 
-            a_info = a_data.get(nation_b)
-            b_info = b_data.get(nation_a)
+        # A declaration of war also voids whatever answer the other side had
+        # queued for us. Responses live outside pending_diplomacy now, so they
+        # need checking even when only one side has a pending action.
+        if isinstance(a_info, dict) and a_info.get("turns", 0) == 0 and a_info.get("action") == "WAR_DECLARATION":
+            _war_cancels_response(map_screen, nation_a, nation_b)
+        if isinstance(b_info, dict) and b_info.get("turns", 0) == 0 and b_info.get("action") == "WAR_DECLARATION":
+            _war_cancels_response(map_screen, nation_b, nation_a)
 
-            # A declaration of war also voids whatever answer the other side had
-            # queued for us. Responses live outside pending_diplomacy now, so they
-            # need checking even when only one side has a pending action.
-            if isinstance(a_info, dict) and a_info.get("turns", 0) == 0 and a_info.get("action") == "WAR_DECLARATION":
-                _war_cancels_response(map_screen, nation_a, nation_b)
-            if isinstance(b_info, dict) and b_info.get("turns", 0) == 0 and b_info.get("action") == "WAR_DECLARATION":
-                _war_cancels_response(map_screen, nation_b, nation_a)
+        if isinstance(a_info, dict) and a_info.get("turns", 0) == 0 and \
+           isinstance(b_info, dict) and b_info.get("turns", 0) == 0:
 
-            if isinstance(a_info, dict) and a_info.get("turns", 0) == 0 and \
-               isinstance(b_info, dict) and b_info.get("turns", 0) == 0:
+            a_action = a_info.get("action")
+            b_action = b_info.get("action")
 
-                a_action = a_info.get("action")
-                b_action = b_info.get("action")
+            if a_action == "JOIN_FACTION_REQ" and b_action == "FACTION_INVITE":
+                if finalize_faction_join(map_screen.map_data, map_screen.nation_data, nation_b, nation_a):
+                    log_global_event(map_screen.nation_data, f"{nation_a} and {nation_b} have united their factions!")
+                _resolve_cross_action(map_screen, nation_a, nation_b, a_data, b_data, "CROSS_FACTION_JOIN")
 
-                if a_action == "JOIN_FACTION_REQ" and b_action == "FACTION_INVITE":
-                    if finalize_faction_join(map_screen.map_data, map_screen.nation_data, nation_b, nation_a):
-                        log_global_event(map_screen.nation_data, f"{nation_a} and {nation_b} have united their factions!")
-                    _resolve_cross_action(map_screen, nation_a, nation_b, a_data, b_data, "CROSS_FACTION_JOIN")
+            elif b_action == "JOIN_FACTION_REQ" and a_action == "FACTION_INVITE":
+                if finalize_faction_join(map_screen.map_data, map_screen.nation_data, nation_a, nation_b):
+                    log_global_event(map_screen.nation_data, f"{nation_a} and {nation_b} have united their factions!")
+                _resolve_cross_action(map_screen, nation_a, nation_b, a_data, b_data, "CROSS_FACTION_JOIN")
 
-                elif b_action == "JOIN_FACTION_REQ" and a_action == "FACTION_INVITE":
-                    if finalize_faction_join(map_screen.map_data, map_screen.nation_data, nation_a, nation_b):
-                        log_global_event(map_screen.nation_data, f"{nation_a} and {nation_b} have united their factions!")
-                    _resolve_cross_action(map_screen, nation_a, nation_b, a_data, b_data, "CROSS_FACTION_JOIN")
+            elif a_action == "WAR_DECLARATION" and b_action in _WAR_CANCELS:
+                action_name = b_action.split('_')[0].lower()
+                msg = ai_prompts.AI_FALLBACK_RESPONSES["CROSS_WAR_DECLARATION"].format(action=action_name)
+                send_message(map_screen, nation_a, nation_b, msg, "DIPLOMACY")
+                del b_data[nation_a]
 
-                elif a_action == "WAR_DECLARATION" and b_action in _WAR_CANCELS:
-                    action_name = b_action.split('_')[0].lower()
-                    msg = ai_prompts.AI_FALLBACK_RESPONSES["CROSS_WAR_DECLARATION"].format(action=action_name)
-                    send_message(map_screen, nation_a, nation_b, msg, "DIPLOMACY")
-                    del b_data[nation_a]
+            elif b_action == "WAR_DECLARATION" and a_action in _WAR_CANCELS:
+                action_name = a_action.split('_')[0].lower()
+                msg = ai_prompts.AI_FALLBACK_RESPONSES["CROSS_WAR_DECLARATION"].format(action=action_name)
+                send_message(map_screen, nation_b, nation_a, msg, "DIPLOMACY")
+                del a_data[nation_b]
 
-                elif b_action == "WAR_DECLARATION" and a_action in _WAR_CANCELS:
-                    action_name = a_action.split('_')[0].lower()
-                    msg = ai_prompts.AI_FALLBACK_RESPONSES["CROSS_WAR_DECLARATION"].format(action=action_name)
-                    send_message(map_screen, nation_b, nation_a, msg, "DIPLOMACY")
-                    del a_data[nation_b]
+            elif a_action == "CEASEFIRE" and b_action == "CEASEFIRE":
+                finalize_neutral(map_screen.nation_data, nation_a, nation_b)
+                log_global_event(map_screen.nation_data, f"{nation_a} and {nation_b} have signed a mutual ceasefire.")
+                _resolve_cross_action(map_screen, nation_a, nation_b, a_data, b_data, "CROSS_CEASEFIRE")
 
-                elif a_action == "CEASEFIRE" and b_action == "CEASEFIRE":
-                    finalize_neutral(map_screen.nation_data, nation_a, nation_b)
-                    log_global_event(map_screen.nation_data, f"{nation_a} and {nation_b} have signed a mutual ceasefire.")
-                    _resolve_cross_action(map_screen, nation_a, nation_b, a_data, b_data, "CROSS_CEASEFIRE")
+            elif (a_action == "CALL_TO_ARMS" and b_action == "JOIN_WARS") or \
+                 (a_action == "JOIN_WARS" and b_action == "CALL_TO_ARMS"):
 
-                elif (a_action == "CALL_TO_ARMS" and b_action == "JOIN_WARS") or \
-                     (a_action == "JOIN_WARS" and b_action == "CALL_TO_ARMS"):
-
-                    join_faction_wars(map_screen.map_data, map_screen.nation_data, nation_a, nation_b)
-                    join_faction_wars(map_screen.map_data, map_screen.nation_data, nation_b, nation_a)
-                    log_global_event(map_screen.nation_data, f"ESCALATION: {nation_a} and {nation_b} have formally combined their war efforts!")
-                    _resolve_cross_action(map_screen, nation_a, nation_b, a_data, b_data, "CROSS_CALL_TO_ARMS")
+                join_faction_wars(map_screen.map_data, map_screen.nation_data, nation_a, nation_b)
+                join_faction_wars(map_screen.map_data, map_screen.nation_data, nation_b, nation_a)
+                log_global_event(map_screen.nation_data, f"ESCALATION: {nation_a} and {nation_b} have formally combined their war efforts!")
+                _resolve_cross_action(map_screen, nation_a, nation_b, a_data, b_data, "CROSS_CALL_TO_ARMS")
 
 
 def _forward_war_declaration_to_masters(map_screen, declared_country, declarer,

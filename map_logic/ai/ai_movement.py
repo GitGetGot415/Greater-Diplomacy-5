@@ -60,19 +60,15 @@ def _tile_pressure(assignments, stacks, tile, capacity=None):
             assignments.get(tile, 0))
 
 
-def _bfs_nearest_target(start_id, target_ids, allowed_prov_ids, id_to_province, target_assignments, is_convoy=False, is_ship=False, moving_nation=None, nation_data=None, unsafe_waters=None, unit_speed=1.0, water_ids=None, neighbor_ids=None, target_stacks=None, target_capacity=None):
-    """Finds shortest path using Dijkstra. Returns the path to the target with the least units assigned."""
-    if unsafe_waters is None:
-        unsafe_waters = {}
-    if target_stacks is None:
-        target_stacks = {}
-    if target_capacity is None:
-        target_capacity = {}
-    if water_ids is None:
-        water_ids = {p_id for p_id, p in id_to_province.items() if queries.is_water_province(p)}
-    if neighbor_ids is None:
-        neighbor_ids = build_neighbor_index(id_to_province)
+# Bound retained candidate paths per nation. The cache is discarded before
+# another nation plans (and always before units move or diplomacy resolves).
+_PATH_SEARCH_CACHE_LIMIT = 128
 
+
+def _search_target_paths(start_id, target_ids, allowed_prov_ids, id_to_province,
+                         is_convoy, is_ship, moving_nation, nation_data,
+                         unit_speed, water_ids, neighbor_ids):
+    """Discover candidate paths without consulting changing assignments."""
     # Partial paths are cons cells -- (tile_id, cell_it_came_from) -- rather than
     # lists. Extending one is a single tuple instead of copying the whole path,
     # and branches share their common prefix, which matters because this search
@@ -147,6 +143,38 @@ def _bfs_nearest_target(start_id, target_ids, allowed_prov_ids, id_to_province, 
                 visited[n_id] = new_cost
                 heapq.heappush(queue, (new_cost, counter, n_id, (n_id, path)))
                 counter += 1
+
+    return tuple(valid_paths)
+
+
+def _bfs_nearest_target(start_id, target_ids, allowed_prov_ids, id_to_province, target_assignments, is_convoy=False, is_ship=False, moving_nation=None, nation_data=None, unsafe_waters=None, unit_speed=1.0, water_ids=None, neighbor_ids=None, target_stacks=None, target_capacity=None, path_cache=None):
+    """Finds shortest path using Dijkstra. Returns the path to the target with the least units assigned."""
+    if unsafe_waters is None:
+        unsafe_waters = {}
+    if target_stacks is None:
+        target_stacks = {}
+    if target_capacity is None:
+        target_capacity = {}
+    if water_ids is None:
+        water_ids = {p_id for p_id, p in id_to_province.items() if queries.is_water_province(p)}
+    if neighbor_ids is None:
+        neighbor_ids = build_neighbor_index(id_to_province)
+
+    # This cache is scoped to one nation's order pass, where graph, entry
+    # permissions and waters are fixed. The complete target set matters: it
+    # determines both which paths exist and where the depth cutoff starts.
+    key = (start_id, frozenset(target_ids), is_convoy, is_ship,
+           moving_nation, max(1.0, float(unit_speed)))
+    valid_paths = path_cache.get(key) if path_cache is not None else None
+    if valid_paths is None:
+        valid_paths = _search_target_paths(
+            start_id, target_ids, allowed_prov_ids, id_to_province,
+            is_convoy, is_ship, moving_nation, nation_data,
+            unit_speed, water_ids, neighbor_ids)
+        if path_cache is not None:
+            if len(path_cache) >= _PATH_SEARCH_CACHE_LIMIT:
+                path_cache.clear()
+            path_cache[key] = valid_paths
 
     # Pick the path pointing to the target with the LEAST assignments, tie-breaking by cost.
     if valid_paths:
@@ -457,8 +485,26 @@ def _attackers_would_survive(map_screen, ai_name, target_prov, attackers):
     )
 
 
-def _attack_target_is_immediate_loss(map_screen, ai_name, target_id, unit):
+def _attack_target_is_immediate_loss(map_screen, ai_name, target_id, unit,
+                                   cache=None, attacker_signature=None):
     """True when moving ``unit`` into ``target_id`` would be an instant wipe."""
+    if cache is not None:
+        target_prov = map_screen.id_to_province.get(target_id)
+        # A unit already on the target appears twice in the hypothetical sides.
+        # That identity-sensitive case must not share another unit's verdict.
+        if target_prov and any(defender is unit for defender in target_prov.get("units", ())):
+            return _attack_target_is_immediate_loss(map_screen, ai_name, target_id, unit)
+        if attacker_signature is None:
+            attacker_signature = combat_rules.single_attacker_signature(unit)
+        key = (target_id, attacker_signature)
+        if key in cache:
+            return cache[key]
+        # Cache only within one nation's order assignment. No defender stats,
+        # politics or diplomatic state change during that pass; the following
+        # nation's reserve rotation must not inherit this nation's verdicts.
+        result = _attack_target_is_immediate_loss(map_screen, ai_name, target_id, unit)
+        cache[key] = result
+        return result
     target_prov = map_screen.id_to_province.get(target_id)
     if not target_prov:
         return False
@@ -722,6 +768,8 @@ def _assign_unit_orders(map_screen, ai_name, units_info, ctx, allowed_prov_ids, 
     target_stacks = ctx["target_stacks"]
     naval_stacks = ctx["naval_stacks"]
     target_capacity = ctx["target_capacity"]
+    path_cache = {}
+    survival_cache = {}
 
     def claim(tile, from_tile=None):
         """Books one unit onto `tile`, freeing the tile it left.
@@ -740,6 +788,7 @@ def _assign_unit_orders(map_screen, ai_name, units_info, ctx, allowed_prov_ids, 
         return _tile_pressure(target_assignments, target_stacks, tile, target_capacity)
 
     for unit, prov in units_info:
+        attacker_signature = combat_rules.single_attacker_signature(unit)
         u_type = unit.get("type", "")
         is_convoy = u_type.startswith("Convoy")
         is_naval_combatant = queries.is_naval_unit(u_type) and not is_convoy
@@ -884,7 +933,8 @@ def _assign_unit_orders(map_screen, ai_name, units_info, ctx, allowed_prov_ids, 
                 adjacent_targets = [
                     target_id for target_id in adjacent_targets
                     if not _attack_target_is_immediate_loss(
-                        map_screen, ai_name, target_id, unit)
+                        map_screen, ai_name, target_id, unit,
+                        survival_cache, attacker_signature)
                 ]
             if adjacent_targets:
                 # Pick the adjacent enemy with the least attackers currently assigned
@@ -951,7 +1001,8 @@ def _assign_unit_orders(map_screen, ai_name, units_info, ctx, allowed_prov_ids, 
         targets = [
             target_id for target_id in targets
             if not _attack_target_is_immediate_loss(
-                map_screen, ai_name, target_id, unit)
+                map_screen, ai_name, target_id, unit,
+                survival_cache, attacker_signature)
         ]
 
         if not targets:
@@ -981,7 +1032,8 @@ def _assign_unit_orders(map_screen, ai_name, units_info, ctx, allowed_prov_ids, 
             water_ids=water_ids,
             neighbor_ids=neighbor_ids,
             target_stacks=stacks,
-            target_capacity=target_capacity
+            target_capacity=target_capacity,
+            path_cache=path_cache
         )
 
         if path:
@@ -1112,6 +1164,7 @@ def _assign_maintenance_orders(map_screen, ai_name, units_info, ctx,
     moment it stops making sense.
     """
     unit_library = queries.get_unit_library()
+    path_cache = {}
     tech_tree = queries.get_tech_tree()
     nation = map_screen.nation_data.get(ai_name, {})
     research = nation.get("research", {})
@@ -1163,7 +1216,7 @@ def _assign_maintenance_orders(map_screen, ai_name, units_info, ctx,
             target_assignments,
             moving_nation=ai_name, nation_data=map_screen.nation_data,
             unit_speed=unit.get("speed", 1),
-            water_ids=water_ids, neighbor_ids=neighbor_ids)
+            water_ids=water_ids, neighbor_ids=neighbor_ids, path_cache=path_cache)
         if not path or any(step in water_ids for step in path):
             return None
         return path
