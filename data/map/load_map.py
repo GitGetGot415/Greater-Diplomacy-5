@@ -340,30 +340,15 @@ def load_map_assets(map_screen, load_path):
         _apply_history_snapshot(save_meta, map_screen.history, map_screen.history_turn)
 
     # --- 3. Load Nation Data (The Critical Fix) ---
-    base_nation_data = copy.deepcopy(country_io.load_all_country_data())
-
     if save_meta and "nation_data" in save_meta:
         map_screen.nation_data = save_meta["nation_data"]
-
-        # SYNC FIX: Merge any missing research keys from the base template
-        # so old map saves instantly get the updated tech tree.
-        for country, base_data in base_nation_data.items():
-            if country not in map_screen.nation_data:
-                map_screen.nation_data[country] = base_data
-            else:
-                # SYNC FIX: Merge any missing top-level keys from the base template
-                for base_key, base_val in base_data.items():
-                    if base_key not in map_screen.nation_data[country]:
-                        map_screen.nation_data[country][base_key] = base_val
-
-                if "research" in base_data:
-                    current_res = map_screen.nation_data[country].setdefault("research", {})
-                    for tech_key, tech_val in base_data["research"].items():
-                        if tech_key not in current_res:
-                            current_res[tech_key] = tech_val
     else:
         # Fallback to default starting data
-        map_screen.nation_data = base_nation_data
+        map_screen.nation_data = {}
+    # Restore empty template references and retain the legacy missing-field/
+    # research migration through one shared path. Editor countries remain
+    # fully available even when their saved records contain no duplicated data.
+    queries.merge_country_templates(map_screen.nation_data)
 
     # Relation scores are derived on demand by queries.get_relation_score from
     # at_war_with / faction / master / temp_modifiers / claims, so there is no

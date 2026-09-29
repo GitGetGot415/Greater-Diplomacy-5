@@ -2914,8 +2914,116 @@ def map_data_with_saved_provinces(map_data, saved_provinces):
     return result
 
 
-def build_save_dict(map_screen, *, include_provinces=True):
-    """Standardize save state; multiplayer snapshots retain province overlays."""
+# These optional bookkeeping fields have empty defaults at their readers.
+# Do not generalize this to arbitrary empty values: an empty custom field may
+# be an intentional override and must survive a save.
+_EMPTY_COUNTRY_SAVE_FIELDS = {
+    "pending_diplomacy": {},
+    "relations": {},
+    "diplo_responses": {},
+    "military_attaches": [],
+    "armies": [],
+    "war_durations": {},
+}
+
+
+def merge_country_templates(nation_data):
+    """Restore catalog countries and migrate missing fields in place.
+
+    Empty save records are references to the shared country catalog. Filling
+    them in place preserves the saved iteration order, including custom IDs,
+    and leaves the entire catalog available to editor brushes and events.
+    Copies keep live edits from changing the process-wide template cache.
+    """
+    for country, template in get_country_data().items():
+        if country not in nation_data:
+            nation_data[country] = copy.deepcopy(template)
+            continue
+        current = nation_data[country]
+        # SYNC FIX: Merge missing top-level and research keys from the base
+        # template so old saves immediately get new fields and tech keys.
+        for key, value in template.items():
+            if key not in current:
+                current[key] = copy.deepcopy(value)
+        if "research" in template:
+            research = current.setdefault("research", {})
+            for key, value in template["research"].items():
+                if key not in research:
+                    research[key] = copy.deepcopy(value)
+    return nation_data
+
+
+def _country_uses_only_template_defaults(country, template):
+    """Whether restoring this record loses no authored or gameplay state."""
+    if not isinstance(country, dict):
+        return False
+    for key, value in country.items():
+        if key == "research" and isinstance(value, dict):
+            # The loader already fills missing research keys. Preserve any
+            # override or unknown technology, including an explicitly zero level.
+            baseline = template.get(key, {})
+            if any(tech not in baseline or level != baseline[tech]
+                   for tech, level in value.items()):
+                return False
+        elif (key in ("flag_data", "portrait_data")
+              and not template.get(key) and value in ("", "DEFAULT")):
+            # _load_default_images resolves both to the same local/default asset.
+            continue
+        elif key in template:
+            if value != template[key]:
+                return False
+        elif key not in _EMPTY_COUNTRY_SAVE_FIELDS or value != _EMPTY_COUNTRY_SAVE_FIELDS[key]:
+            return False
+    return True
+
+
+def compact_nation_data(nation_data, *reference_blocks):
+    """Replace unused, unmodified catalog records with empty template references.
+
+    Keep every custom/modified record and the transitive country references in
+    retained state, province data and metadata. Scanning dictionary keys too
+    protects diplomacy tables and pre-war ownership maps. Unknown state is
+    retained conservatively. Empty placeholders preserve iteration order (and
+    thus AI/random/diplomacy ordering) without duplicating hundreds of templates.
+    Live state and shared templates are never mutated.
+    """
+    templates = get_country_data()
+    candidates = {
+        name for name, country in nation_data.items()
+        if name in templates and name not in c.UNPLAYABLE_NATIONS
+        and _country_uses_only_template_defaults(country, templates[name])
+    }
+    required = set(nation_data) - candidates
+    pending = [nation_data[name] for name in required]
+    pending.extend(reference_blocks)
+    while pending:
+        value = pending.pop()
+        if isinstance(value, dict):
+            pending.extend(value.keys())
+            pending.extend(value.values())
+        elif isinstance(value, (list, tuple, set)):
+            pending.extend(value)
+        elif isinstance(value, str) and value in nation_data and value not in required:
+            required.add(value)
+            pending.append(nation_data[value])
+    return {name: country if name in required else {}
+            for name, country in nation_data.items()}
+
+
+def compact_save_nation_data(save_dict, map_data):
+    """Compact a disk metadata payload, protecting all other saved fields."""
+    references = {key: value for key, value in save_dict.items() if key != "nation_data"}
+    save_dict["nation_data"] = compact_nation_data(
+        save_dict["nation_data"], map_data, references)
+    return save_dict
+
+
+def build_save_dict(map_screen, *, include_provinces=True, compact_nations=False):
+    """Standardize save state; only disk saves opt into country compaction.
+
+    Network snapshots keep complete records for projection and authentication;
+    they do not rely on the recipient having an identical country catalog.
+    """
     scenario_settings = getattr(map_screen, 'scenario_settings', {}) or {}
     # Keep this setting explicit in every new save. Older base maps omit it,
     # but their effective default is OFF and that default should survive the
@@ -2954,6 +3062,8 @@ def build_save_dict(map_screen, *, include_provinces=True):
     if include_provinces:
         for data in map_screen.map_data.values():
             save_dict["provinces"][data["json_key"]] = build_saved_province_data(data)
+    if compact_nations:
+        compact_save_nation_data(save_dict, map_screen.map_data)
     return save_dict
 
 def get_clicked_province(mouse_pos, map_screen):
@@ -4446,7 +4556,8 @@ def refresh_map_directories(screen, dirs_to_check, success_message="Data refresh
                 # 4. Reconstruct the exact structural configuration payload
                 # map_data.json carries current province state in new files;
                 # the meta overlay remains only in legacy and multiplayer data.
-                save_dict = build_save_dict(temp_map_context, include_provinces=False)
+                save_dict = build_save_dict(
+                    temp_map_context, include_provinces=False, compact_nations=True)
 
                 # 5. Perform the manual write operations in-place
                 from data.map import history_io

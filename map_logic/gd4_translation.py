@@ -391,6 +391,11 @@ def build_save_payload(parsed, base_map_dir=None):
     except OSError as error:
         raise GD4TranslationError("the bundled GD5 GD4 base map is unavailable") from error
 
+    # The bundled map can reference unused catalog countries with empty
+    # records. Restore their colors/defaults before GD4 assigns those nations
+    # land or uses them as templates for custom imported countries.
+    queries.merge_country_templates(base_meta["nation_data"])
+
     requested_months = int(math.floor(parsed["time"]))
     minimum_months = c.START_YEAR * 12
     months = max(requested_months, minimum_months)
@@ -519,6 +524,7 @@ def translate_file(source_path, saves_dir=None, base_map_dir=None):
         raw_map = json.load(handle)
     raw_map = queries.map_data_with_saved_provinces(
         raw_map, payload.pop("provinces"))
+    queries.compact_save_nation_data(payload, raw_map)
     saves_dir = saves_dir or c.SAVES_DIR
     os.makedirs(saves_dir, exist_ok=True)
     destination = _destination_path(source_path, saves_dir)

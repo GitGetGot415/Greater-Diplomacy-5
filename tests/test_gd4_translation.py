@@ -129,6 +129,21 @@ class GD4TranslationTests(unittest.TestCase):
         self.assertEqual(gd4._gd4_color(0, 100), [255, 255, 255])
         self.assertEqual(payload["nation_data"]["United States of America"]["color"], [0, 80, 255])
 
+    def test_sparse_base_map_restores_catalog_colors_and_preserves_overrides(self):
+        catalog = gd4.queries.get_country_data()
+        custom_color = [12, 34, 56]
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            (base / "meta.json").write_text(json.dumps({"nation_data": {
+                "Unclaimed": {}, "United States of America": {},
+                "Canada": {"color": custom_color},
+            }}), encoding="utf-8")
+            (base / "map_data.json").write_text("{}", encoding="utf-8")
+            payload, _ = gd4.build_save_payload(gd4.parse_save(self.source_text), str(base))
+        self.assertEqual(payload["nation_data"]["United States of America"]["color"],
+                         catalog["United States of America"]["color"])
+        self.assertEqual(payload["nation_data"]["Canada"]["color"], custom_color)
+
     def test_the_rot_tro_owner_token_resolves_to_the_rot(self):
         parsed = gd4.parse_save(self.source_text)
         parsed["countries"][gd4.GD4_COUNTRY_CODES.index("WWE")][2] = "The Rot"

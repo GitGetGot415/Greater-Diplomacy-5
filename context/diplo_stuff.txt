@@ -7,6 +7,15 @@ even without a counter-proposal. Each pair re-reads its actions after previous
 effects, so removed proposals cannot resolve from a stale snapshot. Dormant
 country records do not add pairwise work; diplomatic timing is unchanged.
 
+Disk saves may represent unused, unchanged catalog countries with empty {}
+records. The loader restores their templates before diplomacy, faction repair,
+AI or editor tools run. Full records are retained for any country referenced by
+provinces, cores, units, metadata, diplomacy or scripted events, and for all
+customized state (including landless/exiled countries). Placeholder keys retain
+the saved nation iteration order. Tournament and real-time network snapshots
+still contain complete country records; their authority and visibility rules
+are unchanged. Per-turn history retains its complete snapshots.
+
 unilateral declarations:
 turn 0: msg is written
 turn 0.5: msg is sent

@@ -527,6 +527,7 @@ def translate_file(source_path, saves_dir=None):
     try:
         saved_provinces = payload.pop("provinces")
         raw_map = queries.map_data_with_saved_provinces(raw_map, saved_provinces)
+        queries.compact_save_nation_data(payload, raw_map)
         with open(os.path.join(destination, "meta.json"), "w", encoding="utf-8") as handle:
             handle.write(history_io.dump_compact_text(payload))
         with open(os.path.join(destination, "map_data.json"), "w", encoding="utf-8") as handle:
