@@ -9,6 +9,7 @@ path only runs when no display exists, which is the opposite of a test run.
 """
 
 import unittest
+from pathlib import Path
 from unittest import mock
 
 import pygame
@@ -220,6 +221,177 @@ class DialogTests(unittest.TestCase):
         confirm_dialog.show_person_info("Name", "", [])
         modal_stack.active().draw(self.surface)
         modal_stack.pop()
+
+    def credited_images(self):
+        from data import constants as c
+        return next(person["images"] for entry in c.CREDITS_DATA
+                    for person in entry.get("people", []) if person.get("images")
+                    and all(Path(image["path"]).parent == Path(c.ARMY_SYMBOLS_DIR)
+                            for image in person["images"]))
+
+    def test_credit_images_load_once_and_preserve_aspect_ratio(self):
+        images = self.credited_images()
+        with mock.patch.object(pygame.image, "load", wraps=pygame.image.load) as load:
+            confirm_dialog.show_person_info("Artist", "Art", images=images)
+            modal = modal_stack.active()
+            self.assertEqual(load.call_count, len({image["path"] for image in images}))
+            modal.draw(self.surface)
+            modal.draw(self.surface)
+            self.assertEqual(load.call_count, len({image["path"] for image in images}))
+        self.assertEqual(len(modal.image_rows), len(images))
+        for image, row in zip(images, modal.image_rows):
+            path = Path(image["path"])
+            self.assertEqual(path.read_bytes()[:8], b"\x89PNG\r\n\x1a\n")
+            source = pygame.image.load(str(path))
+            self.assertTrue(row["labels"])
+            self.assertTrue(modal.content_rect.contains(row["rect"]))
+            self.assertTrue(row["rect"].contains(row["image_rect"]))
+            self.assertFalse(row["rect"].colliderect(modal.ok_rect))
+            scaled_w, scaled_h = row["image"].get_size()
+            expected_w = source.get_width() * scaled_h / source.get_height()
+            self.assertAlmostEqual(scaled_w, expected_w, delta=1)
+        for index, (previous, following) in enumerate(zip(modal.image_rows, modal.image_rows[1:])):
+            if (index + 1) % modal.image_columns:
+                self.assertEqual(previous["rect"].top, following["rect"].top)
+                self.assertLess(previous["rect"].right, following["rect"].left)
+            else:
+                self.assertLess(previous["rect"].bottom, following["rect"].top)
+
+    def test_credit_image_pairs_and_odd_final_image_fit_their_columns(self):
+        from ui.confirm_dialog.person_info import _PersonInfoModal
+        images = self.credited_images()[:5]
+        for size in ((360, 320), (1280, 720)):
+            for align in ("left", "center", "right"):
+                with self.subTest(size=size, align=align):
+                    modal = _PersonInfoModal(pygame.Surface(size), "Artist", "Art", [], None,
+                                             align, images)
+                    self.assertEqual(modal.image_columns, 2)
+                    self.assertEqual(len(modal.image_rows), len(images))
+                    for index, cell in enumerate(modal.image_rows):
+                        self.assertGreaterEqual(cell["rect"].left, modal.content_rect.left)
+                        self.assertLessEqual(cell["rect"].right, modal.content_rect.right)
+                        if index % modal.image_columns:
+                            previous = modal.image_rows[index - 1]
+                            self.assertEqual(previous["rect"].top, cell["rect"].top)
+                            self.assertFalse(previous["rect"].colliderect(cell["rect"]))
+                    self.assertGreater(modal.image_rows[-1]["rect"].top,
+                                       modal.image_rows[-2]["rect"].bottom)
+
+    def test_credit_images_scroll_on_small_displays_without_hiding_close(self):
+        from ui.confirm_dialog.person_info import _PersonInfoModal
+        for size in ((520, 320), (360, 320), (1280, 720)):
+            for align in ("left", "center", "right"):
+                with self.subTest(size=size, align=align):
+                    surface = pygame.Surface(size)
+                    modal = _PersonInfoModal(surface, "Artist", "Art", [], None,
+                                             align, self.credited_images())
+                    self.assertTrue(surface.get_rect().contains(modal.box_rect))
+                    self.assertTrue(modal.box_rect.contains(modal.ok_rect))
+                    self.assertLess(modal.content_rect.bottom, modal.ok_rect.top)
+                    modal.handle_events([pygame.event.Event(pygame.MOUSEWHEEL, y=-100)])
+                    self.assertEqual(modal.scroll_y, modal.max_scroll)
+                    last = modal.image_rows[-1]["rect"].move(0, -modal.scroll_y)
+                    self.assertTrue(modal.content_rect.contains(last))
+                    modal.draw(surface)
+                    self.assertEqual(surface.get_clip(), surface.get_rect())
+                    modal.handle_events([click(modal.ok_rect.center)])
+                    self.assertTrue(modal._resolved)
+
+    def test_credit_images_forwarded_from_clickable_name(self):
+        from screens.menu_screens import credits
+        images = self.credited_images()
+        data = [{"main_text": "Art: ", "people": [{"link_text": "Artist", "images": images}]}]
+        with mock.patch.object(credits.c, "CREDITS_DATA", data):
+            screen = credits.Credits()
+        person = screen.credits_list[0]["people_links"][0]
+        self.assertTrue(person["has_popup"])
+        with mock.patch.object(credits, "show_person_info") as show:
+            screen.additional_events(click(person["link_rect"].center))
+        show.assert_called_once_with("Artist", "", [], "center", images=images)
+
+    def test_credit_links_follow_images_and_use_scrolled_hitboxes(self):
+        from ui.confirm_dialog.person_info import _PersonInfoModal
+        links = [{"text": "Site", "url": "https://example.invalid"}]
+        surface = pygame.Surface((520, 320))
+        modal = _PersonInfoModal(surface, "Artist", "Art", links, None,
+                                 "left", self.credited_images())
+        self.assertGreater(modal.link_rects[0].top, modal.image_rows[-1]["rect"].bottom)
+        modal.handle_events([pygame.event.Event(pygame.MOUSEWHEEL, y=-100)])
+        visible_link = modal.link_rects[0].move(0, -modal.scroll_y)
+        self.assertTrue(modal.content_rect.contains(visible_link))
+        with mock.patch("ui.confirm_dialog.person_info.webbrowser.open") as open_url:
+            modal.handle_events([click(visible_link.center)])
+        open_url.assert_called_once_with(links[0]["url"])
+
+    def test_credit_image_labels_wrap_within_the_popup(self):
+        from ui.confirm_dialog.person_info import _PersonInfoModal
+        image = dict(self.credited_images()[0], text="Long image label " * 15)
+        surface = pygame.Surface((360, 320))
+        modal = _PersonInfoModal(surface, "Artist", "", [], None, images=[image])
+        row = modal.image_rows[0]
+        self.assertGreater(len(row["labels"]), 1)
+        self.assertGreaterEqual(row["rect"].left, modal.content_rect.left)
+        self.assertLessEqual(row["rect"].right, modal.content_rect.right)
+        modal.draw(surface)
+
+    def test_standalone_person_info_receives_images(self):
+        from ui.confirm_dialog import person_info
+        images = self.credited_images()
+        calls = []
+        with mock.patch.object(person_info, "_run_blocking") as run:
+            person_info._show_person_info_standalone("Artist", "Art", [], "left", None,
+                                                    lambda: calls.append(True), images)
+        modal = run.call_args.args[0](self.surface)
+        self.assertEqual(len(modal.image_rows), len(images))
+        self.assertEqual(calls, [True])
+
+    def scrollable_credit_modal(self):
+        from ui.confirm_dialog.person_info import _PersonInfoModal
+        return _PersonInfoModal(pygame.Surface((520, 320)), "Artist", "Art", [], None,
+                                "left", self.credited_images() * 3)
+
+    def test_credit_scrollbar_is_visible_and_drags_without_a_jump(self):
+        modal = self.scrollable_credit_modal()
+        track, handle = modal.scroll_track_rect, modal.scroll_handle_rect
+        self.assertIsNotNone(track)
+        self.assertTrue(modal.box_rect.contains(track))
+        self.assertTrue(track.contains(handle))
+        self.assertGreater(track.left, modal.content_rect.right)
+        surface = pygame.Surface((520, 320))
+        modal.draw(surface)
+        self.assertNotEqual(surface.get_at(handle.center), surface.get_at(modal.box_rect.topleft))
+        grab = (handle.centerx, handle.bottom - 2)
+        modal.handle_events([click(grab)])
+        modal.handle_events([pygame.event.Event(pygame.MOUSEMOTION, pos=grab)])
+        self.assertAlmostEqual(modal.scroll_y, 0, delta=1)
+        modal.handle_events([pygame.event.Event(pygame.MOUSEMOTION,
+                                                pos=(grab[0], track.bottom + track.height))])
+        self.assertEqual(modal.scroll_y, modal.max_scroll)
+        self.assertEqual(modal.scroll_handle_rect.bottom, track.bottom)
+        modal.handle_events([pygame.event.Event(pygame.MOUSEBUTTONUP, pos=(0, 0), button=1)])
+        modal.handle_events([pygame.event.Event(pygame.MOUSEMOTION, pos=(grab[0], track.top))])
+        self.assertEqual(modal.scroll_y, modal.max_scroll)
+
+    def test_credit_scrollbar_track_wheel_keys_and_focus_loss(self):
+        modal = self.scrollable_credit_modal()
+        track = modal.scroll_track_rect
+        modal.handle_events([click((track.centerx, track.bottom - 1))])
+        self.assertEqual(modal.scroll_y, modal.max_scroll)
+        modal.handle_events([pygame.event.Event(pygame.WINDOWFOCUSLOST)])
+        self.assertIsNone(modal._scroll_drag_offset)
+        modal.handle_events([pygame.event.Event(pygame.MOUSEWHEEL, y=1)])
+        self.assertLess(modal.scroll_y, modal.max_scroll)
+        previous = modal.scroll_y
+        modal.handle_events([key(pygame.K_UP)])
+        self.assertLess(modal.scroll_y, previous)
+        self.assertTrue(track.contains(modal.scroll_handle_rect))
+
+    def test_credit_scrollbar_is_hidden_when_all_images_fit(self):
+        confirm_dialog.show_person_info("Artist", "Art", images=self.credited_images())
+        modal = modal_stack.active()
+        self.assertEqual(modal.max_scroll, 0)
+        self.assertIsNone(modal.scroll_track_rect)
+        self.assertIsNone(modal.scroll_handle_rect)
 
 
 

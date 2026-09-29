@@ -40,8 +40,9 @@ class Credits(GameState):
                 link_text = person.get("link_text", "")
                 info_text = person.get("info", "")
                 links = person.get("links", [])
+                images = person.get("images", [])
                 align = person.get("align", "center")
-                has_popup = bool(info_text or links)
+                has_popup = bool(info_text or links or images)
 
                 link_w = font.size(link_text)[0] if link_text else 0
                 link_rect = pygame.Rect(current_x, current_y, link_w, font.get_height())
@@ -50,6 +51,7 @@ class Credits(GameState):
                     "link_text": link_text,
                     "info": info_text,
                     "links": links,
+                    "images": images,
                     "align": align,
                     "has_popup": has_popup,
                     "link_rect": link_rect
@@ -79,7 +81,8 @@ class Credits(GameState):
             for item in self.credits_list:
                 for person in item.get("people_links", []):
                     if person["has_popup"] and person["link_text"] and person["link_rect"].collidepoint(event.pos):
-                        show_person_info(person["link_text"], person["info"], person["links"], person["align"])
+                        show_person_info(person["link_text"], person["info"], person["links"], person["align"],
+                                         images=person["images"])
 
     def additional_draw(self, surface):
         font = fonts.get("heading2")

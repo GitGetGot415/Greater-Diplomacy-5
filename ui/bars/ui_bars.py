@@ -28,20 +28,27 @@ def calculate_scroll_snap(mouse_y, max_scroll, track_y, view_h):
     ratio = max(0.0, min(1.0, rel_y / max(1, max_y)))
     return ratio * max_scroll
 
-def draw_standard_scrollbar(surface, scroll_y, max_scroll, track_x, track_y, view_h, width=15):
-    """Standardized scrollbar rendering to eliminate visual duplication across screens."""
+def get_standard_scrollbar_rects(scroll_y, max_scroll, track_x, track_y, view_h, width=15):
+    """Shared scrollbar geometry for drawing and input, including before first draw."""
     if max_scroll >= 0:
         return None, None
     track_rect = pygame.Rect(track_x, track_y, width, view_h)
-    pygame.draw.rect(surface, (50, 50, 60), track_rect)
     
     ratio = scroll_y / max_scroll
     handle_h = max(30, int(view_h * (view_h / (view_h - max_scroll))))
     handle_y = track_y + ratio * (view_h - handle_h)
     
     handle_rect = pygame.Rect(track_x, handle_y, width, handle_h)
-    pygame.draw.rect(surface, (150, 150, 150), handle_rect, border_radius=5)
+    return track_rect, handle_rect
 
+
+def draw_standard_scrollbar(surface, scroll_y, max_scroll, track_x, track_y, view_h, width=15):
+    """Standardized scrollbar rendering to eliminate visual duplication across screens."""
+    track_rect, handle_rect = get_standard_scrollbar_rects(
+        scroll_y, max_scroll, track_x, track_y, view_h, width)
+    if track_rect is not None:
+        pygame.draw.rect(surface, (50, 50, 60), track_rect)
+        pygame.draw.rect(surface, (150, 150, 150), handle_rect, border_radius=5)
     return track_rect, handle_rect
 
 def calculate_scroll_snap_horizontal(mouse_x, min_value, max_value, track_x, track_w):

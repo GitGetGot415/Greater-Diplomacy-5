@@ -128,9 +128,9 @@ class _BaseModal:
         surf = self.btn_font.render(label, True, (255, 255, 255))
         surface.blit(surf, surf.get_rect(center=rect.center))
 
-    def draw_body_lines(self, surface):
+    def draw_body_lines(self, surface, offset_y=0):
         """Renders the wrapped message and returns the y below the last line."""
-        y = self.box_rect.y + self.BODY_DY
+        y = self.box_rect.y + self.BODY_DY + offset_y
         left_x, right_x = self.box_rect.x + 40, self.box_rect.right - 40
         for line in self.lines:
             line_surf = self.msg_font.render(line, True, (210, 210, 210))

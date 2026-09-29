@@ -102,7 +102,9 @@ REMOVE_CORE_TURNS = 2
 
 # Each person may have "info" (free-text bio shown in the popup) and/or "links"
 # (a list of {"text", "url"} shown as clickable lines below the info text).
-# A person with neither is rendered as plain, non-clickable text.
+# Optional "images" entries {"path", "text"} display an image beside a label;
+# omitting "text" uses the image filename as its label.
+# A person without info, links, or images is plain, non-clickable text.
 CREDITS_DATA = [
     {
         "main_text": "Lead Developer: ",
@@ -135,8 +137,26 @@ CREDITS_DATA = [
                     "Added:\n"
                     "- Submarines\n"
                     "- Terrain art\n"
-                    "- Icons for Credits, Load Game, Map Editor, New Game"
+                    "- Icons for New Game, Load Game, Map Editor, Credits"
                 ),
+                "images": [
+                    {"path": "assets/classic/Submarine.png"},
+                    {"path": "assets/terrains/coastal_sea.png"},
+                    {"path": "assets/terrains/Desert.png"},
+                    {"path": "assets/terrains/Forest.png"},
+                    {"path": "assets/terrains/Hills.png"},
+                    {"path": "assets/terrains/inland_sea.png"},
+                    {"path": "assets/terrains/Jungle.png"},
+                    {"path": "assets/terrains/lakes.png"},
+                    {"path": "assets/terrains/Mountain.png"},
+                    {"path": "assets/terrains/Ocean.png"},
+                    {"path": "assets/terrains/Plains.png"},
+                    {"path": "assets/terrains/Swamp.png"},
+                    {"path": "assets/images/New Game.png"},
+                    {"path": "assets/images/Load Game.png"},
+                    {"path": "assets/images/Map Editor.png"},
+                    {"path": "assets/images/Credits.png"},
+                ],
                 "align": "left",
                 "links": [{"text": "GitHub", "url": "https://github.com/litbrb"}]
             },
@@ -183,13 +203,15 @@ CREDITS_DATA = [
             "people": [
                 {
                     "link_text": "Randomly",
-                    "info": ("Icons Added:\n"
-                    "- Randomly_King.png\n"
-                    "- Randomly_Queen.png\n"
-                    "- Randomly_Rook.png\n"
-                    "- Randomly_Bishop.png\n"
-                    "- Randomly_Knight.png\n"
-                    "- Randomly_Pawn.png\n"),
+                    "info": "Icons Added:",
+                    "images": [
+                        {"path": "assets/symbols/Randomly_King.png"},
+                        {"path": "assets/symbols/Randomly_Queen.png"},
+                        {"path": "assets/symbols/Randomly_Rook.png"},
+                        {"path": "assets/symbols/Randomly_Bishop.png"},
+                        {"path": "assets/symbols/Randomly_Knight.png"},
+                        {"path": "assets/symbols/Randomly_Pawn.png"},
+                    ],
                     "align": "left",
                 },
                 {
