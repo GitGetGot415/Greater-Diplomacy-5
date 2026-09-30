@@ -13313,7 +13313,9 @@
             }
         ],
         "orders": [],
-        "buildings": [],
+        "buildings": [
+            "Fort Lvl 20"
+        ],
         "resources": {},
         "cores": [
             "German Reich",
@@ -13989,7 +13991,9 @@
             }
         ],
         "orders": [],
-        "buildings": [],
+        "buildings": [
+            "Fort Lvl 20"
+        ],
         "resources": {},
         "cores": [
             "German Reich",

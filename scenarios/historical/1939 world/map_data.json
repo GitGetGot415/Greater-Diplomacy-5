@@ -19907,7 +19907,9 @@
         "building_queue": [],
         "unit_queue": [],
         "orders": [],
-        "buildings": [],
+        "buildings": [
+            "Fort Lvl 20"
+        ],
         "resources": {},
         "cores": [
             "German Reich",
@@ -20814,7 +20816,9 @@
         "building_queue": [],
         "unit_queue": [],
         "orders": [],
-        "buildings": [],
+        "buildings": [
+            "Fort Lvl 20"
+        ],
         "resources": {},
         "cores": [
             "German Reich",

@@ -1,6 +1,6 @@
 {
-    "version": "v38",
-    "generated_at": "2026-09-26T13:42:46.410056",
+    "version": "v39",
+    "generated_at": "2026-09-30T14:24:55.470429",
     "date": {
         "day": 15,
         "month": 2,
@@ -8,7 +8,7 @@
         "total_turns": 0
     },
     "loop_map": true,
-    "player_country": "None",
+    "player_country": "Editor",
     "active_players": [],
     "current_player_index": 0,
     "scenario_settings": {
