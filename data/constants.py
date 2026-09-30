@@ -192,7 +192,7 @@ CREDITS_DATA = [
             {
                 "link_text": "GitGetGot415",
                 "info": "Classic unit art:",
-                "images": [{"directory": "assets/classic", "recursive": True}],
+                "images": [{"directory": "assets/classic", "recursive": True, "exclude": ["Submarine.png"]}],
                 "align": "left",
                 "links": [{"text": "GitHub", "url": "https://github.com/GitGetGot415"}]
             },
