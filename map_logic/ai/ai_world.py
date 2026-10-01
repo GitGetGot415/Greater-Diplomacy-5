@@ -8,10 +8,10 @@ enemy nation. On a large map `_run_basic_proactive_ai` was paying for those
 thousands of times a turn, which is why the AI could not afford to think any
 harder than it did.
 
-AIWorld does the sweeps once and answers from the result. The answers are
-identical to the `queries` functions they stand in for -- tests/test_ai_world.py
-asserts that pairwise, and that parity is the whole contract. Nothing here is a
-better heuristic; it is the same heuristic, affordable.
+AIWorld does the sweeps once and answers from the result. Its cached query
+counterparts are identical to the `queries` functions they stand in for --
+tests/test_ai_world.py asserts that pairwise. War targeting also uses a bounded
+sea-neighbor index when no land front exists.
 
 Why the cached versions live here rather than as `world=` arguments on
 data/queries.py: mod_loader replaces whole files by path, so a mod shipping its
@@ -110,6 +110,7 @@ class AIWorld:
 
         self._sweep()
         self.border_graph = queries.build_national_border_graph(map_data, id_to_province)
+        self.sea_targets = queries.get_nearby_nations_across_water(map_data, id_to_province)
 
     # ------------------------------------------------------------------
     # Construction
@@ -297,6 +298,18 @@ class AIWorld:
                            + self.econ_power(target_nation) / 100.0)
 
         return my_border / target_border, my_total / target_total
+
+    def war_power_ratio(self, ai_nation, target_nation):
+        """Use overall power when a nearby sea target has no shared land front."""
+        border_ratio, global_ratio = self.power_ratio(ai_nation, target_nation)
+        if (target_nation not in self.neighbors[ai_nation]
+                and target_nation in self.sea_targets.get(ai_nation, {})):
+            return global_ratio, global_ratio
+        return border_ratio, global_ratio
+
+    def war_targets(self, nation):
+        """Countries next door by land or a short navigable sea crossing."""
+        return self.neighbors[nation] | self.sea_targets.get(nation, {}).keys()
 
     def thinks_it_can_win(self, ai_nation, target_nation):
         """queries.ai_thinks_it_can_win, from the cached ratios."""

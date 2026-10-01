@@ -61,8 +61,9 @@ def target_value(world, nation, target):
 def war_desire(world, nation, target, scenario_settings=None):
     """How much `nation` wants a war with `target`, 0..1.
 
-    The two power terms are the same quantities ai_thinks_it_can_win compares,
-    but read as degrees rather than as a pass/fail -- with the crossover moved
+    On land the two power terms are those ai_thinks_it_can_win compares. Across
+    nearby water, overall power stands in for a nonexistent land front. The
+    terms are read as degrees rather than as a pass/fail, with the crossover moved
     by how cautious this nation is, so a bold country gambles on odds a careful
     one turns down. The remaining terms are what the old logic had no way to
     say at all: that we like them, that we promised not to, that we are already
@@ -71,7 +72,7 @@ def war_desire(world, nation, target, scenario_settings=None):
     person = traits(world, nation, scenario_settings)
     caution = person.get("caution", 0.5)
 
-    border_ratio, global_ratio = world.power_ratio(nation, target)
+    border_ratio, global_ratio = world.war_power_ratio(nation, target)
 
     # Each of these is 0..1 in its own right and they are *averaged*, not added.
     # Summing them saturated the clamp at the top of the range -- any nation

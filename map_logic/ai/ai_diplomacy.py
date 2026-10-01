@@ -854,7 +854,7 @@ def _join_faction_wars_proactively(bag, map_screen, ai_name, my_faction, my_enem
 
 
 def _declare_war_for_cores_and_claims(bag, map_screen, ai_name, my_enemies, my_master, my_type, is_already_at_war, active_nations, world):
-    """Section 4: declares war on a bordering nation holding our cores/claims
+    """Section 4: declares war on a nearby nation holding our cores/claims
     once we think we can win, or fabricates a claim on them first if we lack a wargoal."""
     if my_master and my_type == c.PUPPET_TYPE_INTEGRATED:
         return
@@ -868,14 +868,13 @@ def _declare_war_for_cores_and_claims(bag, map_screen, ai_name, my_enemies, my_m
     if not valid_war_targets:
         return
 
-    # ONLY look at nations we actually share a physical border with. Sorted for
+    # Only consider a land border or a short navigable sea crossing. Sorted for
     # a stable order -- iterating the raw set meant which neighbour got invaded
     # came down to string hash order, randomised per process, so the same save
     # could start a different war on different launches. Every one that passes
     # is now offered as a candidate carrying its own desire, and the arbiter
     # picks; this loop no longer breaks on the first.
-    my_neighbors = world.neighbors[ai_name]
-    valid_border_targets = sorted(t for t in valid_war_targets if t in my_neighbors)
+    valid_border_targets = sorted(valid_war_targets & world.war_targets(ai_name))
 
     for target in valid_border_targets:
         if target not in active_nations: continue
@@ -893,8 +892,9 @@ def _declare_war_for_cores_and_claims(bag, map_screen, ai_name, my_enemies, my_m
         if my_master and my_type == c.PUPPET_TYPE_AUTONOMOUS and target != my_master:
             continue
 
-        # Border superiority, alliance/economic power and how distracted
-        # the target already is all live inside ai_thinks_it_can_win; this
+        # Land-front superiority (or overall power across nearby water),
+        # alliance/economic power and how distracted the target already is
+        # all inform war desire; this
         # block used to recompute every one of them and throw the result
         # away, which cost several full map scans per candidate target.
         # Not "could I win" but "do I want this": the odds still dominate, but a
@@ -967,7 +967,7 @@ def _drain_llm_requests(bag, map_screen, ai_name, data, my_enemies, active_natio
 
         legal = (current_turn >= turns_to_wait
                  and target not in my_enemies
-                 and target in world.neighbors.get(ai_name, ())
+                 and target in world.war_targets(ai_name)
                  and not queries.are_in_same_faction(ai_name, target, map_screen.nation_data)
                  and not queries.has_active_truce(ai_name, target, map_screen.nation_data)
                  and queries.has_wargoal(ai_name, target, map_screen.nation_data, map_screen.map_data)
@@ -1112,7 +1112,7 @@ def _fabricate_claims_during_war(map_screen, ai_name, data, my_enemies, active_n
 
 
 def _fabricate_claims_on_weaker_neighbors(map_screen, ai_name, data, my_master, my_enemies, active_nations, world):
-    """Section 5: while at peace, fabricates a claim on a weaker bordering
+    """Section 5: while at peace, fabricates a claim on a weaker nearby
     neighbor we don't already have a wargoal or claim against."""
     current_turn = queries.get_total_turns(map_screen.time_manager)
     turns_to_wait = int(map_screen.scenario_settings.get("turns_to_wait_before_war", c.TURNS_TO_WAIT_BEFORE_WAR))
@@ -1121,7 +1121,7 @@ def _fabricate_claims_on_weaker_neighbors(map_screen, ai_name, data, my_master, 
 
     # Sorted for the same reason as the war-target loop above: this one also
     # breaks after the first neighbour it successfully queues a claim against.
-    my_neighbors = sorted(world.neighbors[ai_name])
+    my_neighbors = sorted(world.war_targets(ai_name))
 
     for neighbor in my_neighbors:
         if neighbor not in active_nations: continue
@@ -1151,6 +1151,9 @@ def _fabricate_claims_on_weaker_neighbors(map_screen, ai_name, data, my_master, 
                 if not queries.is_ai_diplo_on_cooldown(ai_name, neighbor, "FABRICATE_CLAIM", map_screen.nation_data):
 
                     valid_targets = queries.get_valid_claim_targets(ai_name, neighbor, map_screen.map_data)
+                    if neighbor not in world.neighbors[ai_name]:
+                        coastal_ids = world.sea_targets.get(ai_name, {}).get(neighbor, set())
+                        valid_targets = [p for p in valid_targets if p["id"] in coastal_ids]
                     if valid_targets:
                         target_prov = random.choice(valid_targets)
                         queue = data.setdefault("claim_queue", [])

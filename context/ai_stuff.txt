@@ -96,6 +96,12 @@ War desire also accounts for guarantees of independence. Declaring on a
 guaranteed country means fighting its guarantors, so their relative power adds
 restraint to the normal target-strength calculation.
 
+Proactive AI claims and war declarations consider countries sharing a land
+border or separated by at most AI_NEARBY_SEA_TILES connected navigable water
+tiles. Lakes do not count. An overseas claim targets the nearby
+coast. Without a shared land front, war desire compares overall power for both
+odds terms; the usual wargoal, truce, faction and turn checks still apply.
+
 AI countries accept a valid Military Attaché request unless the sender is
 sending active volunteer divisions to, or observing through an attaché at, a country the AI is
 fighting. They schedule an existing conflicting attaché for revocation on the

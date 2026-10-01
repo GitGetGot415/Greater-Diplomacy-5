@@ -35,6 +35,9 @@ class GuaranteeTests(unittest.TestCase):
             def power_ratio(self, attacker, target):
                 return (2.0, 2.0) if target == "B" else (0.5, 0.5)
 
+            def war_power_ratio(self, attacker, target):
+                return self.power_ratio(attacker, target)
+
             def relation(self, _a, _b):
                 return 0
 

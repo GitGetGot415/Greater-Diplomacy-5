@@ -3100,6 +3100,48 @@ def get_neighboring_nations(nation, map_data, id_to_province):
                     neighbors.add(n_prov.get("owner"))
     return neighbors
 
+
+def get_nearby_nations_across_water(map_data, id_to_province, max_water_tiles=None):
+    """Map each nation to nearby nations and their reachable coastal province IDs.
+
+    Only connected navigable water counts. The bounded search prevents a coast
+    on a shared ocean from making every country on that ocean a war target.
+    """
+    if max_water_tiles is None:
+        max_water_tiles = c.AI_NEARBY_SEA_TILES
+
+    starting_waters = collections.defaultdict(set)
+    for prov in map_data.values():
+        owner = prov.get("owner")
+        if owner in c.UNPLAYABLE_NATIONS or not owner or is_water_province(prov):
+            continue
+        for neighbor_id in prov.get("neighbors", []):
+            neighbor = id_to_province.get(neighbor_id)
+            if neighbor and neighbor.get("terrain") in c.OCEAN_TERRAINS:
+                starting_waters[owner].add(neighbor_id)
+
+    nearby = {}
+    for owner, water_ids in starting_waters.items():
+        targets = collections.defaultdict(set)
+        queue = collections.deque((water_id, 1) for water_id in water_ids)
+        visited = set(water_ids)
+        while queue:
+            water_id, distance = queue.popleft()
+            for neighbor_id in id_to_province[water_id].get("neighbors", []):
+                neighbor = id_to_province.get(neighbor_id)
+                if not neighbor:
+                    continue
+                if neighbor.get("terrain") in c.OCEAN_TERRAINS:
+                    if distance < max_water_tiles and neighbor_id not in visited:
+                        visited.add(neighbor_id)
+                        queue.append((neighbor_id, distance + 1))
+                elif not is_water_province(neighbor):
+                    target = neighbor.get("owner")
+                    if target and target != owner and target not in c.UNPLAYABLE_NATIONS:
+                        targets[target].add(neighbor_id)
+        nearby[owner] = dict(targets)
+    return nearby
+
 def get_nation_provinces_and_units(nation, map_data):
     """Returns a tuple of (list_of_provinces, list_of_units) owned by the nation."""
     owned_provs = []

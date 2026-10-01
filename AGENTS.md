@@ -199,7 +199,10 @@ feature working in one says nothing about the other.
   remains the fallback for a tile with no rendered box.
 - Layout tests should protect useful invariants such as non-overlap, containment,
   reachability, and consistent spacing. Avoid brittle tests whose only purpose
-  is to freeze an arbitrary pixel coordinate.
+  is to freeze an arbitrary pixel coordinate. In addition to this, avoid tests
+  that assume that a variable remains unchanging, for example a test that checks
+  if the speed of a particular unit is set to a certain amount. Make it such so
+  that if a variable is changed, said test accounts for that change.
 
 ### AI and diplomacy contracts
 

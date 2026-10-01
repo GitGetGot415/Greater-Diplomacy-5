@@ -1410,6 +1410,7 @@ AI_FACTION_MIN_TENURE = 15 # How many turns before AI can retry a rejected/ignor
 AI_WAR_COOLDOWN = 12
 AI_CLAIM_COOLDOWN = 12 # How many turns the AI waits before trying to fabricate another claim
 AI_WEAK_NEIGHBOR_STRENGTH_RATIO = 0.60 # Target must be this much weaker (e.g. 60% of AI's power) to be bullied with claims
+AI_NEARBY_SEA_TILES = 3 # Longest water crossing considered nearby for AI claims and wars
 
 # ==========================================
 # AI DESIRE WEIGHTS (map_logic/ai/ai_opinion.py)

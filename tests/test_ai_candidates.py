@@ -261,5 +261,53 @@ class LegalityTests(unittest.TestCase):
             self.assertIn(action, ai_diplomacy.PROACTIVE_PROPOSALS, action)
 
 
+class NearbySeaTargetTests(unittest.TestCase):
+    def make_game(self):
+        game = StubMapScreen(["A", "B", "C", "D"], human_players=[])
+        game.scenario_settings["turns_to_wait_before_war"] = 0
+        game.scenario_settings["ai_war_declaration_chance"] = 1.0
+        waters = [game.add_province("Ocean", terrain="coastal_sea")
+                  for _ in range(c.AI_NEARBY_SEA_TILES + 1)]
+        lake = game.add_province("Lakes", terrain="lakes")
+        game.border(game.home_of("A")["id"], waters[0]["id"])
+        for first, second in zip(waters, waters[1:]):
+            game.border(first["id"], second["id"])
+        game.border(waters[c.AI_NEARBY_SEA_TILES - 1]["id"], game.home_of("B")["id"])
+        game.border(waters[c.AI_NEARBY_SEA_TILES]["id"], game.home_of("C")["id"])
+        game.border(game.home_of("A")["id"], lake["id"])
+        game.border(lake["id"], game.home_of("D")["id"])
+        game.nation_data["A"]["materials"] = 1000000
+        game.nation_data["A"]["fuel"] = 1000000
+        return game
+
+    def test_only_nations_within_the_navigable_water_limit_are_nearby(self):
+        game = self.make_game()
+        world = ai_world.build(game)
+        self.assertIn("B", world.war_targets("A"))
+        self.assertNotIn("C", world.war_targets("A"))
+        self.assertNotIn("D", world.war_targets("A"))
+        self.assertEqual(world.sea_targets["A"]["B"], {game.home_of("B")["id"]})
+        self.assertEqual(world.war_power_ratio("A", "B"),
+                         (world.power_ratio("A", "B")[1],) * 2)
+
+    def test_ai_can_claim_and_then_propose_war_across_the_water(self):
+        game = self.make_game()
+        world = ai_world.build(game)
+        self.assertTrue(world.is_weaker_neighbor("A", "B"))
+        active = {"A", "B", "C", "D"}
+        ai_diplomacy._fabricate_claims_on_weaker_neighbors(
+            game, "A", game.nation_data["A"], "", [], active, world)
+        self.assertEqual([q["prov_id"] for q in game.nation_data["A"]["claim_queue"]],
+                         [game.home_of("B")["id"]])
+
+        game.nation_data["A"]["claims"] = [game.home_of("B")["id"]]
+        world = ai_world.build(game)
+        bag = ac.Collector("A", game.nation_data["A"]["pending_diplomacy"])
+        ai_diplomacy._declare_war_for_cores_and_claims(
+            bag, game, "A", [], "", "", False, active, world)
+        self.assertEqual([(choice.action, choice.target) for choice in bag.ranked()],
+                         [("WAR_DECLARATION", "B")])
+
+
 if __name__ == "__main__":
     unittest.main()
