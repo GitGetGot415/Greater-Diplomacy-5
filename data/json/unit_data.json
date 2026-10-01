@@ -622,5 +622,12 @@
     "Aircraft Carrier XIV": {"health": 3400, "attack": 2160, "defense": 460, "speed": 1, "cost_materials": 33000, "cost_manpower": 2000, "cost_fuel": 825, "production_time": 10, "bombard_attack": 2160, "bombard_range": 2, "naval_unit": true, "order": {}},
     "Aircraft Carrier XV": {"health": 3600, "attack": 2280, "defense": 480, "speed": 1, "cost_materials": 34000, "cost_manpower": 2000, "cost_fuel": 850, "production_time": 10, "bombard_attack": 2280, "bombard_range": 2, "naval_unit": true, "order": {}},
     "Aircraft Carrier XVI": {"health": 3800, "attack": 2400, "defense": 500, "speed": 1, "cost_materials": 35000, "cost_manpower": 2000, "cost_fuel": 875, "production_time": 10, "bombard_attack": 2400, "bombard_range": 2, "naval_unit": true, "order": {}},
-    "Aircraft Carrier XVII": {"health": 4000, "attack": 2520, "defense": 520, "speed": 1, "cost_materials": 36000, "cost_manpower": 2000, "cost_fuel": 900, "production_time": 10, "bombard_attack": 2520, "bombard_range": 2, "naval_unit": true, "order": {}}
+    "Aircraft Carrier XVII": {"health": 4000, "attack": 2520, "defense": 520, "speed": 1, "cost_materials": 36000, "cost_manpower": 2000, "cost_fuel": 900, "production_time": 10, "bombard_attack": 2520, "bombard_range": 2, "naval_unit": true, "order": {}},
+
+    "Biplane": {"health": 1000, "attack": 100, "defense": 0, "speed": 1, "cost_materials": 500, "cost_manpower": 1000, "cost_fuel": 0, "production_time": 2, "naval_unit": false, "order": {}, "production_group": "Aerospace"},
+    "Piston Fighter": {"health": 1000, "attack": 100, "defense": 0, "speed": 1, "cost_materials": 500, "cost_manpower": 1000, "cost_fuel": 0, "production_time": 2, "naval_unit": false, "order": {}, "production_group": "Aerospace"},
+    "Piston Bomber": {"health": 1000, "attack": 100, "defense": 0, "speed": 1, "cost_materials": 500, "cost_manpower": 1000, "cost_fuel": 0, "production_time": 2, "naval_unit": false, "order": {}, "production_group": "Aerospace"},
+    "V1 Flying Bomb": {"health": 1000, "attack": 100, "defense": 0, "speed": 1, "cost_materials": 500, "cost_manpower": 1000, "cost_fuel": 0, "production_time": 2, "naval_unit": false, "order": {}, "production_group": "Aerospace"},
+    "V2 Rocket": {"health": 1000, "attack": 100, "defense": 0, "speed": 1, "cost_materials": 500, "cost_manpower": 1000, "cost_fuel": 0, "production_time": 2, "naval_unit": false, "order": {}, "production_group": "Aerospace"},
+    "Jet Fighter": {"health": 1000, "attack": 100, "defense": 0, "speed": 1, "cost_materials": 500, "cost_manpower": 1000, "cost_fuel": 0, "production_time": 2, "naval_unit": false, "order": {}, "production_group": "Aerospace"}
 }

@@ -3672,13 +3672,19 @@ def get_base_item_name(name):
 UNIT_GROUP_INFANTRY = "Infantry"
 UNIT_GROUP_TANKS = "Tanks"
 UNIT_GROUP_NAVY = "Navy"
+UNIT_GROUP_AEROSPACE = "Aerospace"
+UNIT_GROUPS = (UNIT_GROUP_INFANTRY, UNIT_GROUP_TANKS, UNIT_GROUP_NAVY, UNIT_GROUP_AEROSPACE)
 
 def classify_unit_group(base_name, stats):
-    """Sorts a unit family into its Infantry / Tanks / Navy column.
+    """Sorts a unit family into its production category.
 
     One rule for the production list, the custom-production picker and anything
     added later, so a unit can never land in different columns in two screens.
     """
+    # Presentation metadata lets aerospace use placeholder infantry stats
+    # without treating it as infantry or introducing flight mechanics.
+    if stats.get("production_group") in UNIT_GROUPS:
+        return stats["production_group"]
     if stats.get("naval_unit", False):
         return UNIT_GROUP_NAVY
     if "Tank" in base_name or "Armored Car" in base_name or base_name in c.TANK_GROUP_EXTRAS:
@@ -3688,7 +3694,7 @@ def classify_unit_group(base_name, stats):
 #: The buckets the AI balances its army across.
 #:
 #: Deliberately NOT the same rule as classify_unit_group above, which sorts the
-#: production screen's Infantry / Tanks / Navy columns. The two genuinely
+#: production screen's unit categories. The two genuinely
 #: disagree -- the production list files Cavalry under Infantry and Railroad
 #: Guns under Tanks, the AI does the opposite -- and reconciling them would
 #: change what the AI builds, i.e. the game. They are two named rules now
@@ -4827,13 +4833,13 @@ def redo_editor_state(map_screen):
 # ==========================================
 
 def get_grouped_units(unit_library, by_family=True, unit_filter=None):
-    """Buckets a unit library into {Infantry/Tanks/Navy: [names]} via classify_unit_group.
+    """Buckets a unit library into production categories via classify_unit_group.
 
     `by_family=True` lists each base class once (the production columns);
     False lists every individual tier (the custom-production picker).
     `unit_filter(name, stats)` drops units the caller doesn't want listed.
     """
-    groups = {UNIT_GROUP_INFANTRY: [], UNIT_GROUP_TANKS: [], UNIT_GROUP_NAVY: []}
+    groups = {group: [] for group in UNIT_GROUPS}
     for name, stats in unit_library.items():
         if unit_filter and not unit_filter(name, stats):
             continue
@@ -4845,9 +4851,9 @@ def get_grouped_units(unit_library, by_family=True, unit_filter=None):
     return groups
 
 def get_ordered_unit_groups(unit_library):
-    """Categorizes and sorts unit families into Infantry, Tanks, and Navy groups."""
+    """Returns unit families in the canonical production category order."""
     groups = get_grouped_units(unit_library)
-    return groups[UNIT_GROUP_INFANTRY], groups[UNIT_GROUP_TANKS], groups[UNIT_GROUP_NAVY]
+    return tuple(groups[group] for group in UNIT_GROUPS)
 
 def was_original_owner(prov, nation, nation_data):
     """True if the tile belonged to `nation` before the current war started.

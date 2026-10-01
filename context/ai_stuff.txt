@@ -71,6 +71,16 @@ without reparsing the unit library. Library-name edits, research-year changes,
 gate/obsolescence rules and JSON refresh invalidate it, including in-place edits.
 These indexes and caches are presentation/planning data, never save fields.
 
+Aerospace is a separate research and production category. Its Biplane,
+Piston Fighter, Piston Bomber, V1 Flying Bomb, V2 Rocket and Jet Fighter units
+currently copy Infantry Type 1910's stats and costs and use normal land-unit
+rules. The unit library's production_group is presentation metadata only;
+the AI still values these units from their stats through its usual unlock
+index. Jet Engine unlocks no unit directly and gates Jet Fighter research.
+Research dates use the existing ahead-of-time penalty, including aerospace.
+Recruitment buildings share the General Buildings production panel; their
+factory requirements and upgrade chain are unchanged.
+
 Map refreshes still evaluate their real layer inputs at state boundaries, but
 reuse unchanged pixel surfaces. Fog always republishes current visibility even
 when its pixels can be reused; hotseat blanking and player changes still apply.

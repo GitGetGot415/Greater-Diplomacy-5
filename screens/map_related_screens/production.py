@@ -70,10 +70,10 @@ SCROLL_LERP = 0.15
 SECTION_PANELS = [
     ("admin",    "ADMINISTRATION",     (40, 20, 60), (150, 100, 200), (200, 150, 255)),
     ("other",    "GENERAL BUILDINGS",  (60, 40, 20), (200, 100, 30),  (255, 150, 50)),
-    ("recruit",  "RECRUITMENT CENTERS",(60, 30, 30), (200, 50, 50),   (255, 100, 100)),
     ("infantry", "INFANTRY",           (30, 60, 30), (50, 150, 50),   c.COLOR_SUCCESS_GREEN),
     ("tank",     "TANKS",              (20, 45, 20), (40, 120, 40),   (80, 200, 80)),
     ("navy",     "NAVAL FORCES",       (30, 30, 60), (50, 50, 150),   (100, 150, 255)),
+    ("aerospace", "AEROSPACE",         (60, 30, 30), (200, 50, 50),   (255, 100, 100)),
     ("custom",   "CUSTOM",             (60, 55, 20), (200, 180, 50),  (255, 220, 100)),
 ]
 
@@ -98,7 +98,8 @@ class Production_Screen(GameState):
         self.tech_tree = queries.get_tech_tree()
         
         # Use the centralized query
-        self.infantry_groups, self.tank_groups, self.navy_groups = queries.get_ordered_unit_groups(self.unit_library)
+        (self.infantry_groups, self.tank_groups, self.navy_groups,
+         self.aerospace_groups) = queries.get_ordered_unit_groups(self.unit_library)
         self.active_bars = []
 
         # Scroll variables
@@ -246,7 +247,7 @@ class Production_Screen(GameState):
         x_pos = LIST_X
 
         # --- BUILDING LOGIC ---
-        bldg_groups = {"Other": ["industry", "fortification"], "Recruitment": ["recruitment"]}
+        bldg_groups = ["industry", "fortification", "recruitment"]
         
         is_core = queries.has_core(owner_nation, self.target_province)
         
@@ -395,7 +396,6 @@ class Production_Screen(GameState):
                         btn_txt = queries.get_condensed_building_name(target)
                         cb = lambda t=target: self.start_construction(t)
                         btn_color = "orange"
-                        if data["group"] == "recruitment": btn_color = "red"
 
                     self._add_scroll_button(x_pos, y_offset, btn_color, btn_txt, cb)
 
@@ -404,13 +404,9 @@ class Production_Screen(GameState):
                     y_offset += ROW_STEP_Y
 
         self.other_start_y = y_offset
-        process_building_categories(bldg_groups["Other"])
+        process_building_categories(bldg_groups)
         self.other_end_y = y_offset
 
-        y_offset += SECTION_SPACING
-        self.recruit_start_y = y_offset
-        process_building_categories(bldg_groups["Recruitment"])
-        self.recruit_end_y = y_offset
         y_offset += SECTION_SPACING
 
         # --- UNIT LOGIC ---
@@ -629,6 +625,11 @@ class Production_Screen(GameState):
         else:
             self.navy_start_y = self.navy_end_y = y_offset
 
+        y_offset += SECTION_SPACING
+        self.aerospace_start_y = y_offset
+        process_unit_groups(self.aerospace_groups, "red")
+        self.aerospace_end_y = y_offset
+
         # --- CUSTOM UNIT LOGIC ---
         # Lets a player build a specific researched tier (e.g. Medium Tank II) even
         # when a higher tier is researched and would otherwise be the only option shown.
@@ -760,9 +761,16 @@ class Production_Screen(GameState):
             self.map_screen.show_feedback("Insufficient resources!")
 
     def buy_unit(self, unit_name):
-        if not self.can_edit_realtime():
+        if not self.map_screen:
             return
         owner = self.target_province.get("owner")
+        viewer = self.map_screen.player_country
+        if (self.map_screen.tactical_mode or
+                (viewer == "Spectator" and not c.SPECTATOR_CAN_EDIT_PRODUCTION) or
+                (viewer != "Spectator" and viewer != owner)):
+            return
+        if not self.can_edit_realtime():
+            return
         if not queries.has_core(owner, self.target_province):
             self.map_screen.show_feedback("Must core territory before recruiting!")
             return
@@ -785,6 +793,10 @@ class Production_Screen(GameState):
 
         owner = self.target_province.get("owner")
         p_data = self.map_screen.nation_data.get(owner, {})
+
+        if not queries.is_unit_unlocked(unit_name, p_data.get("research", {})):
+            self.map_screen.show_feedback("Required unit research is not complete.")
+            return
 
         if not restrictions.can_raise_units(owner, self.map_screen.nation_data):
             turns = restrictions.turns_left(owner, self.map_screen.nation_data, "demilitarized")
@@ -824,7 +836,7 @@ class Production_Screen(GameState):
 
         # Group every unit the player currently has the research level for, regardless
         # of whether it's the group's highest tier (that restriction is what this menu exists to bypass).
-        # Same Infantry/Tanks/Navy rule the production columns use. Motorized/Mechanized/
+        # Same category rule the production columns use. Motorized/Mechanized/
         # IFV Infantry and Heavy Artillery aren't listed separately - add the plain
         # "Infantry Type <year>"/"Artillery <numeral>" entry here and use the
         # Mot/Mec/IFV/Hvy toggle next to it on the production screen's Custom row

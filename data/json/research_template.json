@@ -30,6 +30,14 @@
     "aircraft_carrier": { "category": "NAVY", "max_lvl": 17, "cost": 2400, "req": {"battleship": 1}, "years": [1930, 1935, 1940, 1945, 1950, 1955, 1960, 1965, 1970, 1975, 1980, 1985, 1990, 1995, 2000, 2005, 2010] },
     "submarine": { "category": "NAVY", "max_lvl": 26, "cost": 2400, "req": {}, "years": [1910, 1914, 1918, 1922, 1926, 1930, 1934, 1938, 1942, 1946, 1950, 1954, 1958, 1962, 1966, 1970, 1974, 1978, 1982, 1986, 1990, 1994, 1998, 2002, 2006, 2010] },
     
+    "biplane": { "category": "AEROSPACE", "display_name": "Biplane", "max_lvl": 1, "cost": 900, "req": {}, "years": [1910] },
+    "piston_fighter": { "category": "AEROSPACE", "display_name": "Piston Fighter", "max_lvl": 1, "cost": 900, "req": {"biplane": 1}, "years": [1930] },
+    "piston_bomber": { "category": "AEROSPACE", "display_name": "Piston Bomber", "max_lvl": 1, "cost": 900, "req": {"piston_fighter": 1}, "years": [1935] },
+    "v1_flying_bomb": { "category": "AEROSPACE", "display_name": "V1 Flying Bomb", "max_lvl": 1, "cost": 900, "req": {"piston_bomber": 1}, "years": [1940] },
+    "v2_rocket": { "category": "AEROSPACE", "display_name": "V2 Rocket", "max_lvl": 1, "cost": 900, "req": {"v1_flying_bomb": 1}, "years": [1945] },
+    "jet_engine": { "category": "AEROSPACE", "display_name": "Jet Engine", "max_lvl": 1, "cost": 900, "req": {"piston_bomber": 1}, "years": [1945] },
+    "jet_fighter": { "category": "AEROSPACE", "display_name": "Jet Fighter", "max_lvl": 1, "cost": 900, "req": {"jet_engine": 1}, "years": [1950] },
+
     "basic_factory": { "category": "INDUSTRY", "max_lvl": 1, "cost": 1200, "req": {}, "years": [1910] },
     "factory": { "category": "INDUSTRY", "max_lvl": 25, "cost": 1200, "req": {"basic_factory": 1}, "years": [1914, 1918, 1922, 1926, 1930, 1934, 1938, 1942, 1946, 1950, 1954, 1958, 1962, 1966, 1970, 1974, 1978, 1982, 1986, 1990, 1994, 1998, 2002, 2006, 2010] },
     "bergius_process": { "category": "INDUSTRY", "max_lvl": 1, "cost": 1200, "req": {}, "years": [1910] },

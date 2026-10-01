@@ -50,6 +50,7 @@ GROUP_ACCENT = {
     "Infantry": (90, 140, 200),
     "Tanks": (200, 130, 60),
     "Navy": (60, 170, 160),
+    "Aerospace": (200, 50, 50),
 }
 
 # --- Level-display toggle: top-right corner of the gallery pane, picking how
@@ -162,7 +163,7 @@ def build_gallery_rows(style, country=None, level_display="default", show_all_ar
     classic per the same rule symbol_loader.get_symbol uses -- and within a
     style, falling back further to whatever art applies to every country when
     none of it is scoped to this one), in family order, with a header
-    wherever the Infantry/Tanks/Navy group changes.
+    wherever the production category changes.
 
     A family with several distinct pictures -- different tiers (Light Tank
     IV/V/VI) or different filename-defined eras (Infantry 1914/1916/...) --
@@ -196,7 +197,7 @@ def build_gallery_rows(style, country=None, level_display="default", show_all_ar
     unit_library = queries.get_unit_library()
 
     families = {}       # base name -> [unit names, in file order]
-    family_group = {}   # base name -> "Infantry"/"Tanks"/"Navy"
+    family_group = {}   # base name -> production category
     for name, stats in unit_library.items():
         base = queries.get_base_unit_name(name)
         families.setdefault(base, []).append(name)

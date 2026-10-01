@@ -15,7 +15,8 @@ from map_logic import politics
 
 EXIT_BTN_POS = (20, 10)
 CATEGORY_BTN_START_X = 180
-CATEGORY_BTN_STEP_X = 205
+CATEGORY_BTN_GAP = 5
+CATEGORY_BTN_RIGHT_MARGIN = 20
 CATEGORY_BTN_Y = 10
 
 HEADER_HEIGHT = 70
@@ -76,6 +77,7 @@ COMPLETED_START_X = 10
 COMPLETED_HEADER_STEP_Y = 40
 COMPLETED_ROW_STEP_Y = 28
 COMPLETED_INDENT_X = 10
+COMPLETED_RIGHT_MARGIN = 10
 
 # Scroll feel
 SCROLL_WHEEL_STEP = 70
@@ -86,7 +88,7 @@ ROW_Y = [200, 270, 340, 410, 480, 550]
 ROW_DEFAULT_Y = 350
 
 # Categories whose nodes default to the wide button size.
-WIDE_RESEARCH_CATEGORIES = ["TANKS", "NAVY"]
+WIDE_RESEARCH_CATEGORIES = ["TANKS", "NAVY", "AEROSPACE"]
 
 # Tech families whose display name is "<Class> Type <year>" rather than a
 # roman numeral tier, keyed off the year list in the tech tree.
@@ -162,7 +164,6 @@ class Research_Screen(GameState):
         self.bg_color = (20, 20, 30)
         self.map_screen = None
         self.current_category = "INFANTRY" 
-        self.categories = ["INFANTRY", "TANKS", "NAVY", "INDUSTRY", "COMPLETED"]
 
         # REPLACED DISK I/O WITH CACHED QUERIES
         self.tech_tree = queries.get_tech_tree()
@@ -233,7 +234,10 @@ class Research_Screen(GameState):
 
     def setup_nodes(self):
         """Dynamically positions nodes based on their associated year."""
-        
+        # The JSON insertion order owns the category order, including content
+        # added by mods or removed by scenario settings.
+        self.categories = list(dict.fromkeys(data["category"] for data in self.tech_tree.values()))
+        self.categories.append("COMPLETED")
         self.tech_years = {}
         for tech_key, data in self.tech_tree.items():
             years = data.get("years", [1900] * data["max_lvl"])
@@ -259,6 +263,9 @@ class Research_Screen(GameState):
             "battleship": y2,
             "aircraft_carrier": y2,
             "submarine": y3,
+            "biplane": y1, "piston_fighter": y1, "piston_bomber": y1,
+            "v1_flying_bomb": y1, "v2_rocket": y1,
+            "jet_engine": y3, "jet_fighter": y3,
             "workshop": y1, "basic_factory": y1, "factory": y1,
             "bergius_process": y4, "fuel_refining": y4,
             "basic_recruitment": y2, "recruitment_buildings": y2,
@@ -266,7 +273,7 @@ class Research_Screen(GameState):
             "resource_refining": y5
         }
 
-        self.nodes = {"INFANTRY": [], "TANKS": [], "NAVY": [], "INDUSTRY": []}
+        self.nodes = {cat: [] for cat in self.categories if cat != "COMPLETED"}
 
         for tech_key, data in self.tech_tree.items():
             cat = data["category"]
@@ -313,7 +320,7 @@ class Research_Screen(GameState):
             self._sync_tech_node_positions()
 
     def additional_events(self, event):
-        if self.current_category in ["INFANTRY", "TANKS", "NAVY", "INDUSTRY"] and not self.active_modal:
+        if self.current_category in self.nodes and not self.active_modal:
             if event.type == pygame.MOUSEWHEEL:
                 self.target_scroll_x += event.y * SCROLL_WHEEL_STEP
 
@@ -390,11 +397,16 @@ class Research_Screen(GameState):
     def get_display_name(self, tech_key, lvl):
         """The player-facing name of a tech at a given level.
 
-        Three naming schemes, each driven by its own table at the top of this
+        An explicit content name takes precedence over three naming schemes,
+        each driven by its own table at the top of this
         file rather than a chain of ifs: year-tiered families, fixed one-off
         names, and "<Name> Lvl <n>". Anything unlisted falls back to a title
         cased key plus a roman numeral.
         """
+        content_name = self.tech_tree.get(tech_key, {}).get("display_name")
+        if content_name:
+            return content_name
+
         if tech_key in YEAR_TIER_TECHS:
             return f"{YEAR_TIER_TECHS[tech_key]} {self.tech_year(tech_key, lvl)}"
 
@@ -485,13 +497,18 @@ class Research_Screen(GameState):
         
         self.elements.append(Button(*EXIT_BTN_POS, "small", "red", "Exit", self.exit_screen))
 
+        category_width, category_height = c.SIZES["medium"]
+        available_width = c.SCREEN_WIDTH - CATEGORY_BTN_START_X - CATEGORY_BTN_RIGHT_MARGIN
+        category_width = min(category_width,
+                             (available_width - CATEGORY_BTN_GAP * (len(self.categories) - 1)) // len(self.categories))
         for i, cat in enumerate(self.categories):
             color = "green" if self.current_category == cat else "blue"
-            btn = Button(CATEGORY_BTN_START_X + (i * CATEGORY_BTN_STEP_X), CATEGORY_BTN_Y, "medium", color, cat, lambda c=cat: self.set_category(c))
+            btn = Button(CATEGORY_BTN_START_X + i * (category_width + CATEGORY_BTN_GAP), CATEGORY_BTN_Y,
+                         (category_width, category_height), color, cat, lambda c=cat: self.set_category(c))
             self.elements.append(btn)
 
         if self.current_category == "COMPLETED":
-            pass
+            self.cache_completed_text_list(res_levels)
         else:
             self.draw_tech_nodes(res_levels, queue)
             # Drawn last so it covers any tech-node button still sliding past it.
@@ -975,10 +992,9 @@ class Research_Screen(GameState):
                 
             y_off += MODAL_ENTITY_PADDING_Y # Padding between items
 
-    def render_completed_text_list(self, surface):
-        player_data = self.subject_data
-        res_levels = player_data.get("research", {})
-        
+    def cache_completed_text_list(self, res_levels):
+        """Lay out the completed overview at the input/state boundary."""
+        self.completed_text_surfaces = []
         text_font = fonts.get("button")
         label_font = fonts.get("heading2")
         
@@ -988,18 +1004,28 @@ class Research_Screen(GameState):
             lvl = res_levels.get(tech_id, 0)
             organized[cat].append((tech_id, lvl, data["max_lvl"]))
 
+        column_width = min(COMPLETED_COLUMN_WIDTH,
+                           (c.SCREEN_WIDTH - COMPLETED_START_X - COMPLETED_RIGHT_MARGIN) // max(1, len(organized)))
+
+        def cache_text(text, font, color, x, y, width):
+            rendered = font.render(text, True, color)
+            if rendered.get_width() > width:
+                height = max(1, round(rendered.get_height() * width / rendered.get_width()))
+                rendered = pygame.transform.smoothscale(rendered, (width, height))
+            self.completed_text_surfaces.append((rendered, (x, y)))
+
         for i, (cat_name, techs) in enumerate(organized.items()):
-            curr_x = COMPLETED_START_X + (i * COMPLETED_COLUMN_WIDTH)
+            curr_x = COMPLETED_START_X + (i * column_width)
             curr_y = COMPLETED_START_Y
             
-            head = label_font.render(cat_name, True, c.COLOR_GOLD_HIGHLIGHT)
-            surface.blit(head, (curr_x, curr_y))
+            cache_text(cat_name, label_font, c.COLOR_GOLD_HIGHLIGHT, curr_x, curr_y,
+                       column_width - COMPLETED_INDENT_X)
             curr_y += COMPLETED_HEADER_STEP_Y
             
             techs.sort(key=lambda x: x[2] != 9999)
             
             for tech_id, lvl, max_lvl in techs:
-                display_name = tech_id.replace('_', ' ').title()
+                display_name = self.tech_tree[tech_id].get("display_name", tech_id.replace('_', ' ').title())
                 
                 if max_lvl == 1:
                     val_text = ": YES" if lvl >= 1 else ": NO"
@@ -1010,9 +1036,14 @@ class Research_Screen(GameState):
 
                 color = (200, 200, 200) if lvl > 0 else (100, 100, 100)
 
-                txt_surf = text_font.render(f"{display_name}{val_text}", True, color)
-                surface.blit(txt_surf, (curr_x + COMPLETED_INDENT_X, curr_y))
+                cache_text(f"{display_name}{val_text}", text_font, color,
+                           curr_x + COMPLETED_INDENT_X, curr_y,
+                           column_width - 2 * COMPLETED_INDENT_X)
                 curr_y += COMPLETED_ROW_STEP_Y
+
+    def render_completed_text_list(self, surface):
+        for rendered, position in self.completed_text_surfaces:
+            surface.blit(rendered, position)
 
     def enforce_scroll_bounds(self):
         """Prevents the timeline from scrolling past the defined START_YEAR or END_YEAR."""
