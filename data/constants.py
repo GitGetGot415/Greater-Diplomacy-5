@@ -220,6 +220,8 @@ CREDITS_DATA = [
                     "info": "Icons Added:",
                     "images": [
                         {"path": "assets/symbols/commanderg_Eagle.png"},
+                        {"path": "assets/symbols/commanderg_HammerAndSickle.png"},
+                        {"path": "assets/symbols/commanderg_WizardHat.png"},
                     ],
                     "align": "left",
                 },
