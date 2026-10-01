@@ -35,6 +35,41 @@ REQUESTED_TREE = {
 
 
 class AerospaceRulesTests(unittest.TestCase):
+    def test_air_research_notes_follow_the_unit_capabilities(self):
+        for key, (_, _, name) in REQUESTED_TREE.items():
+            with self.subTest(unit=name):
+                if key == "jet_engine":
+                    self.assertEqual(queries.get_air_unit_traits(name), [])
+                    continue
+                with mock.patch.object(queries, "air_order_radius", wraps=queries.air_order_radius) as radius:
+                    traits = queries.get_air_unit_traits(name)
+                expected = {"AIR_ATTACK"}
+                stats = queries.get_unit_library()[name]
+                if not stats.get("air_consumable"):
+                    expected.add("AIR_REPOSITION")
+                if stats["air_role"] == "fighter":
+                    expected.add("AIR_PATROL")
+                self.assertEqual({call.args[1] for call in radius.call_args_list}, expected)
+                self.assertTrue(traits)
+                self.assertTrue(set(traits).issubset(queries.get_tech_unlocks(key, 1)))
+
+    def test_air_notes_follow_changed_range_bonus_and_interception_data(self):
+        stats = dict(queries.get_unit_library()["Piston Fighter"], air_range_px=333,
+                     air_attack_multiplier=11)
+        with mock.patch.object(queries, "get_unit_library", return_value={"Test Fighter": stats}):
+            traits = queries.get_air_unit_traits("Test Fighter")
+            self.assertTrue(any(f"{queries.air_order_radius({'type': 'Test Fighter'}, 'AIR_ATTACK'):g}" in line
+                                for line in traits))
+            self.assertTrue(any(f"{stats['air_attack_multiplier']:g}" in line for line in traits))
+            self.assertTrue(any(f"{stats['air_range_px']:g}" in line for line in traits))
+        stats = dict(queries.get_unit_library()["V2 Rocket"])
+        with mock.patch.object(queries, "get_unit_library", return_value={"Test Rocket": stats}):
+            immune = queries.get_air_unit_traits("Test Rocket")
+            stats["air_interception_immune"] = False
+            interceptable = queries.get_air_unit_traits("Test Rocket")
+        self.assertNotEqual(immune, interceptable)
+        self.assertEqual(sum(a != b for a, b in zip(immune, interceptable)), 1)
+
     def test_requested_dates_and_prerequisites(self):
         tree = queries.get_tech_tree()
         for key, (year, requirements, name) in REQUESTED_TREE.items():
@@ -210,6 +245,28 @@ class AerospaceScreenTests(unittest.TestCase):
         self.research.draw(self.surface)
         for rendered, position in self.research.completed_text_surfaces:
             self.assertLessEqual(position[0] + rendered.get_width(), c.SCREEN_WIDTH)
+
+    def test_air_details_are_visible_cached_and_fit_above_modal_controls(self):
+        from screens.map_related_screens import research
+        self.research.start_research(self.map)
+        for key, (year, _, name) in REQUESTED_TREE.items():
+            if key == "jet_engine":
+                continue
+            with self.subTest(unit=name):
+                self.research.open_modal({"tech_key": key, "level": 1, "status": "COMPLETED",
+                    "display_name": name, "target_year": year, "icon": None,
+                    "cost": self.research.tech_cost(key)})
+                self.assertTrue(set(queries.get_air_unit_traits(name)).issubset(self.research.modal_unlocks))
+                width = research.MODAL_WIDTH - research.MODAL_TEXT_X - research.MODAL_TEXT_RIGHT_MARGIN
+                for rendered in self.research.modal_unlock_surfaces:
+                    self.assertLessEqual(rendered.get_width(), width)
+                content_bottom = (research.MODAL_BODY_START_Y + research.MODAL_LINE_STEP_Y
+                    + len(self.research.modal_unlock_surfaces) * self.research.modal_unlock_line_step
+                    + 2 * research.MODAL_LINE_STEP_Y + research.MODAL_ENTITY_PADDING_Y)
+                self.assertLessEqual(content_bottom, research.MODAL_BTN_Y_OFFSET)
+                with mock.patch.object(queries, "get_tech_unlocks", side_effect=AssertionError("frame traits")):
+                    self.research.draw(self.surface)
+        self.research.close_modal()
 
     def test_aerospace_rows_are_red_and_recruitment_is_in_general_buildings(self):
         from screens.map_related_screens.production import SECTION_PANELS

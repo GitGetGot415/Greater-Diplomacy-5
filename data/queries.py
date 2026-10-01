@@ -1488,6 +1488,10 @@ def get_tech_unlocks(tech_key, level):
     if tech_key == "submarine":
         unlocks.append("Invisible to neutral/enemy nations unless engaged in active combat")
 
+    for name, stats in get_unit_library().items():
+        if stats.get("air_role") and get_unit_research_requirement(name) == (tech_key, level):
+            unlocks.extend(get_air_unit_traits(name))
+
     return unlocks
 
 def get_infantry_family_year(family_key, player_research, tech_tree):
@@ -4103,6 +4107,33 @@ def air_order_radius(unit, kind):
     if kind == "AIR_REPOSITION":
         return radius * 2
     return radius
+
+
+def get_air_unit_traits(unit_type):
+    """Research details derived from the same capabilities as aircraft orders."""
+    unit = {"type": unit_type}
+    stats = air_unit_stats(unit)
+    if not stats.get("air_role"):
+        return []
+    strike = air_order_radius(unit, "AIR_ATTACK")
+    if stats.get("air_consumable"):
+        traits = [f"Strike range: {strike:g} map pixels; consumed after impact.",
+                  "No patrol or air reposition; relocate by Truck.",
+                  "Immune to interception." if stats.get("air_interception_immune")
+                  else "Can be intercepted by enemy fighters."]
+    else:
+        reposition = air_order_radius(unit, "AIR_REPOSITION")
+        traits = [f"Range: {stats['air_range_px']:g} map px; strike: {strike:g} px; reposition: {reposition:g} px."]
+        if stats["air_role"] == "fighter":
+            patrol = air_order_radius(unit, "AIR_PATROL")
+            multiplier = unit_target_damage_multiplier(unit, unit, air_to_air=True)
+            traits.extend([f"Patrol: {patrol:g} px; weakest/strongest first; returns to base.",
+                           f"Air-to-air damage x{multiplier:g}; no bonus against ground targets."])
+        else:
+            traits.append("Reusable strikes return to base; cannot patrol.")
+    traits.extend([f"Immune to {UNIT_GROUP_TANKS} damage; cannot capture territory.",
+                   f"Ground combat uses Trucks; conversions take {AIR_CONVERT_TURNS} turn each way."])
+    return traits
 
 
 def build_air_geometry(map_screen):

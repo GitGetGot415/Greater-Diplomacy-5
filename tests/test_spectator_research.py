@@ -114,7 +114,9 @@ class SubjectTests(unittest.TestCase):
         c.SPECTATOR_CAN_EDIT_RESEARCH = False
         try:
             self.screen.active_modal = {"status": "AVAILABLE",
-                                        "tech_key": next(iter(self.screen.tech_tree))}
+                                        "tech_key": next(iter(self.screen.tech_tree)),
+                                        "level": 1, "display_name": self.screen.get_display_name(
+                                            next(iter(self.screen.tech_tree)), 1)}
             self.screen.refresh_ui()
             labels = [getattr(el, "text", "") for el in self.screen.elements]
             self.assertIn("Spectator: Read Only", labels)
@@ -128,7 +130,9 @@ class SubjectTests(unittest.TestCase):
         self.map.tactical_mode = False
         self.map.nation_data[self.map.player_country]["research_queue"] = []
         self.screen.active_modal = {"status": "AVAILABLE",
-                                    "tech_key": next(iter(self.screen.tech_tree))}
+                                    "tech_key": next(iter(self.screen.tech_tree)),
+                                    "level": 1, "display_name": self.screen.get_display_name(
+                                        next(iter(self.screen.tech_tree)), 1)}
         try:
             self.screen.refresh_ui()
             labels = [getattr(el, "text", "") for el in self.screen.elements]

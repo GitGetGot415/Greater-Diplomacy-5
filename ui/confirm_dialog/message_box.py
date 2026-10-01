@@ -115,7 +115,7 @@ class _NavigationIntroPopup:
         ("Country actions", "relations", "Click another country's tile to see available diplomatic actions you can take against them."),
     )
     AIR_STEPS = (
-        ("Strike", "In Orders, use the strike icon and click a highlighted province. Reusable planes reach half their full range and return to their launch base."),
+        ("Strike", "In Orders, use the strike icon and click a province inside or touching the range circle. Reusable planes reach half their full range and return to their launch base."),
         ("Patrol", "Fighters cover their full range. The patrol icon cycles weakest attacking force first, strongest first, then off. Survivors may intercept several missions."),
         ("Reposition", "Right-click land to move reusable planes up to twice their full range. Reach uses map pixels and tile edges; zoom never changes it. Aircraft cannot capture land."),
         ("V1 and V2", "Strikes use full range and consume the weapon. V2 bypasses interception. Relocate either weapon with one-turn Truck conversions. Aircraft attacked in ground combat become Trucks automatically."),
@@ -126,7 +126,7 @@ class _NavigationIntroPopup:
         "These buttons are important! Located on the bottom left of the screen, they edit the appearance of the map, giving you the information you need to play effectively.",
         "Reach other countries through the Mail tab or directly from their territory on the map.",
         "Learn how to create, organize, and command armies, including target areas.",
-        "Air missions resolve next turn. Highlighted provinces show the selected aircraft's reach.",
+        "Air missions resolve next turn. A circle around the base shows reach; any part of a tile inside or touching it counts.",
     )
 
     def __init__(self, map_screen):

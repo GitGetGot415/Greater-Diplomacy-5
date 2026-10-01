@@ -216,9 +216,17 @@ CREDITS_DATA = [
                     "align": "left",
                 },
                 {
+                    "link_text": "commanderg",
+                    "info": "Icons Added:",
+                    "images": [
+                        {"path": "assets/symbols/commanderg_Eagle.png"},
+                    ],
+                    "align": "left",
+                },
+                {
                     "link_text": "GitGetGot415",
                     "info": "Icons Added:",
-                    "images": [{"directory": "assets/symbols", "exclude": ["Randomly_*.png"]}],
+                    "images": [{"directory": "assets/symbols", "exclude": ["Randomly_*.png", "commanderg_*.png"]}],
                     "align": "left",
                     "links": [{"text": "GitHub", "url": "https://github.com/GitGetGot415"}]
                 },

@@ -614,6 +614,64 @@ class AirAppSmokeTests(unittest.TestCase):
             for button in screen.action_buttons:
                 self.assertTrue(screen.panel_rect.contains(button.rect))
 
+    def test_air_outlines_deduplicate_and_project_zoom_tilt_without_target_markers(self):
+        from screens.map_related_screens.orders import MOVE_TARGET_COLOR, BOMBARD_TARGET_COLOR
+        with tempfile.TemporaryDirectory() as directory:
+            _original, _fighter, _rocket, path = self.make_runtime_save(directory)
+            loaded = Map(load_path=path, skip_initial_income=True)
+            loaded.selection_mode = False
+            loaded.player_country = "A"
+            base = loaded.id_to_province[1]
+            fighter = base["units"][0]
+            duplicate = wing(base, "Biplane", order={"type": "AIR_PATROL"})
+            loaded.select_map_units([fighter, duplicate])
+            screen = Orders_Screen()
+            screen.start_with_province(base, loaded)
+            loaded.camera.pos.update(0, 0)
+            loaded.camera.zoom = 2
+            loaded.camera.tilt_factor = 0.5
+            self.assertEqual(len(screen.air_range_previews), 1)
+            for kind, color in (("AIR_PATROL", MOVE_TARGET_COLOR), ("AIR_ATTACK", BOMBARD_TARGET_COLOR)):
+                with self.subTest(kind=kind):
+                    if kind == "AIR_ATTACK":
+                        screen.start_bombard_targeting(0, base)
+                    radius = queries.air_order_radius(fighter, kind)
+                    clip_before = self.surface.get_clip()
+                    with patch.object(pygame.draw, "ellipse", wraps=pygame.draw.ellipse) as ellipse, \
+                            patch.object(screen, "draw_target_markers", side_effect=AssertionError("air tile markers")), \
+                            patch.object(queries, "get_air_targets", side_effect=AssertionError("frame targets")), \
+                            patch.object(queries, "air_order_radius", side_effect=AssertionError("frame radius")):
+                        screen.draw_range_previews(self.surface)
+                    self.assertEqual(ellipse.call_count, 1)
+                    rect = ellipse.call_args.args[2]
+                    self.assertEqual(ellipse.call_args.args[1], color)
+                    self.assertEqual(rect.width, round(2 * radius * loaded.camera.zoom))
+                    self.assertEqual(rect.height, round(rect.width * loaded.camera.tilt_factor))
+                    self.assertEqual(rect.center, tuple(round(p) for p in queries.world_to_screen(base["center"], loaded)))
+                    self.assertEqual(self.surface.get_clip(), clip_before)
+
+    def test_wrapped_air_outlines_clip_to_their_own_map_copy(self):
+        game = world()
+        base = tile(game, 1, 8)
+        game.map_w, game.map_h = game.id_map.get_size()
+        game.camera = SimpleNamespace(pos=pygame.Vector2(game.map_w - 40, 0), zoom=1, tilt_factor=1)
+        game.top_ui_height = game.total_ui_h = 0
+        game.loop_map = True
+        screen = Orders_Screen()
+        screen.map_screen = game
+        clips = []
+        def record_clip(_surface, _color, rect, _width):
+            clips.append((rect, _surface.get_clip()))
+        with patch.object(pygame.draw, "ellipse", side_effect=record_clip):
+            screen.draw_air_range(self.surface, base, 100, (0, 255, 0))
+        self.assertTrue(clips)
+        for rect, clip in clips:
+            # The duplicate base near the seam may only paint its own image,
+            # never imply coverage on the previous copy's far-side provinces.
+            if rect.centerx > 0:
+                map_left = round(queries.world_to_screen((0, 0), game, game.map_w)[0])
+                self.assertGreaterEqual(clip.left, map_left)
+
     def test_tournament_player_archive_never_reveals_host_secret_or_hidden_aircraft(self):
         with tempfile.TemporaryDirectory() as directory:
             game, fighter, _rocket, _path = self.make_runtime_save(directory)

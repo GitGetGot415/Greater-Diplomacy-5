@@ -76,6 +76,7 @@ SCROLLBAR_WIDTH = 8
 
 TARGET_MARKER_RADIUS = 12
 TARGET_MARKER_THICKNESS = 3
+AIR_RANGE_THICKNESS = 2
 MOVE_TARGET_COLOR = (0, 255, 0)
 BOMBARD_TARGET_COLOR = (255, 200, 50)
 BOMBARD_PREVIEW_ALPHA = 160
@@ -137,6 +138,7 @@ class Orders_Screen(GameState):
         self._consume_bombard_target_release = False
         self.air_range_previews = []
         self.bombard_target_preview = set()
+        self.bombard_air_radius = None
         self.targeting_label = "bombardment"
 
         # True on a province where the player commands nothing: every unit is
@@ -835,13 +837,20 @@ class Orders_Screen(GameState):
         from ui import sidebar_info
         if self.target_province is not None:
             sidebar_info.prepare_unit_roster(self.map_screen, self.target_province)
-        # Range sets are rebuilt only at selection/order input boundaries.
+        # Cache radii at input boundaries; co-located identical wings share an outline.
         self.air_range_previews = []
+        seen_ranges = set()
         for unit, base in self.map_screen.selected_unit_records():
             if queries.is_air_unit(unit):
-                kind = "AIR_PATROL" if (unit.get("order") or {}).get("type") == "AIR_PATROL" else "AIR_REPOSITION"
-                self.air_range_previews.append((base, queries.get_air_targets(
-                    self.map_screen, unit, base, kind)))
+                stats = queries.air_unit_stats(unit)
+                kind = ("AIR_ATTACK" if stats.get("air_consumable") else
+                        "AIR_PATROL" if (unit.get("order") or {}).get("type") == "AIR_PATROL" else
+                        "AIR_REPOSITION")
+                radius = queries.air_order_radius(unit, kind)
+                key = (tuple(base["center"]), radius)
+                if key not in seen_ranges:
+                    self.air_range_previews.append((base, radius))
+                    seen_ranges.add(key)
         if getattr(self.map_screen, "realtime_multiplayer", False):
             player = self.map_screen.realtime_session.players.get(self.map_screen.realtime_player_id)
             self.read_only = (self.map_screen.realtime_session.phase != "TURN" or not player
@@ -1142,10 +1151,12 @@ class Orders_Screen(GameState):
             return
 
         unit = units[index]
+        self.bombard_air_radius = None
         if queries.is_air_unit(unit):
             self.targeting_label = "air mission"
-            self.bombard_target_preview = queries.get_air_targets(self.map_screen, unit, province, "AIR_ATTACK")
             radius = queries.air_order_radius(unit, "AIR_ATTACK")
+            self.bombard_air_radius = radius
+            self.bombard_target_preview = set()
             result = ("The weapon is consumed after impact." if queries.air_unit_stats(unit).get("air_consumable")
                       else "Survivors return to this base.")
             self.map_screen.show_feedback(f"Choose an air target within {radius:g} map pixels. {result}")
@@ -1857,6 +1868,54 @@ class Orders_Screen(GameState):
                 if 0 <= sx <= c.SCREEN_WIDTH and 0 <= sy <= c.SCREEN_HEIGHT:
                     pygame.draw.circle(surface, color, (int(sx), int(sy)), TARGET_MARKER_RADIUS, TARGET_MARKER_THICKNESS)
 
+    def draw_air_range(self, surface, base, radius, color):
+        """Project the world-space circle, clipping each wrapped image copy.
+
+        Tilt changes the displayed shape, never gameplay reach. Clip to each
+        map copy so the outline cannot imply flight across the wrapping seam.
+        """
+        map_ref = self.map_screen
+        camera = map_ref.camera
+        radius_x = radius * camera.zoom
+        radius_y = radius_x * camera.tilt_factor
+        offsets = (0, -map_ref.map_w, map_ref.map_w) if map_ref.loop_map else (0,)
+        previous_clip = surface.get_clip()
+        for offset in offsets:
+            sx, sy = queries.world_to_screen(base["center"], map_ref, offset)
+            rect = pygame.Rect(round(sx - radius_x), round(sy - radius_y),
+                               max(1, round(2 * radius_x)), max(1, round(2 * radius_y)))
+            left, top = queries.world_to_screen((0, 0), map_ref, offset)
+            right, bottom = queries.world_to_screen((map_ref.map_w, map_ref.map_h), map_ref, offset)
+            map_rect = pygame.Rect(round(left), round(top), round(right - left), round(bottom - top))
+            clip = previous_clip.clip(map_rect).clip(pygame.Rect(
+                0, map_ref.top_ui_height, surface.get_width(), surface.get_height() - map_ref.total_ui_h))
+            if rect.colliderect(clip):
+                surface.set_clip(clip)
+                pygame.draw.ellipse(surface, color, rect, AIR_RANGE_THICKNESS)
+        surface.set_clip(previous_clip)
+
+    def draw_range_previews(self, surface):
+        aiming_province = self.bombarding_unit_province or self.target_province
+        focused_units = aiming_province.get("units", [])
+        aiming_index = self.bombarding_unit_actual_index
+        targeting = (self.bombarding_unit_index is not None and isinstance(aiming_index, int)
+                     and 0 <= aiming_index < len(focused_units))
+        targeting_air = targeting and self.bombard_air_radius is not None
+        for base, radius in self.air_range_previews:
+            if not targeting_air or base["id"] != aiming_province["id"]:
+                self.draw_air_range(surface, base, radius, MOVE_TARGET_COLOR)
+        if not targeting:
+            return
+        if targeting_air:
+            self.draw_air_range(surface, aiming_province, self.bombard_air_radius, BOMBARD_TARGET_COLOR)
+            return
+        self.draw_target_markers(surface, aiming_province, self.bombard_target_preview, BOMBARD_TARGET_COLOR)
+        hovered = queries.get_clicked_province(pygame.mouse.get_pos(), self.map_screen)
+        if hovered and hovered["id"] in self.bombard_target_preview:
+            bomb_range = queries.get_bombardment_range(focused_units[aiming_index].get("type", ""))
+            overlay_renderer.draw_bombardment_arrow(surface, self.map_screen, aiming_province,
+                hovered["id"], bomb_range, alpha=BOMBARD_PREVIEW_ALPHA, force_visible=True)
+
     def draw_background(self, surface):
         # Defer to Map_Screen's own background (flat fill or checkerboard,
         # per the Settings toggle, tinted to the live zoom-based ocean color)
@@ -1880,6 +1939,9 @@ class Orders_Screen(GameState):
             self.map_screen.draw_clean_map_background(surface)
         finally:
             self.map_screen.hide_flag = previous_hide_flag
+
+        # Range outlines sit on the map below the command-panel controls.
+        self.draw_range_previews(surface)
 
         # Do not draw the province inspector here.  Orders is deliberately a
         # free-roaming map workspace; the left panel is driven by the current
@@ -1954,24 +2016,6 @@ class Orders_Screen(GameState):
         self.draw_list_scrollbar(
             surface, self.panel_rect.right - SCROLLBAR_WIDTH, self.panel_top,
             self.panel_max_h, width=SCROLLBAR_WIDTH, limit_attr="max_scroll_y")
-
-        # --- Bombardment Targeting Preview ---
-        for base, targets in self.air_range_previews:
-            self.draw_target_markers(surface, base, targets, MOVE_TARGET_COLOR)
-        aiming_province = self.bombarding_unit_province or self.target_province
-        focused_units = aiming_province.get("units", [])
-        aiming_index = self.bombarding_unit_actual_index
-        if (self.bombarding_unit_index is not None
-                and isinstance(aiming_index, int)
-                and 0 <= aiming_index < len(focused_units)):
-            aiming_unit = focused_units[aiming_index]
-            bomb_range = queries.get_bombardment_range(aiming_unit.get("type", ""))
-            in_range = self.bombard_target_preview
-            self.draw_target_markers(surface, aiming_province, in_range, BOMBARD_TARGET_COLOR)
-
-            hovered = queries.get_clicked_province(pygame.mouse.get_pos(), self.map_screen)
-            if hovered and hovered["id"] in in_range and not queries.is_air_unit(aiming_unit):
-                overlay_renderer.draw_bombardment_arrow(surface, self.map_screen, aiming_province, hovered["id"], bomb_range, alpha=BOMBARD_PREVIEW_ALPHA, force_visible=True)
 
         # Show the same live left-drag rectangle as the map screen.  The
         # rectangle must be normalized in-place; pygame returns None from

@@ -8,6 +8,7 @@ from map_logic.rendering import symbol_loader
 from data import queries
 from ui.bars import ui_bars
 from map_logic import politics
+from ui.text_utils import wrap_text
 
 # ==========================================
 # LAYOUT
@@ -66,6 +67,8 @@ MODAL_BODY_START_Y = 170
 MODAL_LINE_STEP_Y = 30
 MODAL_SUBHEAD_STEP_Y = 25
 MODAL_ENTITY_PADDING_Y = 10
+MODAL_TEXT_RIGHT_MARGIN = 20
+MODAL_TRAIT_LINE_GAP = 2
 MODAL_BTN_Y_OFFSET = 430
 MODAL_ACTION_BTN_X = 50
 MODAL_CANCEL_BTN_X = 650
@@ -470,6 +473,7 @@ class Research_Screen(GameState):
         is_tactical = self.map_screen.tactical_mode
 
         if self.active_modal:
+            self.cache_modal_unlocks()
             st = self.active_modal["status"]
             panel_x, panel_y = self.complete_panel_x, self.complete_panel_y
 
@@ -634,6 +638,18 @@ class Research_Screen(GameState):
     def open_modal(self, node_info):
         self.active_modal = node_info
         self.refresh_ui()
+
+    def cache_modal_unlocks(self):
+        """Wrap capability notes once when the research detail panel changes."""
+        self.modal_unlocks = queries.get_tech_unlocks(
+            self.active_modal["tech_key"], self.active_modal["level"])
+        has_air_traits = self.unit_library.get(self.active_modal["display_name"], {}).get("air_role")
+        font = fonts.get("small" if has_air_traits else "normal")
+        width = MODAL_WIDTH - MODAL_TEXT_X - MODAL_TEXT_RIGHT_MARGIN
+        self.modal_unlock_surfaces = [font.render(line, True, (150, 255, 150))
+            for unlock in self.modal_unlocks for line in wrap_text(f"- {unlock}", font, width)]
+        self.modal_unlock_line_step = (font.get_height() + MODAL_TRAIT_LINE_GAP
+                                       if has_air_traits else MODAL_LINE_STEP_Y)
         
     def close_modal(self):
         self.active_modal = None
@@ -903,18 +919,16 @@ class Research_Screen(GameState):
         y_off = panel_rect.y + MODAL_BODY_START_Y # Shifted down to make room for the warning text
         text_x = panel_rect.x + MODAL_TEXT_X
         display_name = self.active_modal["display_name"]
-        tech_key = self.active_modal["tech_key"]
-        level = self.active_modal["level"]
         
         # Show what this tech unlocks - one per line so a long bonus string
         # doesn't get crammed alongside others and run off the edge of the modal.
-        unlocks = queries.get_tech_unlocks(tech_key, level)
+        unlocks = self.modal_unlocks
         if unlocks:
             surface.blit(font_small.render("Unlocks:", True, (150, 255, 150)), (text_x, y_off))
             y_off += MODAL_LINE_STEP_Y
-            for unlock in unlocks:
-                surface.blit(font_small.render(f"- {unlock}", True, (150, 255, 150)), (text_x, y_off))
-                y_off += MODAL_LINE_STEP_Y
+            for rendered in self.modal_unlock_surfaces:
+                surface.blit(rendered, (text_x, y_off))
+                y_off += self.modal_unlock_line_step
             
         # Collect entities to show stats for (both the tech itself AND anything it unlocks)
         entities_to_show = []
