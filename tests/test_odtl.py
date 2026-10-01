@@ -218,3 +218,51 @@ if __name__ == "__main__":
             failures += 1
     print("all passed" if not failures else f"{failures} failed")
     sys.exit(1 if failures else 0)
+
+
+def test_a_gd5_map_crosses_to_unciv_and_back():
+    """The Unciv crossing, both ways.
+
+    Worth its own test because Unciv reached this module through a TERNARY:
+
+        _FORMAT_ODMAP if fmt == "odmap" else _FORMAT_GD5
+
+    which with two formats could not be wrong and with three had exactly one
+    way to be -- a request for "unciv" would have written a GD5 map directory
+    and reported success. Checking that the result is a Unciv map, rather than
+    that the call returned True, is the whole point.
+    """
+    import json
+
+    source = _first_base_map()
+    assert source, "no shipped base map to translate"
+
+    work = tempfile.mkdtemp()
+    try:
+        out = os.path.join(work, "map.json")
+        ok, notes = odtl.to_unciv(source, out)
+        assert ok, f"to_unciv failed: {notes[:2]}"
+        assert os.path.isfile(out), "to_unciv wrote no file"
+
+        # It is a Unciv map, not a GD5 directory wearing a .json name.
+        with open(out, "r", encoding="utf-8") as handle:
+            tile_map = json.load(handle)
+        assert "tileList" in tile_map, "that is not a Unciv map"
+        assert tile_map["tileList"], "the map has no hexes"
+        for tile in tile_map["tileList"][:20]:
+            assert "position" in tile and "baseTerrain" in tile
+
+        # And home again.
+        back = os.path.join(work, "back")
+        ok, notes = odtl.from_unciv(out, back)
+        assert ok, f"from_unciv failed: {notes[:2]}"
+        assert os.path.isfile(os.path.join(back, "map_data.json")), \
+            "what came back is not a GD5 map"
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+
+
+def test_an_unknown_target_format_is_refused_rather_than_guessed():
+    ok, notes = odtl._convert("whatever", "wherever", "freeciv")
+    assert not ok
+    assert "freeciv" in notes[0]
