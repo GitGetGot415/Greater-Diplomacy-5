@@ -85,8 +85,23 @@ class Translate(GameState):
                 for name in sorted(os.listdir(directory))
                 if odtl.looks_like_odmap(os.path.join(directory, name))]
 
+    def _unciv_maps(self):
+        """Unciv maps waiting in translated/. One JSON file each, not a folder."""
+        directory = self._translated_dir()
+        return [(name, os.path.join(directory, name))
+                for name in sorted(os.listdir(directory))
+                if name.lower().endswith(".json")
+                and os.path.isfile(os.path.join(directory, name))]
+
     def _items(self):
-        return self._gd5_maps() if self.direction == "TO_ODMAP" else self._odmaps()
+        # A table rather than a conditional. With two directions an `if/else`
+        # could not be wrong; with four it has exactly one way to be, and it is
+        # silent -- the wrong list with the right heading over it.
+        if self.direction in ("TO_ODMAP", "TO_UNCIV"):
+            return self._gd5_maps()       # anything this game can send
+        if self.direction == "FROM_ODMAP":
+            return self._odmaps()
+        return self._unciv_maps()         # FROM_UNCIV
 
     # ----------------------------------------------------------------- doing
 
@@ -118,7 +133,16 @@ class Translate(GameState):
             self.refresh_ui()
             return
 
-        if self.direction == "TO_ODMAP":
+        if self.direction == "TO_UNCIV":
+            # One FILE, not a directory: that is what a Unciv map is. It goes
+            # into translated/ beside everything else, which is the folder a
+            # player already moves maps through.
+            destination = os.path.join(self._translated_dir(), f"{name}.json")
+            run = odtl.to_unciv
+        elif self.direction == "FROM_UNCIV":
+            destination = os.path.join(c.BASE_MAPS_DIR, os.path.splitext(name)[0])
+            run = odtl.from_unciv
+        elif self.direction == "TO_ODMAP":
             run = odtl.to_odmap
             if self.send_to_od and self.open_doctrines:
                 # Open Doctrines keeps a custom map as custom_maps/<name>/map.odmap,
@@ -155,7 +179,7 @@ class Translate(GameState):
         # On the web the file has landed in a virtual filesystem the player
         # cannot open, so the translation is not finished until the browser has
         # it. Downloading is the only way out of a browser tab.
-        if ok and odtl.IS_WEB and self.direction == "TO_ODMAP":
+        if ok and odtl.IS_WEB and self.direction in ("TO_ODMAP", "TO_UNCIV"):
             if odtl.offer_download(destination, os.path.basename(destination)):
                 self.status = "Downloading " + os.path.basename(destination)
                 self.status_ok = True
@@ -289,6 +313,13 @@ class Translate(GameState):
                    "GD5 to .odmap", lambda: self.set_direction("TO_ODMAP")),
             Button(255, 90, "medium", "green" if self.direction == "FROM_ODMAP" else "grey",
                    ".odmap to GD5", lambda: self.set_direction("FROM_ODMAP")),
+            # A second row for Unciv. Below rather than beside: four "medium"
+            # buttons do not fit across the screen, and the first row is where
+            # a player looking for Open Doctrines expects to find it.
+            Button(25, 140, "medium", "green" if self.direction == "TO_UNCIV" else "grey",
+                   "GD5 to Unciv", lambda: self.set_direction("TO_UNCIV")),
+            Button(255, 140, "medium", "green" if self.direction == "FROM_UNCIV" else "grey",
+                   "Unciv to GD5", lambda: self.set_direction("FROM_UNCIV")),
         ]
 
         # A browser has no folders, so it gets the two things it does have:
@@ -341,8 +372,12 @@ class Translate(GameState):
     def additional_draw(self, surface):
         items = self._items()
         if not items:
-            empty = ("No maps found." if self.direction == "TO_ODMAP" else
-                     f"Put .odmap files in {self.TRANSLATED_DIR}/ and they appear here.")
+            if self.direction in ("TO_ODMAP", "TO_UNCIV"):
+                empty = "No maps found."
+            elif self.direction == "FROM_ODMAP":
+                empty = f"Put .odmap files in {self.TRANSLATED_DIR}/ and they appear here."
+            else:
+                empty = f"Put Unciv .json maps in {self.TRANSLATED_DIR}/ and they appear here."
             fonts.draw_text_with_shadow(surface, empty, 25, self.ROW_TOP,
                                         "normal", (180, 180, 180))
 
