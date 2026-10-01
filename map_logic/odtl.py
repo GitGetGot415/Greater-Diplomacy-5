@@ -53,6 +53,14 @@ WASM_LIBRARY = "libdragoman.so"
 # dg_format, from dragoman.h.
 _FORMAT_ODMAP = 1
 _FORMAT_GD5 = 2
+_FORMAT_UNCIV = 3
+
+# A table, not a conditional. This was
+#     _FORMAT_ODMAP if fmt == "odmap" else _FORMAT_GD5
+# which has no way to be wrong with two formats and exactly one way with three:
+# a request for "unciv" would have silently written a GD5 map directory and
+# reported success.
+_FORMATS = {"odmap": _FORMAT_ODMAP, "gd5": _FORMAT_GD5, "unciv": _FORMAT_UNCIV}
 
 _package = None      # the desktop path: the open-dragoman package
 _lib = None          # the web path: the library itself, through ctypes
@@ -175,21 +183,34 @@ def _convert(src, dst, fmt):
     conversion can succeed with plenty of them -- that is the normal case,
     because the two games do not hold the same set of facts."""
     _load()
+    if fmt not in _FORMATS:
+        return False, ["unknown target format %r" % (fmt,)]
+
     if _package is not None:
         try:
             report = _package.convert(src, dst, fmt)
             return True, [d.message for d in report]
         except Exception as exc:
+            # The ABI version does not move when a format is added, so an older
+            # open-dragoman package is indistinguishable from a current one
+            # until it is asked for Unciv and says it has never heard of it.
+            # Name the version rather than passing that on as-is.
+            if fmt == "unciv" and "unciv" in str(exc).lower():
+                return False, ["this open-dragoman is too old to write a Unciv "
+                               "map -- 0.5.2 or newer is needed"]
             return False, [str(exc)]
 
     if _lib is None:
         return False, [_load_error or "the translation layer is not available"]
 
+    if fmt not in _FORMATS:
+        return False, ["unknown target format %r" % (fmt,)]
+
     options = _Options()
     _lib.dg_options_defaults(ctypes.byref(options))
     handle = ctypes.c_void_p()
     code = _lib.dg_convert(src.encode("utf-8"), dst.encode("utf-8"),
-                           _FORMAT_ODMAP if fmt == "odmap" else _FORMAT_GD5,
+                           _FORMATS[fmt],
                            ctypes.byref(options), ctypes.byref(handle))
 
     notes = []
@@ -217,6 +238,27 @@ def to_odmap(map_dir, odmap_path):
 def to_gd5(odmap_path, map_dir):
     """An Open Doctrines .odmap -> a GD5 map directory."""
     return _convert(odmap_path, map_dir, "gd5")
+
+
+def to_unciv(src_path, json_path):
+    """A GD5 map directory (or an .odmap) -> a Unciv map, which is ONE FILE.
+
+    Not the same kind of crossing as the Open Doctrines one. That game paints
+    provinces onto a raster the way this one does; Unciv has a hexagon per
+    place, so this is a RESAMPLING onto a grid and the detail between hexes is
+    not carried.
+    """
+    return _convert(src_path, json_path, "unciv")
+
+
+def from_unciv(json_path, map_dir):
+    """A Unciv map -> a GD5 map directory.
+
+    The same call as to_gd5: open-dragoman decides what the source is by
+    looking at it rather than at its name, so a player who picks the wrong
+    kind of file still gets the right answer.
+    """
+    return _convert(json_path, map_dir, "gd5")
 
 
 # ------------------------------------------------------------ finding the game
