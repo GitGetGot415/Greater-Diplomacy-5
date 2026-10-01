@@ -157,6 +157,7 @@ CREDITS_DATA = [
                 "info": (
                     "Added:\n"
                     "- Conversion between OpenDoctrines and GD5\n"
+                    "- Conversion between Unciv and GD5\n"
                     "- OJH Benchmark"
                 ),
                 "align": "left",
