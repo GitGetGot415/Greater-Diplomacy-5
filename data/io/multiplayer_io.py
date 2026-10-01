@@ -288,6 +288,7 @@ def export_tournament(map_ref, file_path, master_key, keys_dict):
 
     from data import queries
     queries.scrub_default_images(map_ref.nation_data)
+    queries.ensure_unit_ids(map_ref.map_data)
     save_dict = queries.build_save_dict(map_ref)
     
     # Embed the raw geometry so the tournament file is self-contained
@@ -325,6 +326,12 @@ def export_tournament(map_ref, file_path, master_key, keys_dict):
         map_ref.multiplayer_session_key = session_key
 
     player_enc_cache = getattr(map_ref, 'multiplayer_player_enc_cache', {})
+    public_context = hash_key(session_key)
+    # Older caches enclosed the host decryption secret. Never reuse those when
+    # writing recipient projections; players get only an opaque session context.
+    if getattr(map_ref, "multiplayer_player_enc_context", None) != public_context:
+        player_enc_cache = {}
+    map_ref.multiplayer_player_enc_context = public_context
     
     active_owners = active_owners_of(map_ref)
 
@@ -365,7 +372,7 @@ def export_tournament(map_ref, file_path, master_key, keys_dict):
         def _encrypt_player(task):
             cid, ckey = task
             if not ckey: return None
-            return cid, hash_key(ckey), encrypt_dict({"sk": session_key}, ckey)
+            return cid, hash_key(ckey), encrypt_dict({"sk": public_context}, ckey)
 
         def _record(result):
             r_cid, r_hash, r_enc = result
@@ -392,6 +399,9 @@ def export_tournament(map_ref, file_path, master_key, keys_dict):
         "spectator_game_data": spectator_game_data_enc,
         "history": history_enc
     }
+    payload["player_game_data"] = {
+        hash_key(key): encrypt_dict(queries.player_snapshot_projection(map_ref, save_dict, cid), key)
+        for cid, key in keys_dict.items() if key and (not active_owners or cid in active_owners)}
     
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
     with open(file_path, 'w') as f:
@@ -463,11 +473,14 @@ def load_tournament(file_path, key):
         if not isinstance(session_key, str):
             return False, None, None, None, None, "Invalid key payload"
 
-        game_data = decrypt_dict(payload.get("game_data"), session_key)
+        projections = payload.get("player_game_data")
+        projected_player = role == "PLAYER" and isinstance(projections, dict)
+        game_data = decrypt_dict(projections.get(i_hash) if projected_player else payload.get("game_data"),
+                                 key if projected_player else session_key)
         if not isinstance(game_data, dict):
             return False, None, None, None, None, "Failed to decrypt game data"
 
-        history = decrypt_dict(payload.get("history"), session_key) if payload.get("history") else []
+        history = decrypt_dict(payload.get("history"), session_key) if payload.get("history") and not projected_player else []
         if history is None:
             history = []
 
@@ -525,6 +538,7 @@ def export_move_file(map_ref, file_path, player_key):
     if cid not in map_ref.nation_data:
         raise ValueError("Only a tournament country player may export a move file.")
 
+    queries.ensure_unit_ids(map_ref.map_data)
     save_dict = queries.build_save_dict(map_ref)
     
     player_data = {
@@ -536,6 +550,7 @@ def export_move_file(map_ref, file_path, player_key):
         # nothing left to serialize.  New hosts use this marker to replace
         # the submitting country's complete map-unit snapshot atomically.
         "unit_snapshot": True,
+        "aircraft_orders": [],
     }
 
     session_key = getattr(map_ref, "multiplayer_session_key", None)
@@ -583,7 +598,18 @@ def export_move_file(map_ref, file_path, player_key):
             if "unit_queue" in prov_data:
                 prov_updates["unit_queue"] = prov_data["unit_queue"]
                 
-        player_units = [u for u in prov_data.get("units", []) if u.get("owner") == cid]
+        player_units = []
+        for unit in prov_data.get("units", []):
+            if unit.get("owner") != cid:
+                continue
+            if queries.is_air_unit(unit) or queries.is_air_transport(unit):
+                # Position, health and transported stats always belong to the
+                # host. A planning file carries only identity and desired orders.
+                player_data["aircraft_orders"].append({
+                    "unit_id": unit["unit_id"], "order": unit.get("order"),
+                    "custom_name": unit.get("custom_name")})
+            else:
+                player_units.append(unit)
         if player_units:
             prov_updates["units"] = player_units
             
@@ -613,7 +639,8 @@ def _move_context_error(map_ref, player_data):
     """
     expected_session = getattr(map_ref, "multiplayer_session_key", None)
     move_session = player_data.get("tournament_session")
-    if move_session is not None and move_session != expected_session:
+    valid_sessions = (expected_session, hash_key(expected_session)) if expected_session else (expected_session,)
+    if move_session is not None and move_session not in valid_sessions:
         return "belongs to a different tournament"
 
     if "tournament_turn" in player_data:
@@ -826,6 +853,58 @@ def _apply_puppet_siphon_updates(map_ref, country_id, player_data):
     return applied
 
 
+def _validate_aircraft_orders(map_ref, country_id, player_data, provinces):
+    """Validate before any import mutation; also safely accept old snapshots."""
+    live = {unit.get("unit_id"): (unit, province)
+            for province in map_ref.map_data.values() for unit in province.get("units", [])
+            if queries.is_air_unit(unit) or queries.is_air_transport(unit)}
+    for updates in provinces.values():
+        if not isinstance(updates, dict) or not isinstance(updates.get("units", []), list):
+            raise ValueError("Invalid province unit snapshot.")
+        for unit in updates.get("units", []):
+            if not isinstance(unit, dict) or (unit.get("unit_id") is not None
+                                              and not isinstance(unit["unit_id"], str)):
+                raise ValueError("Invalid snapshot unit.")
+            if not isinstance(unit.get("type", ""), str):
+                raise ValueError("Invalid snapshot unit type.")
+            if queries.is_air_unit(unit) or queries.is_air_transport(unit):
+                if unit.get("unit_id") not in live or unit.get("owner") != country_id:
+                    raise ValueError("Unauthorized snapshot aircraft.")
+    commands = player_data.get("aircraft_orders")
+    if commands is None:
+        # Older files serialized full aircraft. Recover only order/name drafts,
+        # ignoring every submitted stat/position. Land units retain legacy flow.
+        commands = [{"unit_id": unit.get("unit_id"), "order": unit.get("order"),
+                     "custom_name": unit.get("custom_name")}
+                    for updates in provinces.values() if isinstance(updates, dict)
+                    for unit in updates.get("units", []) if isinstance(unit, dict)
+                    and (queries.is_air_unit(unit) or queries.is_air_transport(unit)
+                         or unit.get("unit_id") in live)]
+    if not isinstance(commands, list):
+        raise ValueError("Invalid aircraft commands.")
+    validated = []
+    seen = set()
+    for command in commands:
+        if not isinstance(command, dict) or not isinstance(command.get("unit_id"), str):
+            raise ValueError("Invalid aircraft identity.")
+        uid = command["unit_id"]
+        if uid not in live or uid in seen:
+            raise ValueError("Unknown or duplicated aircraft command.")
+        seen.add(uid)
+        unit, province = live[uid]
+        if unit.get("owner") != country_id:
+            raise ValueError("Aircraft command belongs to another country.")
+        order = queries.canonical_unit_order(map_ref, country_id, province, unit, command.get("order"))
+        if isinstance(order, dict):
+            order.pop("realtime_cost", None)  # Tournament resources are already in the nation draft.
+        name = command.get("custom_name")
+        if name is not None and (not isinstance(name, str) or len(name) > 120
+                                or any(ord(ch) < 32 for ch in name)):
+            raise ValueError("Invalid aircraft name.")
+        validated.append((unit, order, name))
+    return live, validated
+
+
 def load_move_files(map_ref, move_file_paths, keys_dict):
     """
     Loads a list of .gd5move files and applies their orders to the host's map.
@@ -907,6 +986,11 @@ def load_move_files(map_ref, move_file_paths, keys_dict):
             # files in picker order previously made the last one silently win.
             summary["rejected"] += 1
             continue
+        try:
+            live_aircraft, aircraft_orders = _validate_aircraft_orders(map_ref, cid, player_data, provs)
+        except ValueError:
+            summary["rejected"] += 1
+            continue
         processed_move_cids.add(cid)
 
         summary["faction_renames"] += _apply_faction_renames(
@@ -926,7 +1010,8 @@ def load_move_files(map_ref, move_file_paths, keys_dict):
         if apply_unit_snapshot:
             if cid not in processed_cids:
                 for target_prov in map_ref.map_data.values():
-                    target_prov["units"] = [u for u in target_prov.get("units", []) if u.get("owner") != cid]
+                    target_prov["units"] = [u for u in target_prov.get("units", [])
+                                            if u.get("owner") != cid or u.get("unit_id") in live_aircraft]
                 processed_cids.add(cid)
                 
             # Create a lookup for json_key -> tuple key
@@ -946,7 +1031,17 @@ def load_move_files(map_ref, move_file_paths, keys_dict):
                 if "units" in updates:
                     if "units" not in target_prov:
                         target_prov["units"] = []
-                    target_prov["units"].extend(updates["units"])
+                    target_prov["units"].extend(u for u in updates["units"] if isinstance(u, dict)
+                        and u.get("owner") == cid and u.get("unit_id") not in live_aircraft
+                        and not queries.is_air_unit(u) and not queries.is_air_transport(u)
+                        and not (isinstance(u.get("order"), dict)
+                                 and isinstance(u["order"].get("type"), str)
+                                 and u["order"].get("type") in queries.AIR_ORDER_TYPES))
+
+        for unit, order, name in aircraft_orders:
+            unit["order"] = order or {"type": "MOVE", "path": []}
+            if name:
+                unit["custom_name"] = name
             
         # Also mark this country as having submitted a move
         if not hasattr(map_ref, 'submitted_moves'):

@@ -54,6 +54,8 @@ def process_bombardments(map_screen):
 
     for province in map_screen.map_data.values():
         for unit in province.get("units", []):
+            if queries.is_air_unit(unit):
+                continue
             order = unit.get("order")
             if not isinstance(order, dict) or order.get("type") != "BOMBARD":
                 continue
@@ -115,15 +117,12 @@ def process_bombardments(map_screen):
             # isn't capped by combat width, since each shot was ordered by hand.
             # "bombard_attack" is a separate stat from melee "attack" (falls
             # back to attack for any family that doesn't define it).
-            total_atk = sum(u.get("bombard_attack", u.get("attack", c.DEFAULT_UNIT_ATK))
-                            * combat_rules.effective_damage_multiplier(u, map_screen.nation_data)
-                            for u in guns)
-            apply_group_damage(
-                total_atk,
-                targets,
-                lambda unit, province=target_prov: queries.get_fort_defense_bonus(
-                    province, unit, map_screen.nation_data, combat_active=True),
-            )
+            for hit_targets, total_atk in combat_rules.damage_shots(
+                    guns, targets, nation_data=map_screen.nation_data, attack_field="bombard_attack"):
+                apply_group_damage(
+                    total_atk, hit_targets,
+                    lambda unit, province=target_prov: queries.get_fort_defense_bonus(
+                        province, unit, map_screen.nation_data, combat_active=True))
 
             # Resolve the fort damage after this volley has been calculated so
             # the fort's current level protects against the shells that hit it.
@@ -148,6 +147,8 @@ def process_pinning(map_screen):
     incoming_attacks = {}
     for province in map_screen.map_data.values():
         for unit in province.get("units", []):
+            if queries.is_air_unit(unit):
+                continue
             order = unit.get("order")
             if order and order.get("type") == "MOVE" and order.get("path"):
                 dest_id = order["path"][0]
@@ -201,6 +202,8 @@ def process_pinning(map_screen):
         # what stops the probe and the fight it is predicting from drifting
         # apart the moment either is tuned.
         attacker_units_only = [a_unit for a_unit, _ in hostile_attackers]
+        queries.prepare_aircraft_for_ground_combat(friendly_defenders, map_screen.nation_data,
+                                                  attacker_units_only)
         probe = combat_rules.build_battle(
             [friendly_defenders, attacker_units_only], map_screen.nation_data,
             terrain=dest_prov.get("terrain"))
@@ -265,6 +268,8 @@ def process_pinning(map_screen):
     # --- STANDARD PINNING LOGIC ---
     for province in map_screen.map_data.values():
         for unit in province.get("units", []):
+            if queries.is_air_unit(unit):
+                continue
             order = unit.get("order")
             if order and order.get("type") == "MOVE" and order.get("path"):
                 dest_id = order["path"][0]
@@ -314,6 +319,8 @@ def resolve_meeting_engagement(prov1, prov2, units1, units2, nation_data):
     """
     # Both armies are crossing the same boundary: its narrower terrain limits
     # the fight, independent of which endpoint the caller happens to list first.
+    queries.prepare_aircraft_for_ground_combat(units1, nation_data, units2)
+    queries.prepare_aircraft_for_ground_combat(units2, nation_data, units1)
     battle = combat_rules.build_battle(
         [units1, units2], nation_data,
         width=combat_rules.meeting_combat_width(prov1, prov2))
@@ -408,6 +415,8 @@ def process_combat(map_screen):
 
         is_land = not queries.is_water_province(province)
 
+        queries.prepare_aircraft_for_ground_combat(units, map_screen.nation_data)
+
         battle = combat_rules.build_battle(
             [units], map_screen.nation_data, terrain=province.get("terrain"))
         fighters = set(battle.engaged)
@@ -471,7 +480,7 @@ def check_for_post_combat_captures(map_screen):
         if queries.is_water_province(province):
             continue
 
-        units = province.get("units", [])
+        units = [unit for unit in province.get("units", []) if not queries.is_air_unit(unit)]
         if not units:
             continue
 

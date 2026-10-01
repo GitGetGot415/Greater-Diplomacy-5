@@ -47,17 +47,16 @@ class AerospaceRulesTests(unittest.TestCase):
                 if requirements:
                     self.assertFalse(queries.check_tech_requirements({}, tree[key]["req"]))
 
-    def test_units_copy_infantry_stats_and_share_ui_ai_unlocks(self):
+    def test_air_roles_and_stats_share_ui_ai_unlocks(self):
         library = queries.get_unit_library()
-        baseline = library["Infantry Type 1910"]
         for key, (_, _, name) in REQUESTED_TREE.items():
             with self.subTest(tech=key):
                 if key == "jet_engine":
                     self.assertNotIn(name, library)
                     self.assertEqual(ai_tech_eval.units_unlocked_by(key, {}, library), ())
                     continue
-                self.assertEqual({k: v for k, v in library[name].items()
-                                  if k != "production_group"}, baseline)
+                self.assertTrue(library[name]["air_role"])
+                self.assertGreater(library[name]["air_range_px"], 0)
                 self.assertFalse(queries.is_unit_unlocked(name, {}))
                 self.assertTrue(queries.is_unit_unlocked(name, {key: 1}))
                 self.assertIn(name, ai_tech_eval.units_unlocked_by(key, {}, library))
@@ -66,7 +65,8 @@ class AerospaceRulesTests(unittest.TestCase):
                                  queries.UNIT_GROUP_AEROSPACE)
                 created = queries.create_unit_dict(name, "A", library)
                 self.assertEqual(created["type"], name)
-                self.assertEqual(created["health"], baseline["health"])
+                self.assertEqual(created["health"], library[name]["health"])
+                self.assertTrue(queries.is_air_unit(created))
 
     def test_exact_units_and_families_have_the_same_category(self):
         library = queries.get_unit_library()

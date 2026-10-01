@@ -71,12 +71,17 @@ without reparsing the unit library. Library-name edits, research-year changes,
 gate/obsolescence rules and JSON refresh invalidate it, including in-place edits.
 These indexes and caches are presentation/planning data, never save fields.
 
-Aerospace is a separate research and production category. Its Biplane,
-Piston Fighter, Piston Bomber, V1 Flying Bomb, V2 Rocket and Jet Fighter units
-currently copy Infantry Type 1910's stats and costs and use normal land-unit
-rules. The unit library's production_group is presentation metadata only;
-the AI still values these units from their stats through its usual unlock
-index. Jet Engine unlocks no unit directly and gates Jet Fighter research.
+Aerospace remains a separate research/production category. air_role and
+air_range_px in unit_data.json define flight, independently of production_group
+and land speed. Biplane, Piston Fighter and Jet Fighter patrol; Piston Bomber
+flies reusable strikes. V1 Flying Bomb and V2 Rocket are consumed by a completed
+strike, and V2 alone bypasses interception. Jet Engine remains a research gate.
+The heuristic aircraft pass generates only canonical legal orders. It strikes
+known enemy targets, repositions reusable aircraft onto friendly land nearer
+them, patrols otherwise, and relocates one-use weapons through Trucks. It reads
+only visible enemy stacks, works with the LLM disabled, and leaves the tactical
+player's selected division under player control. Production values aerospace as
+its own AIR role, including the canonical fighter-versus-air damage bonus.
 Research dates use the existing ahead-of-time penalty, including aerospace.
 Recruitment buildings share the General Buildings production panel; their
 factory requirements and upgrade chain are unchanged.

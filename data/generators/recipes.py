@@ -95,7 +95,9 @@ UNIT_STAT_KEYS = ["health", "attack", "defense", "speed", "cost_materials",
 # the equivalent required stat (e.g. "bombard_attack" falls back to "attack").
 # This is how bombardment damage stays independently tunable per family
 # without forcing every non-bombarding family to carry an unused stat.
-OPTIONAL_UNIT_STAT_KEYS = ["bombard_attack"]
+OPTIONAL_UNIT_STAT_KEYS = ["bombard_attack", "production_group", "air_role",
+                           "air_range_px", "air_attack_multiplier", "air_consumable",
+                           "air_interception_immune"]
 
 
 class UnitFamily:
@@ -320,6 +322,14 @@ UNIT_SECTIONS = [
             "cost_fuel": linear(500, 25), "production_time": const(10),
         }, naval_unit=True),
     ],
+    [
+        UnitFamily('Biplane', single(), {'health': 300, 'attack': 35, 'defense': 0, 'speed': 1, 'cost_materials': 500, 'cost_manpower': 1000, 'cost_fuel': 0, 'production_time': 2, 'production_group': 'Aerospace', 'air_role': 'fighter', 'air_range_px': 180, 'air_attack_multiplier': 8}),
+        UnitFamily('Piston Fighter', single(), {'health': 450, 'attack': 50, 'defense': 0, 'speed': 1, 'cost_materials': 500, 'cost_manpower': 1000, 'cost_fuel': 0, 'production_time': 2, 'production_group': 'Aerospace', 'air_role': 'fighter', 'air_range_px': 300, 'air_attack_multiplier': 8}),
+        UnitFamily('Piston Bomber', single(), {'health': 1000, 'attack': 180, 'defense': 0, 'speed': 1, 'cost_materials': 500, 'cost_manpower': 1000, 'cost_fuel': 0, 'production_time': 2, 'production_group': 'Aerospace', 'air_role': 'bomber', 'air_range_px': 400}),
+        UnitFamily('V1 Flying Bomb', single(), {'health': 250, 'attack': 320, 'defense': 0, 'speed': 1, 'cost_materials': 500, 'cost_manpower': 1000, 'cost_fuel': 0, 'production_time': 2, 'production_group': 'Aerospace', 'air_role': 'strike', 'air_range_px': 350, 'air_consumable': True}),
+        UnitFamily('V2 Rocket', single(), {'health': 300, 'attack': 450, 'defense': 0, 'speed': 1, 'cost_materials': 500, 'cost_manpower': 1000, 'cost_fuel': 0, 'production_time': 2, 'production_group': 'Aerospace', 'air_role': 'strike', 'air_range_px': 500, 'air_consumable': True, 'air_interception_immune': True}),
+        UnitFamily('Jet Fighter', single(), {'health': 600, 'attack': 70, 'defense': 0, 'speed': 1, 'cost_materials': 500, 'cost_manpower': 1000, 'cost_fuel': 0, 'production_time': 2, 'production_group': 'Aerospace', 'air_role': 'fighter', 'air_range_px': 450, 'air_attack_multiplier': 8}),
+    ],
 ]
 
 
@@ -531,5 +541,14 @@ RESEARCH_SECTIONS = [
                                   "years": years_range(1913, 2, 50)}),
         ("resource_refining", {"category": "INDUSTRY", "max_lvl": 100, "cost": 900, "req": {},
                                 "years": years_range(1911, 1, 100)}),
+    ],
+    [
+        ('biplane', {'category': 'AEROSPACE', 'display_name': 'Biplane', 'max_lvl': 1, 'cost': 900, 'req': {}, 'years': [1910]}),
+        ('piston_fighter', {'category': 'AEROSPACE', 'display_name': 'Piston Fighter', 'max_lvl': 1, 'cost': 900, 'req': {'biplane': 1}, 'years': [1930]}),
+        ('piston_bomber', {'category': 'AEROSPACE', 'display_name': 'Piston Bomber', 'max_lvl': 1, 'cost': 900, 'req': {'piston_fighter': 1}, 'years': [1935]}),
+        ('v1_flying_bomb', {'category': 'AEROSPACE', 'display_name': 'V1 Flying Bomb', 'max_lvl': 1, 'cost': 900, 'req': {'piston_bomber': 1}, 'years': [1940]}),
+        ('v2_rocket', {'category': 'AEROSPACE', 'display_name': 'V2 Rocket', 'max_lvl': 1, 'cost': 900, 'req': {'v1_flying_bomb': 1}, 'years': [1945]}),
+        ('jet_engine', {'category': 'AEROSPACE', 'display_name': 'Jet Engine', 'max_lvl': 1, 'cost': 900, 'req': {'piston_bomber': 1}, 'years': [1945]}),
+        ('jet_fighter', {'category': 'AEROSPACE', 'display_name': 'Jet Fighter', 'max_lvl': 1, 'cost': 900, 'req': {'jet_engine': 1}, 'years': [1950]}),
     ],
 ]

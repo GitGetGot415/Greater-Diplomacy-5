@@ -241,6 +241,12 @@ def draw_map_screen(map_screen, surface):
                             surface, map_screen, province, target_id, bomb_range,
                             force_visible=force_vis)
 
+                elif order.get("type") in ("AIR_ATTACK", "AIR_REPOSITION"):
+                    target_id = order.get("target_id")
+                    if target_id is not None:
+                        overlay_renderer.draw_split_movement_path(surface, map_screen, province,
+                            [target_id], 1, map_screen.nation_colors.get(owner, (255, 255, 0)),
+                            force_visible=force_vis)
                 elif order.get("type") == "MOVE":
                     path = order.get("path", [])
                     if path:

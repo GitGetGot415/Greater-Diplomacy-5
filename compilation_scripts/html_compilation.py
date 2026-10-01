@@ -32,6 +32,7 @@ SOURCE_FILES = ["main.py", "mod_loader.py", "gameState.py", "ui_elements.py",
 # The multiplayer menu screen lives in screens/menu_screens and is included by
 # this whole-package copy, so it stays available in the web build automatically.
 SOURCE_PACKAGES = ["data", "ui", "screens", "map_logic"]
+# map_logic includes turn_processing/air_processor.py and its desktop-free rules.
 DATA_DIRS = ["assets", "base_maps", "scenarios", "tournament_saves"]
 
 

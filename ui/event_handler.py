@@ -86,6 +86,8 @@ def _select_map_province(map_screen, position, navigate=True):
             and not queries.is_province_visible(map_screen, province["id"])):
         return False
     map_screen.selected_province = province
+    from ui import sidebar_info
+    sidebar_info.prepare_unit_roster(map_screen, province)
     camera_handler.center_camera_on_province(
         map_screen.camera, province["center"], c.SCREEN_WIDTH, c.SCREEN_HEIGHT,
         map_screen.total_ui_h)
@@ -603,9 +605,13 @@ def handle_map_events(map_screen, event):
                         map_screen.show_feedback("Cannot place units in unowned territory!")
                     else:
                         new_unit = queries.create_unit_dict(map_screen.brush_unit, owner, queries.get_unit_library())
-                        map_screen.hovered_province.setdefault("units", []).append(new_unit)
-                        editor_changed = True
-                        map_screen.show_feedback(f"Placed {map_screen.brush_unit} for {owner}")
+                        if queries.is_air_unit(new_unit) and queries.is_water_province(map_screen.hovered_province):
+                            map_screen.show_feedback("Aircraft need a land base.")
+                        else:
+                            map_screen.hovered_province.setdefault("units", []).append(new_unit)
+                            editor_changed = True
+                            owner_name = queries.get_country_display_name(owner, map_screen.nation_data)
+                            map_screen.show_feedback(f"Placed {map_screen.brush_unit} for {owner_name}")
 
         if editor_changed:
             map_screen.queue_editor_visual_refresh(*editor_layers)

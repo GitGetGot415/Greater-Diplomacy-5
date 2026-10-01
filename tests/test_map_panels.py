@@ -206,6 +206,7 @@ class ExitConfirmationTests(unittest.TestCase):
 
     def setUp(self):
         self.map.show_exit_confirmation = True
+        self.map.refresh_ui()
         self.map.draw(self.surface)
 
     def tearDown(self):

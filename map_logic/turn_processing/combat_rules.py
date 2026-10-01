@@ -101,7 +101,7 @@ Lane = namedtuple("Lane", "index slots a b")
 #: width      -- distinct units holding a front slot anywhere in this fight
 #: shares     -- {id(unit): fronts it is holding}, so a unit spread over two
 #:               duels fires one volley split between them rather than two
-Battle = namedtuple("Battle", "lanes engaged bystanders width shares")
+Battle = namedtuple("Battle", "lanes engaged bystanders width shares profiles air_combat", defaults=({}, False))
 
 
 def _hostile(nation_data):
@@ -321,7 +321,7 @@ def _lane_membership(columns, coalition_groups, duels, can_fight):
     return lanes_of, foes
 
 
-def _availability(columns):
+def _availability(columns, profiles=None):
     """{column: units, in the order that column would rather field them}.
 
     Worked out once per column rather than once per lane it fights in: this is
@@ -347,7 +347,7 @@ def _availability(columns):
     available = {}
     for i, (_side, _owner, units) in enumerate(columns):
         # sorted() is stable, so equal-attack units keep their province order.
-        pool = sorted(units, key=lambda u: u.get("attack", c.DEFAULT_UNIT_ATK),
+        pool = sorted(units, key=lambda u: (profiles or {}).get(id(u), u).get("attack", c.DEFAULT_UNIT_ATK),
                       reverse=True)
         held = [u for u in pool if u.get("combat_stance") == "RESERVE"]
         available[i] = [u for u in pool if u.get("combat_stance") != "RESERVE"] + held
@@ -528,7 +528,7 @@ def single_attacker_signature(unit):
             unit.get("combat_stance"), unit.get("lane_target"))
 
 
-def build_battle(sides, nation_data, width=None, full_rank_for=None, terrain=None):
+def build_battle(sides, nation_data, width=None, full_rank_for=None, terrain=None, air_combat=False):
     """Who duels whom, and who is in the front rank, for one fight.
 
     `sides` is a list of unit lists. One side is a tile: everyone standing here
@@ -551,8 +551,16 @@ def build_battle(sides, nation_data, width=None, full_rank_for=None, terrain=Non
     `terrain` selects the tile's shared width; an explicit `width` overrides it.
     Missing or unknown terrain uses the global default.
     """
+    from data import queries
     hostile = _hostile(nation_data)
     columns = _columns(sides)
+    # Keep live references/IDs for lane control, but project engaged aircraft's
+    # automatic Truck conversion for all non-mutating UI and AI consumers.
+    all_units = [unit for side in sides for unit in side]
+    profiles = {id(unit): queries.ground_combat_profile(unit) for unit in all_units
+                if not air_combat and queries.is_air_unit(unit) and any(
+                    hostile(queries.get_unit_combat_owner(unit), queries.get_unit_combat_owner(other))
+                    for other in all_units)}
     across_only = len(sides) > 1
 
     def can_fight(i, j):
@@ -565,7 +573,7 @@ def build_battle(sides, nation_data, width=None, full_rank_for=None, terrain=Non
         width = combat_width_for_terrain(terrain)
     slots = lane_slots(len(duels), width)
     lanes_of, foes = _lane_membership(columns, groups, duels, can_fight)
-    available = _availability(columns)
+    available = _availability(columns, profiles)
     eager = ({i for i, col in enumerate(columns) if col[1] == full_rank_for}
              if full_rank_for else ())
     caps = _caps(groups, duels, lanes_of, available, slots, eager)
@@ -653,7 +661,7 @@ def build_battle(sides, nation_data, width=None, full_rank_for=None, terrain=Non
                   # fighting, not two.
                   len({id(u) for lane in lanes for side in (lane.a, lane.b)
                        for u in side.front}),
-                  shares)
+                  shares, profiles, air_combat)
 
 
 def health_damage_multiplier(unit):
@@ -706,7 +714,7 @@ def effective_damage_multiplier(unit, nation_data=None):
     return health_damage_multiplier(unit) * political
 
 
-def volley(units, shares=None, nation_data=None):
+def volley(units, shares=None, nation_data=None, profiles=None):
     """Attack of a front rank, with any unit fighting on two fronts counted once.
 
     `shares` is Battle.shares. Omitting it reads every unit as holding this
@@ -717,8 +725,8 @@ def volley(units, shares=None, nation_data=None):
     LaneSide's front is a whole coalition's, and the map's prediction bubbles
     read the latter.
     """
-    return sum(u.get("attack", c.DEFAULT_UNIT_ATK) / (shares or {}).get(id(u), 1)
-               * effective_damage_multiplier(u, nation_data)
+    return sum((profiles or {}).get(id(u), u).get("attack", c.DEFAULT_UNIT_ATK) / (shares or {}).get(id(u), 1)
+               * effective_damage_multiplier((profiles or {}).get(id(u), u), nation_data)
                for u in units)
 
 
@@ -739,8 +747,35 @@ def exchange(battle, nation_data=None):
         for side in (lane.a, lane.b):
             for member in side.members:
                 if member.targets:
-                    shots.append((member.targets,
-                                  volley(member.front, battle.shares, nation_data)))
+                    shots.extend(damage_shots(member.front, member.targets,
+                                              battle.shares, nation_data, profiles=battle.profiles,
+                                              air_to_air=battle.air_combat))
+    return shots
+
+
+def damage_shots(units, targets, shares=None, nation_data=None, attack_field="attack", profiles=None,
+                 air_to_air=False):
+    """Pool equally affected targets while preserving the shared damage divisor.
+
+    Tank immunity and fighter bonuses require source/target attribution. A mixed
+    stack still divides its volley across the original front, even when one
+    target is immune; that damage is not redirected to its neighbors.
+    """
+    from data import queries
+    groups = {}
+    for target in targets:
+        signature = tuple(queries.unit_target_damage_multiplier(
+            (profiles or {}).get(id(unit), unit), (profiles or {}).get(id(target), target),
+            air_to_air=air_to_air) for unit in units)
+        groups.setdefault(signature, []).append(target)
+    shots = []
+    for multipliers, group in groups.items():
+        attack = sum((profiles or {}).get(id(unit), unit).get(attack_field,
+                     (profiles or {}).get(id(unit), unit).get("attack", c.DEFAULT_UNIT_ATK))
+                     / (shares or {}).get(id(unit), 1)
+                     * effective_damage_multiplier((profiles or {}).get(id(unit), unit), nation_data) * multiplier
+                     for unit, multiplier in zip(units, multipliers))
+        shots.append((group, attack * len(group) / len(targets)))
     return shots
 
 
@@ -763,12 +798,13 @@ def projected_incoming_damage(battle, nation_data=None, defense_bonus_fn=None):
             continue
         damage_per_unit = total_attack / len(targets)
         for unit in targets:
-            defense_bonus = defense_bonus_fn(unit) if defense_bonus_fn else 0
-            defense = (unit.get("defense", 0)
-                       * health_defense_multiplier(unit)
+            profile = battle.profiles.get(id(unit), unit)
+            defense_bonus = defense_bonus_fn(profile) if defense_bonus_fn else 0
+            defense = (profile.get("defense", 0)
+                       * health_defense_multiplier(profile)
                        + defense_bonus)
             incoming[id(unit)] = incoming.get(id(unit), 0.0) + max(
-                0.0, damage_per_unit - defense)
+                0.0, damage_per_unit - defense) * unit.get("max_health", 1) / max(1, profile.get("max_health", 1))
     return incoming
 
 
@@ -817,8 +853,12 @@ def movers_into(province, dest_id, visible_to=None):
     Only MOVE orders carry a path, so testing for one is the same as testing
     the order type; both call sites did it one way or the other.
     """
+    from data import queries
+
     movers = []
     for unit in province.get("units", []):
+        if queries.is_air_unit(unit):
+            continue
         order = unit.get("order") or {}
         path = order.get("path")
         if not path or path[0] != dest_id:
@@ -841,6 +881,8 @@ def find_meeting_pairs(map_data, nation_data, visible_to=None):
     incoming = {}
     for province in map_data.values():
         for unit in province.get("units", []):
+            if queries.is_air_unit(unit):
+                continue
             order = unit.get("order") or {}
             if order.get("type") != "MOVE" or not order.get("path"):
                 continue

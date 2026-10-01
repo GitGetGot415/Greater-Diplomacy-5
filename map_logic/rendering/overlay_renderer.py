@@ -199,8 +199,8 @@ def combat_strengths(sides, nation_data, friendly_nations, player_nation=None,
         involved = True
         ours = mine[0]
         theirs = lane.b if ours is lane.a else lane.a
-        friendly_atk += combat_rules.volley(ours.front, battle.shares, nation_data)
-        enemy_atk += combat_rules.volley(theirs.front, battle.shares, nation_data)
+        friendly_atk += combat_rules.volley(ours.front, battle.shares, nation_data, battle.profiles)
+        enemy_atk += combat_rules.volley(theirs.front, battle.shares, nation_data, battle.profiles)
 
     return friendly_atk, enemy_atk, involved
 
@@ -285,6 +285,8 @@ def _simulate_combat(sides, nation_data, province=None, max_turns=100):
         [dict(unit) for unit in side if unit.get("health", 0) > 0]
         for side in sides
     ]
+    all_simulated = [unit for side in simulated_sides for unit in side]
+    queries.prepare_aircraft_for_ground_combat(all_simulated, nation_data)
 
     def defense_bonus(unit):
         if province is None:

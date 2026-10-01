@@ -225,3 +225,5 @@ def _process_grid_to_map(map_screen, grid, width, height, num_provinces):
     map_screen.political_map = id_surf.copy()
     map_screen.cores_map = id_surf.copy()
     map_screen.raw_json_data = map_screen.map_data
+    from data import queries
+    queries.build_air_geometry(map_screen)

@@ -45,9 +45,10 @@ ROLE_ASSAULT = "ASSAULT"    # holds a front slot and does the killing
 ROLE_LINE = "LINE"          # the relief rank: holds the tile, rotates into the front as it dies
 ROLE_BOMBARD = "BOMBARD"    # shells from outside every lane, the only thing that reaches a reserve
 ROLE_NAVAL = "NAVAL"
+ROLE_AIR = "AIR"
 
 LAND_ROLES = (ROLE_ASSAULT, ROLE_LINE, ROLE_BOMBARD)
-ALL_ROLES = LAND_ROLES + (ROLE_NAVAL,)
+ALL_ROLES = LAND_ROLES + (ROLE_NAVAL, ROLE_AIR)
 
 #: One unit's worth to one nation this turn.
 #: `score` is value per unit of resource pain; `pain` is what it costs in those
@@ -298,6 +299,13 @@ def evaluate(names, unit_library, ctx):
         combat = (offense + c.AI_W_DURABILITY * (durability / mean_durability)
                   + c.AI_W_SOAK * soak_share)
 
+        if stats.get("air_role"):
+            # Fighters' ordinary attack understates their interception value.
+            # Read the same target-specific rule as the combat resolver.
+            air_bonus = queries.unit_target_damage_multiplier({"type": name}, {"type": name}, air_to_air=True)
+            combat += offense * (air_bonus - 1)
+            combat += c.AI_W_BOMBARD * attack / mean_attack
+
         bomb_range = bombard_range(name, stats)
         if bomb_range:
             # Bombardment fires outside the combat-width cap and draws no return
@@ -307,7 +315,9 @@ def evaluate(names, unit_library, ctx):
             combat += c.AI_W_BOMBARD * (bombard_attack / mean_attack) * bomb_range
 
         naval = bool(stats.get("naval_unit", False))
-        if bomb_range and not naval:
+        if stats.get("air_role"):
+            role = ROLE_AIR
+        elif bomb_range and not naval:
             role = ROLE_BOMBARD
         elif naval:
             role = ROLE_NAVAL
@@ -398,12 +408,14 @@ def role_targets(ctx, naval_need, values=None):
                            max(c.AI_MIN_ROLE_TARGET, width_cap * c.AI_LINE_SPEND_RATIO)),
             ROLE_BOMBARD: max(c.AI_MIN_ROLE_TARGET, width_cap * c.AI_BOMBARD_SPEND_RATIO),
             ROLE_NAVAL: max(0.0, naval_need),
+            ROLE_AIR: max(c.AI_MIN_ROLE_TARGET, width_cap * c.AI_AIR_SPEND_RATIO),
         }
 
     shares = {
         ROLE_ASSAULT: 1.0,
         ROLE_LINE: c.AI_LINE_SPEND_RATIO,
         ROLE_BOMBARD: c.AI_BOMBARD_SPEND_RATIO,
+        ROLE_AIR: c.AI_AIR_SPEND_RATIO,
     }
     total_share = sum(shares.values())
 

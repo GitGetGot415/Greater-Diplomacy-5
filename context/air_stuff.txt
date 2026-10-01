@@ -1,0 +1,69 @@
+AIRCRAFT RULES
+==============
+
+Unit data owns air_role, air_range_px, air_attack_multiplier, air_consumable and
+air_interception_immune. production_group remains presentation metadata. Current
+full pixel ranges: Biplane 180, Piston Fighter 300, Piston Bomber 400, V1 350,
+V2 500 and Jet Fighter 450. Existing maps are approximately 800-1900 pixels
+wide, so these are regional ranges. Costs and research dates/gates are unchanged.
+Fighter health/attack: 300/35, 450/50, 600/70 respectively; bomber 1000/180;
+V1 250/320; V2 300/450. All fighters have an 8x air-only damage modifier.
+
+queries.build_air_geometry indexes actual ID-map pixels as horizontal runs at
+load/generation boundaries. Pixel footprints are closed unit rectangles, so
+touching the radius boundary counts. Distance is from the current base's map
+center to any point of the target tile, including disconnected parts; camera
+zoom, tilt, viewport and horizontal presentation wrapping never change reach.
+The cache is transient, rebuilt on geometry replacement, with distances cached
+per base center/target. Orders previews compute reachable ID sets at input
+boundaries; drawing only positions and blits markers. Command validation checks
+only its target through air_target_in_range, so AI candidate validation does
+not repeat full-map sweeps. Ground combat roster stats are likewise cached at
+selection/state boundaries and display the projected Truck representation.
+
+Patrol covers R, reusable strikes reach R/2, reposition reaches 2R, and one-use
+strikes reach R. Aircraft fly over water, foreign land and nonadjacent provinces.
+Bases and landing tiles must be land; attack targets may be water. Flight never
+captures land. Converted Trucks use ordinary land movement, combat and capture.
+The editor unit brush likewise requires land when placing an aircraft.
+
+AIR_PATROL orders retain base_id and priority (WEAKEST by default in old saves).
+AIR_ATTACK and AIR_REPOSITION retain base_id/target_id, resolve at the next
+turn boundary and clear once. Reusable strikes never remove the unit from its
+launch province, guaranteeing an exact return with health damage retained.
+Patrol remains active until replaced/canceled. Conversion into or out of a
+Truck takes one turn. Original aircraft stats survive via original_* transport
+fields; loading refreshes former infantry placeholders preserving health ratios.
+
+All interceptable aircraft attacking the same province form one committed
+force, across nations. V2s are a separate immune force. Every hostile covering
+fighter joins one shared coalition/lane engagement using global COMBAT_WIDTH,
+including the ordinary three-or-more-side behavior. Missions rank by committed
+calculate_unit_strength sums before losses, with target IDs breaking ties.
+Patrols contribute precedence constraints between covered missions; topological
+ordering preserves all compatible priorities across overlapping coverage. If
+conflicting priorities create a cycle, patrols vote for their next covered
+mission; most votes wins, then target ID. Surviving patrols may fight repeatedly
+and lose effectiveness as health falls. A destroyed attacker never delivers a
+strike.
+
+Ground impact reuses bombardment: no occupation/return fire, health/political
+damage modifiers and fort defense apply, and one fort level is removed per
+surviving attacking wing. This is the explicit assumption for unspecified air
+ground impact. A ranged barrage/strike against a based aircraft uses the shared
+target damage modifiers, including Tanks-category immunity, but never the
+fighter air-to-air bonus; actual melee ground
+engagement instead converts engaged aircraft immediately to Trucks before
+assembling lanes. Truck stats remove all air bonuses/immunity for that fight.
+Non-mutating UI/AI ground estimates project the same conversion. Surviving
+Trucks remain Trucks until the normal one-turn conversion-back order finishes.
+
+Tournament aircraft use authenticated aircraft_orders commands keyed by stable
+unit_id. The host validates orders against its position/type/range, retaining
+its health/stats. Legacy snapshots yield order/name drafts only for existing
+aircraft. New archives give each player an encrypted visibility projection and
+an opaque session context, never the host snapshot's decryption secret. Legacy
+archives still load. Real-time unit commands likewise validate against server
+state and resolve stable IDs when filtered client indexes differ. Server guest
+snapshots and initial map bundles remove hidden units and private foreign orders.
+Neither projection exposes the transient geometry cache or interception lists.

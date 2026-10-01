@@ -523,6 +523,10 @@ def load_map_assets(map_screen, load_path):
         queries.migrate_units_to_current_stats(map_screen.map_data, unit_lib)
         print(f"[SYSTEM] Migrated save from version '{save_version or 'unversioned'}' to '{c.GAME_VERSION}'.")
 
+    queries.migrate_aircraft_stats(map_screen.map_data)
+    queries.normalize_air_orders(map_screen.map_data)
+    queries.build_air_geometry(map_screen)
+
     # --- REPAIR FACTION ROSTERS ---
     # Runs before the pre-war maps below, which are built off the rosters.
     repair_faction_rosters(map_screen.nation_data, map_screen.map_data)

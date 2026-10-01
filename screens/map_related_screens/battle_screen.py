@@ -34,7 +34,7 @@ import data.constants as c
 from data import queries
 from map_logic.turn_processing import combat_rules
 from map_logic.rendering.font_manager import fonts
-from ui import flag_icons
+from ui import flag_icons, sidebar_info
 from ui.bars import ui_bars, view_mode_buttons
 from ui.modal_screen import ModalScreen
 from ui_elements import (draw_wrapped_icon_row, get_combat_stat_entries,
@@ -128,6 +128,16 @@ class Battle_Screen(ModalScreen):
         self.battle = combat_rules.build_battle(
             [self.province.get("units", [])], self.map_screen.nation_data,
             width=self.combat_width)
+        self.combat_row_data = {}
+        for unit in self.province.get("units", []):
+            profile = self.battle.profiles.get(id(unit), unit)
+            row = sidebar_info.unit_roster_row(profile, self.province, self.map_screen.nation_data, True)
+            row["entries"] = get_combat_stat_entries(
+                row["attack"], row["defense"], int(profile.get("health", 0)),
+                profile.get("speed", 0), labeled=False, defense_bonus=row["fort"])
+            if row["bombard"] is not None:
+                row["entries"].extend(get_bombardment_stat_entries(*row["bombard"], labeled=False))
+            self.combat_row_data[id(unit)] = row
         if self.selected_lane >= len(self.battle.lanes):
             self.selected_lane = 0
 
@@ -628,21 +638,22 @@ class Battle_Screen(ModalScreen):
         """
         def paint(surface):
             small = fonts.get("small")
-            library = queries.get_unit_library()
             for rect, (unit, note) in self.row_paint.get(pane, ()):
+                row = self.combat_row_data[id(unit)]
+                profile = row["profile"]
                 owner = unit.get("owner", "?")
                 x = flag_icons.draw_flag_centered(surface, owner, self.map_screen.nation_data,
                                                   rect.x + 6, rect.y + 2, small.get_height())
 
                 dim = owner != self.player or not self.can_command(unit)
-                hp_surf = small.render(queries.format_health_percent(unit), True, c.UI_TEXT_MUTED)
+                hp_surf = small.render(queries.format_health_percent(profile), True, c.UI_TEXT_MUTED)
                 note_width = 0
                 if note:
                     note_width = small.size(note)[0]
                 name_width = max(
                     1, rect.right - 8 - note_width - x - hp_surf.get_width() - 4)
                 name = fit_text(
-                    queries.get_condensed_unit_name(unit.get("type", "Unit")),
+                    queries.get_condensed_unit_name(profile.get("type", "Unit")),
                     small, name_width)
                 name_surf = small.render(name, True,
                                          c.UI_TEXT_MUTED if dim else c.UI_TEXT_LIGHT)
@@ -657,24 +668,8 @@ class Battle_Screen(ModalScreen):
                 # Politics included: this row is a promise about what the unit
                 # will actually do this turn, and the resolver scales its shot
                 # by exactly this.
-                dmg_mult = combat_rules.effective_damage_multiplier(
-                    unit, self.map_screen.nation_data)
-                def_mult = combat_rules.health_defense_multiplier(unit)
-                fort_defense = queries.get_fort_defense_bonus(
-                    self.province, unit, self.map_screen.nation_data, combat_active=True)
-                stat_entries = get_combat_stat_entries(
-                    unit.get("attack", 0) * dmg_mult,
-                    unit.get("defense", 0) * def_mult,
-                    int(unit.get("health", 0)), unit.get("speed", 0),
-                    labeled=False, defense_bonus=fort_defense)
-                stats = library.get(unit.get("type", ""), {})
-                if "bombard_attack" in stats:
-                    stat_entries.extend(get_bombardment_stat_entries(
-                        unit.get("bombard_attack", stats.get("bombard_attack", 0)) * dmg_mult,
-                        unit.get("bombard_range", stats.get("bombard_range", 0)),
-                        labeled=False))
                 draw_wrapped_icon_row(
-                    surface, small, stat_entries, rect.x + 10, stat_y,
+                    surface, small, row["entries"], rect.x + 10, stat_y,
                     (200, 200, 200), rect.width - 20,
                     line_height=small.get_height())
         return paint

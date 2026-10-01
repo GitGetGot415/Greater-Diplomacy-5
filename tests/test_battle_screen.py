@@ -130,6 +130,7 @@ class BuildAndPaintTests(BattleScreenTestCase):
 
                 with mock.patch.object(combat_rules, "build_battle",
                                        side_effect=record_battle):
+                    sidebar_info.prepare_unit_roster(self.map, self.province)
                     sidebar_info.draw_unit_roster(
                         self.map, self.surface, self.province,
                         self.province["units"], True, 0, 0, 370)
@@ -662,6 +663,9 @@ class OrdersScreenRegressionTests(BattleScreenTestCase):
         from screens.map_related_screens.orders import Orders_Screen
 
         self.map.player_country = self.a if player is None else player
+        previous_selection_mode = self.map.selection_mode
+        self.map.selection_mode = False
+        self.addCleanup(setattr, self.map, "selection_mode", previous_selection_mode)
         screen = Orders_Screen()
         screen.start_with_province(self.province, self.map)
         return screen

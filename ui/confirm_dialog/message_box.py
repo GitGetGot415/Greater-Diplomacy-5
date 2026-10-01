@@ -114,12 +114,19 @@ class _NavigationIntroPopup:
         ("Mail", "mail", "Open the Mail tab (located to the left) to read, reply to, or start conversations."),
         ("Country actions", "relations", "Click another country's tile to see available diplomatic actions you can take against them."),
     )
-    PAGE_TITLES = ("Map Navigation", "Map UI", "Other Countries", "Armies")
+    AIR_STEPS = (
+        ("Strike", "In Orders, use the strike icon and click a highlighted province. Reusable planes reach half their full range and return to their launch base."),
+        ("Patrol", "Fighters cover their full range. The patrol icon cycles weakest attacking force first, strongest first, then off. Survivors may intercept several missions."),
+        ("Reposition", "Right-click land to move reusable planes up to twice their full range. Reach uses map pixels and tile edges; zoom never changes it. Aircraft cannot capture land."),
+        ("V1 and V2", "Strikes use full range and consume the weapon. V2 bypasses interception. Relocate either weapon with one-turn Truck conversions. Aircraft attacked in ground combat become Trucks automatically."),
+    )
+    PAGE_TITLES = ("Map Navigation", "Map UI", "Other Countries", "Armies", "Aircraft")
     PAGE_SUBTITLES = (
         "Your country is centered automatically when a game opens or after you choose it. If you're familiar with how HOI4 map controls work, then the default map controls for GD5 should be very easy to understand.",
         "These buttons are important! Located on the bottom left of the screen, they edit the appearance of the map, giving you the information you need to play effectively.",
         "Reach other countries through the Mail tab or directly from their territory on the map.",
         "Learn how to create, organize, and command armies, including target areas.",
+        "Air missions resolve next turn. Highlighted provinces show the selected aircraft's reach.",
     )
 
     def __init__(self, map_screen):
@@ -147,6 +154,7 @@ class _NavigationIntroPopup:
             for captions in self.navigation_caption_lines
         )
         self.army_step_lines = self._army_step_lines()
+        self.air_step_lines = self._army_step_lines(self.AIR_STEPS)
         self._layout()
 
     def _layout(self):
@@ -167,13 +175,13 @@ class _NavigationIntroPopup:
             self.PAGE_SUBTITLES[self.page_index], self.body_font,
             self.rect.width - (2 * self.SUBTITLE_SIDE_PADDING))
 
-    def _army_step_lines(self):
+    def _army_step_lines(self, steps=None):
         """Wrap army instructions to the usable content width of their page."""
         max_width = (self.rect.width - self.ARMY_STEP_NUMBER_X
                      - self.ARMY_STEP_TEXT_X_OFFSET
                      - self.ARMY_STEP_SIDE_PADDING)
         return tuple((heading, tuple(wrap_text(description, self.body_font, max_width)))
-                     for heading, description in self.ARMY_STEPS)
+                     for heading, description in (self.ARMY_STEPS if steps is None else steps))
 
     def _persist_checkbox(self):
         settings = dict(queries.get_settings() or {})
@@ -390,7 +398,8 @@ class _NavigationIntroPopup:
             description_x = step_x + self.ARMY_STEP_TEXT_X_OFFSET
             line_height = self.body_font.get_height() + self.ARMY_STEP_LINE_GAP
             y = step_y
-            for index, (heading, description_lines) in enumerate(self.army_step_lines, start=1):
+            steps = self.army_step_lines if self.page_index == 3 else self.air_step_lines
+            for index, (heading, description_lines) in enumerate(steps, start=1):
                 pygame.draw.circle(surface, (70, 115, 160), (step_x, y + 13), 14)
                 number = self.label_font.render(str(index), True, (255, 255, 255))
                 surface.blit(number, number.get_rect(center=(step_x, y + 13)))

@@ -188,6 +188,8 @@ async def resolve_turn_logic(map_screen): # Renamed from resolve_turn
     await asyncio.sleep(0)
 
     # Pre-Movement Combat Mechanics
+    from map_logic.turn_processing import air_processor
+    air_processor.process_air_orders(map_screen)
     combat_processor.process_bombardments(map_screen)
     combat_processor.process_pinning(map_screen)
     combat_processor.process_meeting_engagements(map_screen)

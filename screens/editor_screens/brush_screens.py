@@ -54,7 +54,7 @@ class Convoy_Converter_Screen(MapOverlayScreen):
             unit = units[i]
             name = unit.get("original_type", unit.get("type", "Unknown"))
             is_naval = self.unit_lib.get(name, {}).get("naval_unit", False)
-            suffix = "(Convoy)" if not is_naval else "(Truck)"
+            suffix = "(Truck)" if is_naval or self.unit_lib.get(name, {}).get("air_role") else "(Convoy)"
             checked = i in self.selected
             label = f"{'[X]' if checked else '[ ]'} {name} {suffix}"
             btn = Button(row_x, y, "list_row", "green" if checked else "grey", label, lambda ii=i: self.toggle(ii))
@@ -73,30 +73,8 @@ class Convoy_Converter_Screen(MapOverlayScreen):
             if want and "original_type" not in unit:
                 name = unit.get("type", "Unknown")
                 is_naval = self.unit_lib.get(name, {}).get("naval_unit", False)
-                target = "Convoy" if not is_naval else "Truck"
-
-                unit["original_type"] = unit["type"]
-                unit["original_speed"] = unit.get("speed", 1)
-                unit["original_max_health"] = unit.get("max_health", c.DEFAULT_UNIT_HP)
-                unit["original_attack"] = unit.get("attack", c.DEFAULT_UNIT_ATK)
-                unit["original_defense"] = unit.get("defense", c.DEFAULT_UNIT_DEF)
-
-                pct = unit.get("health", 1) / max(1, unit.get("max_health", 1))
-                unit["type"] = f"{target} ({unit['type']})"
-                unit["speed"] = 1
-
-                if target == "Convoy":
-                    unit["naval_unit"] = True
-                    unit["max_health"] = c.CONVOY_MAX_HP
-                    unit["attack"] = c.CONVOY_ATK
-                    unit["defense"] = c.CONVOY_DEF
-                else:
-                    unit["naval_unit"] = False
-                    unit["max_health"] = c.TRUCK_MAX_HP
-                    unit["attack"] = c.TRUCK_ATK
-                    unit["defense"] = c.TRUCK_DEF
-
-                unit["health"] = unit["max_health"] * pct
+                target = "Truck" if is_naval or queries.is_air_unit(unit) else "Convoy"
+                queries.load_transport(unit, target)
                 changed = True
             elif not want and "original_type" in unit:
                 queries.revert_transport(unit)

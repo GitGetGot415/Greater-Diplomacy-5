@@ -336,7 +336,7 @@ class NavigationIntroPopupTests(unittest.TestCase):
         self.assertTrue(all(popup.body_font.size(line)[0] <= popup.rect.width -
                             (2 * popup.SUBTITLE_SIDE_PADDING)
                             for line in popup._subtitle_lines()))
-        self.assertEqual(len(popup.ARMY_STEPS), 5)
+        self.assertEqual(len(popup.army_step_lines), len(popup.ARMY_STEPS))
         self.assertTrue(all(len(step) == 2 for step in popup.ARMY_STEPS))
         target_description = next(description for heading, description in popup.ARMY_STEPS
                                   if heading == "Target areas")

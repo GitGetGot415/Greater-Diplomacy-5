@@ -26,29 +26,59 @@ SIDEBAR_INFO_HEIGHT = 640 # Sized to fit the terrain image and buildings list
 info_rect = pygame.Rect(SIDEBAR_INFO_X, SIDEBAR_INFO_Y, SIDEBAR_INFO_WIDTH, SIDEBAR_INFO_HEIGHT)
 
 
+def unit_roster_row(profile, province, nation_data, is_combat):
+    """Presentation numbers derived from the shared damage/defense rules."""
+    stats = queries.get_unit_library().get(profile.get("type", ""), {})
+    damage = combat_rules.effective_damage_multiplier(profile, nation_data)
+    defense = combat_rules.health_defense_multiplier(profile) if is_combat else 1
+    return {
+        "profile": profile,
+        "attack": profile.get("attack", 0) * damage,
+        "defense": profile.get("defense", 0) * defense,
+        "fort": queries.get_fort_defense_bonus(
+            province, profile, nation_data, combat_active=is_combat),
+        "bombard": (profile.get("bombard_attack", stats.get("bombard_attack", 0)) * damage,
+                     profile.get("bombard_range", stats.get("bombard_range", 0)))
+                   if "bombard_attack" in stats else None,
+    }
+
+
+def prepare_unit_roster(map_screen, province):
+    """Cache one province's ground battle and stats at a selection/state boundary."""
+    units = queries.filter_visible_units(
+        province.get("units", []), map_screen.player_country, province, map_screen.nation_data)
+    is_combat = queries.is_province_in_active_combat(province, map_screen.nation_data)
+    battle = combat_rules.build_battle(
+        [units], map_screen.nation_data, terrain=province.get("terrain"))
+    rows = {}
+    for unit in units:
+        profile = battle.profiles.get(id(unit), unit)
+        rows[id(unit)] = unit_roster_row(profile, province, map_screen.nation_data, is_combat)
+    # Standalone UI fixtures may not have Map's presentation cache yet.
+    cache = getattr(map_screen, "_unit_roster_cache", None)
+    if cache is None:
+        cache = map_screen._unit_roster_cache = {}
+    cache[province["id"]] = (is_combat, battle, rows)
+
+
 def draw_unit_roster(map_screen, surface, province, units, is_visible, x, y, width):
     """Draws the ACTIVE GARRISON / COMBAT ZONE unit list for `province`, top-left
     anchored at (x, y) and wrapped to `width`. `units` should already be fog-of-war
     filtered (see queries.filter_visible_units); `is_visible` is the province's own
     fog-of-war state.
 
-    Shared by the province sidebar and the read-only Orders panel (viewing a tile
-    the player holds nothing on) so the two look identical apart from where they
-    sit on screen. Returns the y-coordinate immediately below the last row drawn.
+    prepare_unit_roster must run at the selection/state boundary. Returns the
+    y-coordinate immediately below the last row drawn.
     """
     text_x = x + 10
     right_edge = x + width
     current_y = y
 
-    # 5. Combat Detection
-    is_combat = queries.is_province_in_active_combat(province, map_screen.nation_data)
-
     # Who is actually fighting whom, read off the same rule the turn
     # resolves by. A nation can stand in the middle of a battle on military
     # access without being in it, and listing it as a side -- with its top
     # units highlighted as the ones dealing damage -- was simply untrue.
-    battle = combat_rules.build_battle(
-        [units], map_screen.nation_data, terrain=province.get("terrain"))
+    is_combat, battle, rows = map_screen._unit_roster_cache[province["id"]]
 
     # --- Active Garrison / Combat Zone ---
     # While a fight is active, the Combat Zone display (grouped by side) fully
@@ -109,9 +139,10 @@ def draw_unit_roster(map_screen, surface, province, units, is_visible, x, y, wid
             # nothing, so nothing of theirs is highlighted however good it is.
             engaged_ids = front_ids or set()
             for u in side_units:
-                u_name = queries.get_condensed_unit_name(u.get("type", "Unit"))
-                unit_stats = queries.get_unit_library().get(u.get("type", ""), {})
-                has_bombard = 'bombard_attack' in unit_stats
+                row = rows[id(u)]
+                profile = row["profile"]
+                u_name = queries.get_condensed_unit_name(profile.get("type", "Unit"))
+                has_bombard = row["bombard"] is not None
                 row_height = 20 + (18 if has_bombard else 0)
 
                 in_front = id(u) in engaged_ids
@@ -130,22 +161,17 @@ def draw_unit_roster(map_screen, surface, province, units, is_visible, x, y, wid
                 row_x += name_surf.get_width() + 4
 
                 hp_surf = map_screen.small_font.render(
-                    queries.format_health_percent(u), True, c.UI_TEXT_MUTED)
+                    queries.format_health_percent(profile), True, c.UI_TEXT_MUTED)
                 surface.blit(hp_surf, (row_x, current_y))
                 row_x += hp_surf.get_width() + 6
 
                 # Condensed, icon-based combat stats, matching the garrison list
-                dmg_mult = combat_rules.effective_damage_multiplier(u, map_screen.nation_data)
-                def_mult = combat_rules.health_defense_multiplier(u)
-                fort_defense = queries.get_fort_defense_bonus(
-                    province, u, map_screen.nation_data, combat_active=is_combat)
                 draw_combat_stats(
                     surface, map_screen.small_font, "",
-                    u.get("attack", 0) * dmg_mult,
-                    u.get("defense", 0) * def_mult,
-                    int(u.get("health", 0)), u.get("speed", 0),
+                    row["attack"], row["defense"],
+                    int(profile.get("health", 0)), profile.get("speed", 0),
                     row_x, current_y, (200, 200, 200), labeled=False,
-                    defense_bonus=fort_defense
+                    defense_bonus=row["fort"]
                 )
 
                 current_y += 20
@@ -154,8 +180,7 @@ def draw_unit_roster(map_screen, surface, province, units, is_visible, x, y, wid
                 if has_bombard:
                     draw_bombardment_stats(
                         surface, map_screen.small_font,
-                        u.get("bombard_attack", unit_stats.get('bombard_attack', 0)) * dmg_mult,
-                        u.get("bombard_range", unit_stats.get('bombard_range', 0)),
+                        *row["bombard"],
                         text_x + 20, current_y, (200, 200, 200), base_text="", labeled=False
                     )
                     current_y += 18
@@ -193,7 +218,9 @@ def draw_unit_roster(map_screen, surface, province, units, is_visible, x, y, wid
                 draw_side(side_id, [u for u in units if u.get("owner") == side_id])
     else:
         for u in units:
-            u_name = queries.get_condensed_unit_name(u.get("type", "Unit"))
+            row = rows[id(u)]
+            profile = row["profile"]
+            u_name = queries.get_condensed_unit_name(profile.get("type", "Unit"))
             u_owner_id = u.get("owner", "Unknown")
 
             row_x = text_x + 5
@@ -204,7 +231,7 @@ def draw_unit_roster(map_screen, surface, province, units, is_visible, x, y, wid
             row_x += name_surf.get_width() + 4
 
             hp_surf = map_screen.small_font.render(
-                queries.format_health_percent(u), True, c.UI_TEXT_MUTED)
+                queries.format_health_percent(profile), True, c.UI_TEXT_MUTED)
             surface.blit(hp_surf, (row_x, current_y))
             row_x += hp_surf.get_width() + 4
 
@@ -214,22 +241,19 @@ def draw_unit_roster(map_screen, surface, province, units, is_visible, x, y, wid
                 name_surf.get_height())
 
             # Condensed, icon-based combat stats, matching the production tab's style
-            dmg_mult = combat_rules.effective_damage_multiplier(u, map_screen.nation_data)
             draw_combat_stats(
                 surface, map_screen.small_font, "",
-                u.get("attack", 0) * dmg_mult, u.get("defense", 0), int(u.get("health", 0)), u.get("speed", 0),
+                row["attack"], row["defense"], int(profile.get("health", 0)), profile.get("speed", 0),
                 row_x, current_y, (200, 200, 200), labeled=False
             )
 
             current_y += 20
 
             # Bombardment stats on their own indented line, only for units that can bombard
-            unit_stats = queries.get_unit_library().get(u.get("type", ""), {})
-            if 'bombard_attack' in unit_stats:
+            if row["bombard"] is not None:
                 draw_bombardment_stats(
                     surface, map_screen.small_font,
-                    u.get("bombard_attack", unit_stats.get('bombard_attack', 0)) * dmg_mult,
-                    u.get("bombard_range", unit_stats.get('bombard_range', 0)),
+                    *row["bombard"],
                     text_x + 15, current_y, (200, 200, 200), base_text="", labeled=False
                 )
                 current_y += 18

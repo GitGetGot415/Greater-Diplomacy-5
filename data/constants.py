@@ -1838,6 +1838,7 @@ AI_LINE_SPEND_RATIO = 1.0
 # Guns went from support to the only thing that reaches a reserve, and deep
 # reserve stacks are the formation the lane model encourages.
 AI_BOMBARD_SPEND_RATIO = 0.25
+AI_AIR_SPEND_RATIO = 0.25
 AI_MIN_ROLE_TARGET = 2.0    # even a landlocked one-province nation wants a couple of each
 
 # A unit is ASSAULT when this much of its combat value comes from attack rather

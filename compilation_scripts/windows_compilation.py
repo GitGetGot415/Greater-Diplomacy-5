@@ -49,6 +49,7 @@ def main():
            "--hidden-import", "screens.map_related_screens.automation_screen",
            "--hidden-import", "screens.map_related_screens.declare_independence",
            "--hidden-import", "screens.map_related_screens.politics_screen",
+           "--hidden-import", "map_logic.turn_processing.air_processor",
            "--add-binary", "win64-libsoloud.dll;.",
            "--add-binary", "mac64-libsoloud.dylib;.",
            "--add-binary", "lin64-libsoloud.so;.",

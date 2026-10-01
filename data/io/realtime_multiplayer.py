@@ -756,7 +756,6 @@ class MapRealtimeDriver:
                         "flag_data", "portrait_data", "color"}
     _MAX_CLAIM_DRAFTS = 100
     _MAX_QUEUE_ITEMS = 100
-    _MAX_UNIT_PATH = 200
 
     def __init__(self, map_ref):
         self.map_ref = map_ref
@@ -771,10 +770,13 @@ class MapRealtimeDriver:
         canonical = []
         has_research_command = False
         seen = set()
+        seen_units = set()
         for command in commands:
             if not isinstance(command, dict):
                 raise RealtimeError("Invalid order command.")
             kind = command.get("type")
+            if not isinstance(kind, str):
+                raise RealtimeError("Invalid command type.")
             # A draft is a complete projection of each mutable domain.  One
             # command per domain prevents a client from smuggling a later
             # conflicting value through the same update.
@@ -783,7 +785,12 @@ class MapRealtimeDriver:
                                         "faction_rename", "ratification_response", "army_roster"}:
                 raise RealtimeError("Only one command is allowed for that game action.")
             if kind == "unit_order":
-                canonical.append(self._validate_unit_order(country_id, command))
+                validated = self._validate_unit_order(country_id, command)
+                identity = (validated["province_id"], validated["unit_index"])
+                if identity in seen_units:
+                    raise RealtimeError("Only one order is allowed per unit.")
+                seen_units.add(identity)
+                canonical.append(validated)
             elif kind == "province_queue":
                 canonical.append(self._validate_queue(country_id, command))
             elif kind == "research_queue":
@@ -1297,7 +1304,13 @@ class MapRealtimeDriver:
         from data import queries
         province = self._province(command.get("province_id"))
         index = command.get("unit_index")
-        if not isinstance(index, int) or not 0 <= index < len(province.get("units", [])):
+        unit_id = command.get("unit_id")
+        if unit_id is not None:
+            if not isinstance(unit_id, str):
+                raise RealtimeError("Invalid unit identity.")
+            index = next((i for i, unit in enumerate(province.get("units", []))
+                          if unit.get("unit_id") == unit_id), None)
+        if type(index) is not int or not 0 <= index < len(province.get("units", [])):
             raise RealtimeError("Unknown unit in order.")
         unit = province["units"][index]
         if unit.get("owner") != country_id:
@@ -1325,79 +1338,12 @@ class MapRealtimeDriver:
 
     def _canonical_unit_order(self, country_id: str, province: dict[str, Any], unit: dict[str, Any],
                               order: dict[str, Any] | None) -> dict[str, Any] | None:
-        """Validate every order form before the existing processor sees it."""
+        """Use the same rule as tournament's host-validated aircraft orders."""
         from data import queries
-        if order is None or order == {}:
-            return None
-        kind = order.get("type")
-        if kind == "MOVE":
-            path = order.get("path", [])
-            if (not isinstance(path, list) or len(path) > self._MAX_UNIT_PATH
-                    or any(isinstance(province_id, bool) or not isinstance(province_id, int)
-                           for province_id in path)):
-                raise RealtimeError("Invalid movement path.")
-            previous = province
-            for province_id in path:
-                destination = self._province(province_id)
-                if not queries.can_unit_move_step(
-                        unit, previous, destination, self.map_ref.nation_data):
-                    raise RealtimeError("That unit cannot enter a province in this path.")
-                previous = destination
-            return {"type": "MOVE", "path": list(path)}
-        if kind == "BOMBARD":
-            target = self._province(order.get("target_id"))
-            unit_type = unit.get("type", "")
-            if (queries.is_water_province(province)
-                    and not (unit.get("naval_unit") or queries.is_naval_unit(unit_type))):
-                raise RealtimeError("That unit cannot bombard from water.")
-            targets = queries.get_bombardment_targets(
-                province, self.map_ref.id_to_province, queries.get_bombardment_range(unit_type))
-            if target["id"] not in targets:
-                raise RealtimeError("Bombardment target is out of range.")
-            return {"type": "BOMBARD", "target_id": target["id"]}
-        if kind == "DISBAND":
-            return {"type": "DISBAND", "turns_left": 1}
-        if kind == "REPAIR":
-            if queries.is_nation_in_combat_here(country_id, province, self.map_ref.nation_data):
-                raise RealtimeError("Units cannot repair in combat.")
-            unit_type = unit.get("original_type", unit.get("type", ""))
-            stats = queries.get_unit_library().get(unit_type, {})
-            if queries.get_scenario_flag("free_repairs", c.DEFAULT_FREE_REPAIRS,
-                                         self.map_ref.scenario_settings):
-                cost = {"cost_materials": 0, "cost_manpower": 0, "cost_fuel": 0}
-            else:
-                missing = (unit.get("max_health", 1) - unit.get("health", 0)) / max(1, unit.get("max_health", 1))
-                cost = {key: int(stats.get(key, 0) * missing)
-                        for key in ("cost_materials", "cost_manpower", "cost_fuel")}
-            return {"type": "REPAIR", "turns_left": 1, "refund": cost, "realtime_cost": cost}
-        if kind == "UPGRADE":
-            target_type = order.get("target_type")
-            unit_library = queries.get_unit_library()
-            research = self._country(country_id).get("research", {})
-            if (not isinstance(target_type, str) or target_type not in unit_library
-                    or not queries.is_unit_unlocked(target_type, research)
-                    or not queries.has_industry(province)
-                    or queries.is_nation_in_combat_here(country_id, province, self.map_ref.nation_data)):
-                raise RealtimeError("Invalid unit upgrade.")
-            return {"type": "UPGRADE", "turns_left": 1, "target_type": target_type, "refund": {}}
-        if kind == "CONVERT":
-            source = unit.get("type", "")
-            if queries.is_nation_in_combat_here(country_id, province, self.map_ref.nation_data):
-                raise RealtimeError("Units cannot convert in combat.")
-            if source.startswith("Convoy"):
-                expected, turns = "Land Unit", 1
-            elif source.startswith("Truck"):
-                expected, turns = "Ship", c.TRUCK_CONVERT_TURNS
-            elif queries.is_naval_unit(source):
-                if self._country(country_id).get("research", {}).get("trucks", 0) < 1:
-                    raise RealtimeError("Trucks research is required for this conversion.")
-                expected, turns = "Truck", c.TRUCK_CONVERT_TURNS
-            else:
-                expected, turns = "Convoy", 1
-            if order.get("to") != expected:
-                raise RealtimeError("Invalid unit conversion.")
-            return {"type": "CONVERT", "turns_left": turns, "to": expected}
-        raise RealtimeError("Unknown unit order.")
+        try:
+            return queries.canonical_unit_order(self.map_ref, country_id, province, unit, order)
+        except ValueError as exc:
+            raise RealtimeError(str(exc)) from exc
 
     def _validate_queue(self, country_id: str, command: dict[str, Any]) -> dict[str, Any]:
         from data import queries
@@ -1731,7 +1677,8 @@ def collect_map_commands(map_ref, country_id: str) -> list[dict[str, Any]]:
         for index, unit in enumerate(province.get("units", [])):
             if unit.get("owner") == country_id:
                 commands.append({"type": "unit_order", "province_id": province["id"],
-                                 "unit_index": index, "order": copy.deepcopy(unit.get("order")),
+                                 "unit_index": index, "unit_id": unit.get("unit_id"),
+                                 "order": copy.deepcopy(unit.get("order")),
                                  "custom_name": unit.get("custom_name"),
                                  "combat_stance": unit.get("combat_stance"),
                                  "lane_target": unit.get("lane_target")})
@@ -2182,7 +2129,7 @@ class RealtimeServer:
                     # a host-originated state broadcast in that same instant.
                     with self._clients_lock:
                         self._clients[player_id] = connection
-                self._send_message(connection, "ok", result, message.get("request_id"))
+                self._send_message(connection, "ok", self._project_payload(result, player_id), message.get("request_id"))
         except (ConnectionError, OSError, ssl.SSLError, RealtimeError) as exc:
             try:
                 self._send_message(connection, "error", {"message": str(exc)})
@@ -2240,7 +2187,7 @@ class RealtimeServer:
         with self._clients_lock:
             clients = list(self._clients.items())
         for player_id, connection in clients:
-            try: self._send_message(connection, "state", state)
+            try: self._send_message(connection, "state", self._project_payload({"state": state}, player_id)["state"])
             except OSError:
                 with self._clients_lock:
                     self._clients.pop(player_id, None)
@@ -2261,11 +2208,31 @@ class RealtimeServer:
             clients = list(self._clients.items())
         for player_id, connection in clients:
             try:
-                self._send_message(connection, "map_bundle", {"map_bundle": bundle})
+                self._send_message(connection, "map_bundle", self._project_payload({"map_bundle": bundle}, player_id))
             except OSError:
                 with self._clients_lock:
                     self._clients.pop(player_id, None)
                 self.session.disconnect(player_id)
+
+    def _project_payload(self, payload, player_id):
+        """Guests never receive the host's canonical hidden state."""
+        from data import queries
+        map_ref = getattr(self.session.driver, "map_ref", None)
+        if map_ref is None:  # Protocol-only drivers have no game snapshot.
+            return payload
+        player = self.session.players.get(player_id)
+        country = player.country_id if player else ""
+        projected = copy.deepcopy(payload)
+        state = projected.get("state")
+        if state and "game_state" in state:
+            state["game_state"] = queries.player_snapshot_projection(map_ref, state["game_state"], country)
+        bundle = projected.get("map_bundle")
+        if bundle:
+            snapshot = dict(bundle["snapshot"], _raw_map_data=bundle["raw_map_data"])
+            snapshot = queries.player_snapshot_projection(map_ref, snapshot, country)
+            bundle["raw_map_data"] = snapshot.pop("_raw_map_data")
+            bundle["snapshot"] = snapshot
+        return projected
 
     def _send_message(self, connection: socket.socket, message_type: str,
                       payload: dict[str, Any], request_id: str | None = None) -> None:

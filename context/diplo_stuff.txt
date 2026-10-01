@@ -63,6 +63,12 @@ from a country that has active volunteers with, or an attaché observing, one of
 their enemies. Existing conflicting volunteers are sent home on the following
 turn; a player hosting foreign volunteers may send them home directly.
 
+Aircraft are not eligible land volunteer divisions. A plane converted into a
+Truck follows the ordinary land-unit eligibility and volunteer rules; its
+original aircraft type remains preserved by transport state. Air missions and
+repositioning use geometry reach independently of military access and never
+transfer province ownership. See context/air_stuff.txt for the air rules.
+
 When selecting a country, each available bilateral proposal to an AI displays
 the same deterministic acceptance verdict that the AI will use: YES, NO, or
 MAYBE. MAYBE is reserved for human-controlled targets, whose response cannot

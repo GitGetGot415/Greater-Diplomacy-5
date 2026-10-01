@@ -1195,6 +1195,8 @@ def can_unit_move_step(unit, current_province, destination, nation_data):
     """
     if not current_province or not destination:
         return False
+    if is_air_unit(unit):
+        return False  # Flight uses pixel-range orders, never land edges.
     if destination.get("id") not in current_province.get("neighbors", []):
         return False
     combat_owner = get_unit_combat_owner(unit)
@@ -3066,6 +3068,56 @@ def build_save_dict(map_screen, *, include_provinces=True, compact_nations=False
         compact_save_nation_data(save_dict, map_screen.map_data)
     return save_dict
 
+
+def player_snapshot_projection(map_screen, snapshot, country_id):
+    """Filter a network save before transmission, including raw map geometry."""
+    from types import SimpleNamespace
+    result = copy.deepcopy(snapshot)
+    view = SimpleNamespace(player_country=country_id, map_data=map_screen.map_data,
+        nation_data=map_screen.nation_data,
+        id_to_province={p["id"]: p for p in map_screen.map_data.values()},
+        tactical_mode=False, player_unit=None)
+    visible, _partial = get_visible_provinces(view) if country_id in map_screen.nation_data else (set(), set())
+    fog = get_scenario_flag("fog_of_war", c.DEFAULT_FOG_OF_WAR,
+                            getattr(map_screen, "scenario_settings", {}))
+    private_fields = ("production_queue", "current_research", "research_queue", "research_progress",
+        "research", "inbox", "pending_diplomacy", "diplo_responses", "diplo_draft_lists",
+        "queued_ai_actions", "orders", "armies", "automation", "materials", "manpower", "fuel",
+        "manpower_pool", "materials_pool", "fuel_pool")
+    for cid, country in result.get("nation_data", {}).items():
+        if cid != country_id and isinstance(country, dict):
+            for field in private_fields:
+                country.pop(field, None)
+    by_key = {p["json_key"]: p for p in map_screen.map_data.values()}
+    for key, province in result.get("provinces", {}).items():
+        original = by_key.get(key)
+        if original is None:
+            continue
+        can_see = not fog or visible is None or original["id"] in visible
+        province["units"] = [unit for unit in province.get("units", [])
+            if unit.get("owner") == country_id or can_see and is_unit_visible_to(
+                unit, country_id, original, map_screen.nation_data)]
+        for unit in province["units"]:
+            if unit.get("owner") != country_id:
+                for field in ("order", "combat_stance", "lane_target", "repair_trip"):
+                    unit.pop(field, None)
+        if original.get("owner") != country_id:
+            for field in ("building_queue", "unit_queue", "orders"):
+                province[field] = []
+        if not can_see:
+            province["resources"] = {}
+            province["buildings"] = []
+    for key, raw in result.get("_raw_map_data", {}).items():
+        projected = result.get("provinces", {}).get(key)
+        if projected is not None:
+            for field in ("units", "building_queue", "unit_queue", "orders", "resources", "buildings"):
+                raw[field] = copy.deepcopy(projected.get(field, []))
+        else:
+            raw["units"] = []
+            raw["building_queue"] = raw["unit_queue"] = raw["orders"] = []
+    result["player_country"] = country_id
+    return result
+
 def get_clicked_province(mouse_pos, map_screen):
     """Resolves the province dictionary corresponding to a screen click."""
     mx, my = mouse_pos
@@ -3681,8 +3733,11 @@ def classify_unit_group(base_name, stats):
     One rule for the production list, the custom-production picker and anything
     added later, so a unit can never land in different columns in two screens.
     """
-    # Presentation metadata lets aerospace use placeholder infantry stats
-    # without treating it as infantry or introducing flight mechanics.
+    if base_name.startswith("Truck"):
+        return UNIT_GROUP_INFANTRY
+    if base_name.startswith("Convoy"):
+        return UNIT_GROUP_NAVY
+    # Production grouping is presentation metadata; flight uses air_role.
     if stats.get("production_group") in UNIT_GROUPS:
         return stats["production_group"]
     if stats.get("naval_unit", False):
@@ -4011,6 +4066,225 @@ def load_transport(unit, target):
 
     unit["health"] = unit["max_health"] * pct
 
+
+# Air capabilities come from the current unit type, so a carried aircraft uses
+# Truck rules until it is unpacked. These fields are unit-library tuning, not
+# duplicated frozen state in saves or network snapshots.
+AIR_ORDER_TYPES = frozenset(("AIR_ATTACK", "AIR_PATROL", "AIR_REPOSITION"))
+AIR_INTERCEPTION_PRIORITIES = ("WEAKEST", "STRONGEST")
+AIR_DEFAULT_PRIORITY = "WEAKEST"
+AIR_CONVERT_TURNS = 1
+
+
+def air_unit_stats(unit):
+    return get_unit_library().get(unit.get("type", ""), {})
+
+
+def is_tactical_player_unit(map_screen, unit):
+    # Tactical state is deliberately optional on lightweight AI test maps.
+    return bool(getattr(map_screen, "tactical_mode", False) and unit is map_screen.player_unit)
+
+
+def is_air_unit(unit):
+    return bool(air_unit_stats(unit).get("air_role"))
+
+
+def is_air_transport(unit):
+    name = unit.get("type", "")
+    original = unit.get("original_type") or name.removeprefix("Truck (").removesuffix(")")
+    return name.startswith("Truck (") and bool(get_unit_library().get(original, {}).get("air_role"))
+
+
+def air_order_radius(unit, kind):
+    stats = air_unit_stats(unit)
+    radius = stats.get("air_range_px", 0)
+    if kind == "AIR_ATTACK":
+        return radius if stats.get("air_consumable", False) else radius / 2
+    if kind == "AIR_REPOSITION":
+        return radius * 2
+    return radius
+
+
+def build_air_geometry(map_screen):
+    """Index exact province pixel rectangles once at a map geometry boundary.
+
+    Horizontal runs keep large map images compact. Range measures the nearest
+    point of a tile rectangle to the base center, including boundary pixels;
+    disconnected parts of a province participate too. No camera data is read.
+    Rebuild after loading/repainting ID geometry; distances are discarded with it.
+    """
+    import numpy as np
+    pixels = pygame.surfarray.array2d(map_screen.id_map)
+    colors = {map_screen.id_map.map_rgb(p["map_color"]): p["id"]
+              for p in map_screen.map_data.values()}
+    runs = collections.defaultdict(list)
+    for y in range(pixels.shape[1]):
+        row = pixels[:, y]
+        starts = np.r_[0, np.flatnonzero(row[1:] != row[:-1]) + 1]
+        ends = np.r_[starts[1:], len(row)]
+        for start, end in zip(starts, ends):
+            province_id = colors.get(int(row[start]))
+            if province_id is not None:
+                runs[province_id].append((int(start), int(end), y))
+    map_screen._air_geometry = {key: np.asarray(value, dtype=float)
+                                for key, value in runs.items()}
+    map_screen._air_distances = {}
+
+
+def air_distance_squared(map_screen, base, target_id):
+    """Exact tile-intersection distance, cached per base/geometry pair."""
+    # Lightweight/headless maps can provide geometry directly. Missing geometry
+    # fails closed rather than silently falling back to a center-only rule.
+    if not hasattr(map_screen, "_air_geometry"):
+        if not hasattr(map_screen, "id_map"):
+            return float("inf")
+        build_air_geometry(map_screen)
+    key = (tuple(base["center"]), target_id)
+    cached = map_screen._air_distances.get(key)
+    if cached is not None:
+        return cached
+    runs = map_screen._air_geometry.get(target_id)
+    if runs is None or not len(runs):
+        return float("inf")
+    import numpy as np
+    x, y = base["center"]
+    dx = np.maximum(np.maximum(runs[:, 0] - x, x - runs[:, 1]), 0)
+    dy = np.maximum(np.maximum(runs[:, 2] - y, y - runs[:, 2] - 1), 0)
+    distance = float(np.min(dx * dx + dy * dy))
+    map_screen._air_distances[key] = distance
+    return distance
+
+
+def air_target_in_range(map_screen, unit, base, kind, target_id):
+    """One tile's mission reach; validating a command never sweeps the map."""
+    if kind not in AIR_ORDER_TYPES or not is_air_unit(unit) or is_water_province(base):
+        return False
+    stats = air_unit_stats(unit)
+    if (kind == "AIR_PATROL" and stats.get("air_role") != "fighter"
+            or kind == "AIR_REPOSITION" and stats.get("air_consumable", False)):
+        return False
+    target = map_screen.id_to_province.get(target_id)
+    if target is None or kind == "AIR_REPOSITION" and is_water_province(target):
+        return False
+    radius = air_order_radius(unit, kind)
+    return air_distance_squared(map_screen, base, target_id) <= radius * radius
+
+
+def get_air_targets(map_screen, unit, base, kind):
+    """Geometry-only preview: never reads fogged units or private orders."""
+    return {pid for pid in map_screen.id_to_province
+            if air_target_in_range(map_screen, unit, base, kind, pid)}
+
+
+def canonical_air_order(map_screen, unit, base, order):
+    """Validate planning/resolution/network air orders against one rule.
+
+    Callers enforce controller identity/phase; this validates role, original
+    launch base, target, radius, and priority. Old patrols default to WEAKEST.
+    """
+    if (not isinstance(order, dict) or not isinstance(order.get("type"), str)
+            or order["type"] not in AIR_ORDER_TYPES):
+        raise ValueError("Invalid air order.")
+    if not is_air_unit(unit) or is_water_province(base):
+        raise ValueError("Aircraft must launch from a land base.")
+    if is_nation_in_combat_here(get_unit_combat_owner(unit), base, map_screen.nation_data):
+        raise ValueError("Aircraft engaged on the ground cannot launch.")
+    kind = order["type"]
+    base_id = order.get("base_id", base["id"])
+    if type(base_id) is not int or base_id != base["id"]:
+        raise ValueError("The aircraft is no longer at its launch base.")
+    stats = air_unit_stats(unit)
+    result = {"type": kind, "base_id": base_id}
+    if kind == "AIR_PATROL":
+        priority = order.get("priority", AIR_DEFAULT_PRIORITY)
+        if stats.get("air_role") != "fighter" or priority not in AIR_INTERCEPTION_PRIORITIES:
+            raise ValueError("Only fighters can patrol with a valid interception priority.")
+        result["priority"] = priority
+    else:
+        target_id = order.get("target_id")
+        if type(target_id) is not int or target_id not in map_screen.id_to_province:
+            raise ValueError("Unknown air target.")
+        if not air_target_in_range(map_screen, unit, base, kind, target_id):
+            raise ValueError("Air target is out of range or cannot be landed on.")
+        result["target_id"] = target_id
+    return result
+
+
+def air_conversion_order(unit):
+    if is_air_unit(unit):
+        return {"type": "CONVERT", "to": "Truck", "turns_left": AIR_CONVERT_TURNS}
+    if is_air_transport(unit):
+        return {"type": "CONVERT", "to": "Air Unit", "turns_left": AIR_CONVERT_TURNS}
+    return None
+
+
+def unit_target_damage_multiplier(attacker, target, air_to_air=False):
+    """Target-specific damage, shared by combat, bombardment and previews."""
+    if not is_air_unit(target):
+        return 1.0
+    name = attacker.get("type", "")
+    if classify_unit_group(get_base_unit_name(name), get_unit_library().get(name, {})) == UNIT_GROUP_TANKS:
+        return 0.0
+    return (air_unit_stats(attacker).get("air_attack_multiplier", 1.0)
+            if air_to_air and is_air_unit(attacker) else 1.0)
+
+
+def prepare_aircraft_for_ground_combat(units, nation_data, opponents=None):
+    """Based aircraft become Trucks before a ground battle is assembled."""
+    enemies = units if opponents is None else opponents
+    for unit in units:
+        if is_air_unit(unit) and any(
+                other is not unit and are_at_war(get_unit_combat_owner(unit),
+                    get_unit_combat_owner(other), nation_data) for other in enemies):
+            load_transport(unit, "Truck")
+            unit["order"] = {"type": "MOVE", "path": []}
+
+
+def ground_combat_profile(unit):
+    """Non-mutating Truck stats for UI/AI estimates of a based aircraft."""
+    if not is_air_unit(unit):
+        return unit
+    profile = dict(unit)
+    load_transport(profile, "Truck")
+    return profile
+
+
+def migrate_aircraft_stats(map_data):
+    """Upgrade former placeholder stats, including aircraft carried by Trucks.
+
+    Old saves can share this release's version. Always refresh these explicit
+    library stats on load, preserving health fractions and original transport
+    fields, so the migration is safe to repeat.
+    """
+    for province in map_data.values():
+        for unit in province.get("units", []):
+            transported = is_air_transport(unit)
+            stats = get_unit_library().get(unit.get("original_type") if transported else unit.get("type"), {})
+            if not stats.get("air_role"):
+                continue
+            if transported:
+                for field in ("max_health", "attack", "defense", "speed"):
+                    unit["original_" + field] = stats["health" if field == "max_health" else field]
+            else:
+                fraction = unit.get("health", 0) / max(1, unit.get("max_health", c.DEFAULT_UNIT_HP))
+                unit.update(max_health=stats["health"], health=stats["health"] * fraction,
+                            attack=stats["attack"], defense=stats["defense"], speed=stats["speed"])
+
+
+def normalize_air_orders(map_data):
+    """Stable old-save defaults; obsolete aircraft land paths are discarded."""
+    for province in map_data.values():
+        for unit in province.get("units", []):
+            order = unit.get("order")
+            if not is_air_unit(unit) or not isinstance(order, dict):
+                continue
+            if isinstance(order.get("type"), str) and order["type"] in AIR_ORDER_TYPES:
+                order.setdefault("base_id", province["id"])
+                if order["type"] == "AIR_PATROL":
+                    order.setdefault("priority", AIR_DEFAULT_PRIORITY)
+            elif order.get("type") == "MOVE":
+                order["path"] = []
+
 def revert_transport(unit):
     """Reverts a transport (like a Convoy) back to its original unit type."""
     if "original_type" not in unit:
@@ -4122,7 +4396,7 @@ def get_combat_predictions(map_screen):
     incoming = {}
     for prov in map_data.values():
         for u in prov.get("units", []):
-            if id(u) in meeting_unit_ids:
+            if is_air_unit(u) or id(u) in meeting_unit_ids:
                 continue
             order = u.get("order")
             if order and order.get("type") == "MOVE" and order.get("path"):
@@ -5173,3 +5447,97 @@ def extract_and_flatten_zip(zip_path, extract_target_dir):
                     except OSError:
                         shutil.rmtree(potential_path) # Fallback if hidden files got left behind
                     break
+
+
+MAX_UNIT_ORDER_PATH = 200
+
+def province_for_order(map_screen, province_id):
+    if type(province_id) is not int or province_id not in map_screen.id_to_province:
+        raise ValueError("Unknown province in order.")
+    return map_screen.id_to_province[province_id]
+
+
+def canonical_unit_order(map_screen, country_id, province, unit, order):
+    """Host/server validation shared with tournament aircraft commands."""
+    if order is not None and not isinstance(order, dict):
+        raise ValueError("Invalid unit order.")
+    if order is None or order == {}:
+        return None
+    kind = order.get("type")
+    if not isinstance(kind, str):
+        raise ValueError("Invalid unit order type.")
+    if kind in AIR_ORDER_TYPES:
+        return canonical_air_order(map_screen, unit, province, order)
+    if kind == "MOVE":
+        path = order.get("path", [])
+        if (not isinstance(path, list) or len(path) > MAX_UNIT_ORDER_PATH
+                or any(isinstance(province_id, bool) or not isinstance(province_id, int)
+                       for province_id in path)):
+            raise ValueError("Invalid movement path.")
+        previous = province
+        for province_id in path:
+            destination = province_for_order(map_screen, province_id)
+            if not can_unit_move_step(
+                    unit, previous, destination, map_screen.nation_data):
+                raise ValueError("That unit cannot enter a province in this path.")
+            previous = destination
+        return {"type": "MOVE", "path": list(path)}
+    if kind == "BOMBARD":
+        target = province_for_order(map_screen, order.get("target_id"))
+        unit_type = unit.get("type", "")
+        if (is_water_province(province)
+                and not (unit.get("naval_unit") or is_naval_unit(unit_type))):
+            raise ValueError("That unit cannot bombard from water.")
+        targets = get_bombardment_targets(
+            province, map_screen.id_to_province, get_bombardment_range(unit_type))
+        if target["id"] not in targets:
+            raise ValueError("Bombardment target is out of range.")
+        return {"type": "BOMBARD", "target_id": target["id"]}
+    if kind == "DISBAND":
+        return {"type": "DISBAND", "turns_left": 1}
+    if kind == "REPAIR":
+        if is_nation_in_combat_here(country_id, province, map_screen.nation_data):
+            raise ValueError("Units cannot repair in combat.")
+        unit_type = unit.get("original_type", unit.get("type", ""))
+        stats = get_unit_library().get(unit_type, {})
+        if get_scenario_flag("free_repairs", c.DEFAULT_FREE_REPAIRS,
+                                     map_screen.scenario_settings):
+            cost = {"cost_materials": 0, "cost_manpower": 0, "cost_fuel": 0}
+        else:
+            missing = (unit.get("max_health", 1) - unit.get("health", 0)) / max(1, unit.get("max_health", 1))
+            cost = {key: int(stats.get(key, 0) * missing)
+                    for key in ("cost_materials", "cost_manpower", "cost_fuel")}
+        return {"type": "REPAIR", "turns_left": 1, "refund": cost, "realtime_cost": cost}
+    if kind == "UPGRADE":
+        target_type = order.get("target_type")
+        unit_library = get_unit_library()
+        research = map_screen.nation_data[country_id].get("research", {})
+        if (not isinstance(target_type, str) or target_type not in unit_library
+                or not is_unit_unlocked(target_type, research)
+                or not has_industry(province)
+                or is_nation_in_combat_here(country_id, province, map_screen.nation_data)):
+            raise ValueError("Invalid unit upgrade.")
+        return {"type": "UPGRADE", "turns_left": 1, "target_type": target_type, "refund": {}}
+    if kind == "CONVERT":
+        source = unit.get("type", "")
+        if is_nation_in_combat_here(country_id, province, map_screen.nation_data):
+            raise ValueError("Units cannot convert in combat.")
+        air_conversion = air_conversion_order(unit)
+        if air_conversion:
+            if is_water_province(province):
+                raise ValueError("Aircraft conversion requires land.")
+            expected, turns = air_conversion["to"], air_conversion["turns_left"]
+        elif source.startswith("Convoy"):
+            expected, turns = "Land Unit", 1
+        elif source.startswith("Truck"):
+            expected, turns = "Ship", c.TRUCK_CONVERT_TURNS
+        elif is_naval_unit(source):
+            if map_screen.nation_data[country_id].get("research", {}).get("trucks", 0) < 1:
+                raise ValueError("Trucks research is required for this conversion.")
+            expected, turns = "Truck", c.TRUCK_CONVERT_TURNS
+        else:
+            expected, turns = "Convoy", 1
+        if order.get("to") != expected:
+            raise ValueError("Invalid unit conversion.")
+        return {"type": "CONVERT", "turns_left": turns, "to": expected}
+    raise ValueError("Unknown unit order.")

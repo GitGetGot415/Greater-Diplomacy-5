@@ -234,6 +234,9 @@ def process_movement(map_screen):
                 continue
 
             order = unit.get("order")
+            if queries.is_air_unit(unit):
+                units_to_keep.append(unit)
+                continue
             if order and order.get("type") == "MOVE" and order.get("path"):
                 map_screen._units_with_move_order_this_turn.add(id(unit))
                 unit["_current_province_id"] = province["id"]
@@ -451,7 +454,7 @@ def is_land_unit(unit, unit_library=None):
     """Whether this unit walks. Naval units follow separate coastal rules."""
     library = unit_library if unit_library is not None else queries.get_unit_library()
     stats = library.get(unit.get("type", ""), {})
-    return not (unit.get("naval_unit") or stats.get("naval_unit", False))
+    return not (queries.is_air_unit(unit) or unit.get("naval_unit") or stats.get("naval_unit", False))
 
 
 def process_beached_units(map_screen):

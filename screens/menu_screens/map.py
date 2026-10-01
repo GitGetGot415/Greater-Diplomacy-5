@@ -1213,6 +1213,13 @@ def update_button_states(map_screen):
 
 
 class Map(GameState):
+    def refresh_ui(self):
+        # GameState can refresh during construction before Map has a selection.
+        province = getattr(self, "selected_province", None)
+        if province is not None:
+            from ui import sidebar_info
+            sidebar_info.prepare_unit_roster(self, province)
+
     def __init__(self, load_path=None, is_scenario=False, is_random=False, force_editor=False, random_settings=None, map_settings=None, num_players=1, history_turn=None, skip_initial_income=False):
         super().__init__()
 
@@ -1406,6 +1413,7 @@ class Map(GameState):
         self._presentation_cache_revision = 0
         self._combat_bubble_records_cache = None
         self._unit_render_index_cache = None
+        self._unit_roster_cache = {}
         self.unit_selection_drag = None
         # Army-card editing is local UI state like selection.  The edited
         # record itself still lives in nation_data and is saved/synchronized.
@@ -1806,6 +1814,12 @@ class Map(GameState):
             getattr(self, '_presentation_cache_revision', 0) + 1)
         self._combat_bubble_records_cache = None
         self._unit_render_index_cache = None
+        self._unit_roster_cache = {}
+        # The inspector projects based aircraft as Trucks before ground combat.
+        # Build its roster at this boundary, never during the frame draw.
+        if getattr(self, "selected_province", None) is not None:
+            from ui import sidebar_info
+            sidebar_info.prepare_unit_roster(self, self.selected_province)
         map_renderer.clear_viewport_scale_cache(self)
         # A real-time draft is a state snapshot, not per-frame presentation.
         # The next update serializes it once after the action that changed it.
@@ -1848,6 +1862,7 @@ class Map(GameState):
 
     def refresh_all_maps(self):
         """Unified method to refresh all visual map layers and text at once."""
+        queries.build_air_geometry(self)
         # do note that for larger maps this might take over 1000 ms to complete, this is NOT instant by any means
         # TODO: maybe add the ability to ignore certain refresh actions (example: refresh all except for faction territories)
         refresh_map.invalidate_map_surface_cache(self)
@@ -2095,6 +2110,15 @@ class Map(GameState):
             if isinstance(order, dict) and order.get("type") in c.ORDERS_BLOCKING_MOVEMENT:
                 self.show_feedback("Cannot move units with a blocking order.")
                 return False
+            if queries.is_air_unit(unit):
+                try:
+                    air_order = queries.canonical_air_order(self, unit, origin, {
+                        "type": "AIR_REPOSITION", "target_id": destination["id"]})
+                except ValueError as exc:
+                    self.show_feedback(str(exc))
+                    return False
+                planned.append((unit, air_order))
+                continue
             old_path = (list(order.get("path", [])) if append and isinstance(order, dict)
                         and order.get("type") == "MOVE" else [])
             start = self.id_to_province.get(old_path[-1]) if old_path else origin
@@ -2115,7 +2139,9 @@ class Map(GameState):
             planned.append((unit, old_path + segment))
 
         for unit, path in planned:
-            if path:
+            if isinstance(path, dict):
+                unit["order"] = path
+            elif path:
                 unit["order"] = {"type": "MOVE", "path": path}
             else:
                 unit.pop("order", None)
@@ -2181,6 +2207,8 @@ class Map(GameState):
             return False
         self.select_map_units([unit for unit, _province in records])
         self.selected_province = records[0][1]
+        from ui import sidebar_info
+        sidebar_info.prepare_unit_roster(self, self.selected_province)
         self.focus_camera_on_army(records)
         if open_orders:
             self._orders_return_to_province_menu = False
