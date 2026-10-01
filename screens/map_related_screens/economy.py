@@ -6,6 +6,7 @@ from ui_elements import Button, Slider, make_back_button
 from map_logic.rendering.font_manager import fonts
 from map_logic import politics
 from data import queries
+from ui.table_screen import TableScreen, TableColumn
 
 # ==========================================
 # LAYOUT
@@ -28,6 +29,83 @@ SLIDER_CAPTION_OFFSET_Y = 25
 
 # Zeroed income breakdown, used when there is nothing real to show yet.
 EMPTY_BREAKDOWN = {"core": 0, "non_core": 0, "buildings": 0, "resources": 0, "conversion": 0}
+
+# Expenses table controls and columns
+EXPENSES_TOGGLE_Y = 65
+EXPENSES_TOGGLE_WIDTH = 130
+EXPENSES_TOGGLE_HEIGHT = 28
+EXPENSES_TOGGLE_GAP = 10
+EXPENSES_UNIT_WIDTH = 220
+EXPENSES_DETAIL_WIDTH = 180
+EXPENSES_RESOURCE_WIDTH = 120
+
+
+def expense_table_columns(grouped):
+    detail = (TableColumn("count", "Count", EXPENSES_DETAIL_WIDTH) if grouped else
+              TableColumn("location", "Location (Prov ID)", EXPENSES_DETAIL_WIDTH))
+    return [
+        TableColumn("unit", "Unit", EXPENSES_UNIT_WIDTH, align="left"),
+        detail,
+        *(TableColumn(resource, resource.title(), EXPENSES_RESOURCE_WIDTH,
+                      align="right", fmt=lambda value: f"{value:.2f}")
+          for resource in c.ECON_RESOURCE_KEYS),
+    ]
+
+
+def expense_table_rows(units, unit_library):
+    """Build individual and grouped presentation rows from the same unit upkeep."""
+    individual = []
+    grouped = {}
+    for unit, prov in units:
+        # Use original_type to properly account for converted units like Convoys and Trucks.
+        u_type = unit.get("original_type", unit.get("type"))
+        upkeep = queries.get_unit_upkeep(unit_library.get(u_type, {}))
+        unit_name = unit.get("type")
+        individual.append({"unit": unit_name, "location": prov["id"], **upkeep})
+
+        if unit_name not in grouped:
+            grouped[unit_name] = {"unit": unit_name, "count": 0,
+                                  **{resource: 0 for resource in c.ECON_RESOURCE_KEYS}}
+        group = grouped[unit_name]
+        group["count"] += 1
+        for resource in c.ECON_RESOURCE_KEYS:
+            group[resource] += upkeep[resource]
+    return individual, list(grouped.values())
+
+
+class ExpensesTableScreen(TableScreen):
+    HEADER_Y = 108
+    ROW_TOP = 150
+
+    def __init__(self, game_state, individual_rows, grouped_rows):
+        self.individual_rows = individual_rows
+        self.grouped_rows = grouped_rows
+        self.grouped = False
+        super().__init__(game_state, "Military Upkeep Expenses",
+                         expense_table_columns(False), individual_rows,
+                         empty_message="No units to show expenses for.")
+
+    def set_grouped(self, grouped):
+        if self.grouped == grouped:
+            return
+        self.grouped = grouped
+        self.columns = expense_table_columns(grouped)
+        self.rows = self.grouped_rows if grouped else self.individual_rows
+        self.scroll_y = 0
+        self.max_scroll = 0
+        self.sort_reverse.clear()
+        self.refresh_ui()
+
+    def refresh_ui(self):
+        super().refresh_ui()
+        left = c.SCREEN_WIDTH // 2 - EXPENSES_TOGGLE_WIDTH - EXPENSES_TOGGLE_GAP // 2
+        for grouped, label in ((False, "Individual"), (True, "Grouped")):
+            x = left + (EXPENSES_TOGGLE_WIDTH + EXPENSES_TOGGLE_GAP) * int(grouped)
+            color = "orange" if self.grouped == grouped else "blue"
+            self.elements.append(Button(x, EXPENSES_TOGGLE_Y,
+                                        (EXPENSES_TOGGLE_WIDTH, EXPENSES_TOGGLE_HEIGHT),
+                                        color, label, lambda value=grouped: self.set_grouped(value),
+                                        font_preset="button_small"))
 
 class Economy_Screen(GameState):
     back_state = "MAP"
@@ -228,30 +306,8 @@ class Economy_Screen(GameState):
         _, units = queries.get_nation_provinces_and_units(self.map_screen.player_country, self.map_screen.map_data)
         unit_lib = queries.get_unit_library()
 
-        rows = []
-        for unit, prov in units:
-            # Use original_type to properly account for converted units like Convoys and Trucks
-            u_type = unit.get("original_type", unit.get("type"))
-            stats = unit_lib.get(u_type, {})
-            upkeep = queries.get_unit_upkeep(stats)
-
-            rows.append({
-                "unit": unit.get("type"),
-                "location": prov["id"],
-                "manpower": upkeep["manpower"],
-                "materials": upkeep["materials"],
-                "fuel": upkeep["fuel"],
-            })
-
-        from ui.table_screen import TableScreen, TableColumn
-        columns = [
-            TableColumn("unit", "Unit", 220, align="left"),
-            TableColumn("location", "Location (Prov ID)", 180),
-            TableColumn("manpower", "Manpower", 120, align="right", fmt=lambda v: f"{v:.2f}"),
-            TableColumn("materials", "Materials", 120, align="right", fmt=lambda v: f"{v:.2f}"),
-            TableColumn("fuel", "Fuel", 120, align="right", fmt=lambda v: f"{v:.2f}"),
-        ]
+        individual_rows, grouped_rows = expense_table_rows(units, unit_lib)
 
         from ui.screen_runner import _run_pygame_sub_screen
-        _run_pygame_sub_screen(self.map_screen, TableScreen(self, "Military Upkeep Expenses", columns, rows,
-                                                             empty_message="No units to show expenses for."))
+        _run_pygame_sub_screen(self.map_screen,
+                               ExpensesTableScreen(self, individual_rows, grouped_rows))
