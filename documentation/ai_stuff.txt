@@ -161,6 +161,13 @@ paying for one unit type and scrapping that same type in the same turn. If a
 second place in the code has to decide what a unit is worth, it asks
 ai_unit_eval, or the AI argues with itself.
 
+Aircraft replacements use constants.OBSOLESCENCE_RULES, just like land and
+naval units. Researching a replacement removes the older family from both
+the default production list and the AI's buildable candidates; the disband
+pass uses the same obsolescence query when ranking eligible units. Players
+can still select researched older aircraft through Custom production, and
+existing units and queued production remain intact in all play modes.
+
 
 TUNING
 ------

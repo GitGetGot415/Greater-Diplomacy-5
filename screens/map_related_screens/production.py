@@ -16,7 +16,6 @@ from ui import event_handler
 
 
 # Scrolling list of buttons + their stat bars
-LIST_START_Y = 120
 LIST_X = 50
 ROW_STEP_Y = 40
 SECTION_SPACING = 60
@@ -54,6 +53,8 @@ PANEL_LABEL_OFFSET_Y = -45
 HEADER_HEIGHT = 80
 HEADER_TITLE_POS = (150, 25)
 SCROLL_BOTTOM_PAD = 150
+# Keep the first category's title fully below the fixed header at zero scroll.
+LIST_START_Y = HEADER_HEIGHT - PANEL_LABEL_OFFSET_Y + PANEL_PAD_TOP
 
 # Clicks only register between the header band and the resource bar, so a
 # button that has scrolled behind either one stays visible but inert.
@@ -625,7 +626,9 @@ class Production_Screen(GameState):
         else:
             self.navy_start_y = self.navy_end_y = y_offset
 
-        y_offset += SECTION_SPACING
+        # A hidden/empty naval section must not add a second gap on land tiles.
+        if self.navy_end_y > self.navy_start_y:
+            y_offset += SECTION_SPACING
         self.aerospace_start_y = y_offset
         process_unit_groups(self.aerospace_groups, "red")
         self.aerospace_end_y = y_offset

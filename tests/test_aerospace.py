@@ -35,8 +35,33 @@ REQUESTED_TREE = {
     "jet_fighter": (1950, {"jet_engine": 1}, "Jet Fighter"),
 }
 
+def aircraft_replacement_cases():
+    """Derive replacement cases from the canonical rules and unit library."""
+    library = queries.get_unit_library()
+    aircraft_by_tech = {queries.get_unit_tech_key(name): name
+                        for name, stats in library.items() if stats.get("air_role")}
+    return [(obsolete, aircraft_by_tech[tech], tech)
+            for obsolete in aircraft_by_tech.values()
+            for tech in c.OBSOLESCENCE_RULES.get(obsolete, [])]
+
 
 class AerospaceRulesTests(unittest.TestCase):
+    def test_researched_replacements_make_aircraft_obsolete_for_ui_and_ai(self):
+        library = queries.get_unit_library()
+        cases = aircraft_replacement_cases()
+        self.assertTrue(cases)
+        for obsolete, replacement, tech in cases:
+            with self.subTest(unit=obsolete):
+                research = {queries.get_unit_tech_key(obsolete): 1, tech: 0}
+                self.assertFalse(queries.is_unit_obsolete(obsolete, research))
+                self.assertIn(obsolete, ai_unit_eval.buildable_units(research, library))
+                research[tech] = 1
+                self.assertTrue(queries.is_unit_obsolete(obsolete, research))
+                self.assertNotIn(obsolete, ai_unit_eval.buildable_units(research, library))
+                self.assertIn(replacement, ai_unit_eval.buildable_units(research, library))
+                # Obsolescence filters the default list, not custom build legality.
+                self.assertTrue(queries.is_unit_unlocked(obsolete, research))
+
     def test_zeppelin_matches_current_biplane_bomber_stats(self):
         library = queries.get_unit_library()
         self.assertEqual(library["Zeppelin"], library["Biplane Bomber"])
@@ -327,10 +352,64 @@ class AerospaceScreenTests(unittest.TestCase):
             if kind == "BUILDING" and stats.get("group") == "recruitment":
                 recruitment_rows += 1
                 self.assertTrue(self.production.other_start_y <= y < self.production.other_end_y)
-        self.assertEqual(aerospace_rows, sum(key != "jet_engine" for key in REQUESTED_TREE))
+        expected = [name for key, (_, _, name) in REQUESTED_TREE.items()
+                    if key != "jet_engine" and not queries.is_unit_obsolete(
+                        name, self.map.nation_data[self.country]["research"])]
+        self.assertEqual(aerospace_rows, len(expected))
         self.assertEqual(recruitment_rows, 1)
         self.assertNotIn("recruit", [prefix for prefix, *_ in SECTION_PANELS])
         self.assertGreater(self.production.aerospace_end_y, self.production.aerospace_start_y)
+        self.production.draw(self.surface)
+
+    def test_production_replacements_hide_default_rows_but_allow_custom_rows(self):
+        country = self.map.nation_data[self.country]
+        cases = aircraft_replacement_cases()
+        self.assertTrue(cases)
+        for obsolete, replacement, tech in cases:
+            with self.subTest(unit=obsolete):
+                country["research"] = {queries.get_unit_tech_key(obsolete): 1,
+                                       tech: 0}
+                country["custom_production_units"] = [obsolete]
+                self.production.start_with_province(self.province, self.map)
+                self.assertEqual(sum(stats is self.production.unit_library[obsolete] for _, stats, _, kind
+                                     in self.production.active_bars if kind == "UNIT"), 2)
+                country["research"][tech] = 1
+                self.production.refresh_ui()
+                rows = [(stats, y) for _, stats, y, kind in self.production.active_bars
+                        if kind == "UNIT"]
+                self.assertTrue(any(stats is self.production.unit_library[replacement]
+                    and self.production.aerospace_start_y <= y < self.production.aerospace_end_y
+                    for stats, y in rows))
+                obsolete_rows = [y for stats, y in rows
+                                 if stats is self.production.unit_library[obsolete]]
+                self.assertEqual(len(obsolete_rows), 1)
+                self.assertTrue(self.production.custom_start_y <= obsolete_rows[0] <
+                                self.production.custom_end_y)
+
+    def test_visible_production_categories_have_equal_gaps(self):
+        from screens.map_related_screens.production import SECTION_PANELS, SECTION_SPACING
+        for coastal in (False, True):
+            with self.subTest(coastal=coastal):
+                self.province["is_coastal"] = coastal
+                self.production.start_with_province(self.province, self.map)
+                sections = sorted((getattr(self.production, f"{prefix}_start_y"),
+                                   getattr(self.production, f"{prefix}_end_y"))
+                                  for prefix, *_ in SECTION_PANELS
+                                  if getattr(self.production, f"{prefix}_end_y") >
+                                     getattr(self.production, f"{prefix}_start_y"))
+                for (_, previous_end), (next_start, _) in zip(sections, sections[1:]):
+                    self.assertEqual(next_start - previous_end, SECTION_SPACING)
+
+    def test_administration_heading_fits_below_header_at_top_scroll(self):
+        from screens.map_related_screens.production import PANEL_LABEL_OFFSET_Y, PANEL_PAD_TOP
+        from map_logic.rendering.font_manager import fonts
+        self.production.start_with_province(self.province, self.map)
+        self.production.target_scroll_y = self.production.scroll_y = 100
+        self.production.enforce_scroll_bounds()
+        heading_top = self.production.admin_start_y + PANEL_LABEL_OFFSET_Y + self.production.scroll_y
+        self.assertGreaterEqual(heading_top, self.production.scroll_content_rect.top)
+        self.assertLessEqual(heading_top + fonts.get("heading2").get_height(),
+                             self.production.admin_start_y - PANEL_PAD_TOP)
         self.production.draw(self.surface)
 
     def test_buy_boundary_rejects_unresearched_foreign_and_read_only_orders(self):
