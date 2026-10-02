@@ -95,6 +95,16 @@ when its pixels can be reused; hotseat blanking and player changes still apply.
 Incremental editor painting invalidates the affected surface, and Refresh Maps
 forces a full rebuild. No map sweeps were added to planning-frame rendering.
 
+The map's Naval / Land / Air / All buttons only filter local presentation,
+including unit stacks, strategic army markers and order arrows. They use the
+current unit form: Convoys are naval and Trucks are land, including carried
+aircraft. All is selected whenever a game opens. Filtering clears the local
+unit selection and compression animations; it never changes units, orders,
+AI decisions, fog permissions, saves or multiplayer commands. Combat markers
+for matching units still forecast the complete battle.
+Unknown fogged stacks and generic combat markers remain in All view only,
+so cycling the domain filters cannot reveal their hidden unit types.
+
 map_logic/ai/
   ai_world.py        one snapshot of the map per turn; every strength, border
                      and relation query answers from it

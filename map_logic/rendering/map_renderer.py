@@ -209,8 +209,9 @@ def draw_map_screen(map_screen, surface):
         # screen doubles used by isolated render tests may not have drawn that
         # layer, in which case no unit is compacted.
         compacted_units = getattr(map_screen, "compact_army_unit_object_ids", set())
-        for province in map_screen.map_data.values():
-            for unit in province.get("units", []):
+        unit_index = overlay_renderer._unit_render_index(map_screen)
+        for province in unit_index.occupied_provinces:
+            for unit in unit_index.view_units_by_province[id(province)]:
                 if id(unit) in compacted_units:
                     continue
                 order = unit.get("order")

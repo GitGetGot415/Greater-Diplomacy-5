@@ -4098,6 +4098,22 @@ def is_air_unit(unit):
     return bool(air_unit_stats(unit).get("air_role"))
 
 
+UNIT_VIEW_FILTERS = ("NAVAL", "LAND", "AIR", "ALL")
+DEFAULT_UNIT_VIEW_FILTER = "ALL"
+
+
+def unit_matches_view_filter(unit, view_filter):
+    """Classify the current form, including carried units, for map display."""
+    if view_filter == "ALL":
+        return True
+    if view_filter not in UNIT_VIEW_FILTERS:
+        raise ValueError(f"Unknown unit view filter: {view_filter}")
+    if is_air_unit(unit):
+        return view_filter == "AIR"
+    naval = is_naval_unit(unit.get("type", ""))
+    return view_filter == ("NAVAL" if naval else "LAND")
+
+
 def is_air_transport(unit):
     name = unit.get("type", "")
     original = unit.get("original_type") or name.removeprefix("Truck (").removesuffix(")")

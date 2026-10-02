@@ -20,7 +20,7 @@ from ui import event_handler
 # Game Logic & Rendering Submodules
 import ui_elements
 from ui_elements import Button, Slider
-from ui import diplomatic_popups, spectator_menus, editor_menus, army_panel
+from ui import diplomatic_popups, spectator_menus, editor_menus, army_panel, minimap
 from map_logic.camera.camera_handler import MapCamera
 from map_logic.camera import camera_handler
 from map_logic.diplomacy import (diplomacy_logic, guarantees, military_attaches,
@@ -74,6 +74,12 @@ COUNTRY_FOCUS_UNIT_ZOOM_MARGIN = 0.1
 # --- Bottom-right button strip (editor tools, turn controls) ---
 EDITOR_BOT_BTN_START_X = c.SCREEN_WIDTH - 120
 EDITOR_BOT_BTN_STEP_X = 110
+
+# --- Unit filters beneath the minimap ---
+UNIT_VIEW_BAR_HEIGHT = 56
+UNIT_VIEW_BUTTON_PADDING_X = 10
+UNIT_VIEW_BUTTON_PADDING_Y = 8
+UNIT_VIEW_BUTTON_STEP_X = 60
 
 # --- Top bar, right-aligned ---
 TOP_BAR_BUTTON_GAP = 5
@@ -142,6 +148,20 @@ def render_buttons(map_screen):
     map_screen.btn_view_units = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 2, VIEW_BTN_ROW1_Y, "small_square", "red", "Units", lambda: event_handler.navigate_view_mode(map_screen, "UNITS"), image=icons.get("unit"), show_text=False)
     map_screen.btn_view_economy = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 3, VIEW_BTN_ROW1_Y, "small_square", "red", "Economy", lambda: event_handler.navigate_view_mode(map_screen, "ECONOMY"), image=icons.get("industry"), show_text=False)
     map_screen.btn_toggle_names = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 4, VIEW_BTN_ROW1_Y, "small_square", "blue", "Names", map_screen.toggle_country_names, image=icons.get("names"), show_text=False)
+
+    map_screen.unit_view_bar_rect = pygame.Rect(
+        c.SCREEN_WIDTH - minimap.MINIMAP_WIDTH - minimap.MINIMAP_MARGIN_X,
+        c.SCREEN_HEIGHT - c.BOT_UI_HEIGHT - UNIT_VIEW_BAR_HEIGHT,
+        minimap.MINIMAP_WIDTH, UNIT_VIEW_BAR_HEIGHT)
+    map_screen.unit_view_buttons = {}
+    for index, view_filter in enumerate(queries.UNIT_VIEW_FILTERS):
+        map_screen.unit_view_buttons[view_filter] = Button(
+            map_screen.unit_view_bar_rect.x + UNIT_VIEW_BUTTON_PADDING_X
+            + index * UNIT_VIEW_BUTTON_STEP_X,
+            map_screen.unit_view_bar_rect.y + UNIT_VIEW_BUTTON_PADDING_Y,
+            "small_square", "blue", view_filter.title(),
+            lambda view_filter=view_filter: map_screen.set_unit_view_filter(view_filter),
+            image=icons.get(view_filter.lower()), show_text=False)
 
     # ==================================================================== #
     #                        LEFT & BOTTOM UI BARS                         #
@@ -523,6 +543,7 @@ def render_buttons(map_screen):
 
     # --- Append all explicitly defined buttons into the elements list ---
     map_screen.elements.extend([
+        *map_screen.unit_view_buttons.values(),
         map_screen.btn_help, map_screen.btn_refresh_all, map_screen.btn_global_econ_overview,
         map_screen.btn_view_terrain, map_screen.btn_view_political, map_screen.btn_view_relations, map_screen.btn_view_cores, map_screen.btn_view_factions,
         map_screen.btn_view_resources, map_screen.btn_view_blank, map_screen.btn_view_units, map_screen.btn_view_economy, map_screen.btn_toggle_names,
@@ -784,6 +805,9 @@ def update_button_states(map_screen):
 
         # Hide/disable the button if we are thinking
         map_screen.btn_next_turn.visible = not is_sel and not is_thinking
+        for view_filter, button in map_screen.unit_view_buttons.items():
+            button.visible = map_screen.btn_next_turn.visible and not map_screen.hide_raised_rect
+            button.is_selected = view_filter == map_screen.unit_view_filter
         if getattr(map_screen, "realtime_multiplayer", False):
             session = map_screen.realtime_session
             player = session.players.get(map_screen.realtime_player_id)
@@ -1249,6 +1273,8 @@ class Map(GameState):
         self.hide_tooltip = False
         self.hide_resource_hud = False
         self.hide_minimap = False
+        # Presentation only: saves and multiplayer snapshots never persist it.
+        self.unit_view_filter = queries.DEFAULT_UNIT_VIEW_FILTER
         self.centers_need_update = False
         # Editor brushes may touch many provinces in one drag.  Queue the
         # expensive derived map surfaces and rebuild each affected layer once
@@ -1412,9 +1438,11 @@ class Map(GameState):
         # re-running simulations on every planning frame.
         self._presentation_cache_revision = 0
         self._combat_bubble_records_cache = None
+        self._combat_unit_view_cache = None
         self._unit_render_index_cache = None
         self._unit_roster_cache = {}
         self.unit_selection_drag = None
+        self.army_group_transition_states = {}
         # Army-card editing is local UI state like selection.  The edited
         # record itself still lives in nation_data and is saved/synchronized.
         self.army_editor_state = None
@@ -1480,6 +1508,8 @@ class Map(GameState):
         if self.time_manager.total_turns == 0 and not self.is_editor and not skip_initial_income:
             from map_logic.turn_processing import economy_processor
             economy_processor.process_economy(self)
+        # Build unit membership after loading, before any planning-frame draw.
+        overlay_renderer._unit_render_index(self)
 
     def draw_clean_map_background(self, surface):
         """Temporarily hides UI elements and province selection to draw a clean map background."""
@@ -1581,6 +1611,25 @@ class Map(GameState):
     def set_view_mode(self, mode):
         self.secondary_mode = mode
         self.show_feedback(f"View: {mode}")
+
+    def set_unit_view_filter(self, view_filter):
+        """Switch the local unit overlay without changing any world state."""
+        if view_filter not in queries.UNIT_VIEW_FILTERS:
+            raise ValueError(f"Unknown unit view filter: {view_filter}")
+        if view_filter != self.unit_view_filter:
+            self.unit_view_filter = view_filter
+            self._unit_render_index_cache = None
+            self._combat_unit_view_cache = None
+            # Hidden selections and an old compression animation must not
+            # keep issuing orders or drawing units from the previous filter.
+            self.clear_map_unit_selection()
+            self.army_group_transition_states.clear()
+            self.unit_stack_hitboxes = []
+            self.unit_hover_hitboxes = []
+            self.hovered_unit_stack = None
+            overlay_renderer._unit_render_index(self)
+        self.set_view_mode("UNITS")
+        update_button_states(self)
 
     def set_play_view_defaults(self):
         """Apply the player-facing map view after country selection finishes."""
@@ -1813,6 +1862,7 @@ class Map(GameState):
         self._presentation_cache_revision = (
             getattr(self, '_presentation_cache_revision', 0) + 1)
         self._combat_bubble_records_cache = None
+        self._combat_unit_view_cache = None
         self._unit_render_index_cache = None
         self._unit_roster_cache = {}
         # The inspector projects based aircraft as Trucks before ground combat.
@@ -1824,6 +1874,8 @@ class Map(GameState):
         # A real-time draft is a state snapshot, not per-frame presentation.
         # The next update serializes it once after the action that changed it.
         self._realtime_draft_dirty = True
+        # Classification belongs to this state boundary, not the frame loop.
+        overlay_renderer._unit_render_index(self)
 
     def queue_editor_visual_refresh(self, *layers):
         """Record editor changes for one post-stroke visual-layer rebuild."""

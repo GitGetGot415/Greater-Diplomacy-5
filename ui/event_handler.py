@@ -33,8 +33,10 @@ def map_ui_bar_at_position(map_screen, position):
     # boundaries; a live map publishes all four during construction.
     top_bar = getattr(map_screen, "top_bar_rect", None)
     bottom_bar = getattr(map_screen, "bot_bar_rect", None)
+    unit_view_bar = ui_bars.map_unit_view_bar_rect(map_screen)
     if ((top_bar and top_bar.collidepoint(position))
-            or (bottom_bar and bottom_bar.collidepoint(position))):
+            or (bottom_bar and bottom_bar.collidepoint(position))
+            or (unit_view_bar and unit_view_bar.collidepoint(position))):
         return True
 
     # Both flags exist on a live Map; Orders unit tests use smaller map doubles.

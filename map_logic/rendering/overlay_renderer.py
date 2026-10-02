@@ -24,11 +24,13 @@ class _UnitRenderIndex:
     in one vectorized operation before the per-stack drawing code runs.
     """
 
-    def __init__(self, map_data):
+    def __init__(self, map_data, view_filter=queries.DEFAULT_UNIT_VIEW_FILTER):
         occupied = []
         records = []
         centers = []
         counts = []
+        self.view_units_by_province = {}
+        view_records = []
 
         for province in map_data.values():
             units = province.get("units", [])
@@ -36,11 +38,17 @@ class _UnitRenderIndex:
                 continue
             occupied.append(province)
             records.extend((unit, province) for unit in units)
+            view_units = tuple(unit for unit in units
+                               if queries.unit_matches_view_filter(unit, view_filter))
+            self.view_units_by_province[id(province)] = view_units
+            view_records.extend((unit, province) for unit in view_units)
             centers.append(province.get("center", (0.0, 0.0)))
             counts.append(len(units))
 
         self.occupied_provinces = tuple(occupied)
         self.records = tuple(records)
+        self.view_records = tuple(view_records)
+        self.view_unit_object_ids = {id(unit) for unit, _province in view_records}
         self.live_by_object_id = {
             id(unit): (unit, province) for unit, province in self.records
         }
@@ -112,18 +120,21 @@ class _UnitRenderIndex:
 def _unit_render_index(map_screen):
     """Return the unit index for the current presentation revision."""
     revision = getattr(map_screen, "_presentation_cache_revision", None)
+    # Compatibility for render tools and test doubles predating view filters.
+    view_filter = getattr(map_screen, "unit_view_filter", queries.DEFAULT_UNIT_VIEW_FILTER)
     # A real Map owns explicit invalidation boundaries.  Small test/editor
     # doubles do not, so rebuild for them and reflect direct list mutations
     # rather than retaining stale unit references.
     if revision is None:
-        return _UnitRenderIndex(map_screen.map_data)
+        return _UnitRenderIndex(map_screen.map_data, view_filter)
 
     cached = getattr(map_screen, "_unit_render_index_cache", None)
-    if cached is not None and cached[0] == revision:
+    cache_key = (revision, view_filter)
+    if cached is not None and cached[0] == cache_key:
         return cached[1]
 
-    index = _UnitRenderIndex(map_screen.map_data)
-    map_screen._unit_render_index_cache = (revision, index)
+    index = _UnitRenderIndex(map_screen.map_data, view_filter)
+    map_screen._unit_render_index_cache = (cache_key, index)
     return index
 
 # The images are deliberately separate from outcome color.  A known battle
@@ -384,6 +395,23 @@ def combat_bubbles_are_visible(map_screen):
     return strategic_detail_markers_are_visible(map_screen)
 
 
+def _combat_records_for_unit_view(map_screen, records):
+    """Project cached full-battle forecasts onto identifiable filtered units."""
+    if getattr(map_screen, "unit_view_filter", queries.DEFAULT_UNIT_VIEW_FILTER) == "ALL":
+        return records
+    index = _unit_render_index(map_screen)
+    # Optional only for older render tools/test doubles. Live maps own this
+    # presentation cache and invalidate its unit index at state boundaries.
+    cached = getattr(map_screen, "_combat_unit_view_cache", None)
+    if cached is not None and cached[0] is records and cached[1] is index:
+        return cached[2]
+    filtered = [record for record in records
+                if record["information_available"]
+                and record["unit_ids"] & index.view_unit_object_ids]
+    map_screen._combat_unit_view_cache = (records, index, filtered)
+    return filtered
+
+
 def combat_bubble_records(map_screen):
     """Describe every visible combat bubble and its Orders-screen destination.
 
@@ -409,7 +437,7 @@ def combat_bubble_records(map_screen):
                      c.BATTLE_DISPLAY_MODE)
         cached = getattr(map_screen, '_combat_bubble_records_cache', None)
         if cached is not None and cached[0] == cache_key:
-            return cached[1]
+            return _combat_records_for_unit_view(map_screen, cached[1])
 
     player = map_screen.player_country
     friendly = _combat_friendly_nations(map_screen)
@@ -463,7 +491,7 @@ def combat_bubble_records(map_screen):
 
     if cache_key is not None:
         map_screen._combat_bubble_records_cache = (cache_key, records)
-    return records
+    return _combat_records_for_unit_view(map_screen, records)
 
 
 def _combat_bubble_symbol(record, zoom):
@@ -1100,7 +1128,7 @@ def draw_overlay_content(map_screen, surface, draw_combat=True):
                     # province visibility and per-submarine visibility are
                     # separate layers.
                     visible_units = [unit for unit in queries.filter_visible_units(
-                        province.get("units", []), map_screen.player_country,
+                        unit_index.view_units_by_province.get(id(province), ()), map_screen.player_country,
                         province, map_screen.nation_data)
                         if id(unit) not in combat_unit_ids]
                     display_units = [unit for unit in visible_units
@@ -1679,9 +1707,10 @@ def _army_average_center(records, map_screen):
 def compact_army_groups(map_screen, combat_unit_ids):
     """Build one strategic marker for each local army with unselected members.
 
-    A marker is only created when every live member can be represented.  That
-    keeps an army in its normal per-province view while one of its divisions is
-    in a combat bubble, and lets selecting all members expand it immediately.
+    A marker requires every live member to be resolved, then represents only
+    members matching the current view. Those divisions remain in their normal
+    per-province view while any is in a combat bubble; selecting all matching
+    members expands the marker immediately.
     """
     if not uses_compact_army_icons(map_screen):
         return []
@@ -1709,11 +1738,15 @@ def compact_army_groups(map_screen, combat_unit_ids):
                    if unit_id in live_by_id]
         if len(records) != len(member_ids):
             continue
+        records = [(unit, province) for unit, province in records
+                   if id(unit) in unit_index.view_unit_object_ids]
+        if not records:
+            continue
         if any(id(unit) in combat_unit_ids for unit, _province in records):
             continue
         # A partial selection remains visible and controllable, but it must
-        # not displace the marker.  Its center and fallback art describe the
-        # complete army; only unselected members are hidden by the marker.
+        # not displace the marker. Its center and fallback art describe all
+        # matching members; only unselected ones are hidden by the marker.
         unselected_records = [(unit, province) for unit, province in records
                               if not is_selected(unit)]
         if not unselected_records:
@@ -1800,7 +1833,7 @@ def compact_area_unit_groups(map_screen, combat_unit_ids, organized_unit_object_
         if not _province_is_fully_visible(map_screen, province):
             continue
         for unit in queries.filter_visible_units(
-                province.get("units", []), player_country, province,
+                unit_index.view_units_by_province.get(id(province), ()), player_country, province,
                 map_screen.nation_data):
             if id(unit) in combat_unit_ids or id(unit) in organized_unit_object_ids:
                 continue
@@ -2100,11 +2133,21 @@ def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,
     # selectable underneath. The flag is transient and absent during ordinary
     # map rendering.
     alpha = min(alpha, getattr(map_screen, "_target_area_unit_box_alpha", 255))
+    # Unknown stacks have no knowable domain. Keep their question marks in
+    # All view only so toggling filters cannot reveal a fogged force's type.
+    if (is_partial and getattr(map_screen, "unit_view_filter",
+                               queries.DEFAULT_UNIT_VIEW_FILTER) != "ALL"):
+        return
     # Filtered up front: a lone hidden submarine must not even trip the "?"
     # partial-fog blip, or its position leaks through despite being otherwise
     # invisible to anyone who isn't allied or already fighting it.
     if units is None:
         units = province.get("units", [])
+    # Callers supplying explicit units (including animation frames) share the
+    # same cached membership; classification never runs for every frame.
+    if getattr(map_screen, "unit_view_filter", queries.DEFAULT_UNIT_VIEW_FILTER) != "ALL":
+        allowed = _unit_render_index(map_screen).view_unit_object_ids
+        units = [unit for unit in units if id(unit) in allowed]
     if not units_are_visible:
         units = queries.filter_visible_units(
             units, map_screen.player_country, province, map_screen.nation_data)

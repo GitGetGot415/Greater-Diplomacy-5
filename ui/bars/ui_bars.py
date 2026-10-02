@@ -366,6 +366,16 @@ def draw_textured_rect(surface, rect, image, mode="tile"):
     
     pygame.draw.rect(surface, (20, 20, 20), rect, 2)
 
+def map_unit_view_bar_rect(map_screen):
+    """Return the live unit-filter bar for drawing, layout and input."""
+    # Older tools/test doubles do not construct the map's filter controls.
+    buttons = getattr(map_screen, "unit_view_buttons", {})
+    if (not any(button.visible for button in buttons.values())
+            or getattr(map_screen, "hide_raised_rect", False)):
+        return None
+    return map_screen.unit_view_bar_rect
+
+
 def draw_ui_bars(map_screen, surface):
     # Pass the scale multiplier as the second argument (e.g., 2.0 is double size, 0.5 is half size)
     # Tiled bars benefit greatly from scaling, stretched bars will ignore it anyway
@@ -377,6 +387,9 @@ def draw_ui_bars(map_screen, surface):
     # --- LAYER 4: UI BARS & HUD ---
     draw_textured_rect(surface, map_screen.top_bar_rect, top_bg, mode="tile")
     draw_textured_rect(surface, map_screen.bot_bar_rect, bot_bg, mode="tile")
+    unit_view_rect = map_unit_view_bar_rect(map_screen)
+    if unit_view_rect is not None:
+        draw_textured_rect(surface, unit_view_rect, bot_bg, mode="tile")
     
     if not map_screen.selection_mode and not map_screen.hide_raised_rect:
         draw_textured_rect(surface, map_screen.raised_rect, side_bg, mode="tile")

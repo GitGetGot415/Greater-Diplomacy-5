@@ -101,6 +101,10 @@ class _NavigationIntroPopup:
         ("Economy", "industry", "Shows economic map information."),
         ("Names", "names", "Shows or hides country names."),
     )
+    UNIT_VIEW_NOTE = (
+        "Below the minimap: Naval, Land, Air, All. Filter unit stacks and orders; "
+        "All is selected whenever a game opens."
+    )
     ARMY_STEPS = (
         ("Select units", "Left-click stacks or drag in Units view. "
          "In Orders, right-click a unit row to add or remove it without "
@@ -371,6 +375,18 @@ class _NavigationIntroPopup:
                 surface.blit(label_surf, (x + 36, y))
                 desc_surf = self.body_font.render(description, True, (225, 225, 225))
                 surface.blit(desc_surf, (x + 36, y + self.label_font.get_height() + 2))
+            note_lines = wrap_text(self.UNIT_VIEW_NOTE, self.body_font,
+                                   self.rect.width - 2 * self.SUBTITLE_SIDE_PADDING)
+            note_y = self.rect.y + 92 + content_y_offset + 5 * row_h
+            for line in note_lines:
+                note = self.body_font.render(line, True, (225, 225, 225))
+                surface.blit(note, (self.rect.x + self.SUBTITLE_SIDE_PADDING, note_y))
+                note_y += self.body_font.get_height() + 3
+            self.unit_view_note_rect = pygame.Rect(
+                self.rect.x + self.SUBTITLE_SIDE_PADDING,
+                self.rect.y + 92 + content_y_offset + 5 * row_h,
+                self.rect.width - 2 * self.SUBTITLE_SIDE_PADDING,
+                len(note_lines) * (self.body_font.get_height() + 3))
         elif self.page_index == 2:
             step_x = self.rect.x + 56
             step_y = self.rect.y + 108 + content_y_offset

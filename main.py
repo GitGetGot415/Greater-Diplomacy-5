@@ -271,6 +271,10 @@ class Controller:
         symbol_loader.load_symbols()
 
         ui_elements.UI_ICONS = {
+            "naval": symbol_loader.get_symbol("Naval", 1.5),
+            "land": symbol_loader.get_symbol("Land", 1.5),
+            "air": symbol_loader.get_symbol("Air", 1.5),
+            "all": symbol_loader.get_symbol("All", 1.5),
             "unit": symbol_loader.get_symbol("Infantry", 2),
             "industry": symbol_loader.get_symbol("Factory", 2),
             "blank": symbol_loader.get_symbol("Nothing", 1),
