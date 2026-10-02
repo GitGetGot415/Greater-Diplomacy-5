@@ -46,6 +46,44 @@ def aircraft_replacement_cases():
 
 
 class AerospaceRulesTests(unittest.TestCase):
+    def test_requested_fort_damage_capabilities_survive_data_generation(self):
+        from data.generators.generate_data import build_unit_data_text
+        # This eligibility list is the user's requested gameplay contract,
+        # not an incidental relationship between unit balance values.
+        capable = {"Biplane Bomber", "Monoplane Bomber", "Zeppelin",
+                   "V1 Flying Bomb", "V2 Rocket", "Jet Fighter"}
+        library = queries.get_unit_library()
+        generated = json.loads(build_unit_data_text())
+        for name, stats in library.items():
+            if not stats.get("air_role"):
+                continue
+            with self.subTest(unit=name):
+                expected = name in capable
+                self.assertEqual(queries.air_unit_can_damage_forts({"type": name}), expected)
+                self.assertEqual(bool(generated[name].get("air_damages_forts", False)), expected)
+
+    def test_fort_damage_notes_follow_capability_changes(self):
+        stats = dict(queries.get_unit_library()["Monoplane Fighter"])
+        with mock.patch.object(queries, "get_unit_library", return_value={"Test Fighter": stats}):
+            incapable = queries.get_air_unit_traits("Test Fighter")
+            self.assertFalse(queries.air_unit_can_damage_forts({"type": "Test Fighter"}))
+            stats["air_damages_forts"] = True
+            capable = queries.get_air_unit_traits("Test Fighter")
+            self.assertTrue(queries.air_unit_can_damage_forts({"type": "Test Fighter"}))
+        self.assertEqual(len(incapable), len(capable))
+        self.assertEqual(sum(a != b for a, b in zip(incapable, capable)), 1)
+
+    def test_fort_damage_uses_current_type_not_unit_or_saved_transport_fields(self):
+        bomber = {"type": "Monoplane Bomber"}
+        self.assertTrue(queries.air_unit_can_damage_forts(bomber))
+        fighter = {"type": "Monoplane Fighter", "air_damages_forts": True}
+        self.assertFalse(queries.air_unit_can_damage_forts(fighter))
+        queries.load_transport(bomber, "Truck")
+        bomber["air_damages_forts"] = True
+        self.assertFalse(queries.air_unit_can_damage_forts(bomber))
+        queries.revert_transport(bomber)
+        self.assertTrue(queries.air_unit_can_damage_forts(bomber))
+
     def test_researched_replacements_make_aircraft_obsolete_for_ui_and_ai(self):
         library = queries.get_unit_library()
         cases = aircraft_replacement_cases()

@@ -97,7 +97,7 @@ UNIT_STAT_KEYS = ["health", "attack", "defense", "speed", "cost_materials",
 # without forcing every non-bombarding family to carry an unused stat.
 OPTIONAL_UNIT_STAT_KEYS = ["bombard_attack", "production_group", "air_role",
                            "air_range_px", "air_attack_multiplier", "air_consumable",
-                           "air_interception_immune"]
+                           "air_interception_immune", "air_damages_forts"]
 
 
 class UnitFamily:
@@ -324,13 +324,13 @@ UNIT_SECTIONS = [
     ],
     [
         UnitFamily('Biplane Fighter', single(), {'health': 2000, 'attack': 100, 'defense': 0, 'speed': 1, 'cost_materials': 3000, 'cost_manpower': 1000, 'cost_fuel': 60, 'production_time': 3, 'production_group': 'Aerospace', 'air_role': 'fighter', 'air_range_px': 60, 'air_attack_multiplier': 10}),
-        UnitFamily('Biplane Bomber', single(), {'health': 5000, 'attack': 600, 'defense': 0, 'speed': 1, 'cost_materials': 10000, 'cost_manpower': 1000, 'cost_fuel': 80, 'production_time': 4, 'production_group': 'Aerospace', 'air_role': 'bomber', 'air_range_px': 80}),
-        UnitFamily('Zeppelin', single(), {'health': 5000, 'attack': 600, 'defense': 0, 'speed': 1, 'cost_materials': 10000, 'cost_manpower': 1000, 'cost_fuel': 80, 'production_time': 4, 'production_group': 'Aerospace', 'air_role': 'bomber', 'air_range_px': 80}),
+        UnitFamily('Biplane Bomber', single(), {'health': 5000, 'attack': 600, 'defense': 0, 'speed': 1, 'cost_materials': 10000, 'cost_manpower': 1000, 'cost_fuel': 80, 'production_time': 4, 'production_group': 'Aerospace', 'air_role': 'bomber', 'air_range_px': 80, 'air_damages_forts': True}),
+        UnitFamily('Zeppelin', single(), {'health': 5000, 'attack': 600, 'defense': 0, 'speed': 1, 'cost_materials': 10000, 'cost_manpower': 1000, 'cost_fuel': 80, 'production_time': 4, 'production_group': 'Aerospace', 'air_role': 'bomber', 'air_range_px': 80, 'air_damages_forts': True}),
         UnitFamily('Monoplane Fighter', single(), {'health': 3000, 'attack': 200, 'defense': 50, 'speed': 1, 'cost_materials': 5000, 'cost_manpower': 1000, 'cost_fuel': 100, 'production_time': 4, 'production_group': 'Aerospace', 'air_role': 'fighter', 'air_range_px': 100, 'air_attack_multiplier': 8}),
-        UnitFamily('Monoplane Bomber', single(), {'health': 8000, 'attack': 1000, 'defense': 100, 'speed': 1, 'cost_materials': 15000, 'cost_manpower': 1000, 'cost_fuel': 120, 'production_time': 6, 'production_group': 'Aerospace', 'air_role': 'bomber', 'air_range_px': 150}),
-        UnitFamily('V1 Flying Bomb', single(), {'health': 1000, 'attack': 800, 'defense': 0, 'speed': 1, 'cost_materials': 5000, 'cost_manpower': 1000, 'cost_fuel': 60, 'production_time': 2, 'production_group': 'Aerospace', 'air_role': 'strike', 'air_range_px': 200, 'air_consumable': True}),
-        UnitFamily('V2 Rocket', single(), {'health': 2000, 'attack': 1200, 'defense': 0, 'speed': 1, 'cost_materials': 10000, 'cost_manpower': 1000, 'cost_fuel': 80, 'production_time': 4, 'production_group': 'Aerospace', 'air_role': 'strike', 'air_range_px': 300, 'air_consumable': True, 'air_interception_immune': True}),
-        UnitFamily('Jet Fighter', single(), {'health': 6000, 'attack': 1000, 'defense': 100, 'speed': 1, 'cost_materials': 20000, 'cost_manpower': 1000, 'cost_fuel': 160, 'production_time': 8, 'production_group': 'Aerospace', 'air_role': 'fighter', 'air_range_px': 200, 'air_attack_multiplier': 4}),
+        UnitFamily('Monoplane Bomber', single(), {'health': 8000, 'attack': 1000, 'defense': 100, 'speed': 1, 'cost_materials': 15000, 'cost_manpower': 1000, 'cost_fuel': 120, 'production_time': 6, 'production_group': 'Aerospace', 'air_role': 'bomber', 'air_range_px': 150, 'air_damages_forts': True}),
+        UnitFamily('V1 Flying Bomb', single(), {'health': 1000, 'attack': 800, 'defense': 0, 'speed': 1, 'cost_materials': 5000, 'cost_manpower': 1000, 'cost_fuel': 60, 'production_time': 2, 'production_group': 'Aerospace', 'air_role': 'strike', 'air_range_px': 200, 'air_consumable': True, 'air_damages_forts': True}),
+        UnitFamily('V2 Rocket', single(), {'health': 2000, 'attack': 1200, 'defense': 0, 'speed': 1, 'cost_materials': 10000, 'cost_manpower': 1000, 'cost_fuel': 80, 'production_time': 4, 'production_group': 'Aerospace', 'air_role': 'strike', 'air_range_px': 300, 'air_consumable': True, 'air_interception_immune': True, 'air_damages_forts': True}),
+        UnitFamily('Jet Fighter', single(), {'health': 6000, 'attack': 1000, 'defense': 100, 'speed': 1, 'cost_materials': 20000, 'cost_manpower': 1000, 'cost_fuel': 160, 'production_time': 8, 'production_group': 'Aerospace', 'air_role': 'fighter', 'air_range_px': 200, 'air_attack_multiplier': 4, 'air_damages_forts': True}),
     ],
 ]
 

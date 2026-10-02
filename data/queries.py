@@ -4098,6 +4098,12 @@ def is_air_unit(unit):
     return bool(air_unit_stats(unit).get("air_role"))
 
 
+def air_unit_can_damage_forts(unit):
+    """Current unit-library capability; missing flags and Trucks cannot strike forts."""
+    stats = air_unit_stats(unit)
+    return bool(stats.get("air_role") and stats.get("air_damages_forts", False))
+
+
 UNIT_VIEW_FILTERS = ("NAVAL", "LAND", "AIR", "ALL")
 DEFAULT_UNIT_VIEW_FILTER = "ALL"
 
@@ -4151,6 +4157,8 @@ def get_air_unit_traits(unit_type):
                            f"Air-to-air damage x{multiplier:g}; no bonus against ground targets."])
         else:
             traits.append("Reusable strikes return to base; cannot patrol.")
+    traits.append("Strikes damage forts." if air_unit_can_damage_forts(unit)
+                  else "Strikes do not damage forts.")
     traits.extend([f"Immune to {UNIT_GROUP_TANKS} damage; cannot capture territory.",
                    f"Ground combat uses Trucks; conversions take {AIR_CONVERT_TURNS} turn each way."])
     return traits

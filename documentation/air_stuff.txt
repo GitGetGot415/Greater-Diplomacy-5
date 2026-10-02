@@ -1,8 +1,11 @@
 AIRCRAFT RULES
 ==============
 
-Unit data owns air_role, air_range_px, air_attack_multiplier, air_consumable and
-air_interception_immune. production_group remains presentation metadata.
+Unit data owns air_role, air_range_px, air_attack_multiplier, air_consumable,
+air_interception_immune and air_damages_forts. production_group remains
+presentation metadata. A missing air_damages_forts flag means no fort damage;
+capabilities are read from the current unit library, including for old saves,
+rather than stored on individual units or accepted from multiplayer orders.
 
 queries.build_air_geometry indexes actual ID-map pixels as horizontal runs at
 load/generation boundaries. Pixel footprints are closed unit rectangles, so
@@ -20,7 +23,8 @@ Air targeting replaces the base's movement
 outline with its strike outline; land bombardment retains tile markers. Any
 part of a tile touching or inside the circle is in range. Research details
 show data-driven air ranges, patrol/strike roles, damage bonuses/immunity,
-consumption, interception immunity, and Truck conversion behavior.
+consumption, interception immunity, fort damage capability, and Truck conversion
+behavior.
 Command validation checks
 only its target through air_target_in_range, so AI candidate validation does
 not repeat full-map sweeps. Ground combat roster stats are likewise cached at
@@ -60,8 +64,11 @@ combat width, front ranks and reserves. Defenders fire back even if destroyed
 in that exchange. Aircraft keep their flight stats and Tanks-category immunity;
 the fighter air-to-air bonus applies only during interception. Health/political
 damage modifiers apply to both sides, and fort defense protects only the
-garrison. Flight never occupies or captures the target. Each wing reaching the
-target removes one fort level after the exchange, including on an empty tile.
+garrison. Flight never occupies or captures the target. Only bombers, Zeppelin,
+V1 Flying Bomb, V2 Rocket and Jet Fighters can damage forts, controlled by
+air_damages_forts in unit data. Biplane and Monoplane Fighters cannot damage
+forts. Each capable wing reaching the target removes one fort level after the
+exchange, including on an empty tile. Research unlock details show this capability.
 Surviving reusable aircraft return to their exact base with health and morale
 losses retained; destroyed aircraft are removed. A ranged barrage/strike against
 a based aircraft uses the shared target damage modifiers, including

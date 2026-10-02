@@ -84,6 +84,10 @@ the target garrison, including terrain width, coalition lanes and reserves.
 Defenders can damage or destroy aircraft; Tanks-category immunity still applies
 in flight. Fighter damage bonuses apply only to interception. Survivors retain
 their losses at their launch base, and flight never captures the target.
+Fort damage uses the air_damages_forts unit-data capability, enabled for bombers,
+Zeppelin, V1 Flying Bomb, V2 Rocket and Jet Fighters. Research unlock details
+show whether an aircraft can damage forts. This capability is resolved by the
+same turn processor for player and heuristic AI orders.
 The heuristic aircraft pass generates only canonical legal orders. It strikes
 known enemy targets, repositions reusable aircraft onto friendly land nearer
 them, patrols otherwise, and relocates one-use weapons through Trucks. It reads

@@ -125,12 +125,13 @@ def process_air_orders(map_screen):
                 for unit in lane.a.front + lane.b.front:
                     unit["_in_combat_this_turn"] = True
 
-        # Preserve fort damage even on an empty tile: each wing that reaches
-        # the target removes one level, after the fort protects this exchange.
+        # Preserve fort damage even on an empty tile: each capable wing that
+        # reaches the target removes one level, after the fort protects this
+        # exchange. Eligibility comes from unit data, including for fighters.
         fort_hits = 0
         for owner, wings in by_owner.items():
             if queries.are_at_war(owner, target.get("owner"), map_screen.nation_data):
-                fort_hits += len(wings)
+                fort_hits += sum(queries.air_unit_can_damage_forts(wing) for wing in wings)
         for _ in range(fort_hits):
             queries.damage_fort(target, map_screen.nation_data, map_screen.map_data)
         for unit in survivors:

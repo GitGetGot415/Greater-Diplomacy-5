@@ -288,6 +288,45 @@ class AirResolutionTests(unittest.TestCase):
         self.assertEqual(queries.get_fort_level(self.target), level - 1)
         self.assertIn(aircraft, self.base["units"])
 
+    def test_only_capable_aircraft_damage_hostile_forts(self):
+        for name, stats in queries.get_unit_library().items():
+            if not stats.get("air_role"):
+                continue
+            with self.subTest(unit=name):
+                self.base["units"] = []
+                self.target["buildings"] = ["Fort Lvl 5"]
+                before = queries.get_fort_level(self.target)
+                attacker = self.attack(name)
+                expected = before - int(queries.air_unit_can_damage_forts(attacker))
+                air_processor.process_air_orders(self.game)
+                self.assertEqual(queries.get_fort_level(self.target), expected)
+
+    def test_mixed_wings_count_only_capable_fort_hits(self):
+        self.target["buildings"] = ["Fort Lvl 5"]
+        before = queries.get_fort_level(self.target)
+        attackers = [self.attack(name) for name in ("Biplane Fighter", "Monoplane Bomber", "Jet Fighter")]
+        expected_hits = sum(queries.air_unit_can_damage_forts(u) for u in attackers)
+        air_processor.process_air_orders(self.game)
+        self.assertEqual(queries.get_fort_level(self.target), before - expected_hits)
+
+    def test_fort_damage_capability_is_data_driven_even_for_fighters(self):
+        attacker = self.attack("Biplane Fighter")
+        self.target["buildings"] = ["Fort Lvl 5"]
+        before = queries.get_fort_level(self.target)
+        library = dict(queries.get_unit_library())
+        library[attacker["type"]] = dict(library[attacker["type"]], air_damages_forts=True)
+        with patch.object(queries, "get_unit_library", return_value=library):
+            air_processor.process_air_orders(self.game)
+        self.assertEqual(queries.get_fort_level(self.target), before - 1)
+
+    def test_capable_aircraft_cannot_damage_nonhostile_fort(self):
+        self.target["owner"] = "A"
+        self.target["buildings"] = ["Fort Lvl 5"]
+        before = queries.get_fort_level(self.target)
+        self.attack()
+        air_processor.process_air_orders(self.game)
+        self.assertEqual(queries.get_fort_level(self.target), before)
+
     def test_naval_defender_can_fire_back_during_a_strike_at_sea(self):
         sea = tile(self.game, 4, 40, water=True)
         aircraft = self.combat_fixture(self.base, "Monoplane Bomber", "A",
@@ -485,8 +524,11 @@ class AirResolutionTests(unittest.TestCase):
         self.patrol()
         victim = wing(self.target, "Infantry Type 1910", "B")
         health = victim["health"]
+        self.target["buildings"] = ["Fort Lvl 5"]
+        fort_level = queries.get_fort_level(self.target)
         air_processor.process_air_orders(self.game)
         self.assertEqual(victim["health"], health)
+        self.assertEqual(queries.get_fort_level(self.target), fort_level)
         self.assertNotIn(attacker, self.base["units"])
 
     def test_one_turn_truck_roundtrip_retains_fraction_and_original_type(self):
@@ -550,6 +592,8 @@ class AirIntegrationTests(unittest.TestCase):
         recovered = saved["provinces"][self.base["json_key"]]["units"]
         queries.revert_transport(recovered[0])
         self.assertEqual(recovered[0]["type"], "Monoplane Bomber")
+        self.assertTrue(queries.air_unit_can_damage_forts(recovered[0]))
+        self.assertNotIn("air_damages_forts", recovered[0])
         self.assertEqual(recovered[1]["order"], fighter["order"])
         self.assertNotIn("_air_geometry", saved)
 
@@ -617,6 +661,8 @@ class AirIntegrationTests(unittest.TestCase):
 
     def test_realtime_strike_return_fire_occurs_only_at_server_resolution(self):
         from map_logic.turn_processing import turn_processor
+        self.target["buildings"] = ["Fort Lvl 5"]
+        fort_level = queries.get_fort_level(self.target)
         defender = wing(self.target, "Infantry Type 1910", "B")
         self.plane["defense"] = 0
         before = self.plane["health"]
@@ -626,6 +672,7 @@ class AirIntegrationTests(unittest.TestCase):
         draft = driver.validate_draft("A", [command])
         self.assertEqual(self.plane["health"], before)
         self.assertEqual(self.plane["order"]["type"], "MOVE")
+        self.assertEqual(queries.get_fort_level(self.target), fort_level)
         async def resolve_air(game):
             air_processor.process_air_orders(game)
         # Exercise command application and the server's turn hook, isolating
@@ -636,6 +683,7 @@ class AirIntegrationTests(unittest.TestCase):
         self.assertLess(self.plane["health"], before)
         self.assertIn(self.plane, self.base["units"])
         self.assertLess(defender["health"], defender["max_health"])
+        self.assertEqual(queries.get_fort_level(self.target), fort_level - 1)
 
     def test_realtime_air_drafts_reject_stale_locked_and_nonplanning_turns(self):
         driver = MapRealtimeDriver(self.game)
@@ -685,6 +733,8 @@ class AirIntegrationTests(unittest.TestCase):
         self.assertEqual(canonical["unit_index"], 1)
 
     def test_tournament_command_roundtrip_retains_host_stats_and_position(self):
+        self.target["buildings"] = ["Fort Lvl 5"]
+        fort_level = queries.get_fort_level(self.target)
         defender = wing(self.target, "Infantry Type 1910", "B")
         self.plane["defense"] = 0
         self.plane["order"] = {"type": "AIR_ATTACK", "base_id": 1, "target_id": 2}
@@ -704,10 +754,12 @@ class AirIntegrationTests(unittest.TestCase):
             self.assertEqual(self.plane["health"], health)
             self.assertIs(self.base["units"][0], self.plane)
             self.assertEqual(self.plane["order"]["type"], "AIR_ATTACK")
+            self.assertEqual(queries.get_fort_level(self.target), fort_level)
             air_processor.process_air_orders(self.game)
             self.assertLess(self.plane["health"], health)
             self.assertLess(defender["health"], defender["max_health"])
             self.assertIn(self.plane, self.base["units"])
+            self.assertEqual(queries.get_fort_level(self.target), fort_level - 1)
 
     def test_tournament_rejects_foreign_duplicate_malformed_and_out_of_range_orders(self):
         enemy = wing(self.target, "Biplane Fighter", "B")
