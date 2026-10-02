@@ -6,13 +6,14 @@ base_maps
 
 context
     - contains a python script that makes a copy of every single file and then outputs it in a text format
-    - also contains random text files that may or may not contain important information (like this one)
 
 data
     - stores data about the game, as well as the various editors for the data
     - includes constants.py (gets constant information)
     - includes queries.py (gets dynamic information)
 
+documentation
+    - contains helpful text files that come with important information (like this one)
 dist
     - this is what will be shared to everyone else
 
