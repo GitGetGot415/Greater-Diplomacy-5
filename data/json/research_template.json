@@ -32,6 +32,7 @@
     
     "biplane": { "category": "AEROSPACE", "display_name": "Biplane Fighter", "max_lvl": 1, "cost": 900, "req": {}, "years": [1910] },
     "biplane_bomber": { "category": "AEROSPACE", "display_name": "Biplane Bomber", "max_lvl": 1, "cost": 900, "req": {"biplane": 1}, "years": [1915] },
+    "zeppelin": { "category": "AEROSPACE", "display_name": "Zeppelin", "max_lvl": 1, "cost": 900, "req": {}, "years": [1910] },
     "piston_fighter": { "category": "AEROSPACE", "display_name": "Monoplane Fighter", "max_lvl": 1, "cost": 900, "req": {"biplane_bomber": 1}, "years": [1930] },
     "piston_bomber": { "category": "AEROSPACE", "display_name": "Monoplane Bomber", "max_lvl": 1, "cost": 900, "req": {"piston_fighter": 1}, "years": [1935] },
     "v1_flying_bomb": { "category": "AEROSPACE", "display_name": "V1 Flying Bomb", "max_lvl": 1, "cost": 900, "req": {"piston_bomber": 1}, "years": [1940] },

@@ -26,6 +26,7 @@ from tests import test_tournament_moves as tournament_harness
 REQUESTED_TREE = {
     "biplane": (1910, {}, "Biplane Fighter"),
     "biplane_bomber": (1915, {"biplane": 1}, "Biplane Bomber"),
+    "zeppelin": (1915, {"biplane": 1}, "Zeppelin"),
     "piston_fighter": (1930, {"biplane_bomber": 1}, "Monoplane Fighter"),
     "piston_bomber": (1935, {"piston_fighter": 1}, "Monoplane Bomber"),
     "v1_flying_bomb": (1940, {"piston_bomber": 1}, "V1 Flying Bomb"),
@@ -36,10 +37,10 @@ REQUESTED_TREE = {
 
 
 class AerospaceRulesTests(unittest.TestCase):
-    def test_biplane_bomber_matches_fighter_stats_with_bomber_orders(self):
+    def test_zeppelin_matches_current_biplane_bomber_stats(self):
         library = queries.get_unit_library()
-        expected = dict(library["Biplane Fighter"], air_role="bomber")
-        self.assertEqual(library["Biplane Bomber"], expected)
+        self.assertEqual(library["Zeppelin"], library["Biplane Bomber"])
+        self.assertEqual(library["Zeppelin"]["air_role"], "bomber")
         self.assertFalse(queries.check_tech_requirements(
             {"biplane": 1}, queries.get_tech_tree()["piston_fighter"]["req"]))
         self.assertTrue(queries.check_tech_requirements(
@@ -196,43 +197,49 @@ class AerospaceRealtimeTests(unittest.TestCase):
                 self.driver.validate_draft("A", [{"type": "research_queue", "tech_names": names}])
 
     def test_new_bomber_research_is_authoritative(self):
-        command = {"type": "research_queue", "tech_names": ["biplane_bomber"]}
-        with self.assertRaises(RealtimeError):
-            self.driver.validate_draft("A", [command])
-        self.map.nation_data["A"]["research"] = {"biplane": 1}
-        projects = self.driver.validate_draft("A", [command])[0]["projects"]
-        self.assertEqual(projects[0]["tech_name"], "biplane_bomber")
-        self.assertEqual(projects[0]["points_remaining"],
-                         queries.get_tech_tree()["biplane_bomber"]["cost"])
+        for tech_key, unit_name in (("biplane_bomber", "Biplane Bomber"), ("zeppelin", "Zeppelin")):
+            self.setUp()
+            command = {"type": "research_queue", "tech_names": [tech_key]}
+            with self.assertRaises(RealtimeError):
+                self.driver.validate_draft("A", [command])
+            self.map.nation_data["A"]["research"] = {"biplane": 1}
+            projects = self.driver.validate_draft("A", [command])[0]["projects"]
+            self.assertEqual(projects[0]["tech_name"], tech_key)
+            self.assertEqual(projects[0]["points_remaining"],
+                             queries.get_tech_tree()[tech_key]["cost"])
 
     def test_unit_orders_need_research_and_ownership_and_use_server_stats(self):
-        command = {"type": "province_queue", "province_id": 1, "queue": "unit_queue",
-                   "items": [{"unit_type": "Biplane Bomber", "turns_remaining": 0, "refund": {}}]}
-        with self.assertRaises(RealtimeError):
-            self.driver.validate_draft("A", [command])
-        self.map.nation_data["A"]["research"] = {"biplane_bomber": 1}
-        canonical = self.driver.validate_draft("A", [command])[0]["items"][0]
-        stats = queries.get_unit_library()["Biplane Bomber"]
-        self.assertEqual(canonical["turns_remaining"], stats["production_time"])
-        self.assertEqual(canonical["refund"], {key: stats[key] for key in
-                                              ("cost_materials", "cost_manpower", "cost_fuel")})
-        self.map.map_data["home"]["owner"] = "B"
-        with self.assertRaises(RealtimeError):
-            self.driver.validate_draft("A", [command])
+        for tech_key, unit_name in (("biplane_bomber", "Biplane Bomber"), ("zeppelin", "Zeppelin")):
+            self.setUp()
+            command = {"type": "province_queue", "province_id": 1, "queue": "unit_queue",
+                       "items": [{"unit_type": unit_name, "turns_remaining": 0, "refund": {}}]}
+            with self.assertRaises(RealtimeError):
+                self.driver.validate_draft("A", [command])
+            self.map.nation_data["A"]["research"] = {tech_key: 1}
+            canonical = self.driver.validate_draft("A", [command])[0]["items"][0]
+            stats = queries.get_unit_library()[unit_name]
+            self.assertEqual(canonical["turns_remaining"], stats["production_time"])
+            self.assertEqual(canonical["refund"], {key: stats[key] for key in
+                                                  ("cost_materials", "cost_manpower", "cost_fuel")})
+            self.map.map_data["home"]["owner"] = "B"
+            with self.assertRaises(RealtimeError):
+                self.driver.validate_draft("A", [command])
 
     def test_tournament_import_preserves_aerospace_in_existing_move_fields(self):
-        harness = tournament_harness.TournamentMoveTests()
-        host = tournament_harness.Host()
-        host.map_data = {"home": {"id": 1, "json_key": "home", "owner": "Leader", "units": []}}
-        move = harness.player_data("Leader", host)
-        move["nation_data"]["research_queue"] = [{"tech_name": "jet_engine", "points_remaining": 50}]
-        move["provinces"] = {"home": {"unit_queue": [{"unit_type": "Biplane Bomber", "turns_remaining": 1}]}}
-        with tempfile.TemporaryDirectory() as directory:
-            path = harness.write_move(directory, "aerospace.gd5move", "Leader", move)
-            result = harness.import_moves(host, [path])
-        self.assertEqual(result["loaded"], 1)
-        self.assertEqual(host.nation_data["Leader"]["research_queue"], move["nation_data"]["research_queue"])
-        self.assertEqual(host.map_data["home"]["unit_queue"], move["provinces"]["home"]["unit_queue"])
+        for tech_key, unit_name in (("biplane_bomber", "Biplane Bomber"), ("zeppelin", "Zeppelin")):
+            self.setUp()
+            harness = tournament_harness.TournamentMoveTests()
+            host = tournament_harness.Host()
+            host.map_data = {"home": {"id": 1, "json_key": "home", "owner": "Leader", "units": []}}
+            move = harness.player_data("Leader", host)
+            move["nation_data"]["research_queue"] = [{"tech_name": "jet_engine", "points_remaining": 50}]
+            move["provinces"] = {"home": {"unit_queue": [{"unit_type": unit_name, "turns_remaining": 1}]}}
+            with tempfile.TemporaryDirectory() as directory:
+                path = harness.write_move(directory, "aerospace.gd5move", "Leader", move)
+                result = harness.import_moves(host, [path])
+            self.assertEqual(result["loaded"], 1)
+            self.assertEqual(host.nation_data["Leader"]["research_queue"], move["nation_data"]["research_queue"])
+            self.assertEqual(host.map_data["home"]["unit_queue"], move["provinces"]["home"]["unit_queue"])
 
 
 class AerospaceScreenTests(unittest.TestCase):

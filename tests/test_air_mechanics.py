@@ -227,6 +227,8 @@ class AirResolutionTests(unittest.TestCase):
 
     def test_canonical_tanks_category_is_immune_but_infantry_is_not(self):
         plane = self.attack()
+        # Isolate category immunity from the aircraft's tunable armor.
+        plane["defense"] = 0
         library = queries.get_unit_library()
         tank_name = next(name for name, stats in library.items()
                          if queries.classify_unit_group(queries.get_base_unit_name(name), stats) == queries.UNIT_GROUP_TANKS)
@@ -582,6 +584,8 @@ class AirIntegrationTests(unittest.TestCase):
     def test_fighter_ground_strike_never_receives_air_bonus(self):
         attacker = wing(self.base, "Monoplane Fighter", order={"type": "AIR_ATTACK", "target_id": 2})
         based_enemy = wing(self.target, "Monoplane Bomber", "B")
+        # Isolate the air bonus from the target's tunable armor.
+        based_enemy["defense"] = 0
         before = based_enemy["health"]
         air_processor.process_air_orders(self.game)
         expected = attacker["attack"] * combat_rules.effective_damage_multiplier(attacker, self.game.nation_data)
