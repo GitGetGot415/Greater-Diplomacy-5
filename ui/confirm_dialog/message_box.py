@@ -119,7 +119,7 @@ class _NavigationIntroPopup:
         ("Country actions", "relations", "Click another country's tile to see available diplomatic actions you can take against them."),
     )
     AIR_STEPS = (
-        ("Strike", "In Orders, use the strike icon and click a province inside or touching the range outline. Strikes reach the listed range and return to base, using half the one-way reposition distance."),
+        ("Strike", "In Orders, use the strike icon and click a province inside or touching the range outline. Strikes reach the listed range. After interception, aircraft fight one combat exchange with the defenders, who can fire back. Surviving reusable aircraft return to base with their losses; Tanks-category units cannot damage aircraft in flight."),
         ("Patrol", "Fighters cover their listed range. The patrol icon cycles weakest attacking force first, strongest first, then off. Survivors may intercept several missions."),
         ("Reposition", "Right-click land to move reusable planes up to twice their listed range. Reach uses map pixels and tile edges; zoom never changes it. Aircraft cannot capture land."),
         ("V1 and V2", "Strikes use listed range and consume the weapon. V2 bypasses interception. Relocate either weapon with one-turn Truck conversions. Aircraft attacked in ground combat become Trucks automatically."),

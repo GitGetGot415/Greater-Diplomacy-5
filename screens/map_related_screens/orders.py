@@ -754,7 +754,7 @@ class Orders_Screen(GameState):
                     "Upgrading")
 
         if queries.is_air_unit(unit):
-            add(ACTION_COL_BOMBARD, "yellow", "Choose offensive air target",
+            add(ACTION_COL_BOMBARD, "yellow", "Choose air strike target: defenders can fire back",
                 lambda idx=index, p=province, key=row_key: self.start_bombard_targeting(idx, p, key),
                 "Bombardment Arrows", enabled=not is_water and not in_combat)
         elif order_type == "BOMBARD":

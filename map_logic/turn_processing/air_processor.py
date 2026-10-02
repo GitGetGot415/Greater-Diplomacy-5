@@ -103,23 +103,34 @@ def process_air_orders(map_screen):
         by_owner = {}
         for unit in survivors:
             by_owner.setdefault(queries.get_unit_combat_owner(unit), []).append(unit)
-        # Match bombardment: no occupation/return fire; wounded attack and fort
-        # defense apply. Air strikes hit ground contents and remove one fort
-        # level per surviving wing, just like land artillery.
-        shots = []
+        # A strike is one normal, simultaneous lane exchange against the
+        # garrison. Keep aircraft flying so tank immunity still applies, but
+        # reserve fighter air-to-air bonuses for the interception above.
+        # Separate sides prevent extra fights within the garrison or attacking
+        # force; those belong to ground combat and interception respectively.
+        garrison = [u for u in target.get("units", []) if any(queries.are_at_war(
+            queries.get_unit_combat_owner(wing), queries.get_unit_combat_owner(u),
+            map_screen.nation_data) for wing in survivors)]
+        if survivors and garrison:
+            battle = combat_rules.build_battle(
+                [survivors, garrison], map_screen.nation_data,
+                terrain=target.get("terrain"), convert_aircraft=False)
+            garrison_ids = {id(u) for u in garrison}
+            for targets, attack in combat_rules.exchange(battle, map_screen.nation_data):
+                combat_processor.apply_group_damage(attack, targets, lambda unit:
+                    queries.get_fort_defense_bonus(target, unit, map_screen.nation_data,
+                                                  combat_active=True)
+                    if id(unit) in garrison_ids else 0)
+            for lane in battle.lanes:
+                for unit in lane.a.front + lane.b.front:
+                    unit["_in_combat_this_turn"] = True
+
+        # Preserve fort damage even on an empty tile: each wing that reaches
+        # the target removes one level, after the fort protects this exchange.
         fort_hits = 0
         for owner, wings in by_owner.items():
-            targets = [u for u in target.get("units", []) if queries.are_at_war(
-                owner, queries.get_unit_combat_owner(u), map_screen.nation_data)]
-            shots.extend(combat_rules.damage_shots(wings, targets,
-                nation_data=map_screen.nation_data, attack_field="bombard_attack"))
             if queries.are_at_war(owner, target.get("owner"), map_screen.nation_data):
                 fort_hits += len(wings)
-        for targets, attack in shots:
-            combat_processor.apply_group_damage(attack, targets, lambda unit:
-                queries.get_fort_defense_bonus(target, unit, map_screen.nation_data, combat_active=True))
-            for unit in targets:
-                unit["_in_combat_this_turn"] = True
         for _ in range(fort_hits):
             queries.damage_fort(target, map_screen.nation_data, map_screen.map_data)
         for unit in survivors:

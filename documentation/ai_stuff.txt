@@ -79,6 +79,11 @@ and V2 alone bypasses
 interception. Jet Engine remains a research gate.
 Listed air range is strike/patrol reach; reusable reposition reaches twice that
 distance because it does not reserve a return leg.
+After interception, strikes use a normal simultaneous combat exchange against
+the target garrison, including terrain width, coalition lanes and reserves.
+Defenders can damage or destroy aircraft; Tanks-category immunity still applies
+in flight. Fighter damage bonuses apply only to interception. Survivors retain
+their losses at their launch base, and flight never captures the target.
 The heuristic aircraft pass generates only canonical legal orders. It strikes
 known enemy targets, repositions reusable aircraft onto friendly land nearer
 them, patrols otherwise, and relocates one-use weapons through Trucks. It reads

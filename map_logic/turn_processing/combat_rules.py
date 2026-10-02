@@ -528,7 +528,8 @@ def single_attacker_signature(unit):
             unit.get("combat_stance"), unit.get("lane_target"))
 
 
-def build_battle(sides, nation_data, width=None, full_rank_for=None, terrain=None, air_combat=False):
+def build_battle(sides, nation_data, width=None, full_rank_for=None, terrain=None, air_combat=False,
+                 convert_aircraft=True):
     """Who duels whom, and who is in the front rank, for one fight.
 
     `sides` is a list of unit lists. One side is a tile: everyone standing here
@@ -550,6 +551,10 @@ def build_battle(sides, nation_data, width=None, full_rank_for=None, terrain=Non
 
     `terrain` selects the tile's shared width; an explicit `width` overrides it.
     Missing or unknown terrain uses the global default.
+
+    `convert_aircraft=False` keeps flight stats during a strike against a
+    garrison. It does not enable the fighter bonus: `air_combat` is reserved
+    for interception, and also keeps aircraft flying.
     """
     from data import queries
     hostile = _hostile(nation_data)
@@ -558,7 +563,7 @@ def build_battle(sides, nation_data, width=None, full_rank_for=None, terrain=Non
     # automatic Truck conversion for all non-mutating UI and AI consumers.
     all_units = [unit for side in sides for unit in side]
     profiles = {id(unit): queries.ground_combat_profile(unit) for unit in all_units
-                if not air_combat and queries.is_air_unit(unit) and any(
+                if convert_aircraft and not air_combat and queries.is_air_unit(unit) and any(
                     hostile(queries.get_unit_combat_owner(unit), queries.get_unit_combat_owner(other))
                     for other in all_units)}
     across_only = len(sides) > 1
