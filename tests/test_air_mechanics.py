@@ -62,6 +62,16 @@ class RangeTests(unittest.TestCase):
         self.plane = wing(self.base)
         self.radius = queries.air_order_radius(self.plane, "AIR_ATTACK")
 
+    def test_reusable_strike_matches_listed_range_and_half_reposition(self):
+        for name, stats in queries.get_unit_library().items():
+            if not stats.get("air_role") or stats.get("air_consumable"):
+                continue
+            with self.subTest(unit=name):
+                unit = {"type": name}
+                strike = queries.air_order_radius(unit, "AIR_ATTACK")
+                self.assertEqual(strike, stats["air_range_px"])
+                self.assertEqual(strike, queries.air_order_radius(unit, "AIR_REPOSITION") / 2)
+
     def test_tile_edge_and_disconnected_pixels_count_when_center_is_outside(self):
         target = tile(self.game, 2, int(10 + self.radius), owner="B", center=(1500, 5))
         queries.build_air_geometry(self.game)
@@ -365,6 +375,26 @@ class AirIntegrationTests(unittest.TestCase):
         self.base["neighbors"] = [2]
         self.target["neighbors"] = [1]
         self.plane = wing(self.base)
+
+    def test_listed_strike_boundary_agrees_in_ai_networks_and_resolution(self):
+        radius = queries.air_unit_stats(self.plane)["air_range_px"]
+        target = tile(self.game, 3, int(self.base["center"][0] + radius), owner="B")
+        enemy = wing(target, "Infantry Type 1910", "B")
+        order = {"type": "AIR_ATTACK", "target_id": target["id"]}
+        canonical = queries.canonical_air_order(self.game, self.plane, self.base, order)
+        self.assertIn(canonical, ai_movement.legal_air_candidates(self.game, self.plane, self.base))
+        command = {"type": "unit_order", "province_id": self.base["id"], "unit_index": 0,
+                   "unit_id": self.plane["unit_id"], "order": order}
+        self.assertEqual(MapRealtimeDriver(self.game).validate_draft("A", [command])[0]["order"], canonical)
+        _live, drafts = multiplayer_io._validate_aircraft_orders(self.game, "A",
+            {"aircraft_orders": [{"unit_id": self.plane["unit_id"], "order": order}]}, {})
+        self.assertEqual(drafts[0][1], canonical)
+        self.plane["order"] = canonical
+        health = enemy["health"]
+        air_processor.process_air_orders(self.game)
+        self.assertLess(enemy["health"], health)
+        self.assertIn(self.plane, self.base["units"])
+        self.assertNotIn(self.plane, target["units"])
 
     def test_legacy_patrol_defaults_and_save_transport_roundtrip(self):
         fighter = wing(self.base, "Biplane", order={"type": "AIR_PATROL"})
@@ -671,6 +701,72 @@ class AirAppSmokeTests(unittest.TestCase):
             if rect.centerx > 0:
                 map_left = round(queries.world_to_screen((0, 0), game, game.map_w)[0])
                 self.assertGreaterEqual(clip.left, map_left)
+
+    def test_small_map_fully_covered_range_keeps_a_visible_closed_boundary(self):
+        game = world()
+        game.map_w, game.map_h = 80, 40
+        base = tile(game, 1, 8)
+        game.camera = SimpleNamespace(pos=pygame.Vector2(-20, -10), zoom=2, tilt_factor=0.5)
+        game.top_ui_height, game.total_ui_h = 12, 22
+        screen = Orders_Screen()
+        screen.map_screen = game
+        surface = pygame.Surface((300, 130), pygame.SRCALPHA)
+        color = (0, 255, 0)
+        radius = queries.air_order_radius(wing(base), "AIR_ATTACK")
+        screen.draw_air_range(surface, base, radius, color)
+        left, top = queries.world_to_screen((0, 0), game)
+        right, bottom = queries.world_to_screen((game.map_w, game.map_h), game)
+        for point in ((left, (top + bottom) / 2), (right - 1, (top + bottom) / 2),
+                      ((left + right) / 2, top), ((left + right) / 2, bottom - 1)):
+            self.assertEqual(surface.get_at(tuple(int(p) for p in point))[:3], color)
+        self.assertEqual(surface.get_at((int(left) - 1, int(top))).a, 0)
+        self.assertEqual(surface.get_at((int(left) + 8, int(top) + 8)).a, 0)
+
+    def test_range_cache_reuses_pixels_and_invalidates_camera_radius_and_clip(self):
+        game = world()
+        game.map_w, game.map_h = 160, 120
+        base = tile(game, 1, 8)
+        game.camera = SimpleNamespace(pos=pygame.Vector2(-10, -10), zoom=1, tilt_factor=1)
+        game.top_ui_height = game.total_ui_h = 0
+        screen = Orders_Screen()
+        screen.map_screen = game
+        surface = pygame.Surface((200, 150), pygame.SRCALPHA)
+        clip = pygame.Rect(2, 3, 195, 140)
+        surface.set_clip(clip)
+        with patch.object(pygame.draw, "ellipse", wraps=pygame.draw.ellipse) as ellipse:
+            screen.draw_air_range(surface, base, 60, (0, 255, 0))
+            first = pygame.image.tobytes(surface, "RGBA")
+            surface.fill((0, 0, 0, 0))
+            screen.draw_air_range(surface, base, 60, (0, 255, 0))
+            self.assertEqual(ellipse.call_count, 1)
+            self.assertEqual(pygame.image.tobytes(surface, "RGBA"), first)
+            self.assertEqual(surface.get_clip(), clip)
+            game.camera.pos.x += 5
+            screen.draw_air_range(surface, base, 60, (0, 255, 0))
+            game.camera.zoom = 0.5
+            screen.draw_air_range(surface, base, 60, (0, 255, 0))
+            screen.draw_air_range(surface, base, 70, (0, 255, 0))
+            surface.set_clip(pygame.Rect(5, 6, 170, 100))
+            screen.draw_air_range(surface, base, 70, (0, 255, 0))
+            self.assertEqual(ellipse.call_count, 5)
+
+    def test_wrapped_range_edge_does_not_cover_far_side_of_previous_copy(self):
+        from screens.map_related_screens.orders import AIR_RANGE_THICKNESS
+        game = world()
+        game.map_w, game.map_h = 200, 120
+        base = tile(game, 1, 8, center=(10, 60))
+        game.camera = SimpleNamespace(pos=pygame.Vector2(180, 0), zoom=1, tilt_factor=1)
+        game.top_ui_height = game.total_ui_h = 0
+        game.loop_map = True
+        screen = Orders_Screen()
+        screen.map_screen = game
+        surface = pygame.Surface((220, 120), pygame.SRCALPHA)
+        screen.draw_air_range(surface, base, 60, (0, 255, 0))
+        # Closing the next copy's left edge must not bleed into the far-away
+        # provinces at the right edge of the preceding copy.
+        self.assertEqual(surface.get_at((19, 60)).a, 0)
+        self.assertGreater(surface.get_at((20, 60)).a, 0)
+        self.assertEqual(surface.get_at((20 + AIR_RANGE_THICKNESS + 1, 60)).a, 0)
 
     def test_tournament_player_archive_never_reveals_host_secret_or_hidden_aircraft(self):
         with tempfile.TemporaryDirectory() as directory:

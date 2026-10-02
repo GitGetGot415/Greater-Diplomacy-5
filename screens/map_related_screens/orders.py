@@ -1,4 +1,5 @@
 import pygame
+from math import sqrt
 import data.constants as c
 from gameState import GameState, resolve_keybind
 from ui_elements import Button, process_text_input, draw_text_box
@@ -137,6 +138,8 @@ class Orders_Screen(GameState):
         self.bombarding_unit_actual_index = None
         self._consume_bombard_target_release = False
         self.air_range_previews = []
+        self._air_range_render_cache = {}
+        self._air_range_view_key = None
         self.bombard_target_preview = set()
         self.bombard_air_radius = None
         self.targeting_label = "bombardment"
@@ -839,6 +842,7 @@ class Orders_Screen(GameState):
             sidebar_info.prepare_unit_roster(self.map_screen, self.target_province)
         # Cache radii at input boundaries; co-located identical wings share an outline.
         self.air_range_previews = []
+        self._air_range_render_cache = {}
         seen_ranges = set()
         for unit, base in self.map_screen.selected_unit_records():
             if queries.is_air_unit(unit):
@@ -1869,17 +1873,51 @@ class Orders_Screen(GameState):
                     pygame.draw.circle(surface, color, (int(sx), int(sy)), TARGET_MARKER_RADIUS, TARGET_MARKER_THICKNESS)
 
     def draw_air_range(self, surface, base, radius, color):
-        """Project the world-space circle, clipping each wrapped image copy.
+        """Blit the cached boundary of the circle's intersection with each map.
 
         Tilt changes the displayed shape, never gameplay reach. Clip to each
         map copy so the outline cannot imply flight across the wrapping seam.
+        Close clipped arcs along map edges: on small maps the circle itself
+        can lie entirely outside the image even though the whole map is covered.
         """
         map_ref = self.map_screen
         camera = map_ref.camera
+        previous_clip = surface.get_clip()
+        view_key = (camera.zoom, camera.tilt_factor, tuple(camera.pos), map_ref.map_w,
+                    map_ref.map_h, map_ref.loop_map, map_ref.top_ui_height,
+                    map_ref.total_ui_h, surface.get_size(), tuple(previous_clip))
+        if view_key != self._air_range_view_key:
+            self._air_range_render_cache.clear()
+            self._air_range_view_key = view_key
+        key = (tuple(base["center"]), radius, tuple(color))
+        cached = self._air_range_render_cache.get(key)
+        if cached is not None:
+            image, position = cached
+            surface.blit(image, position)
+            return
+
+        # Rasterize only at a source/camera/viewport boundary. Settled planning
+        # frames reuse these pixels without deriving the range contour again.
+        layer = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
         radius_x = radius * camera.zoom
         radius_y = radius_x * camera.tilt_factor
         offsets = (0, -map_ref.map_w, map_ref.map_w) if map_ref.loop_map else (0,)
-        previous_clip = surface.get_clip()
+        cx, cy = base["center"]
+        edges = []
+        for x in (0, map_ref.map_w):
+            remaining = radius * radius - (x - cx) ** 2
+            if remaining >= 0:
+                span = sqrt(remaining)
+                low, high = max(0, cy - span), min(map_ref.map_h, cy + span)
+                if low <= high:
+                    edges.append(((x, low), (x, high)))
+        for y in (0, map_ref.map_h):
+            remaining = radius * radius - (y - cy) ** 2
+            if remaining >= 0:
+                span = sqrt(remaining)
+                low, high = max(0, cx - span), min(map_ref.map_w, cx + span)
+                if low <= high:
+                    edges.append(((low, y), (high, y)))
         for offset in offsets:
             sx, sy = queries.world_to_screen(base["center"], map_ref, offset)
             rect = pygame.Rect(round(sx - radius_x), round(sy - radius_y),
@@ -1890,9 +1928,22 @@ class Orders_Screen(GameState):
             clip = previous_clip.clip(map_rect).clip(pygame.Rect(
                 0, map_ref.top_ui_height, surface.get_width(), surface.get_height() - map_ref.total_ui_h))
             if rect.colliderect(clip):
-                surface.set_clip(clip)
-                pygame.draw.ellipse(surface, color, rect, AIR_RANGE_THICKNESS)
-        surface.set_clip(previous_clip)
+                layer.set_clip(clip)
+                pygame.draw.ellipse(layer, color, rect, AIR_RANGE_THICKNESS)
+                for start, end in edges:
+                    # The bottom/right world edges fall just outside pygame's
+                    # exclusive Rect bounds; keep their strokes inside the image.
+                    points = []
+                    for point in (start, end):
+                        x, y = queries.world_to_screen(point, map_ref, offset)
+                        points.append((max(map_rect.left, min(map_rect.right - 1, round(x))),
+                                       max(map_rect.top, min(map_rect.bottom - 1, round(y)))))
+                    pygame.draw.line(layer, color, *points, AIR_RANGE_THICKNESS)
+        layer.set_clip(None)
+        bounds = layer.get_bounding_rect()
+        image = layer.subsurface(bounds).copy()
+        self._air_range_render_cache[key] = (image, bounds.topleft)
+        surface.blit(image, bounds.topleft)
 
     def draw_range_previews(self, surface):
         aiming_province = self.bombarding_unit_province or self.target_province

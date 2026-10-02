@@ -4100,10 +4100,9 @@ def is_air_transport(unit):
 
 
 def air_order_radius(unit, kind):
+    """Listed range is mission reach; reposition uses both flight legs one way."""
     stats = air_unit_stats(unit)
     radius = stats.get("air_range_px", 0)
-    if kind == "AIR_ATTACK":
-        return radius if stats.get("air_consumable", False) else radius / 2
     if kind == "AIR_REPOSITION":
         return radius * 2
     return radius
@@ -4123,7 +4122,7 @@ def get_air_unit_traits(unit_type):
                   else "Can be intercepted by enemy fighters."]
     else:
         reposition = air_order_radius(unit, "AIR_REPOSITION")
-        traits = [f"Range: {stats['air_range_px']:g} map px; strike: {strike:g} px; reposition: {reposition:g} px."]
+        traits = [f"Range / strike: {strike:g} map px; reposition: {reposition:g} px."]
         if stats["air_role"] == "fighter":
             patrol = air_order_radius(unit, "AIR_PATROL")
             multiplier = unit_target_damage_multiplier(unit, unit, air_to_air=True)

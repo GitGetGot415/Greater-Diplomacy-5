@@ -3,7 +3,7 @@ AIRCRAFT RULES
 
 Unit data owns air_role, air_range_px, air_attack_multiplier, air_consumable and
 air_interception_immune. production_group remains presentation metadata. Current
-full pixel ranges: Biplane 180, Piston Fighter 300, Piston Bomber 400, V1 350,
+listed mission pixel ranges: Biplane 180, Piston Fighter 300, Piston Bomber 400, V1 350,
 V2 500 and Jet Fighter 450. Existing maps are approximately 800-1900 pixels
 wide, so these are regional ranges. Costs and research dates/gates are unchanged.
 Fighter health/attack: 300/35, 450/50, 600/70 respectively; bomber 1000/180;
@@ -17,7 +17,11 @@ zoom, tilt, viewport and horizontal presentation wrapping never change reach.
 The cache is transient, rebuilt on geometry replacement, with distances cached
 per base center/target. Orders previews cache mission radii at input boundaries
 and draw one world-space circle per distinct base/radius, compressed by camera
-tilt and clipped at map-image edges. Air targeting replaces the base's movement
+tilt and closed along map-image edges wherever the circle covers an edge.
+This keeps reach visible even when a small map fits entirely inside the circle,
+without implying flight across the presentation seam. Rasterized outlines are
+cached by base/radius/color, map dimensions, camera, viewport and clipping state.
+Air targeting replaces the base's movement
 outline with its strike outline; land bombardment retains tile markers. Any
 part of a tile touching or inside the circle is in range. Research details
 show data-driven air ranges, patrol/strike roles, damage bonuses/immunity,
@@ -27,8 +31,10 @@ only its target through air_target_in_range, so AI candidate validation does
 not repeat full-map sweeps. Ground combat roster stats are likewise cached at
 selection/state boundaries and display the projected Truck representation.
 
-Patrol covers R, reusable strikes reach R/2, reposition reaches 2R, and one-use
+Patrol and reusable strikes cover the listed R, reposition reaches 2R, and one-use
 strikes reach R. Aircraft fly over water, foreign land and nonadjacent provinces.
+Reusable strikes spend half the one-way flight distance going out and half
+returning; listed range and strike reach are the same value.
 Bases and landing tiles must be land; attack targets may be water. Flight never
 captures land. Converted Trucks use ordinary land movement, combat and capture.
 The editor unit brush likewise requires land when placing an aircraft.

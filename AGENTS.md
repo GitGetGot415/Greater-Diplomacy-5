@@ -117,6 +117,7 @@ feature working in one says nothing about the other.
   file. A developer should be able to reposition a UI group by changing one
   anchor/gap value, not several scattered numeric literals. Do not move local
   layout constants into `data/constants.py`.
+- Never list out explicit values for units in documentation.
 - Prefer data-driven tables over repeated condition chains when content is
   expected to grow.
 
