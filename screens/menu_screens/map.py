@@ -1645,7 +1645,6 @@ class Map(GameState):
             self.unit_hover_hitboxes = []
             self.hovered_unit_stack = None
             overlay_renderer._unit_render_index(self)
-        self.set_view_mode("UNITS")
         update_button_states(self)
 
     def set_play_view_defaults(self):

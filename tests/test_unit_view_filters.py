@@ -214,6 +214,17 @@ class UnitViewControlTests(unittest.TestCase):
                 game, game.unit_view_bar_rect.center), mode == "UNITS")
             self.assertEqual(minimap.minimap_rect(game, c.SCREEN_WIDTH, c.SCREEN_HEIGHT), mini)
 
+    def test_changing_unit_filter_does_not_switch_or_announce_a_map_view(self):
+        game = self.game
+        for mode in ("UNITS", "ECONOMY"):
+            game.secondary_mode = mode
+            with (patch.object(game, "set_view_mode") as switch_view,
+                  patch.object(game, "show_feedback") as feedback):
+                game.set_unit_view_filter("AIR")
+            self.assertEqual(game.secondary_mode, mode)
+            switch_view.assert_not_called()
+            feedback.assert_not_called()
+
     def test_order_arrows_follow_the_unit_filter(self):
         game = self.game
         library = {"Test Land": {}, "Test Ship": {"naval_unit": True},

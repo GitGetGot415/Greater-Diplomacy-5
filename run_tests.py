@@ -3,6 +3,8 @@
 Right-click this file in the editor and pick "Run Python File in Terminal" --
 no arguments, no typing. Everything under tests/ named test_*.py is picked up
 automatically, so new test files need no wiring up here.
+Audio uses a silent driver; the application harness skips startup music and
+the native desktop audio engine.
 """
 
 import os
@@ -16,6 +18,8 @@ TESTS_DIR = os.path.join(ROOT, "tests")
 def main():
     # Works no matter which directory the editor launched us from
     sys.path.insert(0, ROOT)
+    from tests import configure_test_audio
+    configure_test_audio()
     os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
     if os.name == "nt":
         # Inherit a non-modal native error policy in test subprocesses. A

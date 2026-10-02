@@ -4,7 +4,8 @@ Controller() constructs all 23 screens without ever entering run()'s loop, which
 makes it the cheapest possible guard against constructor-signature drift and
 missing-attribute regressions. Getting there needs three things arranged first:
 
-1. SDL pointed at its dummy video/audio drivers.
+1. SDL pointed at its dummy video/audio drivers. SoLoud is disabled because
+   its native output bypasses SDL's silent driver, and startup music is skipped.
 2. mod_loader neutralised. main._import_project_modules() calls
    mod_loader.install(), which would otherwise apply whatever happens to be
    sitting in the developer's mods/ folder and make test results depend on local
@@ -16,13 +17,16 @@ missing-attribute regressions. Getting there needs three things arranged first:
 
 import os
 import sys
+from unittest.mock import patch
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
+
+from tests import configure_test_audio
+configure_test_audio()
 
 _controller = None
 _surface = None
@@ -69,9 +73,16 @@ def boot():
     import pygame
     import data.constants as c
 
+    # Keep the real mixer available for audio assertions, with no device output.
+    # Test code may still mock SoLoud explicitly when checking that backend.
+    configure_test_audio()
+    c.USE_SOLOUD = False
     pygame.init()
     _surface = pygame.display.set_mode((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
-    _controller = main.Controller()
+    # Startup music can launch a synthesizer thread even with silent output.
+    # Skip only this automatic playback; explicit music tests keep real methods.
+    with patch.object(main.Controller, "play_startup_song"):
+        _controller = main.Controller()
     STATES_UNBUILT_AT_BOOT.update(
         name for name, screen in _controller.states.items() if screen is None)
     return _controller, _surface

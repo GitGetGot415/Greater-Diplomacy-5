@@ -1,8 +1,30 @@
+import os
 import unittest
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 import main as game_main
+
+
+class HeadlessAudioTests(unittest.TestCase):
+    def test_test_setup_overrides_an_audible_sdl_driver(self):
+        from tests import configure_test_audio
+
+        with patch.dict(os.environ, {"SDL_AUDIODRIVER": "wasapi"}):
+            configure_test_audio()
+            self.assertEqual(os.environ["SDL_AUDIODRIVER"], "dummy")
+
+    def test_application_harness_boots_without_native_output_or_startup_music(self):
+        from tests import app_harness
+        import data.constants as c
+        import ui_elements
+
+        controller, _surface = app_harness.boot()
+        self.assertEqual(os.environ["SDL_AUDIODRIVER"], "dummy")
+        self.assertFalse(c.USE_SOLOUD)
+        self.assertIsNone(ui_elements.soloud_engine)
+        self.assertIsNone(controller.beepbox_stream)
+        self.assertEqual(controller.now_playing, "None")
 
 
 class AudioShutdownTests(unittest.TestCase):
