@@ -125,6 +125,14 @@ CREDITS_DATA = [
             {
                 "link_text": "GitGetGot415",
                 "info": "Made all the music",
+                "images": [
+                        {"path": "assets/music/Greater Diplomacy 1/icon.png", "text": "Greater Diplomacy 1"},
+                        {"path": "assets/music/Greater Diplomacy 2/icon.png", "text": "Greater Diplomacy 2"},
+                        {"path": "assets/music/Greater Diplomacy 3/icon.png", "text": "Greater Diplomacy 3"},
+                        {"path": "assets/music/Greater Diplomacy 4/icon.png", "text": "Greater Diplomacy 4"},
+                        {"path": "assets/music/Greater Diplomacy 5/icon.png", "text": "Greater Diplomacy 5"},
+                        {"path": "assets/music/Experimental/icon.png", "text": "Experimental"},
+                ],
                 "align": "left",
                 "links": [{"text": "GitHub", "url": "https://github.com/GitGetGot415"}]
             }
