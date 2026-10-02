@@ -132,6 +132,14 @@ feature working in one says nothing about the other.
   literal when the test is checking the rule rather than using a deliberately
   artificial fixture. A tuning adjustment should change the rule's source of
   truth without requiring unrelated test rewrites.
+- Tests must not freeze incidental relationships between real units in the
+  content library, such as identical stat dictionaries, equal costs, fixed stat
+  ratios, or one unit always being stronger or faster than another. Reading both
+  units from canonical data does not make such an assumption safe: either unit
+  may be tuned independently. Assert each unit's behavior against its own data,
+  or use deliberately artificial fixtures to test comparisons. Assert a fixed
+  relationship only when it is an explicit gameplay contract represented by a
+  canonical rule, and identify that contract in the test.
 - Treat player-facing UI copy, tutorial prose, labels, and other editable text
   as content rather than a test contract. Tests should verify structure,
   navigation, callbacks, icon wiring, layout, and behavior without asserting

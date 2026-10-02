@@ -62,15 +62,6 @@ class AerospaceRulesTests(unittest.TestCase):
                 # Obsolescence filters the default list, not custom build legality.
                 self.assertTrue(queries.is_unit_unlocked(obsolete, research))
 
-    def test_zeppelin_matches_current_biplane_bomber_stats(self):
-        library = queries.get_unit_library()
-        self.assertEqual(library["Zeppelin"], library["Biplane Bomber"])
-        self.assertEqual(library["Zeppelin"]["air_role"], "bomber")
-        self.assertFalse(queries.check_tech_requirements(
-            {"biplane": 1}, queries.get_tech_tree()["piston_fighter"]["req"]))
-        self.assertTrue(queries.check_tech_requirements(
-            {"biplane_bomber": 1}, queries.get_tech_tree()["piston_fighter"]["req"]))
-
     def test_legacy_aircraft_names_preserve_units_transports_and_queue(self):
         province = {"units": [{"type": old} for old in queries.LEGACY_AIRCRAFT_NAMES],
                     "unit_queue": [{"unit_type": old, "turns_remaining": 2}
