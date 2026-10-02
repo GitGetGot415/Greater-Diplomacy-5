@@ -13,11 +13,11 @@ agrees about the same behavior.
 2. Check `git status` and preserve unrelated user changes. Never discard or
    overwrite work just to obtain a clean tree.
 3. Read the relevant design notes:
-   - `context/ai_stuff.txt` for AI, combat, tactical-player, spectator, or LLM
+   - `documentation/ai_stuff.txt` for AI, combat, tactical-player, spectator, or LLM
      work.
-   - `context/diplo_stuff.txt` for diplomacy, proposals, messages, guarantees,
+   - `documentation/diplo_stuff.txt` for diplomacy, proposals, messages, guarantees,
      volunteers, military attaches, factions, war, or peace.
-   - `context/context_prompts.txt` for the original maintainability preferences
+   - `documentation/context_prompts.txt` for the original maintainability preferences
      summarized and made enforceable in this guide.
 4. Identify the canonical rule or data owner. Extend it and make consumers use
    it instead of independently recreating the rule.
@@ -76,7 +76,7 @@ assumption.
 | Other play modes | Does it respect single-player, hotseat, spectator permissions, tactical one-division control, AI-controlled nations, and editor mode? | `screens/menu_screens/map.py`, affected screens, `data/queries.py` |
 | Content tools | Must scenario settings, map/editor UI, scripted-event actions/conditions, or base data be able to author the feature? | `screens/editor_screens/`, scenario screens, scenario/map JSON |
 | Builds | Are new modules, packages, data files, dependencies, or dynamically imported screens included everywhere? | compilation files listed below |
-| Documentation/tests | Which invariant and failure mode need regression coverage? Which design note or user-facing document is now stale? | `tests/`, `context/`, `README.md` |
+| Documentation/tests | Which invariant and failure mode need regression coverage? Which design note or user-facing document is now stale? | `tests/`, `documentation/`, `README.md` |
 
 ### Mandatory multiplayer model
 
@@ -213,10 +213,10 @@ feature working in one says nothing about the other.
 - If a second system needs to value a unit, technology, proposal, or diplomatic
   outcome, reuse the canonical AI/rules valuation instead of inventing another.
 - Preserve prompt-prefix sharing, turn-budget cancellation, and fairness rules
-  described in `context/ai_stuff.txt` when changing LLM work.
+  described in `documentation/ai_stuff.txt` when changing LLM work.
 - Diplomacy has precise message timing, cancellation, crossing-request, and
-  unilateral/bilateral semantics. Read `context/diplo_stuff.txt` and test both
-  directions and delayed resolution before changing it.
+  unilateral/bilateral semantics. Read `documentation/diplo_stuff.txt` and test
+  both directions and delayed resolution before changing it.
 - Diplomacy triggered by UI, AI, scripted events, editor setup, tournament
   import, and real-time commands should converge on the same legality and effect
   functions.
@@ -265,9 +265,9 @@ map UI, and add or revise coverage for the new tutorial behavior.
 
 Update relevant documentation, comments, examples, tests, schemas, and UI copy
 in the same change as the implementation. In particular, keep
-`context/ai_stuff.txt` and `context/diplo_stuff.txt` synchronized with the rules
-they explain. If behavior displayed to the player changes, update every place
-that describes or previews it.
+`documentation/ai_stuff.txt` and `documentation/diplo_stuff.txt` synchronized
+with the rules they explain. If behavior displayed to the player changes,
+update every place that describes or previews it.
 
 When handing work back, summarize the behavior changed and verification
 performed. Do not dump entire files or produce a generic GitHub-style changelog;

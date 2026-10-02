@@ -11,6 +11,7 @@ venv/
 !base_maps/**
 !scenarios/**
 !context/**
+!documentation/**
 !version.txt
 .DS_Store
 .eggs

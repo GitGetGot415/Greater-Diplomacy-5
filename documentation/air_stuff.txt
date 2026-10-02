@@ -2,12 +2,7 @@ AIRCRAFT RULES
 ==============
 
 Unit data owns air_role, air_range_px, air_attack_multiplier, air_consumable and
-air_interception_immune. production_group remains presentation metadata. Current
-listed mission pixel ranges: Biplane 180, Piston Fighter 300, Piston Bomber 400, V1 350,
-V2 500 and Jet Fighter 450. Existing maps are approximately 800-1900 pixels
-wide, so these are regional ranges. Costs and research dates/gates are unchanged.
-Fighter health/attack: 300/35, 450/50, 600/70 respectively; bomber 1000/180;
-V1 250/320; V2 300/450. All fighters have an 8x air-only damage modifier.
+air_interception_immune. production_group remains presentation metadata.
 
 queries.build_air_geometry indexes actual ID-map pixels as horizontal runs at
 load/generation boundaries. Pixel footprints are closed unit rectangles, so
