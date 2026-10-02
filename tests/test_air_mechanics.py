@@ -47,7 +47,7 @@ def tile(game, pid, x, owner="A", water=False, width=4, center=None):
     return province
 
 
-def wing(base, name="Piston Bomber", owner="A", order=None):
+def wing(base, name="Monoplane Bomber", owner="A", order=None):
     unit = queries.create_unit_dict(name, owner, queries.get_unit_library())
     if order:
         unit["order"] = dict(order, base_id=base["id"])
@@ -163,11 +163,11 @@ class AirResolutionTests(unittest.TestCase):
         self.target = tile(self.game, 2, 30, owner="B")
         self.defender_base = tile(self.game, 3, 50, owner="B")
 
-    def attack(self, name="Piston Bomber"):
+    def attack(self, name="Monoplane Bomber"):
         return wing(self.base, name, order={"type": "AIR_ATTACK", "target_id": 2})
 
     def patrol(self, priority="WEAKEST"):
-        return wing(self.defender_base, "Piston Fighter", "B",
+        return wing(self.defender_base, "Monoplane Fighter", "B",
                     {"type": "AIR_PATROL", "priority": priority})
 
     def test_once_only_returns_exact_base_and_retains_damage(self):
@@ -203,7 +203,7 @@ class AirResolutionTests(unittest.TestCase):
         self.attack()
         self.patrol()
         third_base = tile(self.game, 4, 70, owner="C")
-        wing(third_base, "Piston Fighter", "C", {"type": "AIR_PATROL"})
+        wing(third_base, "Monoplane Fighter", "C", {"type": "AIR_PATROL"})
         battles = []
         build = combat_rules.build_battle
         def record(*args, **kwargs):
@@ -216,8 +216,8 @@ class AirResolutionTests(unittest.TestCase):
         self.assertEqual(battles[0].lanes[0].slots, combat_rules.lane_slots(3, c.COMBAT_WIDTH))
 
     def test_fighter_multiplier_only_against_air_and_not_trucks(self):
-        fighter = wing(self.base, "Piston Fighter")
-        aircraft = wing(self.target, "Piston Bomber", "B")
+        fighter = wing(self.base, "Monoplane Fighter")
+        aircraft = wing(self.target, "Monoplane Bomber", "B")
         ground = wing(self.target, "Infantry Type 1910", "B")
         air_attack = combat_rules.damage_shots([fighter], [aircraft], air_to_air=True)[0][1]
         ground_attack = combat_rules.damage_shots([fighter], [ground])[0][1]
@@ -302,7 +302,7 @@ class AirResolutionTests(unittest.TestCase):
             for _ in range(count):
                 wing(self.base, order={"type": "AIR_ATTACK", "target_id": target["id"]})
         first = self.patrol()
-        second = wing(other_base, "Piston Fighter", "B", {"type": "AIR_PATROL"})
+        second = wing(other_base, "Monoplane Fighter", "B", {"type": "AIR_PATROL"})
         for defender in (first, second):
             defender["health"] = defender["max_health"] = sum(
                 unit["attack"] for unit in self.base["units"]) * 2
@@ -397,14 +397,14 @@ class AirIntegrationTests(unittest.TestCase):
         self.assertNotIn(self.plane, target["units"])
 
     def test_legacy_patrol_defaults_and_save_transport_roundtrip(self):
-        fighter = wing(self.base, "Biplane", order={"type": "AIR_PATROL"})
+        fighter = wing(self.base, "Biplane Fighter", order={"type": "AIR_PATROL"})
         queries.normalize_air_orders(self.game.map_data)
         self.assertEqual(fighter["order"]["priority"], queries.AIR_DEFAULT_PRIORITY)
         queries.load_transport(self.plane, "Truck")
         saved = json.loads(json.dumps(queries.build_save_dict(self.game)))
         recovered = saved["provinces"][self.base["json_key"]]["units"]
         queries.revert_transport(recovered[0])
-        self.assertEqual(recovered[0]["type"], "Piston Bomber")
+        self.assertEqual(recovered[0]["type"], "Monoplane Bomber")
         self.assertEqual(recovered[1]["order"], fighter["order"])
         self.assertNotIn("_air_geometry", saved)
 
@@ -435,7 +435,7 @@ class AirIntegrationTests(unittest.TestCase):
         self.game.show_feedback = Mock()
         screen.target_province = self.base
         screen.bombarding_unit_province = self.base
-        fighter = wing(self.base, "Biplane")
+        fighter = wing(self.base, "Biplane Fighter")
         screen.cycle_air_patrol(1, self.base)
         self.assertEqual(fighter["order"]["priority"], queries.AIR_DEFAULT_PRIORITY)
         screen.cycle_air_patrol(1, self.base)
@@ -490,7 +490,7 @@ class AirIntegrationTests(unittest.TestCase):
             session.sync_draft(host.player_id, session.turn_number, commands)
 
     def test_snapshot_hides_orders_and_fogged_units_including_initial_geometry(self):
-        enemy = wing(self.target, "Piston Fighter", "B", {"type": "AIR_PATROL"})
+        enemy = wing(self.target, "Monoplane Fighter", "B", {"type": "AIR_PATROL"})
         remote = tile(self.game, 3, 1000, owner="B")
         hidden = wing(remote, "V2 Rocket", "B")
         saved = queries.build_save_dict(self.game)
@@ -508,7 +508,7 @@ class AirIntegrationTests(unittest.TestCase):
         self.assertEqual(payload["state"]["game_state"], projected)
 
     def test_realtime_stable_id_handles_filtered_client_index(self):
-        foreign = wing(self.base, "Piston Bomber", "B")
+        foreign = wing(self.base, "Monoplane Bomber", "B")
         self.game.nation_data["A"]["at_war_with"] = ["C"]
         self.game.nation_data["B"]["at_war_with"] = ["C"]
         self.base["units"] = [foreign, self.plane]
@@ -537,7 +537,7 @@ class AirIntegrationTests(unittest.TestCase):
             self.assertEqual(self.plane["order"]["type"], "AIR_ATTACK")
 
     def test_tournament_rejects_foreign_duplicate_malformed_and_out_of_range_orders(self):
-        enemy = wing(self.target, "Biplane", "B")
+        enemy = wing(self.target, "Biplane Fighter", "B")
         remote = tile(self.game, 3, 2000, owner="B")
         valid = {"unit_id": self.plane["unit_id"], "order": {"type": "AIR_ATTACK", "target_id": 2}}
         bad = ([dict(valid, unit_id=enemy["unit_id"])], [valid, valid],
@@ -580,8 +580,8 @@ class AirIntegrationTests(unittest.TestCase):
             self.assertEqual(self.plane["order"], {})
 
     def test_fighter_ground_strike_never_receives_air_bonus(self):
-        attacker = wing(self.base, "Piston Fighter", order={"type": "AIR_ATTACK", "target_id": 2})
-        based_enemy = wing(self.target, "Piston Bomber", "B")
+        attacker = wing(self.base, "Monoplane Fighter", order={"type": "AIR_ATTACK", "target_id": 2})
+        based_enemy = wing(self.target, "Monoplane Bomber", "B")
         before = based_enemy["health"]
         air_processor.process_air_orders(self.game)
         expected = attacker["attack"] * combat_rules.effective_damage_multiplier(attacker, self.game.nation_data)
@@ -609,7 +609,7 @@ class AirAppSmokeTests(unittest.TestCase):
         game = world()
         base = tile(game, 1, 8)
         tile(game, 2, 30, owner="B")
-        fighter = wing(base, "Biplane", order={"type": "AIR_PATROL", "priority": "STRONGEST"})
+        fighter = wing(base, "Biplane Fighter", order={"type": "AIR_PATROL", "priority": "STRONGEST"})
         rocket = wing(base, "V2 Rocket")
         queries.load_transport(rocket, "Truck")
         game.raw_json_data = {p["json_key"]: dict(p) for p in game.map_data.values()}
@@ -653,7 +653,7 @@ class AirAppSmokeTests(unittest.TestCase):
             loaded.player_country = "A"
             base = loaded.id_to_province[1]
             fighter = base["units"][0]
-            duplicate = wing(base, "Biplane", order={"type": "AIR_PATROL"})
+            duplicate = wing(base, "Biplane Fighter", order={"type": "AIR_PATROL"})
             loaded.select_map_units([fighter, duplicate])
             screen = Orders_Screen()
             screen.start_with_province(base, loaded)
@@ -836,7 +836,7 @@ class AirAppSmokeTests(unittest.TestCase):
             loaded = Map(load_path=path, force_editor=True, skip_initial_income=True)
             loaded.secondary_mode = "BLANK"
             loaded.editor_mode = "UNIT"
-            loaded.brush_unit = "Piston Bomber"
+            loaded.brush_unit = "Monoplane Bomber"
             base = loaded.id_to_province[1]
             event = pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(600, 400), button=1)
             for terrain, allowed in (("Plains", True), (c.WATER_TERRAINS[0], False)):

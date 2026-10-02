@@ -57,7 +57,7 @@ def process_national_research(map_screen):
                     country_data["research_progress"].pop(tech_key, None)
                 
                 if country_name == map_screen.player_country:
-                    map_screen.show_feedback(f"TECH FINISHED: {tech_key.replace('_', ' ').title()}")
+                    map_screen.show_feedback(f"TECH FINISHED: {queries.get_tech_display_name(tech_key)}")
                 
                 # Remove completed tech from queue
                 queue.pop(i)

@@ -73,9 +73,9 @@ These indexes and caches are presentation/planning data, never save fields.
 
 Aerospace remains a separate research/production category. air_role and
 air_range_px in unit_data.json define flight, independently of production_group
-and land speed. Biplane, Piston Fighter and Jet Fighter patrol; Piston Bomber
-flies reusable strikes. V1 Flying Bomb and V2 Rocket are consumed by a completed
-strike, and V2 alone bypasses interception. Jet Engine remains a research gate.
+and land speed. Fighters patrol; bombers fly reusable strikes. V1 Flying Bomb
+and V2 Rocket are consumed by a completed strike, and V2 alone bypasses
+interception. Jet Engine remains a research gate.
 Listed air range is strike/patrol reach; reusable reposition reaches twice that
 distance because it does not reserve a return leg.
 The heuristic aircraft pass generates only canonical legal orders. It strikes

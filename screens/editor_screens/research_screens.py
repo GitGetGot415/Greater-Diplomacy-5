@@ -120,7 +120,7 @@ class Research_Edit_Screen(MapOverlayScreen):
             for i, y in self.layout_list_rows(len(self.techs), self.ROW_HEIGHT, row_top, view_h=view_h,
                                               cull_top=p.y + 60, cull_bottom=p.bottom - 70):
                 tech = self.techs[i]
-                label = font.render(tech.replace("_", " ").title(), True, c.UI_TEXT_BRIGHT)
+                label = font.render(queries.get_tech_display_name(tech), True, c.UI_TEXT_BRIGHT)
                 surface.blit(label, (p.x + 20, y + 4))
 
                 kind = self.tech_state[tech]

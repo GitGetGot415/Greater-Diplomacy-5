@@ -1451,6 +1451,11 @@ def get_fort_defense_bonus(province, unit, nation_data, combat_active=None):
         return 0
     return level * c.FORT_DEFENSE_PER_LEVEL
 
+def get_tech_display_name(tech_key):
+    """Keep research labels independent of stable save/protocol IDs."""
+    return get_tech_tree().get(tech_key, {}).get("display_name", tech_key.replace("_", " ").title())
+
+
 def get_tech_unlocks(tech_key, level):
     """Returns a list of strings detailing what this tech unlocks."""
     unlocks = []
@@ -4277,6 +4282,34 @@ def ground_combat_profile(unit):
     profile = dict(unit)
     load_transport(profile, "Truck")
     return profile
+
+
+LEGACY_AIRCRAFT_NAMES = {
+    "Biplane": "Biplane Fighter",
+    "Piston Fighter": "Monoplane Fighter",
+    "Piston Bomber": "Monoplane Bomber",
+}
+
+
+def migrate_aircraft_names(map_data):
+    """Preserve old saved aircraft, transports and unfinished production."""
+    for province in map_data.values():
+        for unit in province.get("units", []):
+            for field in ("type", "original_type"):
+                name = unit.get(field)
+                if name in LEGACY_AIRCRAFT_NAMES:
+                    unit[field] = LEGACY_AIRCRAFT_NAMES[name]
+                elif isinstance(name, str):
+                    for carrier in ("Truck", "Convoy"):
+                        prefix = carrier + " ("
+                        if name.startswith(prefix) and name.endswith(")"):
+                            inner = name[len(prefix):-1]
+                            if inner in LEGACY_AIRCRAFT_NAMES:
+                                unit[field] = prefix + LEGACY_AIRCRAFT_NAMES[inner] + ")"
+        for item in province.get("unit_queue", []):
+            name = item.get("unit_type")
+            if name in LEGACY_AIRCRAFT_NAMES:
+                item["unit_type"] = LEGACY_AIRCRAFT_NAMES[name]
 
 
 def migrate_aircraft_stats(map_data):

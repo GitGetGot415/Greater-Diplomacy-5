@@ -323,12 +323,13 @@ UNIT_SECTIONS = [
         }, naval_unit=True),
     ],
     [
-        UnitFamily('Biplane', single(), {'health': 300, 'attack': 35, 'defense': 0, 'speed': 1, 'cost_materials': 500, 'cost_manpower': 1000, 'cost_fuel': 0, 'production_time': 2, 'production_group': 'Aerospace', 'air_role': 'fighter', 'air_range_px': 180, 'air_attack_multiplier': 8}),
-        UnitFamily('Piston Fighter', single(), {'health': 450, 'attack': 50, 'defense': 0, 'speed': 1, 'cost_materials': 500, 'cost_manpower': 1000, 'cost_fuel': 0, 'production_time': 2, 'production_group': 'Aerospace', 'air_role': 'fighter', 'air_range_px': 300, 'air_attack_multiplier': 8}),
-        UnitFamily('Piston Bomber', single(), {'health': 1000, 'attack': 180, 'defense': 0, 'speed': 1, 'cost_materials': 500, 'cost_manpower': 1000, 'cost_fuel': 0, 'production_time': 2, 'production_group': 'Aerospace', 'air_role': 'bomber', 'air_range_px': 400}),
-        UnitFamily('V1 Flying Bomb', single(), {'health': 250, 'attack': 320, 'defense': 0, 'speed': 1, 'cost_materials': 500, 'cost_manpower': 1000, 'cost_fuel': 0, 'production_time': 2, 'production_group': 'Aerospace', 'air_role': 'strike', 'air_range_px': 350, 'air_consumable': True}),
-        UnitFamily('V2 Rocket', single(), {'health': 300, 'attack': 450, 'defense': 0, 'speed': 1, 'cost_materials': 500, 'cost_manpower': 1000, 'cost_fuel': 0, 'production_time': 2, 'production_group': 'Aerospace', 'air_role': 'strike', 'air_range_px': 500, 'air_consumable': True, 'air_interception_immune': True}),
-        UnitFamily('Jet Fighter', single(), {'health': 600, 'attack': 70, 'defense': 0, 'speed': 1, 'cost_materials': 500, 'cost_manpower': 1000, 'cost_fuel': 0, 'production_time': 2, 'production_group': 'Aerospace', 'air_role': 'fighter', 'air_range_px': 450, 'air_attack_multiplier': 8}),
+        UnitFamily('Biplane Fighter', single(), {'health': 1000, 'attack': 50, 'defense': 0, 'speed': 1, 'cost_materials': 500, 'cost_manpower': 1000, 'cost_fuel': 0, 'production_time': 3, 'production_group': 'Aerospace', 'air_role': 'fighter', 'air_range_px': 50, 'air_attack_multiplier': 10}),
+        UnitFamily('Biplane Bomber', single(), {'health': 1000, 'attack': 50, 'defense': 0, 'speed': 1, 'cost_materials': 500, 'cost_manpower': 1000, 'cost_fuel': 0, 'production_time': 3, 'production_group': 'Aerospace', 'air_role': 'bomber', 'air_range_px': 50, 'air_attack_multiplier': 10}),
+        UnitFamily('Monoplane Fighter', single(), {'health': 2000, 'attack': 100, 'defense': 0, 'speed': 1, 'cost_materials': 500, 'cost_manpower': 1000, 'cost_fuel': 0, 'production_time': 4, 'production_group': 'Aerospace', 'air_role': 'fighter', 'air_range_px': 100, 'air_attack_multiplier': 8}),
+        UnitFamily('Monoplane Bomber', single(), {'health': 3000, 'attack': 500, 'defense': 0, 'speed': 1, 'cost_materials': 500, 'cost_manpower': 1000, 'cost_fuel': 0, 'production_time': 6, 'production_group': 'Aerospace', 'air_role': 'bomber', 'air_range_px': 150}),
+        UnitFamily('V1 Flying Bomb', single(), {'health': 500, 'attack': 800, 'defense': 0, 'speed': 1, 'cost_materials': 500, 'cost_manpower': 1000, 'cost_fuel': 0, 'production_time': 2, 'production_group': 'Aerospace', 'air_role': 'strike', 'air_range_px': 200, 'air_consumable': True}),
+        UnitFamily('V2 Rocket', single(), {'health': 1000, 'attack': 1200, 'defense': 0, 'speed': 1, 'cost_materials': 500, 'cost_manpower': 1000, 'cost_fuel': 0, 'production_time': 4, 'production_group': 'Aerospace', 'air_role': 'strike', 'air_range_px': 300, 'air_consumable': True, 'air_interception_immune': True}),
+        UnitFamily('Jet Fighter', single(), {'health': 3000, 'attack': 1000, 'defense': 0, 'speed': 1, 'cost_materials': 500, 'cost_manpower': 1000, 'cost_fuel': 0, 'production_time': 8, 'production_group': 'Aerospace', 'air_role': 'fighter', 'air_range_px': 200, 'air_attack_multiplier': 4}),
     ],
 ]
 
@@ -543,9 +544,10 @@ RESEARCH_SECTIONS = [
                                 "years": years_range(1911, 1, 100)}),
     ],
     [
-        ('biplane', {'category': 'AEROSPACE', 'display_name': 'Biplane', 'max_lvl': 1, 'cost': 900, 'req': {}, 'years': [1910]}),
-        ('piston_fighter', {'category': 'AEROSPACE', 'display_name': 'Piston Fighter', 'max_lvl': 1, 'cost': 900, 'req': {'biplane': 1}, 'years': [1930]}),
-        ('piston_bomber', {'category': 'AEROSPACE', 'display_name': 'Piston Bomber', 'max_lvl': 1, 'cost': 900, 'req': {'piston_fighter': 1}, 'years': [1935]}),
+        ('biplane', {'category': 'AEROSPACE', 'display_name': 'Biplane Fighter', 'max_lvl': 1, 'cost': 900, 'req': {}, 'years': [1910]}),
+        ('biplane_bomber', {'category': 'AEROSPACE', 'display_name': 'Biplane Bomber', 'max_lvl': 1, 'cost': 900, 'req': {'biplane': 1}, 'years': [1915]}),
+        ('piston_fighter', {'category': 'AEROSPACE', 'display_name': 'Monoplane Fighter', 'max_lvl': 1, 'cost': 900, 'req': {'biplane_bomber': 1}, 'years': [1930]}),
+        ('piston_bomber', {'category': 'AEROSPACE', 'display_name': 'Monoplane Bomber', 'max_lvl': 1, 'cost': 900, 'req': {'piston_fighter': 1}, 'years': [1935]}),
         ('v1_flying_bomb', {'category': 'AEROSPACE', 'display_name': 'V1 Flying Bomb', 'max_lvl': 1, 'cost': 900, 'req': {'piston_bomber': 1}, 'years': [1940]}),
         ('v2_rocket', {'category': 'AEROSPACE', 'display_name': 'V2 Rocket', 'max_lvl': 1, 'cost': 900, 'req': {'v1_flying_bomb': 1}, 'years': [1945]}),
         ('jet_engine', {'category': 'AEROSPACE', 'display_name': 'Jet Engine', 'max_lvl': 1, 'cost': 900, 'req': {'piston_bomber': 1}, 'years': [1945]}),

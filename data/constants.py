@@ -1340,6 +1340,10 @@ TANK_GROUP_EXTRAS = [
 # "heavy_artillery" rides the plain "artillery" tech instead of a track of its
 # own, so researching Artillery unlocks both variants at the same levels.
 UNIT_TECH_KEY_OVERRIDES = {
+    # Keep saved research IDs stable when aircraft display names change.
+    "biplane_fighter": "biplane",
+    "monoplane_fighter": "piston_fighter",
+    "monoplane_bomber": "piston_bomber",
     "motorized_infantry_type": "motorized_infantry",
     "mechanized_infantry_type": "mechanized_infantry",
     "infantry_fighting_vehicle_type": "infantry_fighting_vehicle",
