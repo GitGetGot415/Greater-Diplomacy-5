@@ -152,6 +152,7 @@ class UnitViewControlTests(unittest.TestCase):
         self.game.selected_province = None
         self.game.unit_view_filter = queries.DEFAULT_UNIT_VIEW_FILTER
         self.game.tactical_mode = False
+        self.game.set_play_view_defaults()
         update_button_states(self.game)
 
     def test_defaults_callbacks_icons_and_shared_bar_layout(self):
@@ -163,11 +164,17 @@ class UnitViewControlTests(unittest.TestCase):
         self.assertEqual([button.is_selected for button in buttons], [False, False, False, True])
         bar = ui_bars.map_unit_view_bar_rect(game)
         self.assertTrue(all(bar.contains(button.rect) for button in buttons))
-        self.assertTrue(all(left.rect.right < right.rect.left
-                            for left, right in zip(buttons, buttons[1:])))
+        self.assertTrue(all(top.rect.bottom < bottom.rect.top
+                            and top.rect.centerx == bottom.rect.centerx
+                            for top, bottom in zip(buttons, buttons[1:])))
+        self.assertGreaterEqual(bar.left, game.raised_rect.right)
+        self.assertLessEqual(bar.bottom, game.ui_background_rect.top)
+        for button in buttons:
+            self.assertGreater(max(button.image.get_size()), min(button.rect.size) / 2)
+            self.assertLess(max(button.image.get_size()), min(button.rect.size))
         mini = minimap.minimap_rect(game, c.SCREEN_WIDTH, c.SCREEN_HEIGHT)
-        self.assertLess(mini.bottom, bar.top)
-        self.assertLessEqual(bar.bottom, game.btn_next_turn.rect.top)
+        self.assertEqual(mini.bottom, c.SCREEN_HEIGHT - minimap.MINIMAP_MARGIN_Y)
+        self.assertFalse(mini.colliderect(bar))
         self.assertLessEqual(map_top_right_layout.army_tray_rect(game, 100).bottom, mini.top)
         self.assertTrue(event_handler.map_ui_bar_at_position(game, bar.center))
         for view_filter, button in game.unit_view_buttons.items():
@@ -193,6 +200,19 @@ class UnitViewControlTests(unittest.TestCase):
         update_button_states(game)
         self.assertFalse(any(button.visible for button in buttons))
         self.assertIsNone(ui_bars.map_unit_view_bar_rect(game))
+
+    def test_filters_and_bar_only_appear_in_units_view(self):
+        game = self.game
+        mini = minimap.minimap_rect(game, c.SCREEN_WIDTH, c.SCREEN_HEIGHT)
+        for mode in ("UNITS", "ECONOMY", "RESOURCES", "BLANK", "UNITS"):
+            game.set_view_mode(mode)
+            update_button_states(game)
+            self.assertEqual([button.visible for button in game.unit_view_buttons.values()],
+                             [mode == "UNITS"] * len(queries.UNIT_VIEW_FILTERS))
+            self.assertEqual(ui_bars.map_unit_view_bar_rect(game) is not None, mode == "UNITS")
+            self.assertEqual(event_handler.map_ui_bar_at_position(
+                game, game.unit_view_bar_rect.center), mode == "UNITS")
+            self.assertEqual(minimap.minimap_rect(game, c.SCREEN_WIDTH, c.SCREEN_HEIGHT), mini)
 
     def test_order_arrows_follow_the_unit_filter(self):
         game = self.game

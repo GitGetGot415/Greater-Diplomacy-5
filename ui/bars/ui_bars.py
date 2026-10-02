@@ -371,6 +371,7 @@ def map_unit_view_bar_rect(map_screen):
     # Older tools/test doubles do not construct the map's filter controls.
     buttons = getattr(map_screen, "unit_view_buttons", {})
     if (not any(button.visible for button in buttons.values())
+            or map_screen.secondary_mode != "UNITS"
             or getattr(map_screen, "hide_raised_rect", False)):
         return None
     return map_screen.unit_view_bar_rect
@@ -389,7 +390,7 @@ def draw_ui_bars(map_screen, surface):
     draw_textured_rect(surface, map_screen.bot_bar_rect, bot_bg, mode="tile")
     unit_view_rect = map_unit_view_bar_rect(map_screen)
     if unit_view_rect is not None:
-        draw_textured_rect(surface, unit_view_rect, bot_bg, mode="tile")
+        draw_textured_rect(surface, unit_view_rect, side_bg, mode="tile")
     
     if not map_screen.selection_mode and not map_screen.hide_raised_rect:
         draw_textured_rect(surface, map_screen.raised_rect, side_bg, mode="tile")

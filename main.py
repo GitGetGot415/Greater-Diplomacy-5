@@ -271,10 +271,11 @@ class Controller:
         symbol_loader.load_symbols()
 
         ui_elements.UI_ICONS = {
-            "naval": symbol_loader.get_symbol("Naval", 1.5),
-            "land": symbol_loader.get_symbol("Land", 1.5),
-            "air": symbol_loader.get_symbol("Air", 1.5),
-            "all": symbol_loader.get_symbol("All", 1.5),
+            # Map controls fit these native-size sources to their button bounds.
+            "naval": symbol_loader.get_symbol("Naval", 2),
+            "land": symbol_loader.get_symbol("Land", 2),
+            "air": symbol_loader.get_symbol("Air", 2),
+            "all": symbol_loader.get_symbol("All", 2),
             "unit": symbol_loader.get_symbol("Infantry", 2),
             "industry": symbol_loader.get_symbol("Factory", 2),
             "blank": symbol_loader.get_symbol("Nothing", 1),

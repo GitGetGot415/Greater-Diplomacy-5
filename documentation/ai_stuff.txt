@@ -95,7 +95,8 @@ when its pixels can be reused; hotseat blanking and player changes still apply.
 Incremental editor painting invalidates the affected surface, and Refresh Maps
 forces a full rebuild. No map sweeps were added to planning-frame rendering.
 
-The map's Naval / Land / Air / All buttons only filter local presentation,
+The map's Naval / Land / Air / All buttons form a vertical strip beside the
+lower left sidebar, visible only in Units view. They only filter local presentation,
 including unit stacks, strategic army markers and order arrows. They use the
 current unit form: Convoys are naval and Trucks are land, including carried
 aircraft. All is selected whenever a game opens. Filtering clears the local

@@ -20,7 +20,7 @@ from ui import event_handler
 # Game Logic & Rendering Submodules
 import ui_elements
 from ui_elements import Button, Slider
-from ui import diplomatic_popups, spectator_menus, editor_menus, army_panel, minimap
+from ui import diplomatic_popups, spectator_menus, editor_menus, army_panel
 from map_logic.camera.camera_handler import MapCamera
 from map_logic.camera import camera_handler
 from map_logic.diplomacy import (diplomacy_logic, guarantees, military_attaches,
@@ -75,11 +75,17 @@ COUNTRY_FOCUS_UNIT_ZOOM_MARGIN = 0.1
 EDITOR_BOT_BTN_START_X = c.SCREEN_WIDTH - 120
 EDITOR_BOT_BTN_STEP_X = 110
 
-# --- Unit filters beneath the minimap ---
-UNIT_VIEW_BAR_HEIGHT = 56
-UNIT_VIEW_BUTTON_PADDING_X = 10
+# --- Vertical unit filters beside the lower left sidebar ---
+UNIT_VIEW_BUTTON_PADDING_X = 8
 UNIT_VIEW_BUTTON_PADDING_Y = 8
-UNIT_VIEW_BUTTON_STEP_X = 60
+UNIT_VIEW_BUTTON_GAP_Y = 10
+UNIT_VIEW_ICON_PADDING = 4
+UNIT_VIEW_BUTTON_WIDTH, UNIT_VIEW_BUTTON_HEIGHT = c.SIZES["small_square"]
+UNIT_VIEW_BUTTON_STEP_Y = UNIT_VIEW_BUTTON_HEIGHT + UNIT_VIEW_BUTTON_GAP_Y
+UNIT_VIEW_BAR_WIDTH = UNIT_VIEW_BUTTON_WIDTH + 2 * UNIT_VIEW_BUTTON_PADDING_X
+UNIT_VIEW_BAR_HEIGHT = (len(queries.UNIT_VIEW_FILTERS) * UNIT_VIEW_BUTTON_HEIGHT
+                        + (len(queries.UNIT_VIEW_FILTERS) - 1) * UNIT_VIEW_BUTTON_GAP_Y
+                        + 2 * UNIT_VIEW_BUTTON_PADDING_Y)
 
 # --- Top bar, right-aligned ---
 TOP_BAR_BUTTON_GAP = 5
@@ -150,18 +156,27 @@ def render_buttons(map_screen):
     map_screen.btn_toggle_names = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 4, VIEW_BTN_ROW1_Y, "small_square", "blue", "Names", map_screen.toggle_country_names, image=icons.get("names"), show_text=False)
 
     map_screen.unit_view_bar_rect = pygame.Rect(
-        c.SCREEN_WIDTH - minimap.MINIMAP_WIDTH - minimap.MINIMAP_MARGIN_X,
-        c.SCREEN_HEIGHT - c.BOT_UI_HEIGHT - UNIT_VIEW_BAR_HEIGHT,
-        minimap.MINIMAP_WIDTH, UNIT_VIEW_BAR_HEIGHT)
+        map_screen.raised_rect.right,
+        map_screen.ui_background_rect.top - UNIT_VIEW_BAR_HEIGHT,
+        UNIT_VIEW_BAR_WIDTH, UNIT_VIEW_BAR_HEIGHT)
     map_screen.unit_view_buttons = {}
     for index, view_filter in enumerate(queries.UNIT_VIEW_FILTERS):
+        icon = icons.get(view_filter.lower())
+        if icon is not None:
+            # Fit the pixel art once during construction, keeping its aspect
+            # ratio and leaving room for the selected button's border.
+            scale = min((UNIT_VIEW_BUTTON_WIDTH - 2 * UNIT_VIEW_ICON_PADDING) / icon.get_width(),
+                        (UNIT_VIEW_BUTTON_HEIGHT - 2 * UNIT_VIEW_ICON_PADDING) / icon.get_height())
+            icon = pygame.transform.scale(icon, (
+                max(1, round(icon.get_width() * scale)),
+                max(1, round(icon.get_height() * scale))))
         map_screen.unit_view_buttons[view_filter] = Button(
-            map_screen.unit_view_bar_rect.x + UNIT_VIEW_BUTTON_PADDING_X
-            + index * UNIT_VIEW_BUTTON_STEP_X,
-            map_screen.unit_view_bar_rect.y + UNIT_VIEW_BUTTON_PADDING_Y,
+            map_screen.unit_view_bar_rect.x + UNIT_VIEW_BUTTON_PADDING_X,
+            map_screen.unit_view_bar_rect.y + UNIT_VIEW_BUTTON_PADDING_Y
+            + index * UNIT_VIEW_BUTTON_STEP_Y,
             "small_square", "blue", view_filter.title(),
             lambda view_filter=view_filter: map_screen.set_unit_view_filter(view_filter),
-            image=icons.get(view_filter.lower()), show_text=False)
+            image=icon, show_text=False)
 
     # ==================================================================== #
     #                        LEFT & BOTTOM UI BARS                         #
@@ -806,7 +821,9 @@ def update_button_states(map_screen):
         # Hide/disable the button if we are thinking
         map_screen.btn_next_turn.visible = not is_sel and not is_thinking
         for view_filter, button in map_screen.unit_view_buttons.items():
-            button.visible = map_screen.btn_next_turn.visible and not map_screen.hide_raised_rect
+            button.visible = (map_screen.btn_next_turn.visible
+                              and map_screen.secondary_mode == "UNITS"
+                              and not map_screen.hide_raised_rect)
             button.is_selected = view_filter == map_screen.unit_view_filter
         if getattr(map_screen, "realtime_multiplayer", False):
             session = map_screen.realtime_session

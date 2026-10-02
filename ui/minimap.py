@@ -1,6 +1,5 @@
 import pygame
 import data.constants as c
-from ui.bars import ui_bars
 
 # ==========================================
 # LAYOUT
@@ -9,7 +8,6 @@ from ui.bars import ui_bars
 MINIMAP_WIDTH = 240
 MINIMAP_MARGIN_X = 20
 MINIMAP_MARGIN_Y = 80
-MINIMAP_UNIT_VIEW_GAP = 10
 MINIMAP_BG_COLOR = (10, 10, 10)
 MINIMAP_BORDER_COLOR = (100, 100, 100)
 MINIMAP_VIEWBOX_COLOR = (255, 255, 0)
@@ -20,11 +18,8 @@ def minimap_rect(map_screen, screen_width, screen_height):
     map_aspect = map_screen.map_h / map_screen.map_w
     mini_w = MINIMAP_WIDTH
     mini_h = int(mini_w * map_aspect)
-    unit_view_rect = ui_bars.map_unit_view_bar_rect(map_screen)
-    bottom = (unit_view_rect.top - MINIMAP_UNIT_VIEW_GAP
-              if unit_view_rect is not None else screen_height - MINIMAP_MARGIN_Y)
     return pygame.Rect(screen_width - mini_w - MINIMAP_MARGIN_X,
-                       bottom - mini_h,
+                       screen_height - mini_h - MINIMAP_MARGIN_Y,
                        mini_w, mini_h)
 
 

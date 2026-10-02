@@ -97,10 +97,10 @@ ui
       screens/map_related_screens/edit_country.py, settings' in
       screens/menu_screens/settings.py -- so editing a screen's buttons means
       editing that screen's file, nothing else
-    - the map's Naval / Land / Air / All buttons sit between the minimap and
-      turn controls. Their shared textured bar is drawn by bars/ui_bars.py;
-      minimap.py and event_handler.py use that same rectangle for spacing and
-      blocking clicks through the bar. Unit filtering is local presentation,
+    - the map's Naval / Land / Air / All buttons form a vertical strip beside
+      the lower left sidebar, visible only in Units view. Their shared textured
+      bar is drawn by bars/ui_bars.py; event_handler.py uses that same rectangle
+      for blocking clicks through the bar. Unit filtering is local presentation,
       defaults to All on game open, and is cached at load/state/input boundaries.
     /confirm_dialog
         - pygame replacements for tkinter dialogs, split by kind: base.py (shared modal
