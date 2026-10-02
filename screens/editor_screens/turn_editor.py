@@ -2,12 +2,13 @@
 
 Every base item type gets a row with its turn count inline, replacing the old
 listbox + "Apply locally" round trip -- everything on screen is editable and
-Save All writes both tabs at once. A row left at its library default stores no
+Save All writes every category at once. A row left at its library default stores no
 override, so defaults keep tracking the unit/building libraries.
 """
 import sys
 import os
 import json
+import copy
 
 # Add the parent directory (project root) to the Python path so this stays runnable standalone
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -29,11 +30,13 @@ class TurnEditorScreen(ModalScreen):
     LIST_TOP_OFF = 120
     CHECK_SIZE = 30
 
-    def __init__(self):
+    def __init__(self, settings=None, persist=True):
         # Standalone editor: there is no host screen to take keybinds from.
         super().__init__(None, "Construction Turns Editor")
 
-        self.settings = queries.get_scenario_settings() or {}
+        self.target_settings = settings if settings is not None else queries.get_scenario_settings()
+        self.settings = copy.deepcopy(self.target_settings or {})
+        self.persist = persist
 
         # Read straight off disk rather than queries._load_cached_json(): that
         # cache is the SAME dict object load_map.py prunes in place for a
@@ -56,6 +59,11 @@ class TurnEditorScreen(ModalScreen):
                                         self.settings.setdefault("building_disabled", []),
                                         "time", "Building Type"),
         }
+        self.tabs["administrative"] = self._build_tab(
+            queries.get_administrative_library(),
+            self.settings.setdefault("administrative_turn_overrides", {}),
+            self.settings.setdefault("administrative_disabled", []),
+            "time", "Administrative Action")
         self.active_tab = "unit"
 
         self.list_top = self.panel_rect.y + self.LIST_TOP_OFF
@@ -118,11 +126,13 @@ class TurnEditorScreen(ModalScreen):
                 if value != tab["defaults"][btype]:
                     overrides[btype] = value
 
-        self.settings["unit_turn_overrides"] = self.tabs["unit"]["overrides"]
-        self.settings["building_turn_overrides"] = self.tabs["building"]["overrides"]
-        self.settings["unit_disabled"] = sorted(self.tabs["unit"]["disabled_set"])
-        self.settings["building_disabled"] = sorted(self.tabs["building"]["disabled_set"])
-        queries.save_scenario_settings(self.settings)
+        for key, tab in self.tabs.items():
+            self.settings[f"{key}_turn_overrides"] = tab["overrides"]
+            self.settings[f"{key}_disabled"] = sorted(tab["disabled_set"])
+        if self.target_settings is not None:
+            self.target_settings.update(self.settings)
+        if self.persist:
+            queries.save_scenario_settings(self.target_settings if self.target_settings is not None else self.settings)
         confirm_dialog.show_success("Saved", "Successfully saved overrides to scenario settings.")
         self.exit_screen()
 
@@ -155,7 +165,8 @@ class TurnEditorScreen(ModalScreen):
         self.elements = []
 
         tab_w, _tab_h = c.SIZES["browser_tool"]
-        for i, (key, label) in enumerate((("unit", "Units"), ("building", "Buildings"))):
+        for i, (key, label) in enumerate((("unit", "Units"), ("building", "Buildings"),
+                                       ("administrative", "Administrative"))):
             btn = Button(p.x + self.PAD + i * (tab_w + 10), p.y + 56, "browser_tool",
                          "green" if key == self.active_tab else "light_blue", label,
                          lambda k=key: self.select_tab(k))
@@ -254,14 +265,15 @@ class TurnEditorScreen(ModalScreen):
         self.draw_list_scrollbar(surface, p.right - 26, self.list_top, self.list_view_h)
 
 
-def open_turn_editor(on_done=None):
+def open_turn_editor(on_done=None, settings=None, persist=True):
     """Construction-turns editor, usable in-game or standalone (see ui/screen_runner.py).
 
     `on_done` lets a caller (e.g. Scenario Settings) refresh itself once the
     editor closes, since it runs as a non-blocking modal (see ui/modal_stack.py).
     """
     from ui.screen_runner import run_screen
-    run_screen(TurnEditorScreen, on_done=on_done, caption="Construction Turns Editor")
+    run_screen(lambda: TurnEditorScreen(settings=settings, persist=persist),
+               on_done=on_done, caption="Construction Turns Editor")
 
 
 if __name__ == "__main__":

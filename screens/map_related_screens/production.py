@@ -268,9 +268,9 @@ class Production_Screen(GameState):
                     break
 
         self.admin_start_y = y_offset
-        if not is_core:
+        if not is_core and queries.is_administrative_action_enabled("CORE", self.map_screen.scenario_settings):
             is_coring = any(q.get("order_type") == "CORE" for q in building_queue)
-            core_data = queries.get_core_cost(owner_nation, self.map_screen.map_data)
+            core_data = queries.get_core_cost(owner_nation, self.map_screen.map_data, self.map_screen.scenario_settings)
             
             if is_coring:
                 btn_txt = "Coring..."
@@ -305,12 +305,12 @@ class Production_Screen(GameState):
         # --- REMOVE CORES BUTTON ---
         # Cores are ignored entirely under the "Disable Cores" scenario rule, so
         # there's nothing left to add or strip -- skip this row completely.
-        if not getattr(c, "DISABLE_CORES", False):
+        if queries.is_administrative_action_enabled("REMOVE_CORE", self.map_screen.scenario_settings):
             foreign_cores = [core for core in self.target_province.get("cores", []) if core != owner_nation]
             has_unit = any(u.get("owner") == owner_nation for u in self.target_province.get("units", []))
 
             is_removing_cores = any(q.get("order_type") == "REMOVE_CORE" for q in building_queue)
-            remove_data = queries.get_remove_core_cost(owner_nation, self.map_screen.map_data)
+            remove_data = queries.get_remove_core_cost(owner_nation, self.map_screen.map_data, self.map_screen.scenario_settings)
 
             if is_removing_cores:
                 btn_txt2 = "Removing Cores..."
@@ -678,11 +678,21 @@ class Production_Screen(GameState):
 
         self.scroll_content_rect = pygame.Rect(0, CLICK_GUARD_TOP, c.SCREEN_WIDTH, CLICK_GUARD_BOTTOM - CLICK_GUARD_TOP)
 
+    def _can_start_administrative_action(self, order_type):
+        owner = self.target_province.get("owner")
+        viewer = self.map_screen.player_country
+        if (self.map_screen.tactical_mode or
+                (viewer == "Spectator" and not c.SPECTATOR_CAN_EDIT_PRODUCTION) or
+                (viewer != "Spectator" and viewer != owner)):
+            return False
+        return (queries.is_administrative_action_enabled(order_type, self.map_screen.scenario_settings)
+                and self.can_edit_realtime())
+
     def start_coring(self):
-        if not self.can_edit_realtime():
+        if not self._can_start_administrative_action("CORE"):
             return
         owner = self.target_province.get("owner")
-        data = queries.get_core_cost(owner, self.map_screen.map_data)
+        data = queries.get_core_cost(owner, self.map_screen.map_data, self.map_screen.scenario_settings)
         p_data = self.map_screen.nation_data.get(owner, {})
 
         if queries.can_afford(p_data, data):
@@ -690,7 +700,7 @@ class Production_Screen(GameState):
             order = {
                 "order_type": "CORE",
                 "item_name": "Core Territory",
-                "turns_remaining": max(1, data.get("time", 24)),
+                "turns_remaining": data["time"],
                 "group": "administration",
                 "refund": {
                     "cost_materials": data.get("cost_materials", 0),
@@ -706,10 +716,10 @@ class Production_Screen(GameState):
             self.map_screen.show_feedback("Insufficient resources!")
 
     def start_remove_cores(self):
-        if not self.can_edit_realtime():
+        if not self._can_start_administrative_action("REMOVE_CORE"):
             return
         owner = self.target_province.get("owner")
-        data = queries.get_remove_core_cost(owner, self.map_screen.map_data)
+        data = queries.get_remove_core_cost(owner, self.map_screen.map_data, self.map_screen.scenario_settings)
         p_data = self.map_screen.nation_data.get(owner, {})
 
         if queries.can_afford(p_data, data):
@@ -717,7 +727,7 @@ class Production_Screen(GameState):
             order = {
                 "order_type": "REMOVE_CORE",
                 "item_name": "Remove Cores",
-                "turns_remaining": max(1, data.get("time", 1)),
+                "turns_remaining": data["time"],
                 "group": "administration",
                 "refund": {
                     "cost_materials": data.get("cost_materials", 0),

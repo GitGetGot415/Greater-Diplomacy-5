@@ -8,6 +8,7 @@ refresh_ui, a draw and a wheel notch.
 """
 
 import unittest
+from unittest import mock
 
 import pygame
 
@@ -88,7 +89,39 @@ class EditorScreenSmokeTests(unittest.TestCase):
 
     def test_turn_editor(self):
         from screens.editor_screens.turn_editor import TurnEditorScreen
-        self.exercise(TurnEditorScreen())
+        screen = TurnEditorScreen()
+        self.exercise(screen)
+        screen.select_tab("administrative")
+        self.exercise(screen)
+        for element in screen.elements:
+            if getattr(element, "is_scrollable", False):
+                self.assertTrue(screen.scroll_content_rect.contains(element.rect))
+
+    def test_administrative_editor_saves_all_tabs_and_cancels_cleanly(self):
+        from screens.editor_screens.turn_editor import TurnEditorScreen
+        from data import queries
+        settings = {}
+        screen = TurnEditorScreen(settings=settings, persist=False)
+        screen.select_tab("administrative")
+        name = queries.ADMINISTRATIVE_ACTIONS["CORE"][0]
+        duration = screen.tab["defaults"][name] + 3
+        field = next(el for el in screen.elements if getattr(el, "entry_key", None) == name)
+        field.text = str(duration)
+        screen.toggle_disabled(name)
+        self.assertEqual(settings, {})  # An abandoned modal has no side effects.
+        with mock.patch.object(queries, "save_scenario_settings") as save, \
+                mock.patch("ui.confirm_dialog.show_success"):
+            screen.save_all()
+        save.assert_not_called()  # Lobby settings stay in the session.
+        self.assertEqual(settings["administrative_turn_overrides"][name], duration)
+        self.assertIn(name, settings["administrative_disabled"])
+        self.assertTrue(queries.scenario_has_construction_customizations(settings))
+        reopened = TurnEditorScreen(settings=settings, persist=False)
+        self.assertEqual(reopened.tabs["administrative"]["values"][name], str(duration))
+        with mock.patch("ui.confirm_dialog.ask_yes_no", side_effect=lambda _title, _text, cb: cb(True)), \
+                mock.patch("ui.confirm_dialog.show_success"):
+            reopened.reset_to_defaults()
+        self.assertFalse(queries.scenario_has_construction_customizations(settings))
 
     def test_list_select_screen(self):
         from ui.list_select_screen import ListSelectScreen

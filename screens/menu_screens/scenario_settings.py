@@ -326,9 +326,10 @@ class Scenario_Settings(GameState):
     def open_turn_editor(self):
         try:
             from screens.editor_screens.turn_editor import open_turn_editor
-            # Re-reads settings once the editor closes so the "!" badge reflects
-            # whatever was actually saved (or cleared, on cancel/back).
-            open_turn_editor(on_done=lambda screen: self.refresh_ui())
+            # Refresh the badge from the shared settings after the modal closes;
+            # unsaved edits stay inside the editor draft.
+            open_turn_editor(on_done=lambda screen: self.refresh_ui(), settings=self.settings,
+                             persist=not getattr(self, "_session_bound", False))
         except ImportError as e:
             print(f"Error importing turn editor: {e}")
 

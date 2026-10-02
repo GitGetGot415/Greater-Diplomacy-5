@@ -452,12 +452,13 @@ def get_days_per_turn(scenario_settings):
 
 def scenario_has_construction_customizations(settings):
     """True if the Construction Turns Editor has anything set away from its
-    defaults (a turn override or a disabled unit/building), for the badge on
-    its entry-point button in Scenario Settings."""
+    defaults (a turn override or a disabled unit, building, or administrative
+    action), for the badge on its entry-point button in Scenario Settings."""
     if not settings:
         return False
     return bool(settings.get("unit_turn_overrides") or settings.get("building_turn_overrides")
-                or settings.get("unit_disabled") or settings.get("building_disabled"))
+                or settings.get("unit_disabled") or settings.get("building_disabled")
+                or settings.get("administrative_turn_overrides") or settings.get("administrative_disabled"))
 
 def save_scenario_settings(data):
     cache_obj = _JSON_CACHE["scenario_settings"]
@@ -1807,7 +1808,38 @@ def has_core(nation, province):
         return True
     return nation in province.get("cores", [])
 
-def get_core_cost(nation, map_data):
+ADMINISTRATIVE_ACTIONS = {
+    "CORE": ("Core Territory", "CORE_CONSTRUCTION_TURNS"),
+    "REMOVE_CORE": ("Remove Cores", "REMOVE_CORE_TURNS"),
+}
+
+
+def get_administrative_library():
+    """Editor rows and historical durations from the canonical core constants."""
+    return {name: {"time": getattr(c, constant)}
+            for name, constant in ADMINISTRATIVE_ACTIONS.values()}
+
+
+def get_administrative_turns(order_type, scenario_settings=None):
+    name, constant = ADMINISTRATIVE_ACTIONS[order_type]
+    default = getattr(c, constant)
+    raw = (scenario_settings or {}).get("administrative_turn_overrides", {}).get(name, default)
+    try:
+        return max(1, int(raw))
+    except (TypeError, ValueError):
+        return default
+
+
+def is_administrative_action_enabled(order_type, scenario_settings=None):
+    """Disabling an action leaves existing cores and their penalties intact."""
+    settings = scenario_settings or {}
+    name, _constant = ADMINISTRATIVE_ACTIONS[order_type]
+    default = c.DISABLE_CORES if scenario_settings is None else c.DEFAULT_DISABLE_CORES
+    return (not get_scenario_flag("disable_cores", default, settings)
+            and name not in settings.get("administrative_disabled", []))
+
+
+def get_core_cost(nation, map_data, scenario_settings=None):
     """Calculates the cost to core a territory dynamically."""
     core_count = sum(1 for p in map_data.values() if nation in p.get("cores", []))
     
@@ -1818,19 +1850,19 @@ def get_core_cost(nation, map_data):
         "cost_manpower": base_cost + (scaling_cost * core_count),
         "cost_materials": 0,
         "cost_fuel": 0,
-        "time": c.CORE_CONSTRUCTION_TURNS,
+        "time": get_administrative_turns("CORE", scenario_settings),
         "group": "administration"
     }
 
-def get_remove_core_cost(nation, map_data):
+def get_remove_core_cost(nation, map_data, scenario_settings=None):
     """Returns the cost dictionary for removing foreign cores."""
-    core_cost = get_core_cost(nation, map_data)
+    core_cost = get_core_cost(nation, map_data, scenario_settings)
     manpower_cost = max(0, core_cost.get("cost_manpower", 0) // 2)
     return {
         "cost_manpower": manpower_cost,
         "cost_materials": max(0, manpower_cost // 2),
         "cost_fuel": max(0, core_cost.get("cost_fuel", 0) // 2),
-        "time": c.REMOVE_CORE_TURNS,
+        "time": get_administrative_turns("REMOVE_CORE", scenario_settings),
         "group": "administration"
     }
 

@@ -675,7 +675,7 @@ def _apply_coring_priority(map_screen, ai_name, data, my_provs):
     # Nothing to core when cores are disabled -- every tile already counts
     # as cored, so skip straight past this without spending resources.
     surplus_manpower = c.AI_SURPLUS_MANPOWER_FOR_CORING
-    if getattr(c, "DISABLE_CORES", False) or data.get("manpower", 0) <= surplus_manpower:
+    if not queries.is_administrative_action_enabled("CORE", map_screen.scenario_settings) or data.get("manpower", 0) <= surplus_manpower:
         return
 
     uncored_provs = [p for p in my_provs if ai_name not in p.get("cores", []) and not any(q.get("order_type") == "CORE" for q in p.get("building_queue", []))]
@@ -705,13 +705,13 @@ def _apply_coring_priority(map_screen, ai_name, data, my_provs):
     # Prioritize territories with factories
     valid_uncored.sort(key=lambda p: (queries.has_industry(p), p.get("is_coastal", False)), reverse=True)
     target_core_prov = valid_uncored[0]
-    core_data = queries.get_core_cost(ai_name, map_screen.map_data)
+    core_data = queries.get_core_cost(ai_name, map_screen.map_data, map_screen.scenario_settings)
     if queries.can_afford(data, core_data):
         queries.deduct_resources(data, core_data)
         order = {
             "order_type": "CORE",
             "item_name": "Core Territory",
-            "turns_remaining": max(1, core_data.get("time", 24)),
+            "turns_remaining": core_data["time"],
             "group": "administration",
             "refund": {"cost_materials": core_data.get("cost_materials", 0), "cost_manpower": core_data.get("cost_manpower", 0), "cost_fuel": core_data.get("cost_fuel", 0)}
         }

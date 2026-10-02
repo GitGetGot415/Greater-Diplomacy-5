@@ -905,6 +905,41 @@ def _validate_aircraft_orders(map_ref, country_id, player_data, provinces):
     return live, validated
 
 
+def _validate_administrative_orders(map_ref, country_id, provinces):
+    """Validate new core orders against host settings before merging any state.
+
+    Existing entries retain their progress; older moves without administrative
+    orders need no new fields. Players cannot change the host's action settings.
+    """
+    # Lightweight legacy hosts may not carry scenario settings.
+    settings = getattr(map_ref, "scenario_settings", {})
+    by_key = {p.get("json_key"): p for p in map_ref.map_data.values()}
+    for key, updates in provinces.items():
+        if not isinstance(updates, dict):
+            raise ValueError("Invalid province updates.")
+        queue = updates.get("building_queue", [])
+        if not isinstance(queue, list):
+            raise ValueError("Invalid building queue.")
+        for item in queue:
+            if not isinstance(item, dict):
+                raise ValueError("Invalid building queue entry.")
+            order_type = item.get("order_type")
+            if order_type is not None and not isinstance(order_type, str):
+                raise ValueError("Invalid building order type.")
+            if order_type not in queries.ADMINISTRATIVE_ACTIONS:
+                continue
+            province = by_key.get(key)
+            if province is None or province.get("owner") != country_id:
+                raise ValueError("Foreign administrative order.")
+            if item in province.get("building_queue", []):
+                continue
+            if not queries.is_administrative_action_enabled(order_type, settings):
+                raise ValueError("Administrative action is disabled.")
+            duration = queries.get_administrative_turns(order_type, settings)
+            if type(item.get("turns_remaining")) is not int or item["turns_remaining"] != duration:
+                raise ValueError("Invalid administrative duration.")
+
+
 def load_move_files(map_ref, move_file_paths, keys_dict):
     """
     Loads a list of .gd5move files and applies their orders to the host's map.
@@ -987,6 +1022,7 @@ def load_move_files(map_ref, move_file_paths, keys_dict):
             summary["rejected"] += 1
             continue
         try:
+            _validate_administrative_orders(map_ref, cid, provs)
             live_aircraft, aircraft_orders = _validate_aircraft_orders(map_ref, cid, player_data, provs)
         except ValueError:
             summary["rejected"] += 1

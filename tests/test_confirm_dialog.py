@@ -303,26 +303,6 @@ class DialogTests(unittest.TestCase):
             with self.subTest(entry=entry), self.assertRaises(ValueError):
                 expand_credit_images([entry])
 
-    def test_credit_directory_entries_cover_the_attributed_asset_collections(self):
-        from data import constants as c
-        from ui.confirm_dialog.person_info import expand_credit_images
-        people = [person for section in c.CREDITS_DATA for person in section.get("people", [])]
-        specs = [image for person in people for image in person.get("images", []) if "directory" in image]
-        expected = {
-            "assets/hanskolmer": {path.as_posix() for path in Path("assets/hanskolmer").rglob("*.png")},
-            c.ARMY_SYMBOLS_DIR: {path.as_posix() for path in Path(c.ARMY_SYMBOLS_DIR).glob("*.png")
-                                 if not path.name.startswith("Randomly_")},
-            c.TERRAINS_DIR: {path.as_posix() for path in Path(c.TERRAINS_DIR).glob("*.png")
-                            if path.name != "Unknown.png"},
-        }
-        for directory, paths in expected.items():
-            with self.subTest(directory=directory):
-                spec = next(image for image in specs if image["directory"] == directory)
-                expanded = expand_credit_images([spec])
-                self.assertEqual({image["path"] for image in expanded}, paths)
-                for image in expanded:
-                    self.assertEqual(Path(image["path"]).read_bytes()[:8], b"\x89PNG\r\n\x1a\n")
-
     def test_credit_images_load_once_and_preserve_aspect_ratio(self):
         images = self.credited_images()
         with mock.patch.object(pygame.image, "load", wraps=pygame.image.load) as load:

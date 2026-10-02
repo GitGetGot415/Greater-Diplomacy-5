@@ -1378,15 +1378,20 @@ class MapRealtimeDriver:
         country = self._country(country_id)
         if queue_type == "building_queue":
             order_type = intent.get("order_type", "BUILDING")
+            if not isinstance(order_type, str):
+                raise RealtimeError("Invalid building order type.")
+            if (order_type in queries.ADMINISTRATIVE_ACTIONS
+                    and not queries.is_administrative_action_enabled(order_type, self.map_ref.scenario_settings)):
+                raise RealtimeError("That administrative action is disabled.")
             if order_type == "CORE":
                 if country_id in province.get("cores", []):
                     raise RealtimeError("That territory is already cored.")
-                cost = queries.get_core_cost(country_id, self.map_ref.map_data)
+                cost = queries.get_core_cost(country_id, self.map_ref.map_data, self.map_ref.scenario_settings)
                 item_name, group = "Core Territory", "administration"
             elif order_type == "REMOVE_CORE":
                 if not [core for core in province.get("cores", []) if core != country_id]:
                     raise RealtimeError("That territory has no foreign cores to remove.")
-                cost = queries.get_remove_core_cost(country_id, self.map_ref.map_data)
+                cost = queries.get_remove_core_cost(country_id, self.map_ref.map_data, self.map_ref.scenario_settings)
                 item_name, group = "Remove Cores", "administration"
             elif order_type == "BUILDING":
                 item_name = intent.get("item_name")
