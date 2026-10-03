@@ -1157,6 +1157,23 @@ class AirMissionSelectionTests(unittest.TestCase):
         self.unit["order"] = {"type": "AIR_ATTACK", "base_id": 1, "target_id": 2}
         self.assertEqual(self.buttons()[ACTION_COL_BOMBARD].args[6], "Strike Selected")
 
+    def test_move_icon_tracks_relocation_and_ground_movement(self):
+        from pathlib import Path
+        from screens.map_related_screens.orders import ACTION_COL_BOMBARD
+        asset = Path(__file__).resolve().parents[1] / "assets" / "images" / "Air Move.png"
+        self.assertEqual(asset.read_bytes()[:8], b"\x89PNG\r\n\x1a\n")
+        for name, order in (("Monoplane Fighter", {"type": "AIR_REPOSITION", "target_id": 2}),
+                            ("V1 Flying Bomb", {"type": "MOVE", "path": [2]}),
+                            ("V2 Rocket", {"type": "MOVE", "path": [2]})):
+            with self.subTest(unit=name):
+                self.unit["type"] = name
+                self.unit["order"] = order
+                self.assertEqual(self.buttons()[ACTION_COL_BOMBARD].args[6], "Air Move")
+                self.screen.set_air_mission(self.unit, self.base, "STRIKE", row_key=0)
+                self.assertEqual(self.buttons()[ACTION_COL_BOMBARD].args[6], "Strike Selected")
+                self.screen.set_air_mission(self.unit, self.base, "NONE")
+                self.assertEqual(self.buttons()[ACTION_COL_BOMBARD].args[6], "No Mission")
+
     def test_selector_only_offers_defense_to_eligible_aircraft(self):
         for name in ("Monoplane Fighter", "Monoplane Bomber", "V1 Flying Bomb", "V2 Rocket"):
             with self.subTest(unit=name):
@@ -1467,7 +1484,7 @@ class AirAppSmokeTests(unittest.TestCase):
         from screens.map_related_screens.orders import ACTION_ICON_INSET, AIR_MISSION_CHOICES
         screen = Orders_Screen()
         icons = [icon for _mission, _label, icon in AIR_MISSION_CHOICES]
-        icons.extend(("Convoying", "Disbanding", "Repairing", "Text",
+        icons.extend(("Air Move", "Convoying", "Disbanding", "Repairing", "Text",
                       "Upgrading", "Bombardment Arrows"))
         for button_size in (c.SIZES["orders_action_icon"], c.SIZES["list_row"]):
             available = min(button_size) - 2 * ACTION_ICON_INSET

@@ -876,7 +876,8 @@ class Orders_Screen(GameState):
             add(ACTION_COL_BOMBARD, "yellow", "Cancel strike mission" if mission == "STRIKE"
                 else "Select air mission: no mission, defend area, or strike",
                 lambda idx=index, p=province, key=row_key: self.open_air_mission_select(idx, p, key),
-                AIR_MISSION_ICONS[mission])
+                "Air Move" if mission == "NONE" and (order_type == "AIR_REPOSITION"
+                    or (order_type == "MOVE" and order.get("path"))) else AIR_MISSION_ICONS[mission])
         elif order_type == "BOMBARD":
             btn_bombard = add(ACTION_COL_BOMBARD, "red", "Cancel bombardment",
                               lambda idx=index, p=province: self.cancel_unit_order(idx, p),

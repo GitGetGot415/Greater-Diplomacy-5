@@ -122,7 +122,7 @@ class _NavigationIntroPopup:
         ("Missions", "In Orders, choose No mission, Defend area (weakest or strongest first), or Strike. Any aircraft except V1 and V2 can defend. Click an active strike's mission button again to cancel it."),
         ("Group missions", "Select multiple units and use Set Mission beside Disband, Repair and Upgrade. All choices are shown. Strike selects one target; planes unable to perform the mission or reach it keep their current orders."),
         ("Strike / defend", "Strike: left-click or use your move-order button to select a tile in the outline. Defenders can fire back; reusable survivors return to base with their losses. Tanks cannot damage aircraft in flight. Research shows fort damage capability. Defend area covers listed range; survivors may intercept several missions."),
-        ("Reposition", "Right-click land to move reusable planes up to twice their listed range. Reach uses map pixels and tile edges; zoom never changes it. Aircraft cannot capture land."),
+        ("Reposition", "Right-click land to move reusable planes up to twice their listed range. Moving aircraft show the Air Move icon. Reach uses map pixels and tile edges; zoom never changes it. Aircraft cannot capture land."),
         ("V1 and V2", "Strikes consume the weapon; V2 bypasses interception. Relocate on land at ground speed. Air units can load into Convoys at a coast and unload on land. Aircraft caught in ground combat die immediately."),
     )
     PAGE_TITLES = ("Map Navigation", "Map UI", "Other Countries", "Armies", "Aircraft")

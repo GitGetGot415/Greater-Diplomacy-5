@@ -85,7 +85,8 @@ click, so it cannot accidentally create a full-range reposition instead.
 Orders exposes patrol through the air mission selector as Defend area, with
 weakest-first and strongest-first choices available to reusable aircraft. Strike
 uses map targeting, and No mission (or clicking an active strike's button)
-cancels the air order. The four mission icons reflect the current choice.
+cancels the air order. Mission icons reflect the current choice; Air Move marks
+relocation or an aircraft's ground movement path, and No Mission marks idle wings.
 The upgrade button uses the existing numbered-family upgrade helper for every
 unit; named aircraft designs remain separate production unlocks.
 Set Mission applies a choice to eligible aircraft in the selected group and
