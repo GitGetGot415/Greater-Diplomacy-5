@@ -1174,7 +1174,7 @@ class AirMissionSelectionTests(unittest.TestCase):
                 self.screen.set_air_mission(self.unit, self.base, "NONE")
                 self.assertEqual(self.buttons()[ACTION_COL_BOMBARD].args[6], "No Mission")
 
-    def test_selector_only_offers_defense_to_eligible_aircraft(self):
+    def test_selector_shows_all_missions_and_disables_unsupported_defense(self):
         for name in ("Monoplane Fighter", "Monoplane Bomber", "V1 Flying Bomb", "V2 Rocket"):
             with self.subTest(unit=name):
                 self.unit["type"] = name
@@ -1183,10 +1183,11 @@ class AirMissionSelectionTests(unittest.TestCase):
                         patch("ui.screen_runner._run_pygame_sub_screen"):
                     self.screen.open_air_mission_select(0, self.base)
                 choices = [choice[0] for choice in popup.call_args.args[1]]
-                expected = ["NONE", "STRIKE"]
+                self.assertEqual(choices, ["NONE", *queries.AIR_INTERCEPTION_PRIORITIES, "STRIKE"])
+                expected = {"NONE", "STRIKE"}
                 if queries.air_unit_can_patrol(self.unit):
-                    expected = ["NONE", *queries.AIR_INTERCEPTION_PRIORITIES, "STRIKE"]
-                self.assertEqual(choices, expected)
+                    expected.update(queries.AIR_INTERCEPTION_PRIORITIES)
+                self.assertEqual(popup.call_args.kwargs["enabled_missions"], expected)
                 self.assertEqual(self.unit["order"], before)
                 if "WEAKEST" not in choices:
                     self.screen.set_air_mission(self.unit, self.base, "WEAKEST")
@@ -1696,6 +1697,7 @@ class AirAppSmokeTests(unittest.TestCase):
                     self.assertEqual(symbol_loader._resolve_name(icon)[1], icon)
                     button = popup.elements[index]
                     self.assertTrue(popup.panel_rect.contains(button.rect))
+                    self.assertEqual((button.color, button.hover_color), c.UI_COLORS["blue"])
                     self.assertIs(button.right_image, screen._get_action_icon(icon, button.rect.size))
                     self.assertTrue(button.rect.contains(
                         button.right_image.get_rect(midright=(button.rect.right - 5, button.rect.centery))))
@@ -1714,6 +1716,44 @@ class AirAppSmokeTests(unittest.TestCase):
             finally:
                 if modal_stack.active() is wrapper:
                     modal_stack.pop()
+
+    def test_unavailable_air_missions_remain_visible_and_ignore_clicks(self):
+        from ui import modal_stack
+        for name, invalid_base in (("V1 Flying Bomb", False), ("V2 Rocket", False),
+                                   ("Monoplane Fighter", True)):
+            with self.subTest(unit=name, invalid_base=invalid_base):
+                game = world()
+                base = tile(game, 1, 8, water=invalid_base)
+                unit = wing(base, name)
+                screen = Orders_Screen()
+                screen.map_screen = game
+                screen.set_air_mission = Mock()
+                screen.open_air_mission_select(0, base)
+                wrapper = modal_stack.active()
+                popup = wrapper.screen
+                try:
+                    self.assertEqual(len(popup.choices), 4)
+                    for index, (mission, _label, _icon) in enumerate(popup.choices):
+                        button = popup.elements[index]
+                        unavailable = mission in queries.AIR_INTERCEPTION_PRIORITIES or (
+                            invalid_base and mission == "STRIKE")
+                        self.assertEqual(button.disabled, unavailable)
+                        self.assertEqual((button.color, button.hover_color),
+                                         c.UI_COLORS["grey" if unavailable else "blue"])
+                        self.assertTrue(button.visible)
+                        self.assertTrue(popup.panel_rect.contains(button.rect))
+                        if unavailable:
+                            for event_type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
+                                button.handle_event(pygame.event.Event(event_type,
+                                    button=1, pos=button.rect.center))
+                            button.callback()
+                            screen.set_air_mission.assert_not_called()
+                            self.assertIs(modal_stack.active(), wrapper)
+                    popup.elements[0].callback()
+                    screen.set_air_mission.assert_called_once_with(unit, base, "NONE", None)
+                finally:
+                    if modal_stack.active() is wrapper:
+                        modal_stack.pop()
 
     def test_dismissing_air_mission_popup_preserves_existing_mission(self):
         from ui import modal_stack

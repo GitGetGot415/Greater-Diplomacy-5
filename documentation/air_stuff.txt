@@ -45,7 +45,9 @@ The editor unit brush likewise requires land when placing an aircraft.
 AIR_PATROL orders retain base_id and priority (WEAKEST by default in old saves).
 Orders' air mission button opens No mission, Defend area (weakest enemy missions
 targeted first), Defend area (strongest enemy missions targeted first), and Strike.
-Only aircraft legally able to patrol get the Defend area choices. These issue
+All choices remain visible; unavailable missions are disabled, including Defend
+area for aircraft unable to patrol and flight missions at an invalid launch base.
+Available Defend area choices issue
 AIR_PATROL with the selected priority immediately; Strike arms map targeting
 and issues AIR_ATTACK after a valid tile is clicked. Clicking the mission
 button for an active strike cancels it immediately, as does choosing No mission.

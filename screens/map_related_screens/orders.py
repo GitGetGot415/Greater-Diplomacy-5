@@ -105,9 +105,11 @@ class _AirMissionSelectScreen(ModalScreen):
     OPTION_INSET = 20
     CANCEL_BOTTOM = 46
 
-    def __init__(self, orders, choices, on_select):
+    def __init__(self, orders, choices, on_select, *, enabled_missions=None):
         super().__init__(orders.map_screen, "Select air mission")
         self.choices = choices
+        self.enabled_missions = ({mission for mission, _label, _icon in choices}
+                                 if enabled_missions is None else set(enabled_missions))
         self.elements = []
         for row, (mission, label, icon) in enumerate(choices):
             button = self.button(self.panel_rect.x + self.OPTION_INSET,
@@ -115,12 +117,15 @@ class _AirMissionSelectScreen(ModalScreen):
                 self.panel_rect.width - 2 * self.OPTION_INSET, "blue", label,
                 lambda selected=mission: self.select(selected, on_select))
             button.right_image = orders._get_action_icon(icon, button.rect.size)
+            button.apply_state(enabled=mission in self.enabled_missions, color="blue")
             self.elements.append(button)
         self.elements.append(self.button(self.panel_rect.x + self.OPTION_INSET,
             self.panel_rect.bottom - self.CANCEL_BOTTOM,
             self.panel_rect.width - 2 * self.OPTION_INSET, "red", "Cancel", self.exit_screen))
 
     def select(self, mission, on_select):
+        if mission not in self.enabled_missions:
+            return
         self.exit_screen()
         on_select(mission)
 
@@ -1462,12 +1467,15 @@ class Orders_Screen(GameState):
                     and self.bombarding_unit_index is not None)):
             self.set_air_mission(unit, province, "NONE", row_key)
             return
-        choices = [choice for choice in AIR_MISSION_CHOICES
-                   if choice[0] not in queries.AIR_INTERCEPTION_PRIORITIES
-                   or queries.air_unit_can_patrol(unit)]
+        enabled_missions = {"NONE"}
+        if queries.air_unit_can_launch(self.map_screen, unit, province):
+            enabled_missions.add("STRIKE")
+            if queries.air_unit_can_patrol(unit):
+                enabled_missions.update(queries.AIR_INTERCEPTION_PRIORITIES)
         from ui.screen_runner import _run_pygame_sub_screen
-        popup = _AirMissionSelectScreen(self, choices,
-            lambda mission: self.set_air_mission(unit, province, mission, row_key))
+        popup = _AirMissionSelectScreen(self, AIR_MISSION_CHOICES,
+            lambda mission: self.set_air_mission(unit, province, mission, row_key),
+            enabled_missions=enabled_missions)
         _run_pygame_sub_screen(self.map_screen, popup)
 
     def _air_mission_unit_index(self, unit, province):
