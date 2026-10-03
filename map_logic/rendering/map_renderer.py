@@ -222,11 +222,11 @@ def draw_map_screen(map_screen, surface):
 
                 # Only show the arrows for the CURRENT player taking their turn!
                 is_current_player_unit = (owner == map_screen.player_country)
-                is_spectator = map_screen.player_country == "Spectator"
 
                 # Hide the arrows if it's not the current player's unit, the player isn't spectating,
                 # and the game isn't actively resolving AI/global turns.
-                if not is_current_player_unit and not is_spectator and not map_screen.viewing_ai_moves:
+                if not queries.can_view_unit_orders(unit, map_screen.player_country,
+                                                    map_screen.viewing_ai_moves):
                     continue
 
                 # --- NEW: Tell the renderer to bypass Fog of War if the player owns this specific unit ---

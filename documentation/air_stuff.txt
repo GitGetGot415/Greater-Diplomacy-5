@@ -119,6 +119,21 @@ Idle aircraft use No Mission.
 Pending strike targeting uses Strike Selected.
 Closing the selector without a choice changes nothing.
 
+Map boxes separate aircraft from land and naval units.
+Aircraft with different missions use separate boxes, including idle aircraft and different patrol priorities.
+Aircraft with matching missions can share one rectangular box.
+Active missions show their command icon to the right of the box.
+
+The icon uses the same size rule as the army emblem on the left.
+Only the unit rectangle supplies selection and hover hitboxes.
+Mission badges follow the map arrows' order visibility rule.
+Private foreign orders and fogged stacks reveal no mission badges.
+
+At strategic zoom, mission badges disappear and markers combine aircraft missions.
+Aircraft in different armies retain separate markers.
+Aircraft outside armies combine by owner and nearby position.
+Land, naval, and air domains remain separate.
+
 Choice callbacks recheck current unit identity, ownership, tactical control, and real-time planning permission.
 The upgrade icon uses existing numbered-family upgrades.
 Named aircraft do not upgrade into a different design.

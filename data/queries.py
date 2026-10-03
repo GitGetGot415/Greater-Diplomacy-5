@@ -4173,16 +4173,48 @@ UNIT_VIEW_FILTERS = ("NAVAL", "LAND", "AIR", "ALL")
 DEFAULT_UNIT_VIEW_FILTER = "ALL"
 
 
+def unit_display_domain(unit):
+    """Return the map category for the unit's current form."""
+    if is_air_unit(unit):
+        return "AIR"
+    return "NAVAL" if is_naval_unit(unit.get("type", "")) else "LAND"
+
+
+def air_unit_mission(unit):
+    """Return the current aircraft mission, including relocation and idle state."""
+    order = unit.get("order")
+    if not isinstance(order, dict):
+        return "NONE"
+    kind = order.get("type")
+    if kind == "AIR_PATROL":
+        priority = order.get("priority", AIR_DEFAULT_PRIORITY)
+        return priority if priority in AIR_INTERCEPTION_PRIORITIES else AIR_DEFAULT_PRIORITY
+    if kind == "AIR_ATTACK":
+        return "STRIKE"
+    if kind == "AIR_REPOSITION" or (kind == "MOVE" and order.get("path")):
+        return "MOVE"
+    return "NONE"
+
+
+def unit_map_stack_key(unit):
+    """Keep map boxes separate by current domain and aircraft mission."""
+    domain = unit_display_domain(unit)
+    return domain, air_unit_mission(unit) if domain == "AIR" else None
+
+
+def can_view_unit_orders(unit, player_country, viewing_ai_moves=False):
+    """Use the same order visibility for map arrows and mission badges."""
+    return (unit.get("owner") == player_country or player_country == "Spectator"
+            or viewing_ai_moves)
+
+
 def unit_matches_view_filter(unit, view_filter):
     """Classify the current form, including carried units, for map display."""
     if view_filter == "ALL":
         return True
     if view_filter not in UNIT_VIEW_FILTERS:
         raise ValueError(f"Unknown unit view filter: {view_filter}")
-    if is_air_unit(unit):
-        return view_filter == "AIR"
-    naval = is_naval_unit(unit.get("type", ""))
-    return view_filter == ("NAVAL" if naval else "LAND")
+    return view_filter == unit_display_domain(unit)
 
 
 def is_air_transport(unit):

@@ -12,7 +12,7 @@ import pygame
 
 import data.constants as c
 from data import queries
-from map_logic.rendering import overlay_renderer, map_renderer
+from map_logic.rendering import overlay_renderer, map_renderer, symbol_loader
 from screens.menu_screens.map import Map, update_button_states
 from tests import app_harness
 from ui import event_handler, minimap, map_top_right_layout
@@ -49,11 +49,196 @@ class UnitViewFilterTests(unittest.TestCase):
                                  view_filter in (expected, "ALL"))
         carried = {"type": "Convoy (Test Plane)", "original_type": "Test Plane"}
         self.assertTrue(queries.unit_matches_view_filter(carried, "NAVAL"))
+        carried["order"] = {"type": "AIR_ATTACK"}
+        self.assertEqual(queries.unit_map_stack_key(carried), ("NAVAL", None))
         carried["type"] = "Truck (Test Plane)"
         self.assertTrue(queries.unit_matches_view_filter(carried, "LAND"))
+        self.assertEqual(queries.unit_map_stack_key(carried), ("LAND", None))
         self.assertFalse(queries.unit_matches_view_filter(carried, "AIR"))
         with self.assertRaises(ValueError):
             queries.unit_matches_view_filter(carried, "invalid")
+
+    def mission_units(self):
+        orders = ({}, {}, {"type": "AIR_PATROL"},
+                  {"type": "AIR_PATROL", "priority": "STRONGEST"},
+                  {"type": "AIR_ATTACK", "target_id": 2},
+                  {"type": "AIR_ATTACK", "target_id": 3},
+                  {"type": "AIR_REPOSITION", "target_id": 2})
+        planes = [dict(self.units[2], unit_id=f"plane-{index}", order=order)
+                  for index, order in enumerate(orders)]
+        self.province["units"] = self.units[:2] + planes
+        self.game._presentation_cache_revision += 1
+        return planes
+
+    def test_map_separates_domains_and_air_missions_with_matching_hitboxes(self):
+        planes = self.mission_units()
+        self.game.camera.tilt_factor = 0.2
+        surface = pygame.Surface((400, 400))
+        overlay_renderer.draw_unit_icon(self.game, surface, 200, 200, self.province)
+        groups = self.game.unit_stack_hitboxes
+        expected = [self.units[:1], self.units[1:2], planes[:2], planes[2:3],
+                    planes[3:4], planes[4:6], planes[6:]]
+        self.assertCountEqual([tuple(unit["unit_id"] for unit in group["units"]) for group in groups],
+                              [tuple(unit["unit_id"] for unit in members) for members in expected])
+        self.assertEqual([box["units"] for box in self.game.unit_hover_hitboxes],
+                         [box["units"] for box in groups])
+        for index, group in enumerate(groups):
+            for other in groups[index + 1:]:
+                self.assertFalse(group["rect"].colliderect(other["rect"]))
+            self.assertEqual(group["rect"].size, overlay_renderer.unit_box_size(self.game)[:2])
+            if group["units"][0] in planes[2:]:
+                size = overlay_renderer._army_emblem_size(group["rect"].height)
+                badge_center = (group["rect"].right + overlay_renderer.AIR_MISSION_GAP + size // 2,
+                                group["rect"].centery)
+                self.assertIsNone(event_handler._unit_stack_at(self.game, badge_center))
+                self.assertTrue(all(not box["rect"].collidepoint(badge_center)
+                                    for box in self.game.unit_hover_hitboxes))
+
+    def test_mission_badges_match_army_emblem_sizes_and_keep_opacity(self):
+        native = pygame.Surface((12, 12), pygame.SRCALPHA)
+        native.fill((255, 220, 0))
+        for mission in ("WEAKEST", "STRONGEST", "STRIKE", "MOVE"):
+            for height, alpha in ((8, 255), (30, 100), (60, 255)):
+                with self.subTest(mission=mission, height=height, alpha=alpha):
+                    surface = pygame.Surface((100, 100), pygame.SRCALPHA)
+                    box = pygame.Rect(10, 10, 20, height)
+                    name = c.AIR_MISSION_ICONS[mission]
+                    size = overlay_renderer._army_emblem_size(height)
+                    with patch.object(symbol_loader, "get_symbol", return_value=native) as symbol:
+                        overlay_renderer._draw_air_mission(surface, box, name, alpha)
+                    symbol.assert_called_once_with(name, 1, style="classic",
+                                                   fit_size=(size, size))
+                    badge_right = box.right + overlay_renderer.AIR_MISSION_GAP + size
+                    self.assertEqual(surface.get_at((badge_right - 2, box.centery)).a, alpha)
+
+    def test_zoomed_out_markers_separate_domains_and_combine_air_missions(self):
+        self.mission_units()
+        self.game.camera.zoom = 0.2
+        self.game.camera.pos = pygame.Vector2()
+        self.game.top_ui_height = 100
+        members = self.province["units"]
+        self.game.nation_data["A"]["armies"] = [{
+            "id": "mixed", "unit_ids": [unit["unit_id"] for unit in members]}]
+        army_groups = overlay_renderer.compact_army_groups(self.game, set())
+        self.game.nation_data["A"]["armies"] = []
+        area_groups = overlay_renderer.compact_area_unit_groups(self.game, set(), set())
+        for groups in (army_groups, area_groups):
+            self.assertEqual(len(groups), 3)
+            self.assertEqual(len({group["presentation_id"] for group in groups}), len(groups))
+            for group in groups:
+                domains = {queries.unit_display_domain(unit) for unit in group["units"]}
+                self.assertEqual(len(domains), 1)
+                if domains == {"AIR"}:
+                    self.assertEqual(group["units"], members[2:])
+            self.game.unit_stack_hitboxes = []
+            with patch.object(overlay_renderer, "_draw_air_mission") as badges:
+                overlay_renderer.draw_compact_army_groups(self.game, pygame.Surface((400, 400)), groups)
+            badges.assert_not_called()
+            boxes = self.game.unit_stack_hitboxes
+            for index, box in enumerate(boxes):
+                for other in boxes[index + 1:]:
+                    self.assertFalse(box["rect"].colliderect(other["rect"]))
+
+    def test_stack_classification_is_cached_until_orders_or_viewer_change(self):
+        planes = self.mission_units()
+        index = overlay_renderer._unit_render_index(self.game)
+        with patch.object(queries, "unit_map_stack_key", side_effect=AssertionError):
+            overlay_renderer.draw_unit_icon(self.game, pygame.Surface((400, 400)),
+                                            200, 200, self.province)
+        planes[0]["order"] = {"type": "AIR_ATTACK", "target_id": 2}
+        self.game._presentation_cache_revision += 1
+        updated = overlay_renderer._unit_render_index(self.game)
+        self.assertIsNot(index, updated)
+        self.assertEqual(updated.stack_keys[id(planes[0])], ("AIR", "STRIKE"))
+        self.game.player_country = "B"
+        self.assertEqual(overlay_renderer._unit_render_index(self.game).stack_keys[id(planes[0])],
+                         ("AIR", "NONE"))
+
+    def test_mission_change_preserves_the_compact_marker_without_restarting_animation(self):
+        planes = self.mission_units()
+        self.province["units"] = planes[:1]
+        self.game.camera.zoom = 0.2
+        duration_ms = round(overlay_renderer.ARMY_GROUP_TRANSITION_SECONDS * 1000)
+        with patch.object(c, "ARMY_GROUP_ANIMATIONS", True), \
+             patch.object(overlay_renderer.pygame.time, "get_ticks", return_value=0):
+            idle_groups = overlay_renderer.compact_area_unit_groups(self.game, set(), set())
+            overlay_renderer.army_group_presentation(self.game, idle_groups, set())
+        with patch.object(overlay_renderer.pygame.time, "get_ticks", return_value=duration_ms):
+            _groups, moving, _suppressed = overlay_renderer.army_group_presentation(self.game, idle_groups, set())
+            self.assertEqual(moving, [])
+            planes[0]["order"] = {"type": "AIR_ATTACK", "target_id": 2}
+            self.game._presentation_cache_revision += 1
+            strike_groups = overlay_renderer.compact_area_unit_groups(self.game, set(), set())
+            groups, moving, suppressed = overlay_renderer.army_group_presentation(
+                self.game, strike_groups, set())
+        self.assertEqual([group["presentation_id"] for group in groups],
+                         [group["presentation_id"] for group in idle_groups])
+        self.assertEqual(moving, [])
+        self.assertEqual(suppressed, {id(planes[0])})
+
+    def test_zoomed_out_aircraft_keep_their_armies_separate(self):
+        planes = self.mission_units()
+        self.game.camera.zoom = 0.2
+        self.game.nation_data["A"]["armies"] = [
+            {"id": "first", "unit_ids": [unit["unit_id"] for unit in planes[:3]]},
+            {"id": "second", "unit_ids": [unit["unit_id"] for unit in planes[3:5]]}]
+        groups = overlay_renderer.compact_army_groups(self.game, set())
+        self.assertEqual([group["army"]["id"] for group in groups], ["first", "second"])
+        self.assertEqual([group["units"] for group in groups], [planes[:3], planes[3:5]])
+        areas = overlay_renderer.compact_area_unit_groups(
+            self.game, set(), {id(unit) for unit in planes[:5]})
+        air_areas = [group for group in areas if group["units"][0]["type"] == "Test Plane"]
+        self.assertEqual([group["units"] for group in air_areas], [planes[5:]])
+
+    def test_zoomed_out_selected_and_transition_aircraft_hide_mission_badges(self):
+        self.mission_units()
+        self.game.camera.zoom = 0.2
+        self.game.is_unit_selected = lambda _unit: True
+        with patch.object(overlay_renderer, "_draw_air_mission") as badges:
+            overlay_renderer.draw_unit_icon(self.game, pygame.Surface((400, 400)),
+                                            200, 200, self.province)
+        badges.assert_not_called()
+        air_boxes = [box for box in self.game.unit_stack_hitboxes
+                     if box["units"][0]["type"] == "Test Plane"]
+        self.assertEqual([box["units"] for box in air_boxes], [self.province["units"][2:]])
+        self.game.unit_stack_hitboxes = []
+        self.game.camera.pos = pygame.Vector2()
+        self.game.top_ui_height = 0
+        plane = self.province["units"][-1]
+        with patch.object(overlay_renderer, "_draw_air_mission") as badges:
+            overlay_renderer.draw_army_group_transition_units(
+                self.game, pygame.Surface((400, 400)),
+                [{"unit": plane, "province": self.province, "position": (100, 100)}])
+        badges.assert_not_called()
+
+    def test_foreign_or_fogged_orders_do_not_reveal_missions(self):
+        planes = self.mission_units()
+        self.game.player_country = "B"
+        with patch.object(overlay_renderer, "_draw_air_mission", wraps=overlay_renderer._draw_air_mission) as badges:
+            overlay_renderer.draw_unit_icon(self.game, pygame.Surface((400, 400)),
+                                            200, 200, self.province)
+        self.assertTrue(all(call.args[2] is None for call in badges.call_args_list))
+        for viewer, preview in (("Spectator", False), ("B", True)):
+            self.game.player_country = viewer
+            self.game.viewing_ai_moves = preview
+            self.assertEqual(overlay_renderer._unit_render_index(self.game).stack_keys[id(planes[4])],
+                             ("AIR", "STRIKE"))
+        with patch.object(overlay_renderer, "_draw_air_mission") as badges:
+            overlay_renderer.draw_unit_icon(self.game, pygame.Surface((400, 400)),
+                                            200, 200, self.province, is_partial=True)
+        badges.assert_not_called()
+
+    def test_tactical_view_keeps_every_division_separate_at_all_zooms(self):
+        self.mission_units()
+        self.game.tactical_mode = True
+        self.game.player_unit = self.province["units"][-1]
+        for zoom in (0.2, 4):
+            self.game.camera.zoom = zoom
+            self.game.unit_stack_hitboxes = []
+            overlay_renderer.draw_unit_icon(self.game, pygame.Surface((400, 400)),
+                                            200, 200, self.province)
+            self.assertEqual(len(self.game.unit_stack_hitboxes), len(self.province["units"]))
+            self.assertTrue(all(len(box["units"]) == 1 for box in self.game.unit_stack_hitboxes))
 
     def preview_lines(self, visible=True):
         pygame.font.init()

@@ -24,12 +24,14 @@ class _UnitRenderIndex:
     in one vectorized operation before the per-stack drawing code runs.
     """
 
-    def __init__(self, map_data, view_filter=queries.DEFAULT_UNIT_VIEW_FILTER):
+    def __init__(self, map_data, view_filter=queries.DEFAULT_UNIT_VIEW_FILTER,
+                 player_country=None, viewing_ai_moves=False):
         occupied = []
         records = []
         centers = []
         counts = []
         self.view_units_by_province = {}
+        self.stack_keys = {}
         view_records = []
 
         for province in map_data.values():
@@ -38,6 +40,12 @@ class _UnitRenderIndex:
                 continue
             occupied.append(province)
             records.extend((unit, province) for unit in units)
+            for unit in units:
+                stack_key = queries.unit_map_stack_key(unit)
+                if (stack_key[0] == "AIR" and player_country is not None
+                        and not queries.can_view_unit_orders(unit, player_country, viewing_ai_moves)):
+                    stack_key = ("AIR", "NONE")
+                self.stack_keys[id(unit)] = stack_key
             view_units = tuple(unit for unit in units
                                if queries.unit_matches_view_filter(unit, view_filter))
             self.view_units_by_province[id(province)] = view_units
@@ -122,18 +130,20 @@ def _unit_render_index(map_screen):
     revision = getattr(map_screen, "_presentation_cache_revision", None)
     # Compatibility for render tools and test doubles predating view filters.
     view_filter = getattr(map_screen, "unit_view_filter", queries.DEFAULT_UNIT_VIEW_FILTER)
+    player_country = getattr(map_screen, "player_country", None)
+    viewing_ai_moves = getattr(map_screen, "viewing_ai_moves", False)
     # A real Map owns explicit invalidation boundaries.  Small test/editor
     # doubles do not, so rebuild for them and reflect direct list mutations
     # rather than retaining stale unit references.
     if revision is None:
-        return _UnitRenderIndex(map_screen.map_data, view_filter)
+        return _UnitRenderIndex(map_screen.map_data, view_filter, player_country, viewing_ai_moves)
 
     cached = getattr(map_screen, "_unit_render_index_cache", None)
-    cache_key = (revision, view_filter)
+    cache_key = (revision, view_filter, player_country, viewing_ai_moves)
     if cached is not None and cached[0] == cache_key:
         return cached[1]
 
-    index = _UnitRenderIndex(map_screen.map_data, view_filter)
+    index = _UnitRenderIndex(map_screen.map_data, view_filter, player_country, viewing_ai_moves)
     map_screen._unit_render_index_cache = (cache_key, index)
     return index
 
@@ -1071,8 +1081,10 @@ def draw_overlay_content(map_screen, surface, draw_combat=True):
     }
     area_groups = compact_area_unit_groups(
         map_screen, combat_unit_ids, organized_unit_object_ids)
+    desired_groups = [*army_groups, *area_groups]
+    _space_compact_groups(desired_groups)
     compact_groups, transition_units, compact_unit_object_ids = army_group_presentation(
-        map_screen, [*army_groups, *area_groups], combat_unit_ids)
+        map_screen, desired_groups, combat_unit_ids)
     strategic_unit_alphas = strategic_unit_fade_alphas(map_screen)
     # This is transient render state, consumed by map_renderer when it draws
     # movement arrows later in the same frame; it is never part of a save.
@@ -1385,6 +1397,7 @@ ARMY_EMBLEM_MIN_SIZE = 14
 ARMY_EMBLEM_MAX_SIZE = 32
 ARMY_EMBLEM_HEIGHT_RATIO = 0.8
 ARMY_EMBLEM_GAP = 6
+AIR_MISSION_GAP = 5
 ARMY_GROUP_ICON_MAX_ZOOM = 2.0
 ARMY_GROUP_TRANSITION_SECONDS = 0.1
 # Compact markers must read as a formation rather than an ordinary division.
@@ -1407,6 +1420,58 @@ def unit_box_size(map_screen):
     if map_screen.camera.tilt_factor < 0.99 and getattr(c, 'APPLY_TILT_TO_OVERLAYS', True):
         scaled_h = max(8, int(scaled_h * map_screen.camera.tilt_factor))
     return scaled_w, scaled_h, display_scale
+
+
+def _compact_stack_key(stack_key):
+    """Combine missions within each compact domain marker."""
+    return stack_key[0], None
+
+
+def _split_display_records(records, unit_index, include_missions=True):
+    """Partition cached records by domain, with missions in detailed views."""
+    groups = {}
+    for unit, province in records:
+        key = unit_index.stack_keys[id(unit)]
+        if not include_missions:
+            key = _compact_stack_key(key)
+        groups.setdefault(key, []).append((unit, province))
+    return groups.items()
+
+
+def _mission_icon(stack_key):
+    domain, mission = stack_key
+    return c.AIR_MISSION_ICONS[mission] if domain == "AIR" and mission != "NONE" else None
+
+
+def _draw_air_mission(surface, box_rect, icon_name, alpha=255):
+    """Draw a mission badge with the same size rule as army emblems."""
+    if icon_name is None:
+        return
+    size = _army_emblem_size(box_rect.height)
+    icon = symbol_loader.get_symbol(icon_name, 1, style="classic", fit_size=(size, size))
+    def build():
+        badge = pygame.Surface((size, size), pygame.SRCALPHA)
+        pygame.draw.rect(badge, (20, 27, 40), badge.get_rect(), border_radius=3)
+        if icon is not None:
+            badge.blit(icon, icon.get_rect(center=badge.get_rect().center))
+        return badge
+    badge = _cache_box(("air-mission", icon_name, size, icon), build)
+    if alpha < 255:
+        badge = badge.copy()
+        badge.set_alpha(alpha)
+    rect = badge.get_rect(midleft=(box_rect.right + AIR_MISSION_GAP, box_rect.centery))
+    surface.blit(badge, rect)
+
+
+def _space_compact_groups(groups):
+    """Separate compact markers at the same center."""
+    groups_by_center = {}
+    for group in groups:
+        groups_by_center.setdefault(tuple(group["center"]), []).append(group)
+    for colliding_groups in groups_by_center.values():
+        spacing = max(group["icon"].get_height() for group in colliding_groups) + 3
+        for index, group in enumerate(colliding_groups):
+            group["screen_offset"] = (0, round((index - (len(colliding_groups) - 1) / 2) * spacing))
 
 
 def uses_compact_army_icons(map_screen):
@@ -1561,6 +1626,15 @@ def unknown_box(size):
     return _cache_box(("?", (), 0, False, size), build)
 
 
+def _army_band_width(scaled_width):
+    return max(2, min(5, round(scaled_width * 0.1)))
+
+
+def _army_emblem_size(scaled_height):
+    return max(ARMY_EMBLEM_MIN_SIZE, min(ARMY_EMBLEM_MAX_SIZE,
+               round(scaled_height * ARMY_EMBLEM_HEIGHT_RATIO)))
+
+
 def draw_army_unit_bands(surface, owner_units, owner, player_country, nation_data,
                           box_rect, scaled_width, army=None):
     """Draw a local army-color marker beside a stack.
@@ -1579,7 +1653,7 @@ def draw_army_unit_bands(surface, owner_units, owner, player_country, nation_dat
     if not colors:
         return box_rect.left
 
-    band_width = max(2, min(5, round(scaled_width * 0.1)))
+    band_width = _army_band_width(scaled_width)
     band_left = box_rect.left - ARMY_UNIT_BAND_GAP - band_width
     for index, color in enumerate(colors):
         top = box_rect.top + round(index * box_rect.height / len(colors))
@@ -1618,9 +1692,7 @@ def army_emblem_surface(army, size):
 
 def draw_army_emblem(surface, army, box_rect, indicator_left, scaled_height):
     """Draw an organized stack's one large identifying emblem, if it has one."""
-    badge_size = max(ARMY_EMBLEM_MIN_SIZE,
-                     min(ARMY_EMBLEM_MAX_SIZE,
-                         round(scaled_height * ARMY_EMBLEM_HEIGHT_RATIO)))
+    badge_size = _army_emblem_size(scaled_height)
     badge = army_emblem_surface(army, badge_size)
     if not badge:
         return
@@ -1718,7 +1790,7 @@ def _army_average_center(records, map_screen):
 
 
 def compact_army_groups(map_screen, combat_unit_ids):
-    """Build one strategic marker for each local army with unselected members.
+    """Build separate domain markers for each local army.
 
     A marker requires every live member to be resolved, then represents only
     members matching the current view. Those divisions remain in their normal
@@ -1760,22 +1832,24 @@ def compact_army_groups(map_screen, combat_unit_ids):
         # A partial selection remains visible and controllable, but it must
         # not displace the marker. Its center and fallback art describe all
         # matching members; only unselected ones are hidden by the marker.
-        unselected_records = [(unit, province) for unit, province in records
-                              if not is_selected(unit)]
-        if not unselected_records:
-            continue
-        units = [unit for unit, _province in unselected_records]
-        best_unit = queries.get_best_unit_by_defense_then_attack_then_speed(
-            [unit for unit, _province in records])
-        if not best_unit:
-            continue
-        owner_color = map_screen.nation_colors.get(player_country, (200, 200, 200))
-        icon = compact_army_group_icon(army, best_unit, owner_color,
-                                       player_country, box_size, len(units),
-                                       zoom=map_screen.camera.zoom)
-        groups.append({"army": army, "units": units,
-                       "province": records[0][1], "center": _army_average_center(records, map_screen),
-                       "icon": icon})
+        for stack_key, domain_records in _split_display_records(records, unit_index, include_missions=False):
+            units = [unit for unit, _province in domain_records if not is_selected(unit)]
+            if not units:
+                continue
+            best_unit = queries.get_best_unit_by_defense_then_attack_then_speed(
+                [unit for unit, _province in domain_records])
+            if not best_unit:
+                continue
+            owner_color = map_screen.nation_colors.get(player_country, (200, 200, 200))
+            icon = compact_army_group_icon(army, best_unit, owner_color, player_country,
+                                           box_size, len(units), zoom=map_screen.camera.zoom)
+            groups.append({"army": army, "units": units,
+                           "presentation_id": (army["id"] if stack_key == ("LAND", None)
+                                               else ("army", army["id"], stack_key)),
+                           "province": domain_records[0][1],
+                           "center": _army_average_center(domain_records, map_screen),
+                           "icon": icon})
+    _space_compact_groups(groups)
     return groups
 
 
@@ -1853,9 +1927,10 @@ def compact_area_unit_groups(map_screen, combat_unit_ids, organized_unit_object_
             owner = unit.get("owner")
             if not isinstance(owner, str):
                 continue
-            records_by_owner.setdefault(owner, []).append((unit, province))
+            stack_key = _compact_stack_key(unit_index.stack_keys[id(unit)])
+            records_by_owner.setdefault((owner, stack_key), []).append((unit, province))
 
-    for owner, records in records_by_owner.items():
+    for (owner, stack_key), records in records_by_owner.items():
         for cluster_records in _nearby_area_clusters(records, map_screen):
             units = [unit for unit, _province in cluster_records]
             # A selected local area stays expanded, so the selection remains
@@ -1867,14 +1942,15 @@ def compact_area_unit_groups(map_screen, combat_unit_ids, organized_unit_object_
                 continue
             owner_color = map_screen.nation_colors.get(owner, (200, 200, 200))
             icon = compact_army_group_icon(None, best_unit, owner_color, owner,
-                                           box_size, len(units),
-                                           zoom=map_screen.camera.zoom)
+                                           box_size, len(units), zoom=map_screen.camera.zoom)
             anchor_province = cluster_records[0][1]
             anchor_id = anchor_province.get("id", anchor_province["center"])
             groups.append({"army": None, "units": units,
                            # A stable cluster identity lets this virtual stack
                            # use the same compression animation as a real army.
-                           "presentation_id": ("area", owner, anchor_id),
+                           "presentation_id": (("area", owner, anchor_id)
+                                               if stack_key == ("LAND", None)
+                                               else ("area", owner, anchor_id, stack_key)),
                            "province": anchor_province,
                            "center": _army_average_center(cluster_records, map_screen),
                            "icon": icon})
@@ -1882,14 +1958,7 @@ def compact_area_unit_groups(map_screen, combat_unit_ids, organized_unit_object_
     # Several countries can still produce a marker at exactly the same map
     # point.  Separate only those collisions, instead of offsetting all area
     # groups by their source province.
-    groups_by_center = {}
-    for group in groups:
-        groups_by_center.setdefault(tuple(group["center"]), []).append(group)
-    for colliding_groups in groups_by_center.values():
-        spacing = max(group["icon"].get_height() for group in colliding_groups) + 3
-        for index, group in enumerate(colliding_groups):
-            group["screen_offset"] = (0, round((index - (len(colliding_groups) - 1) / 2)
-                                                * spacing))
+    _space_compact_groups(groups)
     return groups
 
 
@@ -1922,6 +1991,12 @@ def army_group_presentation(map_screen, desired_groups, combat_unit_ids):
     if states is None:
         states = {}
         map_screen.army_group_transition_states = states
+    # Animation test doubles can omit the viewer, as the render index permits.
+    viewer = (getattr(map_screen, "player_country", None),
+              getattr(map_screen, "viewing_ai_moves", False))
+    if getattr(map_screen, "_army_group_viewer", viewer) != viewer:
+        states.clear()
+    map_screen._army_group_viewer = viewer
     if not c.ARMY_GROUP_ANIMATIONS:
         # The setting is allowed to change while a marker is moving. Drop any
         # in-flight state so it cannot resume later, then publish exactly the
@@ -1935,7 +2010,8 @@ def army_group_presentation(map_screen, desired_groups, combat_unit_ids):
         return list(desired_groups), [], suppressed_unit_ids
 
     now = pygame.time.get_ticks() / 1000.0
-    live_records = _unit_render_index(map_screen).live_by_object_id
+    unit_index = _unit_render_index(map_screen)
+    live_records = unit_index.live_by_object_id
     desired_by_army = {
         presentation_id: group
         for group in desired_groups
@@ -1943,6 +2019,7 @@ def army_group_presentation(map_screen, desired_groups, combat_unit_ids):
         if presentation_id is not None
     }
     presented_groups, transition_units, suppressed_unit_ids = [], [], set()
+    desired_unit_ids = {id(unit) for group in desired_groups for unit in group["units"]}
 
     for army_id, group in desired_by_army.items():
         unit_ids = tuple(id(unit) for unit in group["units"])
@@ -1990,6 +2067,8 @@ def army_group_presentation(map_screen, desired_groups, combat_unit_ids):
                          "center": group["center"], "icon": group["icon"],
                          "province": group["province"], "started_at": now}
                 states[army_id] = state
+        state["stack_key"] = _compact_stack_key(unit_index.stack_keys[unit_ids[0]])
+        state["screen_offset"] = group.get("screen_offset", (0, 0))
         suppressed_unit_ids.update(unit_ids)
         if state["phase"] == "compress":
             progress = min(1.0, (now - state["started_at"])
@@ -2015,7 +2094,8 @@ def army_group_presentation(map_screen, desired_groups, combat_unit_ids):
             # back inside the marker and should not keep an old animation.
             departure_unit_ids = tuple(
                 unit_id for unit_id in departure["unit_ids"]
-                if unit_id in selected_unit_ids and unit_id in live_records)
+                if unit_id in selected_unit_ids and unit_id in live_records
+                and unit_id not in desired_unit_ids)
             if not departure_unit_ids:
                 continue
             progress = min(1.0, (now - departure["started_at"])
@@ -2039,7 +2119,8 @@ def army_group_presentation(map_screen, desired_groups, combat_unit_ids):
         if army_id in desired_by_army:
             continue
         records = [live_records[unit_id] for unit_id in state["unit_ids"]
-                   if unit_id in live_records]
+                   if unit_id in live_records and unit_id not in desired_unit_ids
+                   and _compact_stack_key(unit_index.stack_keys[unit_id]) == state["stack_key"]]
         if not records or any(id(unit) in combat_unit_ids for unit, _province in records):
             del states[army_id]
             continue
@@ -2051,7 +2132,7 @@ def army_group_presentation(map_screen, desired_groups, combat_unit_ids):
         if progress >= 1.0:
             del states[army_id]
             continue
-        suppressed_unit_ids.update(state["unit_ids"])
+        suppressed_unit_ids.update(id(unit) for unit, _province in records)
         for unit, province in records:
             transition_units.append({"unit": unit, "province": province,
                                      "position": _interpolate_army_position(
@@ -2060,6 +2141,7 @@ def army_group_presentation(map_screen, desired_groups, combat_unit_ids):
         presented_groups.append({"army": None, "units": [unit for unit, _province in records],
                                  "province": state["province"], "center": state["center"],
                                  "icon": state["icon"],
+                                 "screen_offset": state["screen_offset"],
                                  "alpha": round(255 * (1.0 - progress))})
     return presented_groups, transition_units, suppressed_unit_ids
 
@@ -2175,6 +2257,7 @@ def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,
         return
 
     scaled_w, scaled_h, display_scale = unit_box_size(map_screen)
+    compact = uses_compact_army_icons(map_screen)
 
     if is_partial:
         final_surf = unknown_box((scaled_w, scaled_h))
@@ -2208,24 +2291,33 @@ def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,
     # Split every stack into its selected and unselected members so a mixed
     # stack remains readable and the two groups can be clicked independently.
     is_selected = getattr(map_screen, "is_unit_selected", lambda _unit: False)
+    unit_index = _unit_render_index(map_screen)
     split_stacks = []
     for owner, army, stack_units in unit_stacks:
-        selected_units = [unit for unit in stack_units if is_selected(unit)]
-        unselected_units = [unit for unit in stack_units if not is_selected(unit)]
-        if selected_units:
-            split_stacks.append((owner, army, selected_units))
-        if unselected_units:
-            split_stacks.append((owner, army, unselected_units))
+        if map_screen.tactical_mode:
+            split_stacks.extend((owner, army, [unit]) for unit in stack_units)
+            continue
+        for _key, records in _split_display_records(((unit, province) for unit in stack_units),
+                                                    unit_index, include_missions=not compact):
+            selected_units = [unit for unit, _province in records if is_selected(unit)]
+            unselected_units = [unit for unit, _province in records if not is_selected(unit)]
+            if selected_units:
+                split_stacks.append((owner, army, selected_units))
+            if unselected_units:
+                split_stacks.append((owner, army, unselected_units))
     unit_stacks = split_stacks
 
     gap = max(2, int(4 * display_scale)) # Spacing between stacked boxes
+    row_height = max(scaled_h, _army_emblem_size(scaled_h)) if not compact and any(
+        _mission_icon(unit_index.stack_keys[id(members[0])])
+        for _owner, _army, members in unit_stacks) else scaled_h
 
     # 2. Calculate the vertical offset to perfectly center the entire stack over the province
     total_boxes = len(unit_stacks)
-    total_stack_height = (scaled_h * total_boxes) + (gap * (total_boxes - 1))
+    total_stack_height = (row_height * total_boxes) + (gap * (total_boxes - 1))
 
     # Start drawing from the top of the stack and move down.
-    current_sy = sy - (total_stack_height // 2) + (scaled_h // 2)
+    current_sy = sy - (total_stack_height // 2) + (row_height // 2)
 
     # Sort selected stacks above their unselected neighbours, while keeping a
     # tactical player's one controllable division above everything else.
@@ -2277,6 +2369,10 @@ def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,
                 map_screen.nation_data, rect, scaled_w, army=army)
             draw_army_emblem(surface, army, rect, indicator_left, scaled_h)
 
+        if not compact:
+            _draw_air_mission(surface, rect,
+                              _mission_icon(unit_index.stack_keys[id(best_unit)]), alpha)
+
         # Only visible, rendered owner stacks publish a hitbox.  The event
         # layer additionally checks authority before selecting, but never
         # publishing a hidden stack here prevents fog-of-war leakage.
@@ -2285,7 +2381,7 @@ def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,
                                        owner_units, owner, display_scale)
 
         # Move the offset down for the next owner's box in the stack.
-        current_sy += scaled_h + gap
+        current_sy += row_height + gap
 
 
 def draw_split_movement_path(surface, map_screen, start_prov, path, speed, base_color, force_visible=False):

@@ -213,6 +213,21 @@ Combat markers for matching units still estimate the complete battle.
 Unknown fogged stacks and generic combat markers appear only in All.
 Changing filters must not reveal hidden unit types.
 
+Map boxes separate land, naval, and air units, including members of the same army.
+Aircraft also separate by mission, including idle aircraft and each patrol priority.
+Matching aircraft missions can share one rectangular box.
+Active missions show a badge to the right of their box, sized like an army emblem.
+Mission badges do not extend selection or hover hitboxes.
+Tactical views show each visible division separately at every zoom.
+
+At strategic zoom, markers combine aircraft missions within each domain and army.
+Aircraft outside armies combine with nearby aircraft of the same owner.
+Different armies remain separate.
+Strategic zoom hides mission badges.
+
+Mission badges use the same order visibility as map arrows.
+The display cache refreshes when orders, unit forms, filters, or the viewer change.
+
 AI MODULES
 ----------
 

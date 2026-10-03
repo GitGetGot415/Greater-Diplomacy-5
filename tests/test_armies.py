@@ -515,6 +515,7 @@ class ArmyLayoutTests(unittest.TestCase):
             unit_hover_hitboxes=[], unit_stack_hitboxes=[],
             unit_selection_drag=None, is_unit_selected=lambda _unit: False)
         province = {"units": [first, second, third]}
+        map_screen.map_data = {"one": province}
         surface = pygame.Surface((200, 200), pygame.SRCALPHA)
 
         with (patch.object(overlay_renderer, "unit_box",
@@ -547,6 +548,9 @@ class ArmyLayoutTests(unittest.TestCase):
             unit_hover_hitboxes=[], unit_stack_hitboxes=[], unit_selection_drag=None,
             is_unit_selected=lambda unit: unit["unit_id"] in selected_ids)
         surface = pygame.Surface((200, 200), pygame.SRCALPHA)
+        first_province = {"units": first_tile_units}
+        second_province = {"units": second_tile_units}
+        map_screen.map_data = {"one": first_province, "two": second_province}
 
         with (patch.object(overlay_renderer, "unit_box",
                            side_effect=lambda *_args, **kwargs: pygame.Surface(
@@ -556,10 +560,10 @@ class ArmyLayoutTests(unittest.TestCase):
                                               _nations, box, _width, army=None: box.left),
               patch.object(overlay_renderer, "draw_army_emblem")):
             overlay_renderer.draw_unit_icon(
-                map_screen, surface, 50, 50, {"units": first_tile_units},
+                map_screen, surface, 50, 50, first_province,
                 units_are_visible=True)
             overlay_renderer.draw_unit_icon(
-                map_screen, surface, 150, 50, {"units": second_tile_units},
+                map_screen, surface, 150, 50, second_province,
                 units_are_visible=True)
 
         self.assertEqual([call.args[2] for call in boxes.call_args_list], [5, 4, 3, 3])

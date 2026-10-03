@@ -88,13 +88,9 @@ WHEEL_SCROLL_STEP = 30
 UNIT_ICON_ZOOM = 1.5
 
 
-AIR_MISSION_CHOICES = (
-    ("NONE", "No mission", "No Mission"),
-    ("WEAKEST", "Defend area (weakest enemy missions targeted first)", "Weakest First"),
-    ("STRONGEST", "Defend area (strongest enemy missions targeted first)", "Strongest First"),
-    ("STRIKE", "Strike", "Strike Selected"),
-)
-AIR_MISSION_ICONS = {mission: icon for mission, _label, icon in AIR_MISSION_CHOICES}
+AIR_MISSION_CHOICES = c.AIR_MISSION_CHOICES
+AIR_MISSION_ICONS = {mission: c.AIR_MISSION_ICONS[mission]
+                     for mission, _label, _icon in AIR_MISSION_CHOICES}
 
 
 class _AirMissionSelectScreen(ModalScreen):
@@ -874,15 +870,13 @@ class Orders_Screen(GameState):
                     "Upgrading")
 
         if queries.is_air_unit(unit):
-            mission = ("STRIKE" if order_type == "AIR_ATTACK" or self.bombarding_unit_index == row_key
+            mission = ("STRIKE" if self.bombarding_unit_index == row_key
                        or id(unit) in self.air_mission_targeting_ids
-                       else order.get("priority", queries.AIR_DEFAULT_PRIORITY)
-                       if order_type == "AIR_PATROL" else "NONE")
+                       else queries.air_unit_mission(unit))
             add(ACTION_COL_BOMBARD, "yellow", "Cancel strike mission" if mission == "STRIKE"
                 else "Select air mission: no mission, defend area, or strike",
                 lambda idx=index, p=province, key=row_key: self.open_air_mission_select(idx, p, key),
-                "Air Move" if mission == "NONE" and (order_type == "AIR_REPOSITION"
-                    or (order_type == "MOVE" and order.get("path"))) else AIR_MISSION_ICONS[mission])
+                c.AIR_MISSION_ICONS[mission])
         elif order_type == "BOMBARD":
             btn_bombard = add(ACTION_COL_BOMBARD, "red", "Cancel bombardment",
                               lambda idx=index, p=province: self.cancel_unit_order(idx, p),

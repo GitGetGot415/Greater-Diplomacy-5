@@ -134,7 +134,7 @@ class _NavigationIntroPopup:
         "These buttons are important! Located on the bottom left of the screen, they edit the appearance of the map, giving you the information you need to play effectively.",
         "Reach other countries through the Mail tab or directly from their territory on the map.",
         "Learn how to create, organize, and command armies, including target areas.",
-        "Air missions resolve next turn. The range outline closes along map edges; any part of a tile inside or touching it counts.",
+        "Air missions resolve next turn. Aircraft boxes split by mission, with icons on the right; select the unit rectangle. Zoomed-out markers combine missions and hide these icons, while armies and unit categories stay separate. The range outline closes along map edges; any part of a tile inside or touching it counts.",
     )
 
     def __init__(self, map_screen):
