@@ -1809,6 +1809,9 @@ def apply_authoritative_snapshot(map_ref, snapshot: dict[str, Any]) -> None:
     """Replace mutable game state on a client map after a server broadcast."""
     if not isinstance(snapshot, dict):
         return
+    from map_logic.turn_processing import unit_events
+    # Badges are local preferences. Server broadcasts must not mark them unread again.
+    local_event_reads = unit_events.saved_reads(map_ref) if hasattr(map_ref, "time_manager") else {}
     clear_selection = getattr(map_ref, "clear_map_unit_selection", None)
     if clear_selection:
         clear_selection()
@@ -1853,6 +1856,8 @@ def apply_authoritative_snapshot(map_ref, snapshot: dict[str, Any]) -> None:
         map_ref.time_manager.month_index = date.get("month", map_ref.time_manager.month_index)
         map_ref.time_manager.year = date.get("year", map_ref.time_manager.year)
         map_ref.time_manager.total_turns = date.get("total_turns", map_ref.time_manager.total_turns)
+    if hasattr(map_ref, "time_manager"):
+        unit_events.restore(map_ref, snapshot | {"unit_event_read_turns": local_event_reads})
     # These are local intent buffers.  The processed server snapshot has now
     # either applied or rejected them, so carrying them into the next turn
     # would replay an old subject edit or volunteer offer.

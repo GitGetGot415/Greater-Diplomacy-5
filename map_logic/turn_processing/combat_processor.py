@@ -1,6 +1,6 @@
 import data.constants as c
 from data import queries
-from map_logic.turn_processing import combat_rules, edit_province_ownership
+from map_logic.turn_processing import combat_rules, edit_province_ownership, unit_events
 import random # Imported for the random tiebreaker
 from collections import namedtuple
 
@@ -16,7 +16,7 @@ MeetingResult = namedtuple("MeetingResult", "survivors1 survivors2 fought")
 CHARGE_SIDE = 1
 
 
-def apply_group_damage(total_atk, target_units, defense_bonus_fn=None):
+def apply_group_damage(total_atk, target_units, defense_bonus_fn=None, *, sources=None, tile=None):
     """Distributes attack after health-scaled unit defense and flat bonuses.
 
     Fortification defense is a property of the tile, not the individual unit,
@@ -38,6 +38,7 @@ def apply_group_damage(total_atk, target_units, defense_bonus_fn=None):
             percent_lost = (actual_dmg / max_hp) * 100.0
             u["morale"] = max(0.0, float(u.get("morale", c.DEFAULT_UNIT_MORALE)) - percent_lost)
 
+        unit_events.record_damage(u, min(max(0, u["health"]), actual_dmg), sources, tile)
         u["health"] -= actual_dmg
 
 def process_bombardments(map_screen):
@@ -117,12 +118,14 @@ def process_bombardments(map_screen):
             # isn't capped by combat width, since each shot was ordered by hand.
             # "bombard_attack" is a separate stat from melee "attack" (falls
             # back to attack for any family that doesn't define it).
-            for hit_targets, total_atk in combat_rules.damage_shots(
-                    guns, targets, nation_data=map_screen.nation_data, attack_field="bombard_attack"):
+            for hit_targets, total_atk, sources in combat_rules.damage_shots(
+                    guns, targets, nation_data=map_screen.nation_data, attack_field="bombard_attack",
+                    with_sources=True):
                 apply_group_damage(
                     total_atk, hit_targets,
                     lambda unit, province=target_prov: queries.get_fort_defense_bonus(
-                        province, unit, map_screen.nation_data, combat_active=True))
+                        province, unit, map_screen.nation_data, combat_active=True),
+                    sources=sources, tile=target_id)
 
             # Resolve the fort damage after this volley has been calculated so
             # the fort's current level protects against the shells that hit it.
@@ -226,7 +229,7 @@ def process_pinning(map_screen):
                     shot = combat_rules.volley(member.front, probe.shares,
                                                map_screen.nation_data)
                     if receiving.side_index != CHARGE_SIDE:
-                        shots_at_defenders.append((member.targets, shot))
+                        shots_at_defenders.append((member.targets, shot, member.front))
 
         # A charge deeper than the lane can seat always has survivors, because
         # the surplus sits in reserve where nothing can reach it. Fifty militia
@@ -241,12 +244,14 @@ def process_pinning(map_screen):
 
         if not attackers_survive:
             # 1. Attackers are obliterated. Apply their pitiful damage to the defenders.
-            for targets, total_atk in shots_at_defenders:
+            for targets, total_atk, sources in shots_at_defenders:
                 apply_group_damage(
                     total_atk,
                     targets,
                     lambda unit, province=dest_prov: queries.get_fort_defense_bonus(
                         province, unit, map_screen.nation_data, combat_active=True),
+                    sources=[(unit, combat_rules.volley([unit], probe.shares, map_screen.nation_data))
+                             for unit in sources], tile=dest_id,
                 )
 
             for lane in probe.lanes:
@@ -255,6 +260,11 @@ def process_pinning(map_screen):
 
             # 2. Kill the attackers and remove them from incoming_attacks
             for a_unit, a_origin_id in hostile_attackers:
+                unit_events.record_damage(a_unit, max(0, a_unit.get("health", 0)),
+                    [(unit, combat_rules.volley([unit], probe.shares, map_screen.nation_data))
+                     for lane in probe.lanes for side in (lane.a, lane.b)
+                     for member in side.members if a_unit in member.targets for unit in member.front],
+                    dest_id)
                 a_unit["health"] = 0
                 incoming_attacks[dest_id] = [info for info in incoming_attacks[dest_id] if info[0] != a_unit]
 
@@ -320,6 +330,8 @@ def resolve_meeting_engagement(prov1, prov2, units1, units2, nation_data):
     """
     # Both armies are crossing the same boundary: its narrower terrain limits
     # the fight, independent of which endpoint the caller happens to list first.
+    unit_events.set_locations(prov1, units1)
+    unit_events.set_locations(prov2, units2)
     queries.prepare_aircraft_for_ground_combat(units1, nation_data, units2,
                                              on_land=not queries.is_water_province(prov1))
     queries.prepare_aircraft_for_ground_combat(units2, nation_data, units1,
@@ -354,8 +366,8 @@ def resolve_meeting_engagement(prov1, prov2, units1, units2, nation_data):
                 queries.revert_transport(u)
 
     # Measured before any of it lands, so the exchange is simultaneous.
-    for targets, total_atk in combat_rules.exchange(battle, nation_data):
-        apply_group_damage(total_atk, targets)
+    for targets, total_atk, sources in combat_rules.exchange(battle, nation_data, with_sources=True):
+        apply_group_damage(total_atk, targets, sources=sources)
 
     # Only the front rank is in combat: a reserve rests and recovers morale
     # while the units ahead of it bleed, which is the pressure to rotate.
@@ -419,6 +431,7 @@ def process_combat(map_screen):
             continue
 
         is_land = not queries.is_water_province(province)
+        unit_events.set_locations(province, units)
 
         queries.prepare_aircraft_for_ground_combat(units, map_screen.nation_data, on_land=is_land)
 
@@ -435,12 +448,13 @@ def process_combat(map_screen):
         # Every volley is measured before any of it lands, so the fight is
         # simultaneous: a nation wiped out this turn still fires this turn, and
         # nobody's share depends on who happened to be resolved first.
-        for targets, total_atk in combat_rules.exchange(battle, map_screen.nation_data):
+        for targets, total_atk, sources in combat_rules.exchange(battle, map_screen.nation_data, with_sources=True):
             apply_group_damage(
                 total_atk,
                 targets,
                 lambda unit, province=province: queries.get_fort_defense_bonus(
                     province, unit, map_screen.nation_data, combat_active=True),
+                sources=sources, tile=province["id"],
             )
 
         # Only the front rank is in combat: a reserve rests and recovers morale

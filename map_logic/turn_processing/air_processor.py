@@ -1,7 +1,7 @@
 """Resolve pixel-range aircraft orders once at the turn boundary."""
 from data import queries
 import data.constants as c
-from map_logic.turn_processing import combat_rules, combat_processor
+from map_logic.turn_processing import combat_rules, combat_processor, unit_events
 
 
 def _cleanup(map_screen):
@@ -92,8 +92,8 @@ def process_air_orders(map_screen):
             # retain three-or-more-side fights. Terrain never changes air width.
             battle = combat_rules.build_battle([force + defenders], map_screen.nation_data,
                                                width=c.COMBAT_WIDTH, air_combat=True)
-            for targets, attack in combat_rules.exchange(battle, map_screen.nation_data):
-                combat_processor.apply_group_damage(attack, targets)
+            for targets, attack, sources in combat_rules.exchange(battle, map_screen.nation_data, with_sources=True):
+                combat_processor.apply_group_damage(attack, targets, sources=sources, tile=key[0])
             for lane in battle.lanes:
                 for unit in lane.a.front + lane.b.front:
                     unit["_in_combat_this_turn"] = True
@@ -117,11 +117,11 @@ def process_air_orders(map_screen):
                 [survivors, garrison], map_screen.nation_data,
                 terrain=target.get("terrain"), convert_aircraft=False)
             garrison_ids = {id(u) for u in garrison}
-            for targets, attack in combat_rules.exchange(battle, map_screen.nation_data):
+            for targets, attack, sources in combat_rules.exchange(battle, map_screen.nation_data, with_sources=True):
                 combat_processor.apply_group_damage(attack, targets, lambda unit:
                     queries.get_fort_defense_bonus(target, unit, map_screen.nation_data,
                                                   combat_active=True)
-                    if id(unit) in garrison_ids else 0)
+                    if id(unit) in garrison_ids else 0, sources=sources, tile=target["id"])
             for lane in battle.lanes:
                 for unit in lane.a.front + lane.b.front:
                     unit["_in_combat_this_turn"] = True
@@ -138,6 +138,7 @@ def process_air_orders(map_screen):
         for unit in survivors:
             unit["order"] = {"type": "MOVE", "path": []}
             if queries.air_unit_stats(unit).get("air_consumable"):
+                unit_events.record_expended(unit, target["id"])
                 unit["health"] = 0
         _cleanup(map_screen)
 

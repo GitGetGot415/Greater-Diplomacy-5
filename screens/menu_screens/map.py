@@ -14,7 +14,7 @@ from data.platform import run_background
 
 # Core Game State & Global UI Elements
 from gameState import GameState
-from map_logic.turn_processing import turn_manager
+from map_logic.turn_processing import turn_manager, unit_events
 from ui import event_handler
 
 # Game Logic & Rendering Submodules
@@ -330,6 +330,14 @@ def render_buttons(map_screen):
             _run_pygame_sub_screen(map_screen, getattr(import_module(module_path), class_name)(map_screen))
         return open_it
 
+    from ui.bars import resource_hud
+    report_rect = resource_hud.unit_event_button_rect()
+    map_screen.btn_unit_events = Button(
+        report_rect.x, report_rect.y, "small_square", "yellow", "Unit events",
+        sub_screen_opener("screens.map_related_screens.unit_events_screen", "UnitEventsScreen"),
+        image=icons.get("mail"), show_text=False)
+    unit_events.refresh_presentation(map_screen)
+
     open_declare_independence = sub_screen_opener(
         "screens.map_related_screens.declare_independence", "Declare_Independence_Screen")
 
@@ -562,6 +570,7 @@ def render_buttons(map_screen):
         map_screen.btn_help, map_screen.btn_refresh_all, map_screen.btn_global_econ_overview,
         map_screen.btn_view_terrain, map_screen.btn_view_political, map_screen.btn_view_relations, map_screen.btn_view_cores, map_screen.btn_view_factions,
         map_screen.btn_view_resources, map_screen.btn_view_blank, map_screen.btn_view_units, map_screen.btn_view_economy, map_screen.btn_toggle_names,
+        map_screen.btn_unit_events,
         map_screen.btn_ed_load, map_screen.btn_ed_nation,
         map_screen.btn_ed_core, map_screen.btn_ed_claim, map_screen.btn_ed_autocore, map_screen.btn_ed_clear, map_screen.btn_ed_resource, map_screen.btn_ed_building,
         map_screen.btn_ed_unit, map_screen.btn_ed_refresh, map_screen.btn_ed_edited, map_screen.btn_ed_date, map_screen.btn_ed_diplo, map_screen.btn_ed_personality, map_screen.btn_ed_scripts,
@@ -772,6 +781,12 @@ def update_button_states(map_screen):
     # but expose no country-owned actions until the state has a real owner.
     has_player_country = map_screen.player_country in map_screen.nation_data
     is_thinking = map_screen.ai_is_thinking or map_screen.is_refreshing or map_screen.is_saving
+    map_screen.btn_unit_events.visible = (
+        not map_screen.is_editor and not map_screen.hide_resource_hud
+        and (has_player_country or map_screen.player_country == "Spectator")
+        and not is_thinking and not map_screen.viewing_ai_moves
+        and not map_screen.show_player_ready_screen)
+    map_screen.btn_unit_events.notification_count = map_screen._unit_event_unread
     if (not map_screen.is_editor
             and map_screen.player_country != "Spectator"
             and not has_player_country):
@@ -1287,6 +1302,10 @@ class Map(GameState):
         self.active_players = [] # Usually empty on boot unless loaded from save
         self.current_player_index = 0
         self.show_player_ready_screen = False
+        self.unit_event_log = {"turn": 0, "events": []}
+        self.unit_event_read_turns = {}
+        self._unit_event_view = []
+        self._unit_event_unread = 0
         # Every playable map session, including saves and multiplayer sessions,
         # gets a chance to show the tutorial after it has finished loading.
         # The persisted setting is checked when that moment arrives; editor
@@ -1471,6 +1490,7 @@ class Map(GameState):
         self._combat_unit_view_cache = None
         self._unit_render_index_cache = None
         self._unit_roster_cache = {}
+        unit_events.refresh_presentation(self)
         self.unit_selection_drag = None
         self.army_group_transition_states = {}
         # Army-card editing is local UI state like selection.  The edited
@@ -1894,6 +1914,7 @@ class Map(GameState):
         self._combat_unit_view_cache = None
         self._unit_render_index_cache = None
         self._unit_roster_cache = {}
+        unit_events.refresh_presentation(self)
         # The inspector projects aircraft caught in ground combat as casualties.
         # Build its roster at this boundary, never during the frame draw.
         if getattr(self, "selected_province", None) is not None:

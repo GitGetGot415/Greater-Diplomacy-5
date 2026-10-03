@@ -149,13 +149,20 @@ def snapshot_history(map_screen):
         snapshot["provinces"][data["json_key"]] = copy_history_value(saved_province)
     map_screen.history[turn_idx] = snapshot
 
-async def resolve_turn_logic(map_screen): # Renamed from resolve_turn
+async def resolve_turn_logic(map_screen):
+    from map_logic.turn_processing import unit_events
+    with unit_events.record_turn(map_screen):
+        await _resolve_turn_logic(map_screen)
+
+
+async def _resolve_turn_logic(map_screen): # Renamed from resolve_turn
     """Executes time, combat, movement, and economy logic (no refreshes).
 
     Yields with `await asyncio.sleep(0)` between the major sub-phases -- see
     prepare_turn's docstring for why.
     """
     print("\n--- [PHASE 2] TURN RESOLUTION START ---")
+    from map_logic.turn_processing import unit_events
     
     # Snapshot original owners for capture logic
     for prov in map_screen.map_data.values():
@@ -176,35 +183,35 @@ async def resolve_turn_logic(map_screen): # Renamed from resolve_turn
     politics.tick(map_screen)
     
     print("[SYSTEM] Executing Unit Orders & Combat...")
-    movement_processor.process_conversions(map_screen)
-    movement_processor.process_disbands(map_screen)
-    movement_processor.process_repairs(map_screen)
-    movement_processor.process_upgrades(map_screen)
+    unit_events.run_step(map_screen, "Conversions", movement_processor.process_conversions)
+    unit_events.run_step(map_screen, "Disbanding", movement_processor.process_disbands)
+    unit_events.run_step(map_screen, "Repairs", movement_processor.process_repairs)
+    unit_events.run_step(map_screen, "Upgrades", movement_processor.process_upgrades)
     await asyncio.sleep(0)
 
     # Process Queues (Deployments) so new units can defend
     print("[SYSTEM] Processing Queues (Deployments)...")
-    economy_processor.process_queues(map_screen)
+    unit_events.run_step(map_screen, "Deployments", economy_processor.process_queues)
     await asyncio.sleep(0)
 
     # Pre-Movement Combat Mechanics
     from map_logic.turn_processing import air_processor
-    air_processor.process_air_orders(map_screen)
-    combat_processor.process_bombardments(map_screen)
-    combat_processor.process_pinning(map_screen)
-    combat_processor.process_meeting_engagements(map_screen)
+    unit_events.run_step(map_screen, "Air missions", air_processor.process_air_orders)
+    unit_events.run_step(map_screen, "Bombardment", combat_processor.process_bombardments)
+    unit_events.run_step(map_screen, "Pinning", combat_processor.process_pinning)
+    unit_events.run_step(map_screen, "Meeting engagements", combat_processor.process_meeting_engagements)
 
-    movement_processor.process_movement(map_screen)
-    combat_processor.process_combat(map_screen)
+    unit_events.run_step(map_screen, "Movement", movement_processor.process_movement)
+    unit_events.run_step(map_screen, "Ground combat", combat_processor.process_combat)
     combat_processor.check_for_post_combat_captures(map_screen)
     await asyncio.sleep(0)
 
     # Exile any units left standing on foreign soil without a legal right to be there
-    movement_processor.process_stranded_units(map_screen)
+    unit_events.run_step(map_screen, "Return from foreign territory", movement_processor.process_stranded_units)
 
     # ...and re-embark anything left standing in the sea, which is the other way
     # a unit ends the turn somewhere it could never legally have moved to.
-    movement_processor.process_beached_units(map_screen)
+    unit_events.run_step(map_screen, "Naval transport", movement_processor.process_beached_units)
 
     # Re-sync the turn-start snapshot to the now-settled owner. It must stay stale
     # (pre-capture) through combat/stranding above so order-of-execution doesn't
@@ -216,7 +223,7 @@ async def resolve_turn_logic(map_screen): # Renamed from resolve_turn
         prov["_turn_start_owner"] = prov.get("owner", "Unclaimed")
 
     # Kill orphaned units and ghost wars
-    movement_processor.process_dead_nations(map_screen)
+    unit_events.run_step(map_screen, "Country removal", movement_processor.process_dead_nations)
     # Disbands, combat losses, captures, and nation death can all change the
     # set of live units.  Armies are organizational metadata, so prune their
     # membership only after authoritative turn resolution has settled.

@@ -419,6 +419,9 @@ def load_map_assets(map_screen, load_path):
         map_screen.script_variables = []
         map_screen.time_manager = TimeHandler(start_year=c.START_YEAR)
 
+    from map_logic.turn_processing import unit_events
+    unit_events.restore(map_screen, {} if map_screen.selection_mode or map_screen.is_editor else save_meta or {})
+
     # Loading a scenario supplies its saved/default player metadata, which is
     # deliberately ``None`` for an unstarted map.  The editor is not an
     # unstarted player session, though: it owns no nation and must retain its

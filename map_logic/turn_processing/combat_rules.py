@@ -750,7 +750,7 @@ def volley(units, shares=None, nation_data=None, profiles=None):
                for u in units)
 
 
-def exchange(battle, nation_data=None):
+def exchange(battle, nation_data=None, *, with_sources=False):
     """[(targets, total_attack)] for every nation in every lane.
 
     One shot per member rather than one per side, because a side is a coalition
@@ -769,12 +769,13 @@ def exchange(battle, nation_data=None):
                 if member.targets:
                     shots.extend(damage_shots(member.front, member.targets,
                                               battle.shares, nation_data, profiles=battle.profiles,
-                                              air_to_air=battle.air_combat))
+                                              air_to_air=battle.air_combat,
+                                              with_sources=with_sources))
     return shots
 
 
 def damage_shots(units, targets, shares=None, nation_data=None, attack_field="attack", profiles=None,
-                 air_to_air=False):
+                 air_to_air=False, *, with_sources=False):
     """Pool equally affected targets while preserving the shared damage divisor.
 
     Tank immunity and fighter bonuses require source/target attribution. A mixed
@@ -790,12 +791,14 @@ def damage_shots(units, targets, shares=None, nation_data=None, attack_field="at
         groups.setdefault(signature, []).append(target)
     shots = []
     for multipliers, group in groups.items():
-        attack = sum((profiles or {}).get(id(unit), unit).get(attack_field,
+        contributions = [((profiles or {}).get(id(unit), unit).get(attack_field,
                      (profiles or {}).get(id(unit), unit).get("attack", c.DEFAULT_UNIT_ATK))
                      / (shares or {}).get(id(unit), 1)
-                     * effective_damage_multiplier((profiles or {}).get(id(unit), unit), nation_data) * multiplier
-                     for unit, multiplier in zip(units, multipliers))
-        shots.append((group, attack * len(group) / len(targets)))
+                     * effective_damage_multiplier((profiles or {}).get(id(unit), unit), nation_data) * multiplier)
+                     for unit, multiplier in zip(units, multipliers)]
+        attack = sum(contributions)
+        shot = (group, attack * len(group) / len(targets))
+        shots.append(shot + (list(zip(units, contributions)),) if with_sources else shot)
     return shots
 
 

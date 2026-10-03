@@ -168,6 +168,9 @@ def build_tournament_spectator_save(save_dict):
     spectator_save["player_country"] = c.TOURNAMENT_SPECTATOR
     spectator_save["active_players"] = [c.TOURNAMENT_SPECTATOR]
     spectator_save["current_player_index"] = 0
+    spectator_save["unit_event_log"] = {
+        "turn": spectator_save.get("date", {}).get("total_turns", 0), "events": []}
+    spectator_save["unit_event_read_turns"] = {}
 
     nation_data = spectator_save.get("nation_data", {})
     if isinstance(nation_data, dict):

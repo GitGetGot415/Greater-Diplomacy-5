@@ -104,7 +104,9 @@ class _NavigationIntroPopup:
     UNIT_VIEW_NOTE = (
         "In Units view, beside the left sidebar: Naval, Land, Air, All. Filter stacks, orders, and hover previews; "
         "clicking a province still lists every visible unit. "
-        "All is selected whenever a game opens."
+        "All is selected whenever a game opens. "
+        "The yellow mail button beside your resources opens last-turn unit events. "
+        "Its badge counts unread entries; opening the log clears it."
     )
     ARMY_STEPS = (
         ("Select units", "Left-click stacks or drag in Units view. "

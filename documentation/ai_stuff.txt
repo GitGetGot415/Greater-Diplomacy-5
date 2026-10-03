@@ -10,6 +10,43 @@ The model layer selects from those actions and writes messages.
 The model cannot create an action that the rules forbid.
 Without the model, the AI still works. It uses library response text and does not hold model-based summits.
 
+LAST-TURN UNIT EVENTS
+---------------------
+
+The yellow mail button beside the resources opens Unit events.
+The orange screen lists unit names, tile IDs, events, health changes, and sources.
+Click a column header to sort the table.
+Click a row to read its full details.
+
+The report records actual turn resolution, including losses and attacks by AI units.
+AI plans and combat forecasts do not write entries.
+Damage dealt uses each source's share of the applied volley.
+Shares include target restrictions and combat modifiers.
+The total credit equals the target's actual health loss.
+It excludes damage beyond the target's remaining health.
+Forced destruction of grounded aircraft divides credit equally among the hostile units present.
+
+Events also include destruction, disbanding, deployment, movement, repairs, upgrades, and transport or type changes.
+Destroyed units remain in the report after removal from the map.
+Normal players see their own units.
+Tactical players see only their selected division, including its loss.
+Normal spectators can see all recorded entries.
+Editors and tournament spectators receive no unit reports.
+
+The badge counts unread entries for the current player.
+Opening the report marks those entries as read.
+Hotseat players have separate read status.
+The next completed turn replaces the report and clears old read status.
+Empty turns therefore remove earlier entries too.
+
+Saves retain only the latest report and its local read status.
+Older saves start with an empty report.
+History snapshots do not store copies of reports.
+Tournament exports and real-time snapshots include only the receiving player's entries.
+Hidden sources use an unknown-unit label.
+Player move files and real-time commands cannot replace host reports.
+Real-time broadcasts preserve local read status for the same turn.
+
 IMMERSION LEVELS
 ----------------
 

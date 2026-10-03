@@ -3071,6 +3071,7 @@ def build_save_dict(map_screen, *, include_provinces=True, compact_nations=False
     Network snapshots keep complete records for projection and authentication;
     they do not rely on the recipient having an identical country catalog.
     """
+    from map_logic.turn_processing import unit_events
     scenario_settings = getattr(map_screen, 'scenario_settings', {}) or {}
     # Keep this setting explicit in every new save. Older base maps omit it,
     # but their effective default is OFF and that default should survive the
@@ -3097,6 +3098,8 @@ def build_save_dict(map_screen, *, include_provinces=True, compact_nations=False
         "script_variables": map_screen.script_variables,
         "default_research": map_screen.default_research,
         "nation_data": map_screen.nation_data,
+        "unit_event_log": unit_events.saved_log(map_screen),
+        "unit_event_read_turns": unit_events.saved_reads(map_screen),
     }
     if include_provinces:
         save_dict["provinces"] = {}
@@ -3118,6 +3121,14 @@ def player_snapshot_projection(map_screen, snapshot, country_id):
     """Filter a network save before transmission, including raw map geometry."""
     from types import SimpleNamespace
     result = copy.deepcopy(snapshot)
+    from map_logic.turn_processing import unit_events
+    report = unit_events.normalize_log(result.get("unit_event_log"),
+                                      result.get("date", {}).get("total_turns", 0))
+    report["events"] = [row for row in report["events"] if row["owner"] == country_id]
+    result["unit_event_log"] = report
+    result["unit_event_read_turns"] = {
+        owner: turn for owner, turn in result.get("unit_event_read_turns", {}).items()
+        if owner == country_id and turn == report["turn"]}
     view = SimpleNamespace(player_country=country_id, map_data=map_screen.map_data,
         nation_data=map_screen.nation_data,
         id_to_province={p["id"]: p for p in map_screen.map_data.values()},
@@ -4366,6 +4377,8 @@ def prepare_aircraft_for_ground_combat(units, nation_data, opponents=None, on_la
             revert_transport(unit)
     for unit in units:
         if aircraft_caught_in_ground_combat(unit, enemies, nation_data):
+            from map_logic.turn_processing import unit_events
+            unit_events.record_grounded_air_loss(unit, enemies, nation_data)
             unit["health"] = 0
             unit["order"] = {"type": "MOVE", "path": []}
 

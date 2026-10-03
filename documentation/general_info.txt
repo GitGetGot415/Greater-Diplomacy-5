@@ -52,6 +52,8 @@ map_logic/
         Scenario setup and initial country selection.
     turn_processing/
         Turn resolution. This folder replaced the old system32/ folder.
+        unit_events.py records unit events during turn resolution.
+        It keeps only the last completed turn.
 
 map_tools/
     Tools to create and test maps.
@@ -79,6 +81,11 @@ screens/
         Orders and Battle can open for any visible province.
         They are read-only when the player commands no units there.
         In tactical mode, only the player's selected division is editable.
+        unit_events_screen.py shows the last turn's unit events in a sortable table.
+        Click the yellow mail button beside the resource display to open it.
+        Its badge shows the number of unread entries.
+        Opening the table marks the current player's entries as read.
+        Click a row to read its full details.
         Battle columns belong to combat sides, which can include several countries.
         The reserve column also shows allied units that the player cannot edit.
         Those units can replace losses in the front rank.

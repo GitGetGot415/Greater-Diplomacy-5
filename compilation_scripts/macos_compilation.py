@@ -50,7 +50,7 @@ def main():
     # invoking this file with venv/bin/python must not silently switch to a
     # system ``python3`` without py2app or the BeepBox runtime installed.
     cmd = [sys.executable, "compilation_scripts/setup.py", "py2app"]
-    # setup.py explicitly includes the air mission resolver as well as its package.
+    # setup.py includes the air resolver, unit event recorder, and Unit events screen.
 
     result = subprocess.run(cmd)
     if result.returncode != 0:

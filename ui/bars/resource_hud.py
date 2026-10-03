@@ -17,6 +17,15 @@ HUD_BOX_HEIGHT = 30
 HUD_BOX_PAD_X = 15
 HUD_BOX_PAD_Y = 5
 HUD_BOX_TRIM = 40 # Trailing slack shaved off the background box
+EVENT_BUTTON_GAP = 10
+
+
+def unit_event_button_rect():
+    """Place the square report button beside the resource panel."""
+    size = c.SIZES["small_square"]
+    right = HUD_START_X - HUD_BOX_PAD_X + len(c.ECON_RESOURCE_KEYS) * HUD_SPACING - HUD_BOX_TRIM
+    center_y = c.SCREEN_HEIGHT - HUD_HEIGHT_OFFSET - HUD_BOX_PAD_Y + HUD_BOX_HEIGHT // 2
+    return pygame.Rect(right + EVENT_BUTTON_GAP, center_y - size[1] // 2, *size)
 
 # --- Full-width bar (Production / Orders / diplomacy sub-screens) ---
 BAR_HEIGHT = 60

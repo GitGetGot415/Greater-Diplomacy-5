@@ -18,6 +18,7 @@ from screens.menu_screens.map import Map
 from screens.map_related_screens.orders import Orders_Screen, _OrdersRowHitbox
 from ui import event_handler
 from map_logic.setup import player_setup
+from map_logic.turn_processing.time_handler import TimeHandler
 
 
 def province(province_id, neighbors):
@@ -61,6 +62,9 @@ class MapOrderTests(unittest.TestCase):
         game.player_country = "A"
         game.selection_mode = game.is_editor = game.viewing_ai_moves = game.ai_is_thinking = False
         game.tactical_mode = False
+        game.time_manager = TimeHandler()
+        game.unit_event_log = {"turn": game.time_manager.total_turns, "events": []}
+        game.unit_event_read_turns = {}
         game.selected_unit_ids = {id(slow), id(fast)}
         game.unit_selection_drag = None
         game.show_feedback = lambda _text: None

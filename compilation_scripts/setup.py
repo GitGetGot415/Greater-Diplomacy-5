@@ -118,7 +118,9 @@ OPTIONS = {
     ],
     # Standalone modules that aren't packages but are imported by the app.
     'includes': ['gameState', 'ui_elements', 'soloud', 'pygame', 'tkinter',
-                 'map_logic.turn_processing.air_processor'],
+                 'map_logic.turn_processing.air_processor',
+                 'map_logic.turn_processing.unit_events',
+                 'screens.map_related_screens.unit_events_screen'],
     'excludes': ['PyInstaller', 'PySide6', 'PyQt6', 'PyQt5'],
     'resources': ['mac64-libsoloud.dylib'],
 }

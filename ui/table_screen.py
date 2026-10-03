@@ -109,8 +109,11 @@ class TableScreen(GameState):
                 self.on_row_click(row)
                 return
 
-    def draw(self, surface):
+    def draw_background(self, surface):
         surface.fill(self.bg_color)
+
+    def draw(self, surface):
+        self.draw_background(surface)
         ui_bars.draw_centered_title(surface, self.title, 25, "heading1")
 
         if not self.rows:
