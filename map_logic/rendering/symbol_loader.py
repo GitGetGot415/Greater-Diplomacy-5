@@ -778,12 +778,16 @@ def get_native_size(name, style=None, country=None):
     return base_img.get_size() if base_img else None
 
 
-def get_symbol(name, zoom, color=None, alpha=255, style=None, country=None):
+def get_symbol(name, zoom, color=None, alpha=255, style=None, country=None, *, fit_size=None):
     """Returns the scaled icon, or None if no loaded symbol matches the name.
 
     `style` defaults to the globally active c.UNIT_ART_STYLE; anything that
     style's folder doesn't cover for this name (or doesn't cover for
     `country`, a country id) falls back to classic.
+
+    `fit_size` fits the native image into a pixel box, preserving proportions
+    and enlarging small images. It replaces zoom and map-specific scale tuning
+    for fixed-size UI icons, without scaling an intermediate image first.
 
     The surface is shared with every other caller asking for the same picture at
     the same size, so treat what comes back as read-only. That is what `alpha` is
@@ -794,8 +798,13 @@ def get_symbol(name, zoom, color=None, alpha=255, style=None, country=None):
     if base_img is None:
         return None
 
-    # Custom per-symbol scale overrides, on top of the global 0.5.
-    size = _scaled_size(base_img, zoom, c.SYMBOL_BASE_SCALES.get(base_name, 1.0))
+    if fit_size is None:
+        # Custom per-symbol scale overrides, on top of the global 0.5.
+        size = _scaled_size(base_img, zoom, c.SYMBOL_BASE_SCALES.get(base_name, 1.0))
+    else:
+        width, height = base_img.get_size()
+        ratio = min(fit_size[0] / width, fit_size[1] / height)
+        size = (max(1, round(width * ratio)), max(1, round(height * ratio)))
 
     # Keyed on the picture itself (identity-hashed, since Surfaces never
     # define __eq__) rather than (style, base_name, country): most countries

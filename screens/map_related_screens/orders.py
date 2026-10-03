@@ -58,7 +58,7 @@ ACTION_COL_REPAIR = 2
 ACTION_COL_RENAME = 3
 ACTION_COL_UPGRADE = 4
 ACTION_COL_BOMBARD = 5
-ACTION_ICON_ZOOM = 0.65
+ACTION_ICON_INSET = 2
 
 RENAME_BOX_OFFSET_X = UNIT_NAME_OFFSET_X
 RENAME_BOX_OFFSET_Y = 7
@@ -89,8 +89,8 @@ UNIT_ICON_ZOOM = 1.5
 
 AIR_MISSION_CHOICES = (
     ("NONE", "No mission", "No Mission"),
-    ("WEAKEST", "Defend area (weakest missions targeted first)", "Weakest First"),
-    ("STRONGEST", "Defend area (strongest missions targeted first)", "Strongest First"),
+    ("WEAKEST", "Defend area (weakest enemy missions targeted first)", "Weakest First"),
+    ("STRONGEST", "Defend area (strongest enemy missions targeted first)", "Strongest First"),
     ("STRIKE", "Strike", "Strike Selected"),
 )
 AIR_MISSION_ICONS = {mission: icon for mission, _label, icon in AIR_MISSION_CHOICES}
@@ -113,7 +113,7 @@ class _AirMissionSelectScreen(ModalScreen):
                 self.panel_rect.y + self.OPTION_TOP + row * self.OPTION_GAP,
                 self.panel_rect.width - 2 * self.OPTION_INSET, "blue", label,
                 lambda selected=mission: self.select(selected, on_select))
-            button.right_image = orders._get_action_icon(icon)
+            button.right_image = orders._get_action_icon(icon, button.rect.size)
             self.elements.append(button)
         self.elements.append(self.button(self.panel_rect.x + self.OPTION_INSET,
             self.panel_rect.bottom - self.CANCEL_BOTTOM,
@@ -631,12 +631,15 @@ class Orders_Screen(GameState):
         ratio = min(box_w / w, box_h / h)
         return pygame.transform.smoothscale(icon, (max(1, int(w * ratio)), max(1, int(h * ratio))))
 
-    def _get_action_icon(self, name):
-        """Returns one cached command glyph fitted to a compact action cell."""
-        if name not in self.action_icons:
-            icon = symbol_loader.get_symbol(name, zoom=ACTION_ICON_ZOOM)
-            self.action_icons[name] = self.fit_icon(icon, "orders_action_icon", padding=5)
-        return self.action_icons[name]
+    def _get_action_icon(self, name, button_size=None):
+        """Fill the button's icon area, scaling small glyphs up as well as down."""
+        button_size = button_size or c.SIZES["orders_action_icon"]
+        icon_side = max(1, min(button_size) - 2 * ACTION_ICON_INSET)
+        key = (name, icon_side)
+        if key not in self.action_icons:
+            self.action_icons[key] = symbol_loader.get_symbol(
+                name, zoom=1, fit_size=(icon_side, icon_side))
+        return self.action_icons[key]
 
     def _add_action_button(self, unit_index, row_y, slot, color, help_text,
                            callback, icon_name, row_guard, *, enabled=True):

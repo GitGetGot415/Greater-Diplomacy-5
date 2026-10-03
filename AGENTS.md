@@ -39,7 +39,7 @@ agrees about the same behavior.
   from exploration and edits: `web_stage/`, `dist/`, `build/`, `.eggs/`,
   `__pycache__/`, and `venv/`.
 - If the user sends a prompt that happens to be the EXACT SAME THING as what
-  they sent on the previous message, that is 100% a mistake. You can ignore that prompt.
+  they sent on the previous prompt, that is 100% a mistake. You can ignore that prompt.
 
 ## Repository Map and Ownership
 

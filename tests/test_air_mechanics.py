@@ -1241,6 +1241,33 @@ class AirAppSmokeTests(unittest.TestCase):
         from tests import app_harness
         cls.controller, cls.surface = app_harness.boot()
 
+    def test_orders_command_icons_fill_buttons_and_preserve_proportions(self):
+        from map_logic.rendering import symbol_loader
+        from screens.map_related_screens.orders import ACTION_ICON_INSET, AIR_MISSION_CHOICES
+        screen = Orders_Screen()
+        icons = [icon for _mission, _label, icon in AIR_MISSION_CHOICES]
+        icons.extend(("Convoying", "Disbanding", "Repairing", "Text",
+                      "Upgrading", "Bombardment Arrows"))
+        for button_size in (c.SIZES["orders_action_icon"], c.SIZES["list_row"]):
+            available = min(button_size) - 2 * ACTION_ICON_INSET
+            for name in icons:
+                with self.subTest(name=name, button_size=button_size):
+                    native = symbol_loader.get_native_size(name)
+                    icon = screen._get_action_icon(name, button_size)
+                    width, height = icon.get_size()
+                    self.assertEqual(max(width, height), available)
+                    self.assertLessEqual(width, available)
+                    self.assertLessEqual(height, available)
+                    ratio = available / max(native)
+                    self.assertAlmostEqual(width, native[0] * ratio, delta=0.5)
+                    self.assertAlmostEqual(height, native[1] * ratio, delta=0.5)
+                    self.assertIs(icon, screen._get_action_icon(name, button_size))
+
+        # Unit portraits retain their natural relative sizes; filling buttons
+        # applies only to command glyphs.
+        small_portrait = pygame.Surface((2, 2), pygame.SRCALPHA)
+        self.assertIs(screen.fit_icon(small_portrait, "orders_action_icon"), small_portrait)
+
     def make_runtime_save(self, directory, legacy_truck=False):
         game = world()
         base = tile(game, 1, 8)
@@ -1289,7 +1316,9 @@ class AirAppSmokeTests(unittest.TestCase):
                     self.assertEqual(symbol_loader._resolve_name(icon)[1], icon)
                     button = popup.elements[index]
                     self.assertTrue(popup.panel_rect.contains(button.rect))
-                    self.assertIs(button.right_image, screen._get_action_icon(icon))
+                    self.assertIs(button.right_image, screen._get_action_icon(icon, button.rect.size))
+                    self.assertTrue(button.rect.contains(
+                        button.right_image.get_rect(midright=(button.rect.right - 5, button.rect.centery))))
                     self.assertLess(button.font.size(button.text)[0],
                                     button.rect.width - button.right_image.get_width() - 15)
                     for other in popup.elements[index + 1:]:
