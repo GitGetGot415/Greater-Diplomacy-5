@@ -213,6 +213,26 @@ class UnitEventRulesTests(unittest.TestCase):
 
 
 class UnitEventPersistenceTests(unittest.TestCase):
+    def test_mark_unread_preserves_other_players_and_survives_save_and_broadcast(self):
+        game = fixture()
+        game.unit_event_log["events"] = [row(), row("B")]
+        game.unit_event_read_turns = {"A": 1, "B": 1}
+        authoritative = queries.build_save_dict(game)
+        before = copy.deepcopy(game.unit_event_log)
+        unit_events.mark_unread(game)
+        self.assertEqual(game._unit_event_unread, 1)
+        self.assertEqual(game.unit_event_read_turns, {"B": 1})
+        self.assertEqual(game.unit_event_log, before)
+        loaded = fixture()
+        unit_events.restore(loaded, json.loads(json.dumps(queries.build_save_dict(game))))
+        unit_events.refresh_presentation(loaded)
+        self.assertEqual(loaded._unit_event_unread, 1)
+        self.assertEqual(loaded.unit_event_read_turns, {"B": 1})
+        game.refresh_all_maps = lambda: unit_events.refresh_presentation(game)
+        apply_authoritative_snapshot(game, authoritative)
+        self.assertEqual(game._unit_event_unread, 1)
+        self.assertEqual(game.unit_event_read_turns, {"B": 1})
+
     def test_json_round_trip_and_legacy_defaults(self):
         game = fixture()
         game.unit_event_log["events"] = [row()]
@@ -366,6 +386,34 @@ class UnitEventScreenTests(unittest.TestCase):
         with patch("ui.confirm_dialog.show_info") as details:
             screen.show_event(screen.rows[0])
         self.assertIn(game.unit_event_log["events"][0]["details"], details.call_args.args[1])
+
+    def test_mark_all_unread_restores_badge_after_closing_until_reopened(self):
+        from screens.map_related_screens.unit_events_screen import UnitEventsScreen
+        game = self.game
+        before = copy.deepcopy(game.unit_event_log)
+        screen = UnitEventsScreen(game)
+        self.assertEqual(game.btn_unit_events.notification_count, 0)
+        button = screen.btn_mark_all_unread
+        self.assertIn(button, screen.elements)
+        self.assertFalse(button.disabled)
+        bounds = pygame.Rect(0, 0, c.SCREEN_WIDTH, c.SCREEN_HEIGHT)
+        self.assertTrue(bounds.contains(button.rect))
+        self.assertTrue(all(not button.rect.colliderect(element.rect)
+                            for element in screen.elements if element is not button))
+        button.callback()
+        screen.refresh_ui()
+        screen.exit_screen()
+        self.assertEqual(game.btn_unit_events.notification_count, len(screen.rows))
+        self.assertEqual(game.unit_event_log, before)
+        UnitEventsScreen(game)
+        self.assertEqual(game.btn_unit_events.notification_count, 0)
+
+    def test_empty_log_disables_mark_all_unread(self):
+        from screens.map_related_screens.unit_events_screen import UnitEventsScreen
+        self.game.unit_event_log["events"] = []
+        screen = UnitEventsScreen(self.game)
+        self.assertTrue(screen.btn_mark_all_unread.disabled)
+        self.assertEqual(self.game.btn_unit_events.notification_count, 0)
 
     def test_normal_save_loader_preserves_reports_and_legacy_has_empty_log(self):
         from data.map import save_map

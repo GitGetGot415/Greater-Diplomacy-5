@@ -85,6 +85,7 @@ screens/
         Click the yellow mail button beside the resource display to open it.
         Its badge shows the number of unread entries.
         Opening the table marks the current player's entries as read.
+        Mark all unread restores that player's unread badge until the table opens again.
         Click a row to read its full details.
         Battle columns belong to combat sides, which can include several countries.
         The reserve column also shows allied units that the player cannot edit.

@@ -96,6 +96,13 @@ def mark_read(map_screen):
     refresh_presentation(map_screen)
 
 
+def mark_unread(map_screen):
+    """Mark only the current viewer's last-turn report as unread."""
+    map_screen.unit_event_read_turns = saved_reads(map_screen)
+    map_screen.unit_event_read_turns.pop(map_screen.player_country, None)
+    refresh_presentation(map_screen)
+
+
 def _state(map_screen):
     return {id(unit): (unit, province["id"], unit.get("type", ""),
                       unit.get("health", 0))

@@ -35,6 +35,8 @@ Editors and tournament spectators receive no unit reports.
 
 The badge counts unread entries for the current player.
 Opening the report marks those entries as read.
+Click Mark all unread in the report to restore the current player's unread badge.
+Closing the report keeps this unread status. Opening it again marks the entries as read.
 Hotseat players have separate read status.
 The next completed turn replaces the report and clears old read status.
 Empty turns therefore remove earlier entries too.

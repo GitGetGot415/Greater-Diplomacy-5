@@ -4,11 +4,14 @@ from map_logic.turn_processing import unit_events
 from map_logic.rendering.font_manager import fonts
 from ui import text_utils
 from ui.table_screen import TableColumn, TableScreen
+from ui_elements import Button
 
 BACKGROUND_COLOR = (80, 60, 40)
 ROW_COLOR = (48, 35, 25)
 TABLE_MARGIN = 25
 CELL_PADDING = 12
+UNREAD_BUTTON_SIZE = (180, 30)
+UNREAD_BUTTON_MARGIN = 20
 COLUMN_SHARES = (("unit_name", "Unit", .20), ("tile_id", "Tile", .08),
                  ("event_label", "Event", .17), ("amount", "Health", .09),
                  ("details", "Details (click row)", .46))
@@ -33,6 +36,19 @@ class UnitEventsScreen(TableScreen):
         self.bg_color = BACKGROUND_COLOR
         unit_events.mark_read(map_screen)
         map_screen.btn_unit_events.notification_count = map_screen._unit_event_unread
+
+    def refresh_ui(self):
+        super().refresh_ui()
+        self.btn_mark_all_unread = Button(
+            c.SCREEN_WIDTH - UNREAD_BUTTON_MARGIN - UNREAD_BUTTON_SIZE[0],
+            UNREAD_BUTTON_MARGIN, UNREAD_BUTTON_SIZE, "yellow", "Mark all unread",
+            self.mark_all_unread, font_preset="button_small")
+        self.btn_mark_all_unread.apply_state(enabled=bool(self.rows))
+        self.elements.append(self.btn_mark_all_unread)
+
+    def mark_all_unread(self):
+        unit_events.mark_unread(self.map_screen)
+        self.map_screen.btn_unit_events.notification_count = self.map_screen._unit_event_unread
 
     def draw_background(self, surface):
         self.draw_checkerboard_background(surface, self.bg_color)
