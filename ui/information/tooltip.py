@@ -1,6 +1,9 @@
 import pygame
 import data.constants as c
 from data import queries
+from map_logic.rendering import overlay_renderer
+
+UNIT_PREVIEW_LIMIT = 5
 
 def draw_tooltip(map_screen, surface):
     if not map_screen.hovered_province:
@@ -43,24 +46,35 @@ def draw_tooltip(map_screen, surface):
         pass
 
     elif map_screen.secondary_mode == "UNITS":
+        # Older standalone UI fixtures may not have a unit view filter.
+        view_filter = getattr(map_screen, "unit_view_filter", queries.DEFAULT_UNIT_VIEW_FILTER)
+        units = prov.get("units", [])
+        if view_filter != "ALL":
+            # Reuse map membership cached at state/input changes. Do not
+            # classify units again in the planning-frame draw path.
+            units = overlay_renderer._unit_render_index(map_screen).view_units_by_province.get(
+                id(prov), ())
         # Filtered up front: a lone hidden submarine must not even trip the
         # "something is here" partial-fog hint, or its position leaks through
         # the "?" blip despite being otherwise invisible.
         visible_units = queries.filter_visible_units(
-            prov.get("units", []), map_screen.player_country, prov, map_screen.nation_data)
+            units, map_screen.player_country, prov, map_screen.nation_data)
         if not is_visible:
-            if getattr(map_screen, 'partial_visible_provinces', None) is not None and prov["id"] in map_screen.partial_visible_provinces and visible_units:
+            # Unknown stacks have no visible category, as on the map.
+            if (view_filter == "ALL"
+                    and getattr(map_screen, 'partial_visible_provinces', None) is not None
+                    and prov["id"] in map_screen.partial_visible_provinces and visible_units):
                 lines.append("- ? (Unknown Units)")
             else:
                 lines.append("(Units hidden by Fog of War)")
         else:
             units = visible_units
             if not units:
-                lines.append("No Units Present")
+                lines.append("No Units Present" if view_filter == "ALL" else "No Units in Selected Category")
             else:
                 lines.append("--- Units ---")
-                # Show first 5 units to keep tooltip size reasonable
-                for u in units[:5]:
+                # Limit the preview after applying visibility and category.
+                for u in units[:UNIT_PREVIEW_LIMIT]:
                     u_name = u.get("type", "Unit")
                     level = u.get("level", 0)
 
@@ -72,8 +86,8 @@ def draw_tooltip(map_screen, surface):
                     else:
                         lines.append(f"- {u_name}")
 
-                if len(units) > 5:
-                    lines.append(f"...and {len(units)-5} more")
+                if len(units) > UNIT_PREVIEW_LIMIT:
+                    lines.append(f"...and {len(units)-UNIT_PREVIEW_LIMIT} more")
 
     elif map_screen.secondary_mode == "RESOURCES":
         if not is_visible:

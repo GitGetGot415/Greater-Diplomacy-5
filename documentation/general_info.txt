@@ -102,6 +102,8 @@ ui/
     event_handler.py uses the same rectangle to block clicks through the bar.
     The filter changes local display only. All is selected when a game opens.
     Filter results are cached when load, state, or input changes.
+    Hover previews use the same category filter and unit visibility rules.
+    Selecting a province still shows units from all categories.
 
     confirm_dialog/
         pygame dialogs that replace tkinter dialogs.

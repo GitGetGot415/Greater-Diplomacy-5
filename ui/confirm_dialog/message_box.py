@@ -102,7 +102,8 @@ class _NavigationIntroPopup:
         ("Names", "names", "Shows or hides country names."),
     )
     UNIT_VIEW_NOTE = (
-        "In Units view, beside the left sidebar: Naval, Land, Air, All. Filter stacks and orders; "
+        "In Units view, beside the left sidebar: Naval, Land, Air, All. Filter stacks, orders, and hover previews; "
+        "clicking a province still lists every visible unit. "
         "All is selected whenever a game opens."
     )
     ARMY_STEPS = (

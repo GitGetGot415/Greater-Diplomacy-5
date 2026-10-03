@@ -157,6 +157,8 @@ Planning-frame rendering does not run map-wide calculations.
 
 Naval, Land, Air, and All appear beside the lower left sidebar in Units view.
 They filter local unit stacks, army markers, and order arrows.
+Hover previews list only visible units that match the selected category.
+Clicking a province still shows its full visible unit list.
 The filter uses the unit's current form.
 Convoys are naval, including transported aircraft. Trucks are land.
 All is selected when a game opens.

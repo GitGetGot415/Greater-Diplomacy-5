@@ -3,7 +3,7 @@ import os
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
@@ -18,6 +18,7 @@ from tests import app_harness
 from ui import event_handler, minimap, map_top_right_layout
 from ui.bars import ui_bars
 from ui.confirm_dialog.message_box import _NavigationIntroPopup
+from ui.information import tooltip
 
 
 class UnitViewFilterTests(unittest.TestCase):
@@ -53,6 +54,70 @@ class UnitViewFilterTests(unittest.TestCase):
         self.assertFalse(queries.unit_matches_view_filter(carried, "AIR"))
         with self.assertRaises(ValueError):
             queries.unit_matches_view_filter(carried, "invalid")
+
+    def preview_lines(self, visible=True):
+        pygame.font.init()
+        font = pygame.font.Font(None, 16)
+        self.game.small_font = SimpleNamespace(render=Mock(wraps=font.render))
+        self.game.hovered_province = self.province
+        self.game.base_layer = "POLITICAL"
+        self.game.secondary_mode = "UNITS"
+        with patch.object(queries, "is_province_visible", return_value=visible):
+            tooltip.draw_tooltip(self.game, pygame.Surface((400, 400)))
+        return [call.args[0] for call in self.game.small_font.render.call_args_list]
+
+    def test_hover_preview_uses_cached_map_filter_membership(self):
+        for view_filter in queries.UNIT_VIEW_FILTERS:
+            with self.subTest(view_filter=view_filter):
+                self.game.unit_view_filter = view_filter
+                expected = overlay_renderer._unit_render_index(self.game).view_records
+                with patch.object(queries, "unit_matches_view_filter", side_effect=AssertionError):
+                    lines = self.preview_lines()
+                listed = [unit for unit in self.units if any(unit["type"] in line for line in lines)]
+                self.assertEqual(listed, [unit for unit, _province in expected])
+                self.assertEqual(self.province["units"], self.units)
+
+    def test_preview_limit_applies_after_category_filtering(self):
+        self.game.unit_view_filter = "AIR"
+        planes = [dict(self.units[2], unit_id=f"plane-{index}")
+                  for index in range(tooltip.UNIT_PREVIEW_LIMIT + 2)]
+        self.province["units"] = [self.units[0]] * tooltip.UNIT_PREVIEW_LIMIT + planes
+        lines = self.preview_lines()
+        self.assertEqual(sum(self.units[2]["type"] in line for line in lines),
+                         tooltip.UNIT_PREVIEW_LIMIT)
+        self.assertFalse(any(self.units[0]["type"] in line for line in lines))
+        self.assertIn(str(len(planes) - tooltip.UNIT_PREVIEW_LIMIT), lines[-1])
+
+    def test_preview_keeps_fog_and_submarine_visibility(self):
+        self.game.unit_view_filter = "NAVAL"
+        submarine = {"type": "Submarine I", "owner": "B"}
+        queries.get_unit_library()[submarine["type"]] = {"naval_unit": True}
+        self.province["units"] = [self.units[1], submarine]
+        self.assertIn(submarine, overlay_renderer._unit_render_index(
+            self.game).view_units_by_province[id(self.province)])
+        lines = self.preview_lines()
+        self.assertTrue(any(self.units[1]["type"] in line for line in lines))
+        self.assertFalse(any(submarine["type"] in line for line in lines))
+        self.game.partial_visible_provinces = {self.province["id"]}
+        for view_filter in ("LAND", "AIR", "NAVAL"):
+            self.game.unit_view_filter = view_filter
+            partial_lines = self.preview_lines(visible=False)
+            self.game.partial_visible_provinces = set()
+            self.assertEqual(partial_lines, self.preview_lines(visible=False))
+            self.game.partial_visible_provinces = {self.province["id"]}
+            self.assertFalse(any(unit["type"] in line
+                                 for unit in self.province["units"] for line in partial_lines))
+
+    def test_selected_province_roster_retains_other_categories(self):
+        from ui import sidebar_info
+        self.game.unit_view_filter = "AIR"
+        with (patch.object(queries, "is_province_in_active_combat", return_value=False),
+              patch.object(sidebar_info.combat_rules, "build_battle",
+                           return_value=SimpleNamespace(profiles={})),
+              patch.object(sidebar_info, "unit_roster_row", return_value={})):
+            sidebar_info.prepare_unit_roster(self.game, self.province)
+        rows = self.game._unit_roster_cache[self.province["id"]][2]
+        self.assertEqual(set(rows), {id(unit) for unit in self.units})
 
     def test_filter_membership_is_cached_and_world_units_are_preserved(self):
         self.game.unit_view_filter = "AIR"
