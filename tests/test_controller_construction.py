@@ -251,6 +251,71 @@ class ControllerConstructionTests(unittest.TestCase):
             game_map.selection_mode = original_selection_mode
             update_button_states(game_map)
 
+    def test_hotseat_ai_preview_keeps_resolution_settings_and_music_available(self):
+        from screens.menu_screens.map import render_buttons, update_button_states
+        from map_logic.turn_processing import turn_manager
+
+        game = app_harness.boot_map()
+        players = list(game.nation_data)[:2]
+        self.addCleanup(render_buttons, game)
+        with mock.patch.dict(game.__dict__, {
+                "player_country": players[-1], "active_players": players,
+                "current_player_index": len(players) - 1, "selection_mode": False,
+                "selected_province": None, "is_editor": False,
+                "multiplayer_mode": False, "realtime_multiplayer": False,
+                "viewing_ai_moves": False, "ai_is_thinking": False,
+                "is_refreshing": False, "is_saving": False,
+                "show_player_ready_screen": False}):
+            render_buttons(game)
+            with mock.patch.object(turn_manager, "trigger_ai_thread") as prepare:
+                turn_manager.advance_time(game)
+            prepare.assert_called_once_with(game)
+            self.assertEqual(game.player_country, "n/a")
+            game.ai_is_thinking = True
+            update_button_states(game)
+            self.assertFalse(game.btn_next_turn.visible)
+
+            game.ai_is_thinking = False
+            game.viewing_ai_moves = True
+            render_buttons(game)
+            update_button_states(game)
+            for button in (game.btn_next_turn, game.btn_gp_settings, game.btn_gp_music):
+                self.assertTrue(button.visible)
+                self.assertFalse(button.disabled)
+            self.assertFalse(game.btn_gp_edit.visible)
+            self.assertFalse(game.btn_declare_war.visible)
+            with mock.patch.object(game, "change_state") as change:
+                game.btn_gp_settings.callback()
+                game.btn_gp_music.callback()
+            self.assertEqual(change.call_args_list,
+                             [mock.call("SETTINGS"), mock.call("MUSIC_PLAYER")])
+            with mock.patch.object(turn_manager, "run_background") as resolve:
+                game.btn_next_turn.callback()
+            resolve.assert_called_once_with(turn_manager._resolve_turn_and_refresh, game)
+
+    def test_unassigned_turn_control_only_allows_idle_local_ai_preview(self):
+        from screens.menu_screens.map import update_button_states
+
+        game = app_harness.boot_map()
+        self.addCleanup(update_button_states, game)
+        with mock.patch.dict(game.__dict__, {
+                "player_country": "n/a", "active_players": ["A", "B"],
+                "selection_mode": False, "selected_province": None,
+                "is_editor": False, "viewing_ai_moves": True,
+                "ai_is_thinking": False, "is_refreshing": False, "is_saving": False,
+                "multiplayer_mode": False, "realtime_multiplayer": False}):
+            for override in ({"ai_is_thinking": True}, {"is_refreshing": True},
+                             {"is_saving": True}, {"viewing_ai_moves": False},
+                             {"active_players": ["A"]}, {"player_country": "None"},
+                             {"multiplayer_mode": True}, {"realtime_multiplayer": True},
+                             {"selected_province": next(iter(game.map_data.values()))}):
+                with self.subTest(override=override), mock.patch.dict(game.__dict__, override):
+                    update_button_states(game)
+                    self.assertFalse(game.btn_next_turn.visible)
+                    self.assertFalse(game.btn_declare_war.visible)
+            update_button_states(game)
+            self.assertTrue(game.btn_next_turn.visible)
+
 
 class GlobalKeyDispatchTests(unittest.TestCase):
     class State:

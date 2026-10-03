@@ -771,9 +771,23 @@ def update_button_states(map_screen):
     # Leave the map controls and a way to close the selection/exit available,
     # but expose no country-owned actions until the state has a real owner.
     has_player_country = map_screen.player_country in map_screen.nation_data
+    is_thinking = map_screen.ai_is_thinking or map_screen.is_refreshing or map_screen.is_saving
     if (not map_screen.is_editor
             and map_screen.player_country != "Spectator"
             and not has_player_country):
+        for button in (map_screen.btn_gp_settings, map_screen.btn_gp_music,
+                       map_screen.slider_camera_tilt):
+            button.visible = not is_sel
+        # Hotseat clears the viewer after the last player's orders. Keep
+        # resolution available without granting that viewer country actions.
+        local_turn_preview = (
+            map_screen.player_country == "n/a" and map_screen.viewing_ai_moves
+            and len(map_screen.active_players) > 1
+            and not getattr(map_screen, "multiplayer_mode", False)
+            and not getattr(map_screen, "realtime_multiplayer", False))
+        set_btn(map_screen.btn_next_turn,
+                local_turn_preview and not is_sel and not is_thinking,
+                not is_thinking, "Resolve Turn", "red")
         map_screen.btn_exit_to_menu.visible = not is_sel
         map_screen.btn_close_info.visible = is_sel
         map_screen.btn_realtime_details.visible = bool(
@@ -816,7 +830,6 @@ def update_button_states(map_screen):
 
     else:
         viewing_ai = map_screen.viewing_ai_moves
-        is_thinking = map_screen.ai_is_thinking or map_screen.is_refreshing or map_screen.is_saving
 
         # Hide/disable the button if we are thinking
         map_screen.btn_next_turn.visible = not is_sel and not is_thinking

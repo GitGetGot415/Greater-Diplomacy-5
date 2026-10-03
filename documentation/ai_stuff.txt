@@ -151,6 +151,11 @@ They reuse pixel surfaces that have not changed.
 Fog updates current visibility even when it can reuse its image.
 Hotseat blanking and player changes still apply.
 
+After all local players submit orders, the viewer becomes n/a while AI moves are prepared.
+The AI preview must keep Resolve Turn, Settings, and Music available.
+Country-owned actions remain hidden because no player country is assigned.
+Hide Resolve Turn while AI preparation, map refresh, or saving is active.
+
 Editor painting invalidates the affected surface.
 Refresh Maps forces a full rebuild.
 Planning-frame rendering does not run map-wide calculations.
