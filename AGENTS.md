@@ -251,9 +251,10 @@ Use verification appropriate to each change.
 - Use numbered steps for procedures.
   Give required conditions before the steps.
   Separate rules, examples, and proposed features.
-- Apply these rules to design notes, agent guides, tutorials, help text, and explanatory comments and docstrings.
-- Do not edit the TODO text file.
-- Do not edit the README markdown file in the root of the repository.
+- Apply these rules to design notes, agent guides, explanatory comments and docstrings.
+- Do not edit the TODO text file using this language.
+- Do not edit the tutorial help text using this language.
+- Do not edit the README markdown file in the root of the repository using this language.
 - Preserve third-party licenses, source quotations, and archived source data.
   Simplify the project's explanation of that material, not the original text.
 - Check meaning against the code before handoff.
