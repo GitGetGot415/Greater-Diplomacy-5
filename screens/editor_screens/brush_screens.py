@@ -54,7 +54,7 @@ class Convoy_Converter_Screen(MapOverlayScreen):
             unit = units[i]
             name = unit.get("original_type", unit.get("type", "Unknown"))
             is_naval = self.unit_lib.get(name, {}).get("naval_unit", False)
-            suffix = "(Truck)" if is_naval or self.unit_lib.get(name, {}).get("air_role") else "(Convoy)"
+            suffix = "(Truck)" if is_naval else "(Convoy)"
             checked = i in self.selected
             label = f"{'[X]' if checked else '[ ]'} {name} {suffix}"
             btn = Button(row_x, y, "list_row", "green" if checked else "grey", label, lambda ii=i: self.toggle(ii))
@@ -73,7 +73,7 @@ class Convoy_Converter_Screen(MapOverlayScreen):
             if want and "original_type" not in unit:
                 name = unit.get("type", "Unknown")
                 is_naval = self.unit_lib.get(name, {}).get("naval_unit", False)
-                target = "Truck" if is_naval or queries.is_air_unit(unit) else "Convoy"
+                target = "Truck" if is_naval else "Convoy"
                 queries.load_transport(unit, target)
                 changed = True
             elif not want and "original_type" in unit:

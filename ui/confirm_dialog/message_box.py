@@ -122,7 +122,7 @@ class _NavigationIntroPopup:
         ("Strike", "Choose a strike target inside or touching the range outline in Orders. After interception, aircraft fight one combat exchange; defenders can fire back. Surviving reusable aircraft return to base with their losses. Tanks-category units cannot damage aircraft in flight. Research unlocks show which aircraft can damage forts."),
         ("Patrol", "Fighters cover their listed range. The patrol icon cycles weakest attacking force first, strongest first, then off. Survivors may intercept several missions."),
         ("Reposition", "Right-click land to move reusable planes up to twice their listed range. Reach uses map pixels and tile edges; zoom never changes it. Aircraft cannot capture land."),
-        ("V1 and V2", "Strikes use listed range and consume the weapon. V2 bypasses interception. Relocate either weapon with one-turn Truck conversions. Aircraft attacked in ground combat become Trucks automatically."),
+        ("V1 and V2", "Strikes consume the weapon; V2 bypasses interception. Relocate on land at ground speed. Air units can load into Convoys at a coast and unload on land. Aircraft caught in ground combat die immediately."),
     )
     PAGE_TITLES = ("Map Navigation", "Map UI", "Other Countries", "Armies", "Aircraft")
     PAGE_SUBTITLES = (

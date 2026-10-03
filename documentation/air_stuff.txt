@@ -23,28 +23,38 @@ Air targeting replaces the base's movement
 outline with its strike outline; land bombardment retains tile markers. Any
 part of a tile touching or inside the circle is in range. Research details
 show data-driven air ranges, patrol/strike roles, damage bonuses/immunity,
-consumption, interception immunity, fort damage capability, and Truck conversion
+consumption, interception immunity, fort damage capability, and Convoy conversion
 behavior.
 Command validation checks
 only its target through air_target_in_range, so AI candidate validation does
 not repeat full-map sweeps. Ground combat roster stats are likewise cached at
-selection/state boundaries and display the projected Truck representation.
+selection/state boundaries and display immediate ground casualties without
+mutating the aircraft or allocating them front/reserve slots.
 
 Patrol and reusable strikes cover the listed R, reposition reaches 2R, and one-use
 strikes reach R. Aircraft fly over water, foreign land and nonadjacent provinces.
 Reusable strikes spend half the one-way flight distance going out and half
 returning; listed range and strike reach are the same value.
 Bases and landing tiles must be land; attack targets may be water. Flight never
-captures land. Converted Trucks use ordinary land movement, combat and capture.
+captures land. V1/V2 relocate along normal legal land routes at their listed
+ground speed and cannot use AIR_REPOSITION or patrol. Their ranged strikes
+still fly and consume the weapon. No aircraft or landed aircraft Convoy captures
+territory. Aircraft Convoys use ordinary naval transport movement while loaded.
 The editor unit brush likewise requires land when placing an aircraft.
 
 AIR_PATROL orders retain base_id and priority (WEAKEST by default in old saves).
 AIR_ATTACK and AIR_REPOSITION retain base_id/target_id, resolve at the next
 turn boundary and clear once. Reusable strikes never remove the unit from its
 launch province, guaranteeing an exact return with health damage retained.
-Patrol remains active until replaced/canceled. Conversion into or out of a
-Truck takes one turn. Original aircraft stats survive via original_* transport
+Patrol remains active until replaced/canceled. Aircraft can only load into
+Convoys, requiring a coast; unloading requires land. Conversion uses the shared
+AIR_CONVERT_TURNS timer. Original aircraft stats survive via original_* transport
 fields; loading refreshes former infantry placeholders preserving health ratios.
+Legacy aircraft Trucks unpack on land, or become Convoys at sea, on load without
+losing health fraction or identity. The heuristic AI relocates V1/V2 on land
+and uses Convoys for reachable crossings when a land route is unavailable.
+Old Truck conversion orders become Convoy orders on a coast and cancel inland;
+normal land paths are retained for V1/V2 and discarded for reusable aircraft.
 
 All interceptable aircraft attacking the same province form one committed
 force, across nations. V2s are a separate immune force. Every hostile covering
@@ -73,11 +83,12 @@ Surviving reusable aircraft return to their exact base with health and morale
 losses retained; destroyed aircraft are removed. A ranged barrage/strike against
 a based aircraft uses the shared target damage modifiers, including
 Tanks-category immunity, but never the fighter air-to-air bonus. Actual melee
-ground engagement at their base instead converts engaged aircraft immediately
-to Trucks before assembling lanes. Truck stats remove all air bonuses/immunity
-for that fight.
-Non-mutating UI/AI ground estimates project the same conversion. Surviving
-Trucks remain Trucks until the normal one-turn conversion-back order finishes.
+ground engagement instead destroys aircraft immediately, before assembling lanes
+or exchanging damage. This includes V1/V2 moving on land and aircraft unloaded
+from Convoys into hostile troops. Neutral aircraft are unaffected, and
+aircraft Convoys remain loaded during battles at sea.
+Non-mutating UI/AI ground estimates project the same casualties. A hostile ground
+presence at the launch base prevents flight from escaping the destruction rule.
 
 Tournament aircraft use authenticated aircraft_orders commands keyed by stable
 unit_id. The host validates orders against its position/type/range, retaining

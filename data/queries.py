@@ -1196,8 +1196,8 @@ def can_unit_move_step(unit, current_province, destination, nation_data):
     """
     if not current_province or not destination:
         return False
-    if is_air_unit(unit):
-        return False  # Flight uses pixel-range orders, never land edges.
+    if is_air_unit(unit) and not air_unit_can_move_on_ground(unit):
+        return False  # Reusable aircraft use flight orders; missiles use land edges.
     if destination.get("id") not in current_province.get("neighbors", []):
         return False
     combat_owner = get_unit_combat_owner(unit)
@@ -4082,6 +4082,8 @@ def load_transport(unit, target):
     """
     if target not in ("Convoy", "Truck"):
         return
+    if target == "Truck" and is_air_unit(unit):
+        raise ValueError("Air units can only be loaded into Convoys.")
 
     unit["original_type"] = unit["type"]
     unit["original_speed"] = unit.get("speed", 1)
@@ -4109,7 +4111,7 @@ def load_transport(unit, target):
 
 
 # Air capabilities come from the current unit type, so a carried aircraft uses
-# Truck rules until it is unpacked. These fields are unit-library tuning, not
+# Convoy rules until it is unpacked. These fields are unit-library tuning, not
 # duplicated frozen state in saves or network snapshots.
 AIR_ORDER_TYPES = frozenset(("AIR_ATTACK", "AIR_PATROL", "AIR_REPOSITION"))
 AIR_INTERCEPTION_PRIORITIES = ("WEAKEST", "STRONGEST")
@@ -4130,8 +4132,13 @@ def is_air_unit(unit):
     return bool(air_unit_stats(unit).get("air_role"))
 
 
+def air_unit_can_move_on_ground(unit):
+    """One-use air weapons relocate along land edges at their listed speed."""
+    return is_air_unit(unit) and bool(air_unit_stats(unit).get("air_consumable"))
+
+
 def air_unit_can_damage_forts(unit):
-    """Current unit-library capability; missing flags and Trucks cannot strike forts."""
+    """Current unit-library capability; missing flags and transports cannot strike forts."""
     stats = air_unit_stats(unit)
     return bool(stats.get("air_role") and stats.get("air_damages_forts", False))
 
@@ -4154,8 +4161,13 @@ def unit_matches_view_filter(unit, view_filter):
 
 def is_air_transport(unit):
     name = unit.get("type", "")
-    original = unit.get("original_type") or name.removeprefix("Truck (").removesuffix(")")
-    return name.startswith("Truck (") and bool(get_unit_library().get(original, {}).get("air_role"))
+    # Truck names remain recognizable at the legacy-save/import boundary.
+    for carrier in ("Convoy", "Truck"):
+        prefix = carrier + " ("
+        if name.startswith(prefix) and name.endswith(")"):
+            original = unit.get("original_type") or name[len(prefix):-1]
+            return bool(get_unit_library().get(original, {}).get("air_role"))
+    return False
 
 
 def air_order_radius(unit, kind):
@@ -4176,7 +4188,7 @@ def get_air_unit_traits(unit_type):
     strike = air_order_radius(unit, "AIR_ATTACK")
     if stats.get("air_consumable"):
         traits = [f"Strike range: {strike:g} map pixels; consumed after impact.",
-                  "No patrol or air reposition; relocate by Truck.",
+                  "No patrol or air reposition; relocate on land at listed ground speed.",
                   "Immune to interception." if stats.get("air_interception_immune")
                   else "Can be intercepted by enemy fighters."]
     else:
@@ -4192,7 +4204,8 @@ def get_air_unit_traits(unit_type):
     traits.append("Strikes damage forts." if air_unit_can_damage_forts(unit)
                   else "Strikes do not damage forts.")
     traits.extend([f"Immune to {UNIT_GROUP_TANKS} damage; cannot capture territory.",
-                   f"Ground combat uses Trucks; conversions take {AIR_CONVERT_TURNS} turn each way."])
+                   "Destroyed immediately when caught in ground combat.",
+                   f"Coastal Convoy conversions take {AIR_CONVERT_TURNS} turn each way."])
     return traits
 
 
@@ -4303,7 +4316,7 @@ def canonical_air_order(map_screen, unit, base, order):
 
 def air_conversion_order(unit):
     if is_air_unit(unit):
-        return {"type": "CONVERT", "to": "Truck", "turns_left": AIR_CONVERT_TURNS}
+        return {"type": "CONVERT", "to": "Convoy", "turns_left": AIR_CONVERT_TURNS}
     if is_air_transport(unit):
         return {"type": "CONVERT", "to": "Air Unit", "turns_left": AIR_CONVERT_TURNS}
     return None
@@ -4320,23 +4333,37 @@ def unit_target_damage_multiplier(attacker, target, air_to_air=False):
             if air_to_air and is_air_unit(attacker) else 1.0)
 
 
-def prepare_aircraft_for_ground_combat(units, nation_data, opponents=None):
-    """Based aircraft become Trucks before a ground battle is assembled."""
+def aircraft_caught_in_ground_combat(unit, opponents, nation_data):
+    """A based aircraft sharing a ground battle with its enemy is a casualty."""
+    return is_air_unit(unit) and any(
+        other is not unit
+        and are_at_war(get_unit_combat_owner(unit), get_unit_combat_owner(other), nation_data)
+        for other in opponents)
+
+
+def prepare_aircraft_for_ground_combat(units, nation_data, opponents=None, on_land=True):
+    """Destroy based aircraft before assembling a ground battle or launching."""
     enemies = units if opponents is None else opponents
+    if not on_land:
+        return
     for unit in units:
-        if is_air_unit(unit) and any(
-                other is not unit and are_at_war(get_unit_combat_owner(unit),
-                    get_unit_combat_owner(other), nation_data) for other in enemies):
-            load_transport(unit, "Truck")
+        if is_air_transport(unit) and any(
+                other is not unit and other.get("health", 0) > 0
+                and are_at_war(get_unit_combat_owner(unit), get_unit_combat_owner(other), nation_data)
+                for other in enemies):
+            revert_transport(unit)
+    for unit in units:
+        if aircraft_caught_in_ground_combat(unit, enemies, nation_data):
+            unit["health"] = 0
             unit["order"] = {"type": "MOVE", "path": []}
 
 
 def ground_combat_profile(unit):
-    """Non-mutating Truck stats for UI/AI estimates of a based aircraft."""
+    """Non-mutating casualty profile for UI/AI estimates of a caught aircraft."""
     if not is_air_unit(unit):
         return unit
     profile = dict(unit)
-    load_transport(profile, "Truck")
+    profile.update(health=0, attack=0, defense=0)
     return profile
 
 
@@ -4369,7 +4396,7 @@ def migrate_aircraft_names(map_data):
 
 
 def migrate_aircraft_stats(map_data):
-    """Upgrade former placeholder stats, including aircraft carried by Trucks.
+    """Refresh aircraft stats and unpack obsolete aircraft Trucks safely.
 
     Old saves can share this release's version. Always refresh these explicit
     library stats on load, preserving health fractions and original transport
@@ -4378,12 +4405,22 @@ def migrate_aircraft_stats(map_data):
     for province in map_data.values():
         for unit in province.get("units", []):
             transported = is_air_transport(unit)
+            if transported and not unit.get("original_type"):
+                # Some legacy transports only stored the name wrapper.
+                unit["original_type"] = unit["type"].split(" (", 1)[1][:-1]
             stats = get_unit_library().get(unit.get("original_type") if transported else unit.get("type"), {})
             if not stats.get("air_role"):
                 continue
             if transported:
                 for field in ("max_health", "attack", "defense", "speed"):
                     unit["original_" + field] = stats["health" if field == "max_health" else field]
+                if unit["type"].startswith("Truck ("):
+                    # Preserve the carried health fraction and identity without
+                    # leaving an obsolete land-transport capability in saves.
+                    revert_transport(unit)
+                    if is_water_province(province):
+                        load_transport(unit, "Convoy")
+                    unit["order"] = {"type": "MOVE", "path": []}
             else:
                 fraction = unit.get("health", 0) / max(1, unit.get("max_health", c.DEFAULT_UNIT_HP))
                 unit.update(max_health=stats["health"], health=stats["health"] * fraction,
@@ -4391,7 +4428,7 @@ def migrate_aircraft_stats(map_data):
 
 
 def normalize_air_orders(map_data):
-    """Stable old-save defaults; obsolete aircraft land paths are discarded."""
+    """Stable old-save defaults; only one-use weapons retain land paths."""
     for province in map_data.values():
         for unit in province.get("units", []):
             order = unit.get("order")
@@ -4401,8 +4438,11 @@ def normalize_air_orders(map_data):
                 order.setdefault("base_id", province["id"])
                 if order["type"] == "AIR_PATROL":
                     order.setdefault("priority", AIR_DEFAULT_PRIORITY)
-            elif order.get("type") == "MOVE":
+            elif order.get("type") == "MOVE" and not air_unit_can_move_on_ground(unit):
                 order["path"] = []
+            elif order.get("type") == "CONVERT" and order.get("to") == "Truck":
+                unit["order"] = (air_conversion_order(unit) if province.get("is_coastal", False)
+                                 else {"type": "MOVE", "path": []})
 
 def revert_transport(unit):
     """Reverts a transport (like a Convoy) back to its original unit type."""
@@ -4515,7 +4555,7 @@ def get_combat_predictions(map_screen):
     incoming = {}
     for prov in map_data.values():
         for u in prov.get("units", []):
-            if is_air_unit(u) or id(u) in meeting_unit_ids:
+            if (is_air_unit(u) and not air_unit_can_move_on_ground(u)) or id(u) in meeting_unit_ids:
                 continue
             order = u.get("order")
             if order and order.get("type") == "MOVE" and order.get("path"):
@@ -5645,6 +5685,8 @@ def canonical_unit_order(map_screen, country_id, province, unit, order):
         if air_conversion:
             if is_water_province(province):
                 raise ValueError("Aircraft conversion requires land.")
+            if is_air_unit(unit) and not province.get("is_coastal", False):
+                raise ValueError("Convoy conversion requires a coast.")
             expected, turns = air_conversion["to"], air_conversion["turns_left"]
         elif source.startswith("Convoy"):
             expected, turns = "Land Unit", 1

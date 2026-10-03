@@ -90,7 +90,16 @@ show whether an aircraft can damage forts. This capability is resolved by the
 same turn processor for player and heuristic AI orders.
 The heuristic aircraft pass generates only canonical legal orders. It strikes
 known enemy targets, repositions reusable aircraft onto friendly land nearer
-them, patrols otherwise, and relocates one-use weapons through Trucks. It reads
+them, patrols otherwise, and relocates one-use weapons along legal land paths
+at their unit-library ground speed. V1/V2 cannot patrol or fly between bases;
+their flight is limited to consumable strikes. Air units load into Convoys at
+a coast and unload on land, preserving their health fraction and original stats.
+Aircraft caught by hostile units in ground combat die immediately,
+before lane seating or damage; neutral aircraft and aircraft transported at sea
+remain safe from other nations' ground battles. UI and AI forecasts use the same
+casualty rule. Old aircraft Trucks unpack safely on land when loaded, or become
+Convoys if saved at sea, and obsolete Truck
+conversion orders become coastal Convoy orders or are canceled inland. It reads
 only visible enemy stacks, works with the LLM disabled, and leaves the tactical
 player's selected division under player control. Production values aerospace as
 its own AIR role, including the canonical fighter-versus-air damage bonus.
@@ -107,8 +116,8 @@ forces a full rebuild. No map sweeps were added to planning-frame rendering.
 The map's Naval / Land / Air / All buttons form a vertical strip beside the
 lower left sidebar, visible only in Units view. They only filter local presentation,
 including unit stacks, strategic army markers and order arrows. They use the
-current unit form: Convoys are naval and Trucks are land, including carried
-aircraft. All is selected whenever a game opens. Filtering clears the local
+current unit form: Convoys are naval, including carried aircraft, and Trucks
+are land. All is selected whenever a game opens. Filtering clears the local
 unit selection and compression animations; it never changes units, orders,
 AI decisions, fog permissions, saves or multiplayer commands. Combat markers
 for matching units still forecast the complete battle.

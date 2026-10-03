@@ -272,7 +272,7 @@ def combat_outlook_color(sides, nation_data, friendly_nations,
             if color is not None else COMBAT_BUBBLE_UNKNOWN_COLOR)
 
 
-def estimated_combat_outcome(sides, nation_data, province=None, max_turns=100):
+def estimated_combat_outcome(sides, nation_data, province=None, max_turns=100, grounded_sides=None):
     """Estimate the winning side and future volleys for a battle.
 
     This is deliberately a small, non-mutating simulation of the resolver:
@@ -286,18 +286,28 @@ def estimated_combat_outcome(sides, nation_data, province=None, max_turns=100):
     number of future volleys until that result is reached.
     """
     return {key: value for key, value in _simulate_combat(
-        sides, nation_data, province=province, max_turns=max_turns).items()
+        sides, nation_data, province=province, max_turns=max_turns,
+        grounded_sides=grounded_sides).items()
         if key != "sides"}
 
 
-def _simulate_combat(sides, nation_data, province=None, max_turns=100):
+def _simulate_combat(sides, nation_data, province=None, max_turns=100, grounded_sides=None):
     """Run the non-mutating combat estimate and retain its survivors."""
     simulated_sides = [
         [dict(unit) for unit in side if unit.get("health", 0) > 0]
         for side in sides
     ]
-    all_simulated = [unit for side in simulated_sides for unit in side]
-    queries.prepare_aircraft_for_ground_combat(all_simulated, nation_data)
+    if grounded_sides is None:
+        grounded_sides = (set(range(len(sides)))
+                          if province is None or not queries.is_water_province(province) else set())
+    for index, side in enumerate(simulated_sides):
+        enemies = (side if len(simulated_sides) == 1 else
+                   [unit for other_index, other_side in enumerate(simulated_sides)
+                    if index != other_index for unit in other_side])
+        queries.prepare_aircraft_for_ground_combat(side, nation_data, enemies,
+            on_land=index in grounded_sides)
+    simulated_sides = [[unit for unit in side if unit.get("health", 0) > 0]
+                       for side in simulated_sides]
 
     def defense_bonus(unit):
         if province is None:
@@ -308,7 +318,8 @@ def _simulate_combat(sides, nation_data, province=None, max_turns=100):
     for turns in range(max_turns + 1):
         battle = combat_rules.build_battle(
             simulated_sides, nation_data,
-            terrain=province.get("terrain") if province is not None else None)
+            terrain=province.get("terrain") if province is not None else None,
+            grounded_sides=grounded_sides)
         if not battle.lanes:
             live_side_indexes = [index for index, side in enumerate(simulated_sides)
                                  if side]
@@ -790,10 +801,12 @@ def midpoint_bounce_outcomes(map_screen):
         prov_a, prov_b, side_a, side_b = combat_rules.meeting_sides(
             map_screen.id_to_province, pair, visible_to)
         estimate = estimated_combat_outcome(
-            [side_a, side_b], map_screen.nation_data)
+            [side_a, side_b], map_screen.nation_data,
+            grounded_sides={index for index, province in enumerate((prov_a, prov_b))
+                            if not queries.is_water_province(province)})
         winner_side = estimate.get("winner_side")
         is_overrun = (winner_side in (0, 1)
-                      and estimate.get("turns") == 1)
+                      and estimate.get("turns") in (0, 1))
 
         if is_overrun and winner_side == 1:
             origin_id, target_id = prov_b["id"], prov_a["id"]

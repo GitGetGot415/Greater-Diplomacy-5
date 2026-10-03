@@ -132,6 +132,12 @@ def process_conversions(map_screen):
         for unit in province.get("units", []):
             order = unit.get("order")
             if isinstance(order, dict) and order.get("type") == "CONVERT":
+                if queries.is_air_unit(unit) or queries.is_air_transport(unit):
+                    try:
+                        queries.canonical_unit_order(map_screen, unit["owner"], province, unit, order)
+                    except ValueError:
+                        unit["order"] = {"type": "MOVE", "path": []}
+                        continue
                 order["turns_left"] -= 1
 
                 if order["turns_left"] <= 0:
@@ -234,7 +240,7 @@ def process_movement(map_screen):
                 continue
 
             order = unit.get("order")
-            if queries.is_air_unit(unit):
+            if queries.is_air_unit(unit) and not queries.air_unit_can_move_on_ground(unit):
                 units_to_keep.append(unit)
                 continue
             if order and order.get("type") == "MOVE" and order.get("path"):
@@ -357,13 +363,17 @@ def process_movement(map_screen):
                 # --- INSTANT CONVERT FOR CONVOYS UPON LANDING ---
                 if is_convoy and not dest_is_water:
                     queries.revert_transport(unit)
+                    if queries.is_air_unit(unit):
+                        # Aircraft unload at the landing boundary, then must use
+                        # flight orders (or a new ground route for missiles).
+                        order["path"] = []
                 # ------------------------------------------------------------
 
                 # Only conquer if there are NO defenders from an enemy nation
                 if not defenders:
                     if dest_owner == "Unclaimed" or dest_owner in player_data.get("at_war_with", []):
                         # Prevent capturing water tiles via movement
-                        if not queries.is_water_province(target_prov):
+                        if not queries.is_water_province(target_prov) and not queries.is_air_unit(unit):
                             capturer = combat_owner
                             # faction core transfer stuff
                             true_owner = queries.get_faction_core_transfer_target(capturer, target_prov, map_screen.nation_data)

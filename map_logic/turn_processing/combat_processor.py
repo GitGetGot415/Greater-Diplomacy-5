@@ -147,7 +147,7 @@ def process_pinning(map_screen):
     incoming_attacks = {}
     for province in map_screen.map_data.values():
         for unit in province.get("units", []):
-            if queries.is_air_unit(unit):
+            if queries.is_air_unit(unit) and not queries.air_unit_can_move_on_ground(unit):
                 continue
             order = unit.get("order")
             if order and order.get("type") == "MOVE" and order.get("path"):
@@ -233,6 +233,7 @@ def process_pinning(map_screen):
         # genuinely cannot all be shot down in one exchange, so the early
         # resolution below simply stops applying to charges that big.
         attackers_survive = any(
+            probe.profiles.get(id(a_unit), a_unit).get("health", 1) > 0 and
             max(0, incoming_on_charge.get(id(a_unit), 0.0)
                 - a_unit.get("defense", 0) * combat_rules.health_defense_multiplier(a_unit))
             < a_unit.get("health", 1)
@@ -268,7 +269,7 @@ def process_pinning(map_screen):
     # --- STANDARD PINNING LOGIC ---
     for province in map_screen.map_data.values():
         for unit in province.get("units", []):
-            if queries.is_air_unit(unit):
+            if queries.is_air_unit(unit) and not queries.air_unit_can_move_on_ground(unit):
                 continue
             order = unit.get("order")
             if order and order.get("type") == "MOVE" and order.get("path"):
@@ -319,11 +320,15 @@ def resolve_meeting_engagement(prov1, prov2, units1, units2, nation_data):
     """
     # Both armies are crossing the same boundary: its narrower terrain limits
     # the fight, independent of which endpoint the caller happens to list first.
-    queries.prepare_aircraft_for_ground_combat(units1, nation_data, units2)
-    queries.prepare_aircraft_for_ground_combat(units2, nation_data, units1)
+    queries.prepare_aircraft_for_ground_combat(units1, nation_data, units2,
+                                             on_land=not queries.is_water_province(prov1))
+    queries.prepare_aircraft_for_ground_combat(units2, nation_data, units1,
+                                             on_land=not queries.is_water_province(prov2))
     battle = combat_rules.build_battle(
         [units1, units2], nation_data,
-        width=combat_rules.meeting_combat_width(prov1, prov2))
+        width=combat_rules.meeting_combat_width(prov1, prov2),
+        grounded_sides={index for index, province in enumerate((prov1, prov2))
+                        if not queries.is_water_province(province)})
 
     # Front *and* reserve. `fought` is what stops a unit here, and a reserve that
     # walked on through the tile its own army is fighting over would be absurd --
@@ -415,7 +420,7 @@ def process_combat(map_screen):
 
         is_land = not queries.is_water_province(province)
 
-        queries.prepare_aircraft_for_ground_combat(units, map_screen.nation_data)
+        queries.prepare_aircraft_for_ground_combat(units, map_screen.nation_data, on_land=is_land)
 
         battle = combat_rules.build_battle(
             [units], map_screen.nation_data, terrain=province.get("terrain"))
@@ -563,7 +568,7 @@ def check_for_post_combat_captures(map_screen):
                         # Use capturer instead of true_owner here so ships are correctly scuttled even if core transferred
                         if queries.is_hostile_territory(capturer, u["owner"], map_screen.nation_data):
                             u["health"] = 0
-                province["units"] = [u for u in units if u.get("health", 0) > 0]
+                province["units"] = [u for u in province["units"] if u.get("health", 0) > 0]
         else:
             # If no capturer (e.g., bounce tiebreaker triggered), revert any order-of-execution captures
             if current_owner != turn_start_owner:

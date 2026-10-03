@@ -78,7 +78,7 @@ class AerospaceRulesTests(unittest.TestCase):
         self.assertTrue(queries.air_unit_can_damage_forts(bomber))
         fighter = {"type": "Monoplane Fighter", "air_damages_forts": True}
         self.assertFalse(queries.air_unit_can_damage_forts(fighter))
-        queries.load_transport(bomber, "Truck")
+        queries.load_transport(bomber, "Convoy")
         bomber["air_damages_forts"] = True
         self.assertFalse(queries.air_unit_can_damage_forts(bomber))
         queries.revert_transport(bomber)

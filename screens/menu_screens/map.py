@@ -1881,7 +1881,7 @@ class Map(GameState):
         self._combat_unit_view_cache = None
         self._unit_render_index_cache = None
         self._unit_roster_cache = {}
-        # The inspector projects based aircraft as Trucks before ground combat.
+        # The inspector projects aircraft caught in ground combat as casualties.
         # Build its roster at this boundary, never during the frame draw.
         if getattr(self, "selected_province", None) is not None:
             from ui import sidebar_info
@@ -2178,7 +2178,7 @@ class Map(GameState):
             if isinstance(order, dict) and order.get("type") in c.ORDERS_BLOCKING_MOVEMENT:
                 self.show_feedback("Cannot move units with a blocking order.")
                 return False
-            if queries.is_air_unit(unit):
+            if queries.is_air_unit(unit) and not queries.air_unit_can_move_on_ground(unit):
                 try:
                     air_order = queries.canonical_air_order(self, unit, origin, {
                         "type": "AIR_REPOSITION", "target_id": destination["id"]})

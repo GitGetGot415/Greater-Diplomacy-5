@@ -397,14 +397,14 @@ class AirResolutionTests(unittest.TestCase):
         self.assertEqual(len(battles[0].lanes), 3)
         self.assertEqual(battles[0].lanes[0].slots, combat_rules.lane_slots(3, c.COMBAT_WIDTH))
 
-    def test_fighter_multiplier_only_against_air_and_not_trucks(self):
+    def test_fighter_multiplier_only_against_air_and_not_transports(self):
         fighter = wing(self.base, "Monoplane Fighter")
         aircraft = wing(self.target, "Monoplane Bomber", "B")
         ground = wing(self.target, "Infantry Type 1910", "B")
         air_attack = combat_rules.damage_shots([fighter], [aircraft], air_to_air=True)[0][1]
         ground_attack = combat_rules.damage_shots([fighter], [ground])[0][1]
         self.assertAlmostEqual(air_attack, ground_attack * queries.air_unit_stats(fighter)["air_attack_multiplier"])
-        queries.load_transport(aircraft, "Truck")
+        queries.load_transport(aircraft, "Convoy")
         self.assertEqual(combat_rules.damage_shots([fighter], [aircraft])[0][1], ground_attack)
 
     def test_canonical_tanks_category_is_immune_but_infantry_is_not(self):
@@ -433,25 +433,26 @@ class AirResolutionTests(unittest.TestCase):
         combat_processor.process_bombardments(self.game)
         self.assertEqual(rocket["health"], health)
 
-    def test_ground_combat_converts_before_damage_and_preserves_original_stats(self):
+    def test_ground_combat_destroys_aircraft_before_damage(self):
         aircraft = self.attack("V2 Rocket")
         original = dict(aircraft)
         tank = wing(self.base, "WW1 Tank", "B")
         combat_processor.process_combat(self.game)
-        self.assertTrue(queries.is_air_transport(aircraft))
-        self.assertFalse(queries.is_air_unit(aircraft))
-        self.assertEqual(aircraft["original_attack"], original["attack"])
-        self.assertLess(aircraft["health"], c.TRUCK_MAX_HP)
-        self.assertEqual(aircraft["attack"], c.TRUCK_ATK)
-        self.assertEqual(tank["health"], tank["max_health"] - max(0, c.TRUCK_ATK - tank["defense"]))
+        self.assertEqual(aircraft["health"], 0)
+        self.assertNotIn(aircraft, self.base["units"])
+        self.assertEqual(aircraft["type"], original["type"])
+        self.assertNotIn("original_type", aircraft)
+        self.assertEqual(tank["health"], tank["max_health"])
 
-    def test_ground_preview_projects_conversion_without_mutating(self):
+    def test_ground_preview_projects_destruction_without_mutating(self):
         aircraft = self.attack()
         tank = wing(self.base, "WW1 Tank", "B")
         before = dict(aircraft)
         battle = combat_rules.build_battle([[aircraft, tank]], self.game.nation_data)
-        self.assertEqual(battle.profiles[id(aircraft)]["attack"], c.TRUCK_ATK)
-        self.assertGreater(combat_rules.projected_incoming_damage(battle, self.game.nation_data)[id(aircraft)], 0)
+        self.assertEqual(battle.profiles[id(aircraft)]["health"], 0)
+        self.assertEqual(battle.profiles[id(aircraft)]["attack"], 0)
+        self.assertEqual(battle.lanes, [])
+        self.assertEqual(combat_rules.projected_incoming_damage(battle, self.game.nation_data)[id(aircraft)], aircraft["max_health"])
         self.assertEqual(aircraft, before)
 
     def test_interceptions_repeat_in_requested_force_strength_order(self):
@@ -531,8 +532,9 @@ class AirResolutionTests(unittest.TestCase):
         self.assertEqual(queries.get_fort_level(self.target), fort_level)
         self.assertNotIn(attacker, self.base["units"])
 
-    def test_one_turn_truck_roundtrip_retains_fraction_and_original_type(self):
+    def test_convoy_roundtrip_retains_fraction_and_original_type(self):
         unit = self.attack("V2 Rocket")
+        self.base["is_coastal"] = True
         unit["health"] *= 0.6
         unit["order"] = queries.air_conversion_order(unit)
         movement_processor.process_conversions(self.game)
@@ -587,7 +589,7 @@ class AirIntegrationTests(unittest.TestCase):
         fighter = wing(self.base, "Biplane Fighter", order={"type": "AIR_PATROL"})
         queries.normalize_air_orders(self.game.map_data)
         self.assertEqual(fighter["order"]["priority"], queries.AIR_DEFAULT_PRIORITY)
-        queries.load_transport(self.plane, "Truck")
+        queries.load_transport(self.plane, "Convoy")
         saved = json.loads(json.dumps(queries.build_save_dict(self.game)))
         recovered = saved["provinces"][self.base["json_key"]]["units"]
         queries.revert_transport(recovered[0])
@@ -827,19 +829,273 @@ class AirIntegrationTests(unittest.TestCase):
                 self.assertEqual(regenerated_tree[key], entry)
 
 
+class AirGroundTransportTests(unittest.TestCase):
+    def setUp(self):
+        self.game = world()
+        self.base = tile(self.game, 1, 8)
+        self.base["is_coastal"] = True
+        self.land = tile(self.game, 2, 30)
+        self.sea = tile(self.game, 3, 50, water=True)
+        self.base["neighbors"] = [2, 3]
+        self.land["neighbors"] = [1]
+        self.sea["neighbors"] = [1]
+
+    def test_air_conversion_and_both_network_validators_accept_only_convoys(self):
+        for name, stats in queries.get_unit_library().items():
+            if not stats.get("air_role"):
+                continue
+            with self.subTest(unit=name):
+                self.base["units"] = []
+                unit = wing(self.base, name)
+                order = queries.air_conversion_order(unit)
+                self.assertEqual(order["to"], "Convoy")
+                driver = MapRealtimeDriver(self.game)
+                command = {"type": "unit_order", "province_id": 1, "unit_index": 0,
+                           "unit_id": unit["unit_id"], "order": order}
+                self.assertEqual(driver.validate_draft("A", [command])[0]["order"], order)
+                live, drafts = multiplayer_io._validate_aircraft_orders(self.game, "A",
+                    {"aircraft_orders": [{"unit_id": unit["unit_id"], "order": order}]}, {})
+                self.assertIn(unit["unit_id"], live)
+                self.assertEqual(drafts[0][1], order)
+                bad = dict(order, to="Truck")
+                with self.assertRaises(RealtimeError):
+                    driver.validate_draft("A", [dict(command, order=bad)])
+                with self.assertRaises(ValueError):
+                    multiplayer_io._validate_aircraft_orders(self.game, "A",
+                        {"aircraft_orders": [{"unit_id": unit["unit_id"], "order": bad}]}, {})
+                with self.assertRaises(ValueError):
+                    queries.load_transport(unit, "Truck")
+                self.assertFalse(queries.is_air_transport(unit))
+
+    def test_conversion_coast_and_unloading_land_requirements(self):
+        unit = wing(self.land)
+        with self.assertRaises(ValueError):
+            queries.canonical_unit_order(self.game, "A", self.land, unit, queries.air_conversion_order(unit))
+        unit["order"] = queries.air_conversion_order(unit)
+        movement_processor.process_conversions(self.game)
+        self.assertTrue(queries.is_air_unit(unit))
+        queries.load_transport(unit, "Convoy")
+        with self.assertRaises(ValueError):
+            queries.canonical_unit_order(self.game, "A", self.sea, unit, queries.air_conversion_order(unit))
+
+    def test_ui_and_editor_conversion_use_convoys(self):
+        from screens.editor_screens.brush_screens import Convoy_Converter_Screen
+        unit = wing(self.base)
+        self.game.show_feedback = Mock()
+        self.game.queue_editor_visual_refresh = Mock()
+        screen = object.__new__(Orders_Screen)
+        screen.map_screen = self.game
+        screen.target_province = self.base
+        screen.read_only = False
+        screen.refresh_ui = Mock()
+        screen._mark_draft_changed = Mock()
+        screen.convert_unit(0, self.base)
+        self.assertEqual(unit["order"], queries.air_conversion_order(unit))
+        self.base["is_coastal"] = False
+        unit["order"] = {}
+        screen.convert_unit(0, self.base)
+        self.assertEqual(unit["order"], {})
+        editor = object.__new__(Convoy_Converter_Screen)
+        editor.map_screen = self.game
+        editor.province = self.base
+        editor.unit_lib = queries.get_unit_library()
+        editor.selected = {0}
+        editor.save()
+        self.assertTrue(queries.is_air_transport(unit))
+        self.assertEqual(unit["type"], "Convoy (Monoplane Bomber)")
+        editor.selected = set()
+        editor.save()
+        self.assertTrue(queries.is_air_unit(unit))
+
+    def test_missile_routes_agree_with_ui_ai_networks_and_ground_speed(self):
+        for name in ("V1 Flying Bomb", "V2 Rocket"):
+            with self.subTest(unit=name):
+                self.base["units"] = []
+                self.land["units"] = []
+                unit = wing(self.base, name)
+                speed = queries.get_unit_library()[name]["speed"]
+                route = [2]
+                previous = self.land
+                for offset in range(speed):
+                    next_tile = tile(self.game, 4 + offset, 80 + offset * 8)
+                    previous["neighbors"].append(next_tile["id"])
+                    next_tile["neighbors"] = [previous["id"]]
+                    route.append(next_tile["id"])
+                    previous = next_tile
+                self.game.selected_unit_records = lambda: [(unit, self.base)]
+                self.game.can_select_map_units = lambda: True
+                self.game.invalidate_map_presentation_cache = Mock()
+                self.game.show_feedback = Mock()
+                self.game.select_map_units = Mock()
+                Map.issue_selected_move_orders(self.game, previous)
+                self.assertEqual(unit["order"], {"type": "MOVE", "path": route})
+                command = {"type": "unit_order", "province_id": 1, "unit_index": 0,
+                           "unit_id": unit["unit_id"], "order": unit["order"]}
+                self.assertEqual(MapRealtimeDriver(self.game).validate_draft("A", [command])[0]["order"], unit["order"])
+                _, drafts = multiplayer_io._validate_aircraft_orders(self.game, "A",
+                    {"aircraft_orders": [{"unit_id": unit["unit_id"], "order": unit["order"]}]}, {})
+                self.assertEqual(drafts[0][1], unit["order"])
+                self.assertFalse(queries.can_unit_move_step(unit, self.base, self.sea, self.game.nation_data))
+                with self.assertRaises(ValueError):
+                    queries.canonical_air_order(self.game, unit, self.base,
+                        {"type": "AIR_REPOSITION", "target_id": 2})
+                movement_processor.process_movement(self.game)
+                self.assertIn(unit, self.game.id_to_province[route[speed - 1]]["units"])
+                self.assertEqual(unit["order"]["path"], route[speed:])
+
+    def test_heuristic_missiles_relocate_without_converting(self):
+        for name in ("V1 Flying Bomb", "V2 Rocket"):
+            with self.subTest(unit=name):
+                self.base["units"] = []
+                unit = wing(self.base, name)
+                radius = queries.air_order_radius(unit, "AIR_ATTACK")
+                self.game.id_map.fill((0, 0, 0), pygame.Rect(80, 0, 2300, 32))
+                target = tile(self.game, 4, int(self.base["center"][0] + radius + 8), owner="B")
+                queries.build_air_geometry(self.game)
+                with patch.object(c, "USE_FOG_OF_WAR", False):
+                    ai_movement._assign_air_orders(self.game, "A", [(unit, self.base)])
+                self.assertEqual(unit["order"], {"type": "MOVE", "path": [2]})
+
+    def test_ground_combat_spares_neutrals_and_air_convoys_at_sea(self):
+        self.game.nation_data["C"]["at_war_with"] = []
+        for nation in ("A", "B"):
+            self.game.nation_data[nation]["at_war_with"].remove("C")
+        aircraft = wing(self.base)
+        neutral = wing(self.base, owner="C")
+        tank = wing(self.base, "WW1 Tank", "B")
+        carried = wing(self.sea)
+        queries.load_transport(carried, "Convoy")
+        wing(self.sea, "Submarine I", "B")
+        combat_processor.process_combat(self.game)
+        self.assertNotIn(aircraft, self.base["units"])
+        self.assertIn(neutral, self.base["units"])
+        self.assertEqual(neutral["health"], neutral["max_health"])
+        self.assertEqual(tank["health"], tank["max_health"])
+        self.assertTrue(queries.is_air_transport(carried))
+        self.assertEqual(carried["type"], "Convoy (Monoplane Bomber)")
+
+    def test_heuristic_missile_uses_a_convoy_for_an_island_crossing(self):
+        unit = wing(self.base, "V2 Rocket")
+        self.base["neighbors"] = [3]
+        self.sea["neighbors"] = [1, 2]
+        self.land["neighbors"] = [3]
+        radius = queries.air_order_radius(unit, "AIR_ATTACK")
+        tile(self.game, 4, int(self.base["center"][0] + radius + 8), owner="B")
+        queries.build_air_geometry(self.game)
+        with patch.object(c, "USE_FOG_OF_WAR", False):
+            ai_movement._assign_air_orders(self.game, "A", [(unit, self.base)])
+        self.assertEqual(unit["order"], queries.air_conversion_order(unit))
+        movement_processor.process_conversions(self.game)
+        self.assertTrue(queries.is_air_transport(unit))
+        with patch.object(c, "USE_FOG_OF_WAR", False):
+            ai_movement._assign_air_orders(self.game, "A", [(unit, self.base)])
+        self.assertEqual(unit["order"], {"type": "MOVE", "path": [3, 2]})
+
+    def test_old_air_truck_saved_at_sea_becomes_a_convoy(self):
+        unit = wing(self.sea)
+        queries.load_transport(unit, "Convoy")
+        unit.update(type="Truck (Monoplane Bomber)", max_health=c.TRUCK_MAX_HP,
+                    health=c.TRUCK_MAX_HP * 0.4, naval_unit=False)
+        queries.migrate_aircraft_stats(self.game.map_data)
+        self.assertEqual(unit["type"], "Convoy (Monoplane Bomber)")
+        self.assertTrue(unit["naval_unit"])
+        self.assertAlmostEqual(unit["health"] / unit["max_health"], 0.4)
+        self.assertEqual(unit["original_attack"], queries.get_unit_library()["Monoplane Bomber"]["attack"])
+
+    def test_missile_crossing_a_ground_enemy_dies_without_dealing_damage(self):
+        from map_logic.rendering import overlay_renderer
+        self.land["owner"] = "B"
+        missile = wing(self.base, "V2 Rocket", order={"type": "MOVE", "path": [2]})
+        enemy = wing(self.land, "Infantry Type 1910", "B", {"type": "MOVE", "path": [1]})
+        before = dict(missile)
+        estimate = overlay_renderer.estimated_combat_outcome([[missile], [enemy]], self.game.nation_data)
+        self.assertEqual(estimate["winner_side"], 1)
+        self.assertEqual(missile, before)
+        combat_processor.process_meeting_engagements(self.game)
+        self.assertNotIn(missile, self.base["units"])
+        self.assertEqual(enemy["health"], enemy["max_health"])
+        self.assertFalse(enemy.get("_combat_locked", False))
+
+    def test_air_convoy_crossing_a_shore_enemy_keeps_its_sea_profile(self):
+        from map_logic.rendering import overlay_renderer
+        convoy = wing(self.sea)
+        queries.load_transport(convoy, "Convoy")
+        enemy = wing(self.base, "Infantry Type 1910", "B")
+        battle = combat_rules.build_battle([[convoy], [enemy]], self.game.nation_data,
+                                           grounded_sides={1})
+        self.assertNotIn(id(convoy), battle.profiles)
+        expected = combat_rules.projected_incoming_damage(battle, self.game.nation_data)
+        before = convoy["health"]
+        with patch.object(queries, "prepare_aircraft_for_ground_combat",
+                          wraps=queries.prepare_aircraft_for_ground_combat) as prepare:
+            overlay_renderer.estimated_combat_outcome([[convoy], [enemy]], self.game.nation_data,
+                                                       grounded_sides={1})
+        self.assertFalse(prepare.call_args_list[0].kwargs["on_land"])
+        combat_processor.resolve_meeting_engagement(self.sea, self.base, [convoy], [enemy], self.game.nation_data)
+        self.assertEqual(convoy["health"], before - expected.get(id(convoy), 0))
+        self.assertTrue(queries.is_air_transport(convoy))
+
+    def test_aircraft_landing_never_captures_and_dies_to_surface_defenders(self):
+        self.land["owner"] = "B"
+        for defenders in (False, True):
+            with self.subTest(defenders=defenders):
+                self.base["units"] = []
+                self.land["units"] = []
+                self.sea["units"] = []
+                unit = wing(self.sea)
+                queries.load_transport(unit, "Convoy")
+                self.sea["neighbors"] = [2]
+                unit["order"] = {"type": "MOVE", "path": [2]}
+                if defenders:
+                    wing(self.land, "Infantry Type 1910", "B")
+                movement_processor.process_movement(self.game)
+                combat_processor.process_combat(self.game)
+                combat_processor.check_for_post_combat_captures(self.game)
+                self.assertEqual(self.land["owner"], "B")
+                self.assertEqual(unit in self.land["units"], not defenders)
+                self.assertTrue(queries.is_air_unit(unit))
+
+    def test_legacy_trucks_and_pending_orders_migrate_idempotently(self):
+        carried = wing(self.base)
+        queries.load_transport(carried, "Convoy")
+        # Deliberate old-save fixture: current gameplay cannot create this Truck.
+        carried.update(type="Truck (Monoplane Bomber)", max_health=c.TRUCK_MAX_HP,
+                       health=c.TRUCK_MAX_HP * 0.4, naval_unit=False,
+                       order={"type": "MOVE", "path": [2]})
+        pending = wing(self.base, "V1 Flying Bomb")
+        pending["order"] = {"type": "CONVERT", "to": "Truck", "turns_left": 1}
+        missile = wing(self.land, "V2 Rocket")
+        missile["order"] = {"type": "MOVE", "path": [1]}
+        queries.migrate_aircraft_stats(self.game.map_data)
+        queries.normalize_air_orders(self.game.map_data)
+        self.assertTrue(queries.is_air_unit(carried))
+        self.assertNotIn("original_type", carried)
+        self.assertAlmostEqual(carried["health"] / carried["max_health"], 0.4)
+        self.assertEqual(carried["order"]["path"], [])
+        self.assertEqual(pending["order"], queries.air_conversion_order(pending))
+        self.assertEqual(missile["order"]["path"], [1])
+        saved = json.loads(json.dumps(queries.build_save_dict(self.game)))
+        queries.migrate_aircraft_stats(self.game.map_data)
+        queries.normalize_air_orders(self.game.map_data)
+        self.assertEqual(json.loads(json.dumps(queries.build_save_dict(self.game)))["provinces"], saved["provinces"])
+
+
 class AirAppSmokeTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         from tests import app_harness
         cls.controller, cls.surface = app_harness.boot()
 
-    def make_runtime_save(self, directory):
+    def make_runtime_save(self, directory, legacy_truck=False):
         game = world()
         base = tile(game, 1, 8)
         tile(game, 2, 30, owner="B")
         fighter = wing(base, "Biplane Fighter", order={"type": "AIR_PATROL", "priority": "STRONGEST"})
         rocket = wing(base, "V2 Rocket")
-        queries.load_transport(rocket, "Truck")
+        queries.load_transport(rocket, "Convoy")
+        if legacy_truck:
+            rocket.update(type="Truck (V2 Rocket)", max_health=c.TRUCK_MAX_HP,
+                          health=c.TRUCK_MAX_HP * 0.4, naval_unit=False)
         game.raw_json_data = {p["json_key"]: dict(p) for p in game.map_data.values()}
         game.terrain_map = game.id_map.copy()
         game.political_map = game.id_map.copy()
@@ -851,6 +1107,17 @@ class AirAppSmokeTests(unittest.TestCase):
             from data.map import save_map
             asyncio.run(save_map.save_map_data(game, "air-roundtrip"))
         return game, fighter, rocket, os.path.join(directory, "air-roundtrip")
+
+    def test_actual_load_unpacks_legacy_air_trucks_with_health_and_identity_intact(self):
+        with tempfile.TemporaryDirectory() as directory:
+            _original, _fighter, rocket, path = self.make_runtime_save(directory, legacy_truck=True)
+            loaded = Map(load_path=path, skip_initial_income=True)
+            recovered = loaded.id_to_province[1]["units"][1]
+            self.assertTrue(queries.is_air_unit(recovered))
+            self.assertEqual(recovered["type"], rocket["original_type"])
+            self.assertEqual(recovered["unit_id"], rocket["unit_id"])
+            self.assertNotIn("original_type", recovered)
+            self.assertAlmostEqual(recovered["health"] / recovered["max_health"], 0.4)
 
     def test_actual_save_load_and_air_orders_panel_draw_cache_only(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -1039,7 +1306,7 @@ class AirAppSmokeTests(unittest.TestCase):
                 self.assertEqual(loaded.id_to_province[1]["units"][0]["unit_id"], fighter["unit_id"])
                 self.assertIn(hidden, far["units"])
 
-    def test_ground_combat_rosters_show_cached_truck_stats_without_mutating_aircraft(self):
+    def test_ground_combat_rosters_show_cached_casualties_without_mutating_aircraft(self):
         from ui import sidebar_info
         from screens.map_related_screens.battle_screen import Battle_Screen
         with tempfile.TemporaryDirectory() as directory:
@@ -1056,8 +1323,8 @@ class AirAppSmokeTests(unittest.TestCase):
             sidebar_row = loaded._unit_roster_cache[1][2][id(aircraft)]
             battle_row = battle_screen.combat_row_data[id(aircraft)]
             self.assertEqual(sidebar_row["attack"], battle_row["attack"])
-            self.assertEqual(sidebar_row["profile"]["attack"], c.TRUCK_ATK)
-            self.assertEqual(battle_row["profile"]["max_health"], c.TRUCK_MAX_HP)
+            self.assertEqual(sidebar_row["profile"]["attack"], 0)
+            self.assertEqual(battle_row["profile"]["health"], 0)
             with patch.object(combat_rules, "build_battle", side_effect=AssertionError("frame battle")), \
                     patch.object(queries, "ground_combat_profile", side_effect=AssertionError("frame conversion")), \
                     patch.object(combat_rules, "effective_damage_multiplier", side_effect=AssertionError("frame damage")):

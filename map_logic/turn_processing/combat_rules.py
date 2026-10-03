@@ -529,7 +529,7 @@ def single_attacker_signature(unit):
 
 
 def build_battle(sides, nation_data, width=None, full_rank_for=None, terrain=None, air_combat=False,
-                 convert_aircraft=True):
+                 convert_aircraft=True, grounded_sides=None):
     """Who duels whom, and who is in the front rank, for one fight.
 
     `sides` is a list of unit lists. One side is a tile: everyone standing here
@@ -552,20 +552,35 @@ def build_battle(sides, nation_data, width=None, full_rank_for=None, terrain=Non
     `terrain` selects the tile's shared width; an explicit `width` overrides it.
     Missing or unknown terrain uses the global default.
 
-    `convert_aircraft=False` keeps flight stats during a strike against a
-    garrison. It does not enable the fighter bonus: `air_combat` is reserved
-    for interception, and also keeps aircraft flying.
+    `convert_aircraft=False` disables the ground casualty projection during a
+    strike against a garrison. It does not enable the fighter bonus:
+    `air_combat` is reserved for interception and also keeps aircraft flying.
+    `grounded_sides` identifies the land endpoints of a meeting engagement;
+    when omitted, the tile terrain determines whether this is a ground fight.
     """
     from data import queries
     hostile = _hostile(nation_data)
-    columns = _columns(sides)
-    # Keep live references/IDs for lane control, but project engaged aircraft's
-    # automatic Truck conversion for all non-mutating UI and AI consumers.
-    all_units = [unit for side in sides for unit in side]
-    profiles = {id(unit): queries.ground_combat_profile(unit) for unit in all_units
-                if convert_aircraft and not air_combat and queries.is_air_unit(unit) and any(
-                    hostile(queries.get_unit_combat_owner(unit), queries.get_unit_combat_owner(other))
-                    for other in all_units)}
+    # Keep live references/IDs, but remove immediate ground casualties from
+    # lane seating and volleys in non-mutating UI and AI forecasts as well.
+    if grounded_sides is None:
+        grounded_sides = set(range(len(sides))) if terrain not in c.WATER_TERRAINS else set()
+    profiles = {}
+    if convert_aircraft and not air_combat:
+        for side_index, side in enumerate(sides):
+            if side_index not in grounded_sides:
+                continue
+            enemies = (side if len(sides) == 1 else
+                       [u for index, other_side in enumerate(sides) if index != side_index for u in other_side])
+            for unit in side:
+                profile = unit
+                if queries.is_air_transport(unit):
+                    profile = dict(unit)
+                    queries.revert_transport(profile)
+                if queries.aircraft_caught_in_ground_combat(profile, enemies, nation_data):
+                    profiles[id(unit)] = queries.ground_combat_profile(profile)
+    columns = _columns([[unit for unit in side
+                         if profiles.get(id(unit), unit).get("health", 1) > 0]
+                        for side in sides])
     across_only = len(sides) > 1
 
     def can_fight(i, j):
@@ -797,7 +812,8 @@ def projected_incoming_damage(battle, nation_data=None, defense_bonus_fn=None):
     include its bonus without making fortification part of the general combat
     rules.
     """
-    incoming = {}
+    incoming = {unit_id: profile.get("max_health", 1)
+                for unit_id, profile in battle.profiles.items() if profile.get("health", 1) <= 0}
     for targets, total_attack in exchange(battle, nation_data):
         if not targets:
             continue
@@ -862,7 +878,7 @@ def movers_into(province, dest_id, visible_to=None):
 
     movers = []
     for unit in province.get("units", []):
-        if queries.is_air_unit(unit):
+        if queries.is_air_unit(unit) and not queries.air_unit_can_move_on_ground(unit):
             continue
         order = unit.get("order") or {}
         path = order.get("path")
@@ -886,7 +902,7 @@ def find_meeting_pairs(map_data, nation_data, visible_to=None):
     incoming = {}
     for province in map_data.values():
         for unit in province.get("units", []):
-            if queries.is_air_unit(unit):
+            if queries.is_air_unit(unit) and not queries.air_unit_can_move_on_ground(unit):
                 continue
             order = unit.get("order") or {}
             if order.get("type") != "MOVE" or not order.get("path"):

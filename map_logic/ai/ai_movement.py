@@ -24,7 +24,7 @@ def legal_air_candidates(map_screen, unit, base):
 
 
 def _assign_air_orders(map_screen, country, units_info):
-    """Aircraft never enter the land path planner, with or without an LLM."""
+    """Reusable aircraft fly; one-use weapons relocate through legal land paths."""
     units_info = [(unit, base) for unit, base in units_info
                   if queries.is_air_unit(unit) or queries.is_air_transport(unit)]
     if not units_info:
@@ -65,7 +65,9 @@ def _assign_air_orders(map_screen, country, units_info):
                             map_screen.id_to_province, map_screen.nation_data)
                         if path:
                             break
-                unit["order"] = {"type": "MOVE", "path": path} if path else queries.air_conversion_order(unit)
+                unit["order"] = ({"type": "MOVE", "path": path} if path else
+                    {"type": "MOVE", "path": []} if queries.is_water_province(base) else
+                    queries.air_conversion_order(unit))
             continue
         if (not queries.is_air_unit(unit) or queries.is_water_province(base)
                 or queries.is_nation_in_combat_here(country, base, map_screen.nation_data)):
@@ -78,7 +80,7 @@ def _assign_air_orders(map_screen, country, units_info):
                 value(map_screen.id_to_province[order["target_id"]]), -order["target_id"]))
             continue
         # Rebase on friendly land nearer a known enemy; no hidden target stacks
-        # influence the choice. One-use weapons travel exclusively as Trucks.
+        # influence the choice. One-use weapons travel at their land speed.
         if enemies:
             target = max(enemies, key=lambda p: (value(p), -p["id"]))
             radius = queries.air_order_radius(unit, "AIR_ATTACK")
@@ -88,12 +90,22 @@ def _assign_air_orders(map_screen, country, units_info):
             if queries.air_unit_stats(unit).get("air_consumable"):
                 destinations = [p for p in friendly if queries.air_distance_squared(
                     map_screen, p, target["id"]) <= radius * radius]
+                relocation = None
                 for destination in sorted(destinations, key=lambda p: p["id"]):
-                    path = queries.find_unit_move_path({"type": "Truck", "owner": country}, base,
+                    path = queries.find_unit_move_path(unit, base,
                         destination["id"], map_screen.id_to_province, map_screen.nation_data)
                     if path:
-                        unit["order"] = queries.air_conversion_order(unit)
+                        relocation = {"type": "MOVE", "path": path}
                         break
+                if relocation is None and base.get("is_coastal", False):
+                    transport = dict(unit)
+                    queries.load_transport(transport, "Convoy")
+                    if any(queries.find_unit_move_path(transport, base, destination["id"],
+                            map_screen.id_to_province, map_screen.nation_data) for destination in destinations):
+                        relocation = queries.canonical_unit_order(map_screen, country, base, unit,
+                                                                 queries.air_conversion_order(unit))
+                if relocation:
+                    unit["order"] = relocation
             else:
                 reachable = {order["target_id"]: order for order in candidates
                              if order["type"] == "AIR_REPOSITION"}
@@ -574,6 +586,10 @@ def _attackers_would_survive(map_screen, ai_name, target_prov, attackers):
     battle = combat_rules.build_battle(
         [target_units, attackers], map_screen.nation_data,
         terrain=target_prov.get("terrain"))
+    attackers = [unit for unit in attackers
+                 if battle.profiles.get(id(unit), unit).get("health", 1) > 0]
+    if not attackers:
+        return False
     if not battle.lanes:
         return True
 

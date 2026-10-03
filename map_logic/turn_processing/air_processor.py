@@ -15,8 +15,9 @@ def process_air_orders(map_screen):
     reposition = []
     for base in map_screen.map_data.values():
         # A base already occupied by hostile troops cannot launch aircraft out
-        # of an ongoing ground engagement to evade the automatic Truck rule.
-        queries.prepare_aircraft_for_ground_combat(base.get("units", []), map_screen.nation_data)
+        # of an ongoing ground engagement to evade immediate destruction.
+        queries.prepare_aircraft_for_ground_combat(base.get("units", []), map_screen.nation_data,
+                                                 on_land=not queries.is_water_province(base))
         for unit in base.get("units", []):
             order = unit.get("order")
             if (not isinstance(order, dict) or not isinstance(order.get("type"), str)

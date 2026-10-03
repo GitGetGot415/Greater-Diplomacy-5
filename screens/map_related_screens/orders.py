@@ -656,9 +656,13 @@ class Orders_Screen(GameState):
             btn_conv = add(ACTION_COL_CONVERT, "grey", "Convert: unavailable in combat",
                            lambda: None, convert_icon, enabled=False)
         elif queries.air_conversion_order(unit):
-            destination = queries.air_conversion_order(unit)["to"]
-            btn_conv = add(ACTION_COL_CONVERT, "blue", f"Convert to {destination} (1 turn)",
-                           lambda idx=index, p=province: self.convert_unit(idx, p), "Trucking")
+            conversion = queries.air_conversion_order(unit)
+            enabled = not is_water and (is_convoy or is_coastal)
+            btn_conv = add(ACTION_COL_CONVERT, "blue" if enabled else "grey",
+                           f"Convert to {conversion['to']} ({conversion['turns_left']} turn)"
+                           if enabled else "Aircraft Convoy conversion requires a coast; unloading requires land",
+                           lambda idx=index, p=province: self.convert_unit(idx, p), convert_icon,
+                           enabled=enabled)
         elif is_convoy:
             if not is_water:
                 btn_conv = add(ACTION_COL_CONVERT, "blue", "Convert convoy to land unit",
@@ -1267,8 +1271,11 @@ class Orders_Screen(GameState):
 
             air_conversion = queries.air_conversion_order(unit)
             if air_conversion:
-                if queries.is_water_province(province):
-                    self.map_screen.show_feedback("Aircraft conversion requires land.")
+                try:
+                    air_conversion = queries.canonical_unit_order(
+                        self.map_screen, unit["owner"], province, unit, air_conversion)
+                except ValueError as exc:
+                    self.map_screen.show_feedback(str(exc))
                     return
                 target_type, turns = air_conversion["to"], air_conversion["turns_left"]
             elif u_type.startswith("Convoy"):
