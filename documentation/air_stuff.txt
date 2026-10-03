@@ -56,6 +56,15 @@ live unit identity, ownership, tactical control and real-time planning access.
 The upgrade icon exclusively issues existing numbered-family upgrades; named
 aircraft never upgrade into a different aircraft design. No new mission save
 fields or network command kinds are introduced.
+The group Set Mission button shows the number of eligible selected aircraft
+and always offers all four choices. Each choice revalidates the original units
+and their bases, permissions and capabilities. Group Strike selects one tile,
+then assigns only wings whose individual range reaches it. Unsupported missions,
+stale units and out-of-range targets leave that wing's order and paid escrow
+unchanged; dismissing group targeting also preserves its prior orders. Group
+actions fan out into the existing per-unit multiplayer commands.
+Every reusable aircraft, including bombers and Zeppelin, can patrol. One-use
+weapons cannot. Fighter air-to-air bonuses remain defined by unit data.
 AIR_ATTACK and AIR_REPOSITION retain base_id/target_id, resolve at the next
 turn boundary and clear once. Reusable strikes never remove the unit from its
 launch province, guaranteeing an exact return with health damage retained.
@@ -71,7 +80,7 @@ normal land paths are retained for V1/V2 and discarded for reusable aircraft.
 
 All interceptable aircraft attacking the same province form one committed
 force, across nations. V2s are a separate immune force. Every hostile covering
-fighter joins one shared coalition/lane engagement using global COMBAT_WIDTH,
+patrolling aircraft joins one shared coalition/lane engagement using global COMBAT_WIDTH,
 including the ordinary three-or-more-side behavior. Missions rank by committed
 calculate_unit_strength sums before losses, with target IDs breaking ties.
 Patrols contribute precedence constraints between covered missions; topological

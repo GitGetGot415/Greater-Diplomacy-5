@@ -130,7 +130,7 @@ class AerospaceRulesTests(unittest.TestCase):
                 stats = queries.get_unit_library()[name]
                 if not stats.get("air_consumable"):
                     expected.add("AIR_REPOSITION")
-                if stats["air_role"] == "fighter":
+                if queries.air_unit_can_patrol({"type": name}):
                     expected.add("AIR_PATROL")
                 self.assertEqual({call.args[1] for call in radius.call_args_list}, expected)
                 self.assertTrue(traits)

@@ -4136,6 +4136,17 @@ def is_air_unit(unit):
     return bool(air_unit_stats(unit).get("air_role"))
 
 
+def air_unit_can_patrol(unit):
+    """Reusable aircraft can defend an area; one-use air weapons cannot."""
+    return is_air_unit(unit) and not air_unit_stats(unit).get("air_consumable", False)
+
+
+def air_unit_can_launch(map_screen, unit, base):
+    """A mission needs an unpacked aircraft at a land base outside ground combat."""
+    return (is_air_unit(unit) and not is_water_province(base)
+            and not is_nation_in_combat_here(get_unit_combat_owner(unit), base, map_screen.nation_data))
+
+
 def air_unit_can_move_on_ground(unit):
     """One-use air weapons relocate along land edges at their listed speed."""
     return is_air_unit(unit) and bool(air_unit_stats(unit).get("air_consumable"))
@@ -4198,13 +4209,13 @@ def get_air_unit_traits(unit_type):
     else:
         reposition = air_order_radius(unit, "AIR_REPOSITION")
         traits = [f"Range / strike: {strike:g} map px; reposition: {reposition:g} px."]
+        patrol = air_order_radius(unit, "AIR_PATROL")
+        traits.append(f"Patrol: {patrol:g} px; weakest/strongest first; returns to base.")
         if stats["air_role"] == "fighter":
-            patrol = air_order_radius(unit, "AIR_PATROL")
             multiplier = unit_target_damage_multiplier(unit, unit, air_to_air=True)
-            traits.extend([f"Patrol: {patrol:g} px; weakest/strongest first; returns to base.",
-                           f"Air-to-air damage x{multiplier:g}; no bonus against ground targets."])
+            traits.append(f"Air-to-air damage x{multiplier:g}; no bonus against ground targets.")
         else:
-            traits.append("Reusable strikes return to base; cannot patrol.")
+            traits.append("Reusable strikes return to base.")
     traits.append("Strikes damage forts." if air_unit_can_damage_forts(unit)
                   else "Strikes do not damage forts.")
     traits.extend([f"Immune to {UNIT_GROUP_TANKS} damage; cannot capture territory.",
@@ -4268,7 +4279,7 @@ def air_target_in_range(map_screen, unit, base, kind, target_id):
     if kind not in AIR_ORDER_TYPES or not is_air_unit(unit) or is_water_province(base):
         return False
     stats = air_unit_stats(unit)
-    if (kind == "AIR_PATROL" and stats.get("air_role") != "fighter"
+    if (kind == "AIR_PATROL" and not air_unit_can_patrol(unit)
             or kind == "AIR_REPOSITION" and stats.get("air_consumable", False)):
         return False
     target = map_screen.id_to_province.get(target_id)
@@ -4287,26 +4298,23 @@ def get_air_targets(map_screen, unit, base, kind):
 def canonical_air_order(map_screen, unit, base, order):
     """Validate planning/resolution/network air orders against one rule.
 
-    Callers enforce controller identity/phase; this validates role, original
+    Callers enforce controller identity/phase; this validates capabilities, original
     launch base, target, radius, and priority. Old patrols default to WEAKEST.
     """
     if (not isinstance(order, dict) or not isinstance(order.get("type"), str)
             or order["type"] not in AIR_ORDER_TYPES):
         raise ValueError("Invalid air order.")
-    if not is_air_unit(unit) or is_water_province(base):
-        raise ValueError("Aircraft must launch from a land base.")
-    if is_nation_in_combat_here(get_unit_combat_owner(unit), base, map_screen.nation_data):
-        raise ValueError("Aircraft engaged on the ground cannot launch.")
+    if not air_unit_can_launch(map_screen, unit, base):
+        raise ValueError("Air missions require a land base outside ground combat.")
     kind = order["type"]
     base_id = order.get("base_id", base["id"])
     if type(base_id) is not int or base_id != base["id"]:
         raise ValueError("The aircraft is no longer at its launch base.")
-    stats = air_unit_stats(unit)
     result = {"type": kind, "base_id": base_id}
     if kind == "AIR_PATROL":
         priority = order.get("priority", AIR_DEFAULT_PRIORITY)
-        if stats.get("air_role") != "fighter" or priority not in AIR_INTERCEPTION_PRIORITIES:
-            raise ValueError("Only fighters can patrol with a valid interception priority.")
+        if not air_unit_can_patrol(unit) or priority not in AIR_INTERCEPTION_PRIORITIES:
+            raise ValueError("Only reusable aircraft can patrol with a valid interception priority.")
         result["priority"] = priority
     else:
         target_id = order.get("target_id")

@@ -10,10 +10,9 @@ from map_logic.turn_processing import combat_rules
 def legal_air_candidates(map_screen, unit, base):
     """Only canonical orders are ever offered to heuristic/model consumers."""
     candidates = []
-    if (not queries.is_air_unit(unit) or queries.is_water_province(base)
-            or queries.is_nation_in_combat_here(queries.get_unit_combat_owner(unit), base, map_screen.nation_data)):
+    if not queries.air_unit_can_launch(map_screen, unit, base):
         return candidates
-    if queries.air_unit_stats(unit).get("air_role") == "fighter":
+    if queries.air_unit_can_patrol(unit):
         candidates.append(queries.canonical_air_order(map_screen, unit, base,
             {"type": "AIR_PATROL", "priority": queries.AIR_DEFAULT_PRIORITY}))
     for kind in ("AIR_ATTACK", "AIR_REPOSITION"):

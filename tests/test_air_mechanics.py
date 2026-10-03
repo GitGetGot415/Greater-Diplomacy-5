@@ -178,6 +178,21 @@ class AirResolutionTests(unittest.TestCase):
                     morale=c.DEFAULT_UNIT_MORALE)
         return unit
 
+    def test_bomber_patrol_intercepts_and_remains_at_its_base(self):
+        attacker = self.combat_fixture(self.base, "Monoplane Bomber", "A",
+            order={"type": "AIR_ATTACK", "target_id": self.target["id"]})
+        defender = self.combat_fixture(self.defender_base, "Monoplane Bomber", "B",
+            order={"type": "AIR_PATROL", "priority": "STRONGEST"})
+        before = defender["health"]
+        with patch.object(combat_rules, "build_battle", wraps=combat_rules.build_battle) as battles:
+            air_processor.process_air_orders(self.game)
+        self.assertTrue(any(any(unit is defender for side in call.args[0] for unit in side)
+                            for call in battles.call_args_list))
+        self.assertLess(defender["health"], before)
+        self.assertIn(defender, self.defender_base["units"])
+        self.assertEqual(defender["order"]["type"], "AIR_PATROL")
+        self.assertIn(attacker, self.base["units"])
+
     def test_strike_is_reciprocal_normal_combat_and_retains_losses_at_base(self):
         aircraft = self.combat_fixture(self.base, "Monoplane Bomber", "A",
             order={"type": "AIR_ATTACK", "target_id": 2})
@@ -655,7 +670,7 @@ class AirIntegrationTests(unittest.TestCase):
         for order in ({"type": "AIR_ATTACK", "target_id": True},
                       {"type": "AIR_ATTACK", "target_id": 999},
                       {"type": "AIR_ATTACK", "target_id": 2, "base_id": 2},
-                      {"type": ["AIR_ATTACK"]}, {"type": "AIR_PATROL"}):
+                      {"type": ["AIR_ATTACK"]}, {"type": "AIR_PATROL", "priority": "INVALID"}):
             with self.subTest(order=order), self.assertRaises(RealtimeError):
                 driver.validate_draft("A", [dict(command, order=order)])
         with self.assertRaises(RealtimeError):
@@ -1122,7 +1137,7 @@ class AirMissionSelectionTests(unittest.TestCase):
                     self.screen.open_air_mission_select(0, self.base)
                 choices = [choice[0] for choice in popup.call_args.args[1]]
                 expected = ["NONE", "STRIKE"]
-                if queries.air_unit_stats(self.unit).get("air_role") == "fighter":
+                if queries.air_unit_can_patrol(self.unit):
                     expected = ["NONE", *queries.AIR_INTERCEPTION_PRIORITIES, "STRIKE"]
                 self.assertEqual(choices, expected)
                 self.assertEqual(self.unit["order"], before)
@@ -1235,6 +1250,182 @@ class AirMissionSelectionTests(unittest.TestCase):
             self.assertEqual(self.unit["type"], target)
 
 
+class GroupAirMissionSelectionTests(unittest.TestCase):
+    def setUp(self):
+        self.game = world()
+        self.base = tile(self.game, 1, 8)
+        self.target = tile(self.game, 2, 30, owner="B")
+        self.remote = tile(self.game, 3, 900)
+        self.fighter = wing(self.base, "Monoplane Fighter")
+        self.bomber = wing(self.remote, "Monoplane Bomber")
+        self.v1 = wing(self.base, "V1 Flying Bomb")
+        self.v2 = wing(self.remote, "V2 Rocket")
+        self.ground = wing(self.base, "Infantry Type 1910")
+        self.carried = wing(self.base, "Monoplane Bomber")
+        queries.load_transport(self.carried, "Convoy")
+        self.foreign = wing(self.target, "Monoplane Bomber", "B")
+        self.records = [(self.fighter, self.base), (self.bomber, self.remote),
+                        (self.v1, self.base), (self.v2, self.remote),
+                        (self.ground, self.base), (self.carried, self.base),
+                        (self.foreign, self.target)]
+        self.game.selected_unit_records = lambda: list(self.records)
+        self.game.show_feedback = Mock()
+        self.screen = Orders_Screen()
+        self.screen.map_screen = self.game
+        self.screen.target_province = self.base
+        self.screen.refresh_ui = Mock()
+        self.screen._mark_draft_changed = Mock()
+
+    def test_patrol_capability_and_ai_candidates_cover_every_reusable_aircraft(self):
+        for name, stats in queries.get_unit_library().items():
+            if not stats.get("air_role"):
+                continue
+            with self.subTest(unit=name):
+                unit = {"type": name, "owner": "A"}
+                expected = not stats.get("air_consumable", False)
+                self.assertEqual(queries.air_unit_can_patrol(unit), expected)
+                candidates = ai_movement.legal_air_candidates(self.game, unit, self.base)
+                self.assertEqual(any(order["type"] == "AIR_PATROL" for order in candidates), expected)
+                self.assertEqual(bool(queries.get_air_targets(self.game, unit, self.base, "AIR_PATROL")), expected)
+        self.assertFalse(queries.air_unit_can_patrol(self.carried))
+        self.assertFalse(queries.air_unit_can_patrol(self.ground))
+
+    def test_heuristic_bomber_defends_when_no_visible_enemy_target_exists(self):
+        with patch.object(c, "USE_FOG_OF_WAR", True), \
+                patch.object(queries, "get_visible_provinces", return_value=({1, 3}, set())):
+            ai_movement._assign_air_orders(self.game, "A", [(self.bomber, self.remote)])
+        self.assertEqual(self.bomber["order"], queries.canonical_air_order(self.game, self.bomber, self.remote,
+            {"type": "AIR_PATROL", "priority": queries.AIR_DEFAULT_PRIORITY}))
+
+    def test_group_selector_counts_aircraft_and_always_offers_every_choice(self):
+        from screens.map_related_screens.orders import AIR_MISSION_CHOICES
+        self.assertEqual(len(self.screen._batch_command_candidates("MISSION")), 4)
+        # Even a selection containing only missiles retains the defense choices.
+        self.records = [(self.v1, self.base), (self.v2, self.remote)]
+        with patch("screens.map_related_screens.orders._AirMissionSelectScreen") as popup, \
+                patch("ui.screen_runner._run_pygame_sub_screen"):
+            self.screen.open_selected_air_mission_select()
+        self.assertEqual(popup.call_args.args[1], AIR_MISSION_CHOICES)
+        self.records = [(self.bomber, self.remote)]
+        popup.call_args.args[2]("STRONGEST")
+        self.assertNotEqual(self.bomber["order"]["type"], "AIR_PATROL")
+
+    def test_group_patrol_skips_weapons_transports_and_foreign_units_without_refunds(self):
+        refund = {"cost_materials": 37, "cost_manpower": 0, "cost_fuel": 0}
+        for unit in (self.fighter, self.bomber, self.v1):
+            unit["order"] = {"type": "REPAIR", "refund": refund}
+        before = {id(unit): unit["order"] for unit, _base in self.records}
+        resources = self.game.nation_data["A"]["materials"]
+        self.screen.set_selected_air_mission("STRONGEST")
+        for unit, base in self.records:
+            if unit is self.fighter or unit is self.bomber:
+                self.assertEqual(unit["order"], queries.canonical_air_order(self.game, unit, base,
+                    {"type": "AIR_PATROL", "priority": "STRONGEST"}))
+            else:
+                self.assertIs(unit["order"], before[id(unit)])
+        self.assertEqual(self.game.nation_data["A"]["materials"], resources + 2 * refund["cost_materials"])
+        self.screen._mark_draft_changed.assert_called_once()
+
+    def test_group_strike_checks_each_range_and_base_preserving_skipped_orders(self):
+        # Deliberately artificial ranges test comparison without assuming any
+        # lasting range relationship between real aircraft designs.
+        stats = dict(queries.get_unit_library()["Monoplane Bomber"])
+        library = dict(queries.get_unit_library(), **{
+            "Test Short Wing": dict(stats, air_range_px=10),
+            "Test Long Wing": dict(stats, air_range_px=60)})
+        self.fighter["type"] = "Test Short Wing"
+        self.bomber["type"] = self.v1["type"] = "Test Long Wing"
+        records = self.records[:3]
+        old_orders = [unit["order"] for unit, _base in records]
+        with patch.object(queries, "get_unit_library", return_value=library):
+            self.screen.set_selected_air_mission("STRIKE", records)
+            self.assertEqual([unit["order"] for unit, _base in records], old_orders)
+            self.screen._mark_draft_changed.assert_not_called()
+            self.screen.set_bombard_target(None, self.target)
+            expected = queries.canonical_air_order(self.game, self.v1, self.base,
+                {"type": "AIR_ATTACK", "target_id": self.target["id"]})
+        self.assertEqual(self.v1["order"], expected)
+        self.assertIs(self.fighter["order"], old_orders[0])
+        self.assertIs(self.bomber["order"], old_orders[1])
+        self.assertIsNone(self.screen.bombarding_unit_index)
+        self.assertFalse(self.screen.air_mission_targeting_units)
+        self.screen._mark_draft_changed.assert_called_once()
+
+    def test_group_no_mission_clears_aircraft_only_and_canceling_targeting_preserves_orders(self):
+        for unit, _base in self.records:
+            unit["order"] = {"type": "DISBAND", "turns_left": 1}
+        before = [unit["order"] for unit, _base in self.records]
+        self.screen.set_selected_air_mission("STRIKE")
+        self.screen.handle_back_key()
+        self.assertEqual([unit["order"] for unit, _base in self.records], before)
+        self.assertFalse(self.screen.air_mission_targeting_units)
+        self.screen.set_selected_air_mission("NONE")
+        for index, (unit, _base) in enumerate(self.records):
+            if index < 4:
+                self.assertEqual(unit["order"], {"type": "MOVE", "path": []})
+            else:
+                self.assertIs(unit["order"], before[index])
+
+    def test_group_selection_and_targeting_recheck_live_permissions_and_identity(self):
+        for condition in ("foreign", "tactical", "read_only", "removed", "replaced_province",
+                          "combat", "water", "transport", "realtime_submitted"):
+            for mission in ("WEAKEST", "STRIKE"):
+                with self.subTest(condition=condition, mission=mission):
+                    self.setUp()
+                    records = [(self.bomber, self.remote)]
+                    before = self.bomber["order"]
+                    if mission == "STRIKE":
+                        self.screen.set_selected_air_mission(mission, records)
+                    if condition == "foreign":
+                        self.bomber["owner"] = "B"
+                    elif condition == "tactical":
+                        self.game.tactical_mode = True
+                        self.game.player_unit = self.fighter
+                    elif condition == "read_only":
+                        self.screen.read_only = True
+                    elif condition == "removed":
+                        self.remote["units"] = [self.v2]
+                    elif condition == "replaced_province":
+                        self.game.id_to_province[3] = dict(self.remote)
+                    elif condition == "combat":
+                        wing(self.remote, "Infantry Type 1910", "B")
+                    elif condition == "water":
+                        self.remote["terrain"] = c.WATER_TERRAINS[0]
+                    elif condition == "transport":
+                        queries.load_transport(self.bomber, "Convoy")
+                    elif condition == "realtime_submitted":
+                        self.game.can_select_map_units = lambda: False
+                    if mission == "STRIKE":
+                        self.screen.set_bombard_target(None, self.remote)
+                    else:
+                        self.screen.set_selected_air_mission(mission, records)
+                    self.assertIs(self.bomber["order"], before)
+
+    def test_group_patrols_use_authoritative_existing_network_commands(self):
+        self.screen.set_selected_air_mission("WEAKEST")
+        commands = [{"type": "unit_order", "province_id": base["id"],
+            "unit_index": base["units"].index(unit), "unit_id": unit["unit_id"], "order": dict(unit["order"])}
+            for unit, base in self.records[:2]]
+        self.assertEqual([c["order"] for c in MapRealtimeDriver(self.game).validate_draft("A", commands)],
+                         [c["order"] for c in commands])
+        tournament = [{"unit_id": c["unit_id"], "order": c["order"]} for c in commands]
+        _, drafts = multiplayer_io._validate_aircraft_orders(self.game, "A", {"aircraft_orders": tournament}, {})
+        self.assertEqual([d[1] for d in drafts], [c["order"] for c in commands])
+        for bad in (dict(commands[1], order={"type": "AIR_PATROL", "priority": []}),
+                    dict(commands[1], order={"type": "AIR_PATROL", "base_id": self.base["id"]}),
+                    dict(commands[1], unit_id=self.v2["unit_id"], province_id=self.remote["id"], unit_index=1)):
+            with self.subTest(command=bad):
+                with self.assertRaises(RealtimeError):
+                    MapRealtimeDriver(self.game).validate_draft("A", [bad])
+                with self.assertRaises(ValueError):
+                    multiplayer_io._validate_aircraft_orders(self.game, "A",
+                        {"aircraft_orders": [{"unit_id": bad["unit_id"], "order": bad["order"]}]}, {})
+        with self.assertRaises(RealtimeError):
+            MapRealtimeDriver(self.game).validate_draft("B", commands)
+        with self.assertRaises(ValueError):
+            multiplayer_io._validate_aircraft_orders(self.game, "B", {"aircraft_orders": tournament}, {})
+
+
 class AirAppSmokeTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -1268,11 +1459,11 @@ class AirAppSmokeTests(unittest.TestCase):
         small_portrait = pygame.Surface((2, 2), pygame.SRCALPHA)
         self.assertIs(screen.fit_icon(small_portrait, "orders_action_icon"), small_portrait)
 
-    def make_runtime_save(self, directory, legacy_truck=False):
+    def make_runtime_save(self, directory, legacy_truck=False, patrol_type="Biplane Fighter"):
         game = world()
         base = tile(game, 1, 8)
         tile(game, 2, 30, owner="B")
-        fighter = wing(base, "Biplane Fighter", order={"type": "AIR_PATROL", "priority": "STRONGEST"})
+        fighter = wing(base, patrol_type, order={"type": "AIR_PATROL", "priority": "STRONGEST"})
         rocket = wing(base, "V2 Rocket")
         queries.load_transport(rocket, "Convoy")
         if legacy_truck:
@@ -1289,6 +1480,85 @@ class AirAppSmokeTests(unittest.TestCase):
             from data.map import save_map
             asyncio.run(save_map.save_map_data(game, "air-roundtrip"))
         return game, fighter, rocket, os.path.join(directory, "air-roundtrip")
+
+    def test_bomber_patrol_save_roundtrip_preserves_mission_and_priority(self):
+        with tempfile.TemporaryDirectory() as directory:
+            _original, bomber, _rocket, path = self.make_runtime_save(directory, patrol_type="Monoplane Bomber")
+            loaded = Map(load_path=path, skip_initial_income=True)
+            base = loaded.id_to_province[1]
+            restored = base["units"][0]
+            self.assertEqual(restored["unit_id"], bomber["unit_id"])
+            self.assertEqual(restored["order"], bomber["order"])
+            self.assertEqual(restored["order"], queries.canonical_air_order(loaded, restored, base, restored["order"]))
+
+    def test_group_mission_button_fits_header_and_strike_consumes_one_map_click(self):
+        from ui import modal_stack
+        from screens.map_related_screens.orders import BATCH_BTN_ROW_OFFSET_Y, PANEL_Y, ACTION_COL_BOMBARD
+        with tempfile.TemporaryDirectory() as directory:
+            _original, _fighter, _rocket, path = self.make_runtime_save(directory)
+            loaded = Map(load_path=path, skip_initial_income=True)
+            loaded.selection_mode = False
+            loaded.player_country = "A"
+            base = loaded.id_to_province[1]
+            bomber = wing(base, "Monoplane Bomber")
+            missile = wing(base, "V1 Flying Bomb")
+            wing(base, "Infantry Type 1910")
+            loaded.select_map_units(base["units"])
+            screen = Orders_Screen()
+            screen.start_with_province(base, loaded)
+            mission_button = next(button for button in screen.elements
+                                  if getattr(button, "text", "").startswith("Set Mission"))
+            eligible = len(screen._batch_command_candidates("MISSION"))
+            self.assertEqual(mission_button.text, f"Set Mission ({eligible})")
+            batch_buttons = [button for button in screen.elements
+                             if button.rect.y == PANEL_Y + BATCH_BTN_ROW_OFFSET_Y]
+            self.assertEqual(len(batch_buttons), 4)
+            for index, button in enumerate(batch_buttons):
+                self.assertTrue(screen.panel_rect.contains(button.rect))
+                self.assertLess(button.font.size(button.text)[0], button.rect.width)
+                for other in batch_buttons[index + 1:]:
+                    self.assertFalse(button.rect.colliderect(other.rect))
+            mission_button.callback()
+            wrapper = modal_stack.active()
+            popup = wrapper.screen
+            try:
+                self.assertEqual(len(popup.choices), 4)
+                popup.elements[next(i for i, choice in enumerate(popup.choices)
+                                    if choice[0] == "STRONGEST")].callback()
+                wrapper.update()
+                self.assertEqual(bomber["order"]["type"], "AIR_PATROL")
+                self.assertNotEqual(missile["order"]["type"], "AIR_PATROL")
+            finally:
+                if modal_stack.active() is wrapper:
+                    modal_stack.pop()
+            screen.disband_selected_units()
+            # Cancel labels are longer than start labels, but must still fit
+            # after adding the fourth batch control.
+            for button in screen.elements:
+                if button.rect.y == PANEL_Y + BATCH_BTN_ROW_OFFSET_Y:
+                    self.assertLess(button.font.size(button.text)[0], button.rect.width)
+            screen.set_selected_air_mission("STRIKE")
+            rows = {key: unit for key, unit, _province, _index in screen._visible_rows()}
+            mission_buttons = [button for button in screen.action_buttons
+                               if button.action_slot == ACTION_COL_BOMBARD
+                               and id(rows[button.unit_index]) in screen.air_mission_targeting_ids]
+            self.assertTrue(mission_buttons)
+            self.assertTrue(all(button.image is screen._get_action_icon("Strike Selected")
+                                for button in mission_buttons))
+            with patch.object(queries, "canonical_air_order", side_effect=AssertionError("frame air rule")), \
+                    patch.object(queries, "get_air_targets", side_effect=AssertionError("frame range sweep")), \
+                    patch.object(queries, "air_unit_can_launch", side_effect=AssertionError("frame mission eligibility")):
+                screen.draw(self.surface)
+            screen.exit_screen = Mock()
+            target = base
+            position = (screen.panel_rect.right + 100, screen.panel_rect.centery)
+            with patch.object(queries, "get_clicked_province", return_value=target):
+                for event_type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
+                    screen.additional_events(pygame.event.Event(event_type, button=1, pos=position))
+            screen.exit_screen.assert_not_called()
+            self.assertIsNone(screen.bombarding_unit_index)
+            self.assertFalse(screen.air_mission_targeting_units)
+            self.assertEqual(bomber["order"]["type"], "AIR_ATTACK")
 
     def test_air_mission_popup_uses_real_icons_fits_and_applies_a_choice(self):
         from pathlib import Path

@@ -73,18 +73,23 @@ These indexes and caches are presentation/planning data, never save fields.
 
 Aerospace remains a separate research/production category. air_role and
 air_range_px in unit_data.json define flight, independently of production_group
-and land speed. Fighters patrol; bombers, including Zeppelin, fly reusable
-strikes. V1 Flying Bomb and V2 Rocket are consumed by a completed strike,
+and land speed. Every reusable aircraft can patrol or fly reusable strikes,
+including bombers and Zeppelin. V1 Flying Bomb and V2 Rocket are consumed by a completed strike,
 and V2 alone bypasses
 interception. Jet Engine remains a research gate.
 Listed air range is strike/patrol reach; reusable reposition reaches twice that
 distance because it does not reserve a return leg.
 Orders exposes patrol through the air mission selector as Defend area, with
-weakest-first and strongest-first choices available only to fighters. Strike
+weakest-first and strongest-first choices available to reusable aircraft. Strike
 uses map targeting, and No mission (or clicking an active strike's button)
 cancels the air order. The four mission icons reflect the current choice.
 The upgrade button uses the existing numbered-family upgrade helper for every
 unit; named aircraft designs remain separate production unlocks.
+Set Mission applies a choice to eligible aircraft in the selected group and
+always shows all choices. Each wing is validated separately; group strikes
+use one target and skip wings outside their own range, preserving skipped
+orders. No mission clears the group's eligible aircraft orders. Both multiplayer
+systems receive existing per-unit commands and validate them authoritatively.
 After interception, strikes use a normal simultaneous combat exchange against
 the target garrison, including terrain width, coalition lanes and reserves.
 Defenders can damage or destroy aircraft; Tanks-category immunity still applies
@@ -96,7 +101,7 @@ show whether an aircraft can damage forts. This capability is resolved by the
 same turn processor for player and heuristic AI orders.
 The heuristic aircraft pass generates only canonical legal orders. It strikes
 known enemy targets, repositions reusable aircraft onto friendly land nearer
-them, patrols otherwise, and relocates one-use weapons along legal land paths
+them, patrols reusable aircraft otherwise, and relocates one-use weapons along legal land paths
 at their unit-library ground speed. V1/V2 cannot patrol or fly between bases;
 their flight is limited to consumable strikes. Air units load into Convoys at
 a coast and unload on land, preserving their health fraction and original stats.
