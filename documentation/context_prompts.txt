@@ -1,35 +1,58 @@
-==================================================
+MAINTENANCE PREFERENCES
+======================
 
-INTRO.TXT:
+These notes restate the original maintenance requests.
+AGENTS.md defines the repository rules that apply to changes.
 
-so i have this pygame project that's essentially a turn based map game (DO NOT HARD CODE THINGS, TRY TO USE CONSTANTS.PY / QUERIES.PY WHERE APPLICABLE) (DO NOT REMOVE COMMENTS WHEN TRYING TO EDIT FILES) (DO NOT SHOW A GITHUB CHANGE LOG OR THE ENTIRE FILE, ONLY SHOW THE PARTS OF THE FILE YOU CHANGED)
+Code ownership
+--------------
 
-==================================================
+Use constants.py for values shared across modules.
+Use queries.py for shared questions about current game state.
+Check existing helpers before you add another function.
+Combine duplicate functions, calculations, and variables when their behavior is equivalent.
+Make similar systems use the same rules unless gameplay requires a difference.
+Remove unused functions and organize imports when those changes are in scope.
 
-could you check constants.py and queries.py and also search through the entire code to see if everything looks good / if there's something that might be better off added into either one of those two files? (this is basically just me asking for you to check the code to see if anything can be optimized, for example any repeated functions that would be good in queries.py, unnecessary functions that can just be removed, unorganized imports, etc)
+Preserve behavior and explanations
+----------------------------------
 
-ensure nothing is broken, especially with saving / loading settings
+Preserve intentional comments. Update a comment when the code makes it inaccurate.
+Do not change gameplay during cleanup unless you fix an obvious bug or the user requests the change.
+Check settings defaults, saves, and loads after related changes.
 
-anything relating to replacing disk i/o with caching would be useful (if it can be improved, that is)
+Caching and AI text
+------------------
 
-any hardcoded ai responses should be moved to ai_prompts
+Use caches instead of repeated disk reads where appropriate.
+Put rule-based AI response text in the AI response library.
+Read it through ai_prompts rather than embedding it in behavior code.
 
-an example of how to implement these changes (like an example of what the file would have to look like with the changes implemented) would be extremely useful
+Attributes
+----------
 
-- remove getattr
-i've noticed that there's a lot of getattr() being used, but im
-wondering what parts are actually nessecary and what parts are just
-going to cause problems later if i ever change any of the variable names
-and forget to edit it there?
+Use direct attributes for required state.
+Unnecessary getattr fallbacks can hide renamed fields or incomplete initialization.
+Keep fallbacks only where compatibility or optional state requires them.
 
-I need you to aggressively consolidate duplicate functions or variables / code into single unified functions / helpers to make making edits significantly easier
-for example, if you notice 2 functions / variables that are technically different but essentially do the same thing try to merge those into a unified one
-also, try to standardize how the code works, so if you notice simmilar things being done a bit differently make them follow a simmilar ruleset
-do keep in mind though that the gameplay ideally should NOT be changed  unless it looks like an obvious bug or something that a bit of standardization wouldn't change too much
+Layout
+------
 
-Also, if you notice duplicated numbers and such that would probably be better off as a single variable so they can all be edited by just editing that one variable, please do that
-ideally, if it's for something like button placement, it should be stored in the same file it was in instead of moved to constants.py, so if you want to edit it you don't have to go to constants.py
-said variables should be stored close together so it's easy to see where and what they all are
-there are instances where i did end up moving hardcoded stuff to a variable in constants.py instead of on the file locally, and i realize now i kinda regret doing that, so if possible try to stick to that convention i listed above
+Keep screen layout values in the screen that uses them.
+Group those values near the top of the file.
+Use one shared value for repeated spacing or placement.
+Do not move local layout values into constants.py.
 
-in addition, if you notice any weird tests that don't seem nessecary (for example a test to ensure a button is in the right place) maybe consider removing it
+Tests and handoff
+-----------------
+
+Test useful behavior and layout conditions.
+Avoid tests that only fix an arbitrary button coordinate.
+Give a small example when it helps explain a change.
+Show the relevant changes instead of entire files or a generic change log.
+
+Documentation
+-------------
+
+Keep documentation as simple as possible without losing accurate information.
+Use ASD-STE100 Simplified Technical English as required by AGENTS.md.

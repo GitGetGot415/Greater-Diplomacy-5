@@ -338,19 +338,21 @@ class NavigationIntroPopupTests(unittest.TestCase):
                             for line in popup._subtitle_lines()))
         self.assertEqual(len(popup.army_step_lines), len(popup.ARMY_STEPS))
         self.assertTrue(all(len(step) == 2 for step in popup.ARMY_STEPS))
-        target_description = next(description for heading, description in popup.ARMY_STEPS
-                                  if heading == "Target areas")
-        self.assertIn("T", target_description)
-        self.assertIn("balances", target_description)
-        target_lines = next(lines for heading, lines in popup.army_step_lines
-                            if heading == "Target areas")
-        self.assertGreater(len(target_lines), 1)
+        self.assertTrue(all(heading and description
+                            for heading, description in popup.ARMY_STEPS))
         army_text_width = (popup.rect.width - popup.ARMY_STEP_NUMBER_X
                            - popup.ARMY_STEP_TEXT_X_OFFSET
                            - popup.ARMY_STEP_SIDE_PADDING)
         self.assertTrue(all(popup.body_font.size(line)[0] <= army_text_width
                             for _heading, lines in popup.army_step_lines
                             for line in lines))
+        line_height = popup.body_font.get_height() + popup.ARMY_STEP_LINE_GAP
+        content_height = sum(popup.label_font.get_height() + 2 + len(lines) * line_height
+                             + popup.ARMY_STEP_GAP for _heading, lines in popup.army_step_lines)
+        subtitle_offset = max(0, len(popup._subtitle_lines()) - 1) * (
+            popup.body_font.get_height() + popup.SUBTITLE_LINE_GAP)
+        self.assertLess(popup.rect.y + 91 + subtitle_offset + content_height,
+                        popup.checkbox_rect.top)
         popup.draw(surface)
 
         popup.handle_event(pygame.event.Event(

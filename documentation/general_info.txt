@@ -1,107 +1,109 @@
-assets
-    - contains images + audio
+PROJECT FILES
+=============
 
-base_maps
-    - contains the maps that will be used in game
+assets/
+    Images and audio.
 
-context
-    - contains a python script that makes a copy of every single file and then outputs it in a text format
+base_maps/
+    Base maps used by the game.
 
-data
-    - stores data about the game, as well as the various editors for the data
-    - includes constants.py (gets constant information)
-    - includes queries.py (gets dynamic information)
+context/
+    Source export tools and development notes.
+    The export script combines source files into a text file.
 
-documentation
-    - contains helpful text files that come with important information (like this one)
-dist
-    - this is what will be shared to everyone else
+data/
+    Game data and data tools.
+    constants.py stores shared constants.
+    queries.py provides shared queries about current game state.
 
-map_logic
-    /ai
-        - how the ai for every country works
-        - ai_settings.py has the read-only settings getters (provider, model, API keys)
-        - ai_handler.py holds the mutable abort/turn-id state and talks to the LLM providers
-        - ai_evaluation.py turns a proposal/message/proactive action into an AI reply
-        - ai_diplomacy.py is the hardcoded proactive AI (war/faction/claims logic)
-        - ai_movement.py is unit orders; ai_construction.py is recruitment/building
-    /camera
-        - camera movement (note that this does not handle the camera tilt)
-    /diplomacy
-        - diplomacy!
-        - split by concern: war_actions.py, puppet_actions.py, faction_actions.py
-        - diplomacy_agreements.py is a facade re-exporting all three for backwards compatibility
-        - diplomacy_logic.py is a further facade over diplomacy_agreements/diplomacy_processor/diplomacy_messages
-    /random_map
-        - random map and scenario stuff
-    /rendering
-        - shows the ui bars, buttons, symbols, etc
-        - this is the one part of the game with a frame budget, and what makes
-          it affordable is that a zoomed-out map draws a few dozen distinct
-          pictures a few hundred times rather than a few hundred distinct
-          pictures. So symbol_loader caches both halves of get_symbol (the name
-          resolution, which walks every loaded symbol building a regex per key,
-          and the scaled surface) and overlay_renderer.UNIT_BOXES caches the
-          composed unit box. All three are shared, so what they hand back is
-          READ-ONLY -- that is why get_symbol takes an alpha instead of letting
-          callers set one. Together with the missing height half of the overlay
-          cull, that was 443ms a frame on a late-game army and is now 15ms
-    /setup
-        - handles the starting setup for choosing countries at the beginning of a scenario
-    /turn_processing
-        - handles how the map processes turns (renamed from the old /system32)
+documentation/
+    Project guides and design notes.
 
-map_tools
-    - tools for making and testing new maps in base_maps
-    /validation
-        - check_flags.py / check_adjectives.py: scripts auditing data/json/countries_data.json
-    - interactive_map_tester.py is the pygame-based interactive tester (was tester.py)
-    - automatic_map_painter.py / reset_map_data.py are standalone map-authoring scripts
+dist/
+    Generated packages for distribution. Do not edit these as source.
 
-saves
-    - contains saved games
+map_logic/
+    ai/
+        Computer-controlled country behavior.
+        ai_settings.py reads provider, model, and API-key settings.
+        ai_handler.py manages request cancellation, turn IDs, and model providers.
+        ai_evaluation.py selects replies to proposals, messages, and proactive actions.
+        ai_diplomacy.py selects rule-based war, faction, and claim actions.
+        ai_movement.py issues unit orders.
+        ai_construction.py selects recruitment and construction.
+    camera/
+        Camera movement. This folder does not control camera tilt.
+    diplomacy/
+        Shared diplomacy rules and effects.
+        war_actions.py, puppet_actions.py, and faction_actions.py own their respective actions.
+        diplomacy_agreements.py exports those actions for compatibility with older callers.
+        diplomacy_logic.py also exports agreement, processor, and message functions.
+    random_map/
+        Random map and scenario generation.
+    rendering/
+        Map rendering, UI bars, buttons, and symbols.
+        symbol_loader caches symbol-name results and scaled images.
+        overlay_renderer.UNIT_BOXES caches complete unit-box images.
+        Treat shared cached images as read-only.
+        Pass alpha to get_symbol instead of changing a shared image's alpha.
+        Map culling checks both width and height.
+        These caches reduce repeated work when many units use the same image.
+    setup/
+        Scenario setup and initial country selection.
+    turn_processing/
+        Turn resolution. This folder replaced the old system32/ folder.
 
-scenarios
-    - various scenarios
+map_tools/
+    Tools to create and test maps.
+    validation/check_flags.py and check_adjectives.py check data/json/countries_data.json.
+    interactive_map_tester.py is the interactive pygame map tester.
+    Its earlier name was tester.py.
+    automatic_map_painter.py and reset_map_data.py are separate map-authoring tools.
 
-screens
-    - handles the screens the user can go to
-    /menu_screens
-        - top-level navigation screens (main menu, settings, new game, etc)
-    /map_related_screens
-        - screens opened from within an active game/map (orders, battle, research,
-          production, messages, economy, faction, declare independence, and the diplomacy
-          overlays: war/claims/peace/trade/puppets screens)
-        - battle_screen.py is the lane manager, which replaces the Give Orders button
-          on a tile that is fighting -- see combat_rules.py for the model it edits.
-          Both it and orders.py open on any province you can see, read-only when
-          you command nothing there, and in tactical mode both narrow to the one
-          division you command. Its rows are painted rather than labelled (flags
-          and the sidebar's stat icons), which is what draw_panes(foregrounds=)
-          in ui/scroll_panes.py is for. Every column on it is a SIDE's, not a
-          nation's -- including the reserve, where an ally's units are listed
-          dead beside your live ones, because they are what steps into the front
-          rank as it dies
-    /editor_screens
-        - screens only used by the map editor tool (date/economy, research, brushes,
-          diplomacy editor, scripted events editor, historical leaders editor, turn editor)
+saves/
+    Saved games.
 
-ui
-    - reusable widgets, dialogs, and framework glue used by many screens
-      (top/bottom/side/corner ui bars, modals, popups, event dispatch) --
-      NOT where standalone feature screens live, see screens/ for those
-    - flag_icons.py: cached row-sized national flags, for lists that name a
-      country on every row (garrison, combat roster, lane manager)
-    - button-building lives with the screen that builds them, not here: the map's
-      buttons are in screens/menu_screens/map.py, edit country's in
-      screens/map_related_screens/edit_country.py, settings' in
-      screens/menu_screens/settings.py -- so editing a screen's buttons means
-      editing that screen's file, nothing else
-    - the map's Naval / Land / Air / All buttons form a vertical strip beside
-      the lower left sidebar, visible only in Units view. Their shared textured
-      bar is drawn by bars/ui_bars.py; event_handler.py uses that same rectangle
-      for blocking clicks through the bar. Unit filtering is local presentation,
-      defaults to All on game open, and is cached at load/state/input boundaries.
-    /confirm_dialog
-        - pygame replacements for tkinter dialogs, split by kind: base.py (shared modal
-          skeleton), yes_no.py, text_input.py, message_box.py, person_info.py
+scenarios/
+    Scenario data.
+
+screens/
+    Complete game, menu, and editor screens.
+    menu_screens/
+        Main menu, settings, new-game setup, and other main navigation screens.
+    map_related_screens/
+        Screens opened from an active game.
+        Examples include Orders, Battle, Research, Production, Mail, Economy, and diplomacy screens.
+        battle_screen.py manages combat lanes.
+        It replaces Give Orders on a tile where combat is active.
+        combat_rules.py owns the combat model that this screen edits.
+        Orders and Battle can open for any visible province.
+        They are read-only when the player commands no units there.
+        In tactical mode, only the player's selected division is editable.
+        Battle columns belong to combat sides, which can include several countries.
+        The reserve column also shows allied units that the player cannot edit.
+        Those units can replace losses in the front rank.
+        draw_panes(foregrounds=) in ui/scroll_panes.py draws row flags and stat icons.
+    editor_screens/
+        Map editor screens.
+        These cover economy, date, research, brushes, diplomacy, events, leaders, and turn settings.
+
+ui/
+    Shared widgets, bars, dialogs, popups, and event handling.
+    Complete feature screens belong in screens/.
+    flag_icons.py caches small national flags for country lists and combat rows.
+    Each screen builds its own buttons.
+    Map buttons belong in screens/menu_screens/map.py.
+    Country-edit buttons belong in screens/map_related_screens/edit_country.py.
+    Settings buttons belong in screens/menu_screens/settings.py.
+
+    Naval, Land, Air, and All form a vertical strip beside the lower left sidebar.
+    The strip appears only in Units view.
+    bars/ui_bars.py draws its shared textured bar.
+    event_handler.py uses the same rectangle to block clicks through the bar.
+    The filter changes local display only. All is selected when a game opens.
+    Filter results are cached when load, state, or input changes.
+
+    confirm_dialog/
+        pygame dialogs that replace tkinter dialogs.
+        base.py provides the shared dialog structure.
+        yes_no.py, text_input.py, message_box.py, and person_info.py provide specific dialogs.

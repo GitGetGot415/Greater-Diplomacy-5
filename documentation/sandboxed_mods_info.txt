@@ -1,6 +1,33 @@
-What sandboxed mods can/can't do 
+SANDBOXED MODS
+==============
 
-Blocked: open(), os.remove/rmdir/rename/mkdir/makedirs/chmod/chown/link/symlink/listdir/scandir, os.system/popen/spawn*/exec*/fork/kill, os.putenv/unsetenv/startfile, subprocess.Popen, shutil.rmtree/copyfile/copytree/move, and any socket.*/ctypes.* call. Since shutil/pathlib internally call those same low-level os/open primitives, they're covered automatically too.
-(note that the stuff blocked is only blocked when the mod's own code is the direct caller)
+The sandbox checks the direct caller of a protected operation.
+It blocks the operation when mod code is that caller.
+This restriction does not apply when existing game code performs the operation.
 
-Allowed: defining/overriding functions and classes, pure computation, importing anything (including os itself, for harmless things like os.path.join), and calling into the game's own existing functions, even ones that do legitimate file I/O as their normal job (e.g. calling queries.save_game()), since the direct caller of the actual open() there is queries.py, not the mod.
+Blocked operations
+------------------
+
+- open()
+- os.remove, rmdir, rename, mkdir, makedirs, chmod, chown, link, and symlink
+- os.listdir and scandir
+- os.system, popen, spawn*, exec*, fork, and kill
+- os.putenv, unsetenv, and startfile
+- subprocess.Popen
+- shutil.rmtree, copyfile, copytree, and move
+- All socket.* and ctypes.* calls
+
+shutil and pathlib also use protected open and os operations internally.
+Those operations remain subject to the direct-caller check.
+
+Allowed operations
+------------------
+
+- Define or override functions and classes.
+- Run calculations that do not use blocked operations.
+- Import modules, including os.
+- Use permitted helpers such as os.path.join.
+- Call existing game functions, including functions that normally read or write files.
+
+For example, a mod can call queries.save_game().
+The game's save code, rather than the mod, directly calls open().

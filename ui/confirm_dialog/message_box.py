@@ -73,7 +73,7 @@ class _NavigationIntroPopup:
     MOUSE_DIR = os.path.join(c.ASSETS_ROOT_DIR, "mouse")
     NAVIGATION_BUTTONS = (
         ("Left.png", "LEFT MOUSE", (
-            "Click a unit stack to select it; Shift-click adds more.",
+            "Click a unit stack to select it. Shift-click adds more.",
             "Drag in Units view to box-select units."
         )),
         ("Middle.png", "MIDDLE MOUSE", (
@@ -82,18 +82,18 @@ class _NavigationIntroPopup:
         )),
         ("Right.png", "RIGHT MOUSE", (
             "Drag to pan the map outside Orders.",
-            "Right-click moves selected units; Shift queues a waypoint.",
+            "Right-click to move selected units. Hold Shift to queue a waypoint.",
         )),
     )
     KEYBOARD_NAVIGATION = (
         "ARROW KEYS",
-        "Use the arrow keys to pan the map. You can customize these in Settings > Keybinds.",
+        "Use arrow keys to pan. Change these keys in Settings > Keybinds.",
     )
     MAP_UI_BUTTONS = (
         ("Terrain", "terrain", "Shows the terrain map."),
-        ("Political", "political", "Shows the actual countries on the map."),
+        ("Political", "political", "Shows country territory."),
         ("Relations", "relations", "Shows diplomatic relations."),
-        ("Cores", "core", "Shows the territory each country has cores on."),
+        ("Cores", "core", "Shows each country's core territory."),
         ("Factions", "faction", "Shows factions."),
         ("Resources", "resource", "Shows province resources."),
         ("Blank", "blank", "Hides the secondary map overlay."),
@@ -102,36 +102,51 @@ class _NavigationIntroPopup:
         ("Names", "names", "Shows or hides country names."),
     )
     UNIT_VIEW_NOTE = (
-        "In Units view, beside the left sidebar: Naval, Land, Air, All. Filter stacks and orders; "
-        "All is selected whenever a game opens."
+        "In Units view, use Naval, Land, Air, or All to filter stacks and orders. "
+        "These buttons are beside the left sidebar. "
+        "Games open with All selected."
     )
     ARMY_STEPS = (
         ("Select units", "Left-click stacks or drag in Units view. "
-         "In Orders, right-click a unit row to add or remove it without "
-         "changing the other selected units."),
-        ("Create an army", "In Orders, click + Create Army in the Army tray. (Located on the right side of the screen)"),
-        ("Personalize", "Click a card to select the units in said army. Pressing the E button edits its name and emblem."),
-        ("Target areas", "Press T on an army card, select its target tiles, and confirm. The army fills uncovered tiles first, then balances its units. Units that have no orders given will automatically be ordered to fill in the target area next turn."),
-        ("Need to Assign more units?", "With units selected, right-click an army card."),
+         "In Orders, right-click a unit row to add or remove that unit. "
+         "Other unit selections stay unchanged."),
+        ("Create an army", "In Orders, click + Create Army in the Army tray on the right."),
+        ("Personalize", "Click an army card to select its units. Click E to edit its name and emblem."),
+        ("Target areas", "Click T on an army card. Select target tiles. Confirm the selection. "
+         "The army fills uncovered tiles first, then balances its units. "
+         "Next turn, units without orders automatically move to fill the target area."),
+        ("Assign more units", "Select units, then right-click an army card."),
     )
     DIPLOMACY_STEPS = (
-        ("Mail", "mail", "Open the Mail tab (located to the left) to read, reply to, or start conversations."),
-        ("Country actions", "relations", "Click another country's tile to see available diplomatic actions you can take against them."),
+        ("Mail", "mail", "Open Mail on the left to read, reply to, or start conversations."),
+        ("Country actions", "relations", "Click another country's tile to see available diplomatic actions."),
     )
     AIR_STEPS = (
-        ("Missions", "In Orders, choose No mission, Defend area (weakest or strongest first), or Strike. Unavailable choices are disabled. Any aircraft except V1 and V2 can defend. Click an active strike's mission button again to cancel it."),
-        ("Group missions", "Select multiple units and use Set Mission beside Disband, Repair and Upgrade. All choices are shown. Strike selects one target; planes unable to perform the mission or reach it keep their current orders."),
-        ("Strike / defend", "Strike: left-click or use your move-order button to select a tile in the outline. Defenders can fire back; reusable survivors return to base with their losses. Tanks cannot damage aircraft in flight. Research shows fort damage capability. Defend area covers listed range; survivors may intercept several missions."),
-        ("Reposition", "Right-click land to move reusable planes up to twice their listed range. Moving aircraft show the Air Move icon. Reach uses map pixels and tile edges; zoom never changes it. Aircraft cannot capture land."),
-        ("V1 and V2", "Strikes consume the weapon; V2 bypasses interception. Relocate on land at ground speed. Air units can load into Convoys at a coast and unload on land. Aircraft caught in ground combat die immediately."),
+        ("Missions", "In Orders, choose No mission, Defend area (weakest or strongest first), or Strike. "
+         "Unavailable choices are disabled. All aircraft except V1 and V2 can defend. "
+         "Click an active strike's mission button again to cancel it."),
+        ("Group missions", "Select units. Use Set Mission beside Disband, Repair, and Upgrade. "
+         "All choices stay visible. Strike uses one target. "
+         "Aircraft that cannot perform the mission or reach its target keep their orders."),
+        ("Strike / defend", "For Strike, select a tile in the outline with a left-click or your move-order button. "
+         "Defenders return fire, and reusable survivors return to base with their losses. "
+         "Tanks cannot damage aircraft in flight. Research shows fort damage capability. "
+         "Defend area covers listed range. Survivors can intercept several missions."),
+        ("Reposition", "Right-click land to move reusable aircraft up to twice their listed range. "
+         "Air Move marks moving aircraft. Range uses map pixels and tile edges. "
+         "Zoom does not change range. Aircraft cannot capture land."),
+        ("V1 and V2", "Strikes consume the weapon. V2 bypasses interception. "
+         "Move these weapons on land at ground speed. "
+         "Aircraft can load into Convoys at a coast and unload on land. "
+         "Hostile ground combat destroys aircraft immediately."),
     )
     PAGE_TITLES = ("Map Navigation", "Map UI", "Other Countries", "Armies", "Aircraft")
     PAGE_SUBTITLES = (
-        "Your country is centered automatically when a game opens or after you choose it. If you're familiar with how HOI4 map controls work, then the default map controls for GD5 should be very easy to understand.",
-        "These buttons are important! Located on the bottom left of the screen, they edit the appearance of the map, giving you the information you need to play effectively.",
+        "The map centers on your country when a game opens or you select that country. These are the default controls.",
+        "Use the bottom-left buttons to change the map display and view game information.",
         "Reach other countries through the Mail tab or directly from their territory on the map.",
-        "Learn how to create, organize, and command armies, including target areas.",
-        "Air missions resolve next turn. The range outline closes along map edges; any part of a tile inside or touching it counts.",
+        "Create and organize armies. Use target areas to direct their units.",
+        "Air missions resolve next turn. The range outline closes along map edges. A tile inside or touching it is in range.",
     )
 
     def __init__(self, map_screen):
@@ -435,7 +450,7 @@ class _NavigationIntroPopup:
                              self.checkbox_rect.bottomright, 3)
             pygame.draw.line(surface, (80, 190, 100), self.checkbox_rect.topright,
                              self.checkbox_rect.bottomleft, 3)
-        label = self.body_font.render("Don't show this popup when starting a game", True, (225, 225, 225))
+        label = self.body_font.render("Do not show this guide when a game starts", True, (225, 225, 225))
         surface.blit(label, (self.checkbox_rect.right + 9, self.checkbox_rect.y + 2))
 
         for rect, label, enabled in (

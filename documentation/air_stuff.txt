@@ -1,134 +1,235 @@
 AIRCRAFT RULES
 ==============
 
-Unit data owns air_role, air_range_px, air_attack_multiplier, air_consumable,
-air_interception_immune and air_damages_forts. production_group remains
-presentation metadata. A missing air_damages_forts flag means no fort damage;
-capabilities are read from the current unit library, including for old saves,
-rather than stored on individual units or accepted from multiplayer orders.
+AI means artificial intelligence. UI means user interface.
+A wing is one aircraft unit in this guide.
+A lane is a combat exchange between two hostile sides.
+Each side can include several allied countries.
 
-queries.build_air_geometry indexes actual ID-map pixels as horizontal runs at
-load/generation boundaries. Pixel footprints are closed unit rectangles, so
-touching the radius boundary counts. Distance is from the current base's map
-center to any point of the target tile, including disconnected parts; camera
-zoom, tilt, viewport and horizontal presentation wrapping never change reach.
-The cache is transient, rebuilt on geometry replacement, with distances cached
-per base center/target. Orders previews cache mission radii at input boundaries
-and draw one world-space circle per distinct base/radius, compressed by camera
-tilt and closed along map-image edges wherever the circle covers an edge.
-This keeps reach visible even when a small map fits entirely inside the circle,
-without implying flight across the presentation seam. Rasterized outlines are
-cached by base/radius/color, map dimensions, camera, viewport and clipping state.
-Air targeting replaces the base's movement
-outline with its strike outline; land bombardment retains tile markers. Any
-part of a tile touching or inside the circle is in range. Research details
-show data-driven air ranges, patrol/strike roles, damage bonuses/immunity,
-consumption, interception immunity, fort damage capability, and Convoy conversion
-behavior.
-Command validation checks
-only its target through air_target_in_range, so AI candidate validation does
-not repeat full-map sweeps. Ground combat roster stats are likewise cached at
-selection/state boundaries and display immediate ground casualties without
-mutating the aircraft or allocating them front/reserve slots.
+Unit capabilities
+-----------------
 
-Patrol and reusable strikes cover the listed R, reposition reaches 2R, and one-use
-strikes reach R. Aircraft fly over water, foreign land and nonadjacent provinces.
-Reusable strikes spend half the one-way flight distance going out and half
-returning; listed range and strike reach are the same value.
-Bases and landing tiles must be land; attack targets may be water. Flight never
-captures land. V1/V2 relocate along normal legal land routes at their listed
-ground speed and cannot use AIR_REPOSITION or patrol. Their ranged strikes
-still fly and consume the weapon. No aircraft or landed aircraft Convoy captures
-territory. Aircraft Convoys use ordinary naval transport movement while loaded.
-The editor unit brush likewise requires land when placing an aircraft.
+The unit library owns these fields:
 
-AIR_PATROL orders retain base_id and priority (WEAKEST by default in old saves).
-Orders' air mission button opens No mission, Defend area (weakest enemy missions
-targeted first), Defend area (strongest enemy missions targeted first), and Strike.
-All choices remain visible; unavailable missions are disabled, including Defend
-area for aircraft unable to patrol and flight missions at an invalid launch base.
-Available Defend area choices issue
-AIR_PATROL with the selected priority immediately; Strike arms map targeting
-and issues AIR_ATTACK after a valid tile is clicked. Clicking the mission
-button for an active strike cancels it immediately, as does choosing No mission.
-Targeting accepts left-click or the configured move-order click (right-click
-by default). The order click is consumed by the strike/barrage selector and
-cannot fall through to a full-range reposition order. Map events are dispatched
-once, including the target click's release. Patrol coverage uses the listed
-mission radius, half the reusable aircraft's movement radius, with the same
-tile-edge and disconnected-pixel rule. Ordinary move orders replace patrols
-with reposition orders; they do not move the patrol area beyond its base range.
-The button uses No Mission, Weakest First, Strongest First, or Strike Selected
-art to match the selected mission. Relocating aircraft use Air Move, including
-one-use weapons with a ground movement path; idle aircraft use No Mission.
-Pending strike targeting also uses Strike
-Selected. Dismissing the selector changes nothing. Choice callbacks recheck
-live unit identity, ownership, tactical control and real-time planning access.
-The upgrade icon exclusively issues existing numbered-family upgrades; named
-aircraft never upgrade into a different aircraft design. No new mission save
-fields or network command kinds are introduced.
-The group Set Mission button shows the number of eligible selected aircraft
-and always offers all four choices. Each choice revalidates the original units
-and their bases, permissions and capabilities. Group Strike selects one tile,
-then assigns only wings whose individual range reaches it. Unsupported missions,
-stale units and out-of-range targets leave that wing's order and paid escrow
-unchanged; dismissing group targeting also preserves its prior orders. Group
-actions fan out into the existing per-unit multiplayer commands.
-Every reusable aircraft, including bombers and Zeppelin, can patrol. One-use
-weapons cannot. Fighter air-to-air bonuses remain defined by unit data.
-AIR_ATTACK and AIR_REPOSITION retain base_id/target_id, resolve at the next
-turn boundary and clear once. Reusable strikes never remove the unit from its
-launch province, guaranteeing an exact return with health damage retained.
-Patrol remains active until replaced/canceled. Aircraft can only load into
-Convoys, requiring a coast; unloading requires land. Conversion uses the shared
-AIR_CONVERT_TURNS timer. Original aircraft stats survive via original_* transport
-fields; loading refreshes former infantry placeholders preserving health ratios.
-Legacy aircraft Trucks unpack on land, or become Convoys at sea, on load without
-losing health fraction or identity. The heuristic AI relocates V1/V2 on land
-and uses Convoys for reachable crossings when a land route is unavailable.
-Old Truck conversion orders become Convoy orders on a coast and cancel inland;
-normal land paths are retained for V1/V2 and discarded for reusable aircraft.
+air_role
+air_range_px
+air_attack_multiplier
+air_consumable
+air_interception_immune
+air_damages_forts
 
-All interceptable aircraft attacking the same province form one committed
-force, across nations. V2s are a separate immune force. Every hostile covering
-patrolling aircraft joins one shared coalition/lane engagement using global COMBAT_WIDTH,
-including the ordinary three-or-more-side behavior. Missions rank by committed
-calculate_unit_strength sums before losses, with target IDs breaking ties.
-Patrols contribute precedence constraints between covered missions; topological
-ordering preserves all compatible priorities across overlapping coverage. If
-conflicting priorities create a cycle, patrols vote for their next covered
-mission; most votes wins, then target ID. Surviving patrols may fight repeatedly
-and lose effectiveness as health falls. A destroyed attacker never delivers a
-strike.
+production_group is display metadata.
+A missing air_damages_forts flag means the unit cannot damage forts.
+Read capabilities from the current unit library, including for old saves.
+Do not store them on individual units or accept them from multiplayer orders.
 
-After interception, surviving wings strike the garrison through one normal
-simultaneous combat exchange, using shared coalition lanes, target-terrain
-combat width, front ranks and reserves. Defenders fire back even if destroyed
-in that exchange. Aircraft keep their flight stats and Tanks-category immunity;
-the fighter air-to-air bonus applies only during interception. Health/political
-damage modifiers apply to both sides, and fort defense protects only the
-garrison. Flight never occupies or captures the target. Only bombers, Zeppelin,
-V1 Flying Bomb, V2 Rocket and Jet Fighters can damage forts, controlled by
-air_damages_forts in unit data. Biplane and Monoplane Fighters cannot damage
-forts. Each capable wing reaching the target removes one fort level after the
-exchange, including on an empty tile. Research unlock details show this capability.
-Surviving reusable aircraft return to their exact base with health and morale
-losses retained; destroyed aircraft are removed. A ranged barrage/strike against
-a based aircraft uses the shared target damage modifiers, including
-Tanks-category immunity, but never the fighter air-to-air bonus. Actual melee
-ground engagement instead destroys aircraft immediately, before assembling lanes
-or exchanging damage. This includes V1/V2 moving on land and aircraft unloaded
-from Convoys into hostile troops. Neutral aircraft are unaffected, and
-aircraft Convoys remain loaded during battles at sea.
-Non-mutating UI/AI ground estimates project the same casualties. A hostile ground
-presence at the launch base prevents flight from escaping the destruction rule.
+Range and display caches
+------------------------
 
-Tournament aircraft use authenticated aircraft_orders commands keyed by stable
-unit_id. The host validates orders against its position/type/range, retaining
-its health/stats. Legacy snapshots yield order/name drafts only for existing
-aircraft. New archives give each player an encrypted visibility projection and
-an opaque session context, never the host snapshot's decryption secret. Legacy
-archives still load. Real-time unit commands likewise validate against server
-state and resolve stable IDs when filtered client indexes differ. Server guest
-snapshots and initial map bundles remove hidden units and private foreign orders.
-Neither projection exposes the transient geometry cache or interception lists.
+queries.build_air_geometry indexes actual ID-map pixels as horizontal runs when a map loads or is generated.
+Each pixel has a closed rectangular footprint.
+A target touching the range boundary counts as reachable.
+
+Measure from the current base's map center to any part of the target tile.
+Include disconnected parts of that tile.
+Zoom, tilt, viewport, and horizontal display wrapping do not change reach.
+Flight does not cross the display seam.
+
+The geometry cache is temporary.
+Rebuild it when map geometry changes.
+Cache distances by base center and target.
+Command validation checks only its target through air_target_in_range.
+AI candidate validation must not repeat full-map scans.
+
+Orders caches mission radii when input changes.
+Draw one world-space circle for each distinct base and radius.
+Apply camera tilt to its display.
+Close the outline along map edges that lie inside the circle.
+This keeps reach visible when the entire map fits inside the radius.
+
+Cache rasterized outlines by base, radius, color, map dimensions, camera, viewport, and clipping state.
+Air targeting replaces the movement outline with the strike outline.
+Land bombardment retains tile markers.
+Any tile part inside or touching the circle is in range.
+
+Research details show library-based ranges, roles, damage bonuses, immunity, consumption, fort damage, and Convoy conversion.
+Ground-combat roster stats are cached at selection and state changes.
+They show immediate aircraft casualties without modifying units or assigning them front or reserve slots.
+
+Flight and ground movement
+--------------------------
+
+R means the unit's listed air range.
+Patrol and reusable strikes reach R.
+Reusable repositioning reaches 2R.
+One-use strikes reach R.
+
+Aircraft can fly over water, foreign land, and nonadjacent provinces.
+Reusable strikes reserve half their total travel distance for the outgoing flight and half for the return.
+Thus, listed range equals strike reach.
+
+Bases and landing tiles must be land.
+Attack targets can be water.
+Flight never captures territory.
+Landed aircraft and their Convoy transports also cannot capture territory.
+Loaded aircraft Convoys use normal naval transport movement.
+The editor unit brush places aircraft only on land.
+
+V1/V2 move between bases on legal land routes at their ground speed.
+They cannot use AIR_REPOSITION or patrol.
+Their ranged strike flies and consumes the weapon.
+
+Mission controls
+----------------
+
+AIR_PATROL retains base_id and priority.
+Old saves default to WEAKEST.
+
+The air mission button offers four choices:
+- No mission.
+- Defend area, weakest enemy missions first.
+- Defend area, strongest enemy missions first.
+- Strike.
+
+All choices remain visible.
+Disable missions that the aircraft cannot perform.
+Disable flight from an invalid launch base.
+
+An available Defend area choice immediately issues AIR_PATROL with its selected priority.
+Strike starts map targeting.
+A valid target click issues AIR_ATTACK.
+Clicking an active strike's mission button cancels it immediately.
+No mission also cancels it.
+
+Targeting accepts a left-click or the configured move-order click.
+The default move-order click is right-click.
+Consume that click in the strike or barrage selector.
+It must not also issue a reposition order.
+Dispatch each map event once, including the target click's release.
+
+Patrol uses the listed mission radius.
+This is half a reusable aircraft's movement radius.
+Use the same tile-edge and disconnected-pixel range rules.
+A normal move order replaces patrol with repositioning.
+It does not extend the patrol area beyond its base range.
+
+Button images show No Mission, Weakest First, Strongest First, or Strike Selected.
+Relocation uses Air Move, including one-use weapons with a ground path.
+Idle aircraft use No Mission.
+Pending strike targeting uses Strike Selected.
+Closing the selector without a choice changes nothing.
+
+Choice callbacks recheck current unit identity, ownership, tactical control, and real-time planning permission.
+The upgrade icon uses existing numbered-family upgrades.
+Named aircraft do not upgrade into a different design.
+Mission controls add no new save fields or network command kinds.
+
+Group missions
+--------------
+
+Set Mission shows the number of eligible selected aircraft.
+It always offers all four choices.
+Each choice rechecks the original units, bases, permissions, and capabilities.
+
+Group Strike selects one tile.
+It assigns orders only to aircraft whose own range reaches the target.
+Unsupported missions, stale units, and out-of-range targets keep their existing order and reserved payment.
+Canceling group targeting also preserves previous orders.
+Group actions use existing per-unit multiplayer commands.
+
+Every reusable aircraft can patrol, including bombers and Zeppelin.
+One-use weapons cannot patrol.
+Unit data defines fighter air-to-air bonuses.
+
+Resolution and transport
+------------------------
+
+AIR_ATTACK and AIR_REPOSITION retain base_id and target_id.
+They resolve at the next turn boundary and clear once.
+Reusable strikes keep the unit at its launch province.
+Survivors retain damage there, which guarantees an exact return.
+Patrol continues until replaced or canceled.
+
+Aircraft can load only into Convoys.
+Loading requires a coast. Unloading requires land.
+Conversion uses the shared AIR_CONVERT_TURNS timer.
+original_* transport fields preserve aircraft stats.
+Loading replaces old infantry placeholder stats while preserving health ratios.
+
+On load, legacy aircraft Trucks unpack on land or become Convoys at sea.
+They retain identity and health fraction.
+The AI moves V1/V2 on land.
+It uses Convoys for reachable crossings when no land route is available.
+
+Old Truck conversion orders become Convoy orders on a coast and cancel inland.
+Keep normal land paths for V1/V2.
+Discard those paths for reusable aircraft.
+
+Interception
+------------
+
+All interceptable aircraft attacking one province form one committed force, including aircraft from different countries.
+V2s form a separate interception-immune force.
+Every hostile patrol covering the mission joins one shared coalition-lane battle.
+It uses global COMBAT_WIDTH and the normal rules for three or more sides.
+
+Rank missions by their committed calculate_unit_strength sums before losses.
+Target IDs break ties.
+Patrol priorities define ordering constraints between covered missions.
+Use topological ordering when those constraints agree.
+If they form a cycle, patrols vote for their next covered mission.
+Most votes wins, then target ID.
+
+Surviving patrols can fight several times.
+Their effectiveness decreases with health.
+Destroyed attackers do not deliver strikes.
+
+Strikes and ground combat
+-------------------------
+
+After interception, surviving aircraft make one simultaneous exchange against the garrison.
+Use shared coalition lanes, target-terrain combat width, front ranks, and reserves.
+Defenders return fire even if that exchange destroys them.
+
+Aircraft keep flight stats and Tanks-category immunity.
+The fighter air-to-air bonus applies only during interception.
+Health and political damage modifiers apply to both sides.
+Fort defense protects only the garrison.
+Flight never occupies or captures the target.
+
+air_damages_forts controls fort damage.
+Bombers, Zeppelin, V1 Flying Bomb, V2 Rocket, and Jet Fighters can damage forts.
+Biplane and Monoplane Fighters cannot.
+Each capable aircraft that reaches the target removes one fort level after the exchange.
+This also applies to empty tiles.
+Research unlock details show the capability.
+
+Surviving reusable aircraft stay at their exact base with health and morale losses retained.
+Remove destroyed aircraft.
+
+A barrage or ranged strike against based aircraft uses shared target damage modifiers.
+These include Tanks-category immunity, but exclude the fighter air-to-air bonus.
+
+Hostile melee ground combat destroys aircraft immediately, before lane assignment or damage exchange.
+This includes V1/V2 on land and aircraft unloaded from Convoys into hostile troops.
+Neutral aircraft are unaffected.
+Aircraft Convoys stay loaded during sea battles.
+Non-mutating UI and AI estimates show the same casualties.
+Hostile ground units at the launch base prevent aircraft from escaping through flight.
+
+Multiplayer authority and visibility
+-----------------------------------
+
+Tournament files use authenticated aircraft_orders commands keyed by stable unit_id.
+The host validates position, type, and range against its own state.
+It retains its own health and stats.
+Legacy snapshots provide only order and name drafts for existing aircraft.
+
+New archives give each player an encrypted visibility projection and an opaque session context.
+They never provide the host snapshot's decryption secret.
+Legacy archives still load.
+
+Real-time unit commands validate against server state.
+Stable IDs resolve units when filtered client indexes differ.
+Guest snapshots and initial map bundles remove hidden units and private foreign orders.
+Neither multiplayer projection includes the temporary geometry cache or interception lists.

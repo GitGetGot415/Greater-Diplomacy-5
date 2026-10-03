@@ -1,150 +1,197 @@
-diplomacy requirements
+DIPLOMACY RULES
+===============
 
-Simultaneous-action clashes inspect only pairs referenced by current pending
-actions, in the same nation insertion order as the former all-pairs scan.
-One-way declarations remain included because they can cancel queued responses
-even without a counter-proposal. Each pair re-reads its actions after previous
-effects, so removed proposals cannot resolve from a stale snapshot. Dormant
-country records do not add pairwise work; diplomatic timing is unchanged.
+AI means artificial intelligence. UI means user interface.
+A unilateral action needs no reply. A bilateral request needs a reply.
 
-Disk saves may represent unused, unchanged catalog countries with empty {}
-records. The loader restores their templates before diplomacy, faction repair,
-AI or editor tools run. Full records are retained for any country referenced by
-provinces, cores, units, metadata, diplomacy or scripted events, and for all
-customized state (including landless/exiled countries). Placeholder keys retain
-the saved nation iteration order. Tournament and real-time network snapshots
-still contain complete country records; their authority and visibility rules
-are unchanged. Per-turn history retains its complete snapshots.
+Shared processing and save data
+------------------------------
 
-unilateral declarations:
-turn 0: msg is written
-turn 0.5: msg is sent
-turn 1: msg is received
+Simultaneous-action checks inspect country pairs named in current pending actions.
+They preserve country insertion order.
+One-way declarations remain included because they can cancel queued responses without a counter-proposal.
+Each pair reads its actions again after earlier effects.
+A removed proposal must not resolve from an old snapshot.
+Unused country records do not add pairwise work.
 
-Guarantee Independence is unilateral. A guarantor records the protected
-country in its own guarantees list; the target cannot accept or decline it.
-The target must be at peace and outside a faction. A guarantee is removed as
-soon as that stops being true. If war is the reason, every guarantor is first
-called into the target's defensive war against the attacker; a country that
-started the war never receives that help. A guarantor may also revoke its own
-guarantee unilaterally.
+Disk saves can store unused, unchanged catalog countries as empty {} records.
+The loader restores their templates before diplomacy, faction repair, AI, or editor work.
+Keep full records for countries referenced by provinces, cores, units, metadata, diplomacy, or scripted events.
+Also keep full records for customized or landless countries, including governments in exile.
+Placeholder keys preserve saved country order.
 
-Military Attachés are bilateral: they can only be sent to a country currently
-at war that is not fighting the sender. Once accepted, the sender sees exactly
-what the host can see. AI hosts reject attachés from a country with active
-volunteers at, or observing, one of their enemies; an already accepted
-conflicting attaché is revoked on the following turn. A host controlled by a
-player may revoke any foreign attaché instead. An attaché is immediately
-withdrawn if the host leaves its wars or becomes hostile to the sender.
-The sender may also withdraw its attaché unilaterally.
+Tournament files, real-time snapshots, and turn history still contain complete country records.
+Their authority and visibility rules remain unchanged.
 
-The map maker's Global Diplomacy & Factions editor has a Diplomatic
-Agreements view. It can set the selected country to guarantee another country,
-place a military attaché at an at-war country, or receive one-way military
-access through another country. These setup relationships use the same rules
-and save fields as their in-game diplomatic counterparts.
+Message timing
+--------------
 
-Scripted events can guarantee independence, send military attaché and military
-access requests, offer volunteer divisions, and accept or reject each of those
-three request types. A scripted volunteer offer uses its message value as the
-number of available land divisions to reserve (one if blank); after that it
-uses the normal offer, acceptance, travel, and return process.
+In the timelines below, 0.5 and 1.5 mean the send phase between planning turns.
 
-The scripted-event action "Offer Volunteer Divisions" also has a "Use Available
-Capacity" option. It lowers the requested number to the country’s remaining
-volunteer cap, instead of failing because the requested number is too high.
-It still cannot create an offer when no eligible divisions or no capacity remain.
-The event editor can additionally test guarantees, military attachés, one-way
-military access in either direction, volunteer divisions already committed, and
-remaining volunteer capacity.
+A unilateral declaration needs no reply:
 
-Volunteer divisions follow the same conflict rule. AI hosts reject volunteers
-from a country that has active volunteers with, or an attaché observing, one of
-their enemies. Existing conflicting volunteers are sent home on the following
-turn; a player hosting foreign volunteers may send them home directly.
+turn 0:   The sender writes the message.
+turn 0.5: The message is sent.
+turn 1:   The receiver gets the message.
 
-Aircraft are not eligible land volunteer divisions, including V1/V2 weapons
-traveling on the ground. Aircraft can only use Convoy transports, which retain
-their original aircraft type and are also ineligible volunteers. Air missions and
-repositioning use geometry reach independently of military access and never
-transfer province ownership. See documentation/air_stuff.txt for the air rules.
+A bilateral request needs a reply:
 
-When selecting a country, each available bilateral proposal to an AI displays
-the same deterministic acceptance verdict that the AI will use: YES, NO, or
-MAYBE. MAYBE is reserved for human-controlled targets, whose response cannot
-be forecast. The indicator is informational; it neither changes eligibility
-nor queues the proposal.
+turn 0:   The sender writes the request.
+turn 0.5: The request is sent.
+turn 1:   The receiver gets it and writes an acceptance or rejection.
+turn 1.5: The reply is sent.
+turn 2:   The original sender gets the reply.
 
-When scripted events are enabled, outgoing diplomacy indicators and the deal
-acceptance forecast also check the target's matching scripted Accept/Reject
-actions and their conditions.
-Randomly conditioned responses show as uncertain rather than consuming game
-randomness during UI rendering.
+Allow cancellation of all outgoing diplomatic requests during the turn when they were written.
+This includes war declarations and volunteer offers.
 
-Faction members may challenge leadership after outweighing the current leader
-by the required margin for six consecutive turns. If several qualified members
-submit leadership claims that resolve in the same turn, the member with the
-highest nation power takes the chair, regardless of nation-data order. Nation
-power is military strength plus one hundredth of economic power, shared with
-the peace-table strength calculation. An exact tie is resolved randomly among
-the strongest claimants.
+For example, a faction request resolves as follows:
 
-When an AI member takes faction leadership, a generic name in the form "The
-country name Pact" changes to use the new leader's country name. Custom faction
-names are kept as they are. Player-led leadership changes do not rename the
-faction.
+turn 0:   A asks to join B's faction.
+turn 0.5: The request is sent.
+turn 1:   B accepts and writes a reply.
+turn 1.5: The reply is sent.
+turn 2:   A gets the reply and joins the faction.
 
-declarations requiring response:
-turn 0: msg1 is written
-turn 0.5: msg1 is sent
-turn 1: msg1 is received, receiver writes msg2 back
-turn 1.5: msg2 is sent
-turn 2: msg2 is received by original sender
+Crossing requests
+-----------------
 
-all diplomatic requests should be able to be undone if sent on the same turn, so if you declare war but then immediately decide not to that should be allowed
-simmilarly if you send an offer to give volunteers but decide not to send them on the same turn, you should be able to undo the offer
+Different requests sent in opposite directions must not overwrite each other.
 
-turn 0: [A] writes request to join faction of [B]
-turn 0.5: request message is sent
-turn 1: [B] receives request message from [A], accepts request and sends acceptance back to [A]
-turn 1.5: acceptance message is sent
-turn 2: [A] receives acceptance message, [A] is now officially accepted into the faction
+Example:
 
-if two bilateral requests are sent to each other, they shouldn't overwrite each other
-you SHOULD get something like this:
+turn 0:   A offers B a trade. B asks A for military access.
+turn 0.5: Both requests are sent.
+turn 1:   A answers the access request. B answers the trade offer.
+turn 1.5: Both replies are sent.
+turn 2:   Each sender gets the reply to its own request.
 
-turn 0: [A] writes trade deal to country [B]
-turn 0: [B] request millitary access from country [A]
-turn 0.5: both messages are sent
-turn 1: [A] receives the millitary access request from [B], either accepts or declines it
-turn 1: [B] receives the trade deal from [A], either accepts it or declines it
-turn 1.5: both messages are sent
-turn 2: [A] receives acceptance or declining of trade deal, [B] receives acceptance or declining of millitary access
+Crossing requests can combine when acceptance would produce the same result.
+Examples include a war invitation crossing a request to join that war.
+A faction invitation can also cross a request to join that faction.
 
-if something else happens, like one of these messages getting overriden, that shouldn't be the case
+Military access is one-way.
+A asking to enter B's land and B asking to enter A's land produce different results.
+Keep those requests separate.
 
-the one exception though is if both are requesting something that if accepted will lead to the same outcome
+Guarantees of independence
+-------------------------
 
-for example, [A] asking [B] to join their war, and [B] asking [A] if they can join in their war
-another example, [A] inviting [B] to their faction, and [B] requesting to join the faction of [A]
+Guarantee Independence is unilateral.
+The guarantor stores the protected country in its own guarantees list.
+The target cannot accept or reject the guarantee.
+The target must be at peace and outside a faction.
 
-however, do keep in mind that things like [A] requesting millitary access from [B] and [B] requesting millitary access from [A] don't lead to the same outcome because millitary access is a one way thing
-it's possible for a country to let another country into it's borders but also not be allowed into the other countries borders
+Remove a guarantee as soon as those conditions cease to apply.
+If an attack causes the change, first call the guarantors into the target's defensive war.
+A country that started the war does not receive guarantee support.
+The guarantor can revoke its own guarantee without a reply.
 
-Puppet hierarchies must remain acyclic. The map editor rejects an assignment
-that would make a country its own ancestor. Shared puppet-state propagation
-visits each country at most once, so malformed older scenario data cannot
-recurse forever.
+Military attach?s
+-----------------
 
-Government in exile:
-When a faction member loses its last province, it remains in the faction as a
-government in exile. It keeps its units, faction wars, diplomacy, faction
-leadership (if applicable), and the faction pre-war border record. The status
-is derived from having faction membership and no territory; a country stops
-being exiled immediately when it regains a province. A faction member's normal
-core/pre-war-territory capture transfer can therefore restore territory to the
-exiled member. If every member of the faction is landless, the faction is
-disbanded immediately: its historical border record is removed and every former
-member becomes defunct under the ordinary cleanup rules, so no country remains
-at war with a bloc that can no longer restore territory. A landless country
-outside a faction remains defunct under the ordinary cleanup rules.
+Military Attach? requests are bilateral.
+The host must be at war and must not be fighting the sender.
+After acceptance, the sender sees the host's battlefield visibility.
+
+An AI host rejects requests from a country supporting one of its enemies.
+Support means active volunteer divisions or an attach? observing that enemy.
+An accepted conflicting attach? is revoked on the following turn.
+A player-controlled host can revoke a foreign attach? directly.
+
+The attach? withdraws immediately if the host leaves its wars or becomes hostile to the sender.
+The sender can also withdraw it without a reply.
+
+Volunteer divisions
+-------------------
+
+Volunteers use the same support-conflict rule as attach?s.
+AI hosts reject offers from countries with volunteers or attach?s at an enemy.
+Existing conflicting volunteers return home on the following turn.
+A player hosting foreign volunteers can send them home directly.
+
+Aircraft are not eligible land volunteers.
+This includes V1/V2 weapons moving on land.
+Aircraft use only Convoy transports.
+Those transports retain the original aircraft type and remain ineligible as volunteers.
+
+Aircraft missions and repositioning use map geometry, independently of military access.
+They never transfer province ownership.
+See documentation/air_stuff.txt.
+
+Editor and scripted events
+--------------------------
+
+The Global Diplomacy & Factions editor has a Diplomatic Agreements view.
+It can set guarantees, attach?s at countries at war, and one-way military access.
+These setup actions use the same rules and save fields as game actions.
+
+Scripted events can guarantee independence.
+They can request attach?s or military access and offer volunteer divisions.
+They can accept or reject attach? requests, access requests, and volunteer offers.
+
+A volunteer offer uses its message value as the requested number of available land divisions.
+A blank value requests one division.
+It then uses the normal offer, acceptance, travel, and return process.
+
+Offer Volunteer Divisions has a Use Available Capacity option.
+This reduces the requested number to the remaining volunteer capacity.
+It does not create an offer when capacity or eligible divisions are unavailable.
+
+Event conditions can test:
+- Guarantees.
+- Military attach?s.
+- One-way military access in either direction.
+- Committed volunteer divisions.
+- Remaining volunteer capacity.
+
+Acceptance indicators
+---------------------
+
+Available bilateral proposals to AI countries show the shared deterministic acceptance verdict: YES or NO.
+MAYBE is used for human-controlled targets, whose response cannot be predicted.
+The indicator provides information only.
+It does not change eligibility or queue a proposal.
+
+When scripted events are enabled, forecasts also check matching Accept/Reject actions and their conditions.
+This applies to outgoing diplomacy indicators and deal acceptance forecasts.
+Random conditions produce an uncertain forecast.
+UI rendering must not consume game randomness to predict those conditions.
+
+Faction leadership
+------------------
+
+A member can challenge leadership after exceeding the leader's power by the required margin for six consecutive turns.
+When several eligible claims resolve together, the claimant with the highest nation power becomes leader.
+Country-data order does not decide the result.
+Nation power combines military strength with one hundredth of economic power.
+The peace table uses the same calculation.
+An exact tie selects randomly among the strongest claimants.
+
+When an AI member becomes leader, a generic "The country name Pact" name uses the new leader's country name.
+Custom names remain unchanged.
+Player-led leadership changes do not rename the faction.
+
+Puppet hierarchy
+----------------
+
+Puppet relationships must not contain a cycle.
+The editor rejects any assignment that makes a country its own ancestor.
+Shared puppet-state propagation visits each country at most once.
+Malformed older scenario data must not cause endless recursion.
+
+Government in exile
+-------------------
+
+A faction member that loses its last province remains in the faction as a government in exile.
+It keeps its units, faction wars, diplomacy, leadership, and faction pre-war border record.
+Exile is derived from faction membership and lack of territory.
+Regaining a province ends exile immediately.
+
+Normal faction capture transfers can restore a member's core or pre-war territory.
+If all faction members become landless, disband the faction immediately.
+Remove its historical border record.
+Apply ordinary country cleanup to every former member.
+No country remains at war with a faction that cannot restore territory.
+
+A landless country outside a faction uses ordinary cleanup.

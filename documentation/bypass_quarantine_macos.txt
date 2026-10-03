@@ -1,5 +1,17 @@
-Instruct Intel/macOS players to clear the download quarantine flag after unzipping:
+OPEN A DOWNLOADED macOS APP
+==========================
+
+macOS can block the extracted main.app with a download quarantine flag.
+If you trust the download, first try to open it from Finder:
+
+1. Right-click main.app.
+2. Select Open.
+3. Select Open in the confirmation dialog, if available.
+
+If macOS still blocks the app, remove only its quarantine flag:
 
 1. Open Terminal.
-2. Run: xattr -cr /path/to/dist/main.app
-3. Or right-click main.app in Finder -> select Open -> click Open.
+2. Replace the example path with the path to your extracted app.
+3. Run: xattr -dr com.apple.quarantine /path/to/dist/main.app
+
+Repeat these steps for a new download if necessary.

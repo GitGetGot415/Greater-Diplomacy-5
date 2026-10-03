@@ -2,15 +2,20 @@ Greater Diplomacy 4 AI response reference
 ==========================================
 
 Source: TEMP_GD4/project.json, target 'AI Message Processor'.
-The normal processor compared Type and Status. Status maps to the GD5
-strength names as follows: We are Weak = weaker; Roughly Equal = even;
-We are Strong = stronger. A line was selected randomly from the eligible
-Example Responses pool.
+The processor compared Type and Status.
+It selected a random line from the eligible Example Responses pool.
+GD4 status values map to GD5 strength values:
 
-The GD4 export also contains a separate uncalled stack labelled
-'Really Really long responses'. It is included at the end and marked as
-uncalled so every preserved response is accounted for without claiming it
-was reachable through the broadcast handler.
+  We are Weak = weaker
+  Roughly Equal = even
+  We are Strong = stronger
+
+The export also has an uncalled stack named 'Really Really long responses'.
+It appears at the end, marked as uncalled.
+The broadcast handler did not use those lines.
+
+The responses below are archived source text.
+Keep their original wording. The documentation language rules apply to this introduction.
 
 GD4_DENIED_FRIENDSHIP: Type = Denied Friendship; selected by military strength.
 ------------------------------------------------------------------------------

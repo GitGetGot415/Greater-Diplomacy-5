@@ -1,19 +1,27 @@
-Droplet Defaults:
-Region:     choose the closest supported region to the host and most players
+RELAY SETUP DEFAULTS
+===================
+
+Use these values when you create the relay Droplet.
+Choose a supported region near the host and most players.
+
 Image:      Ubuntu 24.04 x64
 Plan:       Basic / Regular shared CPU
 Size:       s-1vcpu-512mb-10gb
 IPv4:       enabled
 IPv6:       disabled
-Backups:    disabled (this relay stores no match saves)
-Monitoring: disabled (unless you want to diagnose failures)
+Backups:    disabled
+Monitoring: disabled, unless needed to investigate failures
 
-Personal Access Tokens Defaults:
+The relay does not store match saves, so these defaults disable backups.
+
+Personal access token permissions
+---------------------------------
+
+Enable create, read, and delete permissions for both resource types:
+
 droplet:    create
 droplet:    read
 droplet:    delete
 firewall:   create
 firewall:   read
 firewall:   delete
-
-TLDR: create/read/delete for droplets and firewalls
