@@ -1625,8 +1625,9 @@ class Orders_Screen(GameState):
                     self.scroll_by(event, attr="scroll_y", limit_attr="max_scroll_y",
                                    speed=WHEEL_SCROLL_STEP)
 
+            # GameState dispatches additional_events after the widgets. Doing
+            # it again can overwrite a mission with movement on the same click.
             super().handle_events([event])
-            self.additional_events(event)
 
     def additional_events(self, event):
         event_handler.resolve_map_mouse_gesture_conflict(self.map_screen, event)
@@ -1695,6 +1696,20 @@ class Orders_Screen(GameState):
                 and getattr(self, "_consume_bombard_target_release", False)):
             self._consume_bombard_target_release = False
             self.map_screen.unit_selection_drag = None
+            return
+
+        # An armed strike/barrage also accepts the configured order gesture.
+        # Let the camera finish a pan first, then consume both press/release so
+        # a right-click cannot fall through to full-range air repositioning.
+        if (event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP)
+                and getattr(self, "bombarding_unit_index", None) is not None
+                and event_handler.mouse_button_has_action(event.button, "issue_orders")):
+            self.map_screen.unit_selection_drag = None
+            if event.type == pygame.MOUSEBUTTONUP and not on_ui:
+                destination = queries.get_clicked_province(event.pos, self.map_screen)
+                if destination:
+                    self.set_bombard_target(self.bombarding_unit_actual_index, destination,
+                                            self.bombarding_unit_province)
             return
 
         # The Orders panel is a live map workspace. A short left-click on a

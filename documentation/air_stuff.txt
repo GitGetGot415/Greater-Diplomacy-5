@@ -49,6 +49,13 @@ Only aircraft legally able to patrol get the Defend area choices. These issue
 AIR_PATROL with the selected priority immediately; Strike arms map targeting
 and issues AIR_ATTACK after a valid tile is clicked. Clicking the mission
 button for an active strike cancels it immediately, as does choosing No mission.
+Targeting accepts left-click or the configured move-order click (right-click
+by default). The order click is consumed by the strike/barrage selector and
+cannot fall through to a full-range reposition order. Map events are dispatched
+once, including the target click's release. Patrol coverage uses the listed
+mission radius, half the reusable aircraft's movement radius, with the same
+tile-edge and disconnected-pixel rule. Ordinary move orders replace patrols
+with reposition orders; they do not move the patrol area beyond its base range.
 The button uses No Mission, Weakest First, Strongest First, or Strike Selected
 art to match the selected mission; pending strike targeting also uses Strike
 Selected. Dismissing the selector changes nothing. Choice callbacks recheck

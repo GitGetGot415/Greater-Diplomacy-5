@@ -79,6 +79,9 @@ and V2 alone bypasses
 interception. Jet Engine remains a research gate.
 Listed air range is strike/patrol reach; reusable reposition reaches twice that
 distance because it does not reserve a return leg.
+Patrol interception uses that same mission radius and tile-intersection rule.
+Orders' armed strike selector consumes left-click or the configured move-order
+click, so it cannot accidentally create a full-range reposition instead.
 Orders exposes patrol through the air mission selector as Defend area, with
 weakest-first and strongest-first choices available to reusable aircraft. Strike
 uses map targeting, and No mission (or clicking an active strike's button)

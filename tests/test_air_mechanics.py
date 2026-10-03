@@ -63,7 +63,7 @@ class RangeTests(unittest.TestCase):
         self.plane = wing(self.base)
         self.radius = queries.air_order_radius(self.plane, "AIR_ATTACK")
 
-    def test_reusable_strike_matches_listed_range_and_half_reposition(self):
+    def test_reusable_strike_and_patrol_match_listed_range_and_half_reposition(self):
         for name, stats in queries.get_unit_library().items():
             if not stats.get("air_role") or stats.get("air_consumable"):
                 continue
@@ -72,6 +72,7 @@ class RangeTests(unittest.TestCase):
                 strike = queries.air_order_radius(unit, "AIR_ATTACK")
                 self.assertEqual(strike, stats["air_range_px"])
                 self.assertEqual(strike, queries.air_order_radius(unit, "AIR_REPOSITION") / 2)
+                self.assertEqual(queries.air_order_radius(unit, "AIR_PATROL"), strike)
 
     def test_tile_edge_and_disconnected_pixels_count_when_center_is_outside(self):
         target = tile(self.game, 2, int(10 + self.radius), owner="B", center=(1500, 5))
@@ -192,6 +193,35 @@ class AirResolutionTests(unittest.TestCase):
         self.assertIn(defender, self.defender_base["units"])
         self.assertEqual(defender["order"]["type"], "AIR_PATROL")
         self.assertIn(attacker, self.base["units"])
+
+    def test_patrol_interception_uses_half_movement_radius_and_tile_edges(self):
+        defender = self.combat_fixture(self.defender_base, "Monoplane Fighter", "B",
+            order={"type": "AIR_PATROL", "priority": "WEAKEST"})
+        radius = queries.air_order_radius(defender, "AIR_PATROL")
+        self.assertEqual(radius, queries.air_order_radius(defender, "AIR_REPOSITION") / 2)
+        for offset, intercepts in ((0, True), (1, False)):
+            with self.subTest(offset=offset):
+                self.base["units"] = []
+                edge_x = self.defender_base["center"][0] + radius + offset
+                with pygame.PixelArray(self.game.id_map) as pixels:
+                    pixels.replace(self.target["map_color"], (0, 0, 0))
+                # The target's distant center must not remove its permitted
+                # edge coverage, or grant coverage to a fully out-of-range tile.
+                self.target = tile(self.game, 2, int(edge_x), owner="B", width=1,
+                    center=(edge_x + radius, self.defender_base["center"][1]))
+                self.base["center"] = (edge_x, self.defender_base["center"][1])
+                attacker = self.combat_fixture(self.base, "Monoplane Bomber", "A",
+                    order={"type": "AIR_ATTACK", "target_id": self.target["id"]})
+                defender["health"] = defender["max_health"]
+                before = defender["health"]
+                queries.build_air_geometry(self.game)
+                with patch.object(combat_rules, "build_battle", wraps=combat_rules.build_battle) as battles:
+                    air_processor.process_air_orders(self.game)
+                participated = any(any(unit is defender for side in call.args[0] for unit in side)
+                                   for call in battles.call_args_list)
+                self.assertEqual(participated, intercepts)
+                self.assertEqual(defender["health"] < before, intercepts)
+                self.assertIn(attacker, self.base["units"])
 
     def test_strike_is_reciprocal_normal_combat_and_retains_losses_at_base(self):
         aircraft = self.combat_fixture(self.base, "Monoplane Bomber", "A",
@@ -1554,11 +1584,74 @@ class AirAppSmokeTests(unittest.TestCase):
             position = (screen.panel_rect.right + 100, screen.panel_rect.centery)
             with patch.object(queries, "get_clicked_province", return_value=target):
                 for event_type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
-                    screen.additional_events(pygame.event.Event(event_type, button=1, pos=position))
+                    screen.handle_events([pygame.event.Event(event_type, button=1, pos=position)])
             screen.exit_screen.assert_not_called()
             self.assertIsNone(screen.bombarding_unit_index)
             self.assertFalse(screen.air_mission_targeting_units)
             self.assertEqual(bomber["order"]["type"], "AIR_ATTACK")
+
+    def test_right_click_strike_targeting_cannot_fall_through_to_movement(self):
+        with tempfile.TemporaryDirectory() as directory:
+            _original, _fighter, _rocket, path = self.make_runtime_save(directory)
+            loaded = Map(load_path=path, skip_initial_income=True)
+            loaded.selection_mode = False
+            loaded.player_country = "A"
+            base = loaded.id_to_province[1]
+            fighter = base["units"][0]
+            radius = queries.air_order_radius(fighter, "AIR_ATTACK")
+            edge_x = base["center"][0] + radius
+            outside = tile(loaded, 3, int(edge_x + 1), width=1)
+            touching = tile(loaded, 4, int(edge_x), width=1,
+                center=(edge_x + radius, base["center"][1]))
+            queries.build_air_geometry(loaded)
+            self.assertTrue(queries.air_target_in_range(loaded, fighter, base, "AIR_REPOSITION", outside["id"]))
+            self.assertFalse(queries.air_target_in_range(loaded, fighter, base, "AIR_ATTACK", outside["id"]))
+            loaded.select_map_units([fighter])
+            screen = Orders_Screen()
+            screen.start_with_province(base, loaded)
+            position = (screen.panel_rect.right + 100, screen.panel_rect.centery)
+            screen.exit_screen = Mock()
+            for group in (False, True):
+                with self.subTest(group=group):
+                    if group:
+                        screen.set_selected_air_mission("STRIKE", [(fighter, base)])
+                    else:
+                        screen.set_air_mission(fighter, base, "STRIKE")
+                    before = dict(fighter["order"])
+                    with patch.object(c, "MOUSE_BUTTON_ACTIONS", c.default_mouse_button_actions()), \
+                            patch.object(queries, "get_clicked_province", return_value=outside), \
+                            patch.object(loaded, "issue_selected_move_orders", wraps=loaded.issue_selected_move_orders) as move:
+                        for event_type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
+                            screen.handle_events([pygame.event.Event(event_type, button=3, pos=position)])
+                    move.assert_not_called()
+                    self.assertEqual(fighter["order"], before)
+                    # A skipped group strike ends targeting; re-arm it for the
+                    # allowed boundary click, while a single strike stays armed.
+                    if group:
+                        screen.set_selected_air_mission("STRIKE", [(fighter, base)])
+                    with patch.object(c, "MOUSE_BUTTON_ACTIONS", c.default_mouse_button_actions()), \
+                            patch.object(queries, "get_clicked_province", return_value=touching), \
+                            patch.object(loaded, "issue_selected_move_orders", wraps=loaded.issue_selected_move_orders) as move, \
+                            patch.object(screen, "set_bombard_target", wraps=screen.set_bombard_target) as strike:
+                        for event_type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
+                            screen.handle_events([pygame.event.Event(event_type, button=3, pos=position)])
+                    move.assert_not_called()
+                    strike.assert_called_once()
+                    self.assertEqual(fighter["order"], queries.canonical_air_order(loaded, fighter, base,
+                        {"type": "AIR_ATTACK", "target_id": touching["id"]}))
+                    command = {"type": "unit_order", "province_id": base["id"], "unit_index": 0,
+                               "unit_id": fighter["unit_id"], "order": dict(fighter["order"])}
+                    self.assertEqual(MapRealtimeDriver(loaded).validate_draft("A", [command])[0]["order"], fighter["order"])
+                    _, drafts = multiplayer_io._validate_aircraft_orders(loaded, "A", {"aircraft_orders": [
+                        {"unit_id": fighter["unit_id"], "order": command["order"]}]}, {})
+                    self.assertEqual(drafts[0][1], fighter["order"])
+                    invalid = dict(command, order={"type": "AIR_ATTACK", "target_id": outside["id"]})
+                    with self.assertRaises(RealtimeError):
+                        MapRealtimeDriver(loaded).validate_draft("A", [invalid])
+                    with self.assertRaises(ValueError):
+                        multiplayer_io._validate_aircraft_orders(loaded, "A", {"aircraft_orders": [
+                            {"unit_id": fighter["unit_id"], "order": invalid["order"]}]}, {})
+                    screen.exit_screen.assert_not_called()
 
     def test_air_mission_popup_uses_real_icons_fits_and_applies_a_choice(self):
         from pathlib import Path
