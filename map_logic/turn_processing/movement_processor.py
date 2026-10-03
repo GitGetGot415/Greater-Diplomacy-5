@@ -84,7 +84,7 @@ def process_upgrades(map_screen):
         for unit in province["units"]:
             order = unit.get("order")
             if isinstance(order, dict) and order.get("type") == "UPGRADE":
-                if not has_factory:
+                if not has_factory or queries.get_unit_tier(unit.get("type", "")) <= 0:
                     unit["order"] = {"type": "MOVE", "path": []}
                     continue
 

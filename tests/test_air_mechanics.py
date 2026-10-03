@@ -627,14 +627,14 @@ class AirIntegrationTests(unittest.TestCase):
         screen.target_province = self.base
         screen.bombarding_unit_province = self.base
         fighter = wing(self.base, "Biplane Fighter")
-        screen.cycle_air_patrol(1, self.base)
+        screen.set_air_mission(fighter, self.base, "WEAKEST")
         self.assertEqual(fighter["order"]["priority"], queries.AIR_DEFAULT_PRIORITY)
-        screen.cycle_air_patrol(1, self.base)
+        screen.set_air_mission(fighter, self.base, "STRONGEST")
         self.assertEqual(fighter["order"]["priority"], "STRONGEST")
         self.game.tactical_mode = True
         self.game.player_unit = self.plane
         before = dict(fighter["order"])
-        screen.cycle_air_patrol(1, self.base)
+        screen.set_air_mission(fighter, self.base, "NONE")
         self.assertEqual(fighter["order"], before)
         screen.set_bombard_target(0, self.target, self.base)
         self.assertEqual(self.plane["order"]["type"], "AIR_ATTACK")
@@ -1080,6 +1080,161 @@ class AirGroundTransportTests(unittest.TestCase):
         self.assertEqual(json.loads(json.dumps(queries.build_save_dict(self.game)))["provinces"], saved["provinces"])
 
 
+class AirMissionSelectionTests(unittest.TestCase):
+    def setUp(self):
+        self.game = world()
+        self.base = tile(self.game, 1, 8)
+        self.target = tile(self.game, 2, 30, owner="B")
+        self.unit = wing(self.base, "Monoplane Fighter")
+        self.game.show_feedback = Mock()
+        self.screen = Orders_Screen()
+        self.screen.map_screen = self.game
+        self.screen.target_province = self.base
+        self.screen.refresh_ui = Mock()
+        self.screen._mark_draft_changed = Mock()
+
+    def buttons(self):
+        with patch.object(self.screen, "_add_action_button", side_effect=lambda *a, **k: Mock()) as add:
+            self.screen._build_unit_action_buttons(0, 0, self.unit, self.base, 0, None,
+                False, False, False, True, self.game.nation_data["A"]["research"])
+        return {call.args[2]: call for call in add.call_args_list}
+
+    def test_icon_tracks_each_mission_and_upgrade_stays_separate(self):
+        from screens.map_related_screens.orders import ACTION_COL_BOMBARD, ACTION_COL_UPGRADE
+        for mission, icon in (("NONE", "No Mission"), ("WEAKEST", "Weakest First"),
+                              ("STRONGEST", "Strongest First")):
+            with self.subTest(mission=mission):
+                self.screen.set_air_mission(self.unit, self.base, mission)
+                buttons = self.buttons()
+                self.assertEqual(buttons[ACTION_COL_BOMBARD].args[6], icon)
+                self.assertEqual(buttons[ACTION_COL_UPGRADE].args[6], "Upgrading")
+                self.assertFalse(buttons[ACTION_COL_UPGRADE].kwargs["enabled"])
+        self.unit["order"] = {"type": "AIR_ATTACK", "base_id": 1, "target_id": 2}
+        self.assertEqual(self.buttons()[ACTION_COL_BOMBARD].args[6], "Strike Selected")
+
+    def test_selector_only_offers_defense_to_eligible_aircraft(self):
+        for name in ("Monoplane Fighter", "Monoplane Bomber", "V1 Flying Bomb", "V2 Rocket"):
+            with self.subTest(unit=name):
+                self.unit["type"] = name
+                before = dict(self.unit["order"])
+                with patch("screens.map_related_screens.orders._AirMissionSelectScreen") as popup, \
+                        patch("ui.screen_runner._run_pygame_sub_screen"):
+                    self.screen.open_air_mission_select(0, self.base)
+                choices = [choice[0] for choice in popup.call_args.args[1]]
+                expected = ["NONE", "STRIKE"]
+                if queries.air_unit_stats(self.unit).get("air_role") == "fighter":
+                    expected = ["NONE", *queries.AIR_INTERCEPTION_PRIORITIES, "STRIKE"]
+                self.assertEqual(choices, expected)
+                self.assertEqual(self.unit["order"], before)
+                if "WEAKEST" not in choices:
+                    self.screen.set_air_mission(self.unit, self.base, "WEAKEST")
+                    self.assertEqual(self.unit["order"], before)
+
+    def test_strike_selection_targets_then_second_button_click_cancels(self):
+        from screens.map_related_screens.orders import ACTION_COL_BOMBARD
+        self.screen.set_air_mission(self.unit, self.base, "WEAKEST")
+        self.screen.set_air_mission(self.unit, self.base, "STRIKE", row_key=0)
+        self.assertEqual(self.screen.bombarding_unit_index, 0)
+        self.assertEqual(self.unit["order"], {"type": "MOVE", "path": []})
+        self.assertEqual(self.buttons()[ACTION_COL_BOMBARD].args[6], "Strike Selected")
+        self.screen.set_bombard_target(0, self.target, self.base)
+        self.assertEqual(self.unit["order"], queries.canonical_air_order(self.game, self.unit, self.base,
+            {"type": "AIR_ATTACK", "target_id": 2}))
+        with patch("screens.map_related_screens.orders._AirMissionSelectScreen") as popup:
+            self.screen.open_air_mission_select(0, self.base)
+            popup.assert_not_called()
+        self.assertEqual(self.unit["order"], {"type": "MOVE", "path": []})
+        self.assertIsNone(self.screen.bombarding_unit_index)
+        self.assertEqual(self.buttons()[ACTION_COL_BOMBARD].args[6], "No Mission")
+
+    def test_no_mission_clears_patrol_and_pending_strike_targeting(self):
+        self.screen.set_air_mission(self.unit, self.base, "STRONGEST")
+        self.screen.set_air_mission(self.unit, self.base, "NONE")
+        self.assertEqual(self.unit["order"], {"type": "MOVE", "path": []})
+        self.screen.set_air_mission(self.unit, self.base, "STRIKE")
+        self.screen.set_air_mission(self.unit, self.base, "NONE")
+        self.assertIsNone(self.screen.bombarding_unit_index)
+
+    def test_selection_rechecks_stale_identity_permissions_and_combat(self):
+        for condition in ("foreign", "tactical", "read_only", "removed", "replaced_province", "combat", "water"):
+            self.setUp()
+            before = dict(self.unit["order"])
+            if condition == "foreign":
+                self.unit["owner"] = "B"
+            elif condition == "tactical":
+                self.game.tactical_mode = True
+                self.game.player_unit = wing(self.base)
+            elif condition == "read_only":
+                self.screen.read_only = True
+            elif condition == "removed":
+                self.base["units"] = []
+            elif condition == "replaced_province":
+                self.game.id_to_province[1] = dict(self.base)
+            elif condition == "combat":
+                wing(self.base, "Infantry Type 1910", "B")
+            elif condition == "water":
+                self.base["terrain"] = c.WATER_TERRAINS[0]
+            for mission in ("WEAKEST", "STRIKE"):
+                with self.subTest(condition=condition, mission=mission):
+                    self.screen.set_air_mission(self.unit, self.base, mission)
+                    self.assertEqual(self.unit["order"], before)
+
+    def test_mission_orders_use_existing_multiplayer_commands(self):
+        for mission in ("NONE", "WEAKEST", "STRONGEST", "STRIKE"):
+            with self.subTest(mission=mission):
+                self.screen.set_air_mission(self.unit, self.base, mission)
+                if mission == "STRIKE":
+                    self.screen.set_bombard_target(0, self.target, self.base)
+                order = dict(self.unit["order"])
+                command = {"type": "unit_order", "province_id": 1, "unit_index": 0,
+                           "unit_id": self.unit["unit_id"], "order": order}
+                self.assertEqual(MapRealtimeDriver(self.game).validate_draft("A", [command])[0]["order"], order)
+                _, drafts = multiplayer_io._validate_aircraft_orders(self.game, "A",
+                    {"aircraft_orders": [{"unit_id": self.unit["unit_id"], "order": order}]}, {})
+                self.assertEqual(drafts[0][1], order)
+
+    def test_named_aircraft_cannot_upgrade_through_ui_networks_or_execution(self):
+        self.base["buildings"] = ["Arms Factory Lvl 1"]
+        self.game.nation_data["A"]["research"] = {key: stats.get("max_lvl", 1)
+                                                   for key, stats in queries.get_tech_tree().items()}
+        for name, stats in queries.get_unit_library().items():
+            if stats.get("air_role") and queries.get_unit_tier(name) == 0:
+                self.assertIsNone(queries.get_upgrade_target(name, self.game.nation_data["A"]["research"],
+                                                            queries.get_unit_library(), queries.get_tech_tree()))
+        self.screen.upgrade_unit(0, "Jet Fighter", self.base)
+        self.assertNotEqual(self.unit["order"].get("type"), "UPGRADE")
+        order = {"type": "UPGRADE", "target_type": "Jet Fighter"}
+        command = {"type": "unit_order", "province_id": 1, "unit_index": 0, "order": order}
+        with self.assertRaises(RealtimeError):
+            MapRealtimeDriver(self.game).validate_draft("A", [command])
+        with self.assertRaises(ValueError):
+            multiplayer_io._validate_aircraft_orders(self.game, "A",
+                {"aircraft_orders": [{"unit_id": self.unit["unit_id"], "order": order}]}, {})
+        self.unit["order"] = dict(order, turns_left=1)
+        movement_processor.process_upgrades(self.game)
+        self.assertEqual(self.unit["type"], "Monoplane Fighter")
+
+    def test_numbered_aircraft_use_existing_upgrade_button_and_rule(self):
+        from screens.map_related_screens.orders import ACTION_COL_UPGRADE
+        # Artificial numbered family: real named aircraft do not get new tiers.
+        stats = dict(queries.get_unit_library()[self.unit["type"]])
+        library = {"Test Plane I": stats, "Test Plane II": dict(stats)}
+        tree = {"test_plane": {"max_lvl": 2, "req": {}, "years": [1900, 1901]}}
+        self.unit["type"] = "Test Plane I"
+        self.screen.unit_library = library
+        self.game.nation_data["A"]["research"] = {"test_plane": 2}
+        self.base["buildings"] = ["Arms Factory Lvl 1"]
+        with patch.object(queries, "get_unit_library", return_value=library), \
+                patch.object(queries, "get_tech_tree", return_value=tree):
+            target = queries.get_upgrade_target(self.unit["type"], {"test_plane": 2}, library, tree)
+            button = self.buttons()[ACTION_COL_UPGRADE]
+            self.assertTrue(button.kwargs["enabled"])
+            button.args[5]()
+            self.assertEqual(self.unit["order"]["target_type"], target)
+            movement_processor.process_upgrades(self.game)
+            self.assertEqual(self.unit["type"], target)
+
+
 class AirAppSmokeTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -1107,6 +1262,64 @@ class AirAppSmokeTests(unittest.TestCase):
             from data.map import save_map
             asyncio.run(save_map.save_map_data(game, "air-roundtrip"))
         return game, fighter, rocket, os.path.join(directory, "air-roundtrip")
+
+    def test_air_mission_popup_uses_real_icons_fits_and_applies_a_choice(self):
+        from pathlib import Path
+        from ui import modal_stack
+        from map_logic.rendering import symbol_loader
+        with tempfile.TemporaryDirectory() as directory:
+            _original, _fighter, _rocket, path = self.make_runtime_save(directory)
+            loaded = Map(load_path=path, skip_initial_income=True)
+            loaded.selection_mode = False
+            loaded.player_country = "A"
+            base = loaded.id_to_province[1]
+            fighter = base["units"][0]
+            loaded.select_map_units([fighter])
+            screen = Orders_Screen()
+            screen.start_with_province(base, loaded)
+            screen.open_air_mission_select(0, base)
+            wrapper = modal_stack.active()
+            popup = wrapper.screen
+            try:
+                self.assertEqual(len(popup.choices), 4)
+                self.assertTrue(self.surface.get_rect().contains(popup.panel_rect))
+                for index, (_mission, _label, icon) in enumerate(popup.choices):
+                    asset = Path(c.ASSETS_DIR) / (icon + ".png")
+                    self.assertEqual(asset.read_bytes()[:8], b"\x89PNG\r\n\x1a\n")
+                    self.assertEqual(symbol_loader._resolve_name(icon)[1], icon)
+                    button = popup.elements[index]
+                    self.assertTrue(popup.panel_rect.contains(button.rect))
+                    self.assertIs(button.right_image, screen._get_action_icon(icon))
+                    self.assertLess(button.font.size(button.text)[0],
+                                    button.rect.width - button.right_image.get_width() - 15)
+                    for other in popup.elements[index + 1:]:
+                        self.assertFalse(button.rect.colliderect(other.rect))
+                with patch.object(queries, "canonical_air_order", side_effect=AssertionError("frame air rule")), \
+                        patch.object(queries, "get_air_targets", side_effect=AssertionError("frame range sweep")):
+                    wrapper.draw(self.surface)
+                weakest_index = next(i for i, choice in enumerate(popup.choices) if choice[0] == "WEAKEST")
+                popup.elements[weakest_index].callback()
+                wrapper.update()
+                self.assertEqual(fighter["order"]["priority"], "WEAKEST")
+                self.assertIsNot(modal_stack.active(), wrapper)
+            finally:
+                if modal_stack.active() is wrapper:
+                    modal_stack.pop()
+
+    def test_dismissing_air_mission_popup_preserves_existing_mission(self):
+        from ui import modal_stack
+        game = world()
+        base = tile(game, 1, 8)
+        fighter = wing(base, "Monoplane Fighter", order={"type": "AIR_PATROL", "priority": "STRONGEST"})
+        screen = Orders_Screen()
+        screen.map_screen = game
+        before = dict(fighter["order"])
+        screen.open_air_mission_select(0, base)
+        wrapper = modal_stack.active()
+        wrapper.screen.handle_back_key()
+        wrapper.update()
+        self.assertIsNot(modal_stack.active(), wrapper)
+        self.assertEqual(fighter["order"], before)
 
     def test_actual_load_unpacks_legacy_air_trucks_with_health_and_identity_intact(self):
         with tempfile.TemporaryDirectory() as directory:

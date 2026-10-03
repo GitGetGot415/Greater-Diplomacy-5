@@ -119,8 +119,8 @@ class _NavigationIntroPopup:
         ("Country actions", "relations", "Click another country's tile to see available diplomatic actions you can take against them."),
     )
     AIR_STEPS = (
-        ("Strike", "Choose a strike target inside or touching the range outline in Orders. After interception, aircraft fight one combat exchange; defenders can fire back. Surviving reusable aircraft return to base with their losses. Tanks-category units cannot damage aircraft in flight. Research unlocks show which aircraft can damage forts."),
-        ("Patrol", "Fighters cover their listed range. The patrol icon cycles weakest attacking force first, strongest first, then off. Survivors may intercept several missions."),
+        ("Missions", "In Orders, use the mission button to choose No mission, Defend area (weakest or strongest first), or Strike. Defend area is available to fighters. Click an active strike's mission button again to cancel it."),
+        ("Strike / defend", "Strike lets you select a tile inside the range outline. Defenders can fire back; reusable survivors return to base with their losses. Tanks cannot damage aircraft in flight. Research shows fort damage capability. Defend area covers listed range; survivors may intercept several missions."),
         ("Reposition", "Right-click land to move reusable planes up to twice their listed range. Reach uses map pixels and tile edges; zoom never changes it. Aircraft cannot capture land."),
         ("V1 and V2", "Strikes consume the weapon; V2 bypasses interception. Relocate on land at ground speed. Air units can load into Convoys at a coast and unload on land. Aircraft caught in ground combat die immediately."),
     )

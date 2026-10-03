@@ -1552,7 +1552,11 @@ def get_highest_infantry(nation_data_block, tech_tree, unit_library, allow_fuel_
     return check_upgrade("infantry_type", "Infantry Type {}") or (default_name if default_name in unit_library else None)
 
 def get_upgrade_target(unit_type, player_research, unit_library, tech_tree):
-    """Determines if a higher level of the current unit type is unlocked and returns its name."""
+    """Return an unlocked higher level within the current numbered unit family."""
+    # Upgrades stay within a numbered family. Named aircraft research unlocks
+    # production, not a conversion between aircraft designs.
+    if get_unit_tier(unit_type) <= 0:
+        return None
     base_name = get_base_unit_name(unit_type)
     
     # Strip "Type" to get the pure class ("Infantry", "Motorized Infantry") so string formatting doesn't duplicate it
@@ -5672,6 +5676,8 @@ def canonical_unit_order(map_screen, country_id, province, unit, order):
         unit_library = get_unit_library()
         research = map_screen.nation_data[country_id].get("research", {})
         if (not isinstance(target_type, str) or target_type not in unit_library
+                or target_type != get_upgrade_target(unit.get("type", ""), research,
+                                                     unit_library, get_tech_tree())
                 or not is_unit_unlocked(target_type, research)
                 or not has_industry(province)
                 or is_nation_in_combat_here(country_id, province, map_screen.nation_data)):

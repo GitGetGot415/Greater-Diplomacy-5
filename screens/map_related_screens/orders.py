@@ -11,6 +11,7 @@ from map_logic.rendering import overlay_renderer
 from ui.bars import ui_bars, resource_hud, view_mode_buttons
 from ui import army_panel, event_handler, map_top_right_layout
 from screens.map_related_screens import battle_screen
+from ui.modal_screen import ModalScreen
 
 # ==========================================
 # COMPACT ORDERS PANEL LAYOUT
@@ -47,7 +48,7 @@ UNIT_HEALTH_BAR_OFFSET_Y = 35
 UNIT_HEALTH_BAR_HEIGHT = 3
 
 # Six tightly packed icon commands: convert, disband, repair, rename, upgrade,
-# bombard. Their full live status is shown in the header when hovered.
+# bombard (air mission for aircraft). Live status appears in the hovered header.
 ACTION_START_OFFSET_X = 242
 ACTION_BUTTON_STEP_X = 28
 ACTION_BUTTON_OFFSET_Y = 6
@@ -84,6 +85,43 @@ BOMBARD_PREVIEW_ALPHA = 160
 
 WHEEL_SCROLL_STEP = 30
 UNIT_ICON_ZOOM = 1.5
+
+
+AIR_MISSION_CHOICES = (
+    ("NONE", "No mission", "No Mission"),
+    ("WEAKEST", "Defend area (weakest missions targeted first)", "Weakest First"),
+    ("STRONGEST", "Defend area (strongest missions targeted first)", "Strongest First"),
+    ("STRIKE", "Strike", "Strike Selected"),
+)
+AIR_MISSION_ICONS = {mission: icon for mission, _label, icon in AIR_MISSION_CHOICES}
+
+
+class _AirMissionSelectScreen(ModalScreen):
+    """One click selects an air mission; Back dismisses without changing it."""
+    PANEL_SIZE = (620, 330)
+    OPTION_TOP = 65
+    OPTION_GAP = 48
+    OPTION_INSET = 20
+    CANCEL_BOTTOM = 46
+
+    def __init__(self, orders, choices, on_select):
+        super().__init__(orders.map_screen, "Select air mission")
+        self.choices = choices
+        self.elements = []
+        for row, (mission, label, icon) in enumerate(choices):
+            button = self.button(self.panel_rect.x + self.OPTION_INSET,
+                self.panel_rect.y + self.OPTION_TOP + row * self.OPTION_GAP,
+                self.panel_rect.width - 2 * self.OPTION_INSET, "blue", label,
+                lambda selected=mission: self.select(selected, on_select))
+            button.right_image = orders._get_action_icon(icon)
+            self.elements.append(button)
+        self.elements.append(self.button(self.panel_rect.x + self.OPTION_INSET,
+            self.panel_rect.bottom - self.CANCEL_BOTTOM,
+            self.panel_rect.width - 2 * self.OPTION_INSET, "red", "Cancel", self.exit_screen))
+
+    def select(self, mission, on_select):
+        self.exit_screen()
+        on_select(mission)
 
 
 class _OrdersRowHitbox(Button):
@@ -729,14 +767,7 @@ class Orders_Screen(GameState):
             btn_rename = add(ACTION_COL_RENAME, "blue", "Rename unit",
                              lambda idx=index, p=province, key=row_key: self.start_renaming(idx, p, key), "Text")
 
-        if queries.is_air_unit(unit):
-            priority = order.get("priority", queries.AIR_DEFAULT_PRIORITY)
-            enabled = queries.air_unit_stats(unit).get("air_role") == "fighter" and not is_water and not in_combat
-            add(ACTION_COL_UPGRADE, "blue" if enabled else "grey",
-                f"Patrol: {priority.lower()} force first; click to cycle priority or cancel"
-                if order_type == "AIR_PATROL" else "Patrol: weakest attacking force first",
-                lambda idx=index, p=province: self.cycle_air_patrol(idx, p), "Upgrading", enabled=enabled)
-        elif order_type == "UPGRADE":
+        if order_type == "UPGRADE":
             btn_upgrade = add(ACTION_COL_UPGRADE, "red", "Cancel upgrade order",
                               lambda idx=index, p=province: self.cancel_unit_order(idx, p), "Upgrading")
         else:
@@ -758,9 +789,13 @@ class Orders_Screen(GameState):
                     "Upgrading")
 
         if queries.is_air_unit(unit):
-            add(ACTION_COL_BOMBARD, "yellow", "Choose air strike target: defenders can fire back",
-                lambda idx=index, p=province, key=row_key: self.start_bombard_targeting(idx, p, key),
-                "Bombardment Arrows", enabled=not is_water and not in_combat)
+            mission = ("STRIKE" if order_type == "AIR_ATTACK" or self.bombarding_unit_index == row_key
+                       else order.get("priority", queries.AIR_DEFAULT_PRIORITY)
+                       if order_type == "AIR_PATROL" else "NONE")
+            add(ACTION_COL_BOMBARD, "yellow", "Cancel strike mission" if mission == "STRIKE"
+                else "Select air mission: no mission, defend area, or strike",
+                lambda idx=index, p=province, key=row_key: self.open_air_mission_select(idx, p, key),
+                AIR_MISSION_ICONS[mission])
         elif order_type == "BOMBARD":
             btn_bombard = add(ACTION_COL_BOMBARD, "red", "Cancel bombardment",
                               lambda idx=index, p=province: self.cancel_unit_order(idx, p),
@@ -1139,6 +1174,13 @@ class Orders_Screen(GameState):
         unit = units[index]
         if self._command_blocked(unit):
             return
+        research = self.map_screen.nation_data[unit["owner"]].get("research", {})
+        expected = queries.get_upgrade_target(unit.get("type", ""), research,
+                                             self.unit_library, queries.get_tech_tree())
+        if expected is None or target_type != expected:
+            self.map_screen.show_feedback("No legal numbered-unit upgrade is available.")
+            return
+        self._refund_unit_order(unit)
         unit["order"] = {
             "type": "UPGRADE",
             "turns_left": 1,
@@ -1159,6 +1201,15 @@ class Orders_Screen(GameState):
             return
 
         unit = units[index]
+        if queries.is_air_unit(unit):
+            if (queries.is_water_province(province)
+                    or queries.is_nation_in_combat_here(queries.get_unit_combat_owner(unit),
+                                                       province, self.map_screen.nation_data)):
+                self.map_screen.show_feedback("Air missions require a land base outside ground combat.")
+                return
+            self._refund_unit_order(unit)
+            unit["order"] = {"type": "MOVE", "path": []}
+            self._mark_draft_changed()
         self.bombard_air_radius = None
         if queries.is_air_unit(unit):
             self.targeting_label = "air mission"
@@ -1180,11 +1231,12 @@ class Orders_Screen(GameState):
             self.map_screen.show_feedback("Select a tile within range to bombard.")
         self.refresh_ui()
 
-    def cancel_bombard_targeting(self):
+    def cancel_bombard_targeting(self, refresh=True):
         self.bombarding_unit_index = None
         self.bombarding_unit_province = None
         self.bombarding_unit_actual_index = None
-        self.refresh_ui()
+        if refresh:
+            self.refresh_ui()
 
     def set_bombard_target(self, index, dest, province=None):
         province = province or self.bombarding_unit_province or self.target_province
@@ -1301,23 +1353,52 @@ class Orders_Screen(GameState):
             self.map_screen.show_feedback(f"Converting to {target_type} ({turns} turns)")
             self.refresh_ui()
 
-    def cycle_air_patrol(self, index, province):
-        unit = province["units"][index]
-        if self._command_blocked(unit):
+    def open_air_mission_select(self, index, province, row_key=None):
+        units = province.get("units", [])
+        if not 0 <= index < len(units):
+            return
+        unit = units[index]
+        if self._command_blocked(unit) or not queries.is_air_unit(unit):
             return
         order = unit.get("order") or {}
-        if order.get("type") == "AIR_PATROL" and order.get("priority") == "STRONGEST":
-            unit["order"] = {"type": "MOVE", "path": []}
-        else:
-            priority = "STRONGEST" if order.get("type") == "AIR_PATROL" else queries.AIR_DEFAULT_PRIORITY
+        if (order.get("type") == "AIR_ATTACK"
+                or (self.bombarding_unit_province is province and self.bombarding_unit_actual_index == index
+                    and self.bombarding_unit_index is not None)):
+            self.set_air_mission(unit, province, "NONE", row_key)
+            return
+        choices = [choice for choice in AIR_MISSION_CHOICES
+                   if choice[0] not in queries.AIR_INTERCEPTION_PRIORITIES
+                   or queries.air_unit_stats(unit).get("air_role") == "fighter"]
+        from ui.screen_runner import _run_pygame_sub_screen
+        popup = _AirMissionSelectScreen(self, choices,
+            lambda mission: self.set_air_mission(unit, province, mission, row_key))
+        _run_pygame_sub_screen(self.map_screen, popup)
+
+    def set_air_mission(self, unit, province, mission, row_key=None):
+        # The selector may outlive a snapshot, a country switch, or a unit's
+        # current form. Recheck its live identity and permissions on selection.
+        if self.map_screen.id_to_province.get(province["id"]) is not province:
+            return
+        index = next((i for i, current in enumerate(province.get("units", [])) if current is unit), None)
+        if index is None or not queries.is_air_unit(unit) or mission not in AIR_MISSION_ICONS:
+            return
+        if self._command_blocked(unit):
+            return
+        if mission == "STRIKE":
+            self.start_bombard_targeting(index, province, row_key)
+            return
+        if mission in queries.AIR_INTERCEPTION_PRIORITIES:
             try:
-                patrol = queries.canonical_air_order(self.map_screen, unit, province,
-                    {"type": "AIR_PATROL", "priority": priority})
+                order = queries.canonical_air_order(self.map_screen, unit, province,
+                    {"type": "AIR_PATROL", "priority": mission})
             except ValueError as exc:
                 self.map_screen.show_feedback(str(exc))
                 return
-            self._refund_unit_order(unit)
-            unit["order"] = patrol
+        else:
+            order = {"type": "MOVE", "path": []}
+        self._refund_unit_order(unit)
+        unit["order"] = order
+        self.cancel_bombard_targeting(refresh=False)
         self._mark_draft_changed()
         self.refresh_ui()
 
@@ -1658,8 +1739,9 @@ class Orders_Screen(GameState):
             return f"Bombard: P{order.get('target_id', '?')}", BOMBARD_TARGET_COLOR
         if order_type in queries.AIR_ORDER_TYPES:
             radius = queries.air_order_radius(unit, order_type)
-            label = (f"Patrol: {order.get('priority', queries.AIR_DEFAULT_PRIORITY).lower()} first"
-                     if order_type == "AIR_PATROL" else f"{order_type[4:].title()}: P{order.get('target_id', '?')}")
+            label = (f"Defend area: {order.get('priority', queries.AIR_DEFAULT_PRIORITY).lower()} first"
+                     if order_type == "AIR_PATROL" else
+                     f"{'Strike' if order_type == 'AIR_ATTACK' else 'Reposition'}: P{order.get('target_id', '?')}")
             return f"{label} | {radius:g}px", BOMBARD_TARGET_COLOR
         if order_type == "CONVERT":
             return f"Convert to {order.get('to', '?')}{turn_suffix}", (100, 180, 255)

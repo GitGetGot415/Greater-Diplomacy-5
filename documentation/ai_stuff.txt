@@ -79,6 +79,12 @@ and V2 alone bypasses
 interception. Jet Engine remains a research gate.
 Listed air range is strike/patrol reach; reusable reposition reaches twice that
 distance because it does not reserve a return leg.
+Orders exposes patrol through the air mission selector as Defend area, with
+weakest-first and strongest-first choices available only to fighters. Strike
+uses map targeting, and No mission (or clicking an active strike's button)
+cancels the air order. The four mission icons reflect the current choice.
+The upgrade button uses the existing numbered-family upgrade helper for every
+unit; named aircraft designs remain separate production unlocks.
 After interception, strikes use a normal simultaneous combat exchange against
 the target garrison, including terrain width, coalition lanes and reserves.
 Defenders can damage or destroy aircraft; Tanks-category immunity still applies
