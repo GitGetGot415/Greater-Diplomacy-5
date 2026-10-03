@@ -300,6 +300,46 @@ class ArmyQueryTests(unittest.TestCase):
                                  - destinations.count(fourth["id"])), 1)
 
 class ArmyLayoutTests(unittest.TestCase):
+    def _name_editor_map(self):
+        army = {"id": "army", "name": "Army 1", "unit_ids": []}
+        map_stub = SimpleNamespace(player_country="A", nation_data={"A": {"armies": [army]}},
+                                   map_data={}, army_custom_symbol_state=None)
+        army_panel._open_editor(map_stub, army)
+        return map_stub
+
+    def test_army_name_editor_accepts_clipboard_shortcuts(self):
+        for key, modifiers in ((pygame.K_v, pygame.KMOD_CTRL),
+                               (pygame.K_v, pygame.KMOD_GUI),
+                               (pygame.K_INSERT, pygame.KMOD_SHIFT)):
+            with self.subTest(key=key, modifiers=modifiers):
+                map_stub = self._name_editor_map()
+                paste = pygame.event.Event(pygame.KEYDOWN, key=key, mod=modifiers, unicode="")
+                with patch("ui_elements._clipboard_text", return_value=" Northern\nCommand"), \
+                     patch("ui_elements.pygame.key.get_mods", return_value=0):
+                    self.assertTrue(army_panel.handle_event(map_stub, paste))
+                self.assertEqual(map_stub.army_editor_state["name"], "Army 1 NorthernCommand")
+                self.assertEqual(map_stub.nation_data["A"]["armies"][0]["name"], "Army 1")
+
+    def test_army_name_editor_limits_pasted_text(self):
+        map_stub = self._name_editor_map()
+        paste = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_v,
+                                   mod=pygame.KMOD_CTRL, unicode="")
+        with patch("ui_elements._clipboard_text", return_value="x" * 100), \
+             patch("ui_elements.pygame.key.get_mods", return_value=0):
+            army_panel.handle_event(map_stub, paste)
+        self.assertEqual(map_stub.army_editor_state["name"], "Army 1" + "x" * (80 - len("Army 1")))
+
+    def test_army_name_editor_copies_current_name(self):
+        for modifiers in (pygame.KMOD_CTRL, pygame.KMOD_GUI):
+            with self.subTest(modifiers=modifiers):
+                map_stub = self._name_editor_map()
+                copy = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_c,
+                                          mod=modifiers, unicode="c")
+                with patch("ui.army_panel.queries.copy_to_clipboard", return_value=True) as clipboard:
+                    self.assertTrue(army_panel.handle_event(map_stub, copy))
+                clipboard.assert_called_once_with("Army 1")
+                self.assertEqual(map_stub.army_editor_state["name"], "Army 1")
+
     def test_army_card_controls_are_vertical_and_non_overlapping(self):
         card = pygame.Rect(100, 100, map_top_right_layout.PANEL_WIDTH,
                            map_top_right_layout.CARD_HEIGHT)

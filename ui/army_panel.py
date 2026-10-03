@@ -7,6 +7,7 @@ from data import queries
 from map_logic.rendering import symbol_loader
 from map_logic.rendering.font_manager import fonts
 from ui import map_top_right_layout
+from ui_elements import process_text_input
 
 
 TRAY_BG = (15, 22, 42, 225)
@@ -371,12 +372,12 @@ def _handle_editor_event(map_screen, event):
             handle_back_key(map_screen)
         elif event.key == pygame.K_RETURN:
             _save_editor(map_screen)
-        elif event.key == pygame.K_a and event.mod & pygame.KMOD_CTRL:
+        elif event.key == pygame.K_a and event.mod & (pygame.KMOD_CTRL | pygame.KMOD_GUI):
             state["name"] = ""
-        elif event.key == pygame.K_BACKSPACE:
-            state["name"] = state["name"][:-1]
-        elif event.unicode and event.unicode.isprintable() and len(state["name"]) < 80:
-            state["name"] += event.unicode
+        elif event.key == pygame.K_c and event.mod & (pygame.KMOD_CTRL | pygame.KMOD_GUI):
+            queries.copy_to_clipboard(state["name"])
+        else:
+            state["name"], _ = process_text_input(event, state["name"], max_length=80)
         return True
     if event.type == pygame.MOUSEMOTION and state.get("color_channel") is not None:
         if event.buttons[0]:
