@@ -230,6 +230,7 @@ CREDITS_DATA = [
                         {"path": "assets/symbols/commanderg_Eagle.png"},
                         {"path": "assets/symbols/commanderg_HammerAndSickle.png"},
                         {"path": "assets/symbols/commanderg_WizardHat.png"},
+                        {"path": "assets/symbols/commanderg_Skull.png"},
                     ],
                     "align": "left",
                 },
