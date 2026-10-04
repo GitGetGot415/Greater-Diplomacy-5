@@ -955,6 +955,11 @@ def is_faction_leader(nation, nation_data):
     """Returns True if the nation is currently a faction leader."""
     return nation_data.get(nation, {}).get("is_faction_leader", False)
 
+def can_invite_to_faction(nation, nation_data):
+    """Only the leader of an existing faction can invite new members."""
+    return bool(nation_data.get(nation, {}).get("faction")
+                and is_faction_leader(nation, nation_data))
+
 def get_historical_owner(province, faction_name, nation_data):
     """Returns the pre-war owner of a tile if a faction war is active, otherwise the primary core."""
     if faction_name and "FACTION_WAR_MAPS" in nation_data and faction_name in nation_data["FACTION_WAR_MAPS"]:

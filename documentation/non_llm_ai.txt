@@ -266,6 +266,7 @@ It cannot independently join, receive an invitation to, or leave a faction.
 pull_puppets_into_faction moves puppets with their master.
 
 queries.can_negotiate_peace and queries.can_choose_own_faction define the shared restrictions.
+queries.can_invite_to_faction permits invitations only from the leader of an existing faction.
 treaty_effects.apply_treaty_effect and faction_actions enforce them.
 This includes crossing invitations.
 

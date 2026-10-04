@@ -974,7 +974,9 @@ def update_button_states(map_screen):
                     set_btn(map_screen.btn_spec_create_fac, True, True, "Create Faction", "blue")
                     set_btn(map_screen.btn_spec_join_fac, True, True, "Join Faction", "green")
                 else:
-                    set_btn(map_screen.btn_spec_invite_fac, True, True, "Invite to Faction", "blue")
+                    set_btn(map_screen.btn_spec_invite_fac, True,
+                            queries.can_invite_to_faction(owner, map_screen.nation_data),
+                            "Invite to Faction", "blue")
                     if is_leader:
                         set_btn(map_screen.btn_spec_disband_fac, True, True, "Disband Faction", "red")
                     else:
@@ -1193,7 +1195,9 @@ def update_button_states(map_screen):
                 they_are_free = queries.can_choose_own_faction(owner, map_screen.nation_data)
                 i_am_free = queries.can_choose_own_faction(map_screen.player_country, map_screen.nation_data)
 
-                can_invite = bool(not factions_disabled and my_faction and not target_faction
+                can_invite = bool(not factions_disabled
+                                  and queries.can_invite_to_faction(map_screen.player_country, map_screen.nation_data)
+                                  and not target_faction
                                   and not at_war and they_are_free)
                 inv_text = get_status_text("INVITE") if pending_action == "FACTION_INVITE" else "Invite to Faction"
                 set_btn(map_screen.btn_fac_invite, True, can_invite or pending_action == "FACTION_INVITE", inv_text, "green")

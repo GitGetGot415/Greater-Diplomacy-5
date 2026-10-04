@@ -993,7 +993,7 @@ def _invite_friends_to_faction(bag, map_screen, ai_name, data, active_nations, w
     accept, but no AI ever sent one -- factions only ever grew by outsiders
     asking to be let in, so a strong bloc never courted anyone.
     """
-    if not data.get("is_faction_leader") or getattr(c, "DISABLE_FACTIONS", False):
+    if not queries.can_invite_to_faction(ai_name, map_screen.nation_data) or getattr(c, "DISABLE_FACTIONS", False):
         return
 
     for other in sorted(active_nations):

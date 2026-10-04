@@ -171,6 +171,33 @@ class TournamentMoveTests(unittest.TestCase):
         self.assertIn("New Pact", host.nation_data["FACTION_WAR_MAPS"])
         self.assertNotIn("Old Pact", host.nation_data["FACTION_WAR_MAPS"])
 
+    def test_only_host_faction_leaders_can_send_imported_invitations(self):
+        from tests.stub_map_screen import StubMapScreen
+        from map_logic.diplomacy import diplomacy_processor
+
+        for country_id in ("Leader", "Member"):
+            with self.subTest(country_id=country_id):
+                host = Host()
+                move = self.player_data(country_id, host)
+                # A player record cannot grant leadership on the host.
+                move["nation_data"]["is_faction_leader"] = True
+                move["nation_data"]["pending_diplomacy"] = {
+                    "Outsider": {"action": "FACTION_INVITE", "turns": 0,
+                                 "timer": 0, "message": "Please join."}}
+                with tempfile.TemporaryDirectory() as directory:
+                    path = self.write_move(directory, "invitation.gd5move", country_id, move)
+                    summary = self.import_moves(host, [path])
+                self.assertEqual(summary["loaded"], 1)
+                game = StubMapScreen(["Leader", "Member", "Outsider"],
+                                     human_players=["Leader", "Member", "Outsider"])
+                for nation, data in host.nation_data.items():
+                    game.nation_data.setdefault(nation, {}).update(data)
+                diplomacy_processor._process_pass1_immediate_actions(game)
+                self.assertEqual(bool(game.inbound("Outsider", country_id)), country_id == "Leader")
+                if country_id == "Member":
+                    self.assertFalse(game.nation_data[country_id]["is_faction_leader"])
+                    self.assertEqual(game.pending_action(country_id, "Outsider"), "")
+
     def test_legacy_faction_rename_is_repaired_on_import(self):
         host = Host()
         legacy_data = {"nation_data": dict(host.nation_data["Leader"]), "provinces": {}}

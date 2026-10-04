@@ -54,6 +54,10 @@ def toggle_diplomacy_action(nation_data, player_name, target_name, action_type, 
             # Prevents declaring war while an alliance request is pending, etc.
             return "A diplomatic action is already pending with this nation!"
 
+    # A former leader can still cancel an unsent invitation above.
+    if action_type == "FACTION_INVITE" and not queries.can_invite_to_faction(player_name, nation_data):
+        return "Only a faction leader may invite members."
+
     # --- THE FIX: Prevent multiple faction requests ---
     faction_actions = ["CREATE_FACTION", "JOIN_FACTION_REQ"]
     if action_type in faction_actions:
@@ -213,7 +217,7 @@ def action_is_legal(map_screen, sender, target, action_type):
     elif action_type == "FACTION_INVITE":
         if getattr(c, "DISABLE_FACTIONS", False):
             return False, "factions are disabled"
-        if not queries.is_faction_leader(sender, nation_data):
+        if not queries.can_invite_to_faction(sender, nation_data):
             return False, "only a faction leader may invite members"
         if not queries.can_choose_own_faction(target, nation_data):
             return False, "a puppet follows its master's faction"
@@ -380,12 +384,14 @@ def _resolve_simultaneous_clashes(map_screen):
             a_action = a_info.get("action")
             b_action = b_info.get("action")
 
-            if a_action == "JOIN_FACTION_REQ" and b_action == "FACTION_INVITE":
+            if (a_action == "JOIN_FACTION_REQ" and b_action == "FACTION_INVITE"
+                    and queries.can_invite_to_faction(nation_b, map_screen.nation_data)):
                 if finalize_faction_join(map_screen.map_data, map_screen.nation_data, nation_b, nation_a):
                     log_global_event(map_screen.nation_data, f"{nation_a} and {nation_b} have united their factions!")
                 _resolve_cross_action(map_screen, nation_a, nation_b, a_data, b_data, "CROSS_FACTION_JOIN")
 
-            elif b_action == "JOIN_FACTION_REQ" and a_action == "FACTION_INVITE":
+            elif (b_action == "JOIN_FACTION_REQ" and a_action == "FACTION_INVITE"
+                  and queries.can_invite_to_faction(nation_a, map_screen.nation_data)):
                 if finalize_faction_join(map_screen.map_data, map_screen.nation_data, nation_a, nation_b):
                     log_global_event(map_screen.nation_data, f"{nation_a} and {nation_b} have united their factions!")
                 _resolve_cross_action(map_screen, nation_a, nation_b, a_data, b_data, "CROSS_FACTION_JOIN")
@@ -1029,6 +1035,12 @@ def _process_pass1_immediate_actions(map_screen):
                     turns = 0 # Force execution this turn
 
             if turns == 0:
+                # Recheck imported drafts and leadership changes before delivery.
+                if action == "FACTION_INVITE" and not queries.can_invite_to_faction(country_name, map_screen.nation_data):
+                    actions_to_clear.append(target)
+                    if country_name == map_screen.player_country:
+                        map_screen.show_feedback("Only a faction leader may invite members.")
+                    continue
                 info["_processed_this_turn"] = True
                 # EXECUTE unilateral actions instantly on Turn 0
                 if action == "JUSTIFY_WARGOAL":

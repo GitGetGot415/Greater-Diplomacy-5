@@ -164,6 +164,13 @@ UI rendering must not consume game randomness to predict those conditions.
 Faction leadership
 ------------------
 
+Only the current faction leader can invite countries into an existing faction.
+An ordinary member cannot send an invitation.
+The game checks leadership when drafting, sending, and resolving an invitation.
+A former leader can cancel an unsent invitation.
+These rules also apply to scripted invitations, spectator invitation controls, and both multiplayer modes.
+Editor faction setup can assign members directly.
+
 A member can challenge leadership after exceeding the leader's power by the required margin for six consecutive turns.
 When several eligible claims resolve together, the claimant with the highest nation power becomes leader.
 Country-data order does not decide the result.

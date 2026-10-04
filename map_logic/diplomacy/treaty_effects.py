@@ -126,7 +126,7 @@ def apply_treaty_effect(host, action, proposer, accepter, params=None, escrow=No
             return _blocked("PUPPET_CANNOT_CHOOSE_FACTION")
         if nation_data[accepter].get("faction", ""):
             return _blocked("ACCEPT_FACTION_ALREADY_IN")
-        if not queries.is_faction_leader(proposer, nation_data):
+        if not queries.can_invite_to_faction(proposer, nation_data):
             return TreatyOutcome("Only a faction leader may invite members.", None)
         finalize_faction_join(map_data, nation_data, proposer, accepter)
 

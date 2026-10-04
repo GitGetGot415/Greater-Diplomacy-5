@@ -1213,6 +1213,8 @@ class MapRealtimeDriver:
         In-flight proposals remain on the authoritative map; clients can only
         replace their own unsent proposals and responses for the current turn.
         """
+        from data import queries
+
         self._country(country_id)
         pending = command.get("pending", {})
         responses = command.get("responses", {})
@@ -1247,6 +1249,8 @@ class MapRealtimeDriver:
                 text(action[4:], "message")
             elif action not in allowed_actions:
                 raise RealtimeError("Unknown diplomatic action.")
+            if action == "FACTION_INVITE" and not queries.can_invite_to_faction(country_id, self.map_ref.nation_data):
+                raise RealtimeError("Only a faction leader may invite members.")
             timer = info.get("timer", 0)
             if not isinstance(timer, int) or isinstance(timer, bool) or not -1 <= timer <= 1000:
                 raise RealtimeError("Invalid diplomacy timer.")
