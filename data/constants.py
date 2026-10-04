@@ -1217,8 +1217,11 @@ COMBAT_WIDTH_BY_TERRAIN = {
     "plains": 20,
 }
 
-# Flying stacks have no width limit. These fractions control attack efficiency.
+# Flying stacks have no width limit. These constants control attack efficiency.
 AIR_STACK_EFFICIENCY_PENALTY = 0.15
+AIR_STACK_EFFICIENCY_BREAKPOINT = 17
+AIR_STACK_LARGE_EFFICIENCY_BASE = 0.60
+AIR_STACK_LARGE_EFFICIENCY_PENALTY = 0.05
 AIR_STACK_MIN_ATTACK_EFFICIENCY = 0.25
 
 # What a unit at 0% health still deals, as a fraction of its full attack. Damage

@@ -266,8 +266,10 @@ Opposing coalitions have separate counts. Neutral aircraft do not count.
 Interception-immune forces remain separate missions.
 
 queries.air_stack_attack_efficiency supplies the shared attack multiplier.
-For x aircraft, attack efficiency is max(25, 100 - 15 * sqrt(x - 1)) percent.
-The minimum applies from 26 aircraft onward.
+For x <= 17 aircraft, attack efficiency is 100 - 15 * sqrt(x - 1) percent.
+For x > 17 aircraft, attack efficiency is max(25, 60 - 5 * sqrt(x - 1)) percent.
+Both curves give 40 percent at 17 aircraft.
+The minimum applies from 50 aircraft onward.
 Read the tuning constants in data/constants.py.
 
 Apply efficiency to aircraft attack before target modifiers and defense.

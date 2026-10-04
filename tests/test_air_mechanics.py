@@ -1,6 +1,7 @@
 """Air rules across resolution, UI/AI, persistence and both network boundaries."""
 import asyncio
 import json
+import math
 import os
 import tempfile
 import unittest
@@ -448,14 +449,32 @@ class AirResolutionTests(unittest.TestCase):
         self.assertTrue(all(not side.reserve for lane in battles[0].lanes for side in (lane.a, lane.b)))
 
     def test_air_stack_curve_and_floor(self):
-        for count in (0, 1, 2, 3, 10, 26, 100):
+        breakpoint = c.AIR_STACK_EFFICIENCY_BREAKPOINT
+        floor_count = math.ceil(((c.AIR_STACK_LARGE_EFFICIENCY_BASE - c.AIR_STACK_MIN_ATTACK_EFFICIENCY)
+                                / c.AIR_STACK_LARGE_EFFICIENCY_PENALTY) ** 2 + 1)
+        for count in (0, 1, 2, 3, 10, breakpoint - 1, breakpoint, breakpoint + 1,
+                      26, floor_count - 1, floor_count, floor_count + 1, 100):
             with self.subTest(count=count):
+                base, penalty = ((1.0, c.AIR_STACK_EFFICIENCY_PENALTY) if count <= breakpoint else
+                                 (c.AIR_STACK_LARGE_EFFICIENCY_BASE, c.AIR_STACK_LARGE_EFFICIENCY_PENALTY))
                 expected = max(c.AIR_STACK_MIN_ATTACK_EFFICIENCY,
-                    1 - c.AIR_STACK_EFFICIENCY_PENALTY * max(0, count - 1) ** 0.5)
+                               base - penalty * max(0, count - 1) ** 0.5)
                 self.assertAlmostEqual(queries.air_stack_attack_efficiency(count), expected)
+        self.assertGreater(queries.air_stack_attack_efficiency(floor_count - 1), c.AIR_STACK_MIN_ATTACK_EFFICIENCY)
+        self.assertAlmostEqual(queries.air_stack_attack_efficiency(floor_count), c.AIR_STACK_MIN_ATTACK_EFFICIENCY)
+
+    def test_equal_aircraft_stacks_gain_total_attack_at_every_size(self):
+        previous_attack = 0
+        for count in range(1, 101):
+            with self.subTest(count=count):
+                total_attack = count * queries.air_stack_attack_efficiency(count)
+                self.assertGreater(total_attack, previous_attack)
+                previous_attack = total_attack
 
     def test_large_interceptions_scale_each_stack_and_damage_every_aircraft(self):
-        for attackers_count, defenders_count in ((1, 2), (3, 10), (26, 30), (40, 2)):
+        breakpoint = c.AIR_STACK_EFFICIENCY_BREAKPOINT
+        for attackers_count, defenders_count in ((1, 2), (3, 10), (breakpoint, breakpoint + 1),
+                                                 (26, 30), (40, 2), (50, 51)):
             with self.subTest(attackers=attackers_count, defenders=defenders_count):
                 self.base["units"] = []
                 self.defender_base["units"] = []

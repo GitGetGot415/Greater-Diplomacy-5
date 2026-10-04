@@ -4210,8 +4210,12 @@ def is_air_unit(unit):
 
 def air_stack_attack_efficiency(aircraft_count):
     """Return the attack multiplier for one coalition's flying mission stack."""
-    return max(c.AIR_STACK_MIN_ATTACK_EFFICIENCY,
-               1.0 - c.AIR_STACK_EFFICIENCY_PENALTY * max(0, aircraft_count - 1) ** 0.5)
+    stack_root = max(0, aircraft_count - 1) ** 0.5
+    if aircraft_count <= c.AIR_STACK_EFFICIENCY_BREAKPOINT:
+        efficiency = 1.0 - c.AIR_STACK_EFFICIENCY_PENALTY * stack_root
+    else:
+        efficiency = c.AIR_STACK_LARGE_EFFICIENCY_BASE - c.AIR_STACK_LARGE_EFFICIENCY_PENALTY * stack_root
+    return max(c.AIR_STACK_MIN_ATTACK_EFFICIENCY, efficiency)
 
 
 def air_unit_can_patrol(unit):
