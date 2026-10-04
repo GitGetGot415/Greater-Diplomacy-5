@@ -179,6 +179,9 @@ class Orders_Screen(GameState):
         self._consume_bombard_target_release = False
         self.air_range_previews = []
         self.air_strike_range_previews = []
+        self._air_range_records = []
+        self._air_range_hover_target = None
+        self._air_range_input_key = None
         self._air_range_render_cache = {}
         self._air_range_view_key = None
         self.bombard_target_preview = set()
@@ -443,10 +446,11 @@ class Orders_Screen(GameState):
         self.refresh_ui()
 
     def _batch_command_candidates(self, command):
-        """Return currently selected units which can start one batch command.
+        """Return selected units which can use one batch command.
 
-        Every batch action replaces an existing order, matching its individual
-        row icon. Paid repair escrow is refunded before the replacement.
+        Repair, upgrade, and disband replace current orders.
+        Mission buttons cancel active missions before opening the selector.
+        Return reserved repair resources before replacing an order.
         """
         candidates = []
         player_research = self.map_screen.nation_data.get(
@@ -472,7 +476,8 @@ class Orders_Screen(GameState):
                     candidates.append((unit, province, target))
             elif command == "MISSION":
                 if (self._air_mission_unit_index(unit, province) is not None
-                        and queries.air_unit_can_launch(self.map_screen, unit, province)):
+                        and (queries.air_unit_has_mission(unit)
+                             or queries.air_unit_can_launch(self.map_screen, unit, province))):
                     candidates.append((unit, province))
         return candidates
 
@@ -591,6 +596,11 @@ class Orders_Screen(GameState):
     def open_selected_air_mission_select(self):
         records = self._batch_command_candidates("MISSION")
         if not records:
+            return
+        active = [(unit, province) for unit, province in records
+                  if queries.air_unit_has_mission(unit)]
+        if active:
+            self.set_selected_air_mission("NONE", active)
             return
         # Keep the original selection. A later snapshot/selection change must
         # not redirect this popup's callback to different units.
@@ -842,7 +852,7 @@ class Orders_Screen(GameState):
 
         if queries.is_air_unit(unit):
             mission = queries.air_unit_mission(unit)
-            add(ACTION_COL_BOMBARD, "yellow", "Cancel strike mission" if mission == "STRIKE"
+            add(ACTION_COL_BOMBARD, "yellow", "Cancel air mission" if queries.air_unit_has_mission(unit)
                 else "Select air mission: no mission or defend area",
                 lambda idx=index, p=province, key=row_key: self.open_air_mission_select(idx, p, key),
                 c.AIR_MISSION_ICONS[mission])
@@ -925,27 +935,46 @@ class Orders_Screen(GameState):
             rows.append((row_key, unit, province, index))
         return rows
 
+    def _refresh_air_range_previews(self, destination=None):
+        """Cache one outline per aircraft at selection, order, or hover changes."""
+        self.air_range_previews = []
+        self.air_strike_range_previews = []
+        seen_ranges = set()
+        for unit, base in self._air_range_records:
+            kind = queries.air_range_preview_kind(self.map_screen, unit, destination)
+            previews = (self.air_range_previews if kind == "AIR_REPOSITION"
+                        else self.air_strike_range_previews)
+            radius = queries.air_order_radius(unit, kind)
+            key = (kind == "AIR_REPOSITION", tuple(base["center"]), radius)
+            if key not in seen_ranges:
+                previews.append((base, radius))
+                seen_ranges.add(key)
+
+    def _refresh_air_range_hover(self, position):
+        """Recheck hover after mouse or camera input, retaining cached outlines."""
+        camera = self.map_screen.camera
+        input_key = (tuple(position), tuple(camera.pos), camera.zoom, camera.tilt_factor)
+        if input_key == self._air_range_input_key:
+            return
+        self._air_range_input_key = input_key
+        if not self._air_range_records:
+            return
+        on_ui = (self.panel_rect.collidepoint(position)
+                 or event_handler.map_ui_bar_at_position(self.map_screen, position))
+        destination = None if on_ui else queries.get_clicked_province(position, self.map_screen)
+        if destination is not self._air_range_hover_target:
+            self._air_range_hover_target = destination
+            self._refresh_air_range_previews(destination)
+
     def refresh_ui(self):
         from ui import sidebar_info
         if self.target_province is not None:
             sidebar_info.prepare_unit_roster(self.map_screen, self.target_province)
-        # Cache radii at input boundaries; co-located identical wings share an outline.
-        self.air_range_previews = []
-        self.air_strike_range_previews = []
+        self._air_range_records = [(unit, base)
+            for unit, base in self.map_screen.selected_unit_records() if queries.is_air_unit(unit)]
         self._air_range_render_cache = {}
-        seen_ranges = set()
-        for unit, base in self.map_screen.selected_unit_records():
-            if not queries.is_air_unit(unit):
-                continue
-            for kind, previews in (("AIR_ATTACK", self.air_strike_range_previews),
-                                   ("AIR_REPOSITION", self.air_range_previews)):
-                if kind == "AIR_REPOSITION" and queries.air_unit_can_move_on_ground(unit):
-                    continue
-                radius = queries.air_order_radius(unit, kind)
-                key = (kind, tuple(base["center"]), radius)
-                if key not in seen_ranges:
-                    previews.append((base, radius))
-                    seen_ranges.add(key)
+        self._air_range_input_key = None
+        self._refresh_air_range_previews(self._air_range_hover_target)
         if getattr(self.map_screen, "realtime_multiplayer", False):
             player = self.map_screen.realtime_session.players.get(self.map_screen.realtime_player_id)
             self.read_only = (self.map_screen.realtime_session.phase != "TURN" or not player
@@ -1092,13 +1121,19 @@ class Orders_Screen(GameState):
                         f"{label} every eligible selected unit, replacing its current order.")
                     self.elements.append(button)
                     batch_x = button.rect.right + TOP_BTN_GAP_X
-                mission_count = len(self._batch_command_candidates("MISSION"))
+                mission_records = self._batch_command_candidates("MISSION")
+                mission_count = len(mission_records)
+                active_missions = sum(queries.air_unit_has_mission(unit)
+                    for unit, _province in mission_records)
+                mission_label = (f"Cancel Mission ({active_missions})" if active_missions
+                                 else f"Set Mission ({mission_count})")
                 mission_button = Button(batch_x, PANEL_Y + BATCH_BTN_ROW_OFFSET_Y,
-                    "orders_header_button", "blue", f"Set Mission ({mission_count})",
+                    "orders_header_button", "blue", mission_label,
                     self.open_selected_air_mission_select, font_preset="tiny")
                 self._fit_batch_button(mission_button, batch_width)
                 mission_button.apply_state(enabled=bool(mission_count))
-                mission_button.help_text = "Set one mission for eligible selected aircraft; unsupported missions and targets are skipped."
+                mission_button.help_text = ("Cancel active missions for selected aircraft."
+                    if active_missions else "Set one mission for eligible selected aircraft; unsupported missions and targets are skipped.")
                 self.elements.append(mission_button)
 
         for display_index, (row_key, unit, province, index) in enumerate(rows):
@@ -1392,8 +1427,7 @@ class Orders_Screen(GameState):
         unit = units[index]
         if self._command_blocked(unit) or not queries.is_air_unit(unit):
             return
-        order = unit.get("order") or {}
-        if order.get("type") == "AIR_ATTACK":
+        if queries.air_unit_has_mission(unit):
             self.set_air_mission(unit, province, "NONE", row_key)
             return
         enabled_missions = {"NONE"}
@@ -1608,6 +1642,10 @@ class Orders_Screen(GameState):
                     and camera.finish_pan_drag(event.button)
                     and event_handler.mouse_button_has_action(event.button, "issue_orders")):
                 return
+
+        if camera is not None and event.type in (
+                pygame.MOUSEMOTION, pygame.MOUSEWHEEL, pygame.MOUSEBUTTONUP):
+            self._refresh_air_range_hover(event_pos)
 
         # Targeting is a modal map action. It must run before the normal
         # left-click selection gesture below, otherwise every target click is
@@ -2236,6 +2274,7 @@ class Orders_Screen(GameState):
         # even when the Orders screen is the active state
         if self.map_screen:
             self.map_screen.camera.update(self.map_screen, c.SCREEN_HEIGHT)
+            self._refresh_air_range_hover(pygame.mouse.get_pos())
 
     def draw(self, surface):
         """Draw army editing modals after Orders' button elements.

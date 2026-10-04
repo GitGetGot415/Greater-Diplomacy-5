@@ -69,6 +69,8 @@ AIRCRAFT ORDERS AND VISIBILITY
 ------------------------------
 
 The aircraft AI generates only orders permitted by the shared rules.
+Player move-order clicks require cancellation of active missions before new movement.
+The AI still selects replacement missions during its normal planning pass.
 It compares strikes with defense against visible enemy aircraft.
 It moves reusable aircraft to closer friendly land when no enemy target is reachable and defense does not take priority.
 Hostile units on friendly tiles also count as strike targets.

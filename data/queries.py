@@ -2690,13 +2690,15 @@ def _queue_army_balanced_area_orders(map_screen, country_id, army, destination_i
             province_id = province.get("id")
             if province_id in coverage:
                 coverage[province_id] += 1
+                if air_unit_has_mission(unit):
+                    continue
                 if (not only_idle and isinstance(order, dict)
                         and order.get("type") == "MOVE"):
                     # A member already within the new area should remain a
                     # defender rather than continue along an old route.
                     unit.pop("order", None)
                 continue
-            if (id(unit) in excluded
+            if (id(unit) in excluded or air_unit_has_mission(unit)
                     or (only_idle and unit_has_active_order(unit))):
                 continue
             if (not only_idle and isinstance(order, dict)
@@ -4234,6 +4236,22 @@ def air_unit_mission(unit):
     if kind == "AIR_REPOSITION" or (kind == "MOVE" and order.get("path")):
         return "MOVE"
     return "NONE"
+
+
+def air_unit_has_mission(unit):
+    """Aircraft movement and mission buttons use the same active-order state."""
+    return is_air_unit(unit) and air_unit_mission(unit) != "NONE"
+
+
+def air_range_preview_kind(map_screen, unit, destination=None):
+    """Show the current mission's reach, or the pending move click's reach."""
+    order = unit.get("order")
+    if isinstance(order, dict) and order.get("type") in AIR_ORDER_TYPES:
+        return order["type"]
+    if air_unit_can_move_on_ground(unit) or (
+            destination is not None and air_move_is_strike(map_screen, unit, destination)):
+        return "AIR_ATTACK"
+    return "AIR_REPOSITION"
 
 
 def unit_map_stack_key(unit):

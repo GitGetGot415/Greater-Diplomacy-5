@@ -171,6 +171,119 @@ class AirMoveSafetyTests(unittest.TestCase):
         self.assertFalse(queries.air_move_is_strike(self.game, self.plane, self.safe))
         self.assertTrue(queries.air_move_is_strike(self.game, self.plane, self.enemy))
 
+    def test_active_air_missions_block_movement_atomically_until_canceled(self):
+        from screens.map_related_screens.orders import Orders_Screen
+        other = wing(self.base, "Test Wing")
+        self.game.selected_unit_records = lambda: [(other, self.base), (self.plane, self.base)]
+        screen = Orders_Screen()
+        screen.map_screen = self.game
+        screen.refresh_ui = Mock()
+        screen._mark_draft_changed = Mock()
+        missions = [{"type": "AIR_PATROL", "priority": priority}
+                    for priority in queries.AIR_INTERCEPTION_PRIORITIES]
+        missions += [{"type": "AIR_ATTACK", "target_id": self.enemy["id"]},
+                     {"type": "AIR_REPOSITION", "target_id": self.safe["id"]}]
+        for mission in missions:
+            for destination in (self.safe, self.enemy):
+                for append in (False, True):
+                    with self.subTest(mission=mission, destination=destination["id"], append=append):
+                        other["order"] = {"type": "MOVE", "path": []}
+                        self.plane["order"] = queries.canonical_air_order(
+                            self.game, self.plane, self.base, mission)
+                        before = deepcopy([other["order"], self.plane["order"]])
+                        self.game.invalidate_map_presentation_cache.reset_mock()
+                        self.assertFalse(Map.issue_selected_move_orders(self.game, destination, append))
+                        self.assertEqual([other["order"], self.plane["order"]], before)
+                        self.game.invalidate_map_presentation_cache.assert_not_called()
+                        screen.open_air_mission_select(self.base["units"].index(self.plane), self.base)
+                        self.assertFalse(queries.air_unit_has_mission(self.plane))
+                        self.assertTrue(Map.issue_selected_move_orders(self.game, destination, append))
+
+    def test_one_use_weapon_ground_route_requires_cancellation_before_retargeting(self):
+        self.plane["type"] = "Test Missile"
+        self.base["neighbors"] = [self.safe["id"]]
+        self.assertTrue(self.move(self.safe))
+        before = deepcopy(self.plane["order"])
+        self.assertFalse(self.move(self.enemy))
+        self.assertEqual(self.plane["order"], before)
+        self.plane["order"] = {"type": "MOVE", "path": []}
+        self.assertTrue(self.move(self.enemy))
+        self.assertEqual(self.plane["order"]["type"], "AIR_ATTACK")
+
+    def test_preview_uses_the_current_mission_or_the_visible_hover_target(self):
+        from screens.map_related_screens.orders import Orders_Screen
+        screen = Orders_Screen()
+        screen.map_screen = self.game
+        screen._air_range_records = [(self.plane, self.base)]
+
+        def check(destination, kind):
+            screen._refresh_air_range_previews(destination)
+            expected = [(self.base, queries.air_order_radius(self.plane, kind))]
+            self.assertEqual(screen.air_range_previews,
+                             expected if kind == "AIR_REPOSITION" else [])
+            self.assertEqual(screen.air_strike_range_previews,
+                             [] if kind == "AIR_REPOSITION" else expected)
+
+        check(None, "AIR_REPOSITION")
+        check(self.safe, "AIR_REPOSITION")
+        check(self.enemy, "AIR_ATTACK")
+        enemy = wing(self.safe, "Infantry Type 1910", "B")
+        check(self.safe, "AIR_ATTACK")
+        self.game.visible_provinces = {self.base["id"]}
+        check(self.safe, "AIR_REPOSITION")
+        check(self.enemy, "AIR_ATTACK")
+        self.safe["units"].remove(enemy)
+        for kind in queries.AIR_ORDER_TYPES:
+            self.plane["order"] = queries.canonical_air_order(self.game, self.plane, self.base,
+                {"type": kind, "target_id": self.safe["id"] if kind == "AIR_REPOSITION"
+                 else self.enemy["id"]})
+            for destination in (None, self.safe, self.enemy):
+                with self.subTest(kind=kind, destination=destination):
+                    check(destination, kind)
+        self.plane["type"] = "Test Missile"
+        self.plane["order"] = {"type": "MOVE", "path": []}
+        check(self.safe, "AIR_ATTACK")
+
+    def test_army_target_area_preserves_an_aircrafts_active_ground_route(self):
+        self.plane["type"] = "Test Missile"
+        self.base["neighbors"] = [self.safe["id"]]
+        queries.ensure_unit_ids(self.game.map_data)
+        army = queries.create_army("A", [self.plane["unit_id"]],
+            self.game.nation_data, self.game.map_data)
+        self.plane["order"] = {"type": "MOVE", "path": [self.safe["id"]]}
+        before = deepcopy(self.plane["order"])
+        for target in (self.base, self.safe):
+            with self.subTest(target=target["id"]):
+                army["defense_area"] = [target["id"]]
+                self.assertEqual(queries.queue_army_defense_orders(self.game, "A", army["id"]), 0)
+                self.assertEqual(self.plane["order"], before)
+        self.plane["order"] = {"type": "MOVE", "path": []}
+        self.assertEqual(queries.queue_army_defense_orders(self.game, "A", army["id"]), 1)
+
+    def test_cancel_then_move_drafts_remain_valid_for_both_multiplayer_hosts(self):
+        from screens.map_related_screens.orders import Orders_Screen
+        screen = Orders_Screen()
+        screen.map_screen = self.game
+        screen.refresh_ui = Mock()
+        screen._mark_draft_changed = Mock()
+        for destination in (self.safe, self.enemy):
+            with self.subTest(destination=destination["id"]):
+                patrol = queries.canonical_air_order(self.game, self.plane, self.base,
+                    {"type": "AIR_PATROL", "priority": "RANDOM"})
+                self.plane["order"] = patrol
+                screen.open_air_mission_select(0, self.base)
+                self.assertTrue(self.move(destination))
+                draft = deepcopy(self.plane["order"])
+                # Hosts retain their original patrol until the final draft arrives.
+                self.plane["order"] = patrol
+                command = {"type": "unit_order", "province_id": self.base["id"],
+                    "unit_index": 0, "unit_id": self.plane["unit_id"], "order": draft}
+                self.assertEqual(MapRealtimeDriver(self.game).validate_draft("A", [command])[0]["order"], draft)
+                _, drafts = multiplayer_io._validate_aircraft_orders(self.game, "A",
+                    {"aircraft_orders": [{"unit_id": self.plane["unit_id"], "order": draft}]}, {})
+                self.assertEqual(drafts[0][1], draft)
+                self.assertEqual(self.plane["order"], patrol)
+
     def test_unclaimed_destination_rejects_flight_and_missile_ground_movement(self):
         self.safe["owner"] = "Unclaimed"
         self.base["neighbors"] = [self.safe["id"]]

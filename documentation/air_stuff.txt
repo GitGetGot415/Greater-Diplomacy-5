@@ -48,7 +48,14 @@ Close the outline along map edges that lie inside the circle.
 This keeps reach visible when the entire map fits inside the radius.
 
 Cache rasterized outlines by base, radius, color, map dimensions, camera, viewport, and clipping state.
-Orders shows separate cached outlines for strike reach and reusable relocation reach.
+Orders shows one range outline for each selected aircraft.
+Aircraft with the same base, radius, and color share one outline.
+Active defense and strike missions show their yellow mission range.
+Active relocation shows its green movement range.
+Idle reusable aircraft show green relocation range over accessible friendly land.
+Hovering enemy territory or visible hostile units switches that preview to yellow strike range.
+Hidden hostile units do not change the preview.
+One-use weapons show only their yellow strike range.
 Land bombardment retains tile markers.
 Any tile part inside or touching the circle is in range.
 
@@ -108,7 +115,7 @@ Hostile units on friendly territory also make the click a strike.
 The aircraft attack without landing there.
 
 The mission menu cannot issue strikes.
-Clicking an active strike's mission button cancels it immediately.
+Clicking an active aircraft's mission button cancels its mission or relocation immediately.
 No mission also cancels it.
 
 A move-order click on accessible land without hostile units issues relocation.
@@ -119,7 +126,10 @@ Land bombardment retains its existing targeting controls.
 Patrol uses the listed mission radius.
 This is half a reusable aircraft's movement radius.
 Use the same tile-edge and disconnected-pixel range rules.
-A normal move order replaces patrol with repositioning.
+Cancel an active mission or relocation before giving another move-order click.
+This also applies to a new strike target and a one-use weapon's ground route.
+Army target-area commands also preserve active aircraft orders.
+If any selected aircraft has an active mission, the movement command preserves all selected orders.
 It does not extend the patrol area beyond its base range.
 
 The menu uses No Mission, Weakest First, Strongest First, and Random First images.
@@ -154,6 +164,8 @@ Group missions
 Set Mission shows the number of eligible selected aircraft.
 It always offers all four choices.
 Each choice rechecks the original units, bases, permissions, and capabilities.
+With active selected missions, the button shows Cancel Mission and cancels those orders without opening the selector.
+This preserves orders on selected aircraft without an active mission.
 
 Group defense skips unsupported aircraft and preserves their orders and reserved payment.
 Group strikes use the configured move-order click on a hostile target.
@@ -260,6 +272,8 @@ They never provide the host snapshot's decryption secret.
 Legacy archives still load.
 
 Real-time unit commands validate against server state.
+Both multiplayer systems submit final order drafts, including cancellation followed by a new movement order.
+The shared player controls require cancellation before replacing an active aircraft mission with a move-order click.
 Stable IDs resolve units when filtered client indexes differ.
 Guest snapshots and initial map bundles remove hidden units and private foreign orders.
 Neither multiplayer projection includes the temporary geometry cache or interception lists.

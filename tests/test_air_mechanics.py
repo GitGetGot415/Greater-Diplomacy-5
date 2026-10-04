@@ -4,6 +4,7 @@ import json
 import os
 import tempfile
 import unittest
+from copy import deepcopy
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock, patch
 
@@ -1219,6 +1220,20 @@ class AirMissionSelectionTests(unittest.TestCase):
         self.screen.set_air_mission(self.unit, self.base, "NONE")
         self.assertIsNone(self.screen.bombarding_unit_index)
 
+    def test_active_mission_button_cancels_each_mission_without_a_popup(self):
+        from screens.map_related_screens.orders import ACTION_COL_BOMBARD
+        missions = [{"type": "AIR_PATROL", "priority": priority}
+                    for priority in queries.AIR_INTERCEPTION_PRIORITIES]
+        missions += [{"type": "AIR_ATTACK", "target_id": self.target["id"]},
+                     {"type": "AIR_REPOSITION", "target_id": self.base["id"]}]
+        for mission in missions:
+            with self.subTest(mission=mission):
+                self.unit["order"] = queries.canonical_air_order(self.game, self.unit, self.base, mission)
+                with patch("screens.map_related_screens.orders._AirMissionSelectScreen") as popup:
+                    self.buttons()[ACTION_COL_BOMBARD].args[5]()
+                    popup.assert_not_called()
+                self.assertFalse(queries.air_unit_has_mission(self.unit))
+
     def test_selection_rechecks_stale_identity_permissions_and_combat(self):
         for condition in ("foreign", "tactical", "read_only", "removed", "replaced_province", "combat", "water"):
             self.setUp()
@@ -1381,6 +1396,30 @@ class GroupAirMissionSelectionTests(unittest.TestCase):
         self.assertIsNone(self.screen.bombarding_unit_index)
         self.screen._mark_draft_changed.assert_not_called()
 
+    def test_group_button_cancels_active_missions_and_preserves_idle_orders(self):
+        idle = wing(self.base, "Monoplane Bomber", order={"type": "REPAIR", "refund": {
+            "cost_materials": 17, "cost_fuel": 0, "cost_manpower": 0}})
+        self.records.append((idle, self.base))
+        idle_order = deepcopy(idle["order"])
+        materials = self.game.nation_data["A"]["materials"]
+        self.fighter["order"] = {"type": "AIR_PATROL", "priority": "RANDOM"}
+        self.bomber["order"] = {"type": "AIR_REPOSITION", "target_id": self.base["id"]}
+        self.v1["order"] = {"type": "AIR_ATTACK", "target_id": self.target["id"]}
+        self.v2["order"] = {"type": "MOVE", "path": [self.base["id"]]}
+        self.ground["order"] = {"type": "MOVE", "path": [self.target["id"]]}
+        before = deepcopy(self.ground["order"])
+        # An invalid launch base must still allow cancellation.
+        self.remote["terrain"] = c.WATER_TERRAINS[0]
+        with patch("screens.map_related_screens.orders._AirMissionSelectScreen") as popup:
+            self.screen.open_selected_air_mission_select()
+            popup.assert_not_called()
+        for unit in (self.fighter, self.bomber, self.v1, self.v2):
+            self.assertFalse(queries.air_unit_has_mission(unit))
+        self.assertEqual(self.ground["order"], before)
+        self.assertEqual(idle["order"], idle_order)
+        self.assertEqual(self.game.nation_data["A"]["materials"], materials)
+        self.assertEqual(self.carried["order"], {"type": "MOVE", "path": []})
+
     def test_group_no_mission_clears_aircraft_only_and_unavailable_strike_preserves_orders(self):
         for unit, _base in self.records:
             unit["order"] = {"type": "DISBAND", "turns_left": 1}
@@ -1540,6 +1579,13 @@ class AirAppSmokeTests(unittest.TestCase):
             loaded.select_map_units(base["units"])
             screen = Orders_Screen()
             screen.start_with_province(base, loaded)
+            cancel_button = next(button for button in screen.elements
+                                 if getattr(button, "text", "").startswith("Cancel Mission"))
+            self.assertTrue(screen.panel_rect.contains(cancel_button.rect))
+            self.assertLess(cancel_button.font.size(cancel_button.text)[0], cancel_button.rect.width)
+            with patch("screens.map_related_screens.orders._AirMissionSelectScreen") as selector:
+                cancel_button.callback()
+                selector.assert_not_called()
             mission_button = next(button for button in screen.elements
                                   if getattr(button, "text", "").startswith("Set Mission"))
             eligible = len(screen._batch_command_candidates("MISSION"))
@@ -1586,6 +1632,7 @@ class AirAppSmokeTests(unittest.TestCase):
             loaded.player_country = "A"
             base = loaded.id_to_province[1]
             fighter = base["units"][0]
+            fighter["order"] = {"type": "MOVE", "path": []}
             radius = queries.air_order_radius(fighter, "AIR_ATTACK")
             edge_x = base["center"][0] + radius
             outside = tile(loaded, 3, int(edge_x + 1), owner="B", width=1)
@@ -1630,6 +1677,7 @@ class AirAppSmokeTests(unittest.TestCase):
             loaded.player_country = "A"
             base = loaded.id_to_province[1]
             fighter = base["units"][0]
+            fighter["order"] = {"type": "MOVE", "path": []}
             loaded.select_map_units([fighter])
             screen = Orders_Screen()
             screen.start_with_province(base, loaded)
@@ -1703,11 +1751,11 @@ class AirAppSmokeTests(unittest.TestCase):
                     if modal_stack.active() is wrapper:
                         modal_stack.pop()
 
-    def test_dismissing_air_mission_popup_preserves_existing_mission(self):
+    def test_dismissing_air_mission_popup_preserves_idle_order(self):
         from ui import modal_stack
         game = world()
         base = tile(game, 1, 8)
-        fighter = wing(base, "Monoplane Fighter", order={"type": "AIR_PATROL", "priority": "STRONGEST"})
+        fighter = wing(base, "Monoplane Fighter")
         screen = Orders_Screen()
         screen.map_screen = game
         before = dict(fighter["order"])
@@ -1785,14 +1833,14 @@ class AirAppSmokeTests(unittest.TestCase):
             loaded.camera.pos.update(0, 0)
             loaded.camera.zoom = 2
             loaded.camera.tilt_factor = 0.5
-            self.assertEqual(len(screen.air_range_previews), 1)
+            self.assertEqual(len(screen.air_range_previews), 0)
+            self.assertEqual(len(screen.air_strike_range_previews), 1)
             for kind, color in (("AIR_REPOSITION", MOVE_TARGET_COLOR), ("AIR_ATTACK", BOMBARD_TARGET_COLOR)):
                 with self.subTest(kind=kind):
+                    for unit in (fighter, duplicate):
+                        unit["order"] = ({"type": "AIR_PATROL"} if kind == "AIR_ATTACK"
+                                         else {"type": "MOVE", "path": []})
                     screen.refresh_ui()
-                    if kind == "AIR_ATTACK":
-                        screen.air_range_previews = []
-                    else:
-                        screen.air_strike_range_previews = []
                     radius = queries.air_order_radius(fighter, kind)
                     clip_before = self.surface.get_clip()
                     with patch.object(pygame.draw, "ellipse", wraps=pygame.draw.ellipse) as ellipse, \
@@ -1807,6 +1855,44 @@ class AirAppSmokeTests(unittest.TestCase):
                     self.assertEqual(rect.height, round(rect.width * loaded.camera.tilt_factor))
                     self.assertEqual(rect.center, tuple(round(p) for p in queries.world_to_screen(base["center"], loaded)))
                     self.assertEqual(self.surface.get_clip(), clip_before)
+
+    def test_air_range_hover_events_switch_the_cached_circle_and_lock_active_missions(self):
+        from screens.map_related_screens.orders import MOVE_TARGET_COLOR, BOMBARD_TARGET_COLOR
+        with tempfile.TemporaryDirectory() as directory:
+            _original, _fighter, _rocket, path = self.make_runtime_save(directory)
+            loaded = Map(load_path=path, skip_initial_income=True)
+            loaded.selection_mode = False
+            loaded.player_country = "A"
+            base = loaded.id_to_province[1]
+            enemy = loaded.id_to_province[2]
+            fighter = base["units"][0]
+            fighter["order"] = {"type": "MOVE", "path": []}
+            loaded.select_map_units([fighter])
+            screen = Orders_Screen()
+            screen.start_with_province(base, loaded)
+            position = (screen.panel_rect.right + 100, screen.panel_rect.centery)
+            targets = ((base, MOVE_TARGET_COLOR, "AIR_REPOSITION"),
+                       (enemy, BOMBARD_TARGET_COLOR, "AIR_ATTACK"),
+                       (base, MOVE_TARGET_COLOR, "AIR_REPOSITION"))
+            for index, (target, color, kind) in enumerate(targets):
+                with self.subTest(target=target["id"]):
+                    event_position = (position[0] + index, position[1])
+                    with patch.object(pygame.mouse, "get_pos", return_value=event_position), \
+                            patch.object(queries, "get_clicked_province", return_value=target):
+                        screen.handle_events([pygame.event.Event(pygame.MOUSEMOTION,
+                            pos=event_position, rel=(1, 0), buttons=(0, 0, 0))])
+                    with patch.object(screen, "draw_air_range") as draw, \
+                            patch.object(queries, "air_range_preview_kind", side_effect=AssertionError("frame mission rule")), \
+                            patch.object(queries, "air_order_radius", side_effect=AssertionError("frame radius")), \
+                            patch.object(queries, "get_clicked_province", side_effect=AssertionError("unchanged input")):
+                        screen.draw_range_previews(self.surface)
+                        screen._refresh_air_range_hover(event_position)
+                    draw.assert_called_once_with(self.surface, base,
+                        queries.air_order_radius(fighter, kind), color)
+            screen.set_air_mission(fighter, base, "RANDOM")
+            self.assertEqual(screen.air_range_previews, [])
+            self.assertEqual(screen.air_strike_range_previews,
+                             [(base, queries.air_order_radius(fighter, "AIR_PATROL"))])
 
     def test_wrapped_air_outlines_clip_to_their_own_map_copy(self):
         game = world()

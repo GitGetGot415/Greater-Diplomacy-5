@@ -2211,6 +2211,9 @@ class Map(GameState):
             return False
         planned = []
         for unit, origin in records:
+            if queries.air_unit_has_mission(unit):
+                self.show_feedback("Cancel the aircraft's mission before giving a new movement order.")
+                return False
             order = unit.get("order", {})
             if isinstance(order, dict) and order.get("type") in c.ORDERS_BLOCKING_MOVEMENT:
                 self.show_feedback("Cannot move units with a blocking order.")

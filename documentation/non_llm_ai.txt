@@ -75,7 +75,12 @@ Use a move-order click on enemy territory or visible enemy units to strike.
 This includes hostile units on friendly territory.
 A click on accessible land without hostile units issues relocation.
 Aircraft cannot land in enemy or unclaimed territory.
-No mission, or another click on an active strike's mission button, cancels the order.
+No mission, or another click on an active aircraft's mission button, cancels the mission or relocation order.
+Cancel that order before using another move-order click.
+This requirement also applies to one-use weapons with a ground route.
+Active defense and strikes show only yellow mission range. Active relocation shows only green movement range.
+Idle aircraft show green relocation range until the pointer targets enemy territory or visible hostile units.
+That target switches the preview to yellow strike range. One-use weapons always show yellow strike range.
 
 Mission icons show the current choice.
 Air Move shows relocation, including a one-use weapon's ground path.
@@ -84,6 +89,7 @@ The upgrade button uses the shared numbered-family upgrade helper.
 Named aircraft designs remain separate production unlocks.
 
 Set Mission applies a choice to eligible aircraft in the selected group.
+With active selected missions, Cancel Mission clears those orders without opening the selector.
 It shows all choices and validates each aircraft separately.
 Group strikes use the same move-order click as single aircraft.
 A movement command preserves all selected orders if any unit cannot reach its destination.
