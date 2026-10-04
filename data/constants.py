@@ -865,6 +865,7 @@ OBSOLESCENCE_RULES = {
     "Landkreuzer P.1000 Ratte": ["landkreuzer_p1500_monster"],
     "Dreadnought": ["battleship"],
     "Battleship": ["aircraft_carrier"],
+    "V1 Flying Bomb": ["v2_rocket"],
     "Zeppelin": ["biplane_bomber"],
     "Biplane Fighter": ["piston_fighter"],
     "Biplane Bomber": ["piston_bomber"],
