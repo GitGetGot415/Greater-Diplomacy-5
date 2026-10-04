@@ -4196,9 +4196,36 @@ def air_move_is_strike(map_screen, unit, destination):
                 unit, destination, map_screen.nation_data, visible_only=True))
 
 
-def air_move_order(map_screen, unit, base, destination):
-    """A flight click strikes a visible enemy; other flight clicks relocate."""
-    kind = "AIR_ATTACK" if air_move_is_strike(map_screen, unit, destination) else "AIR_REPOSITION"
+def available_air_missions(map_screen, unit, base):
+    """Read mission capabilities and launch legality for a mission selector."""
+    missions = {"NONE"}
+    if is_air_unit(unit) and air_unit_can_launch(map_screen, unit, base):
+        missions.update(("MOVE", "STRIKE"))
+        if air_unit_can_patrol(unit):
+            missions.update(AIR_INTERCEPTION_PRIORITIES)
+    return missions
+
+
+def air_move_order(map_screen, unit, base, destination, mission=None):
+    """Retarget movement or strikes; idle aircraft choose from the visible destination."""
+    if mission is None:
+        current = air_unit_mission(unit)
+        mission = current if current in ("MOVE", "STRIKE") else (
+            "STRIKE" if air_move_is_strike(map_screen, unit, destination) else "MOVE")
+    if mission not in ("MOVE", "STRIKE"):
+        raise ValueError("Choose Move or Strike before selecting an air target.")
+    if mission not in available_air_missions(map_screen, unit, base):
+        raise ValueError("Air missions require a land base outside ground combat.")
+    if mission == "STRIKE" and not air_move_is_strike(map_screen, unit, destination):
+        raise ValueError("Air strikes require enemy territory or visible enemy units.")
+    if mission == "MOVE" and air_unit_can_move_on_ground(unit):
+        path = find_unit_move_path(unit, base, destination["id"],
+                                   map_screen.id_to_province, map_screen.nation_data)
+        if path is None:
+            raise ValueError("No legal ground route exists for this aircraft.")
+        return canonical_unit_order(map_screen, unit["owner"], base, unit,
+                                    {"type": "MOVE", "path": path})
+    kind = "AIR_ATTACK" if mission == "STRIKE" else "AIR_REPOSITION"
     return canonical_air_order(map_screen, unit, base,
                                {"type": kind, "target_id": destination["id"]})
 

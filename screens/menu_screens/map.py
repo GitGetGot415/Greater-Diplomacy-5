@@ -2211,15 +2211,18 @@ class Map(GameState):
             return False
         planned = []
         for unit, origin in records:
-            if queries.air_unit_has_mission(unit):
-                self.show_feedback("Cancel the aircraft's mission before giving a new movement order.")
+            is_aircraft = queries.is_air_unit(unit)
+            air_mission = queries.air_unit_mission(unit) if is_aircraft else None
+            if air_mission in queries.AIR_INTERCEPTION_PRIORITIES:
+                self.show_feedback("Choose Move or Strike, or cancel the aircraft's defense mission, before moving.")
                 return False
             order = unit.get("order", {})
             if isinstance(order, dict) and order.get("type") in c.ORDERS_BLOCKING_MOVEMENT:
                 self.show_feedback("Cannot move units with a blocking order.")
                 return False
-            if queries.is_air_unit(unit) and (not queries.air_unit_can_move_on_ground(unit)
-                    or queries.air_move_is_strike(self, unit, destination)):
+            if is_aircraft and (not queries.air_unit_can_move_on_ground(unit)
+                    or air_mission == "STRIKE"
+                    or (air_mission != "MOVE" and queries.air_move_is_strike(self, unit, destination))):
                 try:
                     air_order = queries.air_move_order(self, unit, origin, destination)
                 except ValueError as exc:

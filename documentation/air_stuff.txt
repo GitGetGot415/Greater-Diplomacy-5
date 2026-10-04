@@ -71,6 +71,7 @@ Orders shows one range outline for each selected aircraft.
 Aircraft with the same base, radius, and color share one outline.
 Active defense and strike missions show their yellow mission range.
 Active relocation shows its green movement range.
+During target selection, outlines show the pending mission while the current order remains unchanged.
 Idle reusable aircraft show green relocation range over accessible friendly land.
 Hovering enemy territory or visible hostile units switches that preview to yellow strike range.
 When the pointer leaves all provinces or enters a UI control, keep the previous range preview.
@@ -113,8 +114,10 @@ Mission controls
 AIR_PATROL retains base_id and priority.
 Old saves default to WEAKEST.
 
-The air mission button offers four choices:
+The air mission button offers these choices:
 - No mission.
+- Move, then select a destination.
+- Strike, then select a target.
 - Defend area, weakest enemy missions first.
 - Defend area, strongest enemy missions first.
 - Defend area, random enemy missions first.
@@ -124,6 +127,11 @@ Disable missions that the aircraft cannot perform.
 Disable flight from an invalid launch base.
 
 An available Defend area choice immediately issues AIR_PATROL with its selected priority.
+Move and Strike start target selection without changing the current order.
+Select the target with a left-click or the configured move-order click.
+A valid target replaces the current order.
+An invalid target preserves it and keeps target selection active.
+Escape cancels target selection and preserves the current order.
 
 Select aircraft and use the configured move-order click on enemy territory or visible enemy units.
 The default move-order click is right-click.
@@ -131,9 +139,8 @@ That click issues AIR_ATTACK within strike range.
 Hostile units on friendly territory also make the click a strike.
 The aircraft attack without landing there.
 
-The mission menu cannot issue strikes.
-Clicking an active aircraft's mission button cancels its mission or relocation immediately.
-No mission also cancels it.
+Clicking an active aircraft's mission button opens the selector.
+No mission or the order cancel control cancels the current order.
 
 A move-order click on accessible land without hostile units issues relocation.
 The same click must not issue both strike and relocation orders.
@@ -142,13 +149,17 @@ Land bombardment retains its existing targeting controls.
 
 Patrol uses the mission radius from queries.air_order_radius.
 Use the same tile-edge and disconnected-pixel range rules.
-Cancel an active mission or relocation before giving another move-order click.
-This also applies to a new strike target and a one-use weapon's ground route.
+An active Move or Strike order accepts another move-order click without cancellation.
+The click changes the destination and preserves the mission type.
+Move retains its movement rules. Strike retains its targeting rules.
+This also applies to an aircraft's ground route.
+Choose another mission in the selector to change the mission type.
+Cancel an active defense mission or select Move or Strike before choosing a destination.
 Army target-area commands also preserve active aircraft orders.
-If any selected aircraft has an active mission, the movement command preserves all selected orders.
+If any selected aircraft has an active defense mission, the movement command preserves all selected orders.
 It does not extend the patrol area beyond its base range.
 
-The menu uses No Mission, Weakest First, Strongest First, and Random First images.
+The menu uses the images defined in AIR_MISSION_CHOICES.
 An active strike uses Strike Selected.
 Relocation uses Air Move, including one-use weapons with a ground path.
 Idle aircraft use No Mission.
@@ -180,13 +191,15 @@ Group missions
 --------------
 
 Set Mission shows the number of eligible selected aircraft.
-It always offers all four choices.
+It always shows all mission choices. It disables choices unavailable to every eligible aircraft.
 Each choice rechecks the original units, bases, permissions, and capabilities.
-With active selected missions, the button shows Cancel Mission and cancels those orders without opening the selector.
-This preserves orders on selected aircraft without an active mission.
+The button opens the selector even when selected aircraft have active missions.
+No mission cancels orders on eligible selected aircraft.
 
 Group defense skips unsupported aircraft and preserves their orders and reserved payment.
-Group strikes use the configured move-order click on a hostile target.
+Group Move and Strike choices capture the eligible aircraft before target selection.
+Target selection preserves all captured orders if any captured unit or destination is invalid.
+Group strikes also use the configured move-order click on a hostile target.
 Each selected unit must have a legal order to that destination.
 If any unit cannot reach it, the whole movement command preserves existing orders.
 Group actions use existing per-unit multiplayer commands.
@@ -289,8 +302,8 @@ They never provide the host snapshot's decryption secret.
 Legacy archives still load.
 
 Real-time unit commands validate against server state.
-Both multiplayer systems submit final order drafts, including cancellation followed by a new movement order.
-The shared player controls require cancellation before replacing an active aircraft mission with a move-order click.
+Both multiplayer systems submit final order drafts, including direct movement and strike target changes.
+Pending target selection stays local and adds no save fields or network command kinds.
 Stable IDs resolve units when filtered client indexes differ.
 Guest snapshots and initial map bundles remove hidden units and private foreign orders.
 Neither multiplayer projection includes the temporary geometry cache or interception lists.

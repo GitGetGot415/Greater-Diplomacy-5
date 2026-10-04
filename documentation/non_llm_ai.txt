@@ -68,17 +68,21 @@ Shared queries read aircraft capabilities from the current unit library.
 queries.air_order_radius calculates reach for each order type.
 air_consumable and air_interception_immune control strike consumption and interception eligibility.
 
-The mission selector offers No mission and Defend area with weakest, strongest, or random priority.
+The mission selector offers No mission, Move, Strike, and Defend area with weakest, strongest, or random priority.
 All choices stay visible. Unavailable missions and flight from an invalid base are disabled.
-The menu cannot issue strikes.
+Move and Strike start target selection while preserving the current order.
+Use a left-click or the configured move-order click to select a valid target.
+Escape cancels target selection without changing the current order.
 
 Use a move-order click on enemy territory or visible enemy units to strike.
 This includes hostile units on friendly territory.
 A click on accessible land without hostile units issues relocation.
 Aircraft cannot land in enemy or unclaimed territory.
-No mission, or another click on an active aircraft's mission button, cancels the mission or relocation order.
-Cancel that order before using another move-order click.
-This requirement also applies to one-use weapons with a ground route.
+No mission or the order cancel control cancels the current order.
+The mission button always opens the selector.
+Active Move and Strike orders accept new destinations without cancellation and preserve their mission type.
+This also applies to aircraft with a ground route.
+Change or cancel an active defense mission before using a move-order click.
 Active defense and strikes show only yellow mission range. Active relocation shows only green movement range.
 Idle aircraft show green relocation range until the pointer targets enemy territory or visible hostile units.
 That target switches the preview to yellow strike range. One-use weapons always show yellow strike range.
@@ -91,10 +95,12 @@ The upgrade button uses the shared numbered-family upgrade helper.
 Named aircraft designs remain separate production unlocks.
 
 Set Mission applies a choice to eligible aircraft in the selected group.
-With active selected missions, Cancel Mission clears those orders without opening the selector.
-It shows all choices and validates each aircraft separately.
+The button opens the selector even when selected aircraft have active missions.
+It shows all choices and disables choices unavailable to every eligible aircraft.
+It rechecks aircraft identity, permissions, and capabilities when applying a choice or target.
 Group strikes use the same move-order click as single aircraft.
 A movement command preserves all selected orders if any unit cannot reach its destination.
+Group Move and Strike target selection also preserves all captured orders if any captured unit becomes invalid.
 Unsupported group defense choices preserve those aircraft's orders.
 No mission clears eligible aircraft orders.
 Both multiplayer systems use their existing per-unit commands and validate each order.

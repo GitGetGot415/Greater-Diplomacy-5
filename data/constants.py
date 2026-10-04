@@ -1112,13 +1112,13 @@ MSG_NOTIFICATION_COLOR = (255, 50, 50)
 MAX_CAMERA_ZOOM = 10.0
 AIR_MISSION_CHOICES = (
     ("NONE", "No mission", "No Mission"),
+    ("MOVE", "Move (select a destination)", "Air Move"),
+    ("STRIKE", "Strike (select a target)", "Strike Selected"),
     ("WEAKEST", "Defend area (weakest enemy missions targeted first)", "Weakest First"),
     ("STRONGEST", "Defend area (strongest enemy missions targeted first)", "Strongest First"),
     ("RANDOM", "Defend area (random enemy mission targeted first)", "Random First"),
 )
 AIR_MISSION_ICONS = {mission: icon for mission, _label, icon in AIR_MISSION_CHOICES}
-AIR_MISSION_ICONS["MOVE"] = "Air Move"
-AIR_MISSION_ICONS["STRIKE"] = "Strike Selected"
 # Screen pixels traversed by the initial arrow-key press.  Held keys use the
 # rate below instead of pygame's delayed key-repeat events, so camera movement
 # starts immediately and stays continuous without changing text-entry repeat.

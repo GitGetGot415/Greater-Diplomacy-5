@@ -95,7 +95,7 @@ AIR_MISSION_ICONS = {mission: c.AIR_MISSION_ICONS[mission]
 
 class _AirMissionSelectScreen(ModalScreen):
     """One click selects an air mission; Back dismisses without changing it."""
-    PANEL_SIZE = (620, 330)
+    PANEL_SIZE = (620, 426)
     OPTION_TOP = 65
     OPTION_GAP = 48
     OPTION_INSET = 20
@@ -172,7 +172,9 @@ class Orders_Screen(GameState):
         self.renaming_unit_actual_index = None
         self.rename_text = ""
 
-        # Row key waiting for a map target; GROUP_AIR uses the captured group below.
+        # Capture live unit references while waiting for an aircraft target.
+        self._air_target_records = []
+        self._air_target_mission = None
         self.bombarding_unit_index = None
         self.bombarding_unit_province = None
         self.bombarding_unit_actual_index = None
@@ -449,7 +451,7 @@ class Orders_Screen(GameState):
         """Return selected units which can use one batch command.
 
         Repair, upgrade, and disband replace current orders.
-        Mission buttons cancel active missions before opening the selector.
+        Mission buttons can replace active missions through the selector.
         Return reserved repair resources before replacing an order.
         """
         candidates = []
@@ -597,16 +599,13 @@ class Orders_Screen(GameState):
         records = self._batch_command_candidates("MISSION")
         if not records:
             return
-        active = [(unit, province) for unit, province in records
-                  if queries.air_unit_has_mission(unit)]
-        if active:
-            self.set_selected_air_mission("NONE", active)
-            return
         # Keep the original selection. A later snapshot/selection change must
         # not redirect this popup's callback to different units.
         from ui.screen_runner import _run_pygame_sub_screen
         popup = _AirMissionSelectScreen(self, AIR_MISSION_CHOICES,
-            lambda mission: self.set_selected_air_mission(mission, records))
+            lambda mission: self.set_selected_air_mission(mission, records),
+            enabled_missions=set().union(*(queries.available_air_missions(
+                self.map_screen, unit, base) for unit, base in records)))
         _run_pygame_sub_screen(self.map_screen, popup)
 
     def set_selected_air_mission(self, mission, records=None):
@@ -614,6 +613,9 @@ class Orders_Screen(GameState):
             return
         if records is None:
             records = self._batch_command_candidates("MISSION")
+        if mission in ("MOVE", "STRIKE"):
+            self.start_air_targeting(records, mission)
+            return
         self._apply_selected_air_mission(records, mission)
 
     def _apply_selected_air_mission(self, records, mission):
@@ -852,8 +854,12 @@ class Orders_Screen(GameState):
 
         if queries.is_air_unit(unit):
             mission = queries.air_unit_mission(unit)
-            add(ACTION_COL_BOMBARD, "yellow", "Cancel air mission" if queries.air_unit_has_mission(unit)
-                else "Select air mission: no mission or defend area",
+            targeting = any(current is unit for current, _base in self._air_target_records)
+            if targeting:
+                mission = self._air_target_mission
+            add(ACTION_COL_BOMBARD, "orange" if targeting else "yellow",
+                "Choose a map target; click to change mission" if targeting
+                else "Select air mission: move, strike, defend area, or no mission",
                 lambda idx=index, p=province, key=row_key: self.open_air_mission_select(idx, p, key),
                 c.AIR_MISSION_ICONS[mission])
         elif order_type == "BOMBARD":
@@ -940,8 +946,14 @@ class Orders_Screen(GameState):
         self.air_range_previews = []
         self.air_strike_range_previews = []
         seen_ranges = set()
-        for unit, base in self._air_range_records:
-            kind = queries.air_range_preview_kind(self.map_screen, unit, destination)
+        records = self._air_target_records or self._air_range_records
+        for unit, base in records:
+            if self._air_target_records:
+                if self._air_target_mission == "MOVE" and queries.air_unit_can_move_on_ground(unit):
+                    continue
+                kind = "AIR_REPOSITION" if self._air_target_mission == "MOVE" else "AIR_ATTACK"
+            else:
+                kind = queries.air_range_preview_kind(self.map_screen, unit, destination)
             previews = (self.air_range_previews if kind == "AIR_REPOSITION"
                         else self.air_strike_range_previews)
             radius = queries.air_order_radius(unit, kind)
@@ -1124,17 +1136,13 @@ class Orders_Screen(GameState):
                     batch_x = button.rect.right + TOP_BTN_GAP_X
                 mission_records = self._batch_command_candidates("MISSION")
                 mission_count = len(mission_records)
-                active_missions = sum(queries.air_unit_has_mission(unit)
-                    for unit, _province in mission_records)
-                mission_label = (f"Cancel Mission ({active_missions})" if active_missions
-                                 else f"Set Mission ({mission_count})")
+                mission_label = f"Set Mission ({mission_count})"
                 mission_button = Button(batch_x, PANEL_Y + BATCH_BTN_ROW_OFFSET_Y,
                     "orders_header_button", "blue", mission_label,
                     self.open_selected_air_mission_select, font_preset="tiny")
                 self._fit_batch_button(mission_button, batch_width)
                 mission_button.apply_state(enabled=bool(mission_count))
-                mission_button.help_text = ("Cancel active missions for selected aircraft."
-                    if active_missions else "Set one mission for eligible selected aircraft; unsupported missions and targets are skipped.")
+                mission_button.help_text = "Choose a mission for selected aircraft. No mission cancels their orders."
                 self.elements.append(mission_button)
 
         for display_index, (row_key, unit, province, index) in enumerate(rows):
@@ -1302,7 +1310,7 @@ class Orders_Screen(GameState):
 
         unit = units[index]
         if queries.is_air_unit(unit):
-            self.map_screen.show_feedback("Use a move-order click on enemy territory or units to strike.")
+            self.set_air_mission(unit, province, "STRIKE", row_key)
             return
         self.cancel_bombard_targeting(refresh=False)
         self.targeting_label = "bombardment"
@@ -1316,6 +1324,8 @@ class Orders_Screen(GameState):
         self.refresh_ui()
 
     def cancel_bombard_targeting(self, refresh=True):
+        self._air_target_records = []
+        self._air_target_mission = None
         self.bombarding_unit_index = None
         self.bombarding_unit_province = None
         self.bombarding_unit_actual_index = None
@@ -1323,6 +1333,10 @@ class Orders_Screen(GameState):
             self.refresh_ui()
 
     def set_bombard_target(self, index, dest, province=None):
+        # Older lightweight UI fixtures do not initialize targeting state.
+        if getattr(self, "_air_target_records", None):
+            self.set_air_target(dest)
+            return
         province = province or self.bombarding_unit_province or self.target_province
         units = province.get("units", [])
         if not (0 <= index < len(units)):
@@ -1428,13 +1442,7 @@ class Orders_Screen(GameState):
         unit = units[index]
         if self._command_blocked(unit) or not queries.is_air_unit(unit):
             return
-        if queries.air_unit_has_mission(unit):
-            self.set_air_mission(unit, province, "NONE", row_key)
-            return
-        enabled_missions = {"NONE"}
-        if queries.air_unit_can_launch(self.map_screen, unit, province):
-            if queries.air_unit_can_patrol(unit):
-                enabled_missions.update(queries.AIR_INTERCEPTION_PRIORITIES)
+        enabled_missions = queries.available_air_missions(self.map_screen, unit, province)
         from ui.screen_runner import _run_pygame_sub_screen
         popup = _AirMissionSelectScreen(self, AIR_MISSION_CHOICES,
             lambda mission: self.set_air_mission(unit, province, mission, row_key),
@@ -1463,6 +1471,9 @@ class Orders_Screen(GameState):
         index = self._air_mission_unit_index(unit, province)
         if index is None or mission not in AIR_MISSION_ICONS:
             return
+        if mission in ("MOVE", "STRIKE"):
+            self.start_air_targeting([(unit, province)], mission, row_key)
+            return
         try:
             order = self._air_mission_order(unit, province, mission)
         except ValueError as exc:
@@ -1474,12 +1485,53 @@ class Orders_Screen(GameState):
         self._mark_draft_changed()
         self.refresh_ui()
 
+    def start_air_targeting(self, records, mission, row_key=None):
+        records = [(unit, base) for unit, base in records
+                   if self._air_mission_unit_index(unit, base) is not None
+                   and mission in queries.available_air_missions(self.map_screen, unit, base)]
+        if not records:
+            self.map_screen.show_feedback("No selected aircraft can perform that mission now.")
+            return
+        self.cancel_bombard_targeting(refresh=False)
+        self._air_target_records = records
+        self._air_target_mission = mission
+        self.bombarding_unit_index = "GROUP_AIR" if row_key is None else row_key
+        self.targeting_label = "movement" if mission == "MOVE" else "strike"
+        self.map_screen.show_feedback(
+            f"Select a {self.targeting_label} target. Existing orders stay until a valid target is chosen. Esc cancels targeting.")
+        self.refresh_ui()
+
+    def set_air_target(self, destination):
+        """Validate the captured selection before replacing any aircraft orders."""
+        if not self._air_target_records:
+            return
+        planned = []
+        for unit, base in self._air_target_records:
+            if self._air_mission_unit_index(unit, base) is None:
+                self.map_screen.show_feedback("The aircraft selection changed. Select the mission again.")
+                self.cancel_bombard_targeting()
+                return
+            try:
+                order = queries.air_move_order(self.map_screen, unit, base, destination,
+                                               mission=self._air_target_mission)
+            except ValueError as exc:
+                self.map_screen.show_feedback(str(exc))
+                return
+            planned.append((unit, order))
+        for unit, order in planned:
+            self._refund_unit_order(unit)
+            unit["order"] = order
+        self.cancel_bombard_targeting(refresh=False)
+        self._finish_batch_command("Air mission", len(planned))
+
     def cancel_unit_order(self, index, province=None):
         province = province or self.target_province
         units = province.get("units", [])
         if 0 <= index < len(units):
             if self._command_blocked(units[index]):
                 return
+            if any(unit is units[index] for unit, _base in self._air_target_records):
+                self.cancel_bombard_targeting(refresh=False)
             if "order" in units[index]:
                 self._refund_unit_order(units[index])
                 del units[index]["order"]
@@ -2004,7 +2056,8 @@ class Orders_Screen(GameState):
             if self.renaming_unit_index is not None:
                 help_text = "Type a name | Enter saves | Esc cancels"
             elif self.bombarding_unit_index is not None:
-                help_text = f"Click a highlighted province to set the {self.targeting_label} target"
+                help_text = (f"Click a province to set the {self.targeting_label} target | Esc cancels targeting"
+                    if self._air_target_records else "Click a highlighted province to set the bombardment target")
             elif read_only:
                 help_text = "Intelligence view: orders cannot be changed here"
             elif not player_units:
@@ -2133,7 +2186,7 @@ class Orders_Screen(GameState):
             self.draw_air_range(surface, base, radius, MOVE_TARGET_COLOR)
         for base, radius in self.air_strike_range_previews:
             self.draw_air_range(surface, base, radius, BOMBARD_TARGET_COLOR)
-        if not targeting:
+        if not targeting or self._air_target_records:
             return
         self.draw_target_markers(surface, aiming_province, self.bombard_target_preview, BOMBARD_TARGET_COLOR)
         hovered = queries.get_clicked_province(pygame.mouse.get_pos(), self.map_screen)

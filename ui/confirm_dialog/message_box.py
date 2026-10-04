@@ -162,9 +162,9 @@ class _NavigationIntroPopup:
         ("Country actions", "relations", "Click another country's tile to see available diplomatic actions you can take against them."),
     )
     AIR_STEPS = (
-        ("Missions", "Use the mission button to choose an available defense mission. Click it again to cancel an active mission or relocation. Cancel it before giving new movement orders."),
+        ("Missions", "Choose Move, Strike, or defense from the mission button. Click a target for Move or Strike. No mission cancels the order. Esc cancels target selection."),
         ("Strike / defend", "Click enemy territory or visible enemy units while giving movement orders to strike, including enemies on your land. Aircraft attack without landing. Defenders can fire back, and surviving aircraft return with losses. Enemy aircraft on defense missions may intercept several missions."),
-        ("Reposition", "Right-click accessible land without enemies to move within the displayed relocation range. Idle planes show a green relocation range (except for V1 and V2 rockets). Active defense or strike missions show the yellow range."),
+        ("Reposition", "With Move or Strike active, another order click changes the target and keeps the mission type. Use the selector to switch types. Idle planes show green relocation range (except V1 and V2); defense and strikes show yellow."),
         ("V1 / V2", "V1 and V2 air units die when their strike completes, and they relocate on land at ground speed, unlike most other planes that can move anywhere within their range."),
         ("Aircraft details", "Open Research details for an aircraft's current range and abilities. The mission menu disables choices that aircraft cannot perform. Use the displayed range outline when choosing a target."),
         ("Other Information", "Tanks cannot damage aircraft in flight. Aircraft cannot land on enemy or unclaimed land. Aircraft caught in ground combat die immediately."),
