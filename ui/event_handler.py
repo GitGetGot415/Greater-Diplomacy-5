@@ -717,7 +717,8 @@ def handle_map_events(map_screen, event):
                         map_screen.mail_input_active = False
 
     # 6. STANDARD GAME SELECTION
-    if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+    if (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1
+            and not on_ui):
         _select_map_province(map_screen, event.pos)
 
 

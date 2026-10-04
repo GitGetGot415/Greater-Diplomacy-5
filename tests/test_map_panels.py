@@ -146,6 +146,24 @@ class MapPanelScrollTests(unittest.TestCase):
 
         hit_test.assert_not_called()
 
+    def test_province_menu_blocks_tile_selection_behind_opaque_artwork(self):
+        """Covered tiles cannot replace the province shown in the menu."""
+        current = self.map.selected_province
+        replacement = next(province for province in self.map.map_data.values()
+                           if province is not current)
+        pos = (300, self.surface.get_height() // 2)
+        self.assertTrue(event_handler.ui_bars.province_menu_occludes_map_position(
+            pos, self.surface.get_size()))
+
+        with mock.patch.object(event_handler.queries, "get_clicked_province",
+                               return_value=replacement) as hit_test:
+            event_handler.handle_map_events(
+                self.map, pygame.event.Event(pygame.MOUSEBUTTONDOWN,
+                                             pos=pos, button=1))
+
+        hit_test.assert_not_called()
+        self.assertIs(self.map.selected_province, current)
+
     def test_province_menu_keeps_its_transparent_map_window_clickable(self):
         """A visible province replaces the current selection through clear artwork."""
         current = self.map.selected_province
