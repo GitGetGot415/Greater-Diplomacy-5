@@ -162,11 +162,11 @@ class _NavigationIntroPopup:
         ("Country actions", "relations", "Click another country's tile to see available diplomatic actions you can take against them."),
     )
     AIR_STEPS = (
-        ("Missions", "In Orders, choose No mission or Defend area: weakest, strongest, or random missions first. Unavailable choices are disabled. All aircraft except V1 and V2 can defend. Click an active strike's mission button to cancel it."),
-        ("Group missions", "Select units and use Set Mission beside Disband, Repair and Upgrade for defense or cancellation. Strike with a move-order click. If any selected unit cannot reach the target, all current orders stay."),
-        ("Strike / defend", "Move-order click enemy territory or visible enemy units to strike, including enemies on your land. Aircraft attack without landing. Defenders can fire back; survivors return with losses. Tanks cannot damage aircraft in flight. Research lists fort damage. Patrols may intercept several missions."),
-        ("Reposition", "Right-click accessible land without enemies to move reusable planes up to twice their listed range. Aircraft cannot land on enemy or unclaimed land. The Air Move icon shows relocation. Reach uses tile edges; zoom never changes it. Aircraft cannot capture land."),
-        ("V1 and V2", "Strikes consume the weapon; V2 bypasses interception. Relocate on land at ground speed. Air units can load into Convoys at a coast and unload on land. Aircraft caught in ground combat die immediately."),
+        ("Missions", "You can give air units a mission. Defense missions will make them intercept any enemy aircraft (except V2 rockets) that attempt to strike anything in that air unit's radius."),
+        ("Strike / defend", "Click enemy territory or visible enemy units while giving movement orders to strike, including enemies on your land. Aircraft attack without landing. Defenders can fire back; survivors return with losses. Enemy aircraft on defense missions may intercept several missions."),
+        ("Reposition", "Right-click accessible land without enemies to move reusable planes up to twice their listed range. Aircraft cannot land on enemy or unclaimed land. The Air Move icon shows relocation. Reach uses tile edges; zoom never changes it. "),
+        ("V1 / V2", "V1 and V2 air units die when their strike completes, and they relocate on land at ground speed, unlike most other planes that can move anywhere within their range."),
+        ("Other Information", "Tanks cannot damage aircraft in flight. Aircraft cannot capture land. Aircraft caught in ground combat die immediately."),
     )
     PAGE_TITLES = ("Map Navigation", "Map UI", "Other Countries", "Armies", "Aircraft")
     PAGE_SUBTITLES = (
