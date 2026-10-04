@@ -1304,6 +1304,9 @@ class Map(GameState):
         self.show_player_ready_screen = False
         self.unit_event_log = {"turn": 0, "events": []}
         self.unit_event_read_turns = {}
+        # Local display preferences reset after each completed turn.
+        self.unit_event_filter = None
+        self.unit_event_filter_turn = None
         self._unit_event_view = []
         self._unit_event_unread = 0
         # Every playable map session, including saves and multiplayer sessions,

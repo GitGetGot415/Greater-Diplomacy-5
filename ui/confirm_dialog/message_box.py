@@ -106,7 +106,9 @@ class _NavigationIntroPopup:
         "clicking a province still lists every visible unit. "
         "All is selected whenever a game opens. "
         "The yellow mail button beside your resources opens last-turn unit events. "
-        "Its badge counts unread entries; opening the log clears it."
+        "Its badge counts unread entries; opening the log clears it. "
+        "Filter events, left of Mark all unread, shows one event type. "
+        "The filter button turns orange while selected; each completed turn clears the filter."
     )
     ARMY_STEPS = (
         ("Select units", "Left-click stacks or drag in Units view. "

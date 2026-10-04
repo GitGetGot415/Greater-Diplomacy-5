@@ -500,11 +500,13 @@ class UnitViewControlTests(unittest.TestCase):
                 self.assertEqual([call.args[3] for call in arrows.call_args_list], expected)
 
     def test_tutorial_filter_note_fits_above_navigation_controls(self):
-        popup = _NavigationIntroPopup(SimpleNamespace())
-        popup.page_index = 1
-        popup.draw(pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT)))
-        self.assertLess(popup.unit_view_note_rect.bottom, popup.prev_rect.top)
-        self.assertTrue(popup.rect.contains(popup.unit_view_note_rect))
+        for width in (1024, c.SCREEN_WIDTH):
+            with self.subTest(width=width), patch.object(c, "SCREEN_WIDTH", width):
+                popup = _NavigationIntroPopup(SimpleNamespace())
+                popup.page_index = 1
+                popup.draw(pygame.Surface((width, c.SCREEN_HEIGHT)))
+                self.assertLess(popup.unit_view_note_rect.bottom, popup.prev_rect.top)
+                self.assertTrue(popup.rect.contains(popup.unit_view_note_rect))
 
 
 if __name__ == "__main__":

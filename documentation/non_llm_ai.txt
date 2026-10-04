@@ -394,6 +394,16 @@ The orange screen lists unit names, tile IDs, events, health changes, and source
 Click a column header to sort the table.
 Click a row to read its full details.
 
+Filter events appears to the left of Mark all unread.
+Select one event type to show only matching entries.
+Select No filter to show all permitted entries.
+The button is orange with a selected filter and blue without one.
+The selection stays when you reopen the report during the same turn.
+Each completed turn clears the filter, including turns received by real-time clients.
+
+The filter changes only the local display. Saves and multiplayer commands do not include it.
+Opening the report and Mark all unread still affect all entries permitted for the current player.
+
 The report records actual turn resolution, including losses and attacks by AI units.
 AI plans and combat forecasts do not write entries.
 Damage dealt uses each source's share of the applied volley.

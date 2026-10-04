@@ -62,6 +62,23 @@ def restore(map_screen, metadata):
         owner: turn for owner, turn in reads.items()
         if isinstance(owner, str) and type(turn) is int and turn == map_screen.time_manager.total_turns
     } if isinstance(reads, dict) else {}
+    event_filter_for(map_screen)
+
+
+def set_event_filter(map_screen, event):
+    """Keep the event filter local to this report. Do not save or send it."""
+    if event is not None and event not in EVENT_LABELS:
+        raise ValueError("Select a known unit event type or None.")
+    map_screen.unit_event_filter = event
+    map_screen.unit_event_filter_turn = map_screen.time_manager.total_turns
+
+
+def event_filter_for(map_screen):
+    """Clear the local filter when a new turn arrives."""
+    # Lightweight map fixtures can omit local display preferences.
+    if getattr(map_screen, "unit_event_filter_turn", None) != map_screen.time_manager.total_turns:
+        set_event_filter(map_screen, None)
+    return map_screen.unit_event_filter
 
 
 def entries_for(map_screen):
@@ -80,6 +97,7 @@ def entries_for(map_screen):
 
 def refresh_presentation(map_screen):
     """Prepare the badge at a state or viewer boundary, never in a frame loop."""
+    event_filter_for(map_screen)
     map_screen._unit_event_view = entries_for(map_screen)
     turn = map_screen.time_manager.total_turns
     reads = getattr(map_screen, "unit_event_read_turns", {})
@@ -207,6 +225,7 @@ def record_turn(map_screen):
         yield
         map_screen.unit_event_log = {"turn": map_screen.time_manager.total_turns, "events": recorder.rows}
         map_screen.unit_event_read_turns = {}
+        set_event_filter(map_screen, None)
     finally:
         _RECORDER.reset(token)
 

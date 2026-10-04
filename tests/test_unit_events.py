@@ -123,19 +123,23 @@ class UnitEventRulesTests(unittest.TestCase):
         game = fixture()
         game.unit_event_log["events"] = [row()]
         unit_events.mark_read(game)
+        unit_events.set_event_filter(game, "DESTROYED")
         game.time_manager.total_turns += 1
         with unit_events.record_turn(game):
             pass
         self.assertEqual(game.unit_event_log, {"turn": 2, "events": []})
         self.assertEqual(game.unit_event_read_turns, {})
+        self.assertIsNone(unit_events.event_filter_for(game))
 
     def test_failed_resolution_does_not_publish_partial_events(self):
         game = fixture()
         target = unit(game, "A")
+        unit_events.set_event_filter(game, "DESTROYED")
         with self.assertRaises(RuntimeError), unit_events.record_turn(game):
             combat_processor.apply_group_damage(2, [target])
             raise RuntimeError("Interrupted resolution")
         self.assertEqual(game.unit_event_log["events"], [])
+        self.assertEqual(unit_events.event_filter_for(game), "DESTROYED")
         combat_processor.apply_group_damage(2, [target])
         self.assertEqual(game.unit_event_log["events"], [])
 
@@ -276,20 +280,25 @@ class UnitEventPersistenceTests(unittest.TestCase):
         game.unit_event_log["events"] = [row()]
         snapshot = queries.build_save_dict(game)
         unit_events.mark_read(game)
+        unit_events.set_event_filter(game, "DESTROYED")
         apply_authoritative_snapshot(game, snapshot)
         self.assertEqual(game._unit_event_unread, 0)
+        self.assertEqual(unit_events.event_filter_for(game), "DESTROYED")
         snapshot["date"]["total_turns"] += 1
         snapshot["unit_event_log"]["turn"] += 1
         apply_authoritative_snapshot(game, snapshot)
         self.assertEqual(game._unit_event_unread, 1)
         self.assertEqual(game.unit_event_read_turns, {})
+        self.assertIsNone(unit_events.event_filter_for(game))
 
     def test_reports_and_reads_are_not_realtime_commands(self):
         game = fixture()
         game.unit_event_log["events"] = [row()]
         before = collect_map_commands(game, "A")
         unit_events.mark_read(game)
+        unit_events.set_event_filter(game, "DESTROYED")
         self.assertEqual(collect_map_commands(game, "A"), before)
+        self.assertNotIn("unit_event_filter", queries.build_save_dict(game))
 
     def test_tournament_move_cannot_replace_host_reports(self):
         helper = tournament_tests.TournamentMoveTests()
@@ -341,6 +350,7 @@ class UnitEventScreenTests(unittest.TestCase):
         self.game.unit_event_log = {"turn": self.game.time_manager.total_turns,
                                     "events": [row(self.game.player_country)]}
         self.game.unit_event_read_turns = {}
+        unit_events.set_event_filter(self.game, None)
         unit_events.refresh_presentation(self.game)
 
     def test_button_icon_badge_placement_and_navigation(self):
@@ -415,17 +425,104 @@ class UnitEventScreenTests(unittest.TestCase):
         self.assertTrue(screen.btn_mark_all_unread.disabled)
         self.assertEqual(self.game.btn_unit_events.notification_count, 0)
 
+    def test_filter_picker_shows_only_the_selected_event_and_can_clear_it(self):
+        from screens.map_related_screens.unit_events_screen import UnitEventsScreen
+        from ui import modal_stack
+        game = self.game
+        game.unit_event_log["events"] += [row(game.player_country, event="MOVED"), row("Other country")]
+        before = copy.deepcopy(game.unit_event_log)
+        screen = UnitEventsScreen(game)
+        self.assertEqual(len(screen.rows), 2)
+        self.assertEqual(screen.btn_filter_events.color, c.UI_COLORS["blue"][0])
+        with patch.object(modal_stack, "push") as push:
+            screen.btn_filter_events.callback()
+        picker = push.call_args.args[0].screen
+        self.assertEqual({event for _label, event in picker.items}, {None, *unit_events.EVENT_LABELS})
+        picker.select(next(item for item in picker.items if item[1] == "MOVED"))
+        self.assertEqual([entry["event"] for entry in screen.rows], ["MOVED"])
+        self.assertEqual(screen.btn_filter_events.color, c.UI_COLORS["orange"][0])
+        reopened = UnitEventsScreen(game)
+        self.assertEqual([entry["event"] for entry in reopened.rows], ["MOVED"])
+        self.assertEqual(reopened.btn_filter_events.color, c.UI_COLORS["orange"][0])
+        with patch.object(modal_stack, "push") as push:
+            reopened.btn_filter_events.callback()
+        picker = push.call_args.args[0].screen
+        picker.select(next(item for item in picker.items if item[1] is None))
+        self.assertEqual(len(reopened.rows), 2)
+        self.assertEqual(reopened.btn_filter_events.color, c.UI_COLORS["blue"][0])
+        self.assertEqual(game.unit_event_log, before)
+
+    def test_empty_filter_clears_click_targets_and_keeps_mark_all_unread_available(self):
+        from screens.map_related_screens.unit_events_screen import UnitEventsScreen
+        game = self.game
+        screen = UnitEventsScreen(game)
+        surface = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
+        screen.draw(surface)
+        old_rect = screen.row_hitboxes[0][0]
+        screen.scroll_y = -screen.ROW_HEIGHT
+        screen.set_event_filter("MOVED")
+        self.assertEqual(screen.rows, [])
+        self.assertEqual(screen.row_hitboxes, [])
+        self.assertEqual(screen.scroll_y, 0)
+        self.assertEqual(screen.btn_filter_events.color, c.UI_COLORS["orange"][0])
+        with patch.object(unit_events, "entries_for", side_effect=AssertionError("Frame queried reports")):
+            screen.draw(surface)
+        with patch("ui.confirm_dialog.show_info") as details:
+            screen.additional_events(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=old_rect.center))
+        details.assert_not_called()
+        self.assertFalse(screen.btn_mark_all_unread.disabled)
+        screen.btn_mark_all_unread.callback()
+        self.assertEqual(game.btn_unit_events.notification_count, len(screen.all_rows))
+        with unit_events.record_turn(game):
+            pass
+        reopened = UnitEventsScreen(game)
+        self.assertIsNone(reopened.event_filter)
+        self.assertEqual(reopened.btn_filter_events.color, c.UI_COLORS["blue"][0])
+        self.assertTrue(reopened.btn_mark_all_unread.disabled)
+
+    def test_filter_respects_tactical_and_spectator_permissions(self):
+        from screens.map_related_screens.unit_events_screen import UnitEventsScreen
+        game = self.game
+        game.unit_event_log["events"] += [row(game.player_country, "other"), row("Other country")]
+        for viewer, tactical, editor, expected in (
+                (game.player_country, True, False, 1), ("Spectator", False, False, 3),
+                (c.TOURNAMENT_SPECTATOR, False, False, 0), (game.player_country, False, True, 0)):
+            with self.subTest(viewer=viewer, tactical=tactical, editor=editor), \
+                    patch.object(game, "player_country", viewer), patch.object(game, "tactical_mode", tactical), \
+                    patch.object(game, "is_editor", editor), patch.object(game, "player_unit", {"unit_id": "gone"}):
+                screen = UnitEventsScreen(game)
+                screen.set_event_filter("DESTROYED")
+                self.assertEqual(len(screen.rows), expected)
+
+    def test_filter_button_is_left_of_unread_without_overlapping_controls(self):
+        from screens.map_related_screens.unit_events_screen import UnitEventsScreen
+        for width in (1024, c.SCREEN_WIDTH):
+            with self.subTest(width=width), patch.object(c, "SCREEN_WIDTH", width):
+                screen = UnitEventsScreen(self.game)
+                button = screen.btn_filter_events
+                unread = screen.btn_mark_all_unread
+                self.assertLess(button.rect.right, unread.rect.left)
+                self.assertEqual(button.rect.centery, unread.rect.centery)
+                self.assertTrue(pygame.Rect(0, 0, width, c.SCREEN_HEIGHT).contains(button.rect))
+                self.assertTrue(all(not button.rect.colliderect(element.rect)
+                                    for element in screen.elements if element is not button))
+                title = pygame.Rect((0, 25), fonts.get("heading1").size(screen.title))
+                title.centerx = width // 2
+                self.assertFalse(button.rect.colliderect(title))
+
     def test_normal_save_loader_preserves_reports_and_legacy_has_empty_log(self):
         from data.map import save_map
         from screens.menu_screens.map import Map
         game = self.game
         unit_events.mark_read(game)
+        unit_events.set_event_filter(game, "DESTROYED")
         with tempfile.TemporaryDirectory() as temporary, patch.object(c, "SAVES_DIR", temporary):
             asyncio.run(save_map.save_map_data(game, "reports"))
             path = Path(temporary, "reports")
             loaded = Map(load_path=str(path), skip_initial_income=True)
             self.assertEqual(loaded.unit_event_log, game.unit_event_log)
             self.assertEqual(loaded._unit_event_unread, 0)
+            self.assertIsNone(unit_events.event_filter_for(loaded))
             metadata_path = path / "meta.json"
             metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
             del metadata["unit_event_log"]
