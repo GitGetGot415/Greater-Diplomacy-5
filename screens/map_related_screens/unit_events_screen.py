@@ -10,7 +10,7 @@ BACKGROUND_COLOR = (80, 60, 40)
 ROW_COLOR = (48, 35, 25)
 TABLE_MARGIN = 25
 CELL_PADDING = 12
-UNREAD_BUTTON_SIZE = (180, 30)
+UNREAD_BUTTON_SIZE = (120, 30)
 UNREAD_BUTTON_MARGIN = 20
 COLUMN_SHARES = (("unit_name", "Unit", .20), ("tile_id", "Tile", .08),
                  ("event_label", "Event", .17), ("amount", "Health", .09),
