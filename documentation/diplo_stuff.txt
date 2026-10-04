@@ -114,7 +114,7 @@ Existing conflicting volunteers return home on the following turn.
 A player hosting foreign volunteers can send them home directly.
 
 Aircraft are not eligible land volunteers.
-This includes V1/V2 weapons moving on land.
+This restriction uses the current unit library, including for aircraft with ground routes.
 Aircraft use only Convoy transports.
 Those transports retain the original aircraft type and remain ineligible as volunteers.
 

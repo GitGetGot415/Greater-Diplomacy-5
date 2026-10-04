@@ -109,7 +109,8 @@ Success in one does not prove compatibility with the other.
 - Group a screen's layout values near the top of that screen file.
   Use one anchor or gap value to move a UI group.
   Keep local layout constants out of `data/constants.py`.
-- Do not list explicit unit values in documentation.
+- Keep unit and building tuning data in its source files.
+  Follow the documentation rule below.
 - Use data tables instead of repeated condition chains when content is likely to grow.
 
 ### Hardcoding and Fallbacks
@@ -230,6 +231,22 @@ Use verification appropriate to each change.
 6. State exactly which tests and builds ran and which did not.
 
 ## Documentation
+
+### Unit, Building, and Research Data
+
+- Never document current unit or building stats, research settings, costs, or combat capabilities.
+  These can change frequently. Documentation must not duplicate them.
+- This includes research years, level counts, prerequisites, unlock lists, prices, production times, and resource output.
+  It also includes health, attack, defense, speed, range, damage bonuses, immunity, and fort damage capability.
+- Do not document these settings as tables, examples, named-unit lists, or comparisons.
+  Do not claim that unit or building families have equal stats, equal costs, or fixed strength relationships.
+- Explain shared mechanics, data fields, source locations, and how the game reads current data.
+  Preserve save formats, migration rules, permissions, and control instructions.
+- Refer readers to `data/json/unit_data.json`, `data/json/building_data.json`, and `data/json/research_template.json` for current settings.
+  Refer to `data/generators/recipes.py` for data generation and `data/constants.py` for shared tuning.
+  Refer to shared query and execution helpers for rules defined in code.
+- Apply this rule to guides, design notes, examples, explanatory comments, docstrings, and tutorial text.
+  The game can display current values and capabilities when it derives them from authoritative data or shared rules.
 
 ### Language
 

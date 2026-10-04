@@ -162,11 +162,12 @@ class _NavigationIntroPopup:
         ("Country actions", "relations", "Click another country's tile to see available diplomatic actions you can take against them."),
     )
     AIR_STEPS = (
-        ("Missions", "You can give air units a mission. Defense missions intercept enemy aircraft (except V2 rockets) striking within range. Click the mission button again to cancel an active mission or relocation. Cancel it before giving new movement orders."),
-        ("Strike / defend", "Click enemy territory or visible enemy units while giving movement orders to strike, including enemies on your land. Aircraft attack without landing. Defenders can fire back; survivors return with losses. Enemy aircraft on defense missions may intercept several missions."),
-        ("Reposition", "Right-click accessible land without enemies to move reusable planes up to twice their listed range. Aircraft cannot land on enemy or unclaimed land. The Air Move icon shows relocation. Idle planes show green relocation range; hover an enemy target to see yellow strike range. Outside territory, the last circle stays visible. Active defense or strike missions show only yellow range. Reach uses tile edges; zoom never changes it."),
+        ("Missions", "Use the mission button to choose an available defense mission. Click it again to cancel an active mission or relocation. Cancel it before giving new movement orders."),
+        ("Strike / defend", "Click enemy territory or visible enemy units while giving movement orders to strike, including enemies on your land. Aircraft attack without landing. Defenders can fire back, and surviving aircraft return with losses. Enemy aircraft on defense missions may intercept several missions."),
+        ("Reposition", "Right-click accessible land without enemies to move within the displayed relocation range. Idle planes show a green relocation range (except for V1 and V2 rockets). Active defense or strike missions show the yellow range."),
         ("V1 / V2", "V1 and V2 air units die when their strike completes, and they relocate on land at ground speed, unlike most other planes that can move anywhere within their range."),
-        ("Other Information", "Tanks cannot damage aircraft in flight. Aircraft cannot capture land. Aircraft caught in ground combat die immediately."),
+        ("Aircraft details", "Open Research details for an aircraft's current range and abilities. The mission menu disables choices that aircraft cannot perform. Use the displayed range outline when choosing a target."),
+        ("Other Information", "Tanks cannot damage aircraft in flight. Aircraft cannot land on enemy or unclaimed land. Aircraft caught in ground combat die immediately."),
     )
     PAGE_TITLES = ("Map Navigation", "Map UI", "Other Countries", "Armies", "Aircraft")
     PAGE_SUBTITLES = (
@@ -174,7 +175,7 @@ class _NavigationIntroPopup:
         "These buttons are important! Located on the bottom left of the screen, they edit the appearance of the map, giving you the information you need to play effectively.",
         "Reach other countries through the Mail tab or directly from their territory on the map.",
         "Learn how to create, organize, and command armies, including target areas.",
-        "Air missions resolve next turn. Aircraft boxes split by mission, with icons on the right; select the unit rectangle. Zoomed-out markers combine missions and hide these icons, while armies and unit categories stay separate. The range outline closes along map edges; any part of a tile inside or touching it counts.",
+        "Green outlines represent an aircraft's movement range, yellow ones represent their mission range.",
     )
 
     def __init__(self, map_screen):

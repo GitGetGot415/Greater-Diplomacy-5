@@ -56,3 +56,6 @@ Documentation
 
 Keep documentation as simple as possible without losing accurate information.
 Use ASD-STE100 Simplified Technical English as required by AGENTS.md.
+Do not document current unit or building stats, research settings, costs, or combat capabilities.
+These settings change frequently. Refer readers to their data files and shared rule helpers.
+Explain shared mechanics, data fields, controls, and save compatibility instead.

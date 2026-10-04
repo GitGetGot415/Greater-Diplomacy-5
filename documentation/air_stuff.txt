@@ -29,26 +29,13 @@ Aircraft research
 Aircraft levels use Roman numerals in research and production.
 Research years apply the standard ahead-of-time penalty.
 
-Family                Level years
-Biplane Fighter       1910, 1914, 1918, 1922, 1926
-Biplane Bomber        1915, 1920, 1925
-Monoplane Fighter     1930, 1934, 1938, 1942, 1946
-Monoplane Bomber      1930, 1935, 1940, 1945, 1950
-Jet Fighter           Every four years from 1950 through 2010
-Jet Bomber            Every five years from 1955 through 2010
-
-Biplane Bomber research requires Biplane Fighter I.
-Monoplane Fighter research requires Biplane Fighter V.
-Monoplane Bomber research requires Biplane Bomber III.
-Jet Engine research requires Monoplane Fighter V.
-Jet Fighter research requires Monoplane Fighter V and Jet Engine.
-Jet Bomber research requires Monoplane Bomber V and Jet Fighter I.
-Jet Bombers use assets/classic/Jet Bomber.png.
 Each later level requires the previous level in that family.
-The unit library defines each level's stats, capabilities, costs, and production time.
-Jet Bomber levels initially copy the corresponding Jet Fighter levels, with air_role set to bomber.
-Edit data/json/unit_data.json to tune individual levels.
-Update data/generators/recipes.py before you regenerate the data files.
+Read current research years, levels, prerequisites, and costs in data/json/research_template.json.
+Read current unit stats, capabilities, costs, and production time in data/json/unit_data.json.
+data/generators/recipes.py defines data generation.
+Keep its recipes consistent with data edits before you regenerate the files.
+Research details derive their current information from these libraries and shared queries.
+Jet Bombers use assets/classic/Jet Bomber.png.
 
 Old saves retain their research levels and progress.
 Unnumbered aircraft become level I, including transported aircraft and queued production.
@@ -99,14 +86,11 @@ They show immediate aircraft casualties without modifying units or assigning the
 Flight and ground movement
 --------------------------
 
-R means the unit's listed air range.
-Patrol and reusable strikes reach R.
-Reusable repositioning reaches 2R.
-One-use strikes reach R.
+queries.air_order_radius calculates mission reach from the current unit library and order type.
+UI previews, AI candidates, and command validation use this shared helper.
 
 Aircraft can fly over water, foreign land, and nonadjacent provinces.
-Reusable strikes reserve half their total travel distance for the outgoing flight and half for the return.
-Thus, listed range equals strike reach.
+Reusable strikes reserve travel distance for both the outgoing flight and the return.
 
 Bases and landing tiles must be land.
 Landing requires ownership, friendly relations, or military access.
@@ -119,9 +103,9 @@ Landed aircraft and their Convoy transports also cannot capture territory.
 Loaded aircraft Convoys use normal naval transport movement.
 The editor unit brush places aircraft only on land.
 
-V1/V2 move between bases on legal land routes at their ground speed.
-They cannot use AIR_REPOSITION or patrol.
-Their ranged strike flies and consumes the weapon.
+queries.air_unit_can_move_on_ground and queries.air_unit_can_patrol read the current unit library.
+Use these checks instead of identifying capabilities by unit name.
+air_consumable controls whether a completed strike consumes the aircraft.
 
 Mission controls
 ----------------
@@ -156,8 +140,7 @@ The same click must not issue both strike and relocation orders.
 Dispatch each map event once, including the click's release.
 Land bombardment retains its existing targeting controls.
 
-Patrol uses the listed mission radius.
-This is half a reusable aircraft's movement radius.
+Patrol uses the mission radius from queries.air_order_radius.
 Use the same tile-edge and disconnected-pixel range rules.
 Cancel an active mission or relocation before giving another move-order click.
 This also applies to a new strike target and a one-use weapon's ground route.
@@ -208,9 +191,8 @@ Each selected unit must have a legal order to that destination.
 If any unit cannot reach it, the whole movement command preserves existing orders.
 Group actions use existing per-unit multiplayer commands.
 
-Every reusable aircraft can patrol, including bombers and Zeppelin.
-One-use weapons cannot patrol.
-Unit data defines aircraft air-to-air bonuses.
+queries.air_unit_can_patrol determines defense eligibility from the current unit library.
+Unit data defines aircraft air-to-air modifiers.
 
 Resolution and transport
 ------------------------
@@ -232,19 +214,19 @@ Loading replaces old infantry placeholder stats while preserving health ratios.
 
 On load, legacy aircraft Trucks unpack on land or become Convoys at sea.
 They retain identity and health fraction.
-The AI moves V1/V2 on land.
+The AI uses shared capability checks to select ground routes or flight orders.
 It uses Convoys for reachable crossings when no land route is available.
 See documentation/ai_movement.txt for aircraft AI decisions.
 
 Old Truck conversion orders become Convoy orders on a coast and cancel inland.
-Keep normal land paths for V1/V2.
+Keep normal land paths when queries.air_unit_can_move_on_ground permits them.
 Discard those paths for reusable aircraft.
 
 Interception
 ------------
 
 All interceptable aircraft attacking one province form one committed force, including aircraft from different countries.
-V2s form a separate interception-immune force.
+The air_interception_immune field determines which attackers form a separate force without interception.
 Every hostile patrol covering the mission joins one shared coalition-lane battle.
 It uses global COMBAT_WIDTH and the normal rules for three or more sides.
 
@@ -268,17 +250,16 @@ After interception, surviving aircraft make one simultaneous exchange against th
 Use shared coalition lanes, target-terrain combat width, front ranks, and reserves.
 Defenders return fire even if that exchange destroys them.
 
-Aircraft keep flight stats and Tanks-category immunity.
+Aircraft keep flight stats.
+queries.unit_target_damage_multiplier supplies shared target immunity and damage modifiers.
 The aircraft air-to-air bonus applies only during interception.
 Health and political damage modifiers apply to both sides.
 Fort defense protects only the garrison.
 Flight never occupies or captures the target.
 
 air_damages_forts controls fort damage.
-Bombers, including Jet Bombers, can damage forts.
-Zeppelin, V1 Flying Bomb, V2 Rocket, and Jet Fighters can also damage forts.
-Biplane and Monoplane Fighters cannot.
-Each capable aircraft that reaches the target removes one fort level after the exchange.
+The turn processor applies fort damage only when the current unit library permits it.
+Read the effect in map_logic/turn_processing/air_processor.py.
 This also applies to empty tiles.
 Research unlock details show the capability.
 
@@ -286,10 +267,10 @@ Surviving reusable aircraft stay at their exact base with health and morale loss
 Remove destroyed aircraft.
 
 A barrage or ranged strike against based aircraft uses shared target damage modifiers.
-These include Tanks-category immunity, but exclude the aircraft air-to-air bonus.
+queries.unit_target_damage_multiplier supplies these modifiers without the aircraft air-to-air bonus.
 
 Hostile melee ground combat destroys aircraft immediately, before lane assignment or damage exchange.
-This includes V1/V2 on land and aircraft unloaded from Convoys into hostile troops.
+This includes aircraft with ground routes and aircraft unloaded from Convoys into hostile troops.
 Neutral aircraft are unaffected.
 Aircraft Convoys stay loaded during sea battles.
 Non-mutating UI and AI estimates show the same casualties.

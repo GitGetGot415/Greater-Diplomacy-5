@@ -15,6 +15,10 @@ data/
     Game data and data tools.
     constants.py stores shared constants.
     queries.py provides shared queries about current game state.
+    json/unit_data.json and json/building_data.json own current unit and building settings.
+    json/research_template.json owns current research settings.
+    generators/recipes.py defines data generation.
+    Read current stats, costs, research settings, and capabilities from these sources instead of documentation.
 
 documentation/
     Project guides and design notes.

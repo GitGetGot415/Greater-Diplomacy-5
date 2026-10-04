@@ -58,7 +58,7 @@ DISBAND, CONVERT, and REPAIR orders survive the AI's next movement plan.
 ATTACK CHECKS, BOMBARDMENT, AND ROTATION
 ----------------------------------------
 
-The AI bombards when a target is in range instead of moving artillery into melee.
+For units with legal bombardment orders, the AI prefers an in-range bombardment over melee movement.
 
 Before a charge, the AI estimates the first lane exchange.
 It skips a hostile occupied tile if every proposed attacker would be destroyed in that exchange.
@@ -101,8 +101,7 @@ If no safe landing tile is reachable, normal mission selection continues.
 Aircraft already caught in ground combat cannot escape through flight.
 
 Reusable aircraft patrol when no strike or closer safe base is available.
-It moves V1/V2 along legal land routes at their ground speed.
-V1/V2 cannot patrol or fly between bases.
+Shared capability checks select legal ground routes, patrols, or flights from current unit data.
 
 The AI reads only visible enemy stacks.
 It leaves the tactical player's division under player control.

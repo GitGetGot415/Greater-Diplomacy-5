@@ -59,19 +59,14 @@ AIRCRAFT
 Aerospace is a separate research and production category.
 air_role and air_range_px in unit_data.json define flight.
 production_group and land movement speed do not define flight.
-Monoplane Fighter research requires Biplane Fighter V.
-Monoplane Bomber research requires Biplane Bomber III.
-Jet Engine requires Monoplane Fighter V.
-Jet Fighter research requires Monoplane Fighter V and Jet Engine.
-Jet Bomber research requires Monoplane Bomber V and Jet Fighter I.
 Numbered aircraft levels use the shared research, production, and upgrade rules.
-The unit library defines each level's stats and costs.
+Read current research settings in data/json/research_template.json.
+Read current stats, costs, and capabilities in data/json/unit_data.json.
+data/generators/recipes.py defines data generation.
 
-Every reusable aircraft can patrol and strike, including bombers and Zeppelin.
-V1 Flying Bomb and V2 Rocket are consumed after a completed strike.
-V2 bypasses interception.
-Listed air range is patrol and strike reach.
-Reusable aircraft can reposition up to twice that distance because they do not return to the launch base.
+Shared queries read aircraft capabilities from the current unit library.
+queries.air_order_radius calculates reach for each order type.
+air_consumable and air_interception_immune control strike consumption and interception eligibility.
 
 The mission selector offers No mission and Defend area with weakest, strongest, or random priority.
 All choices stay visible. Unavailable missions and flight from an invalid base are disabled.
@@ -108,13 +103,12 @@ After interception, strikes use one simultaneous combat exchange against the gar
 They use terrain width, coalition lanes, front ranks, and reserves.
 Defenders can damage or destroy aircraft.
 
-Tanks-category immunity applies in flight. Aircraft air-to-air bonuses apply only during interception.
+queries.unit_target_damage_multiplier supplies shared immunity and damage modifiers.
+Aircraft air-to-air bonuses apply only during interception.
 Survivors keep their losses at the launch base.
 Flight never captures territory.
 
 air_damages_forts defines fort damage capability in unit data.
-Bombers, including Jet Bombers, have this capability.
-Zeppelin, V1 Flying Bomb, V2 Rocket, and Jet Fighters also have this capability.
 Research details show it.
 Player and AI orders use the same turn processor.
 See documentation/ai_movement.txt for aircraft AI decisions.
@@ -139,11 +133,11 @@ air_pressure = hostile_air_attack / (hostile_ground_attack + hostile_air_attack 
 Friendly interception attack includes each aircraft's shared air-to-air multiplier.
 A zero denominator gives zero air pressure.
 The evaluator applies interception multipliers before it subtracts enemy aircraft defense.
-It does not credit aircraft with artillery's separate bombardment value.
+It does not add the separate bombardment valuation to aircraft interception or strike value.
 
 Research uses the existing ahead-of-time penalty, including aerospace.
 Recruitment buildings use the General Buildings panel.
-Their factory requirements and upgrade chain are unchanged.
+Read current building settings in data/json/building_data.json and research settings in data/json/research_template.json.
 See documentation/air_stuff.txt for the full aircraft rules.
 
 DIPLOMACY
