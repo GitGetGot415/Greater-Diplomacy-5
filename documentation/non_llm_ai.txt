@@ -59,10 +59,13 @@ AIRCRAFT
 Aerospace is a separate research and production category.
 air_role and air_range_px in unit_data.json define flight.
 production_group and land movement speed do not define flight.
-Monoplane families require level V of their matching biplane family.
-Jet Engine requires Monoplane Fighter V. Jet Fighter research requires Jet Engine.
+Monoplane Fighter research requires Biplane Fighter V.
+Monoplane Bomber research requires Biplane Bomber III.
+Jet Engine requires Monoplane Fighter V.
+Jet Fighter research requires Monoplane Fighter V and Jet Engine.
+Jet Bomber research requires Monoplane Bomber V and Jet Fighter I.
 Numbered aircraft levels use the shared research, production, and upgrade rules.
-Higher levels currently retain their family's level I stats and costs.
+The unit library defines each level's stats and costs.
 
 Every reusable aircraft can patrol and strike, including bombers and Zeppelin.
 V1 Flying Bomb and V2 Rocket are consumed after a completed strike.
@@ -105,12 +108,13 @@ After interception, strikes use one simultaneous combat exchange against the gar
 They use terrain width, coalition lanes, front ranks, and reserves.
 Defenders can damage or destroy aircraft.
 
-Tanks-category immunity applies in flight. Fighter damage bonuses apply only during interception.
+Tanks-category immunity applies in flight. Aircraft air-to-air bonuses apply only during interception.
 Survivors keep their losses at the launch base.
 Flight never captures territory.
 
 air_damages_forts defines fort damage capability in unit data.
-Bombers, Zeppelin, V1 Flying Bomb, V2 Rocket, and Jet Fighters have this capability.
+Bombers, including Jet Bombers, have this capability.
+Zeppelin, V1 Flying Bomb, V2 Rocket, and Jet Fighters also have this capability.
 Research details show it.
 Player and AI orders use the same turn processor.
 See documentation/ai_movement.txt for aircraft AI decisions.

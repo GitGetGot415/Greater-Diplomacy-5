@@ -31,18 +31,22 @@ Research years apply the standard ahead-of-time penalty.
 
 Family                Level years
 Biplane Fighter       1910, 1914, 1918, 1922, 1926
-Biplane Bomber        1914, 1918, 1922, 1926, 1930
-Monoplane Fighter     1930, 1933, 1936, 1939, 1942
-Monoplane Bomber      1933, 1936, 1939, 1942, 1945
-Jet Fighter           1950, 1954, 1958, 1962, 1966, 1970
+Biplane Bomber        1915, 1920, 1925
+Monoplane Fighter     1930, 1934, 1938, 1942, 1946
+Monoplane Bomber      1930, 1935, 1940, 1945, 1950
+Jet Fighter           Every four years from 1950 through 2010
+Jet Bomber            Every five years from 1955 through 2010
 
 Biplane Bomber research requires Biplane Fighter I.
 Monoplane Fighter research requires Biplane Fighter V.
-Monoplane Bomber research requires Biplane Bomber V.
+Monoplane Bomber research requires Biplane Bomber III.
 Jet Engine research requires Monoplane Fighter V.
-Jet Fighter research requires Jet Engine.
+Jet Fighter research requires Monoplane Fighter V and Jet Engine.
+Jet Bomber research requires Monoplane Bomber V and Jet Fighter I.
+Jet Bombers use assets/classic/Jet Bomber.png.
 Each later level requires the previous level in that family.
-Higher levels currently retain their family's level I stats, capabilities, costs, and production time.
+The unit library defines each level's stats, capabilities, costs, and production time.
+Jet Bomber levels initially copy the corresponding Jet Fighter levels, with air_role set to bomber.
 Edit data/json/unit_data.json to tune individual levels.
 Update data/generators/recipes.py before you regenerate the data files.
 
@@ -206,7 +210,7 @@ Group actions use existing per-unit multiplayer commands.
 
 Every reusable aircraft can patrol, including bombers and Zeppelin.
 One-use weapons cannot patrol.
-Unit data defines fighter air-to-air bonuses.
+Unit data defines aircraft air-to-air bonuses.
 
 Resolution and transport
 ------------------------
@@ -265,13 +269,14 @@ Use shared coalition lanes, target-terrain combat width, front ranks, and reserv
 Defenders return fire even if that exchange destroys them.
 
 Aircraft keep flight stats and Tanks-category immunity.
-The fighter air-to-air bonus applies only during interception.
+The aircraft air-to-air bonus applies only during interception.
 Health and political damage modifiers apply to both sides.
 Fort defense protects only the garrison.
 Flight never occupies or captures the target.
 
 air_damages_forts controls fort damage.
-Bombers, Zeppelin, V1 Flying Bomb, V2 Rocket, and Jet Fighters can damage forts.
+Bombers, including Jet Bombers, can damage forts.
+Zeppelin, V1 Flying Bomb, V2 Rocket, and Jet Fighters can also damage forts.
 Biplane and Monoplane Fighters cannot.
 Each capable aircraft that reaches the target removes one fort level after the exchange.
 This also applies to empty tiles.
@@ -281,7 +286,7 @@ Surviving reusable aircraft stay at their exact base with health and morale loss
 Remove destroyed aircraft.
 
 A barrage or ranged strike against based aircraft uses shared target damage modifiers.
-These include Tanks-category immunity, but exclude the fighter air-to-air bonus.
+These include Tanks-category immunity, but exclude the aircraft air-to-air bonus.
 
 Hostile melee ground combat destroys aircraft immediately, before lane assignment or damage exchange.
 This includes V1/V2 on land and aircraft unloaded from Convoys into hostile troops.

@@ -46,6 +46,7 @@
     "piston_bomber": { "category": "AEROSPACE", "display_name": "Monoplane Bomber", "max_lvl": 5, "cost": 1800, "req": {"biplane_bomber": 3}, "years": [1930, 1935, 1940, 1945, 1950] },
     "v1_flying_bomb": { "category": "AEROSPACE", "display_name": "V1 Flying Bomb", "max_lvl": 1, "cost": 900, "req": {}, "years": [1940] },
     "v2_rocket": { "category": "AEROSPACE", "display_name": "V2 Rocket", "max_lvl": 1, "cost": 1200, "req": {"v1_flying_bomb": 1}, "years": [1945] },
-    "jet_engine": { "category": "AEROSPACE", "display_name": "Jet Engine", "max_lvl": 1, "cost": 1800, "req": {"jet_engine": 1}, "years": [1945] },
-    "jet_fighter": { "category": "AEROSPACE", "display_name": "Jet Fighter", "max_lvl": 16, "cost": 2400, "req": {"piston_fighter": 5, "jet_engine": 1}, "years": [1950, 1954, 1958, 1962, 1966, 1970, 1974, 1978, 1982, 1986, 1990, 1994, 1998, 2002, 2006, 2010] }
+    "jet_engine": { "category": "AEROSPACE", "display_name": "Jet Engine", "max_lvl": 1, "cost": 1800, "req": {}, "years": [1945] },
+    "jet_fighter": { "category": "AEROSPACE", "display_name": "Jet Fighter", "max_lvl": 16, "cost": 2400, "req": {"piston_fighter": 5, "jet_engine": 1}, "years": [1950, 1954, 1958, 1962, 1966, 1970, 1974, 1978, 1982, 1986, 1990, 1994, 1998, 2002, 2006, 2010] },
+    "jet_bomber": { "category": "AEROSPACE", "display_name": "Jet Bomber", "max_lvl": 3, "cost": 2400, "req": {"piston_bomber": 5, "jet_fighter": 1}, "years": [1955, 1960, 1965] }
 }

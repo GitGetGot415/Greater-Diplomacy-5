@@ -1343,7 +1343,11 @@ class AirMissionSelectionTests(unittest.TestCase):
                 before = {field: self.unit[field] for field in ("health", "max_health", "attack", "defense", "speed")}
                 movement_processor.process_upgrades(self.game)
                 self.assertEqual(self.unit["type"], target)
-                self.assertEqual({field: self.unit[field] for field in before}, before)
+                stats = library[target]
+                self.assertAlmostEqual(self.unit["health"] / self.unit["max_health"], before["health"] / before["max_health"])
+                self.assertEqual(self.unit["max_health"], stats["health"])
+                for field in ("attack", "defense", "speed"):
+                    self.assertEqual(self.unit[field], stats[field])
 
     def test_aircraft_upgrade_cancels_when_research_factory_or_combat_disallows_it(self):
         for condition in ("research", "factory", "combat"):
@@ -1609,7 +1613,7 @@ class AirAppSmokeTests(unittest.TestCase):
 
     def test_numbered_aircraft_and_legacy_names_survive_actual_save_load(self):
         from data.map import save_map
-        from tests.test_aerospace import REQUESTED_LEVEL_YEARS
+        from tests.test_aerospace import AIRCRAFT_LEVEL_YEARS
         for legacy in (False, True):
             with self.subTest(legacy=legacy), tempfile.TemporaryDirectory() as directory:
                 game, _, _, _ = self.make_runtime_save(directory)
@@ -1617,22 +1621,24 @@ class AirAppSmokeTests(unittest.TestCase):
                 base["units"] = []
                 research = {}
                 names = []
-                for tech, years in REQUESTED_LEVEL_YEARS.items():
+                for tech, years in AIRCRAFT_LEVEL_YEARS.items():
                     level = 1 if legacy else len(years)
+                    if tech == "jet_bomber" and not legacy:
+                        level -= 1
                     name = f"{queries.get_tech_tree()[tech]['display_name']} {c.ROMAN_NUMERALS[level]}"
                     names.append(name)
                     research[tech] = level
                     aircraft = wing(base, name, order={"type": "AIR_PATROL", "priority": "RANDOM"})
                     aircraft["health"] *= 0.6
-                    if legacy:
+                    if legacy and tech != "jet_bomber":
                         aircraft["type"] = queries.get_base_unit_name(name)
                 queries.load_transport(base["units"][-1], "Convoy")
-                base["unit_queue"] = [{"unit_type": queries.get_base_unit_name(name) if legacy else name,
+                base["unit_queue"] = [{"unit_type": queries.get_base_unit_name(name) if legacy and queries.get_base_unit_name(name) in queries.LEGACY_AIRCRAFT_NAMES else name,
                                        "turns_remaining": 1} for name in names]
                 country = game.nation_data["A"]
-                country.update(research=research, research_progress={"biplane": 123},
-                    research_queue=[{"tech_name": "biplane", "points_remaining": 234}] if legacy else [],
-                    custom_production_units=[queries.get_base_unit_name(name) if legacy else name for name in names])
+                country.update(research=research, research_progress={"biplane": 123, "jet_bomber": 321},
+                    research_queue=[{"tech_name": "biplane" if legacy else "jet_bomber", "points_remaining": 234}],
+                    custom_production_units=[queries.get_base_unit_name(name) if legacy and queries.get_base_unit_name(name) in queries.LEGACY_AIRCRAFT_NAMES else name for name in names])
                 with patch.object(c, "SAVES_DIR", directory):
                     asyncio.run(save_map.save_map_data(game, "air-levels"))
                 loaded = Map(load_path=os.path.join(directory, "air-levels"), skip_initial_income=True)
