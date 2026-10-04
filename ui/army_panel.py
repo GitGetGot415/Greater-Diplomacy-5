@@ -80,15 +80,18 @@ def _editor_state(map_screen):
     state = getattr(map_screen, "army_editor_state", None)
     if not isinstance(state, dict):
         return None
-    army = next((item for item in _armies(map_screen)
+    army = next((item for item in queries.get_armies(
+        map_screen.player_country, map_screen.nation_data, map_screen.map_data)
                  if item.get("id") == state.get("army_id")), None)
-    if army is None:
+    if army is None or army["id"] == c.UNASSIGNED_ARMY_ID:
         map_screen.army_editor_state = None
         return None
     return state
 
 
 def _open_editor(map_screen, army):
+    if army["id"] == c.UNASSIGNED_ARMY_ID:
+        return
     map_screen.army_editor_state = {
         "army_id": army["id"],
         "name": army["name"],
@@ -191,6 +194,8 @@ def _target_area_rect(card):
 
 def _open_target_area(map_screen, army):
     """Open an editable map picker without allowing submitted turns to mutate."""
+    if army["id"] == c.UNASSIGNED_ARMY_ID:
+        return
     if not map_screen.can_select_map_units():
         map_screen.show_feedback("Turn submitted or unavailable; unsubmit to edit target areas.")
         return
@@ -249,6 +254,7 @@ def _save_editor(map_screen):
         return False
     map_screen.army_editor_state = None
     map_screen.army_custom_symbol_state = None
+    _refresh_presentation(map_screen)
     map_screen.show_feedback(f"Updated {army['name']}")
     return True
 
@@ -589,11 +595,33 @@ def _visible(map_screen, orders_screen=None):
             and not getattr(map_screen, "tactical_mode", False))
 
 
+def prepare(map_screen):
+    """Cache the Unassigned card after units, rosters, or the player change."""
+    map_screen.unassigned_army_country = map_screen.player_country
+    map_screen.unassigned_army_card = queries.get_unassigned_army(
+        map_screen.player_country, map_screen.nation_data, map_screen.map_data)
+
+
+def _refresh_presentation(map_screen):
+    # Lightweight UI test doubles do not provide the full map cache owner.
+    invalidate = getattr(map_screen, "invalidate_map_presentation_cache", None)
+    if invalidate is not None:
+        invalidate()
+    else:
+        prepare(map_screen)
+
+
 def _armies(map_screen, orders_screen=None):
     if not _visible(map_screen, orders_screen):
         return []
-    return queries.get_armies(map_screen.player_country, map_screen.nation_data,
-                              map_screen.map_data)
+    armies = queries.get_armies(map_screen.player_country, map_screen.nation_data,
+                               map_screen.map_data)
+    # Test doubles may omit cached presentation data. Real maps prepare it at state changes.
+    unassigned = getattr(map_screen, "unassigned_army_card", None)
+    cache_country = getattr(map_screen, "unassigned_army_country", None)
+    return ([unassigned] + armies
+            if cache_country == map_screen.player_country and unassigned and unassigned["unit_ids"]
+            else armies)
 
 
 def _layout(map_screen, show_create=False, orders_screen=None):
@@ -656,7 +684,8 @@ def handle_event(map_screen, event, orders_screen=None):
         for index, army in enumerate(armies):
             rect = map_top_right_layout.card_rect(tray, index, map_screen.army_panel_scroll_y)
             if rect.colliderect(tray) and rect.collidepoint(event.pos):
-                if _orders_can_use_selection(map_screen, orders_screen):
+                if (army["id"] != c.UNASSIGNED_ARMY_ID
+                        and _orders_can_use_selection(map_screen, orders_screen)):
                     map_screen.assign_selection_to_army(army["id"])
                     orders_screen.refresh_ui()
                 return True
@@ -676,18 +705,28 @@ def handle_event(map_screen, event, orders_screen=None):
         rect = map_top_right_layout.card_rect(tray, index, map_screen.army_panel_scroll_y)
         if not rect.colliderect(tray) or not rect.collidepoint(event.pos):
             continue
+        if army["id"] == c.UNASSIGNED_ARMY_ID:
+            map_screen.select_army(army["id"], open_orders=orders_screen is None)
+            if orders_screen is not None:
+                orders_screen.refresh_ui()
+            return True
+        if not map_screen.can_select_map_units():
+            return True
         close_rect = _close_rect(rect)
         if close_rect.collidepoint(event.pos):
             queries.disband_army(map_screen.player_country, army["id"],
                                   map_screen.nation_data, map_screen.map_data)
+            _refresh_presentation(map_screen)
             map_screen.show_feedback(f"Disbanded {army['name']}")
         elif _move_up_rect(rect).collidepoint(event.pos):
             if queries.move_army(map_screen.player_country, army["id"], -1,
                                   map_screen.nation_data, map_screen.map_data):
+                _refresh_presentation(map_screen)
                 map_screen.show_feedback(f"Moved {army['name']} up")
         elif _move_down_rect(rect).collidepoint(event.pos):
             if queries.move_army(map_screen.player_country, army["id"], 1,
                                   map_screen.nation_data, map_screen.map_data):
+                _refresh_presentation(map_screen)
                 map_screen.show_feedback(f"Moved {army['name']} down")
         elif _target_area_rect(rect).collidepoint(event.pos):
             _open_target_area(map_screen, army)
@@ -726,22 +765,29 @@ def draw(map_screen, surface, orders_screen=None, draw_editors=True):
         if not rect.colliderect(tray):
             continue
         selected = bool(selected_ids) and selected_ids == set(army.get("unit_ids", []))
+        unassigned = army["id"] == c.UNASSIGNED_ARMY_ID
         card_color, border_color = _tray_card_colors(
             army.get("symbol_color", c.DEFAULT_ARMY_SYMBOL_COLOR), selected)
+        if unassigned:
+            card_color = c.UNASSIGNED_ARMY_COLOR
         pygame.draw.rect(surface, card_color, rect, border_radius=4)
         pygame.draw.rect(surface, border_color, rect, 1, border_radius=4)
-        _draw_emblem(surface, army.get("symbol", ""), army.get("custom_symbol"),
-                     army.get("symbol_color", c.DEFAULT_ARMY_SYMBOL_COLOR),
-                     army.get("symbol_rotation", c.DEFAULT_ARMY_SYMBOL_ROTATION),
-                     (rect.x + 21, rect.centery), 25,
-                     flipped=army.get("symbol_flipped"))
+        if not unassigned:
+            _draw_emblem(surface, army.get("symbol", ""), army.get("custom_symbol"),
+                         army.get("symbol_color", c.DEFAULT_ARMY_SYMBOL_COLOR),
+                         army.get("symbol_rotation", c.DEFAULT_ARMY_SYMBOL_ROTATION),
+                         (rect.x + 21, rect.centery), 25,
+                         flipped=army.get("symbol_flipped"))
         name = text_font.render(army["name"], True, (245, 245, 250))
         count = text_font.render(f"{len(army.get('unit_ids', []))} units", True, (205, 220, 235))
         text_x = rect.x + (39 if army.get("symbol") or army.get("custom_symbol") else 9)
         surface.blit(name, (text_x, rect.y + 6))
         surface.blit(count, (text_x, rect.y + 23))
+        if unassigned:
+            continue
+        first_army_index = int(armies[0]["id"] == c.UNASSIGNED_ARMY_ID)
         for arrow_rect, label, enabled in (
-                (_move_up_rect(rect), "^", index > 0),
+                (_move_up_rect(rect), "^", index > first_army_index),
                 (_move_down_rect(rect), "v", index < len(armies) - 1)):
             pygame.draw.rect(surface, (62, 88, 135) if enabled else (45, 52, 67),
                              arrow_rect, border_radius=3)

@@ -996,6 +996,20 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
         self.assertNotIn("offensive_area", validated[0]["armies"][0])
         self.assertNotIn("order_mode", validated[0]["armies"][0])
 
+    def test_unassigned_is_local_presentation_and_cannot_be_submitted_as_an_army(self):
+        map_ref = self.make_map()
+        map_ref.player_country = "A"
+        from ui import army_panel
+        army_panel.prepare(map_ref)
+        self.assertTrue(map_ref.unassigned_army_card["unit_ids"])
+        commands = collect_map_commands(map_ref, "A")
+        roster = next(command for command in commands if command["type"] == "army_roster")
+        self.assertEqual(roster["armies"], [])
+        with self.assertRaises(RealtimeError):
+            MapRealtimeDriver(map_ref).validate_draft("A", [{
+                "type": "army_roster", "armies": [map_ref.unassigned_army_card]}])
+        self.assertEqual(map_ref.nation_data["A"]["armies"], [])
+
     def test_an_idle_complete_draft_is_accepted(self):
         map_ref = self.make_map()
         # An ordinary player has many units with no order.  This regression

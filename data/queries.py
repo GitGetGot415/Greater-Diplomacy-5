@@ -2460,6 +2460,9 @@ def normalize_armies(nation_data, map_data):
             if not isinstance(raw, dict):
                 continue
             army_id = raw.get("id")
+            # Unassigned is a derived list entry, never a saved organization.
+            if army_id == c.UNASSIGNED_ARMY_ID:
+                continue
             if not isinstance(army_id, str) or not army_id or army_id in army_ids:
                 army_id = uuid.uuid4().hex
             army_ids.add(army_id)
@@ -2497,6 +2500,26 @@ def get_armies(country_id, nation_data, map_data):
     """Return a country's current army records without doing frame-time scans."""
     country = (nation_data or {}).get(country_id, {})
     return country.get("armies", []) if isinstance(country, dict) else []
+
+
+def get_unassigned_army(country_id, nation_data, map_data):
+    """Build the fixed list entry from current owned units outside saved armies.
+
+    Call at state or input changes. Cache the result for frame rendering.
+    This entry never changes map stack identity, saved rosters, or unit orders.
+    """
+    ensure_unit_ids(map_data)
+    assigned = {unit_id for army in get_armies(country_id, nation_data, map_data)
+                if army.get("id") != c.UNASSIGNED_ARMY_ID
+                for unit_id in army.get("unit_ids", [])}
+    unit_ids = [unit["unit_id"] for province in (map_data or {}).values()
+                for unit in province.get("units", [])
+                if unit.get("owner") == country_id and unit.get("unit_id") not in assigned]
+    return {"id": c.UNASSIGNED_ARMY_ID, "name": "Unassigned", "unit_ids": unit_ids,
+            "symbol": "", "custom_symbol": None,
+            "symbol_color": list(c.UNASSIGNED_ARMY_COLOR),
+            "symbol_rotation": c.DEFAULT_ARMY_SYMBOL_ROTATION,
+            "symbol_flipped": c.DEFAULT_ARMY_SYMBOL_FLIPPED, "defense_area": []}
 
 
 def _army_name(armies):
@@ -2542,6 +2565,8 @@ def create_army(country_id, unit_ids, nation_data, map_data):
 
 def assign_units_to_army(country_id, army_id, unit_ids, nation_data, map_data):
     """Move owned units into an existing army and return whether it changed."""
+    if army_id == c.UNASSIGNED_ARMY_ID:
+        return False
     normalize_armies(nation_data, map_data)
     armies = get_armies(country_id, nation_data, map_data)
     target = next((army for army in armies if army.get("id") == army_id), None)
@@ -2579,6 +2604,8 @@ def ungroup_units(country_id, unit_ids, nation_data, map_data):
 
 def disband_army(country_id, army_id, nation_data, map_data):
     """Delete an army organization record, never its member units."""
+    if army_id == c.UNASSIGNED_ARMY_ID:
+        return False
     normalize_armies(nation_data, map_data)
     armies = get_armies(country_id, nation_data, map_data)
     original_len = len(armies)
@@ -2588,6 +2615,8 @@ def disband_army(country_id, army_id, nation_data, map_data):
 
 def move_army(country_id, army_id, direction, nation_data, map_data):
     """Move an army one display slot up or down in its owner's roster."""
+    if army_id == c.UNASSIGNED_ARMY_ID:
+        return False
     normalize_armies(nation_data, map_data)
     armies = get_armies(country_id, nation_data, map_data)
     index = next((i for i, army in enumerate(armies)
@@ -2610,6 +2639,8 @@ def update_army_presentation(country_id, army_id, name, symbol, symbol_color, sy
     map UI, while multiplayer validates the same schema before it reaches a
     canonical nation record.
     """
+    if army_id == c.UNASSIGNED_ARMY_ID:
+        return None
     normalize_armies(nation_data, map_data)
     army = next((item for item in get_armies(country_id, nation_data, map_data)
                  if item.get("id") == army_id), None)
@@ -2628,6 +2659,8 @@ def update_army_presentation(country_id, army_id, name, symbol, symbol_color, sy
 
 def set_army_defense_area(country_id, army_id, province_ids, nation_data, map_data):
     """Save one army's selected target tiles and return its canonical record."""
+    if army_id == c.UNASSIGNED_ARMY_ID:
+        return None
     normalize_armies(nation_data, map_data)
     army = next((item for item in get_armies(country_id, nation_data, map_data)
                  if item.get("id") == army_id), None)
@@ -2774,6 +2807,8 @@ def _army_record(map_screen, country_id, army_id):
 def queue_army_defense_orders(map_screen, country_id, army_id, only_idle=False,
                               excluded_unit_object_ids=()):
     """Queue balanced legal routes to one army's saved target area."""
+    if army_id == c.UNASSIGNED_ARMY_ID:
+        return 0
     army = _army_record(map_screen, country_id, army_id)
     if army is None:
         return 0

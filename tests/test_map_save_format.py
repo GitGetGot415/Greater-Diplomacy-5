@@ -48,6 +48,22 @@ def sample_map_screen():
 
 
 class MapSaveFormatTests(unittest.TestCase):
+    def test_unassigned_is_rebuilt_from_saved_units_without_a_new_saved_field(self):
+        from ui import army_panel
+        map_screen = sample_map_screen()
+        army_panel.prepare(map_screen)
+        before = map_screen.unassigned_army_card
+        self.assertTrue(before["unit_ids"])
+        snapshot = json.loads(history_io.dump_text(queries.build_save_dict(map_screen)))
+        self.assertNotIn("unassigned_army_card", snapshot)
+        self.assertEqual(snapshot["nation_data"]["Avaria"].get("armies", []), [])
+        loaded = SimpleNamespace(player_country=snapshot["player_country"],
+                                 nation_data=snapshot["nation_data"],
+                                 map_data=snapshot["provinces"])
+        queries.normalize_armies(loaded.nation_data, loaded.map_data)
+        army_panel.prepare(loaded)
+        self.assertEqual(loaded.unassigned_army_card, before)
+
     def test_map_data_holds_current_province_state_and_meta_can_omit_duplicate(self):
         map_screen = sample_map_screen()
 

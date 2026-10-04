@@ -1499,6 +1499,8 @@ class Map(GameState):
         # Army-card editing is local UI state like selection.  The edited
         # record itself still lives in nation_data and is saved/synchronized.
         self.army_editor_state = None
+        self.unassigned_army_card = None
+        self.unassigned_army_country = None
         self._ignore_left_until_release = False
         self._ignore_right_until_release = False
         self._unit_selection_turn = self.time_manager.total_turns
@@ -1917,6 +1919,7 @@ class Map(GameState):
         self._combat_unit_view_cache = None
         self._unit_render_index_cache = None
         self._unit_roster_cache = {}
+        army_panel.prepare(self)
         unit_events.refresh_presentation(self)
         # The inspector projects aircraft caught in ground combat as casualties.
         # Build its roster at this boundary, never during the frame draw.
@@ -2301,8 +2304,11 @@ class Map(GameState):
         """Select all live members of one army, optionally opening Orders."""
         if not self.can_select_map_units():
             return False
-        armies = queries.get_armies(self.player_country, self.nation_data, self.map_data)
-        army = next((item for item in armies if item.get("id") == army_id), None)
+        if army_id == c.UNASSIGNED_ARMY_ID:
+            army = queries.get_unassigned_army(self.player_country, self.nation_data, self.map_data)
+        else:
+            armies = queries.get_armies(self.player_country, self.nation_data, self.map_data)
+            army = next((item for item in armies if item.get("id") == army_id), None)
         if army is None:
             return False
         records_by_id = {
@@ -2403,6 +2409,7 @@ class Map(GameState):
             if "deployment_queue" in province:
                 del province["deployment_queue"]
 
+        army_panel.prepare(self)
         print(f"[MAP SCRUBBER] {updated_count} entities updated, {removed_count} obsolete entities vaporized.")
 
     def handle_back_key(self):

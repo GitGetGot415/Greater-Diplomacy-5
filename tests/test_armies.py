@@ -1,6 +1,7 @@
 """Regression coverage for persistent army organization and tray geometry."""
 
 import unittest
+import copy
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
@@ -79,6 +80,68 @@ class ArmyQueryTests(unittest.TestCase):
         ]}
         self.world = {"one": self.first, "two": self.second}
         self.nations = {"A": {"armies": []}, "B": {"armies": []}}
+
+    def test_unassigned_contains_all_owned_unit_types_outside_real_armies(self):
+        self.second["owner"] = "B"
+        self.second["units"].extend([
+            {"owner": "A", "type": "Biplane Fighter I"},
+            {"owner": "A", "type": "Convoy (Infantry)"},
+            {"owner": "B", "type": "Infantry"},
+        ])
+        queries.normalize_armies(self.nations, self.world)
+        assigned = self.first["units"][0]
+        queries.create_army("A", [assigned["unit_id"]], self.nations, self.world)
+        before = copy.deepcopy(self.nations)
+
+        unassigned = queries.get_unassigned_army("A", self.nations, self.world)
+
+        expected = {unit["unit_id"] for province in self.world.values()
+                    for unit in province["units"]
+                    if unit["owner"] == "A" and unit is not assigned}
+        self.assertEqual(set(unassigned["unit_ids"]), expected)
+        self.assertEqual(unassigned["name"], "Unassigned")
+        self.assertEqual(unassigned["symbol_color"], list(c.UNASSIGNED_ARMY_COLOR))
+        self.assertEqual(unassigned["symbol"], "")
+        self.assertIsNone(unassigned["custom_symbol"])
+        self.assertEqual(unassigned["defense_area"], [])
+        self.assertEqual(self.nations, before)
+        for province in self.world.values():
+            for unit in province["units"]:
+                if unit["unit_id"] in expected:
+                    self.assertIsNone(queries.army_for_unit(unit, self.nations))
+                    self.assertIsNone(queries.army_color_for_unit(unit, self.nations))
+        self.assertEqual(queries.group_units_by_army(
+            [self.second["units"][0]], self.nations), [(None, [self.second["units"][0]])])
+
+    def test_unassigned_rejects_every_army_mutation_and_target_orders(self):
+        queries.normalize_armies(self.nations, self.world)
+        unit_id = self.first["units"][0]["unit_id"]
+        queries.create_army("A", [unit_id], self.nations, self.world)
+        before = copy.deepcopy((self.nations, self.world))
+        reserved = c.UNASSIGNED_ARMY_ID
+        self.assertFalse(queries.assign_units_to_army(
+            "A", reserved, [unit_id], self.nations, self.world))
+        self.assertFalse(queries.disband_army("A", reserved, self.nations, self.world))
+        self.assertFalse(queries.move_army("A", reserved, 1, self.nations, self.world))
+        self.assertIsNone(queries.update_army_presentation(
+            "A", reserved, "Changed", "", [1, 2, 3], 0, False, None,
+            self.nations, self.world))
+        self.assertIsNone(queries.set_army_defense_area(
+            "A", reserved, [2], self.nations, self.world))
+        map_stub = SimpleNamespace(map_data=self.world, nation_data=self.nations)
+        self.assertEqual(queries.queue_army_defense_orders(map_stub, "A", reserved), 0)
+        self.assertEqual((self.nations, self.world), before)
+
+    def test_saved_reserved_entry_does_not_claim_units_during_normalization(self):
+        queries.ensure_unit_ids(self.world)
+        unit_id = self.first["units"][0]["unit_id"]
+        self.nations["A"]["armies"] = [
+            {"id": c.UNASSIGNED_ARMY_ID, "name": "Forged", "unit_ids": [unit_id]},
+            {"id": "real", "name": "Army 1", "unit_ids": [unit_id]},
+        ]
+        queries.normalize_armies(self.nations, self.world)
+        self.assertEqual([army["id"] for army in self.nations["A"]["armies"]], ["real"])
+        self.assertEqual(self.nations["A"]["armies"][0]["unit_ids"], [unit_id])
 
     def test_legacy_units_gain_ids_and_armies_are_exclusive(self):
         queries.normalize_armies(self.nations, self.world)
@@ -1043,9 +1106,15 @@ class ArmyLayoutTests(unittest.TestCase):
                 "A", selected_ids, nations, world),
             select_army=lambda *_args, **_kwargs: True,
         )
+        def assign_selection(army_id):
+            queries.assign_units_to_army("A", army_id, selected_ids, nations, world)
+            army_panel.prepare(map_stub)
+        map_stub.assign_selection_to_army = assign_selection
+        army_panel.prepare(map_stub)
         orders = SimpleNamespace(read_only=False, refresh_ui=Mock())
         tray, armies = army_panel._layout(map_stub, show_create=True)
-        card = map_top_right_layout.card_rect(tray, 0, map_stub.army_panel_scroll_y)
+        army_index = next(index for index, item in enumerate(armies) if item["id"] == army["id"])
+        card = map_top_right_layout.card_rect(tray, army_index, map_stub.army_panel_scroll_y)
         army_panel.handle_event(
             map_stub, pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=3, pos=card.center),
             orders_screen=orders)
@@ -1128,6 +1197,148 @@ class ArmyLayoutTests(unittest.TestCase):
                              map_top_right_layout.PANEL_GAP)
         self.assertLessEqual(tray.bottom, minimap.minimap_rect(
             map_ref, c.SCREEN_WIDTH, c.SCREEN_HEIGHT).top - map_top_right_layout.PANEL_GAP)
+
+
+class UnassignedArmyPanelTests(unittest.TestCase):
+    def setUp(self):
+        self.world = {"home": {"id": 1, "owner": "A", "units": [
+            {"owner": "A", "type": "Infantry"},
+            {"owner": "A", "type": "Tank"},
+        ]}}
+        self.nations = {"A": {"armies": []}}
+        self.map = SimpleNamespace(
+            player_country="A", nation_data=self.nations, map_data=self.world,
+            selected_province=None, selection_mode=False, is_editor=False,
+            tactical_mode=False, realtime_multiplayer=False, map_w=1000, map_h=500,
+            selected_map_unit_ids=lambda: [], can_select_map_units=lambda: True,
+            select_army=Mock(), show_feedback=Mock(), army_editor_state=None,
+            assign_selection_to_army=Mock())
+        army_panel.prepare(self.map)
+        self.ids = [unit["unit_id"] for unit in self.world["home"]["units"]]
+
+    def test_fixed_entry_hides_only_when_no_owned_units_are_unassigned(self):
+        self.assertEqual([army["id"] for army in army_panel._armies(self.map)],
+                         [c.UNASSIGNED_ARMY_ID])
+        army = queries.create_army("A", self.ids, self.nations, self.world)
+        army_panel.prepare(self.map)
+        self.assertEqual(army_panel._armies(self.map), [army])
+
+        queries.ungroup_units("A", [self.ids[0]], self.nations, self.world)
+        army_panel.prepare(self.map)
+        self.assertEqual(army_panel._armies(self.map)[0]["unit_ids"], [self.ids[0]])
+        queries.assign_units_to_army("A", army["id"], self.ids, self.nations, self.world)
+        self.world["home"]["units"].append({"owner": "A", "type": "Infantry"})
+        army_panel.prepare(self.map)
+        new_id = self.world["home"]["units"][-1]["unit_id"]
+        self.assertEqual(army_panel._armies(self.map)[0]["unit_ids"], [new_id])
+
+        queries.disband_army("A", army["id"], self.nations, self.world)
+        army_panel.prepare(self.map)
+        self.assertEqual(set(army_panel._armies(self.map)[0]["unit_ids"]),
+                         {*self.ids, new_id})
+        self.world["home"]["units"].clear()
+        army_panel.prepare(self.map)
+        self.assertEqual(army_panel._armies(self.map), [])
+
+    def test_virtual_card_has_no_editor_target_reorder_or_delete_controls(self):
+        tray, _armies = army_panel._layout(self.map)
+        card = map_top_right_layout.card_rect(tray, 0, self.map.army_panel_scroll_y)
+        for control in (army_panel._edit_rect, army_panel._close_rect,
+                        army_panel._move_up_rect, army_panel._move_down_rect,
+                        army_panel._target_area_rect):
+            with self.subTest(control=control.__name__):
+                event = pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1,
+                                           pos=control(card).center)
+                with (patch.object(queries, "disband_army") as disband,
+                      patch.object(queries, "move_army") as move,
+                      patch.object(army_panel, "_open_editor") as edit,
+                      patch.object(army_panel, "_open_target_area") as target):
+                    self.assertTrue(army_panel.handle_event(self.map, event))
+                disband.assert_not_called()
+                move.assert_not_called()
+                edit.assert_not_called()
+                target.assert_not_called()
+        self.map.select_army.assert_called_with(c.UNASSIGNED_ARMY_ID, open_orders=True)
+        army_panel._open_editor(self.map, self.map.unassigned_army_card)
+        army_panel._open_target_area(self.map, self.map.unassigned_army_card)
+        self.assertIsNone(self.map.army_editor_state)
+
+        orders = SimpleNamespace(read_only=False, refresh_ui=Mock())
+        self.map.selected_map_unit_ids = lambda: self.ids
+        self.assertTrue(army_panel.handle_event(self.map, pygame.event.Event(
+            pygame.MOUSEBUTTONDOWN, button=3, pos=card.center), orders))
+        self.map.assign_selection_to_army.assert_not_called()
+        self.assertTrue(army_panel.handle_event(self.map, pygame.event.Event(
+            pygame.MOUSEBUTTONUP, button=3, pos=card.center), orders))
+
+    def test_virtual_card_is_dark_grey_without_symbols_or_frame_calculations(self):
+        pygame.font.init()
+        surface = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
+        font = pygame.font.Font(None, 18)
+        self.map.selected_map_unit_ids = lambda: self.ids
+        with (patch.object(army_panel.fonts, "get", return_value=font),
+              patch.object(queries, "get_unassigned_army", side_effect=AssertionError("frame scan")),
+              patch.object(army_panel, "_draw_emblem") as emblem,
+              patch.object(army_panel, "_edit_rect") as edit,
+              patch.object(army_panel, "_close_rect") as close,
+              patch.object(army_panel, "_target_area_rect") as target,
+              patch.object(army_panel, "_move_up_rect") as move):
+            army_panel.draw(self.map, surface, draw_editors=False)
+            army_panel.draw(self.map, surface, draw_editors=False)
+        for control in (emblem, edit, close, target, move):
+            control.assert_not_called()
+        tray, _armies = army_panel._layout(self.map)
+        card = map_top_right_layout.card_rect(tray, 0, self.map.army_panel_scroll_y)
+        self.assertTrue(tray.contains(card))
+        self.assertEqual(surface.get_at((card.centerx, card.centery))[:3],
+                         c.UNASSIGNED_ARMY_COLOR)
+
+    def test_unassigned_stays_first_after_real_armies_move_or_are_deleted(self):
+        self.world["home"]["units"].append({"owner": "A", "type": "Infantry"})
+        first = queries.create_army("A", [self.ids[0]], self.nations, self.world)
+        second = queries.create_army("A", [self.ids[1]], self.nations, self.world)
+        queries.move_army("A", second["id"], -1, self.nations, self.world)
+        army_panel.prepare(self.map)
+        self.assertEqual([army["id"] for army in army_panel._armies(self.map)],
+                         [c.UNASSIGNED_ARMY_ID, second["id"], first["id"]])
+        tray, armies = army_panel._layout(self.map)
+        card = map_top_right_layout.card_rect(tray, len(armies) - 1,
+                                             self.map.army_panel_scroll_y)
+        self.assertTrue(army_panel.handle_event(self.map, pygame.event.Event(
+            pygame.MOUSEBUTTONDOWN, button=1, pos=army_panel._close_rect(card).center)))
+        self.assertEqual([army["id"] for army in army_panel._armies(self.map)],
+                         [c.UNASSIGNED_ARMY_ID, second["id"]])
+        self.assertIn(self.ids[0], army_panel._armies(self.map)[0]["unit_ids"])
+
+    def test_selecting_unassigned_selects_its_current_units_and_checks_permissions(self):
+        from screens.menu_screens.map import Map
+        queries.create_army("A", [self.ids[0]], self.nations, self.world)
+        self.map.select_map_units = Mock()
+        self.map.focus_camera_on_army = Mock()
+        self.map.change_state = Mock()
+        with patch("ui.sidebar_info.prepare_unit_roster"):
+            self.assertTrue(Map.select_army(self.map, c.UNASSIGNED_ARMY_ID))
+        self.map.select_map_units.assert_called_once_with([self.world["home"]["units"][1]])
+        self.map.change_state.assert_called_once_with("ORDERS")
+        self.map.can_select_map_units = lambda: False
+        self.map.select_map_units.reset_mock()
+        self.assertFalse(Map.select_army(self.map, c.UNASSIGNED_ARMY_ID))
+        self.map.select_map_units.assert_not_called()
+
+    def test_cached_unassigned_members_are_private_to_the_prepared_player(self):
+        self.nations["B"] = {"armies": []}
+        self.world["home"]["units"].append({"owner": "B", "type": "Infantry"})
+        self.map.player_country = "B"
+        self.assertEqual(army_panel._armies(self.map), [])
+        army_panel.prepare(self.map)
+        self.assertEqual(army_panel._armies(self.map)[0]["unit_ids"],
+                         [self.world["home"]["units"][-1]["unit_id"]])
+        for field, value in (("player_country", "Spectator"), ("is_editor", True),
+                             ("tactical_mode", True), ("selection_mode", True)):
+            original = getattr(self.map, field)
+            setattr(self.map, field, value)
+            self.assertEqual(army_panel._armies(self.map), [])
+            setattr(self.map, field, original)
 
 
 class MinimapTests(unittest.TestCase):

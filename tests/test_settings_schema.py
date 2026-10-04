@@ -340,6 +340,7 @@ class NavigationIntroPopupTests(unittest.TestCase):
         self.assertTrue(all(len(step) == 2 for step in popup.ARMY_STEPS))
         self.assertTrue(all(heading and description
                             for heading, description in popup.ARMY_STEPS))
+        self.assertTrue(any(heading == "Unassigned" for heading, _description in popup.ARMY_STEPS))
         army_text_width = (popup.rect.width - popup.ARMY_STEP_NUMBER_X
                            - popup.ARMY_STEP_TEXT_X_OFFSET
                            - popup.ARMY_STEP_SIDE_PADDING)

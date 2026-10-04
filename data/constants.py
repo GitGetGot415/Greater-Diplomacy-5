@@ -2227,6 +2227,8 @@ COMBAT_BUBBLES_DIR = "assets/combat_bubbles"
 ARMY_SYMBOLS_DIR = "assets/symbols"
 ARMY_SYMBOL_KEY_PREFIX = "Army Symbol "
 DEFAULT_ARMY_SYMBOL_COLOR = (210, 70, 70)
+UNASSIGNED_ARMY_ID = "__unassigned__"
+UNASSIGNED_ARMY_COLOR = (55, 55, 55)
 # New armies choose one of these high-contrast colors.  Keeping the palette
 # bounded makes both their emblems and the matching Orders roster bands easy
 # to distinguish against the map and panel backgrounds.

@@ -862,6 +862,7 @@ class MapRealtimeDriver:
                 and queries.normalize_army_defense_area(
                     defense_area, self.map_ref.map_data) == defense_area)
             if (not isinstance(army_id, str) or not army_id or len(army_id) > 80
+                    or army_id == c.UNASSIGNED_ARMY_ID
                     or army_id in army_ids or not isinstance(name, str)
                     or not name.strip() or len(name.strip()) > 80
                     or not isinstance(unit_ids, list) or len(unit_ids) > len(owned)

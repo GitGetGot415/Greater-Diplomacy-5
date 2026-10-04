@@ -107,6 +107,13 @@ Shared capability checks select legal ground routes, patrols, or flights from cu
 The AI reads only visible enemy stacks.
 It leaves the tactical player's division under player control.
 
+UNASSIGNED UNITS
+----------------
+
+Unassigned is a display entry for units outside saved army groups.
+It has no target area and does not create automatic army orders.
+Normal AI unit planning remains active for these units.
+
 MOVEMENT TUNING
 ---------------
 

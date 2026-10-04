@@ -18,6 +18,7 @@ os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import data.constants as c
+from data import queries
 from data.io import multiplayer_io
 
 
@@ -118,6 +119,22 @@ class TournamentMoveTests(unittest.TestCase):
         }
         result.update(extra)
         return result
+
+    def test_import_discards_reserved_unassigned_entry_without_assigning_its_units(self):
+        host = Host()
+        unit = {"owner": "Leader", "type": "Infantry", "unit_id": "owned"}
+        host.map_data = {"home": {"id": 1, "owner": "Leader", "units": [unit]}}
+        player_data = self.player_data("Leader", host)
+        player_data["nation_data"]["armies"] = [{
+            "id": c.UNASSIGNED_ARMY_ID, "name": "Changed", "unit_ids": ["owned"],
+            "symbol": "Star", "defense_area": [1]}]
+        with tempfile.TemporaryDirectory() as directory:
+            path = self.write_move(directory, "leader.gd5move", "Leader", player_data)
+            summary = self.import_moves(host, [path])
+        self.assertEqual(summary["loaded"], 1)
+        self.assertEqual(host.nation_data["Leader"]["armies"], [])
+        self.assertEqual(queries.get_unassigned_army(
+            "Leader", host.nation_data, host.map_data)["unit_ids"], ["owned"])
 
     def test_a_faction_exile_still_receives_a_tournament_move(self):
         host = Host()

@@ -148,3 +148,23 @@ ui/
         pygame dialogs that replace tkinter dialogs.
         base.py provides the shared dialog structure.
         yes_no.py, text_input.py, message_box.py, and person_info.py provide specific dialogs.
+
+ARMY GROUPS
+===========
+
+The army list starts with Unassigned when the player has units outside saved army groups.
+Unassigned includes all unit types, including units on foreign land.
+It hides only when no owned units remain outside army groups.
+The card is dark grey and has no symbol.
+Click the card to select its units.
+The card cannot be edited, removed, moved, or given a target area.
+Right-click assignment applies only to saved army groups.
+Unassigned units keep their normal map display, without army symbols or color bands.
+
+data/queries.py derives Unassigned from current units and saved army membership.
+ui/army_panel.py caches this entry when map state changes.
+Frame rendering reads the cached entry.
+Saves and multiplayer rosters contain only saved army groups.
+Loading units and memberships recreates Unassigned without a new saved field.
+The real-time server rejects rosters that use the reserved Unassigned identifier.
+Save loading and tournament imports discard records that use this identifier.
