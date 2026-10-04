@@ -1872,10 +1872,13 @@ class AirAppSmokeTests(unittest.TestCase):
             screen.start_with_province(base, loaded)
             position = (screen.panel_rect.right + 100, screen.panel_rect.centery)
             targets = ((base, MOVE_TARGET_COLOR, "AIR_REPOSITION"),
+                       (None, MOVE_TARGET_COLOR, "AIR_REPOSITION"),
                        (enemy, BOMBARD_TARGET_COLOR, "AIR_ATTACK"),
-                       (base, MOVE_TARGET_COLOR, "AIR_REPOSITION"))
+                       (None, BOMBARD_TARGET_COLOR, "AIR_ATTACK"),
+                       (base, MOVE_TARGET_COLOR, "AIR_REPOSITION"),
+                       (None, MOVE_TARGET_COLOR, "AIR_REPOSITION"))
             for index, (target, color, kind) in enumerate(targets):
-                with self.subTest(target=target["id"]):
+                with self.subTest(target=target["id"] if target else None, index=index):
                     event_position = (position[0] + index, position[1])
                     with patch.object(pygame.mouse, "get_pos", return_value=event_position), \
                             patch.object(queries, "get_clicked_province", return_value=target):
@@ -1889,6 +1892,17 @@ class AirAppSmokeTests(unittest.TestCase):
                         screen._refresh_air_range_hover(event_position)
                     draw.assert_called_once_with(self.surface, base,
                         queries.air_order_radius(fighter, kind), color)
+                    if target is None:
+                        screen.refresh_ui()
+                        with patch.object(screen, "draw_air_range") as refreshed_draw:
+                            screen.draw_range_previews(self.surface)
+                        refreshed_draw.assert_called_once_with(self.surface, base,
+                            queries.air_order_radius(fighter, kind), color)
+            # Moving over controls also retains the last preview.
+            screen._refresh_air_range_hover(screen.panel_rect.center)
+            self.assertEqual(screen.air_strike_range_previews, [])
+            self.assertEqual(screen.air_range_previews,
+                             [(base, queries.air_order_radius(fighter, "AIR_REPOSITION"))])
             screen.set_air_mission(fighter, base, "RANDOM")
             self.assertEqual(screen.air_range_previews, [])
             self.assertEqual(screen.air_strike_range_previews,

@@ -54,6 +54,7 @@ Active defense and strike missions show their yellow mission range.
 Active relocation shows its green movement range.
 Idle reusable aircraft show green relocation range over accessible friendly land.
 Hovering enemy territory or visible hostile units switches that preview to yellow strike range.
+When the pointer leaves all provinces or enters a UI control, keep the previous range preview.
 Hidden hostile units do not change the preview.
 One-use weapons show only their yellow strike range.
 Land bombardment retains tile markers.

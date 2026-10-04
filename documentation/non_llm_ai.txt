@@ -81,6 +81,7 @@ This requirement also applies to one-use weapons with a ground route.
 Active defense and strikes show only yellow mission range. Active relocation shows only green movement range.
 Idle aircraft show green relocation range until the pointer targets enemy territory or visible hostile units.
 That target switches the preview to yellow strike range. One-use weapons always show yellow strike range.
+Outside all provinces or over UI controls, the preview keeps its previous range and color.
 
 Mission icons show the current choice.
 Air Move shows relocation, including a one-use weapon's ground path.

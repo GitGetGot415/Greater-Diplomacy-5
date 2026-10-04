@@ -962,7 +962,8 @@ class Orders_Screen(GameState):
         on_ui = (self.panel_rect.collidepoint(position)
                  or event_handler.map_ui_bar_at_position(self.map_screen, position))
         destination = None if on_ui else queries.get_clicked_province(position, self.map_screen)
-        if destination is not self._air_range_hover_target:
+        # Empty map space and UI retain the last territory's range preview.
+        if destination is not None and destination is not self._air_range_hover_target:
             self._air_range_hover_target = destination
             self._refresh_air_range_previews(destination)
 
