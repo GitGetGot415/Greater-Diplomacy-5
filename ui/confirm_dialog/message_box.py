@@ -152,9 +152,8 @@ class _NavigationIntroPopup:
         ("Select units", "Left-click stacks or drag in Units view. "
          "In Orders, right-click a unit row to add or remove it without "
          "changing the other selected units."),
-        ("Unassigned", "Units outside armies appear first in the dark grey Unassigned card, with no emblem. "
-         "Click it to select them. You cannot edit, remove, reorder, or set target areas for this card. "
-         "It hides when all units are assigned. Their map icons stay unchanged."),
+        ("Unassigned", "Select units outside armies with this first, dark grey card. It has no emblem or editing controls. "
+         "It hides when all units are assigned or Settings > Show Unclaimed is OFF. Unassigned units keep their map icons."),
         ("Create an army", "In Orders, click + Create Army in the Army tray. (Located on the right side of the screen)"),
         ("Personalize", "Click a card to select the units in said army. Pressing the E button edits its name and emblem."),
         ("Target areas", "Press T on an army card, select its target tiles, and confirm. The army fills uncovered tiles first, then balances its units. Units that have no orders given will automatically be ordered to fill in the target area next turn."),

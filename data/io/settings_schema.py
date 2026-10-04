@@ -99,6 +99,7 @@ SETTINGS_FIELDS = (
     _field("music_pitch_timeline", "music_pitch_timeline",
            lambda: c.DEFAULT_MUSIC_PITCH_TIMELINE,
            coerce=_coerce_music_pitch_timeline),
+    _field("show_unclaimed", "show_unclaimed", lambda: c.DEFAULT_SHOW_UNCLAIMED),
 )
 
 SETTINGS_ORDER = tuple(field.name for field in SETTINGS_FIELDS)

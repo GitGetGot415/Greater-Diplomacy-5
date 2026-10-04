@@ -39,6 +39,7 @@ GOLDEN_ORDER = (
     "mouse_button_actions",
     "army_group_animations",
     "music_pitch_timeline",
+    "show_unclaimed",
 )
 
 GOLDEN_JSON_KEYS = set(GOLDEN_ORDER)
@@ -68,7 +69,7 @@ class RoundTripTests(unittest.TestCase):
     def sample(self):
         values = settings_schema.defaults()
         values.update({"num_players": 3, "ai_mode": "OLLAMA", "target_fps": 144,
-                       "show_fps": False, "saves_dir": "elsewhere",
+                       "show_fps": False, "show_unclaimed": False, "saves_dir": "elsewhere",
                        "ocean_light_color": (1, 2, 3)})
         return values
 
@@ -202,6 +203,59 @@ class RuntimeMirrorTests(unittest.TestCase):
 
 
 class SettingsScreenTests(unittest.TestCase):
+    def test_show_unclaimed_defaults_on_for_older_settings(self):
+        self.assertTrue(settings_schema.defaults()["show_unclaimed"])
+        self.assertTrue(settings_schema.from_json_dict({"show_fps": False})["show_unclaimed"])
+        old_tuple = settings_schema.to_tuple(settings_schema.defaults(), {})[:-1]
+        self.assertTrue(settings_schema.from_tuple(old_tuple)["show_unclaimed"])
+
+    def test_show_unclaimed_toggle_updates_runtime_and_persists(self):
+        from screens.menu_screens.settings import Settings
+        previous_setting = c.SHOW_UNCLAIMED
+        self.addCleanup(setattr, c, "SHOW_UNCLAIMED", previous_setting)
+        screen = object.__new__(Settings)
+        screen.controller = ControllerTests.Fake()
+        screen.show_unclaimed = True
+        with mock.patch.object(Settings, "refresh_ui"), \
+                mock.patch("screens.menu_screens.settings.queries.save_global_settings") as save:
+            screen.toggle_show_unclaimed()
+        self.assertFalse(screen.show_unclaimed)
+        self.assertFalse(screen.controller.show_unclaimed)
+        self.assertFalse(c.SHOW_UNCLAIMED)
+        save.assert_called_once_with(screen.controller)
+
+    def test_show_unclaimed_button_order_layout_callback_and_reset(self):
+        import pygame
+        from screens.menu_screens.settings import Settings, SETTINGS_RIGHT_COL_X
+        from types import SimpleNamespace
+        pygame.font.init()
+        previous_setting = c.SHOW_UNCLAIMED
+        self.addCleanup(setattr, c, "SHOW_UNCLAIMED", previous_setting)
+        controller = SimpleNamespace(**settings_schema.defaults(), keybinds={})
+        controller.ai_mode = "OFF"
+        with mock.patch("screens.menu_screens.settings.queries.get_settings", return_value={}):
+            screen = Settings(controller)
+        fps = next(item for item in screen.elements if item.text.startswith("Show FPS:"))
+        unclaimed = next(item for item in screen.elements if item.text.startswith("Show Unclaimed:"))
+        intro = next(item for item in screen.elements if item.text.startswith("Show Tutorial Popup:"))
+        self.assertEqual(unclaimed.text, "Show Unclaimed: ON")
+        self.assertLessEqual(fps.rect.bottom, unclaimed.rect.top)
+        self.assertLessEqual(unclaimed.rect.bottom, intro.rect.top)
+        buttons = sorted([item for item in screen.elements
+                          if item.rect.x == SETTINGS_RIGHT_COL_X], key=lambda item: item.rect.y)
+        for first, second in zip(buttons, buttons[1:]):
+            self.assertFalse(first.rect.colliderect(second.rect))
+        bounds = pygame.Rect(0, 0, c.SCREEN_WIDTH, c.SCREEN_HEIGHT)
+        self.assertTrue(all(bounds.contains(item.rect) for item in buttons))
+        with mock.patch("screens.menu_screens.settings.queries.get_settings", return_value={}), \
+                mock.patch("screens.menu_screens.settings.queries.save_global_settings"):
+            unclaimed.callback()
+            self.assertFalse(controller.show_unclaimed)
+            screen.reset_defaults()
+        self.assertTrue(screen.show_unclaimed)
+        self.assertTrue(controller.show_unclaimed)
+        self.assertTrue(c.SHOW_UNCLAIMED)
+
     def test_army_group_animation_toggle_updates_runtime_and_persists(self):
         from screens.menu_screens.settings import Settings
 

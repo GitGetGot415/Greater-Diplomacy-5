@@ -1201,6 +1201,9 @@ class ArmyLayoutTests(unittest.TestCase):
 
 class UnassignedArmyPanelTests(unittest.TestCase):
     def setUp(self):
+        self.show_unclaimed = patch.object(c, "SHOW_UNCLAIMED", True)
+        self.show_unclaimed.start()
+        self.addCleanup(self.show_unclaimed.stop)
         self.world = {"home": {"id": 1, "owner": "A", "units": [
             {"owner": "A", "type": "Infantry"},
             {"owner": "A", "type": "Tank"},
@@ -1215,6 +1218,21 @@ class UnassignedArmyPanelTests(unittest.TestCase):
             assign_selection_to_army=Mock())
         army_panel.prepare(self.map)
         self.ids = [unit["unit_id"] for unit in self.world["home"]["units"]]
+
+    def test_show_unclaimed_only_controls_the_fixed_card_and_updates_immediately(self):
+        army = queries.create_army("A", [self.ids[0]], self.nations, self.world)
+        army_panel.prepare(self.map)
+        cached = self.map.unassigned_army_card
+        before = copy.deepcopy((self.nations, self.world))
+        orders = SimpleNamespace(read_only=False)
+        with patch.object(queries, "get_unassigned_army", side_effect=AssertionError("frame scan")):
+            for context in (None, orders):
+                c.apply_runtime_settings({"show_unclaimed": False})
+                self.assertEqual(army_panel._armies(self.map, context), [army])
+                c.apply_runtime_settings({"show_unclaimed": True})
+                self.assertEqual(army_panel._armies(self.map, context), [cached, army])
+        self.assertEqual((self.nations, self.world), before)
+        self.assertIs(self.map.unassigned_army_card, cached)
 
     def test_fixed_entry_hides_only_when_no_owned_units_are_unassigned(self):
         self.assertEqual([army["id"] for army in army_panel._armies(self.map)],

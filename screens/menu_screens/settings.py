@@ -11,13 +11,15 @@ from ui import confirm_dialog
 # --- Settings screen button layout ---
 SETTINGS_RIGHT_COL_X = c.SCREEN_WIDTH - 260
 SETTINGS_BACK_POS = (50, 50)
-SETTINGS_FULLSCREEN_Y = 20
-SETTINGS_CHECKERBOARD_WATER_Y = 70
-SETTINGS_FPS_TOGGLE_Y = 120
-SETTINGS_INTRO_POPUP_Y = 170
-SETTINGS_ARMY_GROUP_ANIMATIONS_Y = 220
-SETTINGS_MAP_NAV_Y = 270
-SETTINGS_BATTLE_DISPLAY_Y = 320
+SETTINGS_FULLSCREEN_Y = 10
+SETTINGS_OPTION_GAP_Y = 45
+SETTINGS_CHECKERBOARD_WATER_Y = SETTINGS_FULLSCREEN_Y + SETTINGS_OPTION_GAP_Y
+SETTINGS_FPS_TOGGLE_Y = SETTINGS_CHECKERBOARD_WATER_Y + SETTINGS_OPTION_GAP_Y
+SETTINGS_SHOW_UNCLAIMED_Y = SETTINGS_FPS_TOGGLE_Y + SETTINGS_OPTION_GAP_Y
+SETTINGS_INTRO_POPUP_Y = SETTINGS_SHOW_UNCLAIMED_Y + SETTINGS_OPTION_GAP_Y
+SETTINGS_ARMY_GROUP_ANIMATIONS_Y = SETTINGS_INTRO_POPUP_Y + SETTINGS_OPTION_GAP_Y
+SETTINGS_MAP_NAV_Y = SETTINGS_ARMY_GROUP_ANIMATIONS_Y + SETTINGS_OPTION_GAP_Y
+SETTINGS_BATTLE_DISPLAY_Y = SETTINGS_MAP_NAV_Y + SETTINGS_OPTION_GAP_Y
 SETTINGS_PLAYER_SLIDER_Y = 400
 SETTINGS_FPS_SLIDER_Y = 460
 SETTINGS_AI_THREAD_SLIDER_POS = (60, 400)
@@ -57,6 +59,9 @@ SETTINGS_INFO_ROWS = (
      "unusual water for players who don't expect it."),
     (SETTINGS_FPS_TOGGLE_Y, "Show FPS",
      "Displays a live frames-per-second counter on screen."),
+    (SETTINGS_SHOW_UNCLAIMED_Y, "Show Unclaimed",
+     "Shows the Unassigned army card for your units outside army groups. "
+     "Enabled by default. The card stays hidden when all units are assigned."),
     (SETTINGS_INTRO_POPUP_Y, "Show Tutorial Popup",
      "Shows the map tutorial when a fresh game begins. It covers map navigation "
      "and the bottom-left map UI buttons."),
@@ -105,6 +110,10 @@ def render_settings_buttons(settings_screen):
                f"Checkerboard Water: {'ON' if settings_screen.checkerboard_water else 'OFF'}", settings_screen.toggle_checkerboard_water),
         Button(keybind_x, SETTINGS_FPS_TOGGLE_Y, "setting_option", "green" if settings_screen.show_fps else "red",
                f"Show FPS: {'ON' if settings_screen.show_fps else 'OFF'}", settings_screen.toggle_fps),
+        Button(keybind_x, SETTINGS_SHOW_UNCLAIMED_Y, "setting_option",
+               "green" if settings_screen.show_unclaimed else "red",
+               f"Show Unclaimed: {'ON' if settings_screen.show_unclaimed else 'OFF'}",
+               settings_screen.toggle_show_unclaimed),
         Button(keybind_x, SETTINGS_INTRO_POPUP_Y, "setting_option",
                "green" if settings_screen.show_intro_popup else "red",
                f"Show Tutorial Popup: {'ON' if settings_screen.show_intro_popup else 'OFF'}",
@@ -261,6 +270,7 @@ class Settings(GameState):
             setattr(self, f"{attr}_text", getattr(self.controller, attr))
 
         self.show_intro_popup = self.controller.show_intro_popup
+        self.show_unclaimed = self.controller.show_unclaimed
 
         self.active_input = None # Dynamically track which box is selected: "{MODE}_KEY" or "{MODE}_MOD"
 
@@ -349,6 +359,14 @@ class Settings(GameState):
         queries.save_global_settings(self.controller)
         self.refresh_ui()
 
+    def toggle_show_unclaimed(self):
+        """Save whether the army tray displays units outside army groups."""
+        self.show_unclaimed = not self.show_unclaimed
+        self.controller.show_unclaimed = self.show_unclaimed
+        c.apply_runtime_settings({"show_unclaimed": self.show_unclaimed})
+        queries.save_global_settings(self.controller)
+        self.refresh_ui()
+
     def toggle_army_group_animations(self):
         """Persist whether strategic army markers animate between presentations."""
         self.army_group_animations = not self.army_group_animations
@@ -429,6 +447,10 @@ class Settings(GameState):
 
         self.show_intro_popup = True
         self.controller.show_intro_popup = True
+
+        self.show_unclaimed = c.DEFAULT_SHOW_UNCLAIMED
+        self.controller.show_unclaimed = self.show_unclaimed
+        c.apply_runtime_settings({"show_unclaimed": self.show_unclaimed})
 
         self.map_navigation_mode = c.DEFAULT_MAP_NAVIGATION_MODE
         c.apply_runtime_settings({"map_navigation_mode": c.DEFAULT_MAP_NAVIGATION_MODE})

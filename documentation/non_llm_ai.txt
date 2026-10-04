@@ -527,12 +527,14 @@ Aircraft outside armies combine with nearby aircraft of the same owner.
 Different armies remain separate.
 Strategic zoom hides mission badges.
 
-The army tray lists Unassigned first when owned units remain outside saved army groups.
+The army tray lists Unassigned first when Show Unclaimed is enabled and owned units remain outside saved army groups.
 This fixed dark grey card has no symbol or editing controls.
 It has no target area and gives no automatic orders.
 Selecting it selects the player's units outside army groups.
+
 These units keep their existing map boxes and markers without army symbols or color bands.
-The card hides when all owned units belong to army groups.
+The card hides when all owned units belong to army groups, or Show Unclaimed is disabled in Settings.
+Show Unclaimed is enabled by default and changes local display only.
 Map state changes update its cached membership.
 
 Mission badges use the same order visibility as map arrows.

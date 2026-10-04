@@ -152,9 +152,14 @@ ui/
 ARMY GROUPS
 ===========
 
-The army list starts with Unassigned when the player has units outside saved army groups.
+The army list starts with Unassigned when Show Unclaimed is enabled and owned units remain outside army groups.
 Unassigned includes all unit types, including units on foreign land.
-It hides only when no owned units remain outside army groups.
+It hides when no owned units remain outside army groups, or Show Unclaimed is disabled.
+Settings places Show Unclaimed between Show FPS and Show Tutorial Popup.
+Show Unclaimed is enabled by default, including in older settings files.
+Reset Defaults enables it again.
+
+This local display setting does not change membership, orders, saves, or multiplayer commands.
 The card is dark grey and has no symbol.
 Click the card to select its units.
 The card cannot be edited, removed, moved, or given a target area.
@@ -166,5 +171,6 @@ ui/army_panel.py caches this entry when map state changes.
 Frame rendering reads the cached entry.
 Saves and multiplayer rosters contain only saved army groups.
 Loading units and memberships recreates Unassigned without a new saved field.
+
 The real-time server rejects rosters that use the reserved Unassigned identifier.
 Save loading and tournament imports discard records that use this identifier.

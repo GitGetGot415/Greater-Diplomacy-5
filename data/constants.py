@@ -315,6 +315,10 @@ BATTLE_DISPLAY_MODE = DEFAULT_BATTLE_DISPLAY_MODE
 DEFAULT_ARMY_GROUP_ANIMATIONS = True
 ARMY_GROUP_ANIMATIONS = DEFAULT_ARMY_GROUP_ANIMATIONS
 
+# Show the fixed army card for owned units outside saved army groups.
+DEFAULT_SHOW_UNCLAIMED = True
+SHOW_UNCLAIMED = DEFAULT_SHOW_UNCLAIMED
+
 # Which unit art set map_logic.rendering.symbol_loader draws unit icons from.
 # "classic" is the flat assets/images set every icon has always shipped with;
 # any other style (e.g. "hanskolmer") discovers unit art from filenames under
@@ -2420,6 +2424,7 @@ RUNTIME_SETTINGS = {
     "map_navigation_mode": "MAP_NAVIGATION_MODE",
     "battle_display_mode": "BATTLE_DISPLAY_MODE",
     "army_group_animations": "ARMY_GROUP_ANIMATIONS",
+    "show_unclaimed": "SHOW_UNCLAIMED",
     "mouse_button_actions": "MOUSE_BUTTON_ACTIONS",
 }
 

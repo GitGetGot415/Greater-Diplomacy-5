@@ -620,7 +620,8 @@ def _armies(map_screen, orders_screen=None):
     unassigned = getattr(map_screen, "unassigned_army_card", None)
     cache_country = getattr(map_screen, "unassigned_army_country", None)
     return ([unassigned] + armies
-            if cache_country == map_screen.player_country and unassigned and unassigned["unit_ids"]
+            if c.SHOW_UNCLAIMED and cache_country == map_screen.player_country
+            and unassigned and unassigned["unit_ids"]
             else armies)
 
 
