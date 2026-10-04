@@ -244,6 +244,13 @@ def process_movement(map_screen):
                 units_to_keep.append(unit)
                 continue
             if order and order.get("type") == "MOVE" and order.get("path"):
+                if queries.is_air_unit(unit) or queries.is_air_transport(unit):
+                    try:
+                        queries.canonical_unit_order(map_screen, unit["owner"], province, unit, order)
+                    except ValueError:
+                        unit["order"] = {"type": "MOVE", "path": []}
+                        units_to_keep.append(unit)
+                        continue
                 map_screen._units_with_move_order_this_turn.add(id(unit))
                 unit["_current_province_id"] = province["id"]
                 unit["_skip_remaining_steps"] = False
@@ -280,6 +287,11 @@ def process_movement(map_screen):
             target_id = order["path"][0]
             target_prov = map_screen.id_to_province.get(target_id)
             if not target_prov: continue
+            if ((queries.is_air_unit(unit) or queries.is_air_transport(unit))
+                    and not queries.is_water_province(target_prov)
+                    and not queries.air_unit_can_land(unit, target_prov, map_screen.nation_data)):
+                order["path"] = []
+                continue
 
             combat_owner = queries.get_unit_combat_owner(unit)
             player_data = map_screen.nation_data.get(combat_owner, {})

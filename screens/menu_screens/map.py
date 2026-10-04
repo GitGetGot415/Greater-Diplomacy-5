@@ -2212,10 +2212,10 @@ class Map(GameState):
             if isinstance(order, dict) and order.get("type") in c.ORDERS_BLOCKING_MOVEMENT:
                 self.show_feedback("Cannot move units with a blocking order.")
                 return False
-            if queries.is_air_unit(unit) and not queries.air_unit_can_move_on_ground(unit):
+            if queries.is_air_unit(unit) and (not queries.air_unit_can_move_on_ground(unit)
+                    or queries.air_move_is_strike(self, unit, destination)):
                 try:
-                    air_order = queries.canonical_air_order(self, unit, origin, {
-                        "type": "AIR_REPOSITION", "target_id": destination["id"]})
+                    air_order = queries.air_move_order(self, unit, origin, destination)
                 except ValueError as exc:
                     self.show_feedback(str(exc))
                     return False

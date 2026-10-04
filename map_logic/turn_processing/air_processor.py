@@ -1,4 +1,5 @@
 """Resolve pixel-range aircraft orders once at the turn boundary."""
+import random
 from data import queries
 import data.constants as c
 from map_logic.turn_processing import combat_rules, combat_processor, unit_events
@@ -70,6 +71,8 @@ def process_air_orders(map_screen):
         covered = sorted((key for key in pending if any(
             unit is defender for unit in defenders_for(key))),
             key=lambda key: (direction * strengths[key], key))
+        if order["priority"] == "RANDOM":
+            random.shuffle(covered)
         rankings.append(covered)
         for before, after in zip(covered, covered[1:]):
             predecessors[after].add(before)

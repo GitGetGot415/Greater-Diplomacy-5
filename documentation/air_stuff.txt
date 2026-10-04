@@ -48,7 +48,7 @@ Close the outline along map edges that lie inside the circle.
 This keeps reach visible when the entire map fits inside the radius.
 
 Cache rasterized outlines by base, radius, color, map dimensions, camera, viewport, and clipping state.
-Air targeting replaces the movement outline with the strike outline.
+Orders shows separate cached outlines for strike reach and reusable relocation reach.
 Land bombardment retains tile markers.
 Any tile part inside or touching the circle is in range.
 
@@ -69,7 +69,11 @@ Reusable strikes reserve half their total travel distance for the outgoing fligh
 Thus, listed range equals strike reach.
 
 Bases and landing tiles must be land.
-Attack targets can be water.
+Landing requires ownership, friendly relations, or military access.
+Aircraft cannot land in enemy or unclaimed territory, or on hostile units.
+This also restricts one-use weapons' ground routes and aircraft Convoys unloading onto land.
+Attack targets can be water when hostile units are present.
+
 Flight never captures territory.
 Landed aircraft and their Convoy transports also cannot capture territory.
 Loaded aircraft Convoys use normal naval transport movement.
@@ -89,23 +93,28 @@ The air mission button offers four choices:
 - No mission.
 - Defend area, weakest enemy missions first.
 - Defend area, strongest enemy missions first.
-- Strike.
+- Defend area, random enemy missions first.
 
 All choices remain visible.
 Disable missions that the aircraft cannot perform.
 Disable flight from an invalid launch base.
 
 An available Defend area choice immediately issues AIR_PATROL with its selected priority.
-Strike starts map targeting.
-A valid target click issues AIR_ATTACK.
+
+Select aircraft and use the configured move-order click on enemy territory or visible enemy units.
+The default move-order click is right-click.
+That click issues AIR_ATTACK within strike range.
+Hostile units on friendly territory also make the click a strike.
+The aircraft attack without landing there.
+
+The mission menu cannot issue strikes.
 Clicking an active strike's mission button cancels it immediately.
 No mission also cancels it.
 
-Targeting accepts a left-click or the configured move-order click.
-The default move-order click is right-click.
-Consume that click in the strike or barrage selector.
-It must not also issue a reposition order.
-Dispatch each map event once, including the target click's release.
+A move-order click on accessible land without hostile units issues relocation.
+The same click must not issue both strike and relocation orders.
+Dispatch each map event once, including the click's release.
+Land bombardment retains its existing targeting controls.
 
 Patrol uses the listed mission radius.
 This is half a reusable aircraft's movement radius.
@@ -113,10 +122,10 @@ Use the same tile-edge and disconnected-pixel range rules.
 A normal move order replaces patrol with repositioning.
 It does not extend the patrol area beyond its base range.
 
-Button images show No Mission, Weakest First, Strongest First, or Strike Selected.
+The menu uses No Mission, Weakest First, Strongest First, and Random First images.
+An active strike uses Strike Selected.
 Relocation uses Air Move, including one-use weapons with a ground path.
 Idle aircraft use No Mission.
-Pending strike targeting uses Strike Selected.
 Closing the selector without a choice changes nothing.
 
 Map boxes separate aircraft from land and naval units.
@@ -146,10 +155,10 @@ Set Mission shows the number of eligible selected aircraft.
 It always offers all four choices.
 Each choice rechecks the original units, bases, permissions, and capabilities.
 
-Group Strike selects one tile.
-It assigns orders only to aircraft whose own range reaches the target.
-Unsupported missions, stale units, and out-of-range targets keep their existing order and reserved payment.
-Canceling group targeting also preserves previous orders.
+Group defense skips unsupported aircraft and preserves their orders and reserved payment.
+Group strikes use the configured move-order click on a hostile target.
+Each selected unit must have a legal order to that destination.
+If any unit cannot reach it, the whole movement command preserves existing orders.
 Group actions use existing per-unit multiplayer commands.
 
 Every reusable aircraft can patrol, including bombers and Zeppelin.
@@ -164,6 +173,9 @@ They resolve at the next turn boundary and clear once.
 Reusable strikes keep the unit at its launch province.
 Survivors retain damage there, which guarantees an exact return.
 Patrol continues until replaced or canceled.
+
+Saves retain RANDOM priorities. Older patrols still default to WEAKEST.
+Resolution cancels saved orders that no longer meet current landing or target rules.
 
 Aircraft can load only into Convoys.
 Loading requires a coast. Unloading requires land.
@@ -190,7 +202,9 @@ Every hostile patrol covering the mission joins one shared coalition-lane battle
 It uses global COMBAT_WIDTH and the normal rules for three or more sides.
 
 Rank missions by their committed calculate_unit_strength sums before losses.
-Target IDs break ties.
+Target IDs break ties for weakest and strongest priorities.
+Random First shuffles each patrol's covered missions once per turn.
+It does not sort missions by strength.
 Patrol priorities define ordering constraints between covered missions.
 Use topological ordering when those constraints agree.
 If they form a cycle, patrols vote for their next covered mission.

@@ -67,12 +67,14 @@ V2 bypasses interception.
 Listed air range is patrol and strike reach.
 Reusable aircraft can reposition up to twice that distance because they do not return to the launch base.
 
-The mission selector offers No mission, Defend area with either priority, and Strike.
+The mission selector offers No mission and Defend area with weakest, strongest, or random priority.
 All choices stay visible. Unavailable missions and flight from an invalid base are disabled.
-Strike selects a target on the map.
+The menu cannot issue strikes.
 
-The selector consumes the left-click or configured move-order click.
-That click cannot also issue a reposition order.
+Use a move-order click on enemy territory or visible enemy units to strike.
+This includes hostile units on friendly territory.
+A click on accessible land without hostile units issues relocation.
+Aircraft cannot land in enemy or unclaimed territory.
 No mission, or another click on an active strike's mission button, cancels the order.
 
 Mission icons show the current choice.
@@ -83,8 +85,9 @@ Named aircraft designs remain separate production unlocks.
 
 Set Mission applies a choice to eligible aircraft in the selected group.
 It shows all choices and validates each aircraft separately.
-A group strike uses one target.
-Aircraft that cannot perform the mission or reach the target keep their orders.
+Group strikes use the same move-order click as single aircraft.
+A movement command preserves all selected orders if any unit cannot reach its destination.
+Unsupported group defense choices preserve those aircraft's orders.
 No mission clears eligible aircraft orders.
 Both multiplayer systems use their existing per-unit commands and validate each order.
 

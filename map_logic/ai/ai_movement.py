@@ -17,9 +17,49 @@ def legal_air_candidates(map_screen, unit, base):
             {"type": "AIR_PATROL", "priority": queries.AIR_DEFAULT_PRIORITY}))
     for kind in ("AIR_ATTACK", "AIR_REPOSITION"):
         for target_id in sorted(queries.get_air_targets(map_screen, unit, base, kind)):
+            target = map_screen.id_to_province[target_id]
+            if kind == "AIR_ATTACK" and not queries.air_target_is_hostile(
+                    unit, target, map_screen.nation_data, visible_only=True):
+                continue
+            if kind == "AIR_REPOSITION" and not queries.air_unit_can_land(unit, target, map_screen.nation_data):
+                continue
             candidates.append(queries.canonical_air_order(map_screen, unit, base,
                 {"type": kind, "target_id": target_id}))
     return candidates
+
+
+def _air_base_threats(map_screen, country, visible):
+    """Visible ground units threaten every base they can reach this turn.
+
+    Do not read enemy orders. Aircraft die when hostile troops arrive, even
+    when friendly defenders survive. Reach is therefore sufficient warning.
+    """
+    threatened = set()
+    for province in map_screen.map_data.values():
+        if c.USE_FOG_OF_WAR and visible is not None and province["id"] not in visible:
+            continue
+        for unit in queries.filter_visible_units(province.get("units", []), country,
+                                                 province, map_screen.nation_data):
+            if (unit.get("health", 0) <= 0 or queries.is_air_unit(unit)
+                    or not queries.are_at_war(country, queries.get_unit_combat_owner(unit), map_screen.nation_data)):
+                continue
+            reached = {province["id"]}
+            frontier = [province]
+            for _step in range(unit.get("speed", c.DEFAULT_UNIT_SPD)):
+                next_frontier = []
+                for current in frontier:
+                    for target_id in current.get("neighbors", []):
+                        if target_id in reached:
+                            continue
+                        target = map_screen.id_to_province.get(target_id)
+                        if target and queries.can_unit_move_step(unit, current, target, map_screen.nation_data):
+                            reached.add(target_id)
+                            next_frontier.append(target)
+                frontier = next_frontier
+                if not frontier:
+                    break
+            threatened.update(reached)
+    return threatened
 
 
 def _assign_air_orders(map_screen, country, units_info):
@@ -34,7 +74,9 @@ def _assign_air_orders(map_screen, country, units_info):
     visible, _partial = queries.get_visible_provinces(view)
     enemies = [province for province in map_screen.map_data.values()
                if (not c.USE_FOG_OF_WAR or visible is None or province["id"] in visible)
-               and queries.are_at_war(country, province.get("owner"), map_screen.nation_data)]
+               and queries.air_target_is_hostile({"owner": country}, province,
+                   map_screen.nation_data, visible_only=True)]
+    threatened = _air_base_threats(map_screen, country, visible)
 
     enemy_ids = {province["id"] for province in enemies}
     target_values = {province["id"]: sum(queries.calculate_unit_strength(unit) for unit in
@@ -72,6 +114,12 @@ def _assign_air_orders(map_screen, country, units_info):
                 or queries.is_nation_in_combat_here(country, base, map_screen.nation_data)):
             continue
         candidates = legal_air_candidates(map_screen, unit, base)
+        safe_repositions = [order for order in candidates if order["type"] == "AIR_REPOSITION"
+                            and order["target_id"] != base["id"] and order["target_id"] not in threatened]
+        if base["id"] in threatened and safe_repositions:
+            unit["order"] = min(safe_repositions, key=lambda order: (
+                queries.air_distance_squared(map_screen, base, order["target_id"]), order["target_id"]))
+            continue
         attacks = [order for order in candidates if order["type"] == "AIR_ATTACK"
                    and order["target_id"] in enemy_ids]
         if attacks:
@@ -85,7 +133,7 @@ def _assign_air_orders(map_screen, country, units_info):
             radius = queries.air_order_radius(unit, "AIR_ATTACK")
             friendly = [p for p in map_screen.map_data.values()
                         if not queries.is_water_province(p) and p.get("owner") == country
-                        and p["id"] != base["id"]]
+                        and p["id"] != base["id"] and p["id"] not in threatened]
             if queries.air_unit_stats(unit).get("air_consumable"):
                 destinations = [p for p in friendly if queries.air_distance_squared(
                     map_screen, p, target["id"]) <= radius * radius]

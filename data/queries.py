@@ -1198,6 +1198,11 @@ def can_unit_move_step(unit, current_province, destination, nation_data):
         return False
     if is_air_unit(unit) and not air_unit_can_move_on_ground(unit):
         return False  # Reusable aircraft use flight orders; missiles use land edges.
+    if is_air_unit(unit) and not air_unit_can_land(unit, destination, nation_data):
+        return False
+    if (is_air_transport(unit) and not is_water_province(destination)
+            and not air_unit_can_land(unit, destination, nation_data)):
+        return False
     if destination.get("id") not in current_province.get("neighbors", []):
         return False
     combat_owner = get_unit_combat_owner(unit)
@@ -4129,7 +4134,7 @@ def load_transport(unit, target):
 # Convoy rules until it is unpacked. These fields are unit-library tuning, not
 # duplicated frozen state in saves or network snapshots.
 AIR_ORDER_TYPES = frozenset(("AIR_ATTACK", "AIR_PATROL", "AIR_REPOSITION"))
-AIR_INTERCEPTION_PRIORITIES = ("WEAKEST", "STRONGEST")
+AIR_INTERCEPTION_PRIORITIES = ("WEAKEST", "STRONGEST", "RANDOM")
 AIR_DEFAULT_PRIORITY = "WEAKEST"
 AIR_CONVERT_TURNS = 1
 
@@ -4156,6 +4161,40 @@ def air_unit_can_launch(map_screen, unit, base):
     """A mission needs an unpacked aircraft at a land base outside ground combat."""
     return (is_air_unit(unit) and not is_water_province(base)
             and not is_nation_in_combat_here(get_unit_combat_owner(unit), base, map_screen.nation_data))
+
+
+def air_target_is_hostile(unit, target, nation_data, visible_only=False):
+    """Enemy territory or hostile units make a destination a strike target."""
+    country = get_unit_combat_owner(unit)
+    if are_at_war(country, target.get("owner"), nation_data):
+        return True
+    units = target.get("units", [])
+    if visible_only:
+        units = filter_visible_units(units, country, target, nation_data)
+    return any(other.get("health", 0) > 0 and are_at_war(
+        country, get_unit_combat_owner(other), nation_data) for other in units)
+
+
+def air_unit_can_land(unit, target, nation_data):
+    """Landing needs accessible land without enemy troops or ownerless territory."""
+    owner = target.get("owner", "Unclaimed")
+    return (not is_water_province(target) and owner not in c.OWNERLESS_OWNERS
+            and not air_target_is_hostile(unit, target, nation_data)
+            and _can_enter_owned_tile(get_unit_combat_owner(unit), owner, nation_data))
+
+
+def air_move_is_strike(map_screen, unit, destination):
+    """Route clicks using known ownership and visible units, without revealing fogged troops."""
+    return (are_at_war(get_unit_combat_owner(unit), destination.get("owner"), map_screen.nation_data)
+            or is_province_visible(map_screen, destination["id"]) and air_target_is_hostile(
+                unit, destination, map_screen.nation_data, visible_only=True))
+
+
+def air_move_order(map_screen, unit, base, destination):
+    """A flight click strikes a visible enemy; other flight clicks relocate."""
+    kind = "AIR_ATTACK" if air_move_is_strike(map_screen, unit, destination) else "AIR_REPOSITION"
+    return canonical_air_order(map_screen, unit, base,
+                               {"type": kind, "target_id": destination["id"]})
 
 
 def air_unit_can_move_on_ground(unit):
@@ -4253,7 +4292,7 @@ def get_air_unit_traits(unit_type):
         reposition = air_order_radius(unit, "AIR_REPOSITION")
         traits = [f"Range / strike: {strike:g} map px; reposition: {reposition:g} px."]
         patrol = air_order_radius(unit, "AIR_PATROL")
-        traits.append(f"Patrol: {patrol:g} px; weakest/strongest first; returns to base.")
+        traits.append(f"Patrol: {patrol:g} px; weakest, strongest, or random first; returns to base.")
         if stats["air_role"] == "fighter":
             multiplier = unit_target_damage_multiplier(unit, unit, air_to_air=True)
             traits.append(f"Air-to-air damage x{multiplier:g}; no bonus against ground targets.")
@@ -4365,6 +4404,11 @@ def canonical_air_order(map_screen, unit, base, order):
             raise ValueError("Unknown air target.")
         if not air_target_in_range(map_screen, unit, base, kind, target_id):
             raise ValueError("Air target is out of range or cannot be landed on.")
+        target = map_screen.id_to_province[target_id]
+        if kind == "AIR_REPOSITION" and not air_unit_can_land(unit, target, map_screen.nation_data):
+            raise ValueError("Aircraft must land on accessible land without enemy units.")
+        if kind == "AIR_ATTACK" and not air_target_is_hostile(unit, target, map_screen.nation_data):
+            raise ValueError("Air strikes require enemy territory or enemy units.")
         result["target_id"] = target_id
     return result
 

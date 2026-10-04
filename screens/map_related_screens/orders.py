@@ -176,16 +176,12 @@ class Orders_Screen(GameState):
         self.bombarding_unit_index = None
         self.bombarding_unit_province = None
         self.bombarding_unit_actual_index = None
-        self.air_mission_targeting_units = []
-        self.air_mission_targeting_ids = set()
-        self.air_mission_targeting_base_ids = set()
-        self.air_mission_targeting_ranges = []
         self._consume_bombard_target_release = False
         self.air_range_previews = []
+        self.air_strike_range_previews = []
         self._air_range_render_cache = {}
         self._air_range_view_key = None
         self.bombard_target_preview = set()
-        self.bombard_air_radius = None
         self.targeting_label = "bombardment"
 
         # True on a province where the player commands nothing: every unit is
@@ -608,43 +604,18 @@ class Orders_Screen(GameState):
             return
         if records is None:
             records = self._batch_command_candidates("MISSION")
-        if mission == "STRIKE":
-            records = [(unit, base) for unit, base in records
-                       if self._air_mission_unit_index(unit, base) is not None
-                       and queries.air_unit_can_launch(self.map_screen, unit, base)]
-            if not records:
-                return
-            self.cancel_bombard_targeting(refresh=False)
-            self.air_mission_targeting_units = list(records)
-            self.air_mission_targeting_ids = {id(unit) for unit, _base in records}
-            self.air_mission_targeting_base_ids = {base["id"] for _unit, base in records}
-            self.air_mission_targeting_ranges = []
-            seen = set()
-            for unit, base in records:
-                radius = queries.air_order_radius(unit, "AIR_ATTACK")
-                key = (tuple(base["center"]), radius)
-                if key not in seen:
-                    self.air_mission_targeting_ranges.append((base, radius))
-                    seen.add(key)
-            # Reuse the existing modal map-click path; group targets are
-            # resolved per unit rather than using one row's province/index.
-            self.bombarding_unit_index = "GROUP_AIR"
-            self.targeting_label = "group air mission"
-            self.map_screen.show_feedback("Choose a strike target. Only eligible aircraft in range receive the order.")
-            self.refresh_ui()
-            return
         self._apply_selected_air_mission(records, mission)
 
-    def _apply_selected_air_mission(self, records, mission, target=None):
+    def _apply_selected_air_mission(self, records, mission):
         count = 0
         for unit, province in records:
             if self._air_mission_unit_index(unit, province) is None:
                 continue
             try:
-                order = self._air_mission_order(unit, province, mission, target)
+                order = self._air_mission_order(unit, province, mission)
             except ValueError:
-                # Mixed groups deliberately skip unsupported/out-of-range
-                # missions without replacing orders or refunding their escrow.
+                # Mixed groups skip unsupported defense choices or invalid bases.
+                # Keep those units' orders and reserved payment.
                 continue
             self._refund_unit_order(unit)
             unit["order"] = order
@@ -870,11 +841,9 @@ class Orders_Screen(GameState):
                     "Upgrading")
 
         if queries.is_air_unit(unit):
-            mission = ("STRIKE" if self.bombarding_unit_index == row_key
-                       or id(unit) in self.air_mission_targeting_ids
-                       else queries.air_unit_mission(unit))
+            mission = queries.air_unit_mission(unit)
             add(ACTION_COL_BOMBARD, "yellow", "Cancel strike mission" if mission == "STRIKE"
-                else "Select air mission: no mission, defend area, or strike",
+                else "Select air mission: no mission or defend area",
                 lambda idx=index, p=province, key=row_key: self.open_air_mission_select(idx, p, key),
                 c.AIR_MISSION_ICONS[mission])
         elif order_type == "BOMBARD":
@@ -962,18 +931,20 @@ class Orders_Screen(GameState):
             sidebar_info.prepare_unit_roster(self.map_screen, self.target_province)
         # Cache radii at input boundaries; co-located identical wings share an outline.
         self.air_range_previews = []
+        self.air_strike_range_previews = []
         self._air_range_render_cache = {}
         seen_ranges = set()
         for unit, base in self.map_screen.selected_unit_records():
-            if queries.is_air_unit(unit):
-                stats = queries.air_unit_stats(unit)
-                kind = ("AIR_ATTACK" if stats.get("air_consumable") else
-                        "AIR_PATROL" if (unit.get("order") or {}).get("type") == "AIR_PATROL" else
-                        "AIR_REPOSITION")
+            if not queries.is_air_unit(unit):
+                continue
+            for kind, previews in (("AIR_ATTACK", self.air_strike_range_previews),
+                                   ("AIR_REPOSITION", self.air_range_previews)):
+                if kind == "AIR_REPOSITION" and queries.air_unit_can_move_on_ground(unit):
+                    continue
                 radius = queries.air_order_radius(unit, kind)
-                key = (tuple(base["center"]), radius)
+                key = (kind, tuple(base["center"]), radius)
                 if key not in seen_ranges:
-                    self.air_range_previews.append((base, radius))
+                    previews.append((base, radius))
                     seen_ranges.add(key)
         if getattr(self.map_screen, "realtime_multiplayer", False):
             player = self.map_screen.realtime_session.players.get(self.map_screen.realtime_player_id)
@@ -1295,50 +1266,27 @@ class Orders_Screen(GameState):
 
         unit = units[index]
         if queries.is_air_unit(unit):
-            if not queries.air_unit_can_launch(self.map_screen, unit, province):
-                self.map_screen.show_feedback("Air missions require a land base outside ground combat.")
-                return
-            self._refund_unit_order(unit)
-            unit["order"] = {"type": "MOVE", "path": []}
-            self._mark_draft_changed()
+            self.map_screen.show_feedback("Use a move-order click on enemy territory or units to strike.")
+            return
         self.cancel_bombard_targeting(refresh=False)
-        self.bombard_air_radius = None
-        if queries.is_air_unit(unit):
-            self.targeting_label = "air mission"
-            radius = queries.air_order_radius(unit, "AIR_ATTACK")
-            self.bombard_air_radius = radius
-            self.bombard_target_preview = set()
-            result = ("The weapon is consumed after impact." if queries.air_unit_stats(unit).get("air_consumable")
-                      else "Survivors return to this base.")
-            self.map_screen.show_feedback(f"Choose an air target within {radius:g} map pixels. {result}")
-        else:
-            self.targeting_label = "bombardment"
-            self.bombard_target_preview = queries.get_bombardment_targets(
-                province, self.map_screen.id_to_province, queries.get_bombardment_range(unit.get("type", "")))
+        self.targeting_label = "bombardment"
+        self.bombard_target_preview = queries.get_bombardment_targets(
+            province, self.map_screen.id_to_province, queries.get_bombardment_range(unit.get("type", "")))
 
         self.bombarding_unit_index = index if row_key is None else row_key
         self.bombarding_unit_province = province
         self.bombarding_unit_actual_index = index
-        if not queries.is_air_unit(unit):
-            self.map_screen.show_feedback("Select a tile within range to bombard.")
+        self.map_screen.show_feedback("Select a tile within range to bombard.")
         self.refresh_ui()
 
     def cancel_bombard_targeting(self, refresh=True):
         self.bombarding_unit_index = None
         self.bombarding_unit_province = None
         self.bombarding_unit_actual_index = None
-        self.air_mission_targeting_units = []
-        self.air_mission_targeting_ids = set()
-        self.air_mission_targeting_base_ids = set()
-        self.air_mission_targeting_ranges = []
         if refresh:
             self.refresh_ui()
 
     def set_bombard_target(self, index, dest, province=None):
-        # Older lightweight gun-order test doubles have no air targeting state.
-        if getattr(self, "air_mission_targeting_units", None):
-            self._apply_selected_air_mission(self.air_mission_targeting_units, "STRIKE", dest)
-            return
         province = province or self.bombarding_unit_province or self.target_province
         units = province.get("units", [])
         if not (0 <= index < len(units)):
@@ -1350,16 +1298,6 @@ class Orders_Screen(GameState):
         if self._command_blocked(unit):
             return
         if queries.is_air_unit(unit):
-            try:
-                order = queries.canonical_air_order(self.map_screen, unit, province,
-                    {"type": "AIR_ATTACK", "target_id": dest["id"]})
-            except ValueError as exc:
-                self.map_screen.show_feedback(str(exc))
-                return
-            self._refund_unit_order(unit)
-            unit["order"] = order
-            self._mark_draft_changed()
-            self.cancel_bombard_targeting()
             return
 
         # The same rule process_bombardments applies: guns fire from land, and
@@ -1455,15 +1393,11 @@ class Orders_Screen(GameState):
         if self._command_blocked(unit) or not queries.is_air_unit(unit):
             return
         order = unit.get("order") or {}
-        if (order.get("type") == "AIR_ATTACK"
-                or id(unit) in self.air_mission_targeting_ids
-                or (self.bombarding_unit_province is province and self.bombarding_unit_actual_index == index
-                    and self.bombarding_unit_index is not None)):
+        if order.get("type") == "AIR_ATTACK":
             self.set_air_mission(unit, province, "NONE", row_key)
             return
         enabled_missions = {"NONE"}
         if queries.air_unit_can_launch(self.map_screen, unit, province):
-            enabled_missions.add("STRIKE")
             if queries.air_unit_can_patrol(unit):
                 enabled_missions.update(queries.AIR_INTERCEPTION_PRIORITIES)
         from ui.screen_runner import _run_pygame_sub_screen
@@ -1482,20 +1416,17 @@ class Orders_Screen(GameState):
             return None
         return index
 
-    def _air_mission_order(self, unit, province, mission, target=None):
+    def _air_mission_order(self, unit, province, mission):
         if mission == "NONE":
             return {"type": "MOVE", "path": []}
-        order = ({"type": "AIR_PATROL", "priority": mission}
-                 if mission in queries.AIR_INTERCEPTION_PRIORITIES else
-                 {"type": "AIR_ATTACK", "target_id": target["id"]})
+        if mission not in queries.AIR_INTERCEPTION_PRIORITIES:
+            raise ValueError("Choose No mission or a Defend area priority.")
+        order = {"type": "AIR_PATROL", "priority": mission}
         return queries.canonical_air_order(self.map_screen, unit, province, order)
 
     def set_air_mission(self, unit, province, mission, row_key=None):
         index = self._air_mission_unit_index(unit, province)
         if index is None or mission not in AIR_MISSION_ICONS:
-            return
-        if mission == "STRIKE":
-            self.start_bombard_targeting(index, province, row_key)
             return
         try:
             order = self._air_mission_order(unit, province, mission)
@@ -1834,8 +1765,7 @@ class Orders_Screen(GameState):
 
     def _order_summary(self, unit_index, unit):
         """Short status text and color for a compact roster row."""
-        if (self.bombarding_unit_index == unit_index
-                or id(unit) in self.air_mission_targeting_ids):
+        if self.bombarding_unit_index == unit_index:
             return f"Choose {self.targeting_label} target", BOMBARD_TARGET_COLOR
 
         order = unit.get("order", {})
@@ -2155,26 +2085,16 @@ class Orders_Screen(GameState):
         surface.blit(image, bounds.topleft)
 
     def draw_range_previews(self, surface):
-        if self.air_mission_targeting_units:
-            for base, radius in self.air_mission_targeting_ranges:
-                self.draw_air_range(surface, base, radius, BOMBARD_TARGET_COLOR)
-            for base, radius in self.air_range_previews:
-                if base["id"] not in self.air_mission_targeting_base_ids:
-                    self.draw_air_range(surface, base, radius, MOVE_TARGET_COLOR)
-            return
         aiming_province = self.bombarding_unit_province or self.target_province
         focused_units = aiming_province.get("units", [])
         aiming_index = self.bombarding_unit_actual_index
         targeting = (self.bombarding_unit_index is not None and isinstance(aiming_index, int)
                      and 0 <= aiming_index < len(focused_units))
-        targeting_air = targeting and self.bombard_air_radius is not None
         for base, radius in self.air_range_previews:
-            if not targeting_air or base["id"] != aiming_province["id"]:
-                self.draw_air_range(surface, base, radius, MOVE_TARGET_COLOR)
+            self.draw_air_range(surface, base, radius, MOVE_TARGET_COLOR)
+        for base, radius in self.air_strike_range_previews:
+            self.draw_air_range(surface, base, radius, BOMBARD_TARGET_COLOR)
         if not targeting:
-            return
-        if targeting_air:
-            self.draw_air_range(surface, aiming_province, self.bombard_air_radius, BOMBARD_TARGET_COLOR)
             return
         self.draw_target_markers(surface, aiming_province, self.bombard_target_preview, BOMBARD_TARGET_COLOR)
         hovered = queries.get_clicked_province(pygame.mouse.get_pos(), self.map_screen)

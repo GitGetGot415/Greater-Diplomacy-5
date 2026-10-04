@@ -122,10 +122,10 @@ class _NavigationIntroPopup:
         ("Country actions", "relations", "Click another country's tile to see available diplomatic actions you can take against them."),
     )
     AIR_STEPS = (
-        ("Missions", "In Orders, choose No mission, Defend area (weakest or strongest first), or Strike. Unavailable choices are disabled. Any aircraft except V1 and V2 can defend. Click an active strike's mission button again to cancel it."),
-        ("Group missions", "Select multiple units and use Set Mission beside Disband, Repair and Upgrade. All choices are shown. Strike selects one target; planes unable to perform the mission or reach it keep their current orders."),
-        ("Strike / defend", "Strike: left-click or use your move-order button to select a tile in the outline. Defenders can fire back; reusable survivors return to base with their losses. Tanks cannot damage aircraft in flight. Research shows fort damage capability. Defend area covers listed range; survivors may intercept several missions."),
-        ("Reposition", "Right-click land to move reusable planes up to twice their listed range. Moving aircraft show the Air Move icon. Reach uses map pixels and tile edges; zoom never changes it. Aircraft cannot capture land."),
+        ("Missions", "In Orders, choose No mission or Defend area: weakest, strongest, or random missions first. Unavailable choices are disabled. All aircraft except V1 and V2 can defend. Click an active strike's mission button to cancel it."),
+        ("Group missions", "Select units and use Set Mission beside Disband, Repair and Upgrade for defense or cancellation. Strike with a move-order click. If any selected unit cannot reach the target, all current orders stay."),
+        ("Strike / defend", "Move-order click enemy territory or visible enemy units to strike, including enemies on your land. Aircraft attack without landing. Defenders can fire back; survivors return with losses. Tanks cannot damage aircraft in flight. Research lists fort damage. Patrols may intercept several missions."),
+        ("Reposition", "Right-click accessible land without enemies to move reusable planes up to twice their listed range. Aircraft cannot land on enemy or unclaimed land. The Air Move icon shows relocation. Reach uses tile edges; zoom never changes it. Aircraft cannot capture land."),
         ("V1 and V2", "Strikes consume the weapon; V2 bypasses interception. Relocate on land at ground speed. Air units can load into Convoys at a coast and unload on land. Aircraft caught in ground combat die immediately."),
     )
     PAGE_TITLES = ("Map Navigation", "Map UI", "Other Countries", "Armies", "Aircraft")

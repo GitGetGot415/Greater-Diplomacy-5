@@ -23,6 +23,7 @@ map_logic/ai/ai_movement.py
     _bfs_nearest_target selects a path using current assignments.
     _assign_maintenance_orders plans repairs, upgrades, and movement to suitable provinces.
     _assign_air_orders chooses aircraft missions and relocation.
+    _air_base_threats finds tiles that visible enemy ground units can reach this turn.
     legal_air_candidates obtains aircraft orders from shared legality helpers.
     _rotate_damaged_units rotates damaged units in active battles.
 
@@ -69,6 +70,17 @@ AIRCRAFT ORDERS AND VISIBILITY
 
 The aircraft AI generates only orders permitted by the shared rules.
 It strikes visible enemy targets and moves reusable aircraft to closer friendly land.
+Hostile units on friendly tiles also count as strike targets.
+
+Before choosing a mission, reusable aircraft leave bases threatened by visible enemy ground movement.
+They choose a reachable landing tile outside that threat area.
+The threat check uses current ground-unit speed and shared movement legality.
+The check does not read private enemy orders or hidden units.
+
+It avoids threatened landing tiles when moving closer to a target.
+If no safe landing tile is reachable, normal mission selection continues.
+Aircraft already caught in ground combat cannot escape through flight.
+
 Otherwise, it patrols with reusable aircraft.
 It moves V1/V2 along legal land routes at their ground speed.
 V1/V2 cannot patrol or fly between bases.
