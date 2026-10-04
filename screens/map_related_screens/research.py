@@ -93,6 +93,9 @@ ROW_DEFAULT_Y = 350
 # Categories whose nodes default to the wide button size.
 WIDE_RESEARCH_CATEGORIES = ["TANKS", "NAVY", "AEROSPACE"]
 
+# Display labels do not change research category keys.
+CATEGORY_LABELS = {"AEROSPACE": "AIR"}
+
 # Tech families whose display name is "<Class> Type <year>" rather than a
 # roman numeral tier, keyed off the year list in the tech tree.
 YEAR_TIER_TECHS = {
@@ -237,9 +240,12 @@ class Research_Screen(GameState):
 
     def setup_nodes(self):
         """Dynamically positions nodes based on their associated year."""
-        # The JSON insertion order owns the category order, including content
-        # added by mods or removed by scenario settings.
+        # Keep JSON category order for mod and scenario content.
+        # Place Aerospace before Industry when both categories are present.
         self.categories = list(dict.fromkeys(data["category"] for data in self.tech_tree.values()))
+        if "AEROSPACE" in self.categories and "INDUSTRY" in self.categories:
+            self.categories.remove("AEROSPACE")
+            self.categories.insert(self.categories.index("INDUSTRY"), "AEROSPACE")
         self.categories.append("COMPLETED")
         self.tech_years = {}
         for tech_key, data in self.tech_tree.items():
@@ -509,7 +515,8 @@ class Research_Screen(GameState):
         for i, cat in enumerate(self.categories):
             color = "green" if self.current_category == cat else "blue"
             btn = Button(CATEGORY_BTN_START_X + i * (category_width + CATEGORY_BTN_GAP), CATEGORY_BTN_Y,
-                         (category_width, category_height), color, cat, lambda c=cat: self.set_category(c))
+                         (category_width, category_height), color, CATEGORY_LABELS.get(cat, cat),
+                         lambda c=cat: self.set_category(c))
             self.elements.append(btn)
 
         if self.current_category == "COMPLETED":
@@ -1033,7 +1040,7 @@ class Research_Screen(GameState):
             curr_x = COMPLETED_START_X + (i * column_width)
             curr_y = COMPLETED_START_Y
             
-            cache_text(cat_name, label_font, c.COLOR_GOLD_HIGHLIGHT, curr_x, curr_y,
+            cache_text(CATEGORY_LABELS.get(cat_name, cat_name), label_font, c.COLOR_GOLD_HIGHLIGHT, curr_x, curr_y,
                        column_width - COMPLETED_INDENT_X)
             curr_y += COMPLETED_HEADER_STEP_Y
             
@@ -1086,7 +1093,8 @@ class Research_Screen(GameState):
         # ever looking at their own, so naming them there would be noise.
         looking_at = "" if self.subject == self.map_screen.player_country else (
             queries.get_country_display_name(self.subject, self.map_screen.nation_data) + " -- ")
-        ts = font.render(f"{looking_at}VIEWING: {self.current_category}", True, (255, 255, 255))
+        category_label = CATEGORY_LABELS.get(self.current_category, self.current_category)
+        ts = font.render(f"{looking_at}VIEWING: {category_label}", True, (255, 255, 255))
         surface.blit(ts, (c.SCREEN_WIDTH//2 - ts.get_width()//2, HEADER_TITLE_Y))
 
         # --- DYNAMIC OUTPUT CALCULATION ---

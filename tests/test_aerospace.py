@@ -428,15 +428,17 @@ class AerospaceScreenTests(unittest.TestCase):
     def test_research_category_order_and_header_containment(self):
         self.research.start_research(self.map)
         categories = self.research.categories
-        expected_order = list(dict.fromkeys(data["category"] for data in queries.get_tech_tree().values()))
-        self.assertEqual(categories, expected_order + ["COMPLETED"])
-        buttons = [el for el in self.research.elements if getattr(el, "text", None) in categories]
+        self.assertEqual(categories, ["INFANTRY", "TANKS", "NAVY", "AEROSPACE", "INDUSTRY", "COMPLETED"])
+        labels = ["INFANTRY", "TANKS", "NAVY", "AIR", "INDUSTRY", "COMPLETED"]
+        buttons = [el for el in self.research.elements if getattr(el, "text", None) in labels]
+        self.assertEqual([button.text for button in buttons], labels)
         bounds = pygame.Rect(0, 0, c.SCREEN_WIDTH, c.SCREEN_HEIGHT)
         for button in buttons:
             self.assertTrue(bounds.contains(button.rect))
         for first, second in zip(buttons, buttons[1:]):
             self.assertLessEqual(first.rect.right, second.rect.left)
-        self.research.set_category("AEROSPACE")
+        buttons[labels.index("AIR")].callback()
+        self.assertEqual(self.research.current_category, "AEROSPACE")
         self.assertEqual({node["key"] for node in self.research.nodes["AEROSPACE"]}, set(AEROSPACE_CONTENT))
         for key, (_, _, name) in AEROSPACE_CONTENT.items():
             self.assertEqual(self.research.get_display_name(key, 1), name)
