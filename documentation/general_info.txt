@@ -125,6 +125,12 @@ ui/
 
     Naval, Land, Air, and All form a vertical strip beside the lower left sidebar.
     The strip appears only in Units view.
+    The map tutorial uses image markers in UNIT_VIEW_NOTE in ui/confirm_dialog/message_box.py.
+    Move a [icon:naval:18] marker to change its position.
+    Change 18 to set the maximum image dimension in pixels.
+    Use an icon name from ui_elements.UI_ICONS.
+    Omit :18 to use the text height.
+    Images keep their original proportions. Images stay with the preceding word when lines wrap.
     bars/ui_bars.py draws its shared textured bar.
     event_handler.py uses the same rectangle to block clicks through the bar.
     The filter changes local display only. All is selected when a game opens.

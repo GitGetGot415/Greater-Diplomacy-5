@@ -508,6 +508,63 @@ class UnitViewControlTests(unittest.TestCase):
                 self.assertLess(popup.unit_view_note_rect.bottom, popup.prev_rect.top)
                 self.assertTrue(popup.rect.contains(popup.unit_view_note_rect))
 
+    def test_tutorial_filter_icons_stay_right_of_their_names_and_use_cached_lines(self):
+        from ui import text_utils
+        from ui.confirm_dialog import message_box
+        icons = {}
+        colors = {}
+        for index, view_filter in enumerate(queries.UNIT_VIEW_FILTERS):
+            color = (40 + index * 30, 20, 70)
+            icon = pygame.Surface((20, 14))
+            icon.fill(color)
+            icons[view_filter.lower()] = icon
+            colors[view_filter] = color
+        with patch.dict(message_box.ui_elements.UI_ICONS, icons), \
+                patch.object(message_box, "render_inline_text", wraps=text_utils.render_inline_text) as render:
+            popup = _NavigationIntroPopup(SimpleNamespace())
+        groups = [icon for text, icon in render.call_args.args[0] if icon is not None]
+        self.assertEqual(len(groups), len(queries.UNIT_VIEW_FILTERS))
+        for view_filter, group in zip(queries.UNIT_VIEW_FILTERS, groups):
+            icon_rect = pygame.mask.from_threshold(group, colors[view_filter], (1, 1, 1, 255)).get_bounding_rects()[0]
+            name_width = popup.body_font.size(view_filter.title())[0]
+            self.assertGreater(icon_rect.left, name_width)
+            self.assertLessEqual(icon_rect.right, group.get_width())
+            self.assertLessEqual(icon_rect.height, popup.body_font.get_height())
+        self.assertTrue(all(line.get_width() <= popup.rect.width - 2 * popup.SUBTITLE_SIDE_PADDING
+                            for line in popup.unit_view_note_lines))
+        popup.page_index = 1
+        with patch.object(message_box, "render_inline_text", side_effect=AssertionError("Frame prepared tutorial")):
+            popup.draw(pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT)))
+
+    def test_tutorial_image_markers_control_order_position_and_size(self):
+        from ui import text_utils
+        from ui.confirm_dialog import message_box
+        icon = pygame.Surface((20, 10))
+        icon.fill((17, 83, 121))
+        note = "[icon:air:32] first\nChanged [icon:naval:12] repeated [icon:air] end"
+        with patch.object(_NavigationIntroPopup, "UNIT_VIEW_NOTE", note), \
+                patch.dict(message_box.ui_elements.UI_ICONS, {"air": icon, "naval": icon}), \
+                patch.object(message_box, "render_inline_text", wraps=text_utils.render_inline_text) as render:
+            popup = _NavigationIntroPopup(SimpleNamespace())
+        parts = render.call_args.args[0]
+        groups = [image for text, image in parts if image is not None]
+        self.assertEqual(len(groups), 3)
+        for group, size in zip(groups, (32, 12, popup.body_font.get_height())):
+            rect = pygame.mask.from_threshold(group, (17, 83, 121), (1, 1, 1, 255)).get_bounding_rects()[0]
+            self.assertEqual(rect.size, (size, round(size / 2)))
+        self.assertEqual(groups[0].get_width(), 32)
+        self.assertIn((" first\n", None), parts)
+        self.assertEqual(parts[-1], (" end", None))
+
+    def test_tutorial_without_markers_keeps_plain_text(self):
+        from ui import text_utils
+        from ui.confirm_dialog import message_box
+        note = "Air and Naval can appear without images."
+        with patch.object(_NavigationIntroPopup, "UNIT_VIEW_NOTE", note), \
+                patch.object(message_box, "render_inline_text", wraps=text_utils.render_inline_text) as render:
+            _NavigationIntroPopup(SimpleNamespace())
+        self.assertEqual(render.call_args.args[0], [(note, None)])
+
 
 if __name__ == "__main__":
     unittest.main()

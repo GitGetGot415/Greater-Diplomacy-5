@@ -22,7 +22,7 @@ import data.constants as c
 INLINE_ICON_GAP = 6
 
 
-def render_inline_text(parts, font, max_width, color, *, wrap=False):
+def render_inline_text(parts, font, max_width, color, *, wrap=False, icon_gap=INLINE_ICON_GAP):
     """Cache text lines with optional icons. Each part contains text and a cached icon."""
     if max_width <= 0:
         raise ValueError("Inline text needs a positive width.")
@@ -43,7 +43,7 @@ def render_inline_text(parts, font, max_width, color, *, wrap=False):
         for text, icon in parts:
             if icon is not None:
                 pieces.append((icon, width))
-                width += icon.get_width() + INLINE_ICON_GAP
+                width += icon.get_width() + icon_gap
             piece = font.render(text.replace("\n", " "), True, color)
             pieces.append((piece, width))
             width += piece.get_width()
@@ -62,7 +62,7 @@ def render_inline_text(parts, font, max_width, color, *, wrap=False):
         keep_first_word = icon is not None
         if icon is not None:
             first_word = text.split()[0] if text.split() else ""
-            icon_width = icon.get_width() + INLINE_ICON_GAP
+            icon_width = icon.get_width() + icon_gap
             prefix_width = font.size(pending_space)[0] if width else 0
             if width and width + prefix_width + icon_width + font.size(first_word)[0] > max_width:
                 finish_line()

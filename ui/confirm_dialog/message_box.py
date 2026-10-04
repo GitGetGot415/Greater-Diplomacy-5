@@ -1,5 +1,6 @@
 import pygame
 import os
+import re
 from data import queries
 from ui import modal_stack
 from ui.confirm_dialog.base import _BaseModal, _back_key, _lighten, _run_blocking
@@ -93,6 +94,8 @@ class _NavigationIntroPopup:
     SUBTITLE_Y_OFFSET = 55
     SUBTITLE_SIDE_PADDING = 24
     SUBTITLE_LINE_GAP = 2
+    UNIT_VIEW_NOTE_ICON_GAP = 4
+    UNIT_VIEW_NOTE_LINE_GAP = 3
     KEYBOARD_NAVIGATION_BOX_Y = 320
     KEYBOARD_NAVIGATION_BOX_H = 36
     NAVIGATION_COLUMN_SIDE_PADDING = 18
@@ -138,14 +141,12 @@ class _NavigationIntroPopup:
         ("Economy", "industry", "Shows economic map information."),
         ("Names", "names", "Shows or hides country names."),
     )
+    # Move [icon:name:size] markers to place images. Size is the maximum dimension in pixels.
+    # Omit :size to use the body font height. Names come from ui_elements.UI_ICONS.
     UNIT_VIEW_NOTE = (
-        "In Units view, beside the left sidebar: Naval, Land, Air, All. Filter stacks, orders, and hover previews; "
-        "clicking a province still lists every visible unit. "
+        "In Units view specifically you will see new buttons pop up, which are Naval [icon:naval:24], Land [icon:land:24], Air [icon:air:24], and All [icon:all:24]. "
+        "These filter your view of the map so you only see units that belong in that category. "
         "All is selected whenever a game opens. "
-        "The yellow mail button beside your resources opens last-turn unit events. "
-        "Its badge counts unread entries; opening the log clears it. "
-        "Filter events, left of Mark all unread, shows one event type. "
-        "The filter button turns orange while selected; each completed turn clears the filter."
     )
     ARMY_STEPS = (
         ("Select units", "Left-click stacks or drag in Units view. "
@@ -202,7 +203,41 @@ class _NavigationIntroPopup:
         )
         self.army_step_lines = self._army_step_lines()
         self.air_step_lines = self._army_step_lines(self.AIR_STEPS)
+        self.unit_view_note_lines = self._unit_view_note_lines()
+        self.unit_view_note_height = sum(note.get_height() + self.UNIT_VIEW_NOTE_LINE_GAP
+                                         for note in self.unit_view_note_lines)
         self._layout()
+
+    def _unit_view_note_lines(self):
+        """Prepare editable image markers once when the tutorial opens."""
+        parts = []
+        color = (225, 225, 225)
+        position = 0
+        for marker in re.finditer(r"\[icon:([a-z_]+)(?::([1-9][0-9]*))?\]", self.UNIT_VIEW_NOTE):
+            before = self.UNIT_VIEW_NOTE[position:marker.start()]
+            icon = ui_elements.UI_ICONS.get(marker.group(1))
+            if icon is None:
+                parts.append((before, None))
+            else:
+                # Keep the preceding word with its image when a line wraps.
+                word = re.search(r"(\S+)([ \t]*)$", before)
+                label = word.group(1) if word else ""
+                parts.append((before[:word.start()] if word else before, None))
+                size = int(marker.group(2)) if marker.group(2) else self.body_font.get_height()
+                scale = size / max(icon.get_size())
+                icon = pygame.transform.scale(icon, (max(1, round(icon.get_width() * scale)),
+                                                     max(1, round(icon.get_height() * scale))))
+                text = self.body_font.render(label, True, color)
+                gap = self.UNIT_VIEW_NOTE_ICON_GAP if label else 0
+                height = max(self.body_font.get_height(), icon.get_height())
+                group = pygame.Surface((text.get_width() + gap + icon.get_width(), height), pygame.SRCALPHA)
+                group.blit(text, text.get_rect(midleft=(0, height // 2)))
+                group.blit(icon, icon.get_rect(midleft=(text.get_width() + gap, height // 2)))
+                parts.append(("", group))
+            position = marker.end()
+        parts.append((self.UNIT_VIEW_NOTE[position:], None))
+        return render_inline_text(parts, self.body_font, self.rect.width - 2 * self.SUBTITLE_SIDE_PADDING,
+                                  color, wrap=True, icon_gap=0)
 
     def _layout(self):
         self.header_rect = pygame.Rect(self.rect.x, self.rect.y,
@@ -418,18 +453,15 @@ class _NavigationIntroPopup:
                 surface.blit(label_surf, (x + 36, y))
                 desc_surf = self.body_font.render(description, True, (225, 225, 225))
                 surface.blit(desc_surf, (x + 36, y + self.label_font.get_height() + 2))
-            note_lines = wrap_text(self.UNIT_VIEW_NOTE, self.body_font,
-                                   self.rect.width - 2 * self.SUBTITLE_SIDE_PADDING)
             note_y = self.rect.y + 92 + content_y_offset + 5 * row_h
-            for line in note_lines:
-                note = self.body_font.render(line, True, (225, 225, 225))
+            for note in self.unit_view_note_lines:
                 surface.blit(note, (self.rect.x + self.SUBTITLE_SIDE_PADDING, note_y))
-                note_y += self.body_font.get_height() + 3
+                note_y += note.get_height() + self.UNIT_VIEW_NOTE_LINE_GAP
             self.unit_view_note_rect = pygame.Rect(
                 self.rect.x + self.SUBTITLE_SIDE_PADDING,
                 self.rect.y + 92 + content_y_offset + 5 * row_h,
                 self.rect.width - 2 * self.SUBTITLE_SIDE_PADDING,
-                len(note_lines) * (self.body_font.get_height() + 3))
+                self.unit_view_note_height)
         elif self.page_index == 2:
             step_x = self.rect.x + 56
             step_y = self.rect.y + 108 + content_y_offset
