@@ -54,9 +54,11 @@ def toggle_diplomacy_action(nation_data, player_name, target_name, action_type, 
             # Prevents declaring war while an alliance request is pending, etc.
             return "A diplomatic action is already pending with this nation!"
 
-    # A former leader can still cancel an unsent invitation above.
-    if action_type == "FACTION_INVITE" and not queries.can_invite_to_faction(player_name, nation_data):
-        return "Only a faction leader may invite members."
+    # Cancelling an unsent request above needs no leadership check.
+    leadership_error = queries.faction_request_leadership_error(
+        player_name, target_name, action_type, nation_data)
+    if leadership_error:
+        return leadership_error
 
     # --- THE FIX: Prevent multiple faction requests ---
     faction_actions = ["CREATE_FACTION", "JOIN_FACTION_REQ"]
@@ -217,8 +219,9 @@ def action_is_legal(map_screen, sender, target, action_type):
     elif action_type == "FACTION_INVITE":
         if getattr(c, "DISABLE_FACTIONS", False):
             return False, "factions are disabled"
-        if not queries.can_invite_to_faction(sender, nation_data):
-            return False, "only a faction leader may invite members"
+        leadership_error = queries.faction_request_leadership_error(sender, target, action_type, nation_data)
+        if leadership_error:
+            return False, leadership_error
         if not queries.can_choose_own_faction(target, nation_data):
             return False, "a puppet follows its master's faction"
         if target_data.get("faction", ""):
@@ -231,8 +234,9 @@ def action_is_legal(map_screen, sender, target, action_type):
             return False, "a puppet follows its master's faction"
         if sender_data.get("faction", ""):
             return False, "the sender is already in a faction"
-        if not queries.is_faction_leader(target, nation_data):
-            return False, "the target is not a faction leader"
+        leadership_error = queries.faction_request_leadership_error(sender, target, action_type, nation_data)
+        if leadership_error:
+            return False, leadership_error
         if queries.are_at_war(sender, target, nation_data):
             return False, "the countries are at war"
 
@@ -1036,10 +1040,12 @@ def _process_pass1_immediate_actions(map_screen):
 
             if turns == 0:
                 # Recheck imported drafts and leadership changes before delivery.
-                if action == "FACTION_INVITE" and not queries.can_invite_to_faction(country_name, map_screen.nation_data):
+                leadership_error = queries.faction_request_leadership_error(
+                    country_name, target, action, map_screen.nation_data)
+                if leadership_error:
                     actions_to_clear.append(target)
                     if country_name == map_screen.player_country:
-                        map_screen.show_feedback("Only a faction leader may invite members.")
+                        map_screen.show_feedback(leadership_error)
                     continue
                 info["_processed_this_turn"] = True
                 # EXECUTE unilateral actions instantly on Turn 0

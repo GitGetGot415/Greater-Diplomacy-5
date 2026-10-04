@@ -1249,8 +1249,10 @@ class MapRealtimeDriver:
                 text(action[4:], "message")
             elif action not in allowed_actions:
                 raise RealtimeError("Unknown diplomatic action.")
-            if action == "FACTION_INVITE" and not queries.can_invite_to_faction(country_id, self.map_ref.nation_data):
-                raise RealtimeError("Only a faction leader may invite members.")
+            leadership_error = queries.faction_request_leadership_error(
+                country_id, target, action, self.map_ref.nation_data)
+            if leadership_error:
+                raise RealtimeError(leadership_error)
             timer = info.get("timer", 0)
             if not isinstance(timer, int) or isinstance(timer, bool) or not -1 <= timer <= 1000:
                 raise RealtimeError("Invalid diplomacy timer.")

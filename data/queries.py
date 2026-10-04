@@ -960,6 +960,14 @@ def can_invite_to_faction(nation, nation_data):
     return bool(nation_data.get(nation, {}).get("faction")
                 and is_faction_leader(nation, nation_data))
 
+def faction_request_leadership_error(sender, target, action, nation_data):
+    """Return feedback when a membership request lacks the leader's authority."""
+    if action == "FACTION_INVITE" and not can_invite_to_faction(sender, nation_data):
+        return "Only a faction leader may invite members."
+    if action == "JOIN_FACTION_REQ" and not can_invite_to_faction(target, nation_data):
+        return "You must ask the faction leader to let you join."
+    return None
+
 def get_historical_owner(province, faction_name, nation_data):
     """Returns the pre-war owner of a tile if a faction war is active, otherwise the primary core."""
     if faction_name and "FACTION_WAR_MAPS" in nation_data and faction_name in nation_data["FACTION_WAR_MAPS"]:

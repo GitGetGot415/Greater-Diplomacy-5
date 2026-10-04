@@ -126,8 +126,9 @@ def apply_treaty_effect(host, action, proposer, accepter, params=None, escrow=No
             return _blocked("PUPPET_CANNOT_CHOOSE_FACTION")
         if nation_data[accepter].get("faction", ""):
             return _blocked("ACCEPT_FACTION_ALREADY_IN")
-        if not queries.can_invite_to_faction(proposer, nation_data):
-            return TreatyOutcome("Only a faction leader may invite members.", None)
+        leadership_error = queries.faction_request_leadership_error(proposer, accepter, action, nation_data)
+        if leadership_error:
+            return TreatyOutcome(leadership_error, None)
         finalize_faction_join(map_data, nation_data, proposer, accepter)
 
     elif action == "JOIN_FACTION_REQ":
@@ -136,8 +137,9 @@ def apply_treaty_effect(host, action, proposer, accepter, params=None, escrow=No
             return _blocked("PUPPET_CANNOT_CHOOSE_FACTION")
         if nation_data[proposer].get("faction", ""):
             return _blocked("ACCEPT_FACTION_JOIN_ALREADY_IN")
-        if not queries.is_faction_leader(accepter, nation_data):
-            return TreatyOutcome("Only a faction leader may accept new members.", None)
+        leadership_error = queries.faction_request_leadership_error(proposer, accepter, action, nation_data)
+        if leadership_error:
+            return TreatyOutcome(leadership_error, None)
         finalize_faction_join(map_data, nation_data, accepter, proposer)
 
     elif action == "CREATE_FACTION":

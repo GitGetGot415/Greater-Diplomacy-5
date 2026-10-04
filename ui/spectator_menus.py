@@ -93,18 +93,24 @@ def open_spectator_action_menu(map_screen, action_type):
     source_nation = map_screen.selected_province.get("owner")
     if source_nation in c.UNPLAYABLE_NATIONS: return
 
-    if action_type == "INVITE_FACTION" and not queries.can_invite_to_faction(source_nation, map_screen.nation_data):
-        map_screen.show_feedback("Only a faction leader may invite members.")
-        return
+    if action_type == "INVITE_FACTION":
+        leadership_error = queries.faction_request_leadership_error(
+            source_nation, "", "FACTION_INVITE", map_screen.nation_data)
+        if leadership_error:
+            map_screen.show_feedback(leadership_error)
+            return
 
     action = SPECTATOR_ACTIONS.get(action_type, _UNKNOWN_ACTION)
     living_nations = queries.get_living_nations(map_screen.map_data)
     items = action.candidates(map_screen, source_nation, living_nations)
 
     def cb(target_nation):
-        if action_type == "INVITE_FACTION" and not queries.can_invite_to_faction(source_nation, map_screen.nation_data):
-            map_screen.show_feedback("Only a faction leader may invite members.")
-            return
+        if action_type == "INVITE_FACTION":
+            leadership_error = queries.faction_request_leadership_error(
+                source_nation, target_nation, "FACTION_INVITE", map_screen.nation_data)
+            if leadership_error:
+                map_screen.show_feedback(leadership_error)
+                return
         if action.apply:
             from map_logic.diplomacy import diplomacy_logic
             action.apply(diplomacy_logic, map_screen, source_nation, target_nation)

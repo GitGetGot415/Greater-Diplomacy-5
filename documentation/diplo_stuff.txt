@@ -171,6 +171,12 @@ A former leader can cancel an unsent invitation.
 These rules also apply to scripted invitations, spectator invitation controls, and both multiplayer modes.
 Editor faction setup can assign members directly.
 
+The invitation button remains available to ordinary members when the other invitation conditions permit it.
+Click it to see why only the leader can send the invitation.
+Send a join request to the faction leader.
+If you select an ordinary member, the join-request button explains that you must ask the leader.
+Invalid membership requests show no acceptance forecast and are not sent.
+
 A member can challenge leadership after exceeding the leader's power by the required margin for six consecutive turns.
 When several eligible claims resolve together, the claimant with the highest nation power becomes leader.
 Country-data order does not decide the result.

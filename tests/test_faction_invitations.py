@@ -27,7 +27,31 @@ class FactionInvitationTests(unittest.TestCase):
         self.game.player_country = "Member"
         player_diplomacy_actions.handle_specific_action(self.game, "FACTION_INVITE")
         self.assertEqual(self.game.pending_action("Member", "Outsider"), "")
-        self.assertTrue(self.game.feedback)
+        self.assertEqual(self.game.feedback[-1], "Only a faction leader may invite members.")
+
+    def test_join_request_to_a_member_directs_the_player_to_the_leader(self):
+        self.game.player_country = "Outsider"
+        self.game.selected_province = self.game.home_of("Member")
+        player_diplomacy_actions.handle_specific_action(self.game, "JOIN_FACTION_REQ")
+        self.assertEqual(self.game.pending_action("Outsider", "Member"), "")
+        self.assertIn("faction leader", self.game.feedback[-1])
+        self.assertEqual(self.game.mail_draft_text, "Please join.")
+
+    def test_join_request_to_the_leader_can_be_sent_and_undone(self):
+        self.game.player_country = "Outsider"
+        self.game.selected_province = self.game.home_of("Leader")
+        player_diplomacy_actions.handle_specific_action(self.game, "JOIN_FACTION_REQ")
+        self.assertEqual(self.game.pending_action("Outsider", "Leader"), "JOIN_FACTION_REQ")
+        faction_leadership.transfer(self.game.nation_data, "Leader", "Member")
+        player_diplomacy_actions.handle_specific_action(self.game, "JOIN_FACTION_REQ")
+        self.assertEqual(self.game.pending_action("Outsider", "Leader"), "")
+
+    def test_imported_join_request_to_a_member_is_not_delivered(self):
+        self.game.nation_data["Outsider"]["pending_diplomacy"]["Member"] = {
+            "action": "JOIN_FACTION_REQ", "turns": 0, "timer": 0, "message": "Let us join."}
+        self.game.run_turn()
+        self.assertEqual(self.game.inbound("Member", "Outsider"), [])
+        self.assertEqual(self.game.pending_action("Outsider", "Member"), "")
 
     def test_leader_can_invite_and_the_outsider_can_join_at_peace(self):
         player_diplomacy_actions.handle_specific_action(self.game, "FACTION_INVITE")
@@ -77,7 +101,8 @@ class FactionInvitationTests(unittest.TestCase):
                 game.set_faction("Pact", "Leader", "Member")
                 game.nation_data["Member"]["pending_diplomacy"]["Outsider"] = {
                     "action": "FACTION_INVITE", "turns": 0, "timer": 0, "message": "Join us."}
-                game.propose("Outsider", "Member", "JOIN_FACTION_REQ")
+                game.nation_data["Outsider"]["pending_diplomacy"]["Member"] = {
+                    "action": "JOIN_FACTION_REQ", "turns": 0, "timer": 0, "message": "Let us join."}
                 if joiner_first:
                     game.nation_data = dict(reversed(list(game.nation_data.items())))
                 game.run_turn()
@@ -98,6 +123,18 @@ class FactionInvitationTests(unittest.TestCase):
         self.assertEqual(self.game.pending_action("Leader", "Outsider"), "")
         # Removing an unsent draft remains permitted after leadership changes.
         driver.validate_draft("Leader", [{"type": "country_diplomacy", "pending": {}}])
+
+    def test_realtime_join_requests_must_address_the_current_leader(self):
+        driver = MapRealtimeDriver(self.game)
+        command = {"type": "country_diplomacy", "pending": {
+            "Leader": {"action": "JOIN_FACTION_REQ"}}}
+        driver.validate_draft("Outsider", [command])
+        with self.assertRaisesRegex(RealtimeError, "faction leader"):
+            driver.validate_draft("Outsider", [{"type": "country_diplomacy", "pending": {
+                "Member": {"action": "JOIN_FACTION_REQ"}}}])
+        faction_leadership.transfer(self.game.nation_data, "Leader", "Member")
+        with self.assertRaisesRegex(RealtimeError, "faction leader"):
+            driver.validate_draft("Outsider", [command])
 
     def test_spectator_cannot_invite_from_a_member_or_a_stale_picker(self):
         self.game.selected_province = self.game.home_of("Member")
@@ -143,12 +180,16 @@ class FactionInvitationButtonTests(unittest.TestCase):
             patcher.start()
             self.addCleanup(patcher.stop)
 
-    def test_player_invite_requires_leadership_and_preserves_undo(self):
+    def test_player_invite_is_clickable_and_explains_leadership_and_preserves_undo(self):
         game = self.game
         self.map_module.update_button_states(game)
         self.assertTrue(game.btn_fac_invite.visible)
-        self.assertTrue(game.btn_fac_invite.disabled)
+        self.assertFalse(game.btn_fac_invite.disabled)
         self.assertIsNone(game.btn_fac_invite.right_image)
+        with mock.patch.object(game, "show_feedback") as feedback:
+            game.btn_fac_invite.callback()
+        feedback.assert_called_once_with("Only a faction leader may invite members.")
+        self.assertNotIn(self.outsider, game.nation_data[self.member]["pending_diplomacy"])
         game.player_country = self.leader
         self.map_module.update_button_states(game)
         self.assertFalse(game.btn_fac_invite.disabled)
@@ -158,15 +199,33 @@ class FactionInvitationButtonTests(unittest.TestCase):
         self.map_module.update_button_states(game)
         self.assertFalse(game.btn_fac_invite.disabled)
 
-    def test_spectator_invite_requires_the_selected_country_to_lead(self):
+    def test_spectator_invite_is_clickable_for_leaders_and_members(self):
         game = self.game
         game.player_country = "Spectator"
-        for country, enabled in ((self.member, False), (self.leader, True)):
+        for country in (self.member, self.leader):
             game.selected_province = next(p for p in game.map_data.values()
                                           if p.get("owner") == country)
             self.map_module.update_button_states(game)
             self.assertTrue(game.btn_spec_invite_fac.visible)
-            self.assertEqual(not game.btn_spec_invite_fac.disabled, enabled)
+            self.assertFalse(game.btn_spec_invite_fac.disabled)
+            if country == self.member:
+                with mock.patch.object(game, "show_feedback") as feedback:
+                    game.btn_spec_invite_fac.callback()
+                feedback.assert_called_once_with("Only a faction leader may invite members.")
+
+    def test_join_button_to_a_member_is_clickable_and_explains_who_to_ask(self):
+        game = self.game
+        game.player_country = self.outsider
+        game.selected_province = next(p for p in game.map_data.values()
+                                      if p.get("owner") == self.member)
+        self.map_module.update_button_states(game)
+        self.assertTrue(game.btn_fac_join_req.visible)
+        self.assertFalse(game.btn_fac_join_req.disabled)
+        self.assertIsNone(game.btn_fac_join_req.right_image)
+        with mock.patch.object(game, "show_feedback") as feedback:
+            game.btn_fac_join_req.callback()
+        self.assertIn("faction leader", feedback.call_args.args[0])
+        self.assertNotIn(self.member, game.nation_data[self.outsider]["pending_diplomacy"])
 
     def test_tactical_player_cannot_invite_even_when_the_country_leads(self):
         self.game.player_country = self.leader
