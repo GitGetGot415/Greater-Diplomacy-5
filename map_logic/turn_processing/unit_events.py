@@ -163,7 +163,7 @@ class _TurnRecorder:
             row["detail_parts"] = detail_parts
         self.rows.append(row)
 
-    def counterpart(self, viewer, unit):
+    def counterpart(self, viewer, unit, *, reveal_identity=False):
         tile = self.tile(unit)
         if unit.get("owner") != viewer:
             if viewer not in self.visibility:
@@ -179,22 +179,26 @@ class _TurnRecorder:
                                            self.map_screen.scenario_settings)
             if (province is None or fog and visible is not None and tile not in visible
                     or not queries.is_unit_visible_to(unit, viewer, province, self.map_screen.nation_data)):
-                return {"text": "Unknown unit"}
+                if not reveal_identity:
+                    return {"text": "Unknown unit (tile ???)"}
+                tile = "???"
         return {"text": f"{unit_name(unit)} (tile {tile})", "owner": unit["owner"]}
 
-    def damage_details(self, viewer, units):
+    def damage_details(self, viewer, units, *, reveal_identity=False):
         parts = [{"text": f"{self.phase}: "}]
         for index, unit in enumerate(units):
             if index:
                 parts.append({"text": "; "})
-            parts.append(self.counterpart(viewer, unit))
+            parts.append(self.counterpart(viewer, unit, reveal_identity=reveal_identity))
         return parts
 
     def damage(self, unit, amount, sources, tile):
         if amount <= 0:
             return
         sources = [(source, weight) for source, weight in sources or () if weight > 0]
-        parts = self.damage_details(unit.get("owner"), [source for source, _weight in sources]) if sources else None
+        # Attacks reveal the source's identity, but hidden source positions stay private.
+        parts = self.damage_details(unit.get("owner"), [source for source, _weight in sources],
+                                    reveal_identity=True) if sources else None
         self.add(unit, "DAMAGE_RECEIVED", tile, amount,
                  "".join(part["text"] for part in parts) if parts else self.phase, detail_parts=parts)
         self.damage_seen.add(id(unit))

@@ -143,7 +143,7 @@ class UnitEventRulesTests(unittest.TestCase):
         combat_processor.apply_group_damage(2, [target])
         self.assertEqual(game.unit_event_log["events"], [])
 
-    def test_fogged_source_name_and_location_are_private(self):
+    def test_fogged_attacker_name_is_revealed_and_location_is_private(self):
         game = fixture()
         game.scenario_settings["fog_of_war"] = True
         target = unit(game, "A")
@@ -152,10 +152,16 @@ class UnitEventRulesTests(unittest.TestCase):
             combat_processor.apply_group_damage(1, [target], sources=[(source, 1)], tile=1)
         projected = queries.player_snapshot_projection(game, queries.build_save_dict(game), "A")
         self.assertEqual(len(projected["unit_event_log"]["events"]), 1)
-        self.assertNotIn("Secret weapon", json.dumps(projected["unit_event_log"]))
+        self.assertIn("Secret weapon (tile ???)", json.dumps(projected["unit_event_log"]))
         self.assertNotIn("tile 2", json.dumps(projected["unit_event_log"]))
         parts = projected["unit_event_log"]["events"][0]["detail_parts"]
-        self.assertTrue(all("owner" not in part for part in parts))
+        self.assertEqual([part["owner"] for part in parts if "owner" in part], ["B"])
+        loaded = fixture()
+        unit_events.restore(loaded, json.loads(json.dumps(projected)))
+        self.assertEqual(loaded.unit_event_log, projected["unit_event_log"])
+        loaded.refresh_all_maps = lambda: unit_events.refresh_presentation(loaded)
+        apply_authoritative_snapshot(loaded, projected)
+        self.assertEqual(loaded.unit_event_log, projected["unit_event_log"])
 
     def test_detail_flags_use_recorded_owners_even_with_duplicate_names_and_removed_units(self):
         game = fixture()
@@ -193,7 +199,40 @@ class UnitEventRulesTests(unittest.TestCase):
         view = visibility.call_args_list[0].args[0]
         self.assertTrue(view.tactical_mode)
         self.assertIs(view.player_unit, game.player_unit)
-        self.assertNotIn("Hidden source", unit_events.entries_for(game)[0]["details"])
+        self.assertIn("Hidden source (tile ???)", unit_events.entries_for(game)[0]["details"])
+        self.assertNotIn("tile 2", json.dumps(unit_events.entries_for(game)))
+
+    def test_visible_attacker_positions_and_hidden_unit_positions_follow_shared_visibility(self):
+        for fog, visible, unit_visible, expected in (
+                (True, {1, 2}, True, "2"), (True, {1}, True, "???"),
+                (False, {1}, True, "2"), (False, {1, 2}, False, "???")):
+            with self.subTest(fog=fog, visible=visible, unit_visible=unit_visible):
+                game = fixture()
+                game.scenario_settings["fog_of_war"] = fog
+                victim = unit(game, "A")
+                attacker = unit(game, "B", pid=2, name="Attacker")
+                with patch.object(queries, "get_visible_provinces", return_value=(visible, set())), \
+                        patch.object(queries, "is_unit_visible_to", return_value=unit_visible):
+                    with unit_events.record_turn(game):
+                        combat_processor.apply_group_damage(1, [victim], sources=[(attacker, 1)], tile=1)
+                entry = unit_events.entries_for(game)[0]
+                self.assertIn(f"Attacker (tile {expected})", entry["details"])
+                self.assertEqual(entry["tile_id"], 1)
+
+    def test_hidden_targets_stay_unknown_in_damage_dealt_reports(self):
+        game = fixture()
+        game.scenario_settings["fog_of_war"] = True
+        victim = unit(game, "A", name="Hidden target")
+        attacker = unit(game, "B", pid=2)
+        with patch.object(queries, "get_visible_provinces", return_value=({2}, set())):
+            with unit_events.record_turn(game):
+                combat_processor.apply_group_damage(1, [victim], sources=[(attacker, 1)], tile=1)
+        game.player_country = "B"
+        entry = unit_events.entries_for(game)[0]
+        self.assertEqual(entry["event"], "DAMAGE_DEALT")
+        self.assertIn("Unknown unit (tile ???)", entry["details"])
+        self.assertNotIn("Hidden target", json.dumps(entry))
+        self.assertTrue(all("owner" not in part for part in entry["detail_parts"]))
 
     def test_air_strikes_record_incident_tile_and_expended_weapon(self):
         from tests.test_air_mechanics import world, tile, wing
@@ -229,6 +268,26 @@ class UnitEventRulesTests(unittest.TestCase):
             self.assertEqual(game.unit_event_log["turn"], game.time_manager.total_turns)
             asyncio.run(turn_processor.resolve_turn_logic(game))
         self.assertEqual(game.unit_event_log["events"], [])
+
+    def test_air_strike_reveals_attacker_without_revealing_hidden_base(self):
+        from tests.test_air_mechanics import world, tile, wing
+        from map_logic.turn_processing import air_processor
+        game = world()
+        game.is_editor = False
+        game.player_country = "B"
+        game.scenario_settings["fog_of_war"] = True
+        base = tile(game, 1, 8)
+        target = tile(game, 2, 25, owner="B")
+        attacker = wing(base, "Monoplane Bomber", order={"type": "AIR_ATTACK", "target_id": target["id"]})
+        wing(target, "Infantry", owner="B")
+        with patch.object(queries, "get_visible_provinces", return_value=({target["id"]}, set())):
+            with unit_events.record_turn(game):
+                unit_events.run_step(game, "Air missions", air_processor.process_air_orders)
+        received = next(entry for entry in unit_events.entries_for(game) if entry["event"] == "DAMAGE_RECEIVED")
+        self.assertIn(f"{unit_events.unit_name(attacker)} (tile ???)", received["details"])
+        self.assertNotIn(f"tile {base['id']}", json.dumps(received))
+        self.assertEqual(received["tile_id"], target["id"])
+        self.assertEqual([part["owner"] for part in received["detail_parts"] if "owner" in part], [attacker["owner"]])
 
 
 class UnitEventPersistenceTests(unittest.TestCase):

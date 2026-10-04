@@ -94,8 +94,10 @@ screens/
         In tactical mode, only the player's selected division is editable.
         unit_events_screen.py shows the last turn's unit events in a sortable table.
         A country flag appears left of each unit name, using the event's recorded owner.
-        The Details column and expanded view also show flags for visible units named in the event.
-        Hidden units have no flag. Long expanded details support scrolling.
+        The Details column and expanded view also show flags for identified units named in the event.
+        Damage received identifies hidden attackers but replaces their province number with ???.
+        Damage dealt keeps hidden targets as Unknown unit (tile ???) without a flag.
+        Long expanded details support scrolling.
         Click the yellow mail button beside the resource display to open it.
         Its badge shows the number of unread entries.
         Opening the table marks the current player's entries as read.

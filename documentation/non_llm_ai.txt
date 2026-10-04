@@ -396,8 +396,11 @@ The flag uses the owner recorded in the event, including events for destroyed un
 Click a column header to sort the table.
 Click a row to read its full details.
 
-The Details column and expanded view show country flags before visible unit names.
-Hidden units show Unknown unit without a flag.
+The Details column and expanded view show country flags before identified unit names.
+Damage received identifies attackers even when they are hidden.
+Hidden attackers keep their names and flags, but their province number shows ???.
+Damage dealt keeps hidden targets as Unknown unit (tile ???) without a flag.
+
 Use the mouse wheel or Page Up and Page Down to scroll long expanded details.
 Flag images and detail text are prepared when the screen or expanded view opens.
 
@@ -442,11 +445,11 @@ Saves retain only the latest report and its local read status.
 Older saves start with an empty report.
 History snapshots do not store copies of reports.
 Tournament exports and real-time snapshots include only the receiving player's entries.
-Hidden sources use an unknown-unit label.
+Attack details hide source positions with ??? when the viewer cannot see the source unit.
 Player move files and real-time commands cannot replace host reports.
 Real-time broadcasts preserve local read status for the same turn.
 
-Each new damage entry can include detail_parts with text fragments and visible units' recorded owners.
+Each new damage entry can include detail_parts with text fragments and identified units' recorded owners.
 Saves, tournament exports, and real-time snapshots retain these fragments.
 unit_events.normalize_log validates the fragments and preserves the original details text.
 Old reports without detail_parts keep plain text for other units until the next completed turn.
