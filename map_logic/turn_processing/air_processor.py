@@ -91,16 +91,17 @@ def process_air_orders(map_screen):
         force = [unit for unit in missions[key] if unit.get("health", 0) > 0]
         defenders = defenders_for(key)
         if defenders and force:
-            # One side contains every participant: the standard coalition lanes
-            # retain three-or-more-side fights. Terrain never changes air width.
-            battle = combat_rules.build_battle([force + defenders], map_screen.nation_data,
-                                               width=c.COMBAT_WIDTH, air_combat=True)
-            for targets, attack, sources in combat_rules.exchange(battle, map_screen.nation_data, with_sources=True):
-                combat_processor.apply_group_damage(attack, targets, sources=sources, tile=key[0])
-            for lane in battle.lanes:
-                for unit in lane.a.front + lane.b.front:
-                    unit["_in_combat_this_turn"] = True
-            _cleanup(map_screen)
+            with unit_events.record_phase("Interception"):
+                # One side contains every participant: the standard coalition lanes
+                # retain three-or-more-side fights. Terrain never changes air width.
+                battle = combat_rules.build_battle([force + defenders], map_screen.nation_data,
+                                                   width=c.COMBAT_WIDTH, air_combat=True)
+                for targets, attack, sources in combat_rules.exchange(battle, map_screen.nation_data, with_sources=True):
+                    combat_processor.apply_group_damage(attack, targets, sources=sources, tile=key[0])
+                for lane in battle.lanes:
+                    for unit in lane.a.front + lane.b.front:
+                        unit["_in_combat_this_turn"] = True
+                _cleanup(map_screen)
 
         survivors = [unit for unit in force if unit.get("health", 0) > 0]
         target = map_screen.id_to_province[key[0]]

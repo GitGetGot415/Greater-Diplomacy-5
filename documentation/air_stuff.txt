@@ -312,6 +312,8 @@ Last-turn reports
 -----------------
 
 Unit events records health losses and damage dealt during air combat and strikes.
+Interception damage and destroyed-unit entries use Interception in Details.
+Strike entries retain Air missions in Details.
 Interception and strike entries show the mission tile.
 
 Damage received identifies attackers, including aircraft at hidden bases.

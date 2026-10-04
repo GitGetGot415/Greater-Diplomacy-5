@@ -446,6 +446,8 @@ Opening the report and Mark all unread still affect all entries permitted for th
 
 The report records actual turn resolution, including losses and attacks by AI units.
 AI plans and combat forecasts do not write entries.
+Air combat entries use Interception in Details for interception damage and losses.
+Strikes retain the Air missions label.
 Damage dealt uses each source's share of the applied volley.
 Shares include target restrictions and combat modifiers.
 The total credit equals the target's actual health loss.

@@ -146,6 +146,7 @@ class _TurnRecorder:
         self.phase = "Turn resolution"
         self.damage_seen = set()
         self.loss_tiles = {}
+        self.loss_phases = {}
         self.expended = {}
 
     def tile(self, unit):
@@ -200,6 +201,7 @@ class _TurnRecorder:
                  "".join(part["text"] for part in parts) if parts else self.phase, detail_parts=parts)
         self.damage_seen.add(id(unit))
         self.loss_tiles[id(unit)] = tile
+        self.loss_phases[id(unit)] = self.phase
         total = sum(weight for _source, weight in sources)
         for source, weight in sources:
             parts = self.damage_details(source.get("owner"), [unit])
@@ -216,7 +218,8 @@ class _TurnRecorder:
                     event = "EXPENDED"
                 if event == "DESTROYED" and health > 0 and identity not in self.damage_seen:
                     self.damage(unit, health, (), self.tile(unit))
-                self.add(unit, event, self.expended.get(identity, self.loss_tiles.get(identity, self.tile(unit))))
+                self.add(unit, event, self.expended.get(identity, self.loss_tiles.get(identity, self.tile(unit))),
+                         details=self.loss_phases.get(identity, self.phase) if event == "DESTROYED" else self.phase)
                 continue
             if after[1] != tile:
                 self.add(unit, "MOVED", after[1], details=f"{self.phase}: from tile {tile}")
@@ -235,6 +238,7 @@ class _TurnRecorder:
         self.visibility.clear()
         self.damage_seen.clear()
         self.loss_tiles.clear()
+        self.loss_phases.clear()
         self.expended.clear()
 
 
@@ -249,6 +253,20 @@ def record_turn(map_screen):
         set_event_filter(map_screen, None)
     finally:
         _RECORDER.reset(token)
+
+
+@contextmanager
+def record_phase(label):
+    """Label combat entries in a nested phase without scanning the map."""
+    recorder = _RECORDER.get()
+    previous = recorder.phase if recorder is not None else None
+    if recorder is not None:
+        recorder.phase = label
+    try:
+        yield
+    finally:
+        if recorder is not None:
+            recorder.phase = previous
 
 
 def run_step(map_screen, label, function):

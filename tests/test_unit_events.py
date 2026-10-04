@@ -254,6 +254,66 @@ class UnitEventRulesTests(unittest.TestCase):
         self.assertTrue(all(entry["tile_id"] == target["id"] for entry in dealt))
         self.assertTrue(any(entry["unit_id"] == missile["unit_id"] and entry["event"] == "EXPENDED" for entry in entries))
 
+    def air_report_fixture(self):
+        from tests.test_air_mechanics import world, tile, wing
+        game = world()
+        game.is_editor = False
+        game.scenario_settings["fog_of_war"] = False
+        base = tile(game, 1, 8)
+        target = tile(game, 2, 25, owner="B")
+        patrol_base = tile(game, 3, 40, owner="B")
+        attacker = wing(base, "Monoplane Bomber I", order={"type": "AIR_ATTACK", "target_id": target["id"]})
+        patrol = wing(patrol_base, "Monoplane Fighter I", owner="B", order={"type": "AIR_PATROL"})
+        garrison = wing(target, "Infantry", owner="B")
+        # Artificial combat stats keep both exchanges independent of unit tuning.
+        for participant in (attacker, patrol, garrison):
+            participant.update(health=10000, max_health=10000, attack=100, defense=0,
+                               morale=c.DEFAULT_UNIT_MORALE)
+        return game, attacker, patrol, garrison, target
+
+    def test_interception_and_strikes_have_distinct_details_and_survive_projection(self):
+        from map_logic.turn_processing import air_processor
+        game, attacker, patrol, garrison, target = self.air_report_fixture()
+        with unit_events.record_turn(game):
+            unit_events.run_step(game, "Air missions", air_processor.process_air_orders)
+        entries = game.unit_event_log["events"]
+        interceptions = [entry for entry in entries if entry["details"].startswith("Interception:")]
+        strikes = [entry for entry in entries if entry["details"].startswith("Air missions:")]
+        self.assertEqual({entry["unit_id"] for entry in interceptions},
+                         {attacker["unit_id"], patrol["unit_id"]})
+        self.assertEqual({entry["unit_id"] for entry in strikes},
+                         {attacker["unit_id"], garrison["unit_id"]})
+        for exchange in (interceptions, strikes):
+            self.assertEqual({entry["event"] for entry in exchange}, {"DAMAGE_DEALT", "DAMAGE_RECEIVED"})
+            self.assertTrue(all(entry["tile_id"] == target["id"] for entry in exchange))
+            self.assertTrue(all("".join(part["text"] for part in entry["detail_parts"]) == entry["details"]
+                                for entry in exchange))
+        snapshot = json.loads(json.dumps(queries.build_save_dict(game, include_provinces=False)))
+        loaded = fixture()
+        loaded.time_manager.total_turns = game.time_manager.total_turns
+        unit_events.restore(loaded, snapshot)
+        self.assertEqual(loaded.unit_event_log, game.unit_event_log)
+        projected = queries.player_snapshot_projection(game, snapshot, "A")
+        self.assertEqual(projected["unit_event_log"]["events"],
+                         [entry for entry in entries if entry["owner"] == "A"])
+
+    def test_air_destruction_retains_the_phase_of_the_fatal_exchange(self):
+        from map_logic.turn_processing import air_processor
+        for casualty, expected_phase in (("attacker", "Interception"),
+                                         ("patrol", "Interception"),
+                                         ("garrison", "Air missions")):
+            with self.subTest(casualty=casualty):
+                game, attacker, patrol, garrison, target = self.air_report_fixture()
+                lost = {"attacker": attacker, "patrol": patrol, "garrison": garrison}[casualty]
+                lost["health"] = 1
+                with unit_events.record_turn(game):
+                    unit_events.run_step(game, "Air missions", air_processor.process_air_orders)
+                losses = [entry for entry in game.unit_event_log["events"]
+                          if entry["unit_id"] == lost["unit_id"] and entry["event"] == "DESTROYED"]
+                self.assertEqual(len(losses), 1)
+                self.assertEqual(losses[0]["details"], expected_phase)
+                self.assertEqual(losses[0]["tile_id"], target["id"])
+
     def test_authoritative_resolver_records_and_replaces_each_turn(self):
         game = fixture()
         game.time_manager = TimeHandler(start_year=1939)
