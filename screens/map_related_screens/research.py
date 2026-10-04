@@ -144,7 +144,7 @@ LEVEL_SUFFIX_TECHS = {
 # Node button sizes, matched against the lowercased display name in order.
 # First hit wins, so the more specific entries have to come first.
 NODE_SIZE_RULES = [
-    (("aircraft carrier", "battleship", "dreadnought", "submarine"), "tech_square_ultra_wide"),
+    (("aircraft carrier", "battleship", "dreadnought", "submarine", "jet bomber"), "tech_square_ultra_wide"),
     (("ww2 railroad gun",), "tech_square_ww2_railroad_gun"),
     (("landkreuzer p.1000 ratte",), "tech_square_landkreuzer_p1000_ratte"),
     (("landkreuzer p.1500 monster",), "tech_square_landkreuzer_p1500_monster"),
