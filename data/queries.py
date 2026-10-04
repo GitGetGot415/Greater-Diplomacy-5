@@ -3757,6 +3757,8 @@ CONDENSED_UNIT_NAME_WORDS = {
     "Landkreuzer": "LK",
     "P.1000": "",
     "P.1500": "",
+    "Biplane": "Bi",
+    "Monoplane": "Mono",
 }
 
 # Multi-word unit-class names collapsed to a single acronym, checked before the
