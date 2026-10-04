@@ -4302,8 +4302,7 @@ def get_air_unit_traits(unit_type):
     traits.append("Strikes damage forts." if air_unit_can_damage_forts(unit)
                   else "Strikes do not damage forts.")
     traits.extend([f"Immune to {UNIT_GROUP_TANKS} damage; cannot capture territory.",
-                   "Destroyed immediately when caught in ground combat.",
-                   f"Coastal Convoy conversions take {AIR_CONVERT_TURNS} turn each way."])
+                   "Destroyed immediately when caught in ground combat."])
     return traits
 
 
