@@ -24,8 +24,9 @@ class UnitEventsScreen(TableScreen):
     def __init__(self, map_screen):
         self.all_rows = [row | {"event_label": unit_events.EVENT_LABELS[row["event"]]}
                          for row in unit_events.entries_for(map_screen)]
-        self.flags = {owner: flag_icons.flag_surface(owner, map_screen.nation_data)
-                      for owner in {row["owner"] for row in self.all_rows}}
+        owners = {row["owner"] for row in self.all_rows}
+        owners.update(part["owner"] for row in self.all_rows for part in row.get("detail_parts", []) if "owner" in part)
+        self.flags = {owner: flag_icons.flag_surface(owner, map_screen.nation_data) for owner in owners}
         self.event_filter = unit_events.event_filter_for(map_screen)
         rows = self.filtered_rows()
         available = c.SCREEN_WIDTH - 2 * TABLE_MARGIN
@@ -40,7 +41,13 @@ class UnitEventsScreen(TableScreen):
             def fit(value, key=key, text_width=text_width):
                 text = f"{value:.2f}" if key == "amount" and value else "" if key == "amount" else str(value)
                 return text_utils.fit_text(text, fonts.get("small"), text_width)
-            columns.append(TableColumn(key, label, width, align="left", fmt=fit, icon=icon))
+            render = None
+            if key == "details":
+                for row in self.all_rows:
+                    row["_details_surface"] = text_utils.render_inline_text(
+                        self.detail_inline_parts(row), fonts.get("small"), text_width, c.UI_TEXT_BRIGHT)[0]
+                render = lambda row: row["_details_surface"]
+            columns.append(TableColumn(key, label, width, align="left", fmt=fit, icon=icon, render=render))
         super().__init__(map_screen, "Unit events - Last turn", columns, rows,
                          empty_message=self.empty_report_message(),
                          on_row_click=self.show_event, row_tint=lambda _row: ROW_COLOR)
@@ -97,4 +104,10 @@ class UnitEventsScreen(TableScreen):
         from ui import confirm_dialog
         amount = f"\nHealth: {row['amount']:.2f}" if row["amount"] else ""
         confirm_dialog.show_info(row["event_label"],
-            f"{row['unit_name']}\nTile: {row['tile_id']}{amount}\n{row['details']}")
+            f"{row['unit_name']}\nTile: {row['tile_id']}{amount}\n{row['details']}",
+            inline_parts=[(row["unit_name"], self.flags[row["owner"]]),
+                          (f"\nTile: {row['tile_id']}{amount}\n", None)] + self.detail_inline_parts(row))
+
+    def detail_inline_parts(self, row):
+        parts = row.get("detail_parts", [{"text": row["details"]}])
+        return [(part["text"], self.flags[part["owner"]] if "owner" in part else None) for part in parts]

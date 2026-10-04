@@ -154,6 +154,21 @@ class UnitEventRulesTests(unittest.TestCase):
         self.assertEqual(len(projected["unit_event_log"]["events"]), 1)
         self.assertNotIn("Secret weapon", json.dumps(projected["unit_event_log"]))
         self.assertNotIn("tile 2", json.dumps(projected["unit_event_log"]))
+        parts = projected["unit_event_log"]["events"][0]["detail_parts"]
+        self.assertTrue(all("owner" not in part for part in parts))
+
+    def test_detail_flags_use_recorded_owners_even_with_duplicate_names_and_removed_units(self):
+        game = fixture()
+        victim = unit(game, "A", name="Same name")
+        first = unit(game, "B", name="Same name")
+        second = unit(game, "A", name="Same name")
+        with unit_events.record_turn(game):
+            combat_processor.apply_group_damage(2, [victim], sources=[(first, 1), (second, 1)], tile=1)
+        received = next(entry for entry in game.unit_event_log["events"] if entry["event"] == "DAMAGE_RECEIVED")
+        self.assertEqual([part["owner"] for part in received["detail_parts"] if "owner" in part], ["B", "A"])
+        self.assertEqual("".join(part["text"] for part in received["detail_parts"]), received["details"])
+        game.id_to_province[1]["units"].clear()
+        self.assertEqual(unit_events.entries_for(game)[0]["detail_parts"], received["detail_parts"])
 
     def test_grounded_air_loss_has_sources_and_destroyed_entry(self):
         game = fixture()
@@ -239,7 +254,9 @@ class UnitEventPersistenceTests(unittest.TestCase):
 
     def test_json_round_trip_and_legacy_defaults(self):
         game = fixture()
-        game.unit_event_log["events"] = [row()]
+        entry = row()
+        entry["detail_parts"] = [{"text": entry["details"], "owner": "B"}]
+        game.unit_event_log["events"] = [entry]
         unit_events.mark_read(game)
         snapshot = json.loads(json.dumps(queries.build_save_dict(game, include_provinces=False)))
         loaded = fixture()
@@ -250,6 +267,15 @@ class UnitEventPersistenceTests(unittest.TestCase):
         unit_events.restore(loaded, {})
         self.assertEqual(loaded.unit_event_log["events"], [])
         self.assertEqual(loaded.unit_event_read_turns, {})
+
+    def test_legacy_details_and_malformed_optional_parts_keep_the_original_text(self):
+        game = fixture()
+        entry = row()
+        for parts in (None, [], [None], [{"text": entry["details"], "owner": []}],
+                      [{"text": "Different text", "owner": "B"}]):
+            with self.subTest(parts=parts):
+                unit_events.restore(game, {"unit_event_log": {"turn": 1, "events": [entry | {"detail_parts": parts}]}})
+                self.assertEqual(game.unit_event_log["events"], [entry])
 
     def test_stale_and_malformed_reports_are_discarded(self):
         game = fixture()
@@ -263,12 +289,16 @@ class UnitEventPersistenceTests(unittest.TestCase):
     def test_player_projection_and_tournament_spectator_do_not_leak_other_reports(self):
         game = fixture()
         game.unit_event_log["events"] = [row(), row("B")]
+        for entry in game.unit_event_log["events"]:
+            entry["detail_parts"] = [{"text": entry["details"], "owner": entry["owner"]}]
         game.unit_event_read_turns = {"A": 1, "B": 1}
         saved = queries.build_save_dict(game)
         for viewer in ("A", "B", c.TOURNAMENT_SPECTATOR):
             projected = queries.player_snapshot_projection(game, saved, viewer)
             self.assertTrue(all(entry["owner"] == viewer for entry in projected["unit_event_log"]["events"]))
             self.assertLessEqual(set(projected["unit_event_read_turns"]), {viewer})
+            self.assertTrue(all(entry["detail_parts"] == [{"text": entry["details"], "owner": viewer}]
+                                for entry in projected["unit_event_log"]["events"]))
         spectator = multiplayer_io.build_tournament_spectator_save(saved)
         self.assertEqual(spectator["unit_event_log"]["events"], [])
         self.assertEqual(spectator["unit_event_read_turns"], {})
@@ -278,11 +308,13 @@ class UnitEventPersistenceTests(unittest.TestCase):
         game = fixture()
         game.refresh_all_maps = lambda: unit_events.refresh_presentation(game)
         game.unit_event_log["events"] = [row()]
+        game.unit_event_log["events"][0]["detail_parts"] = [{"text": "Ground combat", "owner": "B"}]
         snapshot = queries.build_save_dict(game)
         unit_events.mark_read(game)
         unit_events.set_event_filter(game, "DESTROYED")
         apply_authoritative_snapshot(game, snapshot)
         self.assertEqual(game._unit_event_unread, 0)
+        self.assertEqual(game.unit_event_log["events"][0]["detail_parts"], snapshot["unit_event_log"]["events"][0]["detail_parts"])
         self.assertEqual(unit_events.event_filter_for(game), "DESTROYED")
         snapshot["date"]["total_turns"] += 1
         snapshot["unit_event_log"]["turn"] += 1
@@ -460,6 +492,76 @@ class UnitEventScreenTests(unittest.TestCase):
                 self.assertLessEqual(column.icon(entry).get_height(), screen.ROW_HEIGHT)
                 screen.draw(pygame.Surface((width, c.SCREEN_HEIGHT)))
 
+    def test_details_column_and_popup_show_each_visible_units_flag(self):
+        from screens.map_related_screens.unit_events_screen import UnitEventsScreen, CELL_PADDING
+        from ui import flag_icons, modal_stack, text_utils
+        game = self.game
+        parts = [{"text": "Ground combat: "}, {"text": "Same name (tile 1)", "owner": "B"},
+                 {"text": "; "}, {"text": "Same name (tile 2)", "owner": "C"},
+                 {"text": "; Unknown unit"}]
+        entry = game.unit_event_log["events"][0]
+        entry.update(details="".join(part["text"] for part in parts), detail_parts=parts)
+        colors = {game.player_country: (20, 120, 20), "B": (120, 20, 20), "C": (20, 20, 120)}
+        flags = {}
+        for owner, color in colors.items():
+            flags[owner] = pygame.Surface(flag_icons.ROW_FLAG_SIZE)
+            flags[owner].fill(color)
+        with patch.object(flag_icons, "flag_surface", side_effect=lambda owner, _data: flags[owner]):
+            screen = UnitEventsScreen(game)
+        detail_column = screen.columns[-1]
+        cell = detail_column.render(screen.rows[0])
+        self.assertLessEqual(cell.get_width(), detail_column.width - CELL_PADDING)
+        flag_area = flag_icons.ROW_FLAG_SIZE[0] * flag_icons.ROW_FLAG_SIZE[1]
+        for owner in ("B", "C"):
+            self.assertEqual(pygame.mask.from_threshold(cell, colors[owner], (1, 1, 1, 255)).count(), flag_area)
+        with patch.object(modal_stack, "push") as push:
+            screen.show_event(screen.rows[0])
+        popup = push.call_args.args[0]
+        for owner in colors:
+            pixels = sum(pygame.mask.from_threshold(line, colors[owner], (1, 1, 1, 255)).count()
+                         for line in popup.inline_lines)
+            self.assertEqual(pixels, flag_area)
+        self.assertTrue(all(line.get_width() <= popup.body_rect.width for line in popup.inline_lines))
+        with patch.object(flag_icons, "flag_surface", side_effect=AssertionError("Frame prepared flags")), \
+                patch.object(text_utils, "render_inline_text", side_effect=AssertionError("Frame prepared details")):
+            surface = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
+            screen.draw(surface)
+            popup.draw(surface)
+
+    def test_long_details_popup_keeps_all_flags_and_scrolls_inside_the_viewport(self):
+        from screens.map_related_screens.unit_events_screen import UnitEventsScreen
+        from ui import modal_stack, flag_icons
+        game = self.game
+        parts = [{"text": "Ground combat: "}]
+        for index in range(30):
+            parts.append({"text": "LongUnitName" * 10 + f" (tile {index})", "owner": "B"})
+            parts.append({"text": "; "})
+        entry = game.unit_event_log["events"][0]
+        entry.update(details="".join(part["text"] for part in parts), detail_parts=parts)
+        flag = pygame.Surface(flag_icons.ROW_FLAG_SIZE)
+        flag.fill((123, 45, 67))
+        with patch.object(flag_icons, "flag_surface", return_value=flag):
+            screen = UnitEventsScreen(game)
+        for size in ((640, 480), (c.SCREEN_WIDTH, c.SCREEN_HEIGHT)):
+            with self.subTest(size=size), patch("pygame.display.get_surface", return_value=pygame.Surface(size)), \
+                    patch.object(modal_stack, "push") as push:
+                screen.show_event(screen.rows[0])
+                popup = push.call_args.args[0]
+                self.assertTrue(pygame.Rect((0, 0), size).contains(popup.box_rect))
+                self.assertTrue(popup.box_rect.contains(popup.ok_rect))
+                self.assertFalse(popup.body_rect.colliderect(popup.ok_rect))
+                pixels = sum(pygame.mask.from_threshold(line, (123, 45, 67), (1, 1, 1, 255)).count()
+                             for line in popup.inline_lines)
+                self.assertEqual(pixels, (30 + 1) * flag.get_width() * flag.get_height())
+                popup.handle_events([pygame.event.Event(pygame.MOUSEWHEEL, y=-1000)])
+                self.assertGreater(popup.body_scroll, 0)
+                self.assertEqual(popup.body_scroll, popup.body_scroll_limit)
+                popup.draw(pygame.Surface(size))
+                popup.handle_events([pygame.event.Event(pygame.MOUSEWHEEL, y=1000)])
+                self.assertEqual(popup.body_scroll, 0)
+                popup.handle_events([pygame.event.Event(pygame.KEYDOWN, key=pygame.K_ESCAPE)])
+                self.assertTrue(popup._resolved)
+
     def test_mark_all_unread_restores_badge_after_closing_until_reopened(self):
         from screens.map_related_screens.unit_events_screen import UnitEventsScreen
         game = self.game
@@ -577,6 +679,8 @@ class UnitEventScreenTests(unittest.TestCase):
         from data.map import save_map
         from screens.menu_screens.map import Map
         game = self.game
+        entry = game.unit_event_log["events"][0]
+        entry["detail_parts"] = [{"text": entry["details"], "owner": "B"}]
         unit_events.mark_read(game)
         unit_events.set_event_filter(game, "DESTROYED")
         with tempfile.TemporaryDirectory() as temporary, patch.object(c, "SAVES_DIR", temporary):

@@ -396,6 +396,11 @@ The flag uses the owner recorded in the event, including events for destroyed un
 Click a column header to sort the table.
 Click a row to read its full details.
 
+The Details column and expanded view show country flags before visible unit names.
+Hidden units show Unknown unit without a flag.
+Use the mouse wheel or Page Up and Page Down to scroll long expanded details.
+Flag images and detail text are prepared when the screen or expanded view opens.
+
 Filter events appears to the left of Mark all unread.
 Select one event type to show only matching entries.
 Select No filter to show all permitted entries.
@@ -436,6 +441,12 @@ Tournament exports and real-time snapshots include only the receiving player's e
 Hidden sources use an unknown-unit label.
 Player move files and real-time commands cannot replace host reports.
 Real-time broadcasts preserve local read status for the same turn.
+
+Each new damage entry can include detail_parts with text fragments and visible units' recorded owners.
+Saves, tournament exports, and real-time snapshots retain these fragments.
+unit_events.normalize_log validates the fragments and preserves the original details text.
+Old reports without detail_parts keep plain text for other units until the next completed turn.
+Their main unit still has its recorded owner's flag.
 
 MAP DISPLAY
 -----------

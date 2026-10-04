@@ -270,6 +270,8 @@ Last-turn reports
 Unit events records health losses and damage dealt during air combat and strikes.
 Interception and strike entries show the mission tile.
 Details identify visible sources and their base tiles.
+Country flags appear before visible unit names in the Details column and expanded view.
+Hidden sources have no flag.
 Hidden sources remain unknown.
 Grounded aircraft destroyed by hostile troops also receive loss entries.
 An expended single-use weapon receives a Weapon expended entry.

@@ -7,7 +7,7 @@ from ui.bars import ui_bars
 import data.constants as c
 from map_logic.rendering.font_manager import fonts
 import ui_elements
-from ui.text_utils import wrap_text
+from ui.text_utils import render_inline_text, wrap_text
 
 _KIND_ACCENTS = {
     "info": (80, 150, 220),
@@ -22,15 +22,52 @@ class _MessageModal(_BaseModal):
     BOX_CHROME_H = 170   # 110 of chrome plus the 60 the OK row occupies
     BORDER_WIDTH = 3
     PASSES_RESULT = False
+    BODY_MARGIN = 20
+    BODY_BUTTON_GAP = 10
+    VIEWPORT_MARGIN = 20
 
-    def __init__(self, surface, title, message, on_result, kind):
+    def __init__(self, surface, title, message, on_result, kind, inline_parts=None):
         self.accent = _KIND_ACCENTS.get(kind, _KIND_ACCENTS["info"])
+        self.inline_lines = (render_inline_text(inline_parts, fonts.get("normal"),
+                             min(self.BOX_MAX_W, surface.get_width() - 40) - 2 * self.BODY_MARGIN,
+                             (210, 210, 210), wrap=True) if inline_parts is not None else None)
+        self.inline_height = sum(line.get_height() + 2 for line in self.inline_lines or [])
         super().__init__(surface, title, message, on_result)
+        if self.inline_lines is not None:
+            self.box_rect.height = min(self.box_rect.height, surface.get_height() - 2 * self.VIEWPORT_MARGIN)
+            self.box_rect.centery = surface.get_height() // 2
         self.BORDER_COLOR = self.accent
         self.ok_rect = pygame.Rect(self.box_rect.centerx - 60, self.box_rect.bottom - 55, 120, 40)
+        self.body_rect = pygame.Rect(self.box_rect.x + self.BODY_MARGIN, self.box_rect.y + self.BODY_DY,
+                                    self.box_rect.width - 2 * self.BODY_MARGIN,
+                                    self.ok_rect.top - self.BODY_BUTTON_GAP - (self.box_rect.y + self.BODY_DY))
+        self.body_scroll = 0
+        self.body_scroll_limit = max(0, self.body_height() - self.body_rect.height)
+
+    def body_height(self):
+        if self.inline_lines is None:
+            return super().body_height()
+        return self.inline_height
+
+    def draw_body_lines(self, surface, offset_y=0):
+        if self.inline_lines is None:
+            return super().draw_body_lines(surface, offset_y)
+        old_clip = surface.get_clip()
+        surface.set_clip(self.body_rect.clip(old_clip))
+        y = self.body_rect.top - self.body_scroll
+        for line in self.inline_lines:
+            surface.blit(line, (self.body_rect.left, y))
+            y += line.get_height() + 2
+        surface.set_clip(old_clip)
+        return y
 
     def handle_events(self, events):
         for event in events:
+            if self.inline_lines is not None:
+                scroll = (-event.y * c.SCROLL_STEP if event.type == pygame.MOUSEWHEEL else
+                          self.body_rect.height if event.type == pygame.KEYDOWN and event.key == pygame.K_PAGEDOWN else
+                          -self.body_rect.height if event.type == pygame.KEYDOWN and event.key == pygame.K_PAGEUP else 0)
+                self.body_scroll = max(0, min(self.body_scroll_limit, self.body_scroll + scroll))
             if event.type == pygame.KEYDOWN:
                 if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_ESCAPE,
                                  pygame.K_SPACE, _back_key()):
@@ -454,13 +491,13 @@ class _NavigationIntroPopup:
             surface.blit(button, button.get_rect(center=rect.center))
 
 
-def _show_message_standalone(title, message, tk_parent, kind, on_result):
-    _run_blocking(lambda surf: _MessageModal(surf, title, message, None, kind), tk_parent)
+def _show_message_standalone(title, message, tk_parent, kind, on_result, inline_parts=None):
+    _run_blocking(lambda surf: _MessageModal(surf, title, message, None, kind, inline_parts), tk_parent)
     if on_result:
         on_result()
 
 
-def show_message(title, message, tk_parent=None, kind="info", on_result=None):
+def show_message(title, message, tk_parent=None, kind="info", on_result=None, *, inline_parts=None):
     """Drop-in replacement for messagebox.showinfo / showwarning / showerror.
 
     `kind` picks the accent color: "info", "success", "warning", or "error".
@@ -468,14 +505,14 @@ def show_message(title, message, tk_parent=None, kind="info", on_result=None):
     """
     surface = pygame.display.get_surface()
     if surface is None:
-        _show_message_standalone(title, message, tk_parent, kind, on_result)
+        _show_message_standalone(title, message, tk_parent, kind, on_result, inline_parts)
         return
 
-    modal_stack.push(_MessageModal(surface, title, message, on_result, kind))
+    modal_stack.push(_MessageModal(surface, title, message, on_result, kind, inline_parts))
 
 
-def show_info(title, message, tk_parent=None, on_result=None):
-    show_message(title, message, tk_parent=tk_parent, kind="info", on_result=on_result)
+def show_info(title, message, tk_parent=None, on_result=None, *, inline_parts=None):
+    show_message(title, message, tk_parent=tk_parent, kind="info", on_result=on_result, inline_parts=inline_parts)
 
 
 def show_success(title, message, tk_parent=None, on_result=None):

@@ -19,7 +19,7 @@ class TableColumn:
     display one thing (a date string) but sort on another (its epoch day).
     Columns sharing the same `group` get one merged label drawn above them.
     """
-    def __init__(self, key, label, width, align="center", fmt=str, group=None, sort_key=None, icon=None):
+    def __init__(self, key, label, width, align="center", fmt=str, group=None, sort_key=None, icon=None, render=None):
         self.key = key
         self.label = label
         self.width = width
@@ -29,6 +29,8 @@ class TableColumn:
         self.sort_key = sort_key or (lambda row, k=key: row.get(k))
         # Optional callback returns a cached surface to place before the text.
         self.icon = icon
+        # Optional callback returns the complete cached cell surface.
+        self.render = render
 
 class TableScreen(GameState):
     """Full-screen sortable data table -- the pygame stand-in for the old
@@ -38,7 +40,7 @@ class TableScreen(GameState):
     GROUP_LABEL_Y = 65
     HEADER_Y = 88
     ROW_TOP = 130
-    CELL_ICON_GAP = 6
+    CELL_ICON_GAP = text_utils.INLINE_ICON_GAP
 
     def __init__(self, game_state, title, columns, rows, empty_message="Nothing to show.",
                  on_row_click=None, row_tint=None):
@@ -161,8 +163,11 @@ class TableScreen(GameState):
 
                 x = self.table_x
                 for col in self.columns:
-                    text = col.fmt(row.get(col.key, ""))
-                    cell_surf = row_font.render(text, True, c.UI_TEXT_BRIGHT)
+                    if col.render:
+                        cell_surf = col.render(row)
+                    else:
+                        text = col.fmt(row.get(col.key, ""))
+                        cell_surf = row_font.render(text, True, c.UI_TEXT_BRIGHT)
                     icon = col.icon(row) if col.icon else None
                     prefix_width = icon.get_width() + self.CELL_ICON_GAP if icon is not None else 0
                     rect = pygame.Rect(0, 0, cell_surf.get_width() + prefix_width, cell_surf.get_height())

@@ -37,9 +37,17 @@ def normalize_log(value, turn):
         amount = row.get("amount", 0)
         if isinstance(amount, bool) or not isinstance(amount, (int, float)) or not math.isfinite(amount) or amount < 0:
             continue
-        empty["events"].append({key: row[key] for key in
-                               ("owner", "unit_id", "unit_name", "tile_id", "event", "details")}
-                              | {"amount": amount})
+        entry = {key: row[key] for key in ("owner", "unit_id", "unit_name", "tile_id", "event", "details")}
+        entry["amount"] = amount
+        # Old reports have plain text. Ignore invalid optional details without losing the event.
+        parts = row.get("detail_parts")
+        if (isinstance(parts, list) and parts
+                and all(isinstance(part, dict) and isinstance(part.get("text"), str)
+                        and ("owner" not in part or isinstance(part["owner"], str) and bool(part["owner"]))
+                        for part in parts)
+                and "".join(part["text"] for part in parts) == entry["details"]):
+            entry["detail_parts"] = [{key: part[key] for key in ("text", "owner") if key in part} for part in parts]
+        empty["events"].append(entry)
     return empty
 
 
@@ -143,14 +151,17 @@ class _TurnRecorder:
     def tile(self, unit):
         return self.locations.get(id(unit), -1)
 
-    def add(self, unit, event, tile=None, amount=0, details=""):
+    def add(self, unit, event, tile=None, amount=0, details="", detail_parts=None):
         # Queue deployments also receive stable IDs before their first report.
         if not unit.get("unit_id"):
             queries.ensure_unit_ids(self.map_screen.map_data)
-        self.rows.append({"owner": unit.get("owner", ""), "unit_id": unit.get("unit_id", ""),
+        row = {"owner": unit.get("owner", ""), "unit_id": unit.get("unit_id", ""),
                           "unit_name": unit_name(unit), "event": event,
                           "tile_id": self.tile(unit) if tile is None else tile,
-                          "amount": amount, "details": details or self.phase})
+                          "amount": amount, "details": details or self.phase}
+        if detail_parts:
+            row["detail_parts"] = detail_parts
+        self.rows.append(row)
 
     def counterpart(self, viewer, unit):
         tile = self.tile(unit)
@@ -168,22 +179,31 @@ class _TurnRecorder:
                                            self.map_screen.scenario_settings)
             if (province is None or fog and visible is not None and tile not in visible
                     or not queries.is_unit_visible_to(unit, viewer, province, self.map_screen.nation_data)):
-                return "Unknown unit"
-        return f"{unit_name(unit)} (tile {tile})"
+                return {"text": "Unknown unit"}
+        return {"text": f"{unit_name(unit)} (tile {tile})", "owner": unit["owner"]}
+
+    def damage_details(self, viewer, units):
+        parts = [{"text": f"{self.phase}: "}]
+        for index, unit in enumerate(units):
+            if index:
+                parts.append({"text": "; "})
+            parts.append(self.counterpart(viewer, unit))
+        return parts
 
     def damage(self, unit, amount, sources, tile):
         if amount <= 0:
             return
         sources = [(source, weight) for source, weight in sources or () if weight > 0]
-        details = "; ".join(self.counterpart(unit.get("owner"), source) for source, _weight in sources)
+        parts = self.damage_details(unit.get("owner"), [source for source, _weight in sources]) if sources else None
         self.add(unit, "DAMAGE_RECEIVED", tile, amount,
-                 f"{self.phase}: {details}" if details else self.phase)
+                 "".join(part["text"] for part in parts) if parts else self.phase, detail_parts=parts)
         self.damage_seen.add(id(unit))
         self.loss_tiles[id(unit)] = tile
         total = sum(weight for _source, weight in sources)
         for source, weight in sources:
+            parts = self.damage_details(source.get("owner"), [unit])
             self.add(source, "DAMAGE_DEALT", tile, amount * weight / total,
-                     f"{self.phase}: {self.counterpart(source.get('owner'), unit)}")
+                     "".join(part["text"] for part in parts), detail_parts=parts)
 
     def finish_step(self):
         current = _state(self.map_screen)
