@@ -1,4 +1,4 @@
-"""Turn-by-turn tests for the diplomacy timelines described in context/diplo_stuff.txt.
+"""Turn-by-turn tests for the diplomacy timelines described in documentation/diplo_stuff.txt.
 
 The rules being pinned down:
   * a bilateral proposal is written on turn 0 and lands in the other side's

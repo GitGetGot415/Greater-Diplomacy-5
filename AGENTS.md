@@ -12,9 +12,10 @@ A change is complete only when all affected game modes, state transitions, UI co
 2. Check `git status`.
    Preserve unrelated user changes. Do not discard work to get a clean tree.
 3. Read the relevant design notes:
-   - `documentation/ai_stuff.txt`: AI, combat, tactical play, spectators, and large language models (LLMs).
+   - `documentation/non_llm_ai.txt`: rule-based AI, combat, tactical play, and spectators.
+   - `documentation/llm_ai.txt`: large language models (LLMs), prompts, budgets, cancellation, and fairness.
    - `documentation/diplo_stuff.txt`: diplomacy, messages, guarantees, volunteers, attach?s, factions, war, and peace.
-   - `documentation/context_prompts.txt`: maintenance preferences.
+   - `documentation/other/context_prompts.txt`: maintenance preferences.
 4. Find the shared rule or data owner.
    Extend that implementation and make callers use it.
 
@@ -188,7 +189,7 @@ Success in one does not prove compatibility with the other.
 - Rule-based AI is authoritative and must work with the LLM disabled.
   The model selects only actions already generated and validated as legal.
 - Reuse shared AI or rule valuations for units, technology, proposals, and diplomatic outcomes.
-- Preserve shared prompt prefixes, turn-budget cancellation, and fairness rules from `documentation/ai_stuff.txt`.
+- Preserve shared prompt prefixes, turn-budget cancellation, and fairness rules from `documentation/llm_ai.txt`.
 - Before changing diplomacy, read `documentation/diplo_stuff.txt`.
   Test both directions and delayed resolution.
   Preserve message timing, cancellation, crossing requests, and unilateral or bilateral behavior.
@@ -268,7 +269,7 @@ Update it when map navigation, unit selection, orders, or covered bottom-left co
 Add or update tests for changed tutorial behavior.
 
 Update affected documentation, comments, examples, tests, schemas, and UI text with the implementation.
-Keep `documentation/ai_stuff.txt` and `documentation/diplo_stuff.txt` consistent with the rules.
+Keep `documentation/non_llm_ai.txt`, `documentation/llm_ai.txt`, and `documentation/diplo_stuff.txt` consistent with the rules.
 Update every description or preview of changed player behavior.
 
 At handoff, state the behavior change and verification results.

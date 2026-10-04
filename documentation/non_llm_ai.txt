@@ -1,98 +1,43 @@
-HOW THE AI WORKS
-================
+RULE-BASED AI AND SHARED GAME RULES
+=================================
 
-Artificial intelligence (AI) has two layers.
-UI means user interface.
-The rule-based layer always runs, including when no large language model (LLM) is enabled.
+AI means artificial intelligence. UI means user interface.
+LLM means large language model.
+The rule-based layer always runs, including when no LLM is enabled.
 It generates legal actions and scores them.
-The model layer selects from those actions and writes messages.
+Without the model, the AI uses library response text and does not hold model-based summits.
 
-The model cannot create an action that the rules forbid.
-Without the model, the AI still works. It uses library response text and does not hold model-based summits.
+The model selects from legal actions and writes messages.
+It cannot create an action that the rules forbid.
+See documentation/llm_ai.txt for model settings, decisions, prompts, and request control.
 
-LAST-TURN UNIT EVENTS
----------------------
+This guide covers planning, valuation, combat, diplomacy, and shared player-mode rules.
+The combat and display rules also apply to human players where stated.
+See documentation/diplo_stuff.txt for diplomacy timing and effects.
+See documentation/air_stuff.txt for the full aircraft rules.
 
-The yellow mail button beside the resources opens Unit events.
-The orange screen lists unit names, tile IDs, events, health changes, and sources.
-Click a column header to sort the table.
-Click a row to read its full details.
+AI MODULES
+----------
 
-The report records actual turn resolution, including losses and attacks by AI units.
-AI plans and combat forecasts do not write entries.
-Damage dealt uses each source's share of the applied volley.
-Shares include target restrictions and combat modifiers.
-The total credit equals the target's actual health loss.
-It excludes damage beyond the target's remaining health.
-Forced destruction of grounded aircraft divides credit equally among the hostile units present.
+map_logic/ai/ contains these shared components:
 
-Events also include destruction, disbanding, deployment, movement, repairs, upgrades, and transport or type changes.
-Destroyed units remain in the report after removal from the map.
-Normal players see their own units.
-Tactical players see only their selected division, including its loss.
-Normal spectators can see all recorded entries.
-Editors and tournament spectators receive no unit reports.
-
-The badge counts unread entries for the current player.
-Opening the report marks those entries as read.
-Click Mark all unread in the report to restore the current player's unread badge.
-Closing the report keeps this unread status. Opening it again marks the entries as read.
-Hotseat players have separate read status.
-The next completed turn replaces the report and clears old read status.
-Empty turns therefore remove earlier entries too.
-
-Saves retain only the latest report and its local read status.
-Older saves start with an empty report.
-History snapshots do not store copies of reports.
-Tournament exports and real-time snapshots include only the receiving player's entries.
-Hidden sources use an unknown-unit label.
-Player move files and real-time commands cannot replace host reports.
-Real-time broadcasts preserve local read status for the same turn.
-
-IMMERSION LEVELS
-----------------
-
-Select an immersion level with the red buttons in Settings.
-
-OFF
-    No model calls. Replies use the response library.
-
-LITE
-    The model replies only to custom messages written by a human.
-
-FULL
-    The model handles diplomacy that involves a human.
-    AI-to-AI messages use the response library.
-
-MAJOR
-    FULL behavior, plus model control for major countries.
-    These include leading powers, faction leaders, and countries bordering or fighting a human.
-
-ABSOLUTE
-    Every AI country can use the model. AI countries can hold summits with each other.
-
-The per-country nation_data["llm_tier"] setting can override the immersion level.
-Its values are ALWAYS, NEVER, and AUTO.
-
-MODEL DECISIONS
----------------
-
-1. Select actions from a country's scored legal candidates.
-   A country receives its candidate list once per turn.
-   AI_MAX_ACTIONS_PER_TURN limits the selected actions.
-   The same reply supplies their message text.
-   Countries with no candidates do not need a call.
-   At ABSOLUTE, a country with one candidate still gets a call for its wording.
-
-2. Decide whether to accept a proposal where the rules permit a choice.
-   Fixed restrictions, such as an integrated puppet's trade restriction, remain binding.
-   The model can override a rule-based recommendation, but cannot override legality.
-
-3. Agree on summit outcomes.
-   Summits run at ABSOLUTE, or between major powers at MAJOR.
-
-The game discards illegal model requests.
-A rumor in the global log can still show the attempted action.
+ai_world.py
+    One map snapshot per turn for strength, border, and relation queries.
+ai_unit_eval.py
+    Unit value from its stats and the country's resource scarcity.
+    Do not maintain a separate list of preferred units.
+ai_tech_eval.py
+    Technology value from the things it unlocks.
+ai_personality.py
+    Five scenario-seeded traits. Saved personalities are reproducible.
+ai_opinion.py
+    War, peace, trade, and alliance preference scores.
+ai_candidates.py
+    Legal action generation and ranking.
+ai_commitments.py
+    Promises and the cost of breaking them.
+ai_construction.py, ai_movement.py, ai_research.py, ai_diplomacy.py
+    Production, movement, research, and proactive diplomacy.
 
 RULE-BASED PLANNING AND CACHES
 ----------------------------
@@ -182,79 +127,6 @@ Recruitment buildings use the General Buildings panel.
 Their factory requirements and upgrade chain are unchanged.
 See documentation/air_stuff.txt for the full aircraft rules.
 
-MAP DISPLAY
------------
-
-Map refreshes calculate layer inputs when game state changes.
-They reuse pixel surfaces that have not changed.
-Fog updates current visibility even when it can reuse its image.
-Hotseat blanking and player changes still apply.
-
-After all local players submit orders, the viewer becomes n/a while AI moves are prepared.
-The AI preview must keep Resolve Turn, Settings, and Music available.
-Country-owned actions remain hidden because no player country is assigned.
-Hide Resolve Turn while AI preparation, map refresh, or saving is active.
-
-Editor painting invalidates the affected surface.
-Refresh Maps forces a full rebuild.
-Planning-frame rendering does not run map-wide calculations.
-
-Naval, Land, Air, and All appear beside the lower left sidebar in Units view.
-They filter local unit stacks, army markers, and order arrows.
-Hover previews list only visible units that match the selected category.
-Clicking a province still shows its full visible unit list.
-The filter uses the unit's current form.
-Convoys are naval, including transported aircraft. Trucks are land.
-All is selected when a game opens.
-
-Changing the filter clears local unit selection and compression animations.
-It does not change units, orders, AI decisions, fog permissions, saves, or multiplayer commands.
-Combat markers for matching units still estimate the complete battle.
-Unknown fogged stacks and generic combat markers appear only in All.
-Changing filters must not reveal hidden unit types.
-
-Map boxes separate land, naval, and air units, including members of the same army.
-Aircraft also separate by mission, including idle aircraft and each patrol priority.
-Matching aircraft missions can share one rectangular box.
-Active missions show a badge to the right of their box, sized like an army emblem.
-Mission badges do not extend selection or hover hitboxes.
-Tactical views show each visible division separately at every zoom.
-
-At strategic zoom, markers combine aircraft missions within each domain and army.
-Aircraft outside armies combine with nearby aircraft of the same owner.
-Different armies remain separate.
-Strategic zoom hides mission badges.
-
-Mission badges use the same order visibility as map arrows.
-The display cache refreshes when orders, unit forms, filters, or the viewer change.
-
-AI MODULES
-----------
-
-map_logic/ai/ contains these shared components:
-
-ai_world.py
-    One map snapshot per turn for strength, border, and relation queries.
-ai_unit_eval.py
-    Unit value from its stats and the country's resource scarcity.
-    Do not maintain a separate list of preferred units.
-ai_tech_eval.py
-    Technology value from the things it unlocks.
-ai_personality.py
-    Five scenario-seeded traits. Saved personalities are reproducible.
-ai_opinion.py
-    War, peace, trade, and alliance preference scores.
-ai_candidates.py
-    Legal action generation and ranking.
-ai_commitments.py
-    Promises and the cost of breaking them.
-ai_negotiation.py
-    Summits.
-ai_director.py
-    Model selection from legal candidates.
-ai_construction.py, ai_movement.py, ai_research.py, ai_diplomacy.py
-    Production, movement, research, and proactive diplomacy.
-
 DIPLOMACY
 ---------
 
@@ -333,8 +205,6 @@ AI_COMMITMENT_WEIGHT
     Restraint from commitments before loyalty modifies it.
 AI_MAX_ACTIONS_PER_TURN
     Limit on a country's proactive actions.
-AI_NEGOTIATION_MAX_PAIRS
-    Summit pairs per turn.
 AI_UPKEEP_TARGETS
     Income share permitted for upkeep of each resource.
     Fuel limits can strongly affect army size.
@@ -493,16 +363,6 @@ WAR_DECLARATION stores text in the queued entry's prose field.
 Its message field holds the wargoal required by queued_message.
 Other actions with queued_message must also keep rule data separate from prose.
 
-ai_prompts.VOICE_RULE requires first-person plural speech.
-The sender must not refer to its own country in the third person.
-A reply that starts by naming its sender falls back to library text.
-
-The llm field marks model-authored text.
-_reply and the director's per-candidate messages set it where they create the text.
-It follows the message through pending_diplomacy into both inbox copies.
-The spectator overview marks those rows orange.
-Older messages without this field remain ordinary messages.
-
 Messages also retain the action that produced them.
 constants.MESSAGE_CATEGORIES maps actions to display categories:
 WAR, JOIN WAR, PEACE, TRADE, FACTION, ACCESS, PUPPET, and ALLIANCE.
@@ -512,6 +372,8 @@ That value controls popups and the gold message bubble.
 CALL_TO_ARMS and JOIN_WARS use JOIN WAR.
 They combine existing wars instead of declaring a new one.
 tests/test_spectator_messages.py checks that category labels fit their table column.
+
+See documentation/llm_ai.txt for model voice rules and the llm authorship field.
 
 TACTICAL PLAY
 -------------
@@ -549,99 +411,87 @@ A normal player sees their own research.
 map_screen.viewing_research_country passes the selected country to the research screen.
 editing_country serves the same purpose for the identity editor.
 
-SHARED PROMPT PREFIX
--------------------
+LAST-TURN UNIT EVENTS
+---------------------
 
-Model requests in one turn must share the same world-context prefix.
-build_world_context puts shared information first:
-date, country list, politics, and world events.
-It then adds the selected country, its territory, relations, and task.
-The ai_director system prompt must not name a specific country.
+The yellow mail button beside the resources opens Unit events.
+The orange screen lists unit names, tile IDs, events, health changes, and sources.
+Click a column header to sort the table.
+Click a row to read its full details.
 
-call_ollama sends user content before system content.
-Ollama combines those parts, so this order preserves shared text across summit, director, and response phases.
-Other providers have a separate system field.
+The report records actual turn resolution, including losses and attacks by AI units.
+AI plans and combat forecasts do not write entries.
+Damage dealt uses each source's share of the applied volley.
+Shares include target restrictions and combat modifiers.
+The total credit equals the target's actual health loss.
+It excludes damage beyond the target's remaining health.
+Forced destruction of grounded aircraft divides credit equally among the hostile units present.
 
-Local models can reuse an unchanged prefix instead of processing the whole world again.
-tests/test_prompt_sharing.py protects this order.
-Leave neutral relation scores out of the country-specific section.
-State that an unlisted country is neutral.
+Events also include destruction, disbanding, deployment, movement, repairs, upgrades, and transport or type changes.
+Destroyed units remain in the report after removal from the map.
+Normal players see their own units.
+Tactical players see only their selected division, including its loss.
+Normal spectators can see all recorded entries.
+Editors and tournament spectators receive no unit reports.
 
-Earlier measurements on the 1941 map found 84% shared text across phases, compared with 0% in the previous order.
-With 12 majors and llama3 through Ollama, measured processing time fell from 179 seconds to 28 seconds.
-These are past measurements, not performance guarantees.
+The badge counts unread entries for the current player.
+Opening the report marks those entries as read.
+Click Mark all unread in the report to restore the current player's unread badge.
+Closing the report keeps this unread status. Opening it again marks the entries as read.
+Hotseat players have separate read status.
+The next completed turn replaces the report and clears old read status.
+Empty turns therefore remove earlier entries too.
 
-TURN BUDGET AND CANCELLATION
----------------------------
+Saves retain only the latest report and its local read status.
+Older saves start with an empty report.
+History snapshots do not store copies of reports.
+Tournament exports and real-time snapshots include only the receiving player's entries.
+Hidden sources use an unknown-unit label.
+Player move files and real-time commands cannot replace host reports.
+Real-time broadcasts preserve local read status for the same turn.
 
-ai_turn_budget_seconds sets the maximum model time for a complete turn.
-Its default, 0, means no time limit.
-FORCE SKIP AI lets the player end model work early.
-Unfinished model work uses rule-based fallbacks.
+MAP DISPLAY
+-----------
 
-With a positive limit, prepare_turn starts one shared clock.
-The phases run in this order: summits, director, responses.
-Each phase takes a share of the time left when it starts.
-Unused time passes to the next phase. The final phase takes the remainder.
+Map refreshes calculate layer inputs when game state changes.
+They reuse pixel surfaces that have not changed.
+Fog updates current visibility even when it can reuse its image.
+Hotseat blanking and player changes still apply.
 
-AI_BUDGET_SHARE_SUMMITS, AI_BUDGET_SHARE_DIRECTOR, and AI_BUDGET_SHARE_RESPONSES define those shares.
-Do not restart the full budget for each phase.
+After all local players submit orders, the viewer becomes n/a while AI moves are prepared.
+The AI preview must keep Resolve Turn, Settings, and Music available.
+Country-owned actions remain hidden because no player country is assigned.
+Hide Resolve Turn while AI preparation, map refresh, or saving is active.
 
-A phase must do the following:
+Editor painting invalidates the affected surface.
+Refresh Maps forces a full rebuild.
+Planning-frame rendering does not run map-wide calculations.
 
-1. Check time between requests within a summit.
-   Keep completed exchanges.
-   _complete_exchanges removes an unmatched final line.
-   run_llm_batch uses min_calls to reject time shares too small for useful work.
-   A summit needs at least a pair of calls.
+Naval, Land, Air, and All appear beside the lower left sidebar in Units view.
+They filter local unit stacks, army markers, and order arrows.
+Hover previews list only visible units that match the selected category.
+Clicking a province still shows its full visible unit list.
+The filter uses the unit's current form.
+Convoys are naval, including transported aircraft. Trucks are land.
+All is selected when a game opens.
 
-2. Stop abandoned network requests.
-   future.cancel() cannot stop a running worker.
-   shutdown(wait=False) does not interrupt a blocked read.
-   ai_handler.abort_active_requests closes active sockets.
-   Do not unload the model for a phase timeout.
-   Model unloading would discard the shared prefix cache.
+Changing the filter clears local unit selection and compression animations.
+It does not change units, orders, AI decisions, fog permissions, saves, or multiplayer commands.
+Combat markers for matching units still estimate the complete battle.
+Unknown fogged stacks and generic combat markers appear only in All.
+Changing filters must not reveal hidden unit types.
 
-3. Run rule-based proposal decisions outside the model batch.
-   A slow model must not delay proposals that do not need it.
-   Put the player's correspondence first in the remaining response queue.
+Map boxes separate land, naval, and air units, including members of the same army.
+Aircraft also separate by mission, including idle aircraft and each patrol priority.
+Matching aircraft missions can share one rectangular box.
+Active missions show a badge to the right of their box, sized like an army emblem.
+Mission badges do not extend selection or hover hitboxes.
+Tactical views show each visible division separately at every zoom.
 
-ai_handler.typical_call_seconds estimates request time from completed calls.
-It smooths measurements and ignores requests that the game interrupted.
-Do not replace it with an assumed fixed request duration.
+At strategic zoom, markers combine aircraft missions within each domain and army.
+Aircraft outside armies combine with nearby aircraft of the same owner.
+Different armies remain separate.
+Strategic zoom hides mission badges.
 
-FAIRNESS AND PROGRESS
---------------------
-
-When time is limited, countries that waited longest go first.
-nation_data["llm_last_turn"] records when a country was served.
-Record the turn even if the response is unusable.
-A failing provider must not keep one country at the front indefinitely.
-
-When a batch cannot serve everyone, report the unfinished work and the setting that limits it.
-Suggest ai_threads only for providers other than Ollama.
-Several simultaneous generations on one local model can reduce speed.
-A phase that declines an insufficient time share reports this in the console.
-
-ai_threads limits simultaneous model calls and defaults to 1.
-ai_turn_budget_seconds has no settings UI.
-It is stored in the ignored data/json/settings_config.json.
-Changing its default in constants.py does not replace an existing saved setting.
-
-FORCE SKIP AI must be reachable in every phase that can block.
-Show it when any model-work counter is nonzero.
-Summits use summits_total.
-trigger_ai_thread resets that counter with the other turn counters.
-
-Size the response progress bar from the actual queue.
-Do not duplicate immersion rules to estimate its size.
-
-Earlier 1941-map measurements used MAJOR, llama3, and one thread.
-Without a time limit, all 10 directed countries and 44 model-eligible proposals were served.
-About 60 calls took 8 to 10 minutes per turn.
-Shorter budgets served fewer countries, with llm_last_turn rotating priority across turns.
-These measurements depend on the provider, machine, and scenario.
-
-At ABSOLUTE, check provider availability if turns are slow.
-An unavailable Ollama server can make each request wait for its timeout.
-A positive ai_turn_budget_seconds limits that waiting across the turn.
+Mission badges use the same order visibility as map arrows.
+The display cache refreshes when orders, unit forms, filters, or the viewer change.

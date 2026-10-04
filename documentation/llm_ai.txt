@@ -1,0 +1,201 @@
+LLM AI
+======
+
+LLM means large language model. AI means artificial intelligence.
+UI means user interface.
+The model layer selects legal actions and writes messages.
+Rule-based AI supplies the candidates and checks their legality.
+The model cannot create an action that the rules forbid.
+
+See documentation/non_llm_ai.txt for planning, scoring, response-library text, combat, and player-mode rules.
+That guide also covers shared action limits, personalities, commitments, and message categories.
+Without the model, the AI still works and does not hold model-based summits.
+See documentation/diplo_stuff.txt for diplomacy timing and effects.
+
+LLM MODULES
+-----------
+
+map_logic/ai/ contains these model components:
+
+ai_negotiation.py
+    Summits.
+ai_director.py
+    Model selection from legal candidates.
+ai_settings.py
+    Provider, model, and API-key settings.
+ai_handler.py
+    Model providers, request cancellation, and turn IDs.
+ai_llm_runner.py
+    Model batches, phase budgets, cancellation, and progress.
+ai_prompts.py
+    Shared context, prompt text, voice rules, and response-library access.
+ai_evaluation.py, ai_diplomacy.py
+    Connect model choices and proposal replies to shared AI rules.
+
+IMMERSION LEVELS
+----------------
+
+Select an immersion level with the red buttons in Settings.
+
+OFF
+    No model calls. Replies use the response library.
+
+LITE
+    The model replies only to custom messages written by a human.
+
+FULL
+    The model handles diplomacy that involves a human.
+    AI-to-AI messages use the response library.
+
+MAJOR
+    FULL behavior, plus model control for major countries.
+    These include leading powers, faction leaders, and countries bordering or fighting a human.
+
+ABSOLUTE
+    Every AI country can use the model. AI countries can hold summits with each other.
+
+The per-country nation_data["llm_tier"] setting can override the immersion level.
+Its values are ALWAYS, NEVER, and AUTO.
+
+MODEL DECISIONS
+---------------
+
+1. Select actions from a country's scored legal candidates.
+   A country receives its candidate list once per turn.
+   AI_MAX_ACTIONS_PER_TURN limits the selected actions.
+   The same reply supplies their message text.
+   Countries with no candidates do not need a call.
+   At ABSOLUTE, a country with one candidate still gets a call for its wording.
+
+2. Decide whether to accept a proposal where the rules permit a choice.
+   Fixed restrictions, such as an integrated puppet's trade restriction, remain binding.
+   The model can override a rule-based recommendation, but cannot override legality.
+
+3. Agree on summit outcomes.
+   Summits run at ABSOLUTE, or between major powers at MAJOR.
+
+The game discards illegal model requests.
+A rumor in the global log can still show the attempted action.
+
+MODEL TEXT AND MESSAGE METADATA
+-------------------------------
+
+ai_prompts.VOICE_RULE requires first-person plural speech.
+The sender must not refer to its own country in the third person.
+A reply that starts by naming its sender falls back to library text.
+
+The llm field marks model-authored text.
+_reply and the director's per-candidate messages set it where they create the text.
+It follows the message through pending_diplomacy into both inbox copies.
+The spectator overview marks those rows orange.
+Older messages without this field remain ordinary messages.
+
+See documentation/non_llm_ai.txt for response-library lookup and shared message fields.
+
+SUMMIT TUNING
+-------------
+
+Read current tuning values in data/constants.py.
+
+AI_NEGOTIATION_MAX_PAIRS
+    Summit pairs per turn.
+
+AI_MAX_ACTIONS_PER_TURN limits both model selections and rule-based proactive actions.
+See documentation/non_llm_ai.txt for shared AI tuning.
+
+SHARED PROMPT PREFIX
+-------------------
+
+Model requests in one turn must share the same world-context prefix.
+build_world_context puts shared information first:
+date, country list, politics, and world events.
+It then adds the selected country, its territory, relations, and task.
+The ai_director system prompt must not name a specific country.
+
+call_ollama sends user content before system content.
+Ollama combines those parts, so this order preserves shared text across summit, director, and response phases.
+Other providers have a separate system field.
+
+Local models can reuse an unchanged prefix instead of processing the whole world again.
+tests/test_prompt_sharing.py protects this order.
+Leave neutral relation scores out of the country-specific section.
+State that an unlisted country is neutral.
+
+Earlier measurements on the 1941 map found 84% shared text across phases, compared with 0% in the previous order.
+With 12 majors and llama3 through Ollama, measured processing time fell from 179 seconds to 28 seconds.
+These are past measurements, not performance guarantees.
+
+TURN BUDGET AND CANCELLATION
+---------------------------
+
+ai_turn_budget_seconds sets the maximum model time for a complete turn.
+Its default, 0, means no time limit.
+FORCE SKIP AI lets the player end model work early.
+Unfinished model work uses rule-based fallbacks.
+
+With a positive limit, prepare_turn starts one shared clock.
+The phases run in this order: summits, director, responses.
+Each phase takes a share of the time left when it starts.
+Unused time passes to the next phase. The final phase takes the remainder.
+
+AI_BUDGET_SHARE_SUMMITS, AI_BUDGET_SHARE_DIRECTOR, and AI_BUDGET_SHARE_RESPONSES define those shares.
+Do not restart the full budget for each phase.
+
+A phase must do the following:
+
+1. Check time between requests within a summit.
+   Keep completed exchanges.
+   _complete_exchanges removes an unmatched final line.
+   run_llm_batch uses min_calls to reject time shares too small for useful work.
+   A summit needs at least a pair of calls.
+
+2. Stop abandoned network requests.
+   future.cancel() cannot stop a running worker.
+   shutdown(wait=False) does not interrupt a blocked read.
+   ai_handler.abort_active_requests closes active sockets.
+   Do not unload the model for a phase timeout.
+   Model unloading would discard the shared prefix cache.
+
+3. Run rule-based proposal decisions outside the model batch.
+   A slow model must not delay proposals that do not need it.
+   Put the player's correspondence first in the remaining response queue.
+
+ai_handler.typical_call_seconds estimates request time from completed calls.
+It smooths measurements and ignores requests that the game interrupted.
+Do not replace it with an assumed fixed request duration.
+
+FAIRNESS AND PROGRESS
+--------------------
+
+When time is limited, countries that waited longest go first.
+nation_data["llm_last_turn"] records when a country was served.
+Record the turn even if the response is unusable.
+A failing provider must not keep one country at the front indefinitely.
+
+When a batch cannot serve everyone, report the unfinished work and the setting that limits it.
+Suggest ai_threads only for providers other than Ollama.
+Several simultaneous generations on one local model can reduce speed.
+A phase that declines an insufficient time share reports this in the console.
+
+ai_threads limits simultaneous model calls and defaults to 1.
+ai_turn_budget_seconds has no settings UI.
+It is stored in the ignored data/json/settings_config.json.
+Changing its default in constants.py does not replace an existing saved setting.
+
+FORCE SKIP AI must be reachable in every phase that can block.
+Show it when any model-work counter is nonzero.
+Summits use summits_total.
+trigger_ai_thread resets that counter with the other turn counters.
+
+Size the response progress bar from the actual queue.
+Do not duplicate immersion rules to estimate its size.
+
+Earlier 1941-map measurements used MAJOR, llama3, and one thread.
+Without a time limit, all 10 directed countries and 44 model-eligible proposals were served.
+About 60 calls took 8 to 10 minutes per turn.
+Shorter budgets served fewer countries, with llm_last_turn rotating priority across turns.
+These measurements depend on the provider, machine, and scenario.
+
+At ABSOLUTE, check provider availability if turns are slow.
+An unavailable Ollama server can make each request wait for its timeout.
+A positive ai_turn_budget_seconds limits that waiting across the turn.

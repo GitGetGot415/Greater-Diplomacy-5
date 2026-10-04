@@ -18,6 +18,16 @@ data/
 
 documentation/
     Project guides and design notes.
+    non_llm_ai.txt covers rule-based AI, combat, tactical play, spectators, and shared display rules.
+    llm_ai.txt covers model settings, legal choices, prompts, summits, budgets, cancellation, and fairness.
+    diplo_stuff.txt covers diplomacy rules and message timing.
+    air_stuff.txt covers aircraft rules.
+    other/
+        context_prompts.txt contains maintenance preferences.
+        ai_responses_gd4_reference.txt contains archived Greater Diplomacy 4 response text.
+        bypass_quarantine_macos.txt contains macOS quarantine instructions.
+        recommended-relay-defaults.txt contains relay setup defaults.
+        sandboxed_mods_info.txt describes sandboxed mods.
 
 dist/
     Generated packages for distribution. Do not edit these as source.
