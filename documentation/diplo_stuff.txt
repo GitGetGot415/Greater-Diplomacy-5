@@ -26,6 +26,9 @@ Their authority and visibility rules remain unchanged.
 Message timing
 --------------
 
+The spectator message table shows three-letter month names with the first letter capitalized in the Date column.
+This display format does not change stored dates or chronological sorting.
+
 In the timelines below, 0.5 and 1.5 mean the send phase between planning turns.
 
 A unilateral declaration needs no reply:

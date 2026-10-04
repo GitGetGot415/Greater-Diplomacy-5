@@ -459,6 +459,24 @@ class OverviewTests(unittest.TestCase):
                 self.assertLess(drawn, width,
                                 f"{label!r} is {drawn}px in a {width}px column")
 
+    def test_date_column_shows_short_month_names_without_changing_dates_or_sorting(self):
+        table = self.build()
+        column = next(column for column in table.columns if column.key == "date")
+        months = ("January", "February", "March", "April", "May", "June", "July",
+                  "August", "September", "October", "November", "December")
+        short_names = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+        for month, short_name in zip(months, short_names):
+            with self.subTest(month=month):
+                self.assertEqual(column.fmt(f"15 {month}, 1939 AD"), f"15 {short_name}, 1939 AD")
+        self.assertEqual(column.fmt("Unknown"), "Unknown")
+        self.assertEqual(column.fmt(""), "")
+        self.assertEqual(column.fmt("15 Sep, 1939 AD"), "15 Sep, 1939 AD")
+        table.rows = [{"date": "15 September, 1939 AD", "date_sort": 20},
+                      {"date": "15 February, 1939 AD", "date_sort": 10}]
+        table.sort_by(column)
+        self.assertEqual([row["date_sort"] for row in table.rows], [10, 20])
+        self.assertEqual(table.rows[1]["date"], "15 September, 1939 AD")
+
     def test_a_join_war_row_says_so(self):
         """End to end: an ally asking for help must not arrive in the table
         looking like a declaration of war, and the two directions must not

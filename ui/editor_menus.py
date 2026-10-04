@@ -1,4 +1,5 @@
 import unicodedata
+import re
 import data.constants as c
 from data.map import load_map
 from data import queries
@@ -206,6 +207,10 @@ def open_spectator_messages(map_screen):
 
     all_msgs = []
     months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+    month_pattern = re.compile(r"\b(?:" + "|".join(months) + r")\b")
+
+    def display_date(value):
+        return month_pattern.sub(lambda match: match.group()[:3].capitalize(), str(value))
 
     for c_name, data in map_screen.nation_data.items():
         if data.get("is_playable"):
@@ -258,7 +263,7 @@ def open_spectator_messages(map_screen):
 
     from ui.table_screen import TableColumn, truncate
     columns = [
-        TableColumn("date", "Date", 130, sort_key=lambda r: r["date_sort"]),
+        TableColumn("date", "Date", 130, fmt=display_date, sort_key=lambda r: r["date_sort"]),
         TableColumn("sender", "Sender", 120),
         TableColumn("receiver", "Receiver", 120),
         TableColumn("type", "Type", 100),
