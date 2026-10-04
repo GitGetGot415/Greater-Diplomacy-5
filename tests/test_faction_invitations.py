@@ -185,7 +185,7 @@ class FactionInvitationButtonTests(unittest.TestCase):
         self.map_module.update_button_states(game)
         self.assertTrue(game.btn_fac_invite.visible)
         self.assertFalse(game.btn_fac_invite.disabled)
-        self.assertIsNone(game.btn_fac_invite.right_image)
+        self.assertIs(game.btn_fac_invite.right_image, game.ai_response_images["NO"])
         with mock.patch.object(game, "show_feedback") as feedback:
             game.btn_fac_invite.callback()
         feedback.assert_called_once_with("Only a faction leader may invite members.")
@@ -193,11 +193,13 @@ class FactionInvitationButtonTests(unittest.TestCase):
         game.player_country = self.leader
         self.map_module.update_button_states(game)
         self.assertFalse(game.btn_fac_invite.disabled)
+        self.assertIs(game.btn_fac_invite.right_image, game.ai_response_images["MAYBE"])
         game.nation_data[self.member]["pending_diplomacy"][self.outsider] = {
             "action": "FACTION_INVITE", "turns": 0}
         game.player_country = self.member
         self.map_module.update_button_states(game)
         self.assertFalse(game.btn_fac_invite.disabled)
+        self.assertIsNone(game.btn_fac_invite.right_image)
 
     def test_spectator_invite_is_clickable_for_leaders_and_members(self):
         game = self.game
@@ -221,11 +223,15 @@ class FactionInvitationButtonTests(unittest.TestCase):
         self.map_module.update_button_states(game)
         self.assertTrue(game.btn_fac_join_req.visible)
         self.assertFalse(game.btn_fac_join_req.disabled)
-        self.assertIsNone(game.btn_fac_join_req.right_image)
+        self.assertIs(game.btn_fac_join_req.right_image, game.ai_response_images["NO"])
         with mock.patch.object(game, "show_feedback") as feedback:
             game.btn_fac_join_req.callback()
         self.assertIn("faction leader", feedback.call_args.args[0])
         self.assertNotIn(self.member, game.nation_data[self.outsider]["pending_diplomacy"])
+        game.selected_province = next(p for p in game.map_data.values()
+                                      if p.get("owner") == self.leader)
+        self.map_module.update_button_states(game)
+        self.assertIs(game.btn_fac_join_req.right_image, game.ai_response_images["MAYBE"])
 
     def test_tactical_player_cannot_invite_even_when_the_country_leads(self):
         self.game.player_country = self.leader

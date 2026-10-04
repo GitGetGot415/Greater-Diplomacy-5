@@ -651,15 +651,19 @@ def bilateral_response_indicator(map_screen, target, action):
     """Return the response icon an outgoing bilateral proposal should show.
 
     This is deliberately a view of ``evaluate_verdict`` rather than a second
-    set of AI rules. Matching scripted responses take precedence, as they do
-    when the event runs. A country controlled by a player is inherently
-    unpredictable, including in multiplayer/hotseat.
+    set of AI rules. Leadership restrictions produce NO before prediction.
+    Matching scripted responses take precedence for legal proposals, as they do
+    when the event runs. Human replies to legal proposals remain unpredictable,
+    including in multiplayer and hotseat.
     """
+    if target not in map_screen.nation_data:
+        return None
+    if queries.faction_request_leadership_error(
+            map_screen.player_country, target, action, map_screen.nation_data):
+        return "NO"
     human_players = set(getattr(map_screen, "active_players", ()) or ())
     if target in human_players:
         return "MAYBE"
-    if target not in map_screen.nation_data:
-        return None
 
     scenario_settings = getattr(map_screen, "scenario_settings", None)
     scripted_events_enabled = queries.get_scenario_flag(
@@ -1196,15 +1200,11 @@ def update_button_states(map_screen):
                 # Keep membership controls clickable so refusal feedback is reachable.
                 can_try_invite = bool(not factions_disabled and my_faction and not target_faction
                                       and not at_war and they_are_free)
-                can_invite = (can_try_invite
-                              and queries.can_invite_to_faction(map_screen.player_country, map_screen.nation_data))
                 inv_text = get_status_text("INVITE") if pending_action == "FACTION_INVITE" else "Invite to Faction"
                 set_btn(map_screen.btn_fac_invite, True, can_try_invite or pending_action == "FACTION_INVITE", inv_text, "green")
 
                 can_try_req_join = bool(not factions_disabled and not my_faction and target_faction
                                         and not at_war and i_am_free)
-                can_req_join = (can_try_req_join
-                                and queries.can_invite_to_faction(owner, map_screen.nation_data))
                 req_text = get_status_text("JOIN REQ") if pending_action == "JOIN_FACTION_REQ" else "Req. Join Faction"
                 set_btn(map_screen.btn_fac_join_req, True, can_try_req_join or pending_action == "JOIN_FACTION_REQ", req_text, "green")
 
@@ -1246,9 +1246,9 @@ def update_button_states(map_screen):
                     (map_screen.btn_call_to_arms, "CALL_TO_ARMS",
                      can_call_to_arms and pending_action != "CALL_TO_ARMS"),
                     (map_screen.btn_fac_invite, "FACTION_INVITE",
-                     can_invite and pending_action != "FACTION_INVITE"),
+                     can_try_invite and pending_action != "FACTION_INVITE"),
                     (map_screen.btn_fac_join_req, "JOIN_FACTION_REQ",
-                     can_req_join and pending_action != "JOIN_FACTION_REQ"),
+                     can_try_req_join and pending_action != "JOIN_FACTION_REQ"),
                     (map_screen.btn_fac_create, "CREATE_FACTION",
                      can_create_fac and pending_action != "CREATE_FACTION"),
                     (map_screen.btn_req_mil_access, "REQ_MILITARY_ACCESS",
