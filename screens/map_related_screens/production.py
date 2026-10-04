@@ -24,6 +24,7 @@ BAR_OFFSET_X = 140
 BAR_WIDTH = 570
 BAR_HEIGHT = 30
 BAR_TEXT_PAD_X = 15
+AIR_DAMAGE_LABEL_GAP = 8
 
 # Infantry/Artillery rows: variant mode toggles ("Mot"/"Mec"/"IFV", or
 # Artillery's single "Hvy") sit where the button normally starts, pushing the
@@ -102,6 +103,7 @@ class Production_Screen(GameState):
         (self.infantry_groups, self.tank_groups, self.navy_groups,
          self.aerospace_groups) = queries.get_ordered_unit_groups(self.unit_library)
         self.active_bars = []
+        self.air_damage_labels = {}
 
         # Scroll variables
         self.scroll_y = 0
@@ -244,6 +246,7 @@ class Production_Screen(GameState):
         can_spectator_edit = c.SPECTATOR_CAN_EDIT_PRODUCTION
 
         self.active_bars = []
+        self.air_damage_labels = {}
         y_offset = LIST_START_Y
         x_pos = LIST_X
 
@@ -428,6 +431,9 @@ class Production_Screen(GameState):
             self._add_scroll_button(x_pos + x_offset, y_offset, final_btn_color, queries.get_condensed_unit_name(unit_name), cb)
 
             stats = self.unit_library[unit_name]
+            if stats.get("air_role") == "fighter" and id(stats) not in self.air_damage_labels:
+                text = f"(Air Dmg x{stats.get('air_attack_multiplier', 1.0):g})"
+                self.air_damage_labels[id(stats)] = fonts.get("small").render(text, True, c.COLOR_SUCCESS_GREEN)
             # Shrinks to keep its right edge fixed when x_offset > 0 (the Infantry
             # row's Mot/Mec toggles push its button right) so every bar's right
             # edge still lines up regardless of which row it belongs to.
@@ -989,11 +995,15 @@ class Production_Screen(GameState):
 
                     if 'bombard_attack' in stats:
                         x = draw_stat_separator(surface, bar_font, x, text_y)
-                        draw_bombardment_stats(
+                        x = draw_bombardment_stats(
                             surface, bar_font,
                             stats.get('bombard_attack', 0), stats.get('bombard_range', 0),
                             x, text_y, BAR_STAT_COLOR, base_text="", labeled=False
                         )
+
+                    air_damage_label = self.air_damage_labels.get(id(stats))
+                    if air_damage_label is not None:
+                        surface.blit(air_damage_label, (x + AIR_DAMAGE_LABEL_GAP, text_y))
 
     def draw_chrome(self, surface):
         """Fixed header + resource HUD."""

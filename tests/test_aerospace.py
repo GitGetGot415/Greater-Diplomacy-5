@@ -495,6 +495,68 @@ class AerospaceScreenTests(unittest.TestCase):
                 self.assertEqual(symbol_loader.resolve(name, style="classic", country=self.country),
                                  ("classic", "Jet Bomber"))
 
+    def test_production_fighter_labels_use_current_multipliers_and_follow_all_stats(self):
+        from screens.map_related_screens import production
+        from map_logic.rendering.font_manager import fonts
+
+        class TrackingSurface(pygame.Surface):
+            def blit(surface, source, dest, *args, **kwargs):
+                surface.placements.append((source, dest))
+                return super().blit(source, dest, *args, **kwargs)
+
+        library = dict(self.production.unit_library)
+        fighters = [name for name, stats in library.items() if stats.get("air_role") == "fighter"]
+        # A fractional multiplier and extra stats check formatting and placement.
+        library[fighters[0]] = dict(library[fighters[0]], air_attack_multiplier=2.75,
+                                   bombard_attack=1, bombard_range=1)
+        self.enterContext(mock.patch.object(self.production, "unit_library", library))
+        self.map.nation_data[self.country]["custom_production_units"] = fighters
+        self.production.start_with_province(self.province, self.map)
+        rows = [(rect, stats, y) for rect, stats, y, kind in self.production.active_bars if kind == "UNIT"]
+        expected_keys = {id(stats) for _rect, stats, _y in rows if stats.get("air_role") == "fighter"}
+        self.assertEqual(set(self.production.air_damage_labels), expected_keys)
+        self.assertTrue(any(stats.get("air_role") != "fighter" for _rect, stats, _y in rows))
+        self.assertTrue(any(self.production.aerospace_start_y <= y < self.production.aerospace_end_y
+                            and stats.get("air_role") == "fighter" for _rect, stats, y in rows))
+        self.assertTrue(any(self.production.custom_start_y <= y < self.production.custom_end_y
+                            and stats.get("air_role") == "fighter" for _rect, stats, y in rows))
+
+        surface = TrackingSurface(self.surface.get_size())
+        surface.placements = []
+        stat_ends = {}
+        combat_draw = production.draw_combat_stats
+        bombard_draw = production.draw_bombardment_stats
+
+        def record_combat(*args, **kwargs):
+            end = combat_draw(*args, **kwargs)
+            stat_ends[args[8]] = end
+            return end
+
+        def record_bombardment(*args, **kwargs):
+            end = bombard_draw(*args, **kwargs)
+            stat_ends[args[5]] = end
+            return end
+
+        labels = dict(self.production.air_damage_labels)
+        with mock.patch.object(production, "draw_combat_stats", side_effect=record_combat), \
+                mock.patch.object(production, "draw_bombardment_stats", side_effect=record_bombardment):
+            self.production.additional_draw(surface)
+        for bar, stats, y in rows:
+            if stats.get("air_role") != "fighter":
+                continue
+            label = labels[id(stats)]
+            expected = fonts.get("small").render(f"(Air Dmg x{stats.get('air_attack_multiplier', 1.0):g})",
+                                                 True, c.COLOR_SUCCESS_GREEN)
+            self.assertEqual(pygame.image.tobytes(label, "RGBA"), pygame.image.tobytes(expected, "RGBA"))
+            text_y = y + (bar.height - fonts.get("small").get_height()) // 2
+            positions = [pos for source, pos in surface.placements if source is label and pos[1] == text_y]
+            self.assertEqual(len(positions), 1)
+            label_rect = label.get_rect(topleft=positions[0])
+            self.assertGreaterEqual(label_rect.left, stat_ends[text_y] + production.AIR_DAMAGE_LABEL_GAP)
+            self.assertTrue(bar.contains(label_rect), (stats, label_rect, bar))
+        self.production.additional_draw(surface)
+        self.assertTrue(all(self.production.air_damage_labels[key] is label for key, label in labels.items()))
+
     def test_aerospace_rows_are_red_and_recruitment_is_in_general_buildings(self):
         from screens.map_related_screens.production import SECTION_PANELS
         self.production.start_with_province(self.province, self.map)
