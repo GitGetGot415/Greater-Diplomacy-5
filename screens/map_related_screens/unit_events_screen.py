@@ -24,6 +24,7 @@ class UnitEventsScreen(TableScreen):
     def __init__(self, map_screen):
         self.all_rows = [row | {"event_label": unit_events.EVENT_LABELS[row["event"]]}
                          for row in unit_events.entries_for(map_screen)]
+        self.available_event_types = {row["event"] for row in self.all_rows}
         owners = {row["owner"] for row in self.all_rows}
         owners.update(part["owner"] for row in self.all_rows for part in row.get("detail_parts", []) if "owner" in part)
         self.flags = {owner: flag_icons.flag_surface(owner, map_screen.nation_data) for owner in owners}
@@ -80,7 +81,10 @@ class UnitEventsScreen(TableScreen):
     def choose_event_filter(self):
         items = [("No filter", None)] + [(label, event) for event, label in unit_events.EVENT_LABELS.items()]
         queries.open_listbox_selector(self, "Filter unit events", "Select an event type or No filter.",
-                                      items, self.set_event_filter)
+                                      items, self.set_event_filter, is_enabled=self.filter_choice_enabled)
+
+    def filter_choice_enabled(self, item):
+        return bool(self.all_rows) if item[1] is None else item[1] in self.available_event_types
 
     def set_event_filter(self, event):
         unit_events.set_event_filter(self.map_screen, event)

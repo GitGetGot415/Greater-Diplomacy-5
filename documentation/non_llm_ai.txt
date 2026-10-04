@@ -408,6 +408,10 @@ The button is orange with a selected filter and blue without one.
 The selection stays when you reopen the report during the same turn.
 Each completed turn clears the filter, including turns received by real-time clients.
 
+The picker disables choices that would show no entries for the current viewer.
+Available choices stay blue, including the selected event type.
+Search keeps these states. Enter selects the first available search result.
+
 The filter changes only the local display. Saves and multiplayer commands do not include it.
 Opening the report and Mark all unread still affect all entries permitted for the current player.
 

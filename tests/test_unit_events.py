@@ -585,10 +585,15 @@ class UnitEventScreenTests(unittest.TestCase):
 
     def test_empty_log_disables_mark_all_unread(self):
         from screens.map_related_screens.unit_events_screen import UnitEventsScreen
+        from ui import modal_stack
         self.game.unit_event_log["events"] = []
         screen = UnitEventsScreen(self.game)
         self.assertTrue(screen.btn_mark_all_unread.disabled)
         self.assertEqual(self.game.btn_unit_events.notification_count, 0)
+        with patch.object(modal_stack, "push") as push:
+            screen.btn_filter_events.callback()
+        picker = push.call_args.args[0].screen
+        self.assertTrue(all(not picker._item_enabled(item) for item in picker.items))
 
     def test_filter_picker_shows_only_the_selected_event_and_can_clear_it(self):
         from screens.map_related_screens.unit_events_screen import UnitEventsScreen
@@ -616,6 +621,42 @@ class UnitEventScreenTests(unittest.TestCase):
         self.assertEqual(len(reopened.rows), 2)
         self.assertEqual(reopened.btn_filter_events.color, c.UI_COLORS["blue"][0])
         self.assertEqual(game.unit_event_log, before)
+
+    def test_filter_picker_disables_empty_choices_during_search_and_keyboard_selection(self):
+        from screens.map_related_screens.unit_events_screen import UnitEventsScreen
+        from ui import modal_stack
+        game = self.game
+        game.unit_event_log["events"] += [row(game.player_country, event="MOVED"),
+                                          row("Other country", event="REPAIRED")]
+        screen = UnitEventsScreen(game)
+        screen.set_event_filter("MOVED")
+        with patch.object(modal_stack, "push") as push:
+            screen.btn_filter_events.callback()
+        picker = push.call_args.args[0].screen
+        for _label, event in picker.items:
+            self.assertEqual(picker._item_enabled((_label, event)), event in (None, "MOVED", "DESTROYED"))
+        # Availability uses the viewer's complete report, including events outside the active filter.
+        for element in picker.elements[1:]:
+            if not element.disabled:
+                self.assertEqual(element.color, c.UI_COLORS["blue"][0])
+        picker.search_text = "repair"
+        picker.refresh_ui()
+        self.assertEqual(len(picker.visible_items), 1)
+        self.assertTrue(picker.elements[-1].disabled)
+        picker.elements[-1].callback()
+        picker._handle_search_key(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RETURN))
+        self.assertFalse(picker.done)
+        self.assertEqual(screen.event_filter, "MOVED")
+        picker.search_text = "d"
+        picker.refresh_ui()
+        self.assertFalse(picker._item_enabled(picker.visible_items[0]))
+        self.assertTrue(any(not button.disabled for button in picker.elements[1:]))
+        for button in picker.elements[1:]:
+            if not button.disabled:
+                self.assertEqual(button.color, c.UI_COLORS["blue"][0])
+        picker._handle_search_key(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RETURN))
+        self.assertTrue(picker.done)
+        self.assertEqual(screen.event_filter, "DESTROYED")
 
     def test_empty_filter_clears_click_targets_and_keeps_mark_all_unread_available(self):
         from screens.map_related_screens.unit_events_screen import UnitEventsScreen

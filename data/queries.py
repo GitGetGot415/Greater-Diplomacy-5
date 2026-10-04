@@ -5176,12 +5176,12 @@ def refresh_map_directories(screen, dirs_to_check, success_message="Data refresh
     # Fire and forget the background process
     run_background(_refresh_thread)
 
-def open_listbox_selector(game_state, title, prompt, items, on_confirm_callback):
+def open_listbox_selector(game_state, title, prompt, items, on_confirm_callback, *, is_enabled=None):
     """In-engine listbox picker for editor tools and spectators: dims and freezes
     the current frame, then shows a clickable list of rows in a modal panel."""
     from ui.list_select_screen import ListSelectScreen
     from ui.screen_runner import _run_pygame_sub_screen
-    screen = ListSelectScreen(game_state, title, prompt, items, on_confirm_callback)
+    screen = ListSelectScreen(game_state, title, prompt, items, on_confirm_callback, is_enabled=is_enabled)
     _run_pygame_sub_screen(game_state, screen)
 
 def _clear_phantom_hover(game_state):

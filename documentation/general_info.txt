@@ -102,6 +102,7 @@ screens/
         Mark all unread restores that player's unread badge until the table opens again.
         Click a row to read its full details.
         Filter events sits left of Mark all unread and selects one event type.
+        Its picker disables choices with no entries for the current viewer. Available choices stay blue.
         Its button is orange with a filter and blue without one.
         Each completed turn clears this local display filter.
         Battle columns belong to combat sides, which can include several countries.

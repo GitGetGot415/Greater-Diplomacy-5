@@ -24,18 +24,24 @@ class ListSelectScreen(ModalScreen):
     SEARCH_BOX_HEIGHT = 34
     SEARCH_MAX_CHARS = 40
 
-    def __init__(self, game_state, title, prompt, items, on_confirm):
+    def __init__(self, game_state, title, prompt, items, on_confirm, *, is_enabled=None):
         super().__init__(game_state, title)
         self.prompt = prompt
         self.items = list(items)
         self.on_confirm = on_confirm
+        self.is_enabled = is_enabled
         self.search_text = ""
         self.visible_items = self.items
         self.refresh_ui()
 
     def select(self, item):
+        if not self._item_enabled(item):
+            return
         self.on_confirm(item[1] if isinstance(item, tuple) else item)
         self.exit_screen()
+
+    def _item_enabled(self, item):
+        return self._item_label(item) != self.SEPARATOR and (self.is_enabled is None or self.is_enabled(item))
 
     @staticmethod
     def _item_label(item):
@@ -73,8 +79,7 @@ class ListSelectScreen(ModalScreen):
             item_label = self._item_label(item)
             label = text_utils.truncate_chars(item_label, self.ROW_LABEL_MAX_CHARS)
             btn = Button(row_x, y, "list_row", "blue", label, lambda it=item: self.select(it))
-            if item_label == self.SEPARATOR:
-                btn.apply_state(enabled=False)
+            btn.apply_state(enabled=self._item_enabled(item), color="blue")
             btn.is_scrollable = True
             btn.click_guard = self.scroll_click_guard
             self.elements.append(btn)
@@ -94,7 +99,7 @@ class ListSelectScreen(ModalScreen):
         from ui_elements import process_text_input
         if event.key == pygame.K_RETURN:
             for item in self.visible_items:
-                if self._item_label(item) != self.SEPARATOR:
+                if self._item_enabled(item):
                     self.select(item)
                     break
             return
