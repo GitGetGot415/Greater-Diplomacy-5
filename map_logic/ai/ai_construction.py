@@ -857,6 +857,8 @@ def process_ai_economy_decisions(map_screen):
 
         volley, enemy_def, enemy_stack = ai_unit_eval.threat_profile(
             world, ai_name, unit_library, candidates)
+        air_pressure, air_enemy_def, air_enemy_stack = ai_unit_eval.air_threat_profile(
+            world, ai_name, unit_library)
         frontline = len(world.land_border_tiles.get(ai_name, ())) if world else len(my_provs)
         coast = len(world.coast_tiles.get(ai_name, ())) if world else 0
 
@@ -866,6 +868,7 @@ def process_ai_economy_decisions(map_screen):
             volley=volley, stack=max(1.0, c.LANE_SLOTS_TYPICAL),
             enemy_def=enemy_def, enemy_stack=enemy_stack,
             frontline=max(1, frontline), coast=coast,
+            air_pressure=air_pressure, air_enemy_def=air_enemy_def, air_enemy_stack=air_enemy_stack,
             budget=ai_unit_eval.spending_budget(econ, data, unit_prices))
 
         all_values = ai_unit_eval.evaluate(

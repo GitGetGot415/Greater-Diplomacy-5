@@ -113,7 +113,19 @@ UI and AI estimates use the same casualty rule.
 
 On load, old aircraft Trucks unpack on land or become Convoys at sea.
 Old Truck conversion orders become Convoy orders on a coast and cancel inland.
-Production values aerospace as the AIR role, including the shared fighter-versus-air bonus.
+Production values aerospace as the AIR role.
+Production and research use the same aircraft valuation.
+Ground strikes receive no air-to-air bonus.
+Interception value depends on visible enemy aircraft and available air cover.
+Owned and queued reusable aircraft reduce the need for more interception strength.
+Interception-immune enemies do not create interception demand.
+Unit names do not determine purchase preferences. There is no fixed fighter-to-bomber ratio.
+
+air_pressure = hostile_air_attack / (hostile_ground_attack + hostile_air_attack + friendly_interception_attack).
+Friendly interception attack includes each aircraft's shared air-to-air multiplier.
+A zero denominator gives zero air pressure.
+The evaluator applies interception multipliers before it subtracts enemy aircraft defense.
+It does not credit aircraft with artillery's separate bombardment value.
 
 Research uses the existing ahead-of-time penalty, including aerospace.
 Recruitment buildings use the General Buildings panel.

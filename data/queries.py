@@ -4421,15 +4421,17 @@ def air_conversion_order(unit):
     return None
 
 
-def unit_target_damage_multiplier(attacker, target, air_to_air=False):
+def unit_target_damage_multiplier(attacker, target, air_to_air=False, *, unit_library=None):
     """Target-specific damage, shared by combat, bombardment and previews."""
-    if not is_air_unit(target):
+    library = get_unit_library() if unit_library is None else unit_library
+    if not library.get(target.get("type", ""), {}).get("air_role"):
         return 1.0
     name = attacker.get("type", "")
-    if classify_unit_group(get_base_unit_name(name), get_unit_library().get(name, {})) == UNIT_GROUP_TANKS:
+    stats = library.get(name, {})
+    if classify_unit_group(get_base_unit_name(name), stats) == UNIT_GROUP_TANKS:
         return 0.0
-    return (air_unit_stats(attacker).get("air_attack_multiplier", 1.0)
-            if air_to_air and is_air_unit(attacker) else 1.0)
+    return (stats.get("air_attack_multiplier", 1.0)
+            if air_to_air and stats.get("air_role") else 1.0)
 
 
 def aircraft_caught_in_ground_combat(unit, opponents, nation_data):

@@ -1,5 +1,6 @@
 """Aircraft destination rules, random defense, and evacuation before ground attacks."""
 import unittest
+from copy import deepcopy
 from unittest.mock import Mock, patch
 
 from data import queries
@@ -10,6 +11,114 @@ from map_logic.ai import ai_movement
 from map_logic.turn_processing import air_processor, combat_rules, movement_processor
 from screens.menu_screens.map import Map
 from tests.test_air_mechanics import world, tile, wing
+
+
+class AirMissionPlanningTests(unittest.TestCase):
+    def setUp(self):
+        stats = {"attack": 800, "defense": 0, "health": 1000, "speed": 0,
+                 "cost_materials": 1000, "cost_manpower": 100, "cost_fuel": 0,
+                 "production_time": 2, "air_role": "aircraft", "air_range_px": 80}
+        self.library = dict(queries.get_unit_library())
+        self.library.update({
+            "Support Wing": stats,
+            "Screen Wing": dict(stats, attack=100, health=2000, air_attack_multiplier=20),
+            "Incoming Wing": dict(stats, attack=600),
+            "Ground Target": {key: value for key, value in dict(stats, attack=0, health=2000).items()
+                              if not key.startswith("air_")},
+        })
+        library_patch = patch.object(queries, "get_unit_library", return_value=self.library)
+        library_patch.start()
+        self.addCleanup(library_patch.stop)
+        self.game = world()
+        self.base = tile(self.game, 1, 8)
+        self.enemy = tile(self.game, 2, 30, owner="B")
+        self.screen = wing(self.base, "Screen Wing")
+        self.support = wing(self.base, "Support Wing")
+        self.incoming = wing(self.enemy, "Incoming Wing", "B")
+        self.ground = wing(self.enemy, "Ground Target", "B")
+
+    def plan(self):
+        with patch.object(c, "USE_FOG_OF_WAR", False):
+            ai_movement._assign_air_orders(self.game, "A",
+                [(self.support, self.base), (self.screen, self.base)])
+
+    def test_capable_interceptor_defends_while_other_wing_strikes(self):
+        self.plan()
+        self.assertEqual(self.screen["order"]["type"], "AIR_PATROL")
+        self.assertEqual(self.support["order"]["type"], "AIR_ATTACK")
+        self.assertEqual(self.screen["order"], queries.canonical_air_order(
+            self.game, self.screen, self.base, self.screen["order"]))
+
+    def test_another_interceptor_strikes_after_cover_saturates(self):
+        another = wing(self.base, "Screen Wing")
+        with patch.object(c, "USE_FOG_OF_WAR", False):
+            ai_movement._assign_air_orders(self.game, "A",
+                [(self.screen, self.base), (another, self.base)])
+        self.assertEqual(self.screen["order"]["type"], "AIR_PATROL")
+        self.assertEqual(another["order"]["type"], "AIR_ATTACK")
+
+    def test_planned_defense_intercepts_and_support_strike_resolves(self):
+        self.incoming["order"] = queries.canonical_air_order(self.game, self.incoming, self.enemy,
+            {"type": "AIR_ATTACK", "target_id": self.base["id"]})
+        self.plan()
+        ground_health = self.ground["health"]
+        air_processor.process_air_orders(self.game)
+        self.assertLessEqual(self.incoming["health"], 0)
+        self.assertGreater(self.screen["health"], 0)
+        self.assertLess(self.ground["health"], ground_health)
+        self.assertIn(self.support, self.base["units"])
+
+    def test_fort_damage_is_valued_only_for_capable_aircraft(self):
+        self.enemy["units"].clear()
+        self.enemy["buildings"] = ["Fort Lvl 1"]
+        before = deepcopy(self.enemy)
+        self.assertEqual(ai_movement._air_exchange_value(
+            self.game, [self.support], [], target=self.enemy), 0)
+        self.library["Support Wing"]["air_damages_forts"] = True
+        self.assertGreater(ai_movement._air_exchange_value(
+            self.game, [self.support], [], target=self.enemy), 0)
+        self.assertEqual(self.enemy, before)
+
+    def test_hidden_aircraft_do_not_trigger_defense_or_change_the_forecast(self):
+        hidden = tile(self.game, 3, 50, owner="B")
+        self.enemy["units"].remove(self.incoming)
+        hidden["units"].append(self.incoming)
+        with patch.object(c, "USE_FOG_OF_WAR", True), patch.object(
+                queries, "get_visible_provinces", return_value=({1, 2}, set())):
+            ai_movement._assign_air_orders(self.game, "A", [(self.screen, self.base)])
+        self.assertEqual(self.screen["order"]["type"], "AIR_ATTACK")
+
+    def test_enemy_orders_do_not_change_mission_choice_and_forecasts_do_not_mutate_units(self):
+        before = deepcopy(self.game.map_data)
+        ai_movement._air_exchange_value(self.game, [self.screen], [self.incoming], air_combat=True)
+        self.assertEqual(self.game.map_data, before)
+        for order in ({"type": "AIR_ATTACK", "target_id": 1}, {"type": "AIR_PATROL"}, None):
+            with self.subTest(order=order):
+                self.incoming["order"] = order
+                self.plan()
+                self.assertEqual(self.screen["order"]["type"], "AIR_PATROL")
+
+    def test_out_of_range_or_immune_threat_does_not_trigger_defense(self):
+        remote = tile(self.game, 3, 800, owner="B")
+        self.enemy["units"].remove(self.incoming)
+        remote["units"].append(self.incoming)
+        self.plan()
+        self.assertEqual(self.screen["order"]["type"], "AIR_ATTACK")
+        remote["units"].remove(self.incoming)
+        self.enemy["units"].append(self.incoming)
+        self.library["Incoming Wing"]["air_interception_immune"] = True
+        self.plan()
+        self.assertEqual(self.screen["order"]["type"], "AIR_ATTACK")
+
+    def test_tactical_patrol_counts_as_cover_without_changing_its_order(self):
+        self.game.tactical_mode = True
+        self.game.player_unit = self.screen
+        self.screen["order"] = queries.canonical_air_order(self.game, self.screen, self.base,
+            {"type": "AIR_PATROL", "priority": "RANDOM"})
+        before = dict(self.screen["order"])
+        self.plan()
+        self.assertEqual(self.screen["order"], before)
+        self.assertEqual(self.support["order"]["type"], "AIR_ATTACK")
 
 
 class AirMoveSafetyTests(unittest.TestCase):

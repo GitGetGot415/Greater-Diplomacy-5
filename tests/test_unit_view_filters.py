@@ -529,7 +529,7 @@ class UnitViewControlTests(unittest.TestCase):
             name_width = popup.body_font.size(view_filter.title())[0]
             self.assertGreater(icon_rect.left, name_width)
             self.assertLessEqual(icon_rect.right, group.get_width())
-            self.assertLessEqual(icon_rect.height, popup.body_font.get_height())
+            self.assertLessEqual(icon_rect.bottom, group.get_height())
         self.assertTrue(all(line.get_width() <= popup.rect.width - 2 * popup.SUBTITLE_SIDE_PADDING
                             for line in popup.unit_view_note_lines))
         popup.page_index = 1

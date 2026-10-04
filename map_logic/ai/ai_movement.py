@@ -3,7 +3,7 @@ import heapq
 from types import SimpleNamespace
 import data.constants as c
 from data import queries
-from map_logic.ai import ai_world
+from map_logic.ai import ai_unit_eval, ai_world
 from map_logic.turn_processing import combat_rules
 
 
@@ -62,6 +62,61 @@ def _air_base_threats(map_screen, country, visible):
     return threatened
 
 
+def _air_exchange_value(map_screen, wings, opponents, *, air_combat=False, target=None):
+    """Compare projected equipment losses through the shared combat rules."""
+    if not wings:
+        return 0.0
+    sides = [wings + opponents] if air_combat else [wings, opponents]
+    battle = combat_rules.build_battle(sides, map_screen.nation_data,
+        air_combat=air_combat, convert_aircraft=False,
+        width=c.COMBAT_WIDTH if air_combat else None,
+        terrain=target.get("terrain") if target else None)
+    opponent_ids = {id(unit) for unit in opponents}
+
+    def fort_bonus(unit):
+        return (queries.get_fort_defense_bonus(target, unit, map_screen.nation_data, combat_active=True)
+                if target and id(unit) in opponent_ids else 0)
+    damage = combat_rules.projected_incoming_damage(battle, map_screen.nation_data, fort_bonus)
+    prices = dict.fromkeys(ai_unit_eval.RESOURCES, 1.0)
+
+    def losses(units):
+        return sum(min(unit.get("health", 0), damage.get(id(unit), 0))
+                   / max(1, unit.get("max_health", c.DEFAULT_UNIT_HP))
+                   * ai_unit_eval.unit_pain(queries.air_unit_stats(unit), prices) for unit in units)
+    value = losses(opponents) - losses(wings)
+    if target:
+        hits = sum(queries.air_unit_can_damage_forts(unit) and queries.are_at_war(
+            queries.get_unit_combat_owner(unit), target.get("owner"), map_screen.nation_data) for unit in wings)
+        level = queries.get_fort_level(target)
+        library = queries.get_building_library()
+        for lost_level in range(level, max(0, level - hits), -1):
+            stats = queries.get_building_cost(f"Fort Lvl {lost_level}", target.get("owner"),
+                                             map_screen.map_data, library)
+            value += sum(stats.get(f"cost_{resource}", 0) for resource in ai_unit_eval.RESOURCES)
+    return value
+
+
+def _air_patrol_threats(map_screen, country, visible):
+    """Possible strikes on our land or troops, without reading enemy orders."""
+    protected = {province["id"] for province in map_screen.map_data.values()
+                 if province.get("owner") == country or any(
+                     queries.get_unit_combat_owner(unit) == country and unit.get("health", 0) > 0
+                     for unit in province.get("units", []))}
+    threats = {}
+    for base in map_screen.map_data.values():
+        if c.USE_FOG_OF_WAR and visible is not None and base["id"] not in visible:
+            continue
+        for unit in queries.filter_visible_units(base.get("units", []), country, base, map_screen.nation_data):
+            if (unit.get("health", 0) <= 0 or not queries.is_air_unit(unit)
+                    or queries.air_unit_stats(unit).get("air_interception_immune")
+                    or not queries.are_at_war(country, queries.get_unit_combat_owner(unit), map_screen.nation_data)
+                    or not queries.air_unit_can_launch(map_screen, unit, base)):
+                continue
+            for target_id in protected.intersection(queries.get_air_targets(map_screen, unit, base, "AIR_ATTACK")):
+                threats.setdefault(target_id, []).append(unit)
+    return threats
+
+
 def _assign_air_orders(map_screen, country, units_info):
     """Reusable aircraft fly; one-use weapons relocate through legal land paths."""
     units_info = [(unit, base) for unit, base in units_info
@@ -77,6 +132,15 @@ def _assign_air_orders(map_screen, country, units_info):
                and queries.air_target_is_hostile({"owner": country}, province,
                    map_screen.nation_data, visible_only=True)]
     threatened = _air_base_threats(map_screen, country, visible)
+    patrol_threats = _air_patrol_threats(map_screen, country, visible)
+    patrol_cover = {}
+    patrol_scores = {}
+    strike_scores = {}
+    for unit, base in units_info:
+        if (queries.is_tactical_player_unit(map_screen, unit)
+                and (unit.get("order") or {}).get("type") == "AIR_PATROL"):
+            for target_id in queries.get_air_targets(map_screen, unit, base, "AIR_PATROL"):
+                patrol_cover.setdefault(target_id, []).append(unit)
 
     enemy_ids = {province["id"] for province in enemies}
     target_values = {province["id"]: sum(queries.calculate_unit_strength(unit) for unit in
@@ -88,6 +152,17 @@ def _assign_air_orders(map_screen, country, units_info):
     def value(province):
         return target_values[province["id"]]
 
+    def patrol_value(wings, opponents):
+        key = (tuple(id(unit) for unit in wings), tuple(id(unit) for unit in opponents))
+        if key not in patrol_scores:
+            patrol_scores[key] = _air_exchange_value(map_screen, wings, opponents, air_combat=True)
+        return patrol_scores[key]
+
+    # Plan stronger interceptors first. Unit names do not define the preference.
+    units_info.sort(key=lambda item: item[0].get("attack", 0)
+                    * combat_rules.effective_damage_multiplier(item[0], map_screen.nation_data)
+                    * (queries.unit_target_damage_multiplier(item[0], item[0], air_to_air=True) - 1),
+                    reverse=True)
     for unit, base in units_info:
         if queries.is_tactical_player_unit(map_screen, unit):
             continue
@@ -122,9 +197,35 @@ def _assign_air_orders(map_screen, country, units_info):
             continue
         attacks = [order for order in candidates if order["type"] == "AIR_ATTACK"
                    and order["target_id"] in enemy_ids]
-        if attacks:
-            unit["order"] = max(attacks, key=lambda order: (
-                value(map_screen.id_to_province[order["target_id"]]), -order["target_id"]))
+        attack_order = max(attacks, key=lambda order: (
+            value(map_screen.id_to_province[order["target_id"]]), -order["target_id"])) if attacks else None
+        patrol = next((order for order in candidates if order["type"] == "AIR_PATROL"), None)
+        if patrol and patrol_threats:
+            coverage = queries.get_air_targets(map_screen, unit, base, "AIR_PATROL")
+            defense_value = max((patrol_value(patrol_cover.get(target_id, []) + [unit], patrol_threats[target_id])
+                                - patrol_value(patrol_cover.get(target_id, []), patrol_threats[target_id])
+                                for target_id in coverage.intersection(patrol_threats)), default=0.0)
+
+            def strike_value(order):
+                target = map_screen.id_to_province[order["target_id"]]
+                key = (unit["type"], combat_rules.single_attacker_signature(unit), target["id"])
+                if key not in strike_scores:
+                    opponents = [other for other in queries.filter_visible_units(
+                        target.get("units", []), country, target, map_screen.nation_data)
+                        if queries.are_at_war(country, queries.get_unit_combat_owner(other), map_screen.nation_data)]
+                    strike_scores[key] = _air_exchange_value(map_screen, [unit], opponents, target=target)
+                return strike_scores[key]
+            if attacks:
+                attack_order = max(attacks, key=lambda order: (strike_value(order),
+                    value(map_screen.id_to_province[order["target_id"]]), -order["target_id"]))
+            attack_value = strike_value(attack_order) if attack_order else 0.0
+            if defense_value > max(0.0, attack_value):
+                unit["order"] = patrol
+                for target_id in coverage:
+                    patrol_cover.setdefault(target_id, []).append(unit)
+                continue
+        if attack_order:
+            unit["order"] = attack_order
             continue
         # Rebase on friendly land nearer a known enemy; no hidden target stacks
         # influence the choice. One-use weapons travel at their land speed.
@@ -166,9 +267,10 @@ def _assign_air_orders(map_screen, country, units_info):
                         continue
         if (unit.get("order") or {}).get("type") == "CONVERT":
             continue
-        patrol = next((order for order in candidates if order["type"] == "AIR_PATROL"), None)
         if patrol:
             unit["order"] = patrol
+            for target_id in queries.get_air_targets(map_screen, unit, base, "AIR_PATROL"):
+                patrol_cover.setdefault(target_id, []).append(unit)
 
 def build_neighbor_index(id_to_province):
     """Maps each tile to its neighbours that actually exist on the map.

@@ -119,6 +119,8 @@ def _rank_for_nation(available_techs, ai_name, data, econ, world,
     candidates = ai_unit_eval.buildable_units(research, unit_library)
     volley, enemy_def, enemy_stack = ai_unit_eval.threat_profile(
         world, ai_name, unit_library, candidates)
+    air_pressure, air_enemy_def, air_enemy_stack = ai_unit_eval.air_threat_profile(
+        world, ai_name, unit_library)
     prices = ai_unit_eval.resource_prices(econ, data)
     frontline = len(world.land_border_tiles.get(ai_name, ())) if world else 1
 
@@ -126,6 +128,7 @@ def _rank_for_nation(available_techs, ai_name, data, econ, world,
         prices, volley=volley, stack=max(1.0, c.LANE_SLOTS_TYPICAL),
         enemy_def=enemy_def, enemy_stack=enemy_stack,
         frontline=max(1, frontline),
+        air_pressure=air_pressure, air_enemy_def=air_enemy_def, air_enemy_stack=air_enemy_stack,
         coast=len(world.coast_tiles.get(ai_name, ())) if world else 0,
         budget=ai_unit_eval.spending_budget(econ, data, prices))
 

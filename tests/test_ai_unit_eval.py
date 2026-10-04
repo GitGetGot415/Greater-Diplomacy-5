@@ -11,6 +11,8 @@ is already saturated stops winning.
 import os
 import sys
 import unittest
+from types import SimpleNamespace
+from unittest.mock import patch
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
@@ -196,6 +198,69 @@ class ValuationTests(unittest.TestCase):
 
     def test_unknown_names_are_skipped_rather_than_raising(self):
         self.assertEqual(list(ue.evaluate(["Nonexistent"], LIBRARY, context())), [])
+
+
+class AircraftValuationTests(unittest.TestCase):
+    def setUp(self):
+        self.library = {
+            "Aster": unit(attack=100, defense=0, health=1000, mat=1000, man=100,
+                          air_role="aircraft", air_attack_multiplier=12),
+            "Dahlia": unit(attack=600, defense=0, health=1000, mat=1000, man=100,
+                           air_role="aircraft"),
+        }
+
+    def test_no_enemy_aircraft_means_no_credit_for_an_interception_bonus(self):
+        values = scores(context(), self.library)
+        self.assertGreater(values["Dahlia"].score, values["Aster"].score)
+        unchanged = dict(self.library, Aster=dict(self.library["Aster"], air_attack_multiplier=100))
+        self.assertEqual(scores(context(), unchanged)["Aster"].score, values["Aster"].score)
+
+    def test_air_threat_changes_the_best_purchase_without_unit_name_preferences(self):
+        ctx = context()._replace(air_pressure=1.0)
+        values = scores(ctx, self.library)
+        self.assertGreater(values["Aster"].score, values["Dahlia"].score)
+        targets = ue.role_targets(ctx, 0, values)
+        self.assertEqual(ue.pick_next(values, {}, targets)[0].name, "Aster")
+        values = scores(context(), self.library)
+        self.assertEqual(ue.pick_next(values, {}, targets)[0].name, "Dahlia")
+
+    def test_interception_bonus_applies_before_aircraft_defense(self):
+        ctx = context(enemy_def=200)._replace(air_pressure=1.0, air_enemy_def=200)
+        values = scores(ctx, self.library)
+        self.assertGreater(values["Aster"].combat, values["Dahlia"].combat)
+
+    def threat_world(self):
+        nations = {"A": {"at_war_with": ["B"]}, "B": {"at_war_with": ["A"]},
+                   "C": {"at_war_with": []}}
+        province = {"id": 1, "owner": "B", "neighbors": [], "units": [
+            dict(self.library["Dahlia"], type="Dahlia", owner="B")]}
+        return SimpleNamespace(map_data={1: province}, id_to_province={1: province}, nation_data=nations)
+
+    def test_visible_air_threat_falls_as_owned_and_queued_cover_increases(self):
+        world = self.threat_world()
+        with patch.object(c, "USE_FOG_OF_WAR", False):
+            before = ue.air_threat_profile(world, "A", self.library)[0]
+            home = {"id": 2, "owner": "A", "neighbors": [], "units": [
+                dict(self.library["Aster"], type="Aster", owner="A")]}
+            world.map_data[2] = world.id_to_province[2] = home
+            standing = ue.air_threat_profile(world, "A", self.library)[0]
+            home["unit_queue"] = [{"unit_type": "Aster"}]
+            queued = ue.air_threat_profile(world, "A", self.library)[0]
+        self.assertGreater(before, standing)
+        self.assertGreater(standing, queued)
+
+    def test_hidden_neutral_and_immune_aircraft_do_not_create_interception_demand(self):
+        from data import queries
+        world = self.threat_world()
+        with patch.object(c, "USE_FOG_OF_WAR", True), patch.object(
+                queries, "get_visible_provinces", return_value=(set(), set())):
+            self.assertEqual(ue.air_threat_profile(world, "A", self.library)[0], 0)
+        with patch.object(c, "USE_FOG_OF_WAR", False):
+            world.map_data[1]["units"][0]["owner"] = "C"
+            self.assertEqual(ue.air_threat_profile(world, "A", self.library)[0], 0)
+            world.map_data[1]["units"][0]["owner"] = "B"
+            library = dict(self.library, Dahlia=dict(self.library["Dahlia"], air_interception_immune=True))
+            self.assertEqual(ue.air_threat_profile(world, "A", library)[0], 0)
 
 
 class RoleTests(unittest.TestCase):

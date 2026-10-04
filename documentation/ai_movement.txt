@@ -69,8 +69,23 @@ AIRCRAFT ORDERS AND VISIBILITY
 ------------------------------
 
 The aircraft AI generates only orders permitted by the shared rules.
-It strikes visible enemy targets and moves reusable aircraft to closer friendly land.
+It compares strikes with defense against visible enemy aircraft.
+It moves reusable aircraft to closer friendly land when no enemy target is reachable and defense does not take priority.
 Hostile units on friendly tiles also count as strike targets.
+
+The planner checks which friendly provinces or troops visible enemy aircraft can reach.
+It does not read enemy mission orders. Interception-immune threats do not receive patrol assignments.
+It plans aircraft with larger air-to-air attack bonuses first.
+Shared combat projections compare enemy equipment losses with friendly equipment losses.
+Health, defense, damage modifiers, combat width, and coalition lanes use the execution rules.
+Equipment value uses unit costs and the shared upkeep horizon.
+Strike value also includes completed fort levels that a capable aircraft can remove.
+Defense value measures the additional benefit after existing patrol assignments.
+The aircraft patrols when that benefit exceeds its best strike value and is positive.
+This allows useful interceptors to defend while other aircraft strike.
+The tactical player's patrol counts as cover. The planner does not change that unit's order.
+Without visible aircraft threats, strikes retain their target-strength preference.
+Exchange projections are cached during one country's order pass.
 
 Before choosing a mission, reusable aircraft leave bases threatened by visible enemy ground movement.
 They choose a reachable landing tile outside that threat area.
@@ -81,7 +96,7 @@ It avoids threatened landing tiles when moving closer to a target.
 If no safe landing tile is reachable, normal mission selection continues.
 Aircraft already caught in ground combat cannot escape through flight.
 
-Otherwise, it patrols with reusable aircraft.
+Reusable aircraft patrol when no strike or closer safe base is available.
 It moves V1/V2 along legal land routes at their ground speed.
 V1/V2 cannot patrol or fly between bases.
 

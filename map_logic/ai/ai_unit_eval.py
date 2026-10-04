@@ -35,6 +35,7 @@ heuristic AI.
 """
 
 import collections
+from types import SimpleNamespace
 
 import data.constants as c
 from data import queries
@@ -68,16 +69,65 @@ UnitValue = collections.namedtuple(
 #: budget      -- total pain this nation can afford to commit, which is what the
 #:                role targets actually divide up
 Context = collections.namedtuple(
-    "Context", "prices volley stack enemy_def enemy_stack frontline coast budget")
+    "Context", "prices volley stack enemy_def enemy_stack frontline coast budget "
+    "air_pressure air_enemy_def air_enemy_stack", defaults=(0.0, 0.0, 1.0))
 
 
 def context(prices, volley=1.0, stack=5.0, enemy_def=0.0, enemy_stack=5.0,
-            frontline=1.0, coast=0.0, budget=0.0):
+            frontline=1.0, coast=0.0, budget=0.0,
+            air_pressure=0.0, air_enemy_def=0.0, air_enemy_stack=1.0):
     """Context with defaults, so callers only name what they know."""
     return Context(prices=prices, volley=float(volley), stack=float(stack),
                    enemy_def=float(enemy_def), enemy_stack=float(enemy_stack),
                    frontline=float(frontline), coast=float(coast),
-                   budget=float(budget))
+                   budget=float(budget), air_pressure=float(air_pressure),
+                   air_enemy_def=float(air_enemy_def), air_enemy_stack=float(air_enemy_stack))
+
+
+def air_threat_profile(world, nation, unit_library):
+    """Value interception against visible aircraft, reduced by existing air cover."""
+    if world is None:
+        return 0.0, 0.0, 1.0
+    view = SimpleNamespace(player_country=nation, map_data=world.map_data,
+        nation_data=world.nation_data, id_to_province=world.id_to_province,
+        tactical_mode=False, player_unit=None)
+    visible, _partial = queries.get_visible_provinces(view)
+    ground_attack, air_attack, cover = 0.0, 0.0, 0.0
+    defenses, counts = [], []
+    for province in world.map_data.values():
+        if c.USE_FOG_OF_WAR and visible is not None and province["id"] not in visible:
+            continue
+        aircraft = []
+        for unit in queries.filter_visible_units(province.get("units", []), nation,
+                                                  province, world.nation_data):
+            if unit.get("health", 0) <= 0:
+                continue
+            stats = unit_library.get(unit.get("type", ""), {})
+            owner = queries.get_unit_combat_owner(unit)
+            attack = float(unit.get("attack", stats.get("attack", 0)))
+            if owner == nation and stats.get("air_role") and not stats.get("air_consumable"):
+                cover += attack * queries.unit_target_damage_multiplier(
+                    unit, unit, air_to_air=True, unit_library=unit_library)
+            elif queries.are_at_war(nation, owner, world.nation_data):
+                if stats.get("air_role"):
+                    if not stats.get("air_interception_immune"):
+                        air_attack += attack
+                        aircraft.append(unit)
+                else:
+                    ground_attack += attack
+        if aircraft:
+            defenses.extend(float(unit.get("defense", 0)) for unit in aircraft)
+            counts.append(min(len(aircraft), c.LANE_SLOTS_TYPICAL))
+        if province.get("owner") == nation:
+            for item in province.get("unit_queue", []):
+                name = item.get("unit_type", "")
+                stats = unit_library.get(name, {})
+                if stats.get("air_role") and not stats.get("air_consumable"):
+                    cover += stats.get("attack", 0) * queries.unit_target_damage_multiplier(
+                        {"type": name}, {"type": name}, air_to_air=True, unit_library=unit_library)
+    total = ground_attack + air_attack + cover
+    return (air_attack / total if total > 0 else 0.0,
+            _mean(defenses), max(1.0, _mean(counts)))
 
 
 def spending_budget(econ, stockpile, prices):
@@ -300,11 +350,12 @@ def evaluate(names, unit_library, ctx):
                   + c.AI_W_SOAK * soak_share)
 
         if stats.get("air_role"):
-            # Fighters' ordinary attack understates their interception value.
-            # Read the same target-specific rule as the combat resolver.
-            air_bonus = queries.unit_target_damage_multiplier({"type": name}, {"type": name}, air_to_air=True)
-            combat += offense * (air_bonus - 1)
-            combat += c.AI_W_BOMBARD * attack / mean_attack
+            # Interception bonuses apply before defense, only against aircraft.
+            air_bonus = queries.unit_target_damage_multiplier(
+                {"type": name}, {"type": name}, air_to_air=True, unit_library=unit_library)
+            air_ctx = ctx._replace(enemy_def=ctx.air_enemy_def, enemy_stack=ctx.air_enemy_stack)
+            interception = effective_attack(float(stats.get("attack", 0)) * air_bonus, air_ctx)
+            combat += c.AI_W_OFFENSE * ctx.air_pressure * (interception - attack) / mean_attack
 
         bomb_range = bombard_range(name, stats)
         if bomb_range:
