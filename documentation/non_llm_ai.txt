@@ -391,6 +391,8 @@ LAST-TURN UNIT EVENTS
 
 The yellow mail button beside the resources opens Unit events.
 The orange screen lists unit names, tile IDs, events, health changes, and sources.
+Each unit name has its country's flag on the left.
+The flag uses the owner recorded in the event, including events for destroyed units.
 Click a column header to sort the table.
 Click a row to read its full details.
 

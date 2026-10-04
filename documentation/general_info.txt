@@ -93,6 +93,7 @@ screens/
         They are read-only when the player commands no units there.
         In tactical mode, only the player's selected division is editable.
         unit_events_screen.py shows the last turn's unit events in a sortable table.
+        A country flag appears left of each unit name, using the event's recorded owner.
         Click the yellow mail button beside the resource display to open it.
         Its badge shows the number of unread entries.
         Opening the table marks the current player's entries as read.

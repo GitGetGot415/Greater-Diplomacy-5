@@ -19,7 +19,7 @@ class TableColumn:
     display one thing (a date string) but sort on another (its epoch day).
     Columns sharing the same `group` get one merged label drawn above them.
     """
-    def __init__(self, key, label, width, align="center", fmt=str, group=None, sort_key=None):
+    def __init__(self, key, label, width, align="center", fmt=str, group=None, sort_key=None, icon=None):
         self.key = key
         self.label = label
         self.width = width
@@ -27,6 +27,8 @@ class TableColumn:
         self.fmt = fmt
         self.group = group
         self.sort_key = sort_key or (lambda row, k=key: row.get(k))
+        # Optional callback returns a cached surface to place before the text.
+        self.icon = icon
 
 class TableScreen(GameState):
     """Full-screen sortable data table -- the pygame stand-in for the old
@@ -36,6 +38,7 @@ class TableScreen(GameState):
     GROUP_LABEL_Y = 65
     HEADER_Y = 88
     ROW_TOP = 130
+    CELL_ICON_GAP = 6
 
     def __init__(self, game_state, title, columns, rows, empty_message="Nothing to show.",
                  on_row_click=None, row_tint=None):
@@ -160,14 +163,19 @@ class TableScreen(GameState):
                 for col in self.columns:
                     text = col.fmt(row.get(col.key, ""))
                     cell_surf = row_font.render(text, True, c.UI_TEXT_BRIGHT)
+                    icon = col.icon(row) if col.icon else None
+                    prefix_width = icon.get_width() + self.CELL_ICON_GAP if icon is not None else 0
+                    rect = pygame.Rect(0, 0, cell_surf.get_width() + prefix_width, cell_surf.get_height())
                     mid_y = y + self.ROW_HEIGHT // 2
                     if col.align == "left":
-                        rect = cell_surf.get_rect(midleft=(x + 6, mid_y))
+                        rect.midleft = (x + 6, mid_y)
                     elif col.align == "right":
-                        rect = cell_surf.get_rect(midright=(x + col.width - 6, mid_y))
+                        rect.midright = (x + col.width - 6, mid_y)
                     else:
-                        rect = cell_surf.get_rect(center=(x + col.width // 2, mid_y))
-                    surface.blit(cell_surf, rect)
+                        rect.center = (x + col.width // 2, mid_y)
+                    if icon is not None:
+                        surface.blit(icon, icon.get_rect(midleft=(rect.left, mid_y)))
+                    surface.blit(cell_surf, (rect.left + prefix_width, rect.top))
                     x += col.width
 
         self.draw_list_scrollbar(surface, min(c.SCREEN_WIDTH - 25, self.table_x + self.total_w + 10),

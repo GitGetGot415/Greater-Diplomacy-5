@@ -397,6 +397,69 @@ class UnitEventScreenTests(unittest.TestCase):
             screen.show_event(screen.rows[0])
         self.assertIn(game.unit_event_log["events"][0]["details"], details.call_args.args[1])
 
+    def test_owner_flags_follow_destroyed_units_after_sorting_and_filtering(self):
+        from screens.map_related_screens.unit_events_screen import UnitEventsScreen
+        from ui import flag_icons
+        game = self.game
+        events = [row(game.player_country) | {"unit_name": "Z destroyed unit"},
+                  row("Historic country", event="MOVED") | {"unit_name": "A moving unit"}]
+        game.unit_event_log["events"] = events
+        flags = {owner: pygame.Surface(flag_icons.ROW_FLAG_SIZE) for owner in {entry["owner"] for entry in events}}
+        with patch.object(game, "player_country", "Spectator"), \
+                patch.object(flag_icons, "flag_surface", side_effect=lambda owner, _data: flags[owner]) as prepare:
+            screen = UnitEventsScreen(game)
+        self.assertEqual({call.args[0] for call in prepare.call_args_list}, set(flags))
+
+        class RecordingSurface(pygame.Surface):
+            def blit(self, source, dest, *args, **kwargs):
+                rect = super().blit(source, dest, *args, **kwargs)
+                self.blits.append((source, rect))
+                return rect
+
+        surface = RecordingSurface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
+
+        def check_draw():
+            surface.blits = []
+            with patch.object(flag_icons, "flag_surface", side_effect=AssertionError("Frame prepared flags")), \
+                    patch.object(queries, "decode_b64_to_surf", side_effect=AssertionError("Frame decoded flags")):
+                screen.draw(surface)
+            drawn = [(index, source, rect) for index, (source, rect) in enumerate(surface.blits)
+                     if any(source is flag for flag in flags.values())]
+            self.assertEqual(len(drawn), len(screen.rows))
+            for entry, (index, flag, flag_rect) in zip(screen.rows, drawn):
+                self.assertIs(flag, flags[entry["owner"]])
+                name_rect = surface.blits[index + 1][1]
+                self.assertLess(flag_rect.right, name_rect.left)
+                self.assertEqual(flag_rect.centery, name_rect.centery)
+                unit_cell = pygame.Rect(screen.table_x, flag_rect.centery - screen.ROW_HEIGHT // 2,
+                                        screen.columns[0].width, screen.ROW_HEIGHT)
+                self.assertTrue(unit_cell.contains(flag_rect))
+                self.assertTrue(unit_cell.contains(name_rect))
+
+        check_draw()
+        screen.sort_by(screen.columns[0])
+        self.assertEqual(screen.rows[0]["owner"], "Historic country")
+        check_draw()
+        screen.set_event_filter("DESTROYED")
+        self.assertEqual(len(screen.rows), 1)
+        check_draw()
+
+    def test_long_unit_names_fit_beside_cached_country_flags_at_different_widths(self):
+        from screens.map_related_screens.unit_events_screen import UnitEventsScreen, CELL_PADDING
+        from ui import flag_icons
+        self.game.unit_event_log["events"][0]["unit_name"] = "Long unit name " * 40
+        for width in (1024, c.SCREEN_WIDTH):
+            with self.subTest(width=width), patch.object(c, "SCREEN_WIDTH", width):
+                screen = UnitEventsScreen(self.game)
+                column = screen.columns[0]
+                entry = screen.rows[0]
+                self.assertIs(column.icon(entry), flag_icons.flag_surface(entry["owner"], self.game.nation_data))
+                content_width = (fonts.get("small").size(column.fmt(entry["unit_name"]))[0]
+                                 + column.icon(entry).get_width() + screen.CELL_ICON_GAP)
+                self.assertLessEqual(content_width, column.width - CELL_PADDING)
+                self.assertLessEqual(column.icon(entry).get_height(), screen.ROW_HEIGHT)
+                screen.draw(pygame.Surface((width, c.SCREEN_HEIGHT)))
+
     def test_mark_all_unread_restores_badge_after_closing_until_reopened(self):
         from screens.map_related_screens.unit_events_screen import UnitEventsScreen
         game = self.game

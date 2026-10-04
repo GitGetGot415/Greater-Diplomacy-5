@@ -3,7 +3,7 @@ import data.constants as c
 from data import queries
 from map_logic.turn_processing import unit_events
 from map_logic.rendering.font_manager import fonts
-from ui import text_utils
+from ui import flag_icons, text_utils
 from ui.table_screen import TableColumn, TableScreen
 from ui_elements import Button
 
@@ -24,6 +24,8 @@ class UnitEventsScreen(TableScreen):
     def __init__(self, map_screen):
         self.all_rows = [row | {"event_label": unit_events.EVENT_LABELS[row["event"]]}
                          for row in unit_events.entries_for(map_screen)]
+        self.flags = {owner: flag_icons.flag_surface(owner, map_screen.nation_data)
+                      for owner in {row["owner"] for row in self.all_rows}}
         self.event_filter = unit_events.event_filter_for(map_screen)
         rows = self.filtered_rows()
         available = c.SCREEN_WIDTH - 2 * TABLE_MARGIN
@@ -31,10 +33,14 @@ class UnitEventsScreen(TableScreen):
         widths[-1] = available - sum(widths[:-1])
         columns = []
         for (key, label, _share), width in zip(COLUMN_SHARES, widths):
-            def fit(value, key=key, width=width):
+            icon = (lambda row: self.flags[row["owner"]]) if key == "unit_name" else None
+            text_width = width - CELL_PADDING
+            if icon is not None:
+                text_width -= flag_icons.ROW_FLAG_SIZE[0] + self.CELL_ICON_GAP
+            def fit(value, key=key, text_width=text_width):
                 text = f"{value:.2f}" if key == "amount" and value else "" if key == "amount" else str(value)
-                return text_utils.fit_text(text, fonts.get("small"), width - CELL_PADDING)
-            columns.append(TableColumn(key, label, width, align="left", fmt=fit))
+                return text_utils.fit_text(text, fonts.get("small"), text_width)
+            columns.append(TableColumn(key, label, width, align="left", fmt=fit, icon=icon))
         super().__init__(map_screen, "Unit events - Last turn", columns, rows,
                          empty_message=self.empty_report_message(),
                          on_row_click=self.show_event, row_tint=lambda _row: ROW_COLOR)
