@@ -30,16 +30,6 @@
     "aircraft_carrier": { "category": "NAVY", "max_lvl": 17, "cost": 2400, "req": {"battleship": 1}, "years": [1930, 1935, 1940, 1945, 1950, 1955, 1960, 1965, 1970, 1975, 1980, 1985, 1990, 1995, 2000, 2005, 2010] },
     "submarine": { "category": "NAVY", "max_lvl": 26, "cost": 2400, "req": {}, "years": [1910, 1914, 1918, 1922, 1926, 1930, 1934, 1938, 1942, 1946, 1950, 1954, 1958, 1962, 1966, 1970, 1974, 1978, 1982, 1986, 1990, 1994, 1998, 2002, 2006, 2010] },
     
-    "biplane": { "category": "AEROSPACE", "display_name": "Biplane Fighter", "max_lvl": 1, "cost": 900, "req": {}, "years": [1910] },
-    "biplane_bomber": { "category": "AEROSPACE", "display_name": "Biplane Bomber", "max_lvl": 1, "cost": 900, "req": {"biplane": 1}, "years": [1915] },
-    "zeppelin": { "category": "AEROSPACE", "display_name": "Zeppelin", "max_lvl": 1, "cost": 900, "req": {}, "years": [1910] },
-    "piston_fighter": { "category": "AEROSPACE", "display_name": "Monoplane Fighter", "max_lvl": 1, "cost": 900, "req": {"biplane_bomber": 1}, "years": [1930] },
-    "piston_bomber": { "category": "AEROSPACE", "display_name": "Monoplane Bomber", "max_lvl": 1, "cost": 900, "req": {"piston_fighter": 1}, "years": [1935] },
-    "v1_flying_bomb": { "category": "AEROSPACE", "display_name": "V1 Flying Bomb", "max_lvl": 1, "cost": 900, "req": {"piston_bomber": 1}, "years": [1940] },
-    "v2_rocket": { "category": "AEROSPACE", "display_name": "V2 Rocket", "max_lvl": 1, "cost": 900, "req": {"v1_flying_bomb": 1}, "years": [1945] },
-    "jet_engine": { "category": "AEROSPACE", "display_name": "Jet Engine", "max_lvl": 1, "cost": 900, "req": {"piston_bomber": 1}, "years": [1945] },
-    "jet_fighter": { "category": "AEROSPACE", "display_name": "Jet Fighter", "max_lvl": 1, "cost": 900, "req": {"jet_engine": 1}, "years": [1950] },
-
     "basic_factory": { "category": "INDUSTRY", "max_lvl": 1, "cost": 1200, "req": {}, "years": [1910] },
     "factory": { "category": "INDUSTRY", "max_lvl": 25, "cost": 1200, "req": {"basic_factory": 1}, "years": [1914, 1918, 1922, 1926, 1930, 1934, 1938, 1942, 1946, 1950, 1954, 1958, 1962, 1966, 1970, 1974, 1978, 1982, 1986, 1990, 1994, 1998, 2002, 2006, 2010] },
     "bergius_process": { "category": "INDUSTRY", "max_lvl": 1, "cost": 1200, "req": {}, "years": [1910] },
@@ -47,5 +37,15 @@
     "basic_recruitment": { "category": "INDUSTRY", "max_lvl": 1, "cost": 1200, "req": {}, "years": [1910] },
     "recruitment_buildings": { "category": "INDUSTRY", "max_lvl": 50, "cost": 1200, "req": {"basic_recruitment": 1}, "years": [1912, 1914, 1916, 1918, 1920, 1922, 1924, 1926, 1928, 1930, 1932, 1934, 1936, 1938, 1940, 1942, 1944, 1946, 1948, 1950, 1952, 1954, 1956, 1958, 1960, 1962, 1964, 1966, 1968, 1970, 1972, 1974, 1976, 1978, 1980, 1982, 1984, 1986, 1988, 1990, 1992, 1994, 1996, 1998, 2000, 2002, 2004, 2006, 2008, 2010] },
     "general_recruitment": { "category": "INDUSTRY", "max_lvl": 50, "cost": 900, "req": {"recruitment_buildings": "MATCH_LEVEL"}, "years": [1913, 1915, 1917, 1919, 1921, 1923, 1925, 1927, 1929, 1931, 1933, 1935, 1937, 1939, 1941, 1943, 1945, 1947, 1949, 1951, 1953, 1955, 1957, 1959, 1961, 1963, 1965, 1967, 1969, 1971, 1973, 1975, 1977, 1979, 1981, 1983, 1985, 1987, 1989, 1991, 1993, 1995, 1997, 1999, 2001, 2003, 2005, 2007, 2009, 2011] },
-    "resource_refining": { "category": "INDUSTRY", "max_lvl": 100, "cost": 900, "req": {}, "years": [1911, 1912, 1913, 1914, 1915, 1916, 1917, 1918, 1919, 1920, 1921, 1922, 1923, 1924, 1925, 1926, 1927, 1928, 1929, 1930, 1931, 1932, 1933, 1934, 1935, 1936, 1937, 1938, 1939, 1940, 1941, 1942, 1943, 1944, 1945, 1946, 1947, 1948, 1949, 1950, 1951, 1952, 1953, 1954, 1955, 1956, 1957, 1958, 1959, 1960, 1961, 1962, 1963, 1964, 1965, 1966, 1967, 1968, 1969, 1970, 1971, 1972, 1973, 1974, 1975, 1976, 1977, 1978, 1979, 1980, 1981, 1982, 1983, 1984, 1985, 1986, 1987, 1988, 1989, 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010] }
+    "resource_refining": { "category": "INDUSTRY", "max_lvl": 100, "cost": 900, "req": {}, "years": [1911, 1912, 1913, 1914, 1915, 1916, 1917, 1918, 1919, 1920, 1921, 1922, 1923, 1924, 1925, 1926, 1927, 1928, 1929, 1930, 1931, 1932, 1933, 1934, 1935, 1936, 1937, 1938, 1939, 1940, 1941, 1942, 1943, 1944, 1945, 1946, 1947, 1948, 1949, 1950, 1951, 1952, 1953, 1954, 1955, 1956, 1957, 1958, 1959, 1960, 1961, 1962, 1963, 1964, 1965, 1966, 1967, 1968, 1969, 1970, 1971, 1972, 1973, 1974, 1975, 1976, 1977, 1978, 1979, 1980, 1981, 1982, 1983, 1984, 1985, 1986, 1987, 1988, 1989, 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010] },
+    
+    "biplane": { "category": "AEROSPACE", "display_name": "Biplane Fighter", "max_lvl": 1, "cost": 900, "req": {}, "years": [1910] },
+    "biplane_bomber": { "category": "AEROSPACE", "display_name": "Biplane Bomber", "max_lvl": 1, "cost": 900, "req": {"biplane": 1}, "years": [1915] },
+    "zeppelin": { "category": "AEROSPACE", "display_name": "Zeppelin", "max_lvl": 1, "cost": 900, "req": {"biplane": 1}, "years": [1910] },
+    "piston_fighter": { "category": "AEROSPACE", "display_name": "Monoplane Fighter", "max_lvl": 1, "cost": 900, "req": {"biplane_bomber": 1}, "years": [1930] },
+    "piston_bomber": { "category": "AEROSPACE", "display_name": "Monoplane Bomber", "max_lvl": 1, "cost": 900, "req": {"piston_fighter": 1}, "years": [1935] },
+    "v1_flying_bomb": { "category": "AEROSPACE", "display_name": "V1 Flying Bomb", "max_lvl": 1, "cost": 900, "req": {"piston_bomber": 1}, "years": [1940] },
+    "v2_rocket": { "category": "AEROSPACE", "display_name": "V2 Rocket", "max_lvl": 1, "cost": 900, "req": {"v1_flying_bomb": 1}, "years": [1945] },
+    "jet_engine": { "category": "AEROSPACE", "display_name": "Jet Engine", "max_lvl": 1, "cost": 900, "req": {"piston_bomber": 1}, "years": [1945] },
+    "jet_fighter": { "category": "AEROSPACE", "display_name": "Jet Fighter", "max_lvl": 1, "cost": 900, "req": {"jet_engine": 1}, "years": [1950] }
 }
