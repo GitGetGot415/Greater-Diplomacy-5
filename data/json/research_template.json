@@ -48,5 +48,5 @@
     "v2_rocket": { "category": "AEROSPACE", "display_name": "V2 Rocket", "max_lvl": 1, "cost": 1200, "req": {"v1_flying_bomb": 1}, "years": [1945] },
     "jet_engine": { "category": "AEROSPACE", "display_name": "Jet Engine", "max_lvl": 1, "cost": 1800, "req": {}, "years": [1945] },
     "jet_fighter": { "category": "AEROSPACE", "display_name": "Jet Fighter", "max_lvl": 16, "cost": 2400, "req": {"piston_fighter": 5, "jet_engine": 1}, "years": [1950, 1954, 1958, 1962, 1966, 1970, 1974, 1978, 1982, 1986, 1990, 1994, 1998, 2002, 2006, 2010] },
-    "jet_bomber": { "category": "AEROSPACE", "display_name": "Jet Bomber", "max_lvl": 3, "cost": 2400, "req": {"piston_bomber": 5, "jet_fighter": 1}, "years": [1955, 1960, 1965] }
+    "jet_bomber": { "category": "AEROSPACE", "display_name": "Jet Bomber", "max_lvl": 12, "cost": 2400, "req": {"piston_bomber": 5, "jet_fighter": 1}, "years": [1955, 1960, 1965, 1970, 1975, 1980, 1985, 1990, 1995, 2000, 2005, 2010] }
 }

@@ -330,8 +330,8 @@ UNIT_SECTIONS = [
         UnitFamily('Monoplane Bomber', roman_suffixes(5), {'health': linear(5000, 200), 'attack': linear(1000, 100), 'defense': linear(120, 20), 'speed': 1, 'cost_materials': linear(4000, 400), 'cost_manpower': 500, 'cost_fuel': 120, 'production_time': 4, 'production_group': 'Aerospace', 'air_role': 'bomber', 'air_range_px': 150, 'air_damages_forts': True}),
         UnitFamily('V1 Flying Bomb', single(), {'health': 1000, 'attack': 800, 'defense': 0, 'speed': 1, 'cost_materials': 2000, 'cost_manpower': 0, 'cost_fuel': 60, 'production_time': 2, 'production_group': 'Aerospace', 'air_role': 'strike', 'air_range_px': 200, 'air_consumable': True, 'air_damages_forts': True}),
         UnitFamily('V2 Rocket', single(), {'health': 2000, 'attack': 1200, 'defense': 0, 'speed': 1, 'cost_materials': 4000, 'cost_manpower': 0, 'cost_fuel': 80, 'production_time': 4, 'production_group': 'Aerospace', 'air_role': 'strike', 'air_range_px': 300, 'air_consumable': True, 'air_interception_immune': True, 'air_damages_forts': True}),
-        UnitFamily('Jet Fighter', roman_suffixes(16), {'health': linear(4000, 200), 'attack':  linear(1000, 100), 'defense':  linear(100, 20), 'speed': 1, 'cost_materials':  linear(5000, 200), 'cost_manpower': 500, 'cost_fuel': linear(160, 10), 'production_time': 4, 'production_group': 'Aerospace', 'air_role': 'fighter', 'air_range_px': 400, 'air_attack_multiplier': 4}),
-        UnitFamily('Jet Bomber', roman_suffixes(3), {'health': linear(6000, 200), 'attack':  linear(1600, 200), 'defense':  linear(200, 20), 'speed': 1, 'cost_materials':  linear(6000, 500), 'cost_manpower': 500, 'cost_fuel': linear(160, 20), 'production_time': 6, 'production_group': 'Aerospace', 'air_role': 'bomber', 'air_range_px': 400, 'air_damages_forts': True}),
+        UnitFamily('Jet Fighter', roman_suffixes(16), {'health': linear(4000, 200), 'attack':  linear(1000, 100), 'defense':  linear(100, 20), 'speed': 1, 'cost_materials':  linear(5000, 200), 'cost_manpower': 500, 'cost_fuel': linear(160, 10), 'production_time': 4, 'production_group': 'Aerospace', 'air_role': 'fighter', 'air_range_px': 200, 'air_attack_multiplier': 4}),
+        UnitFamily('Jet Bomber', roman_suffixes(12), {'health': linear(6000, 200), 'attack':  linear(1600, 200), 'defense':  linear(200, 20), 'speed': 1, 'cost_materials':  linear(6000, 500), 'cost_manpower': 500, 'cost_fuel': linear(160, 20), 'production_time': 6, 'production_group': 'Aerospace', 'air_role': 'bomber', 'air_range_px': 300, 'air_damages_forts': True}),
     ],
 ]
 
@@ -555,6 +555,6 @@ RESEARCH_SECTIONS = [
         ('v2_rocket', {'category': 'AEROSPACE', 'display_name': 'V2 Rocket', 'max_lvl': 1, 'cost': 1200, 'req': {'v1_flying_bomb': 1}, 'years': [1945]}),
         ('jet_engine', {'category': 'AEROSPACE', 'display_name': 'Jet Engine', 'max_lvl': 1, 'cost': 1800, 'req': {}, 'years': [1945]}),
         ('jet_fighter', {'category': 'AEROSPACE', 'display_name': 'Jet Fighter', 'max_lvl': 16, 'cost': 2400, 'req': {'piston_fighter': 5, 'jet_engine': 1}, 'years': [1950, 1954, 1958, 1962, 1966, 1970, 1974, 1978, 1982, 1986, 1990, 1994, 1998, 2002, 2006, 2010]}),
-        ('jet_bomber', {'category': 'AEROSPACE', 'display_name': 'Jet Bomber', 'max_lvl': 3, 'cost': 2400, 'req': {'piston_bomber': 5, 'jet_fighter': 1}, 'years': years_range(1955, 5, 3)}),
+        ('jet_bomber', {'category': 'AEROSPACE', 'display_name': 'Jet Bomber', 'max_lvl': 12, 'cost': 2400, 'req': {'piston_bomber': 5, 'jet_fighter': 1}, 'years': years_range(1955, 5, 12)}),
     ],
 ]
