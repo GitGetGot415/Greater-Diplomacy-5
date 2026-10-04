@@ -95,8 +95,7 @@ screens/
         unit_events_screen.py shows the last turn's unit events in a sortable table.
         A country flag appears left of each unit name, using the event's recorded owner.
         The Details column and expanded view also show flags for identified units named in the event.
-        Damage received identifies hidden attackers but replaces their province number with ???.
-        Damage dealt keeps hidden targets as Unknown unit (tile ???) without a flag.
+        Damage received and damage dealt identify hidden units but replace their province number with ???.
         Long expanded details support scrolling.
         Click the yellow mail button beside the resource display to open it.
         Its badge shows the number of unread entries.

@@ -219,7 +219,7 @@ class UnitEventRulesTests(unittest.TestCase):
                 self.assertIn(f"Attacker (tile {expected})", entry["details"])
                 self.assertEqual(entry["tile_id"], 1)
 
-    def test_hidden_targets_stay_unknown_in_damage_dealt_reports(self):
+    def test_hidden_targets_are_identified_in_damage_dealt_reports_without_their_positions(self):
         game = fixture()
         game.scenario_settings["fog_of_war"] = True
         victim = unit(game, "A", name="Hidden target")
@@ -230,9 +230,12 @@ class UnitEventRulesTests(unittest.TestCase):
         game.player_country = "B"
         entry = unit_events.entries_for(game)[0]
         self.assertEqual(entry["event"], "DAMAGE_DEALT")
-        self.assertIn("Unknown unit (tile ???)", entry["details"])
-        self.assertNotIn("Hidden target", json.dumps(entry))
-        self.assertTrue(all("owner" not in part for part in entry["detail_parts"]))
+        self.assertIn("Hidden target (tile ???)", entry["details"])
+        self.assertNotIn("Unknown unit", json.dumps(game.unit_event_log))
+        self.assertEqual([part["owner"] for part in entry["detail_parts"] if "owner" in part], ["A"])
+        projected = queries.player_snapshot_projection(game, queries.build_save_dict(game), "B")
+        self.assertIn("Hidden target (tile ???)", json.dumps(projected["unit_event_log"]))
+        self.assertNotIn("tile 1", json.dumps(projected["unit_event_log"]))
 
     def test_air_strikes_record_incident_tile_and_expended_weapon(self):
         from tests.test_air_mechanics import world, tile, wing

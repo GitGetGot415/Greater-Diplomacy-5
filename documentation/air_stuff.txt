@@ -274,7 +274,7 @@ Damage received identifies attackers, including aircraft at hidden bases.
 Details show an attacker's base tile only when the viewer can see that unit.
 Otherwise, the base tile number shows ???.
 Country flags appear before identified unit names in the Details column and expanded view.
-Damage dealt keeps hidden targets as Unknown unit (tile ???) without a flag.
+Damage dealt also identifies hidden targets, with their province number shown as ???.
 
 Grounded aircraft destroyed by hostile troops also receive loss entries.
 An expended single-use weapon receives a Weapon expended entry.
