@@ -330,7 +330,7 @@ UNIT_SECTIONS = [
         UnitFamily('Monoplane Bomber', single(), {'health': 5000, 'attack': 1000, 'defense': 100, 'speed': 1, 'cost_materials': 4000, 'cost_manpower': 500, 'cost_fuel': 120, 'production_time': 4, 'production_group': 'Aerospace', 'air_role': 'bomber', 'air_range_px': 150, 'air_damages_forts': True}),
         UnitFamily('V1 Flying Bomb', single(), {'health': 1000, 'attack': 800, 'defense': 0, 'speed': 1, 'cost_materials': 1000, 'cost_manpower': 0, 'cost_fuel': 60, 'production_time': 2, 'production_group': 'Aerospace', 'air_role': 'strike', 'air_range_px': 200, 'air_consumable': True, 'air_damages_forts': True}),
         UnitFamily('V2 Rocket', single(), {'health': 2000, 'attack': 1200, 'defense': 0, 'speed': 1, 'cost_materials': 2000, 'cost_manpower': 0, 'cost_fuel': 80, 'production_time': 3, 'production_group': 'Aerospace', 'air_role': 'strike', 'air_range_px': 300, 'air_consumable': True, 'air_interception_immune': True, 'air_damages_forts': True}),
-        UnitFamily('Jet Fighter', single(), {'health': 6000, 'attack': 1000, 'defense': 200, 'speed': 1, 'cost_materials': 6000, 'cost_manpower': 500, 'cost_fuel': 160, 'production_time': 6, 'production_group': 'Aerospace', 'air_role': 'fighter', 'air_range_px': 200, 'air_attack_multiplier': 4, 'air_damages_forts': True}),
+        UnitFamily('Jet Fighter', single(), {'health': 6000, 'attack': 1500, 'defense': 200, 'speed': 1, 'cost_materials': 6000, 'cost_manpower': 500, 'cost_fuel': 160, 'production_time': 4, 'production_group': 'Aerospace', 'air_role': 'fighter', 'air_range_px': 200, 'air_attack_multiplier': 4, 'air_damages_forts': True}),
     ],
 ]
 
