@@ -158,9 +158,7 @@ class UnitViewFilterTests(unittest.TestCase):
                 self.assertTrue(all(not box["rect"].collidepoint(badge_center)
                                     for box in self.game.unit_hover_hitboxes))
 
-    def test_mission_badges_match_army_emblem_sizes_and_keep_opacity(self):
-        native = pygame.Surface((12, 12), pygame.SRCALPHA)
-        native.fill((255, 220, 0))
+    def test_mission_badges_keep_transparency_size_and_opacity(self):
         for mission in ("WEAKEST", "STRONGEST", "STRIKE", "MOVE"):
             for height, alpha in ((8, 255), (30, 100), (60, 255)):
                 with self.subTest(mission=mission, height=height, alpha=alpha):
@@ -168,12 +166,16 @@ class UnitViewFilterTests(unittest.TestCase):
                     box = pygame.Rect(10, 10, 20, height)
                     name = c.AIR_MISSION_ICONS[mission]
                     size = overlay_renderer._army_emblem_size(height)
+                    native = pygame.Surface((size, size), pygame.SRCALPHA)
+                    native.fill((255, 220, 0), native.get_rect().inflate(-4, -4))
                     with patch.object(symbol_loader, "get_symbol", return_value=native) as symbol:
                         overlay_renderer._draw_air_mission(surface, box, name, alpha)
                     symbol.assert_called_once_with(name, 1, style="classic",
                                                    fit_size=(size, size))
-                    badge_right = box.right + overlay_renderer.AIR_MISSION_GAP + size
-                    self.assertEqual(surface.get_at((badge_right - 2, box.centery)).a, alpha)
+                    badge_left = box.right + overlay_renderer.AIR_MISSION_GAP
+                    self.assertEqual(surface.get_at((badge_left + size // 2, box.centery)).a, alpha)
+                    self.assertEqual(surface.get_at((badge_left + size - 2, box.centery)).a, 0)
+                    self.assertEqual(native.get_alpha(), 255)
 
     def test_zoomed_out_markers_separate_domains_and_combine_air_missions(self):
         self.mission_units()

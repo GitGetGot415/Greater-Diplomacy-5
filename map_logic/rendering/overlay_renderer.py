@@ -1446,14 +1446,13 @@ def _mission_icon(stack_key):
 
 
 def _draw_air_mission(surface, box_rect, icon_name, alpha=255):
-    """Draw a mission badge with the same size rule as army emblems."""
+    """Draw a transparent mission image with the same size rule as army emblems."""
     if icon_name is None:
         return
     size = _army_emblem_size(box_rect.height)
     icon = symbol_loader.get_symbol(icon_name, 1, style="classic", fit_size=(size, size))
     def build():
         badge = pygame.Surface((size, size), pygame.SRCALPHA)
-        pygame.draw.rect(badge, (20, 27, 40), badge.get_rect(), border_radius=3)
         if icon is not None:
             badge.blit(icon, icon.get_rect(center=badge.get_rect().center))
         return badge
