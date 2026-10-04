@@ -1,0 +1,90 @@
+AI MOVEMENT AND UNIT ORDERS
+===========================
+
+AI means artificial intelligence. LLM means large language model.
+Unit orders use rule-based AI. They do not require an LLM.
+This guide covers movement planning, aircraft orders, attack checks, rotation, and temporary movement caches.
+See documentation/non_llm_ai.txt for unit valuation, purchasing, disbanding, shared combat rules, and player-mode permissions.
+See documentation/air_stuff.txt for the full aircraft rules.
+
+CODE LOCATIONS
+--------------
+
+map_logic/turn_processing/turn_processor.py
+    prepare_turn calls movement planning after AI research and construction.
+    Turn processors execute the resulting orders later.
+
+map_logic/ai/ai_movement.py
+    process_ai_unit_orders starts planning with a shared diplomacy snapshot.
+    _generate_unit_orders coordinates each country's planning pass.
+    _discover_borders_and_targets finds borders and potential targets.
+    _build_target_assignments records destination assignments and combat capacity.
+    _assign_unit_orders chooses orders for individual units.
+    _bfs_nearest_target selects a path using current assignments.
+    _assign_maintenance_orders plans repairs, upgrades, and movement to suitable provinces.
+    _assign_air_orders chooses aircraft missions and relocation.
+    legal_air_candidates obtains aircraft orders from shared legality helpers.
+    _rotate_damaged_units rotates damaged units in active battles.
+
+map_logic/turn_processing/combat_rules.py
+    Shared combat capacity and damage rules support movement estimates.
+
+data/queries.py
+    Shared movement and aircraft helpers define legal orders and paths.
+
+MOVEMENT CACHES
+---------------
+
+AI movement caches candidate paths during one country's order pass.
+It selects paths against current destination assignments and unit counts.
+Equivalent single attackers can share first-exchange survival estimates while defenders, terrain, and diplomacy remain unchanged.
+Discard these caches before the next country's pass or turn resolution.
+Sharing calculations must not cause countries to share decisions.
+
+These caches are temporary. They are not saved game fields.
+
+DESTINATION CAPACITY AND STANDING ORDERS
+----------------------------------------
+
+ai_movement._tile_pressure prefers tiles with available front and relief capacity.
+A tile with both ranks full sorts after every tile with room.
+Battle attraction decreases to zero as those ranks fill.
+combat_rules.nation_front_capacity calculates each country's capacity on each tile.
+Keep actual unit counts separate from weighted movement scores.
+
+DISBAND, CONVERT, and REPAIR orders survive the AI's next movement plan.
+
+ATTACK CHECKS, BOMBARDMENT, AND ROTATION
+----------------------------------------
+
+The AI bombards when a target is in range instead of moving artillery into melee.
+
+Before a charge, the AI estimates the first lane exchange.
+It skips a hostile occupied tile if every proposed attacker would be destroyed in that exchange.
+
+ai_movement._rotate_damaged_units rotates damaged AI units.
+
+AIRCRAFT ORDERS AND VISIBILITY
+------------------------------
+
+The aircraft AI generates only orders permitted by the shared rules.
+It strikes visible enemy targets and moves reusable aircraft to closer friendly land.
+Otherwise, it patrols with reusable aircraft.
+It moves V1/V2 along legal land routes at their ground speed.
+V1/V2 cannot patrol or fly between bases.
+
+The AI reads only visible enemy stacks.
+It leaves the tactical player's division under player control.
+
+MOVEMENT TUNING
+---------------
+
+Read current tuning values in data/constants.py.
+
+AI_ROTATE_HEALTH_FRACTION
+    Health threshold for replacing a damaged front unit with a healthier available unit.
+AI_REINFORCE_COMBAT_WEIGHT
+    Attraction to a battle. It decreases as the front and relief ranks fill.
+AI_REAR_GUARD_PENALTY
+    Reduces movement toward a quiet border after it has a guard.
+    Quiet-border guarding does not grow with combat width.

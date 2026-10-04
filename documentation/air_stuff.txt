@@ -175,6 +175,7 @@ On load, legacy aircraft Trucks unpack on land or become Convoys at sea.
 They retain identity and health fraction.
 The AI moves V1/V2 on land.
 It uses Convoys for reachable crossings when no land route is available.
+See documentation/ai_movement.txt for aircraft AI decisions.
 
 Old Truck conversion orders become Convoy orders on a coast and cancel inland.
 Keep normal land paths for V1/V2.

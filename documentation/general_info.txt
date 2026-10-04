@@ -19,6 +19,7 @@ data/
 documentation/
     Project guides and design notes.
     non_llm_ai.txt covers rule-based AI, combat, tactical play, spectators, and shared display rules.
+    ai_movement.txt covers AI unit orders, movement caches, aircraft missions, attack checks, rotation, and movement tuning.
     llm_ai.txt covers model settings, legal choices, prompts, summits, budgets, cancellation, and fairness.
     diplo_stuff.txt covers diplomacy rules and message timing.
     air_stuff.txt covers aircraft rules.

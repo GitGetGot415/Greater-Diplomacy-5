@@ -8,6 +8,7 @@ Rule-based AI supplies the candidates and checks their legality.
 The model cannot create an action that the rules forbid.
 
 See documentation/non_llm_ai.txt for planning, scoring, response-library text, combat, and player-mode rules.
+See documentation/ai_movement.txt for rule-based unit-order planning.
 That guide also covers shared action limits, personalities, commitments, and message categories.
 Without the model, the AI still works and does not hold model-based summits.
 See documentation/diplo_stuff.txt for diplomacy timing and effects.

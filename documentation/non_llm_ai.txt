@@ -11,7 +11,8 @@ The model selects from legal actions and writes messages.
 It cannot create an action that the rules forbid.
 See documentation/llm_ai.txt for model settings, decisions, prompts, and request control.
 
-This guide covers planning, valuation, combat, diplomacy, and shared player-mode rules.
+This guide covers valuation, research, combat, diplomacy, and shared player-mode rules.
+See documentation/ai_movement.txt for unit orders, movement caches, aircraft AI, and movement tuning.
 The combat and display rules also apply to human players where stated.
 See documentation/diplo_stuff.txt for diplomacy timing and effects.
 See documentation/air_stuff.txt for the full aircraft rules.
@@ -36,17 +37,13 @@ ai_candidates.py
     Legal action generation and ranking.
 ai_commitments.py
     Promises and the cost of breaking them.
-ai_construction.py, ai_movement.py, ai_research.py, ai_diplomacy.py
-    Production, movement, research, and proactive diplomacy.
+ai_construction.py, ai_research.py, ai_diplomacy.py
+    Production, research, and proactive diplomacy.
+ai_movement.py
+    Unit orders. See documentation/ai_movement.txt.
 
-RULE-BASED PLANNING AND CACHES
-----------------------------
-
-AI movement caches candidate paths during one country's order pass.
-It selects paths against current destination assignments and unit counts.
-Equivalent single attackers can share first-exchange survival estimates while defenders, terrain, and diplomacy remain unchanged.
-Discard these caches before the next country's pass or turn resolution.
-Sharing calculations must not cause countries to share decisions.
+RESEARCH INDEXES
+----------------
 
 data/queries.py indexes unit research requirements and family tiers.
 Production and AI use the same unlock checks.
@@ -54,7 +51,7 @@ New research levels reuse the index without parsing the unit library again.
 Invalidate it after library-name edits, research-year changes, gate changes, obsolescence changes, or JSON refreshes.
 This includes changes made in place.
 
-These indexes and caches are temporary. They are not saved game fields.
+These indexes are temporary. They are not saved game fields.
 
 AIRCRAFT
 --------
@@ -103,12 +100,7 @@ air_damages_forts defines fort damage capability in unit data.
 Bombers, Zeppelin, V1 Flying Bomb, V2 Rocket, and Jet Fighters have this capability.
 Research details show it.
 Player and AI orders use the same turn processor.
-
-The aircraft AI generates only orders permitted by the shared rules.
-It strikes visible enemy targets and moves reusable aircraft to closer friendly land.
-Otherwise, it patrols with reusable aircraft.
-It moves V1/V2 along legal land routes at their ground speed.
-V1/V2 cannot patrol or fly between bases.
+See documentation/ai_movement.txt for aircraft AI decisions.
 
 Aircraft can load into Convoys at a coast and unload on land.
 Transport preserves their health fraction and original stats.
@@ -118,8 +110,6 @@ UI and AI estimates use the same casualty rule.
 
 On load, old aircraft Trucks unpack on land or become Convoys at sea.
 Old Truck conversion orders become Convoy orders on a coast and cancel inland.
-The AI reads only visible enemy stacks.
-It leaves the tactical player's division under player control.
 Production values aerospace as the AIR role, including the shared fighter-versus-air bonus.
 
 Research uses the existing ahead-of-time penalty, including aerospace.
@@ -182,6 +172,7 @@ TUNING
 
 Shared tuning values are in data/constants.py.
 Read their current values there.
+See documentation/ai_movement.txt for movement-specific tuning.
 
 AI_WAR_DESIRE_THRESHOLD
     Minimum war desire for a declaration.
@@ -192,8 +183,6 @@ AI_W_SOAK
     Reserves do not absorb the current volley.
 AI_RESERVE_DEPTH
     Number of ranks worth filling.
-AI_ROTATE_HEALTH_FRACTION
-    Health threshold for replacing a damaged front unit with a healthier available unit.
 AI_TECH_ECONOMY_WEIGHT
     Research balance between industry and military needs.
 AI_BUILDING_PAYBACK_TURNS
@@ -224,11 +213,6 @@ MIN_LANE_SLOTS_PER_SIDE
 LANE_SLOTS_TYPICAL
     Default per-side slots for general purchase and research estimates.
     Movement, border strength, and enemy-front estimates use the actual terrain width.
-AI_REINFORCE_COMBAT_WEIGHT
-    Attraction to a battle. It decreases as the front and relief ranks fill.
-AI_REAR_GUARD_PENALTY
-    Reduces movement toward a quiet border after it has a guard.
-    Quiet-border guarding does not grow with combat width.
 
 AI PERSONALITY
 --------------
@@ -304,27 +288,15 @@ Movement clears both lane orders.
 
 Reserves neither fire nor take ordinary lane damage.
 They recover morale while front units fight.
-ai_movement._rotate_damaged_units rotates damaged AI units.
 Players can rotate units through the Battle screen.
+See documentation/ai_movement.txt for AI rotation, bombardment, and attack checks.
 
 Bombardment is free and receives no return fire.
 It is outside the lane system and can hit reserves.
 A bombarding unit can still fight on its own tile.
-The AI bombards when a target is in range instead of moving artillery into melee.
 
-Before a charge, the AI estimates the first lane exchange.
-It skips a hostile occupied tile if every proposed attacker would be destroyed in that exchange.
-
-MOVEMENT, DISBANDING, AND FUEL
------------------------------
-
-ai_movement._tile_pressure prefers tiles with available front and relief capacity.
-A tile with both ranks full sorts after every tile with room.
-Battle attraction decreases to zero as those ranks fill.
-combat_rules.nation_front_capacity calculates each country's capacity on each tile.
-Keep actual unit counts separate from weighted movement scores.
-
-DISBAND, CONVERT, and REPAIR orders survive the AI's next movement plan.
+DISBANDING AND FUEL
+------------------
 
 Disbanding is a last resort.
 Do not disband units in combat, beside an enemy, or of a type currently being produced.

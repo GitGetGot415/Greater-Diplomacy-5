@@ -13,6 +13,7 @@ A change is complete only when all affected game modes, state transitions, UI co
    Preserve unrelated user changes. Do not discard work to get a clean tree.
 3. Read the relevant design notes:
    - `documentation/non_llm_ai.txt`: rule-based AI, combat, tactical play, and spectators.
+   - `documentation/ai_movement.txt`: AI unit orders, movement caches, aircraft missions, and movement tuning.
    - `documentation/llm_ai.txt`: large language models (LLMs), prompts, budgets, cancellation, and fairness.
    - `documentation/diplo_stuff.txt`: diplomacy, messages, guarantees, volunteers, attach?s, factions, war, and peace.
    - `documentation/other/context_prompts.txt`: maintenance preferences.
@@ -270,6 +271,7 @@ Add or update tests for changed tutorial behavior.
 
 Update affected documentation, comments, examples, tests, schemas, and UI text with the implementation.
 Keep `documentation/non_llm_ai.txt`, `documentation/llm_ai.txt`, and `documentation/diplo_stuff.txt` consistent with the rules.
+Keep `documentation/ai_movement.txt` consistent with AI unit-order planning.
 Update every description or preview of changed player behavior.
 
 At handoff, state the behavior change and verification results.
