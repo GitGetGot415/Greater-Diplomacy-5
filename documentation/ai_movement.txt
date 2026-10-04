@@ -69,6 +69,8 @@ AIRCRAFT ORDERS AND VISIBILITY
 ------------------------------
 
 The aircraft AI generates only orders permitted by the shared rules.
+At an industry building, it upgrades numbered aircraft to the highest researched level in their current family.
+It does not upgrade the tactical player's division, aircraft in combat, or aircraft at threatened bases.
 Player move-order clicks require cancellation of active missions before new movement.
 The AI still selects replacement missions during its normal planning pass.
 It compares strikes with defense against visible enemy aircraft.

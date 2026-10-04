@@ -84,6 +84,13 @@ def process_upgrades(map_screen):
         for unit in province["units"]:
             order = unit.get("order")
             if isinstance(order, dict) and order.get("type") == "UPGRADE":
+                if queries.is_air_unit(unit):
+                    # Aircraft upgrades must retain their family at resolution.
+                    try:
+                        queries.canonical_unit_order(map_screen, unit["owner"], province, unit, order)
+                    except ValueError:
+                        unit["order"] = {"type": "MOVE", "path": []}
+                        continue
                 if not has_factory or queries.get_unit_tier(unit.get("type", "")) <= 0:
                     unit["order"] = {"type": "MOVE", "path": []}
                     continue

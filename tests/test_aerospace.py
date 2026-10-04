@@ -24,28 +24,89 @@ from tests import test_tournament_moves as tournament_harness
 
 # These dates and links are the requested content, rather than balance values.
 REQUESTED_TREE = {
-    "biplane": (1910, {}, "Biplane Fighter"),
-    "biplane_bomber": (1915, {"biplane": 1}, "Biplane Bomber"),
-    "zeppelin": (1915, {"biplane": 1}, "Zeppelin"),
-    "piston_fighter": (1930, {"biplane_bomber": 1}, "Monoplane Fighter"),
-    "piston_bomber": (1935, {"piston_fighter": 1}, "Monoplane Bomber"),
+    "biplane": (1910, {}, "Biplane Fighter I"),
+    "biplane_bomber": (1914, {"biplane": 1}, "Biplane Bomber I"),
+    "zeppelin": (1910, {"biplane": 1}, "Zeppelin"),
+    "piston_fighter": (1930, {"biplane": 5}, "Monoplane Fighter I"),
+    "piston_bomber": (1933, {"biplane_bomber": 5}, "Monoplane Bomber I"),
     "v1_flying_bomb": (1940, {"piston_bomber": 1}, "V1 Flying Bomb"),
     "v2_rocket": (1945, {"v1_flying_bomb": 1}, "V2 Rocket"),
-    "jet_engine": (1945, {"piston_bomber": 1}, "Jet Engine"),
-    "jet_fighter": (1950, {"jet_engine": 1}, "Jet Fighter"),
+    "jet_engine": (1945, {"piston_fighter": 5}, "Jet Engine"),
+    "jet_fighter": (1950, {"jet_engine": 1}, "Jet Fighter I"),
+}
+
+REQUESTED_LEVEL_YEARS = {
+    "biplane": [1910, 1914, 1918, 1922, 1926],
+    "biplane_bomber": [1914, 1918, 1922, 1926, 1930],
+    "piston_fighter": [1930, 1933, 1936, 1939, 1942],
+    "piston_bomber": [1933, 1936, 1939, 1942, 1945],
+    "jet_fighter": [1950, 1954, 1958, 1962, 1966, 1970],
 }
 
 def aircraft_replacement_cases():
     """Derive replacement cases from the canonical rules and unit library."""
     library = queries.get_unit_library()
-    aircraft_by_tech = {queries.get_unit_tech_key(name): name
-                        for name, stats in library.items() if stats.get("air_role")}
+    aircraft_by_tech = {queries.get_unit_tech_key(queries.get_base_unit_name(name)): name
+                        for name, stats in library.items() if stats.get("air_role")
+                        and queries.get_unit_tier(name) <= 1}
     return [(obsolete, aircraft_by_tech[tech], tech)
             for obsolete in aircraft_by_tech.values()
-            for tech in c.OBSOLESCENCE_RULES.get(obsolete, [])]
+            for tech in c.OBSOLESCENCE_RULES.get(queries.get_base_unit_name(obsolete), [])]
 
 
 class AerospaceRulesTests(unittest.TestCase):
+    def test_each_aircraft_level_unlocks_the_same_stats_for_players_and_ai(self):
+        library = queries.get_unit_library()
+        tree = queries.get_tech_tree()
+        for tech, years in REQUESTED_LEVEL_YEARS.items():
+            base = tree[tech]["display_name"]
+            first = library[f"{base} I"]
+            for level in range(1, len(years) + 1):
+                name = f"{base} {c.ROMAN_NUMERALS[level]}"
+                with self.subTest(unit=name):
+                    self.assertEqual(library[name], first)
+                    self.assertEqual(queries.get_unit_research_requirement(name), (tech, level))
+                    before = {tech: level - 1}
+                    after = {tech: level}
+                    self.assertFalse(queries.is_unit_unlocked(name, before))
+                    self.assertTrue(queries.is_unit_unlocked(name, after))
+                    self.assertEqual(ai_tech_eval.units_unlocked_by(tech, before, library), (name,))
+                    self.assertIn(name, ai_unit_eval.buildable_units(after, library))
+                    self.assertTrue(set(queries.get_air_unit_traits(name)).issubset(
+                        queries.get_tech_unlocks(tech, level)))
+                    self.assertIsNone(queries.get_upgrade_target(name, after, library, tree))
+                    if level > 1:
+                        self.assertEqual(queries.get_upgrade_target(f"{base} I", after, library, tree), name)
+
+    def test_monoplane_and_jet_gates_require_all_previous_family_levels(self):
+        tree = queries.get_tech_tree()
+        for tech, prerequisite in (("piston_fighter", "biplane"),
+                                   ("piston_bomber", "biplane_bomber"),
+                                   ("jet_engine", "piston_fighter")):
+            for level in range(5):
+                with self.subTest(tech=tech, level=level):
+                    self.assertFalse(queries.check_tech_requirements({prerequisite: level}, tree[tech]["req"]))
+            self.assertTrue(queries.check_tech_requirements({prerequisite: 5}, tree[tech]["req"]))
+
+    def test_legacy_production_choices_and_upgrade_targets_migrate_once(self):
+        province = {"units": [{"type": "Biplane Fighter", "unit_id": "old-wing",
+                               "order": {"type": "UPGRADE", "target_type": "Biplane Fighter"}}]}
+        country = {"research": {"biplane": 1}, "research_progress": {"biplane": 123},
+                   "custom_production_units": ["Biplane Fighter", "Zeppelin"]}
+        queries.migrate_aircraft_names({1: province}, {"A": country})
+        self.assertEqual(province["units"][0]["type"], "Biplane Fighter I")
+        self.assertEqual(province["units"][0]["order"]["target_type"], "Biplane Fighter I")
+        self.assertEqual(country["custom_production_units"], ["Biplane Fighter I", "Zeppelin"])
+        self.assertEqual(country["research"], {"biplane": 1})
+        self.assertEqual(country["research_progress"], {"biplane": 123})
+        expected = copy.deepcopy((province, country))
+        queries.migrate_aircraft_names({1: province}, {"A": country})
+        self.assertEqual((province, country), expected)
+        for old, new in queries.LEGACY_AIRCRAFT_NAMES.items():
+            unit = queries.create_unit_dict(old, "A", queries.get_unit_library())
+            self.assertEqual(unit["type"], new)
+            self.assertEqual(unit["health"], queries.get_unit_library()[new]["health"])
+
     def test_requested_fort_damage_capabilities_survive_data_generation(self):
         from data.generators.generate_data import build_unit_data_text
         # This eligibility list is the user's requested gameplay contract,
@@ -58,12 +119,12 @@ class AerospaceRulesTests(unittest.TestCase):
             if not stats.get("air_role"):
                 continue
             with self.subTest(unit=name):
-                expected = name in capable
+                expected = queries.get_base_unit_name(name) in capable
                 self.assertEqual(queries.air_unit_can_damage_forts({"type": name}), expected)
                 self.assertEqual(bool(generated[name].get("air_damages_forts", False)), expected)
 
     def test_fort_damage_notes_follow_capability_changes(self):
-        stats = dict(queries.get_unit_library()["Monoplane Fighter"])
+        stats = dict(queries.get_unit_library()["Monoplane Fighter I"])
         with mock.patch.object(queries, "get_unit_library", return_value={"Test Fighter": stats}):
             incapable = queries.get_air_unit_traits("Test Fighter")
             self.assertFalse(queries.air_unit_can_damage_forts({"type": "Test Fighter"}))
@@ -74,9 +135,9 @@ class AerospaceRulesTests(unittest.TestCase):
         self.assertEqual(sum(a != b for a, b in zip(incapable, capable)), 1)
 
     def test_fort_damage_uses_current_type_not_unit_or_saved_transport_fields(self):
-        bomber = {"type": "Monoplane Bomber"}
+        bomber = {"type": "Monoplane Bomber I"}
         self.assertTrue(queries.air_unit_can_damage_forts(bomber))
-        fighter = {"type": "Monoplane Fighter", "air_damages_forts": True}
+        fighter = {"type": "Monoplane Fighter I", "air_damages_forts": True}
         self.assertFalse(queries.air_unit_can_damage_forts(fighter))
         queries.load_transport(bomber, "Convoy")
         bomber["air_damages_forts"] = True
@@ -90,11 +151,11 @@ class AerospaceRulesTests(unittest.TestCase):
         self.assertTrue(cases)
         for obsolete, replacement, tech in cases:
             with self.subTest(unit=obsolete):
-                research = {queries.get_unit_tech_key(obsolete): 1, tech: 0}
-                self.assertFalse(queries.is_unit_obsolete(obsolete, research))
+                research = {queries.get_unit_research_requirement(obsolete)[0]: 1, tech: 0}
+                self.assertFalse(queries.is_unit_obsolete(queries.get_base_unit_name(obsolete), research))
                 self.assertIn(obsolete, ai_unit_eval.buildable_units(research, library))
                 research[tech] = 1
-                self.assertTrue(queries.is_unit_obsolete(obsolete, research))
+                self.assertTrue(queries.is_unit_obsolete(queries.get_base_unit_name(obsolete), research))
                 self.assertNotIn(obsolete, ai_unit_eval.buildable_units(research, library))
                 self.assertIn(replacement, ai_unit_eval.buildable_units(research, library))
                 # Obsolescence filters the default list, not custom build legality.
@@ -112,8 +173,8 @@ class AerospaceRulesTests(unittest.TestCase):
         self.assertEqual([item["unit_type"] for item in province["unit_queue"]],
                          list(queries.LEGACY_AIRCRAFT_NAMES.values()))
         self.assertEqual(province["units"][-1],
-                         {"type": "Truck (Monoplane Bomber)",
-                          "original_type": "Monoplane Bomber", "health": 17})
+                         {"type": "Truck (Monoplane Bomber I)",
+                          "original_type": "Monoplane Bomber I", "health": 17})
         expected = copy.deepcopy(province)
         queries.migrate_aircraft_names({1: province})
         self.assertEqual(province, expected)
@@ -137,7 +198,7 @@ class AerospaceRulesTests(unittest.TestCase):
                 self.assertTrue(set(traits).issubset(queries.get_tech_unlocks(key, 1)))
 
     def test_air_notes_follow_changed_range_bonus_and_interception_data(self):
-        stats = dict(queries.get_unit_library()["Monoplane Fighter"], air_range_px=333,
+        stats = dict(queries.get_unit_library()["Monoplane Fighter I"], air_range_px=333,
                      air_attack_multiplier=11)
         with mock.patch.object(queries, "get_unit_library", return_value={"Test Fighter": stats}):
             traits = queries.get_air_unit_traits("Test Fighter")
@@ -158,9 +219,11 @@ class AerospaceRulesTests(unittest.TestCase):
         for key, (year, requirements, name) in REQUESTED_TREE.items():
             with self.subTest(tech=key):
                 self.assertEqual(tree[key]["category"], "AEROSPACE")
-                self.assertEqual(tree[key]["years"], [year])
+                years = REQUESTED_LEVEL_YEARS.get(key, [year])
+                self.assertEqual(tree[key]["years"], years)
+                self.assertEqual(tree[key]["max_lvl"], len(years))
                 self.assertEqual(tree[key]["req"], requirements)
-                self.assertEqual(tree[key]["display_name"], name)
+                self.assertEqual(tree[key]["display_name"], queries.get_base_unit_name(name))
                 self.assertTrue(queries.check_tech_requirements(requirements, tree[key]["req"]))
                 if requirements:
                     self.assertFalse(queries.check_tech_requirements({}, tree[key]["req"]))
@@ -188,10 +251,11 @@ class AerospaceRulesTests(unittest.TestCase):
 
     def test_exact_units_and_families_have_the_same_category(self):
         library = queries.get_unit_library()
-        expected = [name for key, (_, _, name) in REQUESTED_TREE.items() if key != "jet_engine"]
+        expected = [name for name, stats in library.items() if stats.get("air_role")]
         for by_family in (True, False):
             groups = queries.get_grouped_units(library, by_family=by_family)
-            self.assertCountEqual(groups[queries.UNIT_GROUP_AEROSPACE], expected)
+            entries = set(map(queries.get_base_unit_name, expected)) if by_family else expected
+            self.assertCountEqual(groups[queries.UNIT_GROUP_AEROSPACE], entries)
             self.assertFalse(set(expected).intersection(groups[queries.UNIT_GROUP_INFANTRY]))
 
     def test_research_completion_unlocks_production(self):
@@ -203,7 +267,7 @@ class AerospaceRulesTests(unittest.TestCase):
         with mock.patch("map_logic.politics.research_multiplier", return_value=1):
             process_national_research(map_ref)
         self.assertEqual(country["research_queue"], [])
-        self.assertTrue(queries.is_unit_unlocked("Biplane Fighter", country["research"]))
+        self.assertTrue(queries.is_unit_unlocked("Biplane Fighter I", country["research"]))
 
     def test_existing_save_shape_preserves_techs_progress_and_unit_queue(self):
         map_ref = sample_map_screen()
@@ -212,18 +276,18 @@ class AerospaceRulesTests(unittest.TestCase):
                        research_queue=[{"tech_name": "jet_fighter", "points_remaining": 50}],
                        research_progress={"jet_engine": 75})
         province = next(iter(map_ref.map_data.values()))
-        province["unit_queue"] = [{"unit_type": "Biplane Fighter", "turns_remaining": 1}]
+        province["unit_queue"] = [{"unit_type": "Biplane Fighter I", "turns_remaining": 1}]
         saved = json.loads(json.dumps(queries.build_save_dict(map_ref)))
         self.assertEqual(saved["nation_data"]["Avaria"], country)
         self.assertEqual(saved["provinces"]["(7, 0, 0)"]["unit_queue"], province["unit_queue"])
         # Old saves use a sparse research dictionary: missing new keys are locked.
-        self.assertFalse(queries.is_unit_unlocked("Biplane Fighter", {"infantry_type": 1}))
+        self.assertFalse(queries.is_unit_unlocked("Biplane Fighter I", {"infantry_type": 1}))
         self.assertTrue(set(REQUESTED_TREE).issubset(queries.get_time_appropriate_research(c.START_YEAR)))
 
     def test_icons_are_real_png_files(self):
         for key, (_, _, name) in REQUESTED_TREE.items():
             folder = "images" if key == "jet_engine" else "classic"
-            path = Path(c.ASSETS_ROOT_DIR) / folder / f"{name}.png"
+            path = Path(c.ASSETS_ROOT_DIR) / folder / f"{queries.get_base_unit_name(name)}.png"
             with self.subTest(icon=path):
                 self.assertEqual(path.read_bytes()[:8], b"\x89PNG\r\n\x1a\n")
 
@@ -238,6 +302,34 @@ class AerospaceRealtimeTests(unittest.TestCase):
                                    nation_data={"A": country}, scenario_settings={})
         self.driver = MapRealtimeDriver(self.map)
 
+    def test_level_five_gates_use_authoritative_research(self):
+        for tech, prerequisite in (("piston_fighter", "biplane"),
+                                   ("piston_bomber", "biplane_bomber"),
+                                   ("jet_engine", "piston_fighter")):
+            command = {"type": "research_queue", "tech_names": [tech]}
+            self.map.nation_data["A"]["research"] = {prerequisite: 4}
+            with self.subTest(tech=tech), self.assertRaises(RealtimeError):
+                self.driver.validate_draft("A", [command])
+            self.map.nation_data["A"]["research"] = {prerequisite: 5}
+            project = self.driver.validate_draft("A", [command])[0]["projects"][0]
+            self.assertEqual(project["tech_name"], tech)
+            self.assertEqual(project["points_remaining"], queries.get_tech_tree()[tech]["cost"])
+
+    def test_every_aircraft_tier_uses_server_research_and_production_stats(self):
+        for tech, years in REQUESTED_LEVEL_YEARS.items():
+            base = queries.get_tech_tree()[tech]["display_name"]
+            for level in range(1, len(years) + 1):
+                name = f"{base} {c.ROMAN_NUMERALS[level]}"
+                command = {"type": "province_queue", "province_id": 1, "queue": "unit_queue",
+                           "items": [{"unit_type": name, "turns_remaining": 0}]}
+                with self.subTest(unit=name):
+                    self.map.nation_data["A"]["research"] = {tech: level - 1}
+                    with self.assertRaises(RealtimeError):
+                        self.driver.validate_draft("A", [command])
+                    self.map.nation_data["A"]["research"] = {tech: level}
+                    item = self.driver.validate_draft("A", [command])[0]["items"][0]
+                    self.assertEqual(item["turns_remaining"], queries.get_unit_library()[name]["production_time"])
+
     def test_research_requires_prerequisites_and_keeps_server_costs(self):
         command = {"type": "research_queue", "tech_names": ["jet_fighter"]}
         with self.assertRaises(RealtimeError):
@@ -251,7 +343,7 @@ class AerospaceRealtimeTests(unittest.TestCase):
                 self.driver.validate_draft("A", [{"type": "research_queue", "tech_names": names}])
 
     def test_new_bomber_research_is_authoritative(self):
-        for tech_key, unit_name in (("biplane_bomber", "Biplane Bomber"), ("zeppelin", "Zeppelin")):
+        for tech_key, unit_name in (("biplane_bomber", "Biplane Bomber I"), ("zeppelin", "Zeppelin")):
             self.setUp()
             command = {"type": "research_queue", "tech_names": [tech_key]}
             with self.assertRaises(RealtimeError):
@@ -263,7 +355,7 @@ class AerospaceRealtimeTests(unittest.TestCase):
                              queries.get_tech_tree()[tech_key]["cost"])
 
     def test_unit_orders_need_research_and_ownership_and_use_server_stats(self):
-        for tech_key, unit_name in (("biplane_bomber", "Biplane Bomber"), ("zeppelin", "Zeppelin")):
+        for tech_key, unit_name in (("biplane_bomber", "Biplane Bomber I"), ("zeppelin", "Zeppelin")):
             self.setUp()
             command = {"type": "province_queue", "province_id": 1, "queue": "unit_queue",
                        "items": [{"unit_type": unit_name, "turns_remaining": 0, "refund": {}}]}
@@ -280,7 +372,7 @@ class AerospaceRealtimeTests(unittest.TestCase):
                 self.driver.validate_draft("A", [command])
 
     def test_tournament_import_preserves_aerospace_in_existing_move_fields(self):
-        for tech_key, unit_name in (("biplane_bomber", "Biplane Bomber"), ("zeppelin", "Zeppelin")):
+        for tech_key, unit_name in (("biplane_bomber", "Biplane Bomber I"), ("zeppelin", "Zeppelin")):
             self.setUp()
             harness = tournament_harness.TournamentMoveTests()
             host = tournament_harness.Host()
@@ -327,8 +419,8 @@ class AerospaceScreenTests(unittest.TestCase):
     def test_research_category_order_and_header_containment(self):
         self.research.start_research(self.map)
         categories = self.research.categories
-        self.assertLess(categories.index("NAVY"), categories.index("AEROSPACE"))
-        self.assertLess(categories.index("AEROSPACE"), categories.index("INDUSTRY"))
+        expected_order = list(dict.fromkeys(data["category"] for data in queries.get_tech_tree().values()))
+        self.assertEqual(categories, expected_order + ["COMPLETED"])
         buttons = [el for el in self.research.elements if getattr(el, "text", None) in categories]
         bounds = pygame.Rect(0, 0, c.SCREEN_WIDTH, c.SCREEN_HEIGHT)
         for button in buttons:
@@ -367,6 +459,25 @@ class AerospaceScreenTests(unittest.TestCase):
                     self.research.draw(self.surface)
         self.research.close_modal()
 
+    def test_aircraft_timeline_levels_have_icons_and_do_not_overlap(self):
+        self.research.start_research(self.map)
+        self.research.set_category("AEROSPACE")
+        buttons = [element for element in self.research.elements if getattr(element, "is_tech_node", False)]
+        expected = {(tech, level) for tech, data in self.research.tech_tree.items()
+                    if data["category"] == "AEROSPACE" for level in range(1, data["max_lvl"] + 1)}
+        self.assertEqual({(node["key"], node["lvl"]) for node in self.research.nodes["AEROSPACE"]}, expected)
+        self.assertEqual(len(buttons), len(expected))
+        for button in buttons:
+            self.assertIsNotNone(button.image)
+        for index, first in enumerate(buttons):
+            for second in buttons[index + 1:]:
+                self.assertFalse(first.rect.colliderect(second.rect), (first.text, second.text))
+        for tech, level in expected:
+            base = self.research.tech_tree[tech].get("display_name", "")
+            name = f"{base} {c.ROMAN_NUMERALS[level]}" if tech in REQUESTED_LEVEL_YEARS else base
+            self.assertEqual(self.research.get_display_name(tech, level), name)
+            self.assertEqual(self.research.tech_year(tech, level), self.research.tech_tree[tech]["years"][level - 1])
+
     def test_aerospace_rows_are_red_and_recruitment_is_in_general_buildings(self):
         from screens.map_related_screens.production import SECTION_PANELS
         self.production.start_with_province(self.province, self.map)
@@ -383,7 +494,7 @@ class AerospaceScreenTests(unittest.TestCase):
                 self.assertTrue(self.production.other_start_y <= y < self.production.other_end_y)
         expected = [name for key, (_, _, name) in REQUESTED_TREE.items()
                     if key != "jet_engine" and not queries.is_unit_obsolete(
-                        name, self.map.nation_data[self.country]["research"])]
+                        queries.get_base_unit_name(name), self.map.nation_data[self.country]["research"])]
         self.assertEqual(aerospace_rows, len(expected))
         self.assertEqual(recruitment_rows, 1)
         self.assertNotIn("recruit", [prefix for prefix, *_ in SECTION_PANELS])
@@ -396,7 +507,7 @@ class AerospaceScreenTests(unittest.TestCase):
         self.assertTrue(cases)
         for obsolete, replacement, tech in cases:
             with self.subTest(unit=obsolete):
-                country["research"] = {queries.get_unit_tech_key(obsolete): 1,
+                country["research"] = {queries.get_unit_research_requirement(obsolete)[0]: 1,
                                        tech: 0}
                 country["custom_production_units"] = [obsolete]
                 self.production.start_with_province(self.province, self.map)
@@ -453,7 +564,7 @@ class AerospaceScreenTests(unittest.TestCase):
                         for key, value in changes.items():
                             if key != "research":
                                 stack.enter_context(mock.patch.object(self.map, key, value))
-                        self.production.buy_unit("Biplane Fighter")
+                        self.production.buy_unit("Biplane Fighter I")
             self.assertEqual(self.province["unit_queue"], [])
-        self.production.buy_unit("Biplane Fighter")
-        self.assertEqual(self.province["unit_queue"][0]["unit_type"], "Biplane Fighter")
+        self.production.buy_unit("Biplane Fighter I")
+        self.assertEqual(self.province["unit_queue"][0]["unit_type"], "Biplane Fighter I")

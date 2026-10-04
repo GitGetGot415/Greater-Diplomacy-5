@@ -59,7 +59,10 @@ AIRCRAFT
 Aerospace is a separate research and production category.
 air_role and air_range_px in unit_data.json define flight.
 production_group and land movement speed do not define flight.
-Jet Engine remains a research requirement.
+Monoplane families require level V of their matching biplane family.
+Jet Engine requires Monoplane Fighter V. Jet Fighter research requires Jet Engine.
+Numbered aircraft levels use the shared research, production, and upgrade rules.
+Higher levels currently retain their family's level I stats and costs.
 
 Every reusable aircraft can patrol and strike, including bombers and Zeppelin.
 V1 Flying Bomb and V2 Rocket are consumed after a completed strike.

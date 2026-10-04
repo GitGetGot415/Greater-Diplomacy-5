@@ -179,7 +179,7 @@ class UnitEventRulesTests(unittest.TestCase):
     def test_grounded_air_loss_has_sources_and_destroyed_entry(self):
         game = fixture()
         plane = unit(game, "A")
-        plane["type"] = "Monoplane Bomber"
+        plane["type"] = "Monoplane Bomber I"
         unit(game, "B", name="Ground attacker")
         with unit_events.record_turn(game):
             unit_events.run_step(game, "Ground combat", combat_processor.process_combat)
@@ -281,7 +281,7 @@ class UnitEventRulesTests(unittest.TestCase):
         game.scenario_settings["fog_of_war"] = True
         base = tile(game, 1, 8)
         target = tile(game, 2, 25, owner="B")
-        attacker = wing(base, "Monoplane Bomber", order={"type": "AIR_ATTACK", "target_id": target["id"]})
+        attacker = wing(base, "Monoplane Bomber I", order={"type": "AIR_ATTACK", "target_id": target["id"]})
         wing(target, "Infantry", owner="B")
         with patch.object(queries, "get_visible_provinces", return_value=({target["id"]}, set())):
             with unit_events.record_turn(game):

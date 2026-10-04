@@ -1558,8 +1558,8 @@ def get_highest_infantry(nation_data_block, tech_tree, unit_library, allow_fuel_
 
 def get_upgrade_target(unit_type, player_research, unit_library, tech_tree):
     """Return an unlocked higher level within the current numbered unit family."""
-    # Upgrades stay within a numbered family. Named aircraft research unlocks
-    # production, not a conversion between aircraft designs.
+    # Upgrades stay within a numbered family, including numbered aircraft.
+    # Research does not permit conversion between aircraft designs.
     if get_unit_tier(unit_type) <= 0:
         return None
     base_name = get_base_unit_name(unit_type)
@@ -2294,6 +2294,9 @@ def get_minimum_tank_count(material_income):
 
 def create_unit_dict(unit_type, owner, unit_library):
     """Generates a standard base unit dictionary to avoid redundant stat parsing."""
+    # Old scripted Spawn Unit actions can retain an unnumbered aircraft name.
+    if unit_type not in unit_library:
+        unit_type = LEGACY_AIRCRAFT_NAMES.get(unit_type, unit_type)
     stats = unit_library.get(unit_type, {})
     hp = stats.get("health", c.DEFAULT_UNIT_HP)
     return {
@@ -4489,14 +4492,19 @@ def ground_combat_profile(unit):
 
 
 LEGACY_AIRCRAFT_NAMES = {
-    "Biplane": "Biplane Fighter",
-    "Piston Fighter": "Monoplane Fighter",
-    "Piston Bomber": "Monoplane Bomber",
+    "Biplane": "Biplane Fighter I",
+    "Piston Fighter": "Monoplane Fighter I",
+    "Piston Bomber": "Monoplane Bomber I",
+    "Biplane Fighter": "Biplane Fighter I",
+    "Biplane Bomber": "Biplane Bomber I",
+    "Monoplane Fighter": "Monoplane Fighter I",
+    "Monoplane Bomber": "Monoplane Bomber I",
+    "Jet Fighter": "Jet Fighter I",
 }
 
 
-def migrate_aircraft_names(map_data):
-    """Preserve old saved aircraft, transports and unfinished production."""
+def migrate_aircraft_names(map_data, nation_data=None):
+    """Preserve old aircraft, transports, production choices, and upgrade orders."""
     for province in map_data.values():
         for unit in province.get("units", []):
             for field in ("type", "original_type"):
@@ -4510,10 +4518,18 @@ def migrate_aircraft_names(map_data):
                             inner = name[len(prefix):-1]
                             if inner in LEGACY_AIRCRAFT_NAMES:
                                 unit[field] = prefix + LEGACY_AIRCRAFT_NAMES[inner] + ")"
+            order = unit.get("order") or {}
+            target = order.get("target_type")
+            if target in LEGACY_AIRCRAFT_NAMES:
+                order["target_type"] = LEGACY_AIRCRAFT_NAMES[target]
         for item in province.get("unit_queue", []):
             name = item.get("unit_type")
             if name in LEGACY_AIRCRAFT_NAMES:
                 item["unit_type"] = LEGACY_AIRCRAFT_NAMES[name]
+    for country in (nation_data or {}).values():
+        if "custom_production_units" in country:
+            country["custom_production_units"] = [
+                LEGACY_AIRCRAFT_NAMES.get(name, name) for name in country["custom_production_units"]]
 
 
 def migrate_aircraft_stats(map_data):

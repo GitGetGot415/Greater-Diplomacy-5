@@ -266,9 +266,9 @@ class Research_Screen(GameState):
             "battleship": y2,
             "aircraft_carrier": y2,
             "submarine": y3,
-            "biplane": y1, "biplane_bomber": y1, "zeppelin": y2, "piston_fighter": y1, "piston_bomber": y1,
-            "v1_flying_bomb": y1, "v2_rocket": y1,
-            "jet_engine": y3, "jet_fighter": y3,
+            "biplane": y1, "biplane_bomber": y2, "zeppelin": y2, "piston_fighter": y1, "piston_bomber": y3,
+            "v1_flying_bomb": y4, "v2_rocket": y4,
+            "jet_engine": y2, "jet_fighter": y1,
             "workshop": y1, "basic_factory": y1, "factory": y1,
             "bergius_process": y4, "fuel_refining": y4,
             "basic_recruitment": y2, "recruitment_buildings": y2,
@@ -400,14 +400,15 @@ class Research_Screen(GameState):
     def get_display_name(self, tech_key, lvl):
         """The player-facing name of a tech at a given level.
 
-        An explicit content name takes precedence over three naming schemes,
-        each driven by its own table at the top of this
-        file rather than a chain of ifs: year-tiered families, fixed one-off
-        names, and "<Name> Lvl <n>". Anything unlisted falls back to a title
-        cased key plus a roman numeral.
+        An explicit content name takes precedence.
+        Content with several levels adds a Roman numeral to that name.
+        Tables define year labels, fixed names, and "<Name> Lvl <n>" labels.
+        Other techs use the title-cased key and a Roman numeral.
         """
         content_name = self.tech_tree.get(tech_key, {}).get("display_name")
         if content_name:
+            if self.tech_tree[tech_key]["max_lvl"] > 1:
+                return f"{content_name} {c.ROMAN_NUMERALS.get(lvl, str(lvl))}"
             return content_name
 
         if tech_key in YEAR_TIER_TECHS:

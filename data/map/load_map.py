@@ -517,7 +517,7 @@ def load_map_assets(map_screen, load_path):
             elif u_type.startswith("Truck ("):
                 unit["defense"] = c.TRUCK_DEF
 
-    queries.migrate_aircraft_names(map_screen.map_data)
+    queries.migrate_aircraft_names(map_screen.map_data, map_screen.nation_data)
 
     # --- VERSION MIGRATION ---
     # Old (or version-less) saves carry unit stats baked in from whatever

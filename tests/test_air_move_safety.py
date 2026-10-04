@@ -124,7 +124,7 @@ class AirMissionPlanningTests(unittest.TestCase):
 class AirMoveSafetyTests(unittest.TestCase):
     def setUp(self):
         library = dict(queries.get_unit_library())
-        library["Test Wing"] = dict(library["Monoplane Bomber"], air_range_px=80)
+        library["Test Wing"] = dict(library["Monoplane Bomber I"], air_range_px=80)
         library["Test Missile"] = dict(library["V1 Flying Bomb"], air_range_px=80)
         library_patch = patch.object(queries, "get_unit_library", return_value=library)
         library_patch.start()

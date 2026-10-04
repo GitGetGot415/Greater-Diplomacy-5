@@ -132,6 +132,9 @@ def _assign_air_orders(map_screen, country, units_info):
                and queries.air_target_is_hostile({"owner": country}, province,
                    map_screen.nation_data, visible_only=True)]
     threatened = _air_base_threats(map_screen, country, visible)
+    unit_library = queries.get_unit_library()
+    tech_tree = queries.get_tech_tree()
+    research = map_screen.nation_data[country].get("research", {})
     patrol_threats = _air_patrol_threats(map_screen, country, visible)
     patrol_cover = {}
     patrol_scores = {}
@@ -195,6 +198,12 @@ def _assign_air_orders(map_screen, country, units_info):
             unit["order"] = min(safe_repositions, key=lambda order: (
                 queries.air_distance_squared(map_screen, base, order["target_id"]), order["target_id"]))
             continue
+        if base["id"] not in threatened and queries.has_industry(base):
+            target = queries.get_upgrade_target(unit["type"], research, unit_library, tech_tree)
+            if target:
+                unit["order"] = queries.canonical_unit_order(map_screen, country, base, unit,
+                    {"type": "UPGRADE", "target_type": target})
+                continue
         attacks = [order for order in candidates if order["type"] == "AIR_ATTACK"
                    and order["target_id"] in enemy_ids]
         attack_order = max(attacks, key=lambda order: (

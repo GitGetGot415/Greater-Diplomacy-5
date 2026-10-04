@@ -49,7 +49,7 @@ def tile(game, pid, x, owner="A", water=False, width=4, center=None):
     return province
 
 
-def wing(base, name="Monoplane Bomber", owner="A", order=None):
+def wing(base, name="Monoplane Bomber I", owner="A", order=None):
     unit = queries.create_unit_dict(name, owner, queries.get_unit_library())
     if order:
         unit["order"] = dict(order, base_id=base["id"])
@@ -166,11 +166,11 @@ class AirResolutionTests(unittest.TestCase):
         self.target = tile(self.game, 2, 30, owner="B")
         self.defender_base = tile(self.game, 3, 50, owner="B")
 
-    def attack(self, name="Monoplane Bomber"):
+    def attack(self, name="Monoplane Bomber I"):
         return wing(self.base, name, order={"type": "AIR_ATTACK", "target_id": 2})
 
     def patrol(self, priority="WEAKEST"):
-        return wing(self.defender_base, "Monoplane Fighter", "B",
+        return wing(self.defender_base, "Monoplane Fighter I", "B",
                     {"type": "AIR_PATROL", "priority": priority})
 
     def combat_fixture(self, base, name, owner, attack=80, health=1000, defense=0, order=None):
@@ -181,9 +181,9 @@ class AirResolutionTests(unittest.TestCase):
         return unit
 
     def test_bomber_patrol_intercepts_and_remains_at_its_base(self):
-        attacker = self.combat_fixture(self.base, "Monoplane Bomber", "A",
+        attacker = self.combat_fixture(self.base, "Monoplane Bomber I", "A",
             order={"type": "AIR_ATTACK", "target_id": self.target["id"]})
-        defender = self.combat_fixture(self.defender_base, "Monoplane Bomber", "B",
+        defender = self.combat_fixture(self.defender_base, "Monoplane Bomber I", "B",
             order={"type": "AIR_PATROL", "priority": "STRONGEST"})
         before = defender["health"]
         with patch.object(combat_rules, "build_battle", wraps=combat_rules.build_battle) as battles:
@@ -196,7 +196,7 @@ class AirResolutionTests(unittest.TestCase):
         self.assertIn(attacker, self.base["units"])
 
     def test_patrol_interception_uses_half_movement_radius_and_tile_edges(self):
-        defender = self.combat_fixture(self.defender_base, "Monoplane Fighter", "B",
+        defender = self.combat_fixture(self.defender_base, "Monoplane Fighter I", "B",
             order={"type": "AIR_PATROL", "priority": "WEAKEST"})
         radius = queries.air_order_radius(defender, "AIR_PATROL")
         self.assertEqual(radius, queries.air_order_radius(defender, "AIR_REPOSITION") / 2)
@@ -211,7 +211,7 @@ class AirResolutionTests(unittest.TestCase):
                 self.target = tile(self.game, 2, int(edge_x), owner="B", width=1,
                     center=(edge_x + radius, self.defender_base["center"][1]))
                 self.base["center"] = (edge_x, self.defender_base["center"][1])
-                attacker = self.combat_fixture(self.base, "Monoplane Bomber", "A",
+                attacker = self.combat_fixture(self.base, "Monoplane Bomber I", "A",
                     order={"type": "AIR_ATTACK", "target_id": self.target["id"]})
                 defender["health"] = defender["max_health"]
                 before = defender["health"]
@@ -225,7 +225,7 @@ class AirResolutionTests(unittest.TestCase):
                 self.assertIn(attacker, self.base["units"])
 
     def test_strike_is_reciprocal_normal_combat_and_retains_losses_at_base(self):
-        aircraft = self.combat_fixture(self.base, "Monoplane Bomber", "A",
+        aircraft = self.combat_fixture(self.base, "Monoplane Bomber I", "A",
             order={"type": "AIR_ATTACK", "target_id": 2})
         defender = self.combat_fixture(self.target, "Infantry Type 1910", "B")
         # Strikes must use normal attack, even if a custom aircraft has a
@@ -254,7 +254,7 @@ class AirResolutionTests(unittest.TestCase):
         self.assertEqual(self.target["owner"], "B")
 
     def test_ground_defender_and_aircraft_fire_even_when_both_destroyed(self):
-        aircraft = self.combat_fixture(self.base, "Monoplane Bomber", "A", attack=200,
+        aircraft = self.combat_fixture(self.base, "Monoplane Bomber I", "A", attack=200,
             health=100, order={"type": "AIR_ATTACK", "target_id": 2})
         defender = self.combat_fixture(self.target, "Infantry Type 1910", "B", attack=200, health=100)
         air_processor.process_air_orders(self.game)
@@ -268,7 +268,7 @@ class AirResolutionTests(unittest.TestCase):
         library = queries.get_unit_library()
         tank_name = next(name for name, stats in library.items()
             if queries.classify_unit_group(queries.get_base_unit_name(name), stats) == queries.UNIT_GROUP_TANKS)
-        aircraft = self.combat_fixture(self.base, "Monoplane Bomber", "A",
+        aircraft = self.combat_fixture(self.base, "Monoplane Bomber I", "A",
             order={"type": "AIR_ATTACK", "target_id": 2})
         tank = self.combat_fixture(self.target, tank_name, "B", attack=10000)
         air_processor.process_air_orders(self.game)
@@ -282,7 +282,7 @@ class AirResolutionTests(unittest.TestCase):
         self.target["terrain"] = terrain
         width = combat_rules.combat_width_for_terrain(terrain)
         slots = combat_rules.lane_slots(1, width)
-        attackers = [self.combat_fixture(self.base, "Monoplane Bomber", "A",
+        attackers = [self.combat_fixture(self.base, "Monoplane Bomber I", "A",
             order={"type": "AIR_ATTACK", "target_id": 2}) for _ in range(slots + 2)]
         defenders = [self.combat_fixture(self.target, "Infantry Type 1910", "B")
                       for _ in range(slots + 2)]
@@ -294,7 +294,7 @@ class AirResolutionTests(unittest.TestCase):
 
     def test_strike_obeys_multiparty_lanes_and_leaves_bystanders_alone(self):
         self.game.nation_data["D"] = {"at_war_with": [], "name": "Neutral"}
-        aircraft = self.combat_fixture(self.base, "Monoplane Bomber", "A",
+        aircraft = self.combat_fixture(self.base, "Monoplane Bomber I", "A",
             order={"type": "AIR_ATTACK", "target_id": 2})
         defenders = [self.combat_fixture(self.target, "Infantry Type 1910", owner)
                      for owner in ("B", "C")]
@@ -312,7 +312,7 @@ class AirResolutionTests(unittest.TestCase):
     def test_fort_protects_garrison_only_and_is_damaged_after_exchange(self):
         self.target["buildings"] = ["Fort Lvl 5"]
         level = queries.get_fort_level(self.target)
-        aircraft = self.combat_fixture(self.base, "Monoplane Bomber", "A",
+        aircraft = self.combat_fixture(self.base, "Monoplane Bomber I", "A",
             order={"type": "AIR_ATTACK", "target_id": 2})
         # An attacker stationed in its own fort must not get that fort's defense
         # while flying a strike over the enemy target.
@@ -350,13 +350,13 @@ class AirResolutionTests(unittest.TestCase):
     def test_mixed_wings_count_only_capable_fort_hits(self):
         self.target["buildings"] = ["Fort Lvl 5"]
         before = queries.get_fort_level(self.target)
-        attackers = [self.attack(name) for name in ("Biplane Fighter", "Monoplane Bomber", "Jet Fighter")]
+        attackers = [self.attack(name) for name in ("Biplane Fighter I", "Monoplane Bomber I", "Jet Fighter I")]
         expected_hits = sum(queries.air_unit_can_damage_forts(u) for u in attackers)
         air_processor.process_air_orders(self.game)
         self.assertEqual(queries.get_fort_level(self.target), before - expected_hits)
 
     def test_fort_damage_capability_is_data_driven_even_for_fighters(self):
-        attacker = self.attack("Biplane Fighter")
+        attacker = self.attack("Biplane Fighter I")
         self.target["buildings"] = ["Fort Lvl 5"]
         before = queries.get_fort_level(self.target)
         library = dict(queries.get_unit_library())
@@ -375,7 +375,7 @@ class AirResolutionTests(unittest.TestCase):
 
     def test_naval_defender_can_fire_back_during_a_strike_at_sea(self):
         sea = tile(self.game, 4, 40, water=True)
-        aircraft = self.combat_fixture(self.base, "Monoplane Bomber", "A",
+        aircraft = self.combat_fixture(self.base, "Monoplane Bomber I", "A",
             order={"type": "AIR_ATTACK", "target_id": sea["id"]})
         self.combat_fixture(sea, "Battleship", "B")
         air_processor.process_air_orders(self.game)
@@ -431,7 +431,7 @@ class AirResolutionTests(unittest.TestCase):
         self.attack()
         self.patrol()
         third_base = tile(self.game, 4, 70, owner="C")
-        wing(third_base, "Monoplane Fighter", "C", {"type": "AIR_PATROL"})
+        wing(third_base, "Monoplane Fighter I", "C", {"type": "AIR_PATROL"})
         battles = []
         build = combat_rules.build_battle
         def record(*args, **kwargs):
@@ -444,8 +444,8 @@ class AirResolutionTests(unittest.TestCase):
         self.assertEqual(battles[0].lanes[0].slots, combat_rules.lane_slots(3, c.COMBAT_WIDTH))
 
     def test_fighter_multiplier_only_against_air_and_not_transports(self):
-        fighter = wing(self.base, "Monoplane Fighter")
-        aircraft = wing(self.target, "Monoplane Bomber", "B")
+        fighter = wing(self.base, "Monoplane Fighter I")
+        aircraft = wing(self.target, "Monoplane Bomber I", "B")
         ground = wing(self.target, "Infantry Type 1910", "B")
         air_attack = combat_rules.damage_shots([fighter], [aircraft], air_to_air=True)[0][1]
         ground_attack = combat_rules.damage_shots([fighter], [ground])[0][1]
@@ -533,7 +533,7 @@ class AirResolutionTests(unittest.TestCase):
             for _ in range(count):
                 wing(self.base, order={"type": "AIR_ATTACK", "target_id": target["id"]})
         first = self.patrol()
-        second = wing(other_base, "Monoplane Fighter", "B", {"type": "AIR_PATROL"})
+        second = wing(other_base, "Monoplane Fighter I", "B", {"type": "AIR_PATROL"})
         for defender in (first, second):
             defender["health"] = defender["max_health"] = sum(
                 unit["attack"] for unit in self.base["units"]) * 2
@@ -632,14 +632,14 @@ class AirIntegrationTests(unittest.TestCase):
         self.assertNotIn(self.plane, target["units"])
 
     def test_legacy_patrol_defaults_and_save_transport_roundtrip(self):
-        fighter = wing(self.base, "Biplane Fighter", order={"type": "AIR_PATROL"})
+        fighter = wing(self.base, "Biplane Fighter I", order={"type": "AIR_PATROL"})
         queries.normalize_air_orders(self.game.map_data)
         self.assertEqual(fighter["order"]["priority"], queries.AIR_DEFAULT_PRIORITY)
         queries.load_transport(self.plane, "Convoy")
         saved = json.loads(json.dumps(queries.build_save_dict(self.game)))
         recovered = saved["provinces"][self.base["json_key"]]["units"]
         queries.revert_transport(recovered[0])
-        self.assertEqual(recovered[0]["type"], "Monoplane Bomber")
+        self.assertEqual(recovered[0]["type"], "Monoplane Bomber I")
         self.assertTrue(queries.air_unit_can_damage_forts(recovered[0]))
         self.assertNotIn("air_damages_forts", recovered[0])
         self.assertEqual(recovered[1]["order"], fighter["order"])
@@ -672,7 +672,7 @@ class AirIntegrationTests(unittest.TestCase):
         self.game.show_feedback = Mock()
         screen.target_province = self.base
         screen.bombarding_unit_province = self.base
-        fighter = wing(self.base, "Biplane Fighter")
+        fighter = wing(self.base, "Biplane Fighter I")
         screen.set_air_mission(fighter, self.base, "WEAKEST")
         self.assertEqual(fighter["order"]["priority"], queries.AIR_DEFAULT_PRIORITY)
         screen.set_air_mission(fighter, self.base, "STRONGEST")
@@ -753,7 +753,7 @@ class AirIntegrationTests(unittest.TestCase):
             session.sync_draft(host.player_id, session.turn_number, commands)
 
     def test_snapshot_hides_orders_and_fogged_units_including_initial_geometry(self):
-        enemy = wing(self.target, "Monoplane Fighter", "B", {"type": "AIR_PATROL"})
+        enemy = wing(self.target, "Monoplane Fighter I", "B", {"type": "AIR_PATROL"})
         remote = tile(self.game, 3, 1000, owner="B")
         hidden = wing(remote, "V2 Rocket", "B")
         saved = queries.build_save_dict(self.game)
@@ -771,7 +771,7 @@ class AirIntegrationTests(unittest.TestCase):
         self.assertEqual(payload["state"]["game_state"], projected)
 
     def test_realtime_stable_id_handles_filtered_client_index(self):
-        foreign = wing(self.base, "Monoplane Bomber", "B")
+        foreign = wing(self.base, "Monoplane Bomber I", "B")
         self.game.nation_data["A"]["at_war_with"] = ["C"]
         self.game.nation_data["B"]["at_war_with"] = ["C"]
         self.base["units"] = [foreign, self.plane]
@@ -811,7 +811,7 @@ class AirIntegrationTests(unittest.TestCase):
             self.assertEqual(queries.get_fort_level(self.target), fort_level - 1)
 
     def test_tournament_rejects_foreign_duplicate_malformed_and_out_of_range_orders(self):
-        enemy = wing(self.target, "Biplane Fighter", "B")
+        enemy = wing(self.target, "Biplane Fighter I", "B")
         remote = tile(self.game, 3, 2000, owner="B")
         valid = {"unit_id": self.plane["unit_id"], "order": {"type": "AIR_ATTACK", "target_id": 2}}
         bad = ([dict(valid, unit_id=enemy["unit_id"])], [valid, valid],
@@ -854,8 +854,8 @@ class AirIntegrationTests(unittest.TestCase):
             self.assertEqual(self.plane["order"], {})
 
     def test_fighter_ground_strike_never_receives_air_bonus(self):
-        attacker = wing(self.base, "Monoplane Fighter", order={"type": "AIR_ATTACK", "target_id": 2})
-        based_enemy = wing(self.target, "Monoplane Bomber", "B")
+        attacker = wing(self.base, "Monoplane Fighter I", order={"type": "AIR_ATTACK", "target_id": 2})
+        based_enemy = wing(self.target, "Monoplane Bomber I", "B")
         # Isolate the air bonus from the target's tunable armor.
         based_enemy["defense"] = 0
         before = based_enemy["health"]
@@ -949,7 +949,7 @@ class AirGroundTransportTests(unittest.TestCase):
         editor.selected = {0}
         editor.save()
         self.assertTrue(queries.is_air_transport(unit))
-        self.assertEqual(unit["type"], "Convoy (Monoplane Bomber)")
+        self.assertEqual(unit["type"], "Convoy (Monoplane Bomber I)")
         editor.selected = set()
         editor.save()
         self.assertTrue(queries.is_air_unit(unit))
@@ -1019,7 +1019,7 @@ class AirGroundTransportTests(unittest.TestCase):
         self.assertEqual(neutral["health"], neutral["max_health"])
         self.assertEqual(tank["health"], tank["max_health"])
         self.assertTrue(queries.is_air_transport(carried))
-        self.assertEqual(carried["type"], "Convoy (Monoplane Bomber)")
+        self.assertEqual(carried["type"], "Convoy (Monoplane Bomber I)")
 
     def test_heuristic_missile_uses_a_convoy_for_an_island_crossing(self):
         unit = wing(self.base, "V2 Rocket")
@@ -1041,13 +1041,13 @@ class AirGroundTransportTests(unittest.TestCase):
     def test_old_air_truck_saved_at_sea_becomes_a_convoy(self):
         unit = wing(self.sea)
         queries.load_transport(unit, "Convoy")
-        unit.update(type="Truck (Monoplane Bomber)", max_health=c.TRUCK_MAX_HP,
+        unit.update(type="Truck (Monoplane Bomber I)", max_health=c.TRUCK_MAX_HP,
                     health=c.TRUCK_MAX_HP * 0.4, naval_unit=False)
         queries.migrate_aircraft_stats(self.game.map_data)
-        self.assertEqual(unit["type"], "Convoy (Monoplane Bomber)")
+        self.assertEqual(unit["type"], "Convoy (Monoplane Bomber I)")
         self.assertTrue(unit["naval_unit"])
         self.assertAlmostEqual(unit["health"] / unit["max_health"], 0.4)
-        self.assertEqual(unit["original_attack"], queries.get_unit_library()["Monoplane Bomber"]["attack"])
+        self.assertEqual(unit["original_attack"], queries.get_unit_library()["Monoplane Bomber I"]["attack"])
 
     def test_missile_crossing_a_ground_enemy_dies_without_dealing_damage(self):
         from map_logic.rendering import overlay_renderer
@@ -1108,7 +1108,7 @@ class AirGroundTransportTests(unittest.TestCase):
         carried = wing(self.base)
         queries.load_transport(carried, "Convoy")
         # Deliberate old-save fixture: current gameplay cannot create this Truck.
-        carried.update(type="Truck (Monoplane Bomber)", max_health=c.TRUCK_MAX_HP,
+        carried.update(type="Truck (Monoplane Bomber I)", max_health=c.TRUCK_MAX_HP,
                        health=c.TRUCK_MAX_HP * 0.4, naval_unit=False,
                        order={"type": "MOVE", "path": [2]})
         pending = wing(self.base, "V1 Flying Bomb")
@@ -1134,7 +1134,7 @@ class AirMissionSelectionTests(unittest.TestCase):
         self.game = world()
         self.base = tile(self.game, 1, 8)
         self.target = tile(self.game, 2, 30, owner="B")
-        self.unit = wing(self.base, "Monoplane Fighter")
+        self.unit = wing(self.base, "Monoplane Fighter I")
         self.game.show_feedback = Mock()
         self.screen = Orders_Screen()
         self.screen.map_screen = self.game
@@ -1166,7 +1166,7 @@ class AirMissionSelectionTests(unittest.TestCase):
         from screens.map_related_screens.orders import ACTION_COL_BOMBARD
         asset = Path(__file__).resolve().parents[1] / "assets" / "images" / "Air Move.png"
         self.assertEqual(asset.read_bytes()[:8], b"\x89PNG\r\n\x1a\n")
-        for name, order in (("Monoplane Fighter", {"type": "AIR_REPOSITION", "target_id": 2}),
+        for name, order in (("Monoplane Fighter I", {"type": "AIR_REPOSITION", "target_id": 2}),
                             ("V1 Flying Bomb", {"type": "MOVE", "path": [2]}),
                             ("V2 Rocket", {"type": "MOVE", "path": [2]})):
             with self.subTest(unit=name):
@@ -1179,7 +1179,7 @@ class AirMissionSelectionTests(unittest.TestCase):
                 self.assertEqual(self.buttons()[ACTION_COL_BOMBARD].args[6], "No Mission")
 
     def test_selector_shows_all_missions_and_disables_unsupported_defense(self):
-        for name in ("Monoplane Fighter", "Monoplane Bomber", "V1 Flying Bomb", "V2 Rocket"):
+        for name in ("Monoplane Fighter I", "Monoplane Bomber I", "V1 Flying Bomb", "V2 Rocket"):
             with self.subTest(unit=name):
                 self.unit["type"] = name
                 before = dict(self.unit["order"])
@@ -1270,7 +1270,7 @@ class AirMissionSelectionTests(unittest.TestCase):
                     {"aircraft_orders": [{"unit_id": self.unit["unit_id"], "order": order}]}, {})
                 self.assertEqual(drafts[0][1], order)
 
-    def test_named_aircraft_cannot_upgrade_through_ui_networks_or_execution(self):
+    def test_aircraft_cannot_upgrade_between_families_through_ui_networks_or_execution(self):
         self.base["buildings"] = ["Arms Factory Lvl 1"]
         self.game.nation_data["A"]["research"] = {key: stats.get("max_lvl", 1)
                                                    for key, stats in queries.get_tech_tree().items()}
@@ -1278,9 +1278,9 @@ class AirMissionSelectionTests(unittest.TestCase):
             if stats.get("air_role") and queries.get_unit_tier(name) == 0:
                 self.assertIsNone(queries.get_upgrade_target(name, self.game.nation_data["A"]["research"],
                                                             queries.get_unit_library(), queries.get_tech_tree()))
-        self.screen.upgrade_unit(0, "Jet Fighter", self.base)
+        self.screen.upgrade_unit(0, "Jet Fighter I", self.base)
         self.assertNotEqual(self.unit["order"].get("type"), "UPGRADE")
-        order = {"type": "UPGRADE", "target_type": "Jet Fighter"}
+        order = {"type": "UPGRADE", "target_type": "Jet Fighter I"}
         command = {"type": "unit_order", "province_id": 1, "unit_index": 0, "order": order}
         with self.assertRaises(RealtimeError):
             MapRealtimeDriver(self.game).validate_draft("A", [command])
@@ -1289,11 +1289,11 @@ class AirMissionSelectionTests(unittest.TestCase):
                 {"aircraft_orders": [{"unit_id": self.unit["unit_id"], "order": order}]}, {})
         self.unit["order"] = dict(order, turns_left=1)
         movement_processor.process_upgrades(self.game)
-        self.assertEqual(self.unit["type"], "Monoplane Fighter")
+        self.assertEqual(self.unit["type"], "Monoplane Fighter I")
 
     def test_numbered_aircraft_use_existing_upgrade_button_and_rule(self):
         from screens.map_related_screens.orders import ACTION_COL_UPGRADE
-        # Artificial numbered family: real named aircraft do not get new tiers.
+        # Artificial numbered family isolates the control from content tuning.
         stats = dict(queries.get_unit_library()[self.unit["type"]])
         library = {"Test Plane I": stats, "Test Plane II": dict(stats)}
         tree = {"test_plane": {"max_lvl": 2, "req": {}, "years": [1900, 1901]}}
@@ -1311,6 +1311,58 @@ class AirMissionSelectionTests(unittest.TestCase):
             movement_processor.process_upgrades(self.game)
             self.assertEqual(self.unit["type"], target)
 
+    def test_real_aircraft_upgrades_agree_in_ui_ai_networks_and_resolution(self):
+        from screens.map_related_screens.orders import ACTION_COL_UPGRADE
+        library, tree = queries.get_unit_library(), queries.get_tech_tree()
+        for name, stats in library.items():
+            if not stats.get("air_role") or queries.get_unit_tier(name) != 1:
+                continue
+            with self.subTest(unit=name):
+                self.base["units"] = []
+                self.unit = wing(self.base, name)
+                self.unit["health"] *= 0.6
+                tech = queries.get_unit_research_requirement(name)[0]
+                self.game.nation_data["A"]["research"] = {tech: tree[tech]["max_lvl"]}
+                self.base["buildings"] = ["Arms Factory Lvl 1"]
+                self.screen.unit_library = library
+                target = queries.get_upgrade_target(name, self.game.nation_data["A"]["research"], library, tree)
+                button = self.buttons()[ACTION_COL_UPGRADE]
+                self.assertTrue(button.kwargs["enabled"])
+                button.args[5]()
+                self.assertEqual(self.unit["order"]["target_type"], target)
+                command = {"type": "unit_order", "province_id": 1, "unit_index": 0,
+                           "unit_id": self.unit["unit_id"], "order": self.unit["order"]}
+                self.assertEqual(MapRealtimeDriver(self.game).validate_draft("A", [command])[0]["order"]["target_type"], target)
+                _, drafts = multiplayer_io._validate_aircraft_orders(self.game, "A",
+                    {"aircraft_orders": [{"unit_id": self.unit["unit_id"], "order": self.unit["order"]}]}, {})
+                self.assertEqual(drafts[0][1]["target_type"], target)
+                self.unit["order"] = {}
+                with patch.object(ai_movement, "_air_base_threats", return_value=set()):
+                    ai_movement._assign_air_orders(self.game, "A", [(self.unit, self.base)])
+                self.assertEqual(self.unit["order"]["target_type"], target)
+                before = {field: self.unit[field] for field in ("health", "max_health", "attack", "defense", "speed")}
+                movement_processor.process_upgrades(self.game)
+                self.assertEqual(self.unit["type"], target)
+                self.assertEqual({field: self.unit[field] for field in before}, before)
+
+    def test_aircraft_upgrade_cancels_when_research_factory_or_combat_disallows_it(self):
+        for condition in ("research", "factory", "combat"):
+            with self.subTest(condition=condition):
+                self.base["units"] = []
+                self.unit = wing(self.base, "Monoplane Fighter I")
+                self.base["buildings"] = ["Arms Factory Lvl 1"]
+                self.game.nation_data["A"]["research"] = {"piston_fighter": 2}
+                self.unit["order"] = {"type": "UPGRADE", "target_type": "Monoplane Fighter II", "turns_left": 1}
+                if condition == "research":
+                    self.game.nation_data["A"]["research"] = {}
+                elif condition == "factory":
+                    self.base["buildings"] = []
+                else:
+                    wing(self.base, "Infantry Type 1910", "B")
+                movement_processor.process_upgrades(self.game)
+                self.assertEqual(self.unit["type"], "Monoplane Fighter I")
+                self.assertNotEqual(self.unit["order"]["type"], "UPGRADE")
+
 
 class GroupAirMissionSelectionTests(unittest.TestCase):
     def setUp(self):
@@ -1318,14 +1370,14 @@ class GroupAirMissionSelectionTests(unittest.TestCase):
         self.base = tile(self.game, 1, 8)
         self.target = tile(self.game, 2, 30, owner="B")
         self.remote = tile(self.game, 3, 900)
-        self.fighter = wing(self.base, "Monoplane Fighter")
-        self.bomber = wing(self.remote, "Monoplane Bomber")
+        self.fighter = wing(self.base, "Monoplane Fighter I")
+        self.bomber = wing(self.remote, "Monoplane Bomber I")
         self.v1 = wing(self.base, "V1 Flying Bomb")
         self.v2 = wing(self.remote, "V2 Rocket")
         self.ground = wing(self.base, "Infantry Type 1910")
-        self.carried = wing(self.base, "Monoplane Bomber")
+        self.carried = wing(self.base, "Monoplane Bomber I")
         queries.load_transport(self.carried, "Convoy")
-        self.foreign = wing(self.target, "Monoplane Bomber", "B")
+        self.foreign = wing(self.target, "Monoplane Bomber I", "B")
         self.records = [(self.fighter, self.base), (self.bomber, self.remote),
                         (self.v1, self.base), (self.v2, self.remote),
                         (self.ground, self.base), (self.carried, self.base),
@@ -1397,7 +1449,7 @@ class GroupAirMissionSelectionTests(unittest.TestCase):
         self.screen._mark_draft_changed.assert_not_called()
 
     def test_group_button_cancels_active_missions_and_preserves_idle_orders(self):
-        idle = wing(self.base, "Monoplane Bomber", order={"type": "REPAIR", "refund": {
+        idle = wing(self.base, "Monoplane Bomber I", order={"type": "REPAIR", "refund": {
             "cost_materials": 17, "cost_fuel": 0, "cost_manpower": 0}})
         self.records.append((idle, self.base))
         idle_order = deepcopy(idle["order"])
@@ -1522,7 +1574,7 @@ class AirAppSmokeTests(unittest.TestCase):
         small_portrait = pygame.Surface((2, 2), pygame.SRCALPHA)
         self.assertIs(screen.fit_icon(small_portrait, "orders_action_icon"), small_portrait)
 
-    def make_runtime_save(self, directory, legacy_truck=False, patrol_type="Biplane Fighter",
+    def make_runtime_save(self, directory, legacy_truck=False, patrol_type="Biplane Fighter I",
                           priority="STRONGEST"):
         game = world()
         base = tile(game, 1, 8)
@@ -1547,13 +1599,54 @@ class AirAppSmokeTests(unittest.TestCase):
 
     def test_bomber_patrol_save_roundtrip_preserves_mission_and_priority(self):
         with tempfile.TemporaryDirectory() as directory:
-            _original, bomber, _rocket, path = self.make_runtime_save(directory, patrol_type="Monoplane Bomber")
+            _original, bomber, _rocket, path = self.make_runtime_save(directory, patrol_type="Monoplane Bomber I")
             loaded = Map(load_path=path, skip_initial_income=True)
             base = loaded.id_to_province[1]
             restored = base["units"][0]
             self.assertEqual(restored["unit_id"], bomber["unit_id"])
             self.assertEqual(restored["order"], bomber["order"])
             self.assertEqual(restored["order"], queries.canonical_air_order(loaded, restored, base, restored["order"]))
+
+    def test_numbered_aircraft_and_legacy_names_survive_actual_save_load(self):
+        from data.map import save_map
+        from tests.test_aerospace import REQUESTED_LEVEL_YEARS
+        for legacy in (False, True):
+            with self.subTest(legacy=legacy), tempfile.TemporaryDirectory() as directory:
+                game, _, _, _ = self.make_runtime_save(directory)
+                base = game.id_to_province[1]
+                base["units"] = []
+                research = {}
+                names = []
+                for tech, years in REQUESTED_LEVEL_YEARS.items():
+                    level = 1 if legacy else len(years)
+                    name = f"{queries.get_tech_tree()[tech]['display_name']} {c.ROMAN_NUMERALS[level]}"
+                    names.append(name)
+                    research[tech] = level
+                    aircraft = wing(base, name, order={"type": "AIR_PATROL", "priority": "RANDOM"})
+                    aircraft["health"] *= 0.6
+                    if legacy:
+                        aircraft["type"] = queries.get_base_unit_name(name)
+                queries.load_transport(base["units"][-1], "Convoy")
+                base["unit_queue"] = [{"unit_type": queries.get_base_unit_name(name) if legacy else name,
+                                       "turns_remaining": 1} for name in names]
+                country = game.nation_data["A"]
+                country.update(research=research, research_progress={"biplane": 123},
+                    research_queue=[{"tech_name": "biplane", "points_remaining": 234}] if legacy else [],
+                    custom_production_units=[queries.get_base_unit_name(name) if legacy else name for name in names])
+                with patch.object(c, "SAVES_DIR", directory):
+                    asyncio.run(save_map.save_map_data(game, "air-levels"))
+                loaded = Map(load_path=os.path.join(directory, "air-levels"), skip_initial_income=True)
+                restored = loaded.id_to_province[1]["units"]
+                self.assertEqual([unit["type"] for unit in restored], names[:-1] + [f"Convoy ({names[-1]})"])
+                self.assertEqual(restored[-1]["original_type"], names[-1])
+                for old, new in zip(base["units"], restored):
+                    self.assertEqual(new["unit_id"], old["unit_id"])
+                    self.assertAlmostEqual(new["health"] / new["max_health"], old["health"] / old["max_health"])
+                self.assertEqual([item["unit_type"] for item in loaded.id_to_province[1]["unit_queue"]], names)
+                self.assertEqual(loaded.nation_data["A"]["research"], research)
+                self.assertEqual(loaded.nation_data["A"]["research_progress"], country["research_progress"])
+                self.assertEqual(loaded.nation_data["A"]["research_queue"], country["research_queue"])
+                self.assertEqual(loaded.nation_data["A"]["custom_production_units"], names)
 
     def test_random_patrol_survives_save_load(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -1573,7 +1666,7 @@ class AirAppSmokeTests(unittest.TestCase):
             loaded.selection_mode = False
             loaded.player_country = "A"
             base = loaded.id_to_province[1]
-            bomber = wing(base, "Monoplane Bomber")
+            bomber = wing(base, "Monoplane Bomber I")
             missile = wing(base, "V1 Flying Bomb")
             wing(base, "Infantry Type 1910")
             loaded.select_map_units(base["units"])
@@ -1716,7 +1809,7 @@ class AirAppSmokeTests(unittest.TestCase):
     def test_unavailable_air_missions_remain_visible_and_ignore_clicks(self):
         from ui import modal_stack
         for name, invalid_base in (("V1 Flying Bomb", False), ("V2 Rocket", False),
-                                   ("Monoplane Fighter", True)):
+                                   ("Monoplane Fighter I", True)):
             with self.subTest(unit=name, invalid_base=invalid_base):
                 game = world()
                 base = tile(game, 1, 8, water=invalid_base)
@@ -1755,7 +1848,7 @@ class AirAppSmokeTests(unittest.TestCase):
         from ui import modal_stack
         game = world()
         base = tile(game, 1, 8)
-        fighter = wing(base, "Monoplane Fighter")
+        fighter = wing(base, "Monoplane Fighter I")
         screen = Orders_Screen()
         screen.map_screen = game
         before = dict(fighter["order"])
@@ -1826,7 +1919,7 @@ class AirAppSmokeTests(unittest.TestCase):
             loaded.player_country = "A"
             base = loaded.id_to_province[1]
             fighter = base["units"][0]
-            duplicate = wing(base, "Biplane Fighter", order={"type": "AIR_PATROL"})
+            duplicate = wing(base, "Biplane Fighter I", order={"type": "AIR_PATROL"})
             loaded.select_map_units([fighter, duplicate])
             screen = Orders_Screen()
             screen.start_with_province(base, loaded)
@@ -2064,7 +2157,7 @@ class AirAppSmokeTests(unittest.TestCase):
             loaded = Map(load_path=path, force_editor=True, skip_initial_income=True)
             loaded.secondary_mode = "BLANK"
             loaded.editor_mode = "UNIT"
-            loaded.brush_unit = "Monoplane Bomber"
+            loaded.brush_unit = "Monoplane Bomber I"
             base = loaded.id_to_province[1]
             event = pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(600, 400), button=1)
             for terrain, allowed in (("Plains", True), (c.WATER_TERRAINS[0], False)):

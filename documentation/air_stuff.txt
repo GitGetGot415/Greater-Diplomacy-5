@@ -23,6 +23,34 @@ A missing air_damages_forts flag means the unit cannot damage forts.
 Read capabilities from the current unit library, including for old saves.
 Do not store them on individual units or accept them from multiplayer orders.
 
+Aircraft research
+-----------------
+
+Aircraft levels use Roman numerals in research and production.
+Research years apply the standard ahead-of-time penalty.
+
+Family                Level years
+Biplane Fighter       1910, 1914, 1918, 1922, 1926
+Biplane Bomber        1914, 1918, 1922, 1926, 1930
+Monoplane Fighter     1930, 1933, 1936, 1939, 1942
+Monoplane Bomber      1933, 1936, 1939, 1942, 1945
+Jet Fighter           1950, 1954, 1958, 1962, 1966, 1970
+
+Biplane Bomber research requires Biplane Fighter I.
+Monoplane Fighter research requires Biplane Fighter V.
+Monoplane Bomber research requires Biplane Bomber V.
+Jet Engine research requires Monoplane Fighter V.
+Jet Fighter research requires Jet Engine.
+Each later level requires the previous level in that family.
+Higher levels currently retain their family's level I stats, capabilities, costs, and production time.
+Edit data/json/unit_data.json to tune individual levels.
+Update data/generators/recipes.py before you regenerate the data files.
+
+Old saves retain their research levels and progress.
+Unnumbered aircraft become level I, including transported aircraft and queued production.
+Custom production choices and saved upgrade targets use the same migration.
+Old scripted Spawn Unit actions create level I aircraft from unnumbered names.
+
 Range and display caches
 ------------------------
 
@@ -156,7 +184,9 @@ Land, naval, and air domains remain separate.
 
 Choice callbacks recheck current unit identity, ownership, tactical control, and real-time planning permission.
 The upgrade icon uses existing numbered-family upgrades.
-Named aircraft do not upgrade into a different design.
+Numbered aircraft can upgrade to the highest researched level in their current family.
+Upgrades require an industry building and cannot start or finish in combat.
+Aircraft cannot upgrade into a different family.
 Mission controls add no new save fields or network command kinds.
 
 Group missions
