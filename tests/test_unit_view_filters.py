@@ -58,6 +58,70 @@ class UnitViewFilterTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             queries.unit_matches_view_filter(carried, "invalid")
 
+    def draw_training_badge(self, *, suppressed=(), alphas=None):
+        self.game.secondary_mode = "UNITS"
+        self.game.visible_provinces = getattr(self.game, "visible_provinces", None)
+        badge = pygame.Surface((12, 12))
+        badge.fill((20, 90, 160))
+        surface = pygame.Surface((400, 400))
+        with (patch.object(queries, "world_to_screen", return_value=(100, 100)),
+              patch.object(overlay_renderer, "combat_bubble_records", return_value=[]),
+              patch.object(overlay_renderer, "compact_army_groups", return_value=[]),
+              patch.object(overlay_renderer, "compact_area_unit_groups", return_value=[]),
+              patch.object(overlay_renderer, "army_group_presentation", return_value=([], [], set(suppressed))),
+              patch.object(overlay_renderer, "strategic_unit_fade_alphas", return_value=alphas or {}),
+              patch.object(overlay_renderer, "draw_unit_icon"),
+              patch.object(overlay_renderer, "status_icon", return_value=badge) as icons):
+            overlay_renderer.draw_overlay_content(self.game, surface, draw_combat=False)
+        return [call.args[1] for call in icons.call_args_list], surface
+
+    def test_empty_factory_training_badge_uses_queued_category_for_every_filter(self):
+        self.province["units"] = []
+        for unit in self.units:
+            self.province["unit_queue"] = [{"unit_type": unit["type"], "turns_remaining": 2}]
+            self.game._presentation_cache_revision += 1
+            for view_filter in queries.UNIT_VIEW_FILTERS:
+                with self.subTest(unit=unit["type"], filter=view_filter):
+                    self.game.unit_view_filter = view_filter
+                    icons, surface = self.draw_training_badge()
+                    expected = queries.unit_matches_view_filter(unit, view_filter)
+                    self.assertEqual(icons, [c.ICON_TRAINING] if expected else [])
+                    self.assertEqual(surface.get_at((100, 100))[:3], (20, 90, 160) if expected else (0, 0, 0))
+                    index = overlay_renderer._unit_render_index(self.game)
+                    self.assertEqual(index.records, ())
+                    self.assertEqual(index.total_units, 0)
+
+    def test_training_badge_does_not_depend_on_filtered_or_compact_garrisons(self):
+        self.province["unit_queue"] = [{"unit_type": self.units[0]["type"]}]
+        self.province["units"] = self.units[2:]
+        self.game.unit_view_filter = "LAND"
+        self.assertEqual(self.draw_training_badge()[0], [c.ICON_TRAINING])
+        self.province["units"] = self.units[:1]
+        self.game._presentation_cache_revision += 1
+        self.assertEqual(self.draw_training_badge(suppressed=[id(self.units[0])])[0], [c.ICON_TRAINING])
+        self.assertEqual(self.draw_training_badge(alphas={id(self.units[0]): 0})[0], [c.ICON_TRAINING])
+
+    def test_fog_hides_training_even_when_the_queue_is_present(self):
+        self.province["units"] = []
+        self.province["unit_queue"] = [{"unit_type": self.units[0]["type"]}]
+        self.game.visible_provinces = set()
+        for partial in (set(), {self.province["id"]}):
+            with self.subTest(partial=partial):
+                self.game.partial_visible_provinces = partial
+                self.assertEqual(self.draw_training_badge()[0], [])
+
+    def test_queue_edits_refresh_cached_training_without_frame_classification(self):
+        self.province["units"] = []
+        overlay_renderer._unit_render_index(self.game)
+        self.province["unit_queue"] = [{"unit_type": self.units[0]["type"]}]
+        self.game._presentation_cache_revision += 1
+        overlay_renderer._unit_render_index(self.game)
+        with patch.object(queries, "is_training_troops", side_effect=AssertionError("Frame checked training")):
+            self.assertEqual(self.draw_training_badge()[0], [c.ICON_TRAINING])
+        self.province["unit_queue"].clear()
+        self.game._presentation_cache_revision += 1
+        self.assertEqual(self.draw_training_badge()[0], [])
+
     def mission_units(self):
         orders = ({}, {}, {"type": "AIR_PATROL"},
                   {"type": "AIR_PATROL", "priority": "STRONGEST"},

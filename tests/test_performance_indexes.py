@@ -56,6 +56,17 @@ class PerformanceIndexTests(unittest.TestCase):
         self.assertIs(index.live_by_object_id[id(self.unit_b)][0], self.unit_b)
         self.assertIs(index.live_by_object_id[id(self.unit_b)][1], self.map_data["2"])
 
+    def test_training_only_provinces_participate_without_becoming_deployed_units(self):
+        training = self.map_data["3"]
+        training["unit_queue"] = [{"unit_type": "Infantry"}]
+        index = _UnitRenderIndex(self.map_data)
+        self.assertIn(training, index.occupied_provinces)
+        self.assertIn(id(training), index.training_province_object_ids)
+        self.assertEqual(index.unit_counts.tolist(), [1, 1, 0])
+        self.assertEqual(index.total_units, 2)
+        self.assertEqual(len(index.records), 2)
+        self.assertEqual(index.view_units_by_province[id(training)], ())
+
 
 if __name__ == "__main__":
     unittest.main()

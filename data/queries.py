@@ -1717,9 +1717,10 @@ def strip_disabled_tech_requirements(reqs, disabled_techs):
 
     return {k: v for k, v in reqs.items() if k not in disabled_techs}
 
-def is_training_troops(province):
-    """Returns True if the province has any troops in its deployment queue."""
-    return any("unit_type" in q for q in province.get("unit_queue", []))
+def is_training_troops(province, view_filter=None):
+    """Return whether the deployment queue contains a matching unit category."""
+    return any("unit_type" in item and (view_filter is None or unit_matches_view_filter(
+        {"type": item["unit_type"]}, view_filter)) for item in province.get("unit_queue", []))
 
 def is_constructing_building(province):
     """Returns True if the province has any buildings in its deployment queue."""

@@ -15,7 +15,7 @@ CULL_MARGIN = 250
 
 
 class _UnitRenderIndex:
-    """Cached dense view of unit-bearing provinces for strategic rendering.
+    """Cache provinces with units or matching training queues for map rendering.
 
     The game state remains the province/unit dictionaries.  This index only
     stores references into that state plus compact NumPy arrays for province
@@ -31,12 +31,16 @@ class _UnitRenderIndex:
         centers = []
         counts = []
         self.view_units_by_province = {}
+        self.training_province_object_ids = set()
         self.stack_keys = {}
         view_records = []
 
         for province in map_data.values():
             units = province.get("units", [])
-            if not units:
+            training = queries.is_training_troops(province, view_filter)
+            if training:
+                self.training_province_object_ids.add(id(province))
+            if not units and not training:
                 continue
             occupied.append(province)
             records.extend((unit, province) for unit in units)
@@ -69,7 +73,7 @@ class _UnitRenderIndex:
         self.total_units = int(self.unit_counts.sum(dtype=np.int64))
 
     def culled_candidates(self, map_screen, surface):
-        """Return occupied provinces whose centres are near this viewport."""
+        """Return unit or training provinces whose centers are near this viewport."""
         if not self.occupied_provinces:
             return ()
 
@@ -1091,9 +1095,8 @@ def draw_overlay_content(map_screen, surface, draw_combat=True):
     map_screen.compact_army_unit_object_ids = compact_unit_object_ids
 
     if map_screen.secondary_mode == "UNITS":
-        # Unit overlays are the only mode that needs every live unit-bearing
-        # province.  Use NumPy culling to skip empty and off-screen provinces
-        # before entering the fog, stack, and icon logic below.
+        # Include training queues without deployed units. Cull inactive and
+        # off-screen provinces before checking fog and drawing their icons.
         render_candidates = unit_index.culled_candidates(map_screen, surface)
     else:
         render_candidates = (
@@ -1173,8 +1176,7 @@ def draw_overlay_content(map_screen, surface, draw_combat=True):
                     status_units = [unit for unit in display_units
                                     if strategic_unit_alphas.get(id(unit), 255) == 255]
 
-                    if (not is_partial and status_units
-                            and queries.is_training_troops(province)):
+                    if not is_partial and id(province) in unit_index.training_province_object_ids:
                         training_sym = status_icon(map_screen, c.ICON_TRAINING)
                         if training_sym:
                             rect = training_sym.get_rect(center=(sx, sy))
