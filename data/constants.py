@@ -1208,13 +1208,18 @@ MILITARY_STRENGTH_HEALTH_DIVISOR = 10.0
 # hostile powers standing on it -- and these three numbers decide how many units
 # get to be in those duels. See map_logic/turn_processing/combat_rules.py.
 
-# Total units that fire on one tile, across every lane. Not per nation. A
-# province's terrain can override this in combat_rules.combat_width_for_terrain.
+# Width covers ground and sea combat across every lane, rather than each nation.
+# Flying missions have no width limit. Terrain can override width in
+# combat_rules.combat_width_for_terrain.
 COMBAT_WIDTH = 16
 COMBAT_WIDTH_BY_TERRAIN = {
     "mountain": 12,
     "plains": 20,
 }
+
+# Flying stacks have no width limit. These fractions control attack efficiency.
+AIR_STACK_EFFICIENCY_PENALTY = 0.15
+AIR_STACK_MIN_ATTACK_EFFICIENCY = 0.25
 
 # What a unit at 0% health still deals, as a fraction of its full attack. Damage
 # scales linearly between this floor (at 0% health) and 1.0 (at 100% health) --

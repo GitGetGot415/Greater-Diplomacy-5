@@ -106,7 +106,12 @@ No mission clears eligible aircraft orders.
 Both multiplayer systems use their existing per-unit commands and validate each order.
 
 After interception, strikes use one simultaneous combat exchange against the garrison.
-They use terrain width, coalition lanes, front ranks, and reserves.
+All attacking aircraft participate. Garrison units retain terrain width, front ranks, and reserves.
+Interception also has no aircraft width limit.
+
+Each coalition's engaged aircraft share the attack multiplier from queries.air_stack_attack_efficiency.
+The multiplier decreases with stack size and has a minimum.
+See documentation/air_stuff.txt for the formula and counting rules.
 Defenders can damage or destroy aircraft.
 
 queries.unit_target_damage_multiplier supplies shared immunity and damage modifiers.
@@ -131,8 +136,10 @@ Production values aerospace as the AIR role.
 Production and research use the same aircraft valuation.
 Ground strikes receive no air-to-air bonus.
 Interception value depends on visible enemy aircraft and available air cover.
+Mission estimates use stack efficiency and the shared battle rules.
 Owned and queued reusable aircraft reduce the need for more interception strength.
 Interception-immune enemies do not create interception demand.
+
 Unit names do not determine purchase preferences. There is no fixed fighter-to-bomber ratio.
 
 air_pressure = hostile_air_attack / (hostile_ground_attack + hostile_air_attack + friendly_interception_attack).

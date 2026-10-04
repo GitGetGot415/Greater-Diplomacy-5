@@ -30,10 +30,11 @@ A tile is not one pot. It is a container that splits into *lanes*: one duel per
 pair of hostile **sides**. A side is a coalition -- everyone here who is fighting
 this particular enemy together -- not a single nation, which is why two allies
 facing two allies is one battle rather than four separate quarrels.
-The terrain-adjusted combat width is a budget for the whole tile, divided
+For ground combat, terrain-adjusted width is a budget for the whole tile, divided
 among the lanes, and damage never crosses a lane boundary. Units past a side's
 allowance wait in reserve, where they neither deal damage nor take it --
 bombardment is the only thing that reaches them.
+Flying mission stacks have no width limit. Their attack decreases with stack size.
 
 The invariants the rest of the game is entitled to assume:
 
@@ -48,7 +49,7 @@ The invariants the rest of the game is entitled to assume:
    on what a member gets, not a cap on what the side fields: if the split
    leaves a slot that nobody's allowance covers and somebody present has a
    unit spare, `_topup` seats it. An empty slot helps nobody.
-4. Total front units across every lane equals the terrain's combat width,
+4. In ground combat, total front units across every lane equals the terrain's combat width,
    unless a floor forced it higher -- `c.MIN_LANE_SLOTS_PER_SIDE` per side,
    or the one unit every member nation present is guaranteed -- or there were
    not enough units present to fill the tile.
@@ -529,7 +530,7 @@ def single_attacker_signature(unit):
 
 
 def build_battle(sides, nation_data, width=None, full_rank_for=None, terrain=None, air_combat=False,
-                 convert_aircraft=True, grounded_sides=None):
+                 convert_aircraft=True, grounded_sides=None, air_mission_sides=None):
     """Who duels whom, and who is in the front rank, for one fight.
 
     `sides` is a list of unit lists. One side is a tile: everyone standing here
@@ -557,9 +558,16 @@ def build_battle(sides, nation_data, width=None, full_rank_for=None, terrain=Non
     `air_combat` is reserved for interception and also keeps aircraft flying.
     `grounded_sides` identifies the land endpoints of a meeting engagement;
     when omitted, the tile terrain determines whether this is a ground fight.
+
+    `air_mission_sides` identifies flying sides during a strike. Interception
+    treats all sides as flying. Aircraft occupy every hostile lane without
+    width limits. Each coalition's engaged aircraft share one attack efficiency.
+    Garrison units retain terrain width. Profiles hold temporary attack values.
     """
     from data import queries
     hostile = _hostile(nation_data)
+    if air_mission_sides is None:
+        air_mission_sides = set(range(len(sides))) if air_combat else set()
     # Keep live references/IDs, but remove immediate ground casualties from
     # lane seating and volleys in non-mutating UI and AI forecasts as well.
     if grounded_sides is None:
@@ -567,7 +575,7 @@ def build_battle(sides, nation_data, width=None, full_rank_for=None, terrain=Non
     profiles = {}
     if convert_aircraft and not air_combat:
         for side_index, side in enumerate(sides):
-            if side_index not in grounded_sides:
+            if side_index not in grounded_sides or side_index in air_mission_sides:
                 continue
             enemies = (side if len(sides) == 1 else
                        [u for index, other_side in enumerate(sides) if index != side_index for u in other_side])
@@ -591,14 +599,33 @@ def build_battle(sides, nation_data, width=None, full_rank_for=None, terrain=Non
     duels = _duels(columns, groups, hostile, across_only)
     if width is None:
         width = combat_width_for_terrain(terrain)
-    slots = lane_slots(len(duels), width)
+    slots = 0 if air_combat else lane_slots(len(duels), width)
     lanes_of, foes = _lane_membership(columns, groups, duels, can_fight)
     available = _availability(columns, profiles)
+    flying = {i: [unit for unit in units if queries.is_air_unit(unit)]
+              for i, (side_index, _owner, units) in enumerate(columns)
+              if side_index in air_mission_sides and i in lanes_of}
+    flying_ids = {id(unit) for units in flying.values() for unit in units}
+    for i in available:
+        available[i] = [unit for unit in available[i] if id(unit) not in flying_ids]
+    for group in groups:
+        aircraft = [unit for i in group for unit in flying.get(i, ())]
+        if not aircraft:
+            continue
+        efficiency = queries.air_stack_attack_efficiency(len(aircraft))
+        for unit in aircraft:
+            profile = dict(profiles.get(id(unit), unit))
+            profile["attack"] = profile.get("attack", c.DEFAULT_UNIT_ATK) * efficiency
+            profiles[id(unit)] = profile
     eager = ({i for i, col in enumerate(columns) if col[1] == full_rank_for}
              if full_rank_for else ())
     caps = _caps(groups, duels, lanes_of, available, slots, eager)
     seats = _seat(columns, duels, lanes_of, foes, caps, available)
     _topup(groups, duels, lanes_of, available, slots, seats)
+    # Flying units share their volley across hostile lanes. None wait in reserve.
+    for i, aircraft in flying.items():
+        for duel_index in lanes_of[i]:
+            seats[(i, duel_index)].extend(aircraft)
 
     def front(group_index, duel_index):
         return [u for i in groups[group_index]
@@ -661,7 +688,8 @@ def build_battle(sides, nation_data, width=None, full_rank_for=None, terrain=Non
             # _coalition_groups never merges across one.
             return LaneSide(tuple(m.nation for m in members),
                             columns[groups[group_index][0]][0],
-                            slots, members,
+                            (max(slots, sum(len(m.front) for m in members))
+                             if any(flying.get(i) for i in groups[group_index]) else slots), members,
                             [u for m in members for u in m.front],
                             [u for m in members for u in m.reserve])
 

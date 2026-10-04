@@ -1,7 +1,6 @@
 """Resolve pixel-range aircraft orders once at the turn boundary."""
 import random
 from data import queries
-import data.constants as c
 from map_logic.turn_processing import combat_rules, combat_processor, unit_events
 
 
@@ -93,9 +92,9 @@ def process_air_orders(map_screen):
         if defenders and force:
             with unit_events.record_phase("Interception"):
                 # One side contains every participant: the standard coalition lanes
-                # retain three-or-more-side fights. Terrain never changes air width.
+                # retain three-or-more-side fights. Aircraft have no width limit.
                 battle = combat_rules.build_battle([force + defenders], map_screen.nation_data,
-                                                   width=c.COMBAT_WIDTH, air_combat=True)
+                                                   air_combat=True)
                 for targets, attack, sources in combat_rules.exchange(battle, map_screen.nation_data, with_sources=True):
                     combat_processor.apply_group_damage(attack, targets, sources=sources, tile=key[0])
                 for lane in battle.lanes:
@@ -119,7 +118,7 @@ def process_air_orders(map_screen):
         if survivors and garrison:
             battle = combat_rules.build_battle(
                 [survivors, garrison], map_screen.nation_data,
-                terrain=target.get("terrain"), convert_aircraft=False)
+                terrain=target.get("terrain"), convert_aircraft=False, air_mission_sides={0})
             garrison_ids = {id(u) for u in garrison}
             for targets, attack, sources in combat_rules.exchange(battle, map_screen.nation_data, with_sources=True):
                 combat_processor.apply_group_damage(attack, targets, lambda unit:

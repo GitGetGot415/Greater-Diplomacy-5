@@ -4208,6 +4208,12 @@ def is_air_unit(unit):
     return bool(air_unit_stats(unit).get("air_role"))
 
 
+def air_stack_attack_efficiency(aircraft_count):
+    """Return the attack multiplier for one coalition's flying mission stack."""
+    return max(c.AIR_STACK_MIN_ATTACK_EFFICIENCY,
+               1.0 - c.AIR_STACK_EFFICIENCY_PENALTY * max(0, aircraft_count - 1) ** 0.5)
+
+
 def air_unit_can_patrol(unit):
     """Reusable aircraft can defend an area; one-use air weapons cannot."""
     return is_air_unit(unit) and not air_unit_stats(unit).get("air_consumable", False)

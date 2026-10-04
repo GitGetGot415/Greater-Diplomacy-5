@@ -69,7 +69,7 @@ def _air_exchange_value(map_screen, wings, opponents, *, air_combat=False, targe
     sides = [wings + opponents] if air_combat else [wings, opponents]
     battle = combat_rules.build_battle(sides, map_screen.nation_data,
         air_combat=air_combat, convert_aircraft=False,
-        width=c.COMBAT_WIDTH if air_combat else None,
+        air_mission_sides=None if air_combat else {0},
         terrain=target.get("terrain") if target else None)
     opponent_ids = {id(unit) for unit in opponents}
 
@@ -137,13 +137,19 @@ def _assign_air_orders(map_screen, country, units_info):
     research = map_screen.nation_data[country].get("research", {})
     patrol_threats = _air_patrol_threats(map_screen, country, visible)
     patrol_cover = {}
+    strike_cover = {}
     patrol_scores = {}
     strike_scores = {}
     for unit, base in units_info:
-        if (queries.is_tactical_player_unit(map_screen, unit)
-                and (unit.get("order") or {}).get("type") == "AIR_PATROL"):
+        if not queries.is_tactical_player_unit(map_screen, unit):
+            continue
+        order = unit.get("order") or {}
+        if order.get("type") == "AIR_PATROL":
             for target_id in queries.get_air_targets(map_screen, unit, base, "AIR_PATROL"):
                 patrol_cover.setdefault(target_id, []).append(unit)
+        elif order.get("type") == "AIR_ATTACK":
+            key = (order["target_id"], bool(queries.air_unit_stats(unit).get("air_interception_immune")))
+            strike_cover.setdefault(key, []).append(unit)
 
     enemy_ids = {province["id"] for province in enemies}
     target_values = {province["id"]: sum(queries.calculate_unit_strength(unit) for unit in
@@ -160,6 +166,16 @@ def _assign_air_orders(map_screen, country, units_info):
         if key not in patrol_scores:
             patrol_scores[key] = _air_exchange_value(map_screen, wings, opponents, air_combat=True)
         return patrol_scores[key]
+
+    def committed_strike_value(wings, target):
+        key = (tuple((wing["type"], combat_rules.single_attacker_signature(wing)) for wing in wings),
+               target["id"])
+        if key not in strike_scores:
+            opponents = [other for other in queries.filter_visible_units(
+                target.get("units", []), country, target, map_screen.nation_data)
+                if queries.are_at_war(country, queries.get_unit_combat_owner(other), map_screen.nation_data)]
+            strike_scores[key] = _air_exchange_value(map_screen, wings, opponents, target=target)
+        return strike_scores[key]
 
     # Plan stronger interceptors first. Unit names do not define the preference.
     units_info.sort(key=lambda item: item[0].get("attack", 0)
@@ -217,13 +233,10 @@ def _assign_air_orders(map_screen, country, units_info):
 
             def strike_value(order):
                 target = map_screen.id_to_province[order["target_id"]]
-                key = (unit["type"], combat_rules.single_attacker_signature(unit), target["id"])
-                if key not in strike_scores:
-                    opponents = [other for other in queries.filter_visible_units(
-                        target.get("units", []), country, target, map_screen.nation_data)
-                        if queries.are_at_war(country, queries.get_unit_combat_owner(other), map_screen.nation_data)]
-                    strike_scores[key] = _air_exchange_value(map_screen, [unit], opponents, target=target)
-                return strike_scores[key]
+                key = (target["id"], bool(queries.air_unit_stats(unit).get("air_interception_immune")))
+                committed = strike_cover.get(key, [])
+                return (committed_strike_value(committed + [unit], target)
+                        - committed_strike_value(committed, target))
             if attacks:
                 attack_order = max(attacks, key=lambda order: (strike_value(order),
                     value(map_screen.id_to_province[order["target_id"]]), -order["target_id"]))
@@ -235,6 +248,8 @@ def _assign_air_orders(map_screen, country, units_info):
                 continue
         if attack_order:
             unit["order"] = attack_order
+            key = (attack_order["target_id"], bool(queries.air_unit_stats(unit).get("air_interception_immune")))
+            strike_cover.setdefault(key, []).append(unit)
             continue
         # Rebase on friendly land nearer a known enemy; no hidden target stacks
         # influence the choice. One-use weapons travel at their land speed.

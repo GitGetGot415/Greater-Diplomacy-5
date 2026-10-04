@@ -234,7 +234,7 @@ class AirResolutionTests(unittest.TestCase):
         aircraft["health"] *= 0.6
         politics.set_value(self.game.nation_data, "B", c.POLITICS_MAX)
         battle = combat_rules.build_battle([[aircraft], [defender]], self.game.nation_data,
-            terrain=self.target["terrain"], convert_aircraft=False)
+            terrain=self.target["terrain"], convert_aircraft=False, air_mission_sides={0})
         expected = combat_rules.projected_incoming_damage(battle, self.game.nation_data)
         before = {id(u): u["health"] for u in (aircraft, defender)}
         air_processor.process_air_orders(self.game)
@@ -276,7 +276,7 @@ class AirResolutionTests(unittest.TestCase):
         self.assertLess(tank["health"], tank["max_health"])
         self.assertTrue(queries.is_air_unit(aircraft))
 
-    def test_strike_uses_terrain_width_and_only_front_ranks_fight(self):
+    def test_strike_fields_all_aircraft_but_keeps_garrison_terrain_width(self):
         terrain = next(name for name, width in c.COMBAT_WIDTH_BY_TERRAIN.items()
                        if width != c.COMBAT_WIDTH)
         self.target["terrain"] = terrain
@@ -287,9 +287,9 @@ class AirResolutionTests(unittest.TestCase):
         defenders = [self.combat_fixture(self.target, "Infantry Type 1910", "B")
                       for _ in range(slots + 2)]
         air_processor.process_air_orders(self.game)
-        for units in (attackers, defenders):
-            self.assertEqual(sum(u["health"] < u["max_health"] for u in units), slots)
-            self.assertEqual(sum(bool(u.get("_in_combat_this_turn")) for u in units), slots)
+        for units, count in ((attackers, len(attackers)), (defenders, slots)):
+            self.assertEqual(sum(u["health"] < u["max_health"] for u in units), count)
+            self.assertEqual(sum(bool(u.get("_in_combat_this_turn")) for u in units), count)
         self.assertTrue(all(queries.is_air_unit(u) for u in attackers))
 
     def test_strike_obeys_multiparty_lanes_and_leaves_bystanders_alone(self):
@@ -300,7 +300,7 @@ class AirResolutionTests(unittest.TestCase):
                      for owner in ("B", "C")]
         neutral = self.combat_fixture(self.target, "Infantry Type 1910", "D", attack=10000)
         battle = combat_rules.build_battle([[aircraft], defenders], self.game.nation_data,
-            terrain=self.target["terrain"], convert_aircraft=False)
+            terrain=self.target["terrain"], convert_aircraft=False, air_mission_sides={0})
         self.assertEqual(len(battle.lanes), 2)
         expected = combat_rules.projected_incoming_damage(battle, self.game.nation_data)
         air_processor.process_air_orders(self.game)
@@ -424,10 +424,12 @@ class AirResolutionTests(unittest.TestCase):
         battle = build([attackers + defenders], self.game.nation_data,
                        width=c.COMBAT_WIDTH, air_combat=True)
         self.assertEqual(len(battle.lanes), 1)
-        self.assertEqual(len(battle.lanes[0].a.front), combat_rules.lane_slots(1, c.COMBAT_WIDTH))
-        self.assertEqual(len(battle.lanes[0].b.front), combat_rules.lane_slots(1, c.COMBAT_WIDTH))
+        self.assertEqual(len(battle.lanes[0].a.front), len(attackers))
+        self.assertEqual(len(battle.lanes[0].b.front), len(defenders))
+        self.assertEqual(battle.width, len(attackers + defenders))
+        self.assertFalse(battle.lanes[0].a.reserve + battle.lanes[0].b.reserve)
 
-    def test_three_hostile_sides_use_shared_lanes_and_global_width(self):
+    def test_three_hostile_air_sides_use_shared_lanes_without_width(self):
         self.attack()
         self.patrol()
         third_base = tile(self.game, 4, 70, owner="C")
@@ -441,7 +443,101 @@ class AirResolutionTests(unittest.TestCase):
         with patch.object(combat_rules, "build_battle", side_effect=record):
             air_processor.process_air_orders(self.game)
         self.assertEqual(len(battles[0].lanes), 3)
-        self.assertEqual(battles[0].lanes[0].slots, combat_rules.lane_slots(3, c.COMBAT_WIDTH))
+        self.assertTrue(all(battles[0].shares[id(unit)] == 2
+                            for province in self.game.map_data.values() for unit in province["units"]))
+        self.assertTrue(all(not side.reserve for lane in battles[0].lanes for side in (lane.a, lane.b)))
+
+    def test_air_stack_curve_and_floor(self):
+        for count in (0, 1, 2, 3, 10, 26, 100):
+            with self.subTest(count=count):
+                expected = max(c.AIR_STACK_MIN_ATTACK_EFFICIENCY,
+                    1 - c.AIR_STACK_EFFICIENCY_PENALTY * max(0, count - 1) ** 0.5)
+                self.assertAlmostEqual(queries.air_stack_attack_efficiency(count), expected)
+
+    def test_large_interceptions_scale_each_stack_and_damage_every_aircraft(self):
+        for attackers_count, defenders_count in ((1, 2), (3, 10), (26, 30), (40, 2)):
+            with self.subTest(attackers=attackers_count, defenders=defenders_count):
+                self.base["units"] = []
+                self.defender_base["units"] = []
+                attackers = [self.combat_fixture(self.base, "Monoplane Bomber I", "A", health=100000,
+                    order={"type": "AIR_ATTACK", "target_id": 2}) for _ in range(attackers_count)]
+                defenders = [self.combat_fixture(self.defender_base, "Monoplane Bomber I", "B", health=100000,
+                    order={"type": "AIR_PATROL"}) for _ in range(defenders_count)]
+                air_processor.process_air_orders(self.game)
+                for units, enemies in ((attackers, defenders), (defenders, attackers)):
+                    incoming = sum(enemy["attack"] for enemy in enemies) * queries.air_stack_attack_efficiency(len(enemies))
+                    for unit in units:
+                        self.assertAlmostEqual(unit["max_health"] - unit["health"], incoming / len(units))
+                        self.assertTrue(unit["_in_combat_this_turn"])
+
+    def test_large_strike_scales_attack_before_defense_without_changing_saved_stats(self):
+        count = c.COMBAT_WIDTH * 2
+        attackers = [self.combat_fixture(self.base, "Monoplane Bomber I", "A", health=100000,
+            order={"type": "AIR_ATTACK", "target_id": 2}) for _ in range(count)]
+        defender = self.combat_fixture(self.target, "Infantry Type 1910", "B", health=100000, defense=17)
+        attack = sum(unit["attack"] for unit in attackers) * queries.air_stack_attack_efficiency(count)
+        battle = combat_rules.build_battle([attackers, [defender]], self.game.nation_data,
+            terrain=self.target["terrain"], convert_aircraft=False, air_mission_sides={0})
+        before = deepcopy(self.game.map_data)
+        predicted = combat_rules.projected_incoming_damage(battle, self.game.nation_data)
+        self.assertEqual(self.game.map_data, before)
+        self.assertAlmostEqual(predicted[id(defender)], attack - defender["defense"])
+        shots = combat_rules.exchange(battle, self.game.nation_data, with_sources=True)
+        sources = next(sources for targets, _attack, sources in shots if targets == [defender])
+        self.assertEqual({id(unit) for unit, _amount in sources}, {id(unit) for unit in attackers})
+        self.assertAlmostEqual(sum(amount for _unit, amount in sources), attack)
+        air_processor.process_air_orders(self.game)
+        self.assertAlmostEqual(defender["max_health"] - defender["health"], predicted[id(defender)])
+        saved = json.loads(json.dumps(queries.build_save_dict(self.game)))
+        stored = saved["provinces"][self.base["json_key"]]["units"]
+        for unit, restored in zip(attackers, stored):
+            self.assertAlmostEqual(unit["max_health"] - unit["health"], predicted[id(unit)])
+            self.assertEqual(restored["attack"], before[self.base["map_color"]]["units"][0]["attack"])
+
+    def test_allied_aircraft_from_separate_bases_share_efficiency_and_neutrals_do_not(self):
+        self.game.nation_data["A"].update(at_war_with=["B"], allied_with=["C"])
+        self.game.nation_data["C"].update(at_war_with=["B"], allied_with=["A"])
+        self.game.nation_data["B"]["at_war_with"] = ["A", "C"]
+        self.game.nation_data["D"] = {"at_war_with": []}
+        ally_base = tile(self.game, 4, 70, owner="C")
+        attackers = [self.combat_fixture(base, "Monoplane Bomber I", owner, health=100000,
+            order={"type": "AIR_ATTACK", "target_id": 2})
+            for base, owner in ((self.base, "A"), (ally_base, "C")) for _ in range(10)]
+        neutral = self.combat_fixture(ally_base, "Monoplane Bomber I", "D", health=100000)
+        defender = self.combat_fixture(self.target, "Infantry Type 1910", "B", attack=0, health=100000)
+        air_processor.process_air_orders(self.game)
+        expected = sum(unit["attack"] for unit in attackers) * queries.air_stack_attack_efficiency(len(attackers))
+        self.assertAlmostEqual(defender["max_health"] - defender["health"], expected)
+        self.assertEqual(neutral["health"], neutral["max_health"])
+        self.assertFalse(neutral.get("_in_combat_this_turn"))
+
+    def test_hostile_stacks_have_separate_efficiency_and_split_attack_across_lanes(self):
+        units = {owner: [self.combat_fixture(self.base, "Monoplane Bomber I", owner, health=100000)
+                         for _ in range(count)] for owner, count in (("A", 10), ("B", 3), ("C", 2))}
+        battle = combat_rules.build_battle([sum(units.values(), [])], self.game.nation_data,
+                                           air_combat=True, width=1)
+        self.assertEqual(battle.width, sum(len(stack) for stack in units.values()))
+        shots = combat_rules.exchange(battle, self.game.nation_data, with_sources=True)
+        for owner, stack in units.items():
+            total = sum(amount for _targets, _attack, sources in shots
+                        for unit, amount in sources if unit["owner"] == owner)
+            self.assertAlmostEqual(total, sum(unit["attack"] for unit in stack)
+                                   * queries.air_stack_attack_efficiency(len(stack)))
+            self.assertTrue(all(battle.shares[id(unit)] == 2 for unit in stack))
+
+    def test_strike_recalculates_efficiency_after_interception_losses(self):
+        weak = self.combat_fixture(self.base, "Monoplane Bomber I", "A", health=1,
+            order={"type": "AIR_ATTACK", "target_id": 2})
+        survivors = [self.combat_fixture(self.base, "Monoplane Bomber I", "A", health=100000,
+            order={"type": "AIR_ATTACK", "target_id": 2}) for _ in range(2)]
+        self.combat_fixture(self.defender_base, "Monoplane Bomber I", "B", health=100000,
+            order={"type": "AIR_PATROL"})
+        defender = self.combat_fixture(self.target, "Infantry Type 1910", "B", attack=0, health=100000)
+        air_processor.process_air_orders(self.game)
+        self.assertLessEqual(weak["health"], 0)
+        expected = sum(unit["attack"] * combat_rules.effective_damage_multiplier(unit, self.game.nation_data)
+                       for unit in survivors) * queries.air_stack_attack_efficiency(len(survivors))
+        self.assertAlmostEqual(defender["max_health"] - defender["health"], expected)
 
     def test_fighter_multiplier_only_against_air_and_not_transports(self):
         fighter = wing(self.base, "Monoplane Fighter I")
@@ -610,6 +706,33 @@ class AirIntegrationTests(unittest.TestCase):
         self.base["neighbors"] = [2]
         self.target["neighbors"] = [1]
         self.plane = wing(self.base)
+
+    def test_both_multiplayer_drafts_allow_large_stacks_and_share_scaled_resolution(self):
+        for mode in ("tournament", "realtime"):
+            with self.subTest(mode=mode):
+                self.base["units"] = []
+                self.target["units"] = []
+                aircraft = [wing(self.base) for _ in range(c.COMBAT_WIDTH * 2)]
+                for unit in aircraft:
+                    unit.update(attack=80, defense=0, health=100000, max_health=100000)
+                defender = wing(self.target, "Infantry Type 1910", "B")
+                defender.update(attack=0, defense=0, health=100000, max_health=100000)
+                order = {"type": "AIR_ATTACK", "target_id": 2}
+                if mode == "tournament":
+                    _live, drafts = multiplayer_io._validate_aircraft_orders(self.game, "A",
+                        {"aircraft_orders": [{"unit_id": unit["unit_id"], "order": order} for unit in aircraft]}, {})
+                    for unit, canonical, _name in drafts:
+                        unit["order"] = canonical
+                else:
+                    commands = MapRealtimeDriver(self.game).validate_draft("A", [
+                        {"type": "unit_order", "province_id": 1, "unit_index": index,
+                         "unit_id": unit["unit_id"], "order": order} for index, unit in enumerate(aircraft)])
+                    for unit, command in zip(aircraft, commands):
+                        unit["order"] = command["order"]
+                expected = sum(unit["attack"] for unit in aircraft) * queries.air_stack_attack_efficiency(len(aircraft))
+                air_processor.process_air_orders(self.game)
+                self.assertAlmostEqual(defender["max_health"] - defender["health"], expected)
+                self.assertTrue(all(unit["_in_combat_this_turn"] for unit in aircraft))
 
     def test_listed_strike_boundary_agrees_in_ai_networks_and_resolution(self):
         radius = queries.air_unit_stats(self.plane)["air_range_px"]

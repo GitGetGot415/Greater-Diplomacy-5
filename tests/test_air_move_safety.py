@@ -7,7 +7,7 @@ from data import queries
 import data.constants as c
 from data.io import multiplayer_io
 from data.io.realtime_multiplayer import MapRealtimeDriver, RealtimeError
-from map_logic.ai import ai_movement
+from map_logic.ai import ai_movement, ai_unit_eval
 from map_logic.turn_processing import air_processor, combat_rules, movement_processor
 from screens.menu_screens.map import Map
 from tests.test_air_mechanics import world, tile, wing
@@ -119,6 +119,30 @@ class AirMissionPlanningTests(unittest.TestCase):
         self.plan()
         self.assertEqual(self.screen["order"], before)
         self.assertEqual(self.support["order"]["type"], "AIR_ATTACK")
+
+    def test_ai_large_strike_projection_uses_every_aircraft_and_shared_efficiency(self):
+        self.enemy["units"] = [self.ground]
+        self.ground.update(health=100000, max_health=100000, attack=0)
+        wings = [wing(self.base, "Support Wing") for _ in range(c.COMBAT_WIDTH * 2)]
+        expected_damage = sum(unit["attack"] for unit in wings) * queries.air_stack_attack_efficiency(len(wings))
+        pain = ai_unit_eval.unit_pain(self.library[self.ground["type"]], dict.fromkeys(ai_unit_eval.RESOURCES, 1.0))
+        expected = expected_damage / self.ground["max_health"] * pain
+        before = deepcopy(self.game.map_data)
+        self.assertAlmostEqual(ai_movement._air_exchange_value(self.game, wings, [self.ground], target=self.enemy), expected)
+        self.assertEqual(self.game.map_data, before)
+
+    def test_ai_strike_comparison_includes_tactical_players_committed_stack(self):
+        self.game.tactical_mode = True
+        self.game.player_unit = self.support
+        self.support["order"] = queries.canonical_air_order(self.game, self.support, self.base,
+            {"type": "AIR_ATTACK", "target_id": self.enemy["id"]})
+        before = deepcopy(self.support["order"])
+        with patch.object(ai_movement, "_air_exchange_value", wraps=ai_movement._air_exchange_value) as forecasts:
+            self.plan()
+        strike_stacks = [call.args[1] for call in forecasts.call_args_list if call.kwargs.get("target") is self.enemy]
+        self.assertTrue(any({id(unit) for unit in stack} == {id(self.support), id(self.screen)} for stack in strike_stacks))
+        self.assertTrue(any(stack == [self.support] for stack in strike_stacks))
+        self.assertEqual(self.support["order"], before)
 
 
 class AirMoveSafetyTests(unittest.TestCase):

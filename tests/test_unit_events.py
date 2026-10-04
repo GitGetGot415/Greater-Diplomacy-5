@@ -297,6 +297,29 @@ class UnitEventRulesTests(unittest.TestCase):
         self.assertEqual(projected["unit_event_log"]["events"],
                          [entry for entry in entries if entry["owner"] == "A"])
 
+    def test_large_air_stack_reports_credit_reduced_damage_to_every_aircraft(self):
+        from tests.test_air_mechanics import wing
+        from map_logic.turn_processing import air_processor
+        game, attacker, patrol, garrison, target = self.air_report_fixture()
+        base = game.id_to_province[1]
+        game.id_to_province[3]["units"].remove(patrol)
+        wings = [attacker] + [wing(base, attacker["type"], order=attacker["order"])
+                             for _ in range(c.COMBAT_WIDTH * 2 - 1)]
+        for index, unit in enumerate(wings):
+            unit.update(attack=10 * (index + 1), health=100000, max_health=100000, defense=0)
+        garrison.update(attack=0, health=100000, max_health=100000, defense=17)
+        reduced_attack = sum(unit["attack"] for unit in wings) * queries.air_stack_attack_efficiency(len(wings))
+        with unit_events.record_turn(game):
+            unit_events.run_step(game, "Air missions", air_processor.process_air_orders)
+        dealt = [entry for entry in game.unit_event_log["events"] if entry["event"] == "DAMAGE_DEALT"]
+        self.assertEqual({entry["unit_id"] for entry in dealt}, {unit["unit_id"] for unit in wings})
+        self.assertAlmostEqual(sum(entry["amount"] for entry in dealt), reduced_attack - garrison["defense"])
+        for unit in wings:
+            entry = next(entry for entry in dealt if entry["unit_id"] == unit["unit_id"])
+            expected = (reduced_attack - garrison["defense"]) * unit["attack"] / sum(wing["attack"] for wing in wings)
+            self.assertAlmostEqual(entry["amount"], expected)
+            self.assertEqual(entry["tile_id"], target["id"])
+
     def test_air_destruction_retains_the_phase_of_the_fatal_exchange(self):
         from map_logic.turn_processing import air_processor
         for casualty, expected_phase in (("attacker", "Interception"),

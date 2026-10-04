@@ -82,12 +82,19 @@ The planner checks which friendly provinces or troops visible enemy aircraft can
 It does not read enemy mission orders. Interception-immune threats do not receive patrol assignments.
 It plans aircraft with larger air-to-air attack bonuses first.
 Shared combat projections compare enemy equipment losses with friendly equipment losses.
-Health, defense, damage modifiers, combat width, and coalition lanes use the execution rules.
+
+Health, defense, damage modifiers, and coalition lanes use the execution rules.
+Aircraft have no mission width limit. Garrison units retain terrain width.
+Each coalition's aircraft use the shared stack attack efficiency.
 Equipment value uses unit costs and the shared upkeep horizon.
 Strike value also includes completed fort levels that a capable aircraft can remove.
+
 Defense value measures the additional benefit after existing patrol assignments.
+Strike comparisons measure the additional benefit after existing strike assignments.
+Separate interception-immune missions have separate assignment counts.
 The aircraft patrols when that benefit exceeds its best strike value and is positive.
 This allows useful interceptors to defend while other aircraft strike.
+
 The tactical player's patrol counts as cover. The planner does not change that unit's order.
 Without visible aircraft threats, strikes retain their target-strength preference.
 Exchange projections are cached during one country's order pass.

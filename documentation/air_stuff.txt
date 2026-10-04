@@ -241,7 +241,8 @@ Interception
 All interceptable aircraft attacking one province form one committed force, including aircraft from different countries.
 The air_interception_immune field determines which attackers form a separate force without interception.
 Every hostile patrol covering the mission joins one shared coalition-lane battle.
-It uses global COMBAT_WIDTH and the normal rules for three or more sides.
+It uses the normal coalition rules for three or more sides.
+Every engaged aircraft participates. Air combat has no combat width or aircraft reserves.
 
 Rank missions by their committed calculate_unit_strength sums before losses.
 Target IDs break ties for weakest and strongest priorities.
@@ -256,11 +257,30 @@ Surviving patrols can fight several times.
 Their effectiveness decreases with health.
 Destroyed attackers do not deliver strikes.
 
+Aircraft stack efficiency
+-------------------------
+
+Count each coalition's engaged aircraft once for the current mission exchange.
+Allied aircraft from different bases share this count when they join the same exchange.
+Opposing coalitions have separate counts. Neutral aircraft do not count.
+Interception-immune forces remain separate missions.
+
+queries.air_stack_attack_efficiency supplies the shared attack multiplier.
+For x aircraft, attack efficiency is max(25, 100 - 15 * sqrt(x - 1)) percent.
+The minimum applies from 26 aircraft onward.
+Read the tuning constants in data/constants.py.
+
+Apply efficiency to aircraft attack before target modifiers and defense.
+Health and political modifiers still apply. Efficiency does not reduce aircraft defense.
+Recalculate the count after interception losses, before the surviving aircraft strike.
+Aircraft fighting several hostile coalitions divide their reduced attack between those lanes.
+
 Strikes and ground combat
 -------------------------
 
 After interception, surviving aircraft make one simultaneous exchange against the garrison.
-Use shared coalition lanes, target-terrain combat width, front ranks, and reserves.
+Use shared coalition lanes. Every surviving attacking aircraft participates, without a width limit.
+The garrison retains target-terrain combat width, front ranks, and reserves.
 Defenders return fire even if that exchange destroys them.
 
 Aircraft keep flight stats.
@@ -325,4 +345,5 @@ Damage dealt also identifies hidden targets, with their province number shown as
 Grounded aircraft destroyed by hostile troops also receive loss entries.
 An expended single-use weapon receives a Weapon expended entry.
 Damage dealt uses the applied combat volley, including air modifiers and target immunity.
+Aircraft damage entries include the stack efficiency reduction.
 The next completed turn removes the previous report.
