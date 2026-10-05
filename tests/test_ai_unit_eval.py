@@ -1,6 +1,6 @@
 """Covers the stat-derived replacement for the AI's hardcoded unit lists.
 
-Deliberately built on a synthetic six-unit library rather than the real 602, so
+Deliberately built on a synthetic six-unit library, so
 that rebalancing unit_data.json -- which is exactly the thing this module exists
 to react to -- cannot break these tests. What is asserted here is the shape of
 the reasoning: fuel a nation hasn't got makes fuel units worthless, build time
@@ -383,38 +383,35 @@ class CompositionTests(unittest.TestCase):
 
 
 class BuildableTests(unittest.TestCase):
-    """Runs against the real library, since it is about tech gating, not balance."""
+    """Controlled families test gating and caches without current research settings."""
+
+    def setUp(self):
+        self.library = {f"{base} {c.ROMAN_NUMERALS[level]}": unit()
+                        for base in ("Test Ship", "Test Tank") for level in (1, 2, 3)}
 
     def test_only_the_top_tier_of_each_family_is_offered(self):
         from data import queries
-        library = queries.get_unit_library()
-        research = {"destroyer": 8, "medium_tank": 3, "infantry_type": 30}
+        library = self.library
+        research = {"test_ship": 2, "test_tank": 3}
         names = ue.buildable_units(research, library)
 
-        destroyers = [n for n in names if queries.get_base_unit_name(n) == "Destroyer"]
-        self.assertEqual(destroyers, ["Destroyer VIII"])
+        ships = [n for n in names if queries.get_base_unit_name(n) == "Test Ship"]
+        self.assertEqual(ships, ["Test Ship II"])
 
     def test_nothing_researched_yields_nothing_or_only_free_units(self):
         from data import queries
-        library = queries.get_unit_library()
+        library = self.library
         for name in ue.buildable_units({}, library):
             self.assertTrue(queries.is_unit_unlocked(name, {}), name)
 
     def test_the_same_research_is_only_worked_out_once(self):
-        """Scanning the 602-entry library is regex-heavy and was most of the
-        research pass. Nations in a scenario mostly share research, so a
-        fifty-country map asks a handful of distinct questions, not fifty.
+        """Distinct research states stay cached when earlier states are queried again.
 
-        Asserted by counting distinct entries after asking distinct questions,
-        NOT by counting entries after asking the same one twice -- the first
-        version of this test did the latter, which stays at one entry whether
-        the cache works or is being wiped on every call, and so sat green over
-        exactly that bug.
+        Repeated identical questions cannot detect caches that are cleared on each call.
         """
-        from data import queries
-        library = queries.get_unit_library()
-        a = {"destroyer": 8, "medium_tank": 3, "infantry_type": 30}
-        b = {"destroyer": 8, "medium_tank": 4, "infantry_type": 30}
+        library = self.library
+        a = {"test_ship": 2, "test_tank": 2}
+        b = {"test_ship": 2, "test_tank": 3}
 
         ue._BUILDABLE_CACHE.clear()
         first = ue.buildable_units(a, library)
@@ -428,35 +425,33 @@ class BuildableTests(unittest.TestCase):
     def test_the_cache_survives_repeated_calls(self):
         """Directly pins the bug above: the library check compared id() values
         with `is not`, and large ints are not interned, so it was always true."""
-        from data import queries
-        library = queries.get_unit_library()
+        library = self.library
         ue._BUILDABLE_CACHE.clear()
         for level in range(1, 6):
-            ue.buildable_units({"medium_tank": level}, library)
+            ue.buildable_units({"test_tank": level}, library)
         self.assertEqual(len(ue._BUILDABLE_CACHE), 5)
 
     def test_different_research_gets_a_different_answer(self):
-        from data import queries
-        library = queries.get_unit_library()
-        few = ue.buildable_units({"infantry_type": 30}, library)
-        many = ue.buildable_units({"infantry_type": 30, "medium_tank": 3}, library)
+        library = self.library
+        few = ue.buildable_units({"test_ship": 1}, library)
+        many = ue.buildable_units({"test_ship": 1, "test_tank": 3}, library)
         self.assertNotEqual(few, many)
 
     def test_swapping_the_library_invalidates_the_cache(self):
         """A mod replacing unit_data must not be answered from the old library."""
-        research = {"infantry_type": 30}
-        real = __import__("data.queries", fromlist=["queries"]).get_unit_library()
-        ue.buildable_units(research, real)
+        research = {"test_ship": 1}
+        library = self.library
+        ue.buildable_units(research, library)
         substitute = dict(LIBRARY)
         self.assertNotEqual(ue.buildable_units(research, substitute),
-                            ue.buildable_units(research, real))
+                            ue.buildable_units(research, library))
 
-    def test_the_candidate_set_stays_small(self):
-        """~25 families, not 602 tiers -- the valuation runs per nation per turn."""
-        from data import queries
-        library = queries.get_unit_library()
-        research = {k: 99 for k in queries.get_tech_tree()}
-        self.assertLess(len(ue.buildable_units(research, library)), 40)
+    def test_the_candidate_set_has_one_entry_per_unlocked_family(self):
+        """Tiers collapse into one candidate for each unlocked fixture family."""
+        library = self.library
+        research = {"test_ship": 3, "test_tank": 3}
+        self.assertCountEqual(ue.buildable_units(research, library),
+                              ["Test Ship III", "Test Tank III"])
 
 
 class EffectiveAttackTests(unittest.TestCase):

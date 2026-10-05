@@ -6,14 +6,13 @@ brand-new tech was cheapest, with no notion of whether the thing it unlocked was
 any use -- an island power researched armour, a nation being overrun researched
 recruitment buildings, and neither ever noticed.
 
-The library-dependent cases run against the real tech tree because they are
-about tech gating, not balance; the valuation cases use a synthetic library so
-they survive a rebalance.
+Controlled unit, building, and research fixtures keep tuning out of these tests.
 """
 
 import os
 import sys
 import unittest
+from unittest.mock import patch
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
@@ -33,9 +32,34 @@ def ctx(budget=100000.0, **kw):
                       enemy_stack=5.0, frontline=4.0, budget=budget, **kw)
 
 
+def unit_library():
+    """Create artificial families for unlock and ranking tests."""
+    library = {}
+    for base, count in (("Medium Tank", 4), ("Artillery", 7), ("Cavalry", 1), ("Armored Car", 1)):
+        for level in range(1, count + 1):
+            library[f"{base} {c.ROMAN_NUMERALS[level]}"] = {
+                "attack": 100 * level, "defense": 0, "health": 1000, "speed": 1,
+                "cost_materials": 500, "cost_manpower": 500, "cost_fuel": 0,
+                "production_time": 2, "naval_unit": False}
+    return library
+
+
+def building_library():
+    """Create an artificial replacement chain with controlled marginal yields."""
+    library = {"Basic Factory": {"prod_materials": 500, "cost_materials": 0,
+                                 "cost_manpower": 0, "req": "null"}}
+    for level in range(1, 26):
+        library[f"Factory Lvl {level}"] = {
+            "prod_materials": level * 1000,
+            "cost_materials": c.AI_BUILDING_PAYBACK_TURNS * (2000 if level == 1 else 200),
+            "req": "Basic Factory" if level == 1 else f"Factory Lvl {level - 1}"}
+    library["Recruitment Building Lvl 2"] = {"prod_manpower": 100}
+    return library
+
+
 class UnlockTests(unittest.TestCase):
     def setUp(self):
-        self.library = queries.get_unit_library()
+        self.library = unit_library()
 
     def test_a_tech_level_reports_the_unit_it_unlocks(self):
         research = {"medium_tank": 2}
@@ -59,14 +83,15 @@ class UnlockTests(unittest.TestCase):
         self.assertEqual(len(te._UNLOCK_CACHE), 3)
 
     def test_building_unlocks_are_found(self):
-        blib = queries.get_building_library()
+        blib = building_library()
         self.assertIn("Factory Lvl 1", te.buildings_unlocked_by("factory", 1, blib))
         self.assertEqual(te.buildings_unlocked_by("medium_tank", 1, blib), [])
 
 
 class EconomyValueTests(unittest.TestCase):
     def setUp(self):
-        self.blib = queries.get_building_library()
+        self.blib = building_library()
+        self.enterContext(patch.object(c, "BASIC_FACTORY_BASE_COST_X", 100))
         self.income = {"materials": 5000, "manpower": 5000, "fuel": 500}
 
     def test_a_flat_bonus_tech_is_worth_its_bonus(self):
@@ -86,12 +111,7 @@ class EconomyValueTests(unittest.TestCase):
         self.assertGreater(large, small)
 
     def test_the_first_building_of_a_chain_is_worth_its_whole_yield(self):
-        """Basic Factory replaces nothing, so all 500/turn of it counts.
-
-        Its JSON costs are zeros standing in for a figure computed per nation,
-        so the valuation substitutes the real base rather than reading it as a
-        free +500/turn, which is what it used to be scored as.
-        """
+        """The first building earns its full fixture yield after the shared cost."""
         cheap = prices(materials=1.0, manpower=0.01)
         value = te.economy_gain("basic_factory", 1, cheap, self.blib, self.income)
 
@@ -105,31 +125,28 @@ class EconomyValueTests(unittest.TestCase):
         self.assertGreater(value, 0.0)
 
     def test_the_basic_factory_is_not_scored_as_free(self):
-        """Its JSON costs are zeros standing in for a per-nation figure. Read
-        literally they made it a free +500/turn, which no other building is."""
+        """The shared cost rule replaces placeholder costs."""
         self.assertGreater(
             te._build_cost("Basic Factory", self.blib["Basic Factory"], prices()), 0.0)
 
     def test_an_upgrade_is_worth_only_what_it_adds(self):
-        """Factory Lvl 1 yields 1,000/turn but tears down the Basic Factory's
-        500 doing it, for 30,000 materials. That is not a deal."""
+        """The fixture's first upgrade costs more than its marginal yield."""
         value = te.economy_gain("factory", 1, prices(), self.blib, self.income)
         self.assertEqual(value, 0.0)
 
-    def test_every_factory_upgrade_is_worth_the_same(self):
-        """The bug this replaced, and the headline property.
-
-        Every factory level costs a flat 30,000 and adds a flat 1,000/turn over
-        the level it destroys, so Lvl 25 is worth exactly what Lvl 2 is. The old
-        absolute reading scored the new building's whole output, making Lvl 25
-        look twelve times the deal Lvl 2 was and sending the AI chasing tiers
-        decades ahead of its date -- the further out of reach, the better it
-        looked.
-        """
+    def test_equal_fixture_marginal_yields_and_costs_have_equal_value(self):
+        """Equal artificial upgrades must not earn credit for replaced output."""
         values = {lvl: te.economy_gain("factory", lvl, prices(), self.blib, self.income)
                   for lvl in (2, 8, 15, 25)}
         self.assertEqual(len(set(values.values())), 1, values)
         self.assertGreater(values[2], 0.0, "still worth having, just not more so")
+
+    def test_unequal_fixture_upgrades_use_their_own_yields_and_costs(self):
+        self.blib["Factory Lvl 3"].update(prod_materials=4500,
+                                        cost_materials=300 * c.AI_BUILDING_PAYBACK_TURNS)
+        value = te.economy_gain("factory", 3, prices(), self.blib, self.income)
+        self.assertAlmostEqual(value, 4500 - 2000 - 300)
+        self.assertNotEqual(value, te.economy_gain("factory", 2, prices(), self.blib, self.income))
 
     def test_the_marginal_yield_is_the_difference_between_the_tiers(self):
         """Priced so the upgrade is worth having, the figure is the gap between
@@ -168,15 +185,10 @@ class EconomyValueTests(unittest.TestCase):
 
 
 class BuildingLeadTests(unittest.TestCase):
-    """Research must not run away from what the nation has actually built.
-
-    A province can only ever queue the next item in its chain, so holding
-    factory level 8 with nothing above Lvl 1 anywhere buys nothing for seven
-    twelve-turn upgrades. That is the state the USA was in when this was found.
-    """
+    """Research value follows completed buildings and the shared lead limit."""
 
     def setUp(self):
-        self.blib = queries.get_building_library()
+        self.blib = building_library()
         self.income = {"materials": 5000, "manpower": 5000, "fuel": 500}
 
     def provinces(self, *buildings):
@@ -264,8 +276,8 @@ class UnitGainTests(unittest.TestCase):
 
 class RankingTests(unittest.TestCase):
     def setUp(self):
-        self.library = queries.get_unit_library()
-        self.blib = queries.get_building_library()
+        self.library = unit_library()
+        self.blib = building_library()
         self.research = {"infantry_type": 30, "medium_tank": 3, "artillery": 6,
                          "factory": 7, "resource_refining": 29}
         self.current = set(ue.buildable_units(self.research, self.library))
@@ -308,8 +320,8 @@ class CatchUpTests(unittest.TestCase):
     """
 
     def setUp(self):
-        self.library = queries.get_unit_library()
-        self.blib = queries.get_building_library()
+        self.library = unit_library()
+        self.blib = building_library()
         self.research = {"infantry_type": 30, "medium_tank": 3, "artillery": 6,
                          "factory": 7, "resource_refining": 29}
         self.current = set(ue.buildable_units(self.research, self.library))
@@ -361,8 +373,11 @@ class QueueFillTests(unittest.TestCase):
     def setUp(self):
         from map_logic.ai import ai_research
         self.fill = ai_research._fill_queue
-        self.library = queries.get_unit_library()
-        self.tree = queries.get_tech_tree()
+        self.library = unit_library()
+        self.tree = {key: {"cost": cost, "max_lvl": 50, "req": {}}
+                     for key, cost in (("factory", 1200), ("recruitment_buildings", 1200),
+                                       ("resource_refining", 900), ("medium_tank", 2400))}
+        self.enterContext(patch.object(queries, "get_tech_tree", return_value=self.tree))
         self.research = {"infantry_type": 30, "medium_tank": 3, "factory": 7}
 
     def ranked(self):

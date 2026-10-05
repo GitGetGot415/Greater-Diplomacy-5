@@ -11,8 +11,11 @@ this screen every turn and a spectator uses it never.
 """
 
 import unittest
+from copy import deepcopy
+from unittest.mock import patch
 
 import data.constants as c
+from data import queries
 from tests import app_harness
 
 
@@ -24,6 +27,14 @@ class SubjectTests(unittest.TestCase):
         cls.screen = cls.controller.states["RESEARCH"]
 
     def setUp(self):
+        self.addCleanup(self.screen.start_research, self.map)
+        tree = {"test_research": {"display_name": "Test research", "category": "INDUSTRY",
+                                  "years": [1900], "max_lvl": 1, "cost": 100, "req": {}}}
+        self.enterContext(patch.object(queries, "get_tech_tree", return_value=tree))
+        nation_data = deepcopy(self.map.nation_data)
+        for country in nation_data.values():
+            country.update(research={}, research_queue=[], research_progress={})
+        self.enterContext(patch.object(self.map, "nation_data", nation_data))
         self.saved = {a: getattr(self.map, a, None)
                       for a in ("player_country", "viewing_research_country", "tactical_mode")}
         self.addCleanup(self.restore)

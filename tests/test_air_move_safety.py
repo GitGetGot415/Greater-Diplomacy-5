@@ -10,7 +10,7 @@ from data.io.realtime_multiplayer import MapRealtimeDriver, RealtimeError
 from map_logic.ai import ai_movement, ai_unit_eval
 from map_logic.turn_processing import air_processor, combat_rules, movement_processor
 from screens.menu_screens.map import Map
-from tests.test_air_mechanics import world, tile, wing
+from tests.test_air_mechanics import controlled_air_library, world, tile, wing
 
 
 class AirMissionPlanningTests(unittest.TestCase):
@@ -18,7 +18,7 @@ class AirMissionPlanningTests(unittest.TestCase):
         stats = {"attack": 800, "defense": 0, "health": 1000, "speed": 0,
                  "cost_materials": 1000, "cost_manpower": 100, "cost_fuel": 0,
                  "production_time": 2, "air_role": "aircraft", "air_range_px": 80}
-        self.library = dict(queries.get_unit_library())
+        self.library = controlled_air_library()
         self.library.update({
             "Support Wing": stats,
             "Screen Wing": dict(stats, attack=100, health=2000, air_attack_multiplier=20),
@@ -147,7 +147,7 @@ class AirMissionPlanningTests(unittest.TestCase):
 
 class AirMoveSafetyTests(unittest.TestCase):
     def setUp(self):
-        library = dict(queries.get_unit_library())
+        library = controlled_air_library()
         library["Test Wing"] = dict(library["Monoplane Bomber I"], air_range_px=80)
         library["Test Missile"] = dict(library["V1 Flying Bomb"], air_range_px=80)
         library_patch = patch.object(queries, "get_unit_library", return_value=library)

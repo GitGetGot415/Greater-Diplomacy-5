@@ -110,7 +110,7 @@ Success in one does not prove compatibility with the other.
   Use one anchor or gap value to move a UI group.
   Keep local layout constants out of `data/constants.py`.
 - Keep unit and building tuning data in its source files.
-  Follow the documentation rule below.
+  Follow the test and documentation rules below.
 - Use data tables instead of repeated condition chains when content is likely to grow.
 
 ### Hardcoding and Fallbacks
@@ -118,6 +118,10 @@ Success in one does not prove compatibility with the other.
 - Do not hardcode content, tuning values, or repeated unexplained numbers in behavior code.
   Use JSON data, named local constants, shared constants, or query helpers.
 - Derive gameplay test expectations from shared constants, data, or rule helpers.
+  Never make tests depend on current unit or building stats, research settings, costs, or combat capabilities.
+  Use artificial fixtures to test specific values, relationships, prerequisites, unlocks, and capabilities.
+  Use current data only to check that callers read and apply that data correctly.
+  Derive test setup and expected results from the same authoritative data when testing real content.
   Do not fix balance values in tests unless they belong to an artificial test fixture.
   A tuning change must not require unrelated test edits.
 - Do not assume incidental relationships between real units.
@@ -216,6 +220,8 @@ Use verification appropriate to each change.
 
 1. Add or update focused regression tests for the rule and actual failure.
    Keep useful tests. Rewrite them around the required behavior when necessary.
+   Remove assumptions about current tuning from existing tests, including tests that still pass.
+   Do not delete useful coverage or weaken assertions only to make a failing test pass.
 
 2. Run focused tests during development.
    Example: `python -m unittest tests.test_tournament_moves`.
@@ -229,6 +235,23 @@ Use verification appropriate to each change.
    Tests must not require real network services or an LLM unless marked as integration tests.
 
 6. State exactly which tests and builds ran and which did not.
+
+### Unit, Building, and Research Tests
+
+- Never rely on current unit or building stats, research settings, costs, or combat capabilities in tests.
+  These can change frequently. Tests must check mechanics and data use without fixing current settings.
+- This includes research years, level counts, prerequisites, unlock lists, prices, production times, and resource output.
+  It also includes health, attack, defense, speed, range, damage bonuses, immunity, and fort damage capability.
+- Do not assume that a named unit has a particular capability or that real families have fixed relationships.
+  Do not use current costs, ranges, or research levels as hidden conditions in test setup.
+- Create explicit artificial fixtures for tests that require particular settings or outcomes.
+  Set every relevant field and restore patched data after each test.
+  Do not copy real stats into a fixture and assume that unchanged fields will meet the test conditions.
+- For real-content checks, derive inputs and expectations from authoritative data, shared constants, or rule helpers.
+  Check schema, data propagation, and agreement between systems.
+  Preserve exact identifiers and migration rules when they define compatibility contracts.
+- When tuning exposes an old assumption, rewrite the test around its intended rule.
+  Check other tests for the same assumption, including tests that still pass.
 
 ## Documentation
 

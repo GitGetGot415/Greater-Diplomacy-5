@@ -1,6 +1,5 @@
 """Coverage for fort construction, layering data, and combat protection."""
 
-import json
 import os
 import sys
 import unittest
@@ -29,11 +28,6 @@ def unit(owner, attack=0, defense=0, health=100000):
 
 
 class FortTests(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        with open(c.BUILDING_DATA_PATH, "r", encoding="utf-8") as handle:
-            cls.buildings = json.load(handle)
-
     def test_fort_bonus_only_protects_owner_and_faction_members_in_combat(self):
         province = {"owner": "A", "buildings": ["Fort Lvl 20"], "units": []}
         nations = {
@@ -43,8 +37,9 @@ class FortTests(unittest.TestCase):
         }
         province["units"] = [unit("A"), unit("C")]
 
-        self.assertEqual(queries.get_fort_defense_bonus(province, unit("A"), nations), 200)
-        self.assertEqual(queries.get_fort_defense_bonus(province, unit("B"), nations), 200)
+        expected = queries.get_fort_level(province) * c.FORT_DEFENSE_PER_LEVEL
+        self.assertEqual(queries.get_fort_defense_bonus(province, unit("A"), nations), expected)
+        self.assertEqual(queries.get_fort_defense_bonus(province, unit("B"), nations), expected)
         self.assertEqual(queries.get_fort_defense_bonus(province, unit("C"), nations), 0)
 
         province["units"] = [unit("A")]
@@ -61,15 +56,16 @@ class FortTests(unittest.TestCase):
             "C": {"at_war_with": ["A"]},
         }
 
-        # The helper is also the exact damage path used by combat resolution;
-        # at full health a level-20 fort contributes 200 defense.
+        # Combat resolution must apply the shared fort defense rule.
         target = province["units"][0]
+        before = target["health"]
+        bonus = queries.get_fort_level(province) * c.FORT_DEFENSE_PER_LEVEL
         combat_processor.apply_group_damage(
             500, [target],
             lambda defender: queries.get_fort_defense_bonus(
                 province, defender, nations, combat_active=True),
         )
-        self.assertEqual(target["health"], 99700)
+        self.assertEqual(target["health"], before - max(0, 500 - bonus))
 
     def test_fort_bonus_is_not_reduced_when_the_defender_is_wounded(self):
         province = {"owner": "A", "buildings": ["Fort Lvl 5"], "units": []}
@@ -79,15 +75,16 @@ class FortTests(unittest.TestCase):
         target["health"] = 50000
         province["units"] = [target]
 
+        before = target["health"]
+        bonus = queries.get_fort_level(province) * c.FORT_DEFENSE_PER_LEVEL
         combat_processor.apply_group_damage(
             100, [target],
             lambda defender: queries.get_fort_defense_bonus(
                 province, defender, nations, combat_active=True),
         )
 
-        # The unit has no base defense. Its wounded state must not turn the
-        # level-5 fort's +50 into +25.
-        self.assertEqual(target["health"], 49950)
+        # Wounds must not reduce the fort's separate defense bonus.
+        self.assertEqual(target["health"], before - max(0, 100 - bonus))
 
     def test_artillery_damages_fort_and_refunds_queued_upgrade(self):
         class Screen:

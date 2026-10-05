@@ -48,6 +48,10 @@ Tests and handoff
 
 Test useful behavior and layout conditions.
 Avoid tests that only fix an arbitrary button coordinate.
+Never make tests depend on current unit or building stats, research settings, costs, or combat capabilities.
+Use artificial fixtures when a test needs specific settings.
+For real-content checks, derive test inputs and expected results from authoritative data or shared rules.
+Rewrite old assumptions without removing useful coverage.
 Give a small example when it helps explain a change.
 Show the relevant changes instead of entire files or a generic change log.
 

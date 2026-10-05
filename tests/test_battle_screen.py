@@ -43,6 +43,11 @@ class BattleScreenTestCase(unittest.TestCase):
 
     def setUp(self):
         game_map = self.map
+        stats = {"attack": 20, "defense": 0, "health": 100, "speed": 1,
+                 "cost_materials": 50, "cost_manpower": 10, "cost_fuel": 0,
+                 "production_time": 1, "naval_unit": False}
+        library = {"Infantry": stats, "Test Gun": dict(stats, bombard_attack=30, bombard_range=1)}
+        self.enterContext(mock.patch.object(queries, "get_unit_library", return_value=library))
         # Orders no longer recentres ordinary unit selections. Keep this
         # rendering fixture independent of camera state left by another test.
         previous_camera_pos = pygame.Vector2(game_map.camera.pos)
@@ -66,7 +71,6 @@ class BattleScreenTestCase(unittest.TestCase):
 
         self.province = next(p for p in game_map.map_data.values()
                              if not queries.is_water_province(p))
-        library = queries.get_unit_library()
         # More than a side's lane cap can seat, so there is always a genuine
         # reserve left over to list -- at COMBAT_WIDTH's current tuning a
         # smaller muster gets almost entirely fielded, leaving nothing behind

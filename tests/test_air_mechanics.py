@@ -25,6 +25,61 @@ from screens.menu_screens.map import Map
 from tests.test_tournament_moves import synchronous_progress
 
 
+def controlled_air_library():
+    """Supply artificial families with explicit stats for mechanics tests."""
+    roles = {"Biplane Fighter": "fighter", "Monoplane Fighter": "fighter", "Jet Fighter": "fighter",
+             "Biplane Bomber": "bomber", "Monoplane Bomber": "bomber", "Jet Bomber": "bomber",
+             "Zeppelin": "bomber", "V1 Flying Bomb": "missile", "V2 Rocket": "missile"}
+    names = [f"{base} {c.ROMAN_NUMERALS[level]}"
+             for base in roles if base not in ("Zeppelin", "V1 Flying Bomb", "V2 Rocket")
+             for level in (1, 2)]
+    names.extend(("Zeppelin", "V1 Flying Bomb", "V2 Rocket", "Infantry", "Infantry Type 1910",
+                  "WW1 Tank", "WW1 Railroad Gun", "Artillery VII", "Battleship", "Convoy", "Truck"))
+    library = {}
+    for name in names:
+        base = queries.get_base_unit_name(name)
+        stats = {"attack": 80, "defense": 0, "health": 1000, "speed": 1,
+                 "cost_materials": 1000, "cost_manpower": 100, "cost_fuel": 0,
+                 "production_time": 2, "naval_unit": name in ("Battleship", "Convoy")}
+        role = roles.get(base)
+        if role:
+            consumable = base in ("V1 Flying Bomb", "V2 Rocket")
+            stats.update(air_role=role, air_range_px=240, air_consumable=consumable,
+                         air_attack_multiplier=2 if role == "fighter" else 1,
+                         air_interception_immune=base == "V2 Rocket",
+                         air_damages_forts=role != "fighter",
+                         speed=2 if consumable else 0)
+        if base in ("WW1 Railroad Gun", "Artillery"):
+            stats.update(bombard_attack=80, bombard_range=1)
+        library[name] = stats
+    return library
+
+
+def install_air_fixture(case):
+    """Patch tunable fields and restore them after each test."""
+    library = controlled_air_library()
+    tree = {queries.get_unit_tech_key(queries.get_base_unit_name(name)): {
+                "display_name": queries.get_base_unit_name(name), "max_lvl": 2,
+                "years": [1910, 1911], "cost": 100, "req": {}}
+            for name in library}
+    tree["infantry_type"]["years"] = [1910]
+    tree["infantry_type"]["max_lvl"] = 1
+    for name, stats in library.items():
+        tree[queries.get_unit_tech_key(queries.get_base_unit_name(name))]["category"] = (
+            "AEROSPACE" if stats.get("air_role") else "INFANTRY")
+    # Loading refreshes these libraries from disk in place. Use fixture files
+    # so save/load tests retain the same controlled data after that refresh.
+    directory = case.enterContext(tempfile.TemporaryDirectory())
+    for field, filename, data in (("UNIT_DATA_PATH", "units.json", library),
+                                  ("RESEARCH_TEMPLATE_PATH", "research.json", tree)):
+        path = os.path.join(directory, filename)
+        with open(path, "w", encoding="utf-8") as handle:
+            json.dump(data, handle)
+        case.enterContext(patch.object(c, field, path))
+    case.enterContext(patch.object(queries, "get_unit_library", return_value=library))
+    case.enterContext(patch.object(queries, "get_tech_tree", return_value=tree))
+
+
 def world():
     nations = {name: {"name": name, "is_playable": True,
         "at_war_with": [other for other in ("A", "B", "C") if other != name],
@@ -60,6 +115,7 @@ def wing(base, name="Monoplane Bomber I", owner="A", order=None):
 
 class RangeTests(unittest.TestCase):
     def setUp(self):
+        install_air_fixture(self)
         self.game = world()
         self.base = tile(self.game, 1, 8)
         self.plane = wing(self.base)
@@ -162,6 +218,7 @@ class RangeTests(unittest.TestCase):
 
 class AirResolutionTests(unittest.TestCase):
     def setUp(self):
+        install_air_fixture(self)
         self.game = world()
         self.base = tile(self.game, 1, 8)
         self.target = tile(self.game, 2, 30, owner="B")
@@ -668,7 +725,7 @@ class AirResolutionTests(unittest.TestCase):
             air_processor.process_air_orders(self.game)
         self.assertEqual(seen, [2, 6, 4])
 
-    def test_v1_intercepted_v2_immune_and_both_consumed(self):
+    def test_fixture_interception_immunity_and_consumption(self):
         for name, intercepted in (("V1 Flying Bomb", True), ("V2 Rocket", False)):
             with self.subTest(unit=name):
                 self.base["units"] = []
@@ -719,6 +776,9 @@ class AirResolutionTests(unittest.TestCase):
 
 class AirIntegrationTests(unittest.TestCase):
     def setUp(self):
+        self.content_library = queries.get_unit_library()
+        self.content_tree = queries.get_tech_tree()
+        install_air_fixture(self)
         self.game = world()
         self.base = tile(self.game, 1, 8)
         self.target = tile(self.game, 2, 30, owner="B")
@@ -1010,16 +1070,17 @@ class AirIntegrationTests(unittest.TestCase):
         from data.generators.generate_data import build_unit_data_text, build_research_template_text
         regenerated_units = json.loads(build_unit_data_text())
         regenerated_tree = json.loads(build_research_template_text())
-        for name, stats in queries.get_unit_library().items():
+        for name, stats in self.content_library.items():
             if stats.get("air_role"):
                 self.assertEqual(regenerated_units[name], stats)
-        for key, entry in queries.get_tech_tree().items():
+        for key, entry in self.content_tree.items():
             if entry.get("category") == "AEROSPACE":
                 self.assertEqual(regenerated_tree[key], entry)
 
 
 class AirGroundTransportTests(unittest.TestCase):
     def setUp(self):
+        install_air_fixture(self)
         self.game = world()
         self.base = tile(self.game, 1, 8)
         self.base["is_coastal"] = True
@@ -1273,6 +1334,7 @@ class AirGroundTransportTests(unittest.TestCase):
 
 class AirMissionSelectionTests(unittest.TestCase):
     def setUp(self):
+        install_air_fixture(self)
         self.game = world()
         self.base = tile(self.game, 1, 8)
         self.target = tile(self.game, 2, 30, owner="B")
@@ -1504,7 +1566,7 @@ class AirMissionSelectionTests(unittest.TestCase):
             movement_processor.process_upgrades(self.game)
             self.assertEqual(self.unit["type"], target)
 
-    def test_real_aircraft_upgrades_agree_in_ui_ai_networks_and_resolution(self):
+    def test_aircraft_upgrades_agree_in_ui_ai_networks_and_resolution(self):
         from screens.map_related_screens.orders import ACTION_COL_UPGRADE
         library, tree = queries.get_unit_library(), queries.get_tech_tree()
         for name, stats in library.items():
@@ -1563,6 +1625,7 @@ class AirMissionSelectionTests(unittest.TestCase):
 
 class GroupAirMissionSelectionTests(unittest.TestCase):
     def setUp(self):
+        install_air_fixture(self)
         self.game = world()
         self.base = tile(self.game, 1, 8)
         self.target = tile(self.game, 2, 30, owner="B")
@@ -1760,6 +1823,9 @@ class AirAppSmokeTests(unittest.TestCase):
         from tests import app_harness
         cls.controller, cls.surface = app_harness.boot()
 
+    def setUp(self):
+        install_air_fixture(self)
+
     def test_orders_command_icons_fill_buttons_and_preserve_proportions(self):
         from map_logic.rendering import symbol_loader
         from screens.map_related_screens.orders import ACTION_ICON_INSET, AIR_MISSION_CHOICES
@@ -1822,7 +1888,11 @@ class AirAppSmokeTests(unittest.TestCase):
 
     def test_numbered_aircraft_and_legacy_names_survive_actual_save_load(self):
         from data.map import save_map
-        from tests.test_aerospace import AIRCRAFT_LEVEL_YEARS
+        library = queries.get_unit_library()
+        aircraft_years = {tech: data["years"] for tech, data in queries.get_tech_tree().items()
+                          if any(stats.get("air_role") and queries.get_unit_tier(name) > 0
+                                 and queries.get_unit_research_requirement(name)[0] == tech
+                                 for name, stats in library.items())}
         for legacy in (False, True):
             with self.subTest(legacy=legacy), tempfile.TemporaryDirectory() as directory:
                 game, _, _, _ = self.make_runtime_save(directory)
@@ -1830,10 +1900,8 @@ class AirAppSmokeTests(unittest.TestCase):
                 base["units"] = []
                 research = {}
                 names = []
-                for tech, years in AIRCRAFT_LEVEL_YEARS.items():
+                for tech, years in aircraft_years.items():
                     level = 1 if legacy else len(years)
-                    if tech == "jet_bomber" and not legacy:
-                        level -= 1
                     name = f"{queries.get_tech_tree()[tech]['display_name']} {c.ROMAN_NUMERALS[level]}"
                     names.append(name)
                     research[tech] = level

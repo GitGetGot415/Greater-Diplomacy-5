@@ -52,6 +52,10 @@ def row(owner="A", unit_id="gone", event="DESTROYED"):
 
 
 class UnitEventRulesTests(unittest.TestCase):
+    def setUp(self):
+        from tests.test_air_mechanics import install_air_fixture
+        install_air_fixture(self)
+
     def test_combat_preserves_execution_and_reports_capped_losses_and_sources(self):
         game = fixture()
         victim = unit(game, "A", health=2)
