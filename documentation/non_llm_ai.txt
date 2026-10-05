@@ -426,10 +426,11 @@ Another completed OR branch can preserve a dependent technology.
 Clear changed research projects and progress that no longer meets prerequisites.
 These controls change only the selected country. They do not change the map default.
 
-In the map research editor, purple marks a missing level included in the map default.
-Pink marks a completed level included in the map default.
-Other levels keep their normal colors.
+In the map research editor, purple marks the exact default level when it is missing.
+Pink marks that level when it is completed.
+Earlier and later levels keep their normal colors.
 Player and spectator research trees do not use these default colors.
+The Completed tab is a text list. It has no technology edit buttons.
 
 Edit ALL (Bulk) and Edit Map Default keep their separate Save controls.
 Starting research editing requires the local map editor.
@@ -438,11 +439,22 @@ It is unavailable in tactical play, tournament multiplayer, and real-time multip
 A spectator selects a country and sees its live research tree and queue.
 Select View or Edit above the country search box before selecting a country.
 View opens technology details without allowing research changes.
-Edit grants or removes technology levels immediately, with the same prerequisite rules as the map editor.
+Edit previews technology changes, with the same prerequisite rules as the map editor.
 The spectator research permission switch must permit Edit.
 Tactical play and both multiplayer systems permit only View.
 
-Changes also clear affected projects and invalid progress.
+Select Confirm to save the draft and leave the research screen.
+Select Cancel or press the Back key to discard all edits.
+Draft changes do not change the country's saved research or progress.
+
+An edit that discards active or paused research opens a Yes or No confirmation.
+The message identifies the affected technologies and warns that progress will be lost.
+Select No to keep the draft unchanged.
+Select Yes to discard that progress in the draft.
+Changing technologies back cannot restore this progress.
+Cancel the entire edit to preserve the original research and progress.
+
+Confirm checks permissions again and rejects changes if live research changed during editing.
 A normal player sees their own research.
 map_screen.viewing_research_country passes the selected country to the research screen.
 map_screen.viewing_research_mode passes View or Edit. This temporary display choice is not saved.

@@ -236,34 +236,28 @@ class EditorResearchTreeTests(unittest.TestCase):
         self.screen.start_or_resume_research("root")
         self.assertEqual(self.map.nation_data[self.country]["research_queue"], [])
 
-    def test_completed_overview_clicks_toggle_the_displayed_level(self):
+    def test_completed_overview_is_text_only_in_map_editor(self):
         self.node("root", 2).callback()
         self.screen.set_category("COMPLETED")
-        row = next(button for button in self.screen.elements
-                   if getattr(button, "editor_tech_key", None) == "root")
-        row.callback()
-        self.assertEqual(self.map.nation_data[self.country]["research"]["root"], 1)
+        self.assertTrue(self.screen.completed_text_surfaces)
+        self.assertFalse(any(getattr(button, "editor_tech_key", None) or getattr(button, "is_tech_node", False)
+                             for button in self.screen.elements))
+        self.assertEqual(self.map.nation_data[self.country]["research"]["root"], 2)
         self.assertEqual(self.screen.current_category, "COMPLETED")
 
     def test_map_default_colors_apply_per_level_and_follow_immediate_edits(self):
         self.map.default_research = {"root": 2, "branch": 1}
         self.screen.refresh_ui()
-        self.assertEqual(self.node("root", 1).color, c.UI_COLORS["purple"][0])
+        self.assertEqual(self.node("root", 1).color, c.UI_COLORS["blue"][0])
         self.assertEqual(self.node("root", 2).color, c.UI_COLORS["purple"][0])
         self.assertEqual(self.node("root", 3).color, c.UI_COLORS["grey"][0])
         self.node("root", 2).callback()
-        self.assertEqual(self.node("root", 1).color, c.UI_COLORS["pink"][0])
+        self.assertEqual(self.node("root", 1).color, c.UI_COLORS["green"][0])
         self.assertEqual(self.node("root", 2).color, c.UI_COLORS["pink"][0])
         self.assertEqual(self.node("root", 3).color, c.UI_COLORS["blue"][0])
         self.node("root", 1).callback()
         self.assertEqual(self.node("root", 2).color, c.UI_COLORS["purple"][0])
         self.assertEqual(self.map.default_research, {"root": 2, "branch": 1})
-        self.screen.set_category("COMPLETED")
-        row = next(button for button in self.screen.elements if getattr(button, "editor_tech_key", None) == "root")
-        self.assertEqual(row.color, c.UI_COLORS["purple"][0])
-        self.screen.toggle_editor_tech("root", 2)
-        row = next(button for button in self.screen.elements if getattr(button, "editor_tech_key", None) == "root")
-        self.assertEqual(row.color, c.UI_COLORS["pink"][0])
 
     def test_map_default_colors_are_absent_in_player_and_spectator_trees(self):
         self.map.default_research = {"root": 2}
@@ -287,6 +281,47 @@ class EditorResearchTreeTests(unittest.TestCase):
             self.assertEqual(self.screen.subject_data["research"], {"root": 2, "branch": 2, "tip": 2})
             self.node("branch", 1).callback()
             self.assertEqual(self.screen.subject_data["research"], {"root": 2, "branch": 0, "tip": 0})
+            self.assertEqual(self.map.nation_data[self.country]["research"], {})
+            self.screen.confirm_research_edit()
+            self.assertEqual(self.map.nation_data[self.country]["research"], {"root": 2, "branch": 0, "tip": 0})
+
+    def test_spectator_warns_when_prerequisite_removal_invalidates_a_project(self):
+        from ui import confirm_dialog
+        country = self.map.nation_data[self.country]
+        country.update(research={"root": 2, "branch": 2, "tip": 1},
+                       research_queue=[{"tech_name": "tip", "points_remaining": 40}])
+        before = copy.deepcopy(country)
+        with patch.object(self.map, "is_editor", False), patch.object(self.map, "player_country", "Spectator"), \
+                patch.object(self.map, "viewing_research_country", self.country, create=True), \
+                patch.object(self.map, "viewing_research_mode", "EDIT", create=True):
+            self.screen.start_research(self.map)
+            with patch.object(confirm_dialog, "ask_yes_no") as ask:
+                self.node("branch", 1).callback()
+                ask.assert_called_once()
+                self.assertIn(queries.get_tech_display_name("tip"), ask.call_args.args[1])
+                self.assertEqual(country, before)
+                ask.call_args.args[2](True)
+            self.assertEqual(self.screen.subject_data["research_queue"], [])
+            self.screen.confirm_research_edit()
+            self.assertEqual(country["research_queue"], [])
+            self.assertEqual(country["research"], {"root": 2, "branch": 0, "tip": 0})
+
+    def test_spectator_preserves_progress_when_an_alternative_prerequisite_remains(self):
+        from ui import confirm_dialog
+        country = self.map.nation_data[self.country]
+        country.update(research={"root": 1, "left": 2, "right": 1},
+                       research_queue=[{"tech_name": "choice", "points_remaining": 40}])
+        with patch.object(self.map, "is_editor", False), patch.object(self.map, "player_country", "Spectator"), \
+                patch.object(self.map, "viewing_research_country", self.country, create=True), \
+                patch.object(self.map, "viewing_research_mode", "EDIT", create=True):
+            self.screen.start_research(self.map)
+            self.screen.set_category(self.tree["left"]["category"])
+            with patch.object(confirm_dialog, "ask_yes_no") as ask:
+                self.node("left", 2).callback()
+                ask.assert_not_called()
+            self.screen.confirm_research_edit()
+            self.assertEqual(country["research_queue"], [{"tech_name": "choice", "points_remaining": 40}])
+            self.assertEqual(country["research"], {"root": 1, "left": 1, "right": 1})
 
     def test_reopening_for_an_ordinary_player_clears_editor_mode(self):
         self.map.is_editor = False

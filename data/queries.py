@@ -1794,6 +1794,23 @@ def toggle_country_research(map_screen, country_id, tech_key, level):
     if not can_edit_country_research(map_screen, country_id):
         raise ValueError("Research editing requires a local map editor or permitted spectator.")
     country = map_screen.nation_data[country_id]
+    state, _ = preview_country_research_edit(country, tech_key, level)
+    changed = {key for key, value in state["research"].items() if value != country.get("research", {}).get(key, 0)}
+    _apply_country_research_state(country, state)
+    return changed
+
+
+RESEARCH_EDIT_FIELDS = ("research", "research_queue", "research_progress", "current_research")
+
+
+def country_research_edit_state(country):
+    """Copy research fields without retaining references to the live country."""
+    return {key: copy.deepcopy(country[key]) for key in RESEARCH_EDIT_FIELDS if key in country}
+
+
+def preview_country_research_edit(country, tech_key, level):
+    """Return changed research fields and the projects whose progress is discarded."""
+    country = country_research_edit_state(country)
     research = country.get("research", {})
     tree = get_tech_tree()
     result = edited_research_levels(research, tech_key, level, None, tree)
@@ -1818,7 +1835,35 @@ def toggle_country_research(map_screen, country_id, tech_key, level):
         country.get("research_progress", {}).pop(key, None)
     if isinstance(current_research, str) and current_research in invalidated:
         country["current_research"] = None
-    return changed
+    return country, invalidated & pending
+
+
+def _apply_country_research_state(country, state):
+    """Apply research fields while preserving existing dictionary and list references."""
+    for key in RESEARCH_EDIT_FIELDS:
+        if key not in state:
+            continue
+        value = copy.deepcopy(state[key])
+        current = country.get(key)
+        if isinstance(current, dict) and isinstance(value, dict):
+            current.clear()
+            current.update(value)
+        elif isinstance(current, list) and isinstance(value, list):
+            current[:] = value
+        else:
+            country[key] = value
+
+
+def confirm_country_research_edit(map_screen, country_id, original, draft):
+    """Save a permitted spectator draft only if the live research is unchanged."""
+    if (getattr(map_screen, "player_country", None) != "Spectator"
+            or getattr(map_screen, "is_editor", False)
+            or not can_edit_country_research(map_screen, country_id)):
+        raise ValueError("Research editing requires a permitted local spectator.")
+    country = map_screen.nation_data[country_id]
+    if country_research_edit_state(country) != original:
+        raise ValueError("Country research changed while editing. Cancel and reopen this country's research.")
+    _apply_country_research_state(country, draft)
 
 
 def walk_tech_requirements(reqs):

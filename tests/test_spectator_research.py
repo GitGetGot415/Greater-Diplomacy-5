@@ -6,14 +6,15 @@ The tree itself was unreachable for them because it read player_country, and
 the literal "Spectator" is not a key in nation_data.
 
 The screen shows the selected country. View cannot change research.
-Edit changes completed levels immediately. Normal players keep their research queue controls.
+Edit previews completed levels until Confirm. Cancel preserves the original research and progress.
+Normal players keep their research queue controls.
 """
 
 import unittest
 import pygame
 from copy import deepcopy
 from contextlib import ExitStack
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import data.constants as c
 from data import queries
@@ -40,6 +41,7 @@ class SubjectTests(unittest.TestCase):
         self.enterContext(patch.object(self.map, "multiplayer_mode", False, create=True))
         self.enterContext(patch.object(self.map, "realtime_multiplayer", False, create=True))
         self.enterContext(patch.object(self.map, "viewing_research_mode", "VIEW", create=True))
+        self.enterContext(patch.object(self.map, "show_feedback", Mock()))
         self.saved = {a: getattr(self.map, a, None)
                       for a in ("player_country", "viewing_research_country", "tactical_mode")}
         self.addCleanup(self.restore)
@@ -99,9 +101,12 @@ class SubjectTests(unittest.TestCase):
 
         self.assertEqual(self.map.nation_data[second],
                          before_second, "editing one nation touched another")
-        self.assertEqual(self.map.nation_data[first]["research"], {tech: 1})
+        self.assertEqual(self.screen.subject_data["research"], {tech: 1})
+        self.assertEqual(self.map.nation_data[first]["research"], {})
         self.assertEqual(self.map.nation_data[first]["research_queue"], [])
         self.screen.open_modal({"tech_key": tech, "level": 1})
+        self.assertEqual(self.screen.subject_data["research"], {tech: 0})
+        self.screen.confirm_research_edit()
         self.assertEqual(self.map.nation_data[first]["research"], {tech: 0})
 
     # -- the switch -----------------------------------------------------
@@ -189,6 +194,135 @@ class SubjectTests(unittest.TestCase):
         with patch.object(self.map, "map_data", {}):
             button.callback()
             self.assertEqual(self.map.nation_data[target]["research"], {})
+
+    def test_confirm_saves_draft_and_preserves_live_references_and_other_fields(self):
+        target = self.others()[0]
+        country = self.map.nation_data[target]
+        research, queue, progress = country["research"], country["research_queue"], country["research_progress"]
+        self.spectate(target, "EDIT")
+        self.screen.toggle_editor_tech("test_research", 1)
+        self.assertEqual(research, {})
+        country["test_unrelated_field"] = "preserved"
+        next(button for button in self.screen.elements if getattr(button, "text", "") == "Confirm").callback()
+        self.assertTrue(self.screen.done)
+        self.assertEqual(research, {"test_research": 1})
+        self.assertIs(country["research"], research)
+        self.assertIs(country["research_queue"], queue)
+        self.assertIs(country["research_progress"], progress)
+        self.assertEqual(country["test_unrelated_field"], "preserved")
+        self.assertIsNone(self.screen.spectator_draft)
+
+    def test_cancel_button_and_back_key_discard_all_draft_changes(self):
+        target = self.others()[0]
+        before = deepcopy(self.map.nation_data[target])
+        for exit_method in ("Cancel", "back"):
+            with self.subTest(exit_method=exit_method):
+                self.spectate(target, "EDIT")
+                self.screen.toggle_editor_tech("test_research", 1)
+                self.screen.set_category("COMPLETED")
+                if exit_method == "Cancel":
+                    next(button for button in self.screen.elements if getattr(button, "text", "") == "Cancel").callback()
+                else:
+                    self.screen.handle_back_key()
+                self.assertTrue(self.screen.done)
+                self.assertEqual(self.map.nation_data[target], before)
+
+    def test_progress_warning_no_preserves_draft_and_yes_discards_only_draft_progress(self):
+        from ui import confirm_dialog
+        target = self.others()[0]
+        country = self.map.nation_data[target]
+        country.update(research_queue=[{"tech_name": "test_research", "points_remaining": 40}],
+                       research_progress={"test_research": 30}, current_research="test_research")
+        before = deepcopy(country)
+        self.spectate(target, "EDIT")
+        with patch.object(confirm_dialog, "ask_yes_no") as ask:
+            self.screen.toggle_editor_tech("test_research", 1)
+            ask.assert_called_once()
+            self.assertIn(queries.get_tech_display_name("test_research"), ask.call_args.args[1])
+            self.assertEqual(self.screen.subject_data, queries.country_research_edit_state(before))
+            self.screen.confirm_research_edit()  # Cannot save while the warning is pending.
+            self.assertFalse(self.screen.done)
+            ask.call_args.args[2](False)
+            self.assertEqual(self.screen.subject_data, queries.country_research_edit_state(before))
+            self.screen.toggle_editor_tech("test_research", 1)
+            ask.call_args.args[2](True)
+        self.assertEqual(country, before)
+        self.assertEqual(self.screen.subject_data["research_queue"], [])
+        self.assertEqual(self.screen.subject_data["research_progress"], {})
+        self.assertIsNone(self.screen.subject_data["current_research"])
+        self.screen.toggle_editor_tech("test_research", 1)  # Reversing a tech click cannot restore progress.
+        self.assertEqual(self.screen.subject_data["research_queue"], [])
+        self.screen.exit_screen()
+        self.assertEqual(country, before)
+
+    def test_paused_progress_requires_warning_and_is_cleared_on_confirm(self):
+        from ui import confirm_dialog
+        target = self.others()[0]
+        country = self.map.nation_data[target]
+        country["research_progress"] = {"test_research": 40}
+        self.spectate(target, "EDIT")
+        with patch.object(confirm_dialog, "ask_yes_no") as ask:
+            self.screen.toggle_editor_tech("test_research", 1)
+            ask.assert_called_once()
+            ask.call_args.args[2](True)
+        self.assertEqual(country["research_progress"], {"test_research": 40})
+        self.screen.confirm_research_edit()
+        self.assertEqual(country["research_progress"], {})
+        self.assertEqual(country["research"], {"test_research": 1})
+
+    def test_warning_callbacks_cannot_change_a_cancelled_or_reopened_edit(self):
+        from ui import confirm_dialog
+        target = self.others()[0]
+        self.map.nation_data[target]["research_progress"] = {"test_research": 40}
+        before = deepcopy(self.map.nation_data[target])
+        self.spectate(target, "EDIT")
+        with patch.object(confirm_dialog, "ask_yes_no") as ask:
+            self.screen.toggle_editor_tech("test_research", 1)
+            callback = ask.call_args.args[2]
+        self.screen.exit_screen()
+        callback(True)
+        self.assertEqual(self.map.nation_data[target], before)
+        self.spectate(target, "EDIT")
+        callback(True)
+        self.assertEqual(self.screen.subject_data, queries.country_research_edit_state(before))
+
+    def test_confirm_rechecks_permission_and_rejects_changed_live_research(self):
+        target = self.others()[0]
+        self.spectate(target, "EDIT")
+        self.screen.toggle_editor_tech("test_research", 1)
+        for flags in ({"tactical_mode": True}, {"multiplayer_mode": True}, {"realtime_multiplayer": True},
+                      {"player_country": target}, {"viewing_research_country": "missing"}, {"is_editor": True}):
+            with self.subTest(flags=flags), ExitStack() as stack:
+                for key, value in flags.items():
+                    stack.enter_context(patch.object(self.map, key, value))
+                self.screen.confirm_research_edit()
+                self.assertFalse(self.screen.done)
+                self.assertEqual(self.map.nation_data[target]["research"], {})
+        with patch.object(c, "SPECTATOR_CAN_EDIT_RESEARCH", False):
+            self.screen.confirm_research_edit()
+            self.assertEqual(self.map.nation_data[target]["research"], {})
+        self.map.nation_data[target]["research_progress"]["test_research"] = 40
+        self.screen.confirm_research_edit()
+        self.assertFalse(self.screen.done)
+        self.assertEqual(self.map.nation_data[target]["research_progress"], {"test_research": 40})
+        self.assertEqual(self.map.nation_data[target]["research"], {})
+
+    def test_completed_overview_remains_text_and_confirm_cancel_fit_with_tabs(self):
+        self.spectate(self.others()[0], "EDIT")
+        for size in ((c.SCREEN_WIDTH, c.SCREEN_HEIGHT), (1280, 720)):
+            with self.subTest(size=size), patch.object(c, "SCREEN_WIDTH", size[0]), patch.object(c, "SCREEN_HEIGHT", size[1]):
+                self.screen.set_category("COMPLETED")
+                self.assertTrue(self.screen.completed_text_surfaces)
+                self.assertFalse(any(getattr(button, "editor_tech_key", None) or getattr(button, "is_tech_node", False)
+                                     for button in self.screen.elements))
+                buttons = [button for button in self.screen.elements if hasattr(button, "rect")]
+                bounds = pygame.Rect((0, 0), size)
+                for button in buttons:
+                    self.assertTrue(bounds.contains(button.rect))
+                for index, first in enumerate(buttons):
+                    for second in buttons[index + 1:]:
+                        self.assertFalse(first.rect.colliderect(second.rect))
+                self.screen.draw(pygame.Surface(size))
 
     def test_tactical_mode_is_still_read_only(self):
         """The switch was added beside this rule, not on top of it."""

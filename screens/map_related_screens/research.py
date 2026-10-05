@@ -10,12 +10,14 @@ from ui.bars import ui_bars
 from map_logic import politics
 from ui.text_utils import wrap_text
 from ui.list_select_screen import ListSelectScreen
+from ui import confirm_dialog
 
 # ==========================================
 # LAYOUT
 # ==========================================
 
 EXIT_BTN_POS = (20, 10)
+SPECTATOR_CONFIRM_POS = (130, 10)
 CATEGORY_BTN_START_X = 180
 CATEGORY_BTN_GAP = 5
 CATEGORY_BTN_RIGHT_MARGIN = 20
@@ -53,8 +55,9 @@ HUD_SLOT_TEXT_X = 40
 HUD_FIRST_SLOT_OFFSET_Y = 40
 EDITOR_HELP_LINES = ("EDIT STARTING RESEARCH:", "Click a tech to add it and its prerequisites.",
                      "Click researched tech to remove it and dependents.", "Changes apply immediately to this country.",
-                     "Map default: purple = missing, pink = researched.")
-SPECTATOR_HELP_LINES = ("EDIT COUNTRY RESEARCH:",) + EDITOR_HELP_LINES[1:4]
+                     "Default level: purple = missing, pink = researched.")
+SPECTATOR_HELP_LINES = ("EDIT COUNTRY RESEARCH:",) + EDITOR_HELP_LINES[1:3] + (
+    "Confirm saves changes. Cancel discards all edits.",)
 
 # Tech detail modal
 MODAL_WIDTH = 800
@@ -228,6 +231,11 @@ class Research_Screen(GameState):
         self.map_screen = None
         self.editor_country = ""
         self.spectator_research_mode = "VIEW"
+        self.spectator_draft = None
+        self.research_edit_original = None
+        self.research_edit_country = ""
+        self.research_edit_token = None
+        self.research_warning_pending = False
         self.current_category = "INFANTRY" 
 
         # REPLACED DISK I/O WITH CACHED QUERIES
@@ -279,6 +287,8 @@ class Research_Screen(GameState):
 
     @property
     def subject_data(self):
+        if self.spectator_draft is not None and self.subject == self.research_edit_country:
+            return self.spectator_draft
         return self.map_screen.nation_data[self.subject]
 
     @property
@@ -522,6 +532,17 @@ class Research_Screen(GameState):
         self.editor_country = editor_country
         # Picker modes are display state. Old saves and direct callers default to View.
         self.spectator_research_mode = getattr(map_ref, "viewing_research_mode", "VIEW")
+        self.done = False
+        self.next_state = None
+        self.research_edit_token = object()
+        self.research_warning_pending = False
+        self.spectator_draft = None
+        self.research_edit_original = None
+        self.research_edit_country = ""
+        if not editor_country and map_ref.player_country == "Spectator" and self.spectator_research_mode == "EDIT":
+            self.research_edit_country = self.subject
+            self.research_edit_original = queries.country_research_edit_state(map_ref.nation_data[self.subject])
+            self.spectator_draft = queries.country_research_edit_state(map_ref.nation_data[self.subject])
         self.tech_tree = queries.get_tech_tree()
         self.unit_library = queries.get_unit_library()
         self.building_library = queries.get_building_library()
@@ -593,15 +614,21 @@ class Research_Screen(GameState):
                     self.elements.append(Button(panel_x + MODAL_ACTION_BTN_X, panel_y + MODAL_BTN_Y_OFFSET, "medium", "green", "Researched", lambda: None))
             return
         
-        self.elements.append(Button(*EXIT_BTN_POS, "small", "red", "Exit", self.exit_screen))
+        self.elements.append(Button(*EXIT_BTN_POS, "small", "red",
+                                    "Cancel" if self.spectator_draft is not None else "Exit", self.exit_screen))
+        category_start = CATEGORY_BTN_START_X
+        if self.spectator_draft is not None:
+            confirm = Button(*SPECTATOR_CONFIRM_POS, "small", "green", "Confirm", self.confirm_research_edit)
+            self.elements.append(confirm)
+            category_start = max(category_start, confirm.rect.right + CATEGORY_BTN_GAP)
 
         category_width, category_height = c.SIZES["medium"]
-        available_width = c.SCREEN_WIDTH - CATEGORY_BTN_START_X - CATEGORY_BTN_RIGHT_MARGIN
+        available_width = c.SCREEN_WIDTH - category_start - CATEGORY_BTN_RIGHT_MARGIN
         category_width = min(category_width,
                              (available_width - CATEGORY_BTN_GAP * (len(self.categories) - 1)) // len(self.categories))
         for i, cat in enumerate(self.categories):
             color = "green" if self.current_category == cat else "blue"
-            btn = Button(CATEGORY_BTN_START_X + i * (category_width + CATEGORY_BTN_GAP), CATEGORY_BTN_Y,
+            btn = Button(category_start + i * (category_width + CATEGORY_BTN_GAP), CATEGORY_BTN_Y,
                          (category_width, category_height), color, CATEGORY_LABELS.get(cat, cat),
                          lambda c=cat: self.set_category(c))
             self.elements.append(btn)
@@ -760,7 +787,7 @@ class Research_Screen(GameState):
 
     def tech_button_color(self, tech_key, level, status):
         """Mark map-default levels only in the map research editor."""
-        if self.editing_starting_research and self.map_screen.default_research.get(tech_key, 0) >= level:
+        if self.editing_starting_research and self.map_screen.default_research.get(tech_key, 0) == level:
             return "pink" if status == "COMPLETED" else "purple"
         return STATUS_COLORS[status]
 
@@ -772,18 +799,70 @@ class Research_Screen(GameState):
         self.refresh_ui()
 
     def toggle_editor_tech(self, tech_key, level):
-        if not self.editing_research_levels:
+        if not self.editing_research_levels or self.done or self.research_warning_pending:
             return
         try:
             if self.editing_starting_research:
                 queries.toggle_starting_research(self.map_screen, self.subject, tech_key, level)
             else:
-                queries.toggle_country_research(self.map_screen, self.subject, tech_key, level)
+                if not self.can_edit or self.subject != self.research_edit_country or self.spectator_draft is None:
+                    raise ValueError("Research editing requires a permitted local spectator.")
+                preview, lost_projects = queries.preview_country_research_edit(self.spectator_draft, tech_key, level)
+                token = self.research_edit_token
+                before = self.spectator_draft
+
+                def apply_edit(accepted):
+                    if token is not self.research_edit_token:
+                        return
+                    self.research_warning_pending = False
+                    if not accepted or self.done or self.spectator_draft is not before:
+                        return
+                    if not self.can_edit or self.subject != self.research_edit_country:
+                        self.map_screen.show_feedback("Research editing is no longer permitted for this country.")
+                        return
+                    self.spectator_draft = preview
+                    self.refresh_ui()
+
+                if lost_projects:
+                    names = ", ".join(queries.get_tech_display_name(key) for key in sorted(lost_projects))
+                    message = (f"This edit affects research in progress: {names}.\n"
+                               "The affected projects and their progress will be lost.\n"
+                               "Changing technologies back will not restore this progress.\n"
+                               "Cancel the entire edit to keep the original research and progress.\n"
+                               "Continue with this change?")
+                    self.research_warning_pending = True
+                    confirm_dialog.ask_yes_no("Discard Research Progress?", message, apply_edit)
+                else:
+                    apply_edit(True)
+                return
         except ValueError as error:
             self.map_screen.show_feedback(str(error))
             return
         self._mark_draft_changed()
         self.refresh_ui()
+
+    def confirm_research_edit(self):
+        if self.spectator_draft is None or self.done or self.research_warning_pending:
+            return
+        try:
+            if not self.can_edit or self.subject != self.research_edit_country:
+                raise ValueError("Research editing is no longer permitted for this country.")
+            queries.confirm_country_research_edit(self.map_screen, self.research_edit_country,
+                                                  self.research_edit_original, self.spectator_draft)
+        except ValueError as error:
+            self.map_screen.show_feedback(str(error))
+            return
+        self._mark_draft_changed()
+        self.exit_screen()
+
+    def exit_screen(self):
+        """Discard a spectator draft on Cancel, Escape, or any other exit."""
+        self.spectator_draft = None
+        self.research_edit_original = None
+        self.research_edit_country = ""
+        self.research_edit_token = None
+        self.research_warning_pending = False
+        super().exit_screen()
 
     def cache_modal_unlocks(self):
         """Wrap capability notes once when the research detail panel changes."""
@@ -1211,18 +1290,6 @@ class Research_Screen(GameState):
                 cache_text(f"{display_name}{val_text}", text_font, color,
                            curr_x + COMPLETED_INDENT_X, curr_y,
                            column_width - 2 * COMPLETED_INDENT_X)
-                if self.editing_research_levels:
-                    rendered = self.completed_text_surfaces.pop()[0]
-                    row_color = "green" if lvl > 0 else "blue"
-                    if self.editing_starting_research and self.map_screen.default_research.get(tech_id, 0) > 0:
-                        row_color = "pink" if lvl >= self.map_screen.default_research[tech_id] else "purple"
-                    button = Button(curr_x + COMPLETED_INDENT_X, curr_y,
-                                    (column_width - 2 * COMPLETED_INDENT_X, COMPLETED_ROW_STEP_Y - 2),
-                                    row_color, "",
-                                    lambda key=tech_id, level=max(1, lvl): self.toggle_editor_tech(key, level),
-                                    image=rendered, show_text=False)
-                    button.editor_tech_key = tech_id
-                    self.elements.append(button)
                 curr_y += COMPLETED_ROW_STEP_Y
 
     def render_completed_text_list(self, surface):
