@@ -6,7 +6,7 @@ The tree itself was unreachable for them because it read player_country, and
 the literal "Spectator" is not a key in nation_data.
 
 The screen shows the selected country. View cannot change research.
-Edit previews completed levels until Confirm. Cancel preserves the original research and progress.
+Edit previews completed levels until Save. The exit popup can discard edits with Cancel.
 Normal players keep their research queue controls.
 """
 
@@ -195,7 +195,8 @@ class SubjectTests(unittest.TestCase):
             button.callback()
             self.assertEqual(self.map.nation_data[target]["research"], {})
 
-    def test_confirm_saves_draft_and_preserves_live_references_and_other_fields(self):
+    def test_exit_popup_save_preserves_live_references_and_other_fields(self):
+        from ui import confirm_dialog
         target = self.others()[0]
         country = self.map.nation_data[target]
         research, queue, progress = country["research"], country["research_queue"], country["research_progress"]
@@ -203,7 +204,13 @@ class SubjectTests(unittest.TestCase):
         self.screen.toggle_editor_tech("test_research", 1)
         self.assertEqual(research, {})
         country["test_unrelated_field"] = "preserved"
-        next(button for button in self.screen.elements if getattr(button, "text", "") == "Confirm").callback()
+        with patch.object(confirm_dialog, "ask_yes_no") as ask:
+            next(button for button in self.screen.elements if getattr(button, "text", "") == "Exit").callback()
+            ask.assert_called_once()
+            self.assertFalse(self.screen.done)
+            self.assertEqual(research, {})
+            self.assertEqual(ask.call_args.kwargs, {"yes_label": "Save", "no_label": "Cancel", "back_label": "Go back"})
+            ask.call_args.args[2](True)
         self.assertTrue(self.screen.done)
         self.assertEqual(research, {"test_research": 1})
         self.assertIs(country["research"], research)
@@ -212,20 +219,139 @@ class SubjectTests(unittest.TestCase):
         self.assertEqual(country["test_unrelated_field"], "preserved")
         self.assertIsNone(self.screen.spectator_draft)
 
-    def test_cancel_button_and_back_key_discard_all_draft_changes(self):
+    def test_exit_and_back_key_popup_cancel_discard_all_draft_changes(self):
+        from ui import confirm_dialog
         target = self.others()[0]
         before = deepcopy(self.map.nation_data[target])
-        for exit_method in ("Cancel", "back"):
+        for exit_method in ("Exit", "back"):
             with self.subTest(exit_method=exit_method):
                 self.spectate(target, "EDIT")
                 self.screen.toggle_editor_tech("test_research", 1)
                 self.screen.set_category("COMPLETED")
-                if exit_method == "Cancel":
-                    next(button for button in self.screen.elements if getattr(button, "text", "") == "Cancel").callback()
-                else:
-                    self.screen.handle_back_key()
+                with patch.object(confirm_dialog, "ask_yes_no") as ask:
+                    if exit_method == "Exit":
+                        next(button for button in self.screen.elements if getattr(button, "text", "") == "Exit").callback()
+                    else:
+                        from gameState import dispatch_global_keys
+                        with patch.object(queries, "get_keybind", return_value=pygame.K_F8):
+                            dispatch_global_keys(self.screen, pygame.event.Event(pygame.KEYDOWN, key=pygame.K_F8))
+                    ask.assert_called_once()
+                    self.assertFalse(self.screen.done)
+                    self.assertEqual(self.map.nation_data[target], before)
+                    ask.call_args.args[2](False)
                 self.assertTrue(self.screen.done)
                 self.assertEqual(self.map.nation_data[target], before)
+
+    def test_exit_prompt_blocks_duplicate_prompts_and_edits_until_answered(self):
+        from ui import confirm_dialog
+        target = self.others()[0]
+        self.spectate(target, "EDIT")
+        before = deepcopy(self.screen.spectator_draft)
+        with patch.object(confirm_dialog, "ask_yes_no") as ask:
+            self.screen.exit_screen()  # An Edit session offers the choice even without changes.
+            self.screen.handle_back_key()
+            self.screen.toggle_editor_tech("test_research", 1)
+            self.screen.confirm_research_edit()
+            ask.assert_called_once()
+            self.assertEqual(self.screen.spectator_draft, before)
+            self.assertFalse(self.screen.done)
+            ask.call_args.args[2](False)
+        self.assertTrue(self.screen.done)
+
+    def test_go_back_preserves_draft_and_view_and_allows_further_editing(self):
+        from ui import confirm_dialog
+        target = self.others()[0]
+        self.spectate(target, "EDIT")
+        self.screen.toggle_editor_tech("test_research", 1)
+        self.screen.set_category("COMPLETED")
+        draft = self.screen.spectator_draft
+        before = deepcopy(draft)
+        view = (self.screen.current_category, self.screen.scroll_x, self.screen.target_scroll_x)
+        with patch.object(confirm_dialog, "ask_yes_no") as ask:
+            self.screen.exit_screen()
+            callback = ask.call_args.args[2]
+            callback(None)
+            self.assertFalse(self.screen.done)
+            self.assertFalse(self.screen.research_confirmation_pending)
+            self.assertIs(self.screen.spectator_draft, draft)
+            self.assertEqual(draft, before)
+            self.assertEqual((self.screen.current_category, self.screen.scroll_x, self.screen.target_scroll_x), view)
+            self.assertEqual(self.map.nation_data[target]["research"], {})
+            callback(False)  # An old popup answer cannot discard the retained draft.
+            self.assertFalse(self.screen.done)
+            self.screen.toggle_editor_tech("test_research", 1)
+            self.assertEqual(self.screen.spectator_draft["research"], {"test_research": 0})
+            self.screen.exit_screen()
+            self.assertEqual(ask.call_count, 2)
+            ask.call_args.args[2](False)
+        self.assertTrue(self.screen.done)
+
+    def test_old_exit_callback_cannot_save_a_reopened_edit(self):
+        from ui import confirm_dialog
+        target = self.others()[0]
+        self.spectate(target, "EDIT")
+        self.screen.toggle_editor_tech("test_research", 1)
+        with patch.object(confirm_dialog, "ask_yes_no") as ask:
+            self.screen.exit_screen()
+            callback = ask.call_args.args[2]
+        self.spectate(target, "EDIT")
+        callback(True)
+        self.assertFalse(self.screen.done)
+        self.assertEqual(self.map.nation_data[target]["research"], {})
+        self.assertEqual(self.screen.spectator_draft["research"], {})
+
+    def test_real_go_back_popup_keeps_edit_open_and_cancel_still_discards(self):
+        from ui import modal_stack
+        self.enterContext(patch.object(modal_stack, "_stack", []))
+        target = self.others()[0]
+        self.spectate(target, "EDIT")
+        self.screen.toggle_editor_tech("test_research", 1)
+        draft = self.screen.spectator_draft
+        self.screen.exit_screen()
+        modal = modal_stack.active()
+        self.assertEqual(modal.back_label, "Go back")
+        modal.handle_events([pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=modal.back_rect.center)])
+        modal.update()
+        self.assertTrue(modal_stack.is_empty())
+        self.assertFalse(self.screen.done)
+        self.assertIs(self.screen.spectator_draft, draft)
+        self.assertEqual(self.map.nation_data[target]["research"], {})
+        self.screen.exit_screen()
+        modal = modal_stack.active()
+        modal.handle_events([pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=modal.no_rect.center)])
+        modal.update()
+        self.assertTrue(self.screen.done)
+        self.assertEqual(self.map.nation_data[target]["research"], {})
+
+    def test_popup_save_rechecks_permission_and_leaves_draft_open_on_failure(self):
+        from ui import confirm_dialog
+        target = self.others()[0]
+        self.spectate(target, "EDIT")
+        self.screen.toggle_editor_tech("test_research", 1)
+        with patch.object(confirm_dialog, "ask_yes_no") as ask:
+            self.screen.exit_screen()
+            with patch.object(c, "SPECTATOR_CAN_EDIT_RESEARCH", False):
+                ask.call_args.args[2](True)
+            self.assertFalse(self.screen.done)
+            self.assertEqual(self.map.nation_data[target]["research"], {})
+            self.assertEqual(self.screen.spectator_draft["research"], {"test_research": 1})
+            self.screen.exit_screen()
+            ask.call_args.args[2](False)
+        self.assertTrue(self.screen.done)
+
+    def test_view_and_player_exit_do_not_open_save_popup(self):
+        from ui import confirm_dialog
+        target = self.others()[0]
+        with patch.object(confirm_dialog, "ask_yes_no") as ask:
+            self.spectate(target)
+            self.screen.exit_screen()
+            self.assertTrue(self.screen.done)
+            self.map.player_country = target
+            self.map.viewing_research_country = ""
+            self.screen.start_research(self.map)
+            self.screen.exit_screen()
+            self.assertTrue(self.screen.done)
+            ask.assert_not_called()
 
     def test_progress_warning_no_preserves_draft_and_yes_discards_only_draft_progress(self):
         from ui import confirm_dialog
@@ -252,7 +378,9 @@ class SubjectTests(unittest.TestCase):
         self.assertIsNone(self.screen.subject_data["current_research"])
         self.screen.toggle_editor_tech("test_research", 1)  # Reversing a tech click cannot restore progress.
         self.assertEqual(self.screen.subject_data["research_queue"], [])
-        self.screen.exit_screen()
+        with patch.object(confirm_dialog, "ask_yes_no") as ask:
+            self.screen.exit_screen()
+            ask.call_args.args[2](False)
         self.assertEqual(country, before)
 
     def test_paused_progress_requires_warning_and_is_cleared_on_confirm(self):
@@ -279,7 +407,9 @@ class SubjectTests(unittest.TestCase):
         with patch.object(confirm_dialog, "ask_yes_no") as ask:
             self.screen.toggle_editor_tech("test_research", 1)
             callback = ask.call_args.args[2]
-        self.screen.exit_screen()
+            callback(False)
+            self.screen.exit_screen()
+            ask.call_args.args[2](False)
         callback(True)
         self.assertEqual(self.map.nation_data[target], before)
         self.spectate(target, "EDIT")
@@ -307,7 +437,7 @@ class SubjectTests(unittest.TestCase):
         self.assertEqual(self.map.nation_data[target]["research_progress"], {"test_research": 40})
         self.assertEqual(self.map.nation_data[target]["research"], {})
 
-    def test_completed_overview_remains_text_and_confirm_cancel_fit_with_tabs(self):
+    def test_completed_overview_remains_text_and_exit_fits_with_tabs(self):
         self.spectate(self.others()[0], "EDIT")
         for size in ((c.SCREEN_WIDTH, c.SCREEN_HEIGHT), (1280, 720)):
             with self.subTest(size=size), patch.object(c, "SCREEN_WIDTH", size[0]), patch.object(c, "SCREEN_HEIGHT", size[1]):
@@ -316,6 +446,10 @@ class SubjectTests(unittest.TestCase):
                 self.assertFalse(any(getattr(button, "editor_tech_key", None) or getattr(button, "is_tech_node", False)
                                      for button in self.screen.elements))
                 buttons = [button for button in self.screen.elements if hasattr(button, "rect")]
+                labels = {button.text for button in buttons}
+                self.assertIn("Exit", labels)
+                self.assertNotIn("Confirm", labels)
+                self.assertNotIn("Cancel", labels)
                 bounds = pygame.Rect((0, 0), size)
                 for button in buttons:
                     self.assertTrue(bounds.contains(button.rect))

@@ -17,7 +17,6 @@ from ui import confirm_dialog
 # ==========================================
 
 EXIT_BTN_POS = (20, 10)
-SPECTATOR_CONFIRM_POS = (130, 10)
 CATEGORY_BTN_START_X = 180
 CATEGORY_BTN_GAP = 5
 CATEGORY_BTN_RIGHT_MARGIN = 20
@@ -57,7 +56,7 @@ EDITOR_HELP_LINES = ("EDIT STARTING RESEARCH:", "Click a tech to add it and its 
                      "Click researched tech to remove it and dependents.", "Changes apply immediately to this country.",
                      "Default level: purple = missing, pink = researched.")
 SPECTATOR_HELP_LINES = ("EDIT COUNTRY RESEARCH:",) + EDITOR_HELP_LINES[1:3] + (
-    "Confirm saves changes. Cancel discards all edits.",)
+    "Exit opens Save, Cancel, or Go back.",)
 
 # Tech detail modal
 MODAL_WIDTH = 800
@@ -235,7 +234,7 @@ class Research_Screen(GameState):
         self.research_edit_original = None
         self.research_edit_country = ""
         self.research_edit_token = None
-        self.research_warning_pending = False
+        self.research_confirmation_pending = False
         self.current_category = "INFANTRY" 
 
         # REPLACED DISK I/O WITH CACHED QUERIES
@@ -535,7 +534,7 @@ class Research_Screen(GameState):
         self.done = False
         self.next_state = None
         self.research_edit_token = object()
-        self.research_warning_pending = False
+        self.research_confirmation_pending = False
         self.spectator_draft = None
         self.research_edit_original = None
         self.research_edit_country = ""
@@ -614,21 +613,15 @@ class Research_Screen(GameState):
                     self.elements.append(Button(panel_x + MODAL_ACTION_BTN_X, panel_y + MODAL_BTN_Y_OFFSET, "medium", "green", "Researched", lambda: None))
             return
         
-        self.elements.append(Button(*EXIT_BTN_POS, "small", "red",
-                                    "Cancel" if self.spectator_draft is not None else "Exit", self.exit_screen))
-        category_start = CATEGORY_BTN_START_X
-        if self.spectator_draft is not None:
-            confirm = Button(*SPECTATOR_CONFIRM_POS, "small", "green", "Confirm", self.confirm_research_edit)
-            self.elements.append(confirm)
-            category_start = max(category_start, confirm.rect.right + CATEGORY_BTN_GAP)
+        self.elements.append(Button(*EXIT_BTN_POS, "small", "red", "Exit", self.exit_screen))
 
         category_width, category_height = c.SIZES["medium"]
-        available_width = c.SCREEN_WIDTH - category_start - CATEGORY_BTN_RIGHT_MARGIN
+        available_width = c.SCREEN_WIDTH - CATEGORY_BTN_START_X - CATEGORY_BTN_RIGHT_MARGIN
         category_width = min(category_width,
                              (available_width - CATEGORY_BTN_GAP * (len(self.categories) - 1)) // len(self.categories))
         for i, cat in enumerate(self.categories):
             color = "green" if self.current_category == cat else "blue"
-            btn = Button(category_start + i * (category_width + CATEGORY_BTN_GAP), CATEGORY_BTN_Y,
+            btn = Button(CATEGORY_BTN_START_X + i * (category_width + CATEGORY_BTN_GAP), CATEGORY_BTN_Y,
                          (category_width, category_height), color, CATEGORY_LABELS.get(cat, cat),
                          lambda c=cat: self.set_category(c))
             self.elements.append(btn)
@@ -799,7 +792,7 @@ class Research_Screen(GameState):
         self.refresh_ui()
 
     def toggle_editor_tech(self, tech_key, level):
-        if not self.editing_research_levels or self.done or self.research_warning_pending:
+        if not self.editing_research_levels or self.done or self.research_confirmation_pending:
             return
         try:
             if self.editing_starting_research:
@@ -814,7 +807,7 @@ class Research_Screen(GameState):
                 def apply_edit(accepted):
                     if token is not self.research_edit_token:
                         return
-                    self.research_warning_pending = False
+                    self.research_confirmation_pending = False
                     if not accepted or self.done or self.spectator_draft is not before:
                         return
                     if not self.can_edit or self.subject != self.research_edit_country:
@@ -830,7 +823,7 @@ class Research_Screen(GameState):
                                "Changing technologies back will not restore this progress.\n"
                                "Cancel the entire edit to keep the original research and progress.\n"
                                "Continue with this change?")
-                    self.research_warning_pending = True
+                    self.research_confirmation_pending = True
                     confirm_dialog.ask_yes_no("Discard Research Progress?", message, apply_edit)
                 else:
                     apply_edit(True)
@@ -842,7 +835,7 @@ class Research_Screen(GameState):
         self.refresh_ui()
 
     def confirm_research_edit(self):
-        if self.spectator_draft is None or self.done or self.research_warning_pending:
+        if self.spectator_draft is None or self.done or self.research_confirmation_pending:
             return
         try:
             if not self.can_edit or self.subject != self.research_edit_country:
@@ -853,15 +846,41 @@ class Research_Screen(GameState):
             self.map_screen.show_feedback(str(error))
             return
         self._mark_draft_changed()
-        self.exit_screen()
+        self._close_research_screen()
 
     def exit_screen(self):
-        """Discard a spectator draft on Cancel, Escape, or any other exit."""
+        """Ask whether to save or discard a spectator draft before leaving."""
+        if self.done or self.research_confirmation_pending:
+            return
+        if self.spectator_draft is None:
+            self._close_research_screen()
+            return
+        # A new dialog invalidates callbacks from earlier research warnings.
+        token = self.research_edit_token = object()
+        self.research_confirmation_pending = True
+
+        def finish_exit(save):
+            if token is not self.research_edit_token or self.done:
+                return
+            self.research_confirmation_pending = False
+            self.research_edit_token = object()
+            if save is True:
+                self.confirm_research_edit()
+            elif save is False:
+                self._close_research_screen()
+
+        confirm_dialog.ask_yes_no("Save Research Changes?",
+                                  "Save applies all research edits. Cancel discards all edits and exits. "
+                                  "Go back keeps your draft open on the research screen.",
+                                  finish_exit, yes_label="Save", no_label="Cancel", back_label="Go back")
+
+    def _close_research_screen(self):
+        """Clear the draft and leave after the exit choice is resolved."""
         self.spectator_draft = None
         self.research_edit_original = None
         self.research_edit_country = ""
         self.research_edit_token = None
-        self.research_warning_pending = False
+        self.research_confirmation_pending = False
         super().exit_screen()
 
     def cache_modal_unlocks(self):
@@ -1336,7 +1355,7 @@ class Research_Screen(GameState):
             self.draw_subscreen_modal(surface)
 
     def handle_back_key(self):
-        # Escape closes an open tech modal before it leaves the screen.
+        # Back closes an open tech modal before it leaves the screen.
         if self.active_modal:
             self.close_modal()
         else:

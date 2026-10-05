@@ -4,8 +4,7 @@ They are pushed onto the modal stack from deep inside other screens, so nothing
 else in the suite reaches them -- and they all now share one base class, so a
 mistake in the shared half breaks every dialog at once.
 
-Everything here drives the in-game (modal stack) path. The standalone blocking
-path only runs when no display exists, which is the opposite of a test run.
+Tests drive the in-game modal stack. Standalone callback checks replace the blocking loop with a test double.
 """
 
 import unittest
@@ -85,6 +84,40 @@ class DialogTests(unittest.TestCase):
         long_h = modal_stack.active().box_rect.height
         modal_stack.pop()
         self.assertGreater(long_h, short_h)
+
+    def test_three_choice_dialog_buttons_fit_and_return_distinct_results(self):
+        for rectangle, expected in (("yes_rect", True), ("no_rect", False), ("back_rect", None)):
+            with self.subTest(rectangle=rectangle):
+                self.answers.clear()
+                confirm_dialog.ask_yes_no("T", "Save, discard, or return?", self.answers.append,
+                                          yes_label="Save", no_label="Cancel", back_label="Go back")
+                modal = modal_stack.active()
+                buttons = (modal.yes_rect, modal.no_rect, modal.back_rect)
+                for index, first in enumerate(buttons):
+                    self.assertTrue(modal.box_rect.contains(first))
+                    for second in buttons[index + 1:]:
+                        self.assertFalse(first.colliderect(second))
+                modal.handle_events([click(getattr(modal, rectangle).center)])
+                self.settle()
+                self.assertEqual(self.answers, [expected])
+
+    def test_three_choice_keyboard_returns_to_screen_on_back(self):
+        for keyboard_key, expected in ((pygame.K_RETURN, True), (pygame.K_n, False),
+                                       (pygame.K_ESCAPE, None), (pygame.K_g, None), (pygame.K_F8, None)):
+            with self.subTest(key=keyboard_key), mock.patch("ui.confirm_dialog.yes_no._back_key", return_value=pygame.K_F8):
+                self.answers.clear()
+                confirm_dialog.ask_yes_no("T", "Save?", self.answers.append, back_label="Go back")
+                modal_stack.active().handle_events([key(keyboard_key)])
+                self.settle()
+                self.assertEqual(self.answers, [expected])
+
+    def test_three_choice_standalone_preserves_go_back_result(self):
+        from ui.confirm_dialog import yes_no
+        with mock.patch.object(pygame.display, "get_surface", return_value=None), \
+                mock.patch.object(yes_no, "_run_blocking", return_value=None) as run:
+            confirm_dialog.ask_yes_no("T", "Save?", self.answers.append, back_label="Go back")
+        self.assertIsNone(run.call_args.kwargs["default_result"])
+        self.assertEqual(self.answers, [None])
 
     # -- ask_string / ask_integer ---------------------------------------
 

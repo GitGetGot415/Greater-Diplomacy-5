@@ -443,8 +443,11 @@ Edit previews technology changes, with the same prerequisite rules as the map ed
 The spectator research permission switch must permit Edit.
 Tactical play and both multiplayer systems permit only View.
 
-Select Confirm to save the draft and leave the research screen.
-Select Cancel or press the Back key to discard all edits.
+Select Exit or press the Back key to open the exit popup.
+Select Save to apply the draft and leave the research screen.
+Select Cancel to discard all edits and leave the research screen.
+Select Go back to close the popup and keep the draft open.
+The Back key and Escape also select Go back in this popup.
 Draft changes do not change the country's saved research or progress.
 
 An edit that discards active or paused research opens a Yes or No confirmation.
@@ -454,7 +457,7 @@ Select Yes to discard that progress in the draft.
 Changing technologies back cannot restore this progress.
 Cancel the entire edit to preserve the original research and progress.
 
-Confirm checks permissions again and rejects changes if live research changed during editing.
+Save checks permissions again and rejects changes if live research changed during editing.
 A normal player sees their own research.
 map_screen.viewing_research_country passes the selected country to the research screen.
 map_screen.viewing_research_mode passes View or Edit. This temporary display choice is not saved.
