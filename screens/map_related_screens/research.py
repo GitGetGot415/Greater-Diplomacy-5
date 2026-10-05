@@ -169,6 +169,7 @@ class Research_Screen(GameState):
         super().__init__()
         self.bg_color = (20, 20, 30)
         self.map_screen = None
+        self.editor_country = ""
         self.current_category = "INFANTRY" 
 
         # REPLACED DISK I/O WITH CACHED QUERIES
@@ -204,8 +205,14 @@ class Research_Screen(GameState):
         hand-off channel `editing_country` already uses for the identity
         editor, rather than a second mechanism doing the same job.
         """
+        if self.editor_country:
+            return self.editor_country
         chosen = getattr(self.map_screen, "viewing_research_country", "")
         return chosen or self.map_screen.player_country
+
+    @property
+    def editing_starting_research(self):
+        return bool(self.editor_country)
 
     @property
     def subject_data(self):
@@ -219,6 +226,8 @@ class Research_Screen(GameState):
         kind of onlooker, gated by its own switch so a host can hand out the
         view without the power.
         """
+        if self.editing_starting_research:
+            return queries.can_edit_starting_research(self.map_screen, self.subject)
         if self.map_screen.tactical_mode:
             return False
         if getattr(self.map_screen, "realtime_multiplayer", False):
@@ -230,7 +239,7 @@ class Research_Screen(GameState):
                 return False
         if self.map_screen.player_country == "Spectator":
             return c.SPECTATOR_CAN_EDIT_RESEARCH
-        return True
+        return self.subject == self.map_screen.player_country
 
     def handle_events(self, events):
         for event in events:
@@ -439,8 +448,14 @@ class Research_Screen(GameState):
     def tech_cost(self, tech_key):
         return self.tech_tree.get(tech_key, {}).get("cost", DEFAULT_TECH_COST)
 
-    def start_research(self, map_ref):
+    def start_research(self, map_ref, editor_country=""):
+        if editor_country and not queries.can_edit_starting_research(map_ref, editor_country):
+            raise ValueError("Country research editing requires the local map editor.")
         self.map_screen = map_ref
+        self.editor_country = editor_country
+        self.tech_tree = queries.get_tech_tree()
+        self.unit_library = queries.get_unit_library()
+        self.building_library = queries.get_building_library()
         self.current_category = "INFANTRY"
         self.active_modal = None
         self.scroll_x = 0
@@ -450,6 +465,8 @@ class Research_Screen(GameState):
         # map load -- rebuild self.nodes from whatever tech_tree looks like now,
         # instead of the stale set of keys computed at startup.
         self.setup_nodes()
+        if self.current_category not in self.categories:
+            self.current_category = self.categories[0]
         self.enforce_scroll_bounds()
         self.refresh_ui()
 
@@ -476,6 +493,7 @@ class Research_Screen(GameState):
         player_data = self.subject_data
         res_levels = player_data.setdefault("research", {})
         queue = player_data.setdefault("research_queue", [])
+        self.cache_header()
         
         is_tactical = self.map_screen.tactical_mode
 
@@ -523,9 +541,38 @@ class Research_Screen(GameState):
             self.cache_completed_text_list(res_levels)
         else:
             self.draw_tech_nodes(res_levels, queue)
+            self.cache_connections(res_levels)
             # Drawn last so it covers any tech-node button still sliding past it.
             self.elements.append(ScreenLayer(self, "draw_hud_slots"))
             self.elements.append(ScreenLayer(self, "draw_timeline_scrollbar"))
+            self._sync_tech_node_positions()
+
+    def cache_header(self):
+        """Prepare the country title, output, and editor instructions after changes."""
+        font = fonts.get("heading1")
+        category = CATEGORY_LABELS.get(self.current_category, self.current_category)
+        name = queries.get_country_display_name(self.subject, self.map_screen.nation_data)
+        prefix = f"{name} -- " if self.editing_starting_research or self.subject != self.map_screen.player_country else ""
+        self.header_title_surface = font.render(f"{prefix}VIEWING: {category}", True, (255, 255, 255))
+        self.header_output_surface = None
+        if self.editing_starting_research:
+            hud_font = fonts.get("button")
+            lines = ("EDIT STARTING RESEARCH:", "Click a tech to add it and its prerequisites.",
+                     "Click a green tech to remove it and dependents.", "Changes apply immediately to this country.")
+            self.editor_help_surfaces = []
+            width = HUD_WIDTH - (HUD_TITLE_X - HUD_X) * 2
+            for line in lines:
+                rendered = hud_font.render(line, True, c.UI_TEXT_LIGHT)
+                if rendered.get_width() > width:
+                    height = max(1, round(rendered.get_height() * width / rendered.get_width()))
+                    rendered = pygame.transform.smoothscale(rendered, (width, height))
+                self.editor_help_surfaces.append(rendered)
+        else:
+            days = queries.get_days_per_turn(self.map_screen.scenario_settings)
+            # The headline uses the same political multiplier as turn resolution.
+            multiplier = politics.research_multiplier(self.map_screen.nation_data, self.subject)
+            points = int(c.BASE_RESEARCH_POINTS_PER_DAY * days * multiplier)
+            self.header_output_surface = font.render(f"RESEARCH OUTPUT: {points} pts/turn", True, (0, 255, 255))
 
     def get_button_size(self, tech_key, display_name):
         """Picks a node's button size from NODE_SIZE_RULES (first match wins)."""
@@ -644,7 +691,21 @@ class Research_Screen(GameState):
         return queries.check_tech_requirements(res_levels, reqs, target_lvl)
 
     def open_modal(self, node_info):
+        if self.editing_starting_research:
+            self.toggle_editor_tech(node_info["tech_key"], node_info["level"])
+            return
         self.active_modal = node_info
+        self.refresh_ui()
+
+    def toggle_editor_tech(self, tech_key, level):
+        if not self.editing_starting_research:
+            return
+        try:
+            queries.toggle_starting_research(self.map_screen, self.subject, tech_key, level)
+        except ValueError as error:
+            self.map_screen.show_feedback(str(error))
+            return
+        self._mark_draft_changed()
         self.refresh_ui()
 
     def cache_modal_unlocks(self):
@@ -672,7 +733,7 @@ class Research_Screen(GameState):
         self.close_modal()
 
     def start_or_resume_research(self, tech_name):
-        if not self.can_edit:
+        if self.editing_starting_research or not self.can_edit:
             return
         player_data = self.subject_data
         progress_cache = player_data.setdefault("research_progress", {})
@@ -687,7 +748,7 @@ class Research_Screen(GameState):
         self.refresh_ui()
 
     def pause_research(self, tech_name):
-        if not self.can_edit:
+        if self.editing_starting_research or not self.can_edit:
             return
         player_data = self.subject_data
         queue = player_data.get("research_queue", [])
@@ -726,8 +787,10 @@ class Research_Screen(GameState):
             txt = year_font.render(str(year), True, c.UI_TEXT_LIGHT)
             surface.blit(txt, (x - txt.get_width()//2, axis_y + TIMELINE_YEAR_LABEL_OFFSET_Y))
 
-    def draw_connections(self, surface, res_levels):
+    def cache_connections(self, res_levels):
+        """Prepare prerequisite lines and arrows at state or category changes."""
         import math
+        self.connection_segments = []
         nodes = self.nodes.get(self.current_category, [])
         lookup = {(n["key"], n["lvl"]): n for n in nodes}
         
@@ -735,19 +798,19 @@ class Research_Screen(GameState):
             k = node["key"]
             l = node["lvl"]
 
-            x1 = self.year_to_x(node["year"])
+            x1 = self.year_to_x(node["year"], include_scroll=False)
             y1 = node["base_y"] + NODE_ROW_HALF_HEIGHT
             p1 = (x1, y1)
             
             def draw_line_to_prev(req_k, req_lvl):
                 prev_node = lookup.get((req_k, req_lvl))
                 if prev_node:
-                    x2 = self.year_to_x(prev_node["year"])
+                    x2 = self.year_to_x(prev_node["year"], include_scroll=False)
                     y2 = prev_node["base_y"] + NODE_ROW_HALF_HEIGHT
                     p2 = (x2, y2)
                     color = (0, 255, 0) if res_levels.get(req_k, 0) >= req_lvl else (100, 100, 100)
                     
-                    pygame.draw.line(surface, color, p2, p1, 3)
+                    arrow = None
                     
                     # Draw Arrow in the middle pointing from p2 -> p1
                     mx, my = (p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2
@@ -766,7 +829,8 @@ class Research_Screen(GameState):
                                      tip[1] - head_size * math.sin(angle_rad - math.pi / 6))
                         right_wing = (tip[0] - head_size * math.cos(angle_rad + math.pi / 6),
                                        tip[1] - head_size * math.sin(angle_rad + math.pi / 6))
-                        pygame.draw.polygon(surface, color, [tip, left_wing, right_wing])
+                        arrow = (tip, left_wing, right_wing)
+                    self.connection_segments.append((p2, p1, color, arrow))
 
             # Draw standard linear connection to previous level
             if l > 1:
@@ -777,9 +841,7 @@ class Research_Screen(GameState):
             def process_req(req_k, req_v):
                 # If the requirement is dynamic, draw it for EVERY level
                 if isinstance(req_v, str) and req_v.startswith("MATCH_LEVEL"):
-                    req_val = l
-                    if "+" in req_v: req_val += int(req_v.split("+")[1])
-                    elif "-" in req_v: req_val -= int(req_v.split("-")[1])
+                    req_val = queries.tech_requirement_level(req_v, l)
                     draw_line_to_prev(req_k, req_val)
                 # If the requirement is static (e.g. basic_factory 1), ONLY draw it from level 1
                 elif l == 1:
@@ -789,10 +851,21 @@ class Research_Screen(GameState):
             for req_k, req_v in queries.walk_tech_requirements(reqs):
                 process_req(req_k, req_v)
 
+    def draw_connections(self, surface):
+        for start, end, color, arrow in self.connection_segments:
+            pygame.draw.line(surface, color, (start[0] + self.scroll_x, start[1]),
+                             (end[0] + self.scroll_x, end[1]), 3)
+            if arrow:
+                pygame.draw.polygon(surface, color, [(x + self.scroll_x, y) for x, y in arrow])
+
     def draw_hud_slots(self, surface):
         hud_rect = self.hud_slots_rect()
         pygame.draw.rect(surface, (40, 40, 60), hud_rect)
         pygame.draw.rect(surface, (200, 200, 200), hud_rect, 2)
+        if self.editing_starting_research:
+            for index, rendered in enumerate(self.editor_help_surfaces):
+                surface.blit(rendered, (HUD_TITLE_X, hud_rect.top + HUD_TITLE_OFFSET_Y + index * HUD_SLOT_STEP_Y))
+            return
         hud_font = fonts.get("button")
         surface.blit(hud_font.render("ACTIVE RESEARCH SLOTS:", True, (255, 255, 0)), (HUD_TITLE_X, hud_rect.top + HUD_TITLE_OFFSET_Y))
 
@@ -1061,6 +1134,15 @@ class Research_Screen(GameState):
                 cache_text(f"{display_name}{val_text}", text_font, color,
                            curr_x + COMPLETED_INDENT_X, curr_y,
                            column_width - 2 * COMPLETED_INDENT_X)
+                if self.editing_starting_research:
+                    rendered = self.completed_text_surfaces.pop()[0]
+                    button = Button(curr_x + COMPLETED_INDENT_X, curr_y,
+                                    (column_width - 2 * COMPLETED_INDENT_X, COMPLETED_ROW_STEP_Y - 2),
+                                    "green" if lvl > 0 else "blue", "",
+                                    lambda key=tech_id, level=max(1, lvl): self.toggle_editor_tech(key, level),
+                                    image=rendered, show_text=False)
+                    button.editor_tech_key = tech_id
+                    self.elements.append(button)
                 curr_y += COMPLETED_ROW_STEP_Y
 
     def render_completed_text_list(self, surface):
@@ -1088,31 +1170,17 @@ class Research_Screen(GameState):
         pygame.draw.rect(surface, (40, 40, 50), (0, 0, c.SCREEN_WIDTH, HEADER_HEIGHT))
         pygame.draw.line(surface, (200, 200, 200), (0, HEADER_HEIGHT), (c.SCREEN_WIDTH, HEADER_HEIGHT), 2)
 
-        font = fonts.get("heading1")
-        # Whose tree this is, once it can be somebody else's. A player is only
-        # ever looking at their own, so naming them there would be noise.
-        looking_at = "" if self.subject == self.map_screen.player_country else (
-            queries.get_country_display_name(self.subject, self.map_screen.nation_data) + " -- ")
-        category_label = CATEGORY_LABELS.get(self.current_category, self.current_category)
-        ts = font.render(f"{looking_at}VIEWING: {category_label}", True, (255, 255, 255))
+        ts = self.header_title_surface
         surface.blit(ts, (c.SCREEN_WIDTH//2 - ts.get_width()//2, HEADER_TITLE_Y))
 
-        # --- DYNAMIC OUTPUT CALCULATION ---
-        days_per_turn = queries.get_days_per_turn(self.map_screen.scenario_settings)
-        # The political multiplier belongs in the headline figure, not only in
-        # the resolver: an authoritarian nation reading its unmodified output
-        # here would be told a number it never actually gets.
-        pol_mult = politics.research_multiplier(self.map_screen.nation_data, self.subject)
-        pts_per_turn = int(c.BASE_RESEARCH_POINTS_PER_DAY * days_per_turn * pol_mult)
-        output_text = font.render(f"RESEARCH OUTPUT: {pts_per_turn} pts/turn", True, (0, 255, 255))
-        surface.blit(output_text, (c.SCREEN_WIDTH - output_text.get_width() - HEADER_OUTPUT_MARGIN_X, HEADER_OUTPUT_Y))
+        if self.header_output_surface is not None:
+            output_text = self.header_output_surface
+            surface.blit(output_text, (c.SCREEN_WIDTH - output_text.get_width() - HEADER_OUTPUT_MARGIN_X, HEADER_OUTPUT_Y))
 
         if self.current_category == "COMPLETED":
             self.render_completed_text_list(surface)
         else:
-            player_data = self.subject_data
-            res_levels = player_data.get("research", {})
-            self.draw_connections(surface, res_levels)
+            self.draw_connections(surface)
 
         # ACTIVE RESEARCH SLOTS is now drawn by ResearchHudOverlay (appended last
         # in refresh_ui), so it renders on top of any scrolled tech-node button.

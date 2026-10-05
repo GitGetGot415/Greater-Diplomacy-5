@@ -191,7 +191,8 @@ class Research_List_Screen(MapOverlayScreen):
             cid = self.active_countries[i]
             c_res = self.map_screen.nation_data.get(cid, {}).get("research", {})
             is_diff = any(c_res.get(k, v) != v for k, v in self.default_research.items())
-            label = f"[MODIFIED] {cid}" if is_diff else cid
+            name = queries.get_country_display_name(cid, self.map_screen.nation_data)
+            label = f"[MODIFIED] {name}" if is_diff else name
             btn = Button(row_x, y, "list_row", "blue", label, lambda cc=cid: self.edit_country(cc))
             btn.rect.width = row_w
             btn.is_scrollable = True
@@ -207,14 +208,13 @@ class Research_List_Screen(MapOverlayScreen):
         _run_pygame_sub_screen(self.map_screen, screen, on_done=self.refresh_ui)
 
     def edit_country(self, cid):
-        base_data = dict(self.map_screen.nation_data.get(cid, {}).get("research", self.default_research))
-
-        def save(new_data):
-            nd = self.map_screen.nation_data[cid]
-            nd.setdefault("research", {}).update(new_data)
-            self.map_screen.show_feedback(f"Saved research for {cid}")
-
-        self._open_editor(cid, base_data, save)
+        from screens.map_related_screens.research import Research_Screen
+        if not queries.can_edit_starting_research(self.map_screen, cid):
+            self.map_screen.show_feedback("Country research editing requires the local map editor.")
+            return
+        screen = Research_Screen()
+        screen.start_research(self.map_screen, editor_country=cid)
+        _run_pygame_sub_screen(self.map_screen, screen, on_done=self.refresh_ui)
 
     def edit_all(self):
         base_data = self.default_research.copy()

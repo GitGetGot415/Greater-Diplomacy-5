@@ -1668,6 +1668,13 @@ def get_best_naval_unit(player_research, unit_library):
 
 REQ_GROUP_KEYS = ("OR", "AND")
 
+def tech_requirement_level(value, target_level):
+    """Resolve a fixed prerequisite level or a MATCH_LEVEL expression."""
+    if isinstance(value, str) and value.startswith("MATCH_LEVEL"):
+        offset = value[len("MATCH_LEVEL"):]
+        return target_level + (int(offset) if offset else 0)
+    return value
+
 def check_tech_requirements(res_levels, reqs, target_lvl=1):
     """Centralized tech requirement checker.
 
@@ -1678,19 +1685,125 @@ def check_tech_requirements(res_levels, reqs, target_lvl=1):
     """
     if not reqs: return True
 
-    def get_req_val(v):
-        if isinstance(v, str) and v.startswith("MATCH_LEVEL"):
-            val = target_lvl
-            if "+" in v: val += int(v.split("+")[1])
-            elif "-" in v: val -= int(v.split("-")[1])
-            return val
-        return v
-
     if "OR" in reqs:
         return any(check_tech_requirements(res_levels, sub, target_lvl) for sub in reqs["OR"])
     if "AND" in reqs:
         return all(check_tech_requirements(res_levels, sub, target_lvl) for sub in reqs["AND"])
-    return all(res_levels.get(k, 0) >= get_req_val(v) for k, v in reqs.items())
+    return all(res_levels.get(k, 0) >= tech_requirement_level(v, target_lvl) for k, v in reqs.items())
+
+
+def edited_research_levels(research, tech_key, level, researched, tech_tree=None):
+    """Grant prerequisites or remove dependent levels without changing the input."""
+    tree = get_tech_tree() if tech_tree is None else tech_tree
+    if not isinstance(tech_key, str) or tech_key not in tree:
+        raise ValueError("This technology is not available in this map.")
+    if isinstance(level, bool) or not isinstance(level, int) or not 1 <= level <= tree[tech_key]["max_lvl"]:
+        raise ValueError("Choose a technology level within this map's research tree.")
+    if researched is None:
+        researched = research.get(tech_key, 0) < level
+    result = dict(research)
+
+    def grant(key, required, state, visiting, verified):
+        if required <= 0 or verified.get(key, 0) >= required:
+            return
+        if key not in tree or required > tree[key]["max_lvl"]:
+            raise ValueError("A research prerequisite is unavailable in this map.")
+        if key in visiting:
+            raise ValueError("Research prerequisites contain a cycle.")
+        for target in range(verified.get(key, 0) + 1, required + 1):
+            satisfy(tree[key].get("req", {}), target, state, visiting | {key}, verified)
+            state[key] = max(state.get(key, 0), target)
+            verified[key] = target
+
+    def satisfy(requirements, target, state, visiting, verified):
+        if "OR" in requirements:
+            candidates = []
+            for branch in requirements["OR"]:
+                candidate = dict(state)
+                candidate_verified = dict(verified)
+                try:
+                    satisfy(branch, target, candidate, visiting, candidate_verified)
+                except ValueError:
+                    continue
+                added = sum(max(0, value - state.get(key, 0)) for key, value in candidate.items())
+                candidates.append((added, candidate, candidate_verified))
+            if not candidates:
+                raise ValueError("No research prerequisite branch is available in this map.")
+            _, chosen, chosen_verified = min(candidates, key=lambda item: item[0])
+            state.update(chosen)
+            verified.update(chosen_verified)
+        elif "AND" in requirements:
+            for branch in requirements["AND"]:
+                satisfy(branch, target, state, visiting, verified)
+        else:
+            for key, value in requirements.items():
+                grant(key, tech_requirement_level(value, target), state, visiting, verified)
+
+    if researched:
+        grant(tech_key, level, result, set(), {})
+    else:
+        result[tech_key] = min(result.get(tech_key, 0), level - 1)
+        affected = {tech_key}
+        while True:
+            changed = False
+            for key, data in tree.items():
+                requirements = data.get("req", {})
+                if not any(dependency in affected for dependency, _ in walk_tech_requirements(requirements)):
+                    continue
+                current = result.get(key, 0)
+                for target in range(1, current + 1):
+                    if not check_tech_requirements(result, requirements, target):
+                        result[key] = target - 1
+                        affected.add(key)
+                        changed = True
+                        break
+            if not changed:
+                break
+    return result
+
+
+def can_edit_starting_research(map_screen, country_id):
+    """Starting research edits belong to a local map editor and a living country."""
+    # Optional mode flags support lightweight editor maps and older callers.
+    return bool(getattr(map_screen, "is_editor", False)
+                and not getattr(map_screen, "tactical_mode", False)
+                and not getattr(map_screen, "multiplayer_mode", False)
+                and not getattr(map_screen, "realtime_multiplayer", False)
+                and isinstance(country_id, str)
+                and country_id in map_screen.nation_data
+                and country_id in get_living_nations(map_screen.map_data))
+
+
+def toggle_starting_research(map_screen, country_id, tech_key, level):
+    """Apply an editor click and clear projects invalidated by changed research."""
+    if not can_edit_starting_research(map_screen, country_id):
+        raise ValueError("Starting research can only be changed for a country in the local map editor.")
+    country = map_screen.nation_data[country_id]
+    research = country.get("research", {})
+    tree = get_tech_tree()
+    result = edited_research_levels(research, tech_key, level, None, tree)
+    changed = {key for key in result if result[key] != research.get(key, 0)}
+    research = country.setdefault("research", {})
+    research.update(result)
+    invalidated = set(changed)
+    pending = {project["tech_name"] for project in country.get("research_queue", [])}
+    pending.update(country.get("research_progress", {}))
+    current_research = country.get("current_research")
+    if isinstance(current_research, str):
+        pending.add(current_research)
+    for key in pending:
+        if key in tree and (research.get(key, 0) >= tree[key]["max_lvl"]
+                           or not check_tech_requirements(research, tree[key].get("req", {}),
+                                                          research.get(key, 0) + 1)):
+            invalidated.add(key)
+    if "research_queue" in country:
+        country["research_queue"][:] = [project for project in country["research_queue"]
+                                        if project["tech_name"] not in invalidated]
+    for key in invalidated:
+        country.get("research_progress", {}).pop(key, None)
+    if isinstance(current_research, str) and current_research in invalidated:
+        country["current_research"] = None
+    return changed
 
 def walk_tech_requirements(reqs):
     """Yields every (tech_name, required_level) leaf in a req block, at any nesting depth."""

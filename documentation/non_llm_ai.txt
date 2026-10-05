@@ -415,6 +415,21 @@ All default to True.
 Disable a switch to permit viewing without the corresponding editing ability.
 
 The editor's research screen sets a country's starting research.
+Select a country in Map Research Editor to open its research timeline and category tabs.
+Click an incomplete technology level to grant it and its prerequisites immediately.
+This also grants earlier levels in the same technology.
+For an OR requirement, keep a completed branch or add the branch that needs the fewest additional levels.
+
+Click a completed level to remove it and later levels in the same technology.
+Remove dependent levels only when their remaining prerequisites no longer permit them.
+Another completed OR branch can preserve a dependent technology.
+Clear changed research projects and progress that no longer meets prerequisites.
+These controls change only the selected country. They do not change the map default.
+
+Edit ALL (Bulk) and Edit Map Default keep their separate Save controls.
+Direct technology editing requires the local map editor.
+It is unavailable in tactical play, tournament multiplayer, and real-time multiplayer.
+
 A spectator selects a country and sees its live research tree and queue.
 A normal player sees their own research.
 map_screen.viewing_research_country passes the selected country to the research screen.
