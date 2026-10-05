@@ -166,10 +166,10 @@ class _NavigationIntroPopup:
     AIR_STEPS = (
         ("Missions", "Choose Move, Strike, or defense from the mission button. Click a target for Move or Strike. No mission cancels the order. Esc cancels target selection."),
         ("Strike / defend", "Click enemy territory or visible enemy units while giving movement orders to strike, including enemies on your land. Aircraft attack without landing. Defenders can fire back, and surviving aircraft return with losses. Enemy aircraft on defense missions may intercept several missions."),
-        ("Reposition", "With Move or Strike active, another order click changes the target and keeps the mission type. Use the selector to switch types. Idle planes show green relocation range (except V1 and V2); defense and strikes show yellow."),
-        ("V1 / V2", "V1 and V2 air units die when their strike completes, and they relocate on land at ground speed, unlike most other planes that can move anywhere within their range."),
+        ("Reposition", "With Move or Strike active, another order click changes the target but keeps the mission type. Use the mission selector to switch missions. Idle planes show green relocation range (except V1 and V2); defense and strikes show yellow."),
+        ("V1 / V2", "V1 and V2 air units die when their strike completes, and they relocate on land at ground speed, unlike other planes."),
         ("Aircraft details", "Research shows current range and abilities. Unavailable missions are disabled. Use range outlines to choose targets. Air missions have no aircraft limit; larger allied stacks reduce attack efficiency."),
-        ("Other Information", "Tanks cannot damage aircraft in flight. Aircraft cannot land on enemy or unclaimed land. Aircraft caught in ground combat die immediately."),
+        ("Other Information", "Tanks cannot damage aircraft in flight. Aircraft cannot land on enemy or unclaimed land. Aircraft caught in ground combat die immediately. Aircraft carriers cannot hold aircraft (yet)."),
     )
     PAGE_TITLES = ("Map Navigation", "Map UI", "Other Countries", "Armies", "Aircraft")
     PAGE_SUBTITLES = (
