@@ -1,6 +1,6 @@
 {
-    "version": "v39",
-    "generated_at": "2026-09-30T14:21:45.203138",
+    "version": "v40",
+    "generated_at": "2026-10-04T18:11:12.597490",
     "date": {
         "day": 15,
         "month": 0,
@@ -29045,5 +29045,10 @@
         "Zheleznogorsk": {},
         "Communist Hive Mind Raj": {},
         "Polynesian SSR": {}
-    }
+    },
+    "unit_event_log": {
+        "turn": 0,
+        "events": []
+    },
+    "unit_event_read_turns": {}
 }

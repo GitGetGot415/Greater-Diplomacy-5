@@ -1,6 +1,6 @@
 {
-    "version": "v39",
-    "generated_at": "2026-09-30T14:21:55.300103",
+    "version": "v40",
+    "generated_at": "2026-10-04T18:11:24.122151",
     "date": {
         "day": 15,
         "month": 0,
@@ -55,7 +55,17 @@
         "basic_recruitment": 0,
         "recruitment_buildings": 0,
         "general_recruitment": 0,
-        "resource_refining": 0
+        "resource_refining": 0,
+        "biplane": 0,
+        "biplane_bomber": 0,
+        "zeppelin": 0,
+        "piston_fighter": 0,
+        "piston_bomber": 0,
+        "v1_flying_bomb": 0,
+        "v2_rocket": 0,
+        "jet_engine": 0,
+        "jet_fighter": 0,
+        "jet_bomber": 0
     },
     "nation_data": {
         "Ocean": {
@@ -777,7 +787,17 @@
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
                 "general_recruitment": 0,
-                "resource_refining": 0
+                "resource_refining": 0,
+                "biplane": 0,
+                "biplane_bomber": 0,
+                "zeppelin": 0,
+                "piston_fighter": 0,
+                "piston_bomber": 0,
+                "v1_flying_bomb": 0,
+                "v2_rocket": 0,
+                "jet_engine": 0,
+                "jet_fighter": 0,
+                "jet_bomber": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -846,7 +866,17 @@
                 "basic_recruitment": 0,
                 "recruitment_buildings": 0,
                 "general_recruitment": 0,
-                "resource_refining": 0
+                "resource_refining": 0,
+                "biplane": 0,
+                "biplane_bomber": 0,
+                "zeppelin": 0,
+                "piston_fighter": 0,
+                "piston_bomber": 0,
+                "v1_flying_bomb": 0,
+                "v2_rocket": 0,
+                "jet_engine": 0,
+                "jet_fighter": 0,
+                "jet_bomber": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -1242,5 +1272,10 @@
         "Zheleznogorsk": {},
         "Communist Hive Mind Raj": {},
         "Polynesian SSR": {}
-    }
+    },
+    "unit_event_log": {
+        "turn": 0,
+        "events": []
+    },
+    "unit_event_read_turns": {}
 }
