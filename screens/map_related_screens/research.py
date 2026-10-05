@@ -9,6 +9,7 @@ from data import queries
 from ui.bars import ui_bars
 from map_logic import politics
 from ui.text_utils import wrap_text
+from ui.list_select_screen import ListSelectScreen
 
 # ==========================================
 # LAYOUT
@@ -50,6 +51,10 @@ HUD_TITLE_X = 30
 HUD_TITLE_OFFSET_Y = 10
 HUD_SLOT_TEXT_X = 40
 HUD_FIRST_SLOT_OFFSET_Y = 40
+EDITOR_HELP_LINES = ("EDIT STARTING RESEARCH:", "Click a tech to add it and its prerequisites.",
+                     "Click researched tech to remove it and dependents.", "Changes apply immediately to this country.",
+                     "Map default: purple = missing, pink = researched.")
+SPECTATOR_HELP_LINES = ("EDIT COUNTRY RESEARCH:",) + EDITOR_HELP_LINES[1:4]
 
 # Tech detail modal
 MODAL_WIDTH = 800
@@ -162,6 +167,58 @@ DEFAULT_TECH_COST = 300
 STATUS_COLORS = {"COMPLETED": "green", "RESEARCHING": "orange", "AVAILABLE": "blue", "LOCKED": "grey"}
 
 
+class ResearchCountrySelectScreen(ListSelectScreen):
+    """Choose a spectator research mode before choosing a country."""
+    MODE_ROW_HEIGHT = 50
+    MODE_BUTTON_SIZE = (140, 36)
+    MODE_BUTTON_GAP = 10
+    PANEL_SIZE = (ListSelectScreen.PANEL_SIZE[0], ListSelectScreen.PANEL_SIZE[1] + MODE_ROW_HEIGHT)
+    SEARCH_BOX_Y = ListSelectScreen.SEARCH_BOX_Y + MODE_ROW_HEIGHT
+    ROW_TOP = ListSelectScreen.ROW_TOP + MODE_ROW_HEIGHT
+
+    def __init__(self, map_screen):
+        self.mode = "VIEW"
+        items = queries.country_picker_items(sorted(queries.get_living_nations(map_screen.map_data)),
+                                             map_screen.nation_data)
+        super().__init__(map_screen, "Select Nation's Research", "Select Nation to View or Edit Research:",
+                         items, self.open_country)
+
+    def edit_allowed(self):
+        return bool(self.items and self.map_screen.player_country == "Spectator"
+                    and queries.can_edit_country_research(self.map_screen, self.items[0][1]))
+
+    def set_mode(self, mode):
+        if mode not in ("VIEW", "EDIT") or (mode == "EDIT" and not self.edit_allowed()):
+            return
+        self.mode = mode
+        self.refresh_ui()
+
+    def refresh_ui(self):
+        super().refresh_ui()
+        width, height = self.MODE_BUTTON_SIZE
+        start_x = self.panel_rect.centerx - (2 * width + self.MODE_BUTTON_GAP) // 2
+        for index, (mode, label) in enumerate((("VIEW", "View"), ("EDIT", "Edit"))):
+            button = Button(start_x + index * (width + self.MODE_BUTTON_GAP),
+                            self.panel_rect.y + ListSelectScreen.SEARCH_BOX_Y,
+                            (width, height), "blue", label, lambda value=mode: self.set_mode(value))
+            button.apply_state(enabled=mode == "VIEW" or self.edit_allowed(), color="blue")
+            button.is_selected = self.mode == mode
+            self.elements.append(button)
+
+    def select(self, item):
+        # Recheck permissions if the spectator switch or game mode changed while open.
+        if self.mode == "EDIT" and not self.edit_allowed():
+            self.mode = "VIEW"
+            self.refresh_ui()
+            return
+        super().select(item)
+
+    def open_country(self, country_id):
+        self.map_screen.viewing_research_country = country_id
+        self.map_screen.viewing_research_mode = self.mode
+        self.map_screen.next_state, self.map_screen.done = "RESEARCH", True
+
+
 class Research_Screen(GameState):
     back_state = "MAP"
 
@@ -170,6 +227,7 @@ class Research_Screen(GameState):
         self.bg_color = (20, 20, 30)
         self.map_screen = None
         self.editor_country = ""
+        self.spectator_research_mode = "VIEW"
         self.current_category = "INFANTRY" 
 
         # REPLACED DISK I/O WITH CACHED QUERIES
@@ -215,6 +273,11 @@ class Research_Screen(GameState):
         return bool(self.editor_country)
 
     @property
+    def editing_research_levels(self):
+        return self.editing_starting_research or (
+            self.map_screen.player_country == "Spectator" and self.spectator_research_mode == "EDIT")
+
+    @property
     def subject_data(self):
         return self.map_screen.nation_data[self.subject]
 
@@ -228,6 +291,9 @@ class Research_Screen(GameState):
         """
         if self.editing_starting_research:
             return queries.can_edit_starting_research(self.map_screen, self.subject)
+        if self.map_screen.player_country == "Spectator":
+            return (self.spectator_research_mode == "EDIT"
+                    and queries.can_edit_country_research(self.map_screen, self.subject))
         if self.map_screen.tactical_mode:
             return False
         if getattr(self.map_screen, "realtime_multiplayer", False):
@@ -237,8 +303,6 @@ class Research_Screen(GameState):
             if (not session or session.phase != "TURN" or not player or player.submitted or
                     player.eliminated):
                 return False
-        if self.map_screen.player_country == "Spectator":
-            return c.SPECTATOR_CAN_EDIT_RESEARCH
         return self.subject == self.map_screen.player_country
 
     def handle_events(self, events):
@@ -310,6 +374,9 @@ class Research_Screen(GameState):
     def hud_slots_rect(self):
         """Screen-space rect of the ACTIVE RESEARCH SLOTS box drawn over the timeline."""
         hud_height = HUD_BASE_HEIGHT + (c.RESEARCH_SLOTS * HUD_SLOT_STEP_Y)
+        if self.editing_research_levels:
+            lines = EDITOR_HELP_LINES if self.editing_starting_research else SPECTATOR_HELP_LINES
+            hud_height = max(hud_height, HUD_TITLE_OFFSET_Y + len(lines) * HUD_SLOT_STEP_Y + HUD_BOTTOM_PAD)
         top_y = c.SCREEN_HEIGHT - hud_height - HUD_SCROLLBAR_CLEARANCE
         return pygame.Rect(HUD_X, top_y, HUD_WIDTH, hud_height - HUD_BOTTOM_PAD)
 
@@ -453,6 +520,8 @@ class Research_Screen(GameState):
             raise ValueError("Country research editing requires the local map editor.")
         self.map_screen = map_ref
         self.editor_country = editor_country
+        # Picker modes are display state. Old saves and direct callers default to View.
+        self.spectator_research_mode = getattr(map_ref, "viewing_research_mode", "VIEW")
         self.tech_tree = queries.get_tech_tree()
         self.unit_library = queries.get_unit_library()
         self.building_library = queries.get_building_library()
@@ -555,10 +624,9 @@ class Research_Screen(GameState):
         prefix = f"{name} -- " if self.editing_starting_research or self.subject != self.map_screen.player_country else ""
         self.header_title_surface = font.render(f"{prefix}VIEWING: {category}", True, (255, 255, 255))
         self.header_output_surface = None
-        if self.editing_starting_research:
+        if self.editing_research_levels:
             hud_font = fonts.get("button")
-            lines = ("EDIT STARTING RESEARCH:", "Click a tech to add it and its prerequisites.",
-                     "Click a green tech to remove it and dependents.", "Changes apply immediately to this country.")
+            lines = EDITOR_HELP_LINES if self.editing_starting_research else SPECTATOR_HELP_LINES
             self.editor_help_surfaces = []
             width = HUD_WIDTH - (HUD_TITLE_X - HUD_X) * 2
             for line in lines:
@@ -635,7 +703,7 @@ class Research_Screen(GameState):
                 else:
                     status = "LOCKED"
                     
-            btn_color = STATUS_COLORS[status]
+            btn_color = self.tech_button_color(tech_key, lvl, status)
 
             unlocks = queries.get_tech_unlocks(tech_key, lvl)
             is_large = (self.building_library.get(tech_key, {}).get("group") in c.LARGE_ICON_BUILDING_GROUPS or 
@@ -690,18 +758,27 @@ class Research_Screen(GameState):
         # about whether a tech is available.
         return queries.check_tech_requirements(res_levels, reqs, target_lvl)
 
+    def tech_button_color(self, tech_key, level, status):
+        """Mark map-default levels only in the map research editor."""
+        if self.editing_starting_research and self.map_screen.default_research.get(tech_key, 0) >= level:
+            return "pink" if status == "COMPLETED" else "purple"
+        return STATUS_COLORS[status]
+
     def open_modal(self, node_info):
-        if self.editing_starting_research:
+        if self.editing_research_levels:
             self.toggle_editor_tech(node_info["tech_key"], node_info["level"])
             return
         self.active_modal = node_info
         self.refresh_ui()
 
     def toggle_editor_tech(self, tech_key, level):
-        if not self.editing_starting_research:
+        if not self.editing_research_levels:
             return
         try:
-            queries.toggle_starting_research(self.map_screen, self.subject, tech_key, level)
+            if self.editing_starting_research:
+                queries.toggle_starting_research(self.map_screen, self.subject, tech_key, level)
+            else:
+                queries.toggle_country_research(self.map_screen, self.subject, tech_key, level)
         except ValueError as error:
             self.map_screen.show_feedback(str(error))
             return
@@ -733,7 +810,7 @@ class Research_Screen(GameState):
         self.close_modal()
 
     def start_or_resume_research(self, tech_name):
-        if self.editing_starting_research or not self.can_edit:
+        if self.editing_research_levels or not self.can_edit:
             return
         player_data = self.subject_data
         progress_cache = player_data.setdefault("research_progress", {})
@@ -748,7 +825,7 @@ class Research_Screen(GameState):
         self.refresh_ui()
 
     def pause_research(self, tech_name):
-        if self.editing_starting_research or not self.can_edit:
+        if self.editing_research_levels or not self.can_edit:
             return
         player_data = self.subject_data
         queue = player_data.get("research_queue", [])
@@ -862,7 +939,7 @@ class Research_Screen(GameState):
         hud_rect = self.hud_slots_rect()
         pygame.draw.rect(surface, (40, 40, 60), hud_rect)
         pygame.draw.rect(surface, (200, 200, 200), hud_rect, 2)
-        if self.editing_starting_research:
+        if self.editing_research_levels:
             for index, rendered in enumerate(self.editor_help_surfaces):
                 surface.blit(rendered, (HUD_TITLE_X, hud_rect.top + HUD_TITLE_OFFSET_Y + index * HUD_SLOT_STEP_Y))
             return
@@ -1134,11 +1211,14 @@ class Research_Screen(GameState):
                 cache_text(f"{display_name}{val_text}", text_font, color,
                            curr_x + COMPLETED_INDENT_X, curr_y,
                            column_width - 2 * COMPLETED_INDENT_X)
-                if self.editing_starting_research:
+                if self.editing_research_levels:
                     rendered = self.completed_text_surfaces.pop()[0]
+                    row_color = "green" if lvl > 0 else "blue"
+                    if self.editing_starting_research and self.map_screen.default_research.get(tech_id, 0) > 0:
+                        row_color = "pink" if lvl >= self.map_screen.default_research[tech_id] else "purple"
                     button = Button(curr_x + COMPLETED_INDENT_X, curr_y,
                                     (column_width - 2 * COMPLETED_INDENT_X, COMPLETED_ROW_STEP_Y - 2),
-                                    "green" if lvl > 0 else "blue", "",
+                                    row_color, "",
                                     lambda key=tech_id, level=max(1, lvl): self.toggle_editor_tech(key, level),
                                     image=rendered, show_text=False)
                     button.editor_tech_key = tech_id

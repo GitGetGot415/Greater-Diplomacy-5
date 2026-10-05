@@ -132,24 +132,12 @@ def spec_select_edit_country(map_screen):
     queries.open_listbox_selector(map_screen, "Select Nation to Edit", "Select Nation to Edit:", items, cb)
 
 def spec_select_research_country(map_screen):
-    """Asks a Spectator whose tech tree to open, the way Identity asks whose
-    country to edit.
-
-    The R&D button used to hand a spectator the scenario-authoring checkbox
-    list, which says what a nation has finished but not what it is working on.
-    The real screen shows both -- it just had no way of being pointed at
-    anybody other than the player, which is why spectators were diverted away
-    from it in the first place.
-    """
+    """Choose View or Edit and a country for the spectator research tree."""
     if not _has_active_countries(map_screen):
         return
-    items = queries.country_picker_items(sorted(queries.get_living_nations(map_screen.map_data)),
-                                         map_screen.nation_data)
-    def cb(val):
-        map_screen.viewing_research_country = val
-        map_screen.next_state, map_screen.done = "RESEARCH", True
-    queries.open_listbox_selector(map_screen, "Select Nation's Research",
-                                  "Select Nation to View Research:", items, cb)
+    from screens.map_related_screens.research import ResearchCountrySelectScreen
+    from ui.screen_runner import _run_pygame_sub_screen
+    _run_pygame_sub_screen(map_screen, ResearchCountrySelectScreen(map_screen))
 
 
 def open_editor_date(map_screen):

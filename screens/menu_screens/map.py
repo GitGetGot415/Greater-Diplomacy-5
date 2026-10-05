@@ -359,9 +359,8 @@ def render_buttons(map_screen):
     def research_callback():
         """Three different things, because R&D means three different things.
 
-        The map editor authors what a nation *starts* with, so it keeps the bulk
-        checkbox list. A spectator wants to watch and steer a live programme, so
-        they pick a nation and get the real tech tree. A player gets their own.
+        The map editor sets starting research through country trees or bulk controls.
+        A spectator selects View or Edit and a country. A player opens their own tree.
         """
         if map_screen.is_editor:
             editor_menus.open_map_research_editor(map_screen)

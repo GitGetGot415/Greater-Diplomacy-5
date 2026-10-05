@@ -5,13 +5,14 @@ which says what a nation has finished and nothing about what it is working on.
 The tree itself was unreachable for them because it read player_country, and
 the literal "Spectator" is not a key in nation_data.
 
-The property under test is that the screen serves whoever it is pointed at and
-nobody else -- in particular that a player's path is unchanged, since they use
-this screen every turn and a spectator uses it never.
+The screen shows the selected country. View cannot change research.
+Edit changes completed levels immediately. Normal players keep their research queue controls.
 """
 
 import unittest
+import pygame
 from copy import deepcopy
+from contextlib import ExitStack
 from unittest.mock import patch
 
 import data.constants as c
@@ -35,6 +36,10 @@ class SubjectTests(unittest.TestCase):
         for country in nation_data.values():
             country.update(research={}, research_queue=[], research_progress={})
         self.enterContext(patch.object(self.map, "nation_data", nation_data))
+        self.enterContext(patch.object(self.map, "is_editor", False))
+        self.enterContext(patch.object(self.map, "multiplayer_mode", False, create=True))
+        self.enterContext(patch.object(self.map, "realtime_multiplayer", False, create=True))
+        self.enterContext(patch.object(self.map, "viewing_research_mode", "VIEW", create=True))
         self.saved = {a: getattr(self.map, a, None)
                       for a in ("player_country", "viewing_research_country", "tactical_mode")}
         self.addCleanup(self.restore)
@@ -50,9 +55,10 @@ class SubjectTests(unittest.TestCase):
         living = sorted(queries.get_living_nations(self.map.map_data))
         return [n for n in living if n != self.map.player_country][:count]
 
-    def spectate(self, nation):
+    def spectate(self, nation, mode="VIEW"):
         self.map.player_country = "Spectator"
         self.map.viewing_research_country = nation
+        self.map.viewing_research_mode = mode
         self.screen.start_research(self.map)
 
     # -- who the screen is looking at -----------------------------------
@@ -80,33 +86,35 @@ class SubjectTests(unittest.TestCase):
         self.screen.draw(self.surface)
         self.assertTrue(self.screen.elements)
 
-    def test_two_nations_do_not_share_a_queue(self):
+    def test_edit_changes_only_selected_country_and_does_not_queue_research(self):
         picks = self.others(2)
         if len(picks) < 2:
             self.skipTest("scenario has only one non-player nation")
         first, second = picks
-        self.spectate(first)
-        before_second = list(self.map.nation_data[second].get("research_queue", []))
+        self.spectate(first, "EDIT")
+        before_second = deepcopy(self.map.nation_data[second])
 
         tech = next(iter(self.screen.tech_tree))
-        self.screen.start_or_resume_research(tech)
+        self.screen.open_modal({"tech_key": tech, "level": 1})
 
-        self.assertEqual(list(self.map.nation_data[second].get("research_queue", [])),
-                         before_second, "queuing for one nation touched another")
-        self.assertIn(tech, [p["tech_name"] for p in
-                             self.map.nation_data[first].get("research_queue", [])])
+        self.assertEqual(self.map.nation_data[second],
+                         before_second, "editing one nation touched another")
+        self.assertEqual(self.map.nation_data[first]["research"], {tech: 1})
+        self.assertEqual(self.map.nation_data[first]["research_queue"], [])
+        self.screen.open_modal({"tech_key": tech, "level": 1})
+        self.assertEqual(self.map.nation_data[first]["research"], {tech: 0})
 
     # -- the switch -----------------------------------------------------
 
-    def test_a_spectator_may_edit_by_default(self):
-        self.spectate(self.others()[0])
+    def test_a_spectator_may_edit_after_selecting_edit(self):
+        self.spectate(self.others()[0], "EDIT")
         self.assertTrue(self.screen.can_edit)
         self.assertTrue(c.SPECTATOR_CAN_EDIT_RESEARCH,
                         "the shipped default is meant to preserve what a spectator could already do")
 
     def test_with_the_switch_off_nothing_can_be_queued(self):
         target = self.others()[0]
-        self.spectate(target)
+        self.spectate(target, "EDIT")
         self.map.nation_data[target]["research_queue"] = []
 
         original = c.SPECTATOR_CAN_EDIT_RESEARCH
@@ -114,7 +122,9 @@ class SubjectTests(unittest.TestCase):
         try:
             self.assertFalse(self.screen.can_edit)
             self.screen.start_or_resume_research(next(iter(self.screen.tech_tree)))
+            self.screen.open_modal({"tech_key": next(iter(self.screen.tech_tree)), "level": 1})
             self.assertEqual(self.map.nation_data[target]["research_queue"], [])
+            self.assertEqual(self.map.nation_data[target]["research"], {})
         finally:
             c.SPECTATOR_CAN_EDIT_RESEARCH = original
 
@@ -152,6 +162,34 @@ class SubjectTests(unittest.TestCase):
         finally:
             self.screen.active_modal = None
 
+    def test_view_mode_opens_details_but_cannot_change_research(self):
+        target = self.others()[0]
+        self.spectate(target)
+        before = deepcopy(self.map.nation_data[target])
+        button = next(button for button in self.screen.elements if getattr(button, "is_tech_node", False))
+        button.callback()
+        self.assertIsNotNone(self.screen.active_modal)
+        self.assertFalse(self.screen.can_edit)
+        self.screen.start_or_resume_research("test_research")
+        self.screen.pause_research("test_research")
+        self.screen.toggle_editor_tech("test_research", 1)
+        self.assertEqual(self.map.nation_data[target], before)
+
+    def test_edit_callback_rechecks_local_mode_and_living_country(self):
+        target = self.others()[0]
+        self.spectate(target, "EDIT")
+        button = next(button for button in self.screen.elements if getattr(button, "is_tech_node", False))
+        for flags in ({"tactical_mode": True}, {"multiplayer_mode": True},
+                      {"realtime_multiplayer": True}, {"player_country": target}):
+            with self.subTest(flags=flags), ExitStack() as stack:
+                for key, value in flags.items():
+                    stack.enter_context(patch.object(self.map, key, value))
+                button.callback()
+                self.assertEqual(self.map.nation_data[target]["research"], {})
+        with patch.object(self.map, "map_data", {}):
+            button.callback()
+            self.assertEqual(self.map.nation_data[target]["research"], {})
+
     def test_tactical_mode_is_still_read_only(self):
         """The switch was added beside this rule, not on top of it."""
         self.screen.start_research(self.map)
@@ -165,35 +203,73 @@ class PickerTests(unittest.TestCase):
         app_harness.boot()
         cls.map = app_harness.boot_map()
 
-    def test_the_picker_offers_living_nations_and_routes_to_the_tree(self):
-        from data import queries
+    def setUp(self):
+        for name, value in (("player_country", "Spectator"), ("is_editor", False),
+                            ("tactical_mode", False), ("multiplayer_mode", False),
+                            ("realtime_multiplayer", False), ("viewing_research_country", ""),
+                            ("viewing_research_mode", "VIEW"), ("next_state", "MAP"), ("done", False)):
+            self.enterContext(patch.object(self.map, name, value, create=True))
+
+    def picker(self):
+        from screens.map_related_screens.research import ResearchCountrySelectScreen
+        return ResearchCountrySelectScreen(self.map)
+
+    def test_the_picker_offers_living_nations_and_routes_view_and_edit_to_the_tree(self):
         from ui import editor_menus
-
-        captured = {}
-
-        def fake_selector(game_state, title, prompt, items, on_confirm):
-            captured["items"] = items
-            captured["confirm"] = on_confirm
-
-        original = queries.open_listbox_selector
-        queries.open_listbox_selector = fake_selector
-        saved = (getattr(self.map, "viewing_research_country", None),
-                 self.map.next_state, self.map.done)
-        try:
-            editor_menus.spec_select_research_country(self.map)
-            self.assertEqual(
-                captured["items"],
-                queries.country_picker_items(
+        from ui import screen_runner
+        for mode in ("VIEW", "EDIT"):
+            with self.subTest(mode=mode), patch.object(screen_runner, "_run_pygame_sub_screen") as launch:
+                editor_menus.spec_select_research_country(self.map)
+                picker = launch.call_args.args[1]
+                self.assertEqual(picker.items, queries.country_picker_items(
                     sorted(queries.get_living_nations(self.map.map_data)), self.map.nation_data))
+                picker.set_mode(mode)
+                picker.select(picker.items[0])
+                self.assertEqual(self.map.viewing_research_country, picker.items[0][1])
+                self.assertEqual(self.map.viewing_research_mode, mode)
+                self.assertEqual(self.map.next_state, "RESEARCH")
+                self.assertTrue(self.map.done)
 
-            picked_id = captured["items"][0][1]
-            captured["confirm"](picked_id)
-            self.assertEqual(self.map.viewing_research_country, picked_id)
-            self.assertEqual(self.map.next_state, "RESEARCH")
-            self.assertTrue(self.map.done)
-        finally:
-            queries.open_listbox_selector = original
-            self.map.viewing_research_country, self.map.next_state, self.map.done = saved
+    def test_mode_buttons_fit_above_search_and_preserve_filter(self):
+        for size in ((c.SCREEN_WIDTH, c.SCREEN_HEIGHT), (1280, 720)):
+            with self.subTest(size=size), patch.object(c, "SCREEN_WIDTH", size[0]), patch.object(c, "SCREEN_HEIGHT", size[1]):
+                picker = self.picker()
+                self.assertEqual(picker.mode, "VIEW")
+                picker.search_text = picker.items[0][0]
+                picker.refresh_ui()
+                before = list(picker.visible_items)
+                buttons = {button.text: button for button in picker.elements if button.text in ("View", "Edit")}
+                self.assertEqual(set(buttons), {"View", "Edit"})
+                for button in buttons.values():
+                    self.assertTrue(picker.panel_rect.contains(button.rect))
+                    self.assertLess(button.rect.bottom, picker.panel_rect.y + picker.SEARCH_BOX_Y)
+                    self.assertFalse(button.rect.colliderect(picker.scroll_content_rect))
+                self.assertFalse(buttons["View"].rect.colliderect(buttons["Edit"].rect))
+                buttons["Edit"].callback()
+                self.assertEqual(picker.mode, "EDIT")
+                self.assertEqual(picker.visible_items, before)
+                picker.draw(pygame.Surface(size))
+                picker._handle_search_key(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RETURN, unicode="\r"))
+                self.assertEqual(self.map.viewing_research_mode, "EDIT")
+
+    def test_disabled_edit_and_stale_selection_cannot_open_edit_mode(self):
+        picker = self.picker()
+        picker.set_mode("EDIT")
+        with patch.object(c, "SPECTATOR_CAN_EDIT_RESEARCH", False):
+            picker.select(picker.items[0])
+            self.assertFalse(self.map.done)
+            self.assertEqual(picker.mode, "VIEW")
+            picker.set_mode("EDIT")
+            self.assertEqual(picker.mode, "VIEW")
+            picker.select(picker.items[0])
+            self.assertEqual(self.map.viewing_research_mode, "VIEW")
+
+    def test_network_and_tactical_spectators_can_only_select_view(self):
+        for flag in ("multiplayer_mode", "realtime_multiplayer", "tactical_mode"):
+            with self.subTest(flag=flag), patch.object(self.map, flag, True):
+                picker = self.picker()
+                picker.set_mode("EDIT")
+                self.assertEqual(picker.mode, "VIEW")
 
 
 class AppearanceSwitchTests(unittest.TestCase):

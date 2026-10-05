@@ -1764,8 +1764,16 @@ def edited_research_levels(research, tech_key, level, researched, tech_tree=None
 
 def can_edit_starting_research(map_screen, country_id):
     """Starting research edits belong to a local map editor and a living country."""
-    # Optional mode flags support lightweight editor maps and older callers.
     return bool(getattr(map_screen, "is_editor", False)
+                and can_edit_country_research(map_screen, country_id))
+
+
+def can_edit_country_research(map_screen, country_id):
+    """Allow direct research changes in a local editor or permitted spectator game."""
+    # Optional mode flags support lightweight editor maps and older callers.
+    return bool((getattr(map_screen, "is_editor", False)
+                 or (getattr(map_screen, "player_country", None) == "Spectator"
+                     and c.SPECTATOR_CAN_EDIT_RESEARCH))
                 and not getattr(map_screen, "tactical_mode", False)
                 and not getattr(map_screen, "multiplayer_mode", False)
                 and not getattr(map_screen, "realtime_multiplayer", False)
@@ -1775,9 +1783,16 @@ def can_edit_starting_research(map_screen, country_id):
 
 
 def toggle_starting_research(map_screen, country_id, tech_key, level):
-    """Apply an editor click and clear projects invalidated by changed research."""
+    """Apply a map editor click through the shared country research editor."""
     if not can_edit_starting_research(map_screen, country_id):
         raise ValueError("Starting research can only be changed for a country in the local map editor.")
+    return toggle_country_research(map_screen, country_id, tech_key, level)
+
+
+def toggle_country_research(map_screen, country_id, tech_key, level):
+    """Apply a permitted click and clear projects invalidated by changed research."""
+    if not can_edit_country_research(map_screen, country_id):
+        raise ValueError("Research editing requires a local map editor or permitted spectator.")
     country = map_screen.nation_data[country_id]
     research = country.get("research", {})
     tree = get_tech_tree()
@@ -1804,6 +1819,7 @@ def toggle_starting_research(map_screen, country_id, tech_key, level):
     if isinstance(current_research, str) and current_research in invalidated:
         country["current_research"] = None
     return changed
+
 
 def walk_tech_requirements(reqs):
     """Yields every (tech_name, required_level) leaf in a req block, at any nesting depth."""

@@ -245,6 +245,49 @@ class EditorResearchTreeTests(unittest.TestCase):
         self.assertEqual(self.map.nation_data[self.country]["research"]["root"], 1)
         self.assertEqual(self.screen.current_category, "COMPLETED")
 
+    def test_map_default_colors_apply_per_level_and_follow_immediate_edits(self):
+        self.map.default_research = {"root": 2, "branch": 1}
+        self.screen.refresh_ui()
+        self.assertEqual(self.node("root", 1).color, c.UI_COLORS["purple"][0])
+        self.assertEqual(self.node("root", 2).color, c.UI_COLORS["purple"][0])
+        self.assertEqual(self.node("root", 3).color, c.UI_COLORS["grey"][0])
+        self.node("root", 2).callback()
+        self.assertEqual(self.node("root", 1).color, c.UI_COLORS["pink"][0])
+        self.assertEqual(self.node("root", 2).color, c.UI_COLORS["pink"][0])
+        self.assertEqual(self.node("root", 3).color, c.UI_COLORS["blue"][0])
+        self.node("root", 1).callback()
+        self.assertEqual(self.node("root", 2).color, c.UI_COLORS["purple"][0])
+        self.assertEqual(self.map.default_research, {"root": 2, "branch": 1})
+        self.screen.set_category("COMPLETED")
+        row = next(button for button in self.screen.elements if getattr(button, "editor_tech_key", None) == "root")
+        self.assertEqual(row.color, c.UI_COLORS["purple"][0])
+        self.screen.toggle_editor_tech("root", 2)
+        row = next(button for button in self.screen.elements if getattr(button, "editor_tech_key", None) == "root")
+        self.assertEqual(row.color, c.UI_COLORS["pink"][0])
+
+    def test_map_default_colors_are_absent_in_player_and_spectator_trees(self):
+        self.map.default_research = {"root": 2}
+        self.map.nation_data[self.country]["research"] = {"root": 1}
+        for player, mode in ((self.country, "VIEW"), ("Spectator", "VIEW"), ("Spectator", "EDIT")):
+            with self.subTest(player=player, mode=mode), ExitStack() as stack:
+                stack.enter_context(patch.object(self.map, "is_editor", False))
+                stack.enter_context(patch.object(self.map, "player_country", player))
+                stack.enter_context(patch.object(self.map, "viewing_research_country", self.country, create=True))
+                stack.enter_context(patch.object(self.map, "viewing_research_mode", mode, create=True))
+                self.screen.start_research(self.map)
+                self.assertEqual(self.node("root", 1).color, c.UI_COLORS["green"][0])
+                self.assertEqual(self.node("root", 2).color, c.UI_COLORS["blue"][0])
+
+    def test_spectator_edit_uses_shared_prerequisites_and_dependent_removal(self):
+        with patch.object(self.map, "is_editor", False), patch.object(self.map, "player_country", "Spectator"), \
+                patch.object(self.map, "viewing_research_country", self.country, create=True), \
+                patch.object(self.map, "viewing_research_mode", "EDIT", create=True):
+            self.screen.start_research(self.map)
+            self.node("tip", 2).callback()
+            self.assertEqual(self.screen.subject_data["research"], {"root": 2, "branch": 2, "tip": 2})
+            self.node("branch", 1).callback()
+            self.assertEqual(self.screen.subject_data["research"], {"root": 2, "branch": 0, "tip": 0})
+
     def test_reopening_for_an_ordinary_player_clears_editor_mode(self):
         self.map.is_editor = False
         self.enterContext(patch.object(self.map, "viewing_research_country", "", create=True))
