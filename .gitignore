@@ -38,6 +38,7 @@ mods
 TEMP_GD4
 TEMP_GDHEX
 TEMP_OTHER
+TEMP_OTHER_2
 
 *.pyc
 !countries_data.json

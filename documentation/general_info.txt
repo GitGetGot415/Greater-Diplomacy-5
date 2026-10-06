@@ -1,3 +1,18 @@
+TOURNAMENT FILE STORAGE
+=======================
+
+data/io/multiplayer_io.py owns tournament archive storage.
+Hosts and country players load one shared, encrypted game snapshot.
+Each country key decrypts a small record that contains the shared session key.
+Adding country keys does not add copies of the map, images, or country data.
+The public spectator key opens a separate spectator snapshot without the shared session key.
+
+Country players receive the complete snapshot before local display restrictions apply.
+Tournament fog and private-data restrictions depend on the game client.
+The archive format matches files made before per-country snapshots were introduced.
+Per-country snapshots and compressed snapshot differences are not supported.
+Real-time multiplayer continues to filter each recipient's state before transmission.
+
 PROJECT FILES
 =============
 

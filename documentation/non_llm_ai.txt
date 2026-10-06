@@ -522,7 +522,9 @@ Empty turns therefore remove earlier entries too.
 Saves retain only the latest report and its local read status.
 Older saves start with an empty report.
 History snapshots do not store copies of reports.
-Tournament exports and real-time snapshots include only the receiving player's entries.
+Tournament archives retain all entries in the shared host and player snapshot.
+The tournament report screen shows only the receiving player's entries.
+Real-time snapshots include only the receiving player's entries.
 Combat details hide unit positions with ??? when the viewer cannot see the unit.
 Player move files and real-time commands cannot replace host reports.
 Real-time broadcasts preserve local read status for the same turn.

@@ -1,5 +1,8 @@
 # TODO
 
+!!! Transporting troops with planes will be lovely
+!!! release nations or puppets from spectator mode
+
 maybe if a country has cores on another country, they're not going to join their faction...
 
 fuel deficit should do something

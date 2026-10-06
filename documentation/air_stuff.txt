@@ -319,16 +319,16 @@ The host validates position, type, and range against its own state.
 It retains its own health and stats.
 Legacy snapshots provide only order and name drafts for existing aircraft.
 
-New archives give each player an encrypted visibility projection and an opaque session context.
-They never provide the host snapshot's decryption secret.
-Legacy archives still load.
+Tournament hosts and country players load one shared, encrypted game snapshot.
+Country keys provide the shared session key. Local game rules control display visibility.
+The public spectator key opens only the separate spectator snapshot.
 
 Real-time unit commands validate against server state.
 Both multiplayer systems submit final order drafts, including direct movement and strike target changes.
 Pending target selection stays local and adds no save fields or network command kinds.
 Stable IDs resolve units when filtered client indexes differ.
 Guest snapshots and initial map bundles remove hidden units and private foreign orders.
-Neither multiplayer projection includes the temporary geometry cache or interception lists.
+Network snapshots do not include the temporary geometry cache or interception lists.
 
 Last-turn reports
 -----------------

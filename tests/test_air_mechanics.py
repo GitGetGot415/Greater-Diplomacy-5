@@ -2418,7 +2418,7 @@ class AirAppSmokeTests(unittest.TestCase):
         self.assertGreater(surface.get_at((20, 60)).a, 0)
         self.assertEqual(surface.get_at((20 + AIR_RANGE_THICKNESS + 1, 60)).a, 0)
 
-    def test_tournament_player_archive_never_reveals_host_secret_or_hidden_aircraft(self):
+    def test_tournament_players_share_the_snapshot_and_apply_fog_locally(self):
         with tempfile.TemporaryDirectory() as directory:
             game, fighter, _rocket, _path = self.make_runtime_save(directory)
             far = tile(game, 3, 1500, owner="B")
@@ -2432,12 +2432,16 @@ class AirAppSmokeTests(unittest.TestCase):
                     payload = json.load(handle)
                 entry = payload["verification_table"][multiplayer_io.hash_key("a-key")]
                 context = multiplayer_io.decrypt_dict(entry["enc_session"], "a-key")["sk"]
-                self.assertNotEqual(context, game.multiplayer_session_key)
-                self.assertIsNone(multiplayer_io.decrypt_dict(payload["game_data"], context))
+                self.assertEqual(context, game.multiplayer_session_key)
+                self.assertIsInstance(multiplayer_io.decrypt_dict(payload["game_data"], context), dict)
+                self.assertNotIn("player_game_data", payload)
                 result = multiplayer_io.load_tournament(archive, "a-key")
                 self.assertTrue(result[0])
                 loaded = Map(load_path=result[3], skip_initial_income=True)
-                self.assertEqual(loaded.id_to_province[3]["units"], [])
+                self.assertEqual(loaded.id_to_province[3]["units"][0]["unit_id"], hidden["unit_id"])
+                multiplayer_io.strip_sensitive_data_for_player(loaded, "A")
+                visible, _partial = queries.get_visible_provinces(loaded)
+                self.assertNotIn(3, visible)
                 self.assertEqual(loaded.id_to_province[1]["units"][0]["unit_id"], fighter["unit_id"])
                 self.assertIn(hidden, far["units"])
 

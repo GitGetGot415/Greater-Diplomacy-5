@@ -289,7 +289,6 @@ def export_tournament(map_ref, file_path, master_key, keys_dict):
             for cid, (name, new_key) in regenerated_keys.items():
                 f.write(f"{name} (ID {cid}): {new_key}\n")
 
-    from data import queries
     queries.scrub_default_images(map_ref.nation_data)
     queries.ensure_unit_ids(map_ref.map_data)
     save_dict = queries.build_save_dict(map_ref)
@@ -329,12 +328,6 @@ def export_tournament(map_ref, file_path, master_key, keys_dict):
         map_ref.multiplayer_session_key = session_key
 
     player_enc_cache = getattr(map_ref, 'multiplayer_player_enc_cache', {})
-    public_context = hash_key(session_key)
-    # Older caches enclosed the host decryption secret. Never reuse those when
-    # writing recipient projections; players get only an opaque session context.
-    if getattr(map_ref, "multiplayer_player_enc_context", None) != public_context:
-        player_enc_cache = {}
-    map_ref.multiplayer_player_enc_context = public_context
     
     active_owners = active_owners_of(map_ref)
 
@@ -375,7 +368,7 @@ def export_tournament(map_ref, file_path, master_key, keys_dict):
         def _encrypt_player(task):
             cid, ckey = task
             if not ckey: return None
-            return cid, hash_key(ckey), encrypt_dict({"sk": public_context}, ckey)
+            return cid, hash_key(ckey), encrypt_dict({"sk": session_key}, ckey)
 
         def _record(result):
             r_cid, r_hash, r_enc = result
@@ -402,9 +395,6 @@ def export_tournament(map_ref, file_path, master_key, keys_dict):
         "spectator_game_data": spectator_game_data_enc,
         "history": history_enc
     }
-    payload["player_game_data"] = {
-        hash_key(key): encrypt_dict(queries.player_snapshot_projection(map_ref, save_dict, cid), key)
-        for cid, key in keys_dict.items() if key and (not active_owners or cid in active_owners)}
     
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
     with open(file_path, 'w') as f:
@@ -476,14 +466,11 @@ def load_tournament(file_path, key):
         if not isinstance(session_key, str):
             return False, None, None, None, None, "Invalid key payload"
 
-        projections = payload.get("player_game_data")
-        projected_player = role == "PLAYER" and isinstance(projections, dict)
-        game_data = decrypt_dict(projections.get(i_hash) if projected_player else payload.get("game_data"),
-                                 key if projected_player else session_key)
+        game_data = decrypt_dict(payload.get("game_data"), session_key)
         if not isinstance(game_data, dict):
             return False, None, None, None, None, "Failed to decrypt game data"
 
-        history = decrypt_dict(payload.get("history"), session_key) if payload.get("history") and not projected_player else []
+        history = decrypt_dict(payload.get("history"), session_key) if payload.get("history") else []
         if history is None:
             history = []
 
@@ -642,8 +629,7 @@ def _move_context_error(map_ref, player_data):
     """
     expected_session = getattr(map_ref, "multiplayer_session_key", None)
     move_session = player_data.get("tournament_session")
-    valid_sessions = (expected_session, hash_key(expected_session)) if expected_session else (expected_session,)
-    if move_session is not None and move_session not in valid_sessions:
+    if move_session is not None and move_session != expected_session:
         return "belongs to a different tournament"
 
     if "tournament_turn" in player_data:
