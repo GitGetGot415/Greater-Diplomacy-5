@@ -16,6 +16,9 @@ Real-time multiplayer continues to filter each recipient's state before transmis
 PROJECT FILES
 =============
 
+AGENTS.md
+    Repository rules for AI-assisted changes and maintenance preferences.
+
 assets/
     Images and audio.
 
@@ -43,7 +46,6 @@ documentation/
     diplo_stuff.txt covers diplomacy rules and message timing.
     air_stuff.txt covers aircraft rules.
     other/
-        context_prompts.txt contains maintenance preferences.
         ai_responses_gd4_reference.txt contains archived Greater Diplomacy 4 response text.
         bypass_quarantine_macos.txt contains macOS quarantine instructions.
         recommended-relay-defaults.txt contains relay setup defaults.

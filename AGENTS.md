@@ -16,7 +16,6 @@ A change is complete only when all affected game modes, state transitions, UI co
    - `documentation/ai_movement.txt`: AI unit orders, movement caches, aircraft missions, and movement tuning.
    - `documentation/llm_ai.txt`: large language models (LLMs), prompts, budgets, cancellation, and fairness.
    - `documentation/diplo_stuff.txt`: diplomacy, messages, guarantees, volunteers, attach?s, factions, war, and peace.
-   - `documentation/other/context_prompts.txt`: maintenance preferences.
 4. Find the shared rule or data owner.
    Extend that implementation and make callers use it.
 
@@ -100,8 +99,10 @@ Success in one does not prove compatibility with the other.
 
 ### One Source of Truth
 
-- Combine duplicate calculations, rules, functions, and state changes in one named helper.
+- Check existing helpers before you add another function.
+- Combine duplicate calculations, variables, rules, functions, and state changes in one named helper.
   Use the same path for similar behavior unless a documented gameplay rule requires a difference.
+- Remove unused functions and organize imports when those changes are in scope.
 - Make UI previews and AI scores use the shared gameplay rules.
   Do not copy damage, price, eligibility, acceptance, capacity, or timing formulas into their callers.
 - Put reusable questions about current state in `data/queries.py`.
@@ -151,6 +152,7 @@ Success in one does not prove compatibility with the other.
   Define its owner, writer, loader, and old-save default.
   Test round trips and legacy loading.
 - Keep settings keys consistent across the schema, controller, readers, writers, defaults, and settings UI.
+  Check settings defaults, saves, and loads after related changes.
 - Preserve unknown or older valid data where possible.
   Migration must produce predictable results and be safe to run once on load.
 - Reuse caches instead of reading disk in frame or turn loops.
@@ -324,6 +326,7 @@ Update every description or preview of changed player behavior.
 
 At handoff, state the behavior change and verification results.
 Link relevant files and name remaining risks or unverified platforms.
+Give a small example when it helps explain a change.
 Do not dump whole files or give a generic change log.
 
 ## Completion Conditions
