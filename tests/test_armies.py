@@ -1,4 +1,4 @@
-"""Regression coverage for persistent army organization and tray geometry."""
+"""Regression coverage for army state, permissions, input, and caches."""
 
 import unittest
 import copy
@@ -12,9 +12,7 @@ from data import queries
 from map_logic.rendering import overlay_renderer
 from map_logic.rendering import country_names
 from map_logic.rendering import symbol_loader
-from gameState import GameState
-from screens.map_related_screens.defense_area_screen import DefenseAreaScreen
-from screens.map_related_screens.orders import Orders_Screen, PANEL_INSET, TOP_BTN_GAP_X
+from screens.map_related_screens.orders import Orders_Screen
 from ui import army_panel, map_top_right_layout, minimap
 
 
@@ -362,7 +360,7 @@ class ArmyQueryTests(unittest.TestCase):
         self.assertLessEqual(abs(destinations.count(third["id"])
                                  - destinations.count(fourth["id"])), 1)
 
-class ArmyLayoutTests(unittest.TestCase):
+class ArmyControlTests(unittest.TestCase):
     def _name_editor_map(self):
         army = {"id": "army", "name": "Army 1", "unit_ids": []}
         map_stub = SimpleNamespace(player_country="A", nation_data={"A": {"armies": [army]}},
@@ -403,49 +401,7 @@ class ArmyLayoutTests(unittest.TestCase):
                 clipboard.assert_called_once_with("Army 1")
                 self.assertEqual(map_stub.army_editor_state["name"], "Army 1")
 
-    def test_army_card_controls_are_vertical_and_non_overlapping(self):
-        card = pygame.Rect(100, 100, map_top_right_layout.PANEL_WIDTH,
-                           map_top_right_layout.CARD_HEIGHT)
-        controls = [army_panel._move_up_rect(card), army_panel._move_down_rect(card),
-                    army_panel._target_area_rect(card), army_panel._edit_rect(card),
-                    army_panel._close_rect(card)]
-        self.assertTrue(all(card.contains(control) for control in controls))
-        self.assertFalse(any(first.colliderect(second)
-                             for index, first in enumerate(controls)
-                             for second in controls[index + 1:]))
-
-    def test_defense_picker_keeps_its_controls_at_the_top_of_the_map(self):
-        pygame.font.init()
-        map_ref = SimpleNamespace(
-            player_country="A", nation_data={"A": {"armies": [
-                {"id": "army", "name": "Army 1", "unit_ids": [], "defense_area": []}]}},
-            map_data={})
-        screen = DefenseAreaScreen(map_ref, "army")
-
-        self.assertEqual(screen.panel_rect.top, DefenseAreaScreen.PANEL_TOP)
-        self.assertEqual(screen.panel_rect.centerx, c.SCREEN_WIDTH // 2)
-        self.assertLess(DefenseAreaScreen.SELECTION_MARKER_RADIUS, 14)
-
-    def test_orders_draws_army_editor_over_its_button_elements(self):
-        screen = object.__new__(Orders_Screen)
-        screen.map_screen = object()
-        draw_order = []
-
-        with (patch.object(GameState, "draw", side_effect=lambda *_args: draw_order.append("orders")),
-              patch("screens.map_related_screens.orders.army_panel.draw_editors_over_map",
-                    side_effect=lambda *_args: draw_order.append("editor"))):
-            screen.draw(pygame.Surface((100, 100)))
-
-        self.assertEqual(draw_order, ["orders", "editor"])
-
-    def test_army_flip_button_mirrors_the_y_axis_and_is_clickable(self):
-        emblem = pygame.Surface((2, 1))
-        emblem.set_at((0, 0), (220, 20, 20))
-        emblem.set_at((1, 0), (20, 20, 220))
-        mirrored = symbol_loader.orient_army_symbol(emblem, flipped=True)
-        self.assertEqual(mirrored.get_at((0, 0))[:3], (20, 20, 220))
-        self.assertEqual(mirrored.get_at((1, 0))[:3], (220, 20, 20))
-
+    def test_army_flip_button_updates_the_editor_draft(self):
         army = {"id": "army", "name": "Army 1", "unit_ids": ["unit"],
                 "symbol": "", "symbol_color": [210, 70, 70],
                 "symbol_rotation": 0, "symbol_flipped": False,
@@ -455,41 +411,22 @@ class ArmyLayoutTests(unittest.TestCase):
         army_panel._open_editor(map_stub, army)
         rect = army_panel._editor_rect()
         flip = army_panel._flip_button_rect(rect)
-        self.assertTrue(rect.contains(flip))
         self.assertTrue(army_panel._handle_editor_event(
             map_stub, pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=flip.center)))
         self.assertTrue(map_stub.army_editor_state["symbol_flipped"])
 
-    def test_custom_emblem_red_uses_army_rgb_in_preview_and_map(self):
+    def test_custom_emblem_cache_separates_requested_colors(self):
         size = c.ARMY_CUSTOM_SYMBOL_SIZE
         custom_symbol = [
             c.ARMY_CUSTOM_SYMBOL_RED + c.ARMY_CUSTOM_SYMBOL_BLACK
             + c.ARMY_CUSTOM_SYMBOL_EMPTY * (size - 2),
             *([c.ARMY_CUSTOM_SYMBOL_EMPTY * size] * (size - 1)),
         ]
-        army_color = [25, 120, 225]
-        other_color = (230, 45, 35)
-
-        emblem = symbol_loader.get_custom_army_symbol(
-            custom_symbol, size, tuple(army_color))
-        other_emblem = symbol_loader.get_custom_army_symbol(
-            custom_symbol, size, other_color)
-        self.assertEqual(emblem.get_at((0, 0))[:3], tuple(army_color))
-        self.assertEqual(emblem.get_at((1, 0))[:3], (0, 0, 0))
-        self.assertEqual(other_emblem.get_at((0, 0))[:3], other_color)
-        self.assertIsNot(emblem, other_emblem)
-
-        army = {"symbol": "", "custom_symbol": custom_symbol,
-                "symbol_color": army_color, "symbol_rotation": 0,
-                "symbol_flipped": False}
-        map_emblem = overlay_renderer.army_emblem_surface(army, size)
-        self.assertEqual(map_emblem.get_at((0, 0))[:3], tuple(army_color))
-
-        preview = pygame.Surface((size, size), pygame.SRCALPHA)
-        army_panel._draw_emblem(preview, "", custom_symbol, army_color, 0,
-                                (size // 2, size // 2), size)
-        self.assertEqual(preview.get_at((0, 0))[:3], tuple(army_color))
-
+        first = symbol_loader.get_custom_army_symbol(custom_symbol, size, (25, 120, 225))
+        repeated = symbol_loader.get_custom_army_symbol(custom_symbol, size, (25, 120, 225))
+        other = symbol_loader.get_custom_army_symbol(custom_symbol, size, (230, 45, 35))
+        self.assertIs(first, repeated)
+        self.assertIsNot(first, other)
     def test_back_closes_army_name_editor_before_its_parent_screen(self):
         army = {"id": "army", "name": "Army 1", "unit_ids": ["unit"],
                 "symbol": "", "symbol_color": [210, 70, 70],
@@ -501,37 +438,6 @@ class ArmyLayoutTests(unittest.TestCase):
 
         self.assertTrue(army_panel.handle_back_key(map_stub))
         self.assertIsNone(map_stub.army_editor_state)
-
-    def test_tray_card_color_is_a_less_saturated_army_rgb(self):
-        source = (220, 60, 70)
-        fill, border = army_panel._tray_card_colors(source, selected=False)
-        source_neutral = sum(source) / 3
-        fill_neutral = sum(fill) / 3
-
-        self.assertEqual(fill, army_panel._muted_army_color(source))
-        self.assertNotEqual(fill, source)
-        self.assertTrue(all(abs(channel - fill_neutral) < abs(original - source_neutral)
-                            for channel, original in zip(fill, source)))
-        self.assertTrue(all(channel < original for channel, original in zip(fill, source)))
-        self.assertTrue(all(edge >= channel for edge, channel in zip(border, fill)))
-
-    def test_orders_header_fits_ungroup_and_wraps_movement_guidance(self):
-        controls_width = (c.SIZES["orders_header_button"][0]
-                          + (2 * TOP_BTN_GAP_X)
-                          + c.SIZES["orders_clear_button"][0]
-                          + c.SIZES["orders_header_button"][0])
-        self.assertLessEqual(
-            controls_width + (2 * PANEL_INSET),
-            Orders_Screen.PANEL_WIDTH)
-
-        pygame.font.init()
-        font = pygame.font.Font(None, 18)
-        guidance = ("Right-click a province to move selected units. "
-                    "Shift+right-click queues a waypoint.")
-        lines = Orders_Screen._header_help_lines(guidance, font)
-        self.assertGreater(len(lines), 1)
-        self.assertTrue(all(font.size(line)[0] <= Orders_Screen.PANEL_WIDTH - (2 * PANEL_INSET)
-                            for line in lines))
 
     def test_map_army_bands_show_each_player_member_but_never_foreign_members(self):
         first = {"owner": "A", "unit_id": "first"}
@@ -1040,47 +946,6 @@ class ArmyLayoutTests(unittest.TestCase):
         self.assertEqual(groups.call_args.args[2][0]["units"], [first, second])
         self.assertEqual(map_screen.compact_army_unit_object_ids, {id(first), id(second)})
 
-    def test_blank_compact_army_icon_uses_a_larger_circular_marker(self):
-        army = {"id": "army", "symbol": ""}
-        best_unit = {"owner": "A", "type": "Tank"}
-        fallback = pygame.Surface((48, 24), pygame.SRCALPHA)
-        count_font = Mock(render=lambda *_args: pygame.Surface((8, 8), pygame.SRCALPHA))
-
-        with (patch.object(overlay_renderer, "army_emblem_surface", return_value=None),
-              patch.object(symbol_loader, "get_symbol", return_value=fallback) as symbol,
-              patch.object(overlay_renderer.fonts, "get", return_value=count_font)):
-            icon = overlay_renderer.compact_army_group_icon(
-                army, best_unit, (220, 60, 70), "A", 24, 3)
-            zoomed_out_icon = overlay_renderer.compact_army_group_icon(
-                army, best_unit, (220, 60, 70), "A", 24, 3, zoom=0.5)
-
-        self.assertEqual(icon.get_width(), icon.get_height())
-        self.assertGreater(icon.get_width(), round(
-            24 * c.UNIT_BOX_WIDTH / c.UNIT_BOX_HEIGHT))
-        self.assertLess(zoomed_out_icon.get_width(), icon.get_width())
-        self.assertEqual(icon.get_at((0, 0))[3], 0)
-        self.assertEqual(symbol.call_args.args[0], "Tank")
-        self.assertEqual(symbol.call_args.kwargs["color"], (220, 60, 70))
-
-    def test_compact_army_icon_uses_only_the_army_emblem_inside_its_circle(self):
-        army = {"id": "army", "symbol": "Star"}
-        emblem = pygame.Surface((18, 18), pygame.SRCALPHA)
-        emblem.fill((255, 0, 0, 255))
-        count_font = Mock(render=lambda *_args: pygame.Surface((8, 8), pygame.SRCALPHA))
-
-        with (patch.object(overlay_renderer, "army_emblem_surface", return_value=emblem),
-              patch.object(symbol_loader, "get_symbol") as symbol,
-              patch.object(overlay_renderer.fonts, "get", return_value=count_font)):
-            icon = overlay_renderer.compact_army_group_icon(
-                army, {"owner": "A", "type": "Tank"}, (220, 60, 70), "A", 24, 2)
-
-        self.assertEqual(icon.get_width(), icon.get_height())
-        self.assertGreater(icon.get_width(), round(
-            24 * c.UNIT_BOX_WIDTH / c.UNIT_BOX_HEIGHT))
-        self.assertEqual(icon.get_at((0, 0))[3], 0)
-        self.assertEqual(icon.get_at((24, 33))[:3], (255, 0, 0))
-        symbol.assert_not_called()
-
     def test_orders_tray_creates_armies_and_right_click_assigns_selection(self):
         world = {
             "one": {"id": 1, "owner": "A", "units": [
@@ -1133,30 +998,6 @@ class ArmyLayoutTests(unittest.TestCase):
             orders_screen=orders)
         self.assertEqual(len(nations["A"]["armies"]), 2)
 
-    @patch("ui.army_panel.queries.army_symbol_choices")
-    def test_emblem_picker_wraps_compact_tiles_before_controls(self, choices):
-        choices.return_value = [f"Emblem {index}"
-                                for index in range(army_panel.SYMBOLS_PER_ROW)]
-        rect = army_panel._editor_rect()
-        tiles = army_panel._symbol_rects(rect)
-
-        self.assertEqual(len(tiles), army_panel.SYMBOLS_PER_ROW + 2)
-        self.assertIs(tiles[-1][0], army_panel.CUSTOM_SYMBOL_CHOICE)
-        self.assertEqual(tiles[army_panel.SYMBOLS_PER_ROW][1].x,
-                         tiles[0][1].x)
-        self.assertGreater(tiles[army_panel.SYMBOLS_PER_ROW][1].y,
-                           tiles[0][1].y)
-        self.assertTrue(all(tile.right <= rect.right for _symbol, tile in tiles))
-        self.assertGreater(army_panel._color_section_y(rect),
-                           max(tile.bottom for _symbol, tile in tiles))
-        self.assertLessEqual(army_panel._sample_rect(rect).bottom,
-                             rect.bottom - 42)
-        rotation_buttons = army_panel._rotation_button_rects(rect)
-        self.assertEqual([rotation for rotation, _button in rotation_buttons],
-                         list(c.ARMY_SYMBOL_ROTATIONS))
-        self.assertTrue(all(button.right <= rect.right
-                            for _rotation, button in rotation_buttons))
-
     def test_custom_emblem_canvas_is_exactly_twenty_pixels_square(self):
         pixels = army_panel._blank_custom_symbol()
         self.assertEqual(len(pixels), c.ARMY_CUSTOM_SYMBOL_SIZE)
@@ -1171,33 +1012,16 @@ class ArmyLayoutTests(unittest.TestCase):
         self.assertTrue(all(len(row) == c.ARMY_CUSTOM_SYMBOL_SIZE
                             for row in custom_symbol))
 
-    def test_one_army_uses_a_compact_tray_and_province_view_hides_it(self):
+    def test_province_view_hides_the_army_tray_until_orders_open(self):
         map_ref = SimpleNamespace(realtime_multiplayer=False, selected_province=None,
                                   selection_mode=False, is_editor=False,
                                   player_country="A", tactical_mode=False,
                                   map_w=1000, map_h=500)
-        tray = map_top_right_layout.army_tray_rect(map_ref, 1)
-        self.assertLess(tray.height, 100)
         self.assertTrue(army_panel._visible(map_ref))
         map_ref.selected_province = {"id": 1}
         self.assertFalse(army_panel._visible(map_ref))
         map_ref.army_panel_visible_in_orders = True
         self.assertTrue(army_panel._visible(map_ref))
-
-    def test_realtime_tray_reserves_status_details_and_bottom_bar(self):
-        details = SimpleNamespace(rect=pygame.Rect(c.SCREEN_WIDTH - 120, 140, 80, 24), visible=True)
-        map_ref = SimpleNamespace(realtime_multiplayer=True,
-                                  realtime_connection_error="", btn_realtime_details=details,
-                                  map_w=1000, map_h=500)
-        tray = map_top_right_layout.army_tray_rect(map_ref, 5)
-        status = map_top_right_layout.realtime_status_rect()
-        self.assertGreaterEqual(tray.top, max(status.bottom, details.rect.bottom) +
-                                map_top_right_layout.PANEL_GAP)
-        self.assertLessEqual(tray.bottom, c.SCREEN_HEIGHT - c.BOT_UI_HEIGHT -
-                             map_top_right_layout.PANEL_GAP)
-        self.assertLessEqual(tray.bottom, minimap.minimap_rect(
-            map_ref, c.SCREEN_WIDTH, c.SCREEN_HEIGHT).top - map_top_right_layout.PANEL_GAP)
-
 
 class UnassignedArmyPanelTests(unittest.TestCase):
     def setUp(self):
@@ -1289,7 +1113,7 @@ class UnassignedArmyPanelTests(unittest.TestCase):
         self.assertTrue(army_panel.handle_event(self.map, pygame.event.Event(
             pygame.MOUSEBUTTONUP, button=3, pos=card.center), orders))
 
-    def test_virtual_card_is_dark_grey_without_symbols_or_frame_calculations(self):
+    def test_virtual_card_uses_cached_members_and_has_no_mutation_controls(self):
         pygame.font.init()
         surface = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
         font = pygame.font.Font(None, 18)
@@ -1305,11 +1129,6 @@ class UnassignedArmyPanelTests(unittest.TestCase):
             army_panel.draw(self.map, surface, draw_editors=False)
         for control in (emblem, edit, close, target, move):
             control.assert_not_called()
-        tray, _armies = army_panel._layout(self.map)
-        card = map_top_right_layout.card_rect(tray, 0, self.map.army_panel_scroll_y)
-        self.assertTrue(tray.contains(card))
-        self.assertEqual(surface.get_at((card.centerx, card.centery))[:3],
-                         c.UNASSIGNED_ARMY_COLOR)
 
     def test_unassigned_stays_first_after_real_armies_move_or_are_deleted(self):
         self.world["home"]["units"].append({"owner": "A", "type": "Infantry"})
@@ -1360,31 +1179,6 @@ class UnassignedArmyPanelTests(unittest.TestCase):
 
 
 class MinimapTests(unittest.TestCase):
-    def test_minimap_draws_the_active_map_layer(self):
-        active_map = pygame.Surface((40, 20))
-        active_map.fill((35, 140, 210))
-        map_ref = SimpleNamespace(
-            map_w=40, map_h=20, active_map=active_map,
-            camera=SimpleNamespace(pos=SimpleNamespace(x=0, y=0), zoom=20, tilt_factor=1),
-            total_ui_h=c.TOTAL_UI_HEIGHT)
-        surface = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
-        minimap.draw_minimap(map_ref, surface, c.SCREEN_WIDTH, c.SCREEN_HEIGHT)
-        rect = minimap.minimap_rect(map_ref, c.SCREEN_WIDTH, c.SCREEN_HEIGHT)
-        self.assertEqual(surface.get_at((rect.centerx, rect.centery))[:3], (35, 140, 210))
-
-    def test_minimap_replaces_chroma_key_water_with_ocean_color(self):
-        active_map = pygame.Surface((40, 20))
-        active_map.fill(c.COLOR_CHROMA_PINK)
-        active_map.set_colorkey(c.COLOR_CHROMA_PINK)
-        map_ref = SimpleNamespace(
-            map_w=40, map_h=20, active_map=active_map, bg_color=(17, 46, 83),
-            camera=SimpleNamespace(pos=SimpleNamespace(x=0, y=0), zoom=20, tilt_factor=1),
-            total_ui_h=c.TOTAL_UI_HEIGHT)
-        surface = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
-        minimap.draw_minimap(map_ref, surface, c.SCREEN_WIDTH, c.SCREEN_HEIGHT)
-        rect = minimap.minimap_rect(map_ref, c.SCREEN_WIDTH, c.SCREEN_HEIGHT)
-        self.assertEqual(surface.get_at((rect.centerx, rect.centery))[:3], (17, 46, 83))
-
     def test_minimap_composites_the_same_fog_layer_as_the_main_map(self):
         active_map = pygame.Surface((40, 20))
         active_map.fill((35, 140, 210))

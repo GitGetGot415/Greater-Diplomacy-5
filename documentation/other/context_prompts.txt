@@ -46,8 +46,12 @@ Do not move local layout values into constants.py.
 Tests and handoff
 -----------------
 
-Test useful behavior and layout conditions.
-Avoid tests that only fix an arbitrary button coordinate.
+Test functional behavior, including behavior reached through UI controls.
+Do not add tests that check only visual components.
+Check appearance and layout manually.
+Users can change appearance without updating tests.
+Keep tests for callbacks, input handling, permissions, game rules, data, persistence, caches, and runtime errors.
+Remove appearance assertions from mixed tests. Preserve their functional assertions.
 Never make tests depend on current unit or building stats, research settings, costs, or combat capabilities.
 Use artificial fixtures when a test needs specific settings.
 For real-content checks, derive test inputs and expected results from authoritative data or shared rules.

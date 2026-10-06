@@ -93,9 +93,6 @@ class EditorScreenSmokeTests(unittest.TestCase):
         self.exercise(screen)
         screen.select_tab("administrative")
         self.exercise(screen)
-        for element in screen.elements:
-            if getattr(element, "is_scrollable", False):
-                self.assertTrue(screen.scroll_content_rect.contains(element.rect))
 
     def test_administrative_editor_saves_all_tabs_and_cancels_cleanly(self):
         from screens.editor_screens.turn_editor import TurnEditorScreen

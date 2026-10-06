@@ -224,9 +224,9 @@ class SettingsScreenTests(unittest.TestCase):
         self.assertFalse(c.SHOW_UNCLAIMED)
         save.assert_called_once_with(screen.controller)
 
-    def test_show_unclaimed_button_order_layout_callback_and_reset(self):
+    def test_show_unclaimed_button_callback_and_reset(self):
         import pygame
-        from screens.menu_screens.settings import Settings, SETTINGS_RIGHT_COL_X
+        from screens.menu_screens.settings import Settings
         from types import SimpleNamespace
         pygame.font.init()
         previous_setting = c.SHOW_UNCLAIMED
@@ -235,18 +235,7 @@ class SettingsScreenTests(unittest.TestCase):
         controller.ai_mode = "OFF"
         with mock.patch("screens.menu_screens.settings.queries.get_settings", return_value={}):
             screen = Settings(controller)
-        fps = next(item for item in screen.elements if item.text.startswith("Show FPS:"))
         unclaimed = next(item for item in screen.elements if item.text.startswith("Show Unclaimed:"))
-        intro = next(item for item in screen.elements if item.text.startswith("Show Tutorial Popup:"))
-        self.assertEqual(unclaimed.text, "Show Unclaimed: ON")
-        self.assertLessEqual(fps.rect.bottom, unclaimed.rect.top)
-        self.assertLessEqual(unclaimed.rect.bottom, intro.rect.top)
-        buttons = sorted([item for item in screen.elements
-                          if item.rect.x == SETTINGS_RIGHT_COL_X], key=lambda item: item.rect.y)
-        for first, second in zip(buttons, buttons[1:]):
-            self.assertFalse(first.rect.colliderect(second.rect))
-        bounds = pygame.Rect(0, 0, c.SCREEN_WIDTH, c.SCREEN_HEIGHT)
-        self.assertTrue(all(bounds.contains(item.rect) for item in buttons))
         with mock.patch("screens.menu_screens.settings.queries.get_settings", return_value={}), \
                 mock.patch("screens.menu_screens.settings.queries.save_global_settings"):
             unclaimed.callback()
@@ -278,7 +267,7 @@ class SettingsScreenTests(unittest.TestCase):
 
 
 class NavigationIntroPopupTests(unittest.TestCase):
-    def test_intro_popup_uses_mouse_assets_and_is_draggable(self):
+    def test_intro_popup_handles_drag_navigation_and_persists_preferences(self):
         """The tutorial is a live map popup, not a snapshot modal screen."""
         import pygame
         from ui.confirm_dialog import message_box
@@ -287,50 +276,8 @@ class NavigationIntroPopupTests(unittest.TestCase):
         pygame.display.set_mode((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
         map_stub = type("MapStub", (), {"navigation_intro_popup": None})()
         popup = message_box._NavigationIntroPopup(map_stub)
-        map_stub.navigation_intro_popup = popup
-        self.assertEqual(popup.rect.center, (
-            c.SCREEN_WIDTH // 2,
-            c.SCREEN_HEIGHT // 2 + popup.INITIAL_CENTER_Y_OFFSET,
-        ))
-        self.assertGreater(popup.rect.width, 720)
-        self.assertGreater(popup.rect.height, 370)
-        self.assertEqual(len(popup.PAGE_TITLES), len(popup.PAGE_SUBTITLES))
-        self.assertTrue(all(isinstance(text, str) and text
-                            for text in popup.PAGE_TITLES + popup.PAGE_SUBTITLES))
-
-        image = pygame.Surface((64, 74), pygame.SRCALPHA)
         surface = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
-        with mock.patch.object(message_box.ui_bars, "get_ui_image", return_value=image) as get_image:
-            popup.draw(surface)
-
-        self.assertEqual(
-            [call.args[0] for call in get_image.call_args_list],
-            ["Left.png", "Middle.png", "Right.png"])
-        self.assertTrue(all(call.kwargs["directory"] == popup.MOUSE_DIR
-                            for call in get_image.call_args_list))
-        self.assertEqual(len(popup.NAVIGATION_BUTTONS), 3)
-        self.assertTrue(all(len(lines) >= 1
-                            for _filename, _heading, lines in popup.NAVIGATION_BUTTONS))
-        self.assertEqual(popup.KEYBOARD_NAVIGATION[0], "ARROW KEYS")
-        self.assertTrue(popup.KEYBOARD_NAVIGATION[1])
-        self.assertNotIn("mouse gestures", popup.KEYBOARD_NAVIGATION[1].lower())
-        self.assertIn("mouse gestures", popup.MOUSE_GESTURE_SETTINGS_NOTE.lower())
-        self.assertTrue(all(
-            popup.body_font.size(line)[0] <= popup.navigation_caption_width
-            for captions in popup.navigation_caption_lines
-            for wrapped_lines in captions
-            for line in wrapped_lines
-        ))
-        self.assertLess(popup.keyboard_navigation_rect.bottom,
-                        popup.checkbox_rect.top)
-        self.assertGreaterEqual(popup.mouse_gesture_note_rect.top,
-                                popup.keyboard_navigation_rect.bottom)
-        self.assertFalse(popup.mouse_gesture_note_rect.colliderect(
-            popup.keyboard_navigation_rect))
-        self.assertLessEqual(popup.mouse_gesture_note_rect.bottom,
-                             popup.checkbox_rect.top)
-        self.assertTrue(popup.rect.contains(popup.mouse_gesture_note_rect))
-
+        map_stub.navigation_intro_popup = popup
         # Unit selection and map panning pass through the panel while active.
         self.assertFalse(popup.handle_event(pygame.event.Event(
             pygame.MOUSEBUTTONDOWN, pos=popup.rect.center, button=2)))
@@ -363,51 +310,14 @@ class NavigationIntroPopupTests(unittest.TestCase):
         popup.handle_event(pygame.event.Event(
             pygame.MOUSEBUTTONDOWN, pos=popup.next_rect.center, button=1))
         self.assertEqual(popup.page_index, 1)
-        subtitle_lines = popup._subtitle_lines()
-        self.assertTrue(subtitle_lines)
-        self.assertTrue(all(popup.body_font.size(line)[0] <= popup.rect.width -
-                            (2 * popup.SUBTITLE_SIDE_PADDING)
-                            for line in subtitle_lines))
-        self.assertEqual(len(popup.MAP_UI_BUTTONS), 10)
-        self.assertTrue(all(icon for _label, icon, _description in popup.MAP_UI_BUTTONS))
-        with mock.patch.object(message_box.ui_elements, "UI_ICONS", {
-                icon: image for _label, icon, _description in popup.MAP_UI_BUTTONS}):
-            popup.draw(surface)
-
         popup.handle_event(pygame.event.Event(
             pygame.MOUSEBUTTONDOWN, pos=popup.next_rect.center, button=1))
         self.assertEqual(popup.page_index, 2)
-        self.assertEqual([icon for _heading, icon, _description in popup.DIPLOMACY_STEPS],
-                         ["mail", "relations"])
-        self.assertTrue(all(popup.body_font.size(line)[0] <= popup.rect.width -
-                            (2 * popup.SUBTITLE_SIDE_PADDING)
-                            for line in popup._subtitle_lines()))
         popup.draw(surface)
 
         popup.handle_event(pygame.event.Event(
             pygame.MOUSEBUTTONDOWN, pos=popup.next_rect.center, button=1))
         self.assertEqual(popup.page_index, 3)
-        self.assertTrue(all(popup.body_font.size(line)[0] <= popup.rect.width -
-                            (2 * popup.SUBTITLE_SIDE_PADDING)
-                            for line in popup._subtitle_lines()))
-        self.assertEqual(len(popup.army_step_lines), len(popup.ARMY_STEPS))
-        self.assertTrue(all(len(step) == 2 for step in popup.ARMY_STEPS))
-        self.assertTrue(all(heading and description
-                            for heading, description in popup.ARMY_STEPS))
-        self.assertTrue(any(heading == "Unassigned" for heading, _description in popup.ARMY_STEPS))
-        army_text_width = (popup.rect.width - popup.ARMY_STEP_NUMBER_X
-                           - popup.ARMY_STEP_TEXT_X_OFFSET
-                           - popup.ARMY_STEP_SIDE_PADDING)
-        self.assertTrue(all(popup.body_font.size(line)[0] <= army_text_width
-                            for _heading, lines in popup.army_step_lines
-                            for line in lines))
-        line_height = popup.body_font.get_height() + popup.ARMY_STEP_LINE_GAP
-        content_height = sum(popup.label_font.get_height() + 2 + len(lines) * line_height
-                             + popup.ARMY_STEP_GAP for _heading, lines in popup.army_step_lines)
-        subtitle_offset = max(0, len(popup._subtitle_lines()) - 1) * (
-            popup.body_font.get_height() + popup.SUBTITLE_LINE_GAP)
-        self.assertLess(popup.rect.y + 91 + subtitle_offset + content_height,
-                        popup.checkbox_rect.top)
         popup.draw(surface)
 
         popup.handle_event(pygame.event.Event(

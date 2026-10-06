@@ -131,7 +131,7 @@ Success in one does not prove compatibility with the other.
   Test a fixed relationship only when a shared gameplay rule requires it.
   Identify that rule in the test.
 - Treat editable UI and tutorial text as content.
-  Test structure, navigation, callbacks, icons, layout, and behavior.
+  Test navigation, callbacks, permissions, and state changes.
   Check exact wording only for protocol values, identifiers, or a specific user requirement.
 - Store non-LLM diplomatic and AI text in `data/json/ai_responses.json`.
   Read it through `map_logic/ai/ai_prompts.py`.
@@ -186,9 +186,8 @@ Success in one does not prove compatibility with the other.
     Do not apply strategic fading or zoomed-out army compression.
   - Tactical country selection: a clicked unit box selects from that box's divisions.
     Fall back to the tile only when no rendered box exists there.
-- Test useful layout conditions: no overlap, containment, reachable controls, and consistent spacing.
-  Do not freeze arbitrary coordinates or tunable unit values in tests.
-  Derive expectations from their owners.
+- Check appearance and layout manually.
+  Keep automated checks for input handling, navigation, permissions, and state changes.
 
 ### AI and Diplomacy
 
@@ -218,6 +217,14 @@ Success in one does not prove compatibility with the other.
 
 Use verification appropriate to each change.
 
+- Do not add tests that check only visual components.
+  Examples include colors, fonts, icons, spacing, alignment, dimensions, overlap, and pixel appearance.
+  A person can easily check these by looking at the UI.
+  Users can change appearance without updating tests.
+  Keep tests for backend behavior, including behavior reached through UI controls.
+  Keep checks for callbacks, input handling, permissions, game rules, data, persistence, caches, and runtime errors.
+  In mixed tests, remove appearance assertions and preserve functional assertions.
+
 1. Add or update focused regression tests for the rule and actual failure.
    Keep useful tests. Rewrite them around the required behavior when necessary.
    Remove assumptions about current tuning from existing tests, including tests that still pass.
@@ -230,8 +237,9 @@ Use verification appropriate to each change.
 
 4. For gameplay, check execution, UI and AI agreement, saves, and both multiplayer systems where applicable.
 
-5. For UI, run smoke or layout checks.
-   Check alternative permissions and screen sizes.
+5. For UI, run functional smoke checks and check appearance manually.
+   Test alternative permissions and input handling.
+   Check appearance at different screen sizes manually.
    Tests must not require real network services or an LLM unless marked as integration tests.
 
 6. State exactly which tests and builds ran and which did not.

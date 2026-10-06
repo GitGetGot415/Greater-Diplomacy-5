@@ -7,17 +7,7 @@ import pygame
 import data.constants as c
 from data import queries
 from ui_elements import Button, Slider
-from screens.menu_screens.music_player import (
-    MUSIC_LEFT_PANE_W,
-    MUSIC_PROGRESS_X,
-    MUSIC_PROGRESS_SIZE,
-    MUSIC_TIMELINE_BUTTON_GAP,
-    MUSIC_TIMELINE_BUTTON_X,
-    MUSIC_TIMELINE_HELP_BUTTON_X,
-    MUSIC_TIMELINE_HELP_BUTTON_Y,
-    TRACK_SHUFFLE_TOGGLE_GAP,
-    Music_Player,
-)
+from screens.menu_screens.music_player import Music_Player
 
 
 def make_controller():
@@ -91,7 +81,7 @@ class ShuffleExclusionTests(unittest.TestCase):
             ("shuffle_disabled_tracks", []),
         )
 
-    def test_excluded_song_button_remains_selectable_and_toggle_is_right_and_green(self):
+    def test_excluded_song_remains_selectable_and_settings_match_controller(self):
         pygame.font.init()
         track_path = "assets/music/Album/track.mp3"
         controller = SimpleNamespace(
@@ -116,30 +106,14 @@ class ShuffleExclusionTests(unittest.TestCase):
         player.refresh_ui()
 
         song_button = next(button for button in player.elements if button.text == "track.mp3")
-        exclusion_button = next(button for button in player.elements if button.text == "X")
         self.assertFalse(song_button.disabled)
-        self.assertEqual(exclusion_button.rect.left,
-                         song_button.rect.right + TRACK_SHUFFLE_TOGGLE_GAP)
-        self.assertEqual(exclusion_button.color, c.UI_COLORS["green"][0])
 
         static_button = next(button for button in player.elements
                              if isinstance(button, Button) and button.text == "Static")
         dynamic_button = next(button for button in player.elements
                               if isinstance(button, Button) and button.text == "Dynamic")
-        self.assertEqual(static_button.rect.left, MUSIC_TIMELINE_BUTTON_X)
-        self.assertGreaterEqual(static_button.rect.left,
-                                MUSIC_PROGRESS_X + MUSIC_PROGRESS_SIZE[0])
-        self.assertEqual(dynamic_button.rect.left,
-                         static_button.rect.right + MUSIC_TIMELINE_BUTTON_GAP)
         self.assertTrue(static_button.is_selected)
         self.assertFalse(dynamic_button.is_selected)
-
-        help_button = next(button for button in player.elements
-                           if isinstance(button, Button) and button.text == "?")
-        self.assertEqual(help_button.rect.left, MUSIC_TIMELINE_HELP_BUTTON_X)
-        self.assertEqual(help_button.rect.top, MUSIC_TIMELINE_HELP_BUTTON_Y)
-        self.assertEqual(help_button.rect.left,
-                         dynamic_button.rect.right + MUSIC_TIMELINE_BUTTON_GAP)
 
         sfx_pitch_slider = next(element for element in player.elements
                                 if isinstance(element, Slider)

@@ -24,7 +24,7 @@ from data import queries
 from map_logic.turn_processing import combat_rules
 from screens.map_related_screens import battle_screen
 from tests import app_harness
-from ui import army_panel, map_top_right_layout
+from ui import army_panel
 
 
 class BattleScreenTestCase(unittest.TestCase):
@@ -166,9 +166,6 @@ class BuildAndPaintTests(BattleScreenTestCase):
 
         self.assertIsNotNone(orders.battle_screen)
         self.assertTrue(orders.battle_screen.embedded)
-        self.assertGreater(orders.battle_screen.panel_rect.x, orders.panel_rect.right)
-        self.assertEqual(orders.battle_screen.panel_rect.right,
-                         c.SCREEN_WIDTH - map_top_right_layout.PANEL_RIGHT_MARGIN)
         self.assertFalse(army_panel._visible(self.map, orders))
 
     def test_combat_bubble_entry_opens_the_battle_inspector(self):
@@ -198,31 +195,6 @@ class BuildAndPaintTests(BattleScreenTestCase):
         self.assertEqual(orders.next_state, "MAP")
         self.assertIsNone(self.map.selected_province)
 
-    def test_narrow_unit_stat_rows_wrap_complete_entries(self):
-        from map_logic.rendering.font_manager import fonts
-        from ui_elements import draw_wrapped_icon_row
-
-        font = fonts.get("small")
-        with mock.patch("ui_elements.scale_icon", return_value=None):
-            _, final_y = draw_wrapped_icon_row(
-                self.surface, font,
-                [("Attack", "100"), ("Defense", "0 + 50"),
-                 ("Health", "100"), ("Speed", "1")],
-                10, 10, (200, 200, 200), max_width=100)
-
-        self.assertGreater(final_y, 10)
-
-    def test_unit_side_heading_uses_column_width_for_flags(self):
-        from types import SimpleNamespace
-
-        screen = self.screen()
-        side = SimpleNamespace(nations=[self.a, self.b, self.x, self.y])
-        rect = pygame.Rect(0, 100, 184, 100)
-        with mock.patch.object(screen, "_paint_side_flags") as paint_flags:
-            screen._paint_side_heading(self.surface, rect, side, "1/5")
-
-        self.assertEqual(paint_flags.call_args.kwargs["max_flags"], 4)
-
     def test_selecting_the_other_lane_repaints(self):
         screen = self.screen()
         self.assertGreater(len(screen.battle.lanes), 1)
@@ -235,9 +207,6 @@ class BuildAndPaintTests(BattleScreenTestCase):
     def test_lane_outlook_is_rebuilt_for_the_selected_lane(self):
         screen = self.screen()
         self.assertIsInstance(screen.lane_outcome, dict)
-        self.assertEqual(
-            screen.outcome_rect.top,
-            screen.regions[battle_screen.PANE_LANES].bottom + battle_screen.OUTCOME_GAP)
 
         with mock.patch.object(screen, "_estimate_lane_outcome",
                                wraps=screen._estimate_lane_outcome) as estimate:
@@ -584,30 +553,8 @@ class TacticalModeTests(BattleScreenTestCase):
             self.assertEqual(unit.get("combat_stance"), "RESERVE")
 
 
-class RowPaintingTests(BattleScreenTestCase):
-    """Rows are painted over rather than labelled, so painting is the test."""
-
-    def test_a_bombarding_unit_paints_its_guns_too(self):
-        library = queries.get_unit_library()
-        gunner = next((name for name, stats in library.items()
-                       if "bombard_attack" in stats), None)
-        self.assertIsNotNone(gunner, "no bombarding unit type in the library")
-
-        self.province["units"].append(queries.create_unit_dict(gunner, self.a, library))
-        screen = self.screen()
-        screen.draw(self.surface)
-
-    def test_every_row_carries_something_to_paint(self):
-        screen = self.screen()
-        painted = {pane: len(rows) for pane, rows in screen.row_paint.items()}
-        rows = {}
-        for el in screen.elements:
-            pane = getattr(el, "pane", None)
-            if pane:
-                rows[pane] = rows.get(pane, 0) + 1
-
-        self.assertTrue(rows)
-        self.assertEqual(painted, rows)
+class RowOrderingTests(BattleScreenTestCase):
+    """The viewer's units appear first in each lane."""
 
     def test_your_side_is_listed_first_whichever_half_of_the_lane_it_is(self):
         screen = self.screen()
@@ -797,28 +744,19 @@ class OrdersScreenRegressionTests(BattleScreenTestCase):
         visible_indices = set(screen.unit_row_icons)
         self.assertEqual(visible_indices, set(owned_indices))
         self.assertEqual(len(screen.action_buttons), len(owned_indices) * 6)
-        group_panel_height = screen.panel_rect.height
-        self.assertLess(group_panel_height, c.SCREEN_HEIGHT - 70)
-        self.assertLessEqual(screen.row_height, 80 * 0.75)
-        self.assertLessEqual(screen.PANEL_WIDTH, 570 * 0.85)
 
         for selected_index in owned_indices:
             buttons = [button for button in screen.action_buttons
                        if button.unit_index == selected_index]
             self.assertEqual(len(buttons), 6)
             self.assertEqual({button.action_slot for button in buttons}, set(range(6)))
-            for button in buttons:
-                self.assertTrue(screen.panel_rect.contains(button.rect))
-                self.assertTrue(screen.scroll_content_rect.contains(button.rect))
 
         focused_unit = self.province["units"][owned_indices[0]]
 
-        # Empty MOVE dictionaries are the engine's idle placeholders, so they
-        # must not create a yellow status or a cancel control.
+        # Empty MOVE dictionaries are idle placeholders. They need no cancel control.
         self.assertEqual(screen.cancel_rects, [])
-        summary, color = screen._order_summary(owned_indices[0], focused_unit)
+        summary, _color = screen._order_summary(owned_indices[0], focused_unit)
         self.assertEqual(summary, "Ready")
-        self.assertEqual(color, c.UI_TEXT_MUTED)
 
         # Clicking a selected member of a larger group focuses that member.
         screen.toggle_selected_unit(focused_unit)
@@ -826,7 +764,6 @@ class OrdersScreenRegressionTests(BattleScreenTestCase):
                          {id(focused_unit)})
         screen.draw(self.surface)
         self.assertEqual(set(screen.unit_row_icons), {owned_indices[0]})
-        self.assertLess(screen.panel_rect.height, group_panel_height)
 
         # Clicking the sole selected member retains the normal deselect action.
         screen.toggle_selected_unit(focused_unit)

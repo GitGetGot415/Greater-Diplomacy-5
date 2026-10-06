@@ -79,7 +79,6 @@ class SymbolCacheTests(unittest.TestCase):
         small = symbol_loader.get_symbol(self.name, 1.0)
         big = symbol_loader.get_symbol(self.name, 4.0)
         self.assertIsNot(small, big)
-        self.assertGreater(big.get_width(), small.get_width())
 
     def test_zooms_that_round_to_one_size_share_it(self):
         """Zoom is continuous and lerps between notches, so the cache has to be
@@ -420,29 +419,6 @@ class CombatDisplayTests(unittest.TestCase):
                 {"owner": "B"}, "A", nation_data, forces),
             queries.COMBAT_LOCATION_OFFENSE)
 
-    def test_full_display_makes_active_bubble_translucent(self):
-        record = {"category": queries.COMBAT_LOCATION_DEFENSE,
-                  "color": (255, 255, 0), "potential": False}
-        predicted_record = dict(record, potential=True)
-        surface = pygame.Surface((20, 20), pygame.SRCALPHA)
-        with mock.patch.object(symbol_loader, "get_symbol",
-                               return_value=surface) as get_symbol:
-            c.BATTLE_DISPLAY_MODE = "FULL"
-            overlay_renderer._combat_bubble_symbol(record, 1.0)
-            active_alpha = get_symbol.call_args.kwargs["alpha"]
-            self.assertEqual(active_alpha, overlay_renderer.COMBAT_BUBBLE_FULL_ALPHA)
-
-            overlay_renderer._combat_bubble_symbol(predicted_record, 1.0)
-            predicted_alpha = get_symbol.call_args.kwargs["alpha"]
-            self.assertEqual(predicted_alpha,
-                             overlay_renderer.COMBAT_BUBBLE_FULL_PREDICTION_ALPHA)
-            self.assertLess(predicted_alpha, active_alpha)
-
-            c.BATTLE_DISPLAY_MODE = "COMPACT"
-            overlay_renderer._combat_bubble_symbol(record, 1.0)
-            self.assertEqual(get_symbol.call_args.kwargs["alpha"], 255)
-
-
 class UnitBoxCacheTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -469,10 +445,6 @@ class UnitBoxCacheTests(unittest.TestCase):
     def test_so_is_the_tactical_inversion(self):
         """Black on white is how the player finds their own division."""
         self.assertIsNot(self.box(), self.box(inverted=True))
-
-    def test_the_box_is_drawn_at_the_size_asked_for(self):
-        self.assertEqual(self.box(size=(40, 20)).get_size(), (40, 20))
-        self.assertEqual(self.box(size=(60, 30)).get_size(), (60, 30))
 
     def test_the_unknown_box_is_shared_too(self):
         self.assertIs(overlay_renderer.unknown_box((40, 20)),
@@ -538,8 +510,6 @@ class CompactArmyIconCacheTests(unittest.TestCase):
                 edited = self.icon(army)
 
                 self.assertIsNot(first, edited)
-                self.assertNotEqual(pygame.image.tobytes(first, "RGBA"),
-                                    pygame.image.tobytes(edited, "RGBA"))
                 self.assertIs(edited, self.icon(army))
 
 
@@ -572,17 +542,6 @@ class CullingTests(unittest.TestCase):
 
         overlay_renderer.draw_unit_icon = spy
         self.addCleanup(setattr, overlay_renderer, "draw_unit_icon", self.real_draw)
-
-    def test_the_margin_clears_the_overhang_of_a_crowded_tile(self):
-        self.map.camera.zoom = c.MAX_CAMERA_ZOOM
-        self.map.camera.tilt_factor = 1.0
-        _w, h, scale = overlay_renderer.unit_box_size(self.map)
-
-        # Six nations on one tile is a crowded but perfectly ordinary battle,
-        # and the stack is centred, so half of it is what sits outside the cull.
-        overhang = ((h * 6) + max(2, int(4 * scale)) * 5) // 2
-
-        self.assertGreater(overlay_renderer.CULL_MARGIN, overhang)
 
     def look_at(self, province, zoom):
         """Centres the camera on a province, the way clicking one would."""

@@ -72,10 +72,6 @@ class ExpensesTableTests(unittest.TestCase):
 
         surface = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
         table.draw(surface)
-        toggles = table.elements[-2:]
-        self.assertFalse(toggles[0].rect.colliderect(toggles[1].rect))
-        self.assertTrue(all(0 <= button.rect.left < button.rect.right <= c.SCREEN_WIDTH
-                            and button.rect.bottom <= table.HEADER_Y for button in toggles))
 
         table.elements[-2].callback()
         self.assertIs(table.rows, individual)

@@ -189,27 +189,6 @@ class MapPanelScrollTests(unittest.TestCase):
 
         self.assertIs(self.map.selected_province, replacement)
 
-    def test_province_menu_draws_hover_feedback_in_its_transparent_window(self):
-        """The visible map continues to show the normal province hover glow."""
-        from map_logic.rendering import map_renderer
-
-        previous_hovered = self.map.hovered_province
-        previous_glow = self.map.hover_glow_surf
-        previous_glow_rect = self.map.hover_glow_rect
-        self.addCleanup(setattr, self.map, "hovered_province", previous_hovered)
-        self.addCleanup(setattr, self.map, "hover_glow_surf", previous_glow)
-        self.addCleanup(setattr, self.map, "hover_glow_rect", previous_glow_rect)
-        self.map.hovered_province = self.map.selected_province
-        self.map.hover_glow_surf = pygame.Surface((1, 1), pygame.SRCALPHA)
-        self.map.hover_glow_rect = pygame.Rect(0, 0, 1, 1)
-
-        with mock.patch.object(map_renderer.hover_renderer, "draw_hover_glow") as draw_glow:
-            self.map.draw(self.surface)
-
-        draw_glow.assert_called_once_with(self.map, self.surface)
-
-
-
 class ExitConfirmationTests(unittest.TestCase):
     """The quit-to-menu dialog is drawn by map_logic/rendering/map_renderer.py
     and clicked in ui/event_handler.py. Its button geometry used to be written

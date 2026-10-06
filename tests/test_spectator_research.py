@@ -437,7 +437,7 @@ class SubjectTests(unittest.TestCase):
         self.assertEqual(self.map.nation_data[target]["research_progress"], {"test_research": 40})
         self.assertEqual(self.map.nation_data[target]["research"], {})
 
-    def test_completed_overview_remains_text_and_exit_fits_with_tabs(self):
+    def test_completed_overview_has_no_edit_actions(self):
         self.spectate(self.others()[0], "EDIT")
         for size in ((c.SCREEN_WIDTH, c.SCREEN_HEIGHT), (1280, 720)):
             with self.subTest(size=size), patch.object(c, "SCREEN_WIDTH", size[0]), patch.object(c, "SCREEN_HEIGHT", size[1]):
@@ -450,12 +450,6 @@ class SubjectTests(unittest.TestCase):
                 self.assertIn("Exit", labels)
                 self.assertNotIn("Confirm", labels)
                 self.assertNotIn("Cancel", labels)
-                bounds = pygame.Rect((0, 0), size)
-                for button in buttons:
-                    self.assertTrue(bounds.contains(button.rect))
-                for index, first in enumerate(buttons):
-                    for second in buttons[index + 1:]:
-                        self.assertFalse(first.rect.colliderect(second.rect))
                 self.screen.draw(pygame.Surface(size))
 
     def test_tactical_mode_is_still_read_only(self):
@@ -498,7 +492,7 @@ class PickerTests(unittest.TestCase):
                 self.assertEqual(self.map.next_state, "RESEARCH")
                 self.assertTrue(self.map.done)
 
-    def test_mode_buttons_fit_above_search_and_preserve_filter(self):
+    def test_mode_button_callback_preserves_search_and_sets_selection_mode(self):
         for size in ((c.SCREEN_WIDTH, c.SCREEN_HEIGHT), (1280, 720)):
             with self.subTest(size=size), patch.object(c, "SCREEN_WIDTH", size[0]), patch.object(c, "SCREEN_HEIGHT", size[1]):
                 picker = self.picker()
@@ -508,11 +502,6 @@ class PickerTests(unittest.TestCase):
                 before = list(picker.visible_items)
                 buttons = {button.text: button for button in picker.elements if button.text in ("View", "Edit")}
                 self.assertEqual(set(buttons), {"View", "Edit"})
-                for button in buttons.values():
-                    self.assertTrue(picker.panel_rect.contains(button.rect))
-                    self.assertLess(button.rect.bottom, picker.panel_rect.y + picker.SEARCH_BOX_Y)
-                    self.assertFalse(button.rect.colliderect(picker.scroll_content_rect))
-                self.assertFalse(buttons["View"].rect.colliderect(buttons["Edit"].rect))
                 buttons["Edit"].callback()
                 self.assertEqual(picker.mode, "EDIT")
                 self.assertEqual(picker.visible_items, before)

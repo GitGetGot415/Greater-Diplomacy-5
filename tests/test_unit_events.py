@@ -16,7 +16,6 @@ from data.io import multiplayer_io
 from data.io.realtime_multiplayer import apply_authoritative_snapshot, collect_map_commands
 from map_logic.turn_processing import combat_processor, combat_rules, unit_events, turn_processor
 from map_logic.turn_processing.time_handler import TimeHandler
-from map_logic.rendering.font_manager import fonts
 from tests import app_harness
 from tests import test_tournament_moves as tournament_tests
 
@@ -534,24 +533,14 @@ class UnitEventScreenTests(unittest.TestCase):
         unit_events.set_event_filter(self.game, None)
         unit_events.refresh_presentation(self.game)
 
-    def test_button_icon_badge_placement_and_navigation(self):
+    def test_report_button_updates_unread_count_and_opens_reports(self):
         from screens.menu_screens.map import update_button_states
-        from ui.bars import resource_hud
         from ui import modal_stack
-        from ui_elements import UI_ICONS
         game = self.game
         update_button_states(game)
         button = game.btn_unit_events
         self.assertTrue(button.visible)
         self.assertEqual(button.notification_count, 1)
-        self.assertIs(button.image, UI_ICONS["mail"])
-        self.assertEqual(button.color, c.UI_COLORS["yellow"][0])
-        panel_right = (resource_hud.HUD_START_X - resource_hud.HUD_BOX_PAD_X
-                       + len(c.ECON_RESOURCE_KEYS) * resource_hud.HUD_SPACING - resource_hud.HUD_BOX_TRIM)
-        self.assertGreater(button.rect.left, panel_right)
-        self.assertEqual(button.rect.width, button.rect.height)
-        self.assertTrue(game.bot_bar_rect.contains(button.rect))
-        self.assertFalse(button.rect.colliderect(game.btn_next_turn.rect))
         with patch.object(modal_stack, "push") as push:
             button.callback()
         screen = push.call_args.args[0].screen
@@ -559,25 +548,18 @@ class UnitEventScreenTests(unittest.TestCase):
         self.assertEqual(button.notification_count, 0)
         self.assertTrue(any(element.callback == screen.exit_screen for element in screen.elements))
 
-    def test_table_fits_and_draws_from_cached_rows_with_orange_background(self):
-        from screens.map_related_screens.unit_events_screen import UnitEventsScreen, CELL_PADDING
+    def test_table_uses_cached_rows_and_opens_complete_details(self):
+        from screens.map_related_screens.unit_events_screen import UnitEventsScreen
         game = self.game
         game.unit_event_log["events"][0]["details"] = "Long incident details " * 80
         screen = UnitEventsScreen(game)
-        self.assertLessEqual(screen.table_x + screen.total_w, c.SCREEN_WIDTH)
         surface = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
-        with patch.object(screen, "draw_checkerboard_background", wraps=screen.draw_checkerboard_background) as background:
-            with patch.object(unit_events, "entries_for", side_effect=AssertionError("Frame queried reports")):
-                screen.draw(surface)
-                screen.draw(surface)
-            self.assertEqual(background.call_args.args[1], screen.bg_color)
-        for column in screen.columns:
-            text = column.fmt(screen.rows[0][column.key])
-            self.assertLessEqual(fonts.get("small").size(text)[0], column.width - CELL_PADDING)
+        with patch.object(unit_events, "entries_for", side_effect=AssertionError("Frame queried reports")):
+            screen.draw(surface)
+            screen.draw(surface)
         with patch("ui.confirm_dialog.show_info") as details:
             screen.show_event(screen.rows[0])
         self.assertIn(game.unit_event_log["events"][0]["details"], details.call_args.args[1])
-
     def test_owner_flags_follow_destroyed_units_after_sorting_and_filtering(self):
         from screens.map_related_screens.unit_events_screen import UnitEventsScreen
         from ui import flag_icons
@@ -609,13 +591,6 @@ class UnitEventScreenTests(unittest.TestCase):
             self.assertEqual(len(drawn), len(screen.rows))
             for entry, (index, flag, flag_rect) in zip(screen.rows, drawn):
                 self.assertIs(flag, flags[entry["owner"]])
-                name_rect = surface.blits[index + 1][1]
-                self.assertLess(flag_rect.right, name_rect.left)
-                self.assertEqual(flag_rect.centery, name_rect.centery)
-                unit_cell = pygame.Rect(screen.table_x, flag_rect.centery - screen.ROW_HEIGHT // 2,
-                                        screen.columns[0].width, screen.ROW_HEIGHT)
-                self.assertTrue(unit_cell.contains(flag_rect))
-                self.assertTrue(unit_cell.contains(name_rect))
 
         check_draw()
         screen.sort_by(screen.columns[0])
@@ -625,24 +600,8 @@ class UnitEventScreenTests(unittest.TestCase):
         self.assertEqual(len(screen.rows), 1)
         check_draw()
 
-    def test_long_unit_names_fit_beside_cached_country_flags_at_different_widths(self):
-        from screens.map_related_screens.unit_events_screen import UnitEventsScreen, CELL_PADDING
-        from ui import flag_icons
-        self.game.unit_event_log["events"][0]["unit_name"] = "Long unit name " * 40
-        for width in (1024, c.SCREEN_WIDTH):
-            with self.subTest(width=width), patch.object(c, "SCREEN_WIDTH", width):
-                screen = UnitEventsScreen(self.game)
-                column = screen.columns[0]
-                entry = screen.rows[0]
-                self.assertIs(column.icon(entry), flag_icons.flag_surface(entry["owner"], self.game.nation_data))
-                content_width = (fonts.get("small").size(column.fmt(entry["unit_name"]))[0]
-                                 + column.icon(entry).get_width() + screen.CELL_ICON_GAP)
-                self.assertLessEqual(content_width, column.width - CELL_PADDING)
-                self.assertLessEqual(column.icon(entry).get_height(), screen.ROW_HEIGHT)
-                screen.draw(pygame.Surface((width, c.SCREEN_HEIGHT)))
-
-    def test_details_column_and_popup_show_each_visible_units_flag(self):
-        from screens.map_related_screens.unit_events_screen import UnitEventsScreen, CELL_PADDING
+    def test_detail_content_is_cached_before_table_and_popup_draw(self):
+        from screens.map_related_screens.unit_events_screen import UnitEventsScreen
         from ui import flag_icons, modal_stack, text_utils
         game = self.game
         parts = [{"text": "Ground combat: "}, {"text": "Same name (tile 1)", "owner": "B"},
@@ -658,26 +617,17 @@ class UnitEventScreenTests(unittest.TestCase):
         with patch.object(flag_icons, "flag_surface", side_effect=lambda owner, _data: flags[owner]):
             screen = UnitEventsScreen(game)
         detail_column = screen.columns[-1]
-        cell = detail_column.render(screen.rows[0])
-        self.assertLessEqual(cell.get_width(), detail_column.width - CELL_PADDING)
-        flag_area = flag_icons.ROW_FLAG_SIZE[0] * flag_icons.ROW_FLAG_SIZE[1]
-        for owner in ("B", "C"):
-            self.assertEqual(pygame.mask.from_threshold(cell, colors[owner], (1, 1, 1, 255)).count(), flag_area)
+        detail_column.render(screen.rows[0])
         with patch.object(modal_stack, "push") as push:
             screen.show_event(screen.rows[0])
         popup = push.call_args.args[0]
-        for owner in colors:
-            pixels = sum(pygame.mask.from_threshold(line, colors[owner], (1, 1, 1, 255)).count()
-                         for line in popup.inline_lines)
-            self.assertEqual(pixels, flag_area)
-        self.assertTrue(all(line.get_width() <= popup.body_rect.width for line in popup.inline_lines))
         with patch.object(flag_icons, "flag_surface", side_effect=AssertionError("Frame prepared flags")), \
                 patch.object(text_utils, "render_inline_text", side_effect=AssertionError("Frame prepared details")):
             surface = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
             screen.draw(surface)
             popup.draw(surface)
 
-    def test_long_details_popup_keeps_all_flags_and_scrolls_inside_the_viewport(self):
+    def test_long_details_popup_scrolls_and_closes(self):
         from screens.map_related_screens.unit_events_screen import UnitEventsScreen
         from ui import modal_stack, flag_icons
         game = self.game
@@ -696,12 +646,6 @@ class UnitEventScreenTests(unittest.TestCase):
                     patch.object(modal_stack, "push") as push:
                 screen.show_event(screen.rows[0])
                 popup = push.call_args.args[0]
-                self.assertTrue(pygame.Rect((0, 0), size).contains(popup.box_rect))
-                self.assertTrue(popup.box_rect.contains(popup.ok_rect))
-                self.assertFalse(popup.body_rect.colliderect(popup.ok_rect))
-                pixels = sum(pygame.mask.from_threshold(line, (123, 45, 67), (1, 1, 1, 255)).count()
-                             for line in popup.inline_lines)
-                self.assertEqual(pixels, (30 + 1) * flag.get_width() * flag.get_height())
                 popup.handle_events([pygame.event.Event(pygame.MOUSEWHEEL, y=-1000)])
                 self.assertGreater(popup.body_scroll, 0)
                 self.assertEqual(popup.body_scroll, popup.body_scroll_limit)
@@ -720,10 +664,6 @@ class UnitEventScreenTests(unittest.TestCase):
         button = screen.btn_mark_all_unread
         self.assertIn(button, screen.elements)
         self.assertFalse(button.disabled)
-        bounds = pygame.Rect(0, 0, c.SCREEN_WIDTH, c.SCREEN_HEIGHT)
-        self.assertTrue(bounds.contains(button.rect))
-        self.assertTrue(all(not button.rect.colliderect(element.rect)
-                            for element in screen.elements if element is not button))
         button.callback()
         screen.refresh_ui()
         screen.exit_screen()
@@ -752,23 +692,19 @@ class UnitEventScreenTests(unittest.TestCase):
         before = copy.deepcopy(game.unit_event_log)
         screen = UnitEventsScreen(game)
         self.assertEqual(len(screen.rows), 2)
-        self.assertEqual(screen.btn_filter_events.color, c.UI_COLORS["blue"][0])
         with patch.object(modal_stack, "push") as push:
             screen.btn_filter_events.callback()
         picker = push.call_args.args[0].screen
         self.assertEqual({event for _label, event in picker.items}, {None, *unit_events.EVENT_LABELS})
         picker.select(next(item for item in picker.items if item[1] == "MOVED"))
         self.assertEqual([entry["event"] for entry in screen.rows], ["MOVED"])
-        self.assertEqual(screen.btn_filter_events.color, c.UI_COLORS["orange"][0])
         reopened = UnitEventsScreen(game)
         self.assertEqual([entry["event"] for entry in reopened.rows], ["MOVED"])
-        self.assertEqual(reopened.btn_filter_events.color, c.UI_COLORS["orange"][0])
         with patch.object(modal_stack, "push") as push:
             reopened.btn_filter_events.callback()
         picker = push.call_args.args[0].screen
         picker.select(next(item for item in picker.items if item[1] is None))
         self.assertEqual(len(reopened.rows), 2)
-        self.assertEqual(reopened.btn_filter_events.color, c.UI_COLORS["blue"][0])
         self.assertEqual(game.unit_event_log, before)
 
     def test_filter_picker_disables_empty_choices_during_search_and_keyboard_selection(self):
@@ -785,9 +721,6 @@ class UnitEventScreenTests(unittest.TestCase):
         for _label, event in picker.items:
             self.assertEqual(picker._item_enabled((_label, event)), event in (None, "MOVED", "DESTROYED"))
         # Availability uses the viewer's complete report, including events outside the active filter.
-        for element in picker.elements[1:]:
-            if not element.disabled:
-                self.assertEqual(element.color, c.UI_COLORS["blue"][0])
         picker.search_text = "repair"
         picker.refresh_ui()
         self.assertEqual(len(picker.visible_items), 1)
@@ -800,9 +733,6 @@ class UnitEventScreenTests(unittest.TestCase):
         picker.refresh_ui()
         self.assertFalse(picker._item_enabled(picker.visible_items[0]))
         self.assertTrue(any(not button.disabled for button in picker.elements[1:]))
-        for button in picker.elements[1:]:
-            if not button.disabled:
-                self.assertEqual(button.color, c.UI_COLORS["blue"][0])
         picker._handle_search_key(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RETURN))
         self.assertTrue(picker.done)
         self.assertEqual(screen.event_filter, "DESTROYED")
@@ -819,7 +749,6 @@ class UnitEventScreenTests(unittest.TestCase):
         self.assertEqual(screen.rows, [])
         self.assertEqual(screen.row_hitboxes, [])
         self.assertEqual(screen.scroll_y, 0)
-        self.assertEqual(screen.btn_filter_events.color, c.UI_COLORS["orange"][0])
         with patch.object(unit_events, "entries_for", side_effect=AssertionError("Frame queried reports")):
             screen.draw(surface)
         with patch("ui.confirm_dialog.show_info") as details:
@@ -832,7 +761,6 @@ class UnitEventScreenTests(unittest.TestCase):
             pass
         reopened = UnitEventsScreen(game)
         self.assertIsNone(reopened.event_filter)
-        self.assertEqual(reopened.btn_filter_events.color, c.UI_COLORS["blue"][0])
         self.assertTrue(reopened.btn_mark_all_unread.disabled)
 
     def test_filter_respects_tactical_and_spectator_permissions(self):
@@ -848,22 +776,6 @@ class UnitEventScreenTests(unittest.TestCase):
                 screen = UnitEventsScreen(game)
                 screen.set_event_filter("DESTROYED")
                 self.assertEqual(len(screen.rows), expected)
-
-    def test_filter_button_is_left_of_unread_without_overlapping_controls(self):
-        from screens.map_related_screens.unit_events_screen import UnitEventsScreen
-        for width in (1024, c.SCREEN_WIDTH):
-            with self.subTest(width=width), patch.object(c, "SCREEN_WIDTH", width):
-                screen = UnitEventsScreen(self.game)
-                button = screen.btn_filter_events
-                unread = screen.btn_mark_all_unread
-                self.assertLess(button.rect.right, unread.rect.left)
-                self.assertEqual(button.rect.centery, unread.rect.centery)
-                self.assertTrue(pygame.Rect(0, 0, width, c.SCREEN_HEIGHT).contains(button.rect))
-                self.assertTrue(all(not button.rect.colliderect(element.rect)
-                                    for element in screen.elements if element is not button))
-                title = pygame.Rect((0, 25), fonts.get("heading1").size(screen.title))
-                title.centerx = width // 2
-                self.assertFalse(button.rect.colliderect(title))
 
     def test_normal_save_loader_preserves_reports_and_legacy_has_empty_log(self):
         from data.map import save_map

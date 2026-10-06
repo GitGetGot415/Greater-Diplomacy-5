@@ -438,27 +438,6 @@ class OverviewTests(unittest.TestCase):
         dm.send_treaty_message(self.map, sender, receiver, **kwargs)
         return receiver
 
-    def test_every_category_fits_the_column_it_is_drawn_in(self):
-        """A label wider than its column is caught by nothing else here --
-        message_category would go on returning it, correctly, and the table
-        would go on drawing it over its neighbour. "CALL TO ARMS" renders at
-        exactly the 100px available, which is why a call to arms and a request
-        to join share one label rather than having two.
-
-        The width is read off the table the game actually builds, so this
-        cannot quietly pass against a copy of it.
-        """
-        from map_logic.rendering.font_manager import fonts
-
-        table = self.build()
-        width = next(col.width for col in table.columns if col.key == "type")
-        font = fonts.get("small")
-        for label in set(c.MESSAGE_CATEGORIES.values()) | {"DIPLOMACY", "TEXT"}:
-            with self.subTest(label=label):
-                drawn = font.size(label)[0]
-                self.assertLess(drawn, width,
-                                f"{label!r} is {drawn}px in a {width}px column")
-
     def test_date_column_shows_short_month_names_without_changing_dates_or_sorting(self):
         table = self.build()
         column = next(column for column in table.columns if column.key == "date")
@@ -541,18 +520,6 @@ class OverviewTests(unittest.TestCase):
         self.assertIn("777 Materials", detail.body)
         self.assertIn(b, detail.body, "the terms must name whose side they are")
 
-    def test_the_tint_marks_model_lines_only(self):
-        table = self.build()
-        self.assertIsNotNone(table.row_tint)
-        self.assertEqual(table.row_tint({"llm": True}), c.MESSAGE_LLM_ROW_COLOR)
-        self.assertIsNone(table.row_tint({"llm": False}))
-        self.assertIsNone(table.row_tint({}), "an old message must not read as model-written")
-
-    def test_a_table_with_no_tint_draws_as_before(self):
-        from ui.table_screen import TableScreen, TableColumn
-        plain = TableScreen(self.map, "t", [TableColumn("a", "A", 100)], [{"a": 1}])
-        self.assertIsNone(plain.row_tint)
-
     def test_a_model_written_message_reaches_the_row_as_such(self):
         living = sorted(self.map.nation_data)
         a, b = self.map.player_country, next(
@@ -565,25 +532,6 @@ class OverviewTests(unittest.TestCase):
         rows = {r["message"]: r for r in self.build().rows}
         self.assertTrue(rows["A LINE THE MODEL WROTE."]["llm"])
         self.assertFalse(rows["A LINE THE TABLE PICKED."]["llm"])
-
-    def test_the_tint_is_actually_painted(self):
-        """A callback nothing draws with is a callback that does nothing."""
-        import pygame
-        from ui.table_screen import TableScreen, TableColumn
-
-        surface = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
-        table = TableScreen(self.map, "t", [TableColumn("a", "A", 200)],
-                            [{"a": "only row"}],
-                            row_tint=lambda row: c.MESSAGE_LLM_ROW_COLOR)
-        surface.fill((0, 0, 0))
-        table.draw(surface)
-
-        rect = pygame.Rect(table.table_x, table.ROW_TOP, table.total_w, table.ROW_HEIGHT)
-        painted = {surface.get_at((x, rect.centery))[:3]
-                   for x in range(rect.x + 2, rect.right - 2, 7)}
-        self.assertIn(c.MESSAGE_LLM_ROW_COLOR, painted,
-                      "the tint never reached the surface")
-
 
 if __name__ == "__main__":
     unittest.main()

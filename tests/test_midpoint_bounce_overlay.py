@@ -102,18 +102,6 @@ class BouncePreviewTests(unittest.TestCase):
         self.assertTrue(outcome[0]["overrun"])
         self.assertEqual((outcome[0]["origin_id"], outcome[0]["target_id"]), (2, 1))
 
-    def test_marker_is_drawn_between_the_two_provinces(self):
-        self.screen.viewing_ai_moves = True
-        surface = pygame.Surface((400, 300), pygame.SRCALPHA)
-
-        overlay_renderer.draw_midpoint_bounces(self.screen, surface)
-
-        marker_pixels = sum(
-            1 for x in range(surface.get_width())
-            for y in range(surface.get_height())
-            if surface.get_at((x, y)).a)
-        self.assertGreater(marker_pixels, 0)
-
     def test_army_group_zoom_hides_bounce_and_overrun_previews(self):
         self.screen.viewing_ai_moves = True
         self.screen.camera.zoom = overlay_renderer.ARMY_GROUP_ICON_MAX_ZOOM

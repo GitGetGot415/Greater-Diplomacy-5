@@ -71,74 +71,6 @@ class DealScreenTestCase(unittest.TestCase):
         return next(p for p in self.map.map_data.values() if p.get("owner") == self.player)
 
 
-class LayoutTests(DealScreenTestCase):
-    """Nothing may be drawn on top of anything else, or outside the panel.
-
-    The screen shipped with five separate collisions and nobody could see any of
-    them from the code: every position was a hand-picked offset off panel_rect
-    and no test ever compared two of them. The 28px column heading was blitted
-    four pixels above the 18px row label at the same x, so "YOU RECEIVE" and
-    "Provinces:" were printed over each other; the hint line landed inside the
-    first toggle; the verdict clipped the Send button; and Send itself hung six
-    pixels below the panel. This is the same trick test_editor_menu_layout plays
-    on the left bar, for the same reason.
-    """
-
-    def rects(self, screen):
-        boxes = [(f"input {key}", rect) for key, rect in screen.input_rects().items()]
-        boxes += [(getattr(el, "text", "button"), el.rect) for el in screen.elements
-                  if getattr(el, "rect", None) is not None
-                  and screen.panel_rect.colliderect(el.rect)]
-        return boxes
-
-    def loaded(self):
-        screen = self.screen()
-        screen.pick(deal_screen.TAKE, self.their_province()["id"])
-        screen.pick(deal_screen.GIVE, self.my_province()["id"])
-        screen.vassalize = True
-        screen.refresh_ui()
-        return screen
-
-    def test_no_two_controls_share_ground(self):
-        boxes = self.rects(self.loaded())
-        self.assertGreater(len(boxes), 5, "nothing was laid out at all")
-        for i, (name_a, rect_a) in enumerate(boxes):
-            for name_b, rect_b in boxes[i + 1:]:
-                if rect_a.colliderect(rect_b):
-                    self.fail(f"{name_a} at {tuple(rect_a)} overlaps "
-                              f"{name_b} at {tuple(rect_b)}")
-
-    def test_every_control_is_inside_the_panel(self):
-        screen = self.loaded()
-        for name, rect in self.rects(screen):
-            self.assertTrue(screen.panel_rect.contains(rect),
-                            f"{name} at {tuple(rect)} leaves the panel "
-                            f"{tuple(screen.panel_rect)}")
-
-    def test_the_panel_stays_on_screen(self):
-        panel = self.screen().panel_rect
-        self.assertGreaterEqual(panel.x, 0)
-        self.assertGreaterEqual(panel.y, c.TOP_UI_HEIGHT)
-        self.assertLessEqual(panel.right, c.SCREEN_WIDTH)
-        self.assertLessEqual(panel.bottom, c.SCREEN_HEIGHT - c.BOT_UI_HEIGHT)
-
-    def test_a_bloc_wide_title_still_fits_the_window(self):
-        """It used to join both sides' full rosters and hand the result to
-        draw_centered_title, which centres on the screen and never clips -- so a
-        fourteen-nation peace ran off both edges at once."""
-        from map_logic.rendering.font_manager import fonts
-
-        for i in range(12):
-            self.map.nation_data.setdefault(f"Ally{i}", dict(self.map.nation_data[self.player]))
-        screen = self.screen()
-        screen.my_side = [self.player] + [f"Ally{i}" for i in range(12)]
-        screen.their_side = [self.enemy]
-        screen.role = "BLOC_LEADER"
-
-        width = fonts.get("heading1").size(screen.get_panel_title())[0]
-        self.assertLess(width, c.SCREEN_WIDTH)
-
-
 class RenderTests(DealScreenTestCase):
     def test_a_peace_deal_builds_and_paints(self):
         screen = self.screen()
@@ -551,20 +483,6 @@ class ProjectedMapTests(DealScreenTestCase):
             "action": "PEACE_TREATY", "turns": 1, "parameters": agreement}
         return View_Peace_Treaty_Screen(self.map, self.enemy), wanted
 
-    def test_the_terms_box_is_sized_to_the_terms_and_stays_on_screen(self):
-        """It was a fixed 460px wide with the height derived from the raw line
-        count, no wrapping and no clip -- so a bloc treaty's terms ran off the
-        right of the window and past the bottom of the screen at about
-        twenty-six of them."""
-        screen, _wanted = self.treaty_screen()
-        screen.terms = [f"a term about province {i} and who it belongs to now"
-                        for i in range(60)]
-        screen.lines = screen._wrapped()
-        screen.draw(self.surface)
-
-        self.assertLessEqual(screen.panel_rect.bottom, c.SCREEN_HEIGHT)
-        self.assertLessEqual(screen.panel_rect.right, c.SCREEN_WIDTH)
-
     def test_a_long_treaty_can_be_scrolled(self):
         screen, _wanted = self.treaty_screen()
         screen.terms = [f"term {i}" for i in range(60)]
@@ -582,37 +500,6 @@ class ProjectedMapTests(DealScreenTestCase):
         screen.draw(self.surface)
         self.assertIs(self.map.active_map, before,
                       "the preview outlived the screen that wanted it")
-
-    def test_a_bystander_is_greyed_and_a_party_is_not(self):
-        from map_logic.rendering import refresh_map
-
-        others = [n for n in self.map.nation_data
-                  if isinstance(self.map.nation_data[n], dict)
-                  and n not in (self.player, self.enemy)
-                  and any(p.get("owner") == n for p in self.map.map_data.values())]
-        self.assertTrue(others, "need a nation outside the deal")
-
-        painted = {}
-        original = refresh_map._build_map_surface
-
-        def spy(map_screen, get_data):
-            for prov in map_screen.map_data.values():
-                painted[prov["id"]] = get_data(prov)
-            return original(map_screen, get_data)
-
-        refresh_map._build_map_surface = spy
-        try:
-            screen, wanted = self.treaty_screen()
-            screen.draw(self.surface)
-        finally:
-            refresh_map._build_map_surface = original
-
-        outsider = next(p for p in self.map.map_data.values()
-                        if p.get("owner") == others[0])
-        self.assertEqual(painted[outsider["id"]][1], refresh_map.BYSTANDER_COLOR)
-
-        mine = self.my_province()
-        self.assertNotEqual(painted[mine["id"]][1], refresh_map.BYSTANDER_COLOR)
 
     def test_a_transferred_province_is_painted_for_its_new_owner(self):
         from map_logic.rendering import refresh_map
@@ -632,13 +519,10 @@ class ProjectedMapTests(DealScreenTestCase):
         finally:
             refresh_map._build_map_surface = original
 
-        # The clause hands one of the player's provinces to the enemy; the
-        # preview has to show it in the enemy's color, not the player's.
+        # The preview must project the transfer without changing live ownership.
         self.assertEqual(self.map.id_to_province[wanted].get("owner"), self.player,
                          "nothing has actually changed hands yet")
         self.assertEqual(painted[wanted][0], self.enemy)
-        self.assertEqual(painted[wanted][1],
-                         self.map.nation_colors.get(self.enemy))
 
     def test_a_trade_view_projects_its_transferred_province(self):
         """Trade land is no less real than treaty land in the map preview."""
@@ -818,12 +702,6 @@ class RecipientTests(DealScreenTestCase):
         reopened._load_existing_offer()
         self.assertEqual(reopened.take_ids.get(wanted), self.ally)
 
-    def test_the_list_sits_clear_of_the_panel(self):
-        screen = self.screen()
-        screen.open_recipient_list(deal_screen.TAKE)
-        self.assertFalse(screen.list_rect().colliderect(screen.panel_rect))
-        self.assertGreaterEqual(screen.list_rect().y, c.TOP_UI_HEIGHT)
-
     def test_a_click_on_the_list_does_not_fall_through_to_the_map(self):
         screen = self.screen()
         screen.open_recipient_list(deal_screen.TAKE)
@@ -837,35 +715,6 @@ class RecipientTests(DealScreenTestCase):
 
         screen.additional_events(pygame.event.Event(pygame.MOUSEWHEEL, x=0, y=-1))
         self.assertEqual(screen.list_scroll, 1)
-
-    def test_the_scroll_hint_does_not_sit_on_the_last_row(self):
-        """LayoutTests only inspects controls that touch the panel, and this box
-        deliberately does not -- so its own contents need saying separately."""
-        screen = self.screen()
-        screen.my_side = [self.player] + [f"Ally{i}" for i in range(20)]
-        screen.open_recipient_list(deal_screen.TAKE)
-
-        box = screen.list_rect()
-        rows = [el.rect for el in screen.elements
-                if getattr(el, "rect", None) is not None and box.colliderect(el.rect)]
-        self.assertEqual(len(rows), screen.LIST_ROWS)
-        hint = pygame.Rect(box.x, box.bottom - screen.HINT_H, box.width, screen.HINT_H)
-        for row in rows:
-            self.assertFalse(row.colliderect(hint),
-                             f"a recipient row at {tuple(row)} is under the "
-                             f"'N more' line at {tuple(hint)}")
-
-    def test_every_row_stays_inside_its_box(self):
-        screen = self.screen()
-        screen.my_side = [self.player] + [f"Ally{i}" for i in range(20)]
-        screen.open_recipient_list(deal_screen.TAKE)
-
-        box = screen.list_rect()
-        for el in screen.elements:
-            if getattr(el, "rect", None) is not None and box.colliderect(el.rect):
-                self.assertTrue(box.contains(el.rect),
-                                f"{el.text!r} at {tuple(el.rect)} leaves {tuple(box)}")
-
 
 class DraftTests(DealScreenTestCase):
     """Terms survive closing the screen, until the turn ends.

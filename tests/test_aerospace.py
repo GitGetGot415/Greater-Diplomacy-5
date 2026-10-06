@@ -12,7 +12,6 @@ from unittest import mock
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 
-import pygame
 import data.constants as c
 from data import queries
 from data.io.realtime_multiplayer import MapRealtimeDriver, RealtimeError
@@ -433,18 +432,13 @@ class AerospaceScreenTests(unittest.TestCase):
         self.research.start_research(self.map)
         self.production.start_with_province(self.map.selected_province, self.map)
 
-    def test_research_category_order_and_header_containment(self):
+    def test_research_category_callback_uses_aerospace_data(self):
         self.research.start_research(self.map)
         categories = self.research.categories
         self.assertEqual(categories, ["INFANTRY", "TANKS", "NAVY", "AEROSPACE", "INDUSTRY", "COMPLETED"])
         labels = ["INFANTRY", "TANKS", "NAVY", "AIR", "INDUSTRY", "COMPLETED"]
         buttons = [el for el in self.research.elements if getattr(el, "text", None) in labels]
         self.assertEqual([button.text for button in buttons], labels)
-        bounds = pygame.Rect(0, 0, c.SCREEN_WIDTH, c.SCREEN_HEIGHT)
-        for button in buttons:
-            self.assertTrue(bounds.contains(button.rect))
-        for first, second in zip(buttons, buttons[1:]):
-            self.assertLessEqual(first.rect.right, second.rect.left)
         buttons[labels.index("AIR")].callback()
         self.assertEqual(self.research.current_category, "AEROSPACE")
         self.assertEqual({node["key"] for node in self.research.nodes["AEROSPACE"]}, set(AEROSPACE_CONTENT))
@@ -453,11 +447,8 @@ class AerospaceScreenTests(unittest.TestCase):
         self.research.draw(self.surface)
         self.research.set_category("COMPLETED")
         self.research.draw(self.surface)
-        for rendered, position in self.research.completed_text_surfaces:
-            self.assertLessEqual(position[0] + rendered.get_width(), c.SCREEN_WIDTH)
 
-    def test_air_details_are_visible_cached_and_fit_above_modal_controls(self):
-        from screens.map_related_screens import research
+    def test_air_details_use_current_traits_and_cached_unlocks(self):
         self.research.start_research(self.map)
         for key, (year, _, name) in AEROSPACE_CONTENT.items():
             if key == "jet_engine":
@@ -467,18 +458,11 @@ class AerospaceScreenTests(unittest.TestCase):
                     "display_name": name, "target_year": year, "icon": None,
                     "cost": self.research.tech_cost(key)})
                 self.assertTrue(set(queries.get_air_unit_traits(name)).issubset(self.research.modal_unlocks))
-                width = research.MODAL_WIDTH - research.MODAL_TEXT_X - research.MODAL_TEXT_RIGHT_MARGIN
-                for rendered in self.research.modal_unlock_surfaces:
-                    self.assertLessEqual(rendered.get_width(), width)
-                content_bottom = (research.MODAL_BODY_START_Y + research.MODAL_LINE_STEP_Y
-                    + len(self.research.modal_unlock_surfaces) * self.research.modal_unlock_line_step
-                    + 2 * research.MODAL_LINE_STEP_Y + research.MODAL_ENTITY_PADDING_Y)
-                self.assertLessEqual(content_bottom, research.MODAL_BTN_Y_OFFSET)
                 with mock.patch.object(queries, "get_tech_unlocks", side_effect=AssertionError("frame traits")):
                     self.research.draw(self.surface)
         self.research.close_modal()
 
-    def test_aircraft_timeline_levels_have_icons_and_do_not_overlap(self):
+    def test_aircraft_timeline_levels_follow_research_data(self):
         self.research.start_research(self.map)
         self.research.set_category("AEROSPACE")
         buttons = [element for element in self.research.elements if getattr(element, "is_tech_node", False)]
@@ -486,88 +470,35 @@ class AerospaceScreenTests(unittest.TestCase):
                     if data["category"] == "AEROSPACE" for level in range(1, data["max_lvl"] + 1)}
         self.assertEqual({(node["key"], node["lvl"]) for node in self.research.nodes["AEROSPACE"]}, expected)
         self.assertEqual(len(buttons), len(expected))
-        for button in buttons:
-            self.assertIsNotNone(button.image)
-        for index, first in enumerate(buttons):
-            for second in buttons[index + 1:]:
-                self.assertFalse(first.rect.colliderect(second.rect), (first.text, second.text))
         for tech, level in expected:
             base = self.research.tech_tree[tech].get("display_name", "")
             name = f"{base} {c.ROMAN_NUMERALS[level]}" if tech in AIRCRAFT_LEVEL_YEARS else base
             self.assertEqual(self.research.get_display_name(tech, level), name)
             self.assertEqual(self.research.tech_year(tech, level), self.research.tech_tree[tech]["years"][level - 1])
 
-    def test_jet_bomber_levels_share_the_family_image(self):
-        from map_logic.rendering import symbol_loader
-        for level in range(1, queries.get_tech_tree()["jet_bomber"]["max_lvl"] + 1):
-            name = f"Jet Bomber {c.ROMAN_NUMERALS[level]}"
-            with self.subTest(unit=name):
-                self.assertEqual(symbol_loader.resolve(name, style="classic", country=self.country),
-                                 ("classic", "Jet Bomber"))
-
-    def test_production_fighter_labels_use_current_multipliers_and_follow_all_stats(self):
-        from screens.map_related_screens import production
+    def test_production_fighter_labels_use_current_multipliers_and_cache_results(self):
         from map_logic.rendering.font_manager import fonts
-
-        class TrackingSurface(pygame.Surface):
-            def blit(surface, source, dest, *args, **kwargs):
-                surface.placements.append((source, dest))
-                return super().blit(source, dest, *args, **kwargs)
-
         library = dict(self.production.unit_library)
         fighters = [name for name, stats in library.items() if stats.get("air_role") == "fighter"]
-        # A fractional multiplier and extra stats check formatting and placement.
-        library[fighters[0]] = dict(library[fighters[0]], air_attack_multiplier=2.75,
-                                   bombard_attack=1, bombard_range=1)
+        # Use an artificial multiplier to check data propagation.
+        library[fighters[0]] = dict(library[fighters[0]], air_attack_multiplier=2.75)
         self.enterContext(mock.patch.object(self.production, "unit_library", library))
         self.map.nation_data[self.country]["custom_production_units"] = fighters
-        self.production.start_with_province(self.province, self.map)
-        rows = [(rect, stats, y) for rect, stats, y, kind in self.production.active_bars if kind == "UNIT"]
-        expected_keys = {id(stats) for _rect, stats, _y in rows if stats.get("air_role") == "fighter"}
-        self.assertEqual(set(self.production.air_damage_labels), expected_keys)
-        self.assertTrue(any(stats.get("air_role") != "fighter" for _rect, stats, _y in rows))
-        self.assertTrue(any(self.production.aerospace_start_y <= y < self.production.aerospace_end_y
-                            and stats.get("air_role") == "fighter" for _rect, stats, y in rows))
-        self.assertTrue(any(self.production.custom_start_y <= y < self.production.custom_end_y
-                            and stats.get("air_role") == "fighter" for _rect, stats, y in rows))
-
-        surface = TrackingSurface(self.surface.get_size())
-        surface.placements = []
-        stat_ends = {}
-        combat_draw = production.draw_combat_stats
-        bombard_draw = production.draw_bombardment_stats
-
-        def record_combat(*args, **kwargs):
-            end = combat_draw(*args, **kwargs)
-            stat_ends[args[8]] = end
-            return end
-
-        def record_bombardment(*args, **kwargs):
-            end = bombard_draw(*args, **kwargs)
-            stat_ends[args[5]] = end
-            return end
-
+        font_get = fonts.get
+        small_font = mock.Mock(wraps=font_get("small"))
+        with mock.patch.object(fonts, "get", side_effect=lambda name: small_font if name == "small" else font_get(name)):
+            self.production.start_with_province(self.province, self.map)
+        rows = [stats for _, stats, _, kind in self.production.active_bars if kind == "UNIT"]
+        fighter_stats = {id(stats): stats for stats in rows if stats.get("air_role") == "fighter"}
         labels = dict(self.production.air_damage_labels)
-        with mock.patch.object(production, "draw_combat_stats", side_effect=record_combat), \
-                mock.patch.object(production, "draw_bombardment_stats", side_effect=record_bombardment):
-            self.production.additional_draw(surface)
-        for bar, stats, y in rows:
-            if stats.get("air_role") != "fighter":
-                continue
-            label = labels[id(stats)]
-            expected = fonts.get("small").render(f"(Air Dmg x{stats.get('air_attack_multiplier', 1.0):g})",
-                                                 True, c.COLOR_SUCCESS_GREEN)
-            self.assertEqual(pygame.image.tobytes(label, "RGBA"), pygame.image.tobytes(expected, "RGBA"))
-            text_y = y + (bar.height - fonts.get("small").get_height()) // 2
-            positions = [pos for source, pos in surface.placements if source is label and pos[1] == text_y]
-            self.assertEqual(len(positions), 1)
-            label_rect = label.get_rect(topleft=positions[0])
-            self.assertGreaterEqual(label_rect.left, stat_ends[text_y] + production.AIR_DAMAGE_LABEL_GAP)
-            self.assertTrue(bar.contains(label_rect), (stats, label_rect, bar))
-        self.production.additional_draw(surface)
+        self.assertEqual(set(labels), set(fighter_stats))
+        rendered_text = [call.args[0] for call in small_font.render.call_args_list]
+        for stats in fighter_stats.values():
+            self.assertIn(f"(Air Dmg x{stats.get('air_attack_multiplier', 1.0):g})", rendered_text)
+        self.production.additional_draw(self.surface)
+        self.production.additional_draw(self.surface)
         self.assertTrue(all(self.production.air_damage_labels[key] is label for key, label in labels.items()))
-
-    def test_aerospace_rows_are_red_and_recruitment_is_in_general_buildings(self):
+    def test_production_groups_aerospace_and_recruitment_rows(self):
         from screens.map_related_screens.production import SECTION_PANELS
         self.production.start_with_province(self.province, self.map)
         aerospace_rows = recruitment_rows = 0
@@ -575,9 +506,6 @@ class AerospaceScreenTests(unittest.TestCase):
             if kind == "UNIT" and stats.get("production_group") == queries.UNIT_GROUP_AEROSPACE:
                 aerospace_rows += 1
                 self.assertTrue(self.production.aerospace_start_y <= y < self.production.aerospace_end_y)
-                button = next(el for el in self.production.elements
-                              if getattr(el, "base_y", None) == y)
-                self.assertEqual(button.color, c.UI_COLORS["red"][0])
             if kind == "BUILDING" and stats.get("group") == "recruitment":
                 recruitment_rows += 1
                 self.assertTrue(self.production.other_start_y <= y < self.production.other_end_y)
@@ -614,32 +542,6 @@ class AerospaceScreenTests(unittest.TestCase):
                 self.assertEqual(len(obsolete_rows), 1)
                 self.assertTrue(self.production.custom_start_y <= obsolete_rows[0] <
                                 self.production.custom_end_y)
-
-    def test_visible_production_categories_have_equal_gaps(self):
-        from screens.map_related_screens.production import SECTION_PANELS, SECTION_SPACING
-        for coastal in (False, True):
-            with self.subTest(coastal=coastal):
-                self.province["is_coastal"] = coastal
-                self.production.start_with_province(self.province, self.map)
-                sections = sorted((getattr(self.production, f"{prefix}_start_y"),
-                                   getattr(self.production, f"{prefix}_end_y"))
-                                  for prefix, *_ in SECTION_PANELS
-                                  if getattr(self.production, f"{prefix}_end_y") >
-                                     getattr(self.production, f"{prefix}_start_y"))
-                for (_, previous_end), (next_start, _) in zip(sections, sections[1:]):
-                    self.assertEqual(next_start - previous_end, SECTION_SPACING)
-
-    def test_administration_heading_fits_below_header_at_top_scroll(self):
-        from screens.map_related_screens.production import PANEL_LABEL_OFFSET_Y, PANEL_PAD_TOP
-        from map_logic.rendering.font_manager import fonts
-        self.production.start_with_province(self.province, self.map)
-        self.production.target_scroll_y = self.production.scroll_y = 100
-        self.production.enforce_scroll_bounds()
-        heading_top = self.production.admin_start_y + PANEL_LABEL_OFFSET_Y + self.production.scroll_y
-        self.assertGreaterEqual(heading_top, self.production.scroll_content_rect.top)
-        self.assertLessEqual(heading_top + fonts.get("heading2").get_height(),
-                             self.production.admin_start_y - PANEL_PAD_TOP)
-        self.production.draw(self.surface)
 
     def test_buy_boundary_rejects_unresearched_foreign_and_read_only_orders(self):
         self.production.start_with_province(self.province, self.map)
