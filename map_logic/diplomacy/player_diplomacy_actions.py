@@ -6,6 +6,16 @@ from map_logic.diplomacy import military_attaches
 import data.constants as c
 
 
+def _selected_diplomacy_target(map_screen):
+    """Validate the current selection before a country callback uses it."""
+    target = (map_screen.selected_province or {}).get("owner")
+    if (target is None or target in c.UNPLAYABLE_NATIONS
+            or target not in map_screen.nation_data):
+        map_screen.show_feedback("Select a country before using diplomacy.")
+        return None
+    return target
+
+
 def can_edit_diplomacy(map_screen):
     """Whether the player can alter their diplomatic draft at this moment."""
     if not getattr(map_screen, "realtime_multiplayer", False):
@@ -38,7 +48,9 @@ def handle_declare_war(map_screen):
     if not can_edit_diplomacy(map_screen):
         return None
     player = map_screen.player_country
-    target = map_screen.selected_province.get("owner")
+    target = _selected_diplomacy_target(map_screen)
+    if target is None:
+        return
     
     p_data = map_screen.nation_data.get(player, {})
     t_data = map_screen.nation_data.get(target, {})
@@ -103,7 +115,9 @@ def open_claims_menu(map_screen):
 def handle_ceasefire(map_screen):
     if not can_edit_diplomacy(map_screen):
         return None
-    target = map_screen.selected_province.get("owner")
+    target = _selected_diplomacy_target(map_screen)
+    if target is None:
+        return
 
     # Puppets, and now blocs: a nation inside a faction at war cannot pick off
     # one member of the other side, and only a leader speaks for its own. See
@@ -142,7 +156,9 @@ def handle_specific_action(map_screen, action_type):
     """A clean, generic handler replacing the overloaded faction button logic."""
     if not can_edit_diplomacy(map_screen):
         return None
-    target = map_screen.selected_province.get("owner")
+    target = _selected_diplomacy_target(map_screen)
+    if target is None:
+        return
         
     custom_msg = map_screen.mail_draft_text.strip()
     
@@ -187,7 +203,9 @@ def handle_specific_action(map_screen, action_type):
 
 def handle_guarantee(map_screen):
     """Queue, undo, or revoke a unilateral guarantee."""
-    target = map_screen.selected_province.get("owner")
+    target = _selected_diplomacy_target(map_screen)
+    if target is None:
+        return
     pending = map_screen.nation_data.get(map_screen.player_country, {}).get(
         "pending_diplomacy", {}).get(target, {})
     pending_action = pending.get("action") if isinstance(pending, dict) else pending
@@ -208,7 +226,9 @@ def handle_guarantee(map_screen):
 
 def handle_military_attache(map_screen):
     """Queue or undo an attaché request after checking the live war state."""
-    target = map_screen.selected_province.get("owner")
+    target = _selected_diplomacy_target(map_screen)
+    if target is None:
+        return
     pending = map_screen.nation_data.get(map_screen.player_country, {}).get(
         "pending_diplomacy", {}).get(target, {})
     pending_action = pending.get("action") if isinstance(pending, dict) else pending
@@ -229,7 +249,9 @@ def handle_military_attache(map_screen):
 
 def handle_revoke_foreign_military_attache(map_screen):
     """Queue or undo revoking the selected country's attaché from us."""
-    sender = map_screen.selected_province.get("owner")
+    sender = _selected_diplomacy_target(map_screen)
+    if sender is None:
+        return
     host = map_screen.player_country
     pending = map_screen.nation_data.get(host, {}).get("pending_diplomacy", {}).get(sender, {})
     pending_action = pending.get("action") if isinstance(pending, dict) else pending
@@ -280,7 +302,9 @@ def _answer_incoming_request(map_screen, target, verdict, custom_msg):
 def handle_accept_req(map_screen, target=None, custom_msg=None):
     """Processes the execution of accepting an incoming proposal."""
     if not target:
-        target = map_screen.selected_province.get("owner")
+        target = _selected_diplomacy_target(map_screen)
+        if target is None:
+            return
 
     action, _turns = queries.get_diplomatic_status(target, map_screen.player_country, map_screen.nation_data)
 
@@ -319,7 +343,9 @@ def handle_accept_req(map_screen, target=None, custom_msg=None):
 def handle_reject_req(map_screen, target=None, custom_msg=None):
     """Processes the execution of rejecting an incoming proposal."""
     if not target:
-        target = map_screen.selected_province.get("owner")
+        target = _selected_diplomacy_target(map_screen)
+        if target is None:
+            return
 
     _answer_incoming_request(map_screen, target, diplomacy_logic.RESPONSE_REJECT, custom_msg)
 
@@ -353,7 +379,9 @@ def _handle_faction_assist(map_screen, action, at_war_msg, not_allied_msg, leavi
     """
     if not can_edit_diplomacy(map_screen):
         return None
-    target = map_screen.selected_province.get("owner")
+    target = _selected_diplomacy_target(map_screen)
+    if target is None:
+        return
     if queries.are_at_war(map_screen.player_country, target, map_screen.nation_data):
         map_screen.show_feedback(at_war_msg)
         return
@@ -389,7 +417,9 @@ def handle_send_volunteers(map_screen):
     from ui.checkbox_list_screen import CheckboxItem
 
     donor = map_screen.player_country
-    host = map_screen.selected_province.get("owner")
+    host = _selected_diplomacy_target(map_screen)
+    if host is None:
+        return
     legal, reason = volunteers.is_eligible(donor, host, map_screen.nation_data)
     if not legal:
         map_screen.show_feedback(reason)
@@ -459,7 +489,9 @@ def handle_send_volunteers(map_screen):
 
 def handle_recall_volunteers(map_screen):
     donor = map_screen.player_country
-    host = map_screen.selected_province.get("owner")
+    host = _selected_diplomacy_target(map_screen)
+    if host is None:
+        return
     if not can_edit_diplomacy(map_screen):
         return None
     msg = diplomacy_logic.toggle_diplomacy_action(
@@ -472,7 +504,9 @@ def handle_send_home_foreign_volunteers(map_screen):
     """Queue or undo sending the selected country's volunteers home."""
     if not can_edit_diplomacy(map_screen):
         return None
-    donor = map_screen.selected_province.get("owner")
+    donor = _selected_diplomacy_target(map_screen)
+    if donor is None:
+        return
     host = map_screen.player_country
     pending = map_screen.nation_data.get(host, {}).get("pending_diplomacy", {}).get(donor, {})
     pending_action = pending.get("action") if isinstance(pending, dict) else pending
@@ -490,7 +524,9 @@ def handle_withdraw_volunteer_offer(map_screen):
     if not can_edit_diplomacy(map_screen):
         return None
     donor = map_screen.player_country
-    host = map_screen.selected_province.get("owner")
+    host = _selected_diplomacy_target(map_screen)
+    if host is None:
+        return
     if getattr(map_screen, "realtime_multiplayer", False):
         # An unsubmitted offer has no server reservation yet.  Undo only the
         # local draft; the next sync removes it from the authoritative intent.

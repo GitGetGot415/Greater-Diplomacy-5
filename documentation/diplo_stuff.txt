@@ -4,6 +4,14 @@ DIPLOMACY RULES
 AI means artificial intelligence. UI means user interface.
 A unilateral action needs no reply. A bilateral request needs a reply.
 
+Map controls
+------------
+
+Closing the province panel cancels pending button presses immediately.
+Country diplomacy controls require a current selection with an existing country owner.
+If that selection is unavailable, the callback shows feedback and takes no action.
+Replies from the message screen use their explicit country target without requiring a province selection.
+
 Shared processing and save data
 ------------------------------
 

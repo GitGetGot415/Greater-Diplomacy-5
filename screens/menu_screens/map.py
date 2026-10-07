@@ -1865,6 +1865,12 @@ class Map(GameState):
 
         self.selected_province = self.hovered_province = self.hover_glow_surf = self.last_hovered_id = None
         self.hovered_unit_stack = None
+        # Back keys run before queued mouse events. Cancel presses and hide
+        # province controls before a later release can use the cleared selection.
+        for element in self.elements:
+            if isinstance(element, Button):
+                element.is_pressed = False
+        update_button_states(self)
         self.show_feedback("Map Unlocked")
 
     def save_map_data(self):

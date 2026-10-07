@@ -1,6 +1,9 @@
 """Map menu controls remain available in the correct modes and call their handlers."""
 
 import unittest
+from unittest import mock
+
+import pygame
 
 from screens.menu_screens import map as map_module
 from tests import app_harness
@@ -68,6 +71,42 @@ class MapMenuControlTests(unittest.TestCase):
         finally:
             editor_menus.open_personality_editor = original
         self.assertEqual(len(opened), 1)
+
+    def test_closing_province_cancels_a_pending_diplomacy_click(self):
+        """Back can run before queued mouse events in the same frame."""
+        from gameState import dispatch_global_keys
+
+        game = self.map
+        saved = {attr: getattr(game, attr) for attr in (
+            "selected_province", "selection_mode", "mail_draft_text",
+            "navigation_intro_popup")}
+        self.addCleanup(map_module.update_button_states, game)
+        for attr, value in saved.items():
+            self.addCleanup(setattr, game, attr, value)
+        game.selection_mode = False
+        game.navigation_intro_popup = None
+        game.mail_draft_text = ""
+        game.selected_province = next(
+            province for province in game.map_data.values()
+            if province.get("owner") != game.player_country
+            and province.get("owner") in game.nation_data
+            and game.nation_data[province["owner"]].get("is_playable"))
+        map_module.update_button_states(game)
+        button = game.btn_declare_war
+        button.disabled = False
+        position = button.rect.center
+        with mock.patch("pygame.mouse.get_pos", return_value=position):
+            game.handle_events([pygame.event.Event(
+                pygame.MOUSEBUTTONDOWN, pos=position, button=1)])
+            self.assertTrue(button.is_pressed)
+            dispatch_global_keys(game, pygame.event.Event(
+                pygame.KEYDOWN, key=pygame.K_ESCAPE, mod=0))
+            self.assertIsNone(game.selected_province)
+            with mock.patch.object(button, "callback", wraps=button.callback) as clicked:
+                game.handle_events([pygame.event.Event(
+                    pygame.MOUSEBUTTONUP, pos=position, button=1)])
+            clicked.assert_not_called()
+            self.assertFalse(button.is_pressed)
 
 
 if __name__ == "__main__":
