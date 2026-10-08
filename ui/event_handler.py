@@ -464,32 +464,21 @@ def handle_map_events(map_screen, event):
         if event.type == pygame.MOUSEBUTTONDOWN and event.button in (1, 3):
             queries.save_editor_state(map_screen)
 
-        if pygame.mouse.get_pressed()[0]: # Left Click
-            if map_screen.hovered_province:
-                # --- NATION MODE ---
-                if map_screen.editor_mode == "NATION":
-                    if map_screen.hovered_province.get("owner") != map_screen.brush_nation:
-                        if map_screen.hovered_province.get("owner") not in c.WATER_NATIONS:
-                            edit_province_ownership.conquer_province(map_screen, map_screen.hovered_province, map_screen.brush_nation)
-                            editor_changed = True
-                            editor_layers.update(("political", "relations", "factions",
-                                                  "faction_territories"))
+        fill_active = (map_screen.editor_mode in ("NATION", "CORE")
+                       and map_screen.editor_selection_tool == "PAINT")
+        pressed = pygame.mouse.get_pressed()
+        # Paint runs once per click. Dragging must not fill a second region.
+        left_pressed = (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1
+                        if fill_active else pressed[0])
+        right_pressed = (event.type == pygame.MOUSEBUTTONDOWN and event.button == 3
+                         if fill_active else pressed[2])
 
-                # --- CORE MODE ---
-                elif map_screen.editor_mode == "CORE":
-                    if map_screen.hovered_province.get("owner") not in c.WATER_NATIONS:
-                        # If painting with Unclaimed, wipe the tile
-                        if map_screen.brush_nation in c.UNOWNED_LAND_OWNERS:
-                            if map_screen.hovered_province.get("cores"):
-                                edit_province_ownership.clear_cores(map_screen, map_screen.hovered_province)
-                                editor_changed = True
-                        else:
-                            if map_screen.brush_nation not in map_screen.hovered_province.get("cores", []):
-                                edit_province_ownership.add_core(map_screen, map_screen.hovered_province, map_screen.brush_nation)
-                                editor_changed = True
-                        if editor_changed:
-                            map_screen.centers_need_update = True
-                            editor_layers.add("cores")
+        if left_pressed:
+            if map_screen.hovered_province:
+                if map_screen.editor_mode in ("NATION", "CORE"):
+                    editor_layers.update(edit_province_ownership.apply_editor_territory_brush(
+                        map_screen, map_screen.hovered_province))
+                    editor_changed = bool(editor_layers)
 
                 # --- CLAIM MODE ---
                 elif map_screen.editor_mode == "CLAIM":
@@ -567,16 +556,15 @@ def handle_map_events(map_screen, event):
                             map_screen.hovered_province["resources"][map_screen.brush_resource_type] = map_screen.brush_resource_amount
                             editor_changed = True
 
-        if pygame.mouse.get_pressed()[2]: # Right Click
+        if right_pressed:
             if map_screen.hovered_province:
                 if map_screen.hovered_province.get("owner") not in c.WATER_NATIONS:
 
                     if map_screen.editor_mode == "CORE":
-                        if map_screen.brush_nation in map_screen.hovered_province.get("cores", []):
-                            edit_province_ownership.remove_core(map_screen, map_screen.hovered_province, map_screen.brush_nation)
-                            map_screen.centers_need_update = True
-                            editor_changed = True
-                            editor_layers.add("cores")
+                        changed_layers = edit_province_ownership.apply_editor_territory_brush(
+                            map_screen, map_screen.hovered_province, remove=True)
+                        editor_layers.update(changed_layers)
+                        editor_changed = editor_changed or bool(changed_layers)
                     elif map_screen.editor_mode == "CLAIM":
                         claims = map_screen.nation_data.get(
                             map_screen.brush_nation, {}).get("claims", [])

@@ -134,6 +134,14 @@ screens/
     editor_screens/
         Map editor screens.
         These cover economy, date, research, brushes, diplomacy, events, leaders, and turn settings.
+        Brush and Paint buttons sit between Nation Brush and Load.
+        These buttons apply only to territory and cores. Other tools keep their existing behavior.
+        Brush changes tiles during a drag. Each editor session starts with Brush selected.
+        Paint changes one connected land region per click. Water tiles stop the fill.
+        Territory Paint matches the clicked tile's owner. Core Paint matches its complete core set, regardless of list order.
+        Left-click applies the selected nation. Unclaimed clears cores.
+        Right-click removes the selected nation's cores, or picks a territory owner.
+        Undo and Redo apply to the complete fill. The selected tool is not saved.
 
 ui/
     Shared widgets, bars, dialogs, popups, and event handling.

@@ -2,8 +2,49 @@ import data.constants as c
 from data.io import country_io
 from map_logic.rendering import map_utils, refresh_map
 
-def conquer_province(map_screen, province, new_owner):
-    """Annexes a specific province to a specific country and updates visuals."""
+def apply_editor_territory_brush(map_screen, province, remove=False):
+    """Apply Brush or Paint to territory or cores. Return changed map layers."""
+    from data import queries
+
+    mode = map_screen.editor_mode
+    if (not map_screen.is_editor or mode not in ("NATION", "CORE")
+            or not province or province.get("owner") in c.WATER_NATIONS):
+        return set()
+    # Collect the full region before changing its owner or cores.
+    targets = (queries.get_editor_paint_region(province, map_screen.id_to_province, mode)
+               if map_screen.editor_selection_tool == "PAINT" else [province])
+    nation = map_screen.brush_nation
+    layers = set()
+    fill = map_screen.editor_selection_tool == "PAINT"
+    for index, target in enumerate(targets):
+        if mode == "NATION":
+            if not remove and target.get("owner") != nation:
+                # A fill has one previous owner. Check its remaining land once.
+                conquer_province(map_screen, target, nation,
+                                 refresh_visuals=not fill,
+                                 check_landless=not fill or index == len(targets) - 1)
+                layers.update(("political", "relations", "factions", "faction_territories"))
+        else:
+            cores = target.get("cores", [])
+            if remove:
+                if nation not in cores:
+                    continue
+                remove_core(map_screen, target, nation, refresh_visuals=not fill)
+            elif nation in c.UNOWNED_LAND_OWNERS:
+                if not cores:
+                    continue
+                clear_cores(map_screen, target, refresh_visuals=not fill)
+            else:
+                if nation in cores:
+                    continue
+                add_core(map_screen, target, nation, refresh_visuals=not fill)
+            map_screen.centers_need_update = True
+            layers.add("cores")
+    return layers
+
+
+def conquer_province(map_screen, province, new_owner, *, refresh_visuals=True, check_landless=True):
+    """Apply province ownership. Batch callers can defer visuals and the previous owner's land check."""
     if province:
         # --- NEW: Integrated Puppet Capture Reroute ---
         if not map_screen.is_editor and new_owner in map_screen.nation_data:
@@ -27,7 +68,7 @@ def conquer_province(map_screen, province, new_owner):
             province["building_queue"] = [q for q in province["building_queue"] if q.get("order_type") != "CORE"]
         
         # 2. Visual Update
-        if not map_screen.viewing_ai_moves and not map_screen.ai_is_thinking:
+        if refresh_visuals and not map_screen.viewing_ai_moves and not map_screen.ai_is_thinking:
             nations_dict = country_io.get_nation_colors()
             new_color = list(nations_dict.get(new_owner, (255, 255, 255))) # Fallback to white if unclaimed
             
@@ -50,7 +91,7 @@ def conquer_province(map_screen, province, new_owner):
         map_screen.centers_need_update = True
 
         # --- A nation that just lost its last province leaves the world stage ---
-        if old_owner != new_owner and old_owner in map_screen.nation_data:
+        if check_landless and old_owner != new_owner and old_owner in map_screen.nation_data:
             landless = not any(p.get("owner") == old_owner
                                for p in map_screen.map_data.values())
             if landless:
@@ -230,28 +271,31 @@ def refresh_core_tint(map_screen, province, cores=None):
         map_screen.active_map = map_screen.cores_map
 
 
-def add_core(map_screen, province, nation):
+def add_core(map_screen, province, nation, *, refresh_visuals=True):
     if province and nation:
         cores = province.setdefault("cores", [])
         if nation not in cores:
             cores.insert(0, nation) # Insert at front as primary
         
-        refresh_core_tint(map_screen, province, cores)
+        if refresh_visuals:
+            refresh_core_tint(map_screen, province, cores)
 
-def remove_core(map_screen, province, nation):
+def remove_core(map_screen, province, nation, *, refresh_visuals=True):
     if province and nation:
         cores = province.setdefault("cores", [])
         if nation in cores:
             cores.remove(nation)
         
-        refresh_core_tint(map_screen, province, cores)
+        if refresh_visuals:
+            refresh_core_tint(map_screen, province, cores)
 
-def clear_cores(map_screen, province):
+def clear_cores(map_screen, province, *, refresh_visuals=True):
     """Wipes all cores from the tile for the Unclaimed Eraser brush."""
     if province:
         province["cores"] = []
         
-        refresh_core_tint(map_screen, province)
+        if refresh_visuals:
+            refresh_core_tint(map_screen, province)
 
 def add_claim(map_screen, province, nation):
     if province and nation:

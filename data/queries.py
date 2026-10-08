@@ -5765,8 +5765,34 @@ def play_click_sound():
     ui_elements.play_ui_sound("click")
 
 # ==========================================
-# EDITOR UNDO / REDO LOGIC
+# EDITOR PAINTING AND UNDO / REDO LOGIC
 # ==========================================
+
+def get_editor_paint_region(province, id_to_province, mode):
+    """Return connected land with the same owner or core set as the clicked tile."""
+    if mode not in ("NATION", "CORE") or province.get("owner") in c.WATER_NATIONS:
+        return []
+
+    def tile_type(tile):
+        return tile.get("owner") if mode == "NATION" else frozenset(tile.get("cores", []))
+
+    source_type = tile_type(province)
+    pending = [province]
+    visited = {province["id"]}
+    region = []
+    while pending:
+        current = pending.pop()
+        region.append(current)
+        for neighbor_id in current.get("neighbors", []):
+            if neighbor_id in visited:
+                continue
+            visited.add(neighbor_id)
+            neighbor = id_to_province.get(neighbor_id)
+            if (neighbor is not None and neighbor.get("owner") not in c.WATER_NATIONS
+                    and tile_type(neighbor) == source_type):
+                pending.append(neighbor)
+    return region
+
 
 def _get_current_map_state(map_screen):
     import copy

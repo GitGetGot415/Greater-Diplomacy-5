@@ -74,6 +74,9 @@ COUNTRY_FOCUS_UNIT_ZOOM_MARGIN = 0.1
 # --- Bottom-right button strip (editor tools, turn controls) ---
 EDITOR_BOT_BTN_START_X = c.SCREEN_WIDTH - 120
 EDITOR_BOT_BTN_STEP_X = 110
+EDITOR_SELECTION_TOOL_X = EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X * 0.5
+EDITOR_SELECTION_TOOL_GAP = 15
+EDITOR_SELECTION_TOOL_STEP_X = c.SIZES["small_square"][0] + EDITOR_SELECTION_TOOL_GAP
 
 # --- Vertical unit filters beside the lower left sidebar ---
 UNIT_VIEW_BUTTON_PADDING_X = 8
@@ -186,6 +189,8 @@ def render_buttons(map_screen):
    # Editor Buttons
     map_screen.btn_ed_load = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X *(-0.5), c.BOTTOM_BAR_UI_CENTER_Y, "small_square", "blue", "Load", lambda: editor_menus.editor_load_map(map_screen), font_preset="normal")
     map_screen.btn_ed_nation = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*1.5, c.BOTTOM_BAR_UI_CENTER_Y, "small", "grey", "Nation Brush", lambda: editor_menus.select_brush_nation(map_screen), font_preset="normal")
+    map_screen.btn_ed_brush = Button(EDITOR_SELECTION_TOOL_X, c.BOTTOM_BAR_UI_CENTER_Y, "small_square", "blue", "Brush", lambda: map_screen.set_editor_selection_tool("BRUSH"), image=icons.get("brush"), show_text=False)
+    map_screen.btn_ed_paint = Button(EDITOR_SELECTION_TOOL_X + EDITOR_SELECTION_TOOL_STEP_X, c.BOTTOM_BAR_UI_CENTER_Y, "small_square", "blue", "Paint", lambda: map_screen.set_editor_selection_tool("PAINT"), image=icons.get("paint"), show_text=False)
     map_screen.btn_ed_core = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*2.5, c.BOTTOM_BAR_UI_CENTER_Y, "small", "pink", "Core Brush", lambda: editor_menus.select_core_brush(map_screen), font_preset="normal")
     map_screen.btn_ed_autocore = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*3, c.BOTTOM_BAR_UI_CENTER_Y, "small_square", "pink", "Autocore", map_screen.auto_assign_cores, font_preset="normal")
 
@@ -570,7 +575,7 @@ def render_buttons(map_screen):
         map_screen.btn_view_terrain, map_screen.btn_view_political, map_screen.btn_view_relations, map_screen.btn_view_cores, map_screen.btn_view_factions,
         map_screen.btn_view_resources, map_screen.btn_view_blank, map_screen.btn_view_units, map_screen.btn_view_economy, map_screen.btn_toggle_names,
         map_screen.btn_unit_events,
-        map_screen.btn_ed_load, map_screen.btn_ed_nation,
+        map_screen.btn_ed_load, map_screen.btn_ed_nation, map_screen.btn_ed_brush, map_screen.btn_ed_paint,
         map_screen.btn_ed_core, map_screen.btn_ed_claim, map_screen.btn_ed_autocore, map_screen.btn_ed_clear, map_screen.btn_ed_resource, map_screen.btn_ed_building,
         map_screen.btn_ed_unit, map_screen.btn_ed_refresh, map_screen.btn_ed_edited, map_screen.btn_ed_date, map_screen.btn_ed_diplo, map_screen.btn_ed_personality, map_screen.btn_ed_scripts,
         map_screen.btn_next_turn, map_screen.btn_import_turn, map_screen.btn_skip_ai, map_screen.btn_multi_turn, map_screen.btn_declare_indep, map_screen.btn_gp_edit, map_screen.btn_gp_econ, map_screen.btn_gp_rd, map_screen.btn_gp_msgs,
@@ -819,7 +824,7 @@ def update_button_states(map_screen):
         ed_btns = [
             map_screen.btn_gp_edit, map_screen.btn_gp_econ, map_screen.btn_gp_rd,
             map_screen.btn_gp_msgs, map_screen.btn_gp_save, map_screen.btn_gp_claims,
-            map_screen.btn_ed_load, map_screen.btn_ed_nation, map_screen.btn_ed_core, map_screen.btn_ed_claim,
+            map_screen.btn_ed_load, map_screen.btn_ed_nation, map_screen.btn_ed_brush, map_screen.btn_ed_paint, map_screen.btn_ed_core, map_screen.btn_ed_claim,
             map_screen.btn_ed_autocore, map_screen.btn_ed_resource, map_screen.btn_ed_building,
             map_screen.btn_ed_unit, map_screen.btn_ed_refresh, map_screen.btn_ed_clear,
             map_screen.btn_ed_date, map_screen.btn_ed_edited, map_screen.btn_ed_diplo, map_screen.btn_ed_personality, map_screen.btn_ed_scripts,
@@ -837,6 +842,11 @@ def update_button_states(map_screen):
                           ("CLAIM", map_screen.btn_ed_claim),
                           ("UNIT", map_screen.btn_ed_unit)):
             btn.is_selected = (map_screen.editor_mode == mode)
+
+        for tool, btn in (("BRUSH", map_screen.btn_ed_brush),
+                          ("PAINT", map_screen.btn_ed_paint)):
+            btn.disabled = map_screen.editor_mode not in ("NATION", "CORE")
+            btn.is_selected = (map_screen.editor_selection_tool == tool)
 
         # A painted province may be selected, but the editor is not a player
         # nation.  Do not let that selection fall through into the gameplay
@@ -1433,6 +1443,7 @@ class Map(GameState):
             self.set_play_view_defaults()
 
         self.painting_active = False
+        self.editor_selection_tool = "BRUSH"
         self.brush_nation = "Unclaimed"
         self.viewing_ai_moves = False
         self.skip_ai_view = False
@@ -2629,6 +2640,15 @@ class Map(GameState):
         self.sync_units_to_data()
 
         self.show_feedback(f"Data Resynced! Added {added_count}, Updated {updated_count}. Objects Synced.")
+
+    def set_editor_selection_tool(self, tool):
+        """Select the local territory and core painting tool."""
+        if not self.is_editor or self.editor_mode not in ("NATION", "CORE"):
+            return
+        if tool not in ("BRUSH", "PAINT"):
+            raise ValueError("Unknown editor selection tool.")
+        self.editor_selection_tool = tool
+        update_button_states(self)
 
     def toggle_editor_brush_type(self):
         if self.editor_mode == "NATION":
