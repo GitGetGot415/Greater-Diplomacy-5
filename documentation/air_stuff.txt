@@ -37,6 +37,7 @@ data/generators/recipes.py defines data generation.
 Keep its recipes consistent with data edits before you regenerate the files.
 Research details derive their current information from these libraries and shared queries.
 Jet Bombers use assets/classic/Jet Bomber.png.
+Jet Transports use assets/classic/Jet Transport.png.
 
 Old saves retain their research levels and progress.
 Unnumbered aircraft become level I, including transported aircraft and queued production.

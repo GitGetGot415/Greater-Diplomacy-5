@@ -875,6 +875,7 @@ OBSOLESCENCE_RULES = {
     "Biplane Bomber": ["piston_bomber"],
     "Monoplane Fighter": ["jet_fighter"],
     "Monoplane Bomber": ["jet_bomber"],
+    "Monoplane Transport": ["jet_transport"],
 }
 
 # ==========================================

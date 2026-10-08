@@ -333,6 +333,7 @@ UNIT_SECTIONS = [
         UnitFamily('V2 Rocket', single(), {'health': 2000, 'attack': 1200, 'defense': 0, 'speed': 1, 'cost_materials': 4000, 'cost_manpower': 0, 'cost_fuel': 80, 'production_time': 4, 'production_group': 'Aerospace', 'air_role': 'strike', 'air_range_px': 300, 'air_consumable': True, 'air_interception_immune': True, 'air_damages_forts': True}),
         UnitFamily('Jet Fighter', roman_suffixes(16), {'health': linear(4000, 200), 'attack':  linear(1000, 100), 'defense':  linear(100, 20), 'speed': 1, 'cost_materials':  linear(5000, 200), 'cost_manpower': 500, 'cost_fuel': linear(160, 10), 'production_time': 4, 'production_group': 'Aerospace', 'air_role': 'fighter', 'air_range_px': 200, 'air_attack_multiplier': 4}),
         UnitFamily('Jet Bomber', roman_suffixes(12), {'health': linear(6000, 200), 'attack':  linear(1600, 200), 'defense':  linear(200, 20), 'speed': 1, 'cost_materials':  linear(6000, 500), 'cost_manpower': 500, 'cost_fuel': linear(160, 20), 'production_time': 6, 'production_group': 'Aerospace', 'air_role': 'bomber', 'air_range_px': 300, 'air_damages_forts': True}),
+        UnitFamily('Jet Transport', roman_suffixes(12), {'health': 2000, 'attack': 0, 'defense': 0, 'speed': 1, 'cost_materials': 50000, 'cost_manpower': 1000, 'cost_fuel': 500, 'production_time': 4, 'production_group': 'Aerospace', 'air_role': 'transport', 'air_range_px': linear(90, 10), 'air_transport_capacity': 2}),
     ],
 ]
 
@@ -558,5 +559,6 @@ RESEARCH_SECTIONS = [
         ('jet_engine', {'category': 'AEROSPACE', 'display_name': 'Jet Engine', 'max_lvl': 1, 'cost': 2400, 'req': {}, 'years': [1945]}),
         ('jet_fighter', {'category': 'AEROSPACE', 'display_name': 'Jet Fighter', 'max_lvl': 16, 'cost': 1800, 'req': {'piston_fighter': 5, 'jet_engine': 1}, 'years': [1950, 1954, 1958, 1962, 1966, 1970, 1974, 1978, 1982, 1986, 1990, 1994, 1998, 2002, 2006, 2010]}),
         ('jet_bomber', {'category': 'AEROSPACE', 'display_name': 'Jet Bomber', 'max_lvl': 12, 'cost': 2400, 'req': {'piston_bomber': 5, 'jet_fighter': 1}, 'years': years_range(1955, 5, 12)}),
+        ('jet_transport', {'category': 'AEROSPACE', 'display_name': 'Jet Transport', 'max_lvl': 12, 'cost': 2400, 'req': {'piston_bomber': 5}, 'years': years_range(1955, 5, 12)}),
     ],
 ]

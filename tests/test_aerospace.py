@@ -50,6 +50,31 @@ def aircraft_replacement_cases():
 
 
 class AerospaceRulesTests(unittest.TestCase):
+    def test_jet_transport_research_and_levels_match_its_unit_data(self):
+        technology = queries.get_tech_tree()["jet_transport"]
+        self.assertEqual(technology["max_lvl"], 12)
+        self.assertEqual(technology["years"], list(range(1955, 2011, 5)))
+        self.assertEqual(technology["req"], {"piston_bomber": 5})
+
+        library = queries.get_unit_library()
+        levels = [f"Jet Transport {c.ROMAN_NUMERALS[level]}" for level in range(1, 13)]
+        monoplane = library["Monoplane Transport I"]
+        changed_fields = {"health", "cost_materials", "cost_manpower", "cost_fuel",
+                          "air_range_px", "air_transport_capacity"}
+        for level, name in enumerate(levels):
+            with self.subTest(unit=name):
+                stats = library[name]
+                self.assertEqual(stats["health"], 2000)
+                self.assertEqual(stats["cost_materials"], 50000)
+                self.assertEqual(stats["cost_manpower"], 1000)
+                self.assertEqual(stats["cost_fuel"], 500)
+                self.assertEqual(stats["air_range_px"], 100 + level * 10)
+                self.assertEqual(stats["air_transport_capacity"], 2)
+                self.assertEqual(
+                    {key: value for key, value in stats.items() if key not in changed_fields},
+                    {key: value for key, value in monoplane.items() if key not in changed_fields},
+                )
+
     def test_each_aircraft_level_unlocks_library_stats_for_players_and_ai(self):
         library = queries.get_unit_library()
         tree = queries.get_tech_tree()
