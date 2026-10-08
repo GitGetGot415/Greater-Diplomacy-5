@@ -24,12 +24,14 @@ class ListSelectScreen(ModalScreen):
     SEARCH_BOX_HEIGHT = 34
     SEARCH_MAX_CHARS = 40
 
-    def __init__(self, game_state, title, prompt, items, on_confirm, *, is_enabled=None):
+    def __init__(self, game_state, title, prompt, items, on_confirm, *, is_enabled=None,
+                 close_on_select=True):
         super().__init__(game_state, title)
         self.prompt = prompt
         self.items = list(items)
         self.on_confirm = on_confirm
         self.is_enabled = is_enabled
+        self.close_on_select = close_on_select
         self.search_text = ""
         self.visible_items = self.items
         self.refresh_ui()
@@ -38,7 +40,14 @@ class ListSelectScreen(ModalScreen):
         if not self._item_enabled(item):
             return
         self.on_confirm(item[1] if isinstance(item, tuple) else item)
-        self.exit_screen()
+        if getattr(self, "close_on_select", True):
+            self.exit_screen()
+
+    def set_items(self, items):
+        """Replace picker rows after a successful action without closing the picker."""
+        self.items = list(items)
+        self.scroll_y = 0
+        self.refresh_ui()
 
     def _item_enabled(self, item):
         return self._item_label(item) != self.SEPARATOR and (self.is_enabled is None or self.is_enabled(item))

@@ -1517,22 +1517,35 @@ class Orders_Screen(GameState):
         queries.ensure_unit_ids(self.map_screen.map_data)
         from ui.list_select_screen import ListSelectScreen
         from ui.screen_runner import _run_pygame_sub_screen
-        cargo = plane.get("air_cargo", [])
         capacity = queries.air_transport_capacity(plane)
-        items = [(f"Release: {unit.get('custom_name') or unit['type']}", ("RELEASE", unit["unit_id"]))
-                 for unit in cargo]
-        items.extend((f"Load: {unit.get('custom_name') or unit['type']}", ("LOAD", unit["unit_id"]))
-                     for unit in province.get("units", []) if queries.air_cargo_is_eligible(plane, unit)
-                     and not self._command_blocked_silent(unit))
+
+        def picker_items():
+            cargo = plane.get("air_cargo", [])
+            items = [(f"Release: {unit.get('custom_name') or unit['type']}", ("RELEASE", unit["unit_id"]))
+                     for unit in cargo]
+            items.extend((f"Load: {unit.get('custom_name') or unit['type']}", ("LOAD", unit["unit_id"]))
+                         for unit in province.get("units", []) if queries.air_cargo_is_eligible(plane, unit)
+                         and not self._command_blocked_silent(unit))
+            return items
+
+        popup = None
+
+        def select_cargo(choice):
+            if self.change_air_transport(plane, province, *choice):
+                popup.prompt = (f"Cargo: {len(plane.get('air_cargo', []))} / {capacity}. "
+                                "Choose a unit to load or release.")
+                popup.set_items(picker_items())
+
         popup = ListSelectScreen(self.map_screen, "Air transport",
-            f"Cargo: {len(cargo)} / {capacity}. Choose a unit to load or release.", items,
-            lambda choice: self.change_air_transport(plane, province, *choice),
-            is_enabled=lambda item: item[1][0] == "RELEASE" or len(cargo) < capacity)
+            f"Cargo: {len(plane.get('air_cargo', []))} / {capacity}. Choose a unit to load or release.",
+            picker_items(), select_cargo,
+            is_enabled=lambda item: item[1][0] == "RELEASE" or len(plane.get('air_cargo', [])) < capacity,
+            close_on_select=False)
         _run_pygame_sub_screen(self.map_screen, popup)
 
     def change_air_transport(self, plane, province, action, unit_id):
         if self._air_mission_unit_index(plane, province) is None:
-            return
+            return False
         cargo_ids = [unit["unit_id"] for unit in plane.get("air_cargo", [])]
         if action == "RELEASE" and unit_id in cargo_ids:
             cargo_ids.remove(unit_id)
@@ -1542,15 +1555,16 @@ class Orders_Screen(GameState):
                 return
             cargo_ids.append(unit_id)
         else:
-            return
+            return False
         try:
             queries.set_air_cargo(self.map_screen, self.map_screen.player_country, plane, province, cargo_ids)
         except ValueError as exc:
             self.map_screen.show_feedback(str(exc))
-            return
+            return False
         self.cancel_bombard_targeting(refresh=False)
         self._mark_draft_changed()
         self.refresh_ui()
+        return True
 
     def start_air_targeting(self, records, mission, row_key=None):
         records = [(unit, base) for unit, base in records

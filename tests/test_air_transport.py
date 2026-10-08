@@ -250,6 +250,26 @@ class TransportTests(unittest.TestCase):
         screen.change_air_transport(self.plane, self.base, "RELEASE", self.cargo["unit_id"])
         self.assertIn(self.cargo, self.base["units"])
 
+    def test_cargo_picker_stays_open_and_refreshes_after_each_load(self):
+        queries.air_unit_stats(self.plane)["air_transport_capacity"] = 2
+        second = wing(self.base, "Fixture Cargo")
+        screen = self.screen()
+        with patch("ui.screen_runner._run_pygame_sub_screen") as runner:
+            screen.open_air_transport(self.plane, self.base)
+        popup = runner.call_args.args[1]
+
+        for unit in (self.cargo, second):
+            item = next(item for item in popup.items
+                        if item[1] == ("LOAD", unit["unit_id"]))
+            popup.select(item)
+            self.assertFalse(popup.done)
+            self.assertIn(unit, self.plane["air_cargo"])
+
+        self.assertEqual(popup.prompt, "Cargo: 2 / 2. Choose a unit to load or release.")
+        self.assertFalse(any(item[1][0] == "LOAD" for item in popup.items))
+        self.assertEqual({item[1][1] for item in popup.items},
+                         {self.cargo["unit_id"], second["unit_id"]})
+
     def test_disabled_mission_choices_remain_present_and_ignore_clicks(self):
         screen = self.screen()
         chosen = Mock()
