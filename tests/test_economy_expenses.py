@@ -99,6 +99,31 @@ class ExpensesTableTests(unittest.TestCase):
                          [game.home_of("A")["id"], game.home_of("B")["id"]])
         self.assertEqual(table.grouped_rows[0]["count"], 2)
 
+    def test_opening_expenses_includes_units_inside_transport_planes(self):
+        game = StubMapScreen(["A", "B"])
+        plane = {"owner": "A", "type": "Fixture Transport", "air_cargo": [
+            {"owner": "A", "type": "Fixture Infantry"},
+        ]}
+        game.home_of("A")["units"] = [plane]
+        economy = Economy_Screen()
+        economy.map_screen = game
+        library = {
+            "Fixture Transport": {"cost_materials": 30},
+            "Fixture Infantry": {"cost_manpower": 20},
+        }
+        with patch("screens.map_related_screens.economy.queries.get_unit_library",
+                   return_value=library), \
+                patch("ui.screen_runner._run_pygame_sub_screen") as open_table:
+            economy.open_expenses_table()
+
+        table = open_table.call_args.args[1]
+        self.assertEqual({row["unit"] for row in table.individual_rows},
+                         {"Fixture Transport", "Fixture Infantry"})
+        self.assertEqual([row["location"] for row in table.individual_rows],
+                         [game.home_of("A")["id"]] * 2)
+        self.assertEqual({row["unit"]: row["count"] for row in table.grouped_rows},
+                         {"Fixture Transport": 1, "Fixture Infantry": 1})
+
 
 if __name__ == "__main__":
     unittest.main()

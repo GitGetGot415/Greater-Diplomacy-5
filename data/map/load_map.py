@@ -480,7 +480,12 @@ def load_map_assets(map_screen, load_path):
         # ---------------------
 
         v["cores"] = v.get("cores", [])
-        # Removes any starting instance of a unit type this scenario has disabled.
+        # Remove disabled units from provinces and transport cargo.
+        for unit in v.get("units", []):
+            cargo = unit.get("air_cargo")
+            if isinstance(cargo, list):
+                unit["air_cargo"] = [carried for carried in cargo
+                                     if _unit_base_type(carried) not in disabled_units]
         v["units"] = [u for u in v.get("units", []) if _unit_base_type(u) not in disabled_units]
         v["unit_queue"] = v.get("unit_queue", [])
         v["building_queue"] = v.get("building_queue", [])
@@ -510,7 +515,7 @@ def load_map_assets(map_screen, load_path):
     # unit was converted) onto Convoy/Truck transports. Transports should
     # always have 0 defense, so force it regardless of save version.
     for province in map_screen.map_data.values():
-        for unit in province.get("units", []):
+        for unit in queries.units_with_air_cargo(province.get("units", [])):
             u_type = unit.get("type", "")
             if u_type.startswith("Convoy ("):
                 unit["defense"] = c.CONVOY_DEF
@@ -573,7 +578,7 @@ def load_map_assets(map_screen, load_path):
     # --- AUTO NAME STARTING UNITS ---
     unit_counters = {}
     for prov in map_screen.map_data.values():
-        for unit in prov.get("units", []):
+        for unit in queries.units_with_air_cargo(prov.get("units", [])):
             if not unit.get("custom_name"):
                 unit["custom_name"] = queries.generate_unit_custom_name(unit, unit_counters)
 

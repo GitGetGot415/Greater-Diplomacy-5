@@ -3490,7 +3490,7 @@ def get_nation_provinces_and_units(nation, map_data):
     for prov in map_data.values():
         if prov.get("owner") == nation:
             owned_provs.append(prov)
-        for unit in prov.get("units", []):
+        for unit in units_with_air_cargo(prov.get("units", [])):
             if unit.get("owner") == nation:
                 owned_units.append((unit, prov))
     return owned_provs, owned_units

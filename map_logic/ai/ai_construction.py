@@ -852,7 +852,8 @@ def process_ai_economy_decisions(map_screen):
         # the tally below can bucket them by the same rule; only the buildable
         # set is ever purchased from.
         candidates = ai_unit_eval.buildable_units(data.get("research", {}), unit_library)
-        owned_types = {u.get("type", "") for p in my_provs for u in p.get("units", [])
+        owned_types = {u.get("type", "") for p in my_provs
+                       for u in queries.units_with_air_cargo(p.get("units", []))
                        if u.get("owner") == ai_name}
         owned_types |= {q.get("unit_type", "") for p in my_provs
                         for q in p.get("unit_queue", [])}

@@ -468,6 +468,38 @@ class TransportSaveSmokeTests(unittest.TestCase):
             queries.normalize_air_orders(loaded.map_data)
             self.assertEqual(queries.air_unit_mission_icon(restored), "NONE")
 
+    def test_load_filters_disabled_cargo_and_repairs_embarked_truck_stats(self):
+        case = TransportTests()
+        self.addCleanup(case.doCleanups)
+        case.setUp()
+        with tempfile.TemporaryDirectory() as directory:
+            game, _, _, _ = air_tests.AirAppSmokeTests.make_runtime_save(self, directory)
+            base = game.id_to_province[1]
+            plane = wing(base, "Monoplane Transport I")
+            truck = wing(base, "Fixture Cargo")
+            truck["original_type"] = "Fixture Cargo"
+            truck["type"] = "Truck (Fixture Cargo)"
+            truck["defense"] = 99
+            disabled_cargo = wing(base, "Fixture Cargo")
+            disabled_cargo["type"] = "Fixture Disabled"
+            plane["air_cargo"] = [truck, disabled_cargo]
+            base["units"].remove(truck)
+            base["units"].remove(disabled_cargo)
+            game.scenario_settings["unit_disabled"] = ["Fixture Disabled"]
+
+            from data.map import save_map
+            from screens.menu_screens.map import Map
+            with patch.object(c, "SAVES_DIR", directory):
+                asyncio.run(save_map.save_map_data(game, "cargo-migrations"))
+            loaded = Map(load_path=os.path.join(directory, "cargo-migrations"),
+                         skip_initial_income=True)
+
+        restored = next(unit for unit in loaded.id_to_province[1]["units"]
+                        if unit["unit_id"] == plane["unit_id"])
+        self.assertEqual([unit["type"] for unit in restored["air_cargo"]],
+                         ["Truck (Fixture Cargo)"])
+        self.assertEqual(restored["air_cargo"][0]["defense"], c.TRUCK_DEF)
+
     def test_real_content_matches_recipes_unlocks_and_png_assets(self):
         from data.generators.generate_data import build_unit_data_text, build_research_template_text
         names = [f"Monoplane Transport {c.ROMAN_NUMERALS[level]}" for level in range(1, 4)]
