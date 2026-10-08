@@ -211,6 +211,7 @@ Release countries from cores
 Players open Puppets, then Release Nation, to release countries from their own land.
 Local spectators open Puppets and select the country whose land supplies the release.
 This does not change the spectator's viewing identity.
+Back from the release panel returns to the country list. Cancel closes the country list.
 Tournament and real-time spectators cannot release countries for other players.
 Tactical players and map editors cannot use these release controls.
 
@@ -228,7 +229,10 @@ Do not create a country if no eligible land remains.
 Integrated and Autonomous countries become subjects through the shared puppet assignment rule.
 They join the master's faction and wars under that rule.
 Independent countries have no master. They do not inherit the releasing country's faction or wars.
-The existing country naming, color, and research inheritance rules apply to all three choices.
+Integrated releases use the master's color and adjective in the generated name.
+Autonomous and Independent releases keep the source country's name, adjective, and color.
+Add a number to the generated name when it conflicts with an existing country.
+All three choices inherit the releasing country's research.
 
 release_puppet_queue entries store core_nation, keep_cores, release_type, and turns_left.
 Older entries without release_type resolve as Integrated.

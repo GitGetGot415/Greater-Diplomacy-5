@@ -14,6 +14,7 @@ from map_logic.diplomacy import diplomacy_processor, puppet_actions
 from screens.map_related_screens import puppets_screen
 from tests import app_harness
 from tests.test_map_save_format import sample_map_screen
+from ui import modal_stack
 
 
 def release_map(player="Master"):
@@ -26,7 +27,8 @@ def release_map(player="Master"):
 
     nations = {"Master": country("Master Display", adjective="Masterish", faction="Pact",
                                  at_war_with=["Enemy"], research={"fixture_tech": 2}),
-               "Core": country("Core Display"), "Second": country("Second Display"),
+               "Core": country("Core Display", adjective="Coreish", color=[90, 110, 130]),
+               "Second": country("Second Display"),
                "Other": country("Other Display"), "Enemy": country("Enemy Display")}
     provinces = {}
     for pid, owner, cores in ((1, "Master", ["Core"]),
@@ -86,6 +88,43 @@ class PuppetReleaseRuleTests(unittest.TestCase):
                              {p["id"] for p in expected})
             self.assertEqual(self.map.map_data["2"]["owner"], "Master")
 
+    def test_only_integrated_releases_inherit_master_appearance(self):
+        for release_type in c.PUPPET_RELEASE_TYPES:
+            with self.subTest(release_type=release_type):
+                self.map = release_map()
+                source = copy.deepcopy(self.map.nation_data["Core"])
+                master = self.map.nation_data["Master"]
+                created = self.release(release_type)
+                data = self.map.nation_data[created]
+                integrated = release_type == c.PUPPET_TYPE_INTEGRATED
+                expected_name = (f'{master["adjective"]} {source["name"]}' if integrated
+                                 else f'{source["name"]} 2')
+                expected_color = master["color"] if integrated else source["color"]
+                self.assertEqual(data["name"], expected_name)
+                self.assertEqual(data["color"], expected_color)
+                self.assertEqual(self.map.nation_colors[created], tuple(expected_color))
+                self.assertEqual(data["adjective"], source["adjective"])
+                self.assertEqual(self.map.nation_data["Core"], source)
+                saved_map = sample_map_screen()
+                saved_map.nation_data = self.map.nation_data
+                saved_map.map_data = self.map.map_data
+                saved = json.loads(json.dumps(queries.build_save_dict(saved_map)))
+                queries.merge_country_templates(saved["nation_data"])
+                for field in ("name", "color", "adjective"):
+                    self.assertEqual(saved["nation_data"][created][field], data[field])
+
+    def test_nonintegrated_releases_use_library_appearance_for_absent_countries(self):
+        source = dict(name="Library Display", adjective="Libraryish", color=[140, 160, 180])
+        for release_type in (c.PUPPET_TYPE_AUTONOMOUS, c.PUPPET_RELEASE_INDEPENDENT):
+            with self.subTest(release_type=release_type):
+                self.map = release_map()
+                del self.map.nation_data["Core"]
+                with mock.patch("data.io.country_io.get_country_stats", return_value=source):
+                    created = self.release(release_type)
+                for field in ("name", "color", "adjective"):
+                    self.assertEqual(self.map.nation_data[created][field], source[field])
+                self.assertEqual(self.map.nation_colors[created], tuple(source["color"]))
+
     def test_no_land_or_invalid_type_creates_no_country(self):
         original = copy.deepcopy(self.map.nation_data)
         self.map.map_data["1"]["owner"] = "Other"
@@ -110,12 +149,15 @@ class PuppetReleaseRuleTests(unittest.TestCase):
     def test_resolution_preserves_each_queued_choice(self):
         for release_type in c.PUPPET_RELEASE_TYPES:
             self.map = release_map()
+            appearance_source = ("Master" if release_type == c.PUPPET_TYPE_INTEGRATED else "Core")
+            expected_color = self.map.nation_data[appearance_source]["color"][:]
             self.map.nation_data["Master"]["release_puppet_queue"] = self.canonical(
                 [{"core_nation": "Core", "release_type": release_type}])
             diplomacy_processor._process_claim_queues(self.map)
             created = self.map.map_data["1"]["owner"]
             self.assertEqual(self.map.nation_data[created]["puppet_type"],
                              "" if release_type == c.PUPPET_RELEASE_INDEPENDENT else release_type)
+            self.assertEqual(self.map.nation_data[created]["color"], expected_color)
             self.assertEqual(self.map.nation_data["Master"]["release_puppet_queue"], [])
 
     def test_releases_consume_overlapping_core_land_in_queue_order(self):
@@ -212,6 +254,45 @@ class PuppetReleaseControlTests(unittest.TestCase):
         with mock.patch.object(puppets_screen, "_run_pygame_sub_screen") as launch:
             puppets_screen.open_puppets_menu(self.map)
         self.assertIsInstance(launch.call_args.args[1], puppets_screen.Puppets_Screen)
+
+    def click_button(self, modal, button):
+        pos = button.rect.center
+        with mock.patch.object(pygame.mouse, "get_pos", return_value=pos):
+            modal.handle_events([
+                pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=pos, button=1),
+                pygame.event.Event(pygame.MOUSEBUTTONUP, pos=pos, button=1),
+            ])
+        modal.update()
+
+    def test_spectator_back_returns_to_picker_and_allows_another_country(self):
+        with mock.patch.object(modal_stack, "_stack", []):
+            self.map.player_country = "Spectator"
+            puppets_screen.open_puppets_menu(self.map)
+            picker_modal = modal_stack.active()
+            picker = picker_modal.screen
+            for country_id in ("Master", "Other"):
+                item = next(item for item in picker.items if item[1] == country_id)
+                picker.select(item)
+                release_modal = modal_stack.active()
+                self.assertIsNot(release_modal, picker_modal)
+                self.assertEqual(release_modal.screen.releasing_country, country_id)
+                self.click_button(release_modal, release_modal.screen.elements[0])
+                self.assertIs(modal_stack.active(), picker_modal)
+                picker_modal.update()
+                self.assertIs(modal_stack.active(), picker_modal)
+                self.assertFalse(picker.done)
+            self.click_button(picker_modal, picker.elements[0])
+            self.assertTrue(modal_stack.is_empty())
+
+    def test_generic_picker_still_closes_on_selection_by_default(self):
+        with mock.patch.object(modal_stack, "_stack", []):
+            selected = mock.Mock()
+            queries.open_listbox_selector(self.map, "Test", "Choose", [("Display", "ID")], selected)
+            modal = modal_stack.active()
+            modal.screen.select(modal.screen.items[0])
+            modal.update()
+            selected.assert_called_once_with("ID")
+            self.assertTrue(modal_stack.is_empty())
 
     def test_cannot_queue_twice_or_queue_land_reserved_by_another_release(self):
         screen = puppets_screen.Create_Puppet_Screen(self.map)

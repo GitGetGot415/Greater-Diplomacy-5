@@ -397,6 +397,7 @@ def open_puppets_menu(map_screen):
 
         countries = sorted(queries.get_living_nations(map_screen.map_data))
         queries.open_listbox_selector(map_screen, "Release Nations", "Choose a country to release nations for:",
-                                      queries.country_picker_items(countries, map_screen.nation_data), selected)
+                                      queries.country_picker_items(countries, map_screen.nation_data), selected,
+                                      close_on_select=False)
         return
     _run_pygame_sub_screen(map_screen, Puppets_Screen(map_screen))

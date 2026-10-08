@@ -247,17 +247,19 @@ def finalize_create_puppet(map_data, nation_data, master, core_nation, map_scree
     master_data = nation_data.get(master, {})
     master_name = master_data.get("name", master)
     master_adjective = master_data.get("adjective", "")
-
-    core_name = nation_data.get(core_nation, {}).get("name", core_nation)
+    integrated = release_type == c.PUPPET_TYPE_INTEGRATED
+    from data.io import country_io
 
     # Load from active data or from disk if dead
     if core_nation in nation_data:
         base_data = nation_data[core_nation].copy()
     else:
-        from data.io import country_io
         base_data = country_io.get_country_stats(core_nation).copy()
 
-    if master_adjective:
+    core_name = base_data.get("name", core_nation)
+    if not integrated:
+        base_str = core_name
+    elif master_adjective:
         base_str = f"{master_adjective} {core_name}"
     else:
         base_str = f"{master_name}'s Protectorate of {core_name}"
@@ -275,13 +277,15 @@ def finalize_create_puppet(map_data, nation_data, master, core_nation, map_scree
     new_data = copy.deepcopy(base_data)
     new_data["name"] = new_name
 
-    # Inherit Master's Color
-    master_color = nation_data.get(master, {}).get("color", [255, 255, 255])
-    new_data["color"] = list(master_color)
+    # Only Integrated releases use the master's appearance.
+    # Older country records may omit color. Use the shared country default.
+    release_color = (master_data.get("color", [255, 255, 255]) if integrated
+                     else base_data.get("color", country_io.DEFAULT_NATION_COLOR))
+    new_data["color"] = list(release_color)
 
     # Update map_screen's color cache so the white default bug doesn't happen ---
     if hasattr(map_screen, 'nation_colors'):
-        map_screen.nation_colors[new_id] = tuple(master_color)
+        map_screen.nation_colors[new_id] = tuple(release_color)
 
     # Inherit Master's Research exactly
     master_research = nation_data.get(master, {}).get("research", {})
