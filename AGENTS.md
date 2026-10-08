@@ -241,7 +241,6 @@ Use verification appropriate to each change.
 
 5. For UI, run functional smoke checks and check appearance manually.
    Test alternative permissions and input handling.
-   Check appearance at different screen sizes manually.
    Tests must not require real network services or an LLM unless marked as integration tests.
 
 6. State exactly which tests and builds ran and which did not.
