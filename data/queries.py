@@ -4755,14 +4755,11 @@ def get_air_unit_traits(unit_type):
                   else "Can be intercepted by enemy fighters."]
     else:
         reposition = air_order_radius(unit, "AIR_REPOSITION")
-        traits = [f"Range / strike: {strike:g} map px; reposition: {reposition:g} px."]
+        traits = [f"Strike / Patrol range: {strike:g} map px; reposition: {reposition:g} px."]
         patrol = air_order_radius(unit, "AIR_PATROL")
-        traits.append(f"Patrol: {patrol:g} px; weakest, strongest, or random first; returns to base.")
         if stats["air_role"] == "fighter":
             multiplier = unit_target_damage_multiplier(unit, unit, air_to_air=True)
             traits.append(f"Air-to-air damage x{multiplier:g}; no bonus against ground targets.")
-        else:
-            traits.append("Reusable strikes return to base.")
     traits.append("Strikes damage forts." if air_unit_can_damage_forts(unit)
                   else "Strikes do not damage forts.")
     return traits
