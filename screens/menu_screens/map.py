@@ -846,7 +846,7 @@ def update_button_states(map_screen):
         for tool, btn in (("BRUSH", map_screen.btn_ed_brush),
                           ("PAINT", map_screen.btn_ed_paint)):
             btn.disabled = map_screen.editor_mode not in ("NATION", "CORE")
-            btn.is_selected = (map_screen.editor_selection_tool == tool)
+            btn.is_selected = (not btn.disabled and map_screen.editor_selection_tool == tool)
 
         # A painted province may be selected, but the editor is not a player
         # nation.  Do not let that selection fall through into the gameplay
