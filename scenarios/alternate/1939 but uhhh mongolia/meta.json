@@ -1,6 +1,6 @@
 {
-    "version": "v40",
-    "generated_at": "2026-10-05T19:17:35.869274",
+    "version": "v42",
+    "generated_at": "2026-10-07T19:53:27.777938",
     "date": {
         "day": 15,
         "month": 2,
@@ -61,11 +61,13 @@
         "zeppelin": 1,
         "piston_fighter": 3,
         "piston_bomber": 2,
+        "monoplane_transport": 2,
         "v1_flying_bomb": 0,
         "v2_rocket": 0,
         "jet_engine": 0,
         "jet_fighter": 0,
-        "jet_bomber": 0
+        "jet_bomber": 0,
+        "jet_transport": 0
     },
     "nation_data": {
         "Ocean": {
@@ -320,11 +322,13 @@
                 "zeppelin": 1,
                 "piston_fighter": 3,
                 "piston_bomber": 2,
+                "monoplane_transport": 2,
                 "v1_flying_bomb": 0,
                 "v2_rocket": 0,
                 "jet_engine": 0,
                 "jet_fighter": 0,
-                "jet_bomber": 0
+                "jet_bomber": 0,
+                "jet_transport": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -433,11 +437,13 @@
                 "zeppelin": 1,
                 "piston_fighter": 3,
                 "piston_bomber": 2,
+                "monoplane_transport": 2,
                 "v1_flying_bomb": 0,
                 "v2_rocket": 0,
                 "jet_engine": 0,
                 "jet_fighter": 0,
-                "jet_bomber": 0
+                "jet_bomber": 0,
+                "jet_transport": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -543,11 +549,13 @@
                 "zeppelin": 1,
                 "piston_fighter": 3,
                 "piston_bomber": 2,
+                "monoplane_transport": 2,
                 "v1_flying_bomb": 0,
                 "v2_rocket": 0,
                 "jet_engine": 0,
                 "jet_fighter": 0,
-                "jet_bomber": 0
+                "jet_bomber": 0,
+                "jet_transport": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -822,11 +830,13 @@
                 "zeppelin": 1,
                 "piston_fighter": 3,
                 "piston_bomber": 2,
+                "monoplane_transport": 2,
                 "v1_flying_bomb": 0,
                 "v2_rocket": 0,
                 "jet_engine": 0,
                 "jet_fighter": 0,
-                "jet_bomber": 0
+                "jet_bomber": 0,
+                "jet_transport": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -934,11 +944,13 @@
                 "zeppelin": 1,
                 "piston_fighter": 3,
                 "piston_bomber": 2,
+                "monoplane_transport": 2,
                 "v1_flying_bomb": 0,
                 "v2_rocket": 0,
                 "jet_engine": 0,
                 "jet_fighter": 0,
-                "jet_bomber": 0
+                "jet_bomber": 0,
+                "jet_transport": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -1044,11 +1056,13 @@
                 "zeppelin": 1,
                 "piston_fighter": 3,
                 "piston_bomber": 2,
+                "monoplane_transport": 2,
                 "v1_flying_bomb": 0,
                 "v2_rocket": 0,
                 "jet_engine": 0,
                 "jet_fighter": 0,
-                "jet_bomber": 0
+                "jet_bomber": 0,
+                "jet_transport": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -1154,11 +1168,13 @@
                 "zeppelin": 1,
                 "piston_fighter": 3,
                 "piston_bomber": 2,
+                "monoplane_transport": 2,
                 "v1_flying_bomb": 0,
                 "v2_rocket": 0,
                 "jet_engine": 0,
                 "jet_fighter": 0,
-                "jet_bomber": 0
+                "jet_bomber": 0,
+                "jet_transport": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -1264,11 +1280,13 @@
                 "zeppelin": 1,
                 "piston_fighter": 3,
                 "piston_bomber": 2,
+                "monoplane_transport": 2,
                 "v1_flying_bomb": 0,
                 "v2_rocket": 0,
                 "jet_engine": 0,
                 "jet_fighter": 0,
-                "jet_bomber": 0
+                "jet_bomber": 0,
+                "jet_transport": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -1377,11 +1395,13 @@
                 "zeppelin": 1,
                 "piston_fighter": 3,
                 "piston_bomber": 2,
+                "monoplane_transport": 2,
                 "v1_flying_bomb": 0,
                 "v2_rocket": 0,
                 "jet_engine": 0,
                 "jet_fighter": 0,
-                "jet_bomber": 0
+                "jet_bomber": 0,
+                "jet_transport": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -1489,11 +1509,13 @@
                 "zeppelin": 1,
                 "piston_fighter": 3,
                 "piston_bomber": 2,
+                "monoplane_transport": 2,
                 "v1_flying_bomb": 0,
                 "v2_rocket": 0,
                 "jet_engine": 0,
                 "jet_fighter": 0,
-                "jet_bomber": 0
+                "jet_bomber": 0,
+                "jet_transport": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -1599,11 +1621,13 @@
                 "zeppelin": 1,
                 "piston_fighter": 3,
                 "piston_bomber": 2,
+                "monoplane_transport": 2,
                 "v1_flying_bomb": 0,
                 "v2_rocket": 0,
                 "jet_engine": 0,
                 "jet_fighter": 0,
-                "jet_bomber": 0
+                "jet_bomber": 0,
+                "jet_transport": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -1709,11 +1733,13 @@
                 "zeppelin": 1,
                 "piston_fighter": 3,
                 "piston_bomber": 2,
+                "monoplane_transport": 2,
                 "v1_flying_bomb": 0,
                 "v2_rocket": 0,
                 "jet_engine": 0,
                 "jet_fighter": 0,
-                "jet_bomber": 0
+                "jet_bomber": 0,
+                "jet_transport": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -1819,11 +1845,13 @@
                 "zeppelin": 1,
                 "piston_fighter": 3,
                 "piston_bomber": 2,
+                "monoplane_transport": 2,
                 "v1_flying_bomb": 0,
                 "v2_rocket": 0,
                 "jet_engine": 0,
                 "jet_fighter": 0,
-                "jet_bomber": 0
+                "jet_bomber": 0,
+                "jet_transport": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -2040,11 +2068,13 @@
                 "zeppelin": 1,
                 "piston_fighter": 3,
                 "piston_bomber": 2,
+                "monoplane_transport": 2,
                 "v1_flying_bomb": 0,
                 "v2_rocket": 0,
                 "jet_engine": 0,
                 "jet_fighter": 0,
-                "jet_bomber": 0
+                "jet_bomber": 0,
+                "jet_transport": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -2202,11 +2232,13 @@
                 "zeppelin": 1,
                 "piston_fighter": 3,
                 "piston_bomber": 2,
+                "monoplane_transport": 2,
                 "v1_flying_bomb": 0,
                 "v2_rocket": 0,
                 "jet_engine": 0,
                 "jet_fighter": 0,
-                "jet_bomber": 0
+                "jet_bomber": 0,
+                "jet_transport": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -2312,11 +2344,13 @@
                 "zeppelin": 1,
                 "piston_fighter": 3,
                 "piston_bomber": 2,
+                "monoplane_transport": 2,
                 "v1_flying_bomb": 0,
                 "v2_rocket": 0,
                 "jet_engine": 0,
                 "jet_fighter": 0,
-                "jet_bomber": 0
+                "jet_bomber": 0,
+                "jet_transport": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -2539,11 +2573,13 @@
                 "zeppelin": 1,
                 "piston_fighter": 3,
                 "piston_bomber": 2,
+                "monoplane_transport": 2,
                 "v1_flying_bomb": 0,
                 "v2_rocket": 0,
                 "jet_engine": 0,
                 "jet_fighter": 0,
-                "jet_bomber": 0
+                "jet_bomber": 0,
+                "jet_transport": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -2649,11 +2685,13 @@
                 "zeppelin": 1,
                 "piston_fighter": 3,
                 "piston_bomber": 2,
+                "monoplane_transport": 2,
                 "v1_flying_bomb": 0,
                 "v2_rocket": 0,
                 "jet_engine": 0,
                 "jet_fighter": 0,
-                "jet_bomber": 0
+                "jet_bomber": 0,
+                "jet_transport": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -2759,11 +2797,13 @@
                 "zeppelin": 1,
                 "piston_fighter": 3,
                 "piston_bomber": 2,
+                "monoplane_transport": 2,
                 "v1_flying_bomb": 0,
                 "v2_rocket": 0,
                 "jet_engine": 0,
                 "jet_fighter": 0,
-                "jet_bomber": 0
+                "jet_bomber": 0,
+                "jet_transport": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -2875,11 +2915,13 @@
                 "zeppelin": 1,
                 "piston_fighter": 3,
                 "piston_bomber": 2,
+                "monoplane_transport": 2,
                 "v1_flying_bomb": 0,
                 "v2_rocket": 0,
                 "jet_engine": 0,
                 "jet_fighter": 0,
-                "jet_bomber": 0
+                "jet_bomber": 0,
+                "jet_transport": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -2990,11 +3032,13 @@
                 "zeppelin": 1,
                 "piston_fighter": 3,
                 "piston_bomber": 2,
+                "monoplane_transport": 2,
                 "v1_flying_bomb": 0,
                 "v2_rocket": 0,
                 "jet_engine": 0,
                 "jet_fighter": 0,
-                "jet_bomber": 0
+                "jet_bomber": 0,
+                "jet_transport": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -3100,11 +3144,13 @@
                 "zeppelin": 1,
                 "piston_fighter": 3,
                 "piston_bomber": 2,
+                "monoplane_transport": 2,
                 "v1_flying_bomb": 0,
                 "v2_rocket": 0,
                 "jet_engine": 0,
                 "jet_fighter": 0,
-                "jet_bomber": 0
+                "jet_bomber": 0,
+                "jet_transport": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -3210,11 +3256,13 @@
                 "zeppelin": 1,
                 "piston_fighter": 3,
                 "piston_bomber": 2,
+                "monoplane_transport": 2,
                 "v1_flying_bomb": 0,
                 "v2_rocket": 0,
                 "jet_engine": 0,
                 "jet_fighter": 0,
-                "jet_bomber": 0
+                "jet_bomber": 0,
+                "jet_transport": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -3320,11 +3368,13 @@
                 "zeppelin": 1,
                 "piston_fighter": 3,
                 "piston_bomber": 2,
+                "monoplane_transport": 2,
                 "v1_flying_bomb": 0,
                 "v2_rocket": 0,
                 "jet_engine": 0,
                 "jet_fighter": 0,
-                "jet_bomber": 0
+                "jet_bomber": 0,
+                "jet_transport": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -3430,11 +3480,13 @@
                 "zeppelin": 1,
                 "piston_fighter": 3,
                 "piston_bomber": 2,
+                "monoplane_transport": 2,
                 "v1_flying_bomb": 0,
                 "v2_rocket": 0,
                 "jet_engine": 0,
                 "jet_fighter": 0,
-                "jet_bomber": 0
+                "jet_bomber": 0,
+                "jet_transport": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -3540,11 +3592,13 @@
                 "zeppelin": 1,
                 "piston_fighter": 3,
                 "piston_bomber": 2,
+                "monoplane_transport": 2,
                 "v1_flying_bomb": 0,
                 "v2_rocket": 0,
                 "jet_engine": 0,
                 "jet_fighter": 0,
-                "jet_bomber": 0
+                "jet_bomber": 0,
+                "jet_transport": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -3650,11 +3704,13 @@
                 "zeppelin": 1,
                 "piston_fighter": 3,
                 "piston_bomber": 2,
+                "monoplane_transport": 2,
                 "v1_flying_bomb": 0,
                 "v2_rocket": 0,
                 "jet_engine": 0,
                 "jet_fighter": 0,
-                "jet_bomber": 0
+                "jet_bomber": 0,
+                "jet_transport": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -3760,11 +3816,13 @@
                 "zeppelin": 1,
                 "piston_fighter": 3,
                 "piston_bomber": 2,
+                "monoplane_transport": 2,
                 "v1_flying_bomb": 0,
                 "v2_rocket": 0,
                 "jet_engine": 0,
                 "jet_fighter": 0,
-                "jet_bomber": 0
+                "jet_bomber": 0,
+                "jet_transport": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -3870,11 +3928,13 @@
                 "zeppelin": 1,
                 "piston_fighter": 3,
                 "piston_bomber": 2,
+                "monoplane_transport": 2,
                 "v1_flying_bomb": 0,
                 "v2_rocket": 0,
                 "jet_engine": 0,
                 "jet_fighter": 0,
-                "jet_bomber": 0
+                "jet_bomber": 0,
+                "jet_transport": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -4028,11 +4088,13 @@
                 "zeppelin": 1,
                 "piston_fighter": 3,
                 "piston_bomber": 2,
+                "monoplane_transport": 2,
                 "v1_flying_bomb": 0,
                 "v2_rocket": 0,
                 "jet_engine": 0,
                 "jet_fighter": 0,
-                "jet_bomber": 0
+                "jet_bomber": 0,
+                "jet_transport": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -4327,11 +4389,13 @@
                 "zeppelin": 1,
                 "piston_fighter": 3,
                 "piston_bomber": 2,
+                "monoplane_transport": 2,
                 "v1_flying_bomb": 0,
                 "v2_rocket": 0,
                 "jet_engine": 0,
                 "jet_fighter": 0,
-                "jet_bomber": 0
+                "jet_bomber": 0,
+                "jet_transport": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -4488,11 +4552,13 @@
                 "zeppelin": 1,
                 "piston_fighter": 3,
                 "piston_bomber": 2,
+                "monoplane_transport": 2,
                 "v1_flying_bomb": 0,
                 "v2_rocket": 0,
                 "jet_engine": 0,
                 "jet_fighter": 0,
-                "jet_bomber": 0
+                "jet_bomber": 0,
+                "jet_transport": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -4598,11 +4664,13 @@
                 "zeppelin": 1,
                 "piston_fighter": 3,
                 "piston_bomber": 2,
+                "monoplane_transport": 2,
                 "v1_flying_bomb": 0,
                 "v2_rocket": 0,
                 "jet_engine": 0,
                 "jet_fighter": 0,
-                "jet_bomber": 0
+                "jet_bomber": 0,
+                "jet_transport": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -4708,11 +4776,13 @@
                 "zeppelin": 1,
                 "piston_fighter": 3,
                 "piston_bomber": 2,
+                "monoplane_transport": 2,
                 "v1_flying_bomb": 0,
                 "v2_rocket": 0,
                 "jet_engine": 0,
                 "jet_fighter": 0,
-                "jet_bomber": 0
+                "jet_bomber": 0,
+                "jet_transport": 0
             },
             "manpower": 0,
             "materials": 0,
@@ -4819,11 +4889,13 @@
                 "zeppelin": 1,
                 "piston_fighter": 3,
                 "piston_bomber": 2,
+                "monoplane_transport": 2,
                 "v1_flying_bomb": 0,
                 "v2_rocket": 0,
                 "jet_engine": 0,
                 "jet_fighter": 0,
-                "jet_bomber": 0
+                "jet_bomber": 0,
+                "jet_transport": 0
             },
             "manpower": 0,
             "materials": 0,
