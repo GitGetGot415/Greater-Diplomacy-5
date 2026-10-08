@@ -600,6 +600,8 @@ class Orders_Screen(GameState):
         records = self._batch_command_candidates("MISSION")
         if not records:
             return
+        if len(records) == 1 and self._open_loaded_transport_menu(*records[0]):
+            return
         # Keep the original selection. A later snapshot/selection change must
         # not redirect this popup's callback to different units.
         from ui.screen_runner import _run_pygame_sub_screen
@@ -633,6 +635,13 @@ class Orders_Screen(GameState):
             self.start_air_targeting(records, mission)
             return
         self._apply_selected_air_mission(records, mission)
+
+    def _open_loaded_transport_menu(self, plane, province):
+        if (not plane.get("air_cargo")
+                or "TRANSPORT" not in queries.available_air_missions(self.map_screen, plane, province)):
+            return False
+        self.open_air_transport(plane, province)
+        return True
 
     def _apply_selected_air_mission(self, records, mission):
         count = 0
@@ -1463,6 +1472,8 @@ class Orders_Screen(GameState):
             return
         unit = units[index]
         if self._command_blocked(unit) or not queries.is_air_unit(unit):
+            return
+        if self._open_loaded_transport_menu(unit, province):
             return
         enabled_missions = queries.available_air_missions(self.map_screen, unit, province)
         from ui.screen_runner import _run_pygame_sub_screen

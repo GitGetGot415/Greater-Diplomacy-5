@@ -250,6 +250,22 @@ class TransportTests(unittest.TestCase):
         screen.change_air_transport(self.plane, self.base, "RELEASE", self.cargo["unit_id"])
         self.assertIn(self.cargo, self.base["units"])
 
+    def test_loaded_transport_air_mission_button_opens_cargo_picker_directly(self):
+        self.load()
+        screen = self.screen()
+        with patch("screens.map_related_screens.orders._AirMissionSelectScreen") as mission_picker, \
+                patch("ui.screen_runner._run_pygame_sub_screen") as runner:
+            screen.open_air_mission_select(0, self.base)
+        mission_picker.assert_not_called()
+        self.assertEqual(runner.call_args.args[1].title, "Air transport")
+
+        screen._batch_command_candidates = Mock(return_value=[(self.plane, self.base)])
+        with patch("screens.map_related_screens.orders._AirMissionSelectScreen") as mission_picker, \
+                patch("ui.screen_runner._run_pygame_sub_screen") as runner:
+            screen.open_selected_air_mission_select()
+        mission_picker.assert_not_called()
+        self.assertEqual(runner.call_args.args[1].title, "Air transport")
+
     def test_cargo_picker_stays_open_and_refreshes_after_each_load(self):
         queries.air_unit_stats(self.plane)["air_transport_capacity"] = 2
         second = wing(self.base, "Fixture Cargo")
