@@ -4746,9 +4746,6 @@ def get_air_unit_traits(unit_type):
                 "Move and Transport missions only; no strikes or area defense.",
                 "Load and release your ground units on the same tile.",
                 "Cargo shares the carrier's proportional health loss.",
-                "Released units can receive movement orders immediately.",
-                "Cannot capture territory.",
-                f"Immune to {UNIT_GROUP_TANKS} damage.",
                 "Destroyed immediately when caught in ground combat."]
     strike = air_order_radius(unit, "AIR_ATTACK")
     if stats.get("air_consumable"):
@@ -4768,8 +4765,6 @@ def get_air_unit_traits(unit_type):
             traits.append("Reusable strikes return to base.")
     traits.append("Strikes damage forts." if air_unit_can_damage_forts(unit)
                   else "Strikes do not damage forts.")
-    traits.extend([f"Immune to {UNIT_GROUP_TANKS} damage; cannot capture territory.",
-                   "Destroyed immediately when caught in ground combat."])
     return traits
 
 
