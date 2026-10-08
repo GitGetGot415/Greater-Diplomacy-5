@@ -218,6 +218,7 @@ Tactical players and map editors cannot use these release controls.
 The release panel offers Integrated, Autonomous, and Independent above Keep Cores.
 Each new panel starts with Integrated selected.
 Each queued release stores its selected type. Later control changes do not change queued releases.
+Queued release text is yellow for Integrated, green for Autonomous, and light blue for Independent.
 Cancel a queued release before changing its options.
 
 All choices use the same core-territory rule and the existing country creation rules.

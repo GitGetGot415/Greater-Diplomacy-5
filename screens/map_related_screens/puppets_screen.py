@@ -223,6 +223,11 @@ class Create_Puppet_Screen(MapOverlayScreen):
     CONTENT_BOTTOM_GAP = 30
     TITLE_MARGIN = 20
     ROW_TEXT_WIDTH = 280
+    QUEUED_TEXT_COLORS = {
+        c.PUPPET_TYPE_INTEGRATED: c.COLOR_GOLD_HIGHLIGHT,
+        c.PUPPET_TYPE_AUTONOMOUS: c.COLOR_SUCCESS_GREEN,
+        c.PUPPET_RELEASE_INDEPENDENT: c.UI_ACCENT_BLUE,
+    }
 
     def __init__(self, map_screen, country_id=None):
         super().__init__(map_screen, pygame.Rect(80, 120, 450, c.SCREEN_HEIGHT - 240))
@@ -300,8 +305,10 @@ class Create_Puppet_Screen(MapOverlayScreen):
             status = f" ({entry.get('release_type', c.PUPPET_TYPE_INTEGRATED)} queued)" if entry else ""
             self.release_rows.append((name + status, entry is not None))
             row_text = fit_text(name + status, row_font, self.ROW_TEXT_WIDTH)
+            text_color = (self.QUEUED_TEXT_COLORS[entry.get("release_type", c.PUPPET_TYPE_INTEGRATED)]
+                          if entry else c.UI_TEXT_LIGHT)
             self.release_row_surfaces.append(row_font.render(
-                row_text, True, c.COLOR_GOLD_HIGHLIGHT if entry else c.UI_TEXT_LIGHT))
+                row_text, True, text_color))
             y_pos = self.panel_rect.y + self.ROW_TOP + index * self.ROW_HEIGHT + self.scroll_y
             button = Button(self.panel_rect.x + 320, y_pos, "small", "red" if entry else "green",
                             "Cancel" if entry else "Release",
