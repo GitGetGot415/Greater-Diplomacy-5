@@ -320,6 +320,18 @@ class NavigationIntroPopupTests(unittest.TestCase):
         self.assertEqual(popup.page_index, 3)
         popup.draw(surface)
 
+        # Navigate to all aircraft help pages and return to the army page.
+        for page in range(4, len(popup.PAGE_TITLES)):
+            popup.handle_event(pygame.event.Event(
+                pygame.MOUSEBUTTONDOWN, pos=popup.next_rect.center, button=1))
+            self.assertEqual(popup.page_index, page)
+            popup.draw(surface)
+        self.assertEqual(popup.page_index, len(popup.PAGE_TITLES) - 1)
+        for _page in range(popup.page_index, 3, -1):
+            popup.handle_event(pygame.event.Event(
+                pygame.MOUSEBUTTONDOWN, pos=popup.prev_rect.center, button=1))
+        self.assertEqual(popup.page_index, 3)
+
         popup.handle_event(pygame.event.Event(
             pygame.MOUSEBUTTONDOWN, pos=popup.prev_rect.center, button=1))
         self.assertEqual(popup.page_index, 2)

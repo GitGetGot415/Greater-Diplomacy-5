@@ -767,7 +767,14 @@ class MapRealtimeDriver:
         self.map_ref.player_country = "None"
 
     def validate_draft(self, country_id: str, commands: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        canonical = []
+        from data import queries
+        transport_commands = [command for command in commands
+                              if isinstance(command, dict) and command.get("type") == "air_transport"]
+        try:
+            transport_view, canonical = (queries.air_transport_draft(self.map_ref, country_id, transport_commands)
+                                         if transport_commands else (self.map_ref, []))
+        except ValueError as exc:
+            raise RealtimeError(str(exc)) from exc
         has_research_command = False
         seen = set()
         seen_units = set()
@@ -785,12 +792,14 @@ class MapRealtimeDriver:
                                         "faction_rename", "ratification_response", "army_roster"}:
                 raise RealtimeError("Only one command is allowed for that game action.")
             if kind == "unit_order":
-                validated = self._validate_unit_order(country_id, command)
+                validated = self._validate_unit_order(country_id, command, map_ref=transport_view)
                 identity = (validated["province_id"], validated["unit_index"])
                 if identity in seen_units:
                     raise RealtimeError("Only one order is allowed per unit.")
                 seen_units.add(identity)
                 canonical.append(validated)
+            elif kind == "air_transport":
+                continue  # The complete cargo projection was validated above.
             elif kind == "province_queue":
                 canonical.append(self._validate_queue(country_id, command))
             elif kind == "research_queue":
@@ -831,7 +840,8 @@ class MapRealtimeDriver:
             raise RealtimeError("Invalid army roster.")
         queries.ensure_unit_ids(self.map_ref.map_data)
         owned = {unit.get("unit_id") for province in self.map_ref.map_data.values()
-                 for unit in province.get("units", []) if unit.get("owner") == country_id}
+                 for unit in queries.units_with_air_cargo(province.get("units", []))
+                 if unit.get("owner") == country_id}
         armies, army_ids, assigned = [], set(), set()
         for raw in supplied:
             if not isinstance(raw, dict):
@@ -1307,9 +1317,13 @@ class MapRealtimeDriver:
         except (KeyError, TypeError, ValueError) as exc:
             raise RealtimeError("Unknown province in order.") from exc
 
-    def _validate_unit_order(self, country_id: str, command: dict[str, Any]) -> dict[str, Any]:
+    def _validate_unit_order(self, country_id: str, command: dict[str, Any], *, map_ref=None) -> dict[str, Any]:
         from data import queries
-        province = self._province(command.get("province_id"))
+        map_ref = self.map_ref if map_ref is None else map_ref
+        try:
+            province = queries.province_for_order(map_ref, command.get("province_id"))
+        except ValueError as exc:
+            raise RealtimeError(str(exc)) from exc
         index = command.get("unit_index")
         unit_id = command.get("unit_id")
         if unit_id is not None:
@@ -1325,7 +1339,7 @@ class MapRealtimeDriver:
         order = command.get("order")
         if order is not None and not isinstance(order, dict):
             raise RealtimeError("Invalid unit order.")
-        canonical_order = self._canonical_unit_order(country_id, province, unit, order)
+        canonical_order = self._canonical_unit_order(country_id, province, unit, order, map_ref=map_ref)
         custom_name = command.get("custom_name")
         if custom_name is not None and (not isinstance(custom_name, str) or len(custom_name.strip()) > 120
                                         or any(ord(character) < 32 for character in custom_name)):
@@ -1339,16 +1353,17 @@ class MapRealtimeDriver:
                                         or not queries.are_at_war(country_id, lane_target, self.map_ref.nation_data)):
             raise RealtimeError("Invalid battle lane target.")
         return {"type": "unit_order", "province_id": province["id"],
-                "unit_index": index, "order": canonical_order,
+                "unit_index": index, "unit_id": unit.get("unit_id"), "order": canonical_order,
                 "custom_name": custom_name.strip() if isinstance(custom_name, str) and custom_name.strip() else None,
                 "combat_stance": stance, "lane_target": lane_target}
 
     def _canonical_unit_order(self, country_id: str, province: dict[str, Any], unit: dict[str, Any],
-                              order: dict[str, Any] | None) -> dict[str, Any] | None:
+                              order: dict[str, Any] | None, *, map_ref=None) -> dict[str, Any] | None:
         """Use the same rule as tournament's host-validated aircraft orders."""
         from data import queries
         try:
-            return queries.canonical_unit_order(self.map_ref, country_id, province, unit, order)
+            return queries.canonical_unit_order(self.map_ref if map_ref is None else map_ref,
+                                                country_id, province, unit, order)
         except ValueError as exc:
             raise RealtimeError(str(exc)) from exc
 
@@ -1530,10 +1545,16 @@ class MapRealtimeDriver:
     def process_turn(self, drafts: dict[str, list[dict[str, Any]]]) -> None:
         for country_id, commands in drafts.items():
             country_data = self.map_ref.nation_data[country_id]
+            from data import queries
+            queries.apply_air_transport_commands(self.map_ref, country_id,
+                [command for command in commands if command["type"] == "air_transport"])
             for command in commands:
+                if command["type"] == "air_transport":
+                    continue
                 if command["type"] == "unit_order":
                     province = self._province(command["province_id"])
-                    unit = province["units"][command["unit_index"]]
+                    unit = (next(u for u in province["units"] if u.get("unit_id") == command["unit_id"])
+                            if command.get("unit_id") else province["units"][command["unit_index"]])
                     order = command["order"]
                     if isinstance(order, dict) and order.get("type") == "REPAIR":
                         from data import queries
@@ -1684,7 +1705,9 @@ def collect_map_commands(map_ref, country_id: str) -> list[dict[str, Any]]:
     This deliberately reads only player choices, never mutable combat,
     resource, research-progress, or claim-timer fields from the client map.
     """
-    commands: list[dict[str, Any]] = []
+    from data import queries
+    queries.ensure_unit_ids(map_ref.map_data)
+    commands: list[dict[str, Any]] = queries.air_transport_commands(map_ref, country_id)
     for province in map_ref.map_data.values():
         for index, unit in enumerate(province.get("units", [])):
             if unit.get("owner") == country_id:

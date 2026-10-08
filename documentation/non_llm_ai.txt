@@ -68,7 +68,8 @@ Shared queries read aircraft capabilities from the current unit library.
 queries.air_order_radius calculates reach for each order type.
 air_consumable and air_interception_immune control strike consumption and interception eligibility.
 
-The mission selector offers No mission, Move, Strike, and Defend area with weakest, strongest, or random priority.
+The mission selector offers No mission, Move, Strike, Transport, and Defend area.
+Defend area uses weakest, strongest, or random priority.
 All choices stay visible. Unavailable missions and flight from an invalid base are disabled.
 Move and Strike start target selection while preserving the current order.
 Use a left-click or the configured move-order click to select a valid target.
@@ -93,6 +94,11 @@ Air Move shows relocation, including a one-use weapon's ground path.
 No Mission shows an idle aircraft.
 The upgrade button uses the shared numbered-family upgrade helper.
 Named aircraft designs remain separate production unlocks.
+air_transport_capacity defines cargo capability and capacity.
+Transport aircraft use only Move and Transport missions.
+Their purchase and research value uses capacity and range. They have a separate transport role.
+Cargo stays outside map stacks and combat. Upkeep and army membership include cargo.
+See documentation/air_stuff.txt for cargo controls, damage, saves, and multiplayer commands.
 
 Set Mission applies a choice to eligible aircraft in the selected group.
 The button opens the selector even when selected aircraft have active missions.

@@ -17,6 +17,7 @@ air_attack_multiplier
 air_consumable
 air_interception_immune
 air_damages_forts
+air_transport_capacity
 
 production_group is display metadata.
 A missing air_damages_forts flag means the unit cannot damage forts.
@@ -118,6 +119,7 @@ The air mission button offers these choices:
 - No mission.
 - Move, then select a destination.
 - Strike, then select a target.
+- Transport, then select a unit to load or release.
 - Defend area, weakest enemy missions first.
 - Defend area, strongest enemy missions first.
 - Defend area, random enemy missions first.
@@ -185,7 +187,8 @@ The upgrade icon uses existing numbered-family upgrades.
 Numbered aircraft can upgrade to the highest researched level in their current family.
 Upgrades require an industry building and cannot start or finish in combat.
 Aircraft cannot upgrade into a different family.
-Mission controls add no new save fields or network command kinds.
+Combat mission controls use the existing per-unit order commands.
+Transport uses the saved air_cargo field and explicit cargo commands.
 
 Group missions
 --------------
@@ -202,10 +205,55 @@ Target selection preserves all captured orders if any captured unit or destinati
 Group strikes also use the configured move-order click on a hostile target.
 Each selected unit must have a legal order to that destination.
 If any unit cannot reach it, the whole movement command preserves existing orders.
-Group actions use existing per-unit multiplayer commands.
+Group flight and defense actions use existing per-unit multiplayer commands.
+Group Transport first selects a carrier when several eligible carriers are selected.
 
 queries.air_unit_can_patrol determines defense eligibility from the current unit library.
 Unit data defines aircraft air-to-air modifiers.
+
+Air cargo
+---------
+
+air_transport_capacity defines how many ground units an aircraft can carry.
+Transport aircraft can use Move and Transport. They cannot strike or defend an area.
+Their movement radius uses the listed air_range_px value.
+Other reusable aircraft retain their existing relocation radius calculation.
+Unavailable missions remain visible and disabled.
+
+Select Transport to open the cargo picker.
+Load only your ground units on the carrier's tile.
+Aircraft and ships cannot be cargo. A ship converted into a Truck can be cargo.
+Load and release require land outside ground combat.
+Cancel a unit's paid order before loading it.
+The tactical player's division cannot be loaded by another unit.
+
+The carrier's air_cargo list stores complete unit records.
+Cargo leaves the province unit list. It cannot move, fight, or receive ground orders while loaded.
+Cargo retains its identity, health, upkeep, and army membership.
+Move carries cargo to the carrier's landing tile.
+Select Transport again to release a unit there.
+Released units can receive and execute movement orders immediately.
+Loading and releasing in the same planning phase does not consume movement.
+
+Cargo damage equals cargo current health multiplied by carrier health loss divided by carrier health before the loss.
+Carrier destruction also destroys its cargo.
+Carrier repairs do not repair cargo.
+Release cargo before disbanding the carrier.
+
+Air Transport is the mission icon while any cargo remains aboard.
+Move, target selection, and order cancellation do not replace this icon.
+An empty carrier uses its current order's icon.
+Presentation caches refresh when cargo changes.
+
+Saves store air_cargo inside each carrier. Older units without this field have no cargo.
+Stat migration and identity repair include cargo.
+Tournament moves carry air_transport commands with plane_id, province_id, and cargo_ids.
+Real-time drafts carry the same commands with type air_transport.
+Hosts validate identities, ownership, base, ground-unit form, and capacity before applying a complete cargo draft.
+Cargo commands never replace host unit statistics.
+Released cargo orders use the same host validation as other unit orders.
+Both multiplayer systems remove foreign cargo from player projections.
+Public tournament spectators also receive no cargo records.
 
 Resolution and transport
 ------------------------

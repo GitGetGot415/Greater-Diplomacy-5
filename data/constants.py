@@ -1118,6 +1118,7 @@ AIR_MISSION_CHOICES = (
     ("NONE", "No mission", "No Mission"),
     ("MOVE", "Move (select a destination)", "Air Move"),
     ("STRIKE", "Strike (select a target)", "Strike Selected"),
+    ("TRANSPORT", "Transport (load or release ground units)", "Air Transport"),
     ("WEAKEST", "Defend area (weakest enemy missions targeted first)", "Weakest First"),
     ("STRONGEST", "Defend area (strongest enemy missions targeted first)", "Strongest First"),
     ("RANDOM", "Defend area (random enemy mission targeted first)", "Random First"),
@@ -1837,6 +1838,7 @@ AI_MAX_REPAIR_TRIPS = 2
 #    more than its stats suggest
 AI_W_OFFENSE = 1.0
 AI_W_DURABILITY = 1.0
+AI_W_TRANSPORT = 0.1  # Cargo capacity and flight reach determine transport utility.
 # Flat, not scaled by health: damage is divided by the number of defenders in the
 # lane, so every body in the front rank thins the volley for that rank by the
 # same amount whatever it is made of. A body PAST the front thins nothing at all
@@ -1890,6 +1892,7 @@ AI_LINE_SPEND_RATIO = 1.0
 # reserve stacks are the formation the lane model encourages.
 AI_BOMBARD_SPEND_RATIO = 0.25
 AI_AIR_SPEND_RATIO = 0.25
+AI_TRANSPORT_SPEND_RATIO = 0.05
 AI_MIN_ROLE_TARGET = 2.0    # even a landlocked one-province nation wants a couple of each
 
 # A unit is ASSAULT when this much of its combat value comes from attack rather

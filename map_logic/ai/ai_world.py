@@ -136,7 +136,8 @@ class AIWorld:
                 if u_owner:
                     self.units_by_owner[u_owner].append((u, prov))
                     self._military[u_owner] = (self._military.get(u_owner, 0)
-                                               + queries.calculate_unit_strength(u))
+                                               + sum(queries.calculate_unit_strength(member)
+                                                     for member in queries.units_with_air_cargo([u])))
 
             if queries.is_province_in_active_combat(prov, nation_data):
                 self.combat_tiles.add(prov_id)

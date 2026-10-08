@@ -119,6 +119,7 @@ def _air_patrol_threats(map_screen, country, visible):
 
 def _assign_air_orders(map_screen, country, units_info):
     """Reusable aircraft fly; one-use weapons relocate through legal land paths."""
+    all_units_info = units_info
     units_info = [(unit, base) for unit, base in units_info
                   if queries.is_air_unit(unit) or queries.is_air_transport(unit)]
     if not units_info:
@@ -214,6 +215,9 @@ def _assign_air_orders(map_screen, country, units_info):
             unit["order"] = min(safe_repositions, key=lambda order: (
                 queries.air_distance_squared(map_screen, base, order["target_id"]), order["target_id"]))
             continue
+        if queries.air_unit_can_transport(unit):
+            _assign_air_transport(map_screen, country, unit, base, safe_repositions, enemies, all_units_info)
+            continue
         if base["id"] not in threatened and queries.has_industry(base):
             target = queries.get_upgrade_target(unit["type"], research, unit_library, tech_tree)
             if target:
@@ -295,6 +299,36 @@ def _assign_air_orders(map_screen, country, units_info):
             unit["order"] = patrol
             for target_id in queries.get_air_targets(map_screen, unit, base, "AIR_PATROL"):
                 patrol_cover.setdefault(target_id, []).append(unit)
+
+def _assign_air_transport(map_screen, country, plane, base, repositions, enemies, units_info):
+    """Carry ground reinforcements toward visible enemies through safe land bases."""
+    cargo = plane.get("air_cargo", [])
+    target = min(enemies, key=lambda p: (queries.air_distance_squared(map_screen, base, p["id"]), p["id"])) if enemies else None
+    destination = min(repositions, key=lambda order: (
+        queries.air_distance_squared(map_screen, map_screen.id_to_province[order["target_id"]], target["id"]),
+        order["target_id"])) if target and repositions else None
+    improves = destination and queries.air_distance_squared(
+        map_screen, map_screen.id_to_province[destination["target_id"]], target["id"]) < queries.air_distance_squared(
+            map_screen, base, target["id"])
+    if cargo and not improves:
+        released = list(cargo)
+        queries.set_air_cargo(map_screen, country, plane, base, [])
+        units_info.extend((unit, base) for unit in released)
+        return
+    if not improves:
+        return
+    if not cargo:
+        candidates = [unit for unit in base.get("units", []) if queries.air_cargo_is_eligible(plane, unit)
+                      and not queries.is_tactical_player_unit(map_screen, unit)
+                      and not queries.unit_has_active_order(unit)]
+        candidates.sort(key=queries.calculate_unit_strength, reverse=True)
+        selected = candidates[:queries.air_transport_capacity(plane)]
+        if not selected:
+            return
+        queries.ensure_unit_ids(map_screen.map_data)
+        queries.set_air_cargo(map_screen, country, plane, base, [unit["unit_id"] for unit in selected])
+    plane["order"] = destination
+
 
 def build_neighbor_index(id_to_province):
     """Maps each tile to its neighbours that actually exist on the map.
@@ -1744,7 +1778,8 @@ def _generate_unit_orders(map_screen):
 
         _assign_air_orders(map_screen, ai_name, units_info)
         units_info = [(unit, base) for unit, base in units_info
-                      if not queries.is_air_unit(unit) and not queries.is_air_transport(unit)]
+                      if not queries.is_air_unit(unit) and not queries.is_air_transport(unit)
+                      and any(current is unit for current in base.get("units", []))]
         if not units_info:
             continue
 

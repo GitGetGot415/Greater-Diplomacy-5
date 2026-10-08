@@ -35,6 +35,7 @@ heuristic AI.
 """
 
 import collections
+import math
 from types import SimpleNamespace
 
 import data.constants as c
@@ -47,9 +48,10 @@ ROLE_LINE = "LINE"          # the relief rank: holds the tile, rotates into the 
 ROLE_BOMBARD = "BOMBARD"    # shells from outside every lane, the only thing that reaches a reserve
 ROLE_NAVAL = "NAVAL"
 ROLE_AIR = "AIR"
+ROLE_TRANSPORT = "TRANSPORT"
 
 LAND_ROLES = (ROLE_ASSAULT, ROLE_LINE, ROLE_BOMBARD)
-ALL_ROLES = LAND_ROLES + (ROLE_NAVAL, ROLE_AIR)
+ALL_ROLES = LAND_ROLES + (ROLE_NAVAL, ROLE_AIR, ROLE_TRANSPORT)
 
 #: One unit's worth to one nation this turn.
 #: `score` is value per unit of resource pain; `pain` is what it costs in those
@@ -349,7 +351,10 @@ def evaluate(names, unit_library, ctx):
         combat = (offense + c.AI_W_DURABILITY * (durability / mean_durability)
                   + c.AI_W_SOAK * soak_share)
 
-        if stats.get("air_role"):
+        if stats.get("air_transport_capacity", 0) > 0:
+            # Transport utility comes from capacity and reach, not combat stats.
+            combat = c.AI_W_TRANSPORT * stats["air_transport_capacity"] * math.log1p(stats.get("air_range_px", 0))
+        elif stats.get("air_role"):
             # Interception bonuses apply before defense, only against aircraft.
             air_bonus = queries.unit_target_damage_multiplier(
                 {"type": name}, {"type": name}, air_to_air=True, unit_library=unit_library)
@@ -366,7 +371,9 @@ def evaluate(names, unit_library, ctx):
             combat += c.AI_W_BOMBARD * (bombard_attack / mean_attack) * bomb_range
 
         naval = bool(stats.get("naval_unit", False))
-        if stats.get("air_role"):
+        if stats.get("air_transport_capacity", 0) > 0:
+            role = ROLE_TRANSPORT
+        elif stats.get("air_role"):
             role = ROLE_AIR
         elif bomb_range and not naval:
             role = ROLE_BOMBARD
@@ -460,6 +467,7 @@ def role_targets(ctx, naval_need, values=None):
             ROLE_BOMBARD: max(c.AI_MIN_ROLE_TARGET, width_cap * c.AI_BOMBARD_SPEND_RATIO),
             ROLE_NAVAL: max(0.0, naval_need),
             ROLE_AIR: max(c.AI_MIN_ROLE_TARGET, width_cap * c.AI_AIR_SPEND_RATIO),
+            ROLE_TRANSPORT: max(c.AI_MIN_ROLE_TARGET, frontline * c.AI_TRANSPORT_SPEND_RATIO),
         }
 
     shares = {
@@ -469,6 +477,9 @@ def role_targets(ctx, naval_need, values=None):
         ROLE_AIR: c.AI_AIR_SPEND_RATIO,
     }
     total_share = sum(shares.values())
+    if any(value.role == ROLE_TRANSPORT for value in values.values()):
+        shares[ROLE_TRANSPORT] = c.AI_TRANSPORT_SPEND_RATIO
+        total_share = sum(shares.values())
 
     targets = {}
     for role, share in shares.items():

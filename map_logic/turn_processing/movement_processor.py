@@ -51,6 +51,10 @@ def process_disbands(map_screen):
         for unit in province.get("units", []):
             order = unit.get("order")
             if isinstance(order, dict) and order.get("type") == "DISBAND":
+                if unit.get("air_cargo"):
+                    unit["order"] = {"type": "MOVE", "path": []}
+                    units_to_keep.append(unit)
+                    continue
                 order["turns_left"] -= 1
 
                 if order["turns_left"] <= 0:

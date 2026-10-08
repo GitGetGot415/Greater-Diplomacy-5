@@ -307,6 +307,8 @@ def _disband_worst_unit_if_deficit(map_screen, data, my_provs, ai_name, deficits
         for u in prov.get("units", []):
             if u.get("owner") != ai_name or u.get("order", {}).get("type") == "DISBAND":
                 continue
+            if u.get("air_cargo"):
+                continue
             if u is protected:
                 continue
             u_type = u.get("type", "")
@@ -442,7 +444,7 @@ def _panic_militia_and_tally_forces(map_screen, ai_name, data, my_provs, unit_li
         # key holds the unit's name. Bucketed by the role the unit's own stats
         # put it in, rather than by ai_force_category's substring match on the
         # name, so a renamed or newly added unit counts as whatever it is.
-        standing = [u.get("type", "") for u in prov.get("units", [])
+        standing = [u.get("type", "") for u in queries.units_with_air_cargo(prov.get("units", []))
                     if u.get("owner") == ai_name]
         ordered = [q.get("unit_type", "") for q in prov.get("unit_queue", [])]
         for u_type in standing + ordered:

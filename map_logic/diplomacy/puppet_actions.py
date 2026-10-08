@@ -176,7 +176,7 @@ def finalize_annexation(map_data, nation_data, master, puppet, map_screen):
             edit_province_ownership.conquer_province(map_screen, prov, master)
         for unit in prov.get("units", []):
             if unit.get("owner") == puppet:
-                unit["owner"] = master
+                queries.set_unit_owner(unit, master)
 
     # Every province above went through conquer_province, which retires the
     # loser once its last one changes hands -- but a puppet that already held

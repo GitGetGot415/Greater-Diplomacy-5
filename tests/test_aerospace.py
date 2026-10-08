@@ -90,7 +90,8 @@ class AerospaceRulesTests(unittest.TestCase):
                 continue
             with self.subTest(unit=name):
                 self.assertEqual(queries.air_unit_can_patrol({"type": name}),
-                                 not stats.get("air_consumable", False))
+                                 not stats.get("air_consumable", False)
+                                 and not stats.get("air_transport_capacity", 0))
                 self.assertEqual(queries.air_unit_can_damage_forts({"type": name}),
                                  bool(stats.get("air_damages_forts", False)))
 
@@ -193,8 +194,8 @@ class AerospaceRulesTests(unittest.TestCase):
                     continue
                 with mock.patch.object(queries, "air_order_radius", wraps=queries.air_order_radius) as radius:
                     traits = queries.get_air_unit_traits(name)
-                expected = {"AIR_ATTACK"}
                 stats = queries.get_unit_library()[name]
+                expected = set() if stats.get("air_transport_capacity", 0) else {"AIR_ATTACK"}
                 if not stats.get("air_consumable"):
                     expected.add("AIR_REPOSITION")
                 if queries.air_unit_can_patrol({"type": name}):

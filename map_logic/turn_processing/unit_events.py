@@ -132,7 +132,8 @@ def mark_unread(map_screen):
 def _state(map_screen):
     return {id(unit): (unit, province["id"], unit.get("type", ""),
                       unit.get("health", 0))
-            for province in map_screen.map_data.values() for unit in province.get("units", [])}
+            for province in map_screen.map_data.values()
+            for unit in queries.units_with_air_cargo(province.get("units", []))}
 
 
 class _TurnRecorder:
@@ -289,17 +290,9 @@ def set_locations(province, units):
     """Update combat locations during movement without losing the initial position."""
     recorder = _RECORDER.get()
     if recorder is not None:
-        for unit in units:
+        for unit in queries.units_with_air_cargo(units):
             recorder.locations[id(unit)] = province["id"]
         recorder.visibility.clear()
-
-
-def record_grounded_air_loss(unit, enemies, nation_data):
-    recorder = _RECORDER.get()
-    if recorder is not None and id(unit) in recorder.state:
-        sources = [(enemy, 1) for enemy in enemies if enemy is not unit and queries.are_at_war(
-            queries.get_unit_combat_owner(unit), queries.get_unit_combat_owner(enemy), nation_data)]
-        recorder.damage(unit, max(0, unit.get("health", 0)), sources, recorder.tile(unit))
 
 
 def record_expended(unit, tile):

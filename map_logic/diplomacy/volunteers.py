@@ -104,7 +104,7 @@ def total_divisions(map_screen, donor):
     """The donor's land divisions, including those temporarily off-map."""
     count = 0
     for province in map_screen.map_data.values():
-        count += sum(1 for unit in province.get("units", [])
+        count += sum(1 for unit in queries.units_with_air_cargo(province.get("units", []))
                      if unit.get("owner") == donor and _is_land(unit))
     for mission in missions(map_screen.nation_data, donor).values():
         count += sum(1 for entry in mission.get("held_units", [])

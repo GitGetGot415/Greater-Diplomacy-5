@@ -208,6 +208,9 @@ Malformed older scenario data must not cause endless recursion.
 Government in exile
 -------------------
 
+Air cargo keeps its owner during flight. It still counts toward the owner's land division total.
+Annexation and tactical independence transfer a carrier and its cargo to the same country.
+
 A faction member that loses its last province remains in the faction as a government in exile.
 It keeps its units, faction wars, diplomacy, leadership, and faction pre-war border record.
 Exile is derived from faction membership and lack of territory.

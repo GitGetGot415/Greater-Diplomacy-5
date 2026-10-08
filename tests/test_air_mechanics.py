@@ -123,7 +123,8 @@ class RangeTests(unittest.TestCase):
 
     def test_reusable_strike_and_patrol_match_listed_range_and_half_reposition(self):
         for name, stats in queries.get_unit_library().items():
-            if not stats.get("air_role") or stats.get("air_consumable"):
+            if (not stats.get("air_role") or stats.get("air_consumable")
+                    or stats.get("air_transport_capacity", 0)):
                 continue
             with self.subTest(unit=name):
                 unit = {"type": name}
@@ -1391,7 +1392,7 @@ class AirMissionSelectionTests(unittest.TestCase):
                         patch("ui.screen_runner._run_pygame_sub_screen"):
                     self.screen.open_air_mission_select(0, self.base)
                 choices = [choice[0] for choice in popup.call_args.args[1]]
-                self.assertEqual(choices, ["NONE", "MOVE", "STRIKE", *queries.AIR_INTERCEPTION_PRIORITIES])
+                self.assertEqual(choices, ["NONE", "MOVE", "STRIKE", "TRANSPORT", *queries.AIR_INTERCEPTION_PRIORITIES])
                 expected = {"NONE", "MOVE", "STRIKE"}
                 if queries.air_unit_can_patrol(self.unit):
                     expected.update(queries.AIR_INTERCEPTION_PRIORITIES)
@@ -1656,7 +1657,7 @@ class GroupAirMissionSelectionTests(unittest.TestCase):
                 continue
             with self.subTest(unit=name):
                 unit = {"type": name, "owner": "A"}
-                expected = not stats.get("air_consumable", False)
+                expected = not stats.get("air_consumable", False) and not stats.get("air_transport_capacity", 0)
                 self.assertEqual(queries.air_unit_can_patrol(unit), expected)
                 candidates = ai_movement.legal_air_candidates(self.game, unit, self.base)
                 self.assertEqual(any(order["type"] == "AIR_PATROL" for order in candidates), expected)
@@ -2114,7 +2115,7 @@ class AirAppSmokeTests(unittest.TestCase):
                     self.assertEqual(popup.choices, c.AIR_MISSION_CHOICES)
                     for index, (mission, _label, _icon) in enumerate(popup.choices):
                         button = popup.elements[index]
-                        unavailable = mission in queries.AIR_INTERCEPTION_PRIORITIES or (
+                        unavailable = mission == "TRANSPORT" or mission in queries.AIR_INTERCEPTION_PRIORITIES or (
                             invalid_base and mission in ("MOVE", "STRIKE"))
                         self.assertEqual(button.disabled, unavailable)
                         self.assertTrue(button.visible)

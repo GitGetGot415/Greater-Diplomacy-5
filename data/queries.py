@@ -761,7 +761,7 @@ def get_military_strength(nation, map_data):
     """Calculates rough military strength of a nation based on unit stats."""
     strength = 0
     for prov in map_data.values():
-        for u in prov.get("units", []):
+        for u in units_with_air_cargo(prov.get("units", [])):
             if u.get("owner") == nation:
                 strength += calculate_unit_strength(u)
     return strength
@@ -2296,7 +2296,7 @@ def calculate_all_economies(map_data, nation_data):
                     bd["materials"]["buildings"] += int(yield_mat * building_mult)
 
         # --- UPKEEP LOGIC ---
-        for unit in province.get("units", []):
+        for unit in units_with_air_cargo(province.get("units", [])):
             u_owner = unit.get("owner")
             if u_owner in econ_data:
                 # FETCH ORIGINAL TYPE SO WE KEEP CHARGING UPKEEP DURING TRANSIT
@@ -2513,7 +2513,7 @@ def ensure_unit_ids(map_data):
     """
     seen, added = set(), []
     for province in (map_data or {}).values():
-        for unit in province.get("units", []) if isinstance(province, dict) else ():
+        for unit in units_with_air_cargo(province.get("units", [])) if isinstance(province, dict) else ():
             unit_id = unit.get("unit_id")
             if not isinstance(unit_id, str) or not unit_id or unit_id in seen:
                 unit_id = uuid.uuid4().hex
@@ -2529,7 +2529,7 @@ def _army_unit_ids_by_owner(map_data):
     """Return the live persistent unit IDs indexed by their owning country."""
     owners = {}
     for province in (map_data or {}).values():
-        for unit in province.get("units", []) if isinstance(province, dict) else ():
+        for unit in units_with_air_cargo(province.get("units", [])) if isinstance(province, dict) else ():
             owner, unit_id = unit.get("owner"), unit.get("unit_id")
             if isinstance(owner, str) and isinstance(unit_id, str) and unit_id:
                 owners.setdefault(owner, set()).add(unit_id)
@@ -3120,7 +3120,7 @@ def migrate_units_to_current_stats(map_data, unit_library):
     balance patch they were created under.
     """
     for province in map_data.values():
-        for unit in province.get("units", []):
+        for unit in units_with_air_cargo(province.get("units", [])):
             stats = unit_library.get(unit.get("type"))
             if not stats:
                 continue
@@ -3388,7 +3388,7 @@ def player_snapshot_projection(map_screen, snapshot, country_id):
                 unit, country_id, original, map_screen.nation_data)]
         for unit in province["units"]:
             if unit.get("owner") != country_id:
-                for field in ("order", "combat_stance", "lane_target", "repair_trip"):
+                for field in ("order", "combat_stance", "lane_target", "repair_trip", "air_cargo"):
                     unit.pop(field, None)
         if original.get("owner") != country_id:
             for field in ("building_queue", "unit_queue", "orders"):
@@ -4315,7 +4315,7 @@ def build_active_unit_counters(map_data):
     """Sweeps the map and returns a dictionary of current unit counts for accurate naming."""
     unit_counters = {}
     for prov in map_data.values():
-        for unit in prov.get("units", []):
+        for unit in units_with_air_cargo(prov.get("units", [])):
             owner = unit.get("owner", "Unclaimed")
             base_name = get_formatted_division_name(unit.get("type", "Infantry"))
             unit_counters.setdefault(owner, {})[base_name] = unit_counters.setdefault(owner, {}).get(base_name, 0) + 1
@@ -4393,8 +4393,173 @@ def air_stack_attack_efficiency(aircraft_count):
 
 
 def air_unit_can_patrol(unit):
-    """Reusable aircraft can defend an area; one-use air weapons cannot."""
-    return is_air_unit(unit) and not air_unit_stats(unit).get("air_consumable", False)
+    """Reusable combat aircraft can defend an area."""
+    return (is_air_unit(unit) and not air_unit_stats(unit).get("air_consumable", False)
+            and not air_unit_can_transport(unit))
+
+
+def air_transport_capacity(unit):
+    """Read cargo capacity from the current aircraft data."""
+    stats = air_unit_stats(unit)
+    return max(0, int(stats.get("air_transport_capacity", 0))) if stats.get("air_role") else 0
+
+
+def air_unit_can_transport(unit):
+    return air_transport_capacity(unit) > 0
+
+
+def air_unit_can_strike(unit):
+    return is_air_unit(unit) and not air_unit_can_transport(unit)
+
+
+def units_with_air_cargo(units):
+    """Include cargo for identity, upkeep, persistence, and casualty records."""
+    for unit in units:
+        yield unit
+        yield from unit.get("air_cargo", [])
+
+
+def set_unit_owner(unit, country_id):
+    """Transfer a unit and all its cargo to the same country."""
+    for member in units_with_air_cargo([unit]):
+        member["owner"] = country_id
+
+
+def air_cargo_is_eligible(plane, cargo):
+    """A carrier accepts living ground units controlled by the same country."""
+    return (cargo is not plane and cargo.get("health", 0) > 0
+            and cargo.get("owner") == plane.get("owner")
+            and get_unit_combat_owner(cargo) == get_unit_combat_owner(plane)
+            and unit_display_domain(cargo) == "LAND" and not is_air_transport(cargo)
+            and not cargo.get("air_cargo"))
+
+
+def set_air_cargo(map_screen, country_id, plane, base, cargo_ids):
+    """Apply a validated cargo roster without using any client unit statistics."""
+    if (map_screen.id_to_province.get(base["id"]) is not base
+            or not any(unit is plane for unit in base.get("units", []))
+            or plane.get("owner") != country_id or plane.get("health", 0) <= 0
+            or not air_unit_can_transport(plane)):
+        raise ValueError("Transport requires your aircraft at its current base.")
+    if (not isinstance(cargo_ids, list) or any(not isinstance(uid, str) or not uid for uid in cargo_ids)
+            or len(set(cargo_ids)) != len(cargo_ids)):
+        raise ValueError("Invalid or duplicate cargo identities.")
+    previous = plane.get("air_cargo", [])
+    previous_ids = [unit["unit_id"] for unit in previous]
+    if cargo_ids == previous_ids:
+        return
+    if len(cargo_ids) > air_transport_capacity(plane):
+        raise ValueError("The transport aircraft has insufficient cargo capacity.")
+    if not air_unit_can_launch(map_screen, plane, base):
+        raise ValueError("Load or release cargo on land outside ground combat.")
+    available = {unit["unit_id"]: unit for unit in base.get("units", []) + previous}
+    selected = []
+    for uid in cargo_ids:
+        cargo = available.get(uid)
+        if cargo is None or not air_cargo_is_eligible(plane, cargo):
+            raise ValueError("Cargo must be your ground unit on the aircraft's tile.")
+        if is_tactical_player_unit(map_screen, cargo):
+            raise ValueError("The tactical player's division cannot be loaded by another unit.")
+        selected.append(cargo)
+    selected_ids = set(cargo_ids)
+    for cargo in selected:
+        if cargo["unit_id"] not in previous_ids:
+            # A loaded unit cannot execute a ground order or retain a paid repair.
+            order = cargo.get("order") or {}
+            if order.get("refund"):
+                raise ValueError("Cancel the cargo unit's paid order before loading it.")
+    for cargo in previous:
+        if cargo["unit_id"] not in selected_ids:
+            cargo["order"] = {"type": "MOVE", "path": []}
+            cargo.pop("_combat_locked", None)
+            base["units"].append(cargo)
+    base["units"][:] = [unit for unit in base["units"] if unit["unit_id"] not in selected_ids]
+    for cargo in selected:
+        cargo["order"] = {"type": "MOVE", "path": []}
+        cargo.pop("combat_stance", None)
+        cargo.pop("lane_target", None)
+    plane["air_cargo"] = selected
+
+
+def air_transport_commands(map_screen, country_id):
+    """Serialize cargo identities, including empty rosters that release cargo."""
+    return [{"type": "air_transport", "plane_id": plane["unit_id"],
+             "province_id": base["id"],
+             "cargo_ids": [unit["unit_id"] for unit in plane.get("air_cargo", [])]}
+            for base in map_screen.map_data.values() for plane in base.get("units", [])
+            if plane.get("owner") == country_id and air_unit_can_transport(plane)]
+
+
+def apply_air_transport_commands(map_screen, country_id, commands):
+    """Validate a complete transport draft before applying it to host state."""
+    from types import SimpleNamespace
+    if not isinstance(commands, list):
+        raise ValueError("Invalid transport commands.")
+    if not commands:
+        return []
+    data = copy.deepcopy(map_screen.map_data)
+    draft = SimpleNamespace(map_data=data, id_to_province={p["id"]: p for p in data.values()},
+                            nation_data=map_screen.nation_data, tactical_mode=False, player_unit=None)
+    seen, assigned, canonical = set(), set(), []
+    for command in commands:
+        if not isinstance(command, dict) or not isinstance(command.get("plane_id"), str):
+            raise ValueError("Invalid transport aircraft identity.")
+        uid = command["plane_id"]
+        if uid in seen:
+            raise ValueError("Duplicate transport aircraft command.")
+        seen.add(uid)
+        base = province_for_order(draft, command.get("province_id"))
+        plane = next((u for u in base.get("units", []) if u.get("unit_id") == uid), None)
+        if plane is None:
+            raise ValueError("The transport aircraft is no longer at its base.")
+        cargo_ids = command.get("cargo_ids")
+        if (command.get("type") != "air_transport" or not isinstance(cargo_ids, list)
+                or any(not isinstance(cid, str) or not cid for cid in cargo_ids)
+                or len(set(cargo_ids)) != len(cargo_ids) or assigned.intersection(cargo_ids)):
+            raise ValueError("Invalid or duplicate cargo assignment.")
+        assigned.update(cargo_ids)
+        canonical.append({"type": "air_transport", "plane_id": uid, "province_id": base["id"],
+                          "cargo_ids": list(cargo_ids)})
+    # Release first, so a transfer between carriers is independent of row order.
+    _apply_air_cargo_rosters(draft, country_id, canonical)
+    # All checks completed on a copy. Apply the same changes to live identities.
+    _apply_air_cargo_rosters(map_screen, country_id, canonical)
+    return canonical
+
+
+def _apply_air_cargo_rosters(map_screen, country_id, canonical):
+    for command in canonical:
+        base = map_screen.id_to_province[command["province_id"]]
+        plane = next(u for u in base["units"] if u["unit_id"] == command["plane_id"])
+        retained = [u["unit_id"] for u in plane.get("air_cargo", []) if u["unit_id"] in command["cargo_ids"]]
+        set_air_cargo(map_screen, country_id, plane, base, retained)
+    for command in canonical:
+        base = map_screen.id_to_province[command["province_id"]]
+        plane = next(u for u in base["units"] if u["unit_id"] == command["plane_id"])
+        set_air_cargo(map_screen, country_id, plane, base, command["cargo_ids"])
+
+
+def air_transport_draft(map_screen, country_id, commands):
+    """Create a transport projection for order validation without changing state."""
+    draft = copy.copy(map_screen)
+    draft.map_data = copy.deepcopy(map_screen.map_data)
+    draft.id_to_province = {p["id"]: p for p in draft.map_data.values()}
+    canonical = apply_air_transport_commands(draft, country_id, commands)
+    return draft, canonical
+
+
+def apply_unit_health_loss(unit, damage, *, sources=None, tile=None):
+    """Cargo loses the same fraction of current health as its carrier."""
+    from map_logic.turn_processing import unit_events
+    health = max(0, unit.get("health", 0))
+    loss = min(health, max(0, damage))
+    unit_events.record_damage(unit, loss, sources, tile)
+    if health:
+        for cargo in unit.get("air_cargo", []):
+            apply_unit_health_loss(cargo, cargo.get("health", 0) * loss / health,
+                                   sources=sources, tile=tile)
+    unit["health"] = health - loss
+    return loss
 
 
 def air_unit_can_launch(map_screen, unit, base):
@@ -4434,7 +4599,11 @@ def available_air_missions(map_screen, unit, base):
     """Read mission capabilities and launch legality for a mission selector."""
     missions = {"NONE"}
     if is_air_unit(unit) and air_unit_can_launch(map_screen, unit, base):
-        missions.update(("MOVE", "STRIKE"))
+        missions.add("MOVE")
+        if air_unit_can_transport(unit):
+            missions.add("TRANSPORT")
+        if air_unit_can_strike(unit):
+            missions.add("STRIKE")
         if air_unit_can_patrol(unit):
             missions.update(AIR_INTERCEPTION_PRIORITIES)
     return missions
@@ -4502,6 +4671,11 @@ def air_unit_mission(unit):
     return "NONE"
 
 
+def air_unit_mission_icon(unit):
+    """Cargo keeps its transport badge during movement and order cancellation."""
+    return "TRANSPORT" if unit.get("air_cargo") else air_unit_mission(unit)
+
+
 def air_unit_has_mission(unit):
     """Aircraft movement and mission buttons use the same active-order state."""
     return is_air_unit(unit) and air_unit_mission(unit) != "NONE"
@@ -4512,8 +4686,8 @@ def air_range_preview_kind(map_screen, unit, destination=None):
     order = unit.get("order")
     if isinstance(order, dict) and order.get("type") in AIR_ORDER_TYPES:
         return order["type"]
-    if air_unit_can_move_on_ground(unit) or (
-            destination is not None and air_move_is_strike(map_screen, unit, destination)):
+    if air_unit_can_strike(unit) and (air_unit_can_move_on_ground(unit) or (
+            destination is not None and air_move_is_strike(map_screen, unit, destination))):
         return "AIR_ATTACK"
     return "AIR_REPOSITION"
 
@@ -4521,7 +4695,7 @@ def air_range_preview_kind(map_screen, unit, destination=None):
 def unit_map_stack_key(unit):
     """Keep map boxes separate by current domain and aircraft mission."""
     domain = unit_display_domain(unit)
-    return domain, air_unit_mission(unit) if domain == "AIR" else None
+    return domain, air_unit_mission_icon(unit) if domain == "AIR" else None
 
 
 def can_view_unit_orders(unit, player_country, viewing_ai_moves=False):
@@ -4551,10 +4725,10 @@ def is_air_transport(unit):
 
 
 def air_order_radius(unit, kind):
-    """Listed range is mission reach; reposition uses both flight legs one way."""
+    """Transport movement uses listed range. Other flight relocation uses both legs."""
     stats = air_unit_stats(unit)
     radius = stats.get("air_range_px", 0)
-    if kind == "AIR_REPOSITION":
+    if kind == "AIR_REPOSITION" and not air_unit_can_transport(unit):
         return radius * 2
     return radius
 
@@ -4565,6 +4739,17 @@ def get_air_unit_traits(unit_type):
     stats = air_unit_stats(unit)
     if not stats.get("air_role"):
         return []
+    if air_unit_can_transport(unit):
+        reposition = air_order_radius(unit, "AIR_REPOSITION")
+        return [f"Move range: {reposition:g} map pixels.",
+                f"Transport capacity: {air_transport_capacity(unit)} ground units.",
+                "Move and Transport missions only; no strikes or area defense.",
+                "Load and release your ground units on the same tile.",
+                "Cargo shares the carrier's proportional health loss.",
+                "Released units can receive movement orders immediately.",
+                "Cannot capture territory.",
+                f"Immune to {UNIT_GROUP_TANKS} damage.",
+                "Destroyed immediately when caught in ground combat."]
     strike = air_order_radius(unit, "AIR_ATTACK")
     if stats.get("air_consumable"):
         traits = [f"Strike range: {strike:g} map pixels; consumed after impact.",
@@ -4644,6 +4829,7 @@ def air_target_in_range(map_screen, unit, base, kind, target_id):
         return False
     stats = air_unit_stats(unit)
     if (kind == "AIR_PATROL" and not air_unit_can_patrol(unit)
+            or kind == "AIR_ATTACK" and not air_unit_can_strike(unit)
             or kind == "AIR_REPOSITION" and stats.get("air_consumable", False)):
         return False
     target = map_screen.id_to_province.get(target_id)
@@ -4671,6 +4857,8 @@ def canonical_air_order(map_screen, unit, base, order):
     if not air_unit_can_launch(map_screen, unit, base):
         raise ValueError("Air missions require a land base outside ground combat.")
     kind = order["type"]
+    if kind == "AIR_ATTACK" and not air_unit_can_strike(unit):
+        raise ValueError("Transport aircraft cannot strike.")
     base_id = order.get("base_id", base["id"])
     if type(base_id) is not int or base_id != base["id"]:
         raise ValueError("The aircraft is no longer at its launch base.")
@@ -4737,9 +4925,9 @@ def prepare_aircraft_for_ground_combat(units, nation_data, opponents=None, on_la
             revert_transport(unit)
     for unit in units:
         if aircraft_caught_in_ground_combat(unit, enemies, nation_data):
-            from map_logic.turn_processing import unit_events
-            unit_events.record_grounded_air_loss(unit, enemies, nation_data)
-            unit["health"] = 0
+            sources = [(enemy, 1) for enemy in enemies if enemy is not unit and are_at_war(
+                get_unit_combat_owner(unit), get_unit_combat_owner(enemy), nation_data)]
+            apply_unit_health_loss(unit, unit.get("health", 0), sources=sources)
             unit["order"] = {"type": "MOVE", "path": []}
 
 
@@ -6040,6 +6228,8 @@ def canonical_unit_order(map_screen, country_id, province, unit, order):
             previous = destination
         return {"type": "MOVE", "path": list(path)}
     if kind == "BOMBARD":
+        if is_air_unit(unit):
+            raise ValueError("Aircraft must use a supported air mission.")
         target = province_for_order(map_screen, order.get("target_id"))
         unit_type = unit.get("type", "")
         if (is_water_province(province)
@@ -6051,6 +6241,8 @@ def canonical_unit_order(map_screen, country_id, province, unit, order):
             raise ValueError("Bombardment target is out of range.")
         return {"type": "BOMBARD", "target_id": target["id"]}
     if kind == "DISBAND":
+        if unit.get("air_cargo"):
+            raise ValueError("Release cargo before disbanding its carrier.")
         return {"type": "DISBAND", "turns_left": 1}
     if kind == "REPAIR":
         if is_nation_in_combat_here(country_id, province, map_screen.nation_data):

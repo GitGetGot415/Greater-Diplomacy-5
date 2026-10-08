@@ -69,6 +69,11 @@ AIRCRAFT ORDERS AND VISIBILITY
 ------------------------------
 
 The aircraft AI generates only orders permitted by the shared rules.
+Transport aircraft carry available ground reinforcements toward visible enemies through safe, accessible landing tiles.
+They release cargo when no reachable safe landing tile improves its position.
+Released units join the normal ground-order planning pass.
+The planner preserves paid orders and the tactical player's division.
+Transport aircraft receive no strike or defense candidates.
 At an industry building, it upgrades numbered aircraft to the highest researched level in their current family.
 It does not upgrade the tactical player's division, aircraft in combat, or aircraft at threatened bases.
 Player move-order clicks can change active Move and Strike targets without cancellation.
@@ -108,7 +113,7 @@ It avoids threatened landing tiles when moving closer to a target.
 If no safe landing tile is reachable, normal mission selection continues.
 Aircraft already caught in ground combat cannot escape through flight.
 
-Reusable aircraft patrol when no strike or closer safe base is available.
+Reusable combat aircraft patrol when no strike or closer safe base is available.
 Shared capability checks select legal ground routes, patrols, or flights from current unit data.
 
 The AI reads only visible enemy stacks.

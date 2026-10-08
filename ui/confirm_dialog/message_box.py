@@ -164,20 +164,28 @@ class _NavigationIntroPopup:
         ("Country actions", "relations", "Click another country's tile to see available diplomatic actions you can take against them."),
     )
     AIR_STEPS = (
-        ("Missions", "Choose Move, Strike, or defense from the mission button. Click a target for Move or Strike. No mission cancels the order. Esc cancels target selection."),
+        ("Missions", "Choose Move, Strike, Transport, or defense from the mission button. Click a target for Move or Strike. No mission cancels the order. Esc cancels target selection."),
         ("Strike / defend", "Click enemy territory or visible enemy units while giving movement orders to strike, including enemies on your land. Aircraft attack without landing. Defenders can fire back, and surviving aircraft return with losses. Enemy aircraft on defense missions may intercept several missions."),
         ("Reposition", "With Move or Strike active, another order click changes the target but keeps the mission type. Use the mission selector to switch missions. Idle planes show green relocation range (except V1 and V2); defense and strikes show yellow."),
         ("V1 / V2", "V1 and V2 air units die when their strike completes, and they relocate on land at ground speed, unlike other planes."),
         ("Aircraft details", "Research shows current range and abilities. Unavailable missions are disabled. Use range outlines to choose targets. Air missions have no aircraft limit; larger allied stacks reduce attack efficiency."),
         ("Other Information", "Tanks cannot damage aircraft in flight. Aircraft cannot land on enemy or unclaimed land. Aircraft caught in ground combat die immediately. Aircraft carriers cannot hold aircraft (yet)."),
     )
-    PAGE_TITLES = ("Map Navigation", "Map UI", "Other Countries", "Armies", "Aircraft")
+    TRANSPORT_STEPS = (
+        ("Load cargo", "Transport aircraft can only use Move or Transport. Choose Transport from the mission button, then select your ground unit on the same tile. Unavailable missions stay visible and disabled."),
+        ("Eligible units", "Ships and other planes cannot be cargo. A ship packed into a Truck can be loaded. Research details show each transport's current capacity and range. Cancel a unit's paid order before loading it."),
+        ("Fly with cargo", "Loaded units leave the map and stay aboard the plane. Use Move to fly with cargo. The Air Transport icon stays while any cargo is aboard, even during Move."),
+        ("Cargo damage", "Cargo loses the same fraction of its current health as the plane. For example, losing half the plane's remaining health also removes half each carried unit's remaining health. If the plane is destroyed, its cargo is destroyed too."),
+        ("Release cargo", "Choose Transport again and select Release for a carried unit. It appears on the plane's tile and can move immediately. Loading and releasing it in the same turn does not consume its movement. Load and release on land outside combat."),
+    )
+    PAGE_TITLES = ("Map Navigation", "Map UI", "Other Countries", "Armies", "Aircraft", "Air transport")
     PAGE_SUBTITLES = (
         "Your country is centered automatically when a game opens or after you choose it. If you're familiar with how HOI4 map controls work, then the default map controls for GD5 should be very easy to understand.",
         "These buttons are important! Located on the bottom left of the screen, they edit the appearance of the map, giving you the information you need to play effectively.",
         "Reach other countries through the Mail tab or directly from their territory on the map.",
         "Learn how to create, organize, and command armies, including target areas.",
         "Green outlines represent an aircraft's movement range, yellow ones represent their mission range.",
+        "Carry ground units between accessible land tiles with transport aircraft.",
     )
 
     def __init__(self, map_screen):
@@ -206,6 +214,7 @@ class _NavigationIntroPopup:
         )
         self.army_step_lines = self._army_step_lines()
         self.air_step_lines = self._army_step_lines(self.AIR_STEPS)
+        self.transport_step_lines = self._army_step_lines(self.TRANSPORT_STEPS)
         self.unit_view_note_lines = self._unit_view_note_lines()
         self.unit_view_note_height = sum(note.get_height() + self.UNIT_VIEW_NOTE_LINE_GAP
                                          for note in self.unit_view_note_lines)
@@ -492,7 +501,8 @@ class _NavigationIntroPopup:
             description_x = step_x + self.ARMY_STEP_TEXT_X_OFFSET
             line_height = self.body_font.get_height() + self.ARMY_STEP_LINE_GAP
             y = step_y
-            steps = self.army_step_lines if self.page_index == 3 else self.air_step_lines
+            steps = (self.army_step_lines if self.page_index == 3 else
+                     self.air_step_lines if self.page_index == 4 else self.transport_step_lines)
             for index, (heading, description_lines) in enumerate(steps, start=1):
                 pygame.draw.circle(surface, (70, 115, 160), (step_x, y + 13), 14)
                 number = self.label_font.render(str(index), True, (255, 255, 255))

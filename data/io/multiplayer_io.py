@@ -154,6 +154,7 @@ def strip_sensitive_data_for_tournament_spectator(map_ref):
     for province in map_ref.map_data.values():
         for unit in province.get("units", []):
             unit.pop("order", None)
+            unit.pop("air_cargo", None)
 
 
 def build_tournament_spectator_save(save_dict):
@@ -201,6 +202,7 @@ def build_tournament_spectator_save(save_dict):
         for unit in province.get("units", []):
             if isinstance(unit, dict):
                 unit.pop("order", None)
+                unit.pop("air_cargo", None)
 
     # A self-contained tournament also includes raw geometry. Older maps may
     # have mutable province fields mixed into that geometry, so scrub the same
@@ -216,6 +218,7 @@ def build_tournament_spectator_save(save_dict):
             for unit in province.get("units", []):
                 if isinstance(unit, dict):
                     unit.pop("order", None)
+                    unit.pop("air_cargo", None)
 
     return spectator_save
 
@@ -541,6 +544,7 @@ def export_move_file(map_ref, file_path, player_key):
         # the submitting country's complete map-unit snapshot atomically.
         "unit_snapshot": True,
         "aircraft_orders": [],
+        "air_transport": queries.air_transport_commands(map_ref, cid),
     }
 
     session_key = getattr(map_ref, "multiplayer_session_key", None)
@@ -842,11 +846,13 @@ def _apply_puppet_siphon_updates(map_ref, country_id, player_data):
     return applied
 
 
-def _validate_aircraft_orders(map_ref, country_id, player_data, provinces):
+def _validate_aircraft_orders(map_ref, country_id, player_data, provinces, cargo_ids=()):
     """Validate before any import mutation; also safely accept old snapshots."""
     live = {unit.get("unit_id"): (unit, province)
-            for province in map_ref.map_data.values() for unit in province.get("units", [])
-            if queries.is_air_unit(unit) or queries.is_air_transport(unit)}
+            for province in map_ref.map_data.values()
+            for unit in queries.units_with_air_cargo(province.get("units", []))
+            if queries.is_air_unit(unit) or queries.is_air_transport(unit)
+            or unit.get("unit_id") in cargo_ids}
     for updates in provinces.values():
         if not isinstance(updates, dict) or not isinstance(updates.get("units", []), list):
             raise ValueError("Invalid province unit snapshot.")
@@ -856,6 +862,8 @@ def _validate_aircraft_orders(map_ref, country_id, player_data, provinces):
                 raise ValueError("Invalid snapshot unit.")
             if not isinstance(unit.get("type", ""), str):
                 raise ValueError("Invalid snapshot unit type.")
+            if unit.get("air_cargo") and not queries.is_air_unit(unit):
+                raise ValueError("Unauthorized snapshot cargo.")
             if queries.is_air_unit(unit) or queries.is_air_transport(unit):
                 if unit.get("unit_id") not in live or unit.get("owner") != country_id:
                     raise ValueError("Unauthorized snapshot aircraft.")
@@ -871,6 +879,14 @@ def _validate_aircraft_orders(map_ref, country_id, player_data, provinces):
                          or unit.get("unit_id") in live)]
     if not isinstance(commands, list):
         raise ValueError("Invalid aircraft commands.")
+    commands = list(commands)
+    # Released cargo retains host statistics. Recover only its ground orders.
+    commands.extend({"unit_id": unit["unit_id"], "order": unit.get("order"),
+                     "custom_name": unit.get("custom_name")}
+                    for updates in provinces.values() for unit in updates.get("units", [])
+                    if unit.get("unit_id") in cargo_ids
+                    and any(current is live[unit["unit_id"]][0]
+                            for current in live[unit["unit_id"]][1].get("units", [])))
     validated = []
     seen = set()
     for command in commands:
@@ -883,6 +899,8 @@ def _validate_aircraft_orders(map_ref, country_id, player_data, provinces):
         unit, province = live[uid]
         if unit.get("owner") != country_id:
             raise ValueError("Aircraft command belongs to another country.")
+        if uid in cargo_ids and not any(current is unit for current in province.get("units", [])):
+            raise ValueError("Units inside aircraft cannot receive ground orders.")
         order = queries.canonical_unit_order(map_ref, country_id, province, unit, command.get("order"))
         if isinstance(order, dict):
             order.pop("realtime_cost", None)  # Tournament resources are already in the nation draft.
@@ -1012,7 +1030,13 @@ def load_move_files(map_ref, move_file_paths, keys_dict):
             continue
         try:
             _validate_administrative_orders(map_ref, cid, provs)
-            live_aircraft, aircraft_orders = _validate_aircraft_orders(map_ref, cid, player_data, provs)
+            transport_view, transport_commands = queries.air_transport_draft(
+                map_ref, cid, player_data.get("air_transport", []))
+            cargo_ids = {u["unit_id"] for p in map_ref.map_data.values()
+                         for plane in p.get("units", []) for u in plane.get("air_cargo", [])}
+            cargo_ids.update(uid for command in transport_commands for uid in command["cargo_ids"])
+            live_aircraft, aircraft_orders = _validate_aircraft_orders(
+                transport_view, cid, player_data, provs, cargo_ids)
         except ValueError:
             summary["rejected"] += 1
             continue
@@ -1023,6 +1047,7 @@ def load_move_files(map_ref, move_file_paths, keys_dict):
         if not _merge_player_nation_data(map_ref, cid, nd):
             summary["rejected"] += 1
             continue
+        queries.apply_air_transport_commands(map_ref, cid, transport_commands)
         summary["appearance_updates"] += _apply_appearance_updates(
             map_ref, cid, player_data)
         summary["puppet_siphon_updates"] += _apply_puppet_siphon_updates(
@@ -1064,9 +1089,13 @@ def load_move_files(map_ref, move_file_paths, keys_dict):
                                  and u["order"].get("type") in queries.AIR_ORDER_TYPES))
 
         for unit, order, name in aircraft_orders:
-            unit["order"] = order or {"type": "MOVE", "path": []}
+            uid = unit["unit_id"]
+            current = next(u for p in map_ref.map_data.values()
+                           for u in queries.units_with_air_cargo(p.get("units", []))
+                           if u.get("unit_id") == uid)
+            current["order"] = order or {"type": "MOVE", "path": []}
             if name:
-                unit["custom_name"] = name
+                current["custom_name"] = name
             
         # Also mark this country as having submitted a move
         if not hasattr(map_ref, 'submitted_moves'):

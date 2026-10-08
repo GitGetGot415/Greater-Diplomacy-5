@@ -38,8 +38,7 @@ def apply_group_damage(total_atk, target_units, defense_bonus_fn=None, *, source
             percent_lost = (actual_dmg / max_hp) * 100.0
             u["morale"] = max(0.0, float(u.get("morale", c.DEFAULT_UNIT_MORALE)) - percent_lost)
 
-        unit_events.record_damage(u, min(max(0, u["health"]), actual_dmg), sources, tile)
-        u["health"] -= actual_dmg
+        queries.apply_unit_health_loss(u, actual_dmg, sources=sources, tile=tile)
 
 def process_bombardments(map_screen):
     """Resolves artillery fire on nearby tiles.

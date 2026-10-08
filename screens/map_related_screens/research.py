@@ -356,6 +356,7 @@ class Research_Screen(GameState):
             "submarine": y3,
             "biplane": y1, "biplane_bomber": y2, "zeppelin": y2, "piston_fighter": y1, "piston_bomber": y3,
             "v1_flying_bomb": y4, "v2_rocket": y4,
+            "monoplane_transport": y5,
             "jet_engine": y2, "jet_fighter": y1, "jet_bomber": y2,
             "workshop": y1, "basic_factory": y1, "factory": y1,
             "bergius_process": y4, "fuel_refining": y4,
