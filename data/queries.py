@@ -3495,6 +3495,31 @@ def get_nation_provinces_and_units(nation, map_data):
                 owned_units.append((unit, prov))
     return owned_provs, owned_units
 
+def can_release_nations_for(map_screen, country_id):
+    """Permit own-country releases or local spectator releases for a selected country."""
+    if (country_id not in map_screen.nation_data or country_id in c.UNPLAYABLE_NATIONS
+            or map_screen.is_editor or map_screen.tactical_mode):
+        return False
+    if map_screen.player_country == "Spectator":
+        return not (getattr(map_screen, "multiplayer_mode", False)
+                    or getattr(map_screen, "realtime_multiplayer", False))
+    return country_id == map_screen.player_country
+
+
+def get_puppet_release_provinces(master, core_nation, map_data, keep_cores=False, release_queue=()):
+    """Return eligible land after earlier queued releases take their territory."""
+    if (core_nation == master or core_nation in c.UNPLAYABLE_NATIONS
+            or master in c.UNPLAYABLE_NATIONS):
+        return []
+    return [province for province in map_data.values()
+            if province.get("owner") == master and not is_water_province(province)
+            and core_nation in province.get("cores", [])
+            and not (keep_cores and master in province.get("cores", []))
+            and not any(entry["core_nation"] in province.get("cores", [])
+                        and not (entry.get("keep_cores", False) and master in province.get("cores", []))
+                        for entry in release_queue)]
+
+
 def get_living_nations(map_data):
     """Scans the map and returns a set of all nations that currently own at least one province."""
     active_nations = set()

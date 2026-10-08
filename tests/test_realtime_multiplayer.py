@@ -1041,6 +1041,38 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
                                           "siphons": {"B": {"manpower": 1, "materials": 1, "fuel": 1}},
                                           "release_subjects": [], "appearances": {}}])
 
+    def test_puppet_release_choices_are_collected_and_server_validated(self):
+        for release_type in c.PUPPET_RELEASE_TYPES:
+            with self.subTest(release_type=release_type):
+                map_ref = self.make_map()
+                map_ref.nation_data["A"]["release_puppet_queue"] = [
+                    {"core_nation": "P", "keep_cores": False, "release_type": release_type, "turns_left": 1}]
+                command = next(command for command in collect_map_commands(map_ref, "A")
+                               if command["type"] == "puppet_draft")
+                self.assertEqual(command["release_subjects"][0]["release_type"], release_type)
+                validated = MapRealtimeDriver(map_ref).validate_draft("A", [command])[0]
+                self.assertEqual(validated["release_subjects"][0]["release_type"], release_type)
+
+    def test_puppet_release_rejects_invalid_foreign_and_changed_requests(self):
+        map_ref = self.make_map()
+        driver = MapRealtimeDriver(map_ref)
+        command = {"type": "puppet_draft", "puppet_order": ["P"], "siphons": {}, "appearances": {}}
+        for entries in ([None], [{"core_nation": "P", "release_type": "Unknown"}],
+                        [{"core_nation": "P", "keep_cores": True}],
+                        [{"core_nation": "P"}, {"core_nation": "P"}], [{"core_nation": "B"}]):
+            with self.subTest(entries=entries), self.assertRaises(RealtimeError):
+                driver.validate_draft("A", [dict(command, release_subjects=entries)])
+        with self.assertRaises(RealtimeError):
+            driver.validate_draft("B", [dict(command, puppet_order=[], release_subjects=[{"core_nation": "P"}])])
+        map_ref.nation_data["A"]["release_puppet_queue"] = [
+            {"core_nation": "P", "keep_cores": False, "turns_left": 1}]
+        with self.assertRaises(RealtimeError):
+            driver.validate_draft("A", [dict(command, release_subjects=[
+                {"core_nation": "P", "release_type": c.PUPPET_TYPE_AUTONOMOUS}])])
+        old_command = dict(command, release_subjects=[{"core_nation": "P"}])
+        validated = driver.validate_draft("A", [old_command])[0]
+        self.assertEqual(validated["release_subjects"][0]["release_type"], c.PUPPET_TYPE_INTEGRATED)
+
     def test_queue_items_are_rebuilt_from_server_costs_not_client_refunds(self):
         map_ref = self.make_map()
         driver = MapRealtimeDriver(map_ref)

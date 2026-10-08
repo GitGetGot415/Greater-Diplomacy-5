@@ -1136,25 +1136,13 @@ class MapRealtimeDriver:
                     or puppet_data.get("puppet_type") != c.PUPPET_TYPE_INTEGRATED):
                 raise RealtimeError("You may only edit an integrated subject.")
             canonical_appearances[puppet] = self._canonical_appearance(appearance)
-        old_releases = {entry.get("core_nation"): entry for entry in country.get("release_puppet_queue", [])
-                        if isinstance(entry, dict) and isinstance(entry.get("core_nation"), str)}
-        canonical_releases, seen_subjects = [], set()
-        for entry in releases:
-            subject, keep_cores = entry.get("core_nation"), entry.get("keep_cores", False)
-            if not isinstance(subject, str) or not isinstance(keep_cores, bool) or subject in seen_subjects:
-                raise RealtimeError("Invalid integrated puppet release.")
-            if subject not in self.map_ref.nation_data or subject in c.UNPLAYABLE_NATIONS:
-                raise RealtimeError("Unknown integrated puppet subject.")
-            has_core = any(province.get("owner") == country_id and subject in province.get("cores", [])
-                           for province in self.map_ref.map_data.values())
-            if not has_core:
-                raise RealtimeError("That subject has no eligible core territory.")
-            old = old_releases.get(subject)
-            if old and bool(old.get("keep_cores", False)) != keep_cores:
-                raise RealtimeError("Cancel the existing puppet release before changing it.")
-            canonical_releases.append({"core_nation": subject, "keep_cores": keep_cores,
-                                       "turns_left": max(0, int(old.get("turns_left", 1))) if old else 1})
-            seen_subjects.add(subject)
+        from map_logic.diplomacy.puppet_actions import canonical_puppet_release_queue
+        try:
+            canonical_releases = canonical_puppet_release_queue(
+                self.map_ref.map_data, self.map_ref.nation_data, country_id, releases,
+                country.get("release_puppet_queue", []))
+        except ValueError as error:
+            raise RealtimeError(str(error)) from error
         return {"type": "puppet_draft", "puppet_order": list(puppet_order),
                 "siphons": canonical_siphons, "release_subjects": canonical_releases,
                 "appearances": canonical_appearances}
@@ -1786,7 +1774,8 @@ def collect_map_commands(map_ref, country_id: str) -> list[dict[str, Any]]:
             siphons[puppet] = copy.deepcopy(subject.get("siphon_rates", {}))
     commands.append({"type": "puppet_draft", "puppet_order": list(controlled), "siphons": siphons,
                      "release_subjects": [{"core_nation": entry.get("core_nation"),
-                                           "keep_cores": bool(entry.get("keep_cores", False))}
+                                           "keep_cores": bool(entry.get("keep_cores", False)),
+                                           "release_type": entry.get("release_type", c.PUPPET_TYPE_INTEGRATED)}
                                           for entry in country_data.get("release_puppet_queue", [])
                                           if isinstance(entry, dict)],
                      "appearances": copy.deepcopy(getattr(map_ref, "realtime_pending_appearance_updates", {}))})

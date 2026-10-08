@@ -846,6 +846,9 @@ AI_PEACE_DEMAND_LEVERAGE = 0.55
 
 PUPPET_TYPE_AUTONOMOUS = "Autonomous"
 PUPPET_TYPE_INTEGRATED = "Integrated"
+# Independent is a release choice. Independent countries store no puppet type.
+PUPPET_RELEASE_INDEPENDENT = "Independent"
+PUPPET_RELEASE_TYPES = (PUPPET_TYPE_INTEGRATED, PUPPET_TYPE_AUTONOMOUS, PUPPET_RELEASE_INDEPENDENT)
 MAX_PUPPET_SIPHON = 0.50
 
 # ==========================================

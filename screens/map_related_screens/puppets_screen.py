@@ -7,6 +7,7 @@ from map_logic.rendering.font_manager import fonts
 from map_logic.rendering import overlay_renderer
 from ui.bars import ui_bars
 from ui.screen_runner import _run_pygame_sub_screen
+from ui.text_utils import fit_text
 
 
 class Puppets_Screen(MapOverlayScreen):
@@ -25,7 +26,7 @@ class Puppets_Screen(MapOverlayScreen):
 
     def refresh_ui(self):
         self.elements = [make_back_button(self.exit_screen, style="map")]
-        self.elements.append(Button(c.SCREEN_WIDTH - 300, c.TOP_BAR_UI_CENTER_Y, "large", "blue", "Create Integrated Puppet", self.open_create_puppet))
+        self.elements.append(Button(c.SCREEN_WIDTH - 300, c.TOP_BAR_UI_CENTER_Y, "large", "blue", "Release Nation", self.open_create_puppet))
 
 
 
@@ -145,7 +146,7 @@ class Puppets_Screen(MapOverlayScreen):
     def open_create_puppet(self):
         if not self.can_edit_realtime():
             return
-        screen = Create_Integrated_Puppet_Screen(self.map_screen)
+        screen = Create_Puppet_Screen(self.map_screen)
         _run_pygame_sub_screen(self.map_screen, screen, on_done=self.refresh_ui)
 
     def draw_content(self, surface):
@@ -207,37 +208,43 @@ class Puppets_Screen(MapOverlayScreen):
                     y_pos += self.y_space_between_puppets
 
 
-class Create_Integrated_Puppet_Screen(MapOverlayScreen):
+class Create_Puppet_Screen(MapOverlayScreen):
     overlay_alpha = 0
-    # Docked to the left so the cores being carved out stay visible, and
-    # translucent for the same reason.
+    # Keep the land visible beside the release controls.
     CENTER_PANEL = False
     PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_INFO_OVER_MAP
-    PANEL_TITLE = "Create Integrated Puppet"
+    RELEASE_TYPE_Y = 60
+    RELEASE_TYPE_BUTTON_SIZE = (125, 40)
+    RELEASE_TYPE_BUTTON_GAP = 10
+    KEEP_CORES_Y = 110
+    ROW_TOP = 170
+    ROW_HEIGHT = 50
+    CONTENT_TOP = 160
+    CONTENT_BOTTOM_GAP = 30
+    TITLE_MARGIN = 20
+    ROW_TEXT_WIDTH = 280
 
-    def __init__(self, map_screen):
+    def __init__(self, map_screen, country_id=None):
         super().__init__(map_screen, pygame.Rect(80, 120, 450, c.SCREEN_HEIGHT - 240))
-        self.bg_color = (20, 20, 30)
+        self.releasing_country = self.player if country_id is None else country_id
         self.keep_cores = False
-
-        self.valid_subjects = set()
-        for prov in self.map_screen.map_data.values():
-            if prov.get("owner") == self.player:
-                for core in prov.get("cores", []):
-                    if core != self.player and core not in c.UNPLAYABLE_NATIONS:
-                        self.valid_subjects.add(core)
-        self.valid_subjects = sorted(list(self.valid_subjects))
+        self.release_type = c.PUPPET_TYPE_INTEGRATED
         self.refresh_ui()
 
     def can_edit_realtime(self):
-        if not getattr(self.map_screen, "realtime_multiplayer", False):
-            return True
-        session = getattr(self.map_screen, "realtime_session", None)
-        player = session.players.get(getattr(self.map_screen, "realtime_player_id", "")) if session else None
-        if session and session.phase == "TURN" and player and not player.submitted and not player.eliminated:
-            return True
-        self.map_screen.show_feedback("Turn submitted or unavailable; unsubmit to change subjects.")
-        return False
+        if not queries.can_release_nations_for(self.map_screen, self.releasing_country):
+            self.map_screen.show_feedback("You cannot release nations for this country.")
+            return False
+        from map_logic.diplomacy.player_diplomacy_actions import can_edit_diplomacy
+        return can_edit_diplomacy(self.map_screen)
+
+    def set_release_type(self, release_type):
+        if not self.can_edit_realtime():
+            return
+        if release_type not in c.PUPPET_RELEASE_TYPES:
+            raise ValueError("Unknown nation release type.")
+        self.release_type = release_type
+        self.refresh_ui()
 
     def toggle_keep_cores(self):
         if not self.can_edit_realtime():
@@ -247,145 +254,149 @@ class Create_Integrated_Puppet_Screen(MapOverlayScreen):
 
     def refresh_ui(self):
         self.elements = [make_back_button(self.exit_screen, style="map")]
+        name = queries.get_country_display_name(self.releasing_country, self.map_screen.nation_data)
+        title_font = fonts.get("heading2")
+        title = fit_text(f"Release Nations: {name}", title_font, self.panel_rect.width - 2 * self.TITLE_MARGIN)
+        self.release_title = title_font.render(title, True, c.UI_TEXT_LIGHT)
+        enabled = queries.can_release_nations_for(self.map_screen, self.releasing_country)
+        width, height = self.RELEASE_TYPE_BUTTON_SIZE
+        group_width = len(c.PUPPET_RELEASE_TYPES) * width + (len(c.PUPPET_RELEASE_TYPES) - 1) * self.RELEASE_TYPE_BUTTON_GAP
+        start_x = self.panel_rect.centerx - group_width // 2
+        for index, release_type in enumerate(c.PUPPET_RELEASE_TYPES):
+            button = Button(start_x + index * (width + self.RELEASE_TYPE_BUTTON_GAP),
+                            self.panel_rect.y + self.RELEASE_TYPE_Y, (width, height), "blue", release_type,
+                            lambda value=release_type: self.set_release_type(value))
+            button.apply_state(enabled=enabled, color="blue")
+            button.is_selected = enabled and self.release_type == release_type
+            self.elements.append(button)
+        keep = Button(self.panel_rect.centerx - 100, self.panel_rect.y + self.KEEP_CORES_Y,
+                      "medium", "green" if self.keep_cores else "red",
+                      f"Keep Cores: {'ON' if self.keep_cores else 'OFF'}", self.toggle_keep_cores)
+        keep.apply_state(enabled=enabled, color="green" if self.keep_cores else "red")
+        self.elements.append(keep)
 
-        btn_keep_cores_color = "green" if self.keep_cores else "red"
-        btn_keep_cores_text = f"Keep Cores: {'ON' if self.keep_cores else 'OFF'}"
-        self.elements.append(Button(self.panel_rect.centerx - 100, self.panel_rect.y + 60, "medium", btn_keep_cores_color, btn_keep_cores_text, self.toggle_keep_cores))
+        self.scroll_content_rect = pygame.Rect(self.panel_rect.x + 5, self.panel_rect.y + self.CONTENT_TOP,
+                                               self.panel_rect.width - 10,
+                                               self.panel_rect.height - self.CONTENT_TOP - self.CONTENT_BOTTOM_GAP)
+        queue = self.map_screen.nation_data.get(self.releasing_country, {}).get("release_puppet_queue", [])
+        queued = {entry["core_nation"]: entry for entry in queue}
+        self.valid_subjects = sorted({core for province in self.map_screen.map_data.values()
+                                      if province.get("owner") == self.releasing_country
+                                      and not queries.is_water_province(province)
+                                      for core in province.get("cores", [])
+                                      if core != self.releasing_country and core not in c.UNPLAYABLE_NATIONS}
+                                     | set(queued))
+        self.release_rows = []
+        self.release_row_surfaces = []
+        row_font = fonts.get("normal")
+        for index, subject in enumerate(self.valid_subjects):
+            name = queries.get_country_display_name(subject, self.map_screen.nation_data)
+            if subject not in self.map_screen.nation_data:
+                from data.io import country_io
+                name = country_io.get_country_stats(subject).get("name", name)
+            entry = queued.get(subject)
+            available = queries.get_puppet_release_provinces(
+                self.releasing_country, subject, self.map_screen.map_data, self.keep_cores, queue)
+            status = f" ({entry.get('release_type', c.PUPPET_TYPE_INTEGRATED)} queued)" if entry else ""
+            self.release_rows.append((name + status, entry is not None))
+            row_text = fit_text(name + status, row_font, self.ROW_TEXT_WIDTH)
+            self.release_row_surfaces.append(row_font.render(
+                row_text, True, c.COLOR_GOLD_HIGHLIGHT if entry else c.UI_TEXT_LIGHT))
+            y_pos = self.panel_rect.y + self.ROW_TOP + index * self.ROW_HEIGHT + self.scroll_y
+            button = Button(self.panel_rect.x + 320, y_pos, "small", "red" if entry else "green",
+                            "Cancel" if entry else "Release",
+                            lambda value=subject, cancel=bool(entry): self.cancel_queue(value) if cancel else self.queue_creation(value))
+            button.apply_state(enabled=enabled and (entry is not None or bool(available)),
+                               color="red" if entry else "green",
+                               text="No Land" if entry is None and not available else None)
+            button.is_scrollable = True
+            button.click_guard = self.content_hover_guard()
+            button.base_y = y_pos - self.scroll_y
+            self.elements.append(button)
 
-        y_pos = self.panel_rect.y + 120 + self.scroll_y
-
-        self.scroll_content_rect = pygame.Rect(self.panel_rect.x + 5, self.panel_rect.y + 110,
-                                               self.panel_rect.width - 10, self.panel_rect.height - 120)
-        row_guard = self.content_hover_guard()
-
-        queue = self.map_screen.nation_data.get(self.player, {}).get("release_puppet_queue", [])
-        queued_cores = [q["core_nation"] for q in queue]
-
-        for subject in self.valid_subjects:
-            if y_pos > self.panel_rect.y + 100 and y_pos < self.panel_rect.bottom - 40:
-
-                # Calculate if creating this puppet would leave it with 0 territories
-                territory_count = 0
-                for prov in self.map_screen.map_data.values():
-                    if prov.get("owner") == self.player and subject in prov.get("cores", []):
-                        if self.keep_cores and self.player in prov.get("cores", []):
-                            continue
-
-                        # Account for previously queued puppets taking the land first
-                        taken_by_queue = False
-                        for q in queue:
-                            q_core = q["core_nation"]
-                            q_keep_cores = q.get("keep_cores", False)
-
-                            if q_core in prov.get("cores", []):
-                                if q_keep_cores and self.player in prov.get("cores", []):
-                                    continue
-                                taken_by_queue = True
-                                break
-
-                        if taken_by_queue:
-                            continue
-
-                        territory_count += 1
-
-                if subject in queued_cores:
-                    btn = Button(self.panel_rect.x + 320, y_pos, "small", "red", "Cancel", lambda s=subject: self.cancel_queue(s))
-                else:
-                    btn = Button(self.panel_rect.x + 320, y_pos, "small", "green", "Create", lambda s=subject: self.queue_creation(s))
-                    if territory_count == 0:
-                        btn.apply_state(enabled=False, text="No Land")
-
-                btn.is_scrollable = True
-                btn.click_guard = row_guard
-                btn.base_y = y_pos - self.scroll_y
-                self.elements.append(btn)
-            y_pos += 50
-
-        self.max_scroll = min(0, self.panel_rect.height - (y_pos - self.scroll_y - self.panel_rect.y) - 20)
+        # Cache the map highlights in release order, using the same territory rule.
+        self.queued_highlights = []
+        colors = ((255, 105, 180), (105, 255, 180), (105, 180, 255), (255, 255, 105), (255, 150, 100))
+        prior = []
+        for index, entry in enumerate(queue):
+            provinces = queries.get_puppet_release_provinces(
+                self.releasing_country, entry["core_nation"], self.map_screen.map_data,
+                entry.get("keep_cores", False), prior)
+            self.queued_highlights.extend((province["id"], colors[index % len(colors)]) for province in provinces)
+            prior.append(entry)
+        self.max_scroll = min(0, self.scroll_content_rect.height - len(self.valid_subjects) * self.ROW_HEIGHT)
 
     def update(self):
         super().update()
-        for el in self.elements:
-            if getattr(el, 'is_scrollable', False):
-                el.rect.y = el.base_y + self.scroll_y
+        for element in self.elements:
+            if getattr(element, "is_scrollable", False):
+                element.rect.y = element.base_y + self.scroll_y
 
     def queue_creation(self, subject):
         if not self.can_edit_realtime():
             return
-        queue = self.map_screen.nation_data[self.player].setdefault("release_puppet_queue", [])
-        queue.append({"core_nation": subject, "turns_left": 1, "keep_cores": self.keep_cores})
-        self.map_screen.show_feedback("Creation of " + queries.get_country_display_name(
-            subject, self.map_screen.nation_data) + " queued (1 turn).")
+        from map_logic.diplomacy.puppet_actions import canonical_puppet_release_queue
+        country = self.map_screen.nation_data[self.releasing_country]
+        queue = country.get("release_puppet_queue", [])
+        requested = queue + [{"core_nation": subject, "keep_cores": self.keep_cores,
+                              "release_type": self.release_type}]
+        try:
+            canonical = canonical_puppet_release_queue(self.map_screen.map_data, self.map_screen.nation_data,
+                                                        self.releasing_country, requested, queue)
+        except ValueError as error:
+            self.map_screen.show_feedback(str(error))
+            self.refresh_ui()
+            return
+        country.setdefault("release_puppet_queue", [])[:] = canonical
+        name = queries.get_country_display_name(subject, self.map_screen.nation_data)
+        self.map_screen.show_feedback(f"{self.release_type} release of {name} queued (1 turn).")
         self.refresh_ui()
 
     def cancel_queue(self, subject):
         if not self.can_edit_realtime():
             return
-        queue = self.map_screen.nation_data[self.player].setdefault("release_puppet_queue", [])
-        for i, q in enumerate(queue):
-            if q["core_nation"] == subject:
-                queue.pop(i)
-                self.map_screen.show_feedback("Creation of " + queries.get_country_display_name(
-                    subject, self.map_screen.nation_data) + " cancelled.")
-                self.refresh_ui()
-                return
+        queue = self.map_screen.nation_data[self.releasing_country].get("release_puppet_queue", [])
+        queue[:] = [entry for entry in queue if entry["core_nation"] != subject]
+        self.refresh_ui()
 
     def draw_content(self, surface):
-        # Highlight queued core provinces
-        queue = self.map_screen.nation_data.get(self.player, {}).get("release_puppet_queue", [])
-        queued_cores = [q["core_nation"] for q in queue]
-
-        colors = [(255, 105, 180), (105, 255, 180), (105, 180, 255), (255, 255, 105), (255, 150, 100)]
-        color_map = {}
-        for i, qc in enumerate(queued_cores):
-            color_map[qc] = colors[i % len(colors)]
-
-        for prov in self.map_screen.map_data.values():
-            if prov.get("owner") == self.player:
-                for qc in queued_cores:
-                    if qc in prov.get("cores", []):
-                        overlay_renderer.draw_map_highlight(surface, self.map_screen, prov["id"], color_map[qc], base_radius=10)
-                        break
-
+        for province_id, color in self.queued_highlights:
+            overlay_renderer.draw_map_highlight(surface, self.map_screen, province_id, color, base_radius=10)
         self.draw_panel(surface)
-
-        tiny_font = fonts.get("normal")
-
-        clip_rect = self.scroll_content_rect or pygame.Rect(
-            self.panel_rect.x + 5, self.panel_rect.y + 110, self.panel_rect.width - 10, self.panel_rect.height - 120)
-
-        if not self.valid_subjects:
-            y_off = self.panel_rect.y + 120 + self.scroll_y
-            surface.blit(tiny_font.render("No potential subjects available.", True, c.UI_TEXT_MUTED), (self.panel_rect.x + 30, y_off))
+        surface.blit(self.release_title, self.release_title.get_rect(
+            midtop=(self.panel_rect.centerx, self.panel_rect.y + self.TITLE_Y_OFFSET)))
+        font = fonts.get("normal")
+        if not self.release_rows:
+            surface.blit(font.render("No potential subjects available.", True, c.UI_TEXT_MUTED),
+                         (self.panel_rect.x + 30, self.panel_rect.y + self.ROW_TOP))
         else:
-            with ui_bars.clip_scroll_region(surface, clip_rect,
+            with ui_bars.clip_scroll_region(surface, self.scroll_content_rect,
                                             draw_top=self.scroll_y != 0, draw_bottom=self.scroll_y > self.max_scroll):
-                y_off = self.panel_rect.y + 120 + self.scroll_y
-                for subject in self.valid_subjects:
-                    subject_name = queries.get_country_display_name(
-                        subject, self.map_screen.nation_data)
-                    # A core can name a country that has not yet been created
-                    # on this scenario. Its authored library name is still
-                    # player-facing; only an unknown legacy ID falls through.
-                    if subject not in self.map_screen.nation_data:
-                        from data.io import country_io
-                        subject_name = country_io.get_country_stats(subject).get(
-                            "name", subject_name)
+                for index, text in enumerate(self.release_row_surfaces):
+                    y = self.panel_rect.y + self.ROW_TOP + index * self.ROW_HEIGHT + self.scroll_y
+                    surface.blit(text, (self.panel_rect.x + 20, y + 15))
+        self.draw_list_scrollbar(surface, self.panel_rect.right - 15, self.scroll_content_rect.y,
+                                 self.scroll_content_rect.height, width=10)
 
-                    is_queued = subject in queued_cores
-                    color = c.COLOR_GOLD_HIGHLIGHT if is_queued else (200, 200, 200)
-                    status = " (Queued)" if is_queued else ""
-                    txt = tiny_font.render(f"- {subject_name}{status}", True, color)
-                    surface.blit(txt, (self.panel_rect.x + 20, y_off + 15))
-                    y_off += 50
 
-        # No max_scroll guard here: draw_list_scrollbar already returns nothing
-        # when the list fits, and going through it also clears last frame's
-        # track/handle rects instead of leaving them stale.
-        viewport_h = self.panel_rect.height - 110
-        self.draw_list_scrollbar(surface, self.panel_rect.right - 15, self.panel_rect.y + 100,
-                                 viewport_h, width=10)
+# Preserve the older screen name for callers and mods.
+Create_Integrated_Puppet_Screen = Create_Puppet_Screen
 
 
 def open_puppets_menu(map_screen):
+    if map_screen.player_country == "Spectator":
+        if (getattr(map_screen, "multiplayer_mode", False)
+                or getattr(map_screen, "realtime_multiplayer", False)
+                or map_screen.is_editor or map_screen.tactical_mode):
+            map_screen.show_feedback("Spectator releases are available only in a local strategic game.")
+            return
+
+        def selected(country_id):
+            if queries.can_release_nations_for(map_screen, country_id):
+                _run_pygame_sub_screen(map_screen, Create_Puppet_Screen(map_screen, country_id))
+
+        countries = sorted(queries.get_living_nations(map_screen.map_data))
+        queries.open_listbox_selector(map_screen, "Release Nations", "Choose a country to release nations for:",
+                                      queries.country_picker_items(countries, map_screen.nation_data), selected)
+        return
     _run_pygame_sub_screen(map_screen, Puppets_Screen(map_screen))

@@ -200,7 +200,50 @@ def finalize_take_puppets(map_data, nation_data, master, target_puppet):
         p_type = nation_data.get(p, {}).get("puppet_type", c.PUPPET_TYPE_AUTONOMOUS)
         assign_puppet(map_data, nation_data, master, p, p_type)
 
+def canonical_puppet_release_queue(map_data, nation_data, master, entries, old_queue=()):
+    """Validate release choices. Preserve host countdowns and legacy Integrated releases."""
+    if master not in nation_data or master in c.UNPLAYABLE_NATIONS or not isinstance(entries, list):
+        raise ValueError("Invalid releasing country or release queue.")
+    previous = {entry["core_nation"]: entry for entry in old_queue}
+    result, seen = [], set()
+    for entry in entries:
+        if not isinstance(entry, dict):
+            raise ValueError("Invalid nation release entry.")
+        subject = entry.get("core_nation")
+        keep_cores = entry.get("keep_cores", False)
+        # Older saves and move files did not store a release type.
+        release_type = entry.get("release_type", c.PUPPET_TYPE_INTEGRATED)
+        if (not isinstance(subject, str) or subject == master or subject in c.UNPLAYABLE_NATIONS
+                or subject in seen or not isinstance(keep_cores, bool)
+                or not isinstance(release_type, str) or release_type not in c.PUPPET_RELEASE_TYPES):
+            raise ValueError("Invalid nation release choice.")
+        old = previous.get(subject)
+        if old:
+            if (old.get("keep_cores", False) != keep_cores
+                    or old.get("release_type", c.PUPPET_TYPE_INTEGRATED) != release_type):
+                raise ValueError("Cancel the existing release before changing its options.")
+        elif not queries.get_puppet_release_provinces(master, subject, map_data, keep_cores, result):
+            raise ValueError("That country has no eligible core territory to release.")
+        result.append({"core_nation": subject, "keep_cores": keep_cores, "release_type": release_type,
+                       "turns_left": old.get("turns_left", 1) if old else 1})
+        seen.add(subject)
+    return result
+
+
 def finalize_create_integrated_puppet(map_data, nation_data, master, core_nation, map_screen, keep_cores=False):
+    """Compatibility entry point for an Integrated release."""
+    return finalize_create_puppet(map_data, nation_data, master, core_nation, map_screen, keep_cores)
+
+
+def finalize_create_puppet(map_data, nation_data, master, core_nation, map_screen,
+                         keep_cores=False, release_type=c.PUPPET_TYPE_INTEGRATED):
+    """Release eligible core land as an Integrated, Autonomous, or Independent country."""
+    if release_type not in c.PUPPET_RELEASE_TYPES or master not in nation_data:
+        return None
+    territory = queries.get_puppet_release_provinces(master, core_nation, map_data, keep_cores)
+    if not territory:
+        return None
+    territory_ids = {province["id"] for province in territory}
     master_data = nation_data.get(master, {})
     master_name = master_data.get("name", master)
     master_adjective = master_data.get("adjective", "")
@@ -245,7 +288,9 @@ def finalize_create_integrated_puppet(map_data, nation_data, master, core_nation
     new_data["research"] = copy.deepcopy(master_research)
 
     new_data["is_playable"] = True
-    new_data["is_created_integrated_puppet"] = True
+    new_data.pop("is_created_integrated_puppet", None)
+    if release_type == c.PUPPET_TYPE_INTEGRATED:
+        new_data["is_created_integrated_puppet"] = True
     new_data["at_war_with"] = []
     new_data["allied_with"] = []
     new_data["pending_diplomacy"] = {}
@@ -253,6 +298,7 @@ def finalize_create_integrated_puppet(map_data, nation_data, master, core_nation
     new_data["claim_queue"] = []
     new_data["revoke_queue"] = []
     new_data["return_queue"] = []
+    new_data["release_puppet_queue"] = []
     new_data["puppets"] = []
     new_data["master"] = ""
     new_data["puppet_type"] = ""
@@ -262,8 +308,9 @@ def finalize_create_integrated_puppet(map_data, nation_data, master, core_nation
 
     nation_data[new_id] = new_data
 
-    # Assign as puppet
-    assign_puppet(map_data, nation_data, master, new_id, c.PUPPET_TYPE_INTEGRATED)
+    # Independent releases do not inherit the master's faction or wars.
+    if release_type != c.PUPPET_RELEASE_INDEPENDENT:
+        assign_puppet(map_data, nation_data, master, new_id, release_type)
 
     # Transfer tiles
     for prov in map_data.values():
@@ -271,11 +318,9 @@ def finalize_create_integrated_puppet(map_data, nation_data, master, core_nation
             if new_id not in prov.get("cores", []):
                 prov.setdefault("cores", []).append(new_id)
 
-            if prov.get("owner") == master:
-                # --- NEW: Keep Cores Check ---
-                if keep_cores and master in prov.get("cores", []):
-                    continue
+            if prov["id"] in territory_ids:
                 nation_data[new_id]["spawned_territories"].append(prov["id"])
                 edit_province_ownership.conquer_province(map_screen, prov, new_id)
 
     log_global_event(nation_data, f"{master_name} has formed {new_name}.")
+    return new_id

@@ -136,6 +136,56 @@ class TournamentMoveTests(unittest.TestCase):
         self.assertEqual(queries.get_unassigned_army(
             "Leader", host.nation_data, host.map_data)["unit_ids"], ["owned"])
 
+    def test_import_validates_release_types_and_host_owned_countdowns(self):
+        for release_type in c.PUPPET_RELEASE_TYPES:
+            with self.subTest(release_type=release_type):
+                host = Host()
+                host.map_data = {"land": {"id": 1, "owner": "Leader", "cores": ["Outsider"],
+                                          "terrain": "plains", "units": []}}
+                player_data = self.player_data("Leader", host, release_subjects=[
+                    {"core_nation": "Outsider", "keep_cores": False, "release_type": release_type, "turns_left": 0}])
+                with tempfile.TemporaryDirectory() as directory:
+                    path = self.write_move(directory, "leader.gd5move", "Leader", player_data)
+                    summary = self.import_moves(host, [path])
+                self.assertEqual(summary["loaded"], 1)
+                self.assertEqual(host.nation_data["Leader"]["release_puppet_queue"], [
+                    {"core_nation": "Outsider", "keep_cores": False, "release_type": release_type, "turns_left": 1}])
+
+    def test_import_rejects_invalid_foreign_duplicate_and_stale_release_requests(self):
+        for country, entries, stale in (
+                ("Leader", [None], False),
+                ("Leader", [{"core_nation": "Outsider", "release_type": "Unknown"}], False),
+                ("Leader", [{"core_nation": "Outsider"}, {"core_nation": "Outsider"}], False),
+                ("Member", [{"core_nation": "Outsider"}], False),
+                ("Leader", [{"core_nation": "Outsider"}], True)):
+            with self.subTest(country=country, entries=entries, stale=stale):
+                host = Host()
+                host.map_data = {"land": {"id": 1, "owner": "Leader", "cores": ["Outsider"],
+                                          "terrain": "plains", "units": []}}
+                player_data = self.player_data(country, host, release_subjects=entries)
+                if stale:
+                    player_data["tournament_turn"] -= 1
+                with tempfile.TemporaryDirectory() as directory:
+                    path = self.write_move(directory, "move.gd5move", country, player_data)
+                    summary = self.import_moves(host, [path])
+                self.assertEqual(summary["rejected"], 1)
+                self.assertEqual(summary["loaded"], 0)
+                self.assertNotIn("release_puppet_queue", host.nation_data[country])
+
+    def test_legacy_country_record_releases_default_to_integrated(self):
+        host = Host()
+        host.map_data = {"land": {"id": 1, "owner": "Leader", "cores": ["Outsider"],
+                                  "terrain": "plains", "units": []}}
+        player_data = self.player_data("Leader", host)
+        player_data["nation_data"]["release_puppet_queue"] = [{"core_nation": "Outsider", "turns_left": 0}]
+        with tempfile.TemporaryDirectory() as directory:
+            path = self.write_move(directory, "move.gd5move", "Leader", player_data)
+            summary = self.import_moves(host, [path])
+        self.assertEqual(summary["loaded"], 1)
+        release = host.nation_data["Leader"]["release_puppet_queue"][0]
+        self.assertEqual(release["release_type"], c.PUPPET_TYPE_INTEGRATED)
+        self.assertEqual(release["turns_left"], 1)
+
     def test_a_faction_exile_still_receives_a_tournament_move(self):
         host = Host()
         host.map_data = {"1": {"owner": "Leader"}}

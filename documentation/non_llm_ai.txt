@@ -420,6 +420,11 @@ SPECTATOR_CAN_EDIT_APPEARANCE
 All default to True.
 Disable a switch to permit viewing without the corresponding editing ability.
 
+Local spectators can open Puppets and select a country to release from its core land.
+The release panel offers Integrated, Autonomous, and Independent. Each new panel starts with Integrated selected.
+This control keeps the spectator's viewing identity. It does not permit tournament or real-time spectators to change another player's country.
+See documentation/diplo_stuff.txt for release timing, Keep Cores, permissions, and save compatibility.
+
 The editor's research screen sets a country's starting research.
 Select a country in Map Research Editor to open its research timeline and category tabs.
 Click an incomplete technology level to grant it and its prerequisites immediately.

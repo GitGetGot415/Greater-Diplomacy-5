@@ -545,6 +545,10 @@ def export_move_file(map_ref, file_path, player_key):
         "unit_snapshot": True,
         "aircraft_orders": [],
         "air_transport": queries.air_transport_commands(map_ref, cid),
+        "release_subjects": [{"core_nation": entry["core_nation"],
+                              "keep_cores": entry.get("keep_cores", False),
+                              "release_type": entry.get("release_type", c.PUPPET_TYPE_INTEGRATED)}
+                             for entry in save_dict.get("nation_data", {}).get(cid, {}).get("release_puppet_queue", [])],
     }
 
     session_key = getattr(map_ref, "multiplayer_session_key", None)
@@ -1029,6 +1033,12 @@ def load_move_files(map_ref, move_file_paths, keys_dict):
             summary["rejected"] += 1
             continue
         try:
+            from map_logic.diplomacy.puppet_actions import canonical_puppet_release_queue
+            existing_releases = map_ref.nation_data[cid].get("release_puppet_queue", [])
+            # Legacy moves stored releases only inside the player's country record.
+            releases = player_data.get("release_subjects", nd.get("release_puppet_queue", existing_releases))
+            canonical_releases = canonical_puppet_release_queue(
+                map_ref.map_data, map_ref.nation_data, cid, releases, existing_releases)
             _validate_administrative_orders(map_ref, cid, provs)
             transport_view, transport_commands = queries.air_transport_draft(
                 map_ref, cid, player_data.get("air_transport", []))
@@ -1041,6 +1051,9 @@ def load_move_files(map_ref, move_file_paths, keys_dict):
             summary["rejected"] += 1
             continue
         processed_move_cids.add(cid)
+
+        nd = dict(nd)
+        nd["release_puppet_queue"] = canonical_releases
 
         summary["faction_renames"] += _apply_faction_renames(
             map_ref, cid, player_data, nd)

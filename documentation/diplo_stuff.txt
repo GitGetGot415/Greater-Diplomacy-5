@@ -205,6 +205,42 @@ The editor rejects any assignment that makes a country its own ancestor.
 Shared puppet-state propagation visits each country at most once.
 Malformed older scenario data must not cause endless recursion.
 
+Release countries from cores
+---------------------------
+
+Players open Puppets, then Release Nation, to release countries from their own land.
+Local spectators open Puppets and select the country whose land supplies the release.
+This does not change the spectator's viewing identity.
+Tournament and real-time spectators cannot release countries for other players.
+Tactical players and map editors cannot use these release controls.
+
+The release panel offers Integrated, Autonomous, and Independent above Keep Cores.
+Each new panel starts with Integrated selected.
+Each queued release stores its selected type. Later control changes do not change queued releases.
+Cancel a queued release before changing its options.
+
+All choices use the same core-territory rule and the existing country creation rules.
+Keep Cores excludes tiles with the releasing country's core.
+Earlier queued releases take overlapping land first.
+Each release must have eligible land when queued. Check eligible land again when the release resolves.
+Do not create a country if no eligible land remains.
+
+Integrated and Autonomous countries become subjects through the shared puppet assignment rule.
+They join the master's faction and wars under that rule.
+Independent countries have no master. They do not inherit the releasing country's faction or wars.
+The existing country naming, color, and research inheritance rules apply to all three choices.
+
+release_puppet_queue entries store core_nation, keep_cores, release_type, and turns_left.
+Older entries without release_type resolve as Integrated.
+The save loader preserves these nested queue fields. The queue reader supplies the old-save default.
+New releases resolve after one turn. Existing countdowns remain authoritative.
+
+Tournament move files carry explicit release_subjects requests. Older moves can use their country-record queue.
+The host validates the source country, type, core land, duplicates, and unchanged options.
+It preserves session checks, turn checks, and host countdowns.
+Real-time clients submit release choices in puppet_draft. Only the server applies and resolves those commands.
+Neither protocol accepts a client-supplied countdown for a new release.
+
 Government in exile
 -------------------
 

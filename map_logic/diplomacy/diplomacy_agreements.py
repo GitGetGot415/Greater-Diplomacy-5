@@ -34,6 +34,7 @@ from map_logic.diplomacy.puppet_actions import (
     finalize_release,
     finalize_take_puppets,
     finalize_create_integrated_puppet,
+    finalize_create_puppet,
 )
 
 from map_logic.diplomacy.faction_actions import (

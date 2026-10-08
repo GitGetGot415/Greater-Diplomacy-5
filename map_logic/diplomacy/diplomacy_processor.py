@@ -1570,10 +1570,13 @@ def _process_claim_queues(map_screen):
             for rq in ready_to_release:
                 core_nation = rq["core_nation"]
                 keep_cores = rq.get("keep_cores", False)
-                from map_logic.diplomacy.diplomacy_agreements import finalize_create_integrated_puppet
-                finalize_create_integrated_puppet(map_screen.map_data, map_screen.nation_data, country_name, core_nation, map_screen, keep_cores)
-                if country_name == map_screen.player_country:
-                    map_screen.show_feedback(f"Created integrated puppet from {core_nation} cores!")
+                from map_logic.diplomacy.puppet_actions import finalize_create_puppet
+                release_type = rq.get("release_type", c.PUPPET_TYPE_INTEGRATED)
+                created = finalize_create_puppet(map_screen.map_data, map_screen.nation_data,
+                                                country_name, core_nation, map_screen, keep_cores, release_type)
+                if created and country_name == map_screen.player_country:
+                    core_name = queries.get_country_display_name(core_nation, map_screen.nation_data)
+                    map_screen.show_feedback(f"Released {release_type.lower()} country from {core_name} cores!")
 
 
 def _process_scheduled_ai_attache_revocations(map_screen):
