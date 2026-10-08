@@ -30,6 +30,7 @@ class TransportTests(unittest.TestCase):
             "cost_materials": 500, "cost_manpower": 30, "cost_fuel": 20,
             "production_time": 2, "naval_unit": False,
             "air_role": "transport", "air_range_px": 100, "air_transport_capacity": 1}
+        library["Monoplane Transport I"] = deepcopy(library["Monoplane Transport"])
         library["Fixture Cargo"] = {
             "health": 2800, "attack": 50, "defense": 0, "speed": 2,
             "cost_materials": 100, "cost_manpower": 40, "cost_fuel": 10,
@@ -405,7 +406,7 @@ class TransportSaveSmokeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             game, _, _, _ = air_tests.AirAppSmokeTests.make_runtime_save(self, directory)
             base = game.id_to_province[1]
-            plane = wing(base, "Monoplane Transport")
+            plane = wing(base, "Monoplane Transport I")
             cargo = wing(base, "Fixture Cargo")
             queries.set_air_cargo(game, "A", plane, base, [cargo["unit_id"]])
             cargo["health"] /= 2
@@ -433,14 +434,19 @@ class TransportSaveSmokeTests(unittest.TestCase):
 
     def test_real_content_matches_recipes_unlocks_and_png_assets(self):
         from data.generators.generate_data import build_unit_data_text, build_research_template_text
-        name = "Monoplane Transport"
-        self.assertEqual(queries.get_unit_library()[name], json.loads(build_unit_data_text())[name])
-        key, level = queries.get_unit_research_requirement(name)
+        names = [f"Monoplane Transport {c.ROMAN_NUMERALS[level]}" for level in range(1, 4)]
+        generated_units = json.loads(build_unit_data_text())
+        for name in names:
+            with self.subTest(unit=name):
+                self.assertEqual(queries.get_unit_library()[name], generated_units[name])
+        key, level = queries.get_unit_research_requirement(names[0])
         tree = queries.get_tech_tree()
         self.assertEqual(tree[key], json.loads(build_research_template_text())[key])
         research = dict(tree[key]["req"])
         self.assertTrue(queries.check_tech_requirements(research, tree[key]["req"], level))
         research[key] = level
-        self.assertTrue(queries.is_unit_unlocked(name, research))
+        for name in names:
+            unit_level = queries.get_unit_research_requirement(name)[1]
+            self.assertTrue(queries.is_unit_unlocked(name, dict(research, **{key: unit_level})))
         for path in ("assets/classic/Monoplane Transport.png", "assets/images/Air Transport.png"):
             self.assertEqual(Path(path).read_bytes()[:8], b"\x89PNG\r\n\x1a\n")

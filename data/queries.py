@@ -4940,6 +4940,7 @@ LEGACY_AIRCRAFT_NAMES = {
     "Biplane Bomber": "Biplane Bomber I",
     "Monoplane Fighter": "Monoplane Fighter I",
     "Monoplane Bomber": "Monoplane Bomber I",
+    "Monoplane Transport": "Monoplane Transport I",
     "Jet Fighter": "Jet Fighter I",
 }
 
