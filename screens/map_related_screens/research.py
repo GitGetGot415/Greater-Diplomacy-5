@@ -56,7 +56,7 @@ EDITOR_HELP_LINES = ("EDIT STARTING RESEARCH:", "Click a tech to add it and its 
                      "Click researched tech to remove it and dependents.", "Changes apply immediately to this country.",
                      "Default level: purple = missing, pink = researched.")
 SPECTATOR_HELP_LINES = ("EDIT COUNTRY RESEARCH:",) + EDITOR_HELP_LINES[1:3] + (
-    "Exit opens Save, Cancel, or Go back.",)
+    "Exit opens Save, Don't save, or Go back.",)
 
 # Tech detail modal
 MODAL_WIDTH = 800
@@ -871,9 +871,9 @@ class Research_Screen(GameState):
                 self._close_research_screen()
 
         confirm_dialog.ask_yes_no("Save Research Changes?",
-                                  "Save applies all research edits. Cancel discards all edits and exits. "
+                                  "Save applies all research edits. Don't save discards all edits and exits. "
                                   "Go back keeps your draft open on the research screen.",
-                                  finish_exit, yes_label="Save", no_label="Cancel", back_label="Go back")
+                                  finish_exit, yes_label="Save", no_label="Don't save", back_label="Go back")
 
     def _close_research_screen(self):
         """Clear the draft and leave after the exit choice is resolved."""
