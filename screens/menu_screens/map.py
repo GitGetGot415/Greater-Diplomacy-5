@@ -511,6 +511,8 @@ def render_buttons(map_screen):
         ("btn_spec_join_fac", 3, "yellow", "Join Faction", "spec_join_faction"),
         ("btn_spec_leave_fac", 3, "orange", "Leave Faction", "spec_leave_faction"),
         ("btn_spec_disband_fac", 3, "red", "Disband Faction", "spec_disband_faction"),
+        ("btn_spec_annex", 4, "orange", "Annex", "spec_annex_country"),
+        ("btn_spec_delete", 5, "red", "Delete", "spec_delete_country"),
     )
     for attr, row, color, label, menu_fn in spectator_buttons:
         button = Button(ACTION_BTN_X, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * row,
@@ -590,7 +592,8 @@ def render_buttons(map_screen):
         map_screen.btn_req_mil_access, map_screen.btn_cancel_mil_access, map_screen.btn_revoke_mil_access,
         map_screen.btn_accept_req, map_screen.btn_reject_req, map_screen.btn_force_war, map_screen.btn_force_peace,
         map_screen.btn_spec_create_fac, map_screen.btn_spec_join_fac, map_screen.btn_spec_invite_fac, map_screen.btn_spec_leave_fac,
-        map_screen.btn_spec_disband_fac, map_screen.btn_spectator, map_screen.btn_tactical, map_screen.btn_close_info, map_screen.btn_exit_to_menu, map_screen.btn_realtime_details,
+        map_screen.btn_spec_disband_fac, map_screen.btn_spec_annex, map_screen.btn_spec_delete,
+        map_screen.btn_spectator, map_screen.btn_tactical, map_screen.btn_close_info, map_screen.btn_exit_to_menu, map_screen.btn_realtime_details,
         map_screen.btn_view_foreign_politics,
         map_screen.btn_spec_mp_manage, map_screen.btn_spec_mp_export, map_screen.btn_spec_mp_keys,
         map_screen.slider_camera_tilt
@@ -979,6 +982,9 @@ def update_button_states(map_screen):
             if queries.is_playable(owner, map_screen.nation_data):
                 set_btn(map_screen.btn_force_war, True, True, "Force War", "red")
                 set_btn(map_screen.btn_force_peace, True, True, "Force Ceasefire", "green")
+                can_remove_country = queries.can_use_spectator_country_actions(map_screen)
+                set_btn(map_screen.btn_spec_annex, can_remove_country, can_remove_country, "Annex", "orange")
+                set_btn(map_screen.btn_spec_delete, can_remove_country, can_remove_country, "Delete", "red")
 
                 in_faction = map_screen.nation_data[owner].get("faction", "")
                 is_leader = queries.is_faction_leader(owner, map_screen.nation_data)

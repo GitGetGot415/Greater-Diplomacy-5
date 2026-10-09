@@ -3212,10 +3212,15 @@ def merge_country_templates(nation_data):
 
     Empty save records are references to the shared country catalog. Filling
     them in place preserves the saved iteration order, including custom IDs,
-    and leaves the entire catalog available to editor brushes and events.
+    and keeps catalog countries available unless a spectator explicitly deleted them.
     Copies keep live edits from changing the process-wide template cache.
     """
+    deleted = nation_data.get("GLOBAL_EVENTS", {}).get("deleted_countries", [])
+    for country in deleted:
+        nation_data.pop(country, None)
     for country, template in get_country_data().items():
+        if country in deleted:
+            continue
         if country not in nation_data:
             nation_data[country] = copy.deepcopy(template)
             continue
@@ -3504,6 +3509,17 @@ def can_release_nations_for(map_screen, country_id):
         return not (getattr(map_screen, "multiplayer_mode", False)
                     or getattr(map_screen, "realtime_multiplayer", False))
     return country_id == map_screen.player_country
+
+
+def can_use_spectator_country_actions(map_screen):
+    """Permit immediate country changes only during local spectator planning."""
+    # Network modes are optional until a session attaches them to the map.
+    return (map_screen.player_country == "Spectator"
+            and not (map_screen.is_editor or map_screen.tactical_mode or map_screen.selection_mode
+                     or map_screen.ai_is_thinking or map_screen.viewing_ai_moves
+                     or map_screen.is_refreshing or map_screen.is_saving
+                     or getattr(map_screen, "multiplayer_mode", False)
+                     or getattr(map_screen, "realtime_multiplayer", False)))
 
 
 def get_puppet_release_provinces(master, core_nation, map_data, keep_cores=False, release_queue=()):

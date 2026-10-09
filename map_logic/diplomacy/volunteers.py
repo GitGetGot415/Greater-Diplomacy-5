@@ -197,6 +197,26 @@ def _clear_unit_metadata(unit):
         unit.pop(key, None)
 
 
+def end_country_missions(map_screen, country, successor=None):
+    """End a removed country's missions. Restore foreign divisions to their owners."""
+    for donor, data in map_screen.nation_data.items():
+        donor_missions = data.get("volunteer_missions", {})
+        for host, mission in list(donor_missions.items()):
+            if donor != country and host != country:
+                continue
+            if donor != country and mission.get("state") == DEPLOYED:
+                _recall_deployed(map_screen, donor, host, mission)
+            for entry in mission.get("held_units", []):
+                if donor == country:
+                    if successor is None:
+                        continue
+                    queries.set_unit_owner(entry["unit"], successor)
+                    _restore_to_origin(map_screen, successor, entry)
+                else:
+                    _restore_to_origin(map_screen, donor, entry)
+            del donor_missions[host]
+
+
 def create_offer(map_screen, donor, host, chosen):
     """Remove selected units and create the off-map offer mission.
 

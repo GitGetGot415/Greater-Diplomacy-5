@@ -420,6 +420,12 @@ SPECTATOR_CAN_EDIT_APPEARANCE
 All default to True.
 Disable a switch to permit viewing without the corresponding editing ability.
 
+Local spectators can use Annex and Delete below the selected country's faction controls.
+Annex transfers another country's territory, divisions, and subjects immediately.
+Delete requires confirmation. It removes the country's live state but preserves existing turn history.
+Both actions are unavailable during turn processing, saving, map refresh, tactical play, and both multiplayer modes.
+See documentation/diplo_stuff.txt for core cleanup, volunteer handling, and save compatibility.
+
 Local spectators can open Puppets and select a country to release from its core land.
 Back from the release panel returns to the country list. Cancel closes that list.
 The release panel offers Integrated, Autonomous, and Independent. Each new panel starts with Integrated selected.

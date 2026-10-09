@@ -9,6 +9,66 @@ def force_war_menu(map_screen):
 def force_peace_menu(map_screen): 
     open_spectator_action_menu(map_screen, "PEACE")
 
+
+def _selected_country_for_removal(map_screen):
+    if not queries.can_use_spectator_country_actions(map_screen):
+        return None
+    country = (map_screen.selected_province or {}).get("owner")
+    return country if queries.is_playable(country, map_screen.nation_data) else None
+
+
+def _refresh_country_removal(map_screen):
+    map_screen.clear_map_unit_selection()
+    map_screen.refresh_map_layers(*map_screen.ALL_MAP_LAYERS)
+    map_screen.update_country_centers()
+    from screens.menu_screens.map import update_button_states
+    update_button_states(map_screen)
+
+
+def spec_annex_country(map_screen):
+    source = _selected_country_for_removal(map_screen)
+    if source is None:
+        return
+    source_name = queries.get_country_display_name(source, map_screen.nation_data)
+    candidates = sorted(country for country in queries.get_living_nations(map_screen.map_data)
+                        if country != source and queries.is_playable(country, map_screen.nation_data))
+
+    def selected(target):
+        if (_selected_country_for_removal(map_screen) != source
+                or target not in queries.get_living_nations(map_screen.map_data)):
+            return
+        from map_logic.diplomacy.puppet_actions import finalize_spectator_country_removal
+        target_name = queries.get_country_display_name(target, map_screen.nation_data)
+        if finalize_spectator_country_removal(map_screen, target, source):
+            _refresh_country_removal(map_screen)
+            map_screen.show_feedback(f"{source_name} annexed {target_name}.")
+
+    queries.open_listbox_selector(
+        map_screen, f"Annex for {source_name}", "Select a country to annex immediately:",
+        queries.country_picker_items(candidates, map_screen.nation_data), selected)
+
+
+def spec_delete_country(map_screen):
+    country = _selected_country_for_removal(map_screen)
+    if country is None:
+        return
+    name = queries.get_country_display_name(country, map_screen.nation_data)
+
+    def confirmed(accepted):
+        if not accepted or _selected_country_for_removal(map_screen) != country:
+            return
+        from map_logic.diplomacy.puppet_actions import finalize_spectator_country_removal
+        if finalize_spectator_country_removal(map_screen, country):
+            _refresh_country_removal(map_screen)
+            map_screen.show_feedback(f"Deleted {name}.")
+
+    from ui import confirm_dialog
+    confirm_dialog.ask_yes_no(
+        "Delete Country", f"Delete {name}? Its territory will become unclaimed. "
+        "All its cores and units will be removed. History will remain unchanged.",
+        on_result=confirmed, yes_label="Delete", no_label="Cancel")
+
+
 def _spec_faction_action(map_screen, finalizer, verb, wants_map_data=False):
     """Applies a one-shot faction change to the selected province's owner.
 

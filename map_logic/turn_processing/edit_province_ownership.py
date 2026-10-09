@@ -43,11 +43,15 @@ def apply_editor_territory_brush(map_screen, province, remove=False):
     return layers
 
 
-def conquer_province(map_screen, province, new_owner, *, refresh_visuals=True, check_landless=True):
-    """Apply province ownership. Batch callers can defer visuals and the previous owner's land check."""
+def conquer_province(map_screen, province, new_owner, *, refresh_visuals=True, check_landless=True,
+                     apply_capture_rules=True):
+    """Apply ownership. Batch callers can defer visuals and retirement.
+
+    Spectator country removal can bypass capture rerouting and new claims.
+    """
     if province:
         # --- NEW: Integrated Puppet Capture Reroute ---
-        if not map_screen.is_editor and new_owner in map_screen.nation_data:
+        if apply_capture_rules and not map_screen.is_editor and new_owner in map_screen.nation_data:
             nd = map_screen.nation_data[new_owner]
             if nd.get("puppet_type") == c.PUPPET_TYPE_INTEGRATED:
                 if province["id"] not in nd.get("spawned_territories", []):
@@ -57,7 +61,8 @@ def conquer_province(map_screen, province, new_owner, *, refresh_visuals=True, c
 
         # --- NEW: If you ever lose a territory, you immediately get a claim on it ---
         old_owner = province.get("owner", "Unclaimed")
-        if old_owner not in c.UNPLAYABLE_NATIONS and old_owner != new_owner and not map_screen.is_editor:
+        if (apply_capture_rules and old_owner not in c.UNPLAYABLE_NATIONS
+                and old_owner != new_owner and not map_screen.is_editor):
             add_claim(map_screen, province, old_owner)
 
         # 1. Logic Update
@@ -117,8 +122,10 @@ def retire_exhausted_factions(map_screen):
     return dissolved
 
 
-def retire_landless_nation(map_screen, nation):
+def retire_landless_nation(map_screen, nation, *, force=False):
     """Retires a landless nation unless its faction sustains it in exile.
+
+    force=True permits spectator annexation to end a faction-backed exile.
 
     Two jobs used to be one, behind a gate that only opened for a puppet the
     player had created or a rebellion put down mid-war. Everything else -- an
@@ -150,7 +157,7 @@ def retire_landless_nation(map_screen, nation):
         # unless every member is already landless. In that case there is no
         # possible restorer, so retire the whole exhausted roster now instead
         # of allowing a dead bloc to remain at war indefinitely.
-        if data.get("faction", ""):
+        if data.get("faction", "") and not force:
             retire_exhausted_factions(map_screen)
             # Either the roster was exhausted and this nation has already been
             # retired by the helper, or another member still owns land and it

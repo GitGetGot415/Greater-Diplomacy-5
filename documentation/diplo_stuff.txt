@@ -12,6 +12,31 @@ Country diplomacy controls require a current selection with an existing country 
 If that selection is unavailable, the callback shows feedback and takes no action.
 Replies from the message screen use their explicit country target without requiring a province selection.
 
+Spectator country removal
+------------------------
+
+Local spectators see Annex and Delete below the country faction controls.
+These actions are unavailable in the editor, tactical play, country selection, and both multiplayer modes.
+They are also unavailable during turn processing, map refresh, or saving.
+The game checks these permissions again when the spectator confirms an action.
+
+Annex opens a country list. Select another country to annex it into the first selected country immediately.
+All its territory and divisions transfer. This includes aircraft cargo and divisions in volunteer missions.
+Its subjects transfer to the annexing country. The annexed country cannot remain in exile.
+An Integrated annexer receives the territory directly. The game does not redirect it to its master.
+Ordinary country cores remain. The existing cleanup rule removes cores of created Integrated puppets and active rebellions.
+
+Delete requires confirmation. Cancel or press Back to keep the country.
+Its territory becomes Unclaimed. The game removes its cores, divisions, production queues, and live country record.
+It also clears live diplomacy references and releases its subjects.
+Foreign volunteer divisions return to their owners. A surviving faction member can replace a deleted faction leader.
+Existing turn history remains unchanged.
+
+GLOBAL_EVENTS.deleted_countries stores deleted country IDs in saves and new history snapshots.
+The template loader does not restore these IDs. Older saves without this list keep their existing behavior.
+Loading a historical turn before deletion restores that turn's country state.
+These controls do not add AI actions or multiplayer commands.
+
 Shared processing and save data
 ------------------------------
 

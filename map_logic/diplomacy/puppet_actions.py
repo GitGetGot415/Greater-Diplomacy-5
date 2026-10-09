@@ -164,7 +164,11 @@ def pull_puppets_out_of_faction(master, nation_data):
         nation_data[p]["is_faction_leader"] = False
     apply_to_puppets_recursively(master, nation_data, _clear_fac)
 
-def finalize_annexation(map_data, nation_data, master, puppet, map_screen):
+def finalize_annexation(map_data, nation_data, master, puppet, map_screen, *, force=False):
+    if force and (not queries.can_use_spectator_country_actions(map_screen)
+                  or master == puppet or not queries.is_playable(master, nation_data)
+                  or not queries.is_playable(puppet, nation_data)):
+        return False
     puppets_to_transfer = nation_data.get(puppet, {}).get("puppets", []).copy()
     for child in puppets_to_transfer:
         p_type = nation_data.get(child, {}).get("puppet_type", c.PUPPET_TYPE_AUTONOMOUS)
@@ -173,7 +177,9 @@ def finalize_annexation(map_data, nation_data, master, puppet, map_screen):
     # Transfer all territory and units
     for prov in map_data.values():
         if prov.get("owner") == puppet:
-            edit_province_ownership.conquer_province(map_screen, prov, master)
+            edit_province_ownership.conquer_province(
+                map_screen, prov, master, refresh_visuals=not force,
+                check_landless=not force, apply_capture_rules=not force)
         for unit in prov.get("units", []):
             if unit.get("owner") == puppet:
                 queries.set_unit_owner(unit, master)
@@ -183,11 +189,135 @@ def finalize_annexation(map_data, nation_data, master, puppet, map_screen):
     # nothing never enters that loop, and used to stay on its faction's roster
     # for the rest of the game.
     from map_logic.turn_processing.edit_province_ownership import retire_landless_nation
-    retire_landless_nation(map_screen, puppet)
+    retire_landless_nation(map_screen, puppet, force=force)
 
     break_puppet_link(nation_data, master, puppet)
 
     log_global_event(nation_data, f"{master} has fully annexed {puppet}.")
+
+
+def _references_country(value, country):
+    """Check structured orders and diplomacy for a country ID."""
+    if isinstance(value, dict):
+        return country in value or any(_references_country(item, country) for item in value.values())
+    if isinstance(value, (list, tuple)):
+        return any(_references_country(item, country) for item in value)
+    return value == country
+
+
+def _clear_country_relationships(nation_data, country):
+    """Remove live relations and pending actions. Preserve historical world events."""
+    list_fields = ("at_war_with", "allied_with", "puppets", "guarantees", "military_attaches",
+                   "military_access", "pending_military_attache_revocations", "pending_volunteer_send_homes")
+    table_fields = ("relations", "wargoals", "temp_modifiers", "pending_diplomacy", "diplo_responses",
+                    "diplo_cooldowns", "truces", "draft_lists", "war_durations", "volunteer_missions")
+    queue_fields = ("return_queue", "release_puppet_queue", "inbox", "outbox")
+    for country_id, record in nation_data.items():
+        if country_id in ("GLOBAL_EVENTS", "FACTION_WAR_MAPS", "WAR_PRE_MAPS"):
+            continue
+        if record.get("master") == country:
+            record["master"] = ""
+            record["puppet_type"] = ""
+            record.pop("is_created_integrated_puppet", None)
+        for field in list_fields + queue_fields:
+            if field in record:
+                record[field] = [item for item in record[field] if not _references_country(item, country)]
+        for field in table_fields:
+            if field in record:
+                table = record[field]
+                for key, value in list(table.items()):
+                    if key == country or _references_country(value, country):
+                        del table[key]
+    for field in ("FACTION_WAR_MAPS", "WAR_PRE_MAPS"):
+        maps = nation_data.get(field, {})
+        maps.pop(country, None)
+        for borders in maps.values():
+            # Older shared records can also contain ordinary country defaults.
+            if not isinstance(borders, dict):
+                continue
+            for province_id, owner in list(borders.items()):
+                if owner == country:
+                    del borders[province_id]
+
+
+def finalize_spectator_country_removal(map_screen, country, annexer=None):
+    """Annex a country immediately, or delete its live state and preserve history."""
+    nation_data, map_data = map_screen.nation_data, map_screen.map_data
+    if (not queries.can_use_spectator_country_actions(map_screen)
+            or not queries.is_playable(country, nation_data)):
+        return False
+    if annexer is not None and (annexer == country or not queries.is_playable(annexer, nation_data)
+                               or annexer not in queries.get_living_nations(map_data)):
+        return False
+    from map_logic.diplomacy import volunteers, faction_actions, faction_leadership
+    country_name = queries.get_country_display_name(country, nation_data)
+    volunteers.end_country_missions(map_screen, country, annexer)
+    for province in map_data.values():
+        for unit in queries.units_with_air_cargo(province.get("units", [])):
+            if unit.get("owner") == country:
+                unit.pop("volunteer_host", None)
+                unit.pop("volunteer_origin_id", None)
+    if annexer is not None:
+        # A subject can annex its own ancestor without creating a puppet cycle.
+        if would_create_puppet_cycle(annexer, country, nation_data):
+            break_puppet_link(nation_data, nation_data[annexer].get("master", ""), annexer)
+        if nation_data[annexer].get("puppet_type") == c.PUPPET_TYPE_INTEGRATED:
+            spawned = nation_data[annexer].setdefault("spawned_territories", [])
+            spawned.extend(p["id"] for p in map_data.values()
+                           if p.get("owner") == country and p["id"] not in spawned)
+        finalize_annexation(map_data, nation_data, annexer, country, map_screen, force=True)
+    else:
+        for province in map_data.values():
+            if province.get("owner") == country:
+                edit_province_ownership.conquer_province(
+                    map_screen, province, "Unclaimed", refresh_visuals=False,
+                    check_landless=False, apply_capture_rules=False)
+                province["unit_queue"] = []
+                province["building_queue"] = []
+                province["orders"] = []
+            province["cores"] = [core for core in province.get("cores", []) if core != country]
+        faction = faction_actions.leave_faction(nation_data, country)
+        del nation_data[country]
+        # The loader must not restore a deleted catalog country from its template.
+        log_global_event(nation_data, f"{country_name} was deleted by the spectator.")
+        deleted = nation_data["GLOBAL_EVENTS"].setdefault("deleted_countries", [])
+        if country not in deleted:
+            deleted.append(country)
+        faction_leadership.promote(map_screen, faction)
+        if hasattr(map_screen, "nation_colors"):
+            map_screen.nation_colors.pop(country, None)
+    for province in map_data.values():
+        survivors = []
+        for unit in province.get("units", []):
+            if unit.get("owner") == country:
+                if annexer is None:
+                    continue
+                queries.set_unit_owner(unit, annexer)
+            if "air_cargo" in unit:
+                unit["air_cargo"] = [cargo for cargo in unit["air_cargo"]
+                                      if annexer is not None or cargo.get("owner") != country]
+            for member in queries.units_with_air_cargo([unit]):
+                if member.get("owner") == country and annexer is not None:
+                    queries.set_unit_owner(member, annexer)
+                if member.get("volunteer_host") == country:
+                    member.pop("volunteer_host", None)
+                    member.pop("volunteer_origin_id", None)
+            survivors.append(unit)
+        province["units"] = survivors
+        for field in ("unit_queue", "building_queue", "orders"):
+            if field in province:
+                province[field] = [entry for entry in province[field]
+                                    if not _references_country(entry, country)]
+    _clear_country_relationships(nation_data, country)
+    if country in nation_data:
+        data = nation_data[country]
+        data.update(master="", puppet_type="", puppets=[], faction="", is_faction_leader=False,
+                    at_war_with=[], allied_with=[], pending_diplomacy={}, diplo_responses={},
+                    volunteer_missions={}, scripted_events=[], armies=[], claim_queue=[],
+                    revoke_queue=[], return_queue=[], release_puppet_queue=[])
+    queries.normalize_armies(nation_data, map_data)
+    map_screen.centers_need_update = True
+    return True
 
 def finalize_release(map_data, nation_data, master, puppet, map_screen):
     break_puppet_link(nation_data, master, puppet)
