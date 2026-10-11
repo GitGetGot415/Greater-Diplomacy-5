@@ -131,7 +131,7 @@ class LingProviderTests(NoNetworkTestCase):
         self._patch(ai_handler, "FORCE_SKIP", False)
 
     def test_ling_request_uses_saved_key_and_editable_model(self):
-        for model in (c.DEFAULT_LING_MODEL, "inclusionai/test-ling-model"):
+        for model in (c.DEFAULT_LING_MODEL, "vendor/test-chat-model"):
             with self.subTest(model=model):
                 session = mock.Mock()
                 session.post.return_value.status_code = 200

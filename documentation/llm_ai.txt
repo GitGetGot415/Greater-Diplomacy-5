@@ -33,6 +33,15 @@ ai_prompts.py
 ai_evaluation.py, ai_diplomacy.py
     Connect model choices and proposal replies to shared AI rules.
 
+OPENROUTER SETTINGS
+-------------------
+
+Select OpenRouter in Settings to enter an OpenRouter API key and model ID.
+The model field accepts other OpenRouter models.
+Ling remains the default model.
+Existing settings keep the LING provider ID and the ling_api_key and ling_model keys for compatibility.
+Use OLLAMA for installed local models.
+
 IMMERSION LEVELS
 ----------------
 

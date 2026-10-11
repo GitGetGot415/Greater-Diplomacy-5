@@ -228,7 +228,7 @@ class SettingsScreenTests(unittest.TestCase):
         old_tuple = settings_schema.to_tuple(restored, {})[:-2]
         self.assertEqual(settings_schema.from_tuple(old_tuple), restored)
 
-    def test_ling_button_editing_switching_and_save(self):
+    def test_openrouter_button_editing_switching_and_save(self):
         import pygame
         from types import SimpleNamespace
         from screens.menu_screens.settings import Settings
@@ -239,7 +239,7 @@ class SettingsScreenTests(unittest.TestCase):
                 mock.patch("map_logic.ai.ai_handler.reset_clients") as reset_clients, \
                 mock.patch("screens.menu_screens.settings.queries.save_global_settings") as save:
             screen = Settings(controller)
-            next(item for item in screen.elements if item.text == "LING").callback()
+            next(item for item in screen.elements if item.text == "OpenRouter").callback()
             self.assertEqual(controller.ai_mode, "LING")
             self.assertEqual(screen.get_field("MOD"), c.DEFAULT_LING_MODEL)
             key_y = next(y for box, y, _ in screen.ai_field_rows() if box == "KEY")
@@ -251,8 +251,8 @@ class SettingsScreenTests(unittest.TestCase):
             screen.active_input = "LING_MOD"
             screen.set_field("MOD", "")
             screen.additional_events(pygame.event.Event(
-                pygame.KEYDOWN, key=pygame.K_v, unicode="inclusionai/test-ling-model", mod=0))
-            self.assertEqual(controller.ling_model, "inclusionai/test-ling-model")
+                pygame.KEYDOWN, key=pygame.K_v, unicode="vendor/test-chat-model", mod=0))
+            self.assertEqual(controller.ling_model, "vendor/test-chat-model")
             self.assertEqual(controller.ling_api_key, "test-key")
             screen.set_ai_mode("KIMI")
             self.assertIsNone(screen.active_input)

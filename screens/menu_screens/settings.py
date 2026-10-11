@@ -148,7 +148,8 @@ def render_settings_buttons(settings_screen):
     if ai_is_on:
         # AI provider picker
         settings_screen.elements.extend(make_option_buttons([
-            (SETTINGS_AI_PROVIDER_START_X + i * SETTINGS_AI_PROVIDER_STEP_X, SETTINGS_AI_PROVIDER_Y, mode, mode)
+            (SETTINGS_AI_PROVIDER_START_X + i * SETTINGS_AI_PROVIDER_STEP_X, SETTINGS_AI_PROVIDER_Y,
+             mode, settings_screen.AI_PROVIDER_LABELS.get(mode, mode))
             for i, mode in enumerate(settings_screen.ai_modes[1:])
         ], settings_screen.set_ai_mode, settings_screen.ai_mode))
 
@@ -218,6 +219,8 @@ class Settings(GameState):
     # so one naming rule replaces the four-branch if/elif chains this screen
     # used to carry in five separate places.
     AI_MODES = ["OFF", "OLLAMA", "GEMINI", "CHATGPT", "CLAUDE", "DEEPSEEK", "KIMI", "LING"]
+    # Keep the saved provider ID while showing the service name in the UI.
+    AI_PROVIDER_LABELS = {"LING": "OpenRouter"}
     AI_FIELD_SUFFIX = {"KEY": "api_key", "MOD": "model"}
 
     # key -> (constants attribute to keep in sync, default value, picker title)
@@ -299,12 +302,12 @@ class Settings(GameState):
 
     def ai_field_rows(self):
         """Share field positions and labels across rendering and input handling."""
+        provider_name = self.AI_PROVIDER_LABELS.get(self.ai_mode, self.ai_mode.capitalize())
         return [
             ("KEY", c.SETTINGS_KEY_BOX_Y,
              "Ollama Base URL (blank = localhost):" if self.ai_mode == "OLLAMA"
-             else "Paste OpenRouter API Key (Ling):" if self.ai_mode == "LING"
-             else f"Paste {self.ai_mode.capitalize()} API Key:"),
-            ("MOD", c.SETTINGS_MOD_BOX_Y, f"{self.ai_mode.capitalize()} Model Name:"),
+             else f"Paste {provider_name} API Key:"),
+            ("MOD", c.SETTINGS_MOD_BOX_Y, f"{provider_name} Model Name:"),
         ]
 
     def field_attr(self, box_type):
