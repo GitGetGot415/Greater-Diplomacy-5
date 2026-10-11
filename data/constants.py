@@ -494,6 +494,7 @@ DEFAULT_CLAUDE_MODEL = "claude-3-haiku-20240307"
 DEFAULT_OLLAMA_MODEL = "llama3"
 DEFAULT_DEEPSEEK_MODEL = "deepseek-chat"
 DEFAULT_KIMI_MODEL = "kimi-k2-0711-preview"
+DEFAULT_LING_MODEL = "inclusionai/ling-3.0-tiny:free"
 
 # OpenAI-compatible chat completion endpoints for the hosted providers that
 # don't need a user-editable URL (unlike Ollama, which stores its URL in the
@@ -502,6 +503,7 @@ CHATGPT_API_URL = "https://api.openai.com/v1/chat/completions"
 DEEPSEEK_API_URL = "https://api.deepseek.com/chat/completions"
 # Moonshot AI is the company; Kimi is the model line they ship under that API host.
 KIMI_API_URL = "https://api.moonshot.ai/v1/chat/completions"
+LING_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 # Anthropic's Messages API, used for Claude -- different auth/shape than the
 # OpenAI-compatible providers above, so it gets its own caller.
 CLAUDE_API_URL = "https://api.anthropic.com/v1/messages"

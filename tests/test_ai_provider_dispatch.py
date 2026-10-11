@@ -14,11 +14,14 @@ rather than a slow test.
 import os
 import sys
 import unittest
+from unittest import mock
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import data.constants as c
+from data import queries
 from map_logic.ai import ai_evaluation, ai_handler
 
 
@@ -70,6 +73,7 @@ class DispatchTests(NoNetworkTestCase):
                                ("CHATGPT", "call_openai_compatible"),
                                ("DEEPSEEK", "call_openai_compatible"),
                                ("KIMI", "call_openai_compatible"),
+                               ("LING", "call_openai_compatible"),
                                ("CLAUDE", "call_claude"),
                                ("GEMINI", "call_gemini")):
             picked.clear()
@@ -110,7 +114,7 @@ class DispatchTests(NoNetworkTestCase):
         response" here, so pressing Force Skip put an error string in front of
         the player dressed as a diplomatic cable."""
         self.stub_calls(None)
-        for mode in ("OLLAMA", "CHATGPT", "CLAUDE", "GEMINI"):
+        for mode in ("OLLAMA", "CHATGPT", "CLAUDE", "GEMINI", "DEEPSEEK", "KIMI", "LING"):
             reply = ai_handler._run_provider(mode, "s", "u", None, "we accept.", accepted=True)
             self.assertEqual(reply["message"], "we accept.", mode)
             self.assertEqual(reply["accepted"], True, mode)
@@ -119,6 +123,79 @@ class DispatchTests(NoNetworkTestCase):
         self.stub_calls({"action": "NONE"})
         reply = ai_handler._run_provider("KIMI", "s", "u", None, "canned")
         self.assertIn("KIMI", reply["message"])
+
+
+class LingProviderTests(NoNetworkTestCase):
+    def setUp(self):
+        super().setUp()
+        self._patch(ai_handler, "FORCE_SKIP", False)
+
+    def test_ling_request_uses_saved_key_and_editable_model(self):
+        for model in (c.DEFAULT_LING_MODEL, "inclusionai/test-ling-model"):
+            with self.subTest(model=model):
+                session = mock.Mock()
+                session.post.return_value.status_code = 200
+                session.post.return_value.json.return_value = {
+                    "choices": [{"message": {"content": '{"message":"We agree.","accepted":true}'}}]}
+                with mock.patch.object(ai_handler, "_session", return_value=session), \
+                        mock.patch.object(queries, "get_settings", return_value={
+                            "ling_api_key": "test-key", "ling_model": model}):
+                    result = ai_handler._dispatch("LING", "system", "world", None)
+                self.assertEqual(result, {"message": "We agree.", "accepted": True})
+                args, kwargs = session.post.call_args
+                self.assertEqual(args, (c.LING_API_URL,))
+                self.assertEqual(kwargs["headers"]["Authorization"], "Bearer test-key")
+                self.assertEqual(kwargs["json"]["model"], model)
+                self.assertEqual(kwargs["json"]["messages"], [
+                    {"role": "system", "content": "system"},
+                    {"role": "user", "content": "world"}])
+
+    def test_legacy_settings_supply_default_model_and_empty_key(self):
+        with mock.patch.object(queries, "get_settings", return_value={}), \
+                mock.patch.object(ai_handler, "call_openai_compatible") as call:
+            ai_handler._dispatch("LING", "system", "world", None)
+        call.assert_called_once_with(c.LING_API_URL, "", c.DEFAULT_LING_MODEL,
+                                     "system", "world", None)
+
+    def test_legacy_local_ling_url_cannot_redirect_hosted_requests(self):
+        with mock.patch.object(queries, "get_settings", return_value={
+                "ling_base_url": "http://localhost:11434/v1", "ling_api_key": "test-key"}), \
+                mock.patch.object(ai_handler, "call_openai_compatible") as call:
+            ai_handler._dispatch("LING", "s", "u", None)
+        call.assert_called_once_with(c.LING_API_URL, "test-key", c.DEFAULT_LING_MODEL, "s", "u", None)
+
+    def test_skip_and_stale_turn_prevent_ling_requests(self):
+        self.assertIsNone(ai_handler._dispatch("LING", "s", "u", ai_handler.CURRENT_TURN_ID - 1))
+        ai_handler.FORCE_SKIP = True
+        self.assertIsNone(ai_handler._dispatch("LING", "s", "u", None))
+
+    def test_http_failure_and_invalid_json_use_shared_handling(self):
+        session = mock.Mock()
+        with mock.patch.object(ai_handler, "_session", return_value=session):
+            session.post.return_value.status_code = 401
+            session.post.return_value.text = "invalid API key"
+            failed = ai_handler._dispatch("LING", "s", "u", None)
+            self.assertTrue(failed["error"])
+            self.assertIn("401", failed["message"])
+            session.post.return_value.status_code = 200
+            session.post.return_value.json.return_value = {
+                "choices": [{"message": {"content": "plain reply"}}]}
+            self.assertEqual(ai_handler._dispatch("LING", "s", "u", None), {"message": "plain reply"})
+
+
+class ReplyParsingTests(unittest.TestCase):
+    def test_json_code_blocks_preserve_action_fields(self):
+        payload = '{"message":"Ready","accepted":true,"action":"NONE"}'
+        expected = {"message": "Ready", "accepted": True, "action": "NONE"}
+        for wrapper in ("```json\n{}\n```", "```\n{}\n```", "  ```JSON\r\n{}\r\n```  "):
+            with self.subTest(wrapper=wrapper):
+                self.assertEqual(ai_handler._parse_reply_json(wrapper.format(payload)), expected)
+
+    def test_invalid_json_keeps_the_original_fallback_text(self):
+        for reply in (" ```json\nnot json\n``` ", "```python\nprint('hello')\n```", "ordinary text"):
+            with self.subTest(reply=reply):
+                self.assertEqual(ai_handler._parse_reply_json(reply, lambda text: "JSON ERROR: " + text),
+                                 {"message": "JSON ERROR: " + reply})
 
 
 class ProviderErrorTests(NoNetworkTestCase):

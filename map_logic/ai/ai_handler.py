@@ -37,6 +37,7 @@ from map_logic.ai.ai_settings import (
     get_claude_api_key,
     get_deepseek_api_key,
     get_kimi_api_key,
+    get_ling_api_key,
     get_ai_mode,
     get_ai_immersion_level,
     get_gemini_model,
@@ -44,6 +45,7 @@ from map_logic.ai.ai_settings import (
     get_claude_model,
     get_deepseek_model,
     get_kimi_model,
+    get_ling_model,
     get_ollama_model,
     get_ollama_url,
 )
@@ -180,8 +182,14 @@ def _parse_reply_json(text, fallback=None):
     `fallback` formats the unparseable text (Ollama's says "JSON ERROR:" so a
     local model's mangled output is distinguishable from a real cable).
     """
+    json_text = text.strip()
+    # Some local models wrap valid JSON in a Markdown code block.
+    if json_text.startswith("```") and json_text.endswith("```"):
+        language, newline, body = json_text[3:-3].partition("\n")
+        if newline and language.strip().lower() in ("", "json"):
+            json_text = body.strip()
     try:
-        return json.loads(text)
+        return json.loads(json_text)
     except json.JSONDecodeError:
         return {"message": text if fallback is None else fallback(text)}
 
@@ -215,19 +223,18 @@ def _request_json(url, payload, headers, extract, turn_id=None):
         return _provider_error(f"API ERROR: {str(e)}")
 
 
-#: ChatGPT, DeepSeek, and Kimi (Moonshot) all speak the same OpenAI-style chat
-#: completions REST API, so one caller and this lookup of
-#: (endpoint, api key getter, model getter) covers all three instead of writing
-#: the request/response handling out three times.
+#: These providers share the OpenAI-style chat completions API.
+#: Each entry supplies the endpoint, API-key getter, and model getter.
 OPENAI_COMPATIBLE_PROVIDERS = {
     "CHATGPT": (lambda: c.CHATGPT_API_URL, get_chatgpt_api_key, get_chatgpt_model),
     "DEEPSEEK": (lambda: c.DEEPSEEK_API_URL, get_deepseek_api_key, get_deepseek_model),
     "KIMI": (lambda: c.KIMI_API_URL, get_kimi_api_key, get_kimi_model),
+    "LING": (lambda: c.LING_API_URL, get_ling_api_key, get_ling_model),
 }
 
 
 def call_openai_compatible(url, api_key, model, system_prompt, user_prompt, turn_id=None):
-    """Hits an OpenAI-style /chat/completions endpoint (DeepSeek, Moonshot/Kimi)."""
+    """Send a request to an OpenAI-compatible chat completions endpoint."""
     payload = {
         "model": model,
         "messages": [

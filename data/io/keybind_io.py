@@ -24,7 +24,8 @@ def save_settings(keybind_dict, sfx_volume, music_volume, num_players=1, ai_mode
                   mouse_button_actions=c.DEFAULT_MOUSE_BUTTON_ACTIONS,
                   army_group_animations=c.DEFAULT_ARMY_GROUP_ANIMATIONS,
                   music_pitch_timeline=c.DEFAULT_MUSIC_PITCH_TIMELINE,
-                  show_unclaimed=c.DEFAULT_SHOW_UNCLAIMED):
+                  show_unclaimed=c.DEFAULT_SHOW_UNCLAIMED,
+                  ling_api_key="", ling_model=c.DEFAULT_LING_MODEL):
     """Converts key codes to strings and saves all config data to JSON.
 
     The explicit signature is kept -- callers (and any mod) pass these

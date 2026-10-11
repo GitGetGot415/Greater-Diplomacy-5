@@ -100,6 +100,8 @@ SETTINGS_FIELDS = (
            lambda: c.DEFAULT_MUSIC_PITCH_TIMELINE,
            coerce=_coerce_music_pitch_timeline),
     _field("show_unclaimed", "show_unclaimed", lambda: c.DEFAULT_SHOW_UNCLAIMED),
+    _field("ling_api_key", "ling_api_key", lambda: ""),
+    _field("ling_model", "ling_model", lambda: c.DEFAULT_LING_MODEL),
 )
 
 SETTINGS_ORDER = tuple(field.name for field in SETTINGS_FIELDS)

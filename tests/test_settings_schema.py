@@ -40,6 +40,7 @@ GOLDEN_ORDER = (
     "army_group_animations",
     "music_pitch_timeline",
     "show_unclaimed",
+    "ling_api_key", "ling_model",
 )
 
 GOLDEN_JSON_KEYS = set(GOLDEN_ORDER)
@@ -68,7 +69,8 @@ class SchemaContractTests(unittest.TestCase):
 class RoundTripTests(unittest.TestCase):
     def sample(self):
         values = settings_schema.defaults()
-        values.update({"num_players": 3, "ai_mode": "OLLAMA", "target_fps": 144,
+        values.update({"num_players": 3, "ai_mode": "LING", "target_fps": 144,
+                       "ling_api_key": "test-key", "ling_model": "inclusionai/test-ling-model",
                        "show_fps": False, "show_unclaimed": False, "saves_dir": "elsewhere",
                        "ocean_light_color": (1, 2, 3)})
         return values
@@ -203,10 +205,90 @@ class RuntimeMirrorTests(unittest.TestCase):
 
 
 class SettingsScreenTests(unittest.TestCase):
+    def test_old_ling_url_is_ignored_without_changing_ollama_settings(self):
+        old = {"ai_mode": "LING", "ling_base_url": "http://localhost:11434/v1",
+               "ling_model": "custom-ling-model", "ollama_model": "existing-local-model",
+               "ollama_api_key": "http://localhost:12345/api/chat"}
+        restored = settings_schema.from_json_dict(old)
+        self.assertEqual(restored["ai_mode"], "LING")
+        self.assertEqual(restored["ollama_model"], old["ollama_model"])
+        self.assertEqual(restored["ollama_api_key"], old["ollama_api_key"])
+        self.assertEqual(restored["ling_model"], old["ling_model"])
+        self.assertNotIn("ling_base_url", restored)
+        legacy_tuple = settings_schema.to_tuple(restored, {}) + (old["ling_base_url"],)
+        self.assertEqual(settings_schema.from_tuple(legacy_tuple), restored)
+        self.assertNotIn("ling_base_url", settings_schema.to_json_dict(restored))
+
+    def test_ling_defaults_for_older_settings(self):
+        old_values = {"ai_mode": "KIMI", "kimi_model": "custom-kimi"}
+        restored = settings_schema.from_json_dict(old_values)
+        self.assertEqual(restored["ling_api_key"], "")
+        self.assertEqual(restored["ling_model"], c.DEFAULT_LING_MODEL)
+        self.assertEqual(restored["kimi_model"], old_values["kimi_model"])
+        old_tuple = settings_schema.to_tuple(restored, {})[:-2]
+        self.assertEqual(settings_schema.from_tuple(old_tuple), restored)
+
+    def test_ling_button_editing_switching_and_save(self):
+        import pygame
+        from types import SimpleNamespace
+        from screens.menu_screens.settings import Settings
+        pygame.font.init()
+        controller = SimpleNamespace(**settings_schema.defaults(), keybinds={})
+        controller.ai_mode = "GEMINI"
+        with mock.patch("screens.menu_screens.settings.queries.get_settings", return_value={}), \
+                mock.patch("map_logic.ai.ai_handler.reset_clients") as reset_clients, \
+                mock.patch("screens.menu_screens.settings.queries.save_global_settings") as save:
+            screen = Settings(controller)
+            next(item for item in screen.elements if item.text == "LING").callback()
+            self.assertEqual(controller.ai_mode, "LING")
+            self.assertEqual(screen.get_field("MOD"), c.DEFAULT_LING_MODEL)
+            key_y = next(y for box, y, _ in screen.ai_field_rows() if box == "KEY")
+            screen.handle_events([pygame.event.Event(pygame.MOUSEBUTTONDOWN,
+                button=1, pos=(c.SETTINGS_BOX_X + 5, key_y + 5))])
+            self.assertEqual(screen.active_input, "LING_KEY")
+            self.assertEqual([box for box, _y, _label in screen.ai_field_rows()], ["KEY", "MOD"])
+            screen.set_field("KEY", " test-key ")
+            screen.active_input = "LING_MOD"
+            screen.set_field("MOD", "")
+            screen.additional_events(pygame.event.Event(
+                pygame.KEYDOWN, key=pygame.K_v, unicode="inclusionai/test-ling-model", mod=0))
+            self.assertEqual(controller.ling_model, "inclusionai/test-ling-model")
+            self.assertEqual(controller.ling_api_key, "test-key")
+            screen.set_ai_mode("KIMI")
+            self.assertIsNone(screen.active_input)
+            screen.set_ai_mode("LING")
+            self.assertEqual(screen.get_field("MOD"), controller.ling_model)
+            next(item for item in screen.elements if item.text == "X").callback()
+            self.assertEqual(controller.ling_api_key, "")
+            self.assertIsNone(screen.active_input)
+            screen.toggle_ai_enabled()
+            screen.toggle_ai_enabled()
+            self.assertEqual(controller.ai_mode, "LING")
+            screen.save_and_go_back(execute_exit=False)
+            save.assert_called_once_with(controller)
+            self.assertTrue(reset_clients.called)
+
+    def test_ling_settings_save_load_round_trip(self):
+        from types import SimpleNamespace
+        from data import queries
+        from data.io import keybind_io
+        controller = SimpleNamespace(**settings_schema.defaults(), keybinds={})
+        controller.ai_mode = "LING"
+        controller.ling_api_key = "test-key"
+        controller.ling_model = "inclusionai/test-ling-model"
+        with mock.patch.object(queries, "save_cached_json") as save:
+            queries.save_global_settings(controller)
+        cache_name, saved = save.call_args.args
+        self.assertEqual(cache_name, "settings")
+        with mock.patch.object(keybind_io.os.path, "exists", return_value=True), \
+                mock.patch.object(queries, "get_settings", return_value=saved):
+            restored = settings_schema.from_tuple(keybind_io.load_settings({}))
+        self.assertEqual(restored, settings_schema.from_controller(controller))
+
     def test_show_unclaimed_defaults_on_for_older_settings(self):
         self.assertTrue(settings_schema.defaults()["show_unclaimed"])
         self.assertTrue(settings_schema.from_json_dict({"show_fps": False})["show_unclaimed"])
-        old_tuple = settings_schema.to_tuple(settings_schema.defaults(), {})[:-1]
+        old_tuple = settings_schema.to_tuple(settings_schema.defaults(), {})[:GOLDEN_ORDER.index("show_unclaimed") + 1]
         self.assertTrue(settings_schema.from_tuple(old_tuple)["show_unclaimed"])
 
     def test_show_unclaimed_toggle_updates_runtime_and_persists(self):

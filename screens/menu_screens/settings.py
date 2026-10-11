@@ -149,7 +149,7 @@ def render_settings_buttons(settings_screen):
         # AI provider picker
         settings_screen.elements.extend(make_option_buttons([
             (SETTINGS_AI_PROVIDER_START_X + i * SETTINGS_AI_PROVIDER_STEP_X, SETTINGS_AI_PROVIDER_Y, mode, mode)
-            for i, mode in enumerate(("OLLAMA", "GEMINI", "CHATGPT", "CLAUDE", "DEEPSEEK", "KIMI"))
+            for i, mode in enumerate(settings_screen.ai_modes[1:])
         ], settings_screen.set_ai_mode, settings_screen.ai_mode))
 
         # AI immersion level picker
@@ -161,9 +161,9 @@ def render_settings_buttons(settings_screen):
             for y, level in zip(SETTINGS_AI_IMMERSION_ROWS_Y, c.AI_IMMERSION_LEVELS)
         ], settings_screen.set_ai_immersion_level, settings_screen.ai_immersion_level, color="red"))
 
-        # --- API KEY & MODEL CLEAR BUTTONS ---
+        # Clear buttons use the same rows as the editable fields.
         clear_x = c.SETTINGS_BOX_X + c.SETTINGS_BOX_W + SETTINGS_CLEAR_BTN_GAP_X
-        for box_type, box_y in (("KEY", c.SETTINGS_KEY_BOX_Y), ("MOD", c.SETTINGS_MOD_BOX_Y)):
+        for box_type, box_y, _label in settings_screen.ai_field_rows():
             settings_screen.elements.append(
                 Button(clear_x, box_y, "small_square", "red", "X",
                        lambda b=box_type: settings_screen.clear_input(b))
@@ -217,7 +217,7 @@ class Settings(GameState):
     # Every LLM provider stores its credentials under the same attribute pair,
     # so one naming rule replaces the four-branch if/elif chains this screen
     # used to carry in five separate places.
-    AI_MODES = ["OFF", "GEMINI", "OLLAMA", "CHATGPT", "CLAUDE", "DEEPSEEK", "KIMI"]
+    AI_MODES = ["OFF", "OLLAMA", "GEMINI", "CHATGPT", "CLAUDE", "DEEPSEEK", "KIMI", "LING"]
     AI_FIELD_SUFFIX = {"KEY": "api_key", "MOD": "model"}
 
     # key -> (constants attribute to keep in sync, default value, picker title)
@@ -292,13 +292,23 @@ class Settings(GameState):
 
     @classmethod
     def editable_attrs(cls):
-        """Controller attribute names for every provider's key and model name."""
+        """Controller attributes for provider credentials and models."""
         return [f"{mode.lower()}_{suffix}"
                 for mode in cls.AI_MODES if mode != "OFF"
                 for suffix in cls.AI_FIELD_SUFFIX.values()]
 
+    def ai_field_rows(self):
+        """Share field positions and labels across rendering and input handling."""
+        return [
+            ("KEY", c.SETTINGS_KEY_BOX_Y,
+             "Ollama Base URL (blank = localhost):" if self.ai_mode == "OLLAMA"
+             else "Paste OpenRouter API Key (Ling):" if self.ai_mode == "LING"
+             else f"Paste {self.ai_mode.capitalize()} API Key:"),
+            ("MOD", c.SETTINGS_MOD_BOX_Y, f"{self.ai_mode.capitalize()} Model Name:"),
+        ]
+
     def field_attr(self, box_type):
-        """Controller attribute backing the KEY or MOD box for the active mode."""
+        """Controller attribute for an editable field in the active mode."""
         return f"{self.ai_mode.lower()}_{self.AI_FIELD_SUFFIX[box_type]}"
 
     def get_field(self, box_type):
@@ -528,15 +538,12 @@ class Settings(GameState):
                 
                 # Check for Input Box Selection Dynamically
                 if self.ai_mode != "OFF":
-                    key_rect = pygame.Rect(c.SETTINGS_BOX_X, c.SETTINGS_KEY_BOX_Y, c.SETTINGS_BOX_W, c.SETTINGS_BOX_H)
-                    mod_rect = pygame.Rect(c.SETTINGS_BOX_X, c.SETTINGS_MOD_BOX_Y, c.SETTINGS_BOX_W, c.SETTINGS_BOX_H)
-                    
-                    if key_rect.collidepoint(mx, my):
-                        self.active_input = f"{self.ai_mode}_KEY"
-                    elif mod_rect.collidepoint(mx, my):
-                        self.active_input = f"{self.ai_mode}_MOD"
-                    else:
-                        self.active_input = None
+                    self.active_input = None
+                    for box_type, box_y, _label in self.ai_field_rows():
+                        rect = pygame.Rect(c.SETTINGS_BOX_X, box_y, c.SETTINGS_BOX_W, c.SETTINGS_BOX_H)
+                        if rect.collidepoint(mx, my):
+                            self.active_input = f"{self.ai_mode}_{box_type}"
+                            break
 
             for el in self.elements:
                 el.handle_event(event)
@@ -546,7 +553,7 @@ class Settings(GameState):
         if self.active_input and self.ai_mode != "OFF":
             box_type = self.active_input.rsplit("_", 1)[-1]
             if box_type in self.AI_FIELD_SUFFIX:
-                limit = c.MAX_API_KEY_LENGTH if box_type == "KEY" else c.MAX_MODEL_NAME_LENGTH
+                limit = c.MAX_MODEL_NAME_LENGTH if box_type == "MOD" else c.MAX_API_KEY_LENGTH
                 new_text, _status = ui_elements.process_text_input(event, self.get_field(box_type),
                                                                   max_length=limit)
                 self.set_field(box_type, new_text)
@@ -589,14 +596,7 @@ class Settings(GameState):
         if self.ai_mode == "OFF":
             return
 
-        # --- API KEY / URL box, then MODEL box ---
-        boxes = [
-            ("KEY", c.SETTINGS_KEY_BOX_Y,
-             "Ollama Base URL (blank = localhost):" if self.ai_mode == "OLLAMA"
-             else f"Paste {self.ai_mode.capitalize()} API Key:"),
-            ("MOD", c.SETTINGS_MOD_BOX_Y, f"{self.ai_mode.capitalize()} Model Name:"),
-        ]
-        for box_type, box_y, label in boxes:
+        for box_type, box_y, label in self.ai_field_rows():
             surface.blit(font.render(label, True, c.UI_TEXT_LIGHT), (c.SETTINGS_BOX_X, box_y - 25))
             rect = pygame.Rect(c.SETTINGS_BOX_X, box_y, c.SETTINGS_BOX_W, c.SETTINGS_BOX_H)
             self.draw_text_field(surface, rect, self.get_field(box_type),

@@ -31,6 +31,9 @@ def get_deepseek_api_key():
 def get_kimi_api_key():
     return _setting("kimi_api_key")
 
+def get_ling_api_key():
+    return _setting("ling_api_key")
+
 def get_ai_mode():
     """Reads the settings config to see which AI is active."""
     return _setting("ai_mode", c.DEFAULT_AI_MODE)
@@ -55,6 +58,9 @@ def get_deepseek_model():
 
 def get_kimi_model():
     return _setting("kimi_model", c.DEFAULT_KIMI_MODEL)
+
+def get_ling_model():
+    return _setting("ling_model", c.DEFAULT_LING_MODEL)
 
 def get_ollama_model():
     """Reads the settings config to see which Ollama model is requested."""
