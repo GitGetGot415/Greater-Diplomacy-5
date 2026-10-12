@@ -39,8 +39,12 @@ OPENROUTER SETTINGS
 Select OpenRouter in Settings to enter an OpenRouter API key and model ID.
 The model field accepts other OpenRouter models.
 Ling remains the default model.
-Existing settings keep the LING provider ID and the ling_api_key and ling_model keys for compatibility.
+The provider ID is OPENROUTER. Its settings keys are openrouter_api_key and openrouter_model.
+Older LING settings and ling_api_key and ling_model keys load through the shared settings schema.
+Current keys take priority when both names exist. New settings use only current names.
+The positional settings order stays the same.
 Use OLLAMA for installed local models.
+Its URL setting is ollama_base_url. Older ollama_api_key settings still load.
 
 IMMERSION LEVELS
 ----------------

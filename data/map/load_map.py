@@ -265,16 +265,8 @@ def load_map_assets(map_screen, load_path):
     # --- APPLY TURN OVERRIDES ---
     # Clear and reload libraries to ensure a clean slate before applying overrides
     # We MUST mutate the dictionaries inplace because UI screens hold pointers to them!
-    unit_lib = queries.get_unit_library()
-    building_lib = queries.get_building_library()
-
-    with open(c.UNIT_DATA_PATH, "r") as f:
-        unit_lib.clear()
-        unit_lib.update(json.load(f))
-
-    with open(c.BUILDING_DATA_PATH, "r") as f:
-        building_lib.clear()
-        building_lib.update(json.load(f))
+    unit_lib = queries.reload_game_library("unit_library")
+    building_lib = queries.reload_game_library("building_library")
 
     # Same family-name rule the turn editor writes these overrides with, so the
     # keys it saves always match the ones looked up here.
@@ -316,10 +308,7 @@ def load_map_assets(map_screen, load_path):
     # are *currently* disabled, never undo a prune from an earlier load where
     # they weren't), and it'd keep looking that way until the app restarts
     # and the cache gets rebuilt from scratch.
-    tech_tree = queries.get_tech_tree()
-    with open(c.RESEARCH_TEMPLATE_PATH, "r") as f:
-        tech_tree.clear()
-        tech_tree.update(json.load(f))
+    tech_tree = queries.reload_game_library("tech_tree")
 
     if disabled_tech_keys:
         for key in disabled_tech_keys:

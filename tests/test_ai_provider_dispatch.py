@@ -73,7 +73,7 @@ class DispatchTests(NoNetworkTestCase):
                                ("CHATGPT", "call_openai_compatible"),
                                ("DEEPSEEK", "call_openai_compatible"),
                                ("KIMI", "call_openai_compatible"),
-                               ("LING", "call_openai_compatible"),
+                               ("OPENROUTER", "call_openai_compatible"),
                                ("CLAUDE", "call_claude"),
                                ("GEMINI", "call_gemini")):
             picked.clear()
@@ -114,7 +114,7 @@ class DispatchTests(NoNetworkTestCase):
         response" here, so pressing Force Skip put an error string in front of
         the player dressed as a diplomatic cable."""
         self.stub_calls(None)
-        for mode in ("OLLAMA", "CHATGPT", "CLAUDE", "GEMINI", "DEEPSEEK", "KIMI", "LING"):
+        for mode in ("OLLAMA", "CHATGPT", "CLAUDE", "GEMINI", "DEEPSEEK", "KIMI", "OPENROUTER"):
             reply = ai_handler._run_provider(mode, "s", "u", None, "we accept.", accepted=True)
             self.assertEqual(reply["message"], "we accept.", mode)
             self.assertEqual(reply["accepted"], True, mode)
@@ -125,13 +125,13 @@ class DispatchTests(NoNetworkTestCase):
         self.assertIn("KIMI", reply["message"])
 
 
-class LingProviderTests(NoNetworkTestCase):
+class OpenRouterProviderTests(NoNetworkTestCase):
     def setUp(self):
         super().setUp()
         self._patch(ai_handler, "FORCE_SKIP", False)
 
-    def test_ling_request_uses_saved_key_and_editable_model(self):
-        for model in (c.DEFAULT_LING_MODEL, "vendor/test-chat-model"):
+    def test_openrouter_request_uses_saved_key_and_editable_model(self):
+        for model in (c.DEFAULT_OPENROUTER_MODEL, "vendor/test-chat-model"):
             with self.subTest(model=model):
                 session = mock.Mock()
                 session.post.return_value.status_code = 200
@@ -139,48 +139,75 @@ class LingProviderTests(NoNetworkTestCase):
                     "choices": [{"message": {"content": '{"message":"We agree.","accepted":true}'}}]}
                 with mock.patch.object(ai_handler, "_session", return_value=session), \
                         mock.patch.object(queries, "get_settings", return_value={
-                            "ling_api_key": "test-key", "ling_model": model}):
-                    result = ai_handler._dispatch("LING", "system", "world", None)
+                            "openrouter_api_key": "test-key", "openrouter_model": model}):
+                    result = ai_handler._dispatch("OPENROUTER", "system", "world", None)
                 self.assertEqual(result, {"message": "We agree.", "accepted": True})
                 args, kwargs = session.post.call_args
-                self.assertEqual(args, (c.LING_API_URL,))
+                self.assertEqual(args, (c.OPENROUTER_API_URL,))
                 self.assertEqual(kwargs["headers"]["Authorization"], "Bearer test-key")
                 self.assertEqual(kwargs["json"]["model"], model)
                 self.assertEqual(kwargs["json"]["messages"], [
                     {"role": "system", "content": "system"},
                     {"role": "user", "content": "world"}])
 
+    def test_legacy_provider_and_settings_dispatch_to_openrouter(self):
+        from map_logic.ai import ai_settings
+        for mode in ("LING", "OPENROUTER"):
+            with self.subTest(mode=mode), mock.patch.object(queries, "get_settings", return_value={
+                    "ai_mode": "LING", "ling_api_key": "old-key", "ling_model": "vendor/old-model"}), \
+                    mock.patch.object(ai_handler, "call_openai_compatible") as call:
+                self.assertEqual(ai_settings.get_ai_mode(), "OPENROUTER")
+                ai_handler._dispatch(mode, "system", "world", None)
+                call.assert_called_once_with(c.OPENROUTER_API_URL, "old-key", "vendor/old-model",
+                                             "system", "world", None)
+
+    def test_current_provider_keys_win_over_legacy_values(self):
+        with mock.patch.object(queries, "get_settings", return_value={
+                "ling_api_key": "old-key", "ling_model": "vendor/old-model",
+                "openrouter_api_key": "", "openrouter_model": "vendor/current-model"}), \
+                mock.patch.object(ai_handler, "call_openai_compatible") as call:
+            ai_handler._dispatch("OPENROUTER", "s", "u", None)
+        call.assert_called_once_with(c.OPENROUTER_API_URL, "", "vendor/current-model", "s", "u", None)
+
+    def test_ollama_reads_legacy_url_and_respects_current_empty_url(self):
+        from map_logic.ai import ai_settings
+        with mock.patch.object(queries, "get_settings", return_value={"ollama_api_key": "http://old/api/chat"}):
+            self.assertEqual(ai_settings.get_ollama_url(), "http://old/api/chat")
+        with mock.patch.object(queries, "get_settings", return_value={
+                "ollama_api_key": "http://old/api/chat", "ollama_base_url": ""}):
+            self.assertEqual(ai_settings.get_ollama_url(), "http://localhost:11434/api/chat")
+
     def test_legacy_settings_supply_default_model_and_empty_key(self):
         with mock.patch.object(queries, "get_settings", return_value={}), \
                 mock.patch.object(ai_handler, "call_openai_compatible") as call:
-            ai_handler._dispatch("LING", "system", "world", None)
-        call.assert_called_once_with(c.LING_API_URL, "", c.DEFAULT_LING_MODEL,
+            ai_handler._dispatch("OPENROUTER", "system", "world", None)
+        call.assert_called_once_with(c.OPENROUTER_API_URL, "", c.DEFAULT_OPENROUTER_MODEL,
                                      "system", "world", None)
 
     def test_legacy_local_ling_url_cannot_redirect_hosted_requests(self):
         with mock.patch.object(queries, "get_settings", return_value={
-                "ling_base_url": "http://localhost:11434/v1", "ling_api_key": "test-key"}), \
+                "ling_base_url": "http://localhost:11434/v1", "openrouter_api_key": "test-key"}), \
                 mock.patch.object(ai_handler, "call_openai_compatible") as call:
-            ai_handler._dispatch("LING", "s", "u", None)
-        call.assert_called_once_with(c.LING_API_URL, "test-key", c.DEFAULT_LING_MODEL, "s", "u", None)
+            ai_handler._dispatch("OPENROUTER", "s", "u", None)
+        call.assert_called_once_with(c.OPENROUTER_API_URL, "test-key", c.DEFAULT_OPENROUTER_MODEL, "s", "u", None)
 
-    def test_skip_and_stale_turn_prevent_ling_requests(self):
-        self.assertIsNone(ai_handler._dispatch("LING", "s", "u", ai_handler.CURRENT_TURN_ID - 1))
+    def test_skip_and_stale_turn_prevent_openrouter_requests(self):
+        self.assertIsNone(ai_handler._dispatch("OPENROUTER", "s", "u", ai_handler.CURRENT_TURN_ID - 1))
         ai_handler.FORCE_SKIP = True
-        self.assertIsNone(ai_handler._dispatch("LING", "s", "u", None))
+        self.assertIsNone(ai_handler._dispatch("OPENROUTER", "s", "u", None))
 
     def test_http_failure_and_invalid_json_use_shared_handling(self):
         session = mock.Mock()
         with mock.patch.object(ai_handler, "_session", return_value=session):
             session.post.return_value.status_code = 401
             session.post.return_value.text = "invalid API key"
-            failed = ai_handler._dispatch("LING", "s", "u", None)
+            failed = ai_handler._dispatch("OPENROUTER", "s", "u", None)
             self.assertTrue(failed["error"])
             self.assertIn("401", failed["message"])
             session.post.return_value.status_code = 200
             session.post.return_value.json.return_value = {
                 "choices": [{"message": {"content": "plain reply"}}]}
-            self.assertEqual(ai_handler._dispatch("LING", "s", "u", None), {"message": "plain reply"})
+            self.assertEqual(ai_handler._dispatch("OPENROUTER", "s", "u", None), {"message": "plain reply"})
 
 
 class ReplyParsingTests(unittest.TestCase):

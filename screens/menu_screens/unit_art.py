@@ -50,7 +50,7 @@ GROUP_ACCENT = {
     "Infantry": (90, 140, 200),
     "Tanks": (200, 130, 60),
     "Navy": (60, 170, 160),
-    "Aerospace": (200, 50, 50),
+    "Air": (200, 50, 50),
 }
 
 # --- Level-display toggle: top-right corner of the gallery pane, picking how

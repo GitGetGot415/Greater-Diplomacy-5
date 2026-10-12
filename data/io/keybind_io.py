@@ -7,7 +7,7 @@ from data.io import settings_schema
 CONFIG_PATH = c.SETTINGS_CONFIG_PATH
 
 def save_settings(keybind_dict, sfx_volume, music_volume, num_players=1, ai_mode="GEMINI",
-                  gemini_api_key="", chatgpt_api_key="", claude_api_key="", ollama_api_key="",
+                  gemini_api_key="", chatgpt_api_key="", claude_api_key="", ollama_base_url=None,
                   gemini_model="", chatgpt_model="", claude_model="", ollama_model="",
                   ai_immersion_level="LITE", music_pitch=0.5, sfx_pitch=0.5, target_fps=60,
                   ai_threads=1, show_fps=True, show_intro_popup=True,
@@ -25,15 +25,24 @@ def save_settings(keybind_dict, sfx_volume, music_volume, num_players=1, ai_mode
                   army_group_animations=c.DEFAULT_ARMY_GROUP_ANIMATIONS,
                   music_pitch_timeline=c.DEFAULT_MUSIC_PITCH_TIMELINE,
                   show_unclaimed=c.DEFAULT_SHOW_UNCLAIMED,
-                  ling_api_key="", ling_model=c.DEFAULT_LING_MODEL):
-    """Converts key codes to strings and saves all config data to JSON.
+                  openrouter_api_key=None, openrouter_model=None, **legacy_settings):
+    """Convert key codes to names and save settings as JSON.
 
-    The explicit signature is kept -- callers (and any mod) pass these
-    positionally -- but the body no longer restates the schema: the JSON keys
-    come from settings_schema.SETTINGS_FIELDS.
+    Keep positional argument slots for older callers.
+    Accept older keyword names for renamed fields.
+    A current keyword takes priority, including an empty string.
+    None lets renamed fields use an older keyword or the schema default.
+    Write current JSON keys from settings_schema.SETTINGS_FIELDS.
     """
+    unexpected = set(legacy_settings) - {"ollama_api_key", "ling_api_key", "ling_model"}
+    if unexpected:
+        raise TypeError(f"Unknown settings arguments: {', '.join(sorted(unexpected))}")
     values = {name: value for name, value in locals().items()
               if name in settings_schema.SETTINGS_ORDER}
+    for name in ("ollama_base_url", "openrouter_api_key", "openrouter_model"):
+        if values[name] is None:
+            del values[name]
+    values.update(legacy_settings)
 
     # ``None`` is an intentional, persistent "unassigned" binding.  Omitting
     # it would make load restore the action's default, which prevents players

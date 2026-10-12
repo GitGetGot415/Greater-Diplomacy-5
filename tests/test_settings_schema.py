@@ -26,7 +26,7 @@ from data.io import settings_schema
 # The order load_settings has always returned, after the keybinds at index 0.
 GOLDEN_ORDER = (
     "sfx_volume", "music_volume", "num_players", "ai_mode",
-    "gemini_api_key", "chatgpt_api_key", "claude_api_key", "ollama_api_key",
+    "gemini_api_key", "chatgpt_api_key", "claude_api_key", "ollama_base_url",
     "gemini_model", "chatgpt_model", "claude_model", "ollama_model",
     "ai_immersion_level", "music_pitch", "sfx_pitch", "target_fps",
     "ai_threads", "show_fps", "show_intro_popup", "saves_dir",
@@ -40,7 +40,7 @@ GOLDEN_ORDER = (
     "army_group_animations",
     "music_pitch_timeline",
     "show_unclaimed",
-    "ling_api_key", "ling_model",
+    "openrouter_api_key", "openrouter_model",
 )
 
 GOLDEN_JSON_KEYS = set(GOLDEN_ORDER)
@@ -52,8 +52,8 @@ class SchemaContractTests(unittest.TestCase):
         would hand every setting the value of a different one."""
         self.assertEqual(settings_schema.SETTINGS_ORDER, GOLDEN_ORDER)
 
-    def test_json_keys_are_unchanged(self):
-        """Renaming a key silently resets that setting for every player."""
+    def test_json_keys_use_current_names(self):
+        """Writers use current names. Legacy reader tests protect older files."""
         on_disk = {field.json_key for field in settings_schema.SETTINGS_FIELDS}
         self.assertEqual(on_disk, GOLDEN_JSON_KEYS)
 
@@ -69,8 +69,8 @@ class SchemaContractTests(unittest.TestCase):
 class RoundTripTests(unittest.TestCase):
     def sample(self):
         values = settings_schema.defaults()
-        values.update({"num_players": 3, "ai_mode": "LING", "target_fps": 144,
-                       "ling_api_key": "test-key", "ling_model": "inclusionai/test-ling-model",
+        values.update({"num_players": 3, "ai_mode": "OPENROUTER", "target_fps": 144,
+                       "openrouter_api_key": "test-key", "openrouter_model": "inclusionai/test-ling-model",
                        "show_fps": False, "show_unclaimed": False, "saves_dir": "elsewhere",
                        "ocean_light_color": (1, 2, 3)})
         return values
@@ -153,6 +153,95 @@ class ControllerTests(unittest.TestCase):
                          settings_schema.defaults())
 
 
+class LegacyNamingTests(unittest.TestCase):
+    LEGACY_SETTINGS = {
+        "ai_mode": "LING", "ling_api_key": "old-key", "ling_model": "vendor/old-model",
+        "ollama_api_key": "http://localhost:12345/api/chat",
+    }
+
+    def test_legacy_json_loads_and_writes_current_names(self):
+        values = settings_schema.from_json_dict(self.LEGACY_SETTINGS)
+        self.assertEqual(values["ai_mode"], "OPENROUTER")
+        self.assertEqual(values["openrouter_api_key"], "old-key")
+        self.assertEqual(values["openrouter_model"], "vendor/old-model")
+        self.assertEqual(values["ollama_base_url"], self.LEGACY_SETTINGS["ollama_api_key"])
+        saved = settings_schema.to_json_dict(values)
+        for key in self.LEGACY_SETTINGS.keys() - {"ai_mode"}:
+            self.assertNotIn(key, saved)
+        self.assertEqual(settings_schema.from_json_dict(saved), values)
+        self.assertEqual(settings_schema.to_json_dict(self.LEGACY_SETTINGS), saved)
+
+    def test_current_keys_win_even_when_empty(self):
+        mixed = dict(self.LEGACY_SETTINGS, ai_mode="OLLAMA", openrouter_api_key="",
+                     openrouter_model="vendor/current-model", ollama_base_url="")
+        values = settings_schema.from_json_dict(mixed)
+        self.assertEqual(values["ai_mode"], "OLLAMA")
+        self.assertEqual(values["openrouter_api_key"], "")
+        self.assertEqual(values["openrouter_model"], "vendor/current-model")
+        self.assertEqual(values["ollama_base_url"], "")
+        settings_schema.migrate_setting_names(mixed)
+        self.assertEqual(settings_schema.from_json_dict(mixed), values)
+
+    def test_old_tuple_keeps_the_original_slots(self):
+        sequence = list(settings_schema.to_tuple(settings_schema.defaults(), {}))
+        # These positions are the legacy persistence contract, independent of the new names.
+        sequence[4] = "LING"
+        sequence[8] = "http://localhost:12345/api/chat"
+        sequence[40] = "old-key"
+        sequence[41] = "vendor/old-model"
+        values = settings_schema.from_tuple(sequence)
+        self.assertEqual(values, settings_schema.from_json_dict(self.LEGACY_SETTINGS))
+
+    def test_old_controller_attributes_migrate_to_current_attributes(self):
+        from types import SimpleNamespace
+        controller = SimpleNamespace(**self.LEGACY_SETTINGS)
+        values = settings_schema.from_controller(controller)
+        settings_schema.apply_to_controller(controller, values)
+        self.assertEqual(controller.ai_mode, "OPENROUTER")
+        self.assertEqual(controller.openrouter_api_key, "old-key")
+        self.assertEqual(controller.openrouter_model, "vendor/old-model")
+        self.assertEqual(controller.ollama_base_url, self.LEGACY_SETTINGS["ollama_api_key"])
+
+    def test_cache_migration_preserves_unknown_fields_and_runs_once(self):
+        import json
+        import tempfile
+        from pathlib import Path
+        from data import queries
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "settings.json"
+            legacy = dict(self.LEGACY_SETTINGS, future_setting={"enabled": False}, keybinds={"BACK": None})
+            path.write_text(json.dumps(legacy), encoding="utf-8")
+            with mock.patch.dict(queries._JSON_CACHE, {"settings": {"path": str(path), "data": None}}), \
+                    mock.patch.object(settings_schema, "migrate_setting_names",
+                                      wraps=settings_schema.migrate_setting_names) as migrate:
+                settings = queries.get_settings()
+                self.assertIs(queries.get_settings(), settings)
+                migrate.assert_called_once()
+                self.assertEqual(settings["ai_mode"], "OPENROUTER")
+                self.assertEqual(settings["future_setting"], legacy["future_setting"])
+                self.assertEqual(settings["keybinds"], legacy["keybinds"])
+                expected = dict(settings)
+                self.assertIs(settings_schema.migrate_setting_names(settings), settings)
+                self.assertEqual(settings, expected)
+                queries.save_cached_json("settings", settings)
+                self.assertEqual(json.loads(path.read_text(encoding="utf-8")), expected)
+
+    def test_save_accepts_older_keyword_arguments_and_current_keys_win(self):
+        from data import queries
+        from data.io import keybind_io
+        with mock.patch.object(queries, "save_cached_json") as save:
+            keybind_io.save_settings({}, 0.4, 0.6, **self.LEGACY_SETTINGS)
+        saved = save.call_args.args[1]
+        self.assertEqual(saved["openrouter_api_key"], "old-key")
+        self.assertEqual(saved["ai_mode"], "OPENROUTER")
+        self.assertNotIn("ling_api_key", saved)
+        with mock.patch.object(queries, "save_cached_json") as save:
+            keybind_io.save_settings({}, 0.4, 0.6, openrouter_api_key="", **self.LEGACY_SETTINGS)
+        self.assertEqual(save.call_args.args[1]["openrouter_api_key"], "")
+        with self.assertRaises(TypeError):
+            keybind_io.save_settings({}, 0.4, 0.6, unknown_setting=True)
+
+
 class SaveSignatureTests(unittest.TestCase):
     def test_save_settings_takes_exactly_the_schema_names(self):
         """queries.save_global_settings splats from_controller() into this, so
@@ -161,7 +250,8 @@ class SaveSignatureTests(unittest.TestCase):
         import inspect
         from data.io import keybind_io
 
-        params = list(inspect.signature(keybind_io.save_settings).parameters)
+        params = [name for name, param in inspect.signature(keybind_io.save_settings).parameters.items()
+                  if param.kind != inspect.Parameter.VAR_KEYWORD]
         self.assertEqual(params[0], "keybind_dict")
         self.assertEqual(tuple(params[1:]), settings_schema.SETTINGS_ORDER)
 
@@ -210,20 +300,20 @@ class SettingsScreenTests(unittest.TestCase):
                "ling_model": "custom-ling-model", "ollama_model": "existing-local-model",
                "ollama_api_key": "http://localhost:12345/api/chat"}
         restored = settings_schema.from_json_dict(old)
-        self.assertEqual(restored["ai_mode"], "LING")
+        self.assertEqual(restored["ai_mode"], "OPENROUTER")
         self.assertEqual(restored["ollama_model"], old["ollama_model"])
-        self.assertEqual(restored["ollama_api_key"], old["ollama_api_key"])
-        self.assertEqual(restored["ling_model"], old["ling_model"])
+        self.assertEqual(restored["ollama_base_url"], old["ollama_api_key"])
+        self.assertEqual(restored["openrouter_model"], old["ling_model"])
         self.assertNotIn("ling_base_url", restored)
         legacy_tuple = settings_schema.to_tuple(restored, {}) + (old["ling_base_url"],)
         self.assertEqual(settings_schema.from_tuple(legacy_tuple), restored)
         self.assertNotIn("ling_base_url", settings_schema.to_json_dict(restored))
 
-    def test_ling_defaults_for_older_settings(self):
+    def test_openrouter_defaults_for_older_settings(self):
         old_values = {"ai_mode": "KIMI", "kimi_model": "custom-kimi"}
         restored = settings_schema.from_json_dict(old_values)
-        self.assertEqual(restored["ling_api_key"], "")
-        self.assertEqual(restored["ling_model"], c.DEFAULT_LING_MODEL)
+        self.assertEqual(restored["openrouter_api_key"], "")
+        self.assertEqual(restored["openrouter_model"], c.DEFAULT_OPENROUTER_MODEL)
         self.assertEqual(restored["kimi_model"], old_values["kimi_model"])
         old_tuple = settings_schema.to_tuple(restored, {})[:-2]
         self.assertEqual(settings_schema.from_tuple(old_tuple), restored)
@@ -240,42 +330,42 @@ class SettingsScreenTests(unittest.TestCase):
                 mock.patch("screens.menu_screens.settings.queries.save_global_settings") as save:
             screen = Settings(controller)
             next(item for item in screen.elements if item.text == "OpenRouter").callback()
-            self.assertEqual(controller.ai_mode, "LING")
-            self.assertEqual(screen.get_field("MOD"), c.DEFAULT_LING_MODEL)
+            self.assertEqual(controller.ai_mode, "OPENROUTER")
+            self.assertEqual(screen.get_field("MOD"), c.DEFAULT_OPENROUTER_MODEL)
             key_y = next(y for box, y, _ in screen.ai_field_rows() if box == "KEY")
             screen.handle_events([pygame.event.Event(pygame.MOUSEBUTTONDOWN,
                 button=1, pos=(c.SETTINGS_BOX_X + 5, key_y + 5))])
-            self.assertEqual(screen.active_input, "LING_KEY")
+            self.assertEqual(screen.active_input, "OPENROUTER_KEY")
             self.assertEqual([box for box, _y, _label in screen.ai_field_rows()], ["KEY", "MOD"])
             screen.set_field("KEY", " test-key ")
-            screen.active_input = "LING_MOD"
+            screen.active_input = "OPENROUTER_MOD"
             screen.set_field("MOD", "")
             screen.additional_events(pygame.event.Event(
                 pygame.KEYDOWN, key=pygame.K_v, unicode="vendor/test-chat-model", mod=0))
-            self.assertEqual(controller.ling_model, "vendor/test-chat-model")
-            self.assertEqual(controller.ling_api_key, "test-key")
+            self.assertEqual(controller.openrouter_model, "vendor/test-chat-model")
+            self.assertEqual(controller.openrouter_api_key, "test-key")
             screen.set_ai_mode("KIMI")
             self.assertIsNone(screen.active_input)
-            screen.set_ai_mode("LING")
-            self.assertEqual(screen.get_field("MOD"), controller.ling_model)
+            screen.set_ai_mode("OPENROUTER")
+            self.assertEqual(screen.get_field("MOD"), controller.openrouter_model)
             next(item for item in screen.elements if item.text == "X").callback()
-            self.assertEqual(controller.ling_api_key, "")
+            self.assertEqual(controller.openrouter_api_key, "")
             self.assertIsNone(screen.active_input)
             screen.toggle_ai_enabled()
             screen.toggle_ai_enabled()
-            self.assertEqual(controller.ai_mode, "LING")
+            self.assertEqual(controller.ai_mode, "OPENROUTER")
             screen.save_and_go_back(execute_exit=False)
             save.assert_called_once_with(controller)
             self.assertTrue(reset_clients.called)
 
-    def test_ling_settings_save_load_round_trip(self):
+    def test_openrouter_settings_save_load_round_trip(self):
         from types import SimpleNamespace
         from data import queries
         from data.io import keybind_io
         controller = SimpleNamespace(**settings_schema.defaults(), keybinds={})
-        controller.ai_mode = "LING"
-        controller.ling_api_key = "test-key"
-        controller.ling_model = "inclusionai/test-ling-model"
+        controller.ai_mode = "OPENROUTER"
+        controller.openrouter_api_key = "test-key"
+        controller.openrouter_model = "inclusionai/test-ling-model"
         with mock.patch.object(queries, "save_cached_json") as save:
             queries.save_global_settings(controller)
         cache_name, saved = save.call_args.args
@@ -284,6 +374,25 @@ class SettingsScreenTests(unittest.TestCase):
                 mock.patch.object(queries, "get_settings", return_value=saved):
             restored = settings_schema.from_tuple(keybind_io.load_settings({}))
         self.assertEqual(restored, settings_schema.from_controller(controller))
+
+    def test_ollama_url_control_updates_the_url_setting(self):
+        import pygame
+        from types import SimpleNamespace
+        from screens.menu_screens.settings import Settings
+        from map_logic.ai import ai_settings
+        pygame.font.init()
+        controller = SimpleNamespace(**settings_schema.defaults(), keybinds={})
+        controller.ai_mode = "OLLAMA"
+        with mock.patch("screens.menu_screens.settings.queries.get_settings", return_value={}):
+            screen = Settings(controller)
+        screen.set_field("KEY", " http://localhost:12345/api/chat ")
+        self.assertEqual(controller.ollama_base_url, "http://localhost:12345/api/chat")
+        self.assertNotIn("ollama_api_key", vars(controller))
+        with mock.patch("data.queries.get_settings", return_value=settings_schema.from_controller(controller)):
+            self.assertEqual(ai_settings.get_ollama_url(), controller.ollama_base_url)
+        with mock.patch("screens.menu_screens.settings.queries.get_settings", return_value={}):
+            screen.clear_input("KEY")
+        self.assertEqual(controller.ollama_base_url, "")
 
     def test_show_unclaimed_defaults_on_for_older_settings(self):
         self.assertTrue(settings_schema.defaults()["show_unclaimed"])

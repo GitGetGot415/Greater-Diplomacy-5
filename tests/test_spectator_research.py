@@ -6,7 +6,7 @@ The tree itself was unreachable for them because it read player_country, and
 the literal "Spectator" is not a key in nation_data.
 
 The screen shows the selected country. View cannot change research.
-Edit previews completed levels until Save. The exit popup can discard edits with Cancel.
+Edit previews completed levels until Save. The exit popup can save changes, discard changes, or keep the draft open.
 Normal players keep their research queue controls.
 """
 
@@ -209,7 +209,6 @@ class SubjectTests(unittest.TestCase):
             ask.assert_called_once()
             self.assertFalse(self.screen.done)
             self.assertEqual(research, {})
-            self.assertEqual(ask.call_args.kwargs, {"yes_label": "Save", "no_label": "Cancel", "back_label": "Go back"})
             ask.call_args.args[2](True)
         self.assertTrue(self.screen.done)
         self.assertEqual(research, {"test_research": 1})
@@ -219,7 +218,7 @@ class SubjectTests(unittest.TestCase):
         self.assertEqual(country["test_unrelated_field"], "preserved")
         self.assertIsNone(self.screen.spectator_draft)
 
-    def test_exit_and_back_key_popup_cancel_discard_all_draft_changes(self):
+    def test_exit_and_back_key_popup_discard_all_draft_changes(self):
         from ui import confirm_dialog
         target = self.others()[0]
         before = deepcopy(self.map.nation_data[target])

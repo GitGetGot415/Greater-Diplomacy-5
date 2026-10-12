@@ -11,7 +11,7 @@ import pygame
 import data.constants as c
 from data import queries
 from screens.editor_screens import research_screens
-from screens.map_related_screens.research import Research_Screen, CATEGORY_LABELS
+from screens.map_related_screens.research import Research_Screen
 from tests import app_harness
 from tests.test_map_save_format import sample_map_screen
 
@@ -27,7 +27,7 @@ def tech_tree():
         "offset": (3, {"root": "MATCH_LEVEL+1"}),
         "lower": (4, {"root": "MATCH_LEVEL-1"}),
     }
-    categories = ("INFANTRY", "TANKS", "NAVY", "AEROSPACE", "INDUSTRY")
+    categories = ("INFANTRY", "TANKS", "NAVY", "AIR", "INDUSTRY")
     return {key: {"category": categories[index % len(categories)], "display_name": key.title(),
                   "max_lvl": levels, "cost": 100, "req": req,
                   "years": [c.START_YEAR + index * 6 + level * 2 for level in range(levels)]}
@@ -314,7 +314,7 @@ class EditorResearchTreeTests(unittest.TestCase):
         for size in ((c.SCREEN_WIDTH, c.SCREEN_HEIGHT), (1280, 720)):
             with self.subTest(size=size), patch.object(c, "SCREEN_WIDTH", size[0]), patch.object(c, "SCREEN_HEIGHT", size[1]):
                 self.screen.refresh_ui()
-                labels = [CATEGORY_LABELS.get(category, category) for category in self.screen.categories]
+                labels = self.screen.categories
                 tabs = [button for button in self.screen.elements if getattr(button, "text", None) in labels]
                 self.assertEqual(len(tabs), len(labels))
                 surface = pygame.Surface(size)

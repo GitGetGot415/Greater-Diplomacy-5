@@ -37,7 +37,7 @@ from map_logic.ai.ai_settings import (
     get_claude_api_key,
     get_deepseek_api_key,
     get_kimi_api_key,
-    get_ling_api_key,
+    get_openrouter_api_key,
     get_ai_mode,
     get_ai_immersion_level,
     get_gemini_model,
@@ -45,7 +45,7 @@ from map_logic.ai.ai_settings import (
     get_claude_model,
     get_deepseek_model,
     get_kimi_model,
-    get_ling_model,
+    get_openrouter_model,
     get_ollama_model,
     get_ollama_url,
 )
@@ -229,7 +229,7 @@ OPENAI_COMPATIBLE_PROVIDERS = {
     "CHATGPT": (lambda: c.CHATGPT_API_URL, get_chatgpt_api_key, get_chatgpt_model),
     "DEEPSEEK": (lambda: c.DEEPSEEK_API_URL, get_deepseek_api_key, get_deepseek_model),
     "KIMI": (lambda: c.KIMI_API_URL, get_kimi_api_key, get_kimi_model),
-    "LING": (lambda: c.LING_API_URL, get_ling_api_key, get_ling_model),
+    "OPENROUTER": (lambda: c.OPENROUTER_API_URL, get_openrouter_api_key, get_openrouter_model),
 }
 
 
@@ -341,6 +341,8 @@ def _call_provider(mode, system_prompt, user_prompt, turn_id):
 
 
 def _dispatch(mode, system_prompt, user_prompt, turn_id):
+    from data.io.settings_schema import normalize_ai_mode
+    mode = normalize_ai_mode(mode)
     if mode == "OLLAMA":
         return call_ollama(system_prompt, user_prompt, turn_id)
 

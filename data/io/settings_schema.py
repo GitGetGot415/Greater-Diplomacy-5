@@ -1,23 +1,12 @@
-"""One declaration of what a saved setting is.
+"""Define setting names, defaults, conversions, and older names in one table.
 
-The settings schema used to be written out five times in parallel: as
-save_settings' parameter signature, as the dict it builds, twice more as
-fallback tuples, and once more as load_settings' return -- plus the positional
-attribute reads in queries.save_global_settings and the `len(loaded_data) > N`
-ladder in main.py that unpacks it again. Adding one setting meant editing seven
-places in lockstep, and getting the order wrong anywhere silently mixed up
-unrelated settings.
+Writers use current names. Readers accept older names.
+Current keys take priority when both names exist.
+The positional settings order is a compatibility contract. Do not reorder it.
+main.py applies the returned settings through this schema.
 
-Two contracts have to survive, and both are now derived from SETTINGS_FIELDS
-rather than restated:
-
-- the JSON key set written to data/json/settings_config.json
-- the positional order of load_settings' return, which main.py unpacks by index
-
-Keybinds are not in the table: they need the caller's defaults and a round trip
-through pygame key names, so they stay explicit in keybind_io.
-
-Kept a leaf -- data.constants only -- so it can be imported from anywhere.
+Keybinds use the caller's defaults and pygame key names in keybind_io.
+This module imports only data.constants so other modules can use it safely.
 """
 
 from collections import namedtuple
@@ -45,17 +34,22 @@ def _coerce_music_pitch_timeline(value):
     return c.DEFAULT_MUSIC_PITCH_TIMELINE
 
 
+def normalize_ai_mode(value):
+    """Read the older provider ID as OpenRouter."""
+    return "OPENROUTER" if value == "LING" else value
+
+
 # ORDER IS THE PERSISTED CONTRACT. main.py unpacks load_settings' return by
 # index, so appending is safe and reordering is not.
 SETTINGS_FIELDS = (
     _field("sfx_volume", "sfx_volume", lambda: c.DEFAULT_SFX_VOLUME),
     _field("music_volume", "music_volume", lambda: c.DEFAULT_MUSIC_VOLUME),
     _field("num_players", "num_players", lambda: 1),
-    _field("ai_mode", "ai_mode", lambda: c.DEFAULT_AI_MODE),
+    _field("ai_mode", "ai_mode", lambda: c.DEFAULT_AI_MODE, coerce=normalize_ai_mode),
     _field("gemini_api_key", "gemini_api_key", lambda: "", legacy=("api_key",)),
     _field("chatgpt_api_key", "chatgpt_api_key", lambda: ""),
     _field("claude_api_key", "claude_api_key", lambda: ""),
-    _field("ollama_api_key", "ollama_api_key", lambda: ""),
+    _field("ollama_base_url", "ollama_base_url", lambda: "", legacy=("ollama_api_key",)),
     _field("gemini_model", "gemini_model", lambda: c.DEFAULT_GEMINI_MODEL),
     _field("chatgpt_model", "chatgpt_model", lambda: c.DEFAULT_CHATGPT_MODEL),
     _field("claude_model", "claude_model", lambda: c.DEFAULT_CLAUDE_MODEL),
@@ -100,8 +94,9 @@ SETTINGS_FIELDS = (
            lambda: c.DEFAULT_MUSIC_PITCH_TIMELINE,
            coerce=_coerce_music_pitch_timeline),
     _field("show_unclaimed", "show_unclaimed", lambda: c.DEFAULT_SHOW_UNCLAIMED),
-    _field("ling_api_key", "ling_api_key", lambda: ""),
-    _field("ling_model", "ling_model", lambda: c.DEFAULT_LING_MODEL),
+    _field("openrouter_api_key", "openrouter_api_key", lambda: "", legacy=("ling_api_key",)),
+    _field("openrouter_model", "openrouter_model", lambda: c.DEFAULT_OPENROUTER_MODEL,
+           legacy=("ling_model",)),
 )
 
 SETTINGS_ORDER = tuple(field.name for field in SETTINGS_FIELDS)
@@ -109,39 +104,57 @@ SETTINGS_ORDER = tuple(field.name for field in SETTINGS_FIELDS)
 #: load_settings returns keybinds first, then SETTINGS_FIELDS in order.
 TUPLE_LENGTH = len(SETTINGS_FIELDS) + 1
 
+_FIELDS_BY_NAME = {field.name: field for field in SETTINGS_FIELDS}
+
+
+def read_setting(saved, name, default=None):
+    """Read one setting. A current key takes priority over an older key."""
+    field = _FIELDS_BY_NAME[name]
+    raw = next((saved[key] for key in (field.json_key,) + field.legacy if key in saved), None)
+    if raw is None:
+        return field.default() if default is None else default
+    return field.coerce(raw) if field.coerce else raw
+
+
+def migrate_setting_names(saved):
+    """Update cached names in place. Keep unrelated and unknown settings."""
+    for field in SETTINGS_FIELDS:
+        for old_key in field.legacy:
+            if old_key in saved:
+                saved.setdefault(field.json_key, saved.pop(old_key))
+    if "ai_mode" in saved:
+        saved["ai_mode"] = normalize_ai_mode(saved["ai_mode"])
+    return saved
+
 
 def defaults():
     """Every setting at its shipped value."""
     return {field.name: field.default() for field in SETTINGS_FIELDS}
 
 
+def _filled_values(values):
+    """Fill missing runtime values without applying file-load conversions."""
+    current = migrate_setting_names(dict(values))
+    filled = defaults()
+    filled.update({key: value for key, value in current.items() if key in filled})
+    return filled
+
+
 def to_json_dict(values):
     """The on-disk shape, minus keybinds (keybind_io adds those)."""
-    filled = defaults()
-    filled.update({k: v for k, v in values.items() if k in filled})
+    filled = _filled_values(values)
     return {field.json_key: filled[field.name] for field in SETTINGS_FIELDS}
 
 
 def from_json_dict(saved):
     """Reads a settings file, honouring legacy key names and coercions."""
     saved = saved if isinstance(saved, dict) else {}
-    values = {}
-    for field in SETTINGS_FIELDS:
-        if field.json_key in saved:
-            raw = saved[field.json_key]
-        else:
-            raw = next((saved[key] for key in field.legacy if key in saved), None)
-        if raw is None:
-            values[field.name] = field.default()
-        else:
-            values[field.name] = field.coerce(raw) if field.coerce else raw
-    return values
+    return {field.name: read_setting(saved, field.name) for field in SETTINGS_FIELDS}
 
 
 def to_tuple(values, keybinds):
     """The positional form load_settings has always returned."""
-    filled = defaults()
-    filled.update({k: v for k, v in values.items() if k in filled})
+    filled = _filled_values(values)
     return (keybinds,) + tuple(filled[field.name] for field in SETTINGS_FIELDS)
 
 
@@ -155,19 +168,21 @@ def from_tuple(sequence):
     for index, field in enumerate(SETTINGS_FIELDS, start=1):
         if index < len(sequence):
             values[field.name] = sequence[index]
-    return values
+    return _filled_values(values)
 
 
 def from_controller(controller):
     """Reads the live settings back off the Controller."""
-    return {field.name: getattr(controller, field.name, field.default())
-            for field in SETTINGS_FIELDS}
+    # Older controllers and lightweight test doubles can still have legacy attributes.
+    saved = {key: getattr(controller, key)
+             for field in SETTINGS_FIELDS for key in (field.name,) + field.legacy
+             if hasattr(controller, key)}
+    return _filled_values(saved)
 
 
 def apply_to_controller(controller, values):
     """Writes settings onto the Controller under their canonical names."""
-    filled = defaults()
-    filled.update({k: v for k, v in values.items() if k in filled})
+    filled = _filled_values(values)
     for field in SETTINGS_FIELDS:
         setattr(controller, field.name, filled[field.name])
     return filled

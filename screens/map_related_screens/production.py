@@ -75,7 +75,7 @@ SECTION_PANELS = [
     ("infantry", "INFANTRY",           (30, 60, 30), (50, 150, 50),   c.COLOR_SUCCESS_GREEN),
     ("tank",     "TANKS",              (20, 45, 20), (40, 120, 40),   (80, 200, 80)),
     ("navy",     "NAVAL FORCES",       (30, 30, 60), (50, 50, 150),   (100, 150, 255)),
-    ("aerospace", "AEROSPACE",         (60, 30, 30), (200, 50, 50),   (255, 100, 100)),
+    ("air", "AIR",         (60, 30, 30), (200, 50, 50),   (255, 100, 100)),
     ("custom",   "CUSTOM",             (60, 55, 20), (200, 180, 50),  (255, 220, 100)),
 ]
 
@@ -101,7 +101,7 @@ class Production_Screen(GameState):
         
         # Use the centralized query
         (self.infantry_groups, self.tank_groups, self.navy_groups,
-         self.aerospace_groups) = queries.get_ordered_unit_groups(self.unit_library)
+         self.air_groups) = queries.get_ordered_unit_groups(self.unit_library)
         self.active_bars = []
         self.air_damage_labels = {}
 
@@ -635,9 +635,9 @@ class Production_Screen(GameState):
         # A hidden/empty naval section must not add a second gap on land tiles.
         if self.navy_end_y > self.navy_start_y:
             y_offset += SECTION_SPACING
-        self.aerospace_start_y = y_offset
-        process_unit_groups(self.aerospace_groups, "red")
-        self.aerospace_end_y = y_offset
+        self.air_start_y = y_offset
+        process_unit_groups(self.air_groups, "red")
+        self.air_end_y = y_offset
 
         # --- CUSTOM UNIT LOGIC ---
         # Lets a player build a specific researched tier (e.g. Medium Tank II) even

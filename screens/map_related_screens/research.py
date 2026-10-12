@@ -98,10 +98,7 @@ ROW_Y = [200, 270, 340, 410, 480, 550]
 ROW_DEFAULT_Y = 350
 
 # Categories whose nodes default to the wide button size.
-WIDE_RESEARCH_CATEGORIES = ["TANKS", "NAVY", "AEROSPACE"]
-
-# Display labels do not change research category keys.
-CATEGORY_LABELS = {"AEROSPACE": "AIR"}
+WIDE_RESEARCH_CATEGORIES = ["TANKS", "NAVY", "AIR"]
 
 # Tech families whose display name is "<Class> Type <year>" rather than a
 # roman numeral tier, keyed off the year list in the tech tree.
@@ -323,11 +320,11 @@ class Research_Screen(GameState):
     def setup_nodes(self):
         """Dynamically positions nodes based on their associated year."""
         # Keep JSON category order for mod and scenario content.
-        # Place Aerospace before Industry when both categories are present.
+        # Place Air before Industry when both categories are present.
         self.categories = list(dict.fromkeys(data["category"] for data in self.tech_tree.values()))
-        if "AEROSPACE" in self.categories and "INDUSTRY" in self.categories:
-            self.categories.remove("AEROSPACE")
-            self.categories.insert(self.categories.index("INDUSTRY"), "AEROSPACE")
+        if "AIR" in self.categories and "INDUSTRY" in self.categories:
+            self.categories.remove("AIR")
+            self.categories.insert(self.categories.index("INDUSTRY"), "AIR")
         self.categories.append("COMPLETED")
         self.tech_years = {}
         for tech_key, data in self.tech_tree.items():
@@ -561,7 +558,7 @@ class Research_Screen(GameState):
         self.refresh_ui()
 
     def set_category(self, cat):
-        self.current_category = cat
+        self.current_category = queries.normalize_air_category(cat)
         self.active_modal = None
         self.scroll_x = 0
         self.target_scroll_x = 0
@@ -623,7 +620,7 @@ class Research_Screen(GameState):
         for i, cat in enumerate(self.categories):
             color = "green" if self.current_category == cat else "blue"
             btn = Button(CATEGORY_BTN_START_X + i * (category_width + CATEGORY_BTN_GAP), CATEGORY_BTN_Y,
-                         (category_width, category_height), color, CATEGORY_LABELS.get(cat, cat),
+                         (category_width, category_height), color, cat,
                          lambda c=cat: self.set_category(c))
             self.elements.append(btn)
 
@@ -640,7 +637,7 @@ class Research_Screen(GameState):
     def cache_header(self):
         """Prepare the country title, output, and editor instructions after changes."""
         font = fonts.get("heading1")
-        category = CATEGORY_LABELS.get(self.current_category, self.current_category)
+        category = self.current_category
         name = queries.get_country_display_name(self.subject, self.map_screen.nation_data)
         prefix = f"{name} -- " if self.editing_starting_research or self.subject != self.map_screen.player_country else ""
         self.header_title_surface = font.render(f"{prefix}VIEWING: {category}", True, (255, 255, 255))
@@ -1289,7 +1286,7 @@ class Research_Screen(GameState):
             curr_x = COMPLETED_START_X + (i * column_width)
             curr_y = COMPLETED_START_Y
             
-            cache_text(CATEGORY_LABELS.get(cat_name, cat_name), label_font, c.COLOR_GOLD_HIGHLIGHT, curr_x, curr_y,
+            cache_text(cat_name, label_font, c.COLOR_GOLD_HIGHLIGHT, curr_x, curr_y,
                        column_width - COMPLETED_INDENT_X)
             curr_y += COMPLETED_HEADER_STEP_Y
             

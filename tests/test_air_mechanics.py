@@ -66,7 +66,7 @@ def install_air_fixture(case):
     tree["infantry_type"]["max_lvl"] = 1
     for name, stats in library.items():
         tree[queries.get_unit_tech_key(queries.get_base_unit_name(name))]["category"] = (
-            "AEROSPACE" if stats.get("air_role") else "INFANTRY")
+            "AIR" if stats.get("air_role") else "INFANTRY")
     # Loading refreshes these libraries from disk in place. Use fixture files
     # so save/load tests retain the same controlled data after that refresh.
     directory = case.enterContext(tempfile.TemporaryDirectory())
@@ -1075,7 +1075,7 @@ class AirIntegrationTests(unittest.TestCase):
             if stats.get("air_role"):
                 self.assertEqual(regenerated_units[name], stats)
         for key, entry in self.content_tree.items():
-            if entry.get("category") == "AEROSPACE":
+            if entry.get("category") == "AIR":
                 self.assertEqual(regenerated_tree[key], entry)
 
 

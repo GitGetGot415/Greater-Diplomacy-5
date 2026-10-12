@@ -1,4 +1,4 @@
-"""Aerospace content uses the shared research, production and network rules."""
+"""Air content uses the shared research, production and network rules."""
 import copy
 import json
 import os
@@ -22,14 +22,14 @@ from tests.test_map_save_format import sample_map_screen
 from tests import test_tournament_moves as tournament_harness
 
 # Read current content for checks of data use across systems.
-AEROSPACE_CONTENT = {
+AIR_CONTENT = {
     key: (data["years"][0], data.get("req", {}),
           data["display_name"] + (" I" if data["max_lvl"] > 1 else ""))
-    for key, data in queries.get_tech_tree().items() if data["category"] == "AEROSPACE"
+    for key, data in queries.get_tech_tree().items() if data["category"] == "AIR"
 }
 AIRCRAFT_LEVEL_YEARS = {
     key: data["years"] for key, data in queries.get_tech_tree().items()
-    if data["category"] == "AEROSPACE" and data["max_lvl"] > 1
+    if data["category"] == "AIR" and data["max_lvl"] > 1
 }
 
 def aircraft_cases():
@@ -49,7 +49,51 @@ def aircraft_replacement_cases():
             for tech in c.OBSOLESCENCE_RULES.get(queries.get_base_unit_name(obsolete), [])]
 
 
-class AerospaceRulesTests(unittest.TestCase):
+class AirCategoryMigrationTests(unittest.TestCase):
+    def test_legacy_group_classification_preserves_air_membership(self):
+        library = {
+            "Legacy Wing": {"production_group": "Aerospace"},
+            "Current Wing": {"production_group": "Air"},
+            "Custom Unit": {"production_group": "Custom category"},
+        }
+        groups = queries.get_grouped_units(library, by_family=False)
+        self.assertCountEqual(groups[queries.UNIT_GROUP_AIR], ["Legacy Wing", "Current Wing"])
+        self.assertIn("Custom Unit", groups[queries.UNIT_GROUP_INFANTRY])
+
+    def test_legacy_libraries_migrate_on_load_and_reload_in_place(self):
+        for cache_key, field, legacy, current in (
+            ("unit_library", "production_group", "Aerospace", "Air"),
+            ("tech_tree", "category", "AEROSPACE", "AIR"),
+        ):
+            with self.subTest(library=cache_key), tempfile.TemporaryDirectory() as temporary:
+                path = Path(temporary) / "library.json"
+                old = {"entry": {field: legacy, "unknown_field": 17},
+                       "mod_entry": {field: "MOD_CATEGORY"}}
+                path.write_text(json.dumps(old), encoding="utf-8")
+                with mock.patch.dict(queries._JSON_CACHE, {cache_key: {"path": str(path), "data": None}}):
+                    library = queries._load_cached_json(cache_key)
+                    self.assertEqual(library["entry"], {field: current, "unknown_field": 17})
+                    self.assertEqual(library["mod_entry"][field], "MOD_CATEGORY")
+                    self.assertIs(queries._load_cached_json(cache_key), library)
+                    library["scenario_only_entry"] = {field: "SCENARIO"}
+                    self.assertIs(queries.reload_game_library(cache_key), library)
+                    self.assertNotIn("scenario_only_entry", library)
+                    self.assertEqual(library["entry"][field], current)
+                    expected = copy.deepcopy(library)
+                    queries.normalize_cached_json_names(cache_key, library)
+                    self.assertEqual(library, expected)
+                    queries.save_cached_json(cache_key, library)
+                    self.assertEqual(json.loads(path.read_text(encoding="utf-8")), expected)
+
+    def test_research_accepts_legacy_category_selection(self):
+        from screens.map_related_screens.research import Research_Screen
+        screen = object.__new__(Research_Screen)
+        with mock.patch.object(screen, "enforce_scroll_bounds"), mock.patch.object(screen, "refresh_ui"):
+            screen.set_category("AEROSPACE")
+        self.assertEqual(screen.current_category, "AIR")
+
+
+class AirRulesTests(unittest.TestCase):
     def test_jet_transport_content_matches_its_generated_recipes(self):
         from data.generators.generate_data import build_research_template_text, build_unit_data_text
 
@@ -91,7 +135,7 @@ class AerospaceRulesTests(unittest.TestCase):
 
     def test_each_aircraft_prerequisite_must_be_met(self):
         tree = queries.get_tech_tree()
-        for tech in AEROSPACE_CONTENT:
+        for tech in AIR_CONTENT:
             requirements = tree[tech].get("req", {})
             self.assertTrue(queries.check_tech_requirements(requirements, requirements))
             for prerequisite, required_level in requirements.items():
@@ -202,7 +246,7 @@ class AerospaceRulesTests(unittest.TestCase):
         self.assertEqual(province, expected)
 
     def test_air_research_notes_follow_the_unit_capabilities(self):
-        for key, (_, _, name) in AEROSPACE_CONTENT.items():
+        for key, (_, _, name) in AIR_CONTENT.items():
             with self.subTest(unit=name):
                 if key == "jet_engine":
                     self.assertEqual(queries.get_air_unit_traits(name), [])
@@ -238,9 +282,9 @@ class AerospaceRulesTests(unittest.TestCase):
 
     def test_aircraft_research_schema_has_one_year_per_level(self):
         tree = queries.get_tech_tree()
-        for key, (year, requirements, name) in AEROSPACE_CONTENT.items():
+        for key, (year, requirements, name) in AIR_CONTENT.items():
             with self.subTest(tech=key):
-                self.assertEqual(tree[key]["category"], "AEROSPACE")
+                self.assertEqual(tree[key]["category"], "AIR")
                 years = tree[key]["years"]
                 self.assertEqual(tree[key]["max_lvl"], len(years))
                 self.assertEqual(years, sorted(set(years)))
@@ -251,7 +295,7 @@ class AerospaceRulesTests(unittest.TestCase):
 
     def test_air_roles_and_stats_share_ui_ai_unlocks(self):
         library = queries.get_unit_library()
-        for key, (_, _, name) in AEROSPACE_CONTENT.items():
+        for key, (_, _, name) in AIR_CONTENT.items():
             with self.subTest(tech=key):
                 if key == "jet_engine":
                     self.assertNotIn(name, library)
@@ -264,7 +308,7 @@ class AerospaceRulesTests(unittest.TestCase):
                 self.assertIn(name, ai_tech_eval.units_unlocked_by(key, {}, library))
                 self.assertIn(name, ai_unit_eval.buildable_units({key: 1}, library))
                 self.assertEqual(queries.classify_unit_group(name, library[name]),
-                                 queries.UNIT_GROUP_AEROSPACE)
+                                 queries.UNIT_GROUP_AIR)
                 created = queries.create_unit_dict(name, "A", library)
                 self.assertEqual(created["type"], name)
                 self.assertEqual(created["health"], library[name]["health"])
@@ -276,7 +320,7 @@ class AerospaceRulesTests(unittest.TestCase):
         for by_family in (True, False):
             groups = queries.get_grouped_units(library, by_family=by_family)
             entries = set(map(queries.get_base_unit_name, expected)) if by_family else expected
-            self.assertCountEqual(groups[queries.UNIT_GROUP_AEROSPACE], entries)
+            self.assertCountEqual(groups[queries.UNIT_GROUP_AIR], entries)
             self.assertFalse(set(expected).intersection(groups[queries.UNIT_GROUP_INFANTRY]))
 
     def test_research_completion_unlocks_production(self):
@@ -294,7 +338,7 @@ class AerospaceRulesTests(unittest.TestCase):
     def test_existing_save_shape_preserves_techs_progress_and_unit_queue(self):
         map_ref = sample_map_screen()
         country = map_ref.nation_data["Avaria"]
-        country.update(research={key: 1 for key in AEROSPACE_CONTENT},
+        country.update(research={key: 1 for key in AIR_CONTENT},
                        research_queue=[{"tech_name": "jet_fighter", "points_remaining": 50}],
                        research_progress={"jet_engine": 75})
         province = next(iter(map_ref.map_data.values()))
@@ -306,17 +350,17 @@ class AerospaceRulesTests(unittest.TestCase):
         self.assertFalse(queries.is_unit_unlocked("Biplane Fighter I", {"infantry_type": 1}))
         prerequisites = queries.get_tech_tree()["jet_bomber"].get("req", {})
         self.assertFalse(queries.is_unit_unlocked("Jet Bomber I", prerequisites))
-        self.assertTrue(set(AEROSPACE_CONTENT).issubset(queries.get_time_appropriate_research(c.START_YEAR)))
+        self.assertTrue(set(AIR_CONTENT).issubset(queries.get_time_appropriate_research(c.START_YEAR)))
 
     def test_icons_are_real_png_files(self):
-        for key, (_, _, name) in AEROSPACE_CONTENT.items():
+        for key, (_, _, name) in AIR_CONTENT.items():
             folder = "images" if key == "jet_engine" else "classic"
             path = Path(c.ASSETS_ROOT_DIR) / folder / f"{queries.get_base_unit_name(name)}.png"
             with self.subTest(icon=path):
                 self.assertEqual(path.read_bytes()[:8], b"\x89PNG\r\n\x1a\n")
 
 
-class AerospaceRealtimeTests(unittest.TestCase):
+class AirRealtimeTests(unittest.TestCase):
     def setUp(self):
         province = {"id": 1, "owner": "A", "cores": ["A"], "is_coastal": False,
                     "buildings": ["Basic Factory"], "unit_queue": [], "units": []}
@@ -329,7 +373,7 @@ class AerospaceRealtimeTests(unittest.TestCase):
         self.driver = MapRealtimeDriver(self.map)
 
     def test_aircraft_gates_use_authoritative_research(self):
-        for tech, (_, requirements, _) in AEROSPACE_CONTENT.items():
+        for tech, (_, requirements, _) in AIR_CONTENT.items():
             command = {"type": "research_queue", "tech_names": [tech]}
             for prerequisite, required_level in requirements.items():
                 self.map.nation_data["A"]["research"] = dict(requirements, **{prerequisite: required_level - 1})
@@ -400,7 +444,7 @@ class AerospaceRealtimeTests(unittest.TestCase):
             with self.assertRaises(RealtimeError):
                 self.driver.validate_draft("A", [command])
 
-    def test_tournament_import_preserves_aerospace_in_existing_move_fields(self):
+    def test_tournament_import_preserves_air_in_existing_move_fields(self):
         for tech_key, unit_name in aircraft_cases():
             self.setUp()
             harness = tournament_harness.TournamentMoveTests()
@@ -411,7 +455,7 @@ class AerospaceRealtimeTests(unittest.TestCase):
             move["nation_data"]["research_queue"] = [{"tech_name": "jet_engine", "points_remaining": 50}]
             move["provinces"] = {"home": {"unit_queue": [{"unit_type": unit_name, "turns_remaining": 1}]}}
             with tempfile.TemporaryDirectory() as directory:
-                path = harness.write_move(directory, "aerospace.gd5move", "Leader", move)
+                path = harness.write_move(directory, "air.gd5move", "Leader", move)
                 result = harness.import_moves(host, [path])
             self.assertEqual(result["loaded"], 1)
             self.assertEqual(host.nation_data["Leader"]["research_queue"], move["nation_data"]["research_queue"])
@@ -419,7 +463,7 @@ class AerospaceRealtimeTests(unittest.TestCase):
             self.assertEqual(host.nation_data["Leader"]["research"][tech_key], move["nation_data"]["research"][tech_key])
 
 
-class AerospaceScreenTests(unittest.TestCase):
+class AirScreenTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.controller, cls.surface = app_harness.boot()
@@ -448,17 +492,17 @@ class AerospaceScreenTests(unittest.TestCase):
         self.research.start_research(self.map)
         self.production.start_with_province(self.map.selected_province, self.map)
 
-    def test_research_category_callback_uses_aerospace_data(self):
+    def test_research_category_callback_uses_air_data(self):
         self.research.start_research(self.map)
         categories = self.research.categories
-        self.assertEqual(categories, ["INFANTRY", "TANKS", "NAVY", "AEROSPACE", "INDUSTRY", "COMPLETED"])
+        self.assertEqual(categories, ["INFANTRY", "TANKS", "NAVY", "AIR", "INDUSTRY", "COMPLETED"])
         labels = ["INFANTRY", "TANKS", "NAVY", "AIR", "INDUSTRY", "COMPLETED"]
         buttons = [el for el in self.research.elements if getattr(el, "text", None) in labels]
         self.assertEqual([button.text for button in buttons], labels)
         buttons[labels.index("AIR")].callback()
-        self.assertEqual(self.research.current_category, "AEROSPACE")
-        self.assertEqual({node["key"] for node in self.research.nodes["AEROSPACE"]}, set(AEROSPACE_CONTENT))
-        for key, (_, _, name) in AEROSPACE_CONTENT.items():
+        self.assertEqual(self.research.current_category, "AIR")
+        self.assertEqual({node["key"] for node in self.research.nodes["AIR"]}, set(AIR_CONTENT))
+        for key, (_, _, name) in AIR_CONTENT.items():
             self.assertEqual(self.research.get_display_name(key, 1), name)
         self.research.draw(self.surface)
         self.research.set_category("COMPLETED")
@@ -466,7 +510,7 @@ class AerospaceScreenTests(unittest.TestCase):
 
     def test_air_details_use_current_traits_and_cached_unlocks(self):
         self.research.start_research(self.map)
-        for key, (year, _, name) in AEROSPACE_CONTENT.items():
+        for key, (year, _, name) in AIR_CONTENT.items():
             if key == "jet_engine":
                 continue
             with self.subTest(unit=name):
@@ -480,11 +524,11 @@ class AerospaceScreenTests(unittest.TestCase):
 
     def test_aircraft_timeline_levels_follow_research_data(self):
         self.research.start_research(self.map)
-        self.research.set_category("AEROSPACE")
+        self.research.set_category("AIR")
         buttons = [element for element in self.research.elements if getattr(element, "is_tech_node", False)]
         expected = {(tech, level) for tech, data in self.research.tech_tree.items()
-                    if data["category"] == "AEROSPACE" for level in range(1, data["max_lvl"] + 1)}
-        self.assertEqual({(node["key"], node["lvl"]) for node in self.research.nodes["AEROSPACE"]}, expected)
+                    if data["category"] == "AIR" for level in range(1, data["max_lvl"] + 1)}
+        self.assertEqual({(node["key"], node["lvl"]) for node in self.research.nodes["AIR"]}, expected)
         self.assertEqual(len(buttons), len(expected))
         for tech, level in expected:
             base = self.research.tech_tree[tech].get("display_name", "")
@@ -514,24 +558,24 @@ class AerospaceScreenTests(unittest.TestCase):
         self.production.additional_draw(self.surface)
         self.production.additional_draw(self.surface)
         self.assertTrue(all(self.production.air_damage_labels[key] is label for key, label in labels.items()))
-    def test_production_groups_aerospace_and_recruitment_rows(self):
+    def test_production_groups_air_and_recruitment_rows(self):
         from screens.map_related_screens.production import SECTION_PANELS
         self.production.start_with_province(self.province, self.map)
-        aerospace_rows = recruitment_rows = 0
+        air_rows = recruitment_rows = 0
         for rect, stats, y, kind in self.production.active_bars:
-            if kind == "UNIT" and stats.get("production_group") == queries.UNIT_GROUP_AEROSPACE:
-                aerospace_rows += 1
-                self.assertTrue(self.production.aerospace_start_y <= y < self.production.aerospace_end_y)
+            if kind == "UNIT" and stats.get("production_group") == queries.UNIT_GROUP_AIR:
+                air_rows += 1
+                self.assertTrue(self.production.air_start_y <= y < self.production.air_end_y)
             if kind == "BUILDING" and stats.get("group") == "recruitment":
                 recruitment_rows += 1
                 self.assertTrue(self.production.other_start_y <= y < self.production.other_end_y)
-        expected = [name for key, (_, _, name) in AEROSPACE_CONTENT.items()
+        expected = [name for key, (_, _, name) in AIR_CONTENT.items()
                     if key != "jet_engine" and not queries.is_unit_obsolete(
                         queries.get_base_unit_name(name), self.map.nation_data[self.country]["research"])]
-        self.assertEqual(aerospace_rows, len(expected))
+        self.assertEqual(air_rows, len(expected))
         self.assertEqual(recruitment_rows, 1)
         self.assertNotIn("recruit", [prefix for prefix, *_ in SECTION_PANELS])
-        self.assertGreater(self.production.aerospace_end_y, self.production.aerospace_start_y)
+        self.assertGreater(self.production.air_end_y, self.production.air_start_y)
         self.production.draw(self.surface)
 
     def test_production_replacements_hide_default_rows_but_allow_custom_rows(self):
@@ -551,7 +595,7 @@ class AerospaceScreenTests(unittest.TestCase):
                 rows = [(stats, y) for _, stats, y, kind in self.production.active_bars
                         if kind == "UNIT"]
                 self.assertTrue(any(stats is self.production.unit_library[replacement]
-                    and self.production.aerospace_start_y <= y < self.production.aerospace_end_y
+                    and self.production.air_start_y <= y < self.production.air_end_y
                     for stats, y in rows))
                 obsolete_rows = [y for stats, y in rows
                                  if stats is self.production.unit_library[obsolete]]

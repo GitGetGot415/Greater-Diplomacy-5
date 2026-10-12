@@ -99,6 +99,11 @@ Success in one does not prove compatibility with the other.
 
 ### One Source of Truth
 
+- Match internal names to the names shown to players when they describe the same thing.
+- Use those names in identifiers, data keys, constants, and documentation.
+- Keep formatting differences, such as spaces and capitalization, where each format requires them.
+- Preserve older settings, saves, and protocol values through shared migration rules when names change.
+- Test legacy loading and new-data round trips after a stored name changes.
 - Check existing helpers before you add another function.
 - Combine duplicate calculations, variables, rules, functions, and state changes in one named helper.
   Use the same path for similar behavior unless a documented gameplay rule requires a difference.

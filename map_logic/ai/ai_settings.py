@@ -7,17 +7,17 @@ there instead of moving here too.
 """
 import data.constants as c
 from data import queries
+from data.io import settings_schema
 
 
 def _setting(key, default=""):
     """Reads one live setting. All the getters below share this body."""
-    return queries.get_settings().get(key, default)
+    return settings_schema.read_setting(queries.get_settings(), key, default)
 
 
 def get_gemini_api_key():
     """Helper to dynamically fetch the saved key from cache."""
-    settings = queries.get_settings()
-    return settings.get("gemini_api_key", settings.get("api_key", ""))
+    return _setting("gemini_api_key")
 
 def get_chatgpt_api_key():
     return _setting("chatgpt_api_key")
@@ -31,8 +31,8 @@ def get_deepseek_api_key():
 def get_kimi_api_key():
     return _setting("kimi_api_key")
 
-def get_ling_api_key():
-    return _setting("ling_api_key")
+def get_openrouter_api_key():
+    return _setting("openrouter_api_key")
 
 def get_ai_mode():
     """Reads the settings config to see which AI is active."""
@@ -59,8 +59,8 @@ def get_deepseek_model():
 def get_kimi_model():
     return _setting("kimi_model", c.DEFAULT_KIMI_MODEL)
 
-def get_ling_model():
-    return _setting("ling_model", c.DEFAULT_LING_MODEL)
+def get_openrouter_model():
+    return _setting("openrouter_model", c.DEFAULT_OPENROUTER_MODEL)
 
 def get_ollama_model():
     """Reads the settings config to see which Ollama model is requested."""
@@ -68,5 +68,5 @@ def get_ollama_model():
 
 def get_ollama_url():
     """Reads the URL from the settings. Defaults to localhost if empty."""
-    url = _setting("ollama_api_key").strip()
+    url = _setting("ollama_base_url").strip()
     return url if url else "http://localhost:11434/api/chat"

@@ -487,13 +487,17 @@ def clear_json_caches():
             _JSON_CACHE[key]["data"] = None
     print("[SYSTEM] JSON Memory Caches Cleared.")
 
-def _load_cached_json(cache_key):
+def _load_cached_json(cache_key, *, reload=False):
     """Helper function to handle file reading and caching dynamically."""
     cache_obj = _JSON_CACHE[cache_key]
     
-    if cache_obj["data"] is None:
+    if cache_obj["data"] is None or reload:
+        previous_data = cache_obj["data"]
         file_path = cache_obj["path"]
-        if os.path.exists(file_path):
+        if reload:
+            with open(file_path, "r", encoding="utf-8") as f:
+                cache_obj["data"] = json.load(f)
+        elif os.path.exists(file_path):
             try:
                 with open(file_path, "r", encoding="utf-8") as f:
                     cache_obj["data"] = json.load(f)
@@ -502,12 +506,49 @@ def _load_cached_json(cache_key):
                 cache_obj["data"] = {}
         else:
             cache_obj["data"] = {}
+
+        normalize_cached_json_names(cache_key, cache_obj["data"])
+        if reload and isinstance(previous_data, dict):
+            previous_data.clear()
+            previous_data.update(cache_obj["data"])
+            cache_obj["data"] = previous_data
             
     return cache_obj["data"]
+
+
+def normalize_air_category(value):
+    """Read older air category names without changing other categories."""
+    if value == "Aerospace":
+        return "Air"
+    if value == "AEROSPACE":
+        return "AIR"
+    return value
+
+
+def normalize_cached_json_names(cache_key, data):
+    """Migrate names when data enters the cache. Keep shared dictionaries in place."""
+    if not isinstance(data, dict):
+        return
+    if cache_key == "settings":
+        from data.io.settings_schema import migrate_setting_names
+        migrate_setting_names(data)
+    elif cache_key in ("unit_library", "tech_tree"):
+        field = "production_group" if cache_key == "unit_library" else "category"
+        for entry in data.values():
+            if field in entry:
+                entry[field] = normalize_air_category(entry[field])
+
+
+def reload_game_library(cache_key):
+    """Reload a game library and preserve references held by screens."""
+    if cache_key not in ("unit_library", "building_library", "tech_tree"):
+        raise ValueError(f"Not a game library: {cache_key}")
+    return _load_cached_json(cache_key, reload=True)
 
 def save_cached_json(cache_key, new_data):
     """Saves data to disk AND updates the cache instantly."""
     cache_obj = _JSON_CACHE[cache_key]
+    normalize_cached_json_names(cache_key, new_data)
     cache_obj["data"] = new_data
     
     try:
@@ -4069,8 +4110,8 @@ def get_base_item_name(name):
 UNIT_GROUP_INFANTRY = "Infantry"
 UNIT_GROUP_TANKS = "Tanks"
 UNIT_GROUP_NAVY = "Navy"
-UNIT_GROUP_AEROSPACE = "Aerospace"
-UNIT_GROUPS = (UNIT_GROUP_INFANTRY, UNIT_GROUP_TANKS, UNIT_GROUP_NAVY, UNIT_GROUP_AEROSPACE)
+UNIT_GROUP_AIR = "Air"
+UNIT_GROUPS = (UNIT_GROUP_INFANTRY, UNIT_GROUP_TANKS, UNIT_GROUP_NAVY, UNIT_GROUP_AIR)
 
 def classify_unit_group(base_name, stats):
     """Sorts a unit family into its production category.
@@ -4083,8 +4124,9 @@ def classify_unit_group(base_name, stats):
     if base_name.startswith("Convoy"):
         return UNIT_GROUP_NAVY
     # Production grouping is presentation metadata; flight uses air_role.
-    if stats.get("production_group") in UNIT_GROUPS:
-        return stats["production_group"]
+    group = normalize_air_category(stats.get("production_group"))
+    if group in UNIT_GROUPS:
+        return group
     if stats.get("naval_unit", False):
         return UNIT_GROUP_NAVY
     if "Tank" in base_name or "Armored Car" in base_name or base_name in c.TANK_GROUP_EXTRAS:

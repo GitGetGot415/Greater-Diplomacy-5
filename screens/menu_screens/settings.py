@@ -215,12 +215,10 @@ def render_settings_buttons(settings_screen):
 
 
 class Settings(GameState):
-    # Every LLM provider stores its credentials under the same attribute pair,
-    # so one naming rule replaces the four-branch if/elif chains this screen
-    # used to carry in five separate places.
-    AI_MODES = ["OFF", "OLLAMA", "GEMINI", "CHATGPT", "CLAUDE", "DEEPSEEK", "KIMI", "LING"]
-    # Keep the saved provider ID while showing the service name in the UI.
-    AI_PROVIDER_LABELS = {"LING": "OpenRouter"}
+    # Hosted providers use API keys and model names. Ollama uses a base URL.
+    AI_MODES = ["OFF", "OLLAMA", "GEMINI", "CHATGPT", "CLAUDE", "DEEPSEEK", "KIMI", "OPENROUTER"]
+    # Preserve service-name capitalization in the UI.
+    AI_PROVIDER_LABELS = {"OPENROUTER": "OpenRouter"}
     AI_FIELD_SUFFIX = {"KEY": "api_key", "MOD": "model"}
 
     # key -> (constants attribute to keep in sync, default value, picker title)
@@ -296,9 +294,16 @@ class Settings(GameState):
     @classmethod
     def editable_attrs(cls):
         """Controller attributes for provider credentials and models."""
-        return [f"{mode.lower()}_{suffix}"
+        return [cls.provider_field_attr(mode, box_type)
                 for mode in cls.AI_MODES if mode != "OFF"
-                for suffix in cls.AI_FIELD_SUFFIX.values()]
+                for box_type in cls.AI_FIELD_SUFFIX]
+
+    @classmethod
+    def provider_field_attr(cls, mode, box_type):
+        """Use a URL field for Ollama and API-key fields for hosted providers."""
+        if mode == "OLLAMA" and box_type == "KEY":
+            return "ollama_base_url"
+        return f"{mode.lower()}_{cls.AI_FIELD_SUFFIX[box_type]}"
 
     def ai_field_rows(self):
         """Share field positions and labels across rendering and input handling."""
@@ -312,7 +317,7 @@ class Settings(GameState):
 
     def field_attr(self, box_type):
         """Controller attribute for an editable field in the active mode."""
-        return f"{self.ai_mode.lower()}_{self.AI_FIELD_SUFFIX[box_type]}"
+        return self.provider_field_attr(self.ai_mode, box_type)
 
     def get_field(self, box_type):
         return getattr(self, f"{self.field_attr(box_type)}_text", "")
