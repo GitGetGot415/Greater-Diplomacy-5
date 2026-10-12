@@ -7,10 +7,8 @@ The model layer selects legal actions and writes messages.
 Rule-based AI supplies the candidates and checks their legality.
 The model cannot create an action that the rules forbid.
 
-See documentation/non_llm_ai.txt for planning, scoring, response-library text, combat, and player-mode rules.
+See documentation/non_llm_ai.txt for rule-based AI, shared game rules, and message metadata.
 See documentation/ai_movement.txt for rule-based unit-order planning.
-That guide also covers shared action limits, personalities, commitments, and message categories.
-Without the model, the AI still works and does not hold model-based summits.
 See documentation/diplo_stuff.txt for diplomacy timing and effects.
 
 LLM MODULES
@@ -40,11 +38,8 @@ Select OpenRouter in Settings to enter an OpenRouter API key and model ID.
 The model field accepts other OpenRouter models.
 Ling remains the default model.
 The provider ID is OPENROUTER. Its settings keys are openrouter_api_key and openrouter_model.
-data/migrations.py converts older LING settings and ling_api_key and ling_model keys through the settings schema.
-Current keys take priority when both names exist. New settings use only current names.
-The positional settings order stays the same.
 Use OLLAMA for installed local models.
-Its URL setting is ollama_base_url. Older ollama_api_key settings still load.
+Its URL setting is ollama_base_url.
 
 IMMERSION LEVELS
 ----------------
@@ -114,8 +109,7 @@ Read current tuning values in data/constants.py.
 AI_NEGOTIATION_MAX_PAIRS
     Summit pairs per turn.
 
-AI_MAX_ACTIONS_PER_TURN limits both model selections and rule-based proactive actions.
-See documentation/non_llm_ai.txt for shared AI tuning.
+See documentation/non_llm_ai.txt, TUNING, for shared action limits.
 
 SHARED PROMPT PREFIX
 -------------------

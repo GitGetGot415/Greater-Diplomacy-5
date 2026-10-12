@@ -277,6 +277,14 @@ Use verification appropriate to each change.
 
 ## Documentation
 
+### Shared Information
+
+- Keep each shared explanation in one primary documentation file.
+- Do not duplicate obvious information or complete rule descriptions across documentation files where possible.
+- Use a short reference when another guide needs the same information.
+- Keep local conditions, exceptions, permissions, and brief summaries needed to use a guide independently.
+- Check existing guides before adding documentation. Update the primary guide when its rules change.
+
 ### Unit, Building, and Research Data
 
 - Never document current unit or building stats, research settings, costs, or combat capabilities.
@@ -332,8 +340,9 @@ Update it when map navigation, unit selection, orders, or covered bottom-left co
 Add or update tests for changed tutorial behavior.
 
 Update affected documentation, comments, examples, tests, schemas, and UI text with the implementation.
-Keep `documentation/non_llm_ai.txt`, `documentation/llm_ai.txt`, and `documentation/diplo_stuff.txt` consistent with the rules.
-Keep `documentation/ai_movement.txt` consistent with AI unit-order planning.
+Update the guide that owns each changed rule. Check other guides that refer to it.
+Keep their local instructions and references accurate.
+See `documentation/general_info.txt` for the guide index.
 Update every description or preview of changed player behavior.
 
 At handoff, state the behavior change and verification results.

@@ -68,8 +68,6 @@ ai_movement._rotate_damaged_units rotates damaged AI units.
 AIRCRAFT ORDERS AND VISIBILITY
 ------------------------------
 
-data/migrations.py converts older aircraft orders during map loading.
-
 The aircraft AI generates only orders permitted by the shared rules.
 Transport aircraft carry available ground reinforcements toward visible enemies through safe, accessible landing tiles.
 They release cargo when no reachable safe landing tile improves its position.
@@ -78,8 +76,6 @@ The planner preserves paid orders and the tactical player's division.
 Transport aircraft receive no strike or defense candidates.
 At an industry building, it upgrades numbered aircraft to the highest researched level in their current family.
 It does not upgrade the tactical player's division, aircraft in combat, or aircraft at threatened bases.
-Player move-order clicks can change active Move and Strike targets without cancellation.
-Players must change or cancel an active defense mission before using a move-order click.
 The AI still selects replacement missions during its normal planning pass.
 It compares strikes with defense against visible enemy aircraft.
 It moves reusable aircraft to closer friendly land when no enemy target is reachable and defense does not take priority.
@@ -117,6 +113,7 @@ Aircraft already caught in ground combat cannot escape through flight.
 
 Reusable combat aircraft patrol when no strike or closer safe base is available.
 Shared capability checks select legal ground routes, patrols, or flights from current unit data.
+The AI uses Convoys for reachable crossings when no land route is available.
 
 The AI reads only visible enemy stacks.
 It leaves the tactical player's division under player control.
@@ -124,9 +121,8 @@ It leaves the tactical player's division under player control.
 UNASSIGNED UNITS
 ----------------
 
-Unassigned is a display entry for units outside saved army groups.
-It has no target area and does not create automatic army orders.
-Normal AI unit planning remains active for these units.
+Normal AI unit planning remains active for units outside army groups.
+The Unassigned display entry does not supply AI orders.
 
 MOVEMENT TUNING
 ---------------

@@ -19,12 +19,35 @@ Keep saved-file access, compression formats, and storage synchronization in thei
 Existing migration imports from queries, settings_schema, load_map, and deal still work.
 Those names refer to the central implementation. They do not contain duplicate conversion rules.
 
+OLDER IDENTIFIERS AND FIELDS
+----------------------------
+
+Settings accept api_key as gemini_api_key and ollama_api_key as ollama_base_url.
+They accept music_speed and sfx_speed as music_pitch and sfx_pitch.
+LING becomes OPENROUTER. ling_api_key and ling_model become openrouter_api_key and openrouter_model.
+Writers use current names. Positional settings slots do not change.
+
+Library loading converts AEROSPACE to AIR and Aerospace to Air.
+Research and unit IDs stay unchanged in saves and multiplayer files.
+Unnumbered aircraft become level I in unit records, including transported aircraft.
+Production queues, custom production choices, and upgrade targets use the same name conversion.
+Old scripted Spawn Unit actions also accept unnumbered names.
+Research levels and progress remain unchanged.
+
+Older aircraft Trucks unpack on land or become Convoys at sea, preserving identity and health fraction.
+Old Truck conversion orders become Convoy orders on a coast and cancel inland.
+Keep land paths only when queries.air_unit_can_move_on_ground permits them.
+Older patrols without a priority use WEAKEST.
+Cargo identity and stat repairs include air_cargo records.
+
+Older puppet-release entries without release_type use Integrated.
+Older tournament moves can supply release requests in the country-record queue.
+
 LOAD ORDER
 ----------
 
 Settings and library caches convert older names when they receive data.
 Current settings keys take priority over older keys, including empty strings.
-Conversion does not change positional settings slots.
 Library reloads keep shared dictionaries in place.
 
 Map loading restores country templates before country-dependent rules run.
@@ -47,7 +70,6 @@ Older aircraft snapshots provide only order and name drafts for host validation.
 The host still checks identity, session, turn, duplicates, permissions, costs, and targets.
 Real-time commands still use server validation and filtered snapshots.
 Migration does not grant permission to a client.
-Both systems use the same release-type default for older entries.
 
 ADDING A MIGRATION
 ------------------

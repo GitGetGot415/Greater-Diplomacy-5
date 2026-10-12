@@ -72,6 +72,7 @@ documentation/
     llm_ai.txt covers model settings, legal choices, prompts, summits, budgets, cancellation, and fairness.
     diplo_stuff.txt covers diplomacy rules and message timing.
     air_stuff.txt covers aircraft rules.
+    data_migrations.txt covers compatibility with older GD5 data.
     other/
         ai_responses_gd4_reference.txt contains archived Greater Diplomacy 4 response text.
         bypass_quarantine_macos.txt contains macOS quarantine instructions.
@@ -137,23 +138,10 @@ screens/
         battle_screen.py manages combat lanes.
         It replaces Give Orders on a tile where combat is active.
         combat_rules.py owns the combat model that this screen edits.
-        Orders and Battle can open for any visible province.
-        They are read-only when the player commands no units there.
-        In tactical mode, only the player's selected division is editable.
+        See documentation/non_llm_ai.txt for combat controls and tactical permissions.
         unit_events_screen.py shows the last turn's unit events in a sortable table.
-        A country flag appears left of each unit name, using the event's recorded owner.
-        The Details column and expanded view also show flags for identified units named in the event.
-        Damage received and damage dealt identify hidden units but replace their province number with ???.
-        Long expanded details support scrolling.
-        Click the yellow mail button beside the resource display to open it.
-        Its badge shows the number of unread entries.
-        Opening the table marks the current player's entries as read.
-        Mark all unread restores that player's unread badge until the table opens again.
-        Click a row to read its full details.
-        Filter events sits left of Mark all unread and selects one event type.
-        Its picker disables choices with no entries for the current viewer. Available choices stay blue.
-        Its button is orange with a filter and blue without one.
-        Each completed turn clears this local display filter.
+        See documentation/non_llm_ai.txt, LAST-TURN UNIT EVENTS, for controls, visibility, and persistence.
+
         Battle columns belong to combat sides, which can include several countries.
         The reserve column also shows allied units that the player cannot edit.
         Those units can replace losses in the front rank.
@@ -179,8 +167,7 @@ ui/
     Country-edit buttons belong in screens/map_related_screens/edit_country.py.
     Settings buttons belong in screens/menu_screens/settings.py.
 
-    Naval, Land, Air, and All form a vertical strip beside the lower left sidebar.
-    The strip appears only in Units view.
+    See documentation/non_llm_ai.txt for map unit filters and army-group display.
     The map tutorial uses image markers in UNIT_VIEW_NOTE in ui/confirm_dialog/message_box.py.
     Move a [icon:naval:18] marker to change its position.
     Change 18 to set the maximum image dimension in pixels.
@@ -189,40 +176,8 @@ ui/
     Images keep their original proportions. Images stay with the preceding word when lines wrap.
     bars/ui_bars.py draws its shared textured bar.
     event_handler.py uses the same rectangle to block clicks through the bar.
-    The filter changes local display only. All is selected when a game opens.
-    Filter results are cached when load, state, or input changes.
-    Training icons use the queued unit category. They do not require a deployed unit on the province.
-    Hidden or partially visible provinces do not show training icons.
-    Hover previews use the same category filter and unit visibility rules.
-    Selecting a province still shows units from all categories.
 
     confirm_dialog/
         pygame dialogs that replace tkinter dialogs.
         base.py provides the shared dialog structure.
         yes_no.py, text_input.py, message_box.py, and person_info.py provide specific dialogs.
-
-ARMY GROUPS
-===========
-
-The army list starts with Unassigned when Show Unclaimed is enabled and owned units remain outside army groups.
-Unassigned includes all unit types, including units on foreign land.
-It hides when no owned units remain outside army groups, or Show Unclaimed is disabled.
-Settings places Show Unclaimed between Show FPS and Show Tutorial Popup.
-Show Unclaimed is enabled by default, including in older settings files.
-Reset Defaults enables it again.
-
-This local display setting does not change membership, orders, saves, or multiplayer commands.
-The card is dark grey and has no symbol.
-Click the card to select its units.
-The card cannot be edited, removed, moved, or given a target area.
-Right-click assignment applies only to saved army groups.
-Unassigned units keep their normal map display, without army symbols or color bands.
-
-data/queries.py derives Unassigned from current units and saved army membership.
-ui/army_panel.py caches this entry when map state changes.
-Frame rendering reads the cached entry.
-Saves and multiplayer rosters contain only saved army groups.
-Loading units and memberships recreates Unassigned without a new saved field.
-
-The real-time server rejects rosters that use the reserved Unassigned identifier.
-Save loading and tournament imports discard records that use this identifier.

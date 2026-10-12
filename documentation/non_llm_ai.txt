@@ -53,100 +53,16 @@ This includes changes made in place.
 
 These indexes are temporary. They are not saved game fields.
 
-AIRCRAFT
---------
+AIRCRAFT VALUATION
+------------------
 
-Air is a separate research and production category.
-Its research category is AIR. Its production group is Air.
-Library loading converts older AEROSPACE and Aerospace values to these names.
-data/migrations.py owns these conversions and older aircraft-name, stat, and order corrections.
-Research and unit IDs stay unchanged. Older saves and multiplayer files keep those IDs.
-air_role and air_range_px in unit_data.json define flight.
-production_group and land movement speed do not define flight.
-Numbered aircraft levels use the shared research, production, and upgrade rules.
-Read current research settings in data/json/research_template.json.
-Read current stats, costs, and capabilities in data/json/unit_data.json.
-data/generators/recipes.py defines data generation.
-
-Shared queries read aircraft capabilities from the current unit library.
-queries.air_order_radius calculates reach for each order type.
-air_consumable and air_interception_immune control strike consumption and interception eligibility.
-
-The mission selector offers No mission, Move, Strike, Transport, and Defend area.
-Defend area uses weakest, strongest, or random priority.
-All choices stay visible. Unavailable missions and flight from an invalid base are disabled.
-Move and Strike start target selection while preserving the current order.
-Use a left-click or the configured move-order click to select a valid target.
-Escape cancels target selection without changing the current order.
-
-Use a move-order click on enemy territory or visible enemy units to strike.
-This includes hostile units on friendly territory.
-A click on accessible land without hostile units issues relocation.
-Aircraft cannot land in enemy or unclaimed territory.
-No mission or the order cancel control cancels the current order.
-The mission button always opens the selector.
-Active Move and Strike orders accept new destinations without cancellation and preserve their mission type.
-This also applies to aircraft with a ground route.
-Change or cancel an active defense mission before using a move-order click.
-Active defense and strikes show only yellow mission range. Active relocation shows only green movement range.
-Idle aircraft show green relocation range until the pointer targets enemy territory or visible hostile units.
-That target switches the preview to yellow strike range. One-use weapons always show yellow strike range.
-Outside all provinces or over UI controls, the preview keeps its previous range and color.
-
-Mission icons show the current choice.
-Air Move shows relocation, including a one-use weapon's ground path.
-No Mission shows an idle aircraft.
-The upgrade button uses the shared numbered-family upgrade helper.
-Named aircraft designs remain separate production unlocks.
-air_transport_capacity defines cargo capability and capacity.
-Transport aircraft use only Move and Transport missions.
-Their purchase and research value uses capacity and range. They have a separate transport role.
-Cargo stays outside map stacks and combat. Upkeep and army membership include cargo.
-See documentation/air_stuff.txt for cargo controls, damage, saves, and multiplayer commands.
-
-Set Mission applies a choice to eligible aircraft in the selected group.
-The button opens the selector even when selected aircraft have active missions.
-It shows all choices and disables choices unavailable to every eligible aircraft.
-It rechecks aircraft identity, permissions, and capabilities when applying a choice or target.
-Group strikes use the same move-order click as single aircraft.
-A movement command preserves all selected orders if any unit cannot reach its destination.
-Group Move and Strike target selection also preserves all captured orders if any captured unit becomes invalid.
-Unsupported group defense choices preserve those aircraft's orders.
-No mission clears eligible aircraft orders.
-Both multiplayer systems use their existing per-unit commands and validate each order.
-
-After interception, strikes use one simultaneous combat exchange against the garrison.
-All attacking aircraft participate. Garrison units retain terrain width, front ranks, and reserves.
-Interception also has no aircraft width limit.
-
-Each coalition's engaged aircraft share the attack multiplier from queries.air_stack_attack_efficiency.
-The multiplier decreases with stack size and has a minimum.
-See documentation/air_stuff.txt for the formula and counting rules.
-Defenders can damage or destroy aircraft.
-
-queries.unit_target_damage_multiplier supplies shared immunity and damage modifiers.
-Aircraft air-to-air bonuses apply only during interception.
-Survivors keep their losses at the launch base.
-Flight never captures territory.
-
-air_damages_forts defines fort damage capability in unit data.
-Research details show it.
-Player and AI orders use the same turn processor.
-See documentation/ai_movement.txt for aircraft AI decisions.
-
-Aircraft can load into Convoys at a coast and unload on land.
-Transport preserves their health fraction and original stats.
-Hostile ground combat destroys aircraft before lane assignment or damage exchange.
-Neutral aircraft and aircraft transported at sea are not destroyed by that ground-combat rule.
-UI and AI estimates use the same casualty rule.
-
-On load, old aircraft Trucks unpack on land or become Convoys at sea.
-Old Truck conversion orders become Convoy orders on a coast and cancel inland.
-Production values air as the AIR role.
+Production values aircraft as the AIR role.
 Production and research use the same aircraft valuation.
+Transport aircraft have a separate valuation role based on cargo capacity and range.
 Ground strikes receive no air-to-air bonus.
 Interception value depends on visible enemy aircraft and available air cover.
-Mission estimates use stack efficiency and the shared battle rules.
+Mission estimates use stack efficiency and the execution rules in documentation/air_stuff.txt.
+
 Owned and queued reusable aircraft reduce the need for more interception strength.
 Interception-immune enemies do not create interception demand.
 
@@ -157,11 +73,6 @@ Friendly interception attack includes each aircraft's shared air-to-air multipli
 A zero denominator gives zero air pressure.
 The evaluator applies interception multipliers before it subtracts enemy aircraft defense.
 It does not add the separate bombardment valuation to aircraft interception or strike value.
-
-Research uses the existing ahead-of-time penalty, including air.
-Recruitment buildings use the General Buildings panel.
-Read current building settings in data/json/building_data.json and research settings in data/json/research_template.json.
-See documentation/air_stuff.txt for the full aircraft rules.
 
 DIPLOMACY
 ---------
@@ -175,15 +86,7 @@ Lakes do not count. Overseas claims target the nearby coast.
 Without a shared land front, both odds calculations use overall power.
 Wargoal, truce, faction, and turn restrictions still apply.
 
-AI hosts accept valid Military Attach? requests unless the sender supports one of their enemies.
-Support means active volunteer divisions or an attach? observing that enemy.
-An existing conflicting attach? is revoked on the following turn.
-An attach? shares the host's battlefield vision.
-It withdraws immediately if the host leaves its wars or becomes hostile to the sender.
-
-Volunteer divisions use the same conflict rule.
-AI hosts reject offers from countries supporting an enemy.
-If hostile hosts accept simultaneous offers, they send the divisions home on the following turn after the conflict becomes known.
+See documentation/diplo_stuff.txt for AI acceptance and conflict handling of attach?s and volunteer offers.
 
 VALUATION RULES
 ---------------
@@ -275,28 +178,6 @@ Without an override, the scenario seed generates reproducible traits.
 Generated traits need not match historical behavior.
 tests/test_editor_menu_layout.py checks that editor controls do not overlap.
 
-PUPPETS AND COUNTRY REMOVAL
---------------------------
-
-A puppet can declare war or negotiate peace only with its master.
-It cannot independently join, receive an invitation to, or leave a faction.
-pull_puppets_into_faction moves puppets with their master.
-
-queries.can_negotiate_peace and queries.can_choose_own_faction define the shared restrictions.
-queries.can_invite_to_faction permits invitations only from the leader of an existing faction.
-treaty_effects.apply_treaty_effect and faction_actions enforce them.
-This includes crossing invitations.
-
-A landless faction member remains active as a government in exile.
-It keeps its units, diplomacy, faction wars, leadership, and pre-war border record.
-Regaining a province ends exile.
-If every faction member becomes landless, the faction disbands and ordinary cleanup applies.
-
-Other countries that lose their last province leave factions, wars, and pending offers.
-A player-created puppet, or a rebellion defeated while still at war, also loses its record and cores.
-A scenario's integrated puppet keeps its cores after annexation.
-See documentation/diplo_stuff.txt for the exile and diplomacy rules.
-
 LANE COMBAT
 -----------
 
@@ -336,6 +217,8 @@ Movement clears both lane orders.
 Reserves neither fire nor take ordinary lane damage.
 They recover morale while front units fight.
 Players can rotate units through the Battle screen.
+Orders and Battle can open for any visible province.
+They are read-only when the player commands no units there.
 See documentation/ai_movement.txt for AI rotation, bombardment, and attack checks.
 
 Bombardment is free and receives no return fire.
@@ -424,17 +307,7 @@ SPECTATOR_CAN_EDIT_APPEARANCE
 All default to True.
 Disable a switch to permit viewing without the corresponding editing ability.
 
-Local spectators can use Annex and Delete below the selected country's faction controls.
-Annex transfers another country's territory, divisions, and subjects immediately.
-Delete requires confirmation. It removes the country's live state but preserves existing turn history.
-Both actions are unavailable during turn processing, saving, map refresh, tactical play, and both multiplayer modes.
-See documentation/diplo_stuff.txt for core cleanup, volunteer handling, and save compatibility.
-
-Local spectators can open Puppets and select a country to release from its core land.
-Back from the release panel returns to the country list. Cancel closes that list.
-The release panel offers Integrated, Autonomous, and Independent. Each new panel starts with Integrated selected.
-This control keeps the spectator's viewing identity. It does not permit tournament or real-time spectators to change another player's country.
-See documentation/diplo_stuff.txt for release timing, Keep Cores, permissions, and save compatibility.
+See documentation/diplo_stuff.txt for spectator annexation, deletion, and releases from cores.
 
 The editor's research screen sets a country's starting research.
 Select a country in Map Research Editor to open its research timeline and category tabs.
@@ -518,13 +391,10 @@ Opening the report and Mark all unread still affect all entries permitted for th
 
 The report records actual turn resolution, including losses and attacks by AI units.
 AI plans and combat forecasts do not write entries.
-Air combat entries use Interception in Details for interception damage and losses.
-Strikes retain the Air missions label.
 Damage dealt uses each source's share of the applied volley.
 Shares include target restrictions and combat modifiers.
 The total credit equals the target's actual health loss.
 It excludes damage beyond the target's remaining health.
-Forced destruction of grounded aircraft divides credit equally among the hostile units present.
 
 Events also include destruction, disbanding, deployment, movement, repairs, upgrades, and transport or type changes.
 Destroyed units remain in the report after removal from the map.
@@ -575,8 +445,9 @@ Editor painting invalidates the affected surface.
 Refresh Maps forces a full rebuild.
 Planning-frame rendering does not run map-wide calculations.
 
-Naval, Land, Air, and All appear beside the lower left sidebar in Units view.
+Naval, Land, Air, and All form a vertical strip beside the lower left sidebar in Units view.
 They filter local unit stacks, army markers, and order arrows.
+Filter results are cached when load, state, or input changes.
 Hover previews list only visible units that match the selected category.
 Training icons use the queued unit's category, even when the province has no deployed units.
 Training icons do not depend on deployed unit boxes or compact markers.
@@ -593,26 +464,35 @@ Unknown fogged stacks and generic combat markers appear only in All.
 Changing filters must not reveal hidden unit types.
 
 Map boxes separate land, naval, and air units, including members of the same army.
-Aircraft also separate by mission, including idle aircraft and each patrol priority.
-Matching aircraft missions can share one rectangular box.
-Active missions show a badge to the right of their box, sized like an army emblem.
-Mission badges do not extend selection or hover hitboxes.
 Tactical views show each visible division separately at every zoom.
+See documentation/air_stuff.txt, Mission controls, for aircraft grouping, mission badges, and strategic markers.
 
-At strategic zoom, markers combine aircraft missions within each domain and army.
-Aircraft outside armies combine with nearby aircraft of the same owner.
-Different armies remain separate.
-Strategic zoom hides mission badges.
-
-The army tray lists Unassigned first when Show Unclaimed is enabled and owned units remain outside saved army groups.
-This fixed dark grey card has no symbol or editing controls.
-It has no target area and gives no automatic orders.
-Selecting it selects the player's units outside army groups.
-
-These units keep their existing map boxes and markers without army symbols or color bands.
-The card hides when all owned units belong to army groups, or Show Unclaimed is disabled in Settings.
-Show Unclaimed is enabled by default and changes local display only.
-Map state changes update its cached membership.
-
-Mission badges use the same order visibility as map arrows.
 The display cache refreshes when orders, unit forms, filters, or the viewer change.
+
+ARMY GROUPS
+===========
+
+The army list starts with Unassigned when Show Unclaimed is enabled and owned units remain outside army groups.
+Unassigned includes all unit types, including units on foreign land.
+It hides when no owned units remain outside army groups, or Show Unclaimed is disabled.
+Settings places Show Unclaimed between Show FPS and Show Tutorial Popup.
+Show Unclaimed is enabled by default, including in older settings files.
+Reset Defaults enables it again.
+
+This local display setting does not change membership, orders, saves, or multiplayer commands.
+The card is dark grey and has no symbol.
+Click the card to select its units.
+The card cannot be edited, removed, moved, or given a target area.
+It gives no automatic orders.
+
+Right-click assignment applies only to saved army groups.
+Unassigned units keep their normal map display, without army symbols or color bands.
+
+data/queries.py derives Unassigned from current units and saved army membership.
+ui/army_panel.py caches this entry when map state changes.
+Frame rendering reads the cached entry.
+Saves and multiplayer rosters contain only saved army groups.
+Loading units and memberships recreates Unassigned without a new saved field.
+
+The real-time server rejects rosters that use the reserved Unassigned identifier.
+Save loading and tournament imports discard records that use this identifier.

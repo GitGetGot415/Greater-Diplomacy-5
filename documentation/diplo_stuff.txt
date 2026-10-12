@@ -40,9 +40,6 @@ These controls do not add AI actions or multiplayer commands.
 Shared processing and save data
 ------------------------------
 
-data/migrations.py owns older diplomacy-response, deal, release-type, and faction-roster conversions.
-Loaders and importers call these helpers. Shared diplomacy rules still validate current actions.
-
 Simultaneous-action checks inspect country pairs named in current pending actions.
 They preserve country insertion order.
 One-way declarations remain included because they can cancel queued responses without a counter-proposal.
@@ -58,10 +55,7 @@ Placeholder keys preserve saved country order.
 
 Tournament files, real-time snapshots, and turn history still contain complete country records.
 Their authority and visibility rules remain unchanged.
-Disk history uses compressed full snapshots or snapshot changes, whichever is smaller.
-Loading restores complete records for every turn.
-Tournament archives store one turn without timeline history.
-Compression preserves diplomatic messages and pending actions.
+See documentation/general_info.txt for disk history and tournament archive storage.
 
 Message timing
 --------------
@@ -137,7 +131,7 @@ Military Attach? requests are bilateral.
 The host must be at war and must not be fighting the sender.
 After acceptance, the sender sees the host's battlefield visibility.
 
-An AI host rejects requests from a country supporting one of its enemies.
+An AI host accepts valid requests unless the sender supports one of its enemies.
 Support means active volunteer divisions or an attach? observing that enemy.
 An accepted conflicting attach? is revoked on the following turn.
 A player-controlled host can revoke a foreign attach? directly.
@@ -155,12 +149,7 @@ A player hosting foreign volunteers can send them home directly.
 
 Aircraft are not eligible land volunteers.
 This restriction uses the current unit library, including for aircraft with ground routes.
-Aircraft use only Convoy transports.
-Those transports retain the original aircraft type and remain ineligible as volunteers.
-
-Aircraft missions and repositioning use map geometry, independently of military access.
-They never transfer province ownership.
-See documentation/air_stuff.txt.
+Aircraft remain ineligible as volunteers when transported in Convoys.
 
 Editor and scripted events
 --------------------------
@@ -205,6 +194,7 @@ Faction leadership
 ------------------
 
 Only the current faction leader can invite countries into an existing faction.
+queries.can_invite_to_faction defines this restriction.
 An ordinary member cannot send an invitation.
 The game checks leadership when drafting, sending, and resolving an invitation.
 A former leader can cancel an unsent invitation.
@@ -231,6 +221,12 @@ Player-led leadership changes do not rename the faction.
 
 Puppet hierarchy
 ----------------
+
+A puppet can declare war or negotiate peace only with its master.
+It cannot independently join, receive an invitation to, or leave a faction.
+pull_puppets_into_faction moves puppets with their master.
+queries.can_negotiate_peace and queries.can_choose_own_faction define these restrictions.
+treaty_effects.apply_treaty_effect and faction_actions enforce them, including crossing invitations.
 
 Puppet relationships must not contain a cycle.
 The editor rejects any assignment that makes a country its own ancestor.
@@ -268,11 +264,10 @@ Add a number to the generated name when it conflicts with an existing country.
 All three choices inherit the releasing country's research.
 
 release_puppet_queue entries store core_nation, keep_cores, release_type, and turns_left.
-Older entries without release_type resolve as Integrated.
-The save loader preserves these nested queue fields. The queue reader supplies the old-save default.
+The save loader preserves these nested queue fields.
 New releases resolve after one turn. Existing countdowns remain authoritative.
 
-Tournament move files carry explicit release_subjects requests. Older moves can use their country-record queue.
+Tournament move files carry explicit release_subjects requests.
 The host validates the source country, type, core land, duplicates, and unchanged options.
 It preserves session checks, turn checks, and host countdowns.
 Real-time clients submit release choices in puppet_draft. Only the server applies and resolves those commands.
@@ -296,3 +291,7 @@ Apply ordinary country cleanup to every former member.
 No country remains at war with a faction that cannot restore territory.
 
 A landless country outside a faction uses ordinary cleanup.
+Ordinary cleanup removes wars and pending offers.
+A player-created Integrated puppet also loses its record and cores.
+A rebellion defeated while still at war loses its record and cores.
+A scenario's Integrated puppet keeps its cores after annexation.

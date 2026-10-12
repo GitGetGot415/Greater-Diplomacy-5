@@ -19,7 +19,9 @@ air_interception_immune
 air_damages_forts
 air_transport_capacity
 
+Air is the research and production category. Its identifiers are AIR and Air.
 production_group is display metadata.
+air_role and air_range_px define flight. Land movement speed does not define flight.
 A missing air_damages_forts flag means the unit cannot damage forts.
 Read capabilities from the current unit library, including for old saves.
 Do not store them on individual units or accept them from multiplayer orders.
@@ -29,6 +31,8 @@ Aircraft research
 
 Aircraft levels use Roman numerals in research and production.
 Research years apply the standard ahead-of-time penalty.
+Named aircraft designs remain separate production unlocks.
+Recruitment buildings use the General Buildings panel.
 
 Each later level requires the previous level in that family.
 Read current research years, levels, prerequisites, and costs in data/json/research_template.json.
@@ -38,11 +42,6 @@ Keep its recipes consistent with data edits before you regenerate the files.
 Research details derive their current information from these libraries and shared queries.
 Jet Bombers use assets/classic/Jet Bomber.png.
 Jet Transports use assets/classic/Jet Transport.png.
-
-Old saves retain their research levels and progress.
-Unnumbered aircraft become level I, including transported aircraft and queued production.
-Custom production choices and saved upgrade targets use the same migration.
-Old scripted Spawn Unit actions create level I aircraft from unnumbered names.
 
 Range and display caches
 ------------------------
@@ -114,7 +113,6 @@ Mission controls
 ----------------
 
 AIR_PATROL retains base_id and priority.
-Old saves default to WEAKEST.
 
 The air mission button offers these choices:
 - No mission.
@@ -247,7 +245,6 @@ An empty carrier uses its current order's icon.
 Presentation caches refresh when cargo changes.
 
 Saves store air_cargo inside each carrier. Older units without this field have no cargo.
-Stat migration and identity repair include cargo.
 Tournament moves carry air_transport commands with plane_id, province_id, and cargo_ids.
 Real-time drafts carry the same commands with type air_transport.
 Hosts validate identities, ownership, base, ground-unit form, and capacity before applying a complete cargo draft.
@@ -265,7 +262,7 @@ Reusable strikes keep the unit at its launch province.
 Survivors retain damage there, which guarantees an exact return.
 Patrol continues until replaced or canceled.
 
-Saves retain RANDOM priorities. Older patrols still default to WEAKEST.
+Saves retain RANDOM priorities.
 Resolution cancels saved orders that no longer meet current landing or target rules.
 
 Aircraft can load only into Convoys.
@@ -274,15 +271,7 @@ Conversion uses the shared AIR_CONVERT_TURNS timer.
 original_* transport fields preserve aircraft stats.
 Loading replaces old infantry placeholder stats while preserving health ratios.
 
-On load, legacy aircraft Trucks unpack on land or become Convoys at sea.
-They retain identity and health fraction.
-The AI uses shared capability checks to select ground routes or flight orders.
-It uses Convoys for reachable crossings when no land route is available.
-See documentation/ai_movement.txt for aircraft AI decisions.
-
-Old Truck conversion orders become Convoy orders on a coast and cancel inland.
-Keep normal land paths when queries.air_unit_can_move_on_ground permits them.
-Discard those paths for reusable aircraft.
+See documentation/ai_movement.txt for aircraft AI missions and transport planning.
 
 Interception
 ------------
@@ -368,9 +357,7 @@ The host validates position, type, and range against its own state.
 It retains its own health and stats.
 Legacy snapshots provide only order and name drafts for existing aircraft.
 
-Tournament hosts and country players load one shared, encrypted game snapshot.
-Country keys provide the shared session key. Local game rules control display visibility.
-The public spectator key opens only the separate spectator snapshot.
+See documentation/general_info.txt, TOURNAMENT FILE STORAGE, for archive encryption and snapshot visibility.
 
 Real-time unit commands validate against server state.
 Both multiplayer systems submit final order drafts, including direct movement and strike target changes.
@@ -382,19 +369,15 @@ Network snapshots do not include the temporary geometry cache or interception li
 Last-turn reports
 -----------------
 
-Unit events records health losses and damage dealt during air combat and strikes.
+See documentation/non_llm_ai.txt, LAST-TURN UNIT EVENTS, for report controls, visibility, persistence, and read status.
+
 Interception damage and destroyed-unit entries use Interception in Details.
 Strike entries retain Air missions in Details.
 Interception and strike entries show the mission tile.
-
-Damage received identifies attackers, including aircraft at hidden bases.
 Details show an attacker's base tile only when the viewer can see that unit.
 Otherwise, the base tile number shows ???.
-Country flags appear before identified unit names in the Details column and expanded view.
-Damage dealt also identifies hidden targets, with their province number shown as ???.
 
 Grounded aircraft destroyed by hostile troops also receive loss entries.
+Forced ground destruction divides damage credit equally among the hostile units present.
 An expended single-use weapon receives a Weapon expended entry.
-Damage dealt uses the applied combat volley, including air modifiers and target immunity.
 Aircraft damage entries include the stack efficiency reduction.
-The next completed turn removes the previous report.
