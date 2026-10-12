@@ -55,6 +55,9 @@ Placeholder keys preserve saved country order.
 
 Tournament files, real-time snapshots, and turn history still contain complete country records.
 Their authority and visibility rules remain unchanged.
+Disk history stores changes between turns and restores complete records when loaded.
+Tournament archives store one turn without timeline history.
+Compression preserves diplomatic messages and pending actions.
 
 Message timing
 --------------

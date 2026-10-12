@@ -48,6 +48,18 @@ def sample_map_screen():
 
 
 class MapSaveFormatTests(unittest.TestCase):
+    def test_geometry_omits_only_fields_with_a_separate_state_record(self):
+        raw = {"p": {"terrain": "fixture", "owner": "old", "unknown": {"keep": [1]}},
+               "extra": {"owner": "preserved", "units": [{"fixture": True}]}}
+        saved = {"p": {"owner": "new", "units": []}}
+        geometry = queries.build_map_geometry_save(raw, saved)
+        self.assertEqual(geometry, {
+            "p": {"terrain": "fixture", "unknown": {"keep": [1]}}, "extra": raw["extra"]})
+        self.assertEqual(queries.map_data_with_saved_provinces(geometry, saved),
+                         queries.map_data_with_saved_provinces(raw, saved))
+        geometry["p"]["unknown"]["keep"].append(2)
+        self.assertEqual(raw["p"]["unknown"]["keep"], [1])
+
     def test_unassigned_is_rebuilt_from_saved_units_without_a_new_saved_field(self):
         from ui import army_panel
         map_screen = sample_map_screen()

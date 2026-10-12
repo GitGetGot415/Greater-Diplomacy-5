@@ -5,11 +5,16 @@ import base64
 import binascii
 import secrets
 import copy
+import gzip
+import zlib
 from cryptography.fernet import Fernet, InvalidToken
 import data.constants as c
 from data import queries
 from data.map import history_io
+from data.map.map_cache import remove_optional_layer_files
 from data.platform import sync_persisted_dir
+
+TOURNAMENT_GZIP_LEVEL = 6
 
 def active_owners_of(map_ref):
     """Every nation entitled to a tournament move right now.
@@ -70,11 +75,14 @@ def generate_fernet_key_from_password(password, salt):
     )
     return base64.urlsafe_b64encode(derived_key)
 
-def encrypt_dict(data_dict, password):
+def encrypt_dict(data_dict, password, *, compress=False):
     salt = secrets.token_bytes(16)
     key = generate_fernet_key_from_password(password, salt)
     f = Fernet(key)
-    json_bytes = json.dumps(data_dict).encode('utf-8')
+    json_bytes = history_io.dump_compact_text(data_dict).encode('utf-8')
+    if compress:
+        # Compress plaintext. Encrypted bytes cannot compress effectively.
+        json_bytes = gzip.compress(json_bytes, compresslevel=TOURNAMENT_GZIP_LEVEL, mtime=0)
     encrypted_token = f.encrypt(json_bytes).decode('utf-8')
     salt_b64 = base64.urlsafe_b64encode(salt).decode('utf-8')
     return f"{salt_b64}:{encrypted_token}"
@@ -92,8 +100,11 @@ def decrypt_dict(encrypted_str, password):
     try:
         f = Fernet(key)
         json_bytes = f.decrypt(encrypted_token.encode('utf-8'))
+        # Legacy encrypted files contain JSON directly, without a gzip header.
+        if json_bytes.startswith(b'\x1f\x8b'):
+            json_bytes = gzip.decompress(json_bytes)
         return json.loads(json_bytes.decode('utf-8'))
-    except (InvalidToken, UnicodeDecodeError, json.JSONDecodeError):
+    except (InvalidToken, UnicodeDecodeError, json.JSONDecodeError, OSError, EOFError, zlib.error):
         # Bad ciphertext and non-JSON plaintext are malformed player data.
         return None
 
@@ -298,7 +309,8 @@ def export_tournament(map_ref, file_path, master_key, keys_dict):
     
     # Embed the raw geometry so the tournament file is self-contained
     if hasattr(map_ref, 'raw_json_data'):
-        save_dict["_raw_map_data"] = map_ref.raw_json_data
+        save_dict["_raw_map_data"] = queries.build_map_geometry_save(
+            map_ref.raw_json_data, save_dict["provinces"])
         
     import pygame
     temp_img_dir = os.path.join(c.TOURNAMENT_SAVES_DIR, "temp_img_export")
@@ -309,8 +321,6 @@ def export_tournament(map_ref, file_path, master_key, keys_dict):
         img_names = {
             "terrain.png": getattr(map_ref, 'terrain_map', None),
             "id_map.png": getattr(map_ref, 'id_map', None),
-            "political.png": getattr(map_ref, 'political_map', None),
-            "cores.png": getattr(map_ref, 'cores_map', None)
         }
         
         for name, surf in img_names.items():
@@ -387,9 +397,9 @@ def export_tournament(map_ref, file_path, master_key, keys_dict):
 
     map_ref.multiplayer_player_enc_cache = player_enc_cache
             
-    game_data_enc = encrypt_dict(save_dict, session_key)
+    game_data_enc = encrypt_dict(save_dict, session_key, compress=True)
     spectator_game_data_enc = encrypt_dict(
-        build_tournament_spectator_save(save_dict), c.TOURNAMENT_SPECTATOR_KEY)
+        build_tournament_spectator_save(save_dict), c.TOURNAMENT_SPECTATOR_KEY, compress=True)
     history_enc = None # History omitted for tournament saves to reduce file size
     
     payload = {
@@ -455,7 +465,6 @@ def load_tournament(file_path, key):
         game_data = decrypt_dict(payload.get("spectator_game_data"), key)
         if not isinstance(game_data, dict):
             return False, None, None, None, None, "Tournament does not include spectator data"
-        history = []
     else:
         encrypted_session = entry.get("enc_session")
         if not isinstance(encrypted_session, str):
@@ -473,16 +482,16 @@ def load_tournament(file_path, key):
         if not isinstance(game_data, dict):
             return False, None, None, None, None, "Failed to decrypt game data"
 
-        history = decrypt_dict(payload.get("history"), session_key) if payload.get("history") else []
-        if history is None:
-            history = []
-
     keys_dict = decrypted_session.get("keys_dict", {})
     if not isinstance(keys_dict, dict):
         return False, None, None, None, None, "Invalid key payload"
 
     temp_dir = os.path.join(c.TOURNAMENT_SAVES_DIR, "temp_load")
     os.makedirs(temp_dir, exist_ok=True)
+    # A tournament loads one turn. Clear history and derived images left by
+    # earlier loads, including legacy archives that stored these files.
+    history_io.write(temp_dir, {})
+    remove_optional_layer_files(temp_dir)
 
     # Extract raw geometry if present.  Reject a malformed archive here so the
     # player gets a useful load error instead of a later Map-constructor crash.
@@ -509,9 +518,6 @@ def load_tournament(file_path, key):
         with open(os.path.join(temp_dir, "meta.json"), 'w') as f:
             f.write(history_io.dump_compact_text(game_data))
 
-        if history:
-            with open(os.path.join(temp_dir, "history.json"), 'w') as f:
-                f.write(history_io.dump_compact_text(history))
     except (OSError, TypeError, ValueError):
         return False, None, None, None, None, "Invalid tournament data"
 
@@ -617,7 +623,7 @@ def export_move_file(map_ref, file_path, player_key):
     payload = {
         "country_id": cid,
         "hash": hash_key(player_key),
-        "data": encrypt_dict(player_data, player_key)
+        "data": encrypt_dict(player_data, player_key, compress=True)
     }
     
     os.makedirs(os.path.dirname(file_path), exist_ok=True)

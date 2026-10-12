@@ -2,6 +2,7 @@
 
 import base64
 import copy
+import gzip
 import json
 from pathlib import Path
 import random
@@ -10,9 +11,11 @@ import unittest
 from unittest import mock
 
 import pygame
+from cryptography.fernet import Fernet
 
 from data import constants as c, queries
 from data.io import multiplayer_io as io
+from data.map import history_io
 from tests.test_tournament_moves import Host, nation, synchronous_progress
 
 
@@ -23,9 +26,11 @@ class TournamentArchiveTests(unittest.TestCase):
         self.root = Path(self.directory.name)
         for patcher in (
                 mock.patch.object(c, "TOURNAMENT_SAVES_DIR", str(self.root)),
-                mock.patch.object(io, "run_with_progress", synchronous_progress)):
+                mock.patch.object(io, "run_with_progress", synchronous_progress),
+                mock.patch.object(queries, "datetime")):
             patcher.start()
             self.addCleanup(patcher.stop)
+        queries.datetime.now.return_value.isoformat.return_value = "fixture-export-time"
         self.host = Host()
         self.keys = {f"Country{index}": f"player-key-{index}" for index in range(8)}
         self.host.nation_data = {cid: nation(name=cid) for cid in self.keys}
@@ -52,6 +57,9 @@ class TournamentArchiveTests(unittest.TestCase):
         pixels = rng.randbytes(128 * 128 * 3)
         self.host.terrain_map = pygame.image.frombytes(pixels, (128, 128), "RGB")
         self.host.id_map = self.host.terrain_map.copy()
+        self.host.political_map = self.host.terrain_map.copy()
+        self.host.cores_map = self.host.terrain_map.copy()
+        self.host.history = {"0": {"nation_data": {"private_old_turn": True}}}
         for index, data in enumerate(self.host.nation_data.values()):
             data["inbox"] = [{"private": index}]
             data["research"] = {"fixture": index}
@@ -94,6 +102,61 @@ class TournamentArchiveTests(unittest.TestCase):
                 self.assertEqual(session, {"sk": self.host.multiplayer_session_key})
         self.assertEqual(self.host.raw_json_data, original_raw)
         self.assertFalse(io.load_tournament(str(path), "invalid-key")[0])
+
+    def test_snapshot_stores_current_provinces_once_and_regenerates_overlays(self):
+        path, payload = self.export()
+        snapshot = io.decrypt_dict(payload["game_data"], self.host.multiplayer_session_key)
+        self.assertIsNone(payload["history"])
+        self.assertEqual(set(snapshot["_images"]), {"terrain.png", "id_map.png"})
+        for key, province in snapshot["provinces"].items():
+            self.assertFalse(set(province) & set(snapshot["_raw_map_data"][key]))
+        expected = queries.map_data_with_saved_provinces(self.host.raw_json_data, snapshot["provinces"])
+        self.assertEqual(queries.map_data_with_saved_provinces(
+            snapshot["_raw_map_data"], snapshot["provinces"]), expected)
+        self.load_snapshot(path, "host-key")
+        for name in ("terrain.png", "id_map.png"):
+            self.assertEqual((self.root / "temp_load" / name).read_bytes()[:8], b'\x89PNG\r\n\x1a\n')
+
+    def test_load_ignores_legacy_history_and_removes_stale_history_and_overlays(self):
+        path, payload = self.export()
+        payload["history"] = io.encrypt_dict(self.host.history, self.host.multiplayer_session_key)
+        path.write_text(json.dumps(payload))
+        directory = self.root / "temp_load"
+        directory.mkdir(exist_ok=True)
+        for key in ("host-key", next(iter(self.keys.values())), c.TOURNAMENT_SPECTATOR_KEY):
+            for name in (history_io.GZ_NAME, history_io.PLAIN_NAME, "political.png", "cores.png"):
+                (directory / name).write_bytes(b"stale data")
+            self.load_snapshot(path, key)
+            self.assertEqual(history_io.read(directory), {})
+            for name in (history_io.GZ_NAME, history_io.PLAIN_NAME, "political.png", "cores.png"):
+                self.assertFalse((directory / name).exists())
+
+    def test_compression_is_lossless_and_legacy_ciphertext_remains_supported(self):
+        data = {"fixture": [{"text": "repeated message " * 100, "values": [None, True, 1, 1.5]}] * 50}
+        compressed = io.encrypt_dict(data, "fixture-key", compress=True)
+        plain = io.encrypt_dict(data, "fixture-key")
+        self.assertLess(len(compressed) * 5, len(plain))
+        self.assertEqual(io.decrypt_dict(compressed, "fixture-key"), data)
+        self.assertEqual(io.decrypt_dict(plain, "fixture-key"), data)
+        self.assertIsNone(io.decrypt_dict(compressed, "wrong-key"))
+        salt_text, token = compressed.split(":", 1)
+        salt = base64.urlsafe_b64decode(salt_text)
+        cipher = Fernet(io.generate_fernet_key_from_password("fixture-key", salt))
+        plaintext = cipher.decrypt(token.encode())
+        self.assertEqual(json.loads(gzip.decompress(plaintext)), data)
+        corrupt = salt_text + ":" + cipher.encrypt(b'\x1f\x8bcorrupt gzip').decode()
+        self.assertIsNone(io.decrypt_dict(corrupt, "fixture-key"))
+
+    def test_legacy_uncompressed_snapshot_loads_for_all_recipients(self):
+        path, payload = self.export()
+        for field, key in (("game_data", self.host.multiplayer_session_key),
+                           ("spectator_game_data", c.TOURNAMENT_SPECTATOR_KEY)):
+            payload[field] = io.encrypt_dict(io.decrypt_dict(payload[field], key), key)
+        path.write_text(json.dumps(payload))
+        for key in ("host-key", next(iter(self.keys.values())), c.TOURNAMENT_SPECTATOR_KEY):
+            loaded, snapshot = self.load_snapshot(path, key)
+            self.assertTrue(loaded[0])
+            self.assertEqual(snapshot["date"]["total_turns"], self.host.time_manager.total_turns)
 
     def test_more_players_and_repeated_exports_add_only_key_records(self):
         first_country = next(iter(self.keys))

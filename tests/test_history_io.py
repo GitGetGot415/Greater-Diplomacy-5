@@ -5,6 +5,7 @@ compression carries a plain history.json, and those must keep loading forever.
 """
 
 import gzip
+import copy
 import json
 import os
 import shutil
@@ -112,8 +113,77 @@ class HistoryIOTests(unittest.TestCase):
         path = history_io.write(self.dir, obj, compress=False)
         with open(path, encoding="utf-8") as handle:
             text = handle.read()
-        self.assertEqual(text, json.dumps(obj, indent=c.HISTORY_INDENT))
+        self.assertEqual(history_io.decode_history(json.loads(text)), obj)
+        self.assertEqual(text, json.dumps(history_io.encode_history(obj), indent=c.HISTORY_INDENT))
         self.assertGreater(text.count("\n"), 1)
+
+    def test_legacy_compressed_full_snapshots_still_load(self):
+        with gzip.open(os.path.join(self.dir, history_io.GZ_NAME), "wt", encoding="utf-8") as handle:
+            json.dump(sample_history(), handle)
+        self.assertEqual(history_io.read(self.dir), sample_history())
+
+    def test_deltas_preserve_edits_deletions_order_and_json_types(self):
+        original = {
+            "nation_data": {"A": {"inbox": [{"read": False}], "unknown": {"keep": 1, "remove": 2}},
+                            "B": {"materials": 5}},
+            "provinces": {"p": {"units": [{"id": "u", "health": 7}, {"id": "v"}]}}
+        }
+        modified = copy.deepcopy(original)
+        modified["nation_data"]["A"]["inbox"][0]["read"] = True
+        modified["nation_data"]["A"]["inbox"].append({"read": False, "text": "new"})
+        modified["nation_data"]["A"]["unknown"] = {"new": None, "keep": True}
+        modified["nation_data"] = {"B": modified["nation_data"]["B"], "A": modified["nation_data"]["A"]}
+        modified["provinces"]["p"]["units"] = [{"id": "u", "health": 7.0}]
+        removed = copy.deepcopy(modified)
+        removed["nation_data"].pop("B")
+        removed["provinces"]["p"]["units"] = []
+        history = {"7": original, "9": modified, "10": removed, "11": copy.deepcopy(removed)}
+        before = copy.deepcopy(history)
+        history_io.write(self.dir, history)
+        restored = history_io.read(self.dir)
+        self.assertEqual(history, before)
+        self.assertEqual(restored, history)
+        self.assertEqual(list(restored), list(history))
+        self.assertEqual(list(restored["9"]["nation_data"]), ["B", "A"])
+        self.assertEqual(list(restored["9"]["nation_data"]["A"]["unknown"]), ["new", "keep"])
+        self.assertIs(type(restored["7"]["nation_data"]["A"]["unknown"]["keep"]), int)
+        self.assertIs(type(restored["9"]["nation_data"]["A"]["unknown"]["keep"]), bool)
+        self.assertIs(type(restored["9"]["provinces"]["p"]["units"][0]["health"]), float)
+        restored["9"]["nation_data"]["A"]["inbox"][0]["read"] = "changed"
+        self.assertEqual(restored["10"], history["10"])
+        self.assertEqual(restored["11"], history["11"])
+        self.assertEqual(restored["7"], history["7"])
+
+    def test_appended_messages_and_unchanged_units_are_stored_once(self):
+        history = {}
+        snapshot = {"nation_data": {"A": {"inbox": []}}, "provinces": {
+            str(index): {"units": [{"id": f"unit-{index}", "fixture": list(range(20))}]}
+            for index in range(200)}}
+        for turn in range(30):
+            snapshot["nation_data"]["A"]["inbox"].append({"text": f"message-{turn}", "read": False})
+            history[str(turn)] = copy.deepcopy(snapshot)
+        encoded = history_io.encode_history(history)
+        text = history_io.dump_compact_text(encoded)
+        for turn in range(30):
+            self.assertEqual(text.count(f'"message-{turn}"'), 1)
+        self.assertEqual(text.count('"unit-199"'), 1)
+        self.assertLess(len(text) * 10, len(history_io.dump_compact_text(history)))
+        self.assertEqual(history_io.decode_history(json.loads(text)), history)
+
+    def test_corrupt_delta_falls_back_to_legacy_history(self):
+        with open(os.path.join(self.dir, history_io.PLAIN_NAME), "w", encoding="utf-8") as handle:
+            json.dump(sample_history(), handle)
+        malformed = [
+            {"_history_format": "unknown", "turns": []},
+            {"_history_format": history_io.DELTA_FORMAT, "turns": [["1", ["unknown"]]]},
+            {"_history_format": history_io.DELTA_FORMAT, "turns": [["1", ["set", []]]]},
+            {"_history_format": history_io.DELTA_FORMAT, "turns": [["1", ["set", {}]], ["1", None]]},
+        ]
+        for payload in malformed:
+            with self.subTest(payload=payload):
+                with gzip.open(os.path.join(self.dir, history_io.GZ_NAME), "wt", encoding="utf-8") as handle:
+                    json.dump(payload, handle)
+                self.assertEqual(history_io.read(self.dir), sample_history())
 
 
 if __name__ == "__main__":

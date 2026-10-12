@@ -9,9 +9,34 @@ The public spectator key opens a separate spectator snapshot without the shared 
 
 Country players receive the complete snapshot before local display restrictions apply.
 Tournament fog and private-data restrictions depend on the game client.
-The archive format matches files made before per-country snapshots were introduced.
+Snapshots and player moves use compact JSON, compressed with gzip before encryption.
+The loader also accepts older encrypted JSON without compression.
+New compressed files require a game version with gzip decoding support.
 Per-country snapshots and compressed snapshot differences are not supported.
 Real-time multiplayer continues to filter each recipient's state before transmission.
+
+Each tournament archive stores one turn. Its history field is null.
+The loader ignores history in older tournament archives and removes temporary history files.
+Province state is stored once, separately from map geometry.
+Only terrain.png and id_map.png are embedded. The game rebuilds the political and cores layers.
+Country records, messages, and last-turn unit reports remain complete.
+
+REGULAR SAVE HISTORY
+====================
+
+data/map/history_io.py owns disk history storage.
+history.json.gz contains gzip-compressed JSON with the gd5-history-delta-v1 format identifier.
+The first entry contains a complete snapshot. Later entries contain changes from the previous entry.
+Dictionary changes preserve deletions and key order. List changes preserve edits, additions, and removals.
+Unchanged messages, images, research, and units are not repeated for each turn.
+The reader restores separate, complete snapshots for the timeline and historical loading.
+This format reduces disk storage. It does not reduce the full timeline's memory use.
+
+Older plain history.json files and compressed full snapshots remain readable.
+Saving an older game writes the new format. No turns or messages are removed.
+New history files require a game version with delta decoding support.
+Regular metadata and map_data.json remain readable JSON.
+Real-time commands and state filtering do not change. Real-time host saves use the same history writer.
 
 PROJECT FILES
 =============

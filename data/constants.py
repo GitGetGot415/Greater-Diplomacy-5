@@ -2344,12 +2344,10 @@ HISTORICAL_LEADERS_DEFAULT_PATH = "data/json/historical_leaders_DEFAULT.json"
 # ==========================================
 
 RECORD_HISTORY = True
-# History is compressed on disk, so readable JSON adds little to exported save
-# size while making the payload inspectable after decompressing it.
+# Disk history stores snapshot changes. Indentation keeps decompressed JSON readable.
 HISTORY_INDENT = 4
 SAVE_INDENT = 4
-# Level 1 gets ~13x on history's very repetitive JSON for a third of level 6's
-# CPU, and the write it saves is bigger than the compression it costs.
+# Use fast compression after repeated snapshot values have been removed.
 HISTORY_GZIP_LEVEL = 1
 # Marks a history snapshot whose images have already been scrubbed, so a save
 # does not redo identical work for every turn it has ever recorded.

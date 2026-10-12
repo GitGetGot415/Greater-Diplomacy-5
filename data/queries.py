@@ -3164,6 +3164,19 @@ def build_map_data_save(map_screen):
     }
 
 
+def build_map_geometry_save(raw_map_data, saved_provinces):
+    """Keep map geometry without fields already stored in the province snapshot.
+
+    Preserve unknown fields and provinces without a matching state record.
+    The loader restores current state through overlay_saved_province_data.
+    """
+    return {
+        key: {field: copy.deepcopy(value) for field, value in province.items()
+              if field not in saved_provinces.get(key, {})}
+        for key, province in raw_map_data.items()
+    }
+
+
 def overlay_saved_province_data(map_data, saved_provinces):
     """Apply legacy or history province overlays to their map-data records."""
     malformed_resources = 0
