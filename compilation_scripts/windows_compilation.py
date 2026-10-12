@@ -52,6 +52,7 @@ def main():
            "--hidden-import", "screens.map_related_screens.unit_events_screen",
            "--hidden-import", "map_logic.turn_processing.unit_events",
            "--hidden-import", "map_logic.turn_processing.air_processor",
+           "--hidden-import", "data.migrations",
            "--add-binary", "win64-libsoloud.dll;.",
            "--add-binary", "mac64-libsoloud.dylib;.",
            "--add-binary", "lin64-libsoloud.so;.",

@@ -1,7 +1,7 @@
 import os
 import pygame
 import data.constants as c
-from data import queries
+from data import migrations, queries
 from data.io import settings_schema
 
 CONFIG_PATH = c.SETTINGS_CONFIG_PATH
@@ -34,7 +34,7 @@ def save_settings(keybind_dict, sfx_volume, music_volume, num_players=1, ai_mode
     None lets renamed fields use an older keyword or the schema default.
     Write current JSON keys from settings_schema.SETTINGS_FIELDS.
     """
-    unexpected = set(legacy_settings) - {"ollama_api_key", "ling_api_key", "ling_model"}
+    unexpected = set(legacy_settings) - migrations.LEGACY_SETTINGS_KEYWORD_NAMES
     if unexpected:
         raise TypeError(f"Unknown settings arguments: {', '.join(sorted(unexpected))}")
     values = {name: value for name, value in locals().items()

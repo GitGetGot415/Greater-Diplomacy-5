@@ -962,66 +962,6 @@ def headline(deal, viewer=None):
 # LEGACY SAVES
 # ==========================================
 
-def from_legacy_string(peace_type, proposer, target):
-    """Turns one of the three old peace sentences into a deal.
 
-    Saves made before the rework can have a peace offer in flight, and the AI's
-    own offers carried free prose where the terms were supposed to be. Anything
-    that is not recognisably a demand is read as a white peace, which is what
-    those offers already did when they executed -- treaty_effects fell back to
-    PEACE_WHITE_PEACE whenever the parameters were empty.
-    """
-    from data import queries
-
-    terms = peace_type if isinstance(peace_type, str) else ""
-
-    if not (terms.startswith(c.PEACE_DEMAND_CLAIMS) or terms.startswith(c.PEACE_SURRENDER)):
-        return ceasefire_deal(proposer, target)
-
-    winner, loser = queries.get_peace_winner_loser(terms, proposer, target)
-    frozen = queries.parse_peace_frozen_ids(terms)
-    return new(KIND_PEACE, [proposer], [target],
-               [tiles_clause(loser, winner, frozen, plus_originals=True)])
-
-
-def coerce(params, proposer, target, kind=None):
-    """Whatever was stored on a pending action, as a deal.
-
-    Three shapes reach this: a real deal, one of the old peace strings, and the
-    old four-key trade dict {give_materials, take_fuel, puppet_state, ...}. Pass
-    `kind` when the caller knows which it should be -- an AI peace offer carried
-    free prose where the terms belonged, and reading that as a trade would be
-    worse than reading it as the white peace it always executed as.
-    """
-    if is_deal(params):
-        return params
-
-    if kind == KIND_PEACE:
-        return from_legacy_string(params if isinstance(params, str) else "", proposer, target)
-
-    if isinstance(params, dict):
-        deal = new(KIND_TRADE, [proposer], [target])
-        for resource in c.TRADE_RESOURCE_KEYS:
-            given = int(params.get(f"give_{resource}", 0) or 0)
-            taken = int(params.get(f"take_{resource}", 0) or 0)
-            if given > 0:
-                deal = add_clause(deal, resources_clause(proposer, target, resource, given))
-            if taken > 0:
-                deal = add_clause(deal, resources_clause(target, proposer, resource, taken))
-
-        # "SENDER", "NONE" and "RECEIVER" are the three the old trade screen
-        # wrote. Anything else is read as a vassalage term all the same, in the
-        # sender's favour: the check it replaced was `!= "NONE"`, so an
-        # unrecognised value was refused rather than waved through, and a value
-        # this does not understand is the last thing that should quietly become
-        # no clause at all.
-        puppet_state = params.get("puppet_state") or "NONE"
-        if puppet_state == "RECEIVER":
-            deal = add_clause(deal, {"type": VASSALIZE, "master": target, "subject": proposer,
-                                     "puppet_type": c.PUPPET_TYPE_AUTONOMOUS})
-        elif puppet_state != "NONE":
-            deal = add_clause(deal, {"type": VASSALIZE, "master": proposer, "subject": target,
-                                     "puppet_type": c.PUPPET_TYPE_AUTONOMOUS})
-        return deal
-
-    return from_legacy_string(params, proposer, target)
+# Preserve the deal API. Older-format conversions have one owner.
+from data.migrations import from_legacy_string, migrate_legacy_deal as coerce

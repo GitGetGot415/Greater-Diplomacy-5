@@ -1,5 +1,5 @@
 import data.constants as c
-from data import queries
+from data import migrations, queries
 from map_logic import politics
 
 def process_national_research(map_screen):
@@ -42,10 +42,7 @@ def process_national_research(map_screen):
                                 * (1.0 + faction_bonus))
             # -----------------------------------
             
-            # Use 'points_remaining' instead of 'days_remaining'
-            # (First time initialization if coming from an old save)
-            if "points_remaining" not in project:
-                project["points_remaining"] = project.get("days_remaining", 30) * 10
+            migrations.migrate_research_project(project)
             
             project["points_remaining"] -= effective_points
 

@@ -6,7 +6,7 @@ from ui import text_utils
 from ui_elements import Button, process_text_input
 from map_logic.rendering.font_manager import fonts
 from map_logic.diplomacy import diplomacy_logic, diplomacy_messages, volunteers
-from data import queries
+from data import migrations, queries
 
 # ==========================================
 # LAYOUT
@@ -120,10 +120,8 @@ class Messages_Screen(GameState):
                 self.drafts.append(self.compose_text.strip())
                 self.compose_text = ""
                 
-            existing = pending_dict.get(self.selected_recipient, {})
-            if not isinstance(existing, dict):
-                # Legacy saves stored a bare action string
-                existing = {"action": existing, "turns": 0}
+            existing = migrations.pending_diplomacy_entry(
+                pending_dict.get(self.selected_recipient, {}))
 
             action_str = ""
             existing_action = existing.get("action") or ""

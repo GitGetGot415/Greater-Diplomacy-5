@@ -42,13 +42,15 @@ A change is complete only when all affected game modes, state transitions, UI co
 | --- | --- |
 | `data/constants.py` | Constants and tuning values shared across modules. |
 | `data/queries.py` | Shared state queries, rule helpers, caches, and the save-dictionary builder. |
+| `data/migrations.py` | Older GD5 identifiers, saved-data conversions, and load repairs. |
 | `data/json/` | Data libraries and AI response text used without an LLM. |
-| `data/map/save_map.py`, `data/map/load_map.py` | Saves, loads, defaults, and old-save migration. |
+| `data/map/save_map.py`, `data/map/load_map.py` | Saves, loads, defaults, and migration calls. |
 | `data/io/multiplayer_io.py` | Tournament files, player move export, host import, authentication, and filtering. |
 | `data/io/realtime_multiplayer.py` | Real-time protocol, server commands, snapshots, and filtered client state. |
 | `map_logic/turn_processing/` | Turns, movement, economy, research, and combat. |
 | `map_logic/diplomacy/` | Shared diplomacy rules, messages, effects, and state changes. |
 | `map_logic/ai/` | Rule-based AI, legal candidates, valuation, LLM selection, and fallbacks. |
+| `map_logic/gd4_translation.py`, `map_logic/gdhex_translation.py` | Save imports from other games into GD5. |
 | `screens/` | Complete menu, game, and editor screens. Each screen builds its own buttons. |
 | `ui/` | Shared widgets, panels, dialogs, bars, popups, and UI support. |
 | `compilation_scripts/` | Windows, macOS, and web build definitions. |
@@ -156,6 +158,12 @@ Success in one does not prove compatibility with the other.
 - Treat a new saved field as a schema change.
   Define its owner, writer, loader, and old-save default.
   Test round trips and legacy loading.
+- Put older GD5 data conversion rules and identifier aliases in `data/migrations.py`.
+  Call those helpers from loaders, importers, and other data boundaries.
+  Keep save imports from other games in their separate translation modules.
+  GD4 and Greater Diplomacy Hex Edition are separate games, not older GD5 versions.
+  Keep current schema defaults, file access, and gameplay validation with their existing owners.
+  Preserve migration order, saved references, unknown valid fields, and permission checks.
 - Keep settings keys consistent across the schema, controller, readers, writers, defaults, and settings UI.
   Check settings defaults, saves, and loads after related changes.
 - Preserve unknown or older valid data where possible.

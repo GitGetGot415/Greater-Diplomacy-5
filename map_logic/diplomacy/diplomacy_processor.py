@@ -1,6 +1,6 @@
 from map_logic.ai import ai_commitments, ai_evaluation, ai_llm_runner, ai_prompts
 import data.constants as c
-from data import queries
+from data import migrations, queries
 
 # Import from our newly created submodules
 from map_logic.diplomacy.diplomacy_events import log_global_event
@@ -1571,7 +1571,7 @@ def _process_claim_queues(map_screen):
                 core_nation = rq["core_nation"]
                 keep_cores = rq.get("keep_cores", False)
                 from map_logic.diplomacy.puppet_actions import finalize_create_puppet
-                release_type = rq.get("release_type", c.PUPPET_TYPE_INTEGRATED)
+                release_type = migrations.puppet_release_type(rq)
                 created = finalize_create_puppet(map_screen.map_data, map_screen.nation_data,
                                                 country_name, core_nation, map_screen, keep_cores, release_type)
                 if created and country_name == map_screen.player_country:

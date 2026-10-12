@@ -1,0 +1,61 @@
+SAVED DATA MIGRATIONS
+====================
+
+Migration means conversion from an older Greater Diplomacy 5 (GD5) data format to the current format.
+data/migrations.py owns older GD5 identifiers, conversions, and load repairs.
+Save imports from other games belong in their separate translation modules.
+Greater Diplomacy 4 (GD4) and Greater Diplomacy Hex Edition are separate games, not older GD5 versions.
+
+OWNERSHIP
+---------
+
+Keep GD5 migration rules in data/migrations.py.
+Keep GD4 conversion rules in map_logic/gd4_translation.py.
+Keep Greater Diplomacy Hex Edition conversion rules in map_logic/gdhex_translation.py.
+Keep current settings fields and defaults in data/io/settings_schema.py.
+Keep current gameplay rules and validation in their shared rule modules.
+Keep saved-file access, compression formats, and storage synchronization in their input and output modules.
+
+Existing migration imports from queries, settings_schema, load_map, and deal still work.
+Those names refer to the central implementation. They do not contain duplicate conversion rules.
+
+LOAD ORDER
+----------
+
+Settings and library caches convert older names when they receive data.
+Current settings keys take priority over older keys, including empty strings.
+Conversion does not change positional settings slots.
+Library reloads keep shared dictionaries in place.
+
+Map loading restores country templates before country-dependent rules run.
+It applies province overlays before province queue conversion.
+It converts aircraft names before unit stats and aircraft orders.
+Unit stat conversion preserves health fractions and the existing version check.
+Aircraft corrections also apply when the saved version equals the current version.
+Faction roster repair occurs before faction pre-war maps are initialized.
+
+Older research and production countdowns convert when processing reaches their entries.
+Their existing timing and field precedence stay unchanged.
+Scripted-event forecasts read older fields without changing saved state.
+The event editor and event execution use the same conversion helpers.
+
+MULTIPLAYER
+-----------
+
+Tournament readers use the central helpers for older payloads and release requests.
+Older aircraft snapshots provide only order and name drafts for host validation.
+The host still checks identity, session, turn, duplicates, permissions, costs, and targets.
+Real-time commands still use server validation and filtered snapshots.
+Migration does not grant permission to a client.
+Both systems use the same release-type default for older entries.
+
+ADDING A MIGRATION
+------------------
+
+1. Add the GD5 conversion and older identifiers to data/migrations.py.
+2. Call the helper at the required data boundary.
+3. Preserve unknown valid fields and references held by other modules.
+4. Keep conversion safe to repeat where the existing format permits it.
+5. Test older data, current data, repeat conversion, and a save/load round trip.
+6. Test affected multiplayer validation and player modes.
+7. Check build manifests when adding runtime files.

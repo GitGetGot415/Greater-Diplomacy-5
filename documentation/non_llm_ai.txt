@@ -59,6 +59,7 @@ AIRCRAFT
 Air is a separate research and production category.
 Its research category is AIR. Its production group is Air.
 Library loading converts older AEROSPACE and Aerospace values to these names.
+data/migrations.py owns these conversions and older aircraft-name, stat, and order corrections.
 Research and unit IDs stay unchanged. Older saves and multiplayer files keep those IDs.
 air_role and air_range_px in unit_data.json define flight.
 production_group and land movement speed do not define flight.

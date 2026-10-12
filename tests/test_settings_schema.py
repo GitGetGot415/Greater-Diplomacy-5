@@ -22,6 +22,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import data.constants as c
 from data.io import settings_schema
+from data import migrations
 
 # The order load_settings has always returned, after the keybinds at index 0.
 GOLDEN_ORDER = (
@@ -212,8 +213,8 @@ class LegacyNamingTests(unittest.TestCase):
             legacy = dict(self.LEGACY_SETTINGS, future_setting={"enabled": False}, keybinds={"BACK": None})
             path.write_text(json.dumps(legacy), encoding="utf-8")
             with mock.patch.dict(queries._JSON_CACHE, {"settings": {"path": str(path), "data": None}}), \
-                    mock.patch.object(settings_schema, "migrate_setting_names",
-                                      wraps=settings_schema.migrate_setting_names) as migrate:
+                    mock.patch.object(migrations, "migrate_setting_names",
+                                      wraps=migrations.migrate_setting_names) as migrate:
                 settings = queries.get_settings()
                 self.assertIs(queries.get_settings(), settings)
                 migrate.assert_called_once()

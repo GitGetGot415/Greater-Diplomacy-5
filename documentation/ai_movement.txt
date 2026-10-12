@@ -68,6 +68,8 @@ ai_movement._rotate_damaged_units rotates damaged AI units.
 AIRCRAFT ORDERS AND VISIBILITY
 ------------------------------
 
+data/migrations.py converts older aircraft orders during map loading.
+
 The aircraft AI generates only orders permitted by the shared rules.
 Transport aircraft carry available ground reinforcements toward visible enemies through safe, accessible landing tiles.
 They release cargo when no reachable safe landing tile improves its position.

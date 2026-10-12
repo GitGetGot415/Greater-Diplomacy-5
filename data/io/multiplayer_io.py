@@ -9,7 +9,7 @@ import gzip
 import zlib
 from cryptography.fernet import Fernet, InvalidToken
 import data.constants as c
-from data import queries
+from data import migrations, queries
 from data.map import history_io
 from data.map.map_cache import remove_optional_layer_files
 from data.platform import sync_persisted_dir
@@ -102,10 +102,7 @@ def decrypt_dict(encrypted_str, password):
     try:
         f = Fernet(key)
         json_bytes = f.decrypt(encrypted_token.encode('utf-8'))
-        # Legacy encrypted files contain JSON directly, without a gzip header.
-        if json_bytes.startswith(b'\x1f\x8b'):
-            json_bytes = gzip.decompress(json_bytes)
-        return json.loads(json_bytes.decode('utf-8'))
+        return migrations.decode_saved_json(json_bytes)
     except (InvalidToken, UnicodeDecodeError, json.JSONDecodeError, OSError, EOFError, zlib.error):
         # Bad ciphertext and non-JSON plaintext are malformed player data.
         return None
@@ -555,7 +552,7 @@ def export_move_file(map_ref, file_path, player_key):
         "air_transport": queries.air_transport_commands(map_ref, cid),
         "release_subjects": [{"core_nation": entry["core_nation"],
                               "keep_cores": entry.get("keep_cores", False),
-                              "release_type": entry.get("release_type", c.PUPPET_TYPE_INTEGRATED)}
+                              "release_type": migrations.puppet_release_type(entry)}
                              for entry in save_dict.get("nation_data", {}).get(cid, {}).get("release_puppet_queue", [])],
     }
 
@@ -879,16 +876,7 @@ def _validate_aircraft_orders(map_ref, country_id, player_data, provinces, cargo
             if queries.is_air_unit(unit) or queries.is_air_transport(unit):
                 if unit.get("unit_id") not in live or unit.get("owner") != country_id:
                     raise ValueError("Unauthorized snapshot aircraft.")
-    commands = player_data.get("aircraft_orders")
-    if commands is None:
-        # Older files serialized full aircraft. Recover only order/name drafts,
-        # ignoring every submitted stat/position. Land units retain legacy flow.
-        commands = [{"unit_id": unit.get("unit_id"), "order": unit.get("order"),
-                     "custom_name": unit.get("custom_name")}
-                    for updates in provinces.values() if isinstance(updates, dict)
-                    for unit in updates.get("units", []) if isinstance(unit, dict)
-                    and (queries.is_air_unit(unit) or queries.is_air_transport(unit)
-                         or unit.get("unit_id") in live)]
+    commands = migrations.tournament_aircraft_commands(player_data, provinces, live)
     if not isinstance(commands, list):
         raise ValueError("Invalid aircraft commands.")
     commands = list(commands)
@@ -1024,12 +1012,7 @@ def load_move_files(map_ref, move_file_paths, keys_dict):
         if "tournament_session" not in player_data or "tournament_turn" not in player_data:
             summary["legacy"] += 1
             
-        if "nation_data" in player_data and "provinces" in player_data:
-            nd = player_data["nation_data"]
-            provs = player_data["provinces"]
-        else:
-            nd = player_data
-            provs = {}
+        nd, provs = migrations.tournament_move_sections(player_data)
             
         if not isinstance(nd, dict) or not isinstance(provs, dict):
             summary["rejected"] += 1
@@ -1043,8 +1026,7 @@ def load_move_files(map_ref, move_file_paths, keys_dict):
         try:
             from map_logic.diplomacy.puppet_actions import canonical_puppet_release_queue
             existing_releases = map_ref.nation_data[cid].get("release_puppet_queue", [])
-            # Legacy moves stored releases only inside the player's country record.
-            releases = player_data.get("release_subjects", nd.get("release_puppet_queue", existing_releases))
+            releases = migrations.tournament_release_requests(player_data, nd, existing_releases)
             canonical_releases = canonical_puppet_release_queue(
                 map_ref.map_data, map_ref.nation_data, cid, releases, existing_releases)
             _validate_administrative_orders(map_ref, cid, provs)

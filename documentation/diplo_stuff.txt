@@ -40,6 +40,9 @@ These controls do not add AI actions or multiplayer commands.
 Shared processing and save data
 ------------------------------
 
+data/migrations.py owns older diplomacy-response, deal, release-type, and faction-roster conversions.
+Loaders and importers call these helpers. Shared diplomacy rules still validate current actions.
+
 Simultaneous-action checks inspect country pairs named in current pending actions.
 They preserve country insertion order.
 One-way declarations remain included because they can cancel queued responses without a counter-proposal.

@@ -1,4 +1,4 @@
-"""Define setting names, defaults, conversions, and older names in one table.
+"""Define setting names, defaults, and current-value conversions in one table.
 
 Writers use current names. Readers accept older names.
 Current keys take priority when both names exist.
@@ -6,12 +6,15 @@ The positional settings order is a compatibility contract. Do not reorder it.
 main.py applies the returned settings through this schema.
 
 Keybinds use the caller's defaults and pygame key names in keybind_io.
-This module imports only data.constants so other modules can use it safely.
+Older names and their conversion rules belong to data.migrations.
 """
 
 from collections import namedtuple
 
 import data.constants as c
+from data import migrations
+# Preserve older imports. The rules have one owner in data.migrations.
+from data.migrations import migrate_setting_names, normalize_ai_mode
 
 #: name    -- the attribute name on Controller, and the key in the values dict
 #: json_key-- what it is called on disk
@@ -23,8 +26,8 @@ import data.constants as c
 SettingField = namedtuple("SettingField", "name json_key default coerce legacy")
 
 
-def _field(name, json_key, default, coerce=None, legacy=()):
-    return SettingField(name, json_key, default, coerce, legacy)
+def _field(name, json_key, default, coerce=None):
+    return SettingField(name, json_key, default, coerce, migrations.setting_keys(json_key)[1:])
 
 
 def _coerce_music_pitch_timeline(value):
@@ -34,11 +37,6 @@ def _coerce_music_pitch_timeline(value):
     return c.DEFAULT_MUSIC_PITCH_TIMELINE
 
 
-def normalize_ai_mode(value):
-    """Read the older provider ID as OpenRouter."""
-    return "OPENROUTER" if value == "LING" else value
-
-
 # ORDER IS THE PERSISTED CONTRACT. main.py unpacks load_settings' return by
 # index, so appending is safe and reordering is not.
 SETTINGS_FIELDS = (
@@ -46,17 +44,17 @@ SETTINGS_FIELDS = (
     _field("music_volume", "music_volume", lambda: c.DEFAULT_MUSIC_VOLUME),
     _field("num_players", "num_players", lambda: 1),
     _field("ai_mode", "ai_mode", lambda: c.DEFAULT_AI_MODE, coerce=normalize_ai_mode),
-    _field("gemini_api_key", "gemini_api_key", lambda: "", legacy=("api_key",)),
+    _field("gemini_api_key", "gemini_api_key", lambda: ""),
     _field("chatgpt_api_key", "chatgpt_api_key", lambda: ""),
     _field("claude_api_key", "claude_api_key", lambda: ""),
-    _field("ollama_base_url", "ollama_base_url", lambda: "", legacy=("ollama_api_key",)),
+    _field("ollama_base_url", "ollama_base_url", lambda: ""),
     _field("gemini_model", "gemini_model", lambda: c.DEFAULT_GEMINI_MODEL),
     _field("chatgpt_model", "chatgpt_model", lambda: c.DEFAULT_CHATGPT_MODEL),
     _field("claude_model", "claude_model", lambda: c.DEFAULT_CLAUDE_MODEL),
     _field("ollama_model", "ollama_model", lambda: c.DEFAULT_OLLAMA_MODEL),
     _field("ai_immersion_level", "ai_immersion_level", lambda: "LITE"),
-    _field("music_pitch", "music_pitch", lambda: c.DEFAULT_AUDIO_PITCH, legacy=("music_speed",)),
-    _field("sfx_pitch", "sfx_pitch", lambda: c.DEFAULT_AUDIO_PITCH, legacy=("sfx_speed",)),
+    _field("music_pitch", "music_pitch", lambda: c.DEFAULT_AUDIO_PITCH),
+    _field("sfx_pitch", "sfx_pitch", lambda: c.DEFAULT_AUDIO_PITCH),
     _field("target_fps", "target_fps", lambda: c.TARGET_FPS),
     _field("ai_threads", "ai_threads", lambda: c.DEFAULT_AI_THREADS),
     _field("show_fps", "show_fps", lambda: c.SHOW_FPS),
@@ -94,9 +92,8 @@ SETTINGS_FIELDS = (
            lambda: c.DEFAULT_MUSIC_PITCH_TIMELINE,
            coerce=_coerce_music_pitch_timeline),
     _field("show_unclaimed", "show_unclaimed", lambda: c.DEFAULT_SHOW_UNCLAIMED),
-    _field("openrouter_api_key", "openrouter_api_key", lambda: "", legacy=("ling_api_key",)),
-    _field("openrouter_model", "openrouter_model", lambda: c.DEFAULT_OPENROUTER_MODEL,
-           legacy=("ling_model",)),
+    _field("openrouter_api_key", "openrouter_api_key", lambda: ""),
+    _field("openrouter_model", "openrouter_model", lambda: c.DEFAULT_OPENROUTER_MODEL),
 )
 
 SETTINGS_ORDER = tuple(field.name for field in SETTINGS_FIELDS)
@@ -110,21 +107,10 @@ _FIELDS_BY_NAME = {field.name: field for field in SETTINGS_FIELDS}
 def read_setting(saved, name, default=None):
     """Read one setting. A current key takes priority over an older key."""
     field = _FIELDS_BY_NAME[name]
-    raw = next((saved[key] for key in (field.json_key,) + field.legacy if key in saved), None)
+    raw = migrations.read_setting_value(saved, field.json_key)
     if raw is None:
         return field.default() if default is None else default
     return field.coerce(raw) if field.coerce else raw
-
-
-def migrate_setting_names(saved):
-    """Update cached names in place. Keep unrelated and unknown settings."""
-    for field in SETTINGS_FIELDS:
-        for old_key in field.legacy:
-            if old_key in saved:
-                saved.setdefault(field.json_key, saved.pop(old_key))
-    if "ai_mode" in saved:
-        saved["ai_mode"] = normalize_ai_mode(saved["ai_mode"])
-    return saved
 
 
 def defaults():
@@ -174,9 +160,7 @@ def from_tuple(sequence):
 def from_controller(controller):
     """Reads the live settings back off the Controller."""
     # Older controllers and lightweight test doubles can still have legacy attributes.
-    saved = {key: getattr(controller, key)
-             for field in SETTINGS_FIELDS for key in (field.name,) + field.legacy
-             if hasattr(controller, key)}
+    saved = migrations.controller_setting_values(controller, SETTINGS_ORDER)
     return _filled_values(saved)
 
 

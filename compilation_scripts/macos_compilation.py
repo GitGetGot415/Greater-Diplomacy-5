@@ -40,7 +40,7 @@ def main():
         print(f"Cleaning {dist_dir} folder...")
         remove_dir_safely(dist_dir)
     
-    # 2. Rebuild
+    # 2. Rebuild. setup.py includes data.migrations and its loose source copy.
     print("Running py2app...")
     # setup.py lives alongside this script in compilation_scripts/, but py2app resolves
     # its DATA_FILES (assets, base_maps, etc.) relative to the CWD it's invoked from --

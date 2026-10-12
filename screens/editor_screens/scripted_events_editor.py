@@ -13,7 +13,8 @@ import re
 import pygame
 from gameState import GameState
 import data.constants as c
-from data import queries
+from data import migrations, queries
+from data.migrations import migrate_scripted_event as _upgrade_legacy_event
 from map_logic.turn_processing.time_handler import TimeHandler
 from map_logic.rendering.font_manager import fonts
 from ui import confirm_dialog
@@ -506,9 +507,7 @@ class _EventEditScreen(_ModalScreen):
 
         conds_data = event_data.get("conditions") or [{"chain": "AND", "type": "Turn Number",
                                                        "operator": "==", "value": ""}]
-        acts_data = event_data.get("actions", [])
-        if not acts_data and "action_type" in event_data:
-            acts_data = [{"type": event_data["action_type"], "target": event_data.get("action_target", "None")}]
+        acts_data = migrations.scripted_event_actions(event_data)
 
         self.conds = [_CondRow(d) for d in conds_data]
         self.acts = [_ActRow(d) for d in acts_data]
@@ -924,18 +923,6 @@ class _EventEditScreen(_ModalScreen):
         pygame.draw.rect(surface, (255, 255, 255), rect, 1)
 
 
-def _upgrade_legacy_event(evt):
-    """Folds a pre-conditions-list event into the modern shape, in place."""
-    if "conditions" not in evt:
-        evt["conditions"] = [{
-            "type": evt.get("condition_type", "Turn Number"),
-            "operator": "==",
-            "value": evt.get("condition_val", ""),
-            "chain": "AND",
-        }]
-        evt["fire_once"] = True
-
-
 # ==========================================
 # MAIN EDITOR
 # ==========================================
@@ -985,9 +972,7 @@ class Scripted_Events_Editor_Screen(_ModalScreen):
 
         full_cond_str = truncate("".join(cond_strs), SUMMARY_MAX_CHARS)
 
-        actions = evt.get("actions", [])
-        if not actions and "action_type" in evt:
-            actions = [{"type": evt["action_type"], "target": evt.get("action_target", "None")}]
+        actions = migrations.scripted_event_actions(evt)
 
         act_strs = []
         for a in actions:

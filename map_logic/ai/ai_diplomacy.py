@@ -6,7 +6,7 @@ from map_logic.ai import (ai_candidates, ai_commitments, ai_director, ai_evaluat
                           ai_personality, ai_politics, ai_prompts, ai_world)
 from map_logic.diplomacy import (diplomacy_messages, diplomacy_events,
                                  faction_leadership, war_calls)
-from data import queries
+from data import migrations, queries
 import data.constants as c
 
 def _longest_waiting_first(map_screen, jobs):
@@ -1374,22 +1374,8 @@ def process_scripted_events(map_screen, preview_request=None):
             if trigger_type == "Player Only" and nation_name not in human_players:
                 continue
             
-            # Backwards compatibility parser
-            if "conditions" not in evt:
-                legacy_conditions = [{
-                    "type": evt.get("condition_type", "Turn Number"),
-                    "operator": "==",
-                    "value": evt.get("condition_val", ""),
-                    "chain": "AND"
-                }]
-                if preview_request is None:
-                    evt["conditions"] = legacy_conditions
-                    evt["fire_once"] = True
-                    evt_conditions = evt["conditions"]
-                else:
-                    evt_conditions = legacy_conditions
-            else:
-                evt_conditions = evt["conditions"]
+            evt_conditions = migrations.scripted_event_conditions(
+                evt, migrate=preview_request is None)
 
             conditions = evt_conditions
             if not conditions:
@@ -1620,10 +1606,7 @@ def process_scripted_events(map_screen, preview_request=None):
                     elif chain == "NAND": overall_met = not (overall_met and res)
                     
             if preview_request is not None:
-                actions = evt.get("actions", [])
-                if not actions and "action_type" in evt:
-                    actions = [{"type": evt["action_type"],
-                                "target": evt.get("action_target", "None")}]
+                actions = migrations.scripted_event_actions(evt)
                 matched, response = _scripted_event_response(
                     actions, preview_request[1], preview_request[2])
                 if matched and overall_met is None:
@@ -1635,9 +1618,7 @@ def process_scripted_events(map_screen, preview_request=None):
                 continue
 
             if overall_met:
-                actions = evt.get("actions", [])
-                if not actions and "action_type" in evt:
-                    actions = [{"type": evt["action_type"], "target": evt.get("action_target", "None")}]
+                actions = migrations.scripted_event_actions(evt)
                 
                 pending = data.setdefault("pending_diplomacy", {})
                 

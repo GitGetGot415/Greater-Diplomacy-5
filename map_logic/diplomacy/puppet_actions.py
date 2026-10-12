@@ -6,7 +6,7 @@ war_actions.py and faction_actions.py.
 """
 import copy
 from map_logic.turn_processing import edit_province_ownership
-from data import queries
+from data import migrations, queries
 from map_logic.diplomacy.diplomacy_events import log_global_event
 from map_logic.diplomacy.war_actions import sever_military_access, link_war, remove_enemy, finalize_neutral
 import data.constants as c
@@ -342,7 +342,7 @@ def canonical_puppet_release_queue(map_data, nation_data, master, entries, old_q
         subject = entry.get("core_nation")
         keep_cores = entry.get("keep_cores", False)
         # Older saves and move files did not store a release type.
-        release_type = entry.get("release_type", c.PUPPET_TYPE_INTEGRATED)
+        release_type = migrations.puppet_release_type(entry)
         if (not isinstance(subject, str) or subject == master or subject in c.UNPLAYABLE_NATIONS
                 or subject in seen or not isinstance(keep_cores, bool)
                 or not isinstance(release_type, str) or release_type not in c.PUPPET_RELEASE_TYPES):
@@ -350,7 +350,7 @@ def canonical_puppet_release_queue(map_data, nation_data, master, entries, old_q
         old = previous.get(subject)
         if old:
             if (old.get("keep_cores", False) != keep_cores
-                    or old.get("release_type", c.PUPPET_TYPE_INTEGRATED) != release_type):
+                    or migrations.puppet_release_type(old) != release_type):
                 raise ValueError("Cancel the existing release before changing its options.")
         elif not queries.get_puppet_release_provinces(master, subject, map_data, keep_cores, result):
             raise ValueError("That country has no eligible core territory to release.")

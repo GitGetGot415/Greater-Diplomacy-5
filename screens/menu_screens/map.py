@@ -8,7 +8,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # Data & Constants
 import data.constants as c
-from data import queries
+from data import migrations, queries
 from data.map import load_map, save_map
 from data.platform import run_background
 
@@ -1545,31 +1545,7 @@ class Map(GameState):
 
         render_buttons(self)
 
-        for country_name, data in self.nation_data.items():
-            data.setdefault("at_war_with", [])
-            data.setdefault("allied_with", [])
-            data.setdefault("guarantees", [])
-            data.setdefault("military_attaches", [])
-            data.setdefault("pending_diplomacy", {})
-            responses = data.setdefault("diplo_responses", {})
-
-            # Older saves parked answers in the outgoing-proposal slot, where they
-            # overwrote whatever offer was already travelling to that nation. Move
-            # them across so they resolve on the response channel instead.
-            for other, info in list(data["pending_diplomacy"].items()):
-                act = info.get("action", "") if isinstance(info, dict) else info
-                if not isinstance(act, str):
-                    continue
-                for prefix, verdict in (("ACCEPT_", "ACCEPT"), ("REJECT_", "REJECT")):
-                    if act.startswith(prefix):
-                        responses[other] = {
-                            "verdict": verdict,
-                            "action": act[len(prefix):],
-                            "message": info.get("message", "") if isinstance(info, dict) else "",
-                            "parameters": info.get("parameters") if isinstance(info, dict) else None,
-                        }
-                        del data["pending_diplomacy"][other]
-                        break
+        migrations.migrate_pending_responses(self.nation_data)
 
         # A loaded save may have been written immediately before a faction join
         # or war was resolved. Reconcile once on load so its UI never advertises
@@ -2432,9 +2408,7 @@ class Map(GameState):
                             removed_count += 1
                     province[queue_key] = valid_queue
 
-            # Wipe legacy data if it exists
-            if "deployment_queue" in province:
-                del province["deployment_queue"]
+            migrations.discard_legacy_deployment_queue(province)
 
         army_panel.prepare(self)
         print(f"[MAP SCRUBBER] {updated_count} entities updated, {removed_count} obsolete entities vaporized.")

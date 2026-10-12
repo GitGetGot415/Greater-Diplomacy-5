@@ -3,7 +3,7 @@ import copy
 import uuid
 
 import data.constants as c
-from data import queries
+from data import migrations, queries
 
 # ==========================================
 # PENDING DIPLOMACY ACCESS
@@ -26,9 +26,7 @@ def get_pending(nation_data, player_name, target_name):
 def get_pending_action(nation_data, player_name, target_name):
     pending = get_pending_map(nation_data, player_name)
     info = pending.get(target_name)
-    if isinstance(info, dict):
-        return info.get("action")
-    return info
+    return migrations.pending_diplomacy_action(info)
 
 def describe_trade(params, viewer_is_proposer=False, subject=None, viewer=None,
                    nation_data=None):
@@ -341,10 +339,7 @@ def forward_message(map_screen, sender, receiver, original_message, source_owner
         return None
 
     # Give a legacy message a stable reference the first time it is forwarded.
-    source_message_id = original_message.get("message_id")
-    if not source_message_id:
-        source_message_id = uuid.uuid4().hex
-        original_message["message_id"] = source_message_id
+    source_message_id = migrations.ensure_message_id(original_message)
 
     was_forwarded = is_forwarded(original_message)
     original_sender = (original_message.get("original_sender")

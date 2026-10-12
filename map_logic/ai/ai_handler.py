@@ -341,7 +341,7 @@ def _call_provider(mode, system_prompt, user_prompt, turn_id):
 
 
 def _dispatch(mode, system_prompt, user_prompt, turn_id):
-    from data.io.settings_schema import normalize_ai_mode
+    from data.migrations import normalize_ai_mode
     mode = normalize_ai_mode(mode)
     if mode == "OLLAMA":
         return call_ollama(system_prompt, user_prompt, turn_id)
