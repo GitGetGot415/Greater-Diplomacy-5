@@ -82,7 +82,9 @@ def encrypt_dict(data_dict, password, *, compress=False):
     json_bytes = history_io.dump_compact_text(data_dict).encode('utf-8')
     if compress:
         # Compress plaintext. Encrypted bytes cannot compress effectively.
-        json_bytes = gzip.compress(json_bytes, compresslevel=TOURNAMENT_GZIP_LEVEL, mtime=0)
+        compressed = gzip.compress(json_bytes, compresslevel=TOURNAMENT_GZIP_LEVEL, mtime=0)
+        if len(compressed) < len(json_bytes):
+            json_bytes = compressed
     encrypted_token = f.encrypt(json_bytes).decode('utf-8')
     salt_b64 = base64.urlsafe_b64encode(salt).decode('utf-8')
     return f"{salt_b64}:{encrypted_token}"

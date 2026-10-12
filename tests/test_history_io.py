@@ -8,9 +8,11 @@ import gzip
 import copy
 import json
 import os
+import random
 import shutil
 import tempfile
 import unittest
+from unittest import mock
 
 import data.constants as c
 from data.map import history_io
@@ -169,6 +171,59 @@ class HistoryIOTests(unittest.TestCase):
         self.assertEqual(text.count('"unit-199"'), 1)
         self.assertLess(len(text) * 10, len(history_io.dump_compact_text(history)))
         self.assertEqual(history_io.decode_history(json.loads(text)), history)
+
+    def test_compressed_history_uses_compact_json_for_repetitive_snapshots(self):
+        snapshot = {"provinces": {str(i): {"unit": {"fixture": list(range(30))}} for i in range(100)}}
+        history = {str(turn): copy.deepcopy(snapshot) for turn in range(15)}
+        path = history_io.write(self.dir, history)
+        with gzip.open(path, "rt", encoding="utf-8") as handle:
+            text = handle.read()
+        self.assertEqual(json.loads(text)["_history_format"], history_io.DELTA_FORMAT)
+        self.assertNotIn("\n", text)
+        self.assertEqual(history_io.read(self.dir), history)
+        baseline = gzip.compress(history_io.dump_compact_text(history).encode(),
+                                 compresslevel=c.HISTORY_GZIP_LEVEL, mtime=0)
+        self.assertLess(os.path.getsize(path), len(baseline))
+
+    def test_dense_changes_use_full_snapshots_when_patches_compress_worse(self):
+        rng = random.Random(613)
+        history = {str(turn): {"rows": [[rng.randrange(1000000) for _ in range(10)]
+                                       for _ in range(100)]} for turn in range(10)}
+        full = gzip.compress(history_io.dump_compact_text(history).encode(),
+                             compresslevel=c.HISTORY_GZIP_LEVEL, mtime=0)
+        deltas = gzip.compress(history_io.dump_compact_text(history_io.encode_history(history)).encode(),
+                               compresslevel=c.HISTORY_GZIP_LEVEL, mtime=0)
+        self.assertLess(len(full), len(deltas))
+        path = history_io.write(self.dir, history)
+        self.assertLessEqual(os.path.getsize(path), len(full))
+        with gzip.open(path, "rt", encoding="utf-8") as handle:
+            self.assertEqual(json.load(handle), history)
+        self.assertEqual(history_io.read(self.dir), history)
+
+    def test_failed_compression_preserves_existing_history_and_removes_temporary_files(self):
+        path = history_io.write(self.dir, sample_history())
+        with open(path, "rb") as handle:
+            original = handle.read()
+        with mock.patch.object(history_io, "_snapshot_delta", side_effect=ValueError("fixture failure")):
+            with self.assertRaisesRegex(ValueError, "fixture failure"):
+                history_io.write(self.dir, {"99": {"fixture": "replacement"}})
+        with open(path, "rb") as handle:
+            self.assertEqual(handle.read(), original)
+        self.assertEqual(os.listdir(self.dir), [history_io.GZ_NAME])
+        self.assertEqual(history_io.read(self.dir), sample_history())
+
+    def test_rewriting_a_compressed_legacy_history_keeps_all_snapshots_and_does_not_expand_it(self):
+        history = {str(turn): {"country": {"inbox": [{"message": i} for i in range(turn)]},
+                              "rows": [{"fixture": i, "value": turn + i} for i in range(200)]}
+                   for turn in range(20)}
+        path = os.path.join(self.dir, history_io.GZ_NAME)
+        with gzip.open(path, "wt", encoding="utf-8", compresslevel=c.HISTORY_GZIP_LEVEL) as handle:
+            handle.write(history_io.dump_text(history))
+        original_size = os.path.getsize(path)
+        loaded = history_io.read(self.dir)
+        history_io.write(self.dir, loaded)
+        self.assertLess(os.path.getsize(path), original_size)
+        self.assertEqual(history_io.read(self.dir), history)
 
     def test_corrupt_delta_falls_back_to_legacy_history(self):
         with open(os.path.join(self.dir, history_io.PLAIN_NAME), "w", encoding="utf-8") as handle:

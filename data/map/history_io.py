@@ -1,7 +1,7 @@
 """Read and write the turn history used by the timeline.
 
-Disk history stores changes between snapshots, then compresses the JSON.
-This avoids repeated country data, unit data, images, and growing inboxes.
+Disk history uses compact JSON and compares two compressed representations.
+The writer stores full snapshots or snapshot changes, whichever is smaller.
 Reading restores independent full snapshots for all existing callers.
 Legacy full snapshots remain supported in plain and compressed files.
 Use read for history files. It prefers the compressed file.
@@ -9,9 +9,11 @@ Buffered text writes avoid json.dump's many small writes.
 """
 
 import copy
+from contextlib import ExitStack
 import gzip
 import json
 import os
+import tempfile
 
 import data.constants as c
 
@@ -137,6 +139,52 @@ def decode_history(payload):
     return history
 
 
+def _write_compressed_history(save_path, history):
+    """Compare compressed full snapshots and deltas before replacing the file.
+
+    Serialize one turn at a time. Indented patches can expand large histories.
+    Comparing actual compressed sizes also handles histories with many changes.
+    Temporary files keep the existing history intact if serialization fails.
+    """
+    target = os.path.join(save_path, GZ_NAME)
+    temporary_paths = []
+    try:
+        with ExitStack() as stack:
+            streams = []
+            for _ in range(2):
+                descriptor, path = tempfile.mkstemp(prefix=".history-", suffix=".gz", dir=save_path)
+                temporary_paths.append(path)
+                raw = stack.enter_context(os.fdopen(descriptor, "wb"))
+                streams.append(stack.enter_context(gzip.GzipFile(
+                    filename="", mode="wb", fileobj=raw,
+                    compresslevel=c.HISTORY_GZIP_LEVEL, mtime=0)))
+            full, deltas = streams
+            full.write(b'{')
+            deltas.write(('{"_history_format":' + dump_compact_text(DELTA_FORMAT)
+                          + ',"turns":[').encode('utf-8'))
+            previous = None
+            for index, (turn, snapshot) in enumerate(history.items()):
+                if index:
+                    full.write(b',')
+                    deltas.write(b',')
+                full.write((dump_compact_text(str(turn)) + ':'
+                            + dump_compact_text(snapshot)).encode('utf-8'))
+                deltas.write(dump_compact_text(
+                    [str(turn), _snapshot_delta(previous, snapshot)]).encode('utf-8'))
+                previous = snapshot
+            full.write(b'}')
+            deltas.write(b']}')
+        smallest = min(temporary_paths, key=os.path.getsize)
+        os.replace(smallest, target)
+    finally:
+        for path in temporary_paths:
+            try:
+                os.remove(path)
+            except FileNotFoundError:
+                pass
+    return target
+
+
 def write(save_path, history, compress=True):
     """Writes the history into `save_path`, returning the file actually written.
 
@@ -153,14 +201,11 @@ def write(save_path, history, compress=True):
                 pass
         return None
 
-    payload = dump_text(encode_history(history), indent=c.HISTORY_INDENT)
-
     if compress:
-        target, stale = os.path.join(save_path, GZ_NAME), os.path.join(save_path, PLAIN_NAME)
-        with gzip.open(target, "wt", encoding="utf-8",
-                       compresslevel=c.HISTORY_GZIP_LEVEL) as f:
-            f.write(payload)
+        target = _write_compressed_history(save_path, history)
+        stale = os.path.join(save_path, PLAIN_NAME)
     else:
+        payload = dump_text(encode_history(history), indent=c.HISTORY_INDENT)
         target, stale = os.path.join(save_path, PLAIN_NAME), os.path.join(save_path, GZ_NAME)
         with open(target, "w") as f:
             f.write(payload)

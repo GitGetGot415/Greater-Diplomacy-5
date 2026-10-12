@@ -147,6 +147,13 @@ class TournamentArchiveTests(unittest.TestCase):
         corrupt = salt_text + ":" + cipher.encrypt(b'\x1f\x8bcorrupt gzip').decode()
         self.assertIsNone(io.decrypt_dict(corrupt, "fixture-key"))
 
+    def test_compression_does_not_expand_small_tournament_payloads(self):
+        data = {"a": 1}
+        plain = io.encrypt_dict(data, "fixture-key")
+        compressed = io.encrypt_dict(data, "fixture-key", compress=True)
+        self.assertEqual(len(compressed), len(plain))
+        self.assertEqual(io.decrypt_dict(compressed, "fixture-key"), data)
+
     def test_legacy_uncompressed_snapshot_loads_for_all_recipients(self):
         path, payload = self.export()
         for field, key in (("game_data", self.host.multiplayer_session_key),
