@@ -80,13 +80,18 @@ class AdministrativeConstructionTests(unittest.TestCase):
             self.settings["administrative_turn_overrides"][name] = duration
             item = {"order_type": order, "turns_remaining": duration}
             updates = {"home": {"building_queue": [item]}}
-            _validate_administrative_orders(self.world, "A", updates)
+            self.assertEqual(_validate_administrative_orders(self.world, "A", updates), [])
             with self.assertRaises(ValueError):
                 _validate_administrative_orders(self.world, "B", updates)
-            for malformed in (None, "3", True, duration + 1):
+            for malformed in (None, "3", True, -1):
                 item["turns_remaining"] = malformed
                 with self.assertRaises(ValueError):
                     _validate_administrative_orders(self.world, "A", updates)
+            item["turns_remaining"] = duration + 1
+            warnings = _validate_administrative_orders(self.world, "A", updates)
+            self.assertEqual(len(warnings), 1)
+            self.assertIn(str(duration + 1), warnings[0])
+            self.assertIn(str(duration), warnings[0])
             item["turns_remaining"] = duration
             self.settings["administrative_disabled"] = [name]
             with self.assertRaises(ValueError):

@@ -21,6 +21,37 @@ Province state is stored once, separately from map geometry.
 Only terrain.png and id_map.png are embedded. The game rebuilds the political and cores layers.
 Country records, messages, and last-turn unit reports remain complete.
 
+Tournament move import
+----------------------
+
+Only the tournament host can use Load Moves.
+Each rejected file opens a notification with its filename, country name when known, and rejection reason.
+Tournament players also receive rejection details when they use Import Turn.
+Long rejection details support scrolling.
+Unreadable files, invalid keys, malformed data, unauthorized orders, wrong sessions, wrong turns, and duplicate submissions cannot be accepted.
+Rejected files do not change host state.
+
+Numeric differences in matched ground-unit statistics or new administrative durations require host review.
+The comparison uses the host's current units and scenario settings.
+Aircraft statistics remain under host control.
+Aircraft cargo statistics also remain under host control.
+
+Older units without stable IDs cannot be compared reliably.
+Changed unit forms use different statistics and are excluded from this comparison.
+This check does not prove that all submitted statistics or resource changes are valid.
+
+After reading a stat notification, select Accept to import despite the stated risks.
+Select Reject or press Escape to keep the move rejected.
+Acceptance can import incorrect values or unfair advantages.
+The importer reads and validates the file again before acceptance.
+All checks for malformed data, permissions, sessions, turns, and duplicates still apply.
+
+Duplicate checks cover all selected files and the associated review callbacks.
+Separate imports can replace a country's earlier draft, as before.
+The final notification gives accepted, rejected, and overridden counts.
+Move files and saved games require no new fields.
+These controls do not change real-time multiplayer or local game modes.
+
 REGULAR SAVE HISTORY
 ====================
 

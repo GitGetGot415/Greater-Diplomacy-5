@@ -7,6 +7,7 @@ import secrets
 import copy
 import gzip
 import zlib
+import math
 from cryptography.fernet import Fernet, InvalidToken
 import data.constants as c
 from data import migrations, queries
@@ -15,6 +16,7 @@ from data.map.map_cache import remove_optional_layer_files
 from data.platform import sync_persisted_dir
 
 TOURNAMENT_GZIP_LEVEL = 6
+TOURNAMENT_UNIT_STATS = ("health", "max_health", "morale", "speed", "attack", "defense", "level")
 
 def active_owners_of(map_ref):
     """Every nation entitled to a tournament move right now.
@@ -649,7 +651,7 @@ def _move_context_error(map_ref, player_data):
         time_manager = getattr(map_ref, "time_manager", None)
         expected_turn = getattr(time_manager, "total_turns", None)
         if player_data["tournament_turn"] != expected_turn:
-            return "is for a different turn"
+            return f"is for turn {player_data['tournament_turn']!r}; the host expects turn {expected_turn}"
 
     return None
 
@@ -721,8 +723,8 @@ def _apply_faction_renames(map_ref, country_id, player_data, nation_update):
     return applied
 
 
-def _merge_player_nation_data(map_ref, country_id, nation_update):
-    """Merge a player's record without accepting faction state by accident.
+def _prepare_player_nation_data(map_ref, country_id, nation_update):
+    """Prepare a player's record without changing host state.
 
     Faction membership is shared state.  The player can queue a leave/invite
     in their normal diplomacy data, but the authoritative outcome is resolved
@@ -730,7 +732,7 @@ def _merge_player_nation_data(map_ref, country_id, nation_update):
     restore the previous faction string after its leader has renamed the bloc.
     """
     if not isinstance(nation_update, dict) or country_id not in map_ref.nation_data:
-        return False
+        raise ValueError("The move does not contain a valid country record.")
 
     existing = map_ref.nation_data[country_id]
     faction_state = {
@@ -749,23 +751,15 @@ def _merge_player_nation_data(map_ref, country_id, nation_update):
     # host-owned turn state.  Read only the player's requested lifecycle
     # statuses and rebuild the timers from the host's existing country record.
     from map_logic import politics
-    try:
-        requested_policies = politics.policy_draft_projection({country_id: merged}, country_id)
-        canonical_policies = politics.canonicalize_policy_draft(
-            map_ref.nation_data, country_id, requested_policies)
-    except ValueError:
-        return False
+    requested_policies = politics.policy_draft_projection({country_id: merged}, country_id)
+    canonical_policies = politics.canonicalize_policy_draft(
+        map_ref.nation_data, country_id, requested_policies)
     if canonical_policies:
         merged[politics.POLICY_KEY] = canonical_policies
     else:
         merged.pop(politics.POLICY_KEY, None)
 
-    map_ref.nation_data[country_id] = merged
-    if any(existing.get(key) != merged.get(key)
-           for key in ("name", "adjective", "leader_name", "leader_title",
-                       "flag_data", "portrait_data", "color")):
-        _sync_appearance_caches(map_ref, country_id, merged)
-    return True
+    return merged
 
 
 def _apply_appearance_updates(map_ref, country_id, player_data):
@@ -921,6 +915,7 @@ def _validate_administrative_orders(map_ref, country_id, provinces):
     # Lightweight legacy hosts may not carry scenario settings.
     settings = getattr(map_ref, "scenario_settings", {})
     by_key = {p.get("json_key"): p for p in map_ref.map_data.values()}
+    warnings = []
     for key, updates in provinces.items():
         if not isinstance(updates, dict):
             raise ValueError("Invalid province updates.")
@@ -943,113 +938,189 @@ def _validate_administrative_orders(map_ref, country_id, provinces):
             if not queries.is_administrative_action_enabled(order_type, settings):
                 raise ValueError("Administrative action is disabled.")
             duration = queries.get_administrative_turns(order_type, settings)
-            if type(item.get("turns_remaining")) is not int or item["turns_remaining"] != duration:
+            if type(item.get("turns_remaining")) is not int or item["turns_remaining"] < 0:
                 raise ValueError("Invalid administrative duration.")
+            if item["turns_remaining"] != duration:
+                warnings.append(f"Province {key}: {order_type} duration is "
+                                f"{item['turns_remaining']}; the host expects {duration}.")
+    return warnings
 
 
-def load_move_files(map_ref, move_file_paths, keys_dict):
+def _validate_move_snapshot(map_ref, country_id, nation_update, provinces, protected_unit_ids=()):
+    """Reject malformed snapshots. Report numeric unit differences separately."""
+    for resource in c.ECON_RESOURCE_KEYS:
+        if resource in nation_update:
+            value = nation_update[resource]
+            if type(value) not in (int, float) or not math.isfinite(value):
+                raise ValueError(f"Invalid {resource} amount: expected a finite number.")
+
+    by_key = {p.get("json_key"): p for p in map_ref.map_data.values()}
+    live_units = {u.get("unit_id"): u for p in map_ref.map_data.values()
+                  for u in queries.units_with_air_cargo(p.get("units", []))
+                  if u.get("unit_id") is not None}
+    seen = set()
+    warnings = []
+    for key, updates in provinces.items():
+        province = by_key.get(key)
+        if province is None:
+            raise ValueError(f"Unknown province: {key}.")
+        if not isinstance(updates, dict):
+            raise ValueError(f"Province {key}: expected an update record.")
+        for queue_key in ("building_queue", "unit_queue"):
+            if queue_key in updates:
+                if province.get("owner") != country_id:
+                    raise ValueError(f"Province {key}: cannot edit another country's queues.")
+                queue = updates[queue_key]
+                if not isinstance(queue, list) or any(not isinstance(item, dict) for item in queue):
+                    raise ValueError(f"Province {key}: invalid {queue_key}.")
+        units = updates.get("units", [])
+        if not isinstance(units, list):
+            raise ValueError(f"Province {key}: expected a unit list.")
+        for unit in units:
+            if not isinstance(unit, dict) or unit.get("owner") != country_id:
+                raise ValueError(f"Province {key}: invalid unit or unit owned by another country.")
+            uid = unit.get("unit_id")
+            if uid is not None:
+                if not isinstance(uid, str) or uid in seen:
+                    raise ValueError(f"Province {key}: invalid or duplicated unit ID.")
+                seen.add(uid)
+            original = live_units.get(uid)
+            if original is not None and original.get("owner") != country_id:
+                raise ValueError(f"Province {key}: unit ID belongs to another country.")
+            for stat in TOURNAMENT_UNIT_STATS:
+                if stat in unit:
+                    value = unit[stat]
+                    if type(value) not in (int, float) or not math.isfinite(value) or value < 0:
+                        raise ValueError(f"Province {key}: invalid unit {stat}; expected a finite, nonnegative number.")
+                # Legacy units without IDs cannot be matched reliably.
+                # Form changes have their own stats and are not comparable.
+                if (original is not None and original.get("type") == unit.get("type")
+                        and stat in original and unit.get(stat) != original[stat]
+                        and uid not in protected_unit_ids
+                        and not queries.is_air_unit(unit) and not queries.is_air_transport(unit)):
+                    warnings.append(f"Unit {uid}, {stat}: move has {unit.get(stat)!r}; "
+                                    f"host has {original[stat]!r}.")
+    return warnings
+
+
+def load_move_files(map_ref, move_file_paths, keys_dict, *, accept_stat_mismatches=False,
+                    loaded_countries=()):
     """
     Loads a list of .gd5move files and applies their orders to the host's map.
 
-    Returns a summary with ``loaded``, ``rejected``, and ``legacy`` counts so
-    callers can report what happened instead of claiming every selected file
-    was imported.  ``keys_dict`` maps Country_ID -> Country_Key.
+    Return counts and per-file rejection details. keys_dict maps country IDs to keys.
+    accept_stat_mismatches permits numeric differences only. All other checks still apply.
+    loaded_countries preserves batch duplicate checks during a host's review callbacks.
     """
     processed_cids = set()
-    processed_move_cids = set()
+    processed_move_cids = set(loaded_countries)
     summary = {"loaded": 0, "rejected": 0, "legacy": 0,
                "faction_renames": 0, "appearance_updates": 0,
-               "puppet_siphon_updates": 0}
+               "puppet_siphon_updates": 0, "rejections": [], "overridden": 0,
+               "loaded_countries": []}
+
+    def reject(file_path, cid, reason, *, overridable=False):
+        summary["rejected"] += 1
+        summary["rejections"].append({"file_path": file_path, "country_id": cid,
+                                      "reason": reason, "overridable": overridable})
 
     def _decrypt_move(file_path):
-        if not os.path.exists(file_path):
-            return None
-        with open(file_path, 'r') as f:
-            try:
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
                 payload = json.load(f)
-            except Exception:
-                return None
+        except (OSError, UnicodeError, json.JSONDecodeError) as error:
+            return file_path, None, None, f"Cannot read the move file: {error}"
         
         if not isinstance(payload, dict):
-            return None
+            return file_path, None, None, "Invalid move file: expected a JSON object."
 
         cid = payload.get("country_id")
         p_hash = payload.get("hash")
         
-        if cid not in keys_dict:
-            return None
+        if not isinstance(cid, str) or cid not in keys_dict:
+            return file_path, None, None, "The country ID has no tournament player key."
             
         player_key = keys_dict[cid]
         if hash_key(player_key) != p_hash:
-            return None
+            return file_path, cid, None, "The player key does not match the host's key."
             
         player_data = decrypt_dict(payload.get("data"), player_key)
-        return file_path, cid, player_data
+        error = None if isinstance(player_data, dict) else "Cannot decrypt a valid move record with this player's key."
+        return file_path, cid, player_data, error
         
     valid_moves = {}
 
     def _record(result):
-        file_path, cid, player_data = result
-        valid_moves[file_path] = (cid, player_data)
+        file_path, cid, player_data, error = result
+        valid_moves[file_path] = (cid, player_data, error)
 
     run_with_progress(move_file_paths, _decrypt_move,
                       "Decrypting Move Files...", _record)
                 
     for file_path in move_file_paths:
-        if file_path not in valid_moves:
-            summary["rejected"] += 1
-            continue
-            
-        cid, player_data = valid_moves[file_path]
-        if not isinstance(player_data, dict):
-            summary["rejected"] += 1
+        cid, player_data, error = valid_moves[file_path]
+        if error:
+            reject(file_path, cid, error)
             continue
 
         context_error = _move_context_error(map_ref, player_data)
         if context_error:
-            summary["rejected"] += 1
+            reject(file_path, cid, f"The move {context_error}.")
             continue
-        if "tournament_session" not in player_data or "tournament_turn" not in player_data:
-            summary["legacy"] += 1
-            
+        if ("nation_data" in player_data) != ("provinces" in player_data):
+            reject(file_path, cid, "The move must contain both country and province records.")
+            continue
         nd, provs = migrations.tournament_move_sections(player_data)
             
-        if not isinstance(nd, dict) or not isinstance(provs, dict):
-            summary["rejected"] += 1
+        if not isinstance(nd, dict) or not nd or not isinstance(provs, dict):
+            reject(file_path, cid, "Invalid country or province records.")
             continue
 
         if cid in processed_move_cids:
-            # A country gets one coherent submission per turn.  Applying two
+            # A country gets one coherent submission per selected batch. Applying two
             # files in picker order previously made the last one silently win.
-            summary["rejected"] += 1
+            reject(file_path, cid, "This country already has a loaded move in this import.")
             continue
         try:
+            if not isinstance(map_ref.nation_data.get(cid), dict):
+                raise ValueError("The country does not exist in the host's game.")
             from map_logic.diplomacy.puppet_actions import canonical_puppet_release_queue
             existing_releases = map_ref.nation_data[cid].get("release_puppet_queue", [])
             releases = migrations.tournament_release_requests(player_data, nd, existing_releases)
             canonical_releases = canonical_puppet_release_queue(
                 map_ref.map_data, map_ref.nation_data, cid, releases, existing_releases)
-            _validate_administrative_orders(map_ref, cid, provs)
+            warnings = _validate_administrative_orders(map_ref, cid, provs)
             transport_view, transport_commands = queries.air_transport_draft(
                 map_ref, cid, player_data.get("air_transport", []))
             cargo_ids = {u["unit_id"] for p in map_ref.map_data.values()
                          for plane in p.get("units", []) for u in plane.get("air_cargo", [])}
             cargo_ids.update(uid for command in transport_commands for uid in command["cargo_ids"])
+            warnings.extend(_validate_move_snapshot(map_ref, cid, nd, provs, cargo_ids))
             live_aircraft, aircraft_orders = _validate_aircraft_orders(
                 transport_view, cid, player_data, provs, cargo_ids)
-        except ValueError:
-            summary["rejected"] += 1
+            nd = dict(nd)
+            nd["release_puppet_queue"] = canonical_releases
+            merged = _prepare_player_nation_data(map_ref, cid, nd)
+        except ValueError as error:
+            reject(file_path, cid, str(error))
+            continue
+        if warnings and not accept_stat_mismatches:
+            reject(file_path, cid, "\n".join(warnings), overridable=True)
             continue
         processed_move_cids.add(cid)
+        if warnings:
+            summary["overridden"] += 1
+        if "tournament_session" not in player_data or "tournament_turn" not in player_data:
+            summary["legacy"] += 1
 
-        nd = dict(nd)
-        nd["release_puppet_queue"] = canonical_releases
-
+        existing = map_ref.nation_data[cid]
+        map_ref.nation_data[cid] = merged
         summary["faction_renames"] += _apply_faction_renames(
             map_ref, cid, player_data, nd)
-        if not _merge_player_nation_data(map_ref, cid, nd):
-            summary["rejected"] += 1
-            continue
+        if any(existing.get(key) != merged.get(key)
+               for key in ("name", "adjective", "leader_name", "leader_title",
+                           "flag_data", "portrait_data", "color")):
+            _sync_appearance_caches(map_ref, cid, merged)
         queries.apply_air_transport_commands(map_ref, cid, transport_commands)
         summary["appearance_updates"] += _apply_appearance_updates(
             map_ref, cid, player_data)
@@ -1105,6 +1176,7 @@ def load_move_files(map_ref, move_file_paths, keys_dict):
             map_ref.submitted_moves = set()
         map_ref.submitted_moves.add(cid)
         summary["loaded"] += 1
+        summary["loaded_countries"].append(cid)
         
     if summary["loaded"] and hasattr(map_ref, 'sync_units_to_data'):
         map_ref.sync_units_to_data()

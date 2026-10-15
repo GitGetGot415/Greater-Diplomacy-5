@@ -303,7 +303,10 @@ def render_buttons(map_screen):
 
                     summary = load_move_files(map_screen, [file_path], keys_dict)
                     if not summary["loaded"]:
-                        map_screen.show_feedback("Move import rejected: wrong key, tournament, or turn.")
+                        from ui.multiplayer_host_panel import show_move_rejection
+                        for rejection in summary["rejections"]:
+                            show_move_rejection(map_screen, rejection)
+                        map_screen.show_feedback("Move import rejected. See the notification for details.")
                         return
                     map_screen.show_feedback(f"Move imported from {os.path.basename(file_path)}")
 

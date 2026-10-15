@@ -5,32 +5,104 @@ import data.constants as c
 from ui.checkbox_list_screen import CheckboxItem
 
 
+def show_move_rejection(map_ref, rejection, on_result=None):
+    """Show the file, country, and full rejection reason in a scrollable dialog."""
+    from ui import confirm_dialog
+
+    file_name = os.path.basename(rejection["file_path"])
+    cid = rejection["country_id"]
+    country = queries.get_country_display_name(cid, map_ref.nation_data) if cid else "Unknown country"
+    message = f"Rejected {file_name}\nCountry: {country}\n\n{rejection['reason']}"
+    confirm_dialog.show_message(
+        "Tournament move rejected", message, kind="warning", on_result=on_result,
+        inline_parts=[(message, None)])
+
+
 def load_multiplayer_moves(map_ref, on_result):
     """Multi-select move import. Answers on_result(True) when files were actually loaded."""
+    from ui import confirm_dialog
+
+    def can_import():
+        return (getattr(map_ref, "multiplayer_host_mode", False)
+                and not getattr(map_ref, "realtime_multiplayer", False))
+
+    if not can_import():
+        map_ref.show_feedback("Only the tournament host can import move files.")
+        on_result(False)
+        return
+
     def _on_files(files):
         if not files:
+            on_result(False)
+            return
+        if not can_import():
+            map_ref.show_feedback("Only the tournament host can import move files.")
             on_result(False)
             return
 
         summary = multiplayer_io.load_move_files(
             map_ref, files, getattr(map_ref, 'multiplayer_keys_dict', {}))
-        loaded, rejected = summary["loaded"], summary["rejected"]
-        if loaded and hasattr(map_ref, "refresh_all_maps"):
-            # Move imports can change faction membership, country colors, and
-            # province/unit orders.  Rebuild every cached layer before the host
-            # sees the board or exports the next turn.
-            map_ref.refresh_all_maps()
+        pending = iter(summary["rejections"])
 
-        if loaded:
-            detail = f"Loaded {loaded} move file{'s' if loaded != 1 else ''}."
-            if rejected:
-                detail += f" Skipped {rejected} invalid, duplicate, or wrong-turn file{'s' if rejected != 1 else ''}."
+        def finish():
+            loaded, rejected = summary["loaded"], summary["rejected"]
+            if loaded and hasattr(map_ref, "refresh_all_maps"):
+                # Move imports can change cached map layers and order displays.
+                map_ref.refresh_all_maps()
+            detail = f"Loaded {loaded} move file{'s' if loaded != 1 else ''}. Rejected {rejected}."
+            if summary["overridden"]:
+                detail += f" Accepted {summary['overridden']} despite stat warnings."
             if summary["legacy"]:
                 detail += " Some accepted files use the legacy move format."
             map_ref.show_feedback(detail)
-        else:
-            map_ref.show_feedback("No valid move files were loaded.")
-        on_result(bool(loaded))
+            on_result(bool(loaded))
+
+        def review_next():
+            rejection = next(pending, None)
+            if rejection is None:
+                finish()
+                return
+            file_name = os.path.basename(rejection["file_path"])
+            cid = rejection["country_id"]
+            country = queries.get_country_display_name(cid, map_ref.nation_data) if cid else "Unknown country"
+
+            def after_details():
+                if not rejection["overridable"] or not can_import():
+                    review_next()
+                    return
+
+                def after_choice(accepted):
+                    if accepted and can_import():
+                        # Read and validate again. The file or host turn may have changed.
+                        retry = multiplayer_io.load_move_files(
+                            map_ref, [rejection["file_path"]],
+                            getattr(map_ref, "multiplayer_keys_dict", {}),
+                            accept_stat_mismatches=True,
+                            loaded_countries=summary["loaded_countries"])
+                        if retry["loaded"]:
+                            summary["rejected"] -= 1
+                            for key in ("loaded", "legacy", "overridden"):
+                                summary[key] += retry[key]
+                            summary["loaded_countries"].extend(retry["loaded_countries"])
+                        elif retry["rejections"]:
+                            retry_message = f"{file_name}\n\n{retry['rejections'][0]['reason']}"
+                            confirm_dialog.show_message(
+                                "Move still rejected",
+                                retry_message, kind="warning", on_result=review_next,
+                                inline_parts=[(retry_message, None)])
+                            return
+                    review_next()
+
+                confirm_dialog.ask_yes_no(
+                    "Accept move anyway?",
+                    f"{file_name}\nCountry: {country}\n\n"
+                    "This move has stat mismatches. Accepting it can import incorrect values or unfair advantages. "
+                    "Accept it despite these risks?",
+                    on_result=after_choice, yes_label="Accept", no_label="Reject")
+
+            show_move_rejection(map_ref, rejection, on_result=after_details)
+
+        review_next()
 
     queries.open_file_browser(map_ref, "Select Move Files", c.TOURNAMENT_SAVES_DIR,
                               mode="open_files", extensions=[".gd5move"], on_result=_on_files)

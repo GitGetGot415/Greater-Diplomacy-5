@@ -6,6 +6,7 @@ commands rather than relying on that one record to describe the whole world.
 """
 
 import json
+import copy
 import os
 import sys
 import tempfile
@@ -106,9 +107,9 @@ class TournamentMoveTests(unittest.TestCase):
             json.dump(payload, file)
         return path
 
-    def import_moves(self, host, paths):
+    def import_moves(self, host, paths, **options):
         with mock.patch.object(multiplayer_io, "run_with_progress", synchronous_progress):
-            return multiplayer_io.load_move_files(host, paths, self.keys)
+            return multiplayer_io.load_move_files(host, paths, self.keys, **options)
 
     def player_data(self, country_id, host, **extra):
         result = {
@@ -119,6 +120,217 @@ class TournamentMoveTests(unittest.TestCase):
         }
         result.update(extra)
         return result
+
+    def stat_move(self, host):
+        unit = {"unit_id": "test-unit", "owner": "Leader", "type": "Test ground unit",
+                "health": 12, "max_health": 20, "attack": 4, "defense": 3,
+                "speed": 2, "morale": 1, "level": 0}
+        host.map_data = {"home": {"id": 1, "json_key": "P1", "owner": "Leader", "units": [unit]}}
+        move = self.player_data("Leader", host, unit_snapshot=True,
+                                provinces={"P1": {"units": [copy.deepcopy(unit)]}})
+        move["provinces"]["P1"]["units"][0]["attack"] += 1
+        return move
+
+    def test_each_unreadable_or_unauthenticated_file_has_a_rejection_reason(self):
+        host = Host()
+        with tempfile.TemporaryDirectory() as directory:
+            payloads = ["{", "[]", json.dumps({"country_id": []}),
+                        json.dumps({"country_id": "Leader", "hash": "wrong"}),
+                        json.dumps({"country_id": "Leader", "hash": multiplayer_io.hash_key(self.keys["Leader"]),
+                                    "data": "broken"})]
+            paths = [os.path.join(directory, "missing.gd5move")]
+            for index, payload in enumerate(payloads):
+                path = os.path.join(directory, f"bad-{index}.gd5move")
+                with open(path, "w") as file:
+                    file.write(payload)
+                paths.append(path)
+            summary = self.import_moves(host, paths, accept_stat_mismatches=True)
+        self.assertEqual(summary["rejected"], len(paths))
+        self.assertEqual([item["file_path"] for item in summary["rejections"]], paths)
+        self.assertTrue(all(item["reason"] and not item["overridable"] for item in summary["rejections"]))
+        self.assertEqual(summary["loaded"], 0)
+        self.assertEqual(host.submitted_moves, set())
+
+    def test_stat_mismatch_requires_explicit_acceptance_without_partial_changes(self):
+        host = Host()
+        move = self.stat_move(host)
+        move["faction_renames"] = [{"old_name": "Old Pact", "new_name": "New Pact"}]
+        before = copy.deepcopy((host.nation_data, host.map_data))
+        with tempfile.TemporaryDirectory() as directory:
+            path = self.write_move(directory, "stats.gd5move", "Leader", move)
+            rejected = self.import_moves(host, [path])
+            self.assertEqual(rejected["rejected"], 1)
+            self.assertTrue(rejected["rejections"][0]["overridable"])
+            self.assertIn("attack", rejected["rejections"][0]["reason"])
+            self.assertEqual((host.nation_data, host.map_data), before)
+            self.assertEqual(host.submitted_moves, set())
+            self.assertEqual(host.syncs, 0)
+            accepted = self.import_moves(host, [path], accept_stat_mismatches=True)
+        self.assertEqual(accepted["loaded"], 1)
+        self.assertEqual(accepted["overridden"], 1)
+        self.assertEqual(host.map_data["home"]["units"][0]["attack"], move["provinces"]["P1"]["units"][0]["attack"])
+        self.assertEqual(host.nation_data["Member"]["faction"], "New Pact")
+
+    def test_stat_override_never_bypasses_hard_failures(self):
+        from map_logic import politics
+
+        def invalid_policy(move):
+            move["nation_data"][politics.POLICY_KEY] = {
+                "research_subsidies": {"status": politics.POLICY_ACTIVE}}
+
+        mutations = {
+            "wrong turn": lambda move: move.update(tournament_turn=Time.total_turns - 1),
+            "wrong session": lambda move: move.update(tournament_session="another-session"),
+            "empty country": lambda move: move.update(nation_data={}),
+            "missing section": lambda move: move.pop("provinces"),
+            "malformed province": lambda move: move["provinces"].update(P1=[]),
+            "unknown province": lambda move: move["provinces"].update(missing={}),
+            "foreign unit": lambda move: move["provinces"]["P1"]["units"][0].update(owner="Member"),
+            "broken stat": lambda move: move["provinces"]["P1"]["units"][0].update(attack="bad"),
+            "nonfinite stat": lambda move: move["provinces"]["P1"]["units"][0].update(attack=float("nan")),
+            "foreign aircraft": lambda move: move.update(aircraft_orders=[{"unit_id": "missing"}]),
+            "invalid policy": invalid_policy,
+        }
+        for name, mutate in mutations.items():
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as directory:
+                host = Host()
+                move = self.stat_move(host)
+                move["faction_renames"] = [{"old_name": "Old Pact", "new_name": "New Pact"}]
+                mutate(move)
+                before = copy.deepcopy((host.nation_data, host.map_data))
+                path = self.write_move(directory, "bad.gd5move", "Leader", move)
+                summary = self.import_moves(host, [path], accept_stat_mismatches=True)
+                self.assertEqual(summary["loaded"], 0)
+                self.assertEqual(summary["rejected"], 1)
+                self.assertFalse(summary["rejections"][0]["overridable"])
+                self.assertTrue(summary["rejections"][0]["reason"])
+                self.assertEqual((host.nation_data, host.map_data), before)
+                self.assertEqual(host.submitted_moves, set())
+
+    def test_duplicate_during_host_review_cannot_be_overridden(self):
+        host = Host()
+        with tempfile.TemporaryDirectory() as directory:
+            path = self.write_move(directory, "move.gd5move", "Leader", self.player_data("Leader", host))
+            initial = self.import_moves(host, [path])
+            self.assertEqual(initial["loaded"], 1)
+            summary = self.import_moves(host, [path], accept_stat_mismatches=True,
+                                        loaded_countries=initial["loaded_countries"])
+        self.assertEqual(summary["rejected"], 1)
+        self.assertFalse(summary["rejections"][0]["overridable"])
+        self.assertIn("already", summary["rejections"][0]["reason"])
+
+    def test_administrative_duration_can_be_overridden_but_disabled_actions_cannot(self):
+        order, (setting, _) = next(iter(queries.ADMINISTRATIVE_ACTIONS.items()))
+        for disabled in (False, True):
+            with self.subTest(disabled=disabled), tempfile.TemporaryDirectory() as directory:
+                host = Host()
+                host.map_data = {"home": {"id": 1, "json_key": "P1", "owner": "Leader", "units": []}}
+                host.scenario_settings = {"administrative_turn_overrides": {setting: 7},
+                                          "administrative_disabled": [setting] if disabled else []}
+                move = self.player_data("Leader", host, provinces={"P1": {"building_queue": [
+                    {"order_type": order, "turns_remaining": 8}]}})
+                path = self.write_move(directory, "duration.gd5move", "Leader", move)
+                rejected = self.import_moves(host, [path])
+                self.assertEqual(rejected["rejections"][0]["overridable"], not disabled)
+                accepted = self.import_moves(host, [path], accept_stat_mismatches=True)
+                self.assertEqual(accepted["loaded"], int(not disabled))
+                if not disabled:
+                    self.assertEqual(host.map_data["home"]["building_queue"][0]["turns_remaining"], 8)
+
+    def test_host_ui_reviews_each_file_and_waits_for_acceptance(self):
+        from ui import confirm_dialog, multiplayer_host_panel
+
+        for choice in (False, True):
+            with self.subTest(choice=choice), tempfile.TemporaryDirectory() as directory:
+                host = Host()
+                move = self.stat_move(host)
+                host.multiplayer_host_mode = True
+                host.multiplayer_keys_dict = self.keys
+                host.show_feedback = mock.Mock()
+                host.refresh_all_maps = mock.Mock()
+                move_path = self.write_move(directory, "stats.gd5move", "Leader", move)
+                missing_path = os.path.join(directory, "missing.gd5move")
+                completed = mock.Mock()
+                with mock.patch.object(queries, "open_file_browser") as browser, \
+                        mock.patch.object(confirm_dialog, "show_message") as message, \
+                        mock.patch.object(confirm_dialog, "ask_yes_no") as ask, \
+                        mock.patch.object(multiplayer_io, "run_with_progress", synchronous_progress):
+                    multiplayer_host_panel.load_multiplayer_moves(host, completed)
+                    browser.call_args.kwargs["on_result"]([missing_path, move_path])
+                    self.assertIn("missing.gd5move", message.call_args.args[1])
+                    ask.assert_not_called()
+                    message.call_args.kwargs["on_result"]()
+                    self.assertIn("stats.gd5move", message.call_args.args[1])
+                    self.assertIn("Leader", message.call_args.args[1])
+                    self.assertIn("attack", message.call_args.args[1])
+                    message.call_args.kwargs["on_result"]()
+                    completed.assert_not_called()
+                    ask.call_args.kwargs["on_result"](choice)
+                completed.assert_called_once_with(choice)
+                self.assertEqual(bool(host.submitted_moves), choice)
+                self.assertEqual(host.refresh_all_maps.call_count, int(choice))
+
+    def test_host_ui_rechecks_turn_and_permissions_after_confirmation(self):
+        from ui import confirm_dialog, multiplayer_host_panel
+
+        for change in ("turn", "permission"):
+            with self.subTest(change=change), tempfile.TemporaryDirectory() as directory:
+                host = Host()
+                move = self.stat_move(host)
+                host.time_manager = Time()
+                host.multiplayer_host_mode = True
+                host.multiplayer_keys_dict = self.keys
+                host.show_feedback = mock.Mock()
+                path = self.write_move(directory, "stats.gd5move", "Leader", move)
+                completed = mock.Mock()
+                with mock.patch.object(queries, "open_file_browser") as browser, \
+                        mock.patch.object(confirm_dialog, "show_message") as message, \
+                        mock.patch.object(confirm_dialog, "ask_yes_no") as ask, \
+                        mock.patch.object(multiplayer_io, "run_with_progress", synchronous_progress):
+                    multiplayer_host_panel.load_multiplayer_moves(host, completed)
+                    browser.call_args.kwargs["on_result"]([path])
+                    message.call_args.kwargs["on_result"]()
+                    if change == "turn":
+                        host.time_manager.total_turns += 1
+                    else:
+                        host.multiplayer_host_mode = False
+                    ask.call_args.kwargs["on_result"](True)
+                    if change == "turn":
+                        self.assertIn("turn", message.call_args.args[1])
+                        message.call_args.kwargs["on_result"]()
+                completed.assert_called_once_with(False)
+                self.assertEqual(host.submitted_moves, set())
+
+    def test_nonhosts_cannot_open_move_import(self):
+        from ui import multiplayer_host_panel
+
+        for flags in ({}, {"multiplayer_host_mode": True, "realtime_multiplayer": True}):
+            host = Host()
+            host.__dict__.update(flags)
+            host.show_feedback = mock.Mock()
+            completed = mock.Mock()
+            with mock.patch.object(queries, "open_file_browser") as browser:
+                multiplayer_host_panel.load_multiplayer_moves(host, completed)
+            browser.assert_not_called()
+            completed.assert_called_once_with(False)
+
+    def test_unchanged_stats_legacy_units_and_changed_forms_need_no_override(self):
+        for variation in ("unchanged", "legacy", "form"):
+            with self.subTest(variation=variation), tempfile.TemporaryDirectory() as directory:
+                host = Host()
+                move = self.stat_move(host)
+                unit = move["provinces"]["P1"]["units"][0]
+                if variation == "unchanged":
+                    unit["attack"] = host.map_data["home"]["units"][0]["attack"]
+                elif variation == "legacy":
+                    unit.pop("unit_id")
+                else:
+                    unit["type"] = "Another test ground unit"
+                path = self.write_move(directory, "ordinary.gd5move", "Leader", move)
+                summary = self.import_moves(host, [path])
+                self.assertEqual(summary["loaded"], 1)
+                self.assertEqual(summary["overridden"], 0)
+                self.assertEqual(summary["rejections"], [])
 
     def test_import_discards_reserved_unassigned_entry_without_assigning_its_units(self):
         host = Host()
