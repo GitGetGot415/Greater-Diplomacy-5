@@ -274,6 +274,9 @@ class VolunteerTests(unittest.TestCase):
         volunteer = division("A")
         volunteer["volunteer_host"] = "B"
         enemy = division("C")
+        # Make this an explicit victory instead of an equal-defense stalemate.
+        volunteer.update(type="Volunteer forecast fixture", attack=1000, defense=0)
+        enemy.update(type="Volunteer forecast fixture", attack=0, defense=0)
         province = game.home_of("B")
         province["units"] = [volunteer, enemy]
 
@@ -289,12 +292,9 @@ class VolunteerTests(unittest.TestCase):
         near, far = screen.near_far(lane)
         self.assertTrue(screen.is_mine(near))
         self.assertFalse(screen.is_mine(far))
-        self.assertEqual(
-            overlay_renderer.combat_outlook_color(
-                [province["units"]], game.nation_data, {"A"}, "A",
-                province=province),
-            overlay_renderer._desaturated_country_color(
-                game.nation_data["B"]["color"]))
+        outcome = overlay_renderer.estimated_combat_outcome(
+            [province["units"]], game.nation_data, province=province)
+        self.assertEqual(outcome["winner_nation"], "B")
 
 
 if __name__ == "__main__":

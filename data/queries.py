@@ -177,10 +177,10 @@ def rank_combat_nations_by_health(units):
     """Rank combat nations by the same cascade used for land capture.
 
     Health is the primary result, followed by combined attack and then the
-    highest speed. Combat bubbles and post-combat capture both use this so
-    their predicted winner cannot drift apart. The returned list can still
-    contain ties after all three rules, which the live resolver handles with
-    its bounce/random setting.
+    highest speed. Callers must first select eligible units. Combat forecasts
+    exclude bystanders. Land capture excludes units without capture permission.
+    The returned list can still contain ties after all three rules.
+    The live resolver handles these ties with its bounce/random setting.
     """
     health_totals = {}
     for unit in units:

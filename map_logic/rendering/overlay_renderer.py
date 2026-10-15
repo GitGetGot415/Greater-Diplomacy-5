@@ -175,6 +175,7 @@ COMBAT_BUBBLE_FULL_PREDICTION_ALPHA = 96
 # grey so this remains distinct from the stronger green/red local outlook.
 COMBAT_BUBBLE_UNKNOWN_COLOR = (150, 150, 150)
 COMBAT_BUBBLE_OUTCOME_COLOR_SATURATION = 0.75
+_COMBAT_WINNER_UNSET = object()
 
 
 def combat_strengths(sides, nation_data, friendly_nations, player_nation=None,
@@ -245,15 +246,16 @@ def _country_color(nation_data, nation):
     return tuple(max(0, min(255, int(channel))) for channel in color[:3])
 
 
-def _combat_winner_from_survivors(units):
-    """Choose the country with the most predicted surviving health.
+def _combat_winner_from_survivors(units, engaged):
+    """Rank surviving battle participants. Exclude countries that did not fight.
 
     This deliberately does not consult province ownership.  Sea tiles do not
     have an owner, and a land battle's likely winner is not necessarily the
     country that currently owns the province.  Volunteers are grouped under
     their temporary combat host, matching the side used by the resolver.
     """
-    ranked = queries.rank_combat_nations_by_health(units)
+    ranked = queries.rank_combat_nations_by_health([
+        unit for unit in units if queries.get_unit_combat_owner(unit) in engaged])
     return ranked[0] if ranked else None
 
 
@@ -261,23 +263,22 @@ def _estimated_combat_winner(units, province, nation_data):
     """Return the country expected to win the engagement."""
     simulation = _simulate_combat(
         [units], nation_data, province=province)
-    survivors = simulation["sides"][0]
-    return _combat_winner_from_survivors(survivors)
+    return simulation["winner_nation"]
 
 
 def combat_outlook_color(sides, nation_data, friendly_nations,
                          player_nation=None, province=None,
-                         information_available=True, capture_owner=None):
+                         information_available=True, capture_owner=_COMBAT_WINNER_UNSET):
     """Return the expected winner's muted country color or neutral grey.
 
     ``friendly_nations`` and ``player_nation`` remain accepted for callers that
     used the old outlook API, but the bubble no longer changes color based on
     whether the local player is involved.  Every informed battle uses the same
-    predicted surviving-health rule.
+    forecast. Countries outside the battle cannot become its predicted winner.
     """
     if not information_available:
         return COMBAT_BUBBLE_UNKNOWN_COLOR
-    owner = (capture_owner if capture_owner is not None else
+    owner = (capture_owner if capture_owner is not _COMBAT_WINNER_UNSET else
              _estimated_combat_winner(
                  [unit for side in sides for unit in side], province,
                  nation_data))
@@ -298,6 +299,8 @@ def estimated_combat_outcome(sides, nation_data, province=None, max_turns=100, g
     the current rules produce a stalemate, both sides survive without a hostile
     lane, or the estimate would exceed the safety limit.  ``turns`` is the
     number of future volleys until that result is reached.
+    ``winner_nation`` ranks surviving participants only after the battle ends.
+    It is ``None`` when no participant survives or the forecast cannot resolve combat.
     """
     return {key: value for key, value in _simulate_combat(
         sides, nation_data, province=province, max_turns=max_turns,
@@ -314,6 +317,11 @@ def _simulate_combat(sides, nation_data, province=None, max_turns=100, grounded_
     if grounded_sides is None:
         grounded_sides = (set(range(len(sides)))
                           if province is None or not queries.is_water_province(province) else set())
+    # Record participants before aircraft can become immediate ground casualties.
+    engaged = set(combat_rules.build_battle(
+        simulated_sides, nation_data,
+        terrain=province.get("terrain") if province is not None else None,
+        grounded_sides=grounded_sides, convert_aircraft=False).engaged)
     for index, side in enumerate(simulated_sides):
         enemies = (side if len(simulated_sides) == 1 else
                    [unit for other_index, other_side in enumerate(simulated_sides)
@@ -322,6 +330,14 @@ def _simulate_combat(sides, nation_data, province=None, max_turns=100, grounded_
             on_land=index in grounded_sides)
     simulated_sides = [[unit for unit in side if unit.get("health", 0) > 0]
                        for side in simulated_sides]
+
+    def result(winner_side, turns):
+        winner_nation = (
+            _combat_winner_from_survivors(
+                [unit for side in simulated_sides for unit in side], engaged)
+            if turns is not None else None)
+        return {"winner_side": winner_side, "winner_nation": winner_nation,
+                "turns": turns, "sides": simulated_sides}
 
     def defense_bonus(unit):
         if province is None:
@@ -334,18 +350,17 @@ def _simulate_combat(sides, nation_data, province=None, max_turns=100, grounded_
             simulated_sides, nation_data,
             terrain=province.get("terrain") if province is not None else None,
             grounded_sides=grounded_sides)
+        engaged.update(battle.engaged)
         if not battle.lanes:
             live_side_indexes = [index for index, side in enumerate(simulated_sides)
                                  if side]
             winner_side = (live_side_indexes[0]
                            if len(live_side_indexes) == 1 else None)
-            return {"winner_side": winner_side, "turns": turns,
-                    "sides": simulated_sides}
+            return result(winner_side, turns)
 
         exchanges = list(combat_rules.exchange(battle, nation_data))
         if not exchanges:
-            return {"winner_side": None, "turns": None,
-                    "sides": simulated_sides}
+            return result(None, None)
 
         health_before = sum(
             max(0, float(unit.get("health", 0)))
@@ -365,10 +380,9 @@ def _simulate_combat(sides, nation_data, province=None, max_turns=100, grounded_
             for side in simulated_sides for unit in side
         )
         if health_after >= health_before:
-            return {"winner_side": None, "turns": None,
-                    "sides": simulated_sides}
+            return result(None, None)
 
-    return {"winner_side": None, "turns": None, "sides": simulated_sides}
+    return result(None, None)
 
 
 def estimated_combat_turns(sides, nation_data, province=None, max_turns=100):
@@ -484,8 +498,7 @@ def combat_bubble_records(map_screen):
             sides, map_screen.nation_data, province=province)
         information_available = _combat_information_available(
             map_screen, province["id"])
-        winner_nation = _combat_winner_from_survivors(
-            combat_estimate["sides"][0])
+        winner_nation = combat_estimate["winner_nation"]
         category = (
             queries.get_combat_location_category(
                 province, player, map_screen.nation_data, sides[0])
@@ -495,6 +508,7 @@ def combat_bubble_records(map_screen):
             "province_id": province["id"],
             "center": province["center"],
             "category": category,
+            "winner_nation": winner_nation,
             "color": combat_outlook_color(
                 sides, map_screen.nation_data, friendly, player,
                 province=province,

@@ -33,6 +33,8 @@ tests/test_combat_lanes.py is the spec for the lane rule itself.
 import os
 import sys
 import unittest
+from copy import deepcopy
+from unittest.mock import patch
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
@@ -566,6 +568,132 @@ class PredictionBubbleTests(unittest.TestCase):
         """The real thing draw_combat_bubbles calls, not a restatement of it."""
         return overlay_renderer.combat_strengths(
             [prov["units"]], screen.nation_data, friendly_nations)
+
+    def winner_fixture(self):
+        screen = StubMapScreen()
+        screen.player_country = "A"
+        screen.visible_provinces = None
+        screen.add_nation("A", at_war_with=["B"])
+        screen.add_nation("B", at_war_with=["A"])
+        screen.add_nation("NEUTRAL")
+        troops = [
+            unit("A", attack=100, health=100, kind="Forecast fixture"),
+            unit("B", attack=0, health=200, kind="Forecast fixture"),
+            unit("NEUTRAL", attack=1000, health=10000, kind="Forecast fixture"),
+        ]
+        return screen, screen.add_province("battle", "B", units=troops)
+
+    def test_predicted_winner_excludes_a_healthy_bystander(self):
+        screen, province = self.winner_fixture()
+        before = deepcopy(province)
+
+        outcome = overlay_renderer.estimated_combat_outcome(
+            [province["units"]], screen.nation_data, province=province)
+
+        self.assertEqual(outcome["winner_nation"], "A")
+        self.assertIsNotNone(outcome["turns"])
+        self.assertEqual(province, before)
+        for _ in range(outcome["turns"]):
+            combat_processor.process_combat(screen)
+        self.assertEqual({u["owner"] for u in province["units"]}, {"A", "NEUTRAL"})
+        self.assertFalse(queries.is_province_in_active_combat(province, screen.nation_data))
+        self.assertEqual(province["units"][-1], before["units"][-1])
+
+    def test_neutral_ally_does_not_become_the_predicted_winner(self):
+        screen, province = self.winner_fixture()
+        screen.nation_data["A"]["allied_with"] = ["NEUTRAL"]
+        screen.nation_data["NEUTRAL"]["allied_with"] = ["A"]
+
+        outcome = overlay_renderer.estimated_combat_outcome(
+            [province["units"]], screen.nation_data, province=province)
+
+        self.assertEqual(outcome["winner_nation"], "A")
+
+    def test_ownerless_battle_excludes_bystanders(self):
+        screen, province = self.winner_fixture()
+        province.pop("owner")
+        province["terrain"] = c.WATER_TERRAINS[0]
+
+        self.assertEqual(overlay_renderer._estimated_combat_winner(
+            province["units"], province, screen.nation_data), "A")
+
+    def test_volunteer_winner_uses_host_allegiance(self):
+        screen, province = self.winner_fixture()
+        screen.add_nation("DONOR")
+        province["units"][0].update(owner="DONOR", volunteer_host="A")
+
+        outcome = overlay_renderer.estimated_combat_outcome(
+            [province["units"]], screen.nation_data, province=province)
+
+        self.assertEqual(outcome["winner_nation"], "A")
+
+    def test_stalemate_has_no_predicted_winner(self):
+        screen, province = self.winner_fixture()
+        province["units"][0]["attack"] = 0
+
+        outcome = overlay_renderer.estimated_combat_outcome(
+            [province["units"]], screen.nation_data, province=province)
+
+        self.assertIsNone(outcome["winner_nation"])
+        self.assertIsNone(outcome["turns"])
+
+    def test_immediate_aircraft_loss_still_identifies_the_ground_winner(self):
+        screen, province = self.winner_fixture()
+        province["units"][1]["type"] = "Forecast aircraft"
+        library = {"Forecast aircraft": {"air_role": "BOMBER"}, "Forecast fixture": {}}
+
+        with patch.object(queries, "get_unit_library", return_value=library):
+            outcome = overlay_renderer.estimated_combat_outcome(
+                [province["units"]], screen.nation_data, province=province)
+
+        self.assertEqual(outcome["winner_nation"], "A")
+        self.assertEqual(outcome["turns"], 0)
+
+    def test_incomplete_forecast_has_no_predicted_winner(self):
+        screen, province = self.winner_fixture()
+
+        outcome = overlay_renderer.estimated_combat_outcome(
+            [province["units"]], screen.nation_data, province=province, max_turns=0)
+
+        self.assertIsNone(outcome["winner_nation"])
+        self.assertIsNone(outcome["turns"])
+
+    def test_mutual_destruction_does_not_make_bystander_the_winner(self):
+        screen, province = self.winner_fixture()
+        province["units"][0]["attack"] = 1000
+        province["units"][1]["attack"] = 1000
+
+        outcome = overlay_renderer.estimated_combat_outcome(
+            [province["units"]], screen.nation_data, province=province)
+
+        self.assertIsNone(outcome["winner_nation"])
+        self.assertIsNotNone(outcome["turns"])
+
+    def test_bubble_records_reuse_the_forecast_winner(self):
+        screen, province = self.winner_fixture()
+        province["center"] = (0, 0)
+        prediction = {"type": "province", "loc": province["id"],
+                      "forces": {"all": province["units"]}}
+
+        for resolved in (True, False):
+            with self.subTest(resolved=resolved):
+                if not resolved:
+                    province["units"][0]["attack"] = 0
+                with (patch.object(queries, "get_combat_predictions", return_value=[prediction]),
+                      patch.object(overlay_renderer, "_simulate_combat",
+                                   wraps=overlay_renderer._simulate_combat) as simulate,
+                      patch.object(overlay_renderer, "combat_outlook_color") as outlook):
+                    record = overlay_renderer.combat_bubble_records(screen)[0]
+
+                expected = "A" if resolved else None
+                self.assertEqual(record["winner_nation"], expected)
+                self.assertEqual(outlook.call_args.kwargs["capture_owner"], expected)
+                simulate.assert_called_once()
+
+    def test_explicit_unknown_winner_does_not_repeat_the_simulation(self):
+        with patch.object(overlay_renderer, "_simulate_combat") as simulate:
+            overlay_renderer.combat_outlook_color([], {}, set(), capture_owner=None)
+        simulate.assert_not_called()
 
     def test_an_unseen_enemy_order_does_not_remove_a_possible_defender(self):
         screen = StubMapScreen()

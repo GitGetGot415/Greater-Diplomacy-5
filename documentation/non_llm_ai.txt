@@ -463,6 +463,11 @@ Combat markers for matching units still estimate the complete battle.
 Unknown fogged stacks and generic combat markers appear only in All.
 Changing filters must not reveal hidden unit types.
 
+The bubble color uses the predicted winner among countries that participate in combat.
+Countries outside the combat lanes cannot determine the color, regardless of their health.
+The forecast ranks surviving participants by health, then attack, then speed.
+An unresolved forecast or a battle without surviving participants uses grey.
+
 Map boxes separate land, naval, and air units, including members of the same army.
 Tactical views show each visible division separately at every zoom.
 See documentation/air_stuff.txt, Mission controls, for aircraft grouping, mission badges, and strategic markers.
