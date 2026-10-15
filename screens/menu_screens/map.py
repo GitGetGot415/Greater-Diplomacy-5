@@ -286,8 +286,12 @@ def render_buttons(map_screen):
             save_name = f"Turn_{turn}_{cid}.gd5move"
             export_path = os.path.join(c.TOURNAMENT_SAVES_DIR, save_name)
             player_key = getattr(map_screen, 'multiplayer_player_key', '')
-            export_move_file(map_screen, export_path, player_key)
-            map_screen.show_feedback(f"Move exported to {export_path}")
+
+            def export():
+                export_move_file(map_screen, export_path, player_key)
+                map_screen.show_feedback(f"Move exported to {export_path}")
+
+            queries.export_with_overwrite_confirmation(export_path, export)
 
         map_screen.btn_next_turn = Button(EDITOR_BOT_BTN_START_X, c.BOTTOM_BAR_UI_CENTER_Y, "small", "purple", "Export Turn", m_export)
 

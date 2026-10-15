@@ -5832,6 +5832,25 @@ def get_projected_owner(prov, peace_type, proposer, target, nation_data):
 # FILE & ZIP IMPORT QUERIES
 # ==========================================
 
+def export_with_overwrite_confirmation(file_path, export, parent=None):
+    """Run an export after confirmation when its destination already exists."""
+    if not os.path.exists(file_path):
+        return export()
+
+    from ui import confirm_dialog
+
+    def after_choice(overwrite):
+        if overwrite:
+            export()
+
+    confirm_dialog.ask_yes_no(
+        "Overwrite existing file?",
+        f"{os.path.basename(file_path)} already exists in:\n{os.path.dirname(file_path) or '.'}\n\n"
+        "Overwrite this file?",
+        on_result=after_choice, tk_parent=parent, yes_label="Overwrite", no_label="Cancel")
+    return None
+
+
 def _export_to_downloads(file_name, produce, parent=None):
     """Sends a file to the user, however it gets made.
 
@@ -5845,19 +5864,23 @@ def _export_to_downloads(file_name, produce, parent=None):
     split and the success/error dialogs were written out twice, identically.
     """
     from ui import confirm_dialog
-    try:
-        dest_path = file_name if IS_WEB else os.path.join(downloads_dir(), file_name)
-        produce(dest_path)
+    dest_path = file_name if IS_WEB else os.path.join(downloads_dir(), file_name)
 
-        if IS_WEB:
-            download_file(dest_path)
-            confirm_dialog.show_success("Export Success", f"{file_name} downloaded.", tk_parent=parent)
-        else:
-            confirm_dialog.show_success("Export Success", f"Exported to Downloads as {file_name}", tk_parent=parent)
-        return dest_path
-    except Exception as e:
-        confirm_dialog.show_error("Export Error", str(e), tk_parent=parent)
-        return None
+    def export():
+        try:
+            produce(dest_path)
+
+            if IS_WEB:
+                download_file(dest_path)
+                confirm_dialog.show_success("Export Success", f"{file_name} downloaded.", tk_parent=parent)
+            else:
+                confirm_dialog.show_success("Export Success", f"Exported to Downloads as {file_name}", tk_parent=parent)
+            return dest_path
+        except (OSError, ValueError, zipfile.BadZipFile, zipfile.LargeZipFile) as e:
+            confirm_dialog.show_error("Export Error", str(e), tk_parent=parent)
+            return None
+
+    return export_with_overwrite_confirmation(dest_path, export, parent)
 
 
 def _readable_json_payload(file_path):

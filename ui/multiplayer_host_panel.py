@@ -116,7 +116,6 @@ def export_next_turn(map_ref):
     if not tour_dir:
         tour_dir = c.TOURNAMENT_SAVES_DIR
 
-    os.makedirs(tour_dir, exist_ok=True)
     export_path = os.path.join(tour_dir, f"Turn_{turn}_Host.gd5tour")
     master_key = getattr(map_ref, 'multiplayer_master_key', '')
     keys_dict = getattr(map_ref, 'multiplayer_keys_dict', {})
@@ -125,18 +124,21 @@ def export_next_turn(map_ref):
         map_ref.show_feedback("Error: Host keys missing. Did you init multiplayer?")
         return
 
-    try:
-        multiplayer_io.export_tournament(map_ref, export_path, master_key, keys_dict)
-    except ValueError as error:
-        # This also protects a tournament created by an older build before
-        # the public ``Spectator`` key became reserved.
-        map_ref.show_feedback(f"Tournament export blocked: {error}")
-        return
+    def export():
+        try:
+            multiplayer_io.export_tournament(map_ref, export_path, master_key, keys_dict)
+        except ValueError as error:
+            # This also protects a tournament created by an older build before
+            # the public ``Spectator`` key became reserved.
+            map_ref.show_feedback(f"Tournament export blocked: {error}")
+            return
 
-    # Reset protected countries for next turn
-    map_ref.multiplayer_protected_countries = set()
-    map_ref.submitted_moves = set()
-    map_ref.show_feedback(f"Tournament exported to {export_path}")
+        # Reset protected countries only after the export completes.
+        map_ref.multiplayer_protected_countries = set()
+        map_ref.submitted_moves = set()
+        map_ref.show_feedback(f"Tournament exported to {export_path}")
+
+    queries.export_with_overwrite_confirmation(export_path, export)
 
 def _playable_countries(map_ref):
     """Every playable nation still on the map, ordered by display name."""
