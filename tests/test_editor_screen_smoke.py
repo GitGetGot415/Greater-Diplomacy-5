@@ -98,7 +98,7 @@ class EditorScreenSmokeTests(unittest.TestCase):
 
     def test_conversion_sliders_snap_save_cancel_and_reset(self):
         from screens.editor_screens.turn_editor import TurnEditorScreen
-        from data import queries
+        from data import constants as c, queries
         from ui_elements import Slider, TextField
         settings = {}
         screen = TurnEditorScreen(settings=settings, persist=False)
@@ -106,8 +106,12 @@ class EditorScreenSmokeTests(unittest.TestCase):
         self.assertFalse(any(isinstance(el, TextField) for el in screen.elements))
         sliders = [el for el in screen.elements if isinstance(el, Slider)]
         self.assertEqual(len(sliders), len(queries.CONVERSION_ACTIONS))
+        maximum = c.MAX_CONVERSION_TURNS
+        span = maximum - c.MIN_CONVERSION_TURNS
         for name, slider in zip(screen.tab["names"], sliders):
-            for fraction, expected in ((0, 1), (.3, 2), (.5, 2), (.9, 3), (1, 3)):
+            for expected in range(c.MIN_CONVERSION_TURNS, maximum + 1):
+                # Stop between ticks to verify snapping through mouse input.
+                fraction = min(1, (expected - c.MIN_CONVERSION_TURNS) / span + .02)
                 with self.subTest(name=name, fraction=fraction), \
                         mock.patch("pygame.mouse.get_pressed", return_value=(True, False, False)), \
                         mock.patch("pygame.mouse.get_pos", return_value=slider.handle_rect.center):
@@ -121,14 +125,14 @@ class EditorScreenSmokeTests(unittest.TestCase):
         self.assertEqual(settings, {})
         screen.select_tab("unit")
         screen.select_tab("conversion")
-        self.assertTrue(all(value == "3" for value in screen.tab["values"].values()))
+        self.assertTrue(all(value == str(maximum) for value in screen.tab["values"].values()))
         with mock.patch.object(queries, "save_scenario_settings") as save, \
                 mock.patch("ui.confirm_dialog.show_success"):
             screen.save_all()
         save.assert_not_called()
         self.assertNotIn("conversion_disabled", settings)
         for action in queries.CONVERSION_ACTIONS:
-            self.assertEqual(queries.get_conversion_turns(action, settings), 3)
+            self.assertEqual(queries.get_conversion_turns(action, settings), maximum)
         self.assertTrue(queries.scenario_has_construction_customizations(settings))
         reopened = TurnEditorScreen(settings=settings, persist=False)
         with mock.patch("ui.confirm_dialog.ask_yes_no", side_effect=lambda _title, _text, cb: cb(True)), \

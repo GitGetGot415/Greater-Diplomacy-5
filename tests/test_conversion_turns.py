@@ -39,7 +39,11 @@ class ConversionTurnsTests(unittest.TestCase):
             for invalid in (None, "2", True, 1.5, {}, []):
                 self.set_turns(action, invalid)
                 self.assertEqual(queries.get_conversion_turns(action, self.game.scenario_settings), default)
-            for raw, expected in ((-5, 1), (0, 1), (1, 1), (2, 2), (3, 3), (99, 3)):
+            legal_turns = range(c.MIN_CONVERSION_TURNS, c.MAX_CONVERSION_TURNS + 1)
+            cases = [(turns, turns) for turns in legal_turns]
+            cases.extend(((-5, c.MIN_CONVERSION_TURNS), (0, c.MIN_CONVERSION_TURNS),
+                          (c.MAX_CONVERSION_TURNS + 1, c.MAX_CONVERSION_TURNS)))
+            for raw, expected in cases:
                 self.set_turns(action, raw)
                 self.assertEqual(queries.get_conversion_turns(action, self.game.scenario_settings), expected)
             self.assertEqual(queries.get_conversion_turns(action, {"conversion_turn_overrides": []}), default)
@@ -63,7 +67,8 @@ class ConversionTurnsTests(unittest.TestCase):
                     self.assertEqual(self.ship["order"], {"type": "MOVE", "path": []})
 
     def test_realtime_rebuilds_new_duration_and_retains_progress(self):
-        self.set_turns("TRUCK_SHIP", 3)
+        duration = c.MAX_CONVERSION_TURNS
+        self.set_turns("TRUCK_SHIP", duration)
         driver = MapRealtimeDriver(self.game)
         for transported, target in ((False, "Truck"), (True, "Ship")):
             with self.subTest(transported=transported):
@@ -73,16 +78,17 @@ class ConversionTurnsTests(unittest.TestCase):
                 command = {"type": "unit_order", "province_id": self.base["id"],
                            "unit_id": self.ship["unit_id"],
                            "order": {"type": "CONVERT", "to": target, "turns_left": 0}}
-                self.assertEqual(driver.validate_draft("A", [command])[0]["order"]["turns_left"], 3)
+                self.assertEqual(driver.validate_draft("A", [command])[0]["order"]["turns_left"], duration)
                 with self.assertRaises(RealtimeError):
                     driver.validate_draft("B", [command])
                 with self.assertRaises(RealtimeError):
                     driver.validate_draft("A", [dict(command, order={"type": "CONVERT", "to": "invalid"})])
-                self.ship["order"] = {"type": "CONVERT", "to": target, "turns_left": 2}
+                self.ship["order"] = {"type": "CONVERT", "to": target, "turns_left": duration - 1}
                 self.assertEqual(driver.validate_draft("A", [command])[0]["order"], self.ship["order"])
 
     def test_tournament_uses_host_settings_in_both_directions_and_keeps_progress(self):
-        self.set_turns("TRUCK_SHIP", 3)
+        duration = c.MAX_CONVERSION_TURNS
+        self.set_turns("TRUCK_SHIP", duration)
         for transported, target in ((False, "Truck"), (True, "Ship")):
             with self.subTest(transported=transported):
                 if transported:
@@ -94,11 +100,11 @@ class ConversionTurnsTests(unittest.TestCase):
                 draft["order"] = {"type": "CONVERT", "to": target, "turns_left": 0}
                 self.assertEqual(self.fixture.import_client(client)["loaded"], 1)
                 self.ship = next(u for u in self.base["units"] if u["unit_id"] == self.ship["unit_id"])
-                self.assertEqual(self.ship["order"]["turns_left"], 3)
-                self.ship["order"]["turns_left"] = 2
+                self.assertEqual(self.ship["order"]["turns_left"], duration)
+                self.ship["order"]["turns_left"] = duration - 1
                 self.assertEqual(self.fixture.import_client(client)["loaded"], 1)
                 self.ship = next(u for u in self.base["units"] if u["unit_id"] == self.ship["unit_id"])
-                self.assertEqual(self.ship["order"]["turns_left"], 2)
+                self.assertEqual(self.ship["order"]["turns_left"], duration - 1)
                 self.ship["order"] = {"type": "MOVE", "path": []}
 
     def test_tournament_rejects_illegal_and_stale_conversion_atomically(self):
@@ -120,23 +126,24 @@ class ConversionTurnsTests(unittest.TestCase):
         self.assertEqual(self.game.map_data, before)
 
     def test_ai_drop_projection_and_resolution_use_scenario_recovery(self):
-        self.set_turns("AIR_DROP_RECOVERY", 3)
+        duration = c.MAX_CONVERSION_TURNS
+        self.set_turns("AIR_DROP_RECOVERY", duration)
         target = tile(self.game, 4, 30, owner="B")
         queries.build_air_geometry(self.game)
         with patch.object(ai_movement, "_attackers_would_survive", return_value=True) as projection:
             ai_movement._assign_air_transport(self.game, "A", self.fixture.plane, self.base, [], [target], [])
         dropped = projection.call_args.args[3]
         self.assertTrue(dropped)
-        self.assertTrue(all(queries.air_drop_recovery_turns(unit) == 3 for unit in dropped))
+        self.assertTrue(all(queries.air_drop_recovery_turns(unit) == duration for unit in dropped))
         air_processor.process_air_orders(self.game)
-        self.assertEqual(queries.air_drop_recovery_turns(self.fixture.cargo), 3)
+        self.assertEqual(queries.air_drop_recovery_turns(self.fixture.cargo), duration)
 
     def test_save_dictionary_preserves_independent_scenario_timers(self):
         self.set_turns("TRUCK_SHIP", 1)
-        self.set_turns("AIR_DROP_RECOVERY", 3)
+        self.set_turns("AIR_DROP_RECOVERY", c.MAX_CONVERSION_TURNS)
         screen = sample_map_screen()
         screen.scenario_settings = self.game.scenario_settings
         restored = json.loads(json.dumps(queries.build_save_dict(screen)))["scenario_settings"]
         self.assertEqual(restored, self.game.scenario_settings)
         self.assertEqual(queries.get_conversion_turns("TRUCK_SHIP", restored), 1)
-        self.assertEqual(queries.get_conversion_turns("AIR_DROP_RECOVERY", restored), 3)
+        self.assertEqual(queries.get_conversion_turns("AIR_DROP_RECOVERY", restored), c.MAX_CONVERSION_TURNS)

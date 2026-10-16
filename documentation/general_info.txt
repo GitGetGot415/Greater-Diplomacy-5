@@ -57,7 +57,7 @@ CONSTRUCTION TURN SETTINGS
 
 Open the Construction Turns Editor from Scenario Settings.
 The Conversions category has sliders for Truck / Ship Conversion and Air Drop Recovery.
-Each slider accepts 1, 2, or 3 turns. These actions remain enabled.
+Each slider accepts whole turns from 1 to 9. These actions remain enabled.
 The truck and ship directions use the same duration.
 See documentation/air_stuff.txt for recovery timing and restrictions.
 

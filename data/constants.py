@@ -1305,7 +1305,7 @@ TRUCK_CONVERT_TURNS = 3
 
 # The editor and shared rules use the same inclusive timing limits.
 MIN_CONVERSION_TURNS = 1
-MAX_CONVERSION_TURNS = 3
+MAX_CONVERSION_TURNS = 9
 
 # Recovery includes landing and this many subsequent complete turns.
 AIR_DROP_RECOVERY_TURNS = 1

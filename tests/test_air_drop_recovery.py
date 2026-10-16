@@ -250,15 +250,16 @@ class RecoveryRuntimeTests(unittest.TestCase):
             cargo = wing(base, "Fixture Cargo")
             name = queries.CONVERSION_ACTIONS["AIR_DROP_RECOVERY"][0]
             truck_name = queries.CONVERSION_ACTIONS["TRUCK_SHIP"][0]
-            game.scenario_settings["conversion_turn_overrides"] = {name: 3, truck_name: 1}
+            duration = c.MAX_CONVERSION_TURNS
+            game.scenario_settings["conversion_turn_overrides"] = {name: duration, truck_name: 1}
             queries.begin_air_drop_recovery(cargo, game.scenario_settings)
             with patch.object(c, "SAVES_DIR", directory):
                 asyncio.run(save_map.save_map_data(game, "recovering"))
             loaded = Map(load_path=os.path.join(directory, "recovering"), skip_initial_income=True)
-            self.assertEqual(queries.get_conversion_turns("AIR_DROP_RECOVERY", loaded.scenario_settings), 3)
+            self.assertEqual(queries.get_conversion_turns("AIR_DROP_RECOVERY", loaded.scenario_settings), duration)
             self.assertEqual(queries.get_conversion_turns("TRUCK_SHIP", loaded.scenario_settings), 1)
             restored = next(unit for unit in loaded.id_to_province[1]["units"] if unit["unit_id"] == cargo["unit_id"])
-            self.assertEqual(queries.air_drop_recovery_turns(restored), 3)
+            self.assertEqual(queries.air_drop_recovery_turns(restored), duration)
             loaded.selection_mode = False
             loaded.player_country = "A"
             loaded.select_map_units([restored])
