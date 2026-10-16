@@ -261,7 +261,8 @@ The carrier does not strike the garrison or damage forts.
 Dropped ground units join normal ground combat and capture rules during that turn.
 If a tied capture returns units, dropped cargo returns to its launch tile.
 
-AIR_DROP_RECOVERY_TURNS in data/constants.py sets the recovery duration. Zero disables recovery.
+Construction Turns Editor > Conversions sets Air Drop Recovery from 1 to 3 turns.
+AIR_DROP_RECOVERY_TURNS in data/constants.py supplies the default for scenarios without an override.
 Recovery covers landing and the configured number of complete following turns.
 Recovering units can take damage and capture territory. They cannot move, receive commands, or deal damage.
 This also blocks renaming, maintenance, conversion, disbanding, cargo loading, volunteer offers, and army reassignment.

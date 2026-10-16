@@ -93,6 +93,62 @@ class EditorScreenSmokeTests(unittest.TestCase):
         self.exercise(screen)
         screen.select_tab("administrative")
         self.exercise(screen)
+        screen.select_tab("conversion")
+        self.exercise(screen)
+
+    def test_conversion_sliders_snap_save_cancel_and_reset(self):
+        from screens.editor_screens.turn_editor import TurnEditorScreen
+        from data import queries
+        from ui_elements import Slider, TextField
+        settings = {}
+        screen = TurnEditorScreen(settings=settings, persist=False)
+        screen.select_tab("conversion")
+        self.assertFalse(any(isinstance(el, TextField) for el in screen.elements))
+        sliders = [el for el in screen.elements if isinstance(el, Slider)]
+        self.assertEqual(len(sliders), len(queries.CONVERSION_ACTIONS))
+        for name, slider in zip(screen.tab["names"], sliders):
+            for fraction, expected in ((0, 1), (.3, 2), (.5, 2), (.9, 3), (1, 3)):
+                with self.subTest(name=name, fraction=fraction), \
+                        mock.patch("pygame.mouse.get_pressed", return_value=(True, False, False)), \
+                        mock.patch("pygame.mouse.get_pos", return_value=slider.handle_rect.center):
+                    screen.handle_events([
+                        pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=slider.handle_rect.center),
+                        pygame.event.Event(pygame.MOUSEMOTION,
+                            pos=(slider.rect.left + round(slider.rect.width * fraction), slider.rect.centery)),
+                        pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=slider.handle_rect.center),
+                    ])
+                    self.assertEqual(screen.tab["values"][name], str(expected))
+        self.assertEqual(settings, {})
+        screen.select_tab("unit")
+        screen.select_tab("conversion")
+        self.assertTrue(all(value == "3" for value in screen.tab["values"].values()))
+        with mock.patch.object(queries, "save_scenario_settings") as save, \
+                mock.patch("ui.confirm_dialog.show_success"):
+            screen.save_all()
+        save.assert_not_called()
+        self.assertNotIn("conversion_disabled", settings)
+        for action in queries.CONVERSION_ACTIONS:
+            self.assertEqual(queries.get_conversion_turns(action, settings), 3)
+        self.assertTrue(queries.scenario_has_construction_customizations(settings))
+        reopened = TurnEditorScreen(settings=settings, persist=False)
+        with mock.patch("ui.confirm_dialog.ask_yes_no", side_effect=lambda _title, _text, cb: cb(True)), \
+                mock.patch("ui.confirm_dialog.show_success"):
+            reopened.reset_to_defaults()
+        self.assertEqual(settings["conversion_turn_overrides"], {})
+        self.assertFalse(queries.scenario_has_construction_customizations(settings))
+
+    def test_conversion_editor_repairs_malformed_override_blocks(self):
+        from screens.editor_screens.turn_editor import TurnEditorScreen
+        from data import queries
+        for value in (None, [], "invalid"):
+            with self.subTest(value=value):
+                settings = {"conversion_turn_overrides": value}
+                screen = TurnEditorScreen(settings=settings, persist=False)
+                self.assertEqual(settings["conversion_turn_overrides"], value)
+                self.assertEqual(screen.tabs["conversion"]["overrides"], {})
+                for action, (name, _constant) in queries.CONVERSION_ACTIONS.items():
+                    self.assertEqual(screen.tabs["conversion"]["values"][name],
+                                     str(queries.get_conversion_turns(action)))
 
     def test_administrative_editor_saves_all_tabs_and_cancels_cleanly(self):
         from screens.editor_screens.turn_editor import TurnEditorScreen

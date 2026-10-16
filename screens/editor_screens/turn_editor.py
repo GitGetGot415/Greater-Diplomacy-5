@@ -2,8 +2,8 @@
 
 Every base item type gets a row with its turn count inline, replacing the old
 listbox + "Apply locally" round trip -- everything on screen is editable and
-Save All writes every category at once. A row left at its library default stores no
-override, so defaults keep tracking the unit/building libraries.
+Save All writes every category at once. Default rows store no override.
+Conversions use whole-turn sliders and remain enabled.
 """
 import sys
 import os
@@ -19,8 +19,27 @@ from data import queries
 from ui import confirm_dialog
 from ui.bars import ui_bars
 from ui.modal_screen import ModalScreen
-from ui_elements import Button, TextField, make_back_button
+from ui_elements import Button, Slider, TextField, make_back_button
 from map_logic.rendering.font_manager import fonts
+
+
+class _ConversionTurnSlider(Slider):
+    """Snap the shared slider to whole turns within the conversion limits."""
+
+    def __init__(self, x, y, width, turns, callback):
+        self.on_change = callback
+        span = c.MAX_CONVERSION_TURNS - c.MIN_CONVERSION_TURNS
+        super().__init__(x, y, width, "", turns - c.MIN_CONVERSION_TURNS,
+                         self._set_turns, visual_max=span, allowed_max=span)
+
+    def get_display_string(self):
+        turns = round(self.value) + c.MIN_CONVERSION_TURNS
+        return f"{turns} {'turn' if turns == 1 else 'turns'}"
+
+    def _set_turns(self, value):
+        self.value = round(value)
+        self.handle_rect.centerx = self.rect.x + round(self.rect.width * self.value / self.visual_max)
+        self.on_change(self.value + c.MIN_CONVERSION_TURNS)
 
 
 class TurnEditorScreen(ModalScreen):
@@ -29,6 +48,8 @@ class TurnEditorScreen(ModalScreen):
     PAD = 20
     LIST_TOP_OFF = 120
     CHECK_SIZE = 30
+    CONVERSION_ROW_HEIGHT = 64
+    CONVERSION_SLIDER_WIDTH = 240
 
     def __init__(self, settings=None, persist=True):
         # Standalone editor: there is no host screen to take keybinds from.
@@ -64,6 +85,15 @@ class TurnEditorScreen(ModalScreen):
             self.settings.setdefault("administrative_turn_overrides", {}),
             self.settings.setdefault("administrative_disabled", []),
             "time", "Administrative Action")
+        # Manually edited scenario files can contain a malformed override block.
+        if not isinstance(self.settings.get("conversion_turn_overrides"), dict):
+            self.settings["conversion_turn_overrides"] = {}
+        self.tabs["conversion"] = self._build_tab(
+            queries.get_conversion_library(),
+            self.settings.setdefault("conversion_turn_overrides", {}),
+            [], "time", "Conversion")
+        for action, (name, _constant) in queries.CONVERSION_ACTIONS.items():
+            self.tabs["conversion"]["values"][name] = str(queries.get_conversion_turns(action, self.settings))
         self.active_tab = "unit"
 
         self.list_top = self.panel_rect.y + self.LIST_TOP_OFF
@@ -98,6 +128,10 @@ class TurnEditorScreen(ModalScreen):
     def tab(self):
         return self.tabs[self.active_tab]
 
+    @property
+    def row_height(self):
+        return self.CONVERSION_ROW_HEIGHT if self.active_tab == "conversion" else self.ROW_HEIGHT
+
     def select_tab(self, key):
         self.sync_entries()
         self.active_tab = key
@@ -105,6 +139,8 @@ class TurnEditorScreen(ModalScreen):
         self.refresh_ui()
 
     def toggle_disabled(self, btype):
+        if self.active_tab == "conversion":
+            return
         disabled_set = self.tab["disabled_set"]
         if btype in disabled_set:
             disabled_set.discard(btype)
@@ -114,7 +150,7 @@ class TurnEditorScreen(ModalScreen):
 
     def save_all(self):
         self.sync_entries()
-        for tab in self.tabs.values():
+        for key, tab in self.tabs.items():
             overrides = tab["overrides"]
             overrides.clear()
             for btype in tab["names"]:
@@ -122,13 +158,16 @@ class TurnEditorScreen(ModalScreen):
                     value = max(1, int(tab["values"][btype]))
                 except ValueError:
                     continue
+                if key == "conversion":
+                    value = min(c.MAX_CONVERSION_TURNS, max(c.MIN_CONVERSION_TURNS, value))
                 tab["values"][btype] = str(value)
                 if value != tab["defaults"][btype]:
                     overrides[btype] = value
 
         for key, tab in self.tabs.items():
             self.settings[f"{key}_turn_overrides"] = tab["overrides"]
-            self.settings[f"{key}_disabled"] = sorted(tab["disabled_set"])
+            if key != "conversion":
+                self.settings[f"{key}_disabled"] = sorted(tab["disabled_set"])
         if self.target_settings is not None:
             self.target_settings.update(self.settings)
         if self.persist:
@@ -166,7 +205,7 @@ class TurnEditorScreen(ModalScreen):
 
         tab_w, _tab_h = c.SIZES["browser_tool"]
         for i, (key, label) in enumerate((("unit", "Units"), ("building", "Buildings"),
-                                       ("administrative", "Administrative"))):
+                                       ("administrative", "Administrative"), ("conversion", "Conversions"))):
             btn = Button(p.x + self.PAD + i * (tab_w + 10), p.y + 56, "browser_tool",
                          "green" if key == self.active_tab else "light_blue", label,
                          lambda k=key: self.select_tab(k))
@@ -174,7 +213,8 @@ class TurnEditorScreen(ModalScreen):
             self.elements.append(btn)
 
         names = self.tab["names"]
-        cull_top, cull_bottom = self.list_top - 1, self.list_top + self.list_view_h - self.ROW_HEIGHT + 2
+        row_height = self.row_height
+        cull_top, cull_bottom = self.list_top - 1, self.list_top + self.list_view_h - row_height + 2
         self.scroll_content_rect = pygame.Rect(p.x + self.PAD, self.list_top, p.width - 2 * self.PAD, self.list_view_h)
         # Don't pass view_h explicitly here -- it would let layout_list_rows compute
         # max_scroll against the full (taller) list_view_h while cull_bottom (used
@@ -183,13 +223,23 @@ class TurnEditorScreen(ModalScreen):
         # view. Omitting it makes the function derive view_h from cull_bottom
         # itself, so the scroll limit and the visible boundary agree.
         self._row_layout = list(self.layout_list_rows(
-            len(names), self.ROW_HEIGHT, self.list_top,
+            len(names), row_height, self.list_top,
             cull_top=cull_top, cull_bottom=cull_bottom))
 
         disabled_set = self.tab["disabled_set"]
         check_x = p.right - self.PAD - 34
         for i, y in self._row_layout:
             btype = names[i]
+            if self.active_tab == "conversion":
+                values = self.tab["values"]
+                slider = _ConversionTurnSlider(
+                    p.right - self.PAD - self.CONVERSION_SLIDER_WIDTH - 20, y + 32,
+                    self.CONVERSION_SLIDER_WIDTH, int(values[btype]),
+                    lambda value, name=btype, target=values: target.__setitem__(name, str(value)))
+                slider.is_scrollable = True
+                slider.click_guard = self.scroll_click_guard
+                self.elements.append(slider)
+                continue
             field = TextField(check_x - 10 - 100, y, 100, 28, self.tab["values"][btype], numeric=True)
             field.entry_ref = self.tab["values"]
             field.entry_key = btype
@@ -212,6 +262,8 @@ class TurnEditorScreen(ModalScreen):
                                     "Reset to Defaults", self.reset_to_defaults))
 
     def additional_events(self, event):
+        if any(isinstance(el, Slider) and el.dragging for el in self.elements):
+            return
         self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
 
     def draw_body(self, surface):
@@ -220,10 +272,11 @@ class TurnEditorScreen(ModalScreen):
         small = fonts.get("small")
         surface.blit(small.render(self.tab["label"], True, c.UI_TEXT_DIM), (p.x + self.PAD, self.list_top - 20))
         check_x = p.right - self.PAD - 34
-        turns_hdr = small.render("Turns to Construct", True, c.UI_TEXT_DIM)
+        turns_hdr = small.render("Turns" if self.active_tab == "conversion" else "Turns to Construct", True, c.UI_TEXT_DIM)
         surface.blit(turns_hdr, turns_hdr.get_rect(midright=(check_x - 10, self.list_top - 12)))
-        enabled_hdr = small.render("Enabled", True, c.UI_TEXT_DIM)
-        surface.blit(enabled_hdr, enabled_hdr.get_rect(center=(check_x + self.CHECK_SIZE // 2, self.list_top - 12)))
+        if self.active_tab != "conversion":
+            enabled_hdr = small.render("Enabled", True, c.UI_TEXT_DIM)
+            surface.blit(enabled_hdr, enabled_hdr.get_rect(center=(check_x + self.CHECK_SIZE // 2, self.list_top - 12)))
 
         names = self.tab["names"]
         if not names:
@@ -236,6 +289,7 @@ class TurnEditorScreen(ModalScreen):
         p = self.panel_rect
         font, small = fonts.get("normal"), fonts.get("small")
         names = self.tab["names"]
+        row_height = self.row_height
 
         for el in self.elements:
             if not getattr(el, "is_scrollable", False):
@@ -247,14 +301,16 @@ class TurnEditorScreen(ModalScreen):
                 btype = names[i]
                 if i % 2 == 0:
                     pygame.draw.rect(surface, (44, 44, 56),
-                                     pygame.Rect(p.x + self.PAD, y, p.width - 2 * self.PAD, self.ROW_HEIGHT))
+                                     pygame.Rect(p.x + self.PAD, y, p.width - 2 * self.PAD, row_height))
 
                 label = font.render(btype, True, (225, 225, 225))
-                surface.blit(label, label.get_rect(midleft=(p.x + self.PAD + 8, y + self.ROW_HEIGHT // 2)))
+                surface.blit(label, label.get_rect(midleft=(p.x + self.PAD + 8, y + row_height // 2)))
 
                 default = self.tab["defaults"][btype]
                 hint = small.render(f"default: {default}", True, (150, 150, 165))
-                surface.blit(hint, hint.get_rect(midright=(p.right - self.PAD - 159, y + self.ROW_HEIGHT // 2)))
+                hint_right = (p.right - self.PAD - self.CONVERSION_SLIDER_WIDTH - 50
+                              if self.active_tab == "conversion" else p.right - self.PAD - 159)
+                surface.blit(hint, hint.get_rect(midright=(hint_right, y + row_height // 2)))
 
             for el in self.elements:
                 if getattr(el, "is_scrollable", False):

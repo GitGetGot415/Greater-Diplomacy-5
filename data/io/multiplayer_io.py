@@ -983,6 +983,8 @@ def _validate_move_snapshot(map_ref, country_id, nation_update, provinces, prote
         for unit in units:
             if not isinstance(unit, dict) or unit.get("owner") != country_id:
                 raise ValueError(f"Province {key}: invalid unit or unit owned by another country.")
+            if not isinstance(unit.get("type", ""), str):
+                raise ValueError(f"Province {key}: invalid unit type.")
             uid = unit.get("unit_id")
             if uid is not None:
                 if not isinstance(uid, str) or uid in seen:
@@ -997,6 +999,15 @@ def _validate_move_snapshot(map_ref, country_id, nation_update, provinces, prote
                 queries.validate_air_drop_recovery_draft(original, unit)
             elif isinstance(unit.get("order"), dict) and unit["order"].get("type") == "AIR_DROP_RECOVERY":
                 raise ValueError("Only the host can start air drop recovery.")
+            order = unit.get("order")
+            if isinstance(order, dict) and order.get("type") == "CONVERT":
+                # Legacy snapshots without IDs cannot supply trusted progress.
+                source = original if original is not None else dict(unit, order=None)
+                if (queries.truck_ship_conversion_order(source) is not None
+                        or order.get("to") in ("Truck", "Ship")):
+                    if original is not None and not any(current is original for current in province.get("units", [])):
+                        raise ValueError("A converting unit cannot change province.")
+                    unit["order"] = queries.canonical_unit_order(map_ref, country_id, province, source, order)
             for stat in TOURNAMENT_UNIT_STATS:
                 if stat in unit:
                     value = unit[stat]

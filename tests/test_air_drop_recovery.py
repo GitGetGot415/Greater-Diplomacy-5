@@ -35,10 +35,12 @@ class AirDropRecoveryTests(unittest.TestCase):
         air_processor.process_air_orders(self.game)
         return target
 
-    def test_duration_is_tunable_and_zero_disables_recovery(self):
-        for turns in (0, 1, 3):
-            with self.subTest(turns=turns), patch.object(c, "AIR_DROP_RECOVERY_TURNS", turns):
-                queries.begin_air_drop_recovery(self.cargo)
+    def test_scenario_duration_controls_recovery_countdown(self):
+        name = queries.CONVERSION_ACTIONS["AIR_DROP_RECOVERY"][0]
+        for turns in range(c.MIN_CONVERSION_TURNS, c.MAX_CONVERSION_TURNS + 1):
+            with self.subTest(turns=turns):
+                settings = {"conversion_turn_overrides": {name: turns}}
+                queries.begin_air_drop_recovery(self.cargo, settings)
                 self.assertEqual(queries.air_drop_recovery_turns(self.cargo), turns)
                 for remaining in range(turns - 1, -1, -1):
                     queries.finish_air_drop_recovery_turn([self.cargo])
@@ -217,12 +219,17 @@ class RecoveryRuntimeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory, patch.object(c, "AIR_DROP_RECOVERY_TURNS", 1), \
                 patch.object(c, "RECORD_HISTORY", False):
             game = self.runtime(directory)
+            name = queries.CONVERSION_ACTIONS["AIR_DROP_RECOVERY"][0]
+            game.scenario_settings["conversion_turn_overrides"] = {name: 2}
             base, target = game.id_to_province[1], game.id_to_province[2]
             plane, cargo = wing(base, "Monoplane Transport"), wing(base, "Fixture Cargo")
             defender = wing(target, "Fixture Cargo", "B")
             queries.set_air_cargo(game, "A", plane, base, [cargo["unit_id"]])
             plane["order"] = queries.air_move_order(game, plane, base, target)
             enemy_health = defender["health"]
+            asyncio.run(turn_processor.resolve_turn_logic(game))
+            self.assertEqual(queries.air_drop_recovery_turns(cargo), 2)
+            self.assertEqual(defender["health"], enemy_health)
             asyncio.run(turn_processor.resolve_turn_logic(game))
             self.assertEqual(queries.air_drop_recovery_turns(cargo), 1)
             self.assertEqual(defender["health"], enemy_health)
@@ -237,13 +244,19 @@ class RecoveryRuntimeTests(unittest.TestCase):
         from screens.map_related_screens.orders import Orders_Screen
         with tempfile.TemporaryDirectory() as directory:
             game = self.runtime(directory)
+            for action, (_name, constant) in queries.CONVERSION_ACTIONS.items():
+                self.assertEqual(queries.get_conversion_turns(action, game.scenario_settings), getattr(c, constant))
             base = game.id_to_province[1]
             cargo = wing(base, "Fixture Cargo")
-            with patch.object(c, "AIR_DROP_RECOVERY_TURNS", 3):
-                queries.begin_air_drop_recovery(cargo)
+            name = queries.CONVERSION_ACTIONS["AIR_DROP_RECOVERY"][0]
+            truck_name = queries.CONVERSION_ACTIONS["TRUCK_SHIP"][0]
+            game.scenario_settings["conversion_turn_overrides"] = {name: 3, truck_name: 1}
+            queries.begin_air_drop_recovery(cargo, game.scenario_settings)
             with patch.object(c, "SAVES_DIR", directory):
                 asyncio.run(save_map.save_map_data(game, "recovering"))
             loaded = Map(load_path=os.path.join(directory, "recovering"), skip_initial_income=True)
+            self.assertEqual(queries.get_conversion_turns("AIR_DROP_RECOVERY", loaded.scenario_settings), 3)
+            self.assertEqual(queries.get_conversion_turns("TRUCK_SHIP", loaded.scenario_settings), 1)
             restored = next(unit for unit in loaded.id_to_province[1]["units"] if unit["unit_id"] == cargo["unit_id"])
             self.assertEqual(queries.air_drop_recovery_turns(restored), 3)
             loaded.selection_mode = False

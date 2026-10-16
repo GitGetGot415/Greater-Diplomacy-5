@@ -52,6 +52,23 @@ The final notification gives accepted, rejected, and overridden counts.
 Move files and saved games require no new fields.
 These controls do not change real-time multiplayer or local game modes.
 
+CONSTRUCTION TURN SETTINGS
+==========================
+
+Open the Construction Turns Editor from Scenario Settings.
+The Conversions category has sliders for Truck / Ship Conversion and Air Drop Recovery.
+Each slider accepts 1, 2, or 3 turns. These actions remain enabled.
+The truck and ship directions use the same duration.
+See documentation/air_stuff.txt for recovery timing and restrictions.
+
+Scenario settings store nondefault values in conversion_turn_overrides, keyed by the editor's action names.
+data/queries.py owns the defaults, limits, and conversion-order helpers.
+Older saves without these overrides use the constants in data/constants.py.
+Saved games and multiplayer snapshots retain the scenario settings.
+Only scenario setup changes these settings. Player move files cannot change the host's durations.
+Pending orders retain their remaining turns.
+The map editor's direct unit converter changes starting forms immediately.
+
 REGULAR SAVE HISTORY
 ====================
 

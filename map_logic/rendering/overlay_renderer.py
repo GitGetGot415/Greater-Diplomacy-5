@@ -1225,7 +1225,7 @@ def draw_overlay_content(map_screen, surface, draw_combat=True):
                         if convert_order:
                             base_icon = c.CONVERSION_ICONS.get(convert_order.get("to"))
                             if base_icon in (c.ICON_CONVERTING_TO_TRUCK, c.ICON_CONVERTING_TO_SHIP):
-                                turns_left = max(1, min(c.TRUCK_CONVERT_TURNS, convert_order.get("turns_left", 1)))
+                                turns_left = max(1, min(c.MAX_CONVERSION_TURNS, convert_order.get("turns_left", 1)))
                                 convert_icon = f"{base_icon} {turns_left}"
                             else:
                                 convert_icon = base_icon

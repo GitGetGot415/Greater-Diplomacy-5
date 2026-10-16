@@ -1451,16 +1451,14 @@ class Orders_Screen(GameState):
             elif u_type.startswith("Convoy"):
                 target_type = "Land Unit"
                 turns = 1
-            elif u_type.startswith("Truck"):
-                target_type = "Ship"
-                turns = c.TRUCK_CONVERT_TURNS
-            elif queries.is_naval_unit(u_type):
-                player_research = self.map_screen.nation_data.get(player_country, {}).get("research", {})
-                if player_research.get("trucks", 0) < 1:
-                    self.map_screen.show_feedback("Requires Trucks research!")
+            elif (conversion := queries.truck_ship_conversion_order(unit, self.map_screen.scenario_settings)):
+                try:
+                    conversion = queries.canonical_unit_order(
+                        self.map_screen, unit["owner"], province, unit, conversion)
+                except ValueError as exc:
+                    self.map_screen.show_feedback(str(exc))
                     return
-                target_type = "Truck"
-                turns = c.TRUCK_CONVERT_TURNS
+                target_type, turns = conversion["to"], conversion["turns_left"]
             else:
                 target_type = "Convoy"
                 turns = 1

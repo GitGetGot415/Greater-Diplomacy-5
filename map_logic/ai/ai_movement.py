@@ -314,7 +314,7 @@ def _assign_air_transport(map_screen, country, plane, base, repositions, enemies
     loaded = dict(plane, air_cargo=selected)
     dropped = [dict(unit) for unit in selected]
     for unit in dropped:
-        queries.begin_air_drop_recovery(unit)
+        queries.begin_air_drop_recovery(unit, map_screen.scenario_settings)
     drops = []
     for target in enemies:
         if (not queries.air_drop_target_is_legal(loaded, target, map_screen.nation_data)

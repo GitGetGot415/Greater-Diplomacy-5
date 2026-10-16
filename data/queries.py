@@ -459,13 +459,13 @@ def get_days_per_turn(scenario_settings):
 
 def scenario_has_construction_customizations(settings):
     """True if the Construction Turns Editor has anything set away from its
-    defaults (a turn override or a disabled unit, building, or administrative
-    action), for the badge on its entry-point button in Scenario Settings."""
+    defaults, for the badge on its entry-point button in Scenario Settings."""
     if not settings:
         return False
     return bool(settings.get("unit_turn_overrides") or settings.get("building_turn_overrides")
                 or settings.get("unit_disabled") or settings.get("building_disabled")
-                or settings.get("administrative_turn_overrides") or settings.get("administrative_disabled"))
+                or settings.get("administrative_turn_overrides") or settings.get("administrative_disabled")
+                or settings.get("conversion_turn_overrides"))
 
 def save_scenario_settings(data):
     cache_obj = _JSON_CACHE["scenario_settings"]
@@ -2052,6 +2052,42 @@ def get_administrative_turns(order_type, scenario_settings=None):
         return default
 
 
+CONVERSION_ACTIONS = {
+    "TRUCK_SHIP": ("Truck / Ship Conversion", "TRUCK_CONVERT_TURNS"),
+    "AIR_DROP_RECOVERY": ("Air Drop Recovery", "AIR_DROP_RECOVERY_TURNS"),
+}
+
+
+def get_conversion_turns(action, scenario_settings=None):
+    """Read a scenario timer within the editor's limits. Older saves use defaults."""
+    name, constant = CONVERSION_ACTIONS[action]
+    overrides = (scenario_settings or {}).get("conversion_turn_overrides", {})
+    raw = overrides.get(name) if isinstance(overrides, dict) else None
+    # Settings can come from older saves or manually edited scenario files.
+    if type(raw) is not int:
+        raw = getattr(c, constant)
+    return max(c.MIN_CONVERSION_TURNS, min(c.MAX_CONVERSION_TURNS, raw))
+
+
+def get_conversion_library():
+    """Supply editor rows from the shared timing defaults."""
+    return {name: {"time": get_conversion_turns(action)}
+            for action, (name, _constant) in CONVERSION_ACTIONS.items()}
+
+
+def truck_ship_conversion_order(unit, scenario_settings=None):
+    """Use one timer for both directions. Aircraft and Convoys have separate rules."""
+    source = unit.get("type", "")
+    if source.startswith("Truck"):
+        target = "Ship"
+    elif not source.startswith("Convoy") and is_naval_unit(source):
+        target = "Truck"
+    else:
+        return None
+    return {"type": "CONVERT", "to": target,
+            "turns_left": get_conversion_turns("TRUCK_SHIP", scenario_settings)}
+
+
 def is_administrative_action_enabled(order_type, scenario_settings=None):
     """Disabling an action leaves existing cores and their penalties intact."""
     settings = scenario_settings or {}
@@ -2908,11 +2944,10 @@ def unit_is_air_drop_recovering(unit):
     return air_drop_recovery_turns(unit) > 0
 
 
-def begin_air_drop_recovery(unit):
+def begin_air_drop_recovery(unit, scenario_settings=None):
     """Start an uninterruptible recovery order after deployment."""
-    turns = max(0, c.AIR_DROP_RECOVERY_TURNS)
-    unit["order"] = ({"type": "AIR_DROP_RECOVERY", "turns_left": turns} if turns
-                     else {"type": "MOVE", "path": []})
+    turns = get_conversion_turns("AIR_DROP_RECOVERY", scenario_settings)
+    unit["order"] = {"type": "AIR_DROP_RECOVERY", "turns_left": turns}
 
 
 def finish_air_drop_recovery_turn(units):
@@ -6472,15 +6507,21 @@ def canonical_unit_order(map_screen, country_id, province, unit, order):
             expected, turns = air_conversion["to"], air_conversion["turns_left"]
         elif source.startswith("Convoy"):
             expected, turns = "Land Unit", 1
-        elif source.startswith("Truck"):
-            expected, turns = "Ship", c.TRUCK_CONVERT_TURNS
-        elif is_naval_unit(source):
-            if map_screen.nation_data[country_id].get("research", {}).get("trucks", 0) < 1:
+        elif source.startswith("Truck") or is_naval_unit(source):
+            conversion = truck_ship_conversion_order(unit, map_screen.scenario_settings)
+            if (conversion["to"] == "Truck"
+                    and map_screen.nation_data[country_id].get("research", {}).get("trucks", 0) < 1):
                 raise ValueError("Trucks research is required for this conversion.")
-            expected, turns = "Truck", c.TRUCK_CONVERT_TURNS
+            expected, turns = conversion["to"], conversion["turns_left"]
         else:
             expected, turns = "Convoy", 1
         if order.get("to") != expected:
             raise ValueError("Invalid unit conversion.")
+        existing = unit.get("order")
+        if (expected in ("Truck", "Ship") and isinstance(existing, dict)
+                and existing.get("type") == "CONVERT" and existing.get("to") == expected
+                and type(existing.get("turns_left")) is int and existing["turns_left"] > 0):
+            # A new draft cannot shorten or restart host-owned progress.
+            return copy.deepcopy(existing)
         return {"type": "CONVERT", "turns_left": turns, "to": expected}
     raise ValueError("Unknown unit order.")

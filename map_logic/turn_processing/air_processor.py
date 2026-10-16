@@ -111,7 +111,7 @@ def process_air_orders(map_screen):
             if unit["order"]["type"] == "AIR_DROP":
                 cargo_units = unit.pop("air_cargo")
                 for cargo in cargo_units:
-                    queries.begin_air_drop_recovery(cargo)
+                    queries.begin_air_drop_recovery(cargo, map_screen.scenario_settings)
                     cargo.pop("_combat_locked", None)
                     cargo["_previous_province_id"] = unit["order"]["base_id"]
                     cargo["_current_province_id"] = target["id"]

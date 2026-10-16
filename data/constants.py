@@ -1303,7 +1303,11 @@ CONVOY_DEF = 0
 TRUCK_DEF = 0
 TRUCK_CONVERT_TURNS = 3
 
-# Recovery includes landing and this many subsequent complete turns. Zero disables it.
+# The editor and shared rules use the same inclusive timing limits.
+MIN_CONVERSION_TURNS = 1
+MAX_CONVERSION_TURNS = 3
+
+# Recovery includes landing and this many subsequent complete turns.
 AIR_DROP_RECOVERY_TURNS = 1
 
 # Orders that span more than one turn and are therefore a standing commitment,
