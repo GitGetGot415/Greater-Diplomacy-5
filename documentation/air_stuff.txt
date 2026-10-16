@@ -326,7 +326,8 @@ Defenders return fire even if that exchange destroys them.
 Aircraft keep flight stats.
 queries.unit_target_damage_multiplier supplies shared target immunity and damage modifiers.
 The aircraft air-to-air bonus applies only during interception.
-Health and political damage modifiers apply to both sides.
+Health, political, and conscription damage modifiers apply to both sides.
+See documentation/non_llm_ai.txt for the conscription rule.
 Fort defense protects only the garrison.
 Flight never occupies or captures the target.
 

@@ -745,6 +745,39 @@ class RealtimeSessionTests(unittest.TestCase):
         self.assertEqual((preferences["conscription_slider"], preferences["mat_to_fuel_slider"]), (.6, .2))
         self.assertEqual(claim_draft["province_ids"], [4])
 
+    def test_conscription_damage_uses_server_applied_preferences_before_combat(self):
+        from data import queries
+
+        map_ref = SimpleNamespace(
+            map_data={}, id_to_province={}, player_country="None",
+            nation_data={"A": {"conscription_slider": 0.25, "research": {}},
+                         "B": {"conscription_slider": 1.0}})
+        preferences = next(command for command in collect_map_commands(map_ref, "A")
+                           if command["type"] == "country_preferences")
+        map_ref.nation_data["A"]["conscription_slider"] = 1.0
+        driver = MapRealtimeDriver(map_ref)
+        canonical = driver.validate_draft("A", [preferences])
+        self.assertEqual(queries.get_conscription_damage_bonus(map_ref.nation_data["A"]), 0.0)
+        for invalid in (-0.1, 1.1, True, "0.25", None, float("nan"), float("inf")):
+            with self.subTest(invalid=invalid), self.assertRaises(RealtimeError):
+                driver.validate_draft("A", [{**preferences, "conscription_slider": invalid}])
+
+        resolved_bonuses = {}
+
+        async def prepare(_map_ref):
+            pass
+
+        async def resolve(server_map):
+            resolved_bonuses.update({country: queries.get_conscription_damage_bonus(data)
+                                     for country, data in server_map.nation_data.items()})
+
+        with mock.patch("map_logic.turn_processing.turn_processor.prepare_turn", new=prepare), \
+                mock.patch("map_logic.turn_processing.turn_processor.resolve_turn_logic", new=resolve):
+            driver.process_turn({"A": canonical})
+        self.assertEqual(resolved_bonuses["A"], queries.get_conscription_damage_bonus(
+            {"conscription_slider": 0.25}))
+        self.assertEqual(resolved_bonuses["B"], 0.0)
+
     def test_diplomacy_draft_is_collected_and_cannot_replace_inflight_offer(self):
         map_ref = SimpleNamespace(
             map_data={}, id_to_province={}, nation_colors={},

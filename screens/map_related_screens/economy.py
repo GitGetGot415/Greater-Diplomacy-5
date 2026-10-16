@@ -4,7 +4,6 @@ import data.constants as c
 from ui.bars import ui_bars
 from ui_elements import Button, Slider, make_back_button
 from map_logic.rendering.font_manager import fonts
-from map_logic import politics
 from data import queries
 from ui.table_screen import TableScreen, TableColumn
 
@@ -24,8 +23,16 @@ ROW_HEIGHT = 100
 # Sliders below the rows
 SLIDER_WIDTH = 400
 CONSCRIPTION_SLIDER_Y = 530
-CONVERSION_SLIDER_Y = 600
+CONVERSION_SLIDER_Y = CONSCRIPTION_SLIDER_Y + 70
 SLIDER_CAPTION_OFFSET_Y = 25
+SLIDER_SIDE_CAPTION_GAP = 20
+
+CONSCRIPTION_DAMAGE_COLOR_STOPS = (
+    (0.0, c.UI_ACCENT_BLUE),
+    (0.05, c.COLOR_SUCCESS_GREEN),
+    (0.10, c.COLOR_GOLD_HIGHLIGHT),
+    (0.20, (255, 80, 80)),
+)
 
 # Zeroed income breakdown, used when there is nothing real to show yet.
 EMPTY_BREAKDOWN = {"core": 0, "non_core": 0, "buildings": 0, "resources": 0, "conversion": 0}
@@ -38,6 +45,20 @@ EXPENSES_TOGGLE_GAP = 10
 EXPENSES_UNIT_WIDTH = 220
 EXPENSES_DETAIL_WIDTH = 180
 EXPENSES_RESOURCE_WIDTH = 120
+
+
+def conscription_damage_color(bonus):
+    """Interpolate exponentially between the damage bonus color stops."""
+    if bonus <= CONSCRIPTION_DAMAGE_COLOR_STOPS[0][0]:
+        return CONSCRIPTION_DAMAGE_COLOR_STOPS[0][1]
+    for (low, low_color), (high, high_color) in zip(
+            CONSCRIPTION_DAMAGE_COLOR_STOPS, CONSCRIPTION_DAMAGE_COLOR_STOPS[1:]):
+        if bonus <= high:
+            fraction = (bonus - low) / (high - low)
+            blend = 2.0 ** fraction - 1.0
+            return tuple(round(start + (end - start) * blend)
+                         for start, end in zip(low_color, high_color))
+    return CONSCRIPTION_DAMAGE_COLOR_STOPS[-1][1]
 
 
 def expense_table_columns(grouped):
@@ -117,9 +138,6 @@ class Economy_Screen(GameState):
 
     def start_economy(self, map_ref):
         self.map_screen = map_ref
-        # Clear economy cache to prevent old data from persisting
-        self.last_econ_state = None
-        self.last_econ_turn = -1
         self.refresh_ui()
 
     def refresh_ui(self):
@@ -145,20 +163,37 @@ class Economy_Screen(GameState):
         p_data["conscription_slider"] = conscript_val
         
         if not self.map_screen.tactical_mode:
-            self.elements.append(Slider(c.SCREEN_WIDTH // 2 - SLIDER_WIDTH // 2, CONSCRIPTION_SLIDER_Y, SLIDER_WIDTH, "Conscription (Keep Manpower %)", conscript_val, self.set_conscription, visual_max=1.0, allowed_max=1.0))
-            self.elements.append(Slider(c.SCREEN_WIDTH // 2 - SLIDER_WIDTH // 2, CONVERSION_SLIDER_Y, SLIDER_WIDTH, "Convert % Mats to Fuel", slider_val, self.set_conversion, visual_max=c.MAX_CONVERSION_SLIDER_VAL, allowed_max=max_allowed))
+            conscription = Slider(c.SCREEN_WIDTH // 2 - SLIDER_WIDTH // 2, CONSCRIPTION_SLIDER_Y, SLIDER_WIDTH, "Conscription (Keep Manpower %)", conscript_val, self.set_conscription, visual_max=1.0, allowed_max=1.0)
+            self.conscription_slider = conscription
+            conversion = Slider(c.SCREEN_WIDTH // 2 - SLIDER_WIDTH // 2, CONVERSION_SLIDER_Y, SLIDER_WIDTH, "Convert % Mats to Fuel", slider_val, self.set_conversion, visual_max=c.MAX_CONVERSION_SLIDER_VAL, allowed_max=max_allowed)
+            for slider in (conscription, conversion):
+                slider.click_guard = self.can_edit_realtime
+                self.elements.append(slider)
+            self.refresh_economy_preview()
+
+    def refresh_economy_preview(self):
+        """Cache income and the damage caption when economy inputs change."""
+        country = self.map_screen.nation_data[self.map_screen.player_country]
+        self.econ_cache = queries.get_economy_projections(
+            self.map_screen.player_country, self.map_screen.map_data, self.map_screen.nation_data)
+        bonus = queries.get_conscription_damage_bonus(country)
+        self.conscription_damage_caption = f"dmg modifier: +{bonus:.2%}"
+        self.conscription_damage_color = conscription_damage_color(bonus)
 
     def set_conscription(self, val):
         if not self.map_screen or self.map_screen.tactical_mode: return
         if not self.can_edit_realtime(): return
         p_data = self.map_screen.nation_data[self.map_screen.player_country]
         p_data["conscription_slider"] = val
+        self.refresh_economy_preview()
+        self.map_screen.invalidate_map_presentation_cache()
 
     def set_conversion(self, val):
         if not self.map_screen or self.map_screen.tactical_mode: return
         if not self.can_edit_realtime(): return
         p_data = self.map_screen.nation_data[self.map_screen.player_country]
         p_data["mat_to_fuel_slider"] = val
+        self.refresh_economy_preview()
 
     def can_edit_realtime(self):
         if not getattr(self.map_screen, "realtime_multiplayer", False):
@@ -177,8 +212,6 @@ class Economy_Screen(GameState):
         title_text = "Tactical Unit Economy" if is_tactical else "National Economy"
         ui_bars.draw_centered_title(surface, title_text, TITLE_Y)
         
-        p_data = self.map_screen.nation_data[self.map_screen.player_country]
-
         if is_tactical and self.map_screen.player_unit:
             u_type = self.map_screen.player_unit.get("original_type", self.map_screen.player_unit.get("type"))
             stats = queries.get_unit_library().get(u_type, {})
@@ -200,15 +233,6 @@ class Economy_Screen(GameState):
                 "fuel": c.TACTICAL_MAX_FUEL
             }
         else:
-            # Cache the economy to prevent 60 FPS global recalculations
-            current_sliders = (p_data.get("conscription_slider", 1.0),
-                               p_data.get("mat_to_fuel_slider", 0.0),
-                               repr(p_data.get(politics.POLICY_KEY, {})))
-            if not hasattr(self, 'last_econ_state') or self.last_econ_state != current_sliders or self.map_screen.time_manager.total_turns != getattr(self, 'last_econ_turn', -1):
-                self.econ_cache = queries.get_economy_projections(self.map_screen.player_country, self.map_screen.map_data, self.map_screen.nation_data)
-                self.last_econ_state = current_sliders
-                self.last_econ_turn = self.map_screen.time_manager.total_turns
-            
             econ_tuple = self.econ_cache
             if len(econ_tuple) == 3:
                 total_inc, upkeep, breakdown = econ_tuple
@@ -286,12 +310,18 @@ class Economy_Screen(GameState):
             y_offset += ROW_STEP_Y
 
         if not is_tactical:
-            # Draw dynamic conversion info below sliders
+            damage_txt = font_small.render(self.conscription_damage_caption, True, self.conscription_damage_color)
+            surface.blit(damage_txt, damage_txt.get_rect(midleft=(
+                self.conscription_slider.rect.right + SLIDER_SIDE_CAPTION_GAP,
+                self.conscription_slider.rect.centery)))
+
+            # Draw dynamic conversion info below sliders.
             man_lost = -breakdown.get("manpower", {}).get("conscription", 0)
             mat_gained = breakdown.get("materials", {}).get("conscription", 0)
             if man_lost > 0:
                 cons_txt = font_small.render(f"Converting {int(man_lost)} Manpower -> {int(mat_gained)} Materials", True, c.COLOR_GOLD_HIGHLIGHT)
-                surface.blit(cons_txt, (c.SCREEN_WIDTH // 2 - cons_txt.get_width() // 2, CONSCRIPTION_SLIDER_Y + SLIDER_CAPTION_OFFSET_Y))
+                surface.blit(cons_txt, (c.SCREEN_WIDTH // 2 - cons_txt.get_width() // 2,
+                                       CONSCRIPTION_SLIDER_Y + SLIDER_CAPTION_OFFSET_Y))
 
             mat_lost = -breakdown.get("materials", {}).get("conversion", 0)
             fuel_gained = breakdown.get("fuel", {}).get("conversion", 0)

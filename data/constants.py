@@ -535,6 +535,7 @@ FUEL_REFINING_CONVERSION_PER_LVL = 0.01
 
 MAX_CONVERSION_SLIDER_VAL = 0.50
 CONSCRIPTION_RATIO = 0.2 # 5 manpower -> 1 material
+CONSCRIPTION_MAX_DAMAGE_BONUS = 0.20
 FUEL_CONVERSION_RATIO = 0.1 # 10 materials -> 1 fuel
 
 # ==========================================

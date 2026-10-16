@@ -2250,6 +2250,20 @@ def cancel_trade_escrow(proposer_data, params):
     for res in c.TRADE_RESOURCE_KEYS:
         proposer_data[res] = proposer_data.get(res, 0) + params.get(f"give_{res}", 0)
 
+def get_conscription_damage_bonus(country_data):
+    """Return the extra damage fraction from reduced conscription.
+
+    Two exponential segments meet smoothly at half conscription.
+    Full, half, quarter, and zero conscription give zero, quarter, half, and full bonus.
+    Missing slider values use full conscription for older saves.
+    """
+    conscription = max(0.0, min(1.0, country_data.get("conscription_slider", 1.0)))
+    bonus_at_half = c.CONSCRIPTION_MAX_DAMAGE_BONUS / 4.0
+    if conscription <= 0.5:
+        return c.CONSCRIPTION_MAX_DAMAGE_BONUS * 2.0 ** (-4.0 * conscription)
+    return bonus_at_half * (2.0 ** (2.0 * (1.0 - conscription)) - 1.0)
+
+
 def get_siphon_rates(nation_data_block):
     """Returns a puppet's per-resource siphon rates, creating the block if missing."""
     return nation_data_block.setdefault("siphon_rates", {res: 0.0 for res in c.ECON_RESOURCE_KEYS})

@@ -744,22 +744,21 @@ def health_defense_multiplier(unit):
 
 
 def effective_damage_multiplier(unit, nation_data=None):
-    """Everything that scales one unit's damage: its wounds, then its politics.
+    """Scale damage by health, politics, and conscription.
 
-    The one figure a screen must print its attack through. Both callers below
-    -- the volley and the bombardment pass -- apply exactly this product, so a
-    unit panel scaling by health_damage_multiplier alone advertises a number
-    the fight will not produce. That drift is the whole reason this exists
-    rather than the two multipliers being multiplied at each of the five sites
-    that need them.
-
-    `nation_data` is optional because the callers that compare raw unit stats
-    -- what a factory would build, what a tech unlocks -- want the stat, not
-    this particular country's version of it. Omitting it reads as centrist.
+    Combat resolution and unit panels must use the same product.
+    Health scaling alone would make displayed attack disagree with combat.
+    Pass `nation_data` to apply each unit owner's politics and conscription.
+    Omit it when comparing raw unit types for production or research.
+    Health scaling still applies without country data.
     """
+    from data import queries
+
     political = (politics.damage_multiplier(nation_data, unit.get("owner"))
                  if nation_data else 1.0)
-    return health_damage_multiplier(unit) * political
+    country = nation_data.get(unit.get("owner"), {}) if nation_data else {}
+    conscription = 1.0 + queries.get_conscription_damage_bonus(country)
+    return health_damage_multiplier(unit) * political * conscription
 
 
 def volley(units, shares=None, nation_data=None, profiles=None):
@@ -768,7 +767,7 @@ def volley(units, shares=None, nation_data=None, profiles=None):
     `shares` is Battle.shares. Omitting it reads every unit as holding this
     front alone, which is what a caller measuring a hypothetical rank wants.
 
-    `nation_data` turns on the political damage multiplier, which is applied per
+    `nation_data` turns on country damage modifiers, which are applied per
     unit rather than to the total: a LaneMember's front is one nation's, but a
     LaneSide's front is a whole coalition's, and the map's prediction bubbles
     read the latter.
@@ -836,7 +835,7 @@ def projected_incoming_damage(battle, nation_data=None, defense_bonus_fn=None):
     This is the non-mutating counterpart to the damage arithmetic in
     ``combat_processor.apply_group_damage``. AI planning needs to ask whether
     a hypothetical charge leaves anyone alive, and using the same lane volley,
-    health-scaled defense, and political damage rules keeps that prediction in
+    health-scaled defense, and country damage rules keeps that prediction in
     step with the resolver.
 
     ``defense_bonus_fn`` is optional so callers that model a fortified tile can

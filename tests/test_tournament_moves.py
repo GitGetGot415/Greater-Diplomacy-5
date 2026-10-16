@@ -131,6 +131,21 @@ class TournamentMoveTests(unittest.TestCase):
         move["provinces"]["P1"]["units"][0]["attack"] += 1
         return move
 
+    def test_imported_conscription_changes_only_the_submitting_countrys_damage_bonus(self):
+        host = Host()
+        host.nation_data["Member"]["conscription_slider"] = 0.5
+        move = self.player_data("Leader", host)
+        move["nation_data"]["conscription_slider"] = 0.25
+        before_member = copy.deepcopy(host.nation_data["Member"])
+        expected = queries.get_conscription_damage_bonus(move["nation_data"])
+        with tempfile.TemporaryDirectory() as directory:
+            path = self.write_move(directory, "conscription.gd5move", "Leader", move)
+            result = self.import_moves(host, [path])
+        self.assertEqual(result["loaded"], 1)
+        self.assertEqual(host.nation_data["Leader"]["conscription_slider"], 0.25)
+        self.assertEqual(queries.get_conscription_damage_bonus(host.nation_data["Leader"]), expected)
+        self.assertEqual(host.nation_data["Member"], before_member)
+
     def test_each_unreadable_or_unauthenticated_file_has_a_rejection_reason(self):
         host = Host()
         with tempfile.TemporaryDirectory() as directory:

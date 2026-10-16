@@ -178,6 +178,36 @@ Without an override, the scenario seed generates reproducible traits.
 Generated traits need not match historical behavior.
 tests/test_editor_menu_layout.py checks that editor controls do not overlap.
 
+CONSCRIPTION AND DAMAGE
+----------------------
+
+The National Economy conscription slider sets the share of manpower income kept as manpower.
+The remaining share becomes materials through the existing conversion rule.
+Reducing conscription also increases damage dealt by that country's units.
+The bonus applies immediately to attacks, return fire, bombardment, and aircraft combat.
+It multiplies the existing health and political damage modifiers.
+Each unit uses its owner's conscription setting. Allies keep their own modifiers.
+
+queries.get_conscription_damage_bonus owns the bonus calculation.
+Two exponential segments meet smoothly at half conscription.
+Full conscription gives no bonus. Half conscription gives one quarter of the maximum bonus.
+Quarter conscription gives half the maximum bonus. Zero conscription gives the maximum bonus.
+Read CONSCRIPTION_MAX_DAMAGE_BONUS in data/constants.py for the current maximum.
+
+The dmg modifier: label shows the current bonus to the right of the conscription slider.
+It includes fractional percentages and updates while you drag the slider.
+Its color changes exponentially between blue, green, yellow, and red as the bonus increases.
+Combat, unit panels, map forecasts, and AI battle estimates use combat_rules.effective_damage_multiplier.
+Economy previews refresh when the screen opens or either slider changes.
+Frame drawing reads the cached preview and damage caption.
+Changing conscription also invalidates cached map forecasts and unit stats.
+
+The existing conscription_slider field remains the only saved conscription setting.
+Older saves without this field use full conscription and receive no bonus.
+Tournament moves retain this setting in the player's country record.
+Real-time commands validate this setting on the server before turn processing.
+Tactical players cannot change national conscription. Their host country's setting still applies to their division.
+
 LANE COMBAT
 -----------
 
