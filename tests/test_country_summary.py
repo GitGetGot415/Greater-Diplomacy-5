@@ -117,7 +117,8 @@ class CountrySummaryTests(unittest.TestCase):
         self.assertEqual(summary["diplomacy"]["faction_leader"], "A")
         self.assertEqual(summary["diplomacy"]["puppets"], ["C"])
         screen = CountrySummaryScreen(game, "A")
-        self.assertEqual(screen._names(["A", "B"]), "Display A, Display B")
+        self.assertEqual("".join(text for text, _flag in screen._country_parts(["A", "B"])),
+                         "Display A, Display B")
         self.assertEqual(queries.get_country_summary(game, "C")["diplomacy"]["master"], "A")
 
     def test_local_inspection_does_not_initialize_subject_economy_or_change_state(self):
@@ -223,6 +224,9 @@ class CountrySummaryTests(unittest.TestCase):
         surface = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
         with patch.object(queries, "get_country_summary", side_effect=AssertionError("Frame summary")), \
                 patch.object(queries, "get_economy_projections", side_effect=AssertionError("Frame economy")), \
+                patch("ui.flag_icons.flag_surface", side_effect=AssertionError("Frame flags")), \
+                patch("screens.map_related_screens.country_summary.render_inline_text",
+                      side_effect=AssertionError("Frame text layout")), \
                 patch.object(combat_rules, "volley", side_effect=AssertionError("Frame damage")):
             screen.draw(surface)
             screen.additional_events(pygame.event.Event(pygame.MOUSEWHEEL, y=-1))

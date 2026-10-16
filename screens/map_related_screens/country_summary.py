@@ -8,7 +8,7 @@ from gameState import GameState
 from map_logic.rendering.font_manager import fonts
 from ui import flag_icons
 from ui.bars import ui_bars
-from ui.text_utils import fit_text, wrap_text
+from ui.text_utils import fit_text, render_inline_text, wrap_text
 from ui_elements import Slider, make_back_button
 
 PAGE_MARGIN = 40
@@ -39,9 +39,14 @@ class CountrySummaryScreen(GameState):
         self._layout_width = None
         self.refresh_ui()
 
-    def _names(self, country_ids):
-        return ", ".join(queries.get_country_display_name(country, self.map_screen.nation_data)
-                         for country in country_ids) or "None"
+    def _country_parts(self, country_ids):
+        parts = []
+        for country in country_ids:
+            if parts:
+                parts.append((", ", None))
+            parts.append((queries.get_country_display_name(country, self.map_screen.nation_data),
+                          flag_icons.flag_surface(country, self.map_screen.nation_data)))
+        return parts or [("None", None)]
 
     def _military_lines(self):
         military = self.summary["military"]
@@ -74,19 +79,25 @@ class CountrySummaryScreen(GameState):
     def _diplomacy_lines(self):
         diplomacy = self.summary["diplomacy"]
         return [
-            f"Faction: {diplomacy['faction'] or 'None'}",
-            f"Faction leader: {self._names([diplomacy['faction_leader']]) if diplomacy['faction_leader'] else 'None'}",
-            f"Faction members: {self._names(diplomacy['faction_members'])}",
-            f"Overlord: {self._names([diplomacy['master']]) if diplomacy['master'] else 'None'}",
-            f"Puppets ({len(diplomacy['puppets'])}): {self._names(diplomacy['puppets'])}",
-            f"At war with: {self._names(diplomacy['enemies'])}",
+            [(f"Faction: {diplomacy['faction'] or 'None'}", None)],
+            [("Faction leader: ", None)] + self._country_parts(
+                [diplomacy['faction_leader']] if diplomacy['faction_leader'] else []),
+            [("Faction members: ", None)] + self._country_parts(diplomacy['faction_members']),
+            [("Overlord: ", None)] + self._country_parts([diplomacy['master']] if diplomacy['master'] else []),
+            [(f"Puppets ({len(diplomacy['puppets'])}): ", None)] + self._country_parts(diplomacy['puppets']),
+            [("At war with: ", None)] + self._country_parts(diplomacy['enemies']),
         ]
 
-    def _card(self, title, lines, economy=False):
+    def _card(self, title, lines, economy=False, inline=False):
         font = fonts.get("normal")
-        wrapped = [line for text in lines
-                   for line in wrap_text(text, font, self.card_width - 2 * CARD_PADDING)]
-        height = CARD_TITLE_HEIGHT + len(wrapped) * (font.get_height() + LINE_GAP) + CARD_PADDING
+        width = self.card_width - 2 * CARD_PADDING
+        if inline:
+            rendered_lines = [line for parts in lines for line in render_inline_text(
+                parts, font, width, c.UI_TEXT_BRIGHT, wrap=True)]
+        else:
+            rendered_lines = [font.render(line, True, c.UI_TEXT_BRIGHT) for text in lines
+                              for line in wrap_text(text, font, width)]
+        height = CARD_TITLE_HEIGHT + sum(line.get_height() + LINE_GAP for line in rendered_lines) + CARD_PADDING
         table_y = height
         if economy:
             if self.summary["economy"]["available"]:
@@ -99,9 +110,9 @@ class CountrySummaryScreen(GameState):
         card.blit(fonts.get("heading2").render(title, True, c.UI_ACCENT_BLUE),
                   (CARD_PADDING, CARD_PADDING // 2))
         y = CARD_TITLE_HEIGHT
-        for line in wrapped:
-            card.blit(font.render(line, True, c.UI_TEXT_BRIGHT), (CARD_PADDING, y))
-            y += font.get_height() + LINE_GAP
+        for line in rendered_lines:
+            card.blit(line, (CARD_PADDING, y))
+            y += line.get_height() + LINE_GAP
         if economy:
             self._draw_economy_table(card, table_y)
             # These sliders are rendered into a cached card. They receive no
@@ -145,7 +156,7 @@ class CountrySummaryScreen(GameState):
                              if self.summary["economy"]["available"] else
                              ["Income, expenses, and stockpiles are private."])
             economy = self._card("Economy", economy_lines, economy=True)
-            diplomacy = self._card("Diplomacy", self._diplomacy_lines())
+            diplomacy = self._card("Diplomacy", self._diplomacy_lines(), inline=True)
             self.cards = [(military, 0, 0), (politics, self.card_width + COLUMN_GAP, 0),
                           (economy, 0, military.get_height() + CARD_GAP),
                           (diplomacy, self.card_width + COLUMN_GAP, politics.get_height() + CARD_GAP)]
