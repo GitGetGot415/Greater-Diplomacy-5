@@ -2264,6 +2264,13 @@ def get_conscription_damage_bonus(country_data):
     return bonus_at_half * (2.0 ** (2.0 * (1.0 - conscription)) - 1.0)
 
 
+def get_country_damage_multiplier(country_id, nation_data):
+    """Return national damage modifiers without any unit health penalty."""
+    country = nation_data.get(country_id, {})
+    return (politics.damage_multiplier(nation_data, country_id)
+            * (1.0 + get_conscription_damage_bonus(country)))
+
+
 def get_siphon_rates(nation_data_block):
     """Returns a puppet's per-resource siphon rates, creating the block if missing."""
     return nation_data_block.setdefault("siphon_rates", {res: 0.0 for res in c.ECON_RESOURCE_KEYS})
@@ -3451,6 +3458,97 @@ def get_nation_provinces_and_units(nation, map_data):
             if unit.get("owner") == nation:
                 owned_units.append((unit, prov))
     return owned_provs, owned_units
+
+
+def can_view_country_economy(map_screen, country_id):
+    """Keep foreign private economics out of fogged and multiplayer summaries."""
+    viewer = map_screen.player_country
+    if viewer == c.TOURNAMENT_SPECTATOR:
+        return False
+    if country_id == viewer:
+        return True
+    if (getattr(map_screen, "realtime_multiplayer", False)
+            or getattr(map_screen, "multiplayer_mode", False)):
+        return False
+    if map_screen.is_editor or viewer in ("Spectator", "Editor"):
+        return True
+    return not get_scenario_flag(
+        "fog_of_war", c.DEFAULT_FOG_OF_WAR, map_screen.scenario_settings)
+
+
+def get_country_summary(map_screen, country_id):
+    """Build a read-only country summary from information available to its viewer.
+
+    Foreign military totals count visible units, without revealing transported cargo.
+    Economy figures use the existing projections only when private information is available.
+    Call this when opening the summary, never during frame rendering.
+    """
+    from map_logic.turn_processing import combat_rules
+
+    nation_data = map_screen.nation_data
+    if country_id not in nation_data or country_id in c.UNPLAYABLE_NATIONS:
+        raise ValueError("Choose a country to view its summary.")
+    country = nation_data[country_id]
+    viewer = map_screen.player_country
+    networked = (getattr(map_screen, "realtime_multiplayer", False)
+                 or getattr(map_screen, "multiplayer_mode", False))
+    unrestricted = (not networked and viewer != c.TOURNAMENT_SPECTATOR
+                    and (map_screen.is_editor or viewer in ("Spectator", "Editor")))
+    complete_army = unrestricted or (country_id == viewer and not map_screen.tactical_mode)
+    fog = get_scenario_flag("fog_of_war", c.DEFAULT_FOG_OF_WAR, map_screen.scenario_settings)
+    units = []
+    for province in map_screen.map_data.values():
+        if (not complete_army and fog
+                and not is_province_visible(map_screen, province["id"])):
+            continue
+        visible_units = province.get("units", [])
+        if not complete_army:
+            visible_units = filter_visible_units(visible_units, viewer, province, nation_data)
+        candidates = units_with_air_cargo(visible_units) if complete_army else visible_units
+        units.extend(unit for unit in candidates if unit.get("owner") == country_id)
+
+    economy_available = can_view_country_economy(map_screen, country_id)
+    economy = {"available": economy_available, "resources": [],
+               "conscription": country.get("conscription_slider", 1.0),
+               "conversion": country.get("mat_to_fuel_slider", 0.0)}
+    if economy_available:
+        # Economy queries can initialize missing siphon rates. Inspection must
+        # not initialize or change any saved country state.
+        income, expenses, _breakdown = get_economy_projections(
+            country_id, map_screen.map_data, copy.deepcopy(nation_data))
+        economy["resources"] = [{"resource": resource, "stockpile": country.get(resource, 0),
+                                 "income": income[resource], "expenses": expenses[resource],
+                                 "net": income[resource] - expenses[resource]}
+                                for resource in c.ECON_RESOURCE_KEYS]
+
+    faction = country.get("faction", "")
+    policies = [{"name": politics.policy(policy_id)["name"], "status": state["status"],
+                 "turns_remaining": state.get("turns_remaining", 0)}
+                for policy_id, state in politics.policy_states(nation_data, country_id).items()]
+    return {
+        "country_id": country_id, "name": get_country_display_name(country_id, nation_data),
+        "military": {
+            "complete": complete_army, "unit_count": len(units),
+            "damage_output": combat_rules.volley(units, nation_data=nation_data),
+            "damage_multiplier": get_country_damage_multiplier(country_id, nation_data),
+            "political_damage_multiplier": politics.damage_multiplier(nation_data, country_id),
+            "conscription_damage_bonus": get_conscription_damage_bonus(country),
+        },
+        "politics": {"label": politics.label(politics.value(nation_data, country_id)),
+                     "value": politics.value(nation_data, country_id),
+                     "drift": politics.drift(nation_data, country_id),
+                     "research_multiplier": politics.research_multiplier(nation_data, country_id),
+                     "policies": policies},
+        "diplomacy": {"faction": faction,
+                      "faction_leader": get_faction_leader(faction, nation_data) if faction else None,
+                      "faction_members": get_faction_members(faction, nation_data) if faction else [],
+                      "master": country.get("master", ""),
+                      "puppets": list(country.get("puppets", [])),
+                      "allies": list(country.get("allied_with", [])),
+                      "enemies": get_enemies(country_id, nation_data)},
+        "economy": economy,
+    }
+
 
 def can_release_nations_for(map_screen, country_id):
     """Permit own-country releases or local spectator releases for a selected country."""

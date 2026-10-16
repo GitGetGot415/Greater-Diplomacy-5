@@ -795,12 +795,10 @@ class OrdersScreenRegressionTests(BattleScreenTestCase):
 
         screen = self.orders_screen()
         self.map.hide_flag = False
-        with mock.patch.object(
-                flag_renderer.queries, "decode_b64_to_surf",
-                wraps=flag_renderer.queries.decode_b64_to_surf) as decode:
+        with mock.patch.object(flag_renderer, "flag_icons") as flag_assets:
             screen.draw(self.surface)
 
-        decode.assert_not_called()
+        flag_assets.flag_surface.assert_not_called()
         self.assertFalse(self.map.hide_flag)
 
 

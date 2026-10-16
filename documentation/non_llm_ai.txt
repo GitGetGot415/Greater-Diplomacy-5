@@ -178,6 +178,41 @@ Without an override, the scenario seed generates reproducible traits.
 Generated traits need not match historical behavior.
 tests/test_editor_menu_layout.py checks that editor controls do not overlap.
 
+COUNTRY SUMMARY
+---------------
+
+Hover over the flag in the top left to highlight it.
+Click the flag to open that country's summary.
+Select another country's land tile to show its flag and summary.
+Selecting water keeps the current player's flag.
+The summary is read-only. Back returns to the same player and selected tile.
+
+Long summaries support the mouse wheel, scrollbar, Page Up, and Page Down.
+
+Military shows the combined attack of available units with their current health and national damage modifiers.
+Combat width, missions, and target defenses can change actual damage.
+
+Foreign military figures include only visible units. They do not reveal hidden cargo.
+Strategic players see their complete army. Tactical players keep their restricted battlefield visibility.
+Local spectators and editors can see complete armies.
+
+Politics shows the political position, direction, research modifier, and policy states.
+Diplomacy shows the faction, leader, members, overlord, puppets, allies, and enemies.
+All country names use the shared display-name helper.
+
+Economy shows stockpiles, income, expenses, and net income when the viewer can inspect private economics.
+The sliders show conscription and material conversion without allowing changes.
+Players can inspect their own economy.
+Foreign economy figures remain private in both multiplayer systems.
+In local games, foreign economy figures require disabled fog, spectator mode, or editor mode.
+The Tournament Spectator cannot inspect private economics.
+
+queries.get_country_summary prepares the screen's data when it opens.
+queries.get_country_damage_multiplier owns the combined national damage modifier for summaries and combat.
+Frame drawing and scrolling use cached presentation data.
+The summary adds no saved fields or multiplayer commands. It does not change country state.
+Flag inspection is unavailable during country selection, hidden UI, turn processing, saving, and blocking confirmations.
+
 CONSCRIPTION AND DAMAGE
 ----------------------
 

@@ -68,7 +68,6 @@ this module is meant to be safe to import from anywhere.
 from collections import namedtuple
 
 import data.constants as c
-from map_logic import politics
 
 #: One nation's contribution to one side of one duel. `slots` is its share of
 #: the side's allowance; `front` fire and are fired at; `reserve` are present and
@@ -754,11 +753,9 @@ def effective_damage_multiplier(unit, nation_data=None):
     """
     from data import queries
 
-    political = (politics.damage_multiplier(nation_data, unit.get("owner"))
-                 if nation_data else 1.0)
-    country = nation_data.get(unit.get("owner"), {}) if nation_data else {}
-    conscription = 1.0 + queries.get_conscription_damage_bonus(country)
-    return health_damage_multiplier(unit) * political * conscription
+    national = (queries.get_country_damage_multiplier(unit.get("owner"), nation_data)
+                if nation_data else 1.0)
+    return health_damage_multiplier(unit) * national
 
 
 def volley(units, shares=None, nation_data=None, profiles=None):

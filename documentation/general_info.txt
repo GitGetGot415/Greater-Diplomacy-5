@@ -171,6 +171,8 @@ screens/
         combat_rules.py owns the combat model that this screen edits.
         See documentation/non_llm_ai.txt for combat controls and tactical permissions.
         unit_events_screen.py shows the last turn's unit events in a sortable table.
+        country_summary.py shows read-only country information when the player clicks the top-left flag.
+        See documentation/non_llm_ai.txt for summary data and visibility rules.
         See documentation/non_llm_ai.txt, LAST-TURN UNIT EVENTS, for controls, visibility, and persistence.
 
         Battle columns belong to combat sides, which can include several countries.

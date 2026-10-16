@@ -8,7 +8,7 @@ from data import queries
 from ui_elements import process_text_input
 from map_logic.diplomacy import diplomacy_logic
 from screens.map_related_screens import battle_screen
-from ui.bars import ui_bars
+from ui.bars import flag_renderer, ui_bars
 
 # The three panels that sit on the map at fixed screen rects: Buildings/Garrison,
 # Diplomatic Info and the production queue overlay. Each publishes a rect and a
@@ -34,9 +34,11 @@ def map_ui_bar_at_position(map_screen, position):
     top_bar = getattr(map_screen, "top_bar_rect", None)
     bottom_bar = getattr(map_screen, "bot_bar_rect", None)
     unit_view_bar = ui_bars.map_unit_view_bar_rect(map_screen)
+    flag_rect = flag_renderer.flag_button_rect(map_screen)
     if ((top_bar and top_bar.collidepoint(position))
             or (bottom_bar and bottom_bar.collidepoint(position))
-            or (unit_view_bar and unit_view_bar.collidepoint(position))):
+            or (unit_view_bar and unit_view_bar.collidepoint(position))
+            or (flag_rect and flag_rect.collidepoint(position))):
         return True
 
     # Both flags exist on a live Map; Orders unit tests use smaller map doubles.
@@ -301,6 +303,16 @@ def handle_map_events(map_screen, event):
                     map_screen.multi_turn_abort_requested = True
                     map_screen.show_feedback("Multi-turn processing will stop after this turn...")
         return # Block all other map events while AI is processing!
+
+    flag_rect = flag_renderer.flag_button_rect(map_screen)
+    if flag_rect and flag_rect.collidepoint(event_pos):
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            from screens.map_related_screens.country_summary import open_country_summary
+            open_country_summary(map_screen, flag_renderer.summary_country(map_screen))
+            return
+        if event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP,
+                          pygame.MOUSEMOTION, pygame.MOUSEWHEEL):
+            return
 
     # 1. UI Check (make sure the mouse can't go through the ui bars)
 

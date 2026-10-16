@@ -1,25 +1,55 @@
 import pygame
+from functools import lru_cache
+
 import data.constants as c
-from data import queries
+from ui import flag_icons
+
+FLAG_RECT = pygame.Rect(20, 20, 120, 80)
+FLAG_HOVER_BRIGHTNESS = 35
+
+
+def displayed_country(map_screen):
+    """Use the selected land owner, or the player's country, for the flag."""
+    country = getattr(map_screen, "player_country", None)
+    province = getattr(map_screen, "selected_province", None)
+    if province and province.get("owner", "Unclaimed") not in c.UNPLAYABLE_NATIONS:
+        country = province.get("owner")
+    return country
+
+
+def summary_country(map_screen):
+    """Return the flag's country only while its summary control is available."""
+    # Optional attributes support map-input test doubles and older tool screens.
+    blocked = ("hide_top_info", "hide_flag", "selection_mode", "show_player_ready_screen",
+               "show_exit_confirmation", "is_saving", "ai_is_thinking", "viewing_ai_moves")
+    if any(getattr(map_screen, name, False) for name in blocked):
+        return None
+    country = displayed_country(map_screen)
+    if country in c.UNPLAYABLE_NATIONS or country not in getattr(map_screen, "nation_data", {}):
+        return None
+    return country
+
+
+def flag_button_rect(map_screen):
+    """Share the visible flag's hitbox between map drawing and input."""
+    return FLAG_RECT.copy() if summary_country(map_screen) is not None else None
+
+
+@lru_cache(maxsize=64)
+def _highlighted_flag(flag):
+    highlighted = flag.copy()
+    highlighted.fill((FLAG_HOVER_BRIGHTNESS,) * 3, special_flags=pygame.BLEND_RGB_ADD)
+    return highlighted
+
 
 def draw_flag(map_screen, surface):
-    """Handles decoding and drawing the nation's flag in the top UI bar."""
+    """Draw the cached flag and highlight its country summary control on hover."""
     if map_screen.hide_top_info or getattr(map_screen, "hide_flag", False):
         return
-        
-    # Determine which country to display
-    display_country = map_screen.player_country
-    if map_screen.selected_province:
-        owner = map_screen.selected_province.get("owner", "Unclaimed")
-        if owner not in c.UNPLAYABLE_NATIONS:
-            display_country = owner
-            
-    player_data = map_screen.nation_data.get(display_country, {})
-    flag_str = player_data.get("flag_data", "DEFAULT")
-    
-    flag_surf = queries.decode_b64_to_surf(flag_str, c.FLAG_SIZE, is_portrait=False, country_name=display_country)
-    flag_surf = pygame.transform.scale(flag_surf, (120, 80))
-    
-    # Position it (Adjust X here if you want it further right)
-    surface.blit(flag_surf, (20, 20))
-    pygame.draw.rect(surface, (200, 200, 200), (20, 20, 120, 80), 1)
+    country = displayed_country(map_screen)
+    flag = flag_icons.flag_surface(country, map_screen.nation_data, FLAG_RECT.size)
+    button_rect = flag_button_rect(map_screen)
+    hovered = button_rect is not None and button_rect.collidepoint(pygame.mouse.get_pos())
+    surface.blit(_highlighted_flag(flag) if hovered else flag, FLAG_RECT)
+    pygame.draw.rect(surface, c.UI_ACCENT_BLUE if hovered else c.UI_TEXT_LIGHT,
+                     FLAG_RECT, 3 if hovered else 1)
