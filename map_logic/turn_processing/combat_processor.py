@@ -558,6 +558,7 @@ def check_for_post_combat_captures(map_screen):
                         if prev_prov:
                             if u in units:
                                 units.remove(u)
+                                province["units"].remove(u)
                             u["_current_province_id"] = prev_prov_id
                             if u not in prev_prov.get("units", []):
                                 prev_prov.setdefault("units", []).append(u)

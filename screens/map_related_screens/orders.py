@@ -95,7 +95,7 @@ AIR_MISSION_ICONS = {mission: c.AIR_MISSION_ICONS[mission]
 
 class _AirMissionSelectScreen(ModalScreen):
     """One click selects an air mission; Back dismisses without changing it."""
-    PANEL_SIZE = (620, 474)
+    PANEL_SIZE = (620, 522)
     OPTION_TOP = 65
     OPTION_GAP = 48
     OPTION_INSET = 20
@@ -631,7 +631,7 @@ class Orders_Screen(GameState):
                     self.map_screen, "Select transport aircraft", "Choose an aircraft", items,
                     lambda record: self.open_air_transport(*record)))
             return
-        if mission in ("MOVE", "STRIKE"):
+        if mission in queries.AIR_TARGET_MISSION_TYPES:
             self.start_air_targeting(records, mission)
             return
         self._apply_selected_air_mission(records, mission)
@@ -979,7 +979,7 @@ class Orders_Screen(GameState):
             if self._air_target_records:
                 if self._air_target_mission == "MOVE" and queries.air_unit_can_move_on_ground(unit):
                     continue
-                kind = "AIR_REPOSITION" if self._air_target_mission == "MOVE" else "AIR_ATTACK"
+                kind = queries.AIR_TARGET_MISSION_TYPES[self._air_target_mission]
             else:
                 kind = queries.air_range_preview_kind(self.map_screen, unit, destination)
             previews = (self.air_range_previews if kind == "AIR_REPOSITION"
@@ -1507,7 +1507,7 @@ class Orders_Screen(GameState):
         if mission == "TRANSPORT":
             self.open_air_transport(unit, province)
             return
-        if mission in ("MOVE", "STRIKE"):
+        if mission in queries.AIR_TARGET_MISSION_TYPES:
             self.start_air_targeting([(unit, province)], mission, row_key)
             return
         try:
@@ -1537,11 +1537,17 @@ class Orders_Screen(GameState):
             items.extend((f"Load: {unit.get('custom_name') or unit['type']}", ("LOAD", unit["unit_id"]))
                          for unit in province.get("units", []) if queries.air_cargo_is_eligible(plane, unit)
                          and not self._command_blocked_silent(unit))
+            if queries.air_unit_can_air_drop(plane):
+                items.append(("Air Drop (select enemy land)", ("AIR_DROP", None)))
             return items
 
         popup = None
 
         def select_cargo(choice):
+            if choice[0] == "AIR_DROP":
+                self.start_air_targeting([(plane, province)], "AIR_DROP")
+                popup.exit_screen()
+                return
             if self.change_air_transport(plane, province, *choice):
                 popup.prompt = (f"Cargo: {len(plane.get('air_cargo', []))} / {capacity}. "
                                 "Choose a unit to load or release.")
@@ -1550,7 +1556,7 @@ class Orders_Screen(GameState):
         popup = ListSelectScreen(self.map_screen, "Air transport",
             f"Cargo: {len(plane.get('air_cargo', []))} / {capacity}. Choose a unit to load or release.",
             picker_items(), select_cargo,
-            is_enabled=lambda item: item[1][0] == "RELEASE" or len(plane.get('air_cargo', [])) < capacity,
+            is_enabled=lambda item: item[1][0] != "LOAD" or len(plane.get('air_cargo', [])) < capacity,
             close_on_select=False)
         _run_pygame_sub_screen(self.map_screen, popup)
 
@@ -1588,7 +1594,7 @@ class Orders_Screen(GameState):
         self._air_target_records = records
         self._air_target_mission = mission
         self.bombarding_unit_index = "GROUP_AIR" if row_key is None else row_key
-        self.targeting_label = "movement" if mission == "MOVE" else "strike"
+        self.targeting_label = {"MOVE": "movement", "STRIKE": "strike", "AIR_DROP": "air drop"}[mission]
         self.map_screen.show_feedback(
             f"Select a {self.targeting_label} target. Existing orders stay until a valid target is chosen. Esc cancels targeting.")
         self.refresh_ui()
@@ -1972,9 +1978,10 @@ class Orders_Screen(GameState):
             return f"Bombard: P{order.get('target_id', '?')}", BOMBARD_TARGET_COLOR
         if order_type in queries.AIR_ORDER_TYPES:
             radius = queries.air_order_radius(unit, order_type)
+            target_labels = {"AIR_ATTACK": "Strike", "AIR_REPOSITION": "Reposition", "AIR_DROP": "Air Drop"}
             label = (f"Defend area: {order.get('priority', queries.AIR_DEFAULT_PRIORITY).lower()} first"
                      if order_type == "AIR_PATROL" else
-                     f"{'Strike' if order_type == 'AIR_ATTACK' else 'Reposition'}: P{order.get('target_id', '?')}")
+                     f"{target_labels[order_type]}: P{order.get('target_id', '?')}")
             return f"{label} | {radius:g}px", BOMBARD_TARGET_COLOR
         if order_type == "CONVERT":
             return f"Convert to {order.get('to', '?')}{turn_suffix}", (100, 180, 255)
@@ -2348,7 +2355,7 @@ class Orders_Screen(GameState):
                 overlay_renderer.draw_bombardment_arrow(
                     surface, self.map_screen, origin, target_id,
                     bomb_range, force_visible=True)
-            elif order.get("type") in ("AIR_ATTACK", "AIR_REPOSITION"):
+            elif order.get("type") in queries.AIR_TARGET_MISSION_TYPES.values():
                 overlay_renderer.draw_split_movement_path(surface, self.map_screen, origin,
                     [order["target_id"]], 1, owner_color, force_visible=True)
 

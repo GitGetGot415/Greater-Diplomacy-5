@@ -78,6 +78,284 @@ class TransportTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             queries.air_move_order(self.game, self.plane, self.base, far, "MOVE")
 
+    def plan_drop(self):
+        target = tile(self.game, 4, 30, owner="B")
+        queries.build_air_geometry(self.game)
+        self.load()
+        self.plane["order"] = queries.air_move_order(self.game, self.plane, self.base, target)
+        self.assertEqual(self.plane["order"]["type"], "AIR_DROP")
+        return target
+
+    def test_air_drop_uses_half_move_range_and_includes_tile_boundary(self):
+        self.load()
+        radius = queries.air_order_radius(self.plane, "AIR_REPOSITION") / 2
+        self.assertEqual(queries.air_order_radius(self.plane, "AIR_DROP"), radius)
+        target = tile(self.game, 4, int(self.base["center"][0] + radius), owner="B")
+        queries.build_air_geometry(self.game)
+        order = queries.air_move_order(self.game, self.plane, self.base, target, "AIR_DROP")
+        self.assertEqual(order["target_id"], target["id"])
+        far = tile(self.game, 5, int(self.base["center"][0] + radius + 1), owner="B")
+        queries.build_air_geometry(self.game)
+        with self.assertRaises(ValueError):
+            queries.air_move_order(self.game, self.plane, self.base, far, "AIR_DROP")
+
+    def test_air_drop_requires_cargo_enemy_land_and_current_launch_base(self):
+        target = self.plan_drop()
+        good = deepcopy(self.plane["order"])
+        sea = tile(self.game, 5, 40, water=True)
+        queries.build_air_geometry(self.game)
+        for order in (dict(good, target_id=self.base["id"]), dict(good, target_id=sea["id"]),
+                      dict(good, base_id=999), dict(good, target_id=True), dict(good, target_id=999)):
+            with self.subTest(order=order), self.assertRaises(ValueError):
+                queries.canonical_air_order(self.game, self.plane, self.base, order)
+        self.game.nation_data["A"]["at_war_with"].remove("B")
+        self.game.nation_data["B"]["at_war_with"].remove("A")
+        with self.assertRaises(ValueError):
+            queries.canonical_air_order(self.game, self.plane, self.base, good)
+        self.game.nation_data["A"]["at_war_with"].append("B")
+        self.game.nation_data["B"]["at_war_with"].append("A")
+        queries.set_air_cargo(self.game, "A", self.plane, self.base, [])
+        self.assertNotIn("AIR_DROP", queries.available_air_missions(self.game, self.plane, self.base))
+        for unit in (self.plane, wing(self.base, "Monoplane Bomber I")):
+            with self.subTest(unit=unit["type"]), self.assertRaises(ValueError):
+                queries.canonical_air_order(self.game, unit, self.base, good)
+
+    def test_drop_keeps_carrier_at_base_and_cargo_joins_ground_capture(self):
+        target = self.plan_drop()
+        tile(self.game, 5, 180, owner="B")
+        self.game.is_editor = False
+        self.game.viewing_ai_moves = True
+        self.assertEqual(queries.air_unit_mission_icon(self.plane), "AIR_DROP")
+        self.assertEqual(queries.unit_map_stack_key(self.plane), ("AIR", "AIR_DROP"))
+        self.assertEqual(queries.air_range_preview_kind(self.game, self.plane, target), "AIR_DROP")
+        air_processor.process_air_orders(self.game)
+        self.assertEqual(target["units"], [self.cargo])
+        self.assertEqual(self.base["units"], [self.plane])
+        self.assertFalse(self.plane.get("air_cargo"))
+        self.assertEqual(queries.air_unit_mission(self.plane), "NONE")
+        movement_processor.process_movement(self.game)
+        combat_processor.process_combat(self.game)
+        combat_processor.check_for_post_combat_captures(self.game)
+        self.assertEqual(target["owner"], "A")
+        air_processor.process_air_orders(self.game)
+        self.assertEqual(target["units"], [self.cargo])
+
+    def test_interception_damage_reaches_cargo_before_drop_and_retains_reports(self):
+        target = self.plan_drop()
+        wing(target, "Monoplane Fighter I", "B", order={"type": "AIR_PATROL"})
+        plane_health, cargo_health = self.plane["health"], self.cargo["health"]
+        with unit_events.record_turn(self.game):
+            air_processor.process_air_orders(self.game)
+        self.assertLess(self.plane["health"], plane_health)
+        self.assertGreater(self.plane["health"], 0)
+        self.assertAlmostEqual(self.cargo["health"], cargo_health * self.plane["health"] / plane_health)
+        self.assertIn(self.cargo, target["units"])
+        self.assertIn(self.plane, self.base["units"])
+        self.assertTrue(any(row["unit_id"] == self.cargo["unit_id"] and "Interception" in row["details"]
+                            for row in self.game.unit_event_log["events"]))
+
+    def test_tied_drop_capture_returns_cargo_to_its_launch_tile(self):
+        target = self.plan_drop()
+        # Loading can follow earlier ground movement. Its old origin must not
+        # become the return tile for a tied capture after this flight.
+        self.cargo["_previous_province_id"] = self.destination["id"]
+        wing(target, "Fixture Cargo", "C")
+        self.game.scenario_settings["bounce_tiebreaker"] = True
+        air_processor.process_air_orders(self.game)
+        combat_processor.check_for_post_combat_captures(self.game)
+        self.assertIn(self.cargo, self.base["units"])
+        self.assertNotIn(self.cargo, self.destination["units"])
+        self.assertNotIn(self.cargo, target["units"])
+        self.assertEqual(target["owner"], "B")
+
+    def test_destroyed_transport_and_all_cargo_never_reach_drop_tile(self):
+        queries.air_unit_stats(self.plane)["air_transport_capacity"] = 2
+        second = wing(self.base, "Fixture Cargo")
+        target = self.plan_drop()
+        queries.set_air_cargo(self.game, "A", self.plane, self.base,
+                              [self.cargo["unit_id"], second["unit_id"]])
+        defender = wing(target, "Monoplane Fighter I", "B", order={"type": "AIR_PATROL"})
+        defender["attack"] = self.plane["health"] * 10
+        air_processor.process_air_orders(self.game)
+        self.assertEqual(self.plane["health"], 0)
+        self.assertNotIn(self.plane, self.base["units"])
+        for cargo in (self.cargo, second):
+            self.assertEqual(cargo["health"], 0)
+            self.assertNotIn(cargo, target["units"])
+
+    def test_ground_garrison_cannot_shoot_the_transport_before_drop(self):
+        target = self.plan_drop()
+        defender = wing(target, "Fixture Cargo", "B")
+        defender["attack"] = self.plane["health"] * 10
+        plane_health, cargo_health = self.plane["health"], self.cargo["health"]
+        air_processor.process_air_orders(self.game)
+        self.assertEqual(self.plane["health"], plane_health)
+        self.assertEqual(self.cargo["health"], cargo_health)
+        self.assertIn(self.cargo, target["units"])
+        combat_processor.process_combat(self.game)
+        self.assertEqual(self.cargo["health"], 0)
+        self.assertEqual(self.plane["health"], plane_health)
+
+    def test_drop_cancels_safely_after_peace(self):
+        target = self.plan_drop()
+        self.game.nation_data["A"]["at_war_with"].remove("B")
+        self.game.nation_data["B"]["at_war_with"].remove("A")
+        air_processor.process_air_orders(self.game)
+        self.assertEqual(queries.air_unit_mission(self.plane), "NONE")
+        self.assertEqual(self.plane["air_cargo"], [self.cargo])
+        self.assertNotIn(self.cargo, target["units"])
+
+    def test_map_movement_click_routes_loaded_transport_to_air_drop(self):
+        from screens.menu_screens.map import Map
+        target = self.plan_drop()
+        self.plane.pop("order")
+        self.game.can_select_map_units = lambda: True
+        self.game.selected_unit_records = lambda: [(self.plane, self.base)]
+        self.game.invalidate_map_presentation_cache = Mock()
+        self.game.show_feedback = Mock()
+        self.assertTrue(Map.issue_selected_move_orders(self.game, target))
+        self.assertEqual(queries.air_unit_mission(self.plane), "AIR_DROP")
+
+    def test_group_drop_preserves_all_orders_if_one_transport_cannot_reach(self):
+        target = self.plan_drop()
+        remote = tile(self.game, 5, 300)
+        second = wing(remote, "Monoplane Transport")
+        cargo = wing(remote, "Fixture Cargo")
+        queries.set_air_cargo(self.game, "A", second, remote, [cargo["unit_id"]])
+        queries.build_air_geometry(self.game)
+        screen = self.screen()
+        records = [(self.plane, self.base), (second, remote)]
+        before = [deepcopy(unit["order"]) for unit, _base in records]
+        screen.set_selected_air_mission("AIR_DROP", records)
+        screen.set_air_target(target)
+        self.assertEqual([unit["order"] for unit, _base in records], before)
+        self.assertEqual(screen._air_target_records, records)
+
+    def test_drop_and_strike_share_interception_but_only_bomber_strikes(self):
+        from map_logic.turn_processing import combat_rules
+        target = self.plan_drop()
+        bomber = wing(self.base, "Monoplane Bomber I", order={"type": "AIR_ATTACK", "target_id": target["id"]})
+        defender = wing(target, "Monoplane Fighter I", "B", order={"type": "AIR_PATROL"})
+        with patch.object(combat_rules, "build_battle", wraps=combat_rules.build_battle) as build:
+            air_processor.process_air_orders(self.game)
+        interception, strike = build.call_args_list
+        self.assertTrue(interception.kwargs["air_combat"])
+        self.assertEqual({id(unit) for unit in interception.args[0][0]},
+                         {id(self.plane), id(bomber), id(defender)})
+        self.assertEqual(strike.args[0][0], [bomber])
+        self.assertIn(self.cargo, target["units"])
+
+    def test_ai_loads_and_drops_only_legal_cargo_on_reachable_enemy_land(self):
+        target = tile(self.game, 4, 30, owner="B")
+        queries.build_air_geometry(self.game)
+        ai_movement._assign_air_transport(self.game, "A", self.plane, self.base, [],
+                                          [target], [(self.plane, self.base), (self.cargo, self.base)])
+        self.assertEqual(self.plane["air_cargo"], [self.cargo])
+        self.assertEqual(self.plane["order"]["type"], "AIR_DROP")
+        self.assertIn(self.plane["order"], ai_movement.legal_air_candidates(self.game, self.plane, self.base))
+        self.assertNotIn("AIR_ATTACK", {order["type"] for order in
+            ai_movement.legal_air_candidates(self.game, self.plane, self.base)})
+
+    def test_ai_drop_respects_tactical_control_and_first_exchange_survival(self):
+        target = tile(self.game, 4, 30, owner="B")
+        queries.build_air_geometry(self.game)
+        self.game.tactical_mode = True
+        self.game.player_unit = self.cargo
+        ai_movement._assign_air_transport(self.game, "A", self.plane, self.base, [], [target], [])
+        self.assertFalse(self.plane.get("air_cargo"))
+        self.game.tactical_mode = False
+        defender = wing(target, "Fixture Cargo", "B")
+        defender["attack"] = self.cargo["health"] * 10
+        ai_movement._assign_air_transport(self.game, "A", self.plane, self.base, [], [target], [])
+        self.assertFalse(self.plane.get("air_cargo"))
+
+    def test_drop_ui_picker_targets_and_rechecks_permissions(self):
+        target = self.plan_drop()
+        self.plane.pop("order")
+        screen = self.screen()
+        with patch("ui.screen_runner._run_pygame_sub_screen") as runner:
+            screen.open_air_transport(self.plane, self.base)
+        popup = runner.call_args.args[1]
+        popup.select(next(item for item in popup.items if item[1][0] == "AIR_DROP"))
+        self.assertEqual(screen._air_target_mission, "AIR_DROP")
+        self.assertEqual(queries.air_unit_mission(self.plane), "NONE")
+        screen._refresh_air_range_previews()
+        self.assertEqual(screen.air_strike_range_previews,
+                         [(self.base, queries.air_order_radius(self.plane, "AIR_DROP"))])
+        screen.read_only = True
+        screen.set_air_target(target)
+        self.assertEqual(queries.air_unit_mission(self.plane), "NONE")
+        screen.read_only = False
+        screen.set_air_mission(self.plane, self.base, "AIR_DROP")
+        screen.set_air_target(target)
+        self.assertEqual(queries.air_unit_mission(self.plane), "AIR_DROP")
+
+    def drop_client(self):
+        target = tile(self.game, 4, 30, owner="B")
+        queries.build_air_geometry(self.game)
+        client = deepcopy(self.game)
+        base = client.id_to_province[self.base["id"]]
+        plane, cargo = base["units"]
+        queries.set_air_cargo(client, "A", plane, base, [cargo["unit_id"]])
+        plane["order"] = queries.air_move_order(client, plane, base, client.id_to_province[target["id"]])
+        return client, plane, cargo, target
+
+    def test_realtime_load_and_drop_in_one_draft_keep_host_health(self):
+        client, plane, cargo, target = self.drop_client()
+        plane["health"], cargo["health"] = 1, 1
+        commands = [command for command in collect_map_commands(client, "A")
+                    if command["type"] in ("air_transport", "unit_order")]
+        driver = MapRealtimeDriver(self.game)
+        canonical = driver.validate_draft("A", commands)
+        self.assertEqual(self.base["units"], [self.plane, self.cargo])
+        with patch("map_logic.turn_processing.turn_processor.prepare_turn", new=AsyncMock()), \
+                patch("map_logic.turn_processing.turn_processor.resolve_turn_logic", new=AsyncMock()):
+            driver.process_turn({"A": canonical})
+        self.assertEqual(queries.air_unit_mission(self.plane), "AIR_DROP")
+        air_processor.process_air_orders(self.game)
+        self.assertIn(self.cargo, target["units"])
+        self.assertEqual(self.cargo["health"], self.cargo["max_health"])
+        self.assertEqual(self.plane["health"], self.plane["max_health"])
+
+    def test_realtime_rejects_unauthorized_malformed_stale_or_empty_drop(self):
+        client, plane, cargo, _target = self.drop_client()
+        commands = [command for command in collect_map_commands(client, "A")
+                    if command["type"] in ("air_transport", "unit_order")]
+        driver = MapRealtimeDriver(self.game)
+        for bad_order in (dict(plane["order"], base_id=999), dict(plane["order"], target_id=True),
+                          dict(plane["order"], target_id=2), dict(plane["order"], target_id=999)):
+            bad = deepcopy(commands)
+            next(command for command in bad if command["type"] == "unit_order")["order"] = bad_order
+            with self.subTest(order=bad_order), self.assertRaises(RealtimeError):
+                driver.validate_draft("A", bad)
+            self.assertEqual(self.base["units"], [self.plane, self.cargo])
+        with self.assertRaises(RealtimeError):
+            driver.validate_draft("B", commands)
+        with self.assertRaises(RealtimeError):
+            driver.validate_draft("A", [command for command in commands if command["type"] != "air_transport"])
+
+    def test_tournament_load_and_drop_keep_host_cargo_and_health(self):
+        client, plane, cargo, target = self.drop_client()
+        plane["health"], cargo["health"] = 1, 1
+        self.assertEqual(self.import_client(client)["loaded"], 1)
+        self.assertEqual(queries.air_unit_mission(self.plane), "AIR_DROP")
+        air_processor.process_air_orders(self.game)
+        self.assertIn(self.cargo, target["units"])
+        self.assertEqual(self.cargo["health"], self.cargo["max_health"])
+        self.assertEqual(self.plane["health"], self.plane["max_health"])
+
+    def test_tournament_rejects_invalid_or_stale_drop_atomically(self):
+        client, plane, _cargo, _target = self.drop_client()
+        for transform in (lambda data: data["aircraft_orders"][0]["order"].update(base_id=999),
+                          lambda data: data["aircraft_orders"][0]["order"].update(target_id=True),
+                          lambda data: data["aircraft_orders"][0]["order"].update(target_id=2),
+                          lambda data: data["air_transport"][0].update(cargo_ids=[]),
+                          lambda data: data.update(tournament_turn=0)):
+            with self.subTest(transform=transform):
+                before = deepcopy(self.game.map_data)
+                self.assertEqual(self.import_client(client, transform)["rejected"], 1)
+                self.assertEqual(self.game.map_data, before)
+
     def test_load_release_preserve_identity_health_and_allow_immediate_movement(self):
         self.cargo["order"] = {"type": "MOVE", "path": [2]}
         self.load()
@@ -283,7 +561,7 @@ class TransportTests(unittest.TestCase):
 
         self.assertEqual(popup.prompt, "Cargo: 2 / 2. Choose a unit to load or release.")
         self.assertFalse(any(item[1][0] == "LOAD" for item in popup.items))
-        self.assertEqual({item[1][1] for item in popup.items},
+        self.assertEqual({item[1][1] for item in popup.items if item[1][0] == "RELEASE"},
                          {self.cargo["unit_id"], second["unit_id"]})
 
     def test_disabled_mission_choices_remain_present_and_ignore_clicks(self):
@@ -446,6 +724,7 @@ class TransportSaveSmokeTests(unittest.TestCase):
             cargo = wing(base, "Fixture Cargo")
             queries.set_air_cargo(game, "A", plane, base, [cargo["unit_id"]])
             cargo["health"] /= 2
+            plane["order"] = queries.air_move_order(game, plane, base, game.id_to_province[2])
             from data.map import save_map
             from screens.menu_screens.map import Map
             with patch.object(c, "SAVES_DIR", directory):
@@ -454,6 +733,7 @@ class TransportSaveSmokeTests(unittest.TestCase):
             restored = next(u for u in loaded.id_to_province[1]["units"] if u["unit_id"] == plane["unit_id"])
             self.assertEqual(restored["air_cargo"][0]["unit_id"], cargo["unit_id"])
             self.assertEqual(restored["air_cargo"][0]["health"], cargo["health"])
+            self.assertEqual(restored["order"], plane["order"])
             self.assertFalse(any(u["unit_id"] == cargo["unit_id"] for u in loaded.id_to_province[1]["units"]))
             loaded.selection_mode = False
             loaded.player_country = "A"
@@ -464,6 +744,8 @@ class TransportSaveSmokeTests(unittest.TestCase):
                     patch.object(queries, "canonical_air_order", side_effect=AssertionError("frame air rule")):
                 screen.draw(self.surface)
             queries.set_air_cargo(loaded, "A", restored, loaded.id_to_province[1], [])
+            air_processor.process_air_orders(loaded)
+            self.assertEqual(queries.air_unit_mission(restored), "NONE")
             restored.pop("air_cargo")
             queries.normalize_air_orders(loaded.map_data)
             self.assertEqual(queries.air_unit_mission_icon(restored), "NONE")
@@ -516,5 +798,6 @@ class TransportSaveSmokeTests(unittest.TestCase):
         for name in names:
             unit_level = queries.get_unit_research_requirement(name)[1]
             self.assertTrue(queries.is_unit_unlocked(name, dict(research, **{key: unit_level})))
-        for path in ("assets/classic/Monoplane Transport.png", "assets/images/Air Transport.png"):
+        for path in ("assets/classic/Monoplane Transport.png", "assets/images/Air Transport.png",
+                     "assets/images/Air Drop.png"):
             self.assertEqual(Path(path).read_bytes()[:8], b"\x89PNG\r\n\x1a\n")

@@ -214,7 +214,7 @@ Air cargo
 ---------
 
 air_transport_capacity defines how many ground units an aircraft can carry.
-Transport aircraft can use Move and Transport. They cannot strike or defend an area.
+Transport aircraft can use Move, Transport, and Air Drop. They cannot strike or defend an area.
 Their movement radius uses the listed air_range_px value.
 Other reusable aircraft retain their existing relocation radius calculation.
 Unavailable missions remain visible and disabled.
@@ -239,10 +239,27 @@ Carrier destruction also destroys its cargo.
 Carrier repairs do not repair cargo.
 Release cargo before disbanding the carrier.
 
-Air Transport is the mission icon while any cargo remains aboard.
-Move, target selection, and order cancellation do not replace this icon.
+Air Transport is the mission icon while cargo remains aboard without an active Air Drop order.
+An active Air Drop order uses Air Drop.png beside the aircraft's map box.
+Other orders and order cancellation use Air Transport while cargo remains aboard.
+Target selection retains the current icon until a valid target replaces the order.
 An empty carrier uses its current order's icon.
 Presentation caches refresh when cargo changes.
+
+Select Air Drop in the loaded transport's cargo picker, then select enemy land.
+Group mission controls also provide Air Drop for loaded transports.
+An idle loaded transport selects Air Drop when its movement target is enemy land.
+The target must belong to a country at war with the transport's combat owner.
+Air Drop cannot target water, neutral land, or friendly land.
+Its radius is half the transport's Move radius. The range outline uses this radius.
+
+Enemy patrols intercept Air Drop missions through the same rules as strikes.
+Apply interception damage to the carrier and its cargo before the drop.
+A destroyed carrier cannot drop cargo. Its cargo is also destroyed.
+A surviving carrier releases all cargo on the target and returns to its exact launch tile.
+The carrier does not strike the garrison or damage forts.
+Dropped ground units join normal ground combat and capture rules during that turn.
+If a tied capture returns units, dropped cargo returns to its launch tile.
 
 Saves store air_cargo inside each carrier. Older units without this field have no cargo.
 Tournament moves carry air_transport commands with plane_id, province_id, and cargo_ids.
@@ -256,9 +273,9 @@ Public tournament spectators also receive no cargo records.
 Resolution and transport
 ------------------------
 
-AIR_ATTACK and AIR_REPOSITION retain base_id and target_id.
+AIR_ATTACK, AIR_DROP, and AIR_REPOSITION retain base_id and target_id.
 They resolve at the next turn boundary and clear once.
-Reusable strikes keep the unit at its launch province.
+Reusable strikes and air drops keep the aircraft at its launch province.
 Survivors retain damage there, which guarantees an exact return.
 Patrol continues until replaced or canceled.
 
@@ -276,7 +293,8 @@ See documentation/ai_movement.txt for aircraft AI missions and transport plannin
 Interception
 ------------
 
-All interceptable aircraft attacking one province form one committed force, including aircraft from different countries.
+All interceptable strike and air drop aircraft targeting one province form one committed force.
+This force can include aircraft from different countries.
 The air_interception_immune field determines which attackers form a separate force without interception.
 Every hostile patrol covering the mission joins one shared coalition-lane battle.
 It uses the normal coalition rules for three or more sides.

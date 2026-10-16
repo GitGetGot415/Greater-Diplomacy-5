@@ -4495,7 +4495,8 @@ def load_transport(unit, target):
 # Air capabilities come from the current unit type, so a carried aircraft uses
 # Convoy rules until it is unpacked. These fields are unit-library tuning, not
 # duplicated frozen state in saves or network snapshots.
-AIR_ORDER_TYPES = frozenset(("AIR_ATTACK", "AIR_PATROL", "AIR_REPOSITION"))
+AIR_TARGET_MISSION_TYPES = {"MOVE": "AIR_REPOSITION", "STRIKE": "AIR_ATTACK", "AIR_DROP": "AIR_DROP"}
+AIR_ORDER_TYPES = frozenset((*AIR_TARGET_MISSION_TYPES.values(), "AIR_PATROL"))
 AIR_INTERCEPTION_PRIORITIES = ("WEAKEST", "STRONGEST", "RANDOM")
 AIR_DEFAULT_PRIORITY = "WEAKEST"
 AIR_CONVERT_TURNS = 1
@@ -4564,6 +4565,19 @@ def air_cargo_is_eligible(plane, cargo):
             and get_unit_combat_owner(cargo) == get_unit_combat_owner(plane)
             and unit_display_domain(cargo) == "LAND" and not is_air_transport(cargo)
             and not cargo.get("air_cargo"))
+
+
+def air_unit_can_air_drop(unit):
+    """An air drop requires a transport with living, eligible ground cargo."""
+    cargo = unit.get("air_cargo", [])
+    return (air_unit_can_transport(unit) and 0 < len(cargo) <= air_transport_capacity(unit)
+            and all(air_cargo_is_eligible(unit, member) for member in cargo))
+
+
+def air_drop_target_is_legal(unit, target, nation_data):
+    """Drop ground units only on land owned by a country at war with their carrier."""
+    return (not is_water_province(target) and are_at_war(
+        get_unit_combat_owner(unit), target.get("owner"), nation_data))
 
 
 def set_air_cargo(map_screen, country_id, plane, base, cargo_ids):
@@ -4734,6 +4748,8 @@ def available_air_missions(map_screen, unit, base):
         missions.add("MOVE")
         if air_unit_can_transport(unit):
             missions.add("TRANSPORT")
+        if air_unit_can_air_drop(unit):
+            missions.add("AIR_DROP")
         if air_unit_can_strike(unit):
             missions.add("STRIKE")
         if air_unit_can_patrol(unit):
@@ -4742,13 +4758,15 @@ def available_air_missions(map_screen, unit, base):
 
 
 def air_move_order(map_screen, unit, base, destination, mission=None):
-    """Retarget movement or strikes; idle aircraft choose from the visible destination."""
+    """Retarget flights; idle aircraft choose a mission from the visible destination."""
     if mission is None:
         current = air_unit_mission(unit)
-        mission = current if current in ("MOVE", "STRIKE") else (
+        mission = current if current in AIR_TARGET_MISSION_TYPES else (
+            "AIR_DROP" if air_unit_can_air_drop(unit) and air_drop_target_is_legal(
+                unit, destination, map_screen.nation_data) else
             "STRIKE" if air_move_is_strike(map_screen, unit, destination) else "MOVE")
-    if mission not in ("MOVE", "STRIKE"):
-        raise ValueError("Choose Move or Strike before selecting an air target.")
+    if mission not in AIR_TARGET_MISSION_TYPES:
+        raise ValueError("Choose Move, Strike, or Air Drop before selecting an air target.")
     if mission not in available_air_missions(map_screen, unit, base):
         raise ValueError("Air missions require a land base outside ground combat.")
     if mission == "STRIKE" and not air_move_is_strike(map_screen, unit, destination):
@@ -4760,7 +4778,7 @@ def air_move_order(map_screen, unit, base, destination, mission=None):
             raise ValueError("No legal ground route exists for this aircraft.")
         return canonical_unit_order(map_screen, unit["owner"], base, unit,
                                     {"type": "MOVE", "path": path})
-    kind = "AIR_ATTACK" if mission == "STRIKE" else "AIR_REPOSITION"
+    kind = AIR_TARGET_MISSION_TYPES[mission]
     return canonical_air_order(map_screen, unit, base,
                                {"type": kind, "target_id": destination["id"]})
 
@@ -4798,6 +4816,8 @@ def air_unit_mission(unit):
         return priority if priority in AIR_INTERCEPTION_PRIORITIES else AIR_DEFAULT_PRIORITY
     if kind == "AIR_ATTACK":
         return "STRIKE"
+    if kind == "AIR_DROP":
+        return "AIR_DROP"
     if kind == "AIR_REPOSITION" or (kind == "MOVE" and order.get("path")):
         return "MOVE"
     return "NONE"
@@ -4805,6 +4825,8 @@ def air_unit_mission(unit):
 
 def air_unit_mission_icon(unit):
     """Cargo keeps its transport badge during movement and order cancellation."""
+    if air_unit_mission(unit) == "AIR_DROP":
+        return "AIR_DROP"
     return "TRANSPORT" if unit.get("air_cargo") else air_unit_mission(unit)
 
 
@@ -4818,6 +4840,9 @@ def air_range_preview_kind(map_screen, unit, destination=None):
     order = unit.get("order")
     if isinstance(order, dict) and order.get("type") in AIR_ORDER_TYPES:
         return order["type"]
+    if (air_unit_can_air_drop(unit) and destination is not None
+            and air_drop_target_is_legal(unit, destination, map_screen.nation_data)):
+        return "AIR_DROP"
     if air_unit_can_strike(unit) and (air_unit_can_move_on_ground(unit) or (
             destination is not None and air_move_is_strike(map_screen, unit, destination))):
         return "AIR_ATTACK"
@@ -4857,9 +4882,11 @@ def is_air_transport(unit):
 
 
 def air_order_radius(unit, kind):
-    """Transport movement uses listed range. Other flight relocation uses both legs."""
+    """Air drops reserve half the transport's listed movement range for the return."""
     stats = air_unit_stats(unit)
     radius = stats.get("air_range_px", 0)
+    if kind == "AIR_DROP":
+        return radius / 2
     if kind == "AIR_REPOSITION" and not air_unit_can_transport(unit):
         return radius * 2
     return radius
@@ -4874,8 +4901,9 @@ def get_air_unit_traits(unit_type):
     if air_unit_can_transport(unit):
         reposition = air_order_radius(unit, "AIR_REPOSITION")
         return [f"Move range: {reposition:g} map pixels.",
+                f"Air Drop range: {air_order_radius(unit, 'AIR_DROP'):g} map pixels; returns to base.",
                 f"Transport capacity: {air_transport_capacity(unit)} ground units.",
-                "Move and Transport missions only; no strikes or area defense.",
+                "Move, Transport, and Air Drop missions; no strikes or area defense.",
                 "Load and release your ground units on the same tile.",
                 "Cargo shares the carrier's proportional health loss.",
                 "Destroyed immediately when caught in ground combat."]
@@ -4954,10 +4982,11 @@ def air_target_in_range(map_screen, unit, base, kind, target_id):
     stats = air_unit_stats(unit)
     if (kind == "AIR_PATROL" and not air_unit_can_patrol(unit)
             or kind == "AIR_ATTACK" and not air_unit_can_strike(unit)
+            or kind == "AIR_DROP" and not air_unit_can_air_drop(unit)
             or kind == "AIR_REPOSITION" and stats.get("air_consumable", False)):
         return False
     target = map_screen.id_to_province.get(target_id)
-    if target is None or kind == "AIR_REPOSITION" and is_water_province(target):
+    if target is None or kind in ("AIR_REPOSITION", "AIR_DROP") and is_water_province(target):
         return False
     radius = air_order_radius(unit, kind)
     return air_distance_squared(map_screen, base, target_id) <= radius * radius
@@ -4983,6 +5012,8 @@ def canonical_air_order(map_screen, unit, base, order):
     kind = order["type"]
     if kind == "AIR_ATTACK" and not air_unit_can_strike(unit):
         raise ValueError("Transport aircraft cannot strike.")
+    if kind == "AIR_DROP" and not air_unit_can_air_drop(unit):
+        raise ValueError("Air drops require a transport aircraft carrying ground units.")
     base_id = order.get("base_id", base["id"])
     if type(base_id) is not int or base_id != base["id"]:
         raise ValueError("The aircraft is no longer at its launch base.")
@@ -5003,6 +5034,8 @@ def canonical_air_order(map_screen, unit, base, order):
             raise ValueError("Aircraft must land on accessible land without enemy units.")
         if kind == "AIR_ATTACK" and not air_target_is_hostile(unit, target, map_screen.nation_data):
             raise ValueError("Air strikes require enemy territory or enemy units.")
+        if kind == "AIR_DROP" and not air_drop_target_is_legal(unit, target, map_screen.nation_data):
+            raise ValueError("Air drops require enemy land territory.")
         result["target_id"] = target_id
     return result
 

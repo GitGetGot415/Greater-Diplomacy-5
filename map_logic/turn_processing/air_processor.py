@@ -104,6 +104,23 @@ def process_air_orders(map_screen):
 
         survivors = [unit for unit in force if unit.get("health", 0) > 0]
         target = map_screen.id_to_province[key[0]]
+        # Cargo takes interception losses aboard the carrier before deployment.
+        # Surviving transports return to their exact base without attacking.
+        strike_survivors = []
+        for unit in survivors:
+            if unit["order"]["type"] == "AIR_DROP":
+                cargo_units = unit.pop("air_cargo")
+                for cargo in cargo_units:
+                    cargo["order"] = {"type": "MOVE", "path": []}
+                    cargo.pop("_combat_locked", None)
+                    cargo["_previous_province_id"] = unit["order"]["base_id"]
+                    cargo["_current_province_id"] = target["id"]
+                    target.setdefault("units", []).append(cargo)
+                unit_events.set_locations(target, cargo_units)
+                unit["order"] = {"type": "MOVE", "path": []}
+            else:
+                strike_survivors.append(unit)
+        survivors = strike_survivors
         by_owner = {}
         for unit in survivors:
             by_owner.setdefault(queries.get_unit_combat_owner(unit), []).append(unit)
@@ -153,4 +170,4 @@ def process_air_orders(map_screen):
         base["units"] = [u for u in base["units"] if u is not unit]
         map_screen.id_to_province[order["target_id"]].setdefault("units", []).append(unit)
         unit["order"] = {"type": "MOVE", "path": []}
-    # Patrols persist; strikes and repositioning are one-shot orders.
+    # Patrols persist; strikes, air drops, and repositioning resolve once.

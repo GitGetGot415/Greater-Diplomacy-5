@@ -254,7 +254,7 @@ class AirRulesTests(unittest.TestCase):
                 with mock.patch.object(queries, "air_order_radius", wraps=queries.air_order_radius) as radius:
                     traits = queries.get_air_unit_traits(name)
                 stats = queries.get_unit_library()[name]
-                expected = set() if stats.get("air_transport_capacity", 0) else {"AIR_ATTACK"}
+                expected = {"AIR_DROP"} if stats.get("air_transport_capacity", 0) else {"AIR_ATTACK"}
                 if not stats.get("air_consumable"):
                     expected.add("AIR_REPOSITION")
                 if queries.air_unit_can_patrol({"type": name}):

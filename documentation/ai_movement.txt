@@ -70,6 +70,8 @@ AIRCRAFT ORDERS AND VISIBILITY
 
 The aircraft AI generates only orders permitted by the shared rules.
 Transport aircraft carry available ground reinforcements toward visible enemies through safe, accessible landing tiles.
+They can load eligible ground units and drop them on reachable enemy land.
+They use shared drop legality, range, and ground survival estimates against visible defenders.
 They release cargo when no reachable safe landing tile improves its position.
 Released units join the normal ground-order planning pass.
 The planner preserves paid orders and the tactical player's division.

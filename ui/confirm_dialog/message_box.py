@@ -165,7 +165,7 @@ class _NavigationIntroPopup:
         ("Country actions", "relations", "Click another country's tile to see available diplomatic actions you can take against them."),
     )
     AIR_STEPS = (
-        ("Missions", "Choose Move, Strike, Transport, or defense from the mission button. Click a target for Move or Strike. No mission cancels the order. Esc cancels target selection."),
+        ("Missions", "Choose Move, Strike, Transport, Air Drop, or defense from the mission button. Click a target for a flight mission. No mission cancels the order. Esc cancels target selection."),
         ("Strike / defend", "Click enemy territory or visible enemy units while giving movement orders to strike, including enemies on your land. Aircraft attack without landing. Defenders can fire back, and surviving aircraft return with losses. Enemy aircraft on defense missions may intercept several missions."),
         ("Reposition", "With Move or Strike active, another order click changes the target but keeps the mission type. Use the mission selector to switch missions. Idle planes show green relocation range (except V1 and V2); defense and strikes show yellow."),
         ("V1 / V2", "V1 and V2 air units die when their strike completes, and they relocate on land at ground speed, unlike other planes."),
@@ -173,9 +173,10 @@ class _NavigationIntroPopup:
         ("Other Information", "Tanks cannot damage aircraft in flight. Aircraft cannot land on enemy or unclaimed land. Aircraft caught in ground combat die immediately. Aircraft carriers cannot hold aircraft (yet)."),
     )
     TRANSPORT_STEPS = (
-        ("Load cargo", "Transport aircraft can only use Move or Transport. Choose Transport from the mission button, then select your ground unit on the same tile. Unavailable missions stay visible and disabled."),
+        ("Load cargo", "Choose Transport, then select your ground units on the plane's tile. Transports also offer Move and Air Drop."),
         ("Eligible units", "Ships and other planes cannot be cargo. A ship packed into a Truck can be loaded. Research details show each transport's current capacity and range. Cancel a unit's paid order before loading it."),
-        ("Fly with cargo", "Loaded units leave the map and stay aboard the plane. Use Move to fly with cargo. The Air Transport icon stays while any cargo is aboard, even during Move."),
+        ("Fly with cargo", "Loaded units leave the map and stay aboard the plane. Use Move to fly with cargo. The Air Transport icon stays during Move and order cancellation. An active Air Drop order uses the Air Drop icon."),
+        ("Air Drop", "Choose Air Drop in the cargo picker, then enemy land. Idle loaded planes also drop when ordered there. Range is half Move range. The Air Drop icon appears beside the plane. Patrols intercept before cargo drops. Surviving planes return to base. Cargo joins ground combat."),
         ("Cargo damage", "Cargo loses the same fraction of its current health as the plane. For example, losing half the plane's remaining health also removes half each carried unit's remaining health. If the plane is destroyed, its cargo is destroyed too."),
         ("Release cargo", "Choose Transport again and select Release for a carried unit. It appears on the plane's tile and can move immediately. Loading and releasing it in the same turn does not consume its movement. Load and release on land outside combat."),
     )
@@ -186,7 +187,7 @@ class _NavigationIntroPopup:
         "Reach other countries through the Mail tab or directly from their territory on the map.",
         "Learn how to create, organize, and command armies, including target areas.",
         "Green outlines represent an aircraft's movement range, yellow ones represent their mission range.",
-        "Carry ground units between accessible land tiles with transport aircraft.",
+        "Carry ground units between accessible land tiles, or air drop them into enemy territory.",
     )
 
     def __init__(self, map_screen):

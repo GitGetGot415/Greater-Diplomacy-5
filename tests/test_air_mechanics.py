@@ -1392,7 +1392,7 @@ class AirMissionSelectionTests(unittest.TestCase):
                         patch("ui.screen_runner._run_pygame_sub_screen"):
                     self.screen.open_air_mission_select(0, self.base)
                 choices = [choice[0] for choice in popup.call_args.args[1]]
-                self.assertEqual(choices, ["NONE", "MOVE", "STRIKE", "TRANSPORT", *queries.AIR_INTERCEPTION_PRIORITIES])
+                self.assertEqual(choices, [choice[0] for choice in c.AIR_MISSION_CHOICES])
                 expected = {"NONE", "MOVE", "STRIKE"}
                 if queries.air_unit_can_patrol(self.unit):
                     expected.update(queries.AIR_INTERCEPTION_PRIORITIES)
@@ -2115,7 +2115,7 @@ class AirAppSmokeTests(unittest.TestCase):
                     self.assertEqual(popup.choices, c.AIR_MISSION_CHOICES)
                     for index, (mission, _label, _icon) in enumerate(popup.choices):
                         button = popup.elements[index]
-                        unavailable = mission == "TRANSPORT" or mission in queries.AIR_INTERCEPTION_PRIORITIES or (
+                        unavailable = mission in ("TRANSPORT", "AIR_DROP") or mission in queries.AIR_INTERCEPTION_PRIORITIES or (
                             invalid_base and mission in ("MOVE", "STRIKE"))
                         self.assertEqual(button.disabled, unavailable)
                         self.assertTrue(button.visible)

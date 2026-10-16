@@ -517,7 +517,10 @@ class NavigationIntroPopupTests(unittest.TestCase):
             popup.handle_event(pygame.event.Event(
                 pygame.MOUSEBUTTONDOWN, pos=popup.next_rect.center, button=1))
             self.assertEqual(popup.page_index, page)
-            popup.draw(surface)
+            # Editable aircraft and transport instructions are wrapped when
+            # the popup opens. Navigation must not rebuild this content.
+            with mock.patch.object(popup, "_army_step_lines", side_effect=AssertionError("Frame prepared help")):
+                popup.draw(surface)
         self.assertEqual(popup.page_index, len(popup.PAGE_TITLES) - 1)
         for _page in range(popup.page_index, 3, -1):
             popup.handle_event(pygame.event.Event(

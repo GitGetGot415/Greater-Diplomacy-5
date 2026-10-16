@@ -286,7 +286,7 @@ class AirMoveSafetyTests(unittest.TestCase):
         check(self.safe, "AIR_REPOSITION")
         check(self.enemy, "AIR_ATTACK")
         self.safe["units"].remove(enemy)
-        for kind in queries.AIR_ORDER_TYPES:
+        for kind in ("AIR_ATTACK", "AIR_PATROL", "AIR_REPOSITION"):
             self.plane["order"] = queries.canonical_air_order(self.game, self.plane, self.base,
                 {"type": kind, "target_id": self.safe["id"] if kind == "AIR_REPOSITION"
                  else self.enemy["id"]})

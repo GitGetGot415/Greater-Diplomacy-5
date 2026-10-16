@@ -15,13 +15,15 @@ def legal_air_candidates(map_screen, unit, base):
     if queries.air_unit_can_patrol(unit):
         candidates.append(queries.canonical_air_order(map_screen, unit, base,
             {"type": "AIR_PATROL", "priority": queries.AIR_DEFAULT_PRIORITY}))
-    for kind in ("AIR_ATTACK", "AIR_REPOSITION"):
+    for kind in queries.AIR_TARGET_MISSION_TYPES.values():
         for target_id in sorted(queries.get_air_targets(map_screen, unit, base, kind)):
             target = map_screen.id_to_province[target_id]
             if kind == "AIR_ATTACK" and not queries.air_target_is_hostile(
                     unit, target, map_screen.nation_data, visible_only=True):
                 continue
             if kind == "AIR_REPOSITION" and not queries.air_unit_can_land(unit, target, map_screen.nation_data):
+                continue
+            if kind == "AIR_DROP" and not queries.air_drop_target_is_legal(unit, target, map_screen.nation_data):
                 continue
             candidates.append(queries.canonical_air_order(map_screen, unit, base,
                 {"type": kind, "target_id": target_id}))
@@ -301,8 +303,32 @@ def _assign_air_orders(map_screen, country, units_info):
                 patrol_cover.setdefault(target_id, []).append(unit)
 
 def _assign_air_transport(map_screen, country, plane, base, repositions, enemies, units_info):
-    """Carry ground reinforcements toward visible enemies through safe land bases."""
+    """Drop ground reinforcements on viable enemy land or use accessible bases."""
     cargo = plane.get("air_cargo", [])
+    selected = cargo or sorted((unit for unit in base.get("units", [])
+        if queries.air_cargo_is_eligible(plane, unit)
+        and not queries.is_tactical_player_unit(map_screen, unit)
+        and not queries.unit_has_active_order(unit)),
+        key=queries.calculate_unit_strength, reverse=True)[:queries.air_transport_capacity(plane)]
+    # Evaluate a possible load without changing state when no flight is useful.
+    loaded = dict(plane, air_cargo=selected)
+    drops = []
+    for target in enemies:
+        if (not queries.air_drop_target_is_legal(loaded, target, map_screen.nation_data)
+                or not queries.air_target_in_range(map_screen, loaded, base, "AIR_DROP", target["id"])):
+            continue
+        visible_target = dict(target, units=queries.filter_visible_units(
+            target.get("units", []), country, target, map_screen.nation_data))
+        if _attackers_would_survive(map_screen, country, visible_target, selected):
+            drops.append(queries.canonical_air_order(map_screen, loaded, base,
+                {"type": "AIR_DROP", "target_id": target["id"]}))
+    if drops:
+        if not cargo:
+            queries.ensure_unit_ids(map_screen.map_data)
+            queries.set_air_cargo(map_screen, country, plane, base, [unit["unit_id"] for unit in selected])
+        plane["order"] = min(drops, key=lambda order: (
+            queries.air_distance_squared(map_screen, base, order["target_id"]), order["target_id"]))
+        return
     target = min(enemies, key=lambda p: (queries.air_distance_squared(map_screen, base, p["id"]), p["id"])) if enemies else None
     destination = min(repositions, key=lambda order: (
         queries.air_distance_squared(map_screen, map_screen.id_to_province[order["target_id"]], target["id"]),
@@ -318,11 +344,6 @@ def _assign_air_transport(map_screen, country, plane, base, repositions, enemies
     if not improves:
         return
     if not cargo:
-        candidates = [unit for unit in base.get("units", []) if queries.air_cargo_is_eligible(plane, unit)
-                      and not queries.is_tactical_player_unit(map_screen, unit)
-                      and not queries.unit_has_active_order(unit)]
-        candidates.sort(key=queries.calculate_unit_strength, reverse=True)
-        selected = candidates[:queries.air_transport_capacity(plane)]
         if not selected:
             return
         queries.ensure_unit_ids(map_screen.map_data)

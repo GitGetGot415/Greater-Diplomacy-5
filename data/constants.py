@@ -1126,6 +1126,7 @@ AIR_MISSION_CHOICES = (
     ("MOVE", "Move (select a destination)", "Air Move"),
     ("STRIKE", "Strike (select a target)", "Strike Selected"),
     ("TRANSPORT", "Transport (load or release ground units)", "Air Transport"),
+    ("AIR_DROP", "Air Drop (select enemy land)", "Air Drop"),
     ("WEAKEST", "Defend area (weakest enemy missions targeted first)", "Weakest First"),
     ("STRONGEST", "Defend area (strongest enemy missions targeted first)", "Strongest First"),
     ("RANDOM", "Defend area (random enemy mission targeted first)", "Random First"),
