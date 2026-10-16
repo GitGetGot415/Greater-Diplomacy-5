@@ -11,7 +11,7 @@ from data import constants as c, queries
 from data.io.realtime_multiplayer import MapRealtimeDriver, RealtimeError, collect_map_commands
 from map_logic.ai import ai_movement, ai_world
 from map_logic.diplomacy import volunteers
-from map_logic.turn_processing import air_processor, combat_processor, combat_rules, turn_processor
+from map_logic.turn_processing import air_processor, combat_processor, combat_rules, turn_processor, unit_events
 from screens.map_related_screens.battle_screen import Battle_Screen
 from screens.menu_screens.map import Map
 from tests import test_air_transport as transport_tests
@@ -62,13 +62,70 @@ class AirDropRecoveryTests(unittest.TestCase):
         self.assertLess(self.cargo["health"], health)
         self.assertEqual(defender["health"], enemy_health)
 
-    def test_recovering_cargo_cannot_destroy_grounded_aircraft(self):
+    def test_recovering_cargo_destroys_grounded_aircraft_and_captures_the_tile(self):
         target = self.land()
-        aircraft = wing(target, "Monoplane Bomber I", "B")
-        before = aircraft["health"]
-        combat_processor.process_combat(self.game)
-        self.assertEqual(aircraft["health"], before)
-        self.assertIn(aircraft, target["units"])
+        self.game.is_editor = False
+        self.game.viewing_ai_moves = True
+        # Keep the defender's country and wars active across repeated captures.
+        tile(self.game, 5, 180, owner="B")
+        recovery = deepcopy(self.cargo["order"])
+        health = self.cargo["health"]
+        # The installed artificial library supplies each aircraft capability.
+        for name, stats in queries.get_unit_library().items():
+            if not stats.get("air_role"):
+                continue
+            with self.subTest(aircraft=name):
+                target["owner"] = target["_turn_start_owner"] = "B"
+                aircraft = wing(target, name, "B")
+                combat_processor.process_combat(self.game)
+                combat_processor.check_for_post_combat_captures(self.game)
+                self.assertEqual(aircraft["health"], 0)
+                self.assertNotIn(aircraft, target["units"])
+                self.assertEqual(target["owner"], "A")
+                self.assertEqual(self.cargo["health"], health)
+                self.assertEqual(self.cargo["order"], recovery)
+                self.assertEqual(combat_rules.volley([self.cargo], nation_data=self.game.nation_data), 0)
+
+    def test_ground_forecasts_show_aircraft_loss_during_recovery_without_mutation(self):
+        target = self.land()
+        aircraft = wing(target, "V1 Flying Bomb", "B")
+        before = deepcopy(target["units"])
+        for sides in ([[self.cargo, aircraft]], [[self.cargo], [aircraft]]):
+            with self.subTest(sides=len(sides)):
+                battle = combat_rules.build_battle(sides, self.game.nation_data, terrain=target["terrain"])
+                self.assertEqual(battle.profiles[id(aircraft)]["health"], 0)
+                self.assertEqual(battle.lanes, [])
+                incoming = combat_rules.projected_incoming_damage(battle, self.game.nation_data)
+                self.assertEqual(incoming[id(aircraft)], aircraft["health"])
+                self.assertEqual(target["units"], before)
+
+    def test_recovery_does_not_destroy_neutral_aircraft_or_air_convoys_at_sea(self):
+        target = self.land()
+        self.game.nation_data["C"]["at_war_with"] = []
+        for country in ("A", "B"):
+            self.game.nation_data[country]["at_war_with"].remove("C")
+        neutral = wing(target, "V1 Flying Bomb", "C")
+        before = deepcopy(neutral)
+        queries.prepare_aircraft_for_ground_combat(target["units"], self.game.nation_data)
+        self.assertEqual(neutral, before)
+        convoy = wing(target, "Monoplane Bomber I", "B")
+        queries.load_transport(convoy, "Convoy")
+        before = deepcopy(convoy)
+        queries.prepare_aircraft_for_ground_combat(target["units"], self.game.nation_data, on_land=False)
+        self.assertEqual(convoy, before)
+
+    def test_grounded_aircraft_loss_credits_recovering_troops_in_reports(self):
+        target = self.land()
+        aircraft = wing(target, "V1 Flying Bomb", "B")
+        health = aircraft["health"]
+        with unit_events.record_turn(self.game):
+            unit_events.run_step(self.game, "Ground combat", combat_processor.process_combat)
+        entries = self.game.unit_event_log["events"]
+        losses = [entry for entry in entries if entry["unit_id"] == aircraft["unit_id"]]
+        self.assertEqual({entry["event"] for entry in losses}, {"DAMAGE_RECEIVED", "DESTROYED"})
+        credits = [entry for entry in entries if entry["unit_id"] == self.cargo["unit_id"]
+                   and entry["event"] == "DAMAGE_DEALT"]
+        self.assertEqual(sum(entry["amount"] for entry in credits), health)
 
     def test_shared_validator_rejects_every_replacement_order(self):
         target = self.land()
@@ -238,6 +295,24 @@ class RecoveryRuntimeTests(unittest.TestCase):
             self.assertEqual(defender["health"], enemy_health)
             asyncio.run(turn_processor.resolve_turn_logic(game))
             self.assertLess(defender["health"], enemy_health)
+
+    def test_air_drop_clears_grounded_missile_before_capture_on_landing_turn(self):
+        with tempfile.TemporaryDirectory() as directory, patch.object(c, "RECORD_HISTORY", False):
+            game = self.runtime(directory)
+            base, target = game.id_to_province[1], game.id_to_province[2]
+            plane, cargo = wing(base, "Monoplane Transport"), wing(base, "Fixture Cargo")
+            missile = wing(target, "V1 Flying Bomb", "B")
+            queries.set_air_cargo(game, "A", plane, base, [cargo["unit_id"]])
+            plane["order"] = queries.air_move_order(game, plane, base, target)
+            health = cargo["health"]
+            asyncio.run(turn_processor.resolve_turn_logic(game))
+            self.assertEqual(target["owner"], "A")
+            self.assertNotIn(missile, target["units"])
+            self.assertEqual(missile["health"], 0)
+            self.assertIn(cargo, target["units"])
+            self.assertEqual(cargo["health"], health)
+            self.assertTrue(queries.unit_is_air_drop_recovering(cargo))
+            self.assertFalse(queries.is_nation_in_combat_here("A", target, game.nation_data))
 
     def test_recovery_survives_actual_save_load_and_keeps_orders_read_only(self):
         from data.map import save_map

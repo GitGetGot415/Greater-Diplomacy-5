@@ -264,8 +264,9 @@ If a tied capture returns units, dropped cargo returns to its launch tile.
 Construction Turns Editor > Conversions sets Air Drop Recovery from 1 to 9 turns.
 AIR_DROP_RECOVERY_TURNS in data/constants.py supplies the default for scenarios without an override.
 Recovery covers landing and the configured number of complete following turns.
-Recovering units can take damage and capture territory. They cannot move, receive commands, or deal damage.
+Recovering units can take damage and capture territory. They cannot move, receive commands, or deal normal combat damage.
 This also blocks renaming, maintenance, conversion, disbanding, cargo loading, volunteer offers, and army reassignment.
+Grounded aircraft destruction still applies during recovery.
 Orders shows the remaining recovery turns. Inspection remains available.
 AI planners and automatic army orders preserve recovery.
 
@@ -376,6 +377,7 @@ queries.unit_target_damage_multiplier supplies these modifiers without the aircr
 
 Hostile melee ground combat destroys aircraft immediately, before lane assignment or damage exchange.
 This includes aircraft with ground routes and aircraft unloaded from Convoys into hostile troops.
+Air-drop recovery does not protect enemy aircraft.
 Neutral aircraft are unaffected.
 Aircraft Convoys stay loaded during sea battles.
 Non-mutating UI and AI estimates show the same casualties.

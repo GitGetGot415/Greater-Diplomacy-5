@@ -72,7 +72,7 @@ The aircraft AI generates only orders permitted by the shared rules.
 Transport aircraft carry available ground reinforcements toward visible enemies through safe, accessible landing tiles.
 They can load eligible ground units and drop them on reachable enemy land.
 They use shared drop legality, range, and ground survival estimates against visible defenders.
-Drop estimates include recovery. Recovering ground units receive no orders and deal no damage.
+Drop estimates include recovery. Recovering ground units receive no orders and deal no normal combat damage.
 See documentation/air_stuff.txt for recovery duration and command restrictions.
 They release cargo when no reachable safe landing tile improves its position.
 Released units join the normal ground-order planning pass.

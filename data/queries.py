@@ -5165,9 +5165,9 @@ def unit_target_damage_multiplier(attacker, target, air_to_air=False, *, unit_li
 
 def aircraft_caught_in_ground_combat(unit, opponents, nation_data):
     """A based aircraft sharing a ground battle with its enemy is a casualty."""
+    # Recovery blocks normal attacks, but troops still occupy the aircraft's base.
     return is_air_unit(unit) and any(
         other is not unit
-        and not unit_is_air_drop_recovering(other)
         and are_at_war(get_unit_combat_owner(unit), get_unit_combat_owner(other), nation_data)
         for other in opponents)
 
@@ -5186,7 +5186,7 @@ def prepare_aircraft_for_ground_combat(units, nation_data, opponents=None, on_la
     for unit in units:
         if aircraft_caught_in_ground_combat(unit, enemies, nation_data):
             sources = [(enemy, 1) for enemy in enemies if enemy is not unit
-                       and not unit_is_air_drop_recovering(enemy) and are_at_war(
+                       and are_at_war(
                 get_unit_combat_owner(unit), get_unit_combat_owner(enemy), nation_data)]
             apply_unit_health_loss(unit, unit.get("health", 0), sources=sources)
             unit["order"] = {"type": "MOVE", "path": []}
