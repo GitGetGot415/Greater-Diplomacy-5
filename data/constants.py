@@ -1301,14 +1301,14 @@ CONVOY_ATK = 100
 TRUCK_ATK = 100
 CONVOY_DEF = 0
 TRUCK_DEF = 0
-TRUCK_CONVERT_TURNS = 3
+TRUCK_CONVERT_TURNS = 2
 
 # The editor and shared rules use the same inclusive timing limits.
 MIN_CONVERSION_TURNS = 1
 MAX_CONVERSION_TURNS = 9
 
 # Recovery includes landing and this many subsequent complete turns.
-AIR_DROP_RECOVERY_TURNS = 1
+AIR_DROP_RECOVERY_TURNS = 2
 
 # Orders that span more than one turn and are therefore a standing commitment,
 # not a plan to be re-derived. The AI wipes its units' orders every turn so it
