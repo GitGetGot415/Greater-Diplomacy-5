@@ -16,6 +16,7 @@ import os
 import tempfile
 
 import data.constants as c
+from data import migrations
 
 #: The compressed form is written; the plain form is only ever read, for saves
 #: made before compression existed.
@@ -121,7 +122,7 @@ def decode_history(payload):
     if not isinstance(payload, dict):
         raise ValueError("history root must be an object")
     if "_history_format" not in payload:
-        return payload
+        return migrations.migrate_history_country_records(payload)
     if payload["_history_format"] != DELTA_FORMAT or not isinstance(payload.get("turns"), list):
         raise ValueError("unsupported history format")
     history = {}
@@ -136,7 +137,7 @@ def decode_history(payload):
             raise ValueError("history snapshot must be an object")
         # Timeline edits or save migrations must not change another turn.
         previous = history[turn] = copy.deepcopy(snapshot)
-    return history
+    return migrations.migrate_history_country_records(history)
 
 
 def _write_compressed_history(save_path, history):

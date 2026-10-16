@@ -21,7 +21,7 @@ def release_map(player="Master"):
     def country(name, **fields):
         data = dict(name=name, adjective="", color=[30, 50, 70], is_playable=True,
                     puppets=[], master="", puppet_type="", faction="", at_war_with=[],
-                    allied_with=[], pending_diplomacy={}, research={})
+                    pending_diplomacy={}, research={})
         data.update(fields)
         return data
 

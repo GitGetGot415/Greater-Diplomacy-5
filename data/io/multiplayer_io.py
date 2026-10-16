@@ -759,7 +759,7 @@ def _prepare_player_nation_data(map_ref, country_id, nation_update):
     else:
         merged.pop(politics.POLICY_KEY, None)
 
-    return merged
+    return migrations.migrate_country_record(merged)
 
 
 def _apply_appearance_updates(map_ref, country_id, player_data):

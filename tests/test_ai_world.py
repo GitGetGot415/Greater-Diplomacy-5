@@ -62,7 +62,7 @@ def build_world():
         id_to_province[prov_id] = prov
 
     def nation(**over):
-        base = {"at_war_with": [], "allied_with": [], "claims": [], "puppets": [],
+        base = {"at_war_with": [], "claims": [], "puppets": [],
                 "master": "", "faction": "", "is_faction_leader": False,
                 "temp_modifiers": {}, "manpower": 5000, "materials": 8000, "fuel": 200}
         base.update(over)
@@ -78,8 +78,7 @@ def build_world():
                          temp_modifiers={"Carrow": {"recent_war": -20, "general": 15}}),
         "Borland": nation(at_war_with=["Avaria", "Carrow"], claims=[3],
                           temp_modifiers={"Avaria": {"removed_cores": -30}}),
-        "Carrow": nation(at_war_with=["Borland"], faction="Entente",
-                         allied_with=["Avaria"]),
+        "Carrow": nation(at_war_with=["Borland"], faction="Entente"),
         "Dunmar": nation(master="Avaria", puppet_type=c.PUPPET_TYPE_AUTONOMOUS),
     }
 

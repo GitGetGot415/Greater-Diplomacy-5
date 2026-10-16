@@ -40,6 +40,10 @@ These controls do not add AI actions or multiplayer commands.
 Shared processing and save data
 ------------------------------
 
+Friendly countries are faction members and members of the same imperial family.
+There is no separate direct-alliance list or action.
+See documentation/data_migrations.txt for older country records.
+
 Simultaneous-action checks inspect country pairs named in current pending actions.
 They preserve country insertion order.
 One-way declarations remain included because they can cancel queued responses without a counter-proposal.

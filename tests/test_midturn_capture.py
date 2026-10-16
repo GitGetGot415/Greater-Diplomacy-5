@@ -49,7 +49,6 @@ class StubMapScreen:
         self.nation_data[name] = {
             "name": name,
             "at_war_with": list(at_war_with),
-            "allied_with": [],
             "claims": [],
             "faction": faction,
         }

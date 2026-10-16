@@ -54,9 +54,9 @@ class Screen:
         self.map_data = {str(p["id"]): p for p in provs}
         self.id_to_province = {p["id"]: p for p in provs}
         self.nation_data = {
-            "Avaria": {"at_war_with": list(at_war), "allied_with": [], "puppets": [],
+            "Avaria": {"at_war_with": list(at_war), "puppets": [],
                        "master": "", "faction": "", "research": {}},
-            "Borland": {"at_war_with": ["Avaria"], "allied_with": [], "puppets": [],
+            "Borland": {"at_war_with": ["Avaria"], "puppets": [],
                         "master": "", "faction": "", "research": {}},
         }
 

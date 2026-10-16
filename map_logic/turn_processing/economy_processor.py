@@ -139,7 +139,6 @@ def process_queues(map_screen):
                             "is_rebellion": True,
                             "research": {"militia": militia_lvl},
                             "at_war_with": [current_owner],
-                            "allied_with": [],
                             "pending_diplomacy": {},
                             "diplo_responses": {},
                             "claims": [],

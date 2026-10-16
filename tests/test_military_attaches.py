@@ -16,7 +16,7 @@ from tests.stub_map_screen import StubMapScreen
 
 
 def nation(**extra):
-    data = {"at_war_with": [], "allied_with": [], "faction": "", "master": "",
+    data = {"at_war_with": [], "faction": "", "master": "",
             "puppets": [], "military_access": [], "temp_modifiers": {},
             "pending_diplomacy": {}, "claims": []}
     data.update(extra)

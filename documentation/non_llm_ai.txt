@@ -197,7 +197,7 @@ Strategic players see their complete army. Tactical players keep their restricte
 Local spectators and editors can see complete armies.
 
 Politics shows the political position, direction, research modifier, and policy states.
-Diplomacy shows the faction, leader, members, overlord, puppets, allies, and enemies.
+Diplomacy shows the faction, leader, members, overlord, puppets, and enemies.
 All country names use the shared display-name helper.
 
 Economy shows stockpiles, income, expenses, and net income when the viewer can inspect private economics.

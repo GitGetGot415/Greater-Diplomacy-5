@@ -289,8 +289,7 @@ class CapacityIsRoomNotGarrisonTests(unittest.TestCase):
         screen.add_nation("A", at_war_with=["B"])
         screen.add_nation("ALLY", at_war_with=["B"])
         screen.add_nation("B", at_war_with=["A", "ALLY"])
-        screen.nation_data["A"]["allied_with"] = ["ALLY"]
-        screen.nation_data["ALLY"]["allied_with"] = ["A"]
+        screen.nation_data["A"]["faction"] = screen.nation_data["ALLY"]["faction"] = "Fixture Coalition"
 
         units = [unit("A", attack=10)]
         units += [unit("ALLY", attack=10) for _ in range(5)]

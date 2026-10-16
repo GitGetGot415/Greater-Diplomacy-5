@@ -23,6 +23,73 @@ def round_trip(value):
 
 
 class SavedDataMigrationTests(unittest.TestCase):
+    def test_obsolete_country_alliances_are_removed_without_changing_other_fields(self):
+        for old_value in ([], ["B"], "B", None, {"invalid": True}):
+            with self.subTest(old_value=old_value):
+                country = {"allied_with": old_value, "faction": "Pact", "master": "B",
+                           "puppets": ["C"], "future_field": {"keep": [17]}}
+                expected = copy.deepcopy(country)
+                expected.pop("allied_with")
+                nested = country["future_field"]
+                self.assertIs(migrations.migrate_country_record(country), country)
+                self.assertEqual(country, expected)
+                self.assertIs(country["future_field"], nested)
+                migrations.migrate_country_record(country)
+                self.assertEqual(country, expected)
+
+    def test_old_direct_alliances_do_not_affect_current_friendship_queries(self):
+        countries = {"A": {"allied_with": ["OLD"], "faction": "Pact", "puppets": ["SUB"]},
+                     "B": {"faction": "Pact"}, "SUB": {"master": "A"}, "OLD": {}}
+        self.assertEqual(queries.get_all_friendly_nations("A", countries), {"A", "B", "SUB"})
+        with queries.diplomacy_snapshot():
+            self.assertEqual(queries.get_all_friendly_nations("A", countries), {"A", "B", "SUB"})
+
+    def test_country_cache_and_template_merge_remove_the_obsolete_field(self):
+        catalog = {"A": {"name": "A", "allied_with": []},
+                   "B": {"name": "B", "allied_with": ["A"]}}
+        migrations.normalize_cached_json_names("country_data", catalog)
+        self.assertTrue(all("allied_with" not in country for country in catalog.values()))
+        saved = {"A": {"allied_with": ["B"], "future_field": 23},
+                 "Custom": {"allied_with": ["A"], "name": "Custom"}}
+        with mock.patch.object(queries, "get_country_data", return_value=catalog):
+            restored = migrations.merge_country_templates(saved)
+        self.assertIs(restored, saved)
+        self.assertEqual(restored["A"], {"name": "A", "future_field": 23})
+        self.assertEqual(restored["Custom"], {"name": "Custom"})
+        self.assertEqual(restored["B"], {"name": "B"})
+
+    def test_save_round_trip_does_not_write_the_obsolete_country_field(self):
+        from tests.test_map_save_format import sample_map_screen
+
+        for compact in (False, True):
+            with self.subTest(compact=compact):
+                game = sample_map_screen()
+                game.nation_data["Avaria"].update(allied_with=["Old Friend"], future_field={"keep": 7})
+                with mock.patch.object(queries, "get_country_data", return_value={"Avaria": {"name": "Avaria"}}):
+                    saved = round_trip(queries.build_save_dict(game, compact_nations=compact))
+                    loaded = migrations.merge_country_templates(saved["nation_data"])
+                self.assertNotIn("allied_with", loaded["Avaria"])
+                self.assertEqual(loaded["Avaria"]["future_field"], {"keep": 7})
+                self.assertNotIn("allied_with", game.nation_data["Avaria"])
+
+    def test_pending_response_migration_does_not_restore_obsolete_alliances(self):
+        countries = {"A": {"allied_with": ["B"], "faction": "Pact"}}
+        migrations.migrate_pending_responses(countries)
+        migrations.migrate_pending_responses(countries)
+        self.assertNotIn("allied_with", countries["A"])
+        self.assertEqual(countries["A"]["faction"], "Pact")
+
+    def test_full_and_delta_history_discard_only_obsolete_country_fields(self):
+        from data.map import history_io
+
+        history = {"1": {"nation_data": {"A": {"allied_with": ["B"], "faction": "Pact", "future": 3}}},
+                   "2": {"nation_data": {"A": {"allied_with": [], "faction": "Pact", "future": 4}}}}
+        expected = copy.deepcopy(history)
+        for snapshot in expected.values():
+            snapshot["nation_data"]["A"].pop("allied_with")
+        for payload in (copy.deepcopy(history), history_io.encode_history(history)):
+            self.assertEqual(history_io.decode_history(payload), expected)
+
     def test_province_queues_keep_existing_entries_and_unknown_fields(self):
         units = [{"unit_type": "Fixture Unit"}]
         buildings = [{"building_type": "Fixture Building"}]

@@ -102,7 +102,7 @@ def get_country_map_center(country_id, map_data, loop_map=False, map_width=None)
 def diplomacy_snapshot(freeze_access=True):
     """Memoises faction/friendly lookups for the duration of a read-only pass.
 
-    Only wrap code that leaves "faction", "master", "puppets" and "allied_with"
+    Only wrap code that leaves "faction", "master", and "puppets"
     alone -- a change to any of those inside the block would be invisible to the
     rest of it.
 
@@ -140,7 +140,6 @@ def _compute_friendly_nations(nation, nation_data):
     faction = nation_data.get(nation, {}).get("faction", "")
     if faction:
         friendly.update(get_faction_members(faction, nation_data))
-    friendly.update(nation_data.get(nation, {}).get("allied_with", []))
     return friendly
 
 def friendly_nations_view(nation, nation_data):
@@ -161,7 +160,7 @@ def friendly_nations_view(nation, nation_data):
     return cached
 
 def get_all_friendly_nations(nation, nation_data):
-    """Unified query to fetch a nation, its faction, imperial family, and allies."""
+    """Fetch a nation, its faction members, and its imperial family."""
     return set(friendly_nations_view(nation, nation_data))
 
 def get_unit_combat_owner(unit):
@@ -242,7 +241,7 @@ def get_visible_provinces(map_screen):
         
     friendly_nations = get_all_friendly_nations(player_country, nation_data)
     # An attaché shares the host's battlefield intelligence, including what
-    # that host sees through its own faction, subjects, and allies. It does not
+    # that host sees through its own faction and imperial family. It does not
     # grant movement or make either country friendly for any other rule.
     vision_nations = set(friendly_nations)
     if not (map_screen.tactical_mode and map_screen.player_unit):
@@ -780,7 +779,7 @@ def get_economic_power(nation, nation_data):
     return manpower_val + materials_val + fuel_val
 
 def get_alliance_military_strength(nation, map_data, nation_data):
-    """Calculates the combined military strength of a nation and its faction members/allies/subjects."""
+    """Calculate combined military strength for a nation, its faction, and its imperial family."""
     return sum(get_military_strength(member, map_data) for member in get_all_friendly_nations(nation, nation_data))
 
 def get_military_strength(nation, map_data):
@@ -820,7 +819,7 @@ def get_border_strength(nation_a, nation_b, map_data, id_to_province, nation_dat
     def calc_strength(prov_ids, evaluating_nation, opposing_nation):
         strength = 0
         
-        # Include imperial family (puppets), allies, and faction members defending the border
+        # Include the imperial family and faction members defending the border.
         friendly_nations = get_all_friendly_nations(evaluating_nation, nation_data)
         
         for prov_id in prov_ids:
@@ -886,8 +885,8 @@ def is_submarine_unit(unit_type):
 def is_unit_visible_to(unit, viewer_nation, province, nation_data):
     """Whether `viewer_nation` is allowed to see this unit, on top of ordinary fog of war.
 
-    Submarines stay hidden from everyone outside the owner's imperial family,
-    faction, and allies -- unless mutually hostile nations are already trading
+    Submarines stay hidden from everyone outside the owner's imperial family
+    and faction -- unless mutually hostile nations are already trading
     fire in the province, at which point there is no more hiding among them.
     Every other unit type is unaffected.
     """
@@ -3269,6 +3268,7 @@ def build_save_dict(map_screen, *, include_provinces=True, compact_nations=False
     they do not rely on the recipient having an identical country catalog.
     """
     from map_logic.turn_processing import unit_events
+    migrations.migrate_country_records(map_screen.nation_data)
     scenario_settings = getattr(map_screen, 'scenario_settings', {}) or {}
     # Keep this setting explicit in every new save. Older base maps omit it,
     # but their effective default is OFF and that default should survive the
@@ -3545,7 +3545,6 @@ def get_country_summary(map_screen, country_id):
                       "faction_members": get_faction_members(faction, nation_data) if faction else [],
                       "master": country.get("master", ""),
                       "puppets": list(country.get("puppets", [])),
-                      "allies": list(country.get("allied_with", [])),
                       "enemies": get_enemies(country_id, nation_data)},
         "economy": economy,
     }

@@ -111,7 +111,6 @@ class Declare_Independence_Screen(MapOverlayScreen):
             "is_playable": True,
             "research": copy.deepcopy(old_data.get("research", {})),
             "at_war_with": [old_tag] if old_tag not in c.UNPLAYABLE_NATIONS else [],
-            "allied_with": [],
             "pending_diplomacy": {},
             "diplo_responses": {},
             "claims": [],

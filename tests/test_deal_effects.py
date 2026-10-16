@@ -323,7 +323,7 @@ class WarEndingTests(unittest.TestCase):
 
     def test_a_bloc_peace_ends_every_cross_pair(self):
         self.game.nation_data["C"] = dict(self.game.nation_data["B"], name="C",
-                                          at_war_with=[], allied_with=[], truces={})
+                                          at_war_with=[], truces={})
         self.game.add_province("C")
         self.game.set_war("A", "C")
 

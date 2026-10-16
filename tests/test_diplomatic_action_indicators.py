@@ -13,7 +13,7 @@ from screens.menu_screens.map import bilateral_response_indicator
 
 
 def nation(**overrides):
-    data = {"at_war_with": [], "allied_with": [], "claims": [], "puppets": [],
+    data = {"at_war_with": [], "claims": [], "puppets": [],
             "master": "", "puppet_type": "", "faction": "",
             "is_faction_leader": False, "temp_modifiers": {},
             "pending_diplomacy": {}}

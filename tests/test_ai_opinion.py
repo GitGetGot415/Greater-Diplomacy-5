@@ -255,11 +255,10 @@ class WarDesireTests(unittest.TestCase):
 class PeaceTests(unittest.TestCase):
     def setUp(self):
         self.world, self.map_data, self.nation_data, self.id_to_province = build_world()
-        # A one-sided war. Avaria loses its army, its friends and its treasury;
+        # A one-sided war. Avaria loses its army, subjects, and treasury;
         # simply deleting its units is not enough, because allied strength and
         # stockpiles keep it ahead on the global term -- which is the model
         # working, and was what made the first version of this test wrong.
-        self.nation_data["Avaria"]["allied_with"] = []
         self.nation_data["Avaria"]["puppets"] = []
         self.nation_data["Dunmar"]["master"] = ""
         for resource in ("manpower", "materials", "fuel"):

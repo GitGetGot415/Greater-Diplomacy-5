@@ -249,7 +249,6 @@ def _country_template(name, color, research):
         "fuel": 0,
         "is_playable": True,
         "at_war_with": [],
-        "allied_with": [],
         "faction": "",
         "is_faction_leader": False,
         "master": "",

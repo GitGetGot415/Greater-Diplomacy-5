@@ -26,7 +26,7 @@ def fixture():
         "unit_queue": [], "building_queue": [], "orders": [], "center": (pid * 10, 10)}
         for pid, owner in ((1, "A"), (2, "B"))}
     nations = {owner: {"name": owner, "is_playable": True, "research": {},
-        "at_war_with": [enemy], "allied_with": []} for owner, enemy in (("A", "B"), ("B", "A"))}
+        "at_war_with": [enemy]} for owner, enemy in (("A", "B"), ("B", "A"))}
     return SimpleNamespace(map_data={str(pid): province for pid, province in provinces.items()},
         id_to_province=provinces, nation_data=nations, scenario_settings={"fog_of_war": False},
         player_country="A", tactical_mode=False, player_unit=None, is_editor=False,

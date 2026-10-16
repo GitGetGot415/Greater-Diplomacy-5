@@ -72,6 +72,16 @@ class FakeAddressProbe:
 
 
 class HostSnapshotTests(unittest.TestCase):
+    def test_older_snapshot_drops_direct_alliances_without_changing_factions(self):
+        client = SimpleNamespace(player_country="A", nation_data={"A": {}}, map_data={},
+                                 refresh_all_maps=mock.Mock())
+        snapshot = {"nation_data": {"A": {"allied_with": ["B"], "faction": "Pact", "future": 17},
+                                   "B": {"allied_with": ["A"], "faction": "Pact"}}}
+        apply_authoritative_snapshot(client, snapshot)
+        self.assertEqual(client.nation_data["A"], {"faction": "Pact", "future": 17})
+        self.assertEqual(client.nation_data["B"], {"faction": "Pact"})
+        self.assertEqual(snapshot["nation_data"]["A"]["allied_with"], ["B"])
+
     def test_host_view_refreshes_from_server_before_the_next_turn_draft(self):
         """The host UI is a separate map and must not retain turn-one units."""
         province = {"id": 1, "json_key": "home", "owner": "A", "units": [],

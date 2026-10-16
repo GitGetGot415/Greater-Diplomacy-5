@@ -83,7 +83,6 @@ class StubMapScreen:
             "name": name,
             "is_playable": True,
             "at_war_with": [],
-            "allied_with": [],
             "pending_diplomacy": {},
             "diplo_responses": {},
             "draft_lists": {},

@@ -19,7 +19,7 @@ from ui import spectator_menus, confirm_dialog, modal_stack
 def country(name):
     return dict(name=name, is_playable=True, color=[100, 120, 140], research={},
                 master="", puppet_type="", puppets=[], faction="", is_faction_leader=False,
-                at_war_with=[], allied_with=[], pending_diplomacy={}, claims=[], armies=[])
+                at_war_with=[], pending_diplomacy={}, claims=[], armies=[])
 
 
 def unit(owner, unit_id):

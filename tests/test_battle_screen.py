@@ -62,12 +62,12 @@ class BattleScreenTestCase(unittest.TestCase):
                  if queries.is_playable(n, game_map.nation_data)][:4]
         self.a, self.b, self.x, self.y = names
 
-        for name, allies, enemies in ((self.a, [self.b], [self.x, self.y]),
-                                      (self.b, [self.a], [self.x, self.y]),
-                                      (self.x, [], [self.a, self.b, self.y]),
-                                      (self.y, [], [self.a, self.b, self.x])):
-            game_map.nation_data[name]["allied_with"] = list(allies)
-            game_map.nation_data[name]["at_war_with"] = list(enemies)
+        for name, faction, enemies in ((self.a, "Fixture Coalition", [self.x, self.y]),
+                                       (self.b, "Fixture Coalition", [self.x, self.y]),
+                                       (self.x, "", [self.a, self.b, self.y]),
+                                       (self.y, "", [self.a, self.b, self.x])):
+            self.enterContext(mock.patch.dict(game_map.nation_data[name],
+                                             faction=faction, at_war_with=list(enemies)))
 
         self.province = next(p for p in game_map.map_data.values()
                              if not queries.is_water_province(p))

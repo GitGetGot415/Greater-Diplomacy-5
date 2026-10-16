@@ -572,8 +572,8 @@ class AirResolutionTests(unittest.TestCase):
             self.assertEqual(restored["attack"], before[self.base["map_color"]]["units"][0]["attack"])
 
     def test_allied_aircraft_from_separate_bases_share_efficiency_and_neutrals_do_not(self):
-        self.game.nation_data["A"].update(at_war_with=["B"], allied_with=["C"])
-        self.game.nation_data["C"].update(at_war_with=["B"], allied_with=["A"])
+        self.game.nation_data["A"].update(at_war_with=["B"], faction="Fixture Coalition")
+        self.game.nation_data["C"].update(at_war_with=["B"], faction="Fixture Coalition")
         self.game.nation_data["B"]["at_war_with"] = ["A", "C"]
         self.game.nation_data["D"] = {"at_war_with": []}
         ally_base = tile(self.game, 4, 70, owner="C")

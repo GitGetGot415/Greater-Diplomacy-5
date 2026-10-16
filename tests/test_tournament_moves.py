@@ -49,7 +49,6 @@ def nation(faction="", leader=False, master="", puppet_type="", name=None,
         "puppet_type": puppet_type,
         "puppets": [],
         "at_war_with": [],
-        "allied_with": [],
         "pending_diplomacy": {},
         "diplo_responses": {},
         "materials": 100,
@@ -145,6 +144,18 @@ class TournamentMoveTests(unittest.TestCase):
         self.assertEqual(host.nation_data["Leader"]["conscription_slider"], 0.25)
         self.assertEqual(queries.get_conscription_damage_bonus(host.nation_data["Leader"]), expected)
         self.assertEqual(host.nation_data["Member"], before_member)
+
+    def test_older_move_cannot_restore_the_removed_direct_alliance_field(self):
+        host = Host()
+        move = self.player_data("Leader", host)
+        move["nation_data"]["allied_with"] = ["Outsider"]
+        with tempfile.TemporaryDirectory() as directory:
+            path = self.write_move(directory, "older-country.gd5move", "Leader", move)
+            result = self.import_moves(host, [path])
+        self.assertEqual(result["loaded"], 1)
+        self.assertNotIn("allied_with", host.nation_data["Leader"])
+        self.assertNotIn("Outsider", queries.get_all_friendly_nations("Leader", host.nation_data))
+        self.assertEqual(host.nation_data["Leader"]["faction"], "Old Pact")
 
     def test_each_unreadable_or_unauthenticated_file_has_a_rejection_reason(self):
         host = Host()

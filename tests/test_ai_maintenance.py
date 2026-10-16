@@ -43,10 +43,10 @@ class Screen:
         self.id_to_province = {p["id"]: p for p in provs}
         self.scenario_settings = {}
         self.nation_data = {
-            "Avaria": {"at_war_with": list(at_war), "allied_with": [], "puppets": [],
+            "Avaria": {"at_war_with": list(at_war), "puppets": [],
                        "master": "", "faction": "", "research": {},
                        "materials": 10000, "manpower": 10000, "fuel": 10000},
-            "Borland": {"at_war_with": ["Avaria"], "allied_with": [], "puppets": [],
+            "Borland": {"at_war_with": ["Avaria"], "puppets": [],
                         "master": "", "faction": "", "research": {}},
         }
 

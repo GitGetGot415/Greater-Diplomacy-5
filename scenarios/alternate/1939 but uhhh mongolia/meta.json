@@ -109,7 +109,6 @@
             "fuel": 0,
             "is_playable": false,
             "at_war_with": [],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -159,7 +158,6 @@
             "fuel": 0,
             "is_playable": false,
             "at_war_with": [],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -209,7 +207,6 @@
             "fuel": 0,
             "is_playable": false,
             "at_war_with": [],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -259,7 +256,6 @@
             "fuel": 0,
             "is_playable": true,
             "at_war_with": [],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -337,7 +333,6 @@
             "at_war_with": [
                 "Mongolia"
             ],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -452,7 +447,6 @@
             "at_war_with": [
                 "Mongolia"
             ],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -564,7 +558,6 @@
             "at_war_with": [
                 "Mongolia"
             ],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -652,7 +645,6 @@
             "fuel": 0,
             "is_playable": true,
             "at_war_with": [],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -710,7 +702,6 @@
             "fuel": 0,
             "is_playable": true,
             "at_war_with": [],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -761,7 +752,6 @@
             "fuel": 0,
             "is_playable": true,
             "at_war_with": [],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -845,7 +835,6 @@
             "at_war_with": [
                 "Mongolia"
             ],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -959,7 +948,6 @@
             "at_war_with": [
                 "Mongolia"
             ],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -1071,7 +1059,6 @@
             "at_war_with": [
                 "Mongolia"
             ],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -1183,7 +1170,6 @@
             "at_war_with": [
                 "Mongolia"
             ],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -1295,7 +1281,6 @@
             "at_war_with": [
                 "Mongolia"
             ],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -1410,7 +1395,6 @@
             "at_war_with": [
                 "Mongolia"
             ],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -1524,7 +1508,6 @@
             "at_war_with": [
                 "Mongolia"
             ],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -1636,7 +1619,6 @@
             "at_war_with": [
                 "Mongolia"
             ],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -1748,7 +1730,6 @@
             "at_war_with": [
                 "Mongolia"
             ],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -1860,7 +1841,6 @@
             "at_war_with": [
                 "Mongolia"
             ],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -1948,7 +1928,6 @@
             "fuel": 0,
             "is_playable": true,
             "at_war_with": [],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -1999,7 +1978,6 @@
             "fuel": 0,
             "is_playable": true,
             "at_war_with": [],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -2083,7 +2061,6 @@
             "at_war_with": [
                 "Mongolia"
             ],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -2172,7 +2149,6 @@
             "fuel": 0,
             "is_playable": true,
             "at_war_with": [],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -2247,7 +2223,6 @@
             "at_war_with": [
                 "Mongolia"
             ],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -2359,7 +2334,6 @@
             "at_war_with": [
                 "Mongolia"
             ],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -2447,7 +2421,6 @@
             "fuel": 0,
             "is_playable": true,
             "at_war_with": [],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -2505,7 +2478,6 @@
             "fuel": 0,
             "is_playable": true,
             "at_war_with": [],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -2588,7 +2560,6 @@
             "at_war_with": [
                 "Mongolia"
             ],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -2700,7 +2671,6 @@
             "at_war_with": [
                 "Mongolia"
             ],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -2812,7 +2782,6 @@
             "at_war_with": [
                 "Mongolia"
             ],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -2930,7 +2899,6 @@
             "at_war_with": [
                 "Mongolia"
             ],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -3047,7 +3015,6 @@
             "at_war_with": [
                 "Mongolia"
             ],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -3159,7 +3126,6 @@
             "at_war_with": [
                 "Mongolia"
             ],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -3271,7 +3237,6 @@
             "at_war_with": [
                 "Mongolia"
             ],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -3383,7 +3348,6 @@
             "at_war_with": [
                 "Mongolia"
             ],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -3495,7 +3459,6 @@
             "at_war_with": [
                 "Mongolia"
             ],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -3607,7 +3570,6 @@
             "at_war_with": [
                 "Mongolia"
             ],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -3719,7 +3681,6 @@
             "at_war_with": [
                 "Mongolia"
             ],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -3831,7 +3792,6 @@
             "at_war_with": [
                 "Mongolia"
             ],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -3943,7 +3903,6 @@
             "at_war_with": [
                 "Mongolia"
             ],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -4029,7 +3988,6 @@
             "fuel": 0,
             "is_playable": true,
             "at_war_with": [],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -4136,7 +4094,6 @@
                 "Yugoslavia",
                 "United States of America"
             ],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -4228,7 +4185,6 @@
             "fuel": 0,
             "is_playable": true,
             "at_war_with": [],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -4278,7 +4234,6 @@
             "fuel": 0,
             "is_playable": true,
             "at_war_with": [],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -4329,7 +4284,6 @@
             "fuel": 0,
             "is_playable": true,
             "at_war_with": [],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -4404,7 +4358,6 @@
             "at_war_with": [
                 "Mongolia"
             ],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -4492,7 +4445,6 @@
             "fuel": 0,
             "is_playable": true,
             "at_war_with": [],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -4567,7 +4519,6 @@
             "at_war_with": [
                 "Mongolia"
             ],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -4679,7 +4630,6 @@
             "at_war_with": [
                 "Mongolia"
             ],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -4791,7 +4741,6 @@
             "at_war_with": [
                 "Mongolia"
             ],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -4904,7 +4853,6 @@
             "at_war_with": [
                 "Mongolia"
             ],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -4996,7 +4944,6 @@
             "fuel": 0,
             "is_playable": true,
             "at_war_with": [],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -5047,7 +4994,6 @@
             "fuel": 0,
             "is_playable": true,
             "at_war_with": [],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -5099,7 +5045,6 @@
             "fuel": 0,
             "is_playable": true,
             "at_war_with": [],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -5151,7 +5096,6 @@
             "fuel": 0,
             "is_playable": true,
             "at_war_with": [],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -5205,7 +5149,6 @@
             "fuel": 0,
             "is_playable": true,
             "at_war_with": [],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -5258,7 +5201,6 @@
             "fuel": 0,
             "is_playable": true,
             "at_war_with": [],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -5309,7 +5251,6 @@
             "fuel": 0,
             "is_playable": true,
             "at_war_with": [],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -5360,7 +5301,6 @@
             "fuel": 0,
             "is_playable": true,
             "at_war_with": [],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -5411,7 +5351,6 @@
             "fuel": 0,
             "is_playable": true,
             "at_war_with": [],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -5462,7 +5401,6 @@
             "fuel": 0,
             "is_playable": true,
             "at_war_with": [],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -5513,7 +5451,6 @@
             "fuel": 0,
             "is_playable": true,
             "at_war_with": [],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -5564,7 +5501,6 @@
             "fuel": 0,
             "is_playable": true,
             "at_war_with": [],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -5615,7 +5551,6 @@
             "fuel": 0,
             "is_playable": true,
             "at_war_with": [],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -5666,7 +5601,6 @@
             "fuel": 0,
             "is_playable": true,
             "at_war_with": [],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -5717,7 +5651,6 @@
             "fuel": 0,
             "is_playable": true,
             "at_war_with": [],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -5738,7 +5671,6 @@
             ],
             "is_playable": false,
             "at_war_with": [],
-            "allied_with": [],
             "pending_diplomacy": {},
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
@@ -5766,7 +5698,6 @@
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
             "at_war_with": [],
-            "allied_with": [],
             "pending_diplomacy": {},
             "diplo_responses": {},
             "military_attaches": []
@@ -5775,7 +5706,6 @@
         "Afghanistan": {},
         "FACTION_WAR_MAPS": {
             "at_war_with": [],
-            "allied_with": [],
             "pending_diplomacy": {},
             "manpower": 200,
             "materials": 200,
@@ -6585,7 +6515,6 @@
             "fuel": 0,
             "is_playable": true,
             "at_war_with": [],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -6643,7 +6572,6 @@
             "fuel": 0,
             "is_playable": true,
             "at_war_with": [],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "Gigachad",
             "flag_data": "DEFAULT",
@@ -6920,7 +6848,6 @@
             "fuel": 0,
             "is_playable": true,
             "at_war_with": [],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -7007,7 +6934,6 @@
             "fuel": 0,
             "is_playable": true,
             "at_war_with": [],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -7074,7 +7000,6 @@
             "fuel": 0,
             "is_playable": true,
             "at_war_with": [],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",
@@ -7234,7 +7159,6 @@
             "fuel": 0,
             "is_playable": true,
             "at_war_with": [],
-            "allied_with": [],
             "leader_name": "",
             "leader_title": "",
             "flag_data": "DEFAULT",

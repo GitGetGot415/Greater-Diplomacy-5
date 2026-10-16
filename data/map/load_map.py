@@ -254,14 +254,12 @@ def load_map_assets(map_screen, load_path):
     if c.DISABLE_FACTIONS:
         for c_name, c_data in map_screen.nation_data.items():
             c_data["faction"] = ""
-            c_data["allied_with"] = []
 
     if c.BATTLE_ROYALE_MODE:
         playable_nations = [n for n in map_screen.nation_data.keys() if queries.is_playable(n, map_screen.nation_data)]
         for c_name in playable_nations:
             c_data = map_screen.nation_data[c_name]
             c_data["faction"] = ""
-            c_data["allied_with"] = []
             if "master" in c_data:
                 c_data["master"] = ""
             c_data["puppets"] = []

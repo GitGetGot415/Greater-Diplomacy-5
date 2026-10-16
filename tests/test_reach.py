@@ -204,8 +204,7 @@ class TreatyTests(unittest.TestCase):
     def test_an_ally_cannot_be_used_as_a_pair_of_hands(self):
         """Routing the province to somebody who *can* reach it is fine; routing
         it to somebody who cannot is the loophole, and it is judged on them."""
-        self.game.nation_data["Buyer"]["allied_with"] = ["Seller"]
-        self.game.nation_data["Seller"]["allied_with"] = ["Buyer"]
+        self.game.nation_data["Buyer"]["faction"] = self.game.nation_data["Seller"]["faction"] = "Fixture Coalition"
 
         self.trade(self.far["id"], "Distant", receiver="Seller")
         self.assertEqual(self.game.owner_of(self.far["id"]), "Seller",

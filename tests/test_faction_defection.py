@@ -29,7 +29,7 @@ LONG_ENOUGH = c.AI_FACTION_MIN_TENURE + 5
 
 def nation(faction="", leader=False, at_war=(), master="", tenure=LONG_ENOUGH):
     return {"faction": faction, "is_faction_leader": leader,
-            "at_war_with": list(at_war), "allied_with": [], "puppets": [],
+            "at_war_with": list(at_war), "puppets": [],
             "master": master, "faction_tenure": tenure, "research": {}}
 
 

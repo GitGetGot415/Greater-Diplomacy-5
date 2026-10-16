@@ -21,7 +21,7 @@ def templates():
                    "research": {"infantry_type": 1}, "manpower": 0,
                    "materials": 0, "fuel": 0, "is_playable": True,
                    "flag_data": "", "portrait_data": "",
-                   "at_war_with": [], "allied_with": []}
+                   "at_war_with": []}
             for index, name in enumerate(("A", "B", "C", "D", "E"))}
 
 

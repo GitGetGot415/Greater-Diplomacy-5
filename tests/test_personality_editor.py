@@ -85,10 +85,10 @@ class EditedTraitsChangeBehaviourTests(unittest.TestCase):
 
         def desire(aggression):
             nation_data = {
-                "Avaria": {"at_war_with": [], "allied_with": [], "claims": [], "puppets": [],
+                "Avaria": {"at_war_with": [], "claims": [], "puppets": [],
                            "master": "", "faction": "", "temp_modifiers": {}, "relations": {},
                            "manpower": 5000, "materials": 5000, "fuel": 500, "war_durations": {}},
-                "Borland": {"at_war_with": [], "allied_with": [], "claims": [], "puppets": [],
+                "Borland": {"at_war_with": [], "claims": [], "puppets": [],
                             "master": "", "faction": "", "temp_modifiers": {}, "relations": {},
                             "manpower": 5000, "materials": 5000, "fuel": 500, "war_durations": {}},
             }

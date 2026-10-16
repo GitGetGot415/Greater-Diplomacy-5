@@ -152,7 +152,7 @@ def _coalition_groups(columns, nation_data):
     exists for: in a real alliance war A is at war with both X and Y, so A+B
     against X+Y would spawn four duels rather than the two the front actually
     has. Two columns merge when they are on the same side, not at war, and
-    friendly both ways round -- allies, faction partners, or an imperial family.
+    friendly both ways round -- faction partners or members of an imperial family.
     A neutral standing here on access merges with nobody.
 
     Where nobody is allied this degrades exactly to one coalition per nation, so

@@ -31,7 +31,7 @@ from map_logic.diplomacy import deal
 
 
 def nation(**over):
-    base = {"at_war_with": [], "allied_with": [], "claims": [], "puppets": [],
+    base = {"at_war_with": [], "claims": [], "puppets": [],
             "master": "", "puppet_type": "", "faction": "", "is_faction_leader": False,
             "temp_modifiers": {}, "pending_diplomacy": {},
             "manpower": 5000, "materials": 8000, "fuel": 500, "war_durations": {}}

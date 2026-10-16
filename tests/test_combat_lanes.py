@@ -75,10 +75,10 @@ def member_for(battle, nation):
 def alliance_tile(per_nation=8):
     """A and B allied against X and Y allied, everyone at war across the divide."""
     screen = StubMapScreen()
-    for name, allies in (("A", ["B"]), ("B", ["A"]), ("X", ["Y"]), ("Y", ["X"])):
+    for name, faction in (("A", "Front A"), ("B", "Front A"), ("X", "Front X"), ("Y", "Front X")):
         enemies = ["X", "Y"] if name in ("A", "B") else ["A", "B"]
         screen.add_nation(name, at_war_with=enemies)
-        screen.nation_data[name]["allied_with"] = allies
+        screen.nation_data[name]["faction"] = faction
 
     troops = {n: [unit(n, attack=10) for _ in range(per_nation)]
               for n in ("A", "B", "X", "Y")}
@@ -276,8 +276,7 @@ class WidthTests(unittest.TestCase):
         screen.add_nation("BIG", at_war_with=["X"])
         screen.add_nation("SMALL", at_war_with=["X"])
         screen.add_nation("X", at_war_with=["BIG", "SMALL"])
-        screen.nation_data["BIG"]["allied_with"] = ["SMALL"]
-        screen.nation_data["SMALL"]["allied_with"] = ["BIG"]
+        screen.nation_data["BIG"]["faction"] = screen.nation_data["SMALL"]["faction"] = "Front BIG"
 
         troops = {"BIG": [unit("BIG", attack=10) for _ in range(50)],
                   "SMALL": [unit("SMALL", attack=10) for _ in range(2)],
@@ -430,10 +429,8 @@ class CoalitionTests(unittest.TestCase):
         screen.add_nation("ALLY", at_war_with=["FOE"])
         screen.add_nation("FOE", at_war_with=["BIG", "ALLY"])
         screen.add_nation("SMALLFOE", at_war_with=["BIG"])
-        screen.nation_data["BIG"]["allied_with"] = ["ALLY"]
-        screen.nation_data["ALLY"]["allied_with"] = ["BIG"]
-        screen.nation_data["FOE"]["allied_with"] = ["SMALLFOE"]
-        screen.nation_data["SMALLFOE"]["allied_with"] = ["FOE"]
+        screen.nation_data["BIG"]["faction"] = screen.nation_data["ALLY"]["faction"] = "Front BIG"
+        screen.nation_data["FOE"]["faction"] = screen.nation_data["SMALLFOE"]["faction"] = "Front FOE"
 
         # Sized so BIG+ALLY's combined muster exactly fills their side's lane
         # cap -- test_slots_held_is_the_answer_the_ai_asks_for depends on
@@ -471,8 +468,7 @@ class CoalitionTests(unittest.TestCase):
         screen.add_nation("BIG", at_war_with=["FOE"])
         screen.add_nation("NEUTRAL_ALLY", at_war_with=[])
         screen.add_nation("FOE", at_war_with=["BIG"])
-        screen.nation_data["BIG"]["allied_with"] = ["NEUTRAL_ALLY"]
-        screen.nation_data["NEUTRAL_ALLY"]["allied_with"] = ["BIG"]
+        screen.nation_data["BIG"]["faction"] = screen.nation_data["NEUTRAL_ALLY"]["faction"] = "Front BIG"
 
         prov = tile(screen, {"BIG": [unit("BIG", attack=10)],
                              "NEUTRAL_ALLY": [unit("NEUTRAL_ALLY", attack=99)],
@@ -666,12 +662,12 @@ class HeldBackTests(unittest.TestCase):
         met -- so the slot exists, B has the body, and nothing seated it.
         """
         screen = StubMapScreen()
-        for name, allies, enemies in (("A", ["B"], ["X", "Y"]),
-                                      ("B", ["A"], ["X", "Y"]),
-                                      ("X", [], ["A", "B"]),
-                                      ("Y", [], ["A", "B"])):
+        for name, faction, enemies in (("A", "Front A", ["X", "Y"]),
+                                       ("B", "Front A", ["X", "Y"]),
+                                       ("X", "", ["A", "B"]),
+                                       ("Y", "", ["A", "B"])):
             screen.add_nation(name, at_war_with=enemies)
-            screen.nation_data[name]["allied_with"] = allies
+            screen.nation_data[name]["faction"] = faction
 
         prov = tile(screen, {"A": [unit("A", attack=10) for _ in range(2)],
                              "B": [unit("B", attack=10) for _ in range(8)],

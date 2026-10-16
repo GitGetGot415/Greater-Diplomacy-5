@@ -207,7 +207,7 @@ def _references_country(value, country):
 
 def _clear_country_relationships(nation_data, country):
     """Remove live relations and pending actions. Preserve historical world events."""
-    list_fields = ("at_war_with", "allied_with", "puppets", "guarantees", "military_attaches",
+    list_fields = ("at_war_with", "puppets", "guarantees", "military_attaches",
                    "military_access", "pending_military_attache_revocations", "pending_volunteer_send_homes")
     table_fields = ("relations", "wargoals", "temp_modifiers", "pending_diplomacy", "diplo_responses",
                     "diplo_cooldowns", "truces", "draft_lists", "war_durations", "volunteer_missions")
@@ -312,7 +312,7 @@ def finalize_spectator_country_removal(map_screen, country, annexer=None):
     if country in nation_data:
         data = nation_data[country]
         data.update(master="", puppet_type="", puppets=[], faction="", is_faction_leader=False,
-                    at_war_with=[], allied_with=[], pending_diplomacy={}, diplo_responses={},
+                    at_war_with=[], pending_diplomacy={}, diplo_responses={},
                     volunteer_missions={}, scripted_events=[], armies=[], claim_queue=[],
                     revoke_queue=[], return_queue=[], release_puppet_queue=[])
     queries.normalize_armies(nation_data, map_data)
@@ -426,7 +426,6 @@ def finalize_create_puppet(map_data, nation_data, master, core_nation, map_scree
     if release_type == c.PUPPET_TYPE_INTEGRATED:
         new_data["is_created_integrated_puppet"] = True
     new_data["at_war_with"] = []
-    new_data["allied_with"] = []
     new_data["pending_diplomacy"] = {}
     new_data["claims"] = []
     new_data["claim_queue"] = []

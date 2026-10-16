@@ -22,6 +22,11 @@ Those names refer to the central implementation. They do not contain duplicate c
 OLDER IDENTIFIERS AND FIELDS
 ----------------------------
 
+Older country records can contain allied_with. Loading discards this obsolete field.
+It does not create factions or change existing faction and subject relationships.
+Country caches, saves, history, and both multiplayer systems use the same removal rule.
+Current country records and the country summary do not include a direct-alliance list.
+
 Settings accept api_key as gemini_api_key and ollama_api_key as ollama_base_url.
 They accept music_speed and sfx_speed as music_pitch and sfx_pitch.
 LING becomes OPENROUTER. ling_api_key and ling_model become openrouter_api_key and openrouter_model.

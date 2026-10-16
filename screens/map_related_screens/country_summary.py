@@ -79,7 +79,6 @@ class CountrySummaryScreen(GameState):
             f"Faction members: {self._names(diplomacy['faction_members'])}",
             f"Overlord: {self._names([diplomacy['master']]) if diplomacy['master'] else 'None'}",
             f"Puppets ({len(diplomacy['puppets'])}): {self._names(diplomacy['puppets'])}",
-            f"Allies: {self._names(diplomacy['allies'])}",
             f"At war with: {self._names(diplomacy['enemies'])}",
         ]
 

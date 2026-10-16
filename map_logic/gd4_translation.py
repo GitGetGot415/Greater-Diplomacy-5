@@ -16,7 +16,7 @@ import shutil
 from datetime import datetime
 
 import data.constants as c
-from data import queries
+from data import migrations, queries
 from data.map import history_io
 from data.platform import sync_persisted_dir
 
@@ -286,20 +286,19 @@ def _unique_name(name, nation_data):
 def _make_country_names(records, base_nation_data):
     """GD4 country codes point to records; names may have changed in a save."""
     code_to_name = {}
-    nation_data = copy.deepcopy(base_nation_data)
+    nation_data = migrations.migrate_country_records(copy.deepcopy(base_nation_data))
     for index, record in enumerate(records):
         if not isinstance(record, list) or len(record) < 26:
             raise GD4TranslationError(f"GD4 country record {index + 1} is incomplete")
         code = GD4_COUNTRY_CODES[index]
         name = _unique_name(record[2], nation_data)
         if name not in nation_data and name != "Unclaimed":
-            template = copy.deepcopy(base_nation_data.get("Unclaimed", {}))
+            template = copy.deepcopy(nation_data.get("Unclaimed", {}))
             template.update({
                 "name": name,
                 "color": _gd4_color(record[0], record[1]),
                 "is_playable": True,
                 "at_war_with": [],
-                "allied_with": [],
             })
             nation_data[name] = template
         code_to_name[code] = name
@@ -322,7 +321,6 @@ def _make_country_names(records, base_nation_data):
 
 def _apply_diplomacy(nation_data, code_to_name, wars):
     for entry in nation_data.values():
-        entry["allied_with"] = []
         entry["at_war_with"] = []
         # GD4 has no factions. Clearing all shared-visibility relationships
         # means an imported player sees only their own territory under fog.

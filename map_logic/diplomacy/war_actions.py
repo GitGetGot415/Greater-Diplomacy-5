@@ -252,8 +252,6 @@ def finalize_neutral(nation_data, a, b):
 
     for country, other in [(a, b), (b, a)]:
         remove_enemy(nation_data, country, other)
-        if other in nation_data[country]["allied_with"]:
-            nation_data[country]["allied_with"].remove(other)
 
         # Apply Temporary Post-War Modifier
         queries.add_temporary_modifier(country, other, "recent_war", c.REL_MOD_RECENT_WAR, nation_data)

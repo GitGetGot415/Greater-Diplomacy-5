@@ -479,8 +479,7 @@ class CombatDamageTests(unittest.TestCase):
         screen.add_nation("A", at_war_with=["C"])
         screen.add_nation("B", at_war_with=["C"])
         screen.add_nation("C", at_war_with=["A", "B"])
-        screen.nation_data["A"]["allied_with"] = ["B"]
-        screen.nation_data["B"]["allied_with"] = ["A"]
+        screen.nation_data["A"]["faction"] = screen.nation_data["B"]["faction"] = "Fixture Coalition"
         politics.set_value(screen.nation_data, "A", c.POLITICS_MAX)
 
         prov = screen.add_province("p1", "C", units=[unit("A"), unit("B"), unit("C")])
@@ -733,7 +732,7 @@ class StubWorld:
 
 
 def ai_world_with(*nations, **kwargs):
-    nation_data = {n: {"name": n, "at_war_with": [], "allied_with": []} for n in nations}
+    nation_data = {n: {"name": n, "at_war_with": []} for n in nations}
     return StubWorld(nation_data, **kwargs)
 
 
@@ -784,8 +783,7 @@ class AIPoliticsTests(unittest.TestCase):
     def test_an_ally_next_door_is_not_a_menace(self):
         allied = ai_world_with("A", "B", neighbors={"A": {"B"}},
                                ratios={("A", "B"): (1.0, 0.1)})
-        allied.nation_data["A"]["allied_with"] = ["B"]
-        allied.nation_data["B"]["allied_with"] = ["A"]
+        allied.nation_data["A"]["faction"] = allied.nation_data["B"]["faction"] = "Fixture Coalition"
         alone = ai_world_with("A", neighbors={"A": set()})
         self.assertEqual(self.ai_politics.desired_value(allied, "A"),
                          self.ai_politics.desired_value(alone, "A"))

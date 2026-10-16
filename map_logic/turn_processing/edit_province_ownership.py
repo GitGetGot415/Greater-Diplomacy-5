@@ -199,8 +199,6 @@ def retire_landless_nation(map_screen, nation, *, force=False):
                 continue
             if nation in n_data.get("at_war_with", []):
                 n_data["at_war_with"].remove(nation)
-            if nation in n_data.get("allied_with", []):
-                n_data["allied_with"].remove(nation)
             for dict_key in ["pending_diplomacy", "diplo_responses", "diplo_cooldowns",
                              "truces", "draft_lists"]:
                 if nation in n_data.get(dict_key, {}):

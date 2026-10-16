@@ -25,7 +25,7 @@ from map_logic.ai import ai_prompts
 
 
 def nation(**over):
-    base = {"at_war_with": [], "allied_with": [], "faction": "", "master": "",
+    base = {"at_war_with": [], "faction": "", "master": "",
             "puppets": [], "temp_modifiers": {}, "relations": {}}
     base.update(over)
     return base

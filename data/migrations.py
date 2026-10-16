@@ -97,6 +97,8 @@ def normalize_cached_json_names(cache_key, data):
         return
     if cache_key == "settings":
         migrate_setting_names(data)
+    elif cache_key == "country_data":
+        migrate_country_records(data)
     elif cache_key in ("unit_library", "tech_tree"):
         field = "production_group" if cache_key == "unit_library" else "category"
         for entry in data.values():
@@ -106,6 +108,29 @@ def normalize_cached_json_names(cache_key, data):
 
 # SAVED MAPS, COUNTRIES, AND UNITS
 # ================================
+
+
+def migrate_country_record(country):
+    """Discard the obsolete direct-alliance field without changing faction or subject relationships."""
+    country.pop("allied_with", None)
+    return country
+
+
+def migrate_country_records(nation_data):
+    """Update country records in place, including records from older saved games."""
+    for country in nation_data.values():
+        if isinstance(country, dict):
+            migrate_country_record(country)
+    return nation_data
+
+
+def migrate_history_country_records(history):
+    """Remove obsolete country fields after complete historical snapshots are restored."""
+    for snapshot in history.values():
+        if isinstance(snapshot, dict) and isinstance(snapshot.get("nation_data"), dict):
+            migrate_country_records(snapshot["nation_data"])
+    return history
+
 
 LEGACY_RESEARCH_DEFAULT_DAYS = 30
 LEGACY_RESEARCH_POINTS_PER_DAY = 10
@@ -261,7 +286,7 @@ def merge_country_templates(nation_data):
             for key, value in template["research"].items():
                 if key not in research:
                     research[key] = copy.deepcopy(value)
-    return nation_data
+    return migrate_country_records(nation_data)
 
 
 def saved_player_view(save_meta):
@@ -574,9 +599,9 @@ def ensure_message_id(message):
 
 def migrate_pending_responses(nation_data):
     """Move older reply actions into the response channel in place."""
+    migrate_country_records(nation_data)
     for country in nation_data.values():
         country.setdefault("at_war_with", [])
-        country.setdefault("allied_with", [])
         country.setdefault("guarantees", [])
         country.setdefault("military_attaches", [])
         pending = country.setdefault("pending_diplomacy", {})

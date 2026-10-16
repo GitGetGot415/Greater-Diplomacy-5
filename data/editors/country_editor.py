@@ -10,7 +10,7 @@ import data.constants as c
 import json
 
 import colorsys
-from data import queries
+from data import migrations, queries
 from data.io.country_io import DEFAULT_NATION_COLOR
 from data.io.json_io import load_json_or_empty
 from ui import confirm_dialog
@@ -159,7 +159,6 @@ class CountryEditor:
                     self.data[int_id].setdefault(key, 0)
 
                 self.data[int_id].setdefault("at_war_with", [])
-                self.data[int_id].setdefault("allied_with", [])
 
                 self.data[int_id].setdefault("adjective", "")
                 self.data[int_id].setdefault("leader_name", "")
@@ -200,7 +199,7 @@ class CountryEditor:
                 "research": self.get_default_research_dict(),
                  "manpower": 0, "materials": 0, "fuel": 0,     
                 "is_playable": True,
-                "at_war_with": [], "allied_with": [],
+                "at_war_with": [],
                 "adjective": adjective,
                 "leader_name": leader_name,
                 "leader_title": leader_title,
@@ -230,7 +229,7 @@ class CountryEditor:
         self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
 
     def load_data(self):
-        return load_json_or_empty(PATH)
+        return migrations.migrate_country_records(load_json_or_empty(PATH))
 
     def pick_color(self):
         color = colorchooser.askcolor(title="Choose Country Color")

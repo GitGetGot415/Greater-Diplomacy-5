@@ -1854,6 +1854,8 @@ def apply_authoritative_snapshot(map_ref, snapshot: dict[str, Any]) -> None:
             }
 
     nation_data = copy.deepcopy(snapshot.get("nation_data", map_ref.nation_data))
+    from data import migrations
+    migrations.migrate_country_records(nation_data)
     incoming_player = nation_data.get(player_country, {}) if isinstance(nation_data, dict) else {}
     for message in incoming_player.get("inbox", []) if isinstance(incoming_player, dict) else []:
         if not isinstance(message, dict):

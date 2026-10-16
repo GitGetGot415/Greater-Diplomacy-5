@@ -63,7 +63,6 @@ class StubMapScreen:
         self.nation_data[name] = {
             "name": name,
             "at_war_with": list(at_war_with),
-            "allied_with": [],
             "claims": [],
         }
         return self.nation_data[name]
@@ -601,8 +600,7 @@ class PredictionBubbleTests(unittest.TestCase):
 
     def test_neutral_ally_does_not_become_the_predicted_winner(self):
         screen, province = self.winner_fixture()
-        screen.nation_data["A"]["allied_with"] = ["NEUTRAL"]
-        screen.nation_data["NEUTRAL"]["allied_with"] = ["A"]
+        screen.nation_data["A"]["faction"] = screen.nation_data["NEUTRAL"]["faction"] = "Fixture Coalition"
 
         outcome = overlay_renderer.estimated_combat_outcome(
             [province["units"]], screen.nation_data, province=province)
@@ -777,7 +775,7 @@ class PredictionBubbleTests(unittest.TestCase):
         screen.add_nation("ALLY")
         screen.add_nation("X", at_war_with=["Y"])
         screen.add_nation("Y", at_war_with=["X"])
-        screen.nation_data["P"]["allied_with"] = ["ALLY"]
+        screen.nation_data["P"]["faction"] = screen.nation_data["ALLY"]["faction"] = "Fixture Coalition"
 
         prov = screen.add_province("p1", "X", units=[
             unit("ALLY", attack=50), unit("X", attack=100), unit("Y", attack=100)])
