@@ -160,7 +160,7 @@ class _NavigationIntroPopup:
         ("Need to Assign more units?", "With units selected, right-click an army card."),
     )
     DIPLOMACY_STEPS = (
-        ("Country summary", "relations", "Click the top-left flag for a read-only summary. Select another country's tile to inspect that country."),
+        ("Country summary", "political", "Click the top-left flag for a read-only summary. Select another country's tile to inspect that country."),
         ("Mail", "mail", "Open the Mail tab (located to the left) to read, reply to, or start conversations."),
         ("Country actions", "relations", "Click another country's tile to see available diplomatic actions you can take against them."),
     )
