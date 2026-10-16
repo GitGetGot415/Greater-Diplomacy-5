@@ -331,7 +331,7 @@ class Politics_Screen(GameState):
         damage = politics.damage_multiplier(nation_data, self.player)
         research = politics.research_multiplier(nation_data, self.player)
 
-        text = "Damage dealt  x%.2f          Research speed  x%.2f" % (damage, research)
+        text = "Damage modifier  x%.2f          Research speed  x%.2f" % (damage, research)
         line = normal.render(text, True, c.UI_TEXT_LIGHT)
         surface.blit(line, (self.politics_rect.centerx - line.get_width() // 2,
                             self.politics_rect.y + POLITICS_EFFECTS_OFFSET_Y))
