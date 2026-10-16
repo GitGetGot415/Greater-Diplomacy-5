@@ -1864,6 +1864,7 @@ def apply_authoritative_snapshot(map_ref, snapshot: dict[str, Any]) -> None:
         if saved_state:
             message.update(saved_state)
     map_ref.nation_data = nation_data
+    map_ref.country_economy_summaries = copy.deepcopy(snapshot.get("country_economy_summaries", {}))
     by_json_key = {province.get("json_key"): province for province in map_ref.map_data.values()}
     for json_key, update in snapshot.get("provinces", {}).items():
         province = by_json_key.get(json_key)

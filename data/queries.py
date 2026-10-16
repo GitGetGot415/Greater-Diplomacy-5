@@ -3333,6 +3333,8 @@ def player_snapshot_projection(map_screen, snapshot, country_id):
     visible, _partial = get_visible_provinces(view) if country_id in map_screen.nation_data else (set(), set())
     fog = get_scenario_flag("fog_of_war", c.DEFAULT_FOG_OF_WAR,
                             getattr(map_screen, "scenario_settings", {}))
+    result["country_economy_summaries"] = get_shared_country_economy_summaries(
+        country_id, map_screen.map_data, map_screen.nation_data)
     private_fields = ("production_queue", "current_research", "research_queue", "research_progress",
         "research", "inbox", "pending_diplomacy", "diplo_responses", "diplo_draft_lists",
         "queued_ai_actions", "orders", "armies", "automation", "materials", "manpower", "fuel",
@@ -3460,12 +3462,48 @@ def get_nation_provinces_and_units(nation, map_data):
     return owned_provs, owned_units
 
 
+def shares_country_economy(viewer, country_id, nation_data):
+    """Share economics with the same country, faction members, and direct subjects or masters."""
+    if (viewer not in nation_data or country_id not in nation_data
+            or viewer in c.UNPLAYABLE_NATIONS or country_id in c.UNPLAYABLE_NATIONS):
+        return False
+    return (viewer == country_id or are_in_same_faction(viewer, country_id, nation_data)
+            or nation_data[country_id].get("master") == viewer
+            or nation_data[viewer].get("master") == country_id)
+
+
+def _country_economy_summary(country, income, expenses):
+    return {
+        "available": True,
+        "conscription": country.get("conscription_slider", 1.0),
+        "conversion": country.get("mat_to_fuel_slider", 0.0),
+        "resources": [{"resource": resource, "stockpile": country.get(resource, 0),
+                       "income": income[resource], "expenses": expenses[resource],
+                       "net": income[resource] - expenses[resource]}
+                      for resource in c.ECON_RESOURCE_KEYS],
+    }
+
+
+def get_shared_country_economy_summaries(viewer, map_data, nation_data):
+    """Prepare permitted foreign totals before a network view removes private source data."""
+    shared = [country_id for country_id in nation_data
+              if country_id != viewer and shares_country_economy(viewer, country_id, nation_data)]
+    if not shared:
+        return {}
+    # Projection can initialize siphon rates. Do not change the authoritative state.
+    economies = calculate_all_economies(map_data, copy.deepcopy(nation_data))
+    empty = {resource: 0 for resource in c.ECON_RESOURCE_KEYS}
+    return {country_id: _country_economy_summary(
+        nation_data[country_id], economies.get(country_id, {}).get("total_inc", empty),
+        economies.get(country_id, {}).get("upkeep", empty)) for country_id in shared}
+
+
 def can_view_country_economy(map_screen, country_id):
-    """Keep foreign private economics out of fogged and multiplayer summaries."""
+    """Permit shared economics and unrestricted local inspection."""
     viewer = map_screen.player_country
     if viewer == c.TOURNAMENT_SPECTATOR:
         return False
-    if country_id == viewer:
+    if shares_country_economy(viewer, country_id, map_screen.nation_data):
         return True
     if (getattr(map_screen, "realtime_multiplayer", False)
             or getattr(map_screen, "multiplayer_mode", False)):
@@ -3508,18 +3546,20 @@ def get_country_summary(map_screen, country_id):
         units.extend(unit for unit in candidates if unit.get("owner") == country_id)
 
     economy_available = can_view_country_economy(map_screen, country_id)
-    economy = {"available": economy_available, "resources": [],
-               "conscription": country.get("conscription_slider", 1.0),
-               "conversion": country.get("mat_to_fuel_slider", 0.0)}
+    economy = {"available": False, "resources": []}
     if economy_available:
-        # Economy queries can initialize missing siphon rates. Inspection must
-        # not initialize or change any saved country state.
-        income, expenses, _breakdown = get_economy_projections(
-            country_id, map_screen.map_data, copy.deepcopy(nation_data))
-        economy["resources"] = [{"resource": resource, "stockpile": country.get(resource, 0),
-                                 "income": income[resource], "expenses": expenses[resource],
-                                 "net": income[resource] - expenses[resource]}
-                                for resource in c.ECON_RESOURCE_KEYS]
+        # Older local maps and test doubles have no network presentation cache.
+        shared_economies = getattr(map_screen, "country_economy_summaries", {})
+        if networked and country_id != viewer and country_id in shared_economies:
+            economy = copy.deepcopy(shared_economies[country_id])
+        elif not (getattr(map_screen, "realtime_multiplayer", False) and country_id != viewer
+                  and not getattr(map_screen, "realtime_server_map", None)):
+            # Remote clients without server totals keep the economy private.
+            # Economy queries can initialize missing siphon rates. Inspection must
+            # not initialize or change any saved country state.
+            income, expenses, _breakdown = get_economy_projections(
+                country_id, map_screen.map_data, copy.deepcopy(nation_data))
+            economy = _country_economy_summary(country, income, expenses)
 
     faction = country.get("faction", "")
     policies = [{"name": politics.policy(policy_id)["name"], "status": state["status"],

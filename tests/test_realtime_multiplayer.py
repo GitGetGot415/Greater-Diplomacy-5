@@ -72,6 +72,17 @@ class FakeAddressProbe:
 
 
 class HostSnapshotTests(unittest.TestCase):
+    def test_shared_economy_totals_replace_cached_values_and_clear_on_older_snapshots(self):
+        client = SimpleNamespace(player_country="A", nation_data={"A": {}}, map_data={},
+                                 refresh_all_maps=mock.Mock())
+        totals = {"B": {"available": True, "resources": [{"income": 123}]}}
+        snapshot = {"nation_data": {"A": {}, "B": {}}, "country_economy_summaries": totals}
+        apply_authoritative_snapshot(client, snapshot)
+        self.assertEqual(client.country_economy_summaries, totals)
+        self.assertIsNot(client.country_economy_summaries, totals)
+        apply_authoritative_snapshot(client, {"nation_data": {"A": {}}})
+        self.assertEqual(client.country_economy_summaries, {})
+
     def test_older_snapshot_drops_direct_alliances_without_changing_factions(self):
         client = SimpleNamespace(player_country="A", nation_data={"A": {}}, map_data={},
                                  refresh_all_maps=mock.Mock())

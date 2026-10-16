@@ -9,7 +9,7 @@ from map_logic.rendering.font_manager import fonts
 from ui import flag_icons
 from ui.bars import ui_bars
 from ui.text_utils import fit_text, render_inline_text, wrap_text
-from ui_elements import Slider, make_back_button
+from ui_elements import make_back_button
 
 PAGE_MARGIN = 40
 COLUMN_GAP = 24
@@ -24,8 +24,6 @@ HEADER_FLAG_SIZE = (96, 64)
 HEADER_TEXT_X = HEADER_FLAG_POS[0] + HEADER_FLAG_SIZE[0] + 24
 ECONOMY_ROW_HEIGHT = 27
 ECONOMY_COLUMN_FRACTIONS = (0.36, 0.56, 0.76, 0.96)
-SUMMARY_SLIDER_GAP = 65
-SUMMARY_SLIDER_HEIGHT = 20
 
 
 class CountrySummaryScreen(GameState):
@@ -99,11 +97,15 @@ class CountrySummaryScreen(GameState):
                               for line in wrap_text(text, font, width)]
         height = CARD_TITLE_HEIGHT + sum(line.get_height() + LINE_GAP for line in rendered_lines) + CARD_PADDING
         table_y = height
-        if economy:
-            if self.summary["economy"]["available"]:
-                height += ECONOMY_ROW_HEIGHT * (len(self.summary["economy"]["resources"]) + 1)
-            slider_y = height + CARD_PADDING + font.get_height()
-            height = slider_y + SUMMARY_SLIDER_GAP + SUMMARY_SLIDER_HEIGHT + CARD_PADDING
+        economy_details = []
+        if economy and self.summary["economy"]["available"]:
+            height += ECONOMY_ROW_HEIGHT * (len(self.summary["economy"]["resources"]) + 1)
+            details_y = height + CARD_PADDING
+            economy_details = [font.render(line, True, c.UI_TEXT_BRIGHT) for text in (
+                f"Conscription (manpower kept): {self.summary['economy']['conscription']:.0%}",
+                f"Materials to fuel: {self.summary['economy']['conversion']:.0%}")
+                for line in wrap_text(text, font, width)]
+            height = details_y + sum(line.get_height() + LINE_GAP for line in economy_details) + CARD_PADDING
         card = pygame.Surface((self.card_width, height), pygame.SRCALPHA)
         ui_bars.draw_modal_box(card, card.get_rect(), bg_color=(35, 41, 53),
                                border_color=(75, 90, 115), border_width=1)
@@ -115,14 +117,9 @@ class CountrySummaryScreen(GameState):
             y += line.get_height() + LINE_GAP
         if economy:
             self._draw_economy_table(card, table_y)
-            # These sliders are rendered into a cached card. They receive no
-            # input and cannot edit either the player's or a foreign country.
-            width = self.card_width - 2 * CARD_PADDING
-            for index, (label, value, maximum) in enumerate((
-                    ("Conscription (manpower kept)", self.summary["economy"]["conscription"], 1.0),
-                    ("Materials to fuel", self.summary["economy"]["conversion"], c.MAX_CONVERSION_SLIDER_VAL))):
-                Slider(CARD_PADDING, slider_y + index * SUMMARY_SLIDER_GAP, width,
-                       label, value, None, visual_max=maximum, allowed_max=maximum).draw(card)
+            for line in economy_details:
+                card.blit(line, (CARD_PADDING, details_y))
+                details_y += line.get_height() + LINE_GAP
         return card
 
     def _draw_economy_table(self, card, top):

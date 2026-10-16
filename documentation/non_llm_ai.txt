@@ -201,10 +201,13 @@ Diplomacy shows the faction, leader, members, overlord, puppets, and enemies.
 All country names use the shared display-name helper.
 
 Economy shows stockpiles, income, expenses, and net income when the viewer can inspect private economics.
-The sliders show conscription and material conversion without allowing changes.
+Text shows conscription and material conversion. The summary has no sliders.
+Private economies hide these values as well as resource figures.
 Players can inspect their own economy.
-Foreign economy figures remain private in both multiplayer systems.
-In local games, foreign economy figures require disabled fog, spectator mode, or editor mode.
+Faction members, direct puppets, and the overlord share economy figures in all game modes.
+Other foreign economies require disabled fog, spectator mode, or editor mode in local games.
+Other foreign economies remain private in both multiplayer systems.
+Real-time clients receive shared totals from the server without private orders or research plans.
 The Tournament Spectator cannot inspect private economics.
 
 queries.get_country_summary prepares the screen's data when it opens.

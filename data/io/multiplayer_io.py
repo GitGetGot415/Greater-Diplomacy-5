@@ -113,6 +113,8 @@ def strip_sensitive_data_for_player(map_ref, country_id):
     """
     Modifies the active map_ref in place to hide information that the player should not see.
     """
+    map_ref.country_economy_summaries = queries.get_shared_country_economy_summaries(
+        country_id, map_ref.map_data, map_ref.nation_data)
     map_ref.multiplayer_mode = True
     map_ref.player_country = country_id
     map_ref.active_players = [country_id]
@@ -142,6 +144,7 @@ def strip_sensitive_data_for_tournament_spectator(map_ref):
     planning/economy data and gives the viewer no country, so all remaining map
     presentation flows through the existing no-territory fog rules.
     """
+    map_ref.country_economy_summaries = {}
     map_ref.multiplayer_mode = True
     map_ref.player_country = c.TOURNAMENT_SPECTATOR
     map_ref.active_players = [c.TOURNAMENT_SPECTATOR]

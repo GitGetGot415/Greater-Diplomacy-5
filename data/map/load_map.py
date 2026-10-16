@@ -64,6 +64,7 @@ def load_map_assets(map_screen, load_path):
     map_screen.map_data = {}
     map_screen.id_to_province = {}
     map_screen.nation_data = {}
+    map_screen.country_economy_summaries = {}
     map_screen.history = {}
     map_screen.raw_json_data = {}
 
@@ -240,6 +241,7 @@ def load_map_assets(map_screen, load_path):
     # --- 3. Load Nation Data (The Critical Fix) ---
     if save_meta and "nation_data" in save_meta:
         map_screen.nation_data = save_meta["nation_data"]
+        map_screen.country_economy_summaries = save_meta.get("country_economy_summaries", {})
     else:
         # Fallback to default starting data
         map_screen.nation_data = {}
