@@ -127,7 +127,7 @@ def available_units(map_screen, donor):
     for province in map_screen.map_data.values():
         for unit in province.get("units", []):
             if (unit.get("owner") == donor and _is_land(unit)
-                    and not unit.get("volunteer_host")):
+                    and not unit.get("volunteer_host") and not queries.unit_is_air_drop_recovering(unit)):
                 result.append((province, unit))
     return result
 
@@ -232,7 +232,8 @@ def create_offer(map_screen, donor, host, chosen):
     capacity = remaining_capacity(map_screen, donor)
     valid = [(province, unit) for province, unit in chosen
              if unit in province.get("units", []) and unit.get("owner") == donor
-             and _is_land(unit) and not unit.get("volunteer_host")]
+             and _is_land(unit) and not unit.get("volunteer_host")
+             and not queries.unit_is_air_drop_recovering(unit)]
     if not valid:
         return None, "Select at least one land division."
     if len(valid) > capacity:

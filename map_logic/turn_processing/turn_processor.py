@@ -164,6 +164,9 @@ async def _resolve_turn_logic(map_screen): # Renamed from resolve_turn
     print("\n--- [PHASE 2] TURN RESOLUTION START ---")
     from map_logic.turn_processing import unit_events
     
+    recovering_units = [unit for province in map_screen.map_data.values()
+                        for unit in queries.units_with_air_cargo(province.get("units", []))
+                        if queries.unit_is_air_drop_recovering(unit)]
     # Snapshot original owners for capture logic
     for prov in map_screen.map_data.values():
         prov["_turn_start_owner"] = prov.get("owner", "Unclaimed")
@@ -228,6 +231,7 @@ async def _resolve_turn_logic(map_screen): # Renamed from resolve_turn
     # set of live units.  Armies are organizational metadata, so prune their
     # membership only after authoritative turn resolution has settled.
     queries.normalize_armies(map_screen.nation_data, map_screen.map_data)
+    queries.finish_air_drop_recovery_turn(recovering_units)
     # Target-area returns are deliberately queued only after every submitted
     # movement order has resolved. They therefore become choices for the next
     # planning phase, never a hidden edit to a turn a player already submitted.

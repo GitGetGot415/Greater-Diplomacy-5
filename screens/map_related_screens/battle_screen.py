@@ -205,7 +205,7 @@ class Battle_Screen(ModalScreen):
         that hands you the whole army back.
         """
         mine = [u for u in self.province.get("units", [])
-                if u.get("owner") == self.player]
+                if u.get("owner") == self.player and not queries.unit_is_air_drop_recovering(u)]
         if self.map_screen.tactical_mode:
             return [u for u in mine if u is self.map_screen.player_unit]
         return mine
@@ -267,7 +267,7 @@ class Battle_Screen(ModalScreen):
 
     def send_to_lane(self, unit, lane):
         """Pins a unit to the duel against whoever is on the other side."""
-        if not self.can_edit_realtime():
+        if not self.can_command(unit) or not self.can_edit_realtime():
             return
         far = lane.b if self.is_mine(lane.a) else lane.a
         # A pin names an enemy nation; build_battle resolves it back to whichever
@@ -284,7 +284,7 @@ class Battle_Screen(ModalScreen):
         one has a slot. Which is why a held unit can still show up in the front
         pane -- it says [Release] there rather than [Hold].
         """
-        if not self.can_edit_realtime():
+        if not self.can_command(unit) or not self.can_edit_realtime():
             return
         if unit.get("combat_stance") == "RESERVE":
             unit.pop("combat_stance", None)

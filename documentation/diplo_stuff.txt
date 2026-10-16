@@ -154,6 +154,7 @@ A player hosting foreign volunteers can send them home directly.
 Aircraft are not eligible land volunteers.
 This restriction uses the current unit library, including for aircraft with ground routes.
 Aircraft remain ineligible as volunteers when transported in Convoys.
+Units recovering from an air drop are also ineligible. See documentation/air_stuff.txt for recovery rules.
 
 Editor and scripted events
 --------------------------

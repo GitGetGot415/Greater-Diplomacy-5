@@ -522,10 +522,12 @@ def single_attacker_signature(unit):
     cosmetic text and movement orders do not affect that preview. The caller
     must scope cached verdicts to unchanged defenders, terrain and nation rules.
     """
+    from data import queries
     return (unit.get("owner"), unit.get("volunteer_host"),
             unit.get("attack", c.DEFAULT_UNIT_ATK), unit.get("defense", 0),
             unit.get("health"), unit.get("max_health") or c.DEFAULT_UNIT_HP,
-            unit.get("combat_stance"), unit.get("lane_target"))
+            unit.get("combat_stance"), unit.get("lane_target"),
+            queries.unit_is_air_drop_recovering(unit))
 
 
 def build_battle(sides, nation_data, width=None, full_rank_for=None, terrain=None, air_combat=False,
@@ -753,6 +755,8 @@ def effective_damage_multiplier(unit, nation_data=None):
     """
     from data import queries
 
+    if queries.unit_is_air_drop_recovering(unit):
+        return 0.0
     national = (queries.get_country_damage_multiplier(unit.get("owner"), nation_data)
                 if nation_data else 1.0)
     return health_damage_multiplier(unit) * national

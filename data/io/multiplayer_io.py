@@ -858,7 +858,7 @@ def _validate_aircraft_orders(map_ref, country_id, player_data, provinces, cargo
             for province in map_ref.map_data.values()
             for unit in queries.units_with_air_cargo(province.get("units", []))
             if queries.is_air_unit(unit) or queries.is_air_transport(unit)
-            or unit.get("unit_id") in cargo_ids}
+            or unit.get("unit_id") in cargo_ids or queries.unit_is_air_drop_recovering(unit)}
     for updates in provinces.values():
         if not isinstance(updates, dict) or not isinstance(updates.get("units", []), list):
             raise ValueError("Invalid province unit snapshot.")
@@ -898,6 +898,7 @@ def _validate_aircraft_orders(map_ref, country_id, player_data, provinces, cargo
             raise ValueError("Aircraft command belongs to another country.")
         if uid in cargo_ids and not any(current is unit for current in province.get("units", [])):
             raise ValueError("Units inside aircraft cannot receive ground orders.")
+        queries.validate_air_drop_recovery_draft(unit, command)
         order = queries.canonical_unit_order(map_ref, country_id, province, unit, command.get("order"))
         if isinstance(order, dict):
             order.pop("realtime_cost", None)  # Tournament resources are already in the nation draft.
@@ -990,6 +991,12 @@ def _validate_move_snapshot(map_ref, country_id, nation_update, provinces, prote
             original = live_units.get(uid)
             if original is not None and original.get("owner") != country_id:
                 raise ValueError(f"Province {key}: unit ID belongs to another country.")
+            if original is not None and queries.unit_is_air_drop_recovering(original):
+                if not any(current is original for current in province.get("units", [])):
+                    raise ValueError("A recovering unit cannot change province.")
+                queries.validate_air_drop_recovery_draft(original, unit)
+            elif isinstance(unit.get("order"), dict) and unit["order"].get("type") == "AIR_DROP_RECOVERY":
+                raise ValueError("Only the host can start air drop recovery.")
             for stat in TOURNAMENT_UNIT_STATS:
                 if stat in unit:
                     value = unit[stat]
@@ -1000,6 +1007,7 @@ def _validate_move_snapshot(map_ref, country_id, nation_update, provinces, prote
                 if (original is not None and original.get("type") == unit.get("type")
                         and stat in original and unit.get(stat) != original[stat]
                         and uid not in protected_unit_ids
+                        and not queries.unit_is_air_drop_recovering(original)
                         and not queries.is_air_unit(unit) and not queries.is_air_transport(unit)):
                     warnings.append(f"Unit {uid}, {stat}: move has {unit.get(stat)!r}; "
                                     f"host has {original[stat]!r}.")
@@ -1087,6 +1095,9 @@ def load_move_files(map_ref, move_file_paths, keys_dict, *, accept_stat_mismatch
         try:
             if not isinstance(map_ref.nation_data.get(cid), dict):
                 raise ValueError("The country does not exist in the host's game.")
+            queries.validate_air_drop_recovery_armies(
+                cid, nd.get("armies", map_ref.nation_data[cid].get("armies", [])),
+                map_ref.nation_data, map_ref.map_data)
             from map_logic.diplomacy.puppet_actions import canonical_puppet_release_queue
             existing_releases = map_ref.nation_data[cid].get("release_puppet_queue", [])
             releases = migrations.tournament_release_requests(player_data, nd, existing_releases)

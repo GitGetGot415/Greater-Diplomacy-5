@@ -488,11 +488,15 @@ def migrate_aircraft_stats(map_data):
 
 
 def normalize_air_orders(map_data):
-    """Stable old-save defaults; only one-use weapons retain land paths."""
+    """Repair saved recovery timers and aircraft orders. Old units need no recovery."""
     from data import queries
     for province in map_data.values():
-        for unit in province.get("units", []):
+        for unit in queries.units_with_air_cargo(province.get("units", [])):
             order = unit.get("order")
+            if isinstance(order, dict) and order.get("type") == "AIR_DROP_RECOVERY":
+                if not queries.unit_is_air_drop_recovering(unit):
+                    unit["order"] = {"type": "MOVE", "path": []}
+                continue
             if not queries.is_air_unit(unit) or not isinstance(order, dict):
                 continue
             if isinstance(order.get("type"), str) and order["type"] in queries.AIR_ORDER_TYPES:

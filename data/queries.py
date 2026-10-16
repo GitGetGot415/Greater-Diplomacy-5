@@ -1232,7 +1232,7 @@ def can_unit_move_step(unit, current_province, destination, nation_data):
     route during turn resolution, but UI route finding and real-time command
     validation must agree on terrain, convoy, naval, and access constraints.
     """
-    if not current_province or not destination:
+    if unit_is_air_drop_recovering(unit) or not current_province or not destination:
         return False
     if is_air_unit(unit) and not air_unit_can_move_on_ground(unit):
         return False  # Reusable aircraft use flight orders; missiles use land edges.
@@ -2550,11 +2550,13 @@ def create_unit_dict(unit_type, owner, unit_library):
     }
 
 
-def _army_unit_ids_by_owner(map_data):
+def _army_unit_ids_by_owner(map_data, *, controllable_only=False):
     """Return the live persistent unit IDs indexed by their owning country."""
     owners = {}
     for province in (map_data or {}).values():
         for unit in units_with_air_cargo(province.get("units", [])) if isinstance(province, dict) else ():
+            if controllable_only and unit_is_air_drop_recovering(unit):
+                continue
             owner, unit_id = unit.get("owner"), unit.get("unit_id")
             if isinstance(owner, str) and isinstance(unit_id, str) and unit_id:
                 owners.setdefault(owner, set()).add(unit_id)
@@ -2750,7 +2752,7 @@ def create_army(country_id, unit_ids, nation_data, map_data):
     """
     normalize_armies(nation_data, map_data)
     armies = get_armies(country_id, nation_data, map_data)
-    live = _army_unit_ids_by_owner(map_data).get(country_id, set())
+    live = _army_unit_ids_by_owner(map_data, controllable_only=True).get(country_id, set())
     members = []
     for unit_id in unit_ids if isinstance(unit_ids, (list, tuple, set)) else ():
         if isinstance(unit_id, str) and unit_id in live and unit_id not in members:
@@ -2784,7 +2786,7 @@ def assign_units_to_army(country_id, army_id, unit_ids, nation_data, map_data):
     target = next((army for army in armies if army.get("id") == army_id), None)
     if target is None:
         return False
-    live = _army_unit_ids_by_owner(map_data).get(country_id, set())
+    live = _army_unit_ids_by_owner(map_data, controllable_only=True).get(country_id, set())
     members = []
     for unit_id in unit_ids if isinstance(unit_ids, (list, tuple, set)) else ():
         if isinstance(unit_id, str) and unit_id in live and unit_id not in members:
@@ -2804,7 +2806,8 @@ def ungroup_units(country_id, unit_ids, nation_data, map_data):
     """Remove selected owned units from every army without deleting units."""
     normalize_armies(nation_data, map_data)
     armies = get_armies(country_id, nation_data, map_data)
-    members = {unit_id for unit_id in unit_ids if isinstance(unit_id, str)}
+    live = _army_unit_ids_by_owner(map_data, controllable_only=True).get(country_id, set())
+    members = {unit_id for unit_id in unit_ids if isinstance(unit_id, str) and unit_id in live}
     changed = False
     for army in armies:
         before = army.get("unit_ids", [])
@@ -2820,6 +2823,11 @@ def disband_army(country_id, army_id, nation_data, map_data):
         return False
     normalize_armies(nation_data, map_data)
     armies = get_armies(country_id, nation_data, map_data)
+    proposed = [army for army in armies if army.get("id") != army_id]
+    try:
+        validate_air_drop_recovery_armies(country_id, proposed, nation_data, map_data)
+    except ValueError:
+        return False
     original_len = len(armies)
     armies[:] = [army for army in armies if army.get("id") != army_id]
     return len(armies) != original_len
@@ -2889,6 +2897,60 @@ def unit_has_active_order(unit):
             and (order.get("type") != "MOVE" or bool(order.get("path"))))
 
 
+def air_drop_recovery_turns(unit):
+    """Read the saved recovery order. Older units have no recovery period."""
+    order = unit.get("order")
+    turns = order.get("turns_left", 0) if isinstance(order, dict) and order.get("type") == "AIR_DROP_RECOVERY" else 0
+    return turns if type(turns) is int and turns > 0 else 0
+
+
+def unit_is_air_drop_recovering(unit):
+    return air_drop_recovery_turns(unit) > 0
+
+
+def begin_air_drop_recovery(unit):
+    """Start an uninterruptible recovery order after deployment."""
+    turns = max(0, c.AIR_DROP_RECOVERY_TURNS)
+    unit["order"] = ({"type": "AIR_DROP_RECOVERY", "turns_left": turns} if turns
+                     else {"type": "MOVE", "path": []})
+
+
+def finish_air_drop_recovery_turn(units):
+    """Tick only units that were already recovering when resolution started."""
+    for unit in units:
+        if unit_is_air_drop_recovering(unit):
+            turns = air_drop_recovery_turns(unit) - 1
+            unit["order"] = ({"type": "AIR_DROP_RECOVERY", "turns_left": turns} if turns
+                             else {"type": "MOVE", "path": []})
+
+
+def validate_air_drop_recovery_draft(unit, draft):
+    """Accept unchanged snapshots but reject commands that interrupt recovery."""
+    if unit_is_air_drop_recovering(unit):
+        for key in ("order", "custom_name", "combat_stance", "lane_target", "type", "owner"):
+            if key in draft and draft[key] != unit.get(key):
+                raise ValueError("This unit is recovering from an air drop and cannot be controlled.")
+
+
+def validate_air_drop_recovery_armies(country_id, armies, nation_data, map_data):
+    """Keep recovering units in their existing army, including unassigned units."""
+    recovering = [unit for province in map_data.values()
+                  for unit in units_with_air_cargo(province.get("units", []))
+                  if unit.get("owner") == country_id and unit_is_air_drop_recovering(unit)]
+    if not recovering:
+        return
+
+    def membership(roster):
+        if not isinstance(roster, list) or any(not isinstance(army, dict) for army in roster):
+            raise ValueError("Invalid army roster.")
+        return {uid: army.get("id") for army in roster for uid in army.get("unit_ids", [])}
+
+    previous = membership(nation_data.get(country_id, {}).get("armies", []))
+    proposed = membership(armies)
+    if any(previous.get(unit.get("unit_id")) != proposed.get(unit.get("unit_id")) for unit in recovering):
+        raise ValueError("A recovering unit cannot change armies.")
+
+
 def find_unit_move_paths_to_destinations(unit, start_province, destination_ids,
                                          id_to_province, nation_data):
     """Return each legal route from ``start_province`` to a target-area tile.
@@ -2933,6 +2995,10 @@ def _queue_army_balanced_area_orders(map_screen, country_id, army, destination_i
         for unit in province.get("units", []):
             if (unit.get("owner") != country_id
                     or unit.get("unit_id") not in members):
+                continue
+            if unit_is_air_drop_recovering(unit):
+                if province.get("id") in coverage:
+                    coverage[province["id"]] += 1
                 continue
             order = unit.get("order")
             province_id = province.get("id")
@@ -4561,6 +4627,7 @@ def set_unit_owner(unit, country_id):
 def air_cargo_is_eligible(plane, cargo):
     """A carrier accepts living ground units controlled by the same country."""
     return (cargo is not plane and cargo.get("health", 0) > 0
+            and not unit_is_air_drop_recovering(cargo)
             and cargo.get("owner") == plane.get("owner")
             and get_unit_combat_owner(cargo) == get_unit_combat_owner(plane)
             and unit_display_domain(cargo) == "LAND" and not is_air_transport(cargo)
@@ -5065,6 +5132,7 @@ def aircraft_caught_in_ground_combat(unit, opponents, nation_data):
     """A based aircraft sharing a ground battle with its enemy is a casualty."""
     return is_air_unit(unit) and any(
         other is not unit
+        and not unit_is_air_drop_recovering(other)
         and are_at_war(get_unit_combat_owner(unit), get_unit_combat_owner(other), nation_data)
         for other in opponents)
 
@@ -5082,7 +5150,8 @@ def prepare_aircraft_for_ground_combat(units, nation_data, opponents=None, on_la
             revert_transport(unit)
     for unit in units:
         if aircraft_caught_in_ground_combat(unit, enemies, nation_data):
-            sources = [(enemy, 1) for enemy in enemies if enemy is not unit and are_at_war(
+            sources = [(enemy, 1) for enemy in enemies if enemy is not unit
+                       and not unit_is_air_drop_recovering(enemy) and are_at_war(
                 get_unit_combat_owner(unit), get_unit_combat_owner(enemy), nation_data)]
             apply_unit_health_loss(unit, unit.get("health", 0), sources=sources)
             unit["order"] = {"type": "MOVE", "path": []}
@@ -6322,6 +6391,9 @@ def province_for_order(map_screen, province_id):
 
 def canonical_unit_order(map_screen, country_id, province, unit, order):
     """Host/server validation shared with tournament aircraft commands."""
+    if unit_is_air_drop_recovering(unit):
+        validate_air_drop_recovery_draft(unit, {"order": order})
+        return copy.deepcopy(unit["order"])
     if order is not None and not isinstance(order, dict):
         raise ValueError("Invalid unit order.")
     if order is None or order == {}:

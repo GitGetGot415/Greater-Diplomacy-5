@@ -2276,7 +2276,7 @@ class Map(GameState):
     def selected_map_unit_ids(self):
         """Persistent IDs for the currently commandable selection."""
         return [unit["unit_id"] for unit, _province in self.selected_unit_records()
-                if isinstance(unit.get("unit_id"), str)]
+                if isinstance(unit.get("unit_id"), str) and not queries.unit_is_air_drop_recovering(unit)]
 
     def create_army_from_selection(self):
         if not self.can_select_map_units():

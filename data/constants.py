@@ -1303,11 +1303,14 @@ CONVOY_DEF = 0
 TRUCK_DEF = 0
 TRUCK_CONVERT_TURNS = 3
 
+# Recovery includes landing and this many subsequent complete turns. Zero disables it.
+AIR_DROP_RECOVERY_TURNS = 1
+
 # Orders that span more than one turn and are therefore a standing commitment,
 # not a plan to be re-derived. The AI wipes its units' orders every turn so it
 # can rethink its movement; these are the ones it must NOT wipe, or the order
 # is destroyed before the turn processor ever sees it.
-MULTI_TURN_ORDER_TYPES = ("CONVERT", "DISBAND", "REPAIR", "UPGRADE")
+MULTI_TURN_ORDER_TYPES = ("CONVERT", "DISBAND", "REPAIR", "UPGRADE", "AIR_DROP_RECOVERY")
 # The above plus bombardment, which occupies the unit's turn even though it
 # resolves within it. A unit doing any of these cannot also move.
 ORDERS_BLOCKING_MOVEMENT = MULTI_TURN_ORDER_TYPES + ("BOMBARD",)

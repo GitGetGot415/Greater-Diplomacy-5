@@ -112,6 +112,7 @@ def _disband_peacetime_militia(ai_name, my_provs, at_war, protected=None):
         for u in prov.get("units", []):
             if (u.get("owner") == ai_name
                     and u is not protected
+                    and not queries.unit_is_air_drop_recovering(u)
                     and queries.get_base_unit_name(u.get("type", "")) == "Militia"
                     and u.get("type", "") not in on_order
                     and u.get("order", {}).get("type") != "DISBAND"):
@@ -309,7 +310,7 @@ def _disband_worst_unit_if_deficit(map_screen, data, my_provs, ai_name, deficits
                 continue
             if u.get("air_cargo"):
                 continue
-            if u is protected:
+            if u is protected or queries.unit_is_air_drop_recovering(u):
                 continue
             u_type = u.get("type", "")
             if u_type in on_order:

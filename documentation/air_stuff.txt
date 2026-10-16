@@ -261,6 +261,18 @@ The carrier does not strike the garrison or damage forts.
 Dropped ground units join normal ground combat and capture rules during that turn.
 If a tied capture returns units, dropped cargo returns to its launch tile.
 
+AIR_DROP_RECOVERY_TURNS in data/constants.py sets the recovery duration. Zero disables recovery.
+Recovery covers landing and the configured number of complete following turns.
+Recovering units can take damage and capture territory. They cannot move, receive commands, or deal damage.
+This also blocks renaming, maintenance, conversion, disbanding, cargo loading, volunteer offers, and army reassignment.
+Orders shows the remaining recovery turns. Inspection remains available.
+AI planners and automatic army orders preserve recovery.
+
+The existing order field stores AIR_DROP_RECOVERY with turns_left.
+Saves retain this order. Older saves without it have no pending recovery.
+Hosts retain their own recovery orders in both multiplayer systems.
+Player drafts cannot shorten or cancel recovery.
+
 Saves store air_cargo inside each carrier. Older units without this field have no cargo.
 Tournament moves carry air_transport commands with plane_id, province_id, and cargo_ids.
 Real-time drafts carry the same commands with type air_transport.

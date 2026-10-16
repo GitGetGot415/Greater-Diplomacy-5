@@ -672,6 +672,8 @@ class Orders_Screen(GameState):
         """
         # Lightweight UI test doubles omit optional mode/controller hooks.
         map_ref = self.map_screen
+        if queries.unit_is_air_drop_recovering(unit):
+            return True
         if getattr(self, "read_only", False):
             return True
         if hasattr(map_ref, "player_country") and unit.get("owner") != map_ref.player_country:
@@ -684,7 +686,10 @@ class Orders_Screen(GameState):
     def _command_blocked(self, unit):
         """Like _command_blocked_silent, but also surfaces feedback to the player."""
         if self._command_blocked_silent(unit):
-            self.map_screen.show_feedback("Tactical Mode: You can only command your specific unit!")
+            self.map_screen.show_feedback(
+                "This unit is recovering from an air drop and cannot be controlled."
+                if queries.unit_is_air_drop_recovering(unit) else
+                "Tactical Mode: You can only command your specific unit!")
             return True
         return False
 
@@ -1954,6 +1959,8 @@ class Orders_Screen(GameState):
 
     def _order_summary(self, unit_index, unit):
         """Short status text and color for a compact roster row."""
+        if queries.unit_is_air_drop_recovering(unit):
+            return f"{queries.air_drop_recovery_turns(unit)}t recovery", c.UI_TEXT_MUTED
         if self.bombarding_unit_index == unit_index:
             return f"Choose {self.targeting_label} target", BOMBARD_TARGET_COLOR
 

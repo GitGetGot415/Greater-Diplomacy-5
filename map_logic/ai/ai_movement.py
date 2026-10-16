@@ -312,6 +312,9 @@ def _assign_air_transport(map_screen, country, plane, base, repositions, enemies
         key=queries.calculate_unit_strength, reverse=True)[:queries.air_transport_capacity(plane)]
     # Evaluate a possible load without changing state when no flight is useful.
     loaded = dict(plane, air_cargo=selected)
+    dropped = [dict(unit) for unit in selected]
+    for unit in dropped:
+        queries.begin_air_drop_recovery(unit)
     drops = []
     for target in enemies:
         if (not queries.air_drop_target_is_legal(loaded, target, map_screen.nation_data)
@@ -319,7 +322,7 @@ def _assign_air_transport(map_screen, country, plane, base, repositions, enemies
             continue
         visible_target = dict(target, units=queries.filter_visible_units(
             target.get("units", []), country, target, map_screen.nation_data))
-        if _attackers_would_survive(map_screen, country, visible_target, selected):
+        if _attackers_would_survive(map_screen, country, visible_target, dropped):
             drops.append(queries.canonical_air_order(map_screen, loaded, base,
                 {"type": "AIR_DROP", "target_id": target["id"]}))
     if drops:
@@ -1685,7 +1688,8 @@ def _rotate_damaged_units(map_screen, ai_name, active_battles):
             continue
 
         mine = [u for u in province.get("units", ()) if u.get("owner") == ai_name
-                and not queries.is_tactical_player_unit(map_screen, u)]
+                and not queries.is_tactical_player_unit(map_screen, u)
+                and not queries.unit_is_air_drop_recovering(u)]
         if len(mine) < 2:
             continue
 

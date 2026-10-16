@@ -894,6 +894,11 @@ class MapRealtimeDriver:
                                "symbol_flipped": symbol_flipped,
                                "custom_symbol": copy.deepcopy(custom_symbol),
                                "defense_area": list(defense_area)})
+        try:
+            queries.validate_air_drop_recovery_armies(country_id, armies, self.map_ref.nation_data,
+                                                      self.map_ref.map_data)
+        except ValueError as exc:
+            raise RealtimeError(str(exc)) from exc
         return {"type": "army_roster", "armies": armies}
 
     def _validate_volunteer_commands(self, country_id: str, commands: list[dict[str, Any]]) -> None:
@@ -1325,6 +1330,11 @@ class MapRealtimeDriver:
         unit = province["units"][index]
         if unit.get("owner") != country_id:
             raise RealtimeError("Players may only order their own units.")
+        try:
+            queries.validate_air_drop_recovery_draft(unit, {
+                key: command.get(key) for key in ("order", "custom_name", "combat_stance", "lane_target")})
+        except ValueError as exc:
+            raise RealtimeError(str(exc)) from exc
         order = command.get("order")
         if order is not None and not isinstance(order, dict):
             raise RealtimeError("Invalid unit order.")
