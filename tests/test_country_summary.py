@@ -70,6 +70,9 @@ class CountrySummaryTests(unittest.TestCase):
         self.assertEqual(summary["name"], "Display A")
         self.assertTrue(summary["military"]["complete"])
         self.assertEqual(summary["military"]["damage_output"], expected_damage)
+        self.assertEqual(summary["military"]["raw_damage_output"], combat_rules.volley(troops))
+        self.assertAlmostEqual(summary["military"]["raw_damage_output"]
+                               * summary["military"]["damage_multiplier"], expected_damage)
         self.assertEqual(summary["military"]["damage_multiplier"],
                          queries.get_country_damage_multiplier("A", game.nation_data))
         income, expenses, _breakdown = queries.get_economy_projections(
@@ -94,6 +97,7 @@ class CountrySummaryTests(unittest.TestCase):
         self.assertEqual(summary["military"]["unit_count"], 2)
         self.assertEqual(summary["military"]["damage_output"],
                          combat_rules.volley([visible, plane], nation_data=game.nation_data))
+        self.assertEqual(summary["military"]["raw_damage_output"], combat_rules.volley([visible, plane]))
         self.assertFalse(summary["economy"]["available"])
         self.assertEqual(summary["economy"]["resources"], [])
         self.assertEqual(summary["economy"]["conscription"], 0.25)

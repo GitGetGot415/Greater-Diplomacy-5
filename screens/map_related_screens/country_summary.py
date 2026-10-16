@@ -49,12 +49,11 @@ class CountrySummaryScreen(GameState):
         multiplier = military["damage_multiplier"]
         return [
             f"Damage modifier: {multiplier - 1.0:+.2%} ({multiplier:.3g}x)",
-            f"{scope} damage output: {military['damage_output']:,.2f}",
+            f"{scope} damage output: {military['raw_damage_output']:,.2f} "
+            f"x {multiplier:.6g} = {military['damage_output']:,.2f}",
             f"{scope} units: {military['unit_count']:,}",
             f"Politics and policies: {military['political_damage_multiplier']:.3g}x damage",
             f"Conscription bonus: +{military['conscription_damage_bonus']:.2%}",
-            "Output sums current unit attack, health, and national modifiers. "
-            "Combat width, missions, and target defenses affect actual damage.",
         ]
 
     def _politics_lines(self):

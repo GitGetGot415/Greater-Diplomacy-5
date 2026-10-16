@@ -3529,6 +3529,7 @@ def get_country_summary(map_screen, country_id):
         "country_id": country_id, "name": get_country_display_name(country_id, nation_data),
         "military": {
             "complete": complete_army, "unit_count": len(units),
+            "raw_damage_output": combat_rules.volley(units),
             "damage_output": combat_rules.volley(units, nation_data=nation_data),
             "damage_multiplier": get_country_damage_multiplier(country_id, nation_data),
             "political_damage_multiplier": politics.damage_multiplier(nation_data, country_id),
