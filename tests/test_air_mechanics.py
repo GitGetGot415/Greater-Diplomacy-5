@@ -1091,6 +1091,48 @@ class AirGroundTransportTests(unittest.TestCase):
         self.land["neighbors"] = [1]
         self.sea["neighbors"] = [1]
 
+    def test_ground_casualty_estimates_share_hostility_checks_and_refresh_each_battle(self):
+        self.game.nation_data["C"]["at_war_with"] = []
+        for country in ("A", "B"):
+            self.game.nation_data[country]["at_war_with"].remove("C")
+        aircraft = [wing(self.base) for _ in range(30)]
+        neutral = [wing(self.base, owner="C") for _ in range(30)]
+        volunteer = wing(self.base)
+        volunteer["volunteer_host"] = "C"
+        neutral.append(volunteer)
+        carried = wing(self.base)
+        queries.load_transport(carried, "Convoy")
+        aircraft.append(carried)
+        for hostile in (False, True):
+            if hostile:
+                wing(self.base, "Infantry Type 1910", "B")
+            before = deepcopy(self.base["units"])
+            with patch.object(queries, "aircraft_caught_in_ground_combat",
+                              wraps=queries.aircraft_caught_in_ground_combat) as caught:
+                battle = combat_rules.build_battle([self.base["units"]], self.game.nation_data)
+            self.assertEqual(caught.call_count, 2)
+            for unit in aircraft:
+                profile = battle.profiles.get(id(unit), unit)
+                self.assertEqual(profile["health"], 0 if hostile else unit["health"])
+            for unit in neutral:
+                self.assertNotIn(id(unit), battle.profiles)
+            self.assertEqual(self.base["units"], before)
+
+    def test_ground_casualty_cache_keeps_meeting_endpoints_separate(self):
+        left = [wing(self.base) for _ in range(20)]
+        right = [wing(self.land) for _ in range(20)]
+        enemy = wing(self.base, "Infantry Type 1910", "B")
+        before = deepcopy(left + right)
+        with patch.object(queries, "aircraft_caught_in_ground_combat",
+                          wraps=queries.aircraft_caught_in_ground_combat) as caught:
+            battle = combat_rules.build_battle([left + [enemy], right], self.game.nation_data)
+        self.assertEqual(caught.call_count, 2)
+        for unit in left:
+            self.assertNotIn(id(unit), battle.profiles)
+        for unit in right:
+            self.assertEqual(battle.profiles[id(unit)]["health"], 0)
+        self.assertEqual(left + right, before)
+
     def test_air_conversion_and_both_network_validators_accept_only_convoys(self):
         for name, stats in queries.get_unit_library().items():
             if not stats.get("air_role"):
@@ -1651,6 +1693,28 @@ class GroupAirMissionSelectionTests(unittest.TestCase):
         self.screen.refresh_ui = Mock()
         self.screen._mark_draft_changed = Mock()
 
+    def test_batch_eligibility_scans_each_base_once_and_rechecks_live_changes(self):
+        records = [(wing(base, "Monoplane Fighter I"), base)
+                   for base in (self.base, self.remote) for _ in range(30)]
+        for unit, _base in records:
+            unit["health"] /= 2
+        self.records = records
+        for hostile in (False, True):
+            if hostile:
+                wing(self.base, "Infantry Type 1910", "B")
+            expected = [(unit, base) for unit, base in records if not hostile or base is self.remote]
+            with patch.object(queries, "air_unit_can_launch", wraps=queries.air_unit_can_launch) as launch:
+                self.assertEqual(self.screen._batch_command_candidates("MISSION"), expected)
+            self.assertEqual(launch.call_count, 2)
+            with patch.object(queries, "is_nation_in_combat_here",
+                              wraps=queries.is_nation_in_combat_here) as combat, \
+                    patch.object(queries, "has_industry", return_value=True):
+                self.assertEqual(self.screen._batch_command_candidates("REPAIR"), expected)
+            self.assertEqual(combat.call_count, 2)
+        removed, _base = records[-1]
+        self.remote["units"].remove(removed)
+        self.assertNotIn((removed, self.remote), self.screen._batch_command_candidates("MISSION"))
+
     def test_patrol_capability_and_ai_candidates_cover_every_reusable_aircraft(self):
         for name, stats in queries.get_unit_library().items():
             if not stats.get("air_role"):
@@ -2196,6 +2260,127 @@ class AirAppSmokeTests(unittest.TestCase):
             self.assertEqual(recovered["order"], aircraft["order"])
             self.assertTrue(queries.is_air_unit(recovered))
 
+    def test_group_orders_draw_and_update_reuse_the_selection_snapshot(self):
+        with tempfile.TemporaryDirectory() as directory:
+            _original, _fighter, _rocket, path = self.make_runtime_save(directory)
+            loaded = Map(load_path=path, skip_initial_income=True)
+            base = loaded.id_to_province[1]
+            aircraft = [base["units"][0]] + [
+                wing(base, "Biplane Fighter I") for _ in range(30)]
+            loaded.select_map_units(aircraft)
+            screen = Orders_Screen()
+            screen.start_with_province(base, loaded)
+            with patch.object(loaded, "selected_unit_records",
+                              wraps=loaded.selected_unit_records) as selected:
+                screen.refresh_ui()
+            selected.assert_called_once_with()
+            self.assertEqual([unit for _key, unit, _base, _index in screen._roster_rows], aircraft)
+            with patch.object(loaded, "selected_unit_records",
+                              side_effect=AssertionError("frame selection scan")), \
+                    patch.object(screen, "_visible_rows",
+                                 side_effect=AssertionError("frame roster scan")), \
+                    patch.object(screen, "_order_summary",
+                                 side_effect=AssertionError("frame order rules")), \
+                    patch.object(queries, "common_army_for_units",
+                                 side_effect=AssertionError("frame army lookup")), \
+                    patch.object(pygame.mouse, "get_pos", return_value=screen.panel_rect.center):
+                for _ in range(2):
+                    screen.update()
+                    screen.draw(self.surface)
+
+    def test_group_orders_refresh_cached_records_after_state_and_permission_changes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            _original, _fighter, _rocket, path = self.make_runtime_save(directory)
+            loaded = Map(load_path=path, skip_initial_income=True)
+            base = loaded.id_to_province[1]
+            first = base["units"][0]
+            second = wing(base, "Biplane Fighter I")
+            loaded.select_map_units([first, second])
+            screen = Orders_Screen()
+            screen.start_with_province(base, loaded)
+            loaded.select_map_units([second])
+            screen.update()
+            self.assertEqual(screen._selected_display_records, [(second, base)])
+            second["order"] = {"type": "AIR_PATROL", "base_id": base["id"], "priority": "RANDOM"}
+            loaded.invalidate_map_presentation_cache()
+            screen.update()
+            row_key = screen._roster_rows[0][0]
+            self.assertEqual(screen._row_order_summaries[row_key], screen._order_summary(row_key, second))
+            player = SimpleNamespace(submitted=False, eliminated=False)
+            loaded.realtime_multiplayer = True
+            loaded.realtime_player_id = "fixture-player"
+            loaded.realtime_session = SimpleNamespace(phase="TURN", players={"fixture-player": player})
+            screen.update()
+            self.assertFalse(screen.read_only)
+            previous_order = deepcopy(second["order"])
+            player.submitted = True
+            screen.update()
+            self.assertTrue(screen.read_only)
+            screen.set_selected_air_mission("NONE")
+            self.assertEqual(second["order"], previous_order)
+
+    def test_roster_refresh_reuses_overlay_until_selected_ranges_change(self):
+        with tempfile.TemporaryDirectory() as directory:
+            _original, _fighter, _rocket, path = self.make_runtime_save(directory)
+            loaded = Map(load_path=path, skip_initial_income=True)
+            base = loaded.id_to_province[1]
+            remote = loaded.id_to_province[2]
+            first = base["units"][0]
+            second = wing(remote, "Biplane Fighter I")
+            loaded.select_map_units([first, second])
+            screen = Orders_Screen()
+            screen.start_with_province(base, loaded)
+            screen.draw_range_previews(self.surface)
+            cached = screen._air_range_layer
+            cached_key = screen._air_range_layer_key
+            screen.refresh_ui()
+            with patch.object(screen, "draw_air_range", side_effect=AssertionError("unchanged overlay")):
+                screen.draw_range_previews(self.surface)
+            self.assertIs(screen._air_range_layer, cached)
+            self.assertEqual(screen._air_range_layer_key, cached_key)
+            loaded.select_map_units([second])
+            screen.refresh_ui()
+            with patch.object(screen, "draw_air_range", wraps=screen.draw_air_range) as draw:
+                screen.draw_range_previews(self.surface)
+            draw.assert_called_once_with(cached, remote,
+                queries.air_order_radius(second, "AIR_REPOSITION"), (0, 255, 0))
+            self.assertNotEqual(screen._air_range_layer_key, cached_key)
+            loaded.clear_map_unit_selection()
+            screen.refresh_ui()
+            self.assertIsNone(screen._air_range_layer)
+
+    def test_range_preview_rules_are_shared_by_equivalent_aircraft(self):
+        with tempfile.TemporaryDirectory() as directory:
+            _original, _fighter, _rocket, path = self.make_runtime_save(directory)
+            loaded = Map(load_path=path, skip_initial_income=True)
+            base = loaded.id_to_province[1]
+            remote = loaded.id_to_province[2]
+            patrol = base["units"][0]
+            idle = [wing(base, "Biplane Fighter I") for _ in range(30)]
+            remote_idle = wing(remote, "Biplane Fighter I")
+            missile = wing(base, "V2 Rocket")
+            records = [(unit, base) for unit in [patrol, *idle, missile]] + [(remote_idle, remote)]
+            screen = Orders_Screen()
+            screen.map_screen = loaded
+            screen._air_range_records = records
+            for destination in (base, remote):
+                expected_move, expected_strike = [], []
+                for unit, origin in records:
+                    kind = queries.air_range_preview_kind(loaded, unit, destination)
+                    expected = expected_move if kind == "AIR_REPOSITION" else expected_strike
+                    preview = (origin, queries.air_order_radius(unit, kind))
+                    if preview not in expected:
+                        expected.append(preview)
+                with patch.object(queries, "air_range_preview_kind",
+                                  wraps=queries.air_range_preview_kind) as kind_rule, \
+                        patch.object(queries, "air_order_radius",
+                                     wraps=queries.air_order_radius) as radius_rule:
+                    screen._refresh_air_range_previews(destination)
+                self.assertEqual(kind_rule.call_count, 3)
+                self.assertEqual(radius_rule.call_count, 3)
+                self.assertEqual(screen.air_range_previews, expected_move)
+                self.assertEqual(screen.air_strike_range_previews, expected_strike)
+
     def test_air_range_previews_deduplicate_and_use_cached_rules(self):
         from screens.map_related_screens.orders import MOVE_TARGET_COLOR, BOMBARD_TARGET_COLOR
         with tempfile.TemporaryDirectory() as directory:
@@ -2257,20 +2442,23 @@ class AirAppSmokeTests(unittest.TestCase):
                             patch.object(queries, "get_clicked_province", return_value=target):
                         screen.handle_events([pygame.event.Event(pygame.MOUSEMOTION,
                             pos=event_position, rel=(1, 0), buttons=(0, 0, 0))])
-                    with patch.object(screen, "draw_air_range") as draw, \
+                    previous_key = screen._air_range_layer_key
+                    with patch.object(screen, "draw_air_range", wraps=screen.draw_air_range) as draw, \
                             patch.object(queries, "air_range_preview_kind", side_effect=AssertionError("frame mission rule")), \
                             patch.object(queries, "air_order_radius", side_effect=AssertionError("frame radius")), \
                             patch.object(queries, "get_clicked_province", side_effect=AssertionError("unchanged input")):
                         screen.draw_range_previews(self.surface)
                         screen._refresh_air_range_hover(event_position)
-                    draw.assert_called_once_with(self.surface, base,
-                        queries.air_order_radius(fighter, kind), color)
+                    if screen._air_range_layer_key != previous_key:
+                        draw.assert_called_once_with(screen._air_range_layer, base,
+                            queries.air_order_radius(fighter, kind), color)
+                    else:
+                        draw.assert_not_called()
                     if target is None:
                         screen.refresh_ui()
                         with patch.object(screen, "draw_air_range") as refreshed_draw:
                             screen.draw_range_previews(self.surface)
-                        refreshed_draw.assert_called_once_with(self.surface, base,
-                            queries.air_order_radius(fighter, kind), color)
+                        refreshed_draw.assert_not_called()
             # Moving over controls also retains the last preview.
             screen._refresh_air_range_hover(screen.panel_rect.center)
             self.assertEqual(screen.air_strike_range_previews, [])
@@ -2281,7 +2469,7 @@ class AirAppSmokeTests(unittest.TestCase):
             self.assertEqual(screen.air_strike_range_previews,
                              [(base, queries.air_order_radius(fighter, "AIR_PATROL"))])
 
-    def test_range_cache_reuses_pixels_and_invalidates_camera_radius_and_clip(self):
+    def test_range_cache_invalidates_camera_radius_and_clip(self):
         game = world()
         game.map_w, game.map_h = 160, 120
         base = tile(game, 1, 8)
@@ -2289,25 +2477,110 @@ class AirAppSmokeTests(unittest.TestCase):
         game.top_ui_height = game.total_ui_h = 0
         screen = Orders_Screen()
         screen.map_screen = game
+        screen.target_province = base
+        plane = wing(base)
+        screen._air_range_records = [(plane, base)]
+        screen._refresh_air_range_previews()
         surface = pygame.Surface((200, 150), pygame.SRCALPHA)
         clip = pygame.Rect(2, 3, 195, 140)
         surface.set_clip(clip)
         with patch.object(pygame.draw, "ellipse", wraps=pygame.draw.ellipse) as ellipse:
-            screen.draw_air_range(surface, base, 60, (0, 255, 0))
-            first = pygame.image.tobytes(surface, "RGBA")
-            surface.fill((0, 0, 0, 0))
-            screen.draw_air_range(surface, base, 60, (0, 255, 0))
+            screen.draw_range_previews(surface)
+            screen.draw_range_previews(surface)
             self.assertEqual(ellipse.call_count, 1)
-            self.assertEqual(pygame.image.tobytes(surface, "RGBA"), first)
             self.assertEqual(surface.get_clip(), clip)
             game.camera.pos.x += 5
-            screen.draw_air_range(surface, base, 60, (0, 255, 0))
+            screen.draw_range_previews(surface)
             game.camera.zoom = 0.5
-            screen.draw_air_range(surface, base, 60, (0, 255, 0))
-            screen.draw_air_range(surface, base, 70, (0, 255, 0))
+            screen.draw_range_previews(surface)
+            queries.air_unit_stats(plane)["air_range_px"] += 10
+            screen._refresh_air_range_previews()
+            screen.draw_range_previews(surface)
             surface.set_clip(pygame.Rect(5, 6, 170, 100))
-            screen.draw_air_range(surface, base, 70, (0, 255, 0))
+            screen.draw_range_previews(surface)
             self.assertEqual(ellipse.call_count, 5)
+
+    def test_many_air_bases_share_one_reusable_overlay_and_one_blit(self):
+        class RecordingSurface(pygame.Surface):
+            def blit(self, *args, **kwargs):
+                self.blit_count += 1
+                return super().blit(*args, **kwargs)
+
+        game = world()
+        game.map_w, game.map_h = 2400, 1600
+        game.camera = SimpleNamespace(pos=pygame.Vector2(0, 0), zoom=1, tilt_factor=1)
+        game.top_ui_height = game.total_ui_h = 0
+        screen = Orders_Screen()
+        screen.map_screen = game
+        for index in range(60):
+            base = tile(game, index + 1, index * 10,
+                        center=(100 + index % 10 * 140, 100 + index // 10 * 120))
+            plane = wing(base, order={"type": "AIR_PATROL"} if index % 2 else None)
+            screen._air_range_records.append((plane, base))
+        screen.target_province = base
+        screen._refresh_air_range_previews()
+        surface = RecordingSurface((1600, 900))
+        surface.blit_count = 0
+        with patch.object(pygame, "Surface", wraps=pygame.Surface) as allocate, \
+                patch.object(screen, "draw_air_range", wraps=screen.draw_air_range) as draw:
+            screen.draw_range_previews(surface)
+            self.assertEqual(draw.call_count, len(screen._air_range_records))
+            cached = screen._air_range_layer
+            with patch.object(screen, "draw_air_range", side_effect=AssertionError("frame rasterization")), \
+                    patch.object(queries, "air_order_radius", side_effect=AssertionError("frame range rules")):
+                for _ in range(3):
+                    screen.draw_range_previews(surface)
+            for _ in range(3):
+                game.camera.pos.x += 1
+                screen.draw_range_previews(surface)
+            allocate.assert_called_once()
+        self.assertIs(screen._air_range_layer, cached)
+        self.assertEqual(surface.blit_count, 7)
+
+    def test_range_overlay_invalidates_tilt_wrap_map_viewport_and_mission(self):
+        game = world()
+        game.map_w, game.map_h = 300, 200
+        game.camera = SimpleNamespace(pos=pygame.Vector2(0, 0), zoom=1, tilt_factor=1)
+        game.top_ui_height = game.total_ui_h = 0
+        base = tile(game, 1, 8)
+        plane = wing(base)
+        screen = Orders_Screen()
+        screen.map_screen = game
+        screen.target_province = base
+        screen._air_range_records = [(plane, base)]
+        screen._refresh_air_range_previews()
+        surface = pygame.Surface((320, 240))
+        screen.draw_range_previews(surface)
+        changes = (
+            (game.camera, "tilt_factor", 0.5),
+            (game, "loop_map", True),
+            (game, "map_w", 400),
+            (game, "map_h", 300),
+            (game, "top_ui_height", 10),
+            (game, "total_ui_h", 20),
+        )
+        for target, field, value in changes:
+            with self.subTest(field=field):
+                previous_key = screen._air_range_layer_key
+                setattr(target, field, value)
+                with patch.object(screen, "draw_air_range", wraps=screen.draw_air_range) as draw:
+                    screen.draw_range_previews(surface)
+                    screen.draw_range_previews(surface)
+                draw.assert_called_once()
+                self.assertNotEqual(screen._air_range_layer_key, previous_key)
+        previous_layer = screen._air_range_layer
+        screen.draw_range_previews(pygame.Surface((500, 350)))
+        self.assertIsNot(screen._air_range_layer, previous_layer)
+        for change in (lambda: base.update(center=(50, 40)),
+                       lambda: plane.update(order={"type": "AIR_PATROL"})):
+            previous_key = screen._air_range_layer_key
+            change()
+            screen._refresh_air_range_previews()
+            with patch.object(screen, "draw_air_range", wraps=screen.draw_air_range) as draw:
+                screen.draw_range_previews(surface)
+                screen.draw_range_previews(surface)
+            draw.assert_called_once()
+            self.assertNotEqual(screen._air_range_layer_key, previous_key)
 
     def test_tournament_players_share_the_snapshot_and_apply_fog_locally(self):
         with tempfile.TemporaryDirectory() as directory:

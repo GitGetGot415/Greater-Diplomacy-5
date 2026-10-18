@@ -70,6 +70,22 @@ class TransportTests(unittest.TestCase):
         self.assertEqual({o["type"] for o in ai_movement.legal_air_candidates(self.game, self.plane, self.base)},
                          {"AIR_REPOSITION"})
 
+    def test_group_range_previews_keep_each_transports_cargo_eligibility(self):
+        self.load()
+        empty = wing(self.base, "Monoplane Transport")
+        invalid = wing(self.base, "Monoplane Transport")
+        invalid["air_cargo"] = [dict(self.cargo, health=0)]
+        enemy = tile(self.game, 3, 80, owner="B")
+        screen = self.screen()
+        screen._air_range_records = [(plane, self.base) for plane in (self.plane, empty, invalid)]
+        for planes in ((self.plane, empty, invalid), (empty, invalid, self.plane)):
+            screen._air_range_records = [(plane, self.base) for plane in planes]
+            screen._refresh_air_range_previews(enemy)
+            self.assertEqual(screen.air_strike_range_previews,
+                             [(self.base, queries.air_order_radius(self.plane, "AIR_DROP"))])
+            self.assertEqual(screen.air_range_previews,
+                             [(self.base, queries.air_order_radius(empty, "AIR_REPOSITION"))])
+
     def test_transport_range_comes_from_data_and_rejects_distant_destinations(self):
         radius = queries.air_unit_stats(self.plane)["air_range_px"]
         self.assertEqual(queries.air_order_radius(self.plane, "AIR_REPOSITION"), radius)

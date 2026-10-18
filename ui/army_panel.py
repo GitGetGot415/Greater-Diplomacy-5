@@ -741,7 +741,7 @@ def handle_event(map_screen, event, orders_screen=None):
     return True
 
 
-def draw(map_screen, surface, orders_screen=None, draw_editors=True):
+def draw(map_screen, surface, orders_screen=None, draw_editors=True, selected_ids=None):
     if orders_screen is not None and getattr(orders_screen, "battle_screen", None) is not None:
         return
     show_create = orders_screen is not None
@@ -760,7 +760,8 @@ def draw(map_screen, surface, orders_screen=None, draw_editors=True):
         surface.blit(hint, (tray.x + 69, tray.y + 6))
     clip = surface.get_clip()
     surface.set_clip(tray)
-    selected_ids = set(map_screen.selected_map_unit_ids())
+    if selected_ids is None:
+        selected_ids = set(map_screen.selected_map_unit_ids())
     for index, army in enumerate(armies):
         rect = map_top_right_layout.card_rect(tray, index, map_screen.army_panel_scroll_y)
         if not rect.colliderect(tray):
@@ -811,7 +812,8 @@ def draw(map_screen, surface, orders_screen=None, draw_editors=True):
     if show_create:
         create_rect = _create_rect(tray, armies, map_screen.army_panel_scroll_y)
         if create_rect.colliderect(tray):
-            enabled = _orders_can_use_selection(map_screen, orders_screen)
+            enabled = (_orders_can_manage_armies(map_screen, orders_screen)
+                       and bool(selected_ids))
             pygame.draw.rect(surface, (42, 98, 73) if enabled else (45, 52, 67),
                              create_rect, border_radius=4)
             pygame.draw.rect(surface, (140, 205, 165) if enabled else (95, 115, 130),

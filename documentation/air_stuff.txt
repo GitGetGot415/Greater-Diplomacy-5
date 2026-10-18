@@ -62,12 +62,21 @@ Command validation checks only its target through air_target_in_range.
 AI candidate validation must not repeat full-map scans.
 
 Orders caches mission radii when input changes.
+Aircraft with the same type, combat owner, and order share preview calculations.
+Loaded transports use their own cargo checks.
 Draw one world-space circle for each distinct base and radius.
 Apply camera tilt to its display.
 Close the outline along map edges that lie inside the circle.
 This keeps reach visible when the entire map fits inside the radius.
 
-Cache rasterized outlines by base, radius, color, map dimensions, camera, viewport, and clipping state.
+Draw all selected outlines onto one temporary viewport surface.
+Cache this surface by selected bases, radii, colors, map dimensions, camera, viewport, and clipping state.
+Unchanged frames copy this surface once, regardless of the number of selected bases.
+
+Camera changes clear and redraw the same surface. They do not allocate a separate bitmap for each base.
+Roster refreshes reuse this surface when the displayed ranges stay unchanged.
+Release this surface when no aircraft remain selected.
+
 Orders shows one range outline for each selected aircraft.
 Aircraft with the same base, radius, and color share one outline.
 Active defense and strike missions show their yellow mission range.
@@ -84,6 +93,19 @@ Any tile part inside or touching the circle is in range.
 Research details show library-based ranges, roles, damage bonuses, immunity, consumption, fort damage, and Convoy conversion.
 Ground-combat roster stats are cached at selection and state changes.
 They show immediate aircraft casualties without modifying units or assigning them front or reserve slots.
+Each battle estimate checks grounded aircraft casualties once per combat owner and ground endpoint.
+Discard these checks after each estimate. Later estimates use current opponents and diplomacy.
+
+Orders caches its unit roster and order summaries when selection or map state changes.
+Unchanged frames use these records without map-wide unit searches.
+Batch controls share one selection snapshot during each refresh.
+
+Batch eligibility reuses combat checks and unit positions for each base.
+Aircraft launch checks share results for the same base and combat owner.
+Discard these checks after each batch eligibility calculation.
+
+Command callbacks still check live units and permissions.
+Player, turn, tactical mode, and multiplayer permission changes also update the cached records.
 
 Flight and ground movement
 --------------------------

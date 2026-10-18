@@ -580,12 +580,21 @@ def build_battle(sides, nation_data, width=None, full_rank_for=None, terrain=Non
                 continue
             enemies = (side if len(sides) == 1 else
                        [u for index, other_side in enumerate(sides) if index != side_index for u in other_side])
+            caught_by_owner = {}
             for unit in side:
                 profile = unit
                 if queries.is_air_transport(unit):
                     profile = dict(unit)
                     queries.revert_transport(profile)
-                if queries.aircraft_caught_in_ground_combat(profile, enemies, nation_data):
+                if not queries.is_air_unit(profile):
+                    continue
+                owner = queries.get_unit_combat_owner(profile)
+                # Aircraft at this endpoint share opponents. Hostility depends
+                # on combat owner, so scan those opponents once per country.
+                if owner not in caught_by_owner:
+                    caught_by_owner[owner] = queries.aircraft_caught_in_ground_combat(
+                        profile, enemies, nation_data)
+                if caught_by_owner[owner]:
                     profiles[id(unit)] = queries.ground_combat_profile(profile)
     columns = _columns([[unit for unit in side
                          if profiles.get(id(unit), unit).get("health", 1) > 0]

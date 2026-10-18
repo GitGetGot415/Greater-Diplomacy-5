@@ -39,6 +39,7 @@ TEMP_GD4
 TEMP_GDHEX
 TEMP_OTHER
 TEMP_OTHER_2
+TEMP_OTHER_3
 
 *.pyc
 !countries_data.json

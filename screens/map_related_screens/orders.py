@@ -164,6 +164,12 @@ class Orders_Screen(GameState):
         self.action_buttons = []
         self.unit_row_icons = {}
         self.action_icons = {}
+        self._roster_rows = []
+        self._selected_display_records = []
+        self._selected_display_ids = frozenset()
+        self._row_order_summaries = {}
+        self._panel_title_text = "ORDERS | MAP COMMAND"
+        self._presentation_state = None
         self.battle_screen = None
         self.entered_from_combat_bubble = False
         self.return_to_province_menu = True
@@ -184,8 +190,9 @@ class Orders_Screen(GameState):
         self._air_range_records = []
         self._air_range_hover_target = None
         self._air_range_input_key = None
-        self._air_range_render_cache = {}
-        self._air_range_view_key = None
+        self._air_range_preview_key = ()
+        self._air_range_layer = None
+        self._air_range_layer_key = None
         self.bombard_target_preview = set()
         self.targeting_label = "bombardment"
 
@@ -447,7 +454,7 @@ class Orders_Screen(GameState):
         self.map_screen.ungroup_selection()
         self.refresh_ui()
 
-    def _batch_command_candidates(self, command):
+    def _batch_command_candidates(self, command, records=None):
         """Return selected units which can use one batch command.
 
         Repair, upgrade, and disband replace current orders.
@@ -455,15 +462,23 @@ class Orders_Screen(GameState):
         Return reserved repair resources before replacing an order.
         """
         candidates = []
+        combat_by_province = {}
+        launch_by_base = {}
+        indexes_by_province = {}
         player_research = self.map_screen.nation_data.get(
             self.map_screen.player_country, {}).get("research", {})
-        for unit, province in self.map_screen.selected_unit_records():
+        if records is None:
+            records = self.map_screen.selected_unit_records()
+        for unit, province in records:
             if (unit.get("owner") != self.map_screen.player_country
                     or self._command_blocked_silent(unit)):
                 continue
-            in_combat = queries.is_nation_in_combat_here(
-                self.map_screen.player_country, province,
-                self.map_screen.nation_data)
+            province_key = id(province)
+            if command in ("REPAIR", "UPGRADE"):
+                if province_key not in combat_by_province:
+                    combat_by_province[province_key] = queries.is_nation_in_combat_here(
+                        self.map_screen.player_country, province, self.map_screen.nation_data)
+                in_combat = combat_by_province[province_key]
             if command == "DISBAND":
                 if not unit.get("air_cargo"):
                     candidates.append((unit, province))
@@ -478,9 +493,23 @@ class Orders_Screen(GameState):
                 if not in_combat and queries.has_industry(province) and target:
                     candidates.append((unit, province, target))
             elif command == "MISSION":
-                if (self._air_mission_unit_index(unit, province) is not None
-                        and (queries.air_unit_has_mission(unit)
-                             or queries.air_unit_can_launch(self.map_screen, unit, province))):
+                if not queries.is_air_unit(unit):
+                    continue
+                if province_key not in indexes_by_province:
+                    indexes_by_province[province_key] = {
+                        id(current): index for index, current in enumerate(province.get("units", []))}
+                if self._air_mission_unit_index(
+                        unit, province, indexes_by_province[province_key]) is None:
+                    continue
+                # Launch legality depends on the base and combat owner. Keep
+                # this result only for this snapshot; callbacks check again.
+                launch_key = (province_key, queries.get_unit_combat_owner(unit))
+                if queries.air_unit_has_mission(unit):
+                    candidates.append((unit, province))
+                    continue
+                if launch_key not in launch_by_base:
+                    launch_by_base[launch_key] = queries.air_unit_can_launch(self.map_screen, unit, province)
+                if launch_by_base[launch_key]:
                     candidates.append((unit, province))
         return candidates
 
@@ -501,11 +530,13 @@ class Orders_Screen(GameState):
             "cost_fuel": int(stats.get("cost_fuel", 0) * missing_pct),
         }
 
-    def _selected_units_with_order(self, order_type):
+    def _selected_units_with_order(self, order_type, records=None):
         """Selected commandable units currently carrying one named order."""
+        if records is None:
+            records = self.map_screen.selected_unit_records()
         return [
             (unit, province)
-            for unit, province in self.map_screen.selected_unit_records()
+            for unit, province in records
             if (unit.get("owner") == self.map_screen.player_country
                 and not self._command_blocked_silent(unit)
                 and isinstance(unit.get("order"), dict)
@@ -920,9 +951,10 @@ class Orders_Screen(GameState):
                 if button is not btn_rename:
                     button.apply_state(visible=False)
 
-    def _visible_rows(self):
+    def _visible_rows(self, selected_records=None):
         """Selected units plus their army peers in each army's saved order."""
-        selected_records = self.map_screen.selected_unit_records()
+        if selected_records is None:
+            selected_records = self.map_screen.selected_unit_records()
         if getattr(self, "read_only", False) and not selected_records:
             selected_records = [(unit, self.target_province)
                                 for unit in self.target_province.get("units", [])]
@@ -942,6 +974,7 @@ class Orders_Screen(GameState):
                 }
                 ordered_records = []
                 visible_ids = set()
+                visible_armies = set()
 
                 def include(record):
                     unit, _province = record
@@ -954,6 +987,9 @@ class Orders_Screen(GameState):
                 for unit, _province in selected_records:
                     army = queries.army_for_unit(unit, nation_data)
                     if army:
+                        if army["id"] in visible_armies:
+                            continue
+                        visible_armies.add(army["id"])
                         # Selection must not reorder a group's card roster:
                         # a member stays at its persistent army position even
                         # when it is the only selected division.
@@ -965,10 +1001,14 @@ class Orders_Screen(GameState):
                         include((unit, _province))
                 visible_records = ordered_records
         rows = []
+        indexes_by_province = {}
         for unit, province in visible_records:
-            try:
-                index = province.get("units", []).index(unit)
-            except ValueError:
+            province_key = id(province)
+            if province_key not in indexes_by_province:
+                indexes_by_province[province_key] = {
+                    id(current): index for index, current in enumerate(province.get("units", []))}
+            index = indexes_by_province[province_key].get(id(unit))
+            if index is None:
                 continue
             row_key = index if province is self.target_province else (province["id"], index)
             rows.append((row_key, unit, province, index))
@@ -979,21 +1019,45 @@ class Orders_Screen(GameState):
         self.air_range_previews = []
         self.air_strike_range_previews = []
         seen_ranges = set()
+        preview_rules = {}
         records = self._air_target_records or self._air_range_records
         for unit, base in records:
-            if self._air_target_records:
-                if self._air_target_mission == "MOVE" and queries.air_unit_can_move_on_ground(unit):
-                    continue
-                kind = queries.AIR_TARGET_MISSION_TYPES[self._air_target_mission]
-            else:
-                kind = queries.air_range_preview_kind(self.map_screen, unit, destination)
+            order = unit.get("order")
+            # Cargo eligibility depends on each carrier's live cargo records.
+            # Empty aircraft share rules by type, combat owner, and current order.
+            profile = (unit.get("type"), queries.get_unit_combat_owner(unit),
+                       order.get("type") if isinstance(order, dict) else None,
+                       id(unit) if unit.get("air_cargo") else None)
+            if profile not in preview_rules:
+                if self._air_target_records:
+                    if (self._air_target_mission == "MOVE"
+                            and queries.air_unit_can_move_on_ground(unit)):
+                        preview_rules[profile] = None
+                        continue
+                    kind = queries.AIR_TARGET_MISSION_TYPES[self._air_target_mission]
+                else:
+                    kind = queries.air_range_preview_kind(self.map_screen, unit, destination)
+                preview_rules[profile] = kind, queries.air_order_radius(unit, kind)
+            preview = preview_rules[profile]
+            if preview is None:
+                continue
+            kind, radius = preview
             previews = (self.air_range_previews if kind == "AIR_REPOSITION"
                         else self.air_strike_range_previews)
-            radius = queries.air_order_radius(unit, kind)
             key = (kind == "AIR_REPOSITION", tuple(base["center"]), radius)
             if key not in seen_ranges:
                 previews.append((base, radius))
                 seen_ranges.add(key)
+
+        preview_key = tuple((tuple(base["center"]), radius, MOVE_TARGET_COLOR)
+                            for base, radius in self.air_range_previews)
+        preview_key += tuple((tuple(base["center"]), radius, BOMBARD_TARGET_COLOR)
+                             for base, radius in self.air_strike_range_previews)
+        if preview_key != self._air_range_preview_key:
+            self._air_range_preview_key = preview_key
+            self._air_range_layer_key = None
+            if not preview_key:
+                self._air_range_layer = None
 
     def _refresh_air_range_hover(self, position):
         """Recheck hover after mouse or camera input, retaining cached outlines."""
@@ -1014,11 +1078,11 @@ class Orders_Screen(GameState):
 
     def refresh_ui(self):
         from ui import sidebar_info
+        selected_records = self.map_screen.selected_unit_records()
         if self.target_province is not None:
             sidebar_info.prepare_unit_roster(self.map_screen, self.target_province)
         self._air_range_records = [(unit, base)
-            for unit, base in self.map_screen.selected_unit_records() if queries.is_air_unit(unit)]
-        self._air_range_render_cache = {}
+            for unit, base in selected_records if queries.is_air_unit(unit)]
         self._air_range_input_key = None
         self._refresh_air_range_previews(self._air_range_hover_target)
         if getattr(self.map_screen, "realtime_multiplayer", False):
@@ -1032,7 +1096,7 @@ class Orders_Screen(GameState):
         # Keep the command box no taller than its current roster requires.
         # Once the roster reaches the normal map-panel limit it uses the
         # existing scroll region exactly as before.
-        initial_rows = self._visible_rows()
+        initial_rows = self._visible_rows(selected_records)
         desired_height = (LIST_TOP_OFFSET_Y
                           + max(1, len(initial_rows)) * self.row_height
                           + PANEL_BOTTOM_INSET)
@@ -1049,7 +1113,7 @@ class Orders_Screen(GameState):
         is_tactical = self.map_screen.tactical_mode
         player_country = self.map_screen.player_country
         player_research = self.map_screen.nation_data.get(player_country, {}).get("research", {})
-        rows = self._visible_rows()
+        rows = initial_rows
         player_units = [unit for _key, unit, _province, _index in rows
                         if self.map_screen.is_unit_selected(unit)]
         all_player_units = [unit for province in self.map_screen.map_data.values()
@@ -1064,8 +1128,21 @@ class Orders_Screen(GameState):
         single_row = rows[0] if len(rows) == 1 else None
         if single_row and single_row[2] is not self.target_province:
             self.target_province = single_row[2]
-            rows = self._visible_rows()
+            rows = self._visible_rows(selected_records)
             single_row = rows[0] if len(rows) == 1 else None
+
+        # Build roster data at input and state changes. Frames draw these records.
+        self._roster_rows = rows
+        self._selected_display_records = selected_records
+        self._selected_display_ids = frozenset(
+            unit["unit_id"] for unit, _province in selected_records
+            if isinstance(unit.get("unit_id"), str))
+        self._panel_title_text = self._panel_title(player_units)
+        self._row_order_summaries = {
+            key: self._order_summary(key, unit)
+            for key, unit, _province, _index in rows
+            if unit.get("owner") == player_country}
+        self._presentation_state = self._current_presentation_state()
 
         # Battle is deliberately a child of Orders.  Keep this available for
         # observers as well as participants: a read-only Orders view can still
@@ -1136,8 +1213,8 @@ class Orders_Screen(GameState):
                                 - (batch_count - 1) * TOP_BTN_GAP_X) // batch_count)
                 batch_x = self.PANEL_X + PANEL_INSET
                 for label, order_type, start_order in batch_actions:
-                    active_orders = self._selected_units_with_order(order_type)
-                    candidates = self._batch_command_candidates(order_type)
+                    active_orders = self._selected_units_with_order(order_type, selected_records)
+                    candidates = self._batch_command_candidates(order_type, selected_records)
                     active_ids = {id(unit) for unit, _province in active_orders}
                     action_scope_ids = active_ids | {
                         id(candidate[0]) for candidate in candidates}
@@ -1167,7 +1244,7 @@ class Orders_Screen(GameState):
                         f"{label} every eligible selected unit, replacing its current order.")
                     self.elements.append(button)
                     batch_x = button.rect.right + TOP_BTN_GAP_X
-                mission_records = self._batch_command_candidates("MISSION")
+                mission_records = self._batch_command_candidates("MISSION", selected_records)
                 mission_count = len(mission_records)
                 mission_label = f"Set Mission ({mission_count})"
                 mission_button = Button(batch_x, PANEL_Y + BATCH_BTN_ROW_OFFSET_Y,
@@ -1485,12 +1562,13 @@ class Orders_Screen(GameState):
             enabled_missions=enabled_missions)
         _run_pygame_sub_screen(self.map_screen, popup)
 
-    def _air_mission_unit_index(self, unit, province):
+    def _air_mission_unit_index(self, unit, province, unit_indexes=None):
         # The selector may outlive a snapshot, a country switch, or a unit's
         # current form. Recheck its live identity and permissions on selection.
         if self.map_screen.id_to_province.get(province["id"]) is not province:
             return None
-        index = next((i for i, current in enumerate(province.get("units", [])) if current is unit), None)
+        index = (unit_indexes.get(id(unit)) if unit_indexes is not None else
+                 next((i for i, current in enumerate(province.get("units", [])) if current is unit), None))
         if index is None or not queries.is_air_unit(unit) or self._command_blocked_silent(unit):
             return None
         return index
@@ -2088,7 +2166,7 @@ class Orders_Screen(GameState):
                 # is never shown -- that would leak private intel the player
                 # has no business seeing. Its owner is fair game, same as the
                 # map/sidebar already reveal.
-                summary, summary_color = self._order_summary(row_key, unit)
+                summary, summary_color = self._row_order_summaries[row_key]
             else:
                 owner_id = unit.get("owner", "Unknown")
                 summary = queries.get_country_display_name(owner_id, self.map_screen.nation_data)
@@ -2133,7 +2211,7 @@ class Orders_Screen(GameState):
     def _draw_panel_header(self, surface, rows, player_units, read_only):
         title_font = fonts.get("heading2")
         tiny_font = fonts.get("tiny")
-        title = fit_text(self._panel_title(player_units),
+        title = fit_text(self._panel_title_text,
                          title_font, self.PANEL_WIDTH - 62)
         surface.blit(title_font.render(title, True, (255, 255, 255)),
                      (self.PANEL_X + PANEL_INSET,
@@ -2142,7 +2220,7 @@ class Orders_Screen(GameState):
         if read_only:
             meta = "READ ONLY | NO COMMANDABLE UNITS SELECTED"
         else:
-            selected_count = len(self.map_screen.selected_unit_records())
+            selected_count = len(self._selected_display_records)
             meta = f"{selected_count} SELECTED"
         surface.blit(tiny_font.render(meta, True, c.UI_TEXT_LIGHT),
                      (self.PANEL_X + PANEL_INSET,
@@ -2208,7 +2286,7 @@ class Orders_Screen(GameState):
                     pygame.draw.circle(surface, color, (int(sx), int(sy)), TARGET_MARKER_RADIUS, TARGET_MARKER_THICKNESS)
 
     def draw_air_range(self, surface, base, radius, color):
-        """Blit the cached boundary of the circle's intersection with each map.
+        """Draw one range boundary onto the shared aircraft overlay.
 
         Tilt changes the displayed shape, never gameplay reach. Clip to each
         map copy so the outline cannot imply flight across the wrapping seam.
@@ -2218,22 +2296,6 @@ class Orders_Screen(GameState):
         map_ref = self.map_screen
         camera = map_ref.camera
         previous_clip = surface.get_clip()
-        view_key = (camera.zoom, camera.tilt_factor, tuple(camera.pos), map_ref.map_w,
-                    map_ref.map_h, map_ref.loop_map, map_ref.top_ui_height,
-                    map_ref.total_ui_h, surface.get_size(), tuple(previous_clip))
-        if view_key != self._air_range_view_key:
-            self._air_range_render_cache.clear()
-            self._air_range_view_key = view_key
-        key = (tuple(base["center"]), radius, tuple(color))
-        cached = self._air_range_render_cache.get(key)
-        if cached is not None:
-            image, position = cached
-            surface.blit(image, position)
-            return
-
-        # Rasterize only at a source/camera/viewport boundary. Settled planning
-        # frames reuse these pixels without deriving the range contour again.
-        layer = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
         radius_x = radius * camera.zoom
         radius_y = radius_x * camera.tilt_factor
         offsets = (0, -map_ref.map_w, map_ref.map_w) if map_ref.loop_map else (0,)
@@ -2263,8 +2325,8 @@ class Orders_Screen(GameState):
             clip = previous_clip.clip(map_rect).clip(pygame.Rect(
                 0, map_ref.top_ui_height, surface.get_width(), surface.get_height() - map_ref.total_ui_h))
             if rect.colliderect(clip):
-                layer.set_clip(clip)
-                pygame.draw.ellipse(layer, color, rect, AIR_RANGE_THICKNESS)
+                surface.set_clip(clip)
+                pygame.draw.ellipse(surface, color, rect, AIR_RANGE_THICKNESS)
                 for start, end in edges:
                     # The bottom/right world edges fall just outside pygame's
                     # exclusive Rect bounds; keep their strokes inside the image.
@@ -2273,12 +2335,36 @@ class Orders_Screen(GameState):
                         x, y = queries.world_to_screen(point, map_ref, offset)
                         points.append((max(map_rect.left, min(map_rect.right - 1, round(x))),
                                        max(map_rect.top, min(map_rect.bottom - 1, round(y)))))
-                    pygame.draw.line(layer, color, *points, AIR_RANGE_THICKNESS)
-        layer.set_clip(None)
-        bounds = layer.get_bounding_rect()
-        image = layer.subsurface(bounds).copy()
-        self._air_range_render_cache[key] = (image, bounds.topleft)
-        surface.blit(image, bounds.topleft)
+                    pygame.draw.line(surface, color, *points, AIR_RANGE_THICKNESS)
+        surface.set_clip(previous_clip)
+
+    def _draw_cached_air_ranges(self, surface):
+        """Cache all selected ranges in one reusable viewport surface."""
+        if not self._air_range_preview_key:
+            return
+        map_ref = self.map_screen
+        camera = map_ref.camera
+        clip = surface.get_clip()
+        key = (self._air_range_preview_key, camera.zoom, camera.tilt_factor,
+               tuple(camera.pos), map_ref.map_w, map_ref.map_h, map_ref.loop_map,
+               map_ref.top_ui_height, map_ref.total_ui_h, surface.get_size(), tuple(clip))
+        if key != self._air_range_layer_key:
+            layer = self._air_range_layer
+            if layer is None or layer.get_size() != surface.get_size():
+                layer = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+                self._air_range_layer = layer
+            else:
+                layer.set_clip(None)
+                layer.fill((0, 0, 0, 0))
+            layer.set_clip(clip)
+            # Separate range bitmaps require a viewport-sized scan, copy, and
+            # alpha blit per base. Draw every outline into this one layer instead.
+            for base, radius in self.air_range_previews:
+                self.draw_air_range(layer, base, radius, MOVE_TARGET_COLOR)
+            for base, radius in self.air_strike_range_previews:
+                self.draw_air_range(layer, base, radius, BOMBARD_TARGET_COLOR)
+            self._air_range_layer_key = key
+        surface.blit(self._air_range_layer, (0, 0))
 
     def draw_range_previews(self, surface):
         aiming_province = self.bombarding_unit_province or self.target_province
@@ -2286,10 +2372,7 @@ class Orders_Screen(GameState):
         aiming_index = self.bombarding_unit_actual_index
         targeting = (self.bombarding_unit_index is not None and isinstance(aiming_index, int)
                      and 0 <= aiming_index < len(focused_units))
-        for base, radius in self.air_range_previews:
-            self.draw_air_range(surface, base, radius, MOVE_TARGET_COLOR)
-        for base, radius in self.air_strike_range_previews:
-            self.draw_air_range(surface, base, radius, BOMBARD_TARGET_COLOR)
+        self._draw_cached_air_ranges(surface)
         if not targeting or self._air_target_records:
             return
         self.draw_target_markers(surface, aiming_province, self.bombard_target_preview, BOMBARD_TARGET_COLOR)
@@ -2336,7 +2419,7 @@ class Orders_Screen(GameState):
 
         read_only = getattr(self, "read_only", False)
         owner_color = self.map_screen.nation_colors.get(self.map_screen.player_country, (255, 255, 0))
-        rows = self._visible_rows()
+        rows = self._roster_rows
         player_units = [unit for _key, unit, _province, _index in rows
                         if self.map_screen.is_unit_selected(unit)]
 
@@ -2415,13 +2498,29 @@ class Orders_Screen(GameState):
         resource_hud.draw_resource_bar(surface, self.map_screen,
                                        start_x=view_mode_buttons.RESOURCE_BAR_OFFSET_X)
         army_panel.draw(self.map_screen, surface, orders_screen=self,
-                        draw_editors=False)
+                        draw_editors=False, selected_ids=self._selected_display_ids)
 
         if self.battle_screen is not None:
             self.battle_screen.draw_embedded(surface)
 
+    def _current_presentation_state(self):
+        """Track map state boundaries, including authoritative multiplayer snapshots."""
+        map_ref = self.map_screen
+        # Lightweight UI test maps can omit the map's cache revision and selection IDs.
+        state = (getattr(map_ref, "_presentation_cache_revision", None),
+                 map_ref.player_country, map_ref.time_manager.total_turns,
+                 map_ref.tactical_mode, frozenset(getattr(map_ref, "selected_unit_ids", ())))
+        if getattr(map_ref, "realtime_multiplayer", False):
+            player = map_ref.realtime_session.players.get(map_ref.realtime_player_id)
+            state += (map_ref.realtime_session.phase,
+                      (player.submitted, player.eliminated) if player else None)
+        return state
+
     def update(self):
         super().update()
+        if (self.map_screen and self.target_province
+                and self._presentation_state != self._current_presentation_state()):
+            self.refresh_ui()
         if self.battle_screen is not None:
             if not queries.is_province_in_active_combat(
                     self.target_province, self.map_screen.nation_data):
