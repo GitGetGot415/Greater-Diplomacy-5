@@ -513,6 +513,11 @@ Editor painting invalidates the affected surface.
 Refresh Maps forces a full rebuild.
 Planning-frame rendering does not run map-wide calculations.
 
+In Economy view, factory icons turn gray while their province has units in production.
+Factories without queued units keep their normal colors.
+This display uses cached production status and does not depend on the Units view filter.
+Partial fog keeps the existing unknown building marker.
+
 Naval, Land, Air, and All form a vertical strip beside the lower left sidebar in Units view.
 They filter local unit stacks, army markers, and order arrows.
 Filter results are cached when load, state, or input changes.

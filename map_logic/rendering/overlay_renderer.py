@@ -32,12 +32,18 @@ class _UnitRenderIndex:
         counts = []
         self.view_units_by_province = {}
         self.training_province_object_ids = set()
+        self.producing_unit_province_object_ids = set()
         self.stack_keys = {}
         view_records = []
 
         for province in map_data.values():
             units = province.get("units", [])
-            training = queries.is_training_troops(province, view_filter)
+            producing_units = queries.is_training_troops(province)
+            if producing_units:
+                self.producing_unit_province_object_ids.add(id(province))
+            training = producing_units and (
+                view_filter == queries.DEFAULT_UNIT_VIEW_FILTER
+                or queries.is_training_troops(province, view_filter))
             if training:
                 self.training_province_object_ids.add(id(province))
             if not units and not training:
@@ -1289,7 +1295,10 @@ def draw_overlay_content(map_screen, surface, draw_combat=True):
                         offset_y = 0
                         
                         sym_name = b_name
-                        symbol = symbol_loader.get_symbol(sym_name, building_zoom)
+                        busy_factory = (
+                            b_lib.get(b_name, {}).get("group") == "industry"
+                            and id(province) in unit_index.producing_unit_province_object_ids)
+                        symbol = symbol_loader.get_symbol(sym_name, building_zoom, grayscale=busy_factory)
                         
                         if symbol:
                             symbol = map_utils.apply_tilt(symbol, map_screen.camera.tilt_factor, c.APPLY_TILT_TO_OVERLAYS)
@@ -1307,7 +1316,8 @@ def draw_overlay_content(map_screen, surface, draw_combat=True):
                         else:
                             # Fallback colored squares for different types
                             color = (150, 150, 150) # Grey for workshop
-                            if "Factory" in b_name: color = (100, 100, 200) # Blue-ish for factory
+                            if "Factory" in b_name and not busy_factory:
+                                color = (100, 100, 200) # Blue-ish for an idle factory
                             if "Refinery" in b_name: color = (200, 100, 100) # Red-ish for refinery
                             if "Fort" in b_name: color = (120, 120, 120) # Grey for fort
                             

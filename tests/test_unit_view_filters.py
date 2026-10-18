@@ -122,6 +122,20 @@ class UnitViewFilterTests(unittest.TestCase):
         self.game._presentation_cache_revision += 1
         self.assertEqual(self.draw_training_badge()[0], [])
 
+    def test_production_status_ignores_unit_filter_and_refreshes_with_queue_edits(self):
+        self.province["units"] = []
+        self.game.unit_view_filter = "AIR"
+        self.province["unit_queue"] = [{"unit_type": "Test Land"}]
+        index = overlay_renderer._unit_render_index(self.game)
+        self.assertIn(id(self.province), index.producing_unit_province_object_ids)
+        self.assertNotIn(id(self.province), index.training_province_object_ids)
+        with patch.object(queries, "is_training_troops", side_effect=AssertionError("Frame checked production")):
+            self.assertIs(overlay_renderer._unit_render_index(self.game), index)
+        self.province["unit_queue"].clear()
+        self.game._presentation_cache_revision += 1
+        index = overlay_renderer._unit_render_index(self.game)
+        self.assertNotIn(id(self.province), index.producing_unit_province_object_ids)
+
     def mission_units(self):
         orders = ({}, {}, {"type": "AIR_PATROL"},
                   {"type": "AIR_PATROL", "priority": "STRONGEST"},

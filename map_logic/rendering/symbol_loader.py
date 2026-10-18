@@ -64,7 +64,7 @@ STYLE_CULTURES = {}
 #: of the lag when a player zoomed out with units showing.
 RESOLVED_NAMES = {}
 
-#: (base_name, color, alpha, size) -> the scaled surface. Shared with every
+#: (image identity, color, alpha, size, grayscale) -> the scaled surface. Shared with every
 #: caller asking for the same picture, so what comes back is read-only: pass
 #: `alpha` to get_symbol rather than calling set_alpha on the result, or the next
 #: caller inherits it. Everything else here already copies before it mutates.
@@ -778,7 +778,8 @@ def get_native_size(name, style=None, country=None):
     return base_img.get_size() if base_img else None
 
 
-def get_symbol(name, zoom, color=None, alpha=255, style=None, country=None, *, fit_size=None):
+def get_symbol(name, zoom, color=None, alpha=255, style=None, country=None, *, fit_size=None,
+               grayscale=False):
     """Returns the scaled icon, or None if no loaded symbol matches the name.
 
     `style` defaults to the globally active c.UNIT_ART_STYLE; anything that
@@ -788,6 +789,8 @@ def get_symbol(name, zoom, color=None, alpha=255, style=None, country=None, *, f
     `fit_size` fits the native image into a pixel box, preserving proportions
     and enlarging small images. It replaces zoom and map-specific scale tuning
     for fixed-size UI icons, without scaling an intermediate image first.
+
+    `grayscale` returns a cached gray version without changing the source image.
 
     The surface is shared with every other caller asking for the same picture at
     the same size, so treat what comes back as read-only. That is what `alpha` is
@@ -813,7 +816,7 @@ def get_symbol(name, zoom, color=None, alpha=255, style=None, country=None, *, f
     # duplicate per country that happens to see identical art.
     img_key = id(base_img)
 
-    key = (img_key, color, alpha, size)
+    key = (img_key, color, alpha, size, grayscale)
     scaled = SCALED_SYMBOLS.get(key)
     if scaled is not None:
         return scaled
@@ -829,6 +832,8 @@ def get_symbol(name, zoom, color=None, alpha=255, style=None, country=None, *, f
         target_img = base_img
 
     scaled = pygame.transform.scale(target_img, size)
+    if grayscale:
+        scaled = pygame.transform.grayscale(scaled)
     if alpha < 255:
         scaled.set_alpha(alpha)
 

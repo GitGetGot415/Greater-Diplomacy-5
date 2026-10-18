@@ -75,6 +75,16 @@ class SymbolCacheTests(unittest.TestCase):
         second = symbol_loader.get_symbol(self.name, 2.0)
         self.assertIs(first, second)
 
+    def test_grayscale_variants_reuse_the_cache_without_replacing_normal_symbols(self):
+        normal = symbol_loader.get_symbol(self.name, 2.0)
+        with mock.patch.object(pygame.transform, "grayscale", wraps=pygame.transform.grayscale) as convert:
+            first = symbol_loader.get_symbol(self.name, 2.0, grayscale=True)
+            second = symbol_loader.get_symbol(self.name, 2.0, grayscale=True)
+        convert.assert_called_once()
+        self.assertIs(first, second)
+        self.assertIsNot(first, normal)
+        self.assertIs(symbol_loader.get_symbol(self.name, 2.0), normal)
+
     def test_a_different_size_is_a_different_surface(self):
         small = symbol_loader.get_symbol(self.name, 1.0)
         big = symbol_loader.get_symbol(self.name, 4.0)
