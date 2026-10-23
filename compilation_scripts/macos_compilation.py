@@ -51,6 +51,7 @@ def main():
     # system ``python3`` without py2app or the BeepBox runtime installed.
     cmd = [sys.executable, "compilation_scripts/setup.py", "py2app"]
     # setup.py includes the air resolver, unit event recorder, and Unit events screen.
+    # It also includes the scenario Unit Stats Editor.
 
     result = subprocess.run(cmd)
     if result.returncode != 0:

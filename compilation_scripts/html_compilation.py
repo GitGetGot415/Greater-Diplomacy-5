@@ -35,6 +35,7 @@ SOURCE_PACKAGES = ["data", "ui", "screens", "map_logic"]
 # The data package includes migrations.py for older saves and settings.
 # map_logic includes air_processor.py and unit_events.py in turn_processing/.
 # screens includes the Unit events screen. These modules also run on web builds.
+# The screens package also includes the scenario Unit Stats Editor.
 DATA_DIRS = ["assets", "base_maps", "scenarios", "tournament_saves"]
 
 

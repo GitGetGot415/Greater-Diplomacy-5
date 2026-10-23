@@ -467,6 +467,99 @@ def scenario_has_construction_customizations(settings):
                 or settings.get("administrative_turn_overrides") or settings.get("administrative_disabled")
                 or settings.get("conversion_turn_overrides"))
 
+def get_unit_range_defaults(unit_library=None):
+    """Read editable range families from the complete, unmodified unit library."""
+    if unit_library is None:
+        # The live cache can contain scenario overrides or omit disabled units.
+        with open(c.UNIT_DATA_PATH, encoding="utf-8") as handle:
+            unit_library = json.load(handle)
+    families = collections.defaultdict(list)
+    for name, stats in unit_library.items():
+        families[get_base_item_name(name)].append((name, stats))
+    defaults = {}
+    for family, members in families.items():
+        fields = {}
+        bombard = [get_bombardment_range(name, stats) for name, stats in members]
+        if any(bombard):
+            fields["bombard_range"] = max(bombard)
+        aircraft = sorted(
+            (_unit_range_level(name), stats["air_range_px"])
+            for name, stats in members if stats.get("air_role") and stats.get("air_range_px", 0) > 0)
+        if aircraft:
+            first_level, first_range = aircraft[0]
+            last_level, last_range = aircraft[-1]
+            step = ((last_range - first_range) / (last_level - first_level)
+                    if last_level > first_level else 0)
+            fields["air_range_start"] = first_range - (first_level - 1) * step
+            fields["air_range_per_level"] = step
+        if fields:
+            defaults[family] = fields
+    return defaults
+
+
+def refresh_unit_range_overrides(settings):
+    """Restore library ranges and apply updated lobby settings without changing other stats."""
+    with open(c.UNIT_DATA_PATH, encoding="utf-8") as handle:
+        source = json.load(handle)
+    apply_unit_range_overrides(source, settings)
+    for name, stats in get_unit_library().items():
+        if name not in source:
+            continue
+        for key in ("bombard_range", "air_range_px"):
+            if key in source[name]:
+                stats[key] = source[name][key]
+            else:
+                stats.pop(key, None)
+
+
+def _unit_range_level(name):
+    """Return the numbered family level, or one for an unnumbered unit."""
+    return max(1, get_unit_research_requirement(name)[1])
+
+
+def get_unit_range_overrides(settings, defaults):
+    """Keep valid range changes. Missing or malformed fields use library defaults."""
+    raw = (settings or {}).get("unit_range_overrides", {})
+    if not isinstance(raw, dict):
+        return {}
+    overrides = {}
+    for family, fields in defaults.items():
+        values = raw.get(family)
+        if not isinstance(values, dict):
+            continue
+        changed = {}
+        for key, default in fields.items():
+            value = values.get(key)
+            minimum = 0 if key == "air_range_per_level" else 1
+            if type(value) is int and value >= minimum and value != default:
+                changed[key] = value
+        if changed:
+            overrides[family] = changed
+    return overrides
+
+
+def scenario_has_unit_stat_customizations(settings):
+    """Report effective range changes for the Unit Stats Editor badge."""
+    if not settings or not settings.get("unit_range_overrides"):
+        return False
+    return bool(get_unit_range_overrides(settings, get_unit_range_defaults()))
+
+
+def apply_unit_range_overrides(unit_library, settings):
+    """Apply scenario ranges to a freshly loaded library before units are restored."""
+    defaults = get_unit_range_defaults(unit_library)
+    overrides = get_unit_range_overrides(settings, defaults)
+    for name, stats in unit_library.items():
+        family = get_base_item_name(name)
+        changed = overrides.get(family, {})
+        if "bombard_range" in changed and get_bombardment_range(name, stats) > 0:
+            stats["bombard_range"] = changed["bombard_range"]
+        if stats.get("air_role") and ("air_range_start" in changed or "air_range_per_level" in changed):
+            start = changed.get("air_range_start", defaults[family]["air_range_start"])
+            step = changed.get("air_range_per_level", defaults[family]["air_range_per_level"])
+            stats["air_range_px"] = start + (_unit_range_level(name) - 1) * step
+
+
 def save_scenario_settings(data):
     cache_obj = _JSON_CACHE["scenario_settings"]
     
@@ -4461,7 +4554,7 @@ def is_naval_unit(unit_type):
     stats = get_unit_library().get(unit_type, {})
     return stats.get("naval_unit", False)
 
-def get_bombardment_range(unit_type):
+def get_bombardment_range(unit_type, stats=None):
     """Returns how many tiles this unit class can shell, or 0 if it cannot bombard.
 
     The unit's own bombard_range wins, so adding one in unit_data.json is all it
@@ -4474,7 +4567,9 @@ def get_bombardment_range(unit_type):
     that name is not in the unit library, so the stat lookup misses, and it is
     not in the table either.
     """
-    from_stats = (get_unit_library().get(unit_type) or {}).get("bombard_range")
+    if stats is None:
+        stats = get_unit_library().get(unit_type) or {}
+    from_stats = stats.get("bombard_range")
     if from_stats:
         return int(from_stats)
     return c.BOMBARDMENT_UNITS.get(get_base_unit_name(unit_type), 0)

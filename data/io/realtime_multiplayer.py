@@ -465,6 +465,11 @@ class RealtimeSession:
             self._require_host_lobby(host_id)
             if not isinstance(settings, dict):
                 raise RealtimeError("Scenario settings must be an object.")
+            # Lightweight drivers can omit map setup. The game driver updates
+            # its saved settings and ranges before the lobby broadcast.
+            configure = getattr(self.driver, "configure_scenario_settings", None)
+            if configure is not None:
+                configure(settings)
             self.config.scenario_settings = copy.deepcopy(settings)
             self._broadcast()
 
@@ -760,6 +765,12 @@ class MapRealtimeDriver:
 
     def __init__(self, map_ref):
         self.map_ref = map_ref
+
+    def configure_scenario_settings(self, settings):
+        """Apply host lobby ranges before snapshots or player commands use them."""
+        from data import queries
+        queries.refresh_unit_range_overrides(settings)
+        self.map_ref.scenario_settings = copy.deepcopy(settings)
 
     def start_game(self, countries: list[str]) -> None:
         self.map_ref.active_players = list(countries)
@@ -1839,6 +1850,15 @@ def apply_authoritative_snapshot(map_ref, snapshot: dict[str, Any]) -> None:
     """Replace mutable game state on a client map after a server broadcast."""
     if not isinstance(snapshot, dict):
         return
+    settings = snapshot.get("scenario_settings")
+    if isinstance(settings, dict):
+        from data import queries
+        # A guest can have the earlier lobby bundle when the host changes ranges.
+        # Lightweight snapshot fixtures can omit local scenario settings.
+        previous = getattr(map_ref, "scenario_settings", {})
+        if previous.get("unit_range_overrides", {}) != settings.get("unit_range_overrides", {}):
+            queries.refresh_unit_range_overrides(settings)
+        map_ref.scenario_settings = copy.deepcopy(settings)
     from map_logic.turn_processing import unit_events
     # Badges are local preferences. Server broadcasts must not mark them unread again.
     local_event_reads = unit_events.saved_reads(map_ref) if hasattr(map_ref, "time_manager") else {}

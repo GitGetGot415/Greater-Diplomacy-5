@@ -292,10 +292,7 @@ def bombard_range(name, stats):
     `stats` is still consulted first for callers holding a synthetic library the
     real one has never heard of -- which is every test in this module.
     """
-    from_stats = stats.get("bombard_range")
-    if from_stats:
-        return int(from_stats)
-    return queries.get_bombardment_range(name)
+    return queries.get_bombardment_range(name, stats)
 
 
 def evaluate(names, unit_library, ctx):

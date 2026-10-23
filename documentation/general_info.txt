@@ -52,6 +52,38 @@ The final notification gives accepted, rejected, and overridden counts.
 Move files and saved games require no new fields.
 These controls do not change real-time multiplayer or local game modes.
 
+UNIT RANGE SETTINGS
+===================
+
+Select Edit Unit Stats in Scenario Settings. This button is left of Edit Construction Turns.
+The Range category lists bombardment families and aircraft families from the complete unit library.
+Disabled families remain available in this editor.
+
+Bombardment range uses whole tiles. Each family has one range field.
+Aircraft range uses whole map pixels. Each family has a starting range and an increase for each level.
+Range = start + (level - 1) * increase.
+Starting ranges must be positive. The increase can be zero.
+The existing mission rules still convert aircraft range into strike, patrol, relocation, and air drop reach.
+See documentation/air_stuff.txt for those rules.
+
+Select Save All Changes to apply the draft. Back discards the draft.
+Reset to Defaults restores and saves the library ranges after confirmation.
+The Edit Unit Stats button shows ! when saved ranges differ from defaults.
+The main Scenario Settings reset keeps these separate editor settings, as it does for construction turns.
+
+Scenario settings store changed fields in unit_range_overrides, keyed by unit family.
+Supported fields are bombard_range, air_range_start, and air_range_per_level.
+data/queries.py validates and applies these fields when the map loads.
+Missing or invalid fields use library defaults. Existing saves retain their own scenario settings.
+Current defaults come from data/json/unit_data.json and the shared bombardment rules.
+See data/generators/recipes.py and data/constants.py for source tuning.
+
+Combat, AI, command validation, and previews read the same active unit library.
+Saves and both multiplayer systems retain the host's range settings.
+Only scenario setup can change ranges. Player move files and real-time player commands cannot change them.
+Real-time lobby edits update the server's ranges before it sends new snapshots.
+These settings apply to all local player modes, AI countries, and map editor units.
+
 CONSTRUCTION TURN SETTINGS
 ==========================
 

@@ -1464,22 +1464,10 @@ class Map(GameState):
         # --- 2. Data Loading ---
         if is_random and random_settings:
             self.random_settings = random_settings
-            load_map.load_map_assets(self, random_settings["map_path"])
+            load_map.load_map_assets(self, random_settings["map_path"], scenario_settings=map_settings)
             self.time_manager.year = random_settings["year"]
         else:
-            load_map.load_map_assets(self, load_path)
-
-        # Capture settings passed from New_Game
-        if map_settings:
-            self.scenario_settings = map_settings
-        elif not hasattr(self, 'scenario_settings'):
-            self.scenario_settings = {
-                "fog_of_war": c.DEFAULT_FOG_OF_WAR,
-                "fog_of_war_strength": c.DEFAULT_FOG_OF_WAR_STRENGTH,
-                "casus_belli_required": c.DEFAULT_CASUS_BELLI,
-                "truce_turns": c.DEFAULT_TRUCE_TURNS,
-                "force_time_appropriate_research": c.DEFAULT_FORCE_TIME_APPROPRIATE_RESEARCH,
-            }
+            load_map.load_map_assets(self, load_path, scenario_settings=map_settings)
 
         # --- 3. Visuals & UI Setup ---
         self.bg_color = (20, 20, 20)

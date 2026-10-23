@@ -8,10 +8,8 @@ from ui import confirm_dialog
 # ==========================================
 # LAYOUT
 # ==========================================
-# Everything lives on one screen now: the general scenario rules on the left,
-# the AI-specific rules boxed off on the right so they still read as their own
-# section, and the two screen-opening actions (reset / turn editor) footered
-# below both columns. Only "Edit Construction Turns" still opens a sub-screen.
+# General scenario rules use the left column. AI rules use the right panel.
+# The footer opens the unit stats and construction turns editors.
 
 
 ROW_H = 50
@@ -44,13 +42,16 @@ AI_PANEL_RECT = pygame.Rect(AI_INFO_X - 20, AI_PANEL_TOP,
 SLIDER_WIDTH = 180
 SLIDER_Y_OFFSET = 8
 
-# --- Footer actions, centred under both columns ---
+# --- Footer actions ---
 DAYS_PER_TURN_ROW_Y = LEFT_TOP_Y + 8 * ROW_H
 TRUCE_ROW_Y = LEFT_TOP_Y + 9 * ROW_H
 DAMAGE_FLOOR_ROW_Y = LEFT_TOP_Y + 10 * ROW_H
 DEFENSE_FLOOR_ROW_Y = LEFT_TOP_Y + 11 * ROW_H
 RESET_ROW_Y = 615
 TURN_EDITOR_ROW_Y = 675
+EDITOR_BUTTON_GAP = 20
+UNIT_EDITOR_X = (c.SCREEN_WIDTH - c.SIZES["scenario_setting_button"][0]) // 2
+TURN_EDITOR_X = UNIT_EDITOR_X + c.SIZES["scenario_setting_button"][0] + EDITOR_BUTTON_GAP
 
 # ==========================================
 # TOGGLES
@@ -212,7 +213,12 @@ class Scenario_Settings(GameState):
 
         self.elements.extend(self.build_ai_section())
 
-        turn_editor_btn = Button("centered", TURN_EDITOR_ROW_Y, "scenario_setting_button", "purple",
+        unit_editor_btn = Button(UNIT_EDITOR_X, TURN_EDITOR_ROW_Y, "scenario_setting_button", "purple",
+                                 "Edit Unit Stats", self.open_unit_stats_editor, font_preset="button_small")
+        if queries.scenario_has_unit_stat_customizations(self.settings):
+            unit_editor_btn.notification_text = "!"
+
+        turn_editor_btn = Button(TURN_EDITOR_X, TURN_EDITOR_ROW_Y, "scenario_setting_button", "purple",
                                  "Edit Construction Turns", self.open_turn_editor, font_preset="button_small")
         if queries.scenario_has_construction_customizations(self.settings):
             turn_editor_btn.notification_text = "!"
@@ -220,7 +226,7 @@ class Scenario_Settings(GameState):
         self.elements.extend([
             Button("centered", RESET_ROW_Y, "scenario_setting_button", "grey", "Reset to Defaults",
                    self.reset_defaults, font_preset="button_small"),
-            turn_editor_btn,
+            unit_editor_btn, turn_editor_btn,
         ])
 
     def build_fog_slider(self):
@@ -332,6 +338,11 @@ class Scenario_Settings(GameState):
                              persist=not getattr(self, "_session_bound", False))
         except ImportError as e:
             print(f"Error importing turn editor: {e}")
+
+    def open_unit_stats_editor(self):
+        from screens.editor_screens.unit_stats_editor import open_unit_stats_editor
+        open_unit_stats_editor(on_done=lambda screen: self.refresh_ui(), settings=self.settings,
+                               persist=not getattr(self, "_session_bound", False))
 
     def cycle_days_per_turn(self):
         options = c.DAYS_PER_TURN_OPTIONS

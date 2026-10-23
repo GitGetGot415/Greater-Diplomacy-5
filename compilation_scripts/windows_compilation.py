@@ -51,6 +51,7 @@ def main():
            "--hidden-import", "screens.map_related_screens.politics_screen",
            "--hidden-import", "screens.map_related_screens.unit_events_screen",
            "--hidden-import", "screens.map_related_screens.country_summary",
+           "--hidden-import", "screens.editor_screens.unit_stats_editor",
            "--hidden-import", "map_logic.turn_processing.unit_events",
            "--hidden-import", "map_logic.turn_processing.air_processor",
            "--hidden-import", "data.migrations",

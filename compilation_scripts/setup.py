@@ -122,6 +122,7 @@ OPTIONS = {
                  'map_logic.turn_processing.air_processor',
                  'map_logic.turn_processing.unit_events',
                  'screens.map_related_screens.unit_events_screen',
+                 'screens.editor_screens.unit_stats_editor',
                  'screens.map_related_screens.country_summary'],
     'excludes': ['PyInstaller', 'PySide6', 'PyQt6', 'PyQt5'],
     'resources': ['mac64-libsoloud.dylib'],

@@ -112,6 +112,8 @@ Flight and ground movement
 
 queries.air_order_radius calculates mission reach from the current unit library and order type.
 UI previews, AI candidates, and command validation use this shared helper.
+Scenario Settings > Edit Unit Stats changes family range starts and increases for each level.
+See documentation/general_info.txt, UNIT RANGE SETTINGS, for editing and persistence.
 
 Aircraft can fly over water, foreign land, and nonadjacent provinces.
 Reusable strikes reserve travel distance for both the outgoing flight and the return.

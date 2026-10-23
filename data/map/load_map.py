@@ -59,7 +59,7 @@ def _apply_history_snapshot(save_meta, history, history_turn):
     return True
 
 
-def load_map_assets(map_screen, load_path):
+def load_map_assets(map_screen, load_path, scenario_settings=None):
     # Ensure no residual data from a previous map persists during the load
     map_screen.map_data = {}
     map_screen.id_to_province = {}
@@ -69,7 +69,8 @@ def load_map_assets(map_screen, load_path):
     map_screen.raw_json_data = {}
 
     # --- UNIFIED SETTINGS LOADING ---
-    scenario_settings = queries.get_scenario_settings()
+    if scenario_settings is None:
+        scenario_settings = queries.get_scenario_settings()
     # Ensure we always have a dictionary to reference
     map_screen.scenario_settings = copy.deepcopy(scenario_settings) if scenario_settings is not None else {
         "fog_of_war": c.DEFAULT_FOG_OF_WAR,
@@ -97,6 +98,8 @@ def load_map_assets(map_screen, load_path):
         map_screen.nation_data = copy.deepcopy(country_io.load_all_country_data())
         _load_default_images(map_screen)
         map_screen.nation_colors = country_io.nation_colors_from(map_screen.nation_data)
+        queries.apply_unit_range_overrides(
+            queries.reload_game_library("unit_library"), map_screen.scenario_settings)
         return
 
     # --- ZIP FILE INTERCEPT ---
@@ -163,6 +166,9 @@ def load_map_assets(map_screen, load_path):
                 map_screen.scenario_settings["use_scripted_events"] = save_meta["scenario_settings"]["use_scripted_events"]
             if "force_time_appropriate_research" in save_meta["scenario_settings"]:
                 map_screen.scenario_settings["force_time_appropriate_research"] = save_meta["scenario_settings"]["force_time_appropriate_research"]
+    elif save_meta and not map_screen.selection_mode:
+        # Saves from before scenario settings must not inherit new range preferences.
+        map_screen.scenario_settings.pop("unit_range_overrides", None)
 
     # Base maps and older scenarios may not have stored this setting yet. Add
     # the effective default to the live settings so an editor save writes it
@@ -177,6 +183,7 @@ def load_map_assets(map_screen, load_path):
     # We MUST mutate the dictionaries inplace because UI screens hold pointers to them!
     unit_lib = queries.reload_game_library("unit_library")
     building_lib = queries.reload_game_library("building_library")
+    queries.apply_unit_range_overrides(unit_lib, map_screen.scenario_settings)
 
     # Same family-name rule the turn editor writes these overrides with, so the
     # keys it saves always match the ones looked up here.
