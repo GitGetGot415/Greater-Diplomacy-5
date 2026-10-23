@@ -57,6 +57,7 @@ UNIT RANGE SETTINGS
 
 Select Edit Unit Stats in Scenario Settings. This button is right of Edit Construction Turns.
 The Range category lists bombardment families and aircraft families from the complete unit library.
+Bombardment families appear first. Aircraft families follow. Each group uses alphabetical order.
 Disabled families remain available in this editor.
 
 Bombardment range uses whole tiles. Each family has one range field.

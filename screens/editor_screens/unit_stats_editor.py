@@ -30,12 +30,10 @@ class UnitStatsEditorScreen(ModalScreen):
                      for key, default in fields.items()}
             for family, fields in self.defaults.items()
         }
-        self.rows = []
-        for family, fields in sorted(self.defaults.items(), key=lambda item: item[0].lower()):
-            if "bombard_range" in fields:
-                self.rows.append((family, "bombard_range"))
-            if "air_range_start" in fields:
-                self.rows.append((family, "air_range_start"))
+        families = sorted(self.defaults.items(), key=lambda item: item[0].lower())
+        self.rows = [(family, key)
+                     for key in ("bombard_range", "air_range_start")
+                     for family, fields in families if key in fields]
         self.list_top = self.panel_rect.y + self.LIST_TOP_OFF
         self.list_view_h = self.panel_rect.bottom - 66 - self.list_top
         self.refresh_ui()
