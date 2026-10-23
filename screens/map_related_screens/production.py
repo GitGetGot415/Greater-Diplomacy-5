@@ -6,6 +6,7 @@ from ui_elements import Button, draw_resource_string, draw_combat_stats, draw_bo
 from screens.map_related_screens import recruit_ui
 from map_logic.rendering.font_manager import fonts
 from data import queries
+from map_logic import production_actions
 from map_logic.diplomacy import restrictions
 from ui.bars import resource_hud, view_mode_buttons
 from ui import event_handler
@@ -416,10 +417,9 @@ class Production_Screen(GameState):
         # --- UNIT LOGIC ---
         def render_unit_button(unit_name, btn_color, x_offset=0):
             nonlocal y_offset
-            if queries.get_base_unit_name(unit_name) == "Militia":
-                can_build = queries.has_industry(self.target_province)
-            else:
-                can_build = queries.has_basic_factory(self.target_province)
+            factory = queries.get_unit_metadata(unit_name, self.unit_library)["recruitment"]["industry"]
+            can_build = (factory == "none" or (queries.has_industry(self.target_province)
+                         if factory == "industry" else queries.has_basic_factory(self.target_province)))
 
             if is_spectator and not can_spectator_edit:
                 final_btn_color = "grey"
@@ -499,7 +499,9 @@ class Production_Screen(GameState):
 
             mode, prefix = resolve_variant(self.infantry_mode, INFANTRY_VARIANTS)
             self.infantry_mode = mode
-            unit_name = f"{prefix} {base_year}" if prefix else f"Infantry Type {base_year}"
+            unit_name = queries.get_unit_for_family_tier(self.unit_library, prefix or "Infantry Type", base_year)
+            if unit_name is None:
+                return
 
             def set_mode(new_mode):
                 # Clicking the already-active mode toggles it back off (regular Infantry).
@@ -515,7 +517,10 @@ class Production_Screen(GameState):
             gets its own independent toggle (see self.custom_infantry_modes)."""
             mode, prefix = resolve_variant(self.custom_infantry_modes.get(base_name, "normal"), INFANTRY_VARIANTS)
             self.custom_infantry_modes[base_name] = mode
-            unit_name = base_name.replace("Infantry Type", prefix) if prefix else base_name
+            unit_name = (queries.get_unit_for_family_tier(self.unit_library, prefix, queries.get_unit_tier(base_name))
+                         if prefix else base_name)
+            if unit_name is None:
+                return
 
             def set_mode(new_mode, base=base_name):
                 current = self.custom_infantry_modes.get(base, "normal")
@@ -528,13 +533,11 @@ class Production_Screen(GameState):
         def highest_unlocked_roman_tier(group_name):
             """Highest tier of a roman-numeral-leveled family (Artillery, Cavalry,
             Militia, Tanks, Navies, ...) the player's research covers, or None."""
-            tech_key = queries.get_unit_tech_key(group_name)
-            researched_lvl = player_research.get(tech_key, 0)
             highest_lvl, highest_unlocked = -1, None
             for name in self.unit_library:
                 if queries.get_base_unit_name(name) == group_name:
-                    lvl = queries.roman_to_int(name.replace(group_name, "").strip())
-                    if researched_lvl >= max(1, lvl) and lvl > highest_lvl:
+                    lvl = queries.get_unit_tier(name, self.unit_library)
+                    if queries.is_unit_unlocked(name, player_research, self.unit_library) and lvl > highest_lvl:
                         highest_lvl, highest_unlocked = lvl, name
             return highest_unlocked
 
@@ -551,7 +554,10 @@ class Production_Screen(GameState):
 
             mode, prefix = resolve_variant(self.artillery_mode, ARTILLERY_VARIANTS)
             self.artillery_mode = mode
-            unit_name = highest_unlocked.replace("Artillery", prefix) if prefix else highest_unlocked
+            unit_name = (queries.get_unit_for_family_tier(self.unit_library, prefix, queries.get_unit_tier(highest_unlocked))
+                         if prefix else highest_unlocked)
+            if unit_name is None:
+                return
 
             def set_mode(new_mode):
                 self.artillery_mode = new_mode if self.artillery_mode != new_mode else "normal"
@@ -566,7 +572,10 @@ class Production_Screen(GameState):
             independent toggle (see self.custom_artillery_modes)."""
             mode, prefix = resolve_variant(self.custom_artillery_modes.get(base_name, "normal"), ARTILLERY_VARIANTS)
             self.custom_artillery_modes[base_name] = mode
-            unit_name = base_name.replace("Artillery", prefix) if prefix else base_name
+            unit_name = (queries.get_unit_for_family_tier(self.unit_library, prefix, queries.get_unit_tier(base_name))
+                         if prefix else base_name)
+            if unit_name is None:
+                return
 
             def set_mode(new_mode, base=base_name):
                 current = self.custom_artillery_modes.get(base, "normal")
@@ -595,7 +604,7 @@ class Production_Screen(GameState):
                 if tech_key in ("infantry_type", "motorized_infantry", "mechanized_infantry", "infantry_fighting_vehicle"):
                     year = queries.get_infantry_family_year(tech_key, player_research, self.tech_tree)
                     if year is not None:
-                        highest_unlocked = f"{group_name} {year}"
+                        highest_unlocked = queries.get_unit_for_family_tier(self.unit_library, group_name, year)
                 else:
                     # Let the Roman Numeral block perfectly handle Cavalry, Tanks, Navies, and Militia
                     highest_unlocked = highest_unlocked_roman_tier(group_name)
@@ -695,151 +704,33 @@ class Production_Screen(GameState):
                 and self.can_edit_realtime())
 
     def start_coring(self):
-        if not self._can_start_administrative_action("CORE"):
-            return
-        owner = self.target_province.get("owner")
-        data = queries.get_core_cost(owner, self.map_screen.map_data, self.map_screen.scenario_settings)
-        p_data = self.map_screen.nation_data.get(owner, {})
-
-        if queries.can_afford(p_data, data):
-            queries.deduct_resources(p_data, data)
-            order = {
-                "order_type": "CORE",
-                "item_name": "Core Territory",
-                "turns_remaining": data["time"],
-                "group": "administration",
-                "refund": {
-                    "cost_materials": data.get("cost_materials", 0),
-                    "cost_manpower": data.get("cost_manpower", 0),
-                    "cost_fuel": data.get("cost_fuel", 0)
-                }
-            }
-            self.target_province.setdefault("building_queue", []).append(order)
-            self._mark_draft_changed()
-            self.map_screen.show_feedback("Started Coring Territory")
-            self.refresh_ui()
-        else:
-            self.map_screen.show_feedback("Insufficient resources!")
+        if self._can_start_administrative_action("CORE"):
+            self._submit_production("building_queue", {"order_type": "CORE"}, "Started Coring Territory")
 
     def start_remove_cores(self):
-        if not self._can_start_administrative_action("REMOVE_CORE"):
-            return
-        owner = self.target_province.get("owner")
-        data = queries.get_remove_core_cost(owner, self.map_screen.map_data, self.map_screen.scenario_settings)
-        p_data = self.map_screen.nation_data.get(owner, {})
-
-        if queries.can_afford(p_data, data):
-            queries.deduct_resources(p_data, data)
-            order = {
-                "order_type": "REMOVE_CORE",
-                "item_name": "Remove Cores",
-                "turns_remaining": data["time"],
-                "group": "administration",
-                "refund": {
-                    "cost_materials": data.get("cost_materials", 0),
-                    "cost_manpower": data.get("cost_manpower", 0),
-                    "cost_fuel": data.get("cost_fuel", 0)
-                }
-            }
-            self.target_province.setdefault("building_queue", []).append(order)
-            self._mark_draft_changed()
-            self.map_screen.show_feedback("Started Core Removal")
-            self.refresh_ui()
-        else:
-            self.map_screen.show_feedback("Insufficient resources!")
+        if self._can_start_administrative_action("REMOVE_CORE"):
+            self._submit_production("building_queue", {"order_type": "REMOVE_CORE"}, "Started Core Removal")
 
     def start_construction(self, b_name):
-        if not self.can_edit_realtime():
-            return
-        owner = self.target_province.get("owner")
-        if not queries.has_core(owner, self.target_province):
-            self.map_screen.show_feedback("Must core territory before producing!")
-            return
-
-        data = queries.get_building_cost(b_name, owner, self.map_screen.map_data, self.building_library)
-        p_data = self.map_screen.nation_data.get(owner, {})
-
-        if queries.can_afford(p_data, data):
-            queries.deduct_resources(p_data, data)
-            order = {
-                "order_type": "BUILDING",
-                "item_name": b_name,
-                "turns_remaining": max(1, data.get("time", 1)),
-                "group": data["group"],
-                "refund": {
-                    "cost_materials": data.get("cost_materials", 0),
-                    "cost_manpower": data.get("cost_manpower", 0),
-                    "cost_fuel": data.get("cost_fuel", 0)
-                }
-            }
-            self.target_province.setdefault("building_queue", []).append(order)
-            self._mark_draft_changed()
-            self.map_screen.show_feedback(f"Started {b_name}")
-            self.refresh_ui()
-        else:
-            self.map_screen.show_feedback("Insufficient resources!")
+        self._submit_production("building_queue", {"order_type": "BUILDING", "item_name": b_name}, f"Started {b_name}")
 
     def buy_unit(self, unit_name):
-        if not self.map_screen:
+        self._submit_production("unit_queue", {"unit_type": unit_name}, f"Production started: {unit_name}")
+
+    def _submit_production(self, queue, intent, feedback):
+        if not self.map_screen or not self.can_edit_realtime():
             return
         owner = self.target_province.get("owner")
-        viewer = self.map_screen.player_country
-        if (self.map_screen.tactical_mode or
-                (viewer == "Spectator" and not c.SPECTATOR_CAN_EDIT_PRODUCTION) or
-                (viewer != "Spectator" and viewer != owner)):
+        try:
+            production_actions.submit_production(
+                self.map_screen, owner, self.target_province, queue, intent,
+                unit_library=self.unit_library, building_library=self.building_library)
+        except ValueError as error:
+            self.map_screen.show_feedback(str(error))
             return
-        if not self.can_edit_realtime():
-            return
-        if not queries.has_core(owner, self.target_province):
-            self.map_screen.show_feedback("Must core territory before recruiting!")
-            return
-
-        stats = self.unit_library.get(unit_name)
-        if not stats or not self.map_screen: return
-
-        if stats.get("naval_unit", False) and not self.target_province.get("is_coastal", False):
-            self.map_screen.show_feedback("Can't build naval units on landlocked tiles!")
-            return
-
-        if queries.get_base_unit_name(unit_name) == "Militia":
-            if not queries.has_industry(self.target_province):
-                self.map_screen.show_feedback("Requires a Workshop or Factory to recruit Militia!")
-                return
-        else:
-            if not queries.has_basic_factory(self.target_province):
-                self.map_screen.show_feedback("Requires a Basic Factory or better to recruit!")
-                return
-
-        owner = self.target_province.get("owner")
-        p_data = self.map_screen.nation_data.get(owner, {})
-
-        if not queries.is_unit_unlocked(unit_name, p_data.get("research", {})):
-            self.map_screen.show_feedback("Required unit research is not complete.")
-            return
-
-        if not restrictions.can_raise_units(owner, self.map_screen.nation_data):
-            turns = restrictions.turns_left(owner, self.map_screen.nation_data, "demilitarized")
-            self.map_screen.show_feedback(
-                f"Demilitarized by treaty -- no new units for {turns} more turns.")
-            return
-
-        if queries.can_afford(p_data, stats):
-            queries.deduct_resources(p_data, stats)
-            order = {
-                "unit_type": unit_name,
-                "turns_remaining": max(1, stats.get("production_time", 1)),
-                "refund": {
-                    "cost_materials": stats.get("cost_materials", 0),
-                    "cost_manpower": stats.get("cost_manpower", 0),
-                    "cost_fuel": stats.get("cost_fuel", 0)
-                }
-            }
-            self.target_province.setdefault("unit_queue", []).append(order)
-            self._mark_draft_changed()
-            self.map_screen.show_feedback(f"Production started: {unit_name}")
-            self.refresh_ui()
-        else:
-            self.map_screen.show_feedback("Insufficient resources!")
+        self._mark_draft_changed()
+        self.map_screen.show_feedback(feedback)
+        self.refresh_ui()
 
     def open_custom_unit_manager(self):
         if not self.can_edit_realtime():
@@ -895,20 +786,15 @@ class Production_Screen(GameState):
     def cancel_order(self, index, q_type):
         if not self.can_edit_realtime():
             return
-        queue_key = "building_queue" if q_type == "building" else "unit_queue"
-        queue = self.target_province.get(queue_key, [])
-        
-        if 0 <= index < len(queue):
-            item = queue.pop(index)
-            
-            owner = self.target_province.get("owner", "Unclaimed")
-            p_data = self.map_screen.nation_data.get(owner, {})
-            
-            queries.refund_queue_item(p_data, item, owner, self.map_screen.map_data)
-
-            self._mark_draft_changed()
-            self.map_screen.show_feedback("Cancelled & Refunded")
-            self.refresh_ui()
+        queue = "building_queue" if q_type == "building" else "unit_queue"
+        owner = self.target_province.get("owner", "Unclaimed")
+        try:
+            production_actions.cancel_production(self.map_screen, owner, self.target_province, queue, index)
+        except ValueError:
+            return
+        self._mark_draft_changed()
+        self.map_screen.show_feedback("Cancelled & Refunded")
+        self.refresh_ui()
 
     def additional_events(self, event):
         if event.type == pygame.MOUSEWHEEL:

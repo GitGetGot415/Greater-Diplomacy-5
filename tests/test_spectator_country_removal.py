@@ -277,7 +277,7 @@ class SpectatorRemovalButtonTests(unittest.TestCase):
                       realtime_session=SimpleNamespace(phase="TURN", players={}), realtime_player_id="spectator",
                       _realtime_submit=mock.Mock(), _realtime_unsubmit=mock.Mock())
         for field, value in fields.items():
-            self.enterContext(mock.patch.object(self.game, field, value, create=True))
+            self.enterContext(mock.patch.object(app_harness.state_owner(self.game, field), field, value, create=True))
 
     def test_local_spectator_buttons_are_available_and_call_the_handlers(self):
         self.map_module.update_button_states(self.game)

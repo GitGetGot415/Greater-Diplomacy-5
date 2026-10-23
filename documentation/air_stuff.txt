@@ -25,6 +25,9 @@ air_role and air_range_px define flight. Land movement speed does not define fli
 A missing air_damages_forts flag means the unit cannot damage forts.
 Read capabilities from the current unit library, including for old saves.
 Do not store them on individual units or accept them from multiplayer orders.
+Family identity, tier order, and requirements also come from the library's explicit metadata.
+See documentation/general_info.txt for metadata ownership and older-content adapters.
+Aircraft geometry remains a temporary computation index. Backend loading builds it without retaining a display surface.
 
 Aircraft research
 -----------------

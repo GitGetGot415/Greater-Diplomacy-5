@@ -43,6 +43,10 @@ A change is complete only when all affected game modes, state transitions, UI co
 | `data/constants.py` | Constants and tuning values shared across modules. |
 | `data/queries.py` | Shared state queries, rule helpers, caches, and the save-dictionary builder. |
 | `data/migrations.py` | Older GD5 identifiers, saved-data conversions, and load repairs. |
+| `data/game_state.py`, `data/session_state.py` | World data, participants, control permissions, and processing progress. |
+| `data/state_access.py` | Explicit state access, map compatibility properties, and backend execution context. |
+| `map_logic/production_actions.py` | Shared production validation, queue construction, charging, cancellation, and refunds. |
+| `map_logic/diplomacy/diplomacy_lifecycle.py` | Request identity, channel writes, timing transitions, and response references. |
 | `data/json/` | Data libraries and AI response text used without an LLM. |
 | `data/map/save_map.py`, `data/map/load_map.py` | Saves, loads, defaults, and migration calls. |
 | `data/io/multiplayer_io.py` | Tournament files, player move export, host import, authentication, and filtering. |
@@ -53,7 +57,8 @@ A change is complete only when all affected game modes, state transitions, UI co
 | `map_logic/gd4_translation.py`, `map_logic/gdhex_translation.py` | Save imports from other games into GD5. |
 | `screens/` | Complete menu, game, and editor screens. Each screen builds its own buttons. |
 | `ui/` | Shared widgets, panels, dialogs, bars, popups, and UI support. |
-| `compilation_scripts/` | Windows, macOS, and web build definitions. |
+| `compilation_scripts/build_manifest.py`, `compilation_scripts/build_support.py` | Shared packaging inventory, platform policy, filtering, staging, and resets. |
+| Other `compilation_scripts/` files | Platform packaging tools and native archive procedures. |
 | `tests/` | Regression tests and rule checks. `run_tests.py` finds all `test_*.py` files. |
 
 ## Apply Changes to All Affected Systems
@@ -218,7 +223,9 @@ Success in one does not prove compatibility with the other.
 ## Add Files, Assets, or Dependencies
 
 - Add `__init__.py` when a new Python package requires it.
-- Include new runtime modules, packages, data, assets, dependencies, and dynamically imported screens in each applicable build file:
+- Register new runtime material in `compilation_scripts/build_manifest.py`.
+  Keep platform filtering and staging in `compilation_scripts/build_support.py`.
+  The following entry points consume those shared declarations:
   - `compilation_scripts/html_compilation.py`
   - `compilation_scripts/windows_compilation.py`
   - `compilation_scripts/macos_compilation.py`

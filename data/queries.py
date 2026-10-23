@@ -1,3 +1,4 @@
+from data.state_access import world_for, session_for
 import collections
 import contextlib
 import copy
@@ -223,12 +224,22 @@ def _apply_vision_radius(prov, id_to_province, visible_set, partial_set):
         if n1_prov:
             partial_set.update(n1_prov.get("neighbors", []))
 
+
+def get_viewing_country(context):
+    """Keep visibility identity separate from the participant who can issue orders."""
+    session = session_for(context)
+    # Older map contexts have only the controlling identity.
+    viewer = getattr(session, "viewing_country", None)
+    return viewer if viewer is not None else session.player_country
+
 def get_visible_provinces(map_screen):
     """Calculates and returns sets of province IDs currently visible and partially visible to the player."""
-    player_country = map_screen.player_country
-    map_data = map_screen.map_data
-    nation_data = map_screen.nation_data
-    id_to_province = map_screen.id_to_province
+    world_state = world_for(map_screen)
+    session_state = session_for(map_screen)
+    player_country = get_viewing_country(map_screen)
+    map_data = world_state.map_data
+    nation_data = world_state.nation_data
+    id_to_province = world_state.id_to_province
 
     if player_country == c.TOURNAMENT_SPECTATOR:
         # This is a deliberately countryless tournament viewer, not the
@@ -244,7 +255,7 @@ def get_visible_provinces(map_screen):
     # that host sees through its own faction and imperial family. It does not
     # grant movement or make either country friendly for any other rule.
     vision_nations = set(friendly_nations)
-    if not (map_screen.tactical_mode and map_screen.player_unit):
+    if not (session_state.tactical_mode and session_state.player_unit):
         from map_logic.diplomacy import military_attaches
         for host in military_attaches.hosts_for(player_country, nation_data):
             vision_nations.update(get_all_friendly_nations(host, nation_data))
@@ -252,8 +263,8 @@ def get_visible_provinces(map_screen):
     visible_set = set()
     partial_set = set()
     
-    is_tactical = map_screen.tactical_mode and map_screen.player_unit
-    tactical_unit = map_screen.player_unit if is_tactical else None
+    is_tactical = session_state.tactical_mode and session_state.player_unit
+    tactical_unit = session_state.player_unit if is_tactical else None
     
     friendly_unit_locations = []
     tactical_location = None
@@ -579,8 +590,7 @@ def save_scenario_settings(data):
 
 def clear_json_caches():
     """Forces the game to fetch the updated files on the next read."""
-    global _UNIT_RESEARCH_INDEX_CACHE
-    _UNIT_RESEARCH_INDEX_CACHE = None
+    invalidate_unit_metadata()
     for key in _JSON_CACHE:
         # Prevent the Data Refresh button from wiping active session configurations
         if key not in ["settings", "scenario_settings"]:
@@ -616,6 +626,15 @@ def _load_cached_json(cache_key, *, reload=False):
     return cache_obj["data"]
 
 
+
+def invalidate_unit_metadata():
+    """Discard unit indexes and any loaded art-name resolutions after content edits."""
+    global _UNIT_RESEARCH_INDEX_CACHE
+    _UNIT_RESEARCH_INDEX_CACHE = None
+    symbols = sys.modules.get("map_logic.rendering.symbol_loader")
+    if symbols is not None:
+        symbols.clear_caches()
+
 def reload_game_library(cache_key):
     """Reload a game library and preserve references held by screens."""
     if cache_key not in ("unit_library", "building_library", "tech_tree"):
@@ -626,6 +645,8 @@ def save_cached_json(cache_key, new_data):
     """Saves data to disk AND updates the cache instantly."""
     cache_obj = _JSON_CACHE[cache_key]
     normalize_cached_json_names(cache_key, new_data)
+    if cache_key in ("unit_library", "tech_tree"):
+        invalidate_unit_metadata()
     cache_obj["data"] = new_data
     
     try:
@@ -839,10 +860,11 @@ def apply_time_appropriate_research_to_map(map_screen, year):
     auto-recompute (when "force_time_appropriate_research" is on), so the two
     can't drift into computing this differently.
     """
+    world_state = world_for(map_screen)
     time_app_res = get_time_appropriate_research(year)
-    map_screen.default_research = time_app_res.copy()
-    for cid in get_living_nations(map_screen.map_data):
-        map_screen.nation_data[cid]["research"] = time_app_res.copy()
+    world_state.default_research = time_app_res.copy()
+    for cid in get_living_nations(world_state.map_data):
+        world_state.nation_data[cid]["research"] = time_app_res.copy()
     return time_app_res
 
 
@@ -1661,91 +1683,67 @@ def get_infantry_family_year(family_key, player_research, tech_tree):
     years = tech_tree.get(year_source, {}).get("years", [c.START_YEAR])
     return years[max(0, min(lvl - 1, len(years) - 1))]
 
+def get_unit_for_family_tier(unit_library, family, tier):
+    """Find an exact family tier without constructing a content identifier."""
+    for name in unit_library:
+        metadata = get_unit_metadata(name, unit_library)
+        if metadata["family"] == family and metadata["tier_order"] == tier:
+            return name
+    return None
+
+
 def get_highest_infantry(nation_data_block, tech_tree, unit_library, allow_fuel_units=True):
-    """Finds the highest level infantry unit the nation has researched, prioritizing mechanized/motorized upgrades."""
-    res_levels = nation_data_block.get("research", {})
+    """Preserve vehicle preference and the starting infantry fallback."""
+    research = nation_data_block.get("research", {})
+    tracks = (["infantry_fighting_vehicle", "mechanized_infantry", "motorized_infantry"]
+              if allow_fuel_units else []) + ["infantry_type"]
+    for track in tracks:
+        year = get_infantry_family_year(track, research, tech_tree)
+        if year is None:
+            continue
+        for name in unit_library:
+            metadata = get_unit_metadata(name, unit_library)
+            if metadata["research"]["tech"] == track and metadata["tier_order"] == year:
+                return name
+    for name in unit_library:
+        metadata = get_unit_metadata(name, unit_library)
+        if metadata["research"]["tech"] == "infantry_type" and metadata["tier_order"] == c.START_YEAR:
+            return name
+    return None
 
-    def check_upgrade(family_key, name_fmt):
-        year_val = get_infantry_family_year(family_key, res_levels, tech_tree)
-        if year_val is not None:
-            u_name = name_fmt.format(year_val)
-            if u_name in unit_library: return u_name
-        return None
-
-    if allow_fuel_units:
-        for tech, fmt in [("infantry_fighting_vehicle", "Infantry Fighting Vehicle Type {}"),
-                          ("mechanized_infantry", "Mechanized Infantry Type {}"),
-                          ("motorized_infantry", "Motorized Infantry Type {}")]:
-            found = check_upgrade(tech, fmt)
-            if found: return found
-
-    # Fallback to standard (fuel-free) infantry -- but only if that's actually
-    # buildable. A scenario that disabled Infantry entirely removes every
-    # "Infantry Type <year>" entry from unit_library, so blindly returning the
-    # START_YEAR name here would hand callers a unit that doesn't exist,
-    # silently falling back to placeholder stats when they build it.
-    default_name = f"Infantry Type {c.START_YEAR}"
-    return check_upgrade("infantry_type", "Infantry Type {}") or (default_name if default_name in unit_library else None)
 
 def get_upgrade_target(unit_type, player_research, unit_library, tech_tree):
-    """Return an unlocked higher level within the current numbered unit family."""
-    # Upgrades stay within a numbered family, including numbered aircraft.
-    # Research does not permit conversion between aircraft designs.
-    if get_unit_tier(unit_type) <= 0:
+    """Return the exact researched tier within the existing numbered family."""
+    current = get_unit_metadata(unit_type, unit_library)
+    if current["tier_order"] <= 0:
         return None
-    base_name = get_base_unit_name(unit_type)
-    
-    # Strip "Type" to get the pure class ("Infantry", "Motorized Infantry") so string formatting doesn't duplicate it
-    clean_base = re.sub(r'(?i)\s+type', '', base_name).strip()
-    tech_key = get_unit_tech_key(clean_base)
-
-    if clean_base == "Infantry":
-        tech_key = "infantry_type"
-
-    # Handle Year-based units (Infantry Type variants use "Type <year>"; Artillery
-    # is roman-numeral leveled like Militia and falls through to the branch below)
-    if tech_key in ["infantry_type", "motorized_infantry", "mechanized_infantry", "infantry_fighting_vehicle"]:
-        year_val = get_infantry_family_year(tech_key, player_research, tech_tree)
-        if year_val is None:
-            return None
-
-        target_name = f"{clean_base} Type {year_val}"
-
-        if target_name in unit_library and target_name != unit_type:
-            curr_year_match = re.search(r'\b(\d{4})\b', unit_type)
-            if curr_year_match and int(year_val) > int(curr_year_match.group(1)):
-                return target_name
+    track = current["research"]["tech"]
+    yearly = ("year" in current["research"] or
+              any("minimum_year" in requirement for requirement in current["requirements"]))
+    target = (get_infantry_family_year(track, player_research, tech_tree) if yearly
+              else player_research.get(track, 0))
+    if target is None or target <= 0:
         return None
-
-    res_lvl = player_research.get(tech_key, 0)
-    if res_lvl <= 0:
-        return None
-
-    # Handle Roman Numeral units
-    target_name = f"{clean_base} {c.ROMAN_NUMERALS.get(res_lvl, str(res_lvl))}"
-    if target_name in unit_library and target_name != unit_type:
-        curr_lvl = roman_to_int(unit_type.replace(base_name, "").strip())
-        if res_lvl > curr_lvl:
-            return target_name
-
+    for name in unit_library:
+        metadata = get_unit_metadata(name, unit_library)
+        if metadata["family"] != current["family"] or metadata["tier_order"] <= current["tier_order"]:
+            continue
+        level = metadata["tier_order"] if yearly else metadata["research"].get("level", 1)
+        if level == target:
+            return name
     return None
+
 
 def get_best_preferred_unit(player_research, unit_library, preference_list):
-    """Generic helper to find the highest preference unit unlocked."""
-    for base_pref in reversed(preference_list):
-        tech_key = base_pref.lower().replace(" ", "_")
-        res_lvl = player_research.get(tech_key, 0)
-
-        if res_lvl > 0:
-            if base_pref in ["WW1 Armored Car", "WW1 Tank", "Dreadnought"]:
-                return base_pref
-
-            # Uses the constant rather than rebuilding the dict every call
-            for check_lvl in range(res_lvl, 0, -1):
-                test_name = f"{base_pref} {c.ROMAN_NUMERALS.get(check_lvl, str(check_lvl))}"
-                if test_name in unit_library:
-                    return test_name
+    """Find the highest available tier in the existing family preference order."""
+    for family in reversed(preference_list):
+        candidates = [name for name in unit_library
+                      if get_base_unit_name(name, unit_library) == family
+                      and is_unit_unlocked(name, player_research, unit_library)]
+        if candidates:
+            return max(candidates, key=lambda name: get_unit_tier(name, unit_library))
     return None
+
 
 def _best_unit_for_role(player_research, unit_library, role, preference_list):
     """Highest-scoring unlocked unit filling a role, by stats rather than by name.
@@ -1882,22 +1880,23 @@ def edited_research_levels(research, tech_key, level, researched, tech_tree=None
 
 def can_edit_starting_research(map_screen, country_id):
     """Starting research edits belong to a local map editor and a living country."""
-    return bool(getattr(map_screen, "is_editor", False)
+    return bool(getattr(session_for(map_screen), "is_editor", False)
                 and can_edit_country_research(map_screen, country_id))
 
 
 def can_edit_country_research(map_screen, country_id):
     """Allow direct research changes in a local editor or permitted spectator game."""
+    world_state = world_for(map_screen)
     # Optional mode flags support lightweight editor maps and older callers.
-    return bool((getattr(map_screen, "is_editor", False)
-                 or (getattr(map_screen, "player_country", None) == "Spectator"
+    return bool((getattr(session_for(map_screen), "is_editor", False)
+                 or (getattr(session_for(map_screen), "player_country", None) == "Spectator"
                      and c.SPECTATOR_CAN_EDIT_RESEARCH))
-                and not getattr(map_screen, "tactical_mode", False)
-                and not getattr(map_screen, "multiplayer_mode", False)
-                and not getattr(map_screen, "realtime_multiplayer", False)
+                and not getattr(session_for(map_screen), "tactical_mode", False)
+                and not getattr(session_for(map_screen), "multiplayer_mode", False)
+                and not getattr(session_for(map_screen), "realtime_multiplayer", False)
                 and isinstance(country_id, str)
-                and country_id in map_screen.nation_data
-                and country_id in get_living_nations(map_screen.map_data))
+                and country_id in world_state.nation_data
+                and country_id in get_living_nations(world_state.map_data))
 
 
 def toggle_starting_research(map_screen, country_id, tech_key, level):
@@ -1909,9 +1908,10 @@ def toggle_starting_research(map_screen, country_id, tech_key, level):
 
 def toggle_country_research(map_screen, country_id, tech_key, level):
     """Apply a permitted click and clear projects invalidated by changed research."""
+    world_state = world_for(map_screen)
     if not can_edit_country_research(map_screen, country_id):
         raise ValueError("Research editing requires a local map editor or permitted spectator.")
-    country = map_screen.nation_data[country_id]
+    country = world_state.nation_data[country_id]
     state, _ = preview_country_research_edit(country, tech_key, level)
     changed = {key for key, value in state["research"].items() if value != country.get("research", {}).get(key, 0)}
     _apply_country_research_state(country, state)
@@ -1974,11 +1974,12 @@ def _apply_country_research_state(country, state):
 
 def confirm_country_research_edit(map_screen, country_id, original, draft):
     """Save a permitted spectator draft only if the live research is unchanged."""
-    if (getattr(map_screen, "player_country", None) != "Spectator"
-            or getattr(map_screen, "is_editor", False)
+    world_state = world_for(map_screen)
+    if (getattr(session_for(map_screen), "player_country", None) != "Spectator"
+            or getattr(session_for(map_screen), "is_editor", False)
             or not can_edit_country_research(map_screen, country_id)):
         raise ValueError("Research editing requires a permitted local spectator.")
-    country = map_screen.nation_data[country_id]
+    country = world_state.nation_data[country_id]
     if country_research_edit_state(country) != original:
         raise ValueError("Country research changed while editing. Cancel and reopen this country's research.")
     _apply_country_research_state(country, draft)
@@ -2567,17 +2568,19 @@ def format_number(value):
 
 def get_resource_hud_strings(map_screen, include_net=False, target_nation=None):
     """Generates unified resource tracking strings and colors for all UI HUDs."""
-    is_tactical = map_screen.tactical_mode and map_screen.player_unit
+    world_state = world_for(map_screen)
+    session_state = session_for(map_screen)
+    is_tactical = session_state.tactical_mode and session_state.player_unit
 
     if target_nation is None:
-        target_nation = map_screen.player_country
+        target_nation = session_state.player_country
         
-    if is_tactical and target_nation == map_screen.player_country:
+    if is_tactical and target_nation == session_state.player_country:
         manpower = int(map_screen.player_manpower)
         materials = int(map_screen.player_materials)
         fuel = int(map_screen.player_fuel)
     else:
-        n_data = map_screen.nation_data.get(target_nation, {})
+        n_data = world_state.nation_data.get(target_nation, {})
         manpower = int(n_data.get("manpower", 0))
         materials = int(n_data.get("materials", 0))
         fuel = int(n_data.get("fuel", 0))
@@ -2592,16 +2595,16 @@ def get_resource_hud_strings(map_screen, include_net=False, target_nation=None):
     total_upkeep = {r: 0 for r in c.ECON_RESOURCE_KEYS}
 
     if include_net:
-        if is_tactical and target_nation == map_screen.player_country:
-            u_type = map_screen.player_unit.get("original_type", map_screen.player_unit.get("type"))
+        if is_tactical and target_nation == session_state.player_country:
+            u_type = session_state.player_unit.get("original_type", session_state.player_unit.get("type"))
             stats = get_unit_library().get(u_type, {})
             total_inc = get_unit_upkeep(stats)
-            morale = map_screen.player_unit.get("morale", c.DEFAULT_UNIT_MORALE)
+            morale = session_state.player_unit.get("morale", c.DEFAULT_UNIT_MORALE)
             desertion_cost = total_inc.get("manpower", 0) * ((100.0 - float(morale)) / 100.0)
             total_upkeep["manpower"] = desertion_cost
         else:
             if not hasattr(map_screen, 'econ_cache_time') or pygame.time.get_ticks() - map_screen.econ_cache_time > 1000 or getattr(map_screen, 'econ_cache_target', None) != target_nation:
-                map_screen.econ_cache = get_economy_projections(target_nation, map_screen.map_data, map_screen.nation_data)
+                map_screen.econ_cache = get_economy_projections(target_nation, world_state.map_data, world_state.nation_data)
                 map_screen.econ_cache_time = pygame.time.get_ticks()
                 map_screen.econ_cache_target = target_nation
                 
@@ -2617,7 +2620,7 @@ def get_resource_hud_strings(map_screen, include_net=False, target_nation=None):
     for res_key, name, color, p_val in res_order:
         net_str = fmt_net(total_inc.get(res_key, 0), total_upkeep.get(res_key, 0)) if include_net else ""
 
-        if is_tactical and target_nation == map_screen.player_country:
+        if is_tactical and target_nation == session_state.player_country:
             if res_key == "manpower":
                 max_val = c.TACTICAL_MAX_MANPOWER
             elif res_key == "materials":
@@ -3110,16 +3113,17 @@ def _queue_army_balanced_area_orders(map_screen, country_id, army, destination_i
     Existing members count as defenders, reachable gaps are filled first, then
     reinforcements go to the least-covered destination.
     """
+    world_state = world_for(map_screen)
     destinations = list(dict.fromkeys(destination_ids or ()))
     destinations = [province_id for province_id in destinations
-                    if province_id in map_screen.id_to_province]
+                    if province_id in world_state.id_to_province]
     if not destinations:
         return 0
     excluded = set(excluded_unit_object_ids)
     members = set(army.get("unit_ids", []))
     coverage = {province_id: 0 for province_id in destinations}
     candidates = []
-    for province in map_screen.map_data.values():
+    for province in world_state.map_data.values():
         for unit in province.get("units", []):
             if (unit.get("owner") != country_id
                     or unit.get("unit_id") not in members):
@@ -3147,8 +3151,8 @@ def _queue_army_balanced_area_orders(map_screen, country_id, army, destination_i
                     and order.get("type") in c.ORDERS_BLOCKING_MOVEMENT):
                 continue
             paths = find_unit_move_paths_to_destinations(
-                unit, province, destinations, map_screen.id_to_province,
-                map_screen.nation_data)
+                unit, province, destinations, world_state.id_to_province,
+                world_state.nation_data)
             if not paths:
                 continue
             candidates.append((unit, paths))
@@ -3205,8 +3209,9 @@ def _queue_army_balanced_area_orders(map_screen, country_id, army, destination_i
 
 
 def _army_record(map_screen, country_id, army_id):
+    world_state = world_for(map_screen)
     return next((item for item in get_armies(
-        country_id, map_screen.nation_data, map_screen.map_data)
+        country_id, world_state.nation_data, world_state.map_data)
                  if item.get("id") == army_id), None)
 
 
@@ -3225,9 +3230,10 @@ def queue_army_defense_orders(map_screen, country_id, army_id, only_idle=False,
 
 def queue_idle_army_defense_orders(map_screen):
     """Prepare target-area returns for idle units after this turn resolves."""
+    world_state = world_for(map_screen)
     moved_or_ordered = getattr(map_screen, "_units_with_move_order_this_turn", set())
     queued = 0
-    for country_id, country in map_screen.nation_data.items():
+    for country_id, country in world_state.nation_data.items():
         if not isinstance(country, dict):
             continue
         for army in country.get("armies", []):
@@ -3351,9 +3357,10 @@ def build_map_data_save(map_screen):
     separate meta.json province overlay unnecessary while retaining the
     structural and unknown fields already attached to each live province.
     """
+    world_state = world_for(map_screen)
     return {
         data["json_key"]: copy.deepcopy(data)
-        for data in map_screen.map_data.values()
+        for data in world_state.map_data.values()
     }
 
 
@@ -3461,9 +3468,12 @@ def build_save_dict(map_screen, *, include_provinces=True, compact_nations=False
     Network snapshots keep complete records for projection and authentication;
     they do not rely on the recipient having an identical country catalog.
     """
+    world_state = world_for(map_screen)
+    session_state = session_for(map_screen)
     from map_logic.turn_processing import unit_events
-    migrations.migrate_country_records(map_screen.nation_data)
-    scenario_settings = getattr(map_screen, 'scenario_settings', {}) or {}
+    migrations.migrate_country_records(world_state.nation_data)
+    migrations.migrate_diplomatic_records(world_state.nation_data)
+    scenario_settings = getattr(world_for(map_screen), 'scenario_settings', {}) or {}
     # Keep this setting explicit in every new save. Older base maps omit it,
     # but their effective default is OFF and that default should survive the
     # editor's copy/save path instead of disappearing from meta.json.
@@ -3475,20 +3485,21 @@ def build_save_dict(map_screen, *, include_provinces=True, compact_nations=False
     save_dict = {
         "version": c.GAME_VERSION,
         "generated_at": datetime.now().isoformat(),
+        "diplomacy_schema_version": migrations.DIPLOMACY_SCHEMA_VERSION,
         "date": {
-            "day": map_screen.time_manager.day,
-            "month": map_screen.time_manager.month_index,
-            "year": map_screen.time_manager.year,
-            "total_turns": map_screen.time_manager.total_turns
+            "day": world_state.time_manager.day,
+            "month": world_state.time_manager.month_index,
+            "year": world_state.time_manager.year,
+            "total_turns": world_state.time_manager.total_turns
         },
-        "loop_map": map_screen.loop_map,
-        "player_country": map_screen.player_country,
-        "active_players": map_screen.active_players,
-        "current_player_index": map_screen.current_player_index,
+        "loop_map": world_state.loop_map,
+        "player_country": session_state.player_country,
+        "active_players": session_state.active_players,
+        "current_player_index": session_state.current_player_index,
         "scenario_settings": scenario_settings,
-        "script_variables": map_screen.script_variables,
-        "default_research": map_screen.default_research,
-        "nation_data": map_screen.nation_data,
+        "script_variables": world_state.script_variables,
+        "default_research": world_state.default_research,
+        "nation_data": world_state.nation_data,
         "unit_event_log": unit_events.saved_log(map_screen),
         "unit_event_read_turns": unit_events.saved_reads(map_screen),
     }
@@ -3501,15 +3512,16 @@ def build_save_dict(map_screen, *, include_provinces=True, compact_nations=False
         save_dict["realtime_match"] = realtime_metadata
     
     if include_provinces:
-        for data in map_screen.map_data.values():
+        for data in world_state.map_data.values():
             save_dict["provinces"][data["json_key"]] = build_saved_province_data(data)
     if compact_nations:
-        compact_save_nation_data(save_dict, map_screen.map_data)
+        compact_save_nation_data(save_dict, world_state.map_data)
     return save_dict
 
 
 def player_snapshot_projection(map_screen, snapshot, country_id):
     """Filter a network save before transmission, including raw map geometry."""
+    world_state = world_for(map_screen)
     from types import SimpleNamespace
     result = copy.deepcopy(snapshot)
     from map_logic.turn_processing import unit_events
@@ -3520,15 +3532,15 @@ def player_snapshot_projection(map_screen, snapshot, country_id):
     result["unit_event_read_turns"] = {
         owner: turn for owner, turn in result.get("unit_event_read_turns", {}).items()
         if owner == country_id and turn == report["turn"]}
-    view = SimpleNamespace(player_country=country_id, map_data=map_screen.map_data,
-        nation_data=map_screen.nation_data,
-        id_to_province={p["id"]: p for p in map_screen.map_data.values()},
+    view = SimpleNamespace(player_country=country_id, map_data=world_state.map_data,
+        nation_data=world_state.nation_data,
+        id_to_province={p["id"]: p for p in world_state.map_data.values()},
         tactical_mode=False, player_unit=None)
-    visible, _partial = get_visible_provinces(view) if country_id in map_screen.nation_data else (set(), set())
+    visible, _partial = get_visible_provinces(view) if country_id in world_state.nation_data else (set(), set())
     fog = get_scenario_flag("fog_of_war", c.DEFAULT_FOG_OF_WAR,
-                            getattr(map_screen, "scenario_settings", {}))
+                            getattr(world_for(map_screen), "scenario_settings", {}))
     result["country_economy_summaries"] = get_shared_country_economy_summaries(
-        country_id, map_screen.map_data, map_screen.nation_data)
+        country_id, world_state.map_data, world_state.nation_data)
     private_fields = ("production_queue", "current_research", "research_queue", "research_progress",
         "research", "inbox", "pending_diplomacy", "diplo_responses", "diplo_draft_lists",
         "queued_ai_actions", "orders", "armies", "automation", "materials", "manpower", "fuel",
@@ -3537,7 +3549,7 @@ def player_snapshot_projection(map_screen, snapshot, country_id):
         if cid != country_id and isinstance(country, dict):
             for field in private_fields:
                 country.pop(field, None)
-    by_key = {p["json_key"]: p for p in map_screen.map_data.values()}
+    by_key = {p["json_key"]: p for p in world_state.map_data.values()}
     for key, province in result.get("provinces", {}).items():
         original = by_key.get(key)
         if original is None:
@@ -3545,7 +3557,7 @@ def player_snapshot_projection(map_screen, snapshot, country_id):
         can_see = not fog or visible is None or original["id"] in visible
         province["units"] = [unit for unit in province.get("units", [])
             if unit.get("owner") == country_id or can_see and is_unit_visible_to(
-                unit, country_id, original, map_screen.nation_data)]
+                unit, country_id, original, world_state.nation_data)]
         for unit in province["units"]:
             if unit.get("owner") != country_id:
                 for field in ("order", "combat_stance", "lane_target", "repair_trip", "air_cargo"):
@@ -3569,18 +3581,19 @@ def player_snapshot_projection(map_screen, snapshot, country_id):
 
 def get_clicked_province(mouse_pos, map_screen):
     """Resolves the province dictionary corresponding to a screen click."""
+    world_state = world_for(map_screen)
     mx, my = mouse_pos
     cam = map_screen.camera
     wx = (mx / cam.zoom) + cam.pos.x
-    if map_screen.loop_map:
-        wx %= map_screen.map_w
+    if world_state.loop_map:
+        wx %= world_state.map_w
     wy = ((my - map_screen.top_ui_height) / (cam.zoom * cam.tilt_factor)) + cam.pos.y
     
-    if 0 <= wy < map_screen.map_h:
-        safe_x = max(0, min(int(wx), map_screen.map_w - 1))
-        safe_y = max(0, min(int(wy), map_screen.map_h - 1))
+    if 0 <= wy < world_state.map_h:
+        safe_x = max(0, min(int(wx), world_state.map_w - 1))
+        safe_y = max(0, min(int(wy), world_state.map_h - 1))
         color = map_screen.id_map.get_at((safe_x, safe_y))
-        return map_screen.map_data.get((color.r, color.g, color.b))
+        return world_state.map_data.get((color.r, color.g, color.b))
     return None
 
 def world_to_screen(world_pos, map_screen, offset=0):
@@ -3694,18 +3707,20 @@ def get_shared_country_economy_summaries(viewer, map_data, nation_data):
 
 def can_view_country_economy(map_screen, country_id):
     """Permit shared economics and unrestricted local inspection."""
-    viewer = map_screen.player_country
+    world_state = world_for(map_screen)
+    session_state = session_for(map_screen)
+    viewer = get_viewing_country(map_screen)
     if viewer == c.TOURNAMENT_SPECTATOR:
         return False
-    if shares_country_economy(viewer, country_id, map_screen.nation_data):
+    if shares_country_economy(viewer, country_id, world_state.nation_data):
         return True
-    if (getattr(map_screen, "realtime_multiplayer", False)
-            or getattr(map_screen, "multiplayer_mode", False)):
+    if (getattr(session_for(map_screen), "realtime_multiplayer", False)
+            or getattr(session_for(map_screen), "multiplayer_mode", False)):
         return False
-    if map_screen.is_editor or viewer in ("Spectator", "Editor"):
+    if session_state.is_editor or viewer in ("Spectator", "Editor"):
         return True
     return not get_scenario_flag(
-        "fog_of_war", c.DEFAULT_FOG_OF_WAR, map_screen.scenario_settings)
+        "fog_of_war", c.DEFAULT_FOG_OF_WAR, world_state.scenario_settings)
 
 
 def get_country_summary(map_screen, country_id):
@@ -3715,21 +3730,23 @@ def get_country_summary(map_screen, country_id):
     Economy figures use the existing projections only when private information is available.
     Call this when opening the summary, never during frame rendering.
     """
+    world_state = world_for(map_screen)
+    session_state = session_for(map_screen)
     from map_logic.turn_processing import combat_rules
 
-    nation_data = map_screen.nation_data
+    nation_data = world_state.nation_data
     if country_id not in nation_data or country_id in c.UNPLAYABLE_NATIONS:
         raise ValueError("Choose a country to view its summary.")
     country = nation_data[country_id]
-    viewer = map_screen.player_country
-    networked = (getattr(map_screen, "realtime_multiplayer", False)
-                 or getattr(map_screen, "multiplayer_mode", False))
+    viewer = get_viewing_country(map_screen)
+    networked = (getattr(session_for(map_screen), "realtime_multiplayer", False)
+                 or getattr(session_for(map_screen), "multiplayer_mode", False))
     unrestricted = (not networked and viewer != c.TOURNAMENT_SPECTATOR
-                    and (map_screen.is_editor or viewer in ("Spectator", "Editor")))
-    complete_army = unrestricted or (country_id == viewer and not map_screen.tactical_mode)
-    fog = get_scenario_flag("fog_of_war", c.DEFAULT_FOG_OF_WAR, map_screen.scenario_settings)
+                    and (session_state.is_editor or viewer in ("Spectator", "Editor")))
+    complete_army = unrestricted or (country_id == viewer and not session_state.tactical_mode)
+    fog = get_scenario_flag("fog_of_war", c.DEFAULT_FOG_OF_WAR, world_state.scenario_settings)
     units = []
-    for province in map_screen.map_data.values():
+    for province in world_state.map_data.values():
         if (not complete_army and fog
                 and not is_province_visible(map_screen, province["id"])):
             continue
@@ -3746,13 +3763,13 @@ def get_country_summary(map_screen, country_id):
         shared_economies = getattr(map_screen, "country_economy_summaries", {})
         if networked and country_id != viewer and country_id in shared_economies:
             economy = copy.deepcopy(shared_economies[country_id])
-        elif not (getattr(map_screen, "realtime_multiplayer", False) and country_id != viewer
+        elif not (getattr(session_for(map_screen), "realtime_multiplayer", False) and country_id != viewer
                   and not getattr(map_screen, "realtime_server_map", None)):
             # Remote clients without server totals keep the economy private.
             # Economy queries can initialize missing siphon rates. Inspection must
             # not initialize or change any saved country state.
             income, expenses, _breakdown = get_economy_projections(
-                country_id, map_screen.map_data, copy.deepcopy(nation_data))
+                country_id, world_state.map_data, copy.deepcopy(nation_data))
             economy = _country_economy_summary(country, income, expenses)
 
     faction = country.get("faction", "")
@@ -3786,24 +3803,27 @@ def get_country_summary(map_screen, country_id):
 
 def can_release_nations_for(map_screen, country_id):
     """Permit own-country releases or local spectator releases for a selected country."""
-    if (country_id not in map_screen.nation_data or country_id in c.UNPLAYABLE_NATIONS
-            or map_screen.is_editor or map_screen.tactical_mode):
+    world_state = world_for(map_screen)
+    session_state = session_for(map_screen)
+    if (country_id not in world_state.nation_data or country_id in c.UNPLAYABLE_NATIONS
+            or session_state.is_editor or session_state.tactical_mode):
         return False
-    if map_screen.player_country == "Spectator":
-        return not (getattr(map_screen, "multiplayer_mode", False)
-                    or getattr(map_screen, "realtime_multiplayer", False))
-    return country_id == map_screen.player_country
+    if session_state.player_country == "Spectator":
+        return not (getattr(session_for(map_screen), "multiplayer_mode", False)
+                    or getattr(session_for(map_screen), "realtime_multiplayer", False))
+    return country_id == session_state.player_country
 
 
 def can_use_spectator_country_actions(map_screen):
     """Permit immediate country changes only during local spectator planning."""
+    session_state = session_for(map_screen)
     # Network modes are optional until a session attaches them to the map.
-    return (map_screen.player_country == "Spectator"
-            and not (map_screen.is_editor or map_screen.tactical_mode or map_screen.selection_mode
-                     or map_screen.ai_is_thinking or map_screen.viewing_ai_moves
-                     or map_screen.is_refreshing or map_screen.is_saving
-                     or getattr(map_screen, "multiplayer_mode", False)
-                     or getattr(map_screen, "realtime_multiplayer", False)))
+    return (session_state.player_country == "Spectator"
+            and not (session_state.is_editor or session_state.tactical_mode or session_state.selection_mode
+                     or session_state.ai_is_thinking or session_state.viewing_ai_moves
+                     or session_state.is_refreshing or session_state.is_saving
+                     or getattr(session_for(map_screen), "multiplayer_mode", False)
+                     or getattr(session_for(map_screen), "realtime_multiplayer", False)))
 
 
 def get_puppet_release_provinces(master, core_nation, map_data, keep_cores=False, release_queue=()):
@@ -4225,10 +4245,44 @@ def is_foreign_playable(owner, player_country, nation_data):
         return False
     return owner != player_country and owner in nation_data and nation_data[owner].get("is_playable", False)
 
-def get_base_unit_name(unit_name):
-    """Strips years and roman numerals to return the base unit class (e.g. 'Infantry Type 1850' -> 'Infantry')."""
-    base = re.sub(r'\s+\d{4}$', '', unit_name)
-    return re.sub(r'\s+[IVXLCDM]+$', '', base).strip()
+def get_unit_metadata(unit_name, unit_library=None):
+    """Read active identity metadata. Infer names only for older content."""
+    library = get_unit_library() if unit_library is None else unit_library
+    stats = library.get(unit_name, {})
+    metadata = stats.get("metadata")
+    if "metadata" not in stats:
+        return migrations.legacy_unit_metadata(unit_name, stats)
+    if not isinstance(metadata, dict):
+        raise ValueError(f"Unit {unit_name}: metadata must be an object.")
+    if not isinstance(metadata.get("family"), str) or not metadata["family"]:
+        raise ValueError(f"Unit {unit_name}: metadata.family must be a nonempty string.")
+    tier = metadata.get("tier_order")
+    if isinstance(tier, bool) or not isinstance(tier, int) or tier < 0:
+        raise ValueError(f"Unit {unit_name}: metadata.tier_order must be a nonnegative integer.")
+    research = metadata.get("research")
+    requirements = metadata.get("requirements")
+    recruitment = metadata.get("recruitment")
+    if not isinstance(research, dict) or not isinstance(requirements, list):
+        raise ValueError(f"Unit {unit_name}: define metadata.research and metadata.requirements.")
+    for requirement in [research] + requirements:
+        if not isinstance(requirement, dict) or not isinstance(requirement.get("tech"), str):
+            raise ValueError(f"Unit {unit_name}: each research requirement needs a tech key.")
+        keys = set(requirement) & {"level", "year", "minimum_year"}
+        if len(keys) != 1:
+            raise ValueError(f"Unit {unit_name}: each requirement needs one level, year, or minimum_year.")
+        value = requirement[next(iter(keys))]
+        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+            raise ValueError(f"Unit {unit_name}: requirement values must be nonnegative integers.")
+    if not isinstance(recruitment, dict) or recruitment.get("industry") not in ("industry", "basic_factory", "none"):
+        raise ValueError(f"Unit {unit_name}: metadata.recruitment.industry must be industry, basic_factory, or none.")
+    if not isinstance(recruitment.get("coastal"), bool):
+        raise ValueError(f"Unit {unit_name}: metadata.recruitment.coastal must be boolean.")
+    return metadata
+
+
+def get_base_unit_name(unit_name, unit_library=None):
+    """Return the explicit family, with a boundary adapter for older content."""
+    return get_unit_metadata(unit_name, unit_library)["family"]
 
 # Word-for-word shorthand used ONLY by get_condensed_unit_name, for the tightly
 # spaced production unit list and garrison rosters. Every other screen shows
@@ -4328,6 +4382,10 @@ def get_base_item_name(name):
     "Factory". The trailing-numeral test runs through roman_to_int rather than a
     hardcoded numeral list, so it keeps working past whatever tier someone adds.
     """
+    library = get_unit_library()
+    if name in library:
+        metadata = get_unit_metadata(name, library)
+        return metadata.get("settings_family", metadata["family"])
     if " Type " in name: return name.split(" Type ")[0]
     if " Lvl " in name: return name.split(" Lvl ")[0]
 
@@ -4349,19 +4407,10 @@ def classify_unit_group(base_name, stats):
     One rule for the production list, the custom-production picker and anything
     added later, so a unit can never land in different columns in two screens.
     """
-    if base_name.startswith("Truck"):
-        return UNIT_GROUP_INFANTRY
-    if base_name.startswith("Convoy"):
-        return UNIT_GROUP_NAVY
-    # Production grouping is presentation metadata; flight uses air_role.
-    group = normalize_air_category(stats.get("production_group"))
-    if group in UNIT_GROUPS:
-        return group
-    if stats.get("naval_unit", False):
-        return UNIT_GROUP_NAVY
-    if "Tank" in base_name or "Armored Car" in base_name or base_name in c.TANK_GROUP_EXTRAS:
-        return UNIT_GROUP_TANKS
-    return UNIT_GROUP_INFANTRY
+    metadata = stats.get("metadata")
+    if isinstance(metadata, dict):
+        return normalize_air_category(stats.get("production_group")) or metadata.get("production_group", UNIT_GROUP_INFANTRY)
+    return migrations.legacy_unit_group(base_name, stats)
 
 #: The buckets the AI balances its army across.
 #:
@@ -4378,26 +4427,14 @@ AI_FORCE_NAVY = "NAVY"
 
 def is_ai_tank(unit_type):
     """Whether the AI counts this unit towards its armour quota."""
-    return "Tank" in unit_type or "Armored" in unit_type or unit_type == "Cavalry"
+    return bool(get_unit_metadata(unit_type).get("ai_tank", False))
 
 
 def ai_force_category(unit_type):
-    """Which column of the AI's army balance a unit counts in, or None.
-
-    The tests run in this order in every copy this replaces: infantry before
-    armour, so a hypothetical "Infantry Tank" counts as infantry. Anything that
-    matches none of the three -- convoys, trucks, artillery -- is not counted
-    at all, which is why None is a real answer rather than a default bucket.
-    """
+    """Read the AI quota group independently from production presentation."""
     if not unit_type:
         return None
-    if "Infantry" in unit_type or get_base_unit_name(unit_type) == "Militia":
-        return AI_FORCE_INFANTRY
-    if is_ai_tank(unit_type):
-        return AI_FORCE_TANKS
-    if is_naval_unit(unit_type) and not unit_type.startswith("Convoy"):
-        return AI_FORCE_NAVY
-    return None
+    return get_unit_metadata(unit_type).get("ai_force_category")
 
 
 def get_formatted_division_name(unit_type):
@@ -4412,17 +4449,17 @@ def get_formatted_division_name(unit_type):
         
     return base_name
 
-def get_unit_tech_key(base_name):
-    """Maps a base unit class name to the research key that unlocks it.
+def get_unit_tech_key(base_name, unit_library=None):
+    """Read a family's explicit research track, with an older-content adapter."""
+    library = get_unit_library() if unit_library is None else unit_library
+    if base_name in library:
+        return get_unit_metadata(base_name, library)["research"]["tech"]
+    for name, stats in library.items():
+        metadata = stats.get("metadata")
+        if isinstance(metadata, dict) and metadata.get("family") == base_name:
+            return get_unit_metadata(name, library)["research"]["tech"]
+    return migrations.legacy_unit_tech_key(base_name)
 
-    Punctuation is dropped rather than turned into a separator, so
-    "Landkreuzer P.1000 Ratte" resolves to landkreuzer_p1000_ratte and not
-    landkreuzer_p.1000_ratte - which matched no tech, leaving the unit
-    permanently unbuildable.
-    """
-    key = re.sub(r'[^a-z0-9 ]', '', base_name.lower())
-    key = re.sub(r'\s+', '_', key.strip())
-    return c.UNIT_TECH_KEY_OVERRIDES.get(key, key)
 
 def roman_to_int(s):
     """Converts a roman numeral string to an integer.
@@ -4444,49 +4481,52 @@ def roman_to_int(s):
         else: res += s1; i += 1
     return res
 
-def get_unit_research_requirement(unit_name):
-    """Returns (tech_key, required_level) needed to unlock an exact unit tier by name.
+def _unit_research_pair(requirement):
+    tech = requirement["tech"]
+    if "year" in requirement:
+        years = get_tech_tree().get(tech, {}).get("years", [])
+        year = requirement["year"]
+        return tech, years.index(year) + 1 if year in years else 1
+    return tech, requirement.get("level", 1)
 
-    Infantry Type (year-suffixed) keys off the tech's position in its 'years' list;
-    everything else - including Artillery, which is roman-numeral leveled like
-    Militia - keys off its trailing roman numeral, mirroring the tier logic in
-    production.py's unit rendering. Motorized/Mechanized Infantry aren't leveled
-    techs of their own (see c.VEHICLE_INFANTRY_GATES) so they're not representable
-    as a single (tech_key, level) pair - is_unit_unlocked handles them directly
-    instead of going through this function.
-    """
-    base_name = get_base_unit_name(unit_name)
-    tech_key = get_unit_tech_key(base_name)
 
-    if tech_key == "infantry_type":
-        years = get_tech_tree().get(tech_key, {}).get("years", [])
-        year_match = re.search(r'(\d{4})$', unit_name)
-        if year_match and years:
-            year = int(year_match.group(1))
-            if year in years:
-                return tech_key, years.index(year) + 1
-        return tech_key, 1
+def get_unit_research_requirement(unit_name, unit_library=None):
+    """Return the primary research pair for compatibility and research displays."""
+    return _unit_research_pair(get_unit_metadata(unit_name, unit_library)["research"])
 
-    lvl_str = unit_name.replace(base_name, "").strip()
-    return tech_key, max(1, roman_to_int(lvl_str))
 
-def get_unit_unlock_requirement(unit_name):
-    """Parse one unit's unlock rule into (tech, level, vehicle-infantry year).
+def get_unit_requirements(unit_name, unit_library=None):
+    """Return explicit compound requirements for one unit."""
+    return {"all": get_unit_metadata(unit_name, unit_library)["requirements"]}
 
-    Vehicle infantry depends on its transport gate plus the infantry year,
-    rather than one research level. A missing year remains unbuildable.
-    """
-    base_name = get_base_unit_name(unit_name)
-    tech_key = get_unit_tech_key(base_name)
-    if tech_key in c.VEHICLE_INFANTRY_GATES:
-        year_match = re.search(r'(\d{4})$', unit_name)
-        return tech_key, None, int(year_match.group(1)) if year_match else None
-    tech_key, required_lvl = get_unit_research_requirement(unit_name)
-    return tech_key, required_lvl, None
+
+def get_unit_unlock_requirement(unit_name, unit_library=None):
+    """Preserve the older three-field requirement interface for existing callers."""
+    metadata = get_unit_metadata(unit_name, unit_library)
+    tech, level = _unit_research_pair(metadata["research"])
+    if tech in c.VEHICLE_INFANTRY_GATES:
+        for requirement in metadata["requirements"]:
+            if "minimum_year" in requirement:
+                return tech, None, requirement["minimum_year"]
+    return tech, level, None
 
 
 def unit_requirement_is_met(requirement, player_research):
     """Evaluate a parsed rule; shared by exact-tier UI checks and AI indexes."""
+    if isinstance(requirement, dict):
+        for item in requirement["all"]:
+            tech = item["tech"]
+            if "minimum_year" in item:
+                year = get_infantry_family_year(tech, player_research, get_tech_tree())
+                minimum = item["minimum_year"]
+                if minimum is None or year is None or year < minimum:
+                    return False
+            else:
+                tech, level = _unit_research_pair(item)
+                if player_research.get(tech, 0) < level:
+                    return False
+        return True
+    # Older callers can still pass the former three-field requirement.
     tech_key, required_lvl, year = requirement
     if required_lvl is None:
         unlocked_year = get_infantry_family_year(tech_key, player_research, get_tech_tree())
@@ -4494,19 +4534,15 @@ def unit_requirement_is_met(requirement, player_research):
     return player_research.get(tech_key, 0) >= required_lvl
 
 
-def is_unit_unlocked(unit_name, player_research):
+def is_unit_unlocked(unit_name, player_research, unit_library=None):
     """Returns True if player_research meets the requirement for this exact unit tier,
     independent of whether it's the group's currently-highest tier (see Custom production)."""
-    return unit_requirement_is_met(get_unit_unlock_requirement(unit_name), player_research)
+    return unit_requirement_is_met(get_unit_requirements(unit_name, unit_library), player_research)
 
 
-def get_unit_tier(unit_name):
-    """Sort a unit family's tiers by trailing year or roman numeral."""
-    year = re.search(r'\s+(\d{4})$', unit_name)
-    if year:
-        return int(year.group(1))
-    roman = re.search(r'\s+([IVXLCDM]+)$', unit_name)
-    return roman_to_int(roman.group(1)) if roman else 0
+def get_unit_tier(unit_name, unit_library=None):
+    """Read the active family's tier order without parsing a display name."""
+    return get_unit_metadata(unit_name, unit_library)["tier_order"]
 
 
 _UNIT_RESEARCH_INDEX_CACHE = None
@@ -4523,8 +4559,8 @@ def get_unit_research_index(unit_library):
     """
     global _UNIT_RESEARCH_INDEX_CACHE
     schema = (
-        tuple(unit_library),
-        tuple(get_tech_tree().get("infantry_type", {}).get("years", ())),
+        tuple((name, repr(stats.get("metadata"))) for name, stats in unit_library.items()),
+        tuple((key, tuple(info.get("years", ()))) for key, info in get_tech_tree().items()),
         tuple(sorted(c.VEHICLE_INFANTRY_GATES.items())),
         tuple(sorted(c.UNIT_TECH_KEY_OVERRIDES.items())),
         tuple(sorted((base, tuple(techs)) for base, techs in c.OBSOLESCENCE_RULES.items())),
@@ -4535,8 +4571,8 @@ def get_unit_research_index(unit_library):
 
     families = {}
     for name in unit_library:
-        families.setdefault(get_base_unit_name(name), []).append(
-            (name, get_unit_tier(name), get_unit_unlock_requirement(name)))
+        families.setdefault(get_base_unit_name(name, unit_library), []).append(
+            (name, get_unit_tier(name, unit_library), get_unit_requirements(name, unit_library)))
     index = tuple(
         (base, tuple(sorted(tiers, key=lambda tier: tier[1], reverse=True)))
         for base, tiers in families.items()
@@ -4618,17 +4654,9 @@ def generate_unit_custom_name(unit, unit_counters):
     owner = unit.get("owner", "Unclaimed")
     unit_type = unit.get("type", "Infantry")
     
-    # Extract year or level for suffix
-    suffix = ""
-    year_match = re.search(r'\b(\d{4})\b', unit_type)
-    if year_match:
-        suffix = f" ({year_match.group(1)})"
-    else:
-        # Match roman numerals at the end of the string
-        numeral_match = re.search(r'\b([IVXLCDM]+)$', unit_type)
-        if numeral_match:
-            suffix = f" ({numeral_match.group(1)})"
-    
+    label = get_unit_metadata(unit_type).get("division_suffix", "")
+    suffix = f" ({label})" if label else ""
+
     # Clean up the base name using our new unified string parser
     base_name = get_formatted_division_name(unit_type)
     
@@ -4704,7 +4732,8 @@ def air_unit_stats(unit):
 
 def is_tactical_player_unit(map_screen, unit):
     # Tactical state is deliberately optional on lightweight AI test maps.
-    return bool(getattr(map_screen, "tactical_mode", False) and unit is map_screen.player_unit)
+    session_state = session_for(map_screen)
+    return bool(getattr(session_for(map_screen), "tactical_mode", False) and unit is session_state.player_unit)
 
 
 def is_air_unit(unit):
@@ -4779,7 +4808,8 @@ def air_drop_target_is_legal(unit, target, nation_data):
 
 def set_air_cargo(map_screen, country_id, plane, base, cargo_ids):
     """Apply a validated cargo roster without using any client unit statistics."""
-    if (map_screen.id_to_province.get(base["id"]) is not base
+    world_state = world_for(map_screen)
+    if (world_state.id_to_province.get(base["id"]) is not base
             or not any(unit is plane for unit in base.get("units", []))
             or plane.get("owner") != country_id or plane.get("health", 0) <= 0
             or not air_unit_can_transport(plane)):
@@ -4826,23 +4856,25 @@ def set_air_cargo(map_screen, country_id, plane, base, cargo_ids):
 
 def air_transport_commands(map_screen, country_id):
     """Serialize cargo identities, including empty rosters that release cargo."""
+    world_state = world_for(map_screen)
     return [{"type": "air_transport", "plane_id": plane["unit_id"],
              "province_id": base["id"],
              "cargo_ids": [unit["unit_id"] for unit in plane.get("air_cargo", [])]}
-            for base in map_screen.map_data.values() for plane in base.get("units", [])
+            for base in world_state.map_data.values() for plane in base.get("units", [])
             if plane.get("owner") == country_id and air_unit_can_transport(plane)]
 
 
 def apply_air_transport_commands(map_screen, country_id, commands):
     """Validate a complete transport draft before applying it to host state."""
+    world_state = world_for(map_screen)
     from types import SimpleNamespace
     if not isinstance(commands, list):
         raise ValueError("Invalid transport commands.")
     if not commands:
         return []
-    data = copy.deepcopy(map_screen.map_data)
+    data = copy.deepcopy(world_state.map_data)
     draft = SimpleNamespace(map_data=data, id_to_province={p["id"]: p for p in data.values()},
-                            nation_data=map_screen.nation_data, tactical_mode=False, player_unit=None)
+                            nation_data=world_state.nation_data, tactical_mode=False, player_unit=None)
     seen, assigned, canonical = set(), set(), []
     for command in commands:
         if not isinstance(command, dict) or not isinstance(command.get("plane_id"), str):
@@ -4871,21 +4903,23 @@ def apply_air_transport_commands(map_screen, country_id, commands):
 
 
 def _apply_air_cargo_rosters(map_screen, country_id, canonical):
+    world_state = world_for(map_screen)
     for command in canonical:
-        base = map_screen.id_to_province[command["province_id"]]
+        base = world_state.id_to_province[command["province_id"]]
         plane = next(u for u in base["units"] if u["unit_id"] == command["plane_id"])
         retained = [u["unit_id"] for u in plane.get("air_cargo", []) if u["unit_id"] in command["cargo_ids"]]
         set_air_cargo(map_screen, country_id, plane, base, retained)
     for command in canonical:
-        base = map_screen.id_to_province[command["province_id"]]
+        base = world_state.id_to_province[command["province_id"]]
         plane = next(u for u in base["units"] if u["unit_id"] == command["plane_id"])
         set_air_cargo(map_screen, country_id, plane, base, command["cargo_ids"])
 
 
 def air_transport_draft(map_screen, country_id, commands):
     """Create a transport projection for order validation without changing state."""
+    world_state = world_for(map_screen)
     draft = copy.copy(map_screen)
-    draft.map_data = copy.deepcopy(map_screen.map_data)
+    draft.map_data = copy.deepcopy(world_state.map_data)
     draft.id_to_province = {p["id"]: p for p in draft.map_data.values()}
     canonical = apply_air_transport_commands(draft, country_id, commands)
     return draft, canonical
@@ -4907,8 +4941,9 @@ def apply_unit_health_loss(unit, damage, *, sources=None, tile=None):
 
 def air_unit_can_launch(map_screen, unit, base):
     """A mission needs an unpacked aircraft at a land base outside ground combat."""
+    world_state = world_for(map_screen)
     return (is_air_unit(unit) and not is_water_province(base)
-            and not is_nation_in_combat_here(get_unit_combat_owner(unit), base, map_screen.nation_data))
+            and not is_nation_in_combat_here(get_unit_combat_owner(unit), base, world_state.nation_data))
 
 
 def air_target_is_hostile(unit, target, nation_data, visible_only=False):
@@ -4933,9 +4968,10 @@ def air_unit_can_land(unit, target, nation_data):
 
 def air_move_is_strike(map_screen, unit, destination):
     """Route clicks using known ownership and visible units, without revealing fogged troops."""
-    return (are_at_war(get_unit_combat_owner(unit), destination.get("owner"), map_screen.nation_data)
+    world_state = world_for(map_screen)
+    return (are_at_war(get_unit_combat_owner(unit), destination.get("owner"), world_state.nation_data)
             or is_province_visible(map_screen, destination["id"]) and air_target_is_hostile(
-                unit, destination, map_screen.nation_data, visible_only=True))
+                unit, destination, world_state.nation_data, visible_only=True))
 
 
 def available_air_missions(map_screen, unit, base):
@@ -4956,11 +4992,12 @@ def available_air_missions(map_screen, unit, base):
 
 def air_move_order(map_screen, unit, base, destination, mission=None):
     """Retarget flights; idle aircraft choose a mission from the visible destination."""
+    world_state = world_for(map_screen)
     if mission is None:
         current = air_unit_mission(unit)
         mission = current if current in AIR_TARGET_MISSION_TYPES else (
             "AIR_DROP" if air_unit_can_air_drop(unit) and air_drop_target_is_legal(
-                unit, destination, map_screen.nation_data) else
+                unit, destination, world_state.nation_data) else
             "STRIKE" if air_move_is_strike(map_screen, unit, destination) else "MOVE")
     if mission not in AIR_TARGET_MISSION_TYPES:
         raise ValueError("Choose Move, Strike, or Air Drop before selecting an air target.")
@@ -4970,7 +5007,7 @@ def air_move_order(map_screen, unit, base, destination, mission=None):
         raise ValueError("Air strikes require enemy territory or visible enemy units.")
     if mission == "MOVE" and air_unit_can_move_on_ground(unit):
         path = find_unit_move_path(unit, base, destination["id"],
-                                   map_screen.id_to_province, map_screen.nation_data)
+                                   world_state.id_to_province, world_state.nation_data)
         if path is None:
             raise ValueError("No legal ground route exists for this aircraft.")
         return canonical_unit_order(map_screen, unit["owner"], base, unit,
@@ -5034,11 +5071,12 @@ def air_unit_has_mission(unit):
 
 def air_range_preview_kind(map_screen, unit, destination=None):
     """Show the current mission's reach, or the pending move click's reach."""
+    world_state = world_for(map_screen)
     order = unit.get("order")
     if isinstance(order, dict) and order.get("type") in AIR_ORDER_TYPES:
         return order["type"]
     if (air_unit_can_air_drop(unit) and destination is not None
-            and air_drop_target_is_legal(unit, destination, map_screen.nation_data)):
+            and air_drop_target_is_legal(unit, destination, world_state.nation_data)):
         return "AIR_DROP"
     if air_unit_can_strike(unit) and (air_unit_can_move_on_ground(unit) or (
             destination is not None and air_move_is_strike(map_screen, unit, destination))):
@@ -5122,7 +5160,7 @@ def get_air_unit_traits(unit_type):
     return traits
 
 
-def build_air_geometry(map_screen):
+def build_air_geometry(map_screen, id_surface=None):
     """Index exact province pixel rectangles once at a map geometry boundary.
 
     Horizontal runs keep large map images compact. Range measures the nearest
@@ -5130,10 +5168,12 @@ def build_air_geometry(map_screen):
     disconnected parts of a province participate too. No camera data is read.
     Rebuild after loading/repainting ID geometry; distances are discarded with it.
     """
+    world_state = world_for(map_screen)
     import numpy as np
-    pixels = pygame.surfarray.array2d(map_screen.id_map)
-    colors = {map_screen.id_map.map_rgb(p["map_color"]): p["id"]
-              for p in map_screen.map_data.values()}
+    surface = map_screen.id_map if id_surface is None else id_surface
+    pixels = pygame.surfarray.array2d(surface)
+    colors = {surface.map_rgb(p["map_color"]): p["id"]
+              for p in world_state.map_data.values()}
     runs = collections.defaultdict(list)
     for y in range(pixels.shape[1]):
         row = pixels[:, y]
@@ -5174,6 +5214,7 @@ def air_distance_squared(map_screen, base, target_id):
 
 def air_target_in_range(map_screen, unit, base, kind, target_id):
     """One tile's mission reach; validating a command never sweeps the map."""
+    world_state = world_for(map_screen)
     if kind not in AIR_ORDER_TYPES or not is_air_unit(unit) or is_water_province(base):
         return False
     stats = air_unit_stats(unit)
@@ -5182,7 +5223,7 @@ def air_target_in_range(map_screen, unit, base, kind, target_id):
             or kind == "AIR_DROP" and not air_unit_can_air_drop(unit)
             or kind == "AIR_REPOSITION" and stats.get("air_consumable", False)):
         return False
-    target = map_screen.id_to_province.get(target_id)
+    target = world_state.id_to_province.get(target_id)
     if target is None or kind in ("AIR_REPOSITION", "AIR_DROP") and is_water_province(target):
         return False
     radius = air_order_radius(unit, kind)
@@ -5191,7 +5232,8 @@ def air_target_in_range(map_screen, unit, base, kind, target_id):
 
 def get_air_targets(map_screen, unit, base, kind):
     """Geometry-only preview: never reads fogged units or private orders."""
-    return {pid for pid in map_screen.id_to_province
+    world_state = world_for(map_screen)
+    return {pid for pid in world_state.id_to_province
             if air_target_in_range(map_screen, unit, base, kind, pid)}
 
 
@@ -5201,6 +5243,7 @@ def canonical_air_order(map_screen, unit, base, order):
     Callers enforce controller identity/phase; this validates capabilities, original
     launch base, target, radius, and priority. Old patrols default to WEAKEST.
     """
+    world_state = world_for(map_screen)
     if (not isinstance(order, dict) or not isinstance(order.get("type"), str)
             or order["type"] not in AIR_ORDER_TYPES):
         raise ValueError("Invalid air order.")
@@ -5222,16 +5265,16 @@ def canonical_air_order(map_screen, unit, base, order):
         result["priority"] = priority
     else:
         target_id = order.get("target_id")
-        if type(target_id) is not int or target_id not in map_screen.id_to_province:
+        if type(target_id) is not int or target_id not in world_state.id_to_province:
             raise ValueError("Unknown air target.")
         if not air_target_in_range(map_screen, unit, base, kind, target_id):
             raise ValueError("Air target is out of range or cannot be landed on.")
-        target = map_screen.id_to_province[target_id]
-        if kind == "AIR_REPOSITION" and not air_unit_can_land(unit, target, map_screen.nation_data):
+        target = world_state.id_to_province[target_id]
+        if kind == "AIR_REPOSITION" and not air_unit_can_land(unit, target, world_state.nation_data):
             raise ValueError("Aircraft must land on accessible land without enemy units.")
-        if kind == "AIR_ATTACK" and not air_target_is_hostile(unit, target, map_screen.nation_data):
+        if kind == "AIR_ATTACK" and not air_target_is_hostile(unit, target, world_state.nation_data):
             raise ValueError("Air strikes require enemy territory or enemy units.")
-        if kind == "AIR_DROP" and not air_drop_target_is_legal(unit, target, map_screen.nation_data):
+        if kind == "AIR_DROP" and not air_drop_target_is_legal(unit, target, world_state.nation_data):
             raise ValueError("Air drops require enemy land territory.")
         result["target_id"] = target_id
     return result
@@ -5321,22 +5364,24 @@ def has_units_in_province(nation, province):
 
 def get_active_ai_nations(map_screen):
     """Returns a list of all playable, active AI nations (excluding the human player)."""
+    world_state = world_for(map_screen)
+    session_state = session_for(map_screen)
     ai_nations = []
     # Account for potential hotseat active_players lists or standard player_country setups
-    human_players = map_screen.active_players if map_screen.active_players else [map_screen.player_country]
+    human_players = session_state.active_players if session_state.active_players else [session_state.player_country]
     
     # --- TACTICAL OVERRIDE ---
     # Give the AI full command of the country's macro strategy
-    if map_screen.tactical_mode:
+    if session_state.tactical_mode:
         human_players = []
     
     # Cross-reference with nations that actually own territory
-    living_nations = get_living_nations(map_screen.map_data)
+    living_nations = get_living_nations(world_state.map_data)
     
     submitted = getattr(map_screen, 'submitted_moves', set())
     protected = getattr(map_screen, 'multiplayer_protected_countries', set())
 
-    for name, data in map_screen.nation_data.items():
+    for name, data in world_state.nation_data.items():
         if (submitted and name in submitted) or (protected and name in protected):
             continue
         if name in living_nations and name not in human_players and name not in c.UNPLAYABLE_NATIONS and data.get("is_playable"):
@@ -5367,11 +5412,13 @@ def get_best_unit_by_defense_then_attack_then_speed(units): return get_best_unit
 
 def get_combat_predictions(map_screen):
     """Generates predictions for meeting engagements and province clashes."""
-    map_data = map_screen.map_data
-    nation_data = map_screen.nation_data
+    world_state = world_for(map_screen)
+    session_state = session_for(map_screen)
+    map_data = world_state.map_data
+    nation_data = world_state.nation_data
 
-    player_country = map_screen.player_country
-    is_spectator = player_country == "Spectator" or map_screen.is_editor
+    player_country = session_state.player_country
+    is_spectator = player_country == "Spectator" or session_state.is_editor
     
     predictions = []
 
@@ -5391,7 +5438,7 @@ def get_combat_predictions(map_screen):
     meeting_unit_ids = set()
     for pair in combat_rules.find_meeting_pairs(map_data, nation_data, visible_to):
         prov_a, prov_b, side1, side2 = combat_rules.meeting_sides(
-            map_screen.id_to_province, pair, visible_to)
+            world_state.id_to_province, pair, visible_to)
         # A head-on swap is resolved between its two origin tiles, so it has no
         # province bubble of its own. Keep those movers out of the ordinary
         # incoming/static pass below to avoid duplicate endpoint bubbles.
@@ -5752,40 +5799,6 @@ def will_ai_accept_peace(target_nation, proposer_nation, peace_type, map_data, n
                              {prov["id"]: prov for prov in (map_data or {}).values()})
     return ai_opinion.accepts_peace(world, target_nation, proposer_nation, peace_type)
 
-    if peace_type.startswith(c.PEACE_SURRENDER):
-        gains_territory = False
-        
-        # Dynamically check the map data instead of relying on the UI text string.
-        # The UI evaluates this BEFORE appending the specific territory data to the string.
-        if map_data:
-            ai_claims = nation_data.get(target_nation, {}).get("claims", [])
-            for prov in map_data.values():
-                if prov.get("owner") == proposer_nation and (prov["id"] in ai_claims or target_nation in prov.get("cores", [])):
-                    gains_territory = True
-                    break
-        else:
-            # Fallback if map_data is missing
-            # This "fallback" just makes the ai always accept
-            gains_territory = "No territories surrendered" not in peace_type
-
-        # AI shouldn't accept a surrender unless they gain territory OR if they'll also accept a ceasefire
-        if gains_territory:
-            return True
-            
-        war_dur = nation_data.get(target_nation, {}).get("war_durations", {}).get(proposer_nation, 0)
-        if war_dur < c.MIN_TURNS_FOR_CEASEFIRE:
-            return False
-            
-        if map_data:
-            if not ai_thinks_it_can_win(target_nation, proposer_nation, map_data, nation_data):
-                return True
-        else:
-            return True
-            
-        return False
-            
-    # This query acts as a centralized place to expand logic later (e.g. check war score).
-    return True
 
 # ==========================================
 # DATA SYNC & REFRESH
@@ -6070,9 +6083,10 @@ def get_editor_paint_region(province, id_to_province, mode):
 
 
 def _get_current_map_state(map_screen):
+    world_state = world_for(map_screen)
     import copy
     state = {}
-    for color_key, prov in map_screen.map_data.items():
+    for color_key, prov in world_state.map_data.items():
         state[color_key] = {
             "owner": prov.get("owner"),
             "cores": copy.deepcopy(prov.get("cores", [])),
@@ -6083,9 +6097,10 @@ def _get_current_map_state(map_screen):
     return state
 
 def _apply_map_state(map_screen, state):
+    world_state = world_for(map_screen)
     import copy
     for color_key, saved_prov in state.items():
-        prov = map_screen.map_data.get(color_key)
+        prov = world_state.map_data.get(color_key)
         if prov:
             prov["owner"] = saved_prov["owner"]
             prov["cores"] = copy.deepcopy(saved_prov["cores"])
@@ -6156,7 +6171,7 @@ def get_grouped_units(unit_library, by_family=True, unit_filter=None):
     for name, stats in unit_library.items():
         if unit_filter and not unit_filter(name, stats):
             continue
-        base = get_base_unit_name(name)
+        base = get_base_unit_name(name, unit_library)
         entry = base if by_family else name
         bucket = groups[classify_unit_group(base, stats)]
         if entry not in bucket:
@@ -6514,13 +6529,15 @@ def extract_and_flatten_zip(zip_path, extract_target_dir):
 MAX_UNIT_ORDER_PATH = 200
 
 def province_for_order(map_screen, province_id):
-    if type(province_id) is not int or province_id not in map_screen.id_to_province:
+    world_state = world_for(map_screen)
+    if type(province_id) is not int or province_id not in world_state.id_to_province:
         raise ValueError("Unknown province in order.")
-    return map_screen.id_to_province[province_id]
+    return world_state.id_to_province[province_id]
 
 
 def canonical_unit_order(map_screen, country_id, province, unit, order):
     """Host/server validation shared with tournament aircraft commands."""
+    world_state = world_for(map_screen)
     if unit_is_air_drop_recovering(unit):
         validate_air_drop_recovery_draft(unit, {"order": order})
         return copy.deepcopy(unit["order"])
@@ -6543,7 +6560,7 @@ def canonical_unit_order(map_screen, country_id, province, unit, order):
         for province_id in path:
             destination = province_for_order(map_screen, province_id)
             if not can_unit_move_step(
-                    unit, previous, destination, map_screen.nation_data):
+                    unit, previous, destination, world_state.nation_data):
                 raise ValueError("That unit cannot enter a province in this path.")
             previous = destination
         return {"type": "MOVE", "path": list(path)}
@@ -6556,7 +6573,7 @@ def canonical_unit_order(map_screen, country_id, province, unit, order):
                 and not (unit.get("naval_unit") or is_naval_unit(unit_type))):
             raise ValueError("That unit cannot bombard from water.")
         targets = get_bombardment_targets(
-            province, map_screen.id_to_province, get_bombardment_range(unit_type))
+            province, world_state.id_to_province, get_bombardment_range(unit_type))
         if target["id"] not in targets:
             raise ValueError("Bombardment target is out of range.")
         return {"type": "BOMBARD", "target_id": target["id"]}
@@ -6565,12 +6582,12 @@ def canonical_unit_order(map_screen, country_id, province, unit, order):
             raise ValueError("Release cargo before disbanding its carrier.")
         return {"type": "DISBAND", "turns_left": 1}
     if kind == "REPAIR":
-        if is_nation_in_combat_here(country_id, province, map_screen.nation_data):
+        if is_nation_in_combat_here(country_id, province, world_state.nation_data):
             raise ValueError("Units cannot repair in combat.")
         unit_type = unit.get("original_type", unit.get("type", ""))
         stats = get_unit_library().get(unit_type, {})
         if get_scenario_flag("free_repairs", c.DEFAULT_FREE_REPAIRS,
-                                     map_screen.scenario_settings):
+                                     world_state.scenario_settings):
             cost = {"cost_materials": 0, "cost_manpower": 0, "cost_fuel": 0}
         else:
             missing = (unit.get("max_health", 1) - unit.get("health", 0)) / max(1, unit.get("max_health", 1))
@@ -6580,18 +6597,18 @@ def canonical_unit_order(map_screen, country_id, province, unit, order):
     if kind == "UPGRADE":
         target_type = order.get("target_type")
         unit_library = get_unit_library()
-        research = map_screen.nation_data[country_id].get("research", {})
+        research = world_state.nation_data[country_id].get("research", {})
         if (not isinstance(target_type, str) or target_type not in unit_library
                 or target_type != get_upgrade_target(unit.get("type", ""), research,
                                                      unit_library, get_tech_tree())
                 or not is_unit_unlocked(target_type, research)
                 or not has_industry(province)
-                or is_nation_in_combat_here(country_id, province, map_screen.nation_data)):
+                or is_nation_in_combat_here(country_id, province, world_state.nation_data)):
             raise ValueError("Invalid unit upgrade.")
         return {"type": "UPGRADE", "turns_left": 1, "target_type": target_type, "refund": {}}
     if kind == "CONVERT":
         source = unit.get("type", "")
-        if is_nation_in_combat_here(country_id, province, map_screen.nation_data):
+        if is_nation_in_combat_here(country_id, province, world_state.nation_data):
             raise ValueError("Units cannot convert in combat.")
         air_conversion = air_conversion_order(unit)
         if air_conversion:
@@ -6603,9 +6620,9 @@ def canonical_unit_order(map_screen, country_id, province, unit, order):
         elif source.startswith("Convoy"):
             expected, turns = "Land Unit", 1
         elif source.startswith("Truck") or is_naval_unit(source):
-            conversion = truck_ship_conversion_order(unit, map_screen.scenario_settings)
+            conversion = truck_ship_conversion_order(unit, world_state.scenario_settings)
             if (conversion["to"] == "Truck"
-                    and map_screen.nation_data[country_id].get("research", {}).get("trucks", 0) < 1):
+                    and world_state.nation_data[country_id].get("research", {}).get("trucks", 0) < 1):
                 raise ValueError("Trucks research is required for this conversion.")
             expected, turns = conversion["to"], conversion["turns_left"]
         else:
@@ -6620,3 +6637,78 @@ def canonical_unit_order(map_screen, country_id, province, unit, order):
             return copy.deepcopy(existing)
         return {"type": "CONVERT", "turns_left": turns, "to": expected}
     raise ValueError("Unknown unit order.")
+
+
+def build_research_project(tech_name, points_remaining):
+    """Construct the current project schema without changing progress policy."""
+    return {"tech_name": tech_name, "points_remaining": points_remaining}
+
+
+def canonical_research_selection(country_data, requested, tech_tree=None):
+    """Preview an ordered selection using authoritative progress and prerequisites."""
+    if (not isinstance(requested, list) or len(requested) > c.RESEARCH_SLOTS or
+            any(not isinstance(tech, str) for tech in requested) or
+            len(set(requested)) != len(requested)):
+        raise ValueError("Invalid research selection.")
+    if not isinstance(country_data, dict):
+        raise ValueError("Unknown country research selection.")
+    tech_tree = get_tech_tree() if tech_tree is None else tech_tree
+    research = country_data.get("research", {})
+    if not isinstance(research, dict):
+        raise ValueError("Invalid authoritative research data.")
+    current_queue = country_data.get("research_queue", [])
+    if not isinstance(current_queue, list):
+        raise ValueError("Invalid authoritative research queue.")
+    running = {project.get("tech_name"): project for project in current_queue
+               if isinstance(project, dict) and isinstance(project.get("tech_name"), str)}
+    progress = copy.deepcopy(country_data.get("research_progress", {}))
+    if not isinstance(progress, dict):
+        progress = {}
+
+    # Paused projects retain the authoritative remaining point total.
+    for tech_name, project in running.items():
+        if tech_name not in requested:
+            remaining = project.get("points_remaining", tech_tree.get(tech_name, {}).get("cost", 0))
+            if isinstance(remaining, (int, float)) and remaining >= 0:
+                progress[tech_name] = remaining
+
+    canonical_projects = []
+    for tech_name in requested:
+        tech = tech_tree.get(tech_name)
+        if not isinstance(tech, dict):
+            raise ValueError("Unknown research technology.")
+        if tech_name in running:
+            # Keep the server's project object and progress, never the
+            # similarly shaped value supplied by a client.
+            project = copy.deepcopy(running[tech_name])
+        else:
+            current_level = research.get(tech_name, 0)
+            if not isinstance(current_level, int) or current_level < 0:
+                raise ValueError("Invalid research level.")
+            if current_level >= tech.get("max_lvl", 0):
+                raise ValueError("That research is already complete.")
+            if not check_tech_requirements(research, tech.get("req", {}), current_level + 1):
+                raise ValueError("Research requirements are not met.")
+            cost = tech.get("cost")
+            if not isinstance(cost, (int, float)) or cost <= 0:
+                raise ValueError("Invalid research technology.")
+            remaining = progress.pop(tech_name, cost)
+            if not isinstance(remaining, (int, float)) or remaining < 0:
+                remaining = cost
+            project = build_research_project(tech_name, remaining)
+        progress.pop(tech_name, None)
+        canonical_projects.append(project)
+    return {"projects": canonical_projects,
+            "research_progress": progress}
+
+
+def apply_country_appearance(nation_data, country_id, appearance):
+    """Apply identity fields after the caller validates its mode and authority."""
+    if country_id not in nation_data or not isinstance(appearance, dict):
+        raise ValueError("Invalid country appearance target or data.")
+    if set(appearance) - set(c.COUNTRY_APPEARANCE_FIELDS):
+        raise ValueError("Country appearance cannot change gameplay fields.")
+    country = nation_data[country_id]
+    changed = tuple(key for key, value in appearance.items() if country.get(key) != value)
+    country.update(copy.deepcopy(appearance))
+    return changed

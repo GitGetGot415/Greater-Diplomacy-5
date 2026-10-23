@@ -76,6 +76,51 @@ The host still checks identity, session, turn, duplicates, permissions, costs, a
 Real-time commands still use server validation and filtered snapshots.
 Migration does not grant permission to a client.
 
+UNIT METADATA
+-------------
+
+New unit libraries contain explicit identity and requirement metadata.
+Queries read this metadata without parsing the unit identifier.
+legacy_unit_metadata adapts older libraries that omit metadata.
+Explicit metadata takes priority. Invalid explicit fields produce errors that identify the unit and field.
+Unknown valid metadata fields remain intact.
+get_unit_unlock_requirement retains its older three-field result as a compatibility adapter.
+Runtime unlock checks use get_unit_requirements for explicit compound requirements.
+Existing unit identifiers, instance fields, transport forms, and stat-refresh rules remain unchanged.
+See documentation/general_info.txt for metadata ownership and cache invalidation.
+
+DIPLOMATIC RECORD IDENTITIES
+---------------------------
+
+diplomacy_schema_version identifies the additive request-reference format.
+Missing versions use the older-input adapter. Unsupported versions produce an explicit compatibility error.
+Requests remain in each country's pending_diplomacy channel.
+Responses remain in diplo_responses. They do not gain request travel counters.
+
+Each new request receives request_id without consuming gameplay randomness.
+Responses refer to the request they answer.
+Older requests receive reproducible identities from their existing content and country pair.
+Repeat migration preserves identity, timing, escrow, and unknown fields.
+Older bare actions retain their existing delayed interpretation.
+Older ACCEPT_ and REJECT_ entries move through the existing response-channel adapter.
+An unmatched older response retains its explicit legacy_unmatched marker.
+Current network input cannot use that marker to establish authority.
+
+Ratification rounds use treaty_id. Member answers refer to their current round.
+Older active rounds receive reproducible identities. Human waiting periods and immediate AI answers remain unchanged.
+Saves, history, tournament files, and real-time snapshots retain these fields in their existing country-owned channels.
+Private real-time channels remain filtered before transmission.
+
+New tournament moves include production_schema_version.
+Their new queue entries use shared legality, cost, and aggregate budget checks.
+Existing paid entries retain progress. Numeric timing and refund differences retain host review.
+Older moves retain the existing partial-state and administrative-review adapter.
+Authentication, session checks, turn checks, and duplicate checks apply before either adapter changes host state.
+
+Current diplomacy commands validate response references against host-owned requests.
+Supported older commands bind omitted references through the explicit older-input adapter.
+A client-supplied identity never proves ownership or permission.
+
 ADDING A MIGRATION
 ------------------
 

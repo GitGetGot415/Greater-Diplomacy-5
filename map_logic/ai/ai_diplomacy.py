@@ -1,3 +1,5 @@
+from data.state_access import world_for, session_for
+from map_logic.diplomacy import diplomacy_lifecycle as lifecycle
 import random
 import time
 from collections import namedtuple
@@ -22,10 +24,11 @@ def _longest_waiting_first(map_screen, jobs):
     The stamp lives in nation_data, so it is saved and restored with everything
     else, and a nation that has never been consulted sorts first.
     """
-    turn = queries.get_total_turns(map_screen.time_manager)
+    world_state = world_for(map_screen)
+    turn = queries.get_total_turns(world_state.time_manager)
 
     def waited(choice):
-        stamp = map_screen.nation_data.get(choice["nation"], {}).get("llm_last_turn")
+        stamp = world_state.nation_data.get(choice["nation"], {}).get("llm_last_turn")
         return (0 if stamp is None else 1, stamp or 0, choice["nation"])
 
     ordered = sorted(jobs, key=waited)
@@ -47,12 +50,14 @@ def process_proactive_llm_tasks(map_screen):
     with nothing to choose between is not asked at all, which on a large map is
     most of them.
     """
-    pending_choices = getattr(map_screen, "proactive_choices", None) or []
-    map_screen.proactive_llm_tasks = []
+    world_state = world_for(map_screen)
+    session_state = session_for(map_screen)
+    pending_choices = getattr(session_for(map_screen), "proactive_choices", None) or []
+    session_state.proactive_llm_tasks = []
 
     if not pending_choices:
-        map_screen.proactive_llm_tasks_total = 0
-        map_screen.proactive_llm_tasks_completed = 0
+        session_state.proactive_llm_tasks_total = 0
+        session_state.proactive_llm_tasks_completed = 0
         return
 
     world = ai_world.for_screen(map_screen)
@@ -72,21 +77,21 @@ def process_proactive_llm_tasks(map_screen):
     jobs = [choice for choice in pending_choices if consulted(choice)]
     jobs = _longest_waiting_first(map_screen, jobs)
 
-    map_screen.proactive_llm_tasks_total = len(jobs)
-    map_screen.proactive_llm_tasks_completed = 0
-    map_screen.loading_status_text = f"Directing AI Nations (0/{len(jobs)})..."
+    session_state.proactive_llm_tasks_total = len(jobs)
+    session_state.proactive_llm_tasks_completed = 0
+    session_state.loading_status_text = f"Directing AI Nations (0/{len(jobs)})..."
 
     my_turn_id = ai_handler.CURRENT_TURN_ID
-    active_nations = set(queries.get_living_nations(map_screen.map_data))
+    active_nations = set(queries.get_living_nations(world_state.map_data))
 
     def call(choice):
         nation = choice["nation"]
         note = (f"Your temperament: "
-                f"{ai_personality.describe(map_screen.nation_data, nation, map_screen.scenario_settings)}.\n")
+                f"{ai_personality.describe(world_state.nation_data, nation, world_state.scenario_settings)}.\n")
         system, user = ai_director.build_prompt(
             world, nation, choice["candidates"], c.AI_MAX_ACTIONS_PER_TURN, note)
         context = ai_evaluation.get_world_context(
-            map_screen.nation_data, active_nations, nation)
+            world_state.nation_data, active_nations, nation)
         return ai_handler._run_provider(mode, system, f"{context}\n{user}",
                                         my_turn_id, None, raw=True)
 
@@ -95,12 +100,12 @@ def process_proactive_llm_tasks(map_screen):
         # and had its turn at the model, so it goes to the back of the queue
         # either way. Stamping only on success would let a nation whose
         # provider keeps erroring monopolise the front of the line.
-        map_screen.nation_data.setdefault(choice["nation"], {})["llm_last_turn"] = choice["_turn"]
+        world_state.nation_data.setdefault(choice["nation"], {})["llm_last_turn"] = choice["_turn"]
         if not reply or reply.get("error"):
             return
         chosen, messages = ai_director.parse(reply, choice["candidates"],
                                              c.AI_MAX_ACTIONS_PER_TURN,
-                                             choice["nation"], map_screen.nation_data)
+                                             choice["nation"], world_state.nation_data)
         choice["chosen"] = chosen
         choice["messages"] = messages
 
@@ -115,7 +120,7 @@ def process_proactive_llm_tasks(map_screen):
         outcome = ai_llm_runner.run_llm_batch(
             jobs, call, record, record_fallback,
             on_progress=count,
-            should_abort=lambda: map_screen.force_skip_llm,
+            should_abort=lambda: session_state.force_skip_llm,
             max_workers=queries.get_ai_threads(),
             deadline=ai_llm_runner.turn_deadline(map_screen, c.AI_BUDGET_SHARE_DIRECTOR))
         ai_llm_runner.report_unserved(map_screen, outcome, "Directing AI nations")
@@ -124,7 +129,7 @@ def process_proactive_llm_tasks(map_screen):
         _execute_candidates(map_screen, choice["nation"], choice["pending"],
                             choice["chosen"], choice.get("messages"))
 
-    map_screen.proactive_choices = []
+    session_state.proactive_choices = []
 
 def _complete_exchanges(history):
     """The part of a cut-short summit that reads as a meeting.
@@ -145,12 +150,14 @@ def process_summits(map_screen):
     latency. Costs nothing at all unless both sides of a pair are model-driven,
     which in practice means MAJOR or ABSOLUTE.
     """
+    world_state = world_for(map_screen)
+    session_state = session_for(map_screen)
     if not ai_negotiation.enabled() or ai_handler.get_ai_mode() == "OFF":
         return
 
     world = ai_world.for_screen(map_screen)
-    total_turns = queries.get_total_turns(map_screen.time_manager)
-    active_nations = set(queries.get_living_nations(map_screen.map_data))
+    total_turns = queries.get_total_turns(world_state.time_manager)
+    active_nations = set(queries.get_living_nations(world_state.map_data))
 
     def model_driven(nation):
         return ai_evaluation.llm_enabled_for(nation, world) is True
@@ -164,16 +171,16 @@ def process_summits(map_screen):
     # keys the Force Skip button off these counters and this phase used to set
     # none of them -- leaving the first model work of the turn with nothing on
     # screen to stop it.
-    map_screen.summits_total = len(pairs)
-    map_screen.summits_completed = 0
-    map_screen.loading_status_text = f"Holding Summits (0/{len(pairs)})..."
+    session_state.summits_total = len(pairs)
+    session_state.summits_completed = 0
+    session_state.loading_status_text = f"Holding Summits (0/{len(pairs)})..."
     my_turn_id = ai_handler.CURRENT_TURN_ID
     mode = ai_handler.get_ai_mode()
-    settings = map_screen.scenario_settings
+    settings = world_state.scenario_settings
 
     def say(speaker, listener, system, history):
         context = ai_evaluation.get_world_context(
-            map_screen.nation_data, active_nations, speaker, listener)
+            world_state.nation_data, active_nations, speaker, listener)
         transcript = "\n".join(history) if history else "(nothing said yet)"
         reply = ai_handler._run_provider(
             mode, system, f"{context}\nSo far:\n{transcript}\n\nSpeak.",
@@ -253,7 +260,7 @@ def process_summits(map_screen):
     outcome = ai_llm_runner.run_llm_batch(
         pairs, call, record, record_fallback,
         on_progress=count,
-        should_abort=lambda: map_screen.force_skip_llm,
+        should_abort=lambda: session_state.force_skip_llm,
         max_workers=queries.get_ai_threads(),
         deadline=deadline, min_calls=2)
     ai_llm_runner.report_unserved(map_screen, outcome, "Holding summits")
@@ -261,7 +268,7 @@ def process_summits(map_screen):
     for pair in pairs:
         if not pair["transcript"]:
             continue
-        ai_negotiation.record_summit(map_screen.nation_data, pair["a"], pair["b"], total_turns)
+        ai_negotiation.record_summit(world_state.nation_data, pair["a"], pair["b"], total_turns)
         agreed = ai_negotiation.apply_terms(
             map_screen, pair["a"], pair["b"], pair["terms"], total_turns)
         _publish_summit(map_screen, pair, agreed)
@@ -277,6 +284,7 @@ def _publish_summit(map_screen, pair, agreed):
     directly, because a summit a player never learns about may as well not have
     happened.
     """
+    world_state = world_for(map_screen)
     a, b = pair["a"], pair["b"]
     for line in pair["transcript"]:
         speaker, _, said = line.partition(": ")
@@ -288,19 +296,19 @@ def _publish_summit(map_screen, pair, agreed):
     if agreed:
         summary = ai_negotiation.describe_terms(agreed)
         diplomacy_events.log_global_event(
-            map_screen.nation_data, f"SUMMIT: {a} and {b} agreed {summary}.")
+            world_state.nation_data, f"SUMMIT: {a} and {b} agreed {summary}.")
         headline = f"Our attaches report that {a} and {b} met in private and agreed {summary}."
     else:
         diplomacy_events.log_global_event(
-            map_screen.nation_data, f"SUMMIT: {a} and {b} met, and agreed nothing.")
+            world_state.nation_data, f"SUMMIT: {a} and {b} met, and agreed nothing.")
         headline = f"Our attaches report that {a} and {b} met in private, but parted without agreement."
 
     world = ai_world.for_screen(map_screen)
-    for human in getattr(map_screen, "active_players", ()):
+    for human in getattr(session_for(map_screen), "active_players", ()):
         if human in (a, b):
             continue
         neighbours = world.neighbors.get(human, ())
-        shares_bloc = any(queries.are_in_same_faction(human, side, map_screen.nation_data)
+        shares_bloc = any(queries.are_in_same_faction(human, side, world_state.nation_data)
                           for side in (a, b))
         if a in neighbours or b in neighbours or shares_bloc:
             diplomacy_messages.send_message(map_screen, "Foreign Ministry", human, headline, "TEXT")
@@ -388,12 +396,13 @@ def _queue_proactive_proposal(map_screen, pending, ai_name, target, action,
     job -- and every difference between them that actually matters is a column
     of PROACTIVE_PROPOSALS.
     """
+    world_state = world_for(map_screen)
     spec = PROACTIVE_PROPOSALS[action]
     # Who it is being said to decides how it is said: a nation that knows it is
     # outmatched declares war differently from one that knows it is not.
     fallback = ai_prompts.resolve(spec.fallback_key, sender=ai_name, target=target,
-                                  nation_data=map_screen.nation_data,
-                                  map_data=map_screen.map_data,
+                                  nation_data=world_state.nation_data,
+                                  map_data=world_state.map_data,
                                   default=spec.fallback)
 
     # What the leader actually says. For every action but one this is also what
@@ -419,10 +428,10 @@ def _queue_proactive_proposal(map_screen, pending, ai_name, target, action,
     }
     if parameters:
         entry["parameters"] = parameters
-    pending[target] = entry
+    lifecycle.put_request_in_channel(pending, target, **entry)
 
     if spec.cooldown:
-        queries.set_ai_diplo_cooldown(ai_name, target, action, map_screen.nation_data)
+        queries.set_ai_diplo_cooldown(ai_name, target, action, world_state.nation_data)
 
 
 def _execute_candidates(map_screen, ai_name, pending, candidates, messages=None):
@@ -458,6 +467,7 @@ def _decrement_diplo_cooldowns(data):
 def _auto_revoke_war_based_access(map_screen, ai_name, data, my_enemies):
     """Section 0.5: access granted purely because we shared an enemy lapses
     once that shared enemy is no longer common to both of us (peace, ceasefire, etc)."""
+    world_state = world_for(map_screen)
     access_reasons = data.get("military_access_reasons", {})
     if not access_reasons:
         return
@@ -466,7 +476,7 @@ def _auto_revoke_war_based_access(map_screen, ai_name, data, my_enemies):
     for grantee in list(access_reasons.keys()):
         if access_reasons[grantee] != "war":
             continue
-        grantee_enemies = set(queries.get_enemies(grantee, map_screen.nation_data))
+        grantee_enemies = set(queries.get_enemies(grantee, world_state.nation_data))
         if set(my_enemies) & grantee_enemies:
             continue  # still fighting a common enemy, access stands
 
@@ -474,7 +484,7 @@ def _auto_revoke_war_based_access(map_screen, ai_name, data, my_enemies):
             my_access.remove(grantee)
         del access_reasons[grantee]
 
-        diplomacy_events.log_global_event(map_screen.nation_data, f"{ai_name} revoked {grantee}'s military access as their shared war has ended.")
+        diplomacy_events.log_global_event(world_state.nation_data, f"{ai_name} revoked {grantee}'s military access as their shared war has ended.")
         diplomacy_messages.send_message(map_screen, ai_name, grantee, "Our common war has ended; your military access through our territory has been revoked.", "DIPLOMACY")
 
 
@@ -504,10 +514,11 @@ def _white_peace_terms(map_screen, ai_name, enemy):
     treaty_effects, finding nothing in the parameters either, executed the
     "peace treaty" as a white peace that transferred nothing.
     """
+    world_state = world_for(map_screen)
     from map_logic.diplomacy import deal as deal_mod
     from map_logic.diplomacy import peace_scope
 
-    mine, theirs = peace_scope.deal_sides(ai_name, enemy, map_screen.nation_data)
+    mine, theirs = peace_scope.deal_sides(ai_name, enemy, world_state.nation_data)
     return _with_the_price_of_walking_out(
         map_screen, ai_name, enemy,
         deal_mod.new(deal_mod.KIND_PEACE, mine, theirs, [deal_mod.white_peace()]))
@@ -527,10 +538,11 @@ def _with_the_price_of_walking_out(map_screen, ai_name, enemy, deal):
     Hungary, Romania, Bulgaria and Finland each bought their way out of the war
     with the Allies, and the Axis was empty by the morning.
     """
+    world_state = world_for(map_screen)
     from map_logic.diplomacy import treaty_effects
 
     return treaty_effects.with_separate_peace_cost(deal, ai_name, enemy,
-                                                  map_screen.nation_data)
+                                                  world_state.nation_data)
 
 
 def _victors_terms(map_screen, ai_name, enemy, leverage):
@@ -555,11 +567,12 @@ def _victors_terms(map_screen, ai_name, enemy, leverage):
     would only be refused for. A side that is genuinely losing scales to nothing
     and offers the status quo, which is what suing for peace is supposed to be.
     """
+    world_state = world_for(map_screen)
     from map_logic.diplomacy import deal as deal_mod
     from map_logic.diplomacy import peace_scope, war_score
 
-    mine, theirs = peace_scope.deal_sides(ai_name, enemy, map_screen.nation_data)
-    prewar = war_score.prewar_index(map_screen.nation_data)
+    mine, theirs = peace_scope.deal_sides(ai_name, enemy, world_state.nation_data)
+    prewar = war_score.prewar_index(world_state.nation_data)
     ours, foes = set(mine), set(theirs)
 
     # Every province considered here is one we are standing on, so the reach
@@ -568,7 +581,7 @@ def _victors_terms(map_screen, ai_name, enemy, leverage):
     # AI is held to that rule at execution like everybody else; it simply has no
     # way of proposing something that breaks it.
     holdings = {}
-    for prov in map_screen.map_data.values():
+    for prov in world_state.map_data.values():
         holder = prov.get("owner")
         if holder not in ours:
             continue
@@ -616,11 +629,12 @@ def _seek_ceasefire_if_unreachable(bag, map_screen, ai_name, my_enemies, active_
     a reason to give back ground the bloc has already taken, and -- see the
     membership check below -- it is not a reason to walk out of the bloc either.
     """
+    world_state = world_for(map_screen)
     from map_logic.diplomacy import peace_scope, war_score
 
     for enemy in my_enemies:
         if enemy not in active_nations: continue
-        if not _may_settle(map_screen.nation_data, ai_name, enemy): continue
+        if not _may_settle(world_state.nation_data, ai_name, enemy): continue
         if not world.reachable(ai_name, enemy):
             # A member cannot settle without leaving its faction, and cannot
             # settle with one enemy without settling with that enemy's whole
@@ -630,10 +644,10 @@ def _seek_ceasefire_if_unreachable(bag, map_screen, ai_name, my_enemies, active_
             # leading nobody. Unreachability is the bloc leader's argument to
             # make; a member has to actually want out, which is the section
             # below.
-            role = peace_scope.negotiation_role(ai_name, enemy, map_screen.nation_data)
+            role = peace_scope.negotiation_role(ai_name, enemy, world_state.nation_data)
             if peace_scope.costs_membership(role):
                 continue
-            if ai_candidates.not_on_cooldown(map_screen.nation_data, ai_name, enemy, "CEASEFIRE"):
+            if ai_candidates.not_on_cooldown(world_state.nation_data, ai_name, enemy, "CEASEFIRE"):
                 leverage = war_score.between(map_screen, ai_name, enemy, world)["mine"]
                 bag.add(ai_candidates.make(
                     "CEASEFIRE", enemy, c.AI_SCORE_CEASEFIRE_UNREACHABLE,
@@ -649,23 +663,24 @@ def _offer_peace_when_losing(bag, map_screen, ai_name, my_enemies, active_nation
     so a nation being slowly destroyed by a neighbour it shared a border with
     had no way to ask for terms and simply fought until it was gone.
     """
+    world_state = world_for(map_screen)
     from map_logic.diplomacy import deal as deal_mod
     from map_logic.diplomacy import war_score
 
     for enemy in my_enemies:
         if enemy not in active_nations: continue
-        if not _may_settle(map_screen.nation_data, ai_name, enemy): continue
-        if not ai_candidates.not_on_cooldown(map_screen.nation_data, ai_name, enemy, "PEACE_TREATY"):
+        if not _may_settle(world_state.nation_data, ai_name, enemy): continue
+        if not ai_candidates.not_on_cooldown(world_state.nation_data, ai_name, enemy, "PEACE_TREATY"):
             continue
 
         # The receiving side has refused to talk for the first couple of turns
         # of a war since MIN_TURNS_FOR_CEASEFIRE was introduced; the offering
         # side never knew, and spent those turns proposing into a wall.
-        duration = map_screen.nation_data.get(ai_name, {}).get("war_durations", {}).get(enemy, 0)
+        duration = world_state.nation_data.get(ai_name, {}).get("war_durations", {}).get(enemy, 0)
         if duration < c.MIN_TURNS_FOR_CEASEFIRE:
             continue
 
-        appetite = ai_opinion.peace_appetite(world, ai_name, enemy, map_screen.scenario_settings)
+        appetite = ai_opinion.peace_appetite(world, ai_name, enemy, world_state.scenario_settings)
         if appetite < c.AI_PEACE_OFFER_THRESHOLD:
             continue
 
@@ -679,8 +694,8 @@ def _offer_peace_when_losing(bag, map_screen, ai_name, my_enemies, active_nation
         # threshold: the price is added to the one that already exists, in the
         # same currency, so a small nation feels the loss of its allies more
         # than a large one does and neither of them pays for it out of nowhere.
-        price = deal_mod.demand_fraction(terms, ai_name, map_screen.map_data,
-                                         map_screen.nation_data, whole_side=False)
+        price = deal_mod.demand_fraction(terms, ai_name, world_state.map_data,
+                                         world_state.nation_data, whole_side=False)
         if appetite < c.AI_PEACE_OFFER_THRESHOLD + price:
             continue
 
@@ -693,6 +708,7 @@ def _offer_peace_when_losing(bag, map_screen, ai_name, my_enemies, active_nation
 def _seek_defensive_faction(bag, map_screen, ai_name, pending, my_enemies, active_nations, world):
     """Section 1.5: an unaligned nation at war looks for a faction to join, or
     else another unaligned co-belligerent to found one with."""
+    world_state = world_for(map_screen)
     # Prevent sending multiple faction requests
     has_pending_faction_req = False
     for target_nation, info in pending.items():
@@ -706,7 +722,7 @@ def _seek_defensive_faction(bag, map_screen, ai_name, pending, my_enemies, activ
     potential_leaders = []
     for enemy in my_enemies:
         # Find nations also at war with our enemy
-        enemy_wars = queries.get_enemies(enemy, map_screen.nation_data)
+        enemy_wars = queries.get_enemies(enemy, world_state.nation_data)
         for mutual_combatant in enemy_wars:
             if mutual_combatant == ai_name or mutual_combatant not in active_nations:
                 continue
@@ -719,9 +735,9 @@ def _seek_defensive_faction(bag, map_screen, ai_name, pending, my_enemies, activ
             if mutual_combatant in my_enemies:
                 continue
             # If they have a faction, we want to talk to the leader
-            fac = map_screen.nation_data.get(mutual_combatant, {}).get("faction", "")
+            fac = world_state.nation_data.get(mutual_combatant, {}).get("faction", "")
             if fac:
-                fac_leader = queries.get_faction_leader(fac, map_screen.nation_data)
+                fac_leader = queries.get_faction_leader(fac, world_state.nation_data)
                 if (fac_leader and fac_leader not in potential_leaders
                         and fac_leader in active_nations
                         and fac_leader not in my_enemies):
@@ -732,52 +748,53 @@ def _seek_defensive_faction(bag, map_screen, ai_name, pending, my_enemies, activ
         # whichever happened to be found first.
         target_leader = max(potential_leaders,
                             key=lambda n: (ai_opinion.alliance_appetite(
-                                world, ai_name, n, map_screen.scenario_settings), n))
+                                world, ai_name, n, world_state.scenario_settings), n))
         # A puppet has no alignment to seek -- it holds whatever its master
         # holds. Founding one is a different act and stays available:
         # finalize_create_faction redirects to the master and makes it the
         # leader, so the result is a bloc the overlord is actually in, not a
         # subject aligned somewhere its master is not.
-        if (queries.can_choose_own_faction(ai_name, map_screen.nation_data)
-                and ai_candidates.not_on_cooldown(map_screen.nation_data, ai_name,
+        if (queries.can_choose_own_faction(ai_name, world_state.nation_data)
+                and ai_candidates.not_on_cooldown(world_state.nation_data, ai_name,
                                                   target_leader, "JOIN_FACTION_REQ")):
             bag.add(ai_candidates.make(
                 "JOIN_FACTION_REQ", target_leader,
                 max(c.AI_SCORE_DEFENSIVE_FACTION,
                     ai_opinion.alliance_appetite(world, ai_name, target_leader,
-                                                 map_screen.scenario_settings)),
+                                                 world_state.scenario_settings)),
                 "we are at war and alone, and they already fight our enemies"))
         return
 
     # Find nations also at war with our enemy who aren't in a faction to form a new one with
     potential_partners = []
     for enemy in my_enemies:
-        enemy_wars = queries.get_enemies(enemy, map_screen.nation_data)
+        enemy_wars = queries.get_enemies(enemy, world_state.nation_data)
         for mutual_combatant in enemy_wars:
             if mutual_combatant == ai_name or mutual_combatant not in active_nations:
                 continue
             if mutual_combatant in my_enemies:
                 continue
-            fac = map_screen.nation_data.get(mutual_combatant, {}).get("faction", "")
+            fac = world_state.nation_data.get(mutual_combatant, {}).get("faction", "")
             if not fac and mutual_combatant not in potential_partners:
                 potential_partners.append(mutual_combatant)
 
     if potential_partners:
         target_partner = max(potential_partners,
                              key=lambda n: (ai_opinion.alliance_appetite(
-                                 world, ai_name, n, map_screen.scenario_settings), n))
-        if ai_candidates.not_on_cooldown(map_screen.nation_data, ai_name, target_partner, "CREATE_FACTION"):
+                                 world, ai_name, n, world_state.scenario_settings), n))
+        if ai_candidates.not_on_cooldown(world_state.nation_data, ai_name, target_partner, "CREATE_FACTION"):
             bag.add(ai_candidates.make(
                 "CREATE_FACTION", target_partner,
                 max(c.AI_SCORE_DEFENSIVE_FACTION,
                     ai_opinion.alliance_appetite(world, ai_name, target_partner,
-                                                 map_screen.scenario_settings)),
+                                                 world_state.scenario_settings)),
                 "neither of us has allies and we fight the same enemy"))
 
 
 def _call_faction_to_arms(bag, map_screen, ai_name, my_faction, my_enemies, active_nations, world):
     """Section 2: asks a faction-mate to join a war of ours they aren't already in."""
-    faction_members = queries.get_faction_members(my_faction, map_screen.nation_data)
+    world_state = world_for(map_screen)
+    faction_members = queries.get_faction_members(my_faction, world_state.nation_data)
     for member in faction_members:
         if member == ai_name or member not in active_nations: continue
 
@@ -788,14 +805,14 @@ def _call_faction_to_arms(bag, map_screen, ai_name, my_faction, my_enemies, acti
         # failed it in join_faction_wars, so the call was made, answered, and
         # then quietly did nothing.
         unshared_wars = [e for e in war_calls.unshared_wars(ai_name, member,
-                                                            map_screen.nation_data)
+                                                            world_state.nation_data)
                          if e in active_nations]
 
         if unshared_wars:
-            if ai_candidates.not_on_cooldown(map_screen.nation_data, ai_name, member, "CALL_TO_ARMS"):
+            if ai_candidates.not_on_cooldown(world_state.nation_data, ai_name, member, "CALL_TO_ARMS"):
                 # More urgent the worse the war is going.
                 urgency = ai_opinion.peace_appetite(world, ai_name, unshared_wars[0],
-                                                    map_screen.scenario_settings)
+                                                    world_state.scenario_settings)
                 bag.add(ai_candidates.make(
                     "CALL_TO_ARMS", member,
                     c.AI_SCORE_CALL_TO_ARMS + (1.0 - c.AI_SCORE_CALL_TO_ARMS) * urgency,
@@ -807,18 +824,19 @@ def _request_access_from_co_belligerents(bag, map_screen, ai_name, my_enemies, a
     """Section 2.5: even nations in different factions ask each other for
     passage if they're both fighting the same enemy, so allied fronts can
     actually link up."""
+    world_state = world_for(map_screen)
     co_belligerents = []
     for enemy in my_enemies:
         if enemy not in active_nations: continue
-        for co in queries.get_enemies(enemy, map_screen.nation_data):
+        for co in queries.get_enemies(enemy, world_state.nation_data):
             if co == ai_name or co not in active_nations: continue
             if co in co_belligerents: continue
             if co in my_enemies: continue
-            if not queries.needs_military_access_request(ai_name, co, map_screen.nation_data): continue
+            if not queries.needs_military_access_request(ai_name, co, world_state.nation_data): continue
             co_belligerents.append(co)
 
     for co in co_belligerents:
-        if not ai_candidates.not_on_cooldown(map_screen.nation_data, ai_name, co, "REQ_MILITARY_ACCESS"):
+        if not ai_candidates.not_on_cooldown(world_state.nation_data, ai_name, co, "REQ_MILITARY_ACCESS"):
             continue
         bag.add(ai_candidates.make(
             "REQ_MILITARY_ACCESS", co, c.AI_SCORE_MILITARY_ACCESS,
@@ -828,9 +846,10 @@ def _request_access_from_co_belligerents(bag, map_screen, ai_name, my_enemies, a
 def _join_faction_wars_proactively(bag, map_screen, ai_name, my_faction, my_enemies,
                                    active_nations, world):
     """Section 3: offers to join a faction-mate's war we aren't already in."""
-    faction_members = queries.get_faction_members(my_faction, map_screen.nation_data)
-    loyalty = ai_personality.trait(map_screen.nation_data, ai_name, "loyalty",
-                                   map_screen.scenario_settings)
+    world_state = world_for(map_screen)
+    faction_members = queries.get_faction_members(my_faction, world_state.nation_data)
+    loyalty = ai_personality.trait(world_state.nation_data, ai_name, "loyalty",
+                                   world_state.scenario_settings)
     for member in faction_members:
         if member == ai_name:
             continue
@@ -839,12 +858,12 @@ def _join_faction_wars_proactively(bag, map_screen, ai_name, my_faction, my_enem
         # _call_faction_to_arms. Here it is the member who is fighting and we who
         # would be joining, so the arguments swap.
         unshared_wars = [e for e in war_calls.unshared_wars(member, ai_name,
-                                                            map_screen.nation_data)
+                                                            world_state.nation_data)
                          if e in active_nations]
 
         if unshared_wars:
             target_enemy = unshared_wars[0]
-            if ai_candidates.not_on_cooldown(map_screen.nation_data, ai_name, member, "JOIN_WARS"):
+            if ai_candidates.not_on_cooldown(world_state.nation_data, ai_name, member, "JOIN_WARS"):
                 # A faithless nation lets its allies fight alone; a loyal one
                 # turns up. Nothing used to distinguish them.
                 bag.add(ai_candidates.make(
@@ -856,11 +875,12 @@ def _join_faction_wars_proactively(bag, map_screen, ai_name, my_faction, my_enem
 def _declare_war_for_cores_and_claims(bag, map_screen, ai_name, my_enemies, my_master, my_type, is_already_at_war, active_nations, world):
     """Section 4: declares war on a nearby nation holding our cores/claims
     once we think we can win, or fabricates a claim on them first if we lack a wargoal."""
+    world_state = world_for(map_screen)
     if my_master and my_type == c.PUPPET_TYPE_INTEGRATED:
         return
 
-    current_turn = queries.get_total_turns(map_screen.time_manager)
-    turns_to_wait = int(map_screen.scenario_settings.get("turns_to_wait_before_war", c.TURNS_TO_WAIT_BEFORE_WAR))
+    current_turn = queries.get_total_turns(world_state.time_manager)
+    turns_to_wait = int(world_state.scenario_settings.get("turns_to_wait_before_war", c.TURNS_TO_WAIT_BEFORE_WAR))
     if current_turn < turns_to_wait:
         return
 
@@ -879,12 +899,12 @@ def _declare_war_for_cores_and_claims(bag, map_screen, ai_name, my_enemies, my_m
     for target in valid_border_targets:
         if target not in active_nations: continue
         if target in my_enemies: continue
-        if queries.are_in_same_faction(ai_name, target, map_screen.nation_data): continue
-        if queries.has_active_truce(ai_name, target, map_screen.nation_data): continue
+        if queries.are_in_same_faction(ai_name, target, world_state.nation_data): continue
+        if queries.has_active_truce(ai_name, target, world_state.nation_data): continue
 
         # --- NEW: Skip Integrated Puppets ---
-        t_master = map_screen.nation_data.get(target, {}).get("master", "")
-        t_type = map_screen.nation_data.get(target, {}).get("puppet_type", "")
+        t_master = world_state.nation_data.get(target, {}).get("master", "")
+        t_type = world_state.nation_data.get(target, {}).get("puppet_type", "")
         if t_master and t_type == c.PUPPET_TYPE_INTEGRATED:
             continue
 
@@ -901,15 +921,15 @@ def _declare_war_for_cores_and_claims(bag, map_screen, ai_name, my_enemies, my_m
         # nation we are on good terms with, a promise we made, and the two wars
         # we are already losing all count now -- and an aggressive nation will
         # gamble on odds a cautious one turns down.
-        desire = ai_opinion.war_desire(world, ai_name, target, map_screen.scenario_settings)
+        desire = ai_opinion.war_desire(world, ai_name, target, world_state.scenario_settings)
         if desire >= c.AI_WAR_DESIRE_THRESHOLD:
 
             # Random chance to actually declare war
-            war_chance = float(map_screen.scenario_settings.get("ai_war_declaration_chance", c.AI_WAR_DECLARATION_CHANCE))
+            war_chance = float(world_state.scenario_settings.get("ai_war_declaration_chance", c.AI_WAR_DECLARATION_CHANCE))
             if random.random() <= war_chance:
-                has_wargoal = queries.has_wargoal(ai_name, target, map_screen.nation_data, map_screen.map_data)
+                has_wargoal = queries.has_wargoal(ai_name, target, world_state.nation_data, world_state.map_data)
                 if has_wargoal:
-                    if ai_candidates.not_on_cooldown(map_screen.nation_data, ai_name, target, "WAR_DECLARATION"):
+                    if ai_candidates.not_on_cooldown(world_state.nation_data, ai_name, target, "WAR_DECLARATION"):
                         bag.add(ai_candidates.make(
                             "WAR_DECLARATION", target, desire,
                             f"{target} holds territory that is ours by right and we have the strength to take it",
@@ -918,20 +938,20 @@ def _declare_war_for_cores_and_claims(bag, map_screen, ai_name, my_enemies, my_m
                     # Make a claim! (assuming no war is happening). Not a
                     # proposal -- it goes straight into our own claim queue --
                     # so it is done here rather than offered as a candidate.
-                    if not is_already_at_war and not queries.is_ai_diplo_on_cooldown(ai_name, target, "MAKE_CLAIM", map_screen.nation_data):
+                    if not is_already_at_war and not queries.is_ai_diplo_on_cooldown(ai_name, target, "MAKE_CLAIM", world_state.nation_data):
                         core_ids = []
-                        for prov in map_screen.map_data.values():
+                        for prov in world_state.map_data.values():
                             if prov.get("owner") == target and ai_name in prov.get("cores", []):
                                 core_ids.append(prov["id"])
 
                         if core_ids:
-                            queue = map_screen.nation_data[ai_name].setdefault("claim_queue", [])
-                            claims = map_screen.nation_data[ai_name].setdefault("claims", [])
+                            queue = world_state.nation_data[ai_name].setdefault("claim_queue", [])
+                            claims = world_state.nation_data[ai_name].setdefault("claims", [])
                             for cid in core_ids:
                                 if cid not in claims and not any(q["prov_id"] == cid for q in queue):
                                     queue.append({"prov_id": cid, "turns_left": c.CLAIM_TURN_CORE})
 
-                            queries.set_ai_diplo_cooldown(ai_name, target, "MAKE_CLAIM", map_screen.nation_data, duration=c.AI_CLAIM_COOLDOWN)
+                            queries.set_ai_diplo_cooldown(ai_name, target, "MAKE_CLAIM", world_state.nation_data, duration=c.AI_CLAIM_COOLDOWN)
                             break
 
 
@@ -948,13 +968,14 @@ def _drain_llm_requests(bag, map_screen, ai_name, data, my_enemies, active_natio
     because the leader wanting it is real information -- an illegal one is
     dropped, with a rumour in the log so the pressure is still visible.
     """
+    world_state = world_for(map_screen)
     requests = data.get("ai_requests") or []
     if not requests:
         return
     data["ai_requests"] = []
 
-    current_turn = queries.get_total_turns(map_screen.time_manager)
-    turns_to_wait = int(map_screen.scenario_settings.get(
+    current_turn = queries.get_total_turns(world_state.time_manager)
+    turns_to_wait = int(world_state.scenario_settings.get(
         "turns_to_wait_before_war", c.TURNS_TO_WAIT_BEFORE_WAR))
 
     for request in requests:
@@ -968,18 +989,18 @@ def _drain_llm_requests(bag, map_screen, ai_name, data, my_enemies, active_natio
         legal = (current_turn >= turns_to_wait
                  and target not in my_enemies
                  and target in world.war_targets(ai_name)
-                 and not queries.are_in_same_faction(ai_name, target, map_screen.nation_data)
-                 and not queries.has_active_truce(ai_name, target, map_screen.nation_data)
-                 and queries.has_wargoal(ai_name, target, map_screen.nation_data, map_screen.map_data)
-                 and ai_candidates.not_on_cooldown(map_screen.nation_data, ai_name, target,
+                 and not queries.are_in_same_faction(ai_name, target, world_state.nation_data)
+                 and not queries.has_active_truce(ai_name, target, world_state.nation_data)
+                 and queries.has_wargoal(ai_name, target, world_state.nation_data, world_state.map_data)
+                 and ai_candidates.not_on_cooldown(world_state.nation_data, ai_name, target,
                                                    "WAR_DECLARATION"))
         if not legal:
             diplomacy_events.log_global_event(
-                map_screen.nation_data,
+                world_state.nation_data,
                 f"RUMOR: {ai_name} weighed war with {target} and thought better of it.")
             continue
 
-        desire = ai_opinion.war_desire(world, ai_name, target, map_screen.scenario_settings)
+        desire = ai_opinion.war_desire(world, ai_name, target, world_state.scenario_settings)
         bag.add(ai_candidates.make(
             "WAR_DECLARATION", target, min(1.0, desire + c.AI_LLM_REQUEST_BONUS),
             f"our own government has pressed for this war since {request.get('reason') or 'last season'}",
@@ -993,25 +1014,26 @@ def _invite_friends_to_faction(bag, map_screen, ai_name, data, active_nations, w
     accept, but no AI ever sent one -- factions only ever grew by outsiders
     asking to be let in, so a strong bloc never courted anyone.
     """
-    if not queries.can_invite_to_faction(ai_name, map_screen.nation_data) or getattr(c, "DISABLE_FACTIONS", False):
+    world_state = world_for(map_screen)
+    if not queries.can_invite_to_faction(ai_name, world_state.nation_data) or getattr(c, "DISABLE_FACTIONS", False):
         return
 
     for other in sorted(active_nations):
         if other == ai_name:
             continue
-        other_data = map_screen.nation_data.get(other, {})
+        other_data = world_state.nation_data.get(other, {})
         if other_data.get("faction"):
             continue
         # Courting somebody else's subject is courting their overlord's answer.
-        if not queries.can_choose_own_faction(other, map_screen.nation_data):
+        if not queries.can_choose_own_faction(other, world_state.nation_data):
             continue
-        if queries.are_at_war(ai_name, other, map_screen.nation_data):
+        if queries.are_at_war(ai_name, other, world_state.nation_data):
             continue
-        if not ai_candidates.not_on_cooldown(map_screen.nation_data, ai_name, other, "FACTION_INVITE"):
+        if not ai_candidates.not_on_cooldown(world_state.nation_data, ai_name, other, "FACTION_INVITE"):
             continue
 
         appetite = ai_opinion.alliance_appetite(world, ai_name, other,
-                                                map_screen.scenario_settings)
+                                                world_state.scenario_settings)
         if appetite >= c.AI_ALLIANCE_DESIRE_THRESHOLD:
             bag.add(ai_candidates.make(
                 "FACTION_INVITE", other, appetite,
@@ -1025,21 +1047,22 @@ def _offer_trades(bag, map_screen, ai_name, active_nations, world):
     it gave away literally nothing -- so the entire trade system was inert
     between AI nations.
     """
+    world_state = world_for(map_screen)
     for other in sorted(world.neighbors.get(ai_name, ())):
         if other not in active_nations:
             continue
-        if queries.are_at_war(ai_name, other, map_screen.nation_data):
+        if queries.are_at_war(ai_name, other, world_state.nation_data):
             continue
         # Neutral is fine. Relations sit at exactly 0 for almost every pair on
         # a fresh map -- requiring better than that meant trade never happened
         # anywhere. Only active dislike rules it out.
         if world.relation(ai_name, other) < 0:
             continue
-        if not ai_candidates.not_on_cooldown(map_screen.nation_data, ai_name, other, "TRADE"):
+        if not ai_candidates.not_on_cooldown(world_state.nation_data, ai_name, other, "TRADE"):
             continue
 
         offer = ai_candidates.resource_offer(world, ai_name, other,
-                                             map_screen.scenario_settings)
+                                             world_state.scenario_settings)
         if not offer:
             continue
 
@@ -1058,12 +1081,13 @@ def _claim_faction_leadership(bag, map_screen, ai_name, world, scenario_settings
     content one does not, however heavy it has become, which is what keeps the
     strongest army in every bloc from mechanically ending up at its head.
     """
+    world_state = world_for(map_screen)
     if getattr(c, "DISABLE_FACTIONS", False):
         return
     if not faction_leadership.can_claim(map_screen, ai_name):
         return
 
-    person = ai_personality.get(map_screen.nation_data, ai_name, scenario_settings)
+    person = ai_personality.get(world_state.nation_data, ai_name, scenario_settings)
     if person.get("ambition", 0.5) < c.AI_CLAIM_LEADERSHIP_AMBITION:
         return
 
@@ -1075,13 +1099,14 @@ def _claim_faction_leadership(bag, map_screen, ai_name, world, scenario_settings
 def _fabricate_claims_during_war(map_screen, ai_name, data, my_enemies, active_nations):
     """Section 4.5: while at war and with no claim queued, picks one enemy
     province (preferring one bordering territory we already hold or claim) to fabricate a claim on."""
+    world_state = world_for(map_screen)
     claim_queue = data.get("claim_queue", [])
     if claim_queue:
         return
 
     my_claims = set(data.get("claims", []))
     owned_and_claimed = set(my_claims)
-    for prov in map_screen.map_data.values():
+    for prov in world_state.map_data.values():
         if prov.get("owner") == ai_name:
             owned_and_claimed.add(prov["id"])
 
@@ -1090,10 +1115,10 @@ def _fabricate_claims_during_war(map_screen, ai_name, data, my_enemies, active_n
 
     for enemy in my_enemies:
         if enemy not in active_nations: continue
-        if queries.is_ai_diplo_on_cooldown(ai_name, enemy, "FABRICATE_CLAIM", map_screen.nation_data):
+        if queries.is_ai_diplo_on_cooldown(ai_name, enemy, "FABRICATE_CLAIM", world_state.nation_data):
             continue
 
-        for prov in map_screen.map_data.values():
+        for prov in world_state.map_data.values():
             if prov.get("owner") == enemy and prov["id"] not in my_claims:
                 potential_targets_any.append((enemy, prov))
                 if any(n_id in owned_and_claimed for n_id in prov.get("neighbors", [])):
@@ -1108,14 +1133,15 @@ def _fabricate_claims_during_war(map_screen, ai_name, data, my_enemies, active_n
     if chosen_target:
         target_enemy, target_prov = chosen_target
         data.setdefault("claim_queue", []).append({"prov_id": target_prov["id"], "turns_left": c.CLAIM_TURN_NON_CORE})
-        queries.set_ai_diplo_cooldown(ai_name, target_enemy, "FABRICATE_CLAIM", map_screen.nation_data, duration=c.AI_CLAIM_COOLDOWN)
+        queries.set_ai_diplo_cooldown(ai_name, target_enemy, "FABRICATE_CLAIM", world_state.nation_data, duration=c.AI_CLAIM_COOLDOWN)
 
 
 def _fabricate_claims_on_weaker_neighbors(map_screen, ai_name, data, my_master, my_enemies, active_nations, world):
     """Section 5: while at peace, fabricates a claim on a weaker nearby
     neighbor we don't already have a wargoal or claim against."""
-    current_turn = queries.get_total_turns(map_screen.time_manager)
-    turns_to_wait = int(map_screen.scenario_settings.get("turns_to_wait_before_war", c.TURNS_TO_WAIT_BEFORE_WAR))
+    world_state = world_for(map_screen)
+    current_turn = queries.get_total_turns(world_state.time_manager)
+    turns_to_wait = int(world_state.scenario_settings.get("turns_to_wait_before_war", c.TURNS_TO_WAIT_BEFORE_WAR))
     if current_turn < turns_to_wait:
         return
 
@@ -1126,18 +1152,18 @@ def _fabricate_claims_on_weaker_neighbors(map_screen, ai_name, data, my_master, 
     for neighbor in my_neighbors:
         if neighbor not in active_nations: continue
         if neighbor in my_enemies: continue
-        if queries.are_in_same_faction(ai_name, neighbor, map_screen.nation_data): continue
-        if queries.has_active_truce(ai_name, neighbor, map_screen.nation_data): continue
+        if queries.are_in_same_faction(ai_name, neighbor, world_state.nation_data): continue
+        if queries.has_active_truce(ai_name, neighbor, world_state.nation_data): continue
 
         # Avoid attacking masters or puppets
-        n_master = map_screen.nation_data.get(neighbor, {}).get("master", "")
+        n_master = world_state.nation_data.get(neighbor, {}).get("master", "")
         if my_master and my_master == neighbor: continue
         if n_master and n_master == ai_name: continue
 
         # Check if we already have claims on them or an active wargoal
-        has_wg = queries.has_wargoal(ai_name, neighbor, map_screen.nation_data, map_screen.map_data)
+        has_wg = queries.has_wargoal(ai_name, neighbor, world_state.nation_data, world_state.map_data)
         claims = data.get("claims", [])
-        has_claims_on_them = any(map_screen.id_to_province.get(cid, {}).get("owner") == neighbor for cid in claims)
+        has_claims_on_them = any(world_state.id_to_province.get(cid, {}).get("owner") == neighbor for cid in claims)
 
         if not has_wg and not has_claims_on_them:
             # Fabricating a claim is how a war becomes legal later, so it wants
@@ -1146,11 +1172,11 @@ def _fabricate_claims_on_weaker_neighbors(map_screen, ai_name, data, my_master, 
             # terms with a weak neighbour now simply leaves them alone.
             if (world.is_weaker_neighbor(ai_name, neighbor)
                     and ai_opinion.war_desire(world, ai_name, neighbor,
-                                              map_screen.scenario_settings)
+                                              world_state.scenario_settings)
                     >= c.AI_CLAIM_DESIRE_THRESHOLD):
-                if not queries.is_ai_diplo_on_cooldown(ai_name, neighbor, "FABRICATE_CLAIM", map_screen.nation_data):
+                if not queries.is_ai_diplo_on_cooldown(ai_name, neighbor, "FABRICATE_CLAIM", world_state.nation_data):
 
-                    valid_targets = queries.get_valid_claim_targets(ai_name, neighbor, map_screen.map_data)
+                    valid_targets = queries.get_valid_claim_targets(ai_name, neighbor, world_state.map_data)
                     if neighbor not in world.neighbors[ai_name]:
                         coastal_ids = world.sea_targets.get(ai_name, {}).get(neighbor, set())
                         valid_targets = [p for p in valid_targets if p["id"] in coastal_ids]
@@ -1161,32 +1187,34 @@ def _fabricate_claims_on_weaker_neighbors(map_screen, ai_name, data, my_master, 
                         # Ensure it's not already in the queue
                         if not any(q["prov_id"] == target_prov["id"] for q in queue):
                             queue.append({"prov_id": target_prov["id"], "turns_left": c.CLAIM_TURN_NON_CORE})
-                            queries.set_ai_diplo_cooldown(ai_name, neighbor, "FABRICATE_CLAIM", map_screen.nation_data, duration=c.AI_CLAIM_COOLDOWN)
+                            queries.set_ai_diplo_cooldown(ai_name, neighbor, "FABRICATE_CLAIM", world_state.nation_data, duration=c.AI_CLAIM_COOLDOWN)
                             break  # Limit to queueing one claim per cycle
 
 
 def _run_basic_proactive_ai(map_screen):
-    active_nations = set(queries.get_living_nations(map_screen.map_data))
+    world_state = world_for(map_screen)
+    session_state = session_for(map_screen)
+    active_nations = set(queries.get_living_nations(world_state.map_data))
     ai_nations = queries.get_active_ai_nations(map_screen)
 
     # --- Trigger the UI Progress Bar ---
-    map_screen.proactive_tasks_total = len(ai_nations)
-    map_screen.proactive_tasks_completed = 0
-    map_screen.loading_status_text = "Evaluating AI Grand Strategy..."
+    session_state.proactive_tasks_total = len(ai_nations)
+    session_state.proactive_tasks_completed = 0
+    session_state.loading_status_text = "Evaluating AI Grand Strategy..."
 
     # Nothing below redraws the map, so every border, strength and relation
     # this pass asks about is the same for every nation in it. The snapshot
     # holds the reachability graph that used to be built here, plus the
     # per-pair answers each section below would otherwise sweep the map for.
     world = ai_world.for_screen(map_screen)
-    map_screen.proactive_choices = []
+    session_state.proactive_choices = []
 
     for ai_name in ai_nations:
         if ai_name not in active_nations:
-            map_screen.proactive_tasks_completed += 1
+            session_state.proactive_tasks_completed += 1
             continue
 
-        data = map_screen.nation_data[ai_name]
+        data = world_state.nation_data[ai_name]
         pending = data.setdefault("pending_diplomacy", {})
         my_faction = data.get("faction", "")
         my_enemies = data.get("at_war_with", [])
@@ -1200,15 +1228,15 @@ def _run_basic_proactive_ai(map_screen):
         # still has an army to arm and factories to run in a world with no
         # diplomacy in it. The player's own country is never in ai_nations, so
         # this needs no gate of its own.
-        ai_politics.decide(world, ai_name, map_screen.nation_data,
-                           getattr(map_screen, "scenario_settings", None))
+        ai_politics.decide(world, ai_name, world_state.nation_data,
+                           getattr(world_for(map_screen), "scenario_settings", None))
 
         # Battle Royale has no diplomacy to run, but the cooldown/access
         # upkeep above still applies to every nation -- this used to `return`
         # from inside the loop, which skipped that upkeep for every nation
         # after the first and left the loading bar stuck below its total.
         if c.BATTLE_ROYALE_MODE:
-            map_screen.proactive_tasks_completed += 1
+            session_state.proactive_tasks_completed += 1
             continue
 
         is_already_at_war = len(my_enemies) > 0
@@ -1248,14 +1276,14 @@ def _run_basic_proactive_ai(map_screen):
 
         if my_faction:
             _claim_faction_leadership(bag, map_screen, ai_name, world,
-                                      map_screen.scenario_settings)
+                                      world_state.scenario_settings)
 
         # Held rather than executed. The director pass runs next and gives each
         # nation's leader the chance to pick differently from its staff; without
         # a model, or after a Force Skip, `chosen` is what actually happens.
         ranked = bag.ranked()
         if ranked:
-            map_screen.proactive_choices.append({
+            session_state.proactive_choices.append({
                 "nation": ai_name,
                 "pending": pending,
                 "candidates": ranked,
@@ -1270,8 +1298,8 @@ def _run_basic_proactive_ai(map_screen):
             _fabricate_claims_on_weaker_neighbors(map_screen, ai_name, data, my_master, my_enemies, active_nations, world)
 
         # --- Update Progress Bar ---
-        map_screen.proactive_tasks_completed += 1
-        map_screen.loading_status_text = f"Evaluating AI Grand Strategy ({map_screen.proactive_tasks_completed}/{map_screen.proactive_tasks_total})..."
+        session_state.proactive_tasks_completed += 1
+        session_state.loading_status_text = f"Evaluating AI Grand Strategy ({session_state.proactive_tasks_completed}/{session_state.proactive_tasks_total})..."
 
 _SCRIPTED_RESPONSE_ACTIONS = {
     "Accept Military Attaché": ("SEND_MILITARY_ATTACHE", diplomacy_messages.RESPONSE_ACCEPT),
@@ -1342,19 +1370,21 @@ def _chain_condition_result(previous, current, chain):
 
 def process_scripted_events(map_screen, preview_request=None):
     """Processes scenario-specific scripted events for AI nations."""
-    if not queries.get_scenario_flag("use_scripted_events", c.DEFAULT_USE_SCRIPTED_EVENTS, map_screen.scenario_settings):
+    world_state = world_for(map_screen)
+    session_state = session_for(map_screen)
+    if not queries.get_scenario_flag("use_scripted_events", c.DEFAULT_USE_SCRIPTED_EVENTS, world_state.scenario_settings):
         return None
         
-    active_nations = set(queries.get_living_nations(map_screen.map_data))
-    human_players = map_screen.active_players
-    current_turn = queries.get_total_turns(map_screen.time_manager)
+    active_nations = set(queries.get_living_nations(world_state.map_data))
+    human_players = session_state.active_players
+    current_turn = queries.get_total_turns(world_state.time_manager)
     preview_response = None
     preview_unknown = False
     
     for nation_name in active_nations:
         if preview_request is not None and nation_name != preview_request[0]:
             continue
-        data = map_screen.nation_data.get(nation_name, {})
+        data = world_state.nation_data.get(nation_name, {})
         events = data.get("scripted_events", [])
         if not events:
             continue
@@ -1444,7 +1474,7 @@ def process_scripted_events(map_screen, preview_request=None):
                     var_name = cond.get("variable", "")
                     var_type = "string"
                     var_val = "0"
-                    for v in getattr(map_screen, "script_variables", []):
+                    for v in getattr(world_for(map_screen), "script_variables", []):
                         if v["name"] == var_name:
                             var_type = v["type"]
                             var_val = v["value"]
@@ -1511,44 +1541,44 @@ def process_scripted_events(map_screen, preview_request=None):
                     if not targets:
                         res = False
                     elif c_type == "At War With":
-                        res = all(t in active_nations and queries.are_at_war(nation_name, t, map_screen.nation_data) for t in targets)
+                        res = all(t in active_nations and queries.are_at_war(nation_name, t, world_state.nation_data) for t in targets)
                     elif c_type == "In Faction With":
-                        res = all(t in active_nations and queries.are_in_same_faction(nation_name, t, map_screen.nation_data) for t in targets)
+                        res = all(t in active_nations and queries.are_in_same_faction(nation_name, t, world_state.nation_data) for t in targets)
                     elif c_type == "Not In Faction With":
-                        res = all(t in active_nations and not queries.are_in_same_faction(nation_name, t, map_screen.nation_data) for t in targets)
+                        res = all(t in active_nations and not queries.are_in_same_faction(nation_name, t, world_state.nation_data) for t in targets)
                     elif c_type == "Has Truce With":
-                        res = all(t in active_nations and queries.has_active_truce(nation_name, t, map_screen.nation_data) for t in targets)
+                        res = all(t in active_nations and queries.has_active_truce(nation_name, t, world_state.nation_data) for t in targets)
                     elif c_type == "At Peace With":
-                        res = all(t in active_nations and not queries.are_at_war(nation_name, t, map_screen.nation_data) for t in targets)
+                        res = all(t in active_nations and not queries.are_at_war(nation_name, t, world_state.nation_data) for t in targets)
                     elif c_type == "Country Exists":
                         res = all(t in active_nations for t in targets)
                     elif c_type == "Country Doesn't Exist":
                         res = all(t not in active_nations for t in targets)
                     elif c_type == "Occupying Claims Of":
-                        res = all(any(map_screen.id_to_province.get(pid, {}).get("owner") == nation_name for pid in map_screen.nation_data.get(t, {}).get("claims", [])) for t in targets)
+                        res = all(any(world_state.id_to_province.get(pid, {}).get("owner") == nation_name for pid in world_state.nation_data.get(t, {}).get("claims", [])) for t in targets)
                     elif c_type == "Occupying All Claims":
-                        res = all(map_screen.nation_data.get(t, {}).get("claims") and all(map_screen.id_to_province.get(pid, {}).get("owner") == nation_name for pid in map_screen.nation_data.get(t, {}).get("claims", [])) for t in targets)
+                        res = all(world_state.nation_data.get(t, {}).get("claims") and all(world_state.id_to_province.get(pid, {}).get("owner") == nation_name for pid in world_state.nation_data.get(t, {}).get("claims", [])) for t in targets)
                     elif c_type in ("Guaranteeing", "Not Guaranteeing"):
                         from map_logic.diplomacy import guarantees
-                        promised = set(guarantees.guaranteed_targets(nation_name, map_screen.nation_data))
+                        promised = set(guarantees.guaranteed_targets(nation_name, world_state.nation_data))
                         expected = c_type == "Guaranteeing"
                         res = all(t in active_nations and ((t in promised) == expected)
                                   for t in targets)
                     elif c_type in ("Has Military Attaché", "Doesn't Have Military Attaché"):
                         from map_logic.diplomacy import military_attaches
-                        hosts = set(military_attaches.hosts_for(nation_name, map_screen.nation_data))
+                        hosts = set(military_attaches.hosts_for(nation_name, world_state.nation_data))
                         expected = c_type == "Has Military Attaché"
                         res = all(t in active_nations and ((t in hosts) == expected)
                                   for t in targets)
                     elif c_type in ("Has Military Access Through", "Doesn't Have Military Access Through"):
                         expected = c_type == "Has Military Access Through"
                         res = all(t in active_nations and
-                                  (queries.has_military_access(nation_name, t, map_screen.nation_data) == expected)
+                                  (queries.has_military_access(nation_name, t, world_state.nation_data) == expected)
                                   for t in targets)
                     elif c_type in ("Grants Military Access To", "Doesn't Grant Military Access To"):
                         expected = c_type == "Grants Military Access To"
                         res = all(t in active_nations and
-                                  (queries.has_military_access(t, nation_name, map_screen.nation_data) == expected)
+                                  (queries.has_military_access(t, nation_name, world_state.nation_data) == expected)
                                   for t in targets)
                 elif c_type == "True":
                     res = True
@@ -1559,12 +1589,12 @@ def process_scripted_events(map_screen, preview_request=None):
                             and c_val == preview_request[1]):
                         res = c_op == preview_request[2]
                     else:
-                        pend_act, pend_turns = queries.get_diplomatic_status(c_val, nation_name, map_screen.nation_data)
+                        pend_act, pend_turns = queries.get_diplomatic_status(c_val, nation_name, world_state.nation_data)
                         res = (pend_act == c_op and pend_turns > 0)
                 elif c_type == "Occupying All Cores Of":
-                    res = queries.is_occupying_all_cores(nation_name, c_val, map_screen.map_data)
+                    res = queries.is_occupying_all_cores(nation_name, c_val, world_state.map_data)
                 elif c_type == "Occupying Tile":
-                    res = queries.is_occupying_tiles(nation_name, c_val, map_screen.id_to_province)
+                    res = queries.is_occupying_tiles(nation_name, c_val, world_state.id_to_province)
                 elif c_type == "Is AI Controlled":
                     target_check = c_val if c_val else nation_name
                     res = (target_check not in human_players and target_check in active_nations)
@@ -1572,27 +1602,27 @@ def process_scripted_events(map_screen, preview_request=None):
                     target_check = c_val if c_val else nation_name
                     res = (target_check in human_players and target_check in active_nations)
                 elif c_type == "Occupying Core Of":
-                    res = any(p.get("owner") == nation_name and c_val in p.get("cores", []) for p in map_screen.map_data.values())
+                    res = any(p.get("owner") == nation_name and c_val in p.get("cores", []) for p in world_state.map_data.values())
                 elif c_type == "Bordering":
-                    res = c_val in queries.get_neighboring_nations(nation_name, map_screen.map_data, map_screen.id_to_province)
+                    res = c_val in queries.get_neighboring_nations(nation_name, world_state.map_data, world_state.id_to_province)
                 elif c_type == "Not Bordering":
-                    res = c_val not in queries.get_neighboring_nations(nation_name, map_screen.map_data, map_screen.id_to_province)
+                    res = c_val not in queries.get_neighboring_nations(nation_name, world_state.map_data, world_state.id_to_province)
                 elif c_type == "Is At War":
                     target_check = c_val if c_val else nation_name
-                    res = len(queries.get_enemies(target_check, map_screen.nation_data)) > 0
+                    res = len(queries.get_enemies(target_check, world_state.nation_data)) > 0
                 elif c_type == "Is At Peace":
                     target_check = c_val if c_val else nation_name
-                    res = len(queries.get_enemies(target_check, map_screen.nation_data)) == 0
+                    res = len(queries.get_enemies(target_check, world_state.nation_data)) == 0
                 elif c_type == "Is In Faction":
                     target_check = c_val if c_val else nation_name
-                    res = map_screen.nation_data.get(target_check, {}).get("faction", "") != ""
+                    res = world_state.nation_data.get(target_check, {}).get("faction", "") != ""
                 elif c_type == "Not In Faction":
                     target_check = c_val if c_val else nation_name
                     res = (target_check in active_nations and
-                           map_screen.nation_data.get(target_check, {}).get("faction", "") == "")
+                           world_state.nation_data.get(target_check, {}).get("faction", "") == "")
                 elif c_type == "Is Faction Leader":
                     target_check = c_val if c_val else nation_name
-                    res = queries.is_faction_leader(target_check, map_screen.nation_data)
+                    res = queries.is_faction_leader(target_check, world_state.nation_data)
                     
                 if c_idx == 0:
                     overall_met = res
@@ -1655,7 +1685,7 @@ def process_scripted_events(map_screen, preview_request=None):
                     if a_type == "Queue Claims":
                         prov_ids = [int(p.strip()) for p in str(act.get("message", "")).split(",") if p.strip().isdigit()]
                         for pid in prov_ids:
-                            if pid not in map_screen.id_to_province:
+                            if pid not in world_state.id_to_province:
                                 continue
                             queue = data.setdefault("claim_queue", [])
                             if not any(q["prov_id"] == pid for q in queue) and pid not in data.get("claims", []):
@@ -1674,7 +1704,7 @@ def process_scripted_events(map_screen, preview_request=None):
                         target_list = [t.strip() for t in str(raw_targets).split(",") if t.strip()]
                         for a_target in target_list:
                             if a_target == "None": continue
-                            t_data = map_screen.nation_data.get(a_target, {})
+                            t_data = world_state.nation_data.get(a_target, {})
                             revoke_queue = t_data.setdefault("revoke_queue", [])
                             for pid in t_data.get("claims", []):
                                 if not any(rq["prov_id"] == pid for rq in revoke_queue):
@@ -1691,7 +1721,7 @@ def process_scripted_events(map_screen, preview_request=None):
                                 continue
                             for tile_id in tiles:
                                 if not tile_id.isdigit(): continue
-                                prov = map_screen.id_to_province.get(int(tile_id))
+                                prov = world_state.id_to_province.get(int(tile_id))
                                 if prov:
                                     if must_control and prov.get("owner") != nation_name:
                                         continue
@@ -1708,7 +1738,7 @@ def process_scripted_events(map_screen, preview_request=None):
                                 continue
                             for tile_id in tiles:
                                 if not tile_id.isdigit(): continue
-                                prov = map_screen.id_to_province.get(int(tile_id))
+                                prov = world_state.id_to_province.get(int(tile_id))
                                 if prov:
                                     if must_control and prov.get("owner") != nation_name:
                                         continue
@@ -1721,7 +1751,7 @@ def process_scripted_events(map_screen, preview_request=None):
                         op = act.get("unit_type", "Set")
                         msg_val = act.get("message", "0")
                         
-                        for v in getattr(map_screen, "script_variables", []):
+                        for v in getattr(world_for(map_screen), "script_variables", []):
                             if v["name"] == var_name:
                                 var_type = v["type"]
                                 if var_type in ["int", "double"]:
@@ -1760,12 +1790,12 @@ def process_scripted_events(map_screen, preview_request=None):
 
                         # Answering a proposal is its own channel, not a pending action
                         if a_type in ("Accept Proposal", "Reject Proposal"):
-                            pend_act, pend_turns = queries.get_diplomatic_status(a_target, nation_name, map_screen.nation_data)
+                            pend_act, pend_turns = queries.get_diplomatic_status(a_target, nation_name, world_state.nation_data)
                             if pend_turns > 0 and pend_act in c.BILATERAL_ACTIONS:
                                 verdict = diplomacy_messages.RESPONSE_ACCEPT if a_type == "Accept Proposal" else diplomacy_messages.RESPONSE_REJECT
-                                their_req = diplomacy_messages.get_pending(map_screen.nation_data, a_target, nation_name)
+                                their_req = diplomacy_messages.get_pending(world_state.nation_data, a_target, nation_name)
                                 diplomacy_messages.set_response(
-                                    map_screen.nation_data, nation_name, a_target, verdict, pend_act,
+                                    world_state.nation_data, nation_name, a_target, verdict, pend_act,
                                     message=act.get("message", ""), parameters=their_req.get("parameters"))
                             continue
 
@@ -1776,12 +1806,12 @@ def process_scripted_events(map_screen, preview_request=None):
                         if a_type in _SCRIPTED_RESPONSE_ACTIONS:
                             expected_action, verdict = _SCRIPTED_RESPONSE_ACTIONS[a_type]
                             pend_act, pend_turns = queries.get_diplomatic_status(
-                                a_target, nation_name, map_screen.nation_data)
+                                a_target, nation_name, world_state.nation_data)
                             if pend_turns > 0 and pend_act == expected_action:
                                 their_req = diplomacy_messages.get_pending(
-                                    map_screen.nation_data, a_target, nation_name)
+                                    world_state.nation_data, a_target, nation_name)
                                 diplomacy_messages.set_response(
-                                    map_screen.nation_data, nation_name, a_target,
+                                    world_state.nation_data, nation_name, a_target,
                                     verdict, expected_action,
                                     message=act.get("message", ""),
                                     parameters=their_req.get("parameters"))
@@ -1809,14 +1839,14 @@ def process_scripted_events(map_screen, preview_request=None):
                             details, error = volunteers.create_offer(
                                 map_screen, nation_name, a_target, chosen)
                             if not error:
-                                pending[a_target] = {
+                                lifecycle.put_request(world_state.nation_data, nation_name, a_target, **{
                                     "action": volunteers.ACTION,
                                     "turns": 0,
                                     "timer": 0,
                                     "message": (f"We offer {details['count']} volunteer "
                                                 f"{'division' if details['count'] == 1 else 'divisions'}."),
                                     "parameters": details,
-                                }
+                                })
                             continue
 
                         eng_action = ""
@@ -1850,12 +1880,12 @@ def process_scripted_events(map_screen, preview_request=None):
                                 custom_msg = act.get("message", "")
                                 ai_generate = act.get("ai_generate", False)
 
-                                pending[a_target] = {
+                                lifecycle.put_request(world_state.nation_data, nation_name, a_target, **{
                                     "action": eng_action,
                                     "turns": 0,
                                     "timer": 0,
                                     "message": custom_msg
-                                }
+                                })
 
                                 if ai_generate:
                                     # Generated here rather than queued. Scripted
@@ -1867,7 +1897,7 @@ def process_scripted_events(map_screen, preview_request=None):
                                     # little and makes the option real.
                                     fallback = custom_msg if custom_msg else "We have sent a diplomatic missive."
                                     generated = ai_handler.generate_proactive_text(
-                                        map_screen.nation_data, active_nations, nation_name,
+                                        world_state.nation_data, active_nations, nation_name,
                                         a_target,
                                         ai_prompts.get_proactive_action_context(eng_action, a_target),
                                         human_players, ai_handler.CURRENT_TURN_ID)

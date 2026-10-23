@@ -1,9 +1,11 @@
 
+from data.state_access import world_for, session_for
 import copy
 import uuid
 
 import data.constants as c
 from data import migrations, queries
+from map_logic.diplomacy import diplomacy_lifecycle as lifecycle
 
 # ==========================================
 # PENDING DIPLOMACY ACCESS
@@ -84,10 +86,8 @@ def set_pending(nation_data, player_name, target_name, action, **extra):
     Deliberately an overwrite, not a toggle: the player-facing screens replace
     a queued declaration/offer outright rather than cancelling it.
     """
-    entry = {"action": action, "turns": 0, "timer": 0}
-    entry.update(extra)
-    get_pending_map(nation_data, player_name, writable=True)[target_name] = entry
-    return entry
+    return lifecycle.put_request(nation_data, player_name, target_name, action, **extra)
+
 
 def clear_pending(nation_data, player_name, target_name, only_actions=None):
     """Removes a queued action. `only_actions` limits it to matching actions.
@@ -101,8 +101,7 @@ def clear_pending(nation_data, player_name, target_name, only_actions=None):
         action = get_pending_action(nation_data, player_name, target_name)
         if action not in only_actions:
             return False
-    del pending[target_name]
-    return True
+    return lifecycle.remove_request(pending, target_name)
 
 # ==========================================
 # DIPLOMATIC RESPONSE ACCESS
@@ -142,18 +141,18 @@ def get_response_status(nation_data, player_name, sender_name):
 
 def set_response(nation_data, player_name, sender_name, verdict, action, **extra):
     """Queues an answer to sender_name's proposal. Overwrites any earlier answer."""
-    entry = {"verdict": verdict, "action": action, "message": ""}
-    entry.update(extra)
-    get_response_map(nation_data, player_name, writable=True)[sender_name] = entry
-    return entry
+    pending = get_pending_map(nation_data, sender_name)
+    request = pending.get(player_name)
+    if request is not None:
+        pending[player_name] = migrations.normalize_diplomatic_request(request, sender_name, player_name)
+    return lifecycle.put_response(nation_data, player_name, sender_name, verdict, action, **extra)
+
 
 def clear_response(nation_data, player_name, sender_name):
     """Removes a queued response. Returns True when something was removed."""
     responses = get_response_map(nation_data, player_name)
-    if sender_name not in responses:
-        return False
-    del responses[sender_name]
-    return True
+    return lifecycle.remove_response(responses, sender_name)
+
 
 def queue_text_message(nation_data, player_name, target_name, content):
     if player_name not in nation_data:
@@ -172,7 +171,7 @@ def queue_text_message(nation_data, player_name, target_name, content):
         return "Message draft saved alongside formal action."
         
     combined = "\n".join(cur_list) if cur_list else content
-    pending[target_name] = {"action": f"MSG:{combined}", "turns": 0, "message": combined}
+    set_pending(nation_data, player_name, target_name, f"MSG:{combined}", message=combined)
     return "Message draft saved. Will send at end of turn."
 
 def cancel_text_message(nation_data, player_name, target_name):
@@ -244,14 +243,9 @@ def queue_forwarded_message(nation_data, player_name, target_name, source_owner,
             return "A diplomatic action is already in transit to this country."
         return "A diplomatic action is already pending with this country."
 
-    pending[target_name] = {
-        "action": FORWARD_ACTION,
-        "turns": 0,
-        "timer": 0,
-        "message": original_message.get("content", ""),
-        "forwarded_message": copy.deepcopy(original_message),
-        "forwarded_source": source_owner,
-    }
+    set_pending(nation_data, player_name, target_name, FORWARD_ACTION,
+                message=original_message.get("content", ""),
+                forwarded_message=copy.deepcopy(original_message), forwarded_source=source_owner)
     return "Forward queued. It will be sent at the end of the turn."
 
 def _deliver(nation_data, owner, entry):
@@ -289,8 +283,9 @@ def send_message(map_screen, sender, receiver, content, msg_type="TEXT", extra=N
     travels the identical path -- so there was no way to see which of the
     things a country said it had actually thought of.
     """
-    nation_data = map_screen.nation_data
-    date_str = map_screen.time_manager.get_date_string()
+    world_state = world_for(map_screen)
+    nation_data = world_state.nation_data
+    date_str = world_state.time_manager.get_date_string()
 
     # Delivery fields are owned by this function. In particular, an action or
     # forwarding stamp must not be able to replace the visible sender/date by
@@ -332,6 +327,7 @@ def forward_message(map_screen, sender, receiver, original_message, source_owner
     carried over so a forwarded war declaration or treaty remains machine-
     readable to the next country.
     """
+    world_state = world_for(map_screen)
     if not isinstance(original_message, dict):
         return None
     content = original_message.get("content", "")
@@ -352,7 +348,7 @@ def forward_message(map_screen, sender, receiver, original_message, source_owner
     forward_chain = copy.deepcopy(original_message.get("forward_chain", [])) if was_forwarded else []
     if not isinstance(forward_chain, list):
         forward_chain = []
-    date_str = map_screen.time_manager.get_date_string()
+    date_str = world_state.time_manager.get_date_string()
     forward_chain.append({"country": sender, "date": date_str})
 
     extra = {
@@ -449,6 +445,9 @@ def send_treaty_message(map_screen, sender, receiver, action, custom_msg="", par
     itemized terms. It is quoted under them so the thread reads as one letter.
     """
     extra = {"action": action}
+    request = get_pending(world_for(map_screen).nation_data, sender, receiver)
+    if request.get("request_id"):
+        extra["request_id"] = request["request_id"]
     if parameters:
         extra["parameters"] = parameters
 

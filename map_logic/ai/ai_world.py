@@ -30,6 +30,7 @@ Stdlib and `data` only -- no requests, no google.genai -- so it imports under
 Pyodide alongside the rest of the heuristic AI.
 """
 
+from data.state_access import world_for, session_for
 import collections
 import random
 
@@ -471,14 +472,15 @@ class AIWorld:
 
 def build(map_screen):
     """Snapshots the map for this turn's AI passes."""
+    world_state = world_for(map_screen)
     total_turns = 0
-    time_manager = getattr(map_screen, "time_manager", None)
+    time_manager = getattr(world_for(map_screen), "time_manager", None)
     if time_manager is not None:
         total_turns = queries.get_total_turns(time_manager)
 
-    return AIWorld(map_screen.map_data, map_screen.nation_data,
-                   map_screen.id_to_province, total_turns,
-                   human_players=getattr(map_screen, "active_players", ()))
+    return AIWorld(world_state.map_data, world_state.nation_data,
+                   world_state.id_to_province, total_turns,
+                   human_players=getattr(session_for(map_screen), "active_players", ()))
 
 
 def for_screen(map_screen):

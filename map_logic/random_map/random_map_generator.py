@@ -1,7 +1,9 @@
+from data.state_access import world_for, session_for
 import data.constants as c
 from data import queries
 
 def randomize_all_provinces(map_screen, settings):
+    world_state = world_for(map_screen)
     target_country_count = settings["countries"]
     start_year = settings["year"]
     island_filter_size = settings.get("island_filter_size", c.RANDOM_SCENARIO_DEFAULT_ISLAND_FILTER)
@@ -9,11 +11,11 @@ def randomize_all_provinces(map_screen, settings):
     resource_chance = settings.get("resource_chance", c.RANDOM_SCENARIO_DEFAULT_RESOURCE_CHANCE)
 
     playable_nations = [
-        name for name, stats in map_screen.nation_data.items()
-        if queries.is_playable(name, map_screen.nation_data)
+        name for name, stats in world_state.nation_data.items()
+        if queries.is_playable(name, world_state.nation_data)
     ]
     
-    land_provinces = [p for p in map_screen.map_data.values() if not queries.is_water_province(p)]
+    land_provinces = [p for p in world_state.map_data.values() if not queries.is_water_province(p)]
     
     if not land_provinces or not playable_nations: return
 
@@ -35,7 +37,7 @@ def randomize_all_provinces(map_screen, settings):
 
         while queue:
             curr_id = queue.pop(0)
-            curr_prov = map_screen.id_to_province[curr_id]
+            curr_prov = world_state.id_to_province[curr_id]
             comp.append(curr_prov)
 
             for n_id in curr_prov.get("neighbors", []):
@@ -61,7 +63,7 @@ def randomize_all_provinces(map_screen, settings):
     # --- Step A: Plant Seeds ---
     for nation in active_nations:
         seed_id = random.choice(list(unassigned_land))
-        seed_prov = map_screen.id_to_province[seed_id]
+        seed_prov = world_state.id_to_province[seed_id]
         
         seed_prov["owner"] = nation
         seed_prov["cores"] = [nation]
@@ -80,7 +82,7 @@ def randomize_all_provinces(map_screen, settings):
                 
                 if frontier_list:
                     target_id = frontier_list.pop(random.randint(0, len(frontier_list) - 1))
-                    target_prov = map_screen.id_to_province[target_id]
+                    target_prov = world_state.id_to_province[target_id]
                     
                     target_prov["owner"] = nation
                     target_prov["cores"] = [nation]
@@ -94,10 +96,10 @@ def randomize_all_provinces(map_screen, settings):
             if not expanded_this_round and unassigned_land:
                 target_id = random.choice(list(unassigned_land))
                 nation = random.choice(active_nations)
-                map_screen.id_to_province[target_id]["owner"] = nation
-                map_screen.id_to_province[target_id]["cores"] = [nation]
+                world_state.id_to_province[target_id]["owner"] = nation
+                world_state.id_to_province[target_id]["cores"] = [nation]
                 unassigned_land.remove(target_id)
-                for n_id in map_screen.id_to_province[target_id].get("neighbors", []):
+                for n_id in world_state.id_to_province[target_id].get("neighbors", []):
                     if n_id in unassigned_land: frontiers[nation].append(n_id)
 
     # --- Step B.5: Assign Bordering Cores ---
@@ -108,7 +110,7 @@ def randomize_all_provinces(map_screen, settings):
         for prov in owned_provs:
             # Check every neighbor of the owned province
             for n_id in prov.get("neighbors", []):
-                n_prov = map_screen.id_to_province.get(n_id)
+                n_prov = world_state.id_to_province.get(n_id)
                 
                 if n_prov:
                     # Ignore water tiles
@@ -126,11 +128,11 @@ def randomize_all_provinces(map_screen, settings):
 
     # Apply base tech to all active nations
     for nation in active_nations:
-        if "research" not in map_screen.nation_data[nation]:
-            map_screen.nation_data[nation]["research"] = {}
+        if "research" not in world_state.nation_data[nation]:
+            world_state.nation_data[nation]["research"] = {}
         
         # Overwrite with the calculated time-appropriate tech levels
-        map_screen.nation_data[nation]["research"] = baseline_tech.copy()
+        world_state.nation_data[nation]["research"] = baseline_tech.copy()
 
 
     # Determine which buildings are legally allowed to spawn based on tech
@@ -247,7 +249,7 @@ def randomize_all_provinces(map_screen, settings):
         tech_tree = queries.get_tech_tree()
 
         # Calculate starting economy so we can budget the starting armies
-        all_econ = queries.calculate_all_economies(map_screen.map_data, map_screen.nation_data)
+        all_econ = queries.calculate_all_economies(world_state.map_data, world_state.nation_data)
 
         # Helper to generate a fresh unit dictionary so pointers aren't shared across provinces
         def generate_unit(nation, u_name):
@@ -257,7 +259,7 @@ def randomize_all_provinces(map_screen, settings):
             owned_provs = [p for p in valid_land_provinces if p["owner"] == nation]
             if not owned_provs: continue
 
-            data = map_screen.nation_data[nation]
+            data = world_state.nation_data[nation]
             econ = all_econ.get(nation)
             if not econ: continue
 
@@ -281,12 +283,12 @@ def randomize_all_provinces(map_screen, settings):
             coastal_provs = []
             for prov in owned_provs:
                 # Filter out lake-only coasts using your query
-                if prov.get("is_coastal", False) and queries.borders_ocean(prov, map_screen.id_to_province):
+                if prov.get("is_coastal", False) and queries.borders_ocean(prov, world_state.id_to_province):
                     coastal_provs.append(prov)
 
                 # Check if it touches anything not owned by this nation
                 for n_id in prov.get("neighbors", []):
-                    n_prov = map_screen.id_to_province.get(n_id)
+                    n_prov = world_state.id_to_province.get(n_id)
                     if n_prov and n_prov.get("owner") != nation and not queries.is_water_province(n_prov):
                         border_provs.append(prov)
                         break # Already flagged as a border, move to next province

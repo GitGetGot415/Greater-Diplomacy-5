@@ -1,3 +1,4 @@
+from data.state_access import world_for, session_for
 import data.constants as c
 from data import queries
 from map_logic.turn_processing import combat_rules, edit_province_ownership, unit_events
@@ -47,12 +48,13 @@ def process_bombardments(map_screen):
     shells first. Bombarding units hold position (they carry a BOMBARD order
     instead of a MOVE one) and take no return fire.
     """
+    world_state = world_for(map_screen)
     # Collect every barrage before resolving any of them so the damage is
     # simultaneous - two guns shelling each other's tiles both get to fire.
     barrages = {}
     firing_units = []
 
-    for province in map_screen.map_data.values():
+    for province in world_state.map_data.values():
         for unit in province.get("units", []):
             if queries.is_air_unit(unit):
                 continue
@@ -73,7 +75,7 @@ def process_bombardments(map_screen):
 
             # Drop the order if the gun can no longer make the shot
             if (bomb_range <= 0 or afloat
-                    or target_id not in queries.get_bombardment_targets(province, map_screen.id_to_province, bomb_range)):
+                    or target_id not in queries.get_bombardment_targets(province, world_state.id_to_province, bomb_range)):
                 unit["order"] = {"type": "MOVE", "path": []}
                 continue
 
@@ -84,7 +86,7 @@ def process_bombardments(map_screen):
         return
 
     for target_id, guns_by_owner in barrages.items():
-        target_prov = map_screen.id_to_province.get(target_id)
+        target_prov = world_state.id_to_province.get(target_id)
         if not target_prov: continue
 
         for owner, guns in guns_by_owner.items():
@@ -95,7 +97,7 @@ def process_bombardments(map_screen):
             target_owner = target_prov.get("owner")
             fort_hits = 0
             if (target_owner and queries.are_at_war(owner, target_owner,
-                                                     map_screen.nation_data)):
+                                                     world_state.nation_data)):
                 fort_hits = sum(
                     not (gun.get("naval_unit")
                          or queries.is_naval_unit(gun.get("type", "")))
@@ -103,14 +105,14 @@ def process_bombardments(map_screen):
                 )
 
             targets = [u for u in target_prov.get("units", [])
-                       if queries.are_at_war(owner, u.get("owner"), map_screen.nation_data)]
+                       if queries.are_at_war(owner, u.get("owner"), world_state.nation_data)]
             if not targets:
                 # A valid bombardment can hit an empty fort tile, so apply its
                 # fort damage even when there are no enemy units to receive
                 # the volley.
                 for _ in range(fort_hits):
                     queries.damage_fort(
-                        target_prov, map_screen.nation_data, map_screen.map_data)
+                        target_prov, world_state.nation_data, world_state.map_data)
                 continue
 
             # Every gun that aimed here contributes; unlike a stack fight this
@@ -118,25 +120,25 @@ def process_bombardments(map_screen):
             # "bombard_attack" is a separate stat from melee "attack" (falls
             # back to attack for any family that doesn't define it).
             for hit_targets, total_atk, sources in combat_rules.damage_shots(
-                    guns, targets, nation_data=map_screen.nation_data, attack_field="bombard_attack",
+                    guns, targets, nation_data=world_state.nation_data, attack_field="bombard_attack",
                     with_sources=True):
                 apply_group_damage(
                     total_atk, hit_targets,
                     lambda unit, province=target_prov: queries.get_fort_defense_bonus(
-                        province, unit, map_screen.nation_data, combat_active=True),
+                        province, unit, world_state.nation_data, combat_active=True),
                     sources=sources, tile=target_id)
 
             # Resolve the fort damage after this volley has been calculated so
             # the fort's current level protects against the shells that hit it.
             for _ in range(fort_hits):
                 queries.damage_fort(
-                    target_prov, map_screen.nation_data, map_screen.map_data)
+                    target_prov, world_state.nation_data, world_state.map_data)
 
             for u in targets:
                 u["_in_combat_this_turn"] = True
 
     # Clear the casualties out before movement and combat run
-    for province in map_screen.map_data.values():
+    for province in world_state.map_data.values():
         if province.get("units"):
             province["units"] = [u for u in province["units"] if u.get("health", 0) > 0]
 
@@ -146,18 +148,19 @@ def process_bombardments(map_screen):
 
 def process_pinning(map_screen):
     """Rule: Units being attacked from a tile must defend the tile they're on, unless moving to friendly territory."""
+    world_state = world_for(map_screen)
     incoming_attacks = {}
-    for province in map_screen.map_data.values():
+    for province in world_state.map_data.values():
         for unit in province.get("units", []):
             if queries.is_air_unit(unit) and not queries.air_unit_can_move_on_ground(unit):
                 continue
             order = unit.get("order")
             if order and order.get("type") == "MOVE" and order.get("path"):
                 dest_id = order["path"][0]
-                dest_prov = map_screen.id_to_province.get(dest_id)
+                dest_prov = world_state.id_to_province.get(dest_id)
                 if dest_prov and queries.is_hostile_territory(
                         queries.get_unit_combat_owner(unit), dest_prov.get("owner", "Unclaimed"),
-                        map_screen.nation_data):
+                        world_state.nation_data):
                     # Track the origin province ID (province["id"]) along with the unit
                     incoming_attacks.setdefault(dest_id, []).append((unit, province["id"]))
 
@@ -165,7 +168,7 @@ def process_pinning(map_screen):
     # If incoming attackers are so weak they'd die instantly, resolve the combat NOW
     # so they die, deal their damage, and don't pin the defenders.
     for dest_id, attackers_info in list(incoming_attacks.items()):
-        dest_prov = map_screen.id_to_province.get(dest_id)
+        dest_prov = world_state.id_to_province.get(dest_id)
         if not dest_prov: continue
 
         defenders = dest_prov.get("units", [])
@@ -175,12 +178,12 @@ def process_pinning(map_screen):
         if tile_owner in c.UNPLAYABLE_NATIONS: continue
 
         friendly_defenders = [u for u in defenders if not queries.are_at_war(
-            tile_owner, queries.get_unit_combat_owner(u), map_screen.nation_data)]
+            tile_owner, queries.get_unit_combat_owner(u), world_state.nation_data)]
         if not friendly_defenders: continue
 
         hostile_attackers = [
             info for info in attackers_info
-            if queries.are_at_war(tile_owner, queries.get_unit_combat_owner(info[0]), map_screen.nation_data)
+            if queries.are_at_war(tile_owner, queries.get_unit_combat_owner(info[0]), world_state.nation_data)
         ]
 
         if not hostile_attackers: continue
@@ -193,7 +196,7 @@ def process_pinning(map_screen):
         friendly_defenders = [
             u for u in friendly_defenders
             if any(queries.are_at_war(queries.get_unit_combat_owner(u),
-                                      queries.get_unit_combat_owner(a), map_screen.nation_data)
+                                      queries.get_unit_combat_owner(a), world_state.nation_data)
                    for a, _ in hostile_attackers)
         ]
         if not friendly_defenders: continue
@@ -204,10 +207,10 @@ def process_pinning(map_screen):
         # what stops the probe and the fight it is predicting from drifting
         # apart the moment either is tuned.
         attacker_units_only = [a_unit for a_unit, _ in hostile_attackers]
-        queries.prepare_aircraft_for_ground_combat(friendly_defenders, map_screen.nation_data,
+        queries.prepare_aircraft_for_ground_combat(friendly_defenders, world_state.nation_data,
                                                   attacker_units_only)
         probe = combat_rules.build_battle(
-            [friendly_defenders, attacker_units_only], map_screen.nation_data,
+            [friendly_defenders, attacker_units_only], world_state.nation_data,
             terrain=dest_prov.get("terrain"))
 
         # Use the same non-mutating damage projection the AI uses when it
@@ -215,7 +218,7 @@ def process_pinning(map_screen):
         # still applied below, after the survival check, so the probe remains
         # simultaneous and side-effect free.
         incoming_on_charge = combat_rules.projected_incoming_damage(
-            probe, map_screen.nation_data)
+            probe, world_state.nation_data)
         shots_at_defenders = []
         for lane in probe.lanes:
             for firing, receiving in ((lane.a, lane.b), (lane.b, lane.a)):
@@ -226,7 +229,7 @@ def process_pinning(map_screen):
                     if not member.targets:
                         continue
                     shot = combat_rules.volley(member.front, probe.shares,
-                                               map_screen.nation_data)
+                                               world_state.nation_data)
                     if receiving.side_index != CHARGE_SIDE:
                         shots_at_defenders.append((member.targets, shot, member.front))
 
@@ -248,8 +251,8 @@ def process_pinning(map_screen):
                     total_atk,
                     targets,
                     lambda unit, province=dest_prov: queries.get_fort_defense_bonus(
-                        province, unit, map_screen.nation_data, combat_active=True),
-                    sources=[(unit, combat_rules.volley([unit], probe.shares, map_screen.nation_data))
+                        province, unit, world_state.nation_data, combat_active=True),
+                    sources=[(unit, combat_rules.volley([unit], probe.shares, world_state.nation_data))
                              for unit in sources], tile=dest_id,
                 )
 
@@ -260,7 +263,7 @@ def process_pinning(map_screen):
             # 2. Kill the attackers and remove them from incoming_attacks
             for a_unit, a_origin_id in hostile_attackers:
                 unit_events.record_damage(a_unit, max(0, a_unit.get("health", 0)),
-                    [(unit, combat_rules.volley([unit], probe.shares, map_screen.nation_data))
+                    [(unit, combat_rules.volley([unit], probe.shares, world_state.nation_data))
                      for lane in probe.lanes for side in (lane.a, lane.b)
                      for member in side.members if a_unit in member.targets for unit in member.front],
                     dest_id)
@@ -268,7 +271,7 @@ def process_pinning(map_screen):
                 incoming_attacks[dest_id] = [info for info in incoming_attacks[dest_id] if info[0] != a_unit]
 
                 # Cleanup dead units from their origin province immediately
-                a_prov = map_screen.id_to_province.get(a_origin_id)
+                a_prov = world_state.id_to_province.get(a_origin_id)
                 if a_prov:
                     a_prov["units"] = [u for u in a_prov["units"] if u.get("health", 0) > 0]
 
@@ -276,26 +279,26 @@ def process_pinning(map_screen):
             dest_prov["units"] = [u for u in dest_prov["units"] if u.get("health", 0) > 0]
 
     # --- STANDARD PINNING LOGIC ---
-    for province in map_screen.map_data.values():
+    for province in world_state.map_data.values():
         for unit in province.get("units", []):
             if queries.is_air_unit(unit) and not queries.air_unit_can_move_on_ground(unit):
                 continue
             order = unit.get("order")
             if order and order.get("type") == "MOVE" and order.get("path"):
                 dest_id = order["path"][0]
-                dest_prov = map_screen.id_to_province.get(dest_id)
+                dest_prov = world_state.id_to_province.get(dest_id)
 
                 # If moving to hostile territory, check if we are pinned by an incoming attack
                 if dest_prov and queries.is_hostile_territory(
                         queries.get_unit_combat_owner(unit), dest_prov.get("owner", "Unclaimed"),
-                        map_screen.nation_data):
+                        world_state.nation_data):
                     attackers = incoming_attacks.get(province["id"], [])
 
                     # ONLY pin if the attacker is hostile AND NOT coming from the tile we are moving to.
                     hostile_attackers = [
                         a for a, origin_id in attackers
                         if queries.are_at_war(queries.get_unit_combat_owner(unit),
-                                              queries.get_unit_combat_owner(a), map_screen.nation_data)
+                                              queries.get_unit_combat_owner(a), world_state.nation_data)
                         and origin_id != dest_id
                     ]
 
@@ -396,13 +399,14 @@ def resolve_meeting_engagement(prov1, prov2, units1, units2, nation_data):
 
 def process_meeting_engagements(map_screen):
     """Rule: If 2 units move into each other, let them engage in combat in between the tiles."""
+    world_state = world_for(map_screen)
     # Which tiles swapped garrisons is decided by combat_rules, the same rule
     # the prediction bubbles are drawn from. The sides are read per pair, as we
     # get to them: a unit killed in one engagement must not still be counted in
     # the next engagement its province takes part in.
-    for pair in combat_rules.find_meeting_pairs(map_screen.map_data, map_screen.nation_data):
-        prov1, prov2, units1, units2 = combat_rules.meeting_sides(map_screen.id_to_province, pair)
-        resolve_meeting_engagement(prov1, prov2, units1, units2, map_screen.nation_data)
+    for pair in combat_rules.find_meeting_pairs(world_state.map_data, world_state.nation_data):
+        prov1, prov2, units1, units2 = combat_rules.meeting_sides(world_state.id_to_province, pair)
+        resolve_meeting_engagement(prov1, prov2, units1, units2, world_state.nation_data)
 
 def process_combat(map_screen):
     """Fights everyone sharing a province, lane by lane.
@@ -424,7 +428,8 @@ def process_combat(map_screen):
     Not just no damage: its convoys stay loaded, its orders survive, and its
     ships are not scuttled by other people's war.
     """
-    for province in map_screen.map_data.values():
+    world_state = world_for(map_screen)
+    for province in world_state.map_data.values():
         units = province.get("units", [])
         if len(units) < 2:
             continue
@@ -432,10 +437,10 @@ def process_combat(map_screen):
         is_land = not queries.is_water_province(province)
         unit_events.set_locations(province, units)
 
-        queries.prepare_aircraft_for_ground_combat(units, map_screen.nation_data, on_land=is_land)
+        queries.prepare_aircraft_for_ground_combat(units, world_state.nation_data, on_land=is_land)
 
         battle = combat_rules.build_battle(
-            [units], map_screen.nation_data, terrain=province.get("terrain"))
+            [units], world_state.nation_data, terrain=province.get("terrain"))
         fighters = set(battle.engaged)
 
         # Unpack Convoys Caught on Land -- only the ones in the battle.
@@ -447,12 +452,12 @@ def process_combat(map_screen):
         # Every volley is measured before any of it lands, so the fight is
         # simultaneous: a nation wiped out this turn still fires this turn, and
         # nobody's share depends on who happened to be resolved first.
-        for targets, total_atk, sources in combat_rules.exchange(battle, map_screen.nation_data, with_sources=True):
+        for targets, total_atk, sources in combat_rules.exchange(battle, world_state.nation_data, with_sources=True):
             apply_group_damage(
                 total_atk,
                 targets,
                 lambda unit, province=province: queries.get_fort_defense_bonus(
-                    province, unit, map_screen.nation_data, combat_active=True),
+                    province, unit, world_state.nation_data, combat_active=True),
                 sources=sources, tile=province["id"],
             )
 
@@ -474,7 +479,7 @@ def process_combat(map_screen):
             # dead are cleared, so a side that wiped its enemy out is free again.
             still_fighting = {
                 owner for owner in fighters
-                if queries.is_nation_in_combat_here(owner, province, map_screen.nation_data)
+                if queries.is_nation_in_combat_here(owner, province, world_state.nation_data)
             }
 
             for u in surviving_units:
@@ -494,7 +499,8 @@ def process_combat(map_screen):
 
 def check_for_post_combat_captures(map_screen):
     """Assigns province ownership to units standing in an undefended enemy province."""
-    for province in map_screen.map_data.values():
+    world_state = world_for(map_screen)
+    for province in world_state.map_data.values():
         if queries.is_water_province(province):
             continue
 
@@ -529,7 +535,7 @@ def check_for_post_combat_captures(map_screen):
         valid_capturer_units = [
             u for u in units
             if any(o in c.OWNERLESS_OWNERS
-                   or queries.are_at_war(queries.get_unit_combat_owner(u), o, map_screen.nation_data)
+                   or queries.are_at_war(queries.get_unit_combat_owner(u), o, world_state.nation_data)
                    for o in claim_owners)
         ]
 
@@ -547,14 +553,14 @@ def check_for_post_combat_captures(map_screen):
         # If there's a tie, run through the tiebreaker cascade
         elif len(top_nations) > 1:
             # Tiebreaker 3: Let fate decide, or bounce.
-            if queries.get_scenario_flag("bounce_tiebreaker", c.DEFAULT_BOUNCE_TIEBREAKER, map_screen.scenario_settings):
+            if queries.get_scenario_flag("bounce_tiebreaker", c.DEFAULT_BOUNCE_TIEBREAKER, world_state.scenario_settings):
                 capturer = None
 
                 # Bounce all valid capturer units back to where they came from
                 for u in valid_capturer_units:
                     if "_previous_province_id" in u:
                         prev_prov_id = u.pop("_previous_province_id")
-                        prev_prov = map_screen.id_to_province.get(prev_prov_id)
+                        prev_prov = world_state.id_to_province.get(prev_prov_id)
                         if prev_prov:
                             if u in units:
                                 units.remove(u)
@@ -571,7 +577,7 @@ def check_for_post_combat_captures(map_screen):
         if capturer:
             if capturer != current_owner:
                 # faction core transfer stuff
-                true_owner = queries.get_faction_core_transfer_target(capturer, province, map_screen.nation_data)
+                true_owner = queries.get_faction_core_transfer_target(capturer, province, world_state.nation_data)
                 edit_province_ownership.conquer_province(map_screen, province, true_owner)
 
             # Scuttle ships if an enemy takes the tile they are on
@@ -580,7 +586,7 @@ def check_for_post_combat_captures(map_screen):
                 for u in units:
                     if queries.is_warship(u.get("type", "")):
                         # Use capturer instead of true_owner here so ships are correctly scuttled even if core transferred
-                        if queries.is_hostile_territory(capturer, u["owner"], map_screen.nation_data):
+                        if queries.is_hostile_territory(capturer, u["owner"], world_state.nation_data):
                             u["health"] = 0
                 province["units"] = [u for u in province["units"] if u.get("health", 0) > 0]
         else:

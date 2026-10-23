@@ -9,6 +9,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 # Data & Constants
 import data.constants as c
 from data import migrations, queries
+from data.state_access import StateAccess
 from data.map import load_map, save_map
 from data.platform import run_background
 
@@ -1308,7 +1309,7 @@ def update_button_states(map_screen):
                 set_orders_or_battle(map_screen, set_btn, has_player_units)
 
 
-class Map(GameState):
+class Map(StateAccess, GameState):
     def refresh_ui(self):
         # GameState can refresh during construction before Map has a selection.
         province = getattr(self, "selected_province", None)
@@ -1318,6 +1319,7 @@ class Map(GameState):
 
     def __init__(self, load_path=None, is_scenario=False, is_random=False, force_editor=False, random_settings=None, map_settings=None, num_players=1, history_turn=None, skip_initial_income=False):
         super().__init__()
+        self.presentation_enabled = True
 
         self.country_actions_scroll_rect = pygame.Rect(
             DIPLO_BTN_X, ACTION_BTN_START_Y, ACTION_SCROLL_WIDTH, ACTION_SCROLL_HEIGHT)
@@ -1552,9 +1554,8 @@ class Map(GameState):
 
         # --- 5. INITIALIZE INCOME ---
         # Provide 1 turn of simulated income so nations don't spawn with 0 resources
-        if self.time_manager.total_turns == 0 and not self.is_editor and not skip_initial_income:
-            from map_logic.turn_processing import economy_processor
-            economy_processor.process_economy(self)
+        from map_logic.turn_processing import economy_processor
+        economy_processor.initialize_income(self, skip=skip_initial_income)
         # Build unit membership after loading, before any planning-frame draw.
         overlay_renderer._unit_render_index(self)
 

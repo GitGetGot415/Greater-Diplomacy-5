@@ -1,4 +1,5 @@
 """Record the latest resolved turn without changing game rules."""
+from data.state_access import world_for, session_for
 from contextlib import contextmanager
 from contextvars import ContextVar
 import math
@@ -53,93 +54,107 @@ def normalize_log(value, turn):
 
 def saved_log(map_screen):
     # Old saves and lightweight map fixtures predate this field.
-    return normalize_log(getattr(map_screen, "unit_event_log", None), map_screen.time_manager.total_turns)
+    world_state = world_for(map_screen)
+    return normalize_log(getattr(world_for(map_screen), "unit_event_log", None), world_state.time_manager.total_turns)
 
 
 def saved_reads(map_screen):
     # Old saves and lightweight map fixtures predate local report preferences.
-    reads = getattr(map_screen, "unit_event_read_turns", {})
+    world_state = world_for(map_screen)
+    reads = getattr(session_for(map_screen), "unit_event_read_turns", {})
     return {owner: turn for owner, turn in reads.items()
-            if isinstance(owner, str) and type(turn) is int and turn == map_screen.time_manager.total_turns}
+            if isinstance(owner, str) and type(turn) is int and turn == world_state.time_manager.total_turns}
 
 
 def restore(map_screen, metadata):
-    map_screen.unit_event_log = normalize_log(metadata.get("unit_event_log"), map_screen.time_manager.total_turns)
+    world_state = world_for(map_screen)
+    session_state = session_for(map_screen)
+    world_state.unit_event_log = normalize_log(metadata.get("unit_event_log"), world_state.time_manager.total_turns)
     reads = metadata.get("unit_event_read_turns", {})
-    map_screen.unit_event_read_turns = {
+    session_state.unit_event_read_turns = {
         owner: turn for owner, turn in reads.items()
-        if isinstance(owner, str) and type(turn) is int and turn == map_screen.time_manager.total_turns
+        if isinstance(owner, str) and type(turn) is int and turn == world_state.time_manager.total_turns
     } if isinstance(reads, dict) else {}
     event_filter_for(map_screen)
 
 
 def set_event_filter(map_screen, event):
     """Keep the event filter local to this report. Do not save or send it."""
+    world_state = world_for(map_screen)
     if event is not None and event not in EVENT_LABELS:
         raise ValueError("Select a known unit event type or None.")
     map_screen.unit_event_filter = event
-    map_screen.unit_event_filter_turn = map_screen.time_manager.total_turns
+    map_screen.unit_event_filter_turn = world_state.time_manager.total_turns
 
 
 def event_filter_for(map_screen):
     """Clear the local filter when a new turn arrives."""
+    world_state = world_for(map_screen)
     # Lightweight map fixtures can omit local display preferences.
-    if getattr(map_screen, "unit_event_filter_turn", None) != map_screen.time_manager.total_turns:
+    if getattr(map_screen, "unit_event_filter_turn", None) != world_state.time_manager.total_turns:
         set_event_filter(map_screen, None)
     return map_screen.unit_event_filter
 
 
 def entries_for(map_screen):
     """Limit reports to the viewer's units, including casualties no longer on the map."""
+    session_state = session_for(map_screen)
     rows = saved_log(map_screen)["events"]
-    if map_screen.is_editor or map_screen.player_country == c.TOURNAMENT_SPECTATOR:
+    if session_state.is_editor or session_state.player_country == c.TOURNAMENT_SPECTATOR:
         return []
-    if map_screen.player_country == "Spectator":
+    if session_state.player_country == "Spectator":
         return rows
-    rows = [row for row in rows if row["owner"] == map_screen.player_country]
-    if map_screen.tactical_mode:
-        unit = map_screen.player_unit
+    rows = [row for row in rows if row["owner"] == session_state.player_country]
+    if session_state.tactical_mode:
+        unit = session_state.player_unit
         rows = [row for row in rows if unit and row["unit_id"] == unit.get("unit_id")]
     return rows
 
 
 def refresh_presentation(map_screen):
     """Prepare the badge at a state or viewer boundary, never in a frame loop."""
+    world_state = world_for(map_screen)
+    session_state = session_for(map_screen)
     event_filter_for(map_screen)
     map_screen._unit_event_view = entries_for(map_screen)
-    turn = map_screen.time_manager.total_turns
-    reads = getattr(map_screen, "unit_event_read_turns", {})
-    map_screen._unit_event_unread = (0 if reads.get(map_screen.player_country) == turn
+    turn = world_state.time_manager.total_turns
+    reads = getattr(session_for(map_screen), "unit_event_read_turns", {})
+    map_screen._unit_event_unread = (0 if reads.get(session_state.player_country) == turn
                                     else len(map_screen._unit_event_view))
 
 
 def mark_read(map_screen):
     # Read status is a local presentation preference, including on network clients.
-    reads = getattr(map_screen, "unit_event_read_turns", {})
-    turn = map_screen.time_manager.total_turns
-    map_screen.unit_event_read_turns = {owner: value for owner, value in reads.items() if value == turn}
-    map_screen.unit_event_read_turns[map_screen.player_country] = turn
+    world_state = world_for(map_screen)
+    session_state = session_for(map_screen)
+    reads = getattr(session_for(map_screen), "unit_event_read_turns", {})
+    turn = world_state.time_manager.total_turns
+    session_state.unit_event_read_turns = {owner: value for owner, value in reads.items() if value == turn}
+    session_state.unit_event_read_turns[session_state.player_country] = turn
     refresh_presentation(map_screen)
 
 
 def mark_unread(map_screen):
     """Mark only the current viewer's last-turn report as unread."""
-    map_screen.unit_event_read_turns = saved_reads(map_screen)
-    map_screen.unit_event_read_turns.pop(map_screen.player_country, None)
+    session_state = session_for(map_screen)
+    session_state.unit_event_read_turns = saved_reads(map_screen)
+    session_state.unit_event_read_turns.pop(session_state.player_country, None)
     refresh_presentation(map_screen)
 
 
 def _state(map_screen):
+    world_state = world_for(map_screen)
     return {id(unit): (unit, province["id"], unit.get("type", ""),
                       unit.get("health", 0))
-            for province in map_screen.map_data.values()
+            for province in world_state.map_data.values()
             for unit in queries.units_with_air_cargo(province.get("units", []))}
 
 
 class _TurnRecorder:
     def __init__(self, map_screen):
+        world_state = world_for(map_screen)
         self.map_screen = map_screen
-        queries.ensure_unit_ids(map_screen.map_data)
+        queries.ensure_unit_ids(world_state.map_data)
         self.state = _state(map_screen)
         self.locations = {identity: state[1] for identity, state in self.state.items()}
         self.rows = []
@@ -245,12 +260,14 @@ class _TurnRecorder:
 
 @contextmanager
 def record_turn(map_screen):
+    world_state = world_for(map_screen)
+    session_state = session_for(map_screen)
     recorder = _TurnRecorder(map_screen)
     token = _RECORDER.set(recorder)
     try:
         yield
-        map_screen.unit_event_log = {"turn": map_screen.time_manager.total_turns, "events": recorder.rows}
-        map_screen.unit_event_read_turns = {}
+        world_state.unit_event_log = {"turn": world_state.time_manager.total_turns, "events": recorder.rows}
+        session_state.unit_event_read_turns = {}
         set_event_filter(map_screen, None)
     finally:
         _RECORDER.reset(token)

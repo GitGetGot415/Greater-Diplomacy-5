@@ -8,10 +8,11 @@ import time
 # dist_dir, etc.) is meant to resolve against the actual project root, so hop up one
 # level and put the root on sys.path before importing first-party packages.
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, REPO_ROOT)
-os.chdir(REPO_ROOT)
+if __name__ == "__main__" and REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
 
 import data.constants as c
+from compilation_scripts.build_support import reset_runtime_files, verified_build_path
 
 def remove_dir_safely(dir_path, retries=5, delay=0.2):
     """Safely remove a directory tree, handling macOS APFS/Finder file lock race conditions."""
@@ -28,8 +29,9 @@ def remove_dir_safely(dir_path, retries=5, delay=0.2):
                 time.sleep(delay)
 
 def main():
-    build_dir = "build"
-    dist_dir = "dist"
+    os.chdir(REPO_ROOT)
+    build_dir = verified_build_path(REPO_ROOT, "build")
+    dist_dir = verified_build_path(REPO_ROOT, "dist")
 
     # 1. Clean old build
     if os.path.exists(build_dir):
@@ -44,7 +46,7 @@ def main():
     print("Running py2app...")
     # setup.py lives alongside this script in compilation_scripts/, but py2app resolves
     # its DATA_FILES (assets, base_maps, etc.) relative to the CWD it's invoked from --
-    # which is REPO_ROOT thanks to the os.chdir() above, so this still lands dist/build
+    # which main() sets to REPO_ROOT, so this still lands dist/build
     # at the project root exactly like before.
     # Keep using the interpreter that started this wrapper.  In particular,
     # invoking this file with venv/bin/python must not silently switch to a
@@ -60,34 +62,8 @@ def main():
         
     print("py2app finished successfully.")
 
-    # Create empty saves/tournament_saves dirs in the bundle, mirroring the
-    # Windows build: the app expects these to exist relative to its cwd, but
-    # any saves already on this dev machine must NOT be bundled.
-    #
-    # mods/ is created empty for the same reason saves/ is: it's not a
-    # py2app data_files entry (those need at least one file per tuple, and
-    # this folder must ship with none), but the game still needs it to
-    # exist -- it's the drop-a-.py-in-here-and-restart folder from
-    # mod_loader.py's docstring / the in-game Mods screen.
     resources_dir = os.path.join(dist_dir, "main.app", "Contents", "Resources")
-    for d in ("saves", "tournament_saves", "mods"):
-        os.makedirs(os.path.join(resources_dir, d), exist_ok=True)
-
-    # Reset local playlist choices so the build doesn't carry over developer
-    # album selections or per-song shuffle exclusions.
-    resources_json_dir = os.path.join(dist_dir, "main.app", "Contents", "Resources", "data", "json")
-    if os.path.exists(resources_json_dir):
-        for playlist_file in ("active_albums.json", "shuffle_disabled_tracks.json"):
-            with open(os.path.join(resources_json_dir, playlist_file), "w") as f:
-                f.write("[]")
-
-    # Reset scenario/global settings to {} so the build falls back to the game's
-    # built-in defaults instead of carrying over whatever the dev machine had set
-    for settings_file in ("scenario_settings.json", "settings_config.json", "starting_song.json", "hildehrand_choice.json"):
-        settings_path = os.path.join(resources_json_dir, settings_file)
-        if os.path.exists(resources_json_dir):
-            with open(settings_path, "w") as f:
-                f.write("{}")
+    reset_runtime_files(resources_dir)
 
     # 3. Zipping the app
     zip_name = f"GD5 MACOS {c.GAME_VERSION}"

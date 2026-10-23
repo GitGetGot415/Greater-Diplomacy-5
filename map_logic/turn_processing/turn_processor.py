@@ -1,3 +1,4 @@
+from data.state_access import world_for, session_for
 import asyncio
 from map_logic.diplomacy import diplomacy_logic
 from map_logic.ai import (ai_movement, ai_research, ai_construction, ai_diplomacy,
@@ -16,6 +17,8 @@ async def prepare_turn(map_screen):
     browser tab/audio scheduling alive instead of freezing for the whole
     turn; on desktop it's a no-op since this runs on its own thread/loop.
     """
+    world_state = world_for(map_screen)
+    session_state = session_for(map_screen)
     print("\n" + "="*40)
     print("--- [PHASE 1] AI PREPARATION START ---")
 
@@ -25,15 +28,15 @@ async def prepare_turn(map_screen):
     ai_llm_runner.begin_turn(map_screen)
 
     # --- NEW: Check if AI is turned off ---
-    ai_disabled = queries.get_scenario_flag("ai_disabled", c.DEFAULT_AI_DISABLED, map_screen.scenario_settings)
+    ai_disabled = queries.get_scenario_flag("ai_disabled", c.DEFAULT_AI_DISABLED, world_state.scenario_settings)
 
 
     if not ai_disabled:
         # --- TACTICAL HIDE ---
         # Mask the player unit so the AI handler doesn't touch it during ANY phase
-        is_tactical = map_screen.tactical_mode and map_screen.player_unit
+        is_tactical = session_state.tactical_mode and session_state.player_unit
         if is_tactical:
-            map_screen.player_unit["owner"] = "TACTICAL_HIDDEN"
+            session_state.player_unit["owner"] = "TACTICAL_HIDDEN"
 
         # One sweep of the map answers the border/strength/relation questions
         # every AI pass below would otherwise re-derive per nation, per target.
@@ -46,7 +49,7 @@ async def prepare_turn(map_screen):
             # --- AI-to-AI summits ---
             # Before the proactive pass, so an agreement reached here is already
             # binding when each nation works out what it wants to do.
-            map_screen.loading_status_text = "Holding Summits..."
+            session_state.loading_status_text = "Holding Summits..."
             ai_diplomacy.process_summits(map_screen)
             await asyncio.sleep(0)
 
@@ -55,23 +58,23 @@ async def prepare_turn(map_screen):
             ai_diplomacy.process_basic_proactive_ai(map_screen)
             await asyncio.sleep(0)
 
-            map_screen.loading_status_text = "Running AI Research..."
+            session_state.loading_status_text = "Running AI Research..."
             print("[SYSTEM] Running AI Research...")
             ai_research.process_ai_research(map_screen)
             await asyncio.sleep(0)
 
-            map_screen.loading_status_text = "Running AI Economy & Construction..."
+            session_state.loading_status_text = "Running AI Economy & Construction..."
             print("[SYSTEM] Running AI Economy & Construction...")
             ai_construction.process_ai_economy_decisions(map_screen)
             await asyncio.sleep(0)
 
-            map_screen.loading_status_text = "Generating AI Movement Orders..."
+            session_state.loading_status_text = "Generating AI Movement Orders..."
             print("[SYSTEM] Generating AI Movement Orders...")
 
             ai_movement.process_ai_unit_orders(map_screen)
             await asyncio.sleep(0)
 
-            map_screen.loading_status_text = "Drafting Proactive Responses..."
+            session_state.loading_status_text = "Drafting Proactive Responses..."
             print("[SYSTEM] Drafting Proactive Responses...")
             ai_diplomacy.process_proactive_llm_tasks(map_screen)
             await asyncio.sleep(0)
@@ -80,7 +83,7 @@ async def prepare_turn(map_screen):
             # In a finally because an AI pass that raises used to leave the
             # player's own unit owned by TACTICAL_HIDDEN for the rest of the game.
             if is_tactical:
-                map_screen.player_unit["owner"] = map_screen.player_country
+                session_state.player_unit["owner"] = session_state.player_country
 
             # Every AI pass is done. Scripted events below can hand provinces
             # between nations, which would make the cached fronts and strengths
@@ -90,21 +93,21 @@ async def prepare_turn(map_screen):
         print("[SYSTEM] AI is OFF. Skipping standard AI actions...")
 
         # Since AI is off, we still need to clear proactive tasks to avoid errors
-        map_screen.proactive_llm_tasks = []
-        map_screen.proactive_tasks_total = 0
-        map_screen.proactive_tasks_completed = 0
-        map_screen.proactive_llm_tasks_total = 0
-        map_screen.proactive_llm_tasks_completed = 0
+        session_state.proactive_llm_tasks = []
+        session_state.proactive_tasks_total = 0
+        session_state.proactive_tasks_completed = 0
+        session_state.proactive_llm_tasks_total = 0
+        session_state.proactive_llm_tasks_completed = 0
 
     # --- Process Scripted Events ---
     # Moved here so AI can't immediately issue orders to units spawned by events this turn
-    map_screen.loading_status_text = "Running Scripted Events..."
+    session_state.loading_status_text = "Running Scripted Events..."
     print("[SYSTEM] Running Scripted Events...")
     ai_diplomacy.process_scripted_events(map_screen)
     await asyncio.sleep(0)
 
     # MOVED: Diplomacy is now processed AFTER AI movement generation.
-    map_screen.loading_status_text = "Processing Pending Diplomacy..."
+    session_state.loading_status_text = "Processing Pending Diplomacy..."
     print("[SYSTEM] Processing Pending Diplomacy...")
     diplomacy_logic.process_diplomacy_turn(map_screen)
     await asyncio.sleep(0)
@@ -112,9 +115,10 @@ async def prepare_turn(map_screen):
     print("--- [PHASE 1] COMPLETE ---")
 
 def snapshot_history(map_screen):
-    if not hasattr(map_screen, 'history'):
-        map_screen.history = {}
-    turn_idx = str(map_screen.time_manager.total_turns)
+    world_state = world_for(map_screen)
+    if not hasattr(world_for(map_screen), 'history'):
+        world_state.history = {}
+    turn_idx = str(world_state.time_manager.total_turns)
 
     # History is JSON data, so recursively copy its lists and dictionaries.
     # A shallow copy is not sufficient: province resources are dictionaries,
@@ -130,13 +134,13 @@ def snapshot_history(map_screen):
             return tuple(copy_history_value(item) for item in value)
         return value
 
-    nation_snap = copy_history_value(map_screen.nation_data)
+    nation_snap = copy_history_value(world_state.nation_data)
     
     snapshot = {
-        "date_str": map_screen.time_manager.get_date_string(),
-        "day": map_screen.time_manager.day,
-        "month": map_screen.time_manager.month_index,
-        "year": map_screen.time_manager.year,
+        "date_str": world_state.time_manager.get_date_string(),
+        "day": world_state.time_manager.day,
+        "month": world_state.time_manager.month_index,
+        "year": world_state.time_manager.year,
         "nation_data": nation_snap,
         "provinces": {}
     }
@@ -144,10 +148,10 @@ def snapshot_history(map_screen):
     # Use the shared save serializer so history and normal saves agree on the
     # province schema.  In particular, resources are a {name: amount} mapping,
     # not a list of resource names.
-    for data in map_screen.map_data.values():
+    for data in world_state.map_data.values():
         saved_province = queries.build_saved_province_data(data)
         snapshot["provinces"][data["json_key"]] = copy_history_value(saved_province)
-    map_screen.history[turn_idx] = snapshot
+    world_state.history[turn_idx] = snapshot
 
 async def resolve_turn_logic(map_screen):
     from map_logic.turn_processing import unit_events
@@ -161,23 +165,25 @@ async def _resolve_turn_logic(map_screen): # Renamed from resolve_turn
     Yields with `await asyncio.sleep(0)` between the major sub-phases -- see
     prepare_turn's docstring for why.
     """
+    world_state = world_for(map_screen)
+    session_state = session_for(map_screen)
     print("\n--- [PHASE 2] TURN RESOLUTION START ---")
     from map_logic.turn_processing import unit_events
     
-    recovering_units = [unit for province in map_screen.map_data.values()
+    recovering_units = [unit for province in world_state.map_data.values()
                         for unit in queries.units_with_air_cargo(province.get("units", []))
                         if queries.unit_is_air_drop_recovering(unit)]
     # Snapshot original owners for capture logic
-    for prov in map_screen.map_data.values():
+    for prov in world_state.map_data.values():
         prov["_turn_start_owner"] = prov.get("owner", "Unclaimed")
         
     # Ghost War Cleanup
     active_nations = queries.get_politically_active_nations(
-        map_screen.map_data, map_screen.nation_data)
-    queries.cleanup_ghost_wars(map_screen.nation_data, active_nations)
+        world_state.map_data, world_state.nation_data)
+    queries.cleanup_ghost_wars(world_state.nation_data, active_nations)
 
-    days_to_advance = queries.get_days_per_turn(map_screen.scenario_settings)
-    map_screen.time_manager.process_time(days_to_advance)
+    days_to_advance = queries.get_days_per_turn(world_state.scenario_settings)
+    world_state.time_manager.process_time(days_to_advance)
 
     # Before combat and before research, so the whole turn resolves under one
     # political value rather than shooting under the old one and researching
@@ -222,7 +228,7 @@ async def _resolve_turn_logic(map_screen): # Renamed from resolve_turn
     # evaluate entry against a province's owner from before it was captured for the
     # entire following order phase -- e.g. blocking a legal war-time move into a
     # newly-conquered province because the pre-conquest owner isn't an enemy.
-    for prov in map_screen.map_data.values():
+    for prov in world_state.map_data.values():
         prov["_turn_start_owner"] = prov.get("owner", "Unclaimed")
 
     # Kill orphaned units and ghost wars
@@ -230,7 +236,7 @@ async def _resolve_turn_logic(map_screen): # Renamed from resolve_turn
     # Disbands, combat losses, captures, and nation death can all change the
     # set of live units.  Armies are organizational metadata, so prune their
     # membership only after authoritative turn resolution has settled.
-    queries.normalize_armies(map_screen.nation_data, map_screen.map_data)
+    queries.normalize_armies(world_state.nation_data, world_state.map_data)
     queries.finish_air_drop_recovery_turn(recovering_units)
     # Target-area returns are deliberately queued only after every submitted
     # movement order has resolved. They therefore become choices for the next
@@ -241,7 +247,7 @@ async def _resolve_turn_logic(map_screen): # Renamed from resolve_turn
     await asyncio.sleep(0)
 
     # Process Morale updates
-    for prov in map_screen.map_data.values():
+    for prov in world_state.map_data.values():
         for u in prov.get("units", []):
             if u.get("_in_combat_this_turn"):
                 u["morale"] = max(0.0, float(u.get("morale", c.DEFAULT_UNIT_MORALE)) - 5.0)
@@ -258,9 +264,9 @@ async def _resolve_turn_logic(map_screen): # Renamed from resolve_turn
 
     if c.RECORD_HISTORY:
         # --- MULTI-TURN OPTIMIZATION ---
-        is_multi = map_screen.multi_turns_total > 0
-        is_last_multi = not is_multi or (map_screen.multi_turns_completed >= map_screen.multi_turns_total - 1)
-        is_spectator = map_screen.player_country == "Spectator"
+        is_multi = session_state.multi_turns_total > 0
+        is_last_multi = not is_multi or (session_state.multi_turns_completed >= session_state.multi_turns_total - 1)
+        is_spectator = session_state.player_country == "Spectator"
         
         if is_multi and not is_last_multi and not is_spectator:
             pass # Skip deepcopying thousands of dictionaries on skipped turns
@@ -274,9 +280,9 @@ async def _resolve_turn_logic(map_screen): # Renamed from resolve_turn
     print("="*40 + "\n")
     
     # --- PROCESS PLAYER AUTOMATION FOR NEXT TURN ---
-    player = map_screen.player_country
+    player = session_state.player_country
     if player and player != "Spectator":
-        auto = map_screen.nation_data.get(player, {}).get("automation", {})
+        auto = world_state.nation_data.get(player, {}).get("automation", {})
         if auto.get("construction"):
             automation_logic.automate_player_construction(map_screen)
         if auto.get("movement"):

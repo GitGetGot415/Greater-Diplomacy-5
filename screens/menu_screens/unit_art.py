@@ -103,14 +103,7 @@ def _family_kind(base, first_name):
     display mode reads a tier's level in _level_label. `first_name` is any
     member of the family (its own suffix shape is the same for all of
     them)."""
-    suffix = first_name[len(base):].strip()
-    if not suffix:
-        return "single"
-    if suffix.isdigit() and len(suffix) == 4:
-        return "year"
-    if all(ch in "IVXLCDM" for ch in suffix.upper()):
-        return "roman"
-    return "other"
+    return queries.get_unit_metadata(first_name).get("tier_kind", "other")
 
 
 def _level_label(mode, base, kind, years_list, idx_by_name, first, last, default_label):
@@ -147,8 +140,8 @@ def _level_label(mode, base, kind, years_list, idx_by_name, first, last, default
     if not years_list:
         return default_label  # no research_template.json entry for this family
 
-    lvl1 = 1 if kind == "single" else queries.roman_to_int(first[len(base):].strip())
-    lvl2 = 1 if kind == "single" else queries.roman_to_int(last[len(base):].strip())
+    lvl1 = 1 if kind == "single" else queries.get_unit_research_requirement(first)[1]
+    lvl2 = 1 if kind == "single" else queries.get_unit_research_requirement(last)[1]
     if lvl1 < 1 or lvl1 > len(years_list):
         return default_label
 

@@ -3,7 +3,7 @@
 Two contracts are load-bearing and neither is checked by anything else:
 
 - the JSON key set written to data/json/settings_config.json
-- the positional order of load_settings' return, which main.py unpacks by index
+- the positional order retained for older load_settings callers
 
 Both used to be restated five times across keybind_io, queries and main. They
 are derived from one table now, which means a careless edit to that table could
@@ -558,6 +558,33 @@ class KeybindIoTests(unittest.TestCase):
         import pygame
 
         pygame.init()
+
+    def test_named_load_matches_the_legacy_adapter_without_repacking_startup_values(self):
+        from data.io import keybind_io
+        from data import queries
+        import pygame
+        saved = {"keybinds": {"BACK": None}, "api_key": "legacy-fixture"}
+        with mock.patch.object(keybind_io.os.path, "exists", return_value=True), \
+                mock.patch.object(queries, "get_settings", return_value=saved):
+            result = keybind_io.load_settings_result({"BACK": pygame.K_ESCAPE}, 0.23, 0.37)
+            positional = keybind_io.load_settings({"BACK": pygame.K_ESCAPE}, 0.23, 0.37)
+        self.assertEqual(result.as_tuple(), positional)
+        self.assertIsNone(result.keybinds["BACK"])
+        self.assertEqual(result.values["gemini_api_key"], saved["api_key"])
+        self.assertEqual(result.values["sfx_volume"], 0.23)
+        self.assertEqual(result.values["music_volume"], 0.37)
+
+    def test_named_load_preserves_whole_file_fallback_for_malformed_keybinds(self):
+        from data.io import keybind_io
+        from data import queries
+        import pygame
+        defaults = {"BACK": pygame.K_ESCAPE}
+        with mock.patch.object(keybind_io.os.path, "exists", return_value=True), \
+                mock.patch.object(queries, "get_settings", return_value={"keybinds": {"BACK": []}, "num_players": 7}):
+            result = keybind_io.load_settings_result(defaults, 0.23, 0.37)
+        self.assertEqual(result.keybinds, defaults)
+        self.assertEqual(result.values["num_players"], settings_schema.defaults()["num_players"])
+        self.assertEqual(result.values["music_volume"], 0.37)
 
     def test_load_settings_returns_the_documented_shape(self):
         from data.io import keybind_io

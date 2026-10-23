@@ -204,9 +204,9 @@ class SavedDataMigrationTests(unittest.TestCase):
         self.assertEqual(pending, {"proposal": proposal})
         self.assertIs(pending["proposal"], proposal)
         self.assertEqual(responses["accepted"], {"verdict": "ACCEPT", "action": "FIXTURE",
-                                               "message": "reply", "parameters": {"value": 9}})
+                                               "message": "reply", "parameters": {"value": 9}, "legacy_unmatched": True})
         self.assertEqual(responses["rejected"], {"verdict": "REJECT", "action": "FIXTURE",
-                                               "message": "", "parameters": None})
+                                               "message": "", "parameters": None, "legacy_unmatched": True})
         restored = round_trip(countries)
         migrations.migrate_pending_responses(restored)
         self.assertEqual(restored, countries)

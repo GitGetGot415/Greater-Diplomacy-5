@@ -1,22 +1,25 @@
 """Resolve pixel-range aircraft orders once at the turn boundary."""
+from data.state_access import world_for, session_for
 import random
 from data import queries
 from map_logic.turn_processing import combat_rules, combat_processor, unit_events
 
 
 def _cleanup(map_screen):
-    for province in map_screen.map_data.values():
+    world_state = world_for(map_screen)
+    for province in world_state.map_data.values():
         province["units"] = [u for u in province.get("units", []) if u.get("health", 0) > 0]
 
 
 def process_air_orders(map_screen):
+    world_state = world_for(map_screen)
     missions = {}
     patrols = []
     reposition = []
-    for base in map_screen.map_data.values():
+    for base in world_state.map_data.values():
         # A base already occupied by hostile troops cannot launch aircraft out
         # of an ongoing ground engagement to evade immediate destruction.
-        queries.prepare_aircraft_for_ground_combat(base.get("units", []), map_screen.nation_data,
+        queries.prepare_aircraft_for_ground_combat(base.get("units", []), world_state.nation_data,
                                                  on_land=not queries.is_water_province(base))
         for unit in base.get("units", []):
             order = unit.get("order")
@@ -52,7 +55,7 @@ def process_air_orders(map_screen):
         return [unit for unit, _base, _order in patrols
                 if unit.get("health", 0) > 0 and target_id in coverage[id(unit)]
                 and any(queries.are_at_war(queries.get_unit_combat_owner(unit),
-                         queries.get_unit_combat_owner(attacker), map_screen.nation_data)
+                         queries.get_unit_combat_owner(attacker), world_state.nation_data)
                         for attacker in missions[key] if attacker.get("health", 0) > 0)]
 
     # Each patrol contributes precedence constraints between covered missions.
@@ -93,9 +96,9 @@ def process_air_orders(map_screen):
             with unit_events.record_phase("Interception"):
                 # One side contains every participant: the standard coalition lanes
                 # retain three-or-more-side fights. Aircraft have no width limit.
-                battle = combat_rules.build_battle([force + defenders], map_screen.nation_data,
+                battle = combat_rules.build_battle([force + defenders], world_state.nation_data,
                                                    air_combat=True)
-                for targets, attack, sources in combat_rules.exchange(battle, map_screen.nation_data, with_sources=True):
+                for targets, attack, sources in combat_rules.exchange(battle, world_state.nation_data, with_sources=True):
                     combat_processor.apply_group_damage(attack, targets, sources=sources, tile=key[0])
                 for lane in battle.lanes:
                     for unit in lane.a.front + lane.b.front:
@@ -103,7 +106,7 @@ def process_air_orders(map_screen):
                 _cleanup(map_screen)
 
         survivors = [unit for unit in force if unit.get("health", 0) > 0]
-        target = map_screen.id_to_province[key[0]]
+        target = world_state.id_to_province[key[0]]
         # Cargo takes interception losses aboard the carrier before deployment.
         # Surviving transports return to their exact base without attacking.
         strike_survivors = []
@@ -111,7 +114,7 @@ def process_air_orders(map_screen):
             if unit["order"]["type"] == "AIR_DROP":
                 cargo_units = unit.pop("air_cargo")
                 for cargo in cargo_units:
-                    queries.begin_air_drop_recovery(cargo, map_screen.scenario_settings)
+                    queries.begin_air_drop_recovery(cargo, world_state.scenario_settings)
                     cargo.pop("_combat_locked", None)
                     cargo["_previous_province_id"] = unit["order"]["base_id"]
                     cargo["_current_province_id"] = target["id"]
@@ -131,15 +134,15 @@ def process_air_orders(map_screen):
         # force; those belong to ground combat and interception respectively.
         garrison = [u for u in target.get("units", []) if any(queries.are_at_war(
             queries.get_unit_combat_owner(wing), queries.get_unit_combat_owner(u),
-            map_screen.nation_data) for wing in survivors)]
+            world_state.nation_data) for wing in survivors)]
         if survivors and garrison:
             battle = combat_rules.build_battle(
-                [survivors, garrison], map_screen.nation_data,
+                [survivors, garrison], world_state.nation_data,
                 terrain=target.get("terrain"), convert_aircraft=False, air_mission_sides={0})
             garrison_ids = {id(u) for u in garrison}
-            for targets, attack, sources in combat_rules.exchange(battle, map_screen.nation_data, with_sources=True):
+            for targets, attack, sources in combat_rules.exchange(battle, world_state.nation_data, with_sources=True):
                 combat_processor.apply_group_damage(attack, targets, lambda unit:
-                    queries.get_fort_defense_bonus(target, unit, map_screen.nation_data,
+                    queries.get_fort_defense_bonus(target, unit, world_state.nation_data,
                                                   combat_active=True)
                     if id(unit) in garrison_ids else 0, sources=sources, tile=target["id"])
             for lane in battle.lanes:
@@ -151,10 +154,10 @@ def process_air_orders(map_screen):
         # exchange. Eligibility comes from unit data, including for fighters.
         fort_hits = 0
         for owner, wings in by_owner.items():
-            if queries.are_at_war(owner, target.get("owner"), map_screen.nation_data):
+            if queries.are_at_war(owner, target.get("owner"), world_state.nation_data):
                 fort_hits += sum(queries.air_unit_can_damage_forts(wing) for wing in wings)
         for _ in range(fort_hits):
-            queries.damage_fort(target, map_screen.nation_data, map_screen.map_data)
+            queries.damage_fort(target, world_state.nation_data, world_state.map_data)
         for unit in survivors:
             unit["order"] = {"type": "MOVE", "path": []}
             if queries.air_unit_stats(unit).get("air_consumable"):
@@ -168,6 +171,6 @@ def process_air_orders(map_screen):
         if unit.get("health", 0) <= 0:
             continue
         base["units"] = [u for u in base["units"] if u is not unit]
-        map_screen.id_to_province[order["target_id"]].setdefault("units", []).append(unit)
+        world_state.id_to_province[order["target_id"]].setdefault("units", []).append(unit)
         unit["order"] = {"type": "MOVE", "path": []}
     # Patrols persist; strikes, air drops, and repositioning resolve once.

@@ -10,6 +10,7 @@ Older names and their conversion rules belong to data.migrations.
 """
 
 from collections import namedtuple
+from dataclasses import dataclass
 
 import data.constants as c
 from data import migrations
@@ -37,8 +38,7 @@ def _coerce_music_pitch_timeline(value):
     return c.DEFAULT_MUSIC_PITCH_TIMELINE
 
 
-# ORDER IS THE PERSISTED CONTRACT. main.py unpacks load_settings' return by
-# index, so appending is safe and reordering is not.
+# Keep positional compatibility for older callers. JSON settings use named keys.
 SETTINGS_FIELDS = (
     _field("sfx_volume", "sfx_volume", lambda: c.DEFAULT_SFX_VOLUME),
     _field("music_volume", "music_volume", lambda: c.DEFAULT_MUSIC_VOLUME),
@@ -98,7 +98,7 @@ SETTINGS_FIELDS = (
 
 SETTINGS_ORDER = tuple(field.name for field in SETTINGS_FIELDS)
 
-#: load_settings returns keybinds first, then SETTINGS_FIELDS in order.
+#: The legacy tuple adapter returns keybinds before the ordered settings.
 TUPLE_LENGTH = len(SETTINGS_FIELDS) + 1
 
 _FIELDS_BY_NAME = {field.name: field for field in SETTINGS_FIELDS}
@@ -145,11 +145,7 @@ def to_tuple(values, keybinds):
 
 
 def from_tuple(sequence):
-    """Unpacks that positional form, tolerating one saved by an older build.
-
-    Anything the sequence is too short to carry falls back to its default,
-    which is what main.py's chain of `len(loaded_data) > N` guards did by hand.
-    """
+    """Accept shorter positional results from older callers and fill missing defaults."""
     values = defaults()
     for index, field in enumerate(SETTINGS_FIELDS, start=1):
         if index < len(sequence):
@@ -170,3 +166,13 @@ def apply_to_controller(controller, values):
     for field in SETTINGS_FIELDS:
         setattr(controller, field.name, filled[field.name])
     return filled
+
+
+@dataclass(frozen=True)
+class SettingsLoadResult:
+    """Return keybinds and schema-normalized values without positional conversion."""
+    keybinds: dict
+    values: dict
+
+    def as_tuple(self):
+        return to_tuple(self.values, self.keybinds)

@@ -38,8 +38,8 @@ class SubjectTests(unittest.TestCase):
             country.update(research={}, research_queue=[], research_progress={})
         self.enterContext(patch.object(self.map, "nation_data", nation_data))
         self.enterContext(patch.object(self.map, "is_editor", False))
-        self.enterContext(patch.object(self.map, "multiplayer_mode", False, create=True))
-        self.enterContext(patch.object(self.map, "realtime_multiplayer", False, create=True))
+        self.enterContext(patch.object(self.map.session, "multiplayer_mode", False))
+        self.enterContext(patch.object(self.map.session, "realtime_multiplayer", False))
         self.enterContext(patch.object(self.map, "viewing_research_mode", "VIEW", create=True))
         self.enterContext(patch.object(self.map, "show_feedback", Mock()))
         self.saved = {a: getattr(self.map, a, None)
@@ -469,7 +469,7 @@ class PickerTests(unittest.TestCase):
                             ("tactical_mode", False), ("multiplayer_mode", False),
                             ("realtime_multiplayer", False), ("viewing_research_country", ""),
                             ("viewing_research_mode", "VIEW"), ("next_state", "MAP"), ("done", False)):
-            self.enterContext(patch.object(self.map, name, value, create=True))
+            self.enterContext(patch.object(app_harness.state_owner(self.map, name), name, value, create=True))
 
     def picker(self):
         from screens.map_related_screens.research import ResearchCountrySelectScreen

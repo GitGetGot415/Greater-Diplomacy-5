@@ -1,18 +1,21 @@
+from data.state_access import world_for, session_for
 import data.constants as c
 from data import migrations, queries
 from map_logic import politics
 
 def process_national_research(map_screen):
     # Load template to know costs (REPLACED WITH CACHE)
+    world_state = world_for(map_screen)
+    session_state = session_for(map_screen)
     template = queries.get_tech_tree()
     
     # Uses the new constant
-    days_per_turn = queries.get_days_per_turn(map_screen.scenario_settings)
+    days_per_turn = queries.get_days_per_turn(world_state.scenario_settings)
     base_points_per_turn = c.BASE_RESEARCH_POINTS_PER_DAY * days_per_turn
 
-    current_exact_year = queries.get_exact_year(map_screen.time_manager)
+    current_exact_year = queries.get_exact_year(world_state.time_manager)
 
-    for country_name, country_data in map_screen.nation_data.items():
+    for country_name, country_data in world_state.nation_data.items():
         queue = country_data.get("research_queue", [])
         if not queue: continue
 
@@ -36,9 +39,9 @@ def process_national_research(map_screen):
             # slower -- at the far end, not at all, which is a stalled project
             # rather than a guarded division.
             faction_bonus = queries.get_faction_research_bonus(
-                country_name, tech_key, current_level + 1, map_screen.nation_data)
+                country_name, tech_key, current_level + 1, world_state.nation_data)
             effective_points = (base_points_per_turn * multiplier
-                                * politics.research_multiplier(map_screen.nation_data, country_name)
+                                * politics.research_multiplier(world_state.nation_data, country_name)
                                 * (1.0 + faction_bonus))
             # -----------------------------------
             
@@ -53,8 +56,28 @@ def process_national_research(map_screen):
                 if "research_progress" in country_data:
                     country_data["research_progress"].pop(tech_key, None)
                 
-                if country_name == map_screen.player_country:
+                if country_name == session_state.player_country:
                     map_screen.show_feedback(f"TECH FINISHED: {queries.get_tech_display_name(tech_key)}")
                 
                 # Remove completed tech from queue
                 queue.pop(i)
+
+
+def apply_research_selection(country, result):
+    """Apply a canonical queue projection after its adapter validates authority."""
+    import copy
+    country["research_queue"] = copy.deepcopy(result["projects"])
+    country["research_progress"] = copy.deepcopy(result["research_progress"])
+
+
+def select_research(country, requested, tech_tree=None):
+    result = queries.canonical_research_selection(country, requested, tech_tree)
+    apply_research_selection(country, result)
+    return result
+
+
+def enqueue_research(queue, tech_name, points_remaining):
+    """Keep AI restart costs explicit after its existing selection pass."""
+    project = queries.build_research_project(tech_name, points_remaining)
+    queue.append(project)
+    return project

@@ -132,3 +132,35 @@ def boot_map():
 
     _map = game_map
     return game_map
+
+
+from contextlib import contextmanager, ExitStack
+from dataclasses import fields
+from data.game_state import WorldState
+from data.session_state import SessionState
+
+_WORLD_FIELDS = {item.name for item in fields(WorldState)}
+_SESSION_FIELDS = {item.name for item in fields(SessionState)}
+
+
+def state_owner(game, name):
+    """Patch the explicit owner rather than a compatibility property."""
+    if name in _WORLD_FIELDS:
+        return game.world
+    if name in _SESSION_FIELDS:
+        return game.session
+    return game
+
+
+@contextmanager
+def patch_map(game, values=None, **kwargs):
+    values = dict(values or {}, **kwargs)
+    groups = {"world": {}, "session": {}, "presentation": {}}
+    for name, value in values.items():
+        group = "world" if name in _WORLD_FIELDS else "session" if name in _SESSION_FIELDS else "presentation"
+        groups[group][name] = value
+    with ExitStack() as stack:
+        stack.enter_context(patch.dict(game.__dict__, groups["presentation"]))
+        stack.enter_context(patch.dict(game.world.__dict__, groups["world"]))
+        stack.enter_context(patch.dict(game.session.__dict__, groups["session"]))
+        yield

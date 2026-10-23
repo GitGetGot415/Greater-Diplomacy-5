@@ -1,3 +1,4 @@
+from data.state_access import world_for, session_for
 from data import queries
 from map_logic.diplomacy import diplomacy_logic, peace_scope, ratification
 from map_logic.diplomacy import volunteers
@@ -18,7 +19,7 @@ def _selected_diplomacy_target(map_screen):
 
 def can_edit_diplomacy(map_screen):
     """Whether the player can alter their diplomatic draft at this moment."""
-    if not getattr(map_screen, "realtime_multiplayer", False):
+    if not getattr(session_for(map_screen), "realtime_multiplayer", False):
         return True
     session = getattr(map_screen, "realtime_session", None)
     player = (session.players.get(getattr(map_screen, "realtime_player_id", ""))
@@ -442,7 +443,7 @@ def handle_send_volunteers(map_screen):
         if not can_edit_diplomacy(map_screen):
             return
         selected = [refs[key] for key in keys if key in refs]
-        if getattr(map_screen, "realtime_multiplayer", False):
+        if getattr(session_for(map_screen), "realtime_multiplayer", False):
             # The client may preview its selection, but reservations belong to
             # the authoritative server.  Removing the local units here made a
             # valid offer disappear before the server could identify it.
@@ -468,7 +469,7 @@ def handle_send_volunteers(map_screen):
         msg = diplomacy_logic.toggle_diplomacy_action(
             map_screen.nation_data, donor, host, volunteers.ACTION, message,
             parameters=details)
-        if getattr(map_screen, "realtime_multiplayer", False):
+        if getattr(session_for(map_screen), "realtime_multiplayer", False):
             drafts = getattr(map_screen, "realtime_volunteer_drafts", None)
             if drafts is None:
                 drafts = {}
@@ -527,7 +528,7 @@ def handle_withdraw_volunteer_offer(map_screen):
     host = _selected_diplomacy_target(map_screen)
     if host is None:
         return
-    if getattr(map_screen, "realtime_multiplayer", False):
+    if getattr(session_for(map_screen), "realtime_multiplayer", False):
         # An unsubmitted offer has no server reservation yet.  Undo only the
         # local draft; the next sync removes it from the authoritative intent.
         pending = map_screen.nation_data.get(donor, {}).get("pending_diplomacy", {})

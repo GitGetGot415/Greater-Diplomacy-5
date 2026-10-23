@@ -47,11 +47,18 @@ RESEARCH INDEXES
 
 data/queries.py indexes unit research requirements and family tiers.
 Production and AI use the same unlock checks.
-New research levels reuse the index without parsing the unit library again.
-Invalidate it after library-name edits, research-year changes, gate changes, obsolescence changes, or JSON refreshes.
+The active unit library supplies explicit family, tier, research, and recruitment metadata.
+New research levels reuse the index without parsing unit identifiers again.
+Invalidate it after library edits, metadata edits, research-year changes, gate changes, obsolescence changes, or JSON refreshes.
 This includes changes made in place.
 
 These indexes are temporary. They are not saved game fields.
+
+AI construction submits selected purchases through map_logic/production_actions.py.
+Selection order, budgets, emergency behavior, site selection, and tactical-unit protection retain their existing rules.
+AI building purchases retain their separate manpower policy.
+Research queue construction uses the shared research owner. Its AI restart policy remains explicit.
+See documentation/general_info.txt for state and action ownership.
 
 AIRCRAFT VALUATION
 ------------------

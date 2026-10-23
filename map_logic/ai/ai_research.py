@@ -1,9 +1,11 @@
+from data.state_access import world_for, session_for
 import data.constants as c
 from data import queries
 from map_logic.ai import ai_tech_eval, ai_unit_eval, ai_world
 
 def process_ai_research(map_screen):
     """Automates research queueing for AI nations."""
+    world_state = world_for(map_screen)
     # REPLACED DISK I/O WITH CACHED QUERIES
     tech_tree = queries.get_tech_tree()
     if not tech_tree:
@@ -11,13 +13,13 @@ def process_ai_research(map_screen):
 
     unit_library = queries.get_unit_library()
     building_library = queries.get_building_library()
-    all_econ = queries.calculate_all_economies(map_screen.map_data, map_screen.nation_data)
+    all_econ = queries.calculate_all_economies(world_state.map_data, world_state.nation_data)
     world = ai_world.for_screen(map_screen)
 
     ai_nations = queries.get_active_ai_nations(map_screen)
 
     for ai_name in ai_nations:
-        data = map_screen.nation_data[ai_name]
+        data = world_state.nation_data[ai_name]
 
         queue = data.setdefault("research_queue", [])
         
@@ -66,7 +68,7 @@ def process_ai_research(map_screen):
         # unlocked was any use: an island power researched armour and a nation
         # being overrun researched recruitment buildings. The historical-pace
         # term survives, but as a multiplier on value rather than as the key.
-        current_year = map_screen.time_manager.year
+        current_year = world_state.time_manager.year
         econ = all_econ.get(ai_name, {})
         available_techs = _rank_for_nation(
             available_techs, ai_name, data, econ, world,
@@ -106,7 +108,8 @@ def _fill_queue(queue, ranked, research, unit_library, tech_tree):
         if ai_tech_eval.units_unlocked_by(pick[0], research, unit_library):
             military_taken = True
 
-        queue.append({"tech_name": pick[0], "points_remaining": pick[2]})
+        from map_logic.turn_processing.research_processor import enqueue_research
+        enqueue_research(queue, pick[0], pick[2])
 
 
 def _rank_for_nation(available_techs, ai_name, data, econ, world,

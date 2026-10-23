@@ -19,6 +19,7 @@ Kept a leaf (stdlib plus data.platform) so it can be imported from anywhere in
 the AI package without closing a cycle.
 """
 
+from data.state_access import world_for, session_for
 import concurrent.futures
 import time
 from collections import namedtuple
@@ -43,11 +44,12 @@ def make_progress_counter(map_screen, label, done_attr, total):
     The returned callable takes (and ignores) the job, which is the shape
     run_llm_batch hands its on_progress.
     """
+    session_state = session_for(map_screen)
     def count(_job=None):
-        done = getattr(map_screen, done_attr, 0) + 1
-        setattr(map_screen, done_attr, done)
-        limit = getattr(map_screen, total, 0) if isinstance(total, str) else total
-        map_screen.loading_status_text = f"{label} ({done}/{limit})..."
+        done = getattr(session_state, done_attr, 0) + 1
+        setattr(session_state, done_attr, done)
+        limit = getattr(session_state, total, 0) if isinstance(total, str) else total
+        session_state.loading_status_text = f"{label} ({done}/{limit})..."
 
     return count
 

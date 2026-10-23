@@ -199,7 +199,7 @@ class ResearchIndexTests(unittest.TestCase):
     def test_new_research_does_not_reparse_names(self):
         library = {"Medium Tank I": {}, "Medium Tank II": {}}
         queries.get_unit_research_index(library)
-        with mock.patch.object(queries, "get_unit_unlock_requirement", side_effect=AssertionError("reparsed")):
+        with mock.patch.object(queries, "get_unit_requirements", side_effect=AssertionError("reparsed")):
             self.assertEqual(ai_unit_eval.buildable_units({"medium_tank": 1}, library), ["Medium Tank I"])
             self.assertEqual(ai_unit_eval.buildable_units({"medium_tank": 2}, library), ["Medium Tank II"])
 

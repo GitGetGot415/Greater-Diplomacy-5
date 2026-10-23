@@ -377,13 +377,12 @@ class Edit_Country_Screen(GameState):
                 self.map_screen.show_feedback("Only your integrated subjects may be edited in real-time multiplayer.")
                 return
         p_data = self.map_screen.nation_data[self.editing_country]
-        p_data["name"] = self.country_name
-        p_data["adjective"] = self.adjective
-        p_data["leader_name"] = self.leader_name
-        p_data["leader_title"] = self.leader_title
-        p_data["flag_data"] = queries.encode_surf_to_b64(self.flag_surf)
-        p_data["portrait_data"] = queries.encode_surf_to_b64(self.portrait_surf)
-        
+        queries.apply_country_appearance(self.map_screen.nation_data, self.editing_country, {
+            "name": self.country_name, "adjective": self.adjective,
+            "leader_name": self.leader_name, "leader_title": self.leader_title,
+            "flag_data": queries.encode_surf_to_b64(self.flag_surf),
+            "portrait_data": queries.encode_surf_to_b64(self.portrait_surf)})
+
         # Scrub it immediately to keep RAM clean
         queries.scrub_default_images({self.editing_country: p_data})
         
@@ -393,7 +392,8 @@ class Edit_Country_Screen(GameState):
         # COLOR SAVE LOGIC
         old_color = p_data.get("color")
         if list(old_color) != list(self.new_map_color):
-            p_data["color"] = self.new_map_color
+            queries.apply_country_appearance(self.map_screen.nation_data, self.editing_country,
+                                             {"color": self.new_map_color})
             
             # Update the quick-lookup dict in the map screen
             self.map_screen.nation_colors[self.editing_country] = tuple(self.new_map_color)

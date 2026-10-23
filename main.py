@@ -319,14 +319,9 @@ class Controller:
         default_keys = default_keybinds()
 
         # 2. Load settings (Safely handle old saves that might not have pitch/speed)
-        loaded_data = keybind_io.load_settings(default_keys, c.DEFAULT_SFX_VOLUME, c.DEFAULT_MUSIC_VOLUME)
-
-        # The positional tuple, its per-setting defaults and the chain of
-        # `len(loaded_data) > N` guards that used to be written out here all
-        # live in data/io/settings_schema.py now -- a tuple saved by an older
-        # build simply stops early and the rest fall back.
-        self.keybinds = loaded_data[0]
-        settings = settings_schema.from_tuple(loaded_data)
+        loaded_data = keybind_io.load_settings_result(default_keys, c.DEFAULT_SFX_VOLUME, c.DEFAULT_MUSIC_VOLUME)
+        self.keybinds = loaded_data.keybinds
+        settings = loaded_data.values
         settings_schema.apply_to_controller(self, settings)
         c.apply_runtime_settings(settings)
 

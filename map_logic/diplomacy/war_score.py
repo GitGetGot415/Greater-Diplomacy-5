@@ -28,6 +28,7 @@ and shadow it wholesale, which would take a brand new function down with it.
 See the note at the top of map_logic/ai/ai_world.py.
 """
 
+from data.state_access import world_for, session_for
 import data.constants as c
 from data.number_utils import clamp01
 from data import queries
@@ -53,13 +54,14 @@ def occupation(map_screen, side_a, side_b):
     heartland counts for more than taking five empty tiles -- which is also what
     stops a side that has overrun a wasteland from reading as the winner.
     """
-    prewar = prewar_index(map_screen.nation_data)
+    world_state = world_for(map_screen)
+    prewar = prewar_index(world_state.nation_data)
     a, b = set(side_a), set(side_b)
 
     homeland = {"a": 0.0, "b": 0.0}
     lost = {"a": 0.0, "b": 0.0}
 
-    for prov in map_screen.map_data.values():
+    for prov in world_state.map_data.values():
         was = original_owner(prov, prewar)
         side = "a" if was in a else ("b" if was in b else None)
         if side is None:
@@ -89,10 +91,11 @@ def nation_power(map_screen, nation, world=None):
     against another and must use the same scale the peace table does -- two
     definitions of strength would be two different answers to the same question.
     """
+    world_state = world_for(map_screen)
     if world is not None:
         return world.military(nation) + world.econ_power(nation) / 100.0
-    return (queries.get_military_strength(nation, map_screen.map_data)
-            + queries.get_economic_power(nation, map_screen.nation_data) / 100.0)
+    return (queries.get_military_strength(nation, world_state.map_data)
+            + queries.get_economic_power(nation, world_state.nation_data) / 100.0)
 
 
 def _bloc_power(map_screen, members, world=None):
@@ -168,9 +171,10 @@ def between(map_screen, nation, opponent, world=None):
     settlement between these two, and this reports it as
     {"mine": 0..1, "theirs": 0..1, ...}.
     """
+    world_state = world_for(map_screen)
     from map_logic.diplomacy import peace_scope
 
-    side_mine, side_theirs = peace_scope.war_sides(nation, opponent, map_screen.nation_data)
+    side_mine, side_theirs = peace_scope.war_sides(nation, opponent, world_state.nation_data)
     scores = leverage(map_screen, side_mine, side_theirs, world)
     return {"mine": scores["a"], "theirs": scores["b"],
             "parts": scores["parts"]["a"], "their_parts": scores["parts"]["b"],

@@ -26,10 +26,13 @@ ai_handler.py
     Model providers, request cancellation, and turn IDs.
 ai_llm_runner.py
     Model batches, phase budgets, cancellation, and progress.
+    Progress counters use session state. AI computation data remains separate from presentation.
 ai_prompts.py
     Shared context, prompt text, voice rules, and response-library access.
 ai_evaluation.py, ai_diplomacy.py
     Connect model choices and proposal replies to shared AI rules.
+    Selected requests use the shared diplomacy lifecycle and stable request references.
+    Budget cancellation, shared prompts, fallback behavior, and fairness rotation retain their existing rules.
 
 OPENROUTER SETTINGS
 -------------------

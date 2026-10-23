@@ -16,6 +16,7 @@ To add a new unit/building level, bump a `count`/range end and re-run.
 """
 import sys
 import os
+import re
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 import data.constants as c
 
@@ -101,11 +102,24 @@ OPTIONAL_UNIT_STAT_KEYS = ["bombard_attack", "production_group", "air_role",
 
 
 class UnitFamily:
-    def __init__(self, prefix, suffixes, stats, naval_unit=False):
+    def __init__(self, prefix, suffixes, stats, naval_unit=False, research_key=None, recruitment=None, division_suffix=""):
         self.prefix = prefix
+        self.division_suffix = division_suffix
         self.suffixes = suffixes
         self.stats = stats
         self.naval_unit = naval_unit
+        key = re.sub(r'[^a-z0-9 ]', '', prefix.lower()).replace(' ', '_')
+        self.research_key = research_key or c.UNIT_TECH_KEY_OVERRIDES.get(key, key)
+        self.production_group = stats.get("production_group") or (
+            "Navy" if naval_unit else "Tanks" if (
+                "Tank" in prefix or "Armored Car" in prefix or prefix in c.TANK_GROUP_EXTRAS) else "Infantry")
+        self.ai_tank = "Tank" in prefix or "Armored" in prefix or prefix == "Cavalry"
+        self.ai_force_category = ("INFANTRY" if "Infantry" in prefix or prefix == "Militia" else
+                                  "TANKS" if self.ai_tank else "NAVY" if naval_unit else None)
+        self.recruitment = recruitment or {
+            "industry": "industry" if prefix == "Militia" else "basic_factory",
+            "coastal": naval_unit,
+        }
 
     def entries(self):
         out = []
@@ -128,6 +142,26 @@ class UnitFamily:
                 entry["bombard_range"] = bombard_range
             entry["naval_unit"] = self.naval_unit
             entry["order"] = {}
+            is_year = suffix is not None and suffix.isdigit()
+            tier = int(suffix) if is_year else (i + 1 if suffix is not None else 0)
+            research = {"tech": self.research_key, "level": max(1, tier if not is_year else 1)}
+            if self.research_key == "infantry_type" and is_year:
+                research = {"tech": self.research_key, "year": tier}
+            requirements = [research.copy()]
+            if self.research_key in c.VEHICLE_INFANTRY_GATES:
+                requirements = [{"tech": c.VEHICLE_INFANTRY_GATES[self.research_key], "level": 1},
+                                {"tech": "infantry_type", "minimum_year": tier}]
+            entry["metadata"] = {"family": self.prefix, "tier_order": tier,
+                                 "research": research, "requirements": requirements,
+                                 "tier_kind": "year" if is_year else "roman" if suffix else "single",
+                                 "tier_label": suffix or "", "division_suffix": suffix or self.division_suffix,
+                                 "recruitment": self.recruitment.copy(),
+                                 "settings_family": self.prefix.removesuffix(" Type"),
+                                 "production_group": self.production_group,
+                                 # The old quota rule counted only unnumbered Cavalry.
+                                 "ai_tank": self.ai_tank and (self.prefix != "Cavalry" or suffix is None),
+                                 "ai_force_category": (None if self.prefix == "Cavalry" and suffix is not None
+                                                       else self.ai_force_category)}
             out.append((name, entry))
         return out
 
@@ -248,13 +282,13 @@ UNIT_SECTIONS = [
             "bombard_attack": 1000,
             "speed": 1, "cost_materials": 50000, "cost_manpower": 2000,
             "cost_fuel": 1000, "production_time": 10,
-        }),
+        }, division_suffix="1000"),
         UnitFamily("Landkreuzer P.1500 Monster", single(), {
             "health": 15000, "attack": 8000, "defense": 500,
             "bombard_attack": 1200,
             "speed": 1, "cost_materials": 60000, "cost_manpower": 2000,
             "cost_fuel": 1200, "production_time": 12,
-        }),
+        }, division_suffix="1500"),
         # Simmilar stats to the Landkreuzer P.1500 Monster but reaches 3 tiles instead
         # of 2 (see c.BOMBARDMENT_UNITS) - the endgame answer to its siege role.
         UnitFamily("Railgun", single(), {

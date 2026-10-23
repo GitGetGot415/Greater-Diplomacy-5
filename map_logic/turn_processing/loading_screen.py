@@ -1,3 +1,4 @@
+from data.state_access import world_for, session_for
 import pygame
 import data.constants as c
 from map_logic.rendering.font_manager import fonts
@@ -30,13 +31,14 @@ def draw_simple_refresh_bar(surface, status_text, completed, total):
 
 def draw_turn_loading_screen(map_screen, surface):
     """Draws 4 dynamic progress bars for turn processing and a skip button."""
+    session_state = session_for(map_screen)
     ui_bars.draw_fullscreen_overlay(surface, 200)
 
     center_x = c.SCREEN_WIDTH // 2
     center_y = c.SCREEN_HEIGHT // 2
 
     font_title = fonts.get("title")
-    txt = font_title.render(map_screen.loading_status_text, True, (255, 255, 255))
+    txt = font_title.render(session_state.loading_status_text, True, (255, 255, 255))
     surface.blit(txt, txt.get_rect(center=(center_x, center_y - 180)))
 
     # Configuration for bars
@@ -70,15 +72,15 @@ def draw_turn_loading_screen(map_screen, surface):
         pygame.draw.rect(surface, (200, 200, 200), (bar_x, y_pos, bar_w, bar_h), 2, border_radius=5)
 
     # --- NEW MULTI TURN LOGIC ---
-    multi_total = map_screen.multi_turns_total
+    multi_total = session_state.multi_turns_total
     if multi_total > 0:
-        draw_bar(center_y - 50, "Multi-Turn Skip Progress", map_screen.multi_turns_completed, multi_total)
+        draw_bar(center_y - 50, "Multi-Turn Skip Progress", session_state.multi_turns_completed, multi_total)
 
         # --- Draw the Abort Multi-Turn Button ---
         abort_btn_rect = pygame.Rect(center_x - 110, c.SCREEN_HEIGHT - 90, 220, 45)
         mx, my = pygame.mouse.get_pos()
 
-        already_aborting = map_screen.multi_turn_abort_requested
+        already_aborting = session_state.multi_turn_abort_requested
         if already_aborting:
             btn_color = (90, 90, 90)
             abort_label = "STOPPING..."
@@ -101,15 +103,15 @@ def draw_turn_loading_screen(map_screen, surface):
     # or two model-driven majors and most turns have none -- an empty bar every
     # turn would be worse than no bar.
     top = center_y - 100
-    summits = getattr(map_screen, "summits_total", 0)
+    summits = getattr(session_for(map_screen), "summits_total", 0)
     if summits:
-        draw_bar(top, "1. Holding Summits", map_screen.summits_completed, summits)
+        draw_bar(top, "1. Holding Summits", session_state.summits_completed, summits)
         top += spacing
 
-    draw_bar(top, "2. Analyzing Global Strategy", map_screen.proactive_tasks_completed, map_screen.proactive_tasks_total)
-    draw_bar(top + spacing, "3. Drafting Proactive Diplomatics", map_screen.proactive_llm_tasks_completed, map_screen.proactive_llm_tasks_total)
-    draw_bar(top + spacing*2, "4. Processing Global Responses", map_screen.responsive_tasks_completed, map_screen.responsive_tasks_total)
-    draw_bar(top + spacing*3, "5. Re-Rendering World Maps", map_screen.refresh_tasks_completed, map_screen.refresh_tasks_total)
+    draw_bar(top, "2. Analyzing Global Strategy", session_state.proactive_tasks_completed, session_state.proactive_tasks_total)
+    draw_bar(top + spacing, "3. Drafting Proactive Diplomatics", session_state.proactive_llm_tasks_completed, session_state.proactive_llm_tasks_total)
+    draw_bar(top + spacing*2, "4. Processing Global Responses", session_state.responsive_tasks_completed, session_state.responsive_tasks_total)
+    draw_bar(top + spacing*3, "5. Re-Rendering World Maps", session_state.refresh_tasks_completed, session_state.refresh_tasks_total)
 
     # --- Draw the Force Skip Button ---
     # Only show it if there are LLM tasks that might get stuck.
@@ -119,9 +121,9 @@ def draw_turn_loading_screen(map_screen, surface):
     # phase where nothing else has started yet was the one phase with no way
     # out of it -- which matters a great deal now that ai_turn_budget_seconds
     # can be 0 and this button is the only thing that ends a turn early.
-    if (map_screen.proactive_llm_tasks_total > 0
-            or map_screen.responsive_tasks_total > 0
-            or getattr(map_screen, "summits_total", 0) > 0):
+    if (session_state.proactive_llm_tasks_total > 0
+            or session_state.responsive_tasks_total > 0
+            or getattr(session_for(map_screen), "summits_total", 0) > 0):
         skip_btn_rect = pygame.Rect(center_x - 100, center_y + 180, 200, 40)
         mx, my = pygame.mouse.get_pos()
         

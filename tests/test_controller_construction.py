@@ -229,7 +229,7 @@ class ControllerConstructionTests(unittest.TestCase):
         game = app_harness.boot_map()
         players = list(game.nation_data)[:2]
         self.addCleanup(render_buttons, game)
-        with mock.patch.dict(game.__dict__, {
+        with app_harness.patch_map(game, {
                 "player_country": players[-1], "active_players": players,
                 "current_player_index": len(players) - 1, "selection_mode": False,
                 "selected_province": None, "is_editor": False,
@@ -269,7 +269,7 @@ class ControllerConstructionTests(unittest.TestCase):
 
         game = app_harness.boot_map()
         self.addCleanup(update_button_states, game)
-        with mock.patch.dict(game.__dict__, {
+        with app_harness.patch_map(game, {
                 "player_country": "n/a", "active_players": ["A", "B"],
                 "selection_mode": False, "selected_province": None,
                 "is_editor": False, "viewing_ai_moves": True,
@@ -280,7 +280,7 @@ class ControllerConstructionTests(unittest.TestCase):
                              {"active_players": ["A"]}, {"player_country": "None"},
                              {"multiplayer_mode": True}, {"realtime_multiplayer": True},
                              {"selected_province": next(iter(game.map_data.values()))}):
-                with self.subTest(override=override), mock.patch.dict(game.__dict__, override):
+                with self.subTest(override=override), app_harness.patch_map(game, override):
                     update_button_states(game)
                     self.assertFalse(game.btn_next_turn.visible)
                     self.assertFalse(game.btn_declare_war.visible)

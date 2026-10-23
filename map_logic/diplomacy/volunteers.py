@@ -1,5 +1,6 @@
 """Volunteer division lifecycle and the rules shared by diplomacy and turns."""
 
+from data.state_access import world_for, session_for
 from collections import deque
 import math
 
@@ -72,29 +73,31 @@ def reconcile_deployed_missions(map_screen, donor=None):
     player-facing capacity/state lookup so the diplomacy button and picker do
     not wait for the next turn to catch up.
     """
-    donors = [donor] if donor is not None else list(map_screen.nation_data)
+    world_state = world_for(map_screen)
+    donors = [donor] if donor is not None else list(world_state.nation_data)
     for mission_donor in donors:
         deployed_hosts = [
             host for host, mission in missions(
-                map_screen.nation_data, mission_donor).items()
+                world_state.nation_data, mission_donor).items()
             if mission.get("state") == DEPLOYED]
         for host in deployed_hosts:
             still_deployed = any(
                 unit.get("owner") == mission_donor
                 and unit.get("volunteer_host") == host
-                for province in map_screen.map_data.values()
+                for province in world_state.map_data.values()
                 for unit in province.get("units", []))
             if not still_deployed:
-                missions(map_screen.nation_data, mission_donor, writable=True).pop(host, None)
+                missions(world_state.nation_data, mission_donor, writable=True).pop(host, None)
 
 
 def committed_count(map_screen, donor):
     """All of a donor's divisions unavailable as volunteers, across hosts."""
+    world_state = world_for(map_screen)
     reconcile_deployed_missions(map_screen, donor)
     count = 0
-    for mission in missions(map_screen.nation_data, donor).values():
+    for mission in missions(world_state.nation_data, donor).values():
         count += _held_count(mission)
-    for province in map_screen.map_data.values():
+    for province in world_state.map_data.values():
         count += sum(1 for unit in province.get("units", [])
                      if unit.get("owner") == donor and unit.get("volunteer_host"))
     return count
@@ -102,11 +105,12 @@ def committed_count(map_screen, donor):
 
 def total_divisions(map_screen, donor):
     """The donor's land divisions, including those temporarily off-map."""
+    world_state = world_for(map_screen)
     count = 0
-    for province in map_screen.map_data.values():
+    for province in world_state.map_data.values():
         count += sum(1 for unit in queries.units_with_air_cargo(province.get("units", []))
                      if unit.get("owner") == donor and _is_land(unit))
-    for mission in missions(map_screen.nation_data, donor).values():
+    for mission in missions(world_state.nation_data, donor).values():
         count += sum(1 for entry in mission.get("held_units", [])
                      if _is_land(entry.get("unit", {})))
     return count
@@ -123,8 +127,9 @@ def remaining_capacity(map_screen, donor):
 
 def available_units(map_screen, donor):
     """(province, unit) pairs that may be placed in a new volunteer offer."""
+    world_state = world_for(map_screen)
     result = []
-    for province in map_screen.map_data.values():
+    for province in world_state.map_data.values():
         for unit in province.get("units", []):
             if (unit.get("owner") == donor and _is_land(unit)
                     and not unit.get("volunteer_host") and not queries.unit_is_air_drop_recovering(unit)):
@@ -134,20 +139,21 @@ def available_units(map_screen, donor):
 
 def travel_turns(map_screen, donor, host):
     """0 for a border, 1 within five graph steps, otherwise 2."""
-    starts = [p["id"] for p in map_screen.map_data.values() if p.get("owner") == donor]
+    world_state = world_for(map_screen)
+    starts = [p["id"] for p in world_state.map_data.values() if p.get("owner") == donor]
     if not starts:
         return 2
     queue = deque((pid, 0) for pid in starts)
     seen = set(starts)
     while queue:
         province_id, distance = queue.popleft()
-        province = map_screen.id_to_province.get(province_id)
+        province = world_state.id_to_province.get(province_id)
         if not province:
             continue
         for neighbor_id in province.get("neighbors", []):
             if neighbor_id in seen:
                 continue
-            neighbor = map_screen.id_to_province.get(neighbor_id)
+            neighbor = world_state.id_to_province.get(neighbor_id)
             if not neighbor:
                 continue
             if neighbor.get("owner") == host:
@@ -158,13 +164,14 @@ def travel_turns(map_screen, donor, host):
 
 
 def _nearest_owned(map_screen, start_id, owner):
-    if start_id not in map_screen.id_to_province:
+    world_state = world_for(map_screen)
+    if start_id not in world_state.id_to_province:
         return None
     queue = deque([start_id])
     seen = {start_id}
     while queue:
         province_id = queue.popleft()
-        province = map_screen.id_to_province.get(province_id)
+        province = world_state.id_to_province.get(province_id)
         if not province:
             continue
         if province.get("owner") == owner:
@@ -177,15 +184,16 @@ def _nearest_owned(map_screen, start_id, owner):
 
 
 def _restore_to_origin(map_screen, donor, entry):
+    world_state = world_for(map_screen)
     unit = entry.get("unit")
-    origin = map_screen.id_to_province.get(entry.get("origin_id"))
+    origin = world_state.id_to_province.get(entry.get("origin_id"))
     if not unit:
         return False
     _clear_unit_metadata(unit)
     if origin and origin.get("owner") == donor:
         origin.setdefault("units", []).append(unit)
         return True
-    start = origin or next(iter(map_screen.map_data.values()), None)
+    start = origin or next(iter(world_state.map_data.values()), None)
     if start is None:
         return False
     start.setdefault("units", []).append(unit)
@@ -199,7 +207,8 @@ def _clear_unit_metadata(unit):
 
 def end_country_missions(map_screen, country, successor=None):
     """End a removed country's missions. Restore foreign divisions to their owners."""
-    for donor, data in map_screen.nation_data.items():
+    world_state = world_for(map_screen)
+    for donor, data in world_state.nation_data.items():
         donor_missions = data.get("volunteer_missions", {})
         for host, mission in list(donor_missions.items()):
             if donor != country and host != country:
@@ -223,11 +232,12 @@ def create_offer(map_screen, donor, host, chosen):
     `chosen` contains the exact (province, unit) objects displayed in the
     checkbox picker, so an index cannot become stale after earlier removals.
     """
+    world_state = world_for(map_screen)
     reconcile_deployed_missions(map_screen, donor)
-    legal, reason = is_eligible(donor, host, map_screen.nation_data)
+    legal, reason = is_eligible(donor, host, world_state.nation_data)
     if not legal:
         return None, reason
-    if host in missions(map_screen.nation_data, donor):
+    if host in missions(world_state.nation_data, donor):
         return None, "You already have volunteers assigned to this country."
     capacity = remaining_capacity(map_screen, donor)
     valid = [(province, unit) for province, unit in chosen
@@ -244,7 +254,7 @@ def create_offer(map_screen, donor, host, chosen):
         province["units"].remove(unit)
         held.append({"unit": unit, "origin_id": province["id"]})
     turns = travel_turns(map_screen, donor, host)
-    missions(map_screen.nation_data, donor, writable=True)[host] = {
+    missions(world_state.nation_data, donor, writable=True)[host] = {
         "state": AWAITING,
         "travel_turns": turns,
         "held_units": held,
@@ -253,21 +263,23 @@ def create_offer(map_screen, donor, host, chosen):
 
 
 def cancel_offer(map_screen, donor, host):
-    mission = missions(map_screen.nation_data, donor).get(host)
+    world_state = world_for(map_screen)
+    mission = missions(world_state.nation_data, donor).get(host)
     if not mission or mission.get("state") != AWAITING:
         return
     for entry in mission.get("held_units", []):
         _restore_to_origin(map_screen, donor, entry)
-    missions(map_screen.nation_data, donor, writable=True).pop(host, None)
-    pending = map_screen.nation_data.get(donor, {}).get("pending_diplomacy", {})
+    missions(world_state.nation_data, donor, writable=True).pop(host, None)
+    pending = world_state.nation_data.get(donor, {}).get("pending_diplomacy", {})
     info = pending.get(host)
     if isinstance(info, dict) and info.get("action") == ACTION:
         del pending[host]
 
 
 def accept_offer(map_screen, donor, host):
-    mission = missions(map_screen.nation_data, donor).get(host)
-    legal, reason = is_eligible(donor, host, map_screen.nation_data)
+    world_state = world_for(map_screen)
+    mission = missions(world_state.nation_data, donor).get(host)
+    legal, reason = is_eligible(donor, host, world_state.nation_data)
     if not mission or mission.get("state") != AWAITING:
         return False, "The volunteer offer is no longer available."
     if not legal:
@@ -285,11 +297,12 @@ def reject_offer(map_screen, donor, host):
 
 
 def _deploy(map_screen, donor, host, mission):
-    legal, _reason = is_eligible(donor, host, map_screen.nation_data)
+    world_state = world_for(map_screen)
+    legal, _reason = is_eligible(donor, host, world_state.nation_data)
     if not legal:
         for entry in mission.get("held_units", []):
             _restore_to_origin(map_screen, donor, entry)
-        missions(map_screen.nation_data, donor, writable=True).pop(host, None)
+        missions(world_state.nation_data, donor, writable=True).pop(host, None)
         return
     for entry in mission.get("held_units", []):
         unit = entry.get("unit")
@@ -306,8 +319,9 @@ def _deploy(map_screen, donor, host, mission):
 
 
 def _recall_deployed(map_screen, donor, host, mission):
+    world_state = world_for(map_screen)
     held = []
-    for province in map_screen.map_data.values():
+    for province in world_state.map_data.values():
         survivors = []
         for unit in province.get("units", []):
             if unit.get("owner") == donor and unit.get("volunteer_host") == host:
@@ -320,7 +334,8 @@ def _recall_deployed(map_screen, donor, host, mission):
 
 
 def recall(map_screen, donor, host):
-    mission = missions(map_screen.nation_data, donor).get(host)
+    world_state = world_for(map_screen)
+    mission = missions(world_state.nation_data, donor).get(host)
     if not mission or mission.get("state") == RETURNING:
         return False
     if mission.get("state") == AWAITING:
@@ -377,8 +392,9 @@ def schedule_conflict_send_homes_for_ai_hosts(nation_data, human_hosts=()):
 
 def process_scheduled_send_homes(map_screen):
     """Begin returns that AI hosts scheduled on the previous turn."""
+    world_state = world_for(map_screen)
     sent_home = []
-    for host, host_data in map_screen.nation_data.items():
+    for host, host_data in world_state.nation_data.items():
         if not isinstance(host_data, dict):
             continue
         pending = host_data.pop(PENDING_SEND_HOME_KEY, [])
@@ -391,19 +407,20 @@ def process_scheduled_send_homes(map_screen):
 
 
 def _finish_return(map_screen, donor, host, mission):
+    world_state = world_for(map_screen)
     for entry in mission.get("held_units", []):
         unit = entry.get("unit")
         if not unit:
             continue
-        start = map_screen.id_to_province.get(entry.get("return_from_id"))
+        start = world_state.id_to_province.get(entry.get("return_from_id"))
         if start is None:
-            start = map_screen.id_to_province.get(entry.get("origin_id"))
+            start = world_state.id_to_province.get(entry.get("origin_id"))
         if start is None:
             continue
         _clear_unit_metadata(unit)
         start.setdefault("units", []).append(unit)
         movement_processor.send_unit_home(map_screen, start, unit)
-    missions(map_screen.nation_data, donor, writable=True).pop(host, None)
+    missions(world_state.nation_data, donor, writable=True).pop(host, None)
 
 
 def mission_state(nation_data, donor, host):
@@ -413,12 +430,13 @@ def mission_state(nation_data, donor, host):
 
 def tick(map_screen):
     """Advance travel and enforce automatic recall once per diplomacy turn."""
-    for donor, data in list(map_screen.nation_data.items()):
+    world_state = world_for(map_screen)
+    for donor, data in list(world_state.nation_data.items()):
         if not isinstance(data, dict):
             continue
-        for host, mission in list(missions(map_screen.nation_data, donor).items()):
+        for host, mission in list(missions(world_state.nation_data, donor).items()):
             state = mission.get("state")
-            legal, _reason = is_eligible(donor, host, map_screen.nation_data)
+            legal, _reason = is_eligible(donor, host, world_state.nation_data)
             if state == AWAITING and not legal:
                 cancel_offer(map_screen, donor, host)
                 continue

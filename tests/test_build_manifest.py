@@ -1,95 +1,26 @@
-"""Checks that every first-party module is actually shipped by all three builds.
-
-The desktop and web pipelines each declare, independently and with no shared
-source of truth, which top-level modules and which packages to stage:
-
-    compilation_scripts/html_compilation.py  SOURCE_FILES / SOURCE_PACKAGES
-    compilation_scripts/windows_compilation.py  dirs_to_copy + a py_file tuple
-    compilation_scripts/setup.py  DATA_FILES + OPTIONS['packages'] / ['includes']
-
-Adding a module or a sub-package means editing all of them. Two of the three
-fail *silently* when you forget: the web build only breaks in the browser with a
-ModuleNotFoundError, and a missing entry in the desktop lists means mod_loader
-can't find that file on disk, so every mod targeting it is rejected as "target
-file not found". Nothing else in the repo or in CI catches either case.
-
-The scripts are parsed with ast rather than imported: html_compilation.py does
-sys.path.insert and os.chdir at module scope.
-"""
-
+"""Check release inventory against sources and inspect actual staging behavior."""
 import ast
+import importlib
+import json
 import os
-import re
+from pathlib import Path
 import subprocess
 import sys
+import tempfile
 import unittest
+from unittest.mock import patch
+
+from compilation_scripts import build_manifest as manifest, build_support as support
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCRIPTS = os.path.join(ROOT, "compilation_scripts")
-
-# Top-level .py files that are deliberately not shipped by any pipeline.
-INTENTIONALLY_UNSTAGED_FILES = {
-    "run_tests.py",           # developer entry point
-    "simulate_crash.py",      # developer entry point, blocks on a dialog like run_tests.py
-    "temp_multiplayer_io.py",  # empty placeholder, not in the runtime graph
-}
-
-# Directories at the repo root that hold no shippable game package.
+INTENTIONALLY_UNSTAGED_FILES = set(manifest.DEV_ONLY_FILES)
 NON_PACKAGE_DIRS = {
     ".git", ".github", ".eggs", "__pycache__", "venv", ".venv", "build", "dist",
     "web_stage", "assets", "base_maps", "saves", "scenarios", "tournament_saves",
     "compilation_scripts", "context", "map_tools", "mods", "tests",
 }
-
-# Sub-packages the web build drops on purpose.
-WEB_EXCLUDED_SUBPACKAGES = {"data.editors"}  # tkinter dev tools
-
-# Packages nothing imports at runtime, so py2app has no reason to bundle them
-# for import. They are still shipped as loose .py by DATA_FILES, which is what
-# mod targeting needs. Adding to this set is a deliberate statement that a
-# package is dev-only -- a new *runtime* package must go in OPTIONS['packages'].
-DEV_ONLY_PACKAGES = {"data.generators"}  # data-file generator scripts
-
-# Modules py2app's static analysis cannot reach from main.py, because main.py
-# imports them from inside _import_project_modules() rather than at module
-# scope. These have to be named explicitly or they won't be bundled.
-DEFERRED_IMPORT_MODULES = {"gameState", "ui_elements", "soloud"}
-
-
-def _literal_lists(tree, names):
-    """Every literal list/tuple assigned to one of `names`, anywhere in a tree."""
-    out = {}
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.Assign):
-            continue
-        for target in node.targets:
-            if isinstance(target, ast.Name) and target.id in names:
-                try:
-                    out[target.id] = list(ast.literal_eval(node.value))
-                except (ValueError, SyntaxError):
-                    pass
-    return out
-
-
-def _parse(name):
-    with open(os.path.join(SCRIPTS, name), encoding="utf-8") as fh:
-        return ast.parse(fh.read())
-
-
-def _parse_path(path):
-    with open(path, encoding="utf-8") as fh:
-        return ast.parse(fh.read())
-
-
-def _nested_function(tree, name):
-    """Compile one simple nested build filter without running its build script."""
-    function = next(node for node in ast.walk(tree)
-                    if isinstance(node, ast.FunctionDef) and node.name == name)
-    isolated = ast.Module(body=[function], type_ignores=[])
-    namespace = {"os": os}
-    exec(compile(ast.fix_missing_locations(isolated), "<build-filter>", "exec"), namespace)
-    return namespace[name]
-
+DEV_ONLY_PACKAGES = set(manifest.DEV_ONLY_PACKAGES)
 
 def _sub_screen_opener_module_paths(tree):
     """First-arg string literals passed to every sub_screen_opener() call."""
@@ -102,69 +33,6 @@ def _sub_screen_opener_module_paths(tree):
             except (ValueError, SyntaxError):
                 pass
     return paths
-
-
-def _windows_pyinstaller_hidden_imports(tree):
-    """Module names passed via --hidden-import in windows_compilation's pyinstaller cmd.
-
-    Adjacent string literals inside the `cmd = (...)` parens are concatenated
-    by the parser itself, so this is a single string constant to literal_eval,
-    not a list of pieces to join.
-    """
-    for node in ast.walk(tree):
-        if not (isinstance(node, ast.Assign)
-                and any(isinstance(t, ast.Name) and t.id == "cmd" for t in node.targets)):
-            continue
-        try:
-            cmd = ast.literal_eval(node.value)
-        except (ValueError, SyntaxError):
-            if isinstance(node.value, ast.List):
-                cmd = [item.value if isinstance(item, ast.Constant) else None
-                       for item in node.value.elts]
-            else:
-                continue
-        if isinstance(cmd, str):
-            return re.findall(r"--hidden-import (\S+)", cmd)
-        if isinstance(cmd, list):
-            return [cmd[index + 1] for index, value in enumerate(cmd[:-1])
-                    if value == "--hidden-import"]
-    return []
-
-
-def _for_loop_literal(tree, var_name):
-    """The literal a `for <var_name> in (...)` iterates over."""
-    for node in ast.walk(tree):
-        if (isinstance(node, ast.For) and isinstance(node.target, ast.Name)
-                and node.target.id == var_name):
-            try:
-                return list(ast.literal_eval(node.iter))
-            except (ValueError, SyntaxError):
-                return []
-    return []
-
-
-def _dict_key_lists(tree, dict_name, keys):
-    """Literal lists stored under `keys` in a literal dict assigned to `dict_name`."""
-    out = {}
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.Assign):
-            continue
-        for target in node.targets:
-            if not (isinstance(target, ast.Name) and target.id == dict_name):
-                continue
-            if not isinstance(node.value, ast.Dict):
-                continue
-            for key_node, value_node in zip(node.value.keys, node.value.values):
-                try:
-                    key = ast.literal_eval(key_node)
-                except (ValueError, SyntaxError):
-                    continue
-                if key in keys:
-                    try:
-                        out[key] = list(ast.literal_eval(value_node))
-                    except (ValueError, SyntaxError):
-                        pass
-    return out
 
 
 def top_level_modules():
@@ -188,214 +56,125 @@ def first_party_packages():
 
 
 class BuildManifestTests(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.html = _parse("html_compilation.py")
-        cls.windows = _parse("windows_compilation.py")
-        cls.macos = _parse("macos_compilation.py")
-        cls.setup = _parse("setup.py")
-        cls.map_screen = _parse_path(os.path.join(ROOT, "screens", "menu_screens", "map.py"))
+    def test_repository_inventory_is_complete(self):
+        self.assertFalse(top_level_modules() - set(manifest.DESKTOP_SOURCE_FILES))
+        self.assertFalse(top_level_modules() - set(manifest.WEB_SOURCE_FILES) - {"soloud.py"})
+        packages = first_party_packages()
+        self.assertFalse(packages - set(manifest.RUNTIME_PACKAGES) - DEV_ONLY_PACKAGES)
+        self.assertFalse({p.split(".")[0] for p in packages} - set(manifest.SOURCE_PACKAGES))
 
-    # --- web ---------------------------------------------------------------
+    def test_dynamic_screens_have_explicit_hidden_imports(self):
+        tree = ast.parse(Path(ROOT, "screens/menu_screens/map.py").read_text(encoding="utf-8"))
+        needed = set(_sub_screen_opener_module_paths(tree))
+        args = manifest.windows_arguments()
+        hidden = {args[i + 1] for i, arg in enumerate(args[:-1]) if arg == "--hidden-import"}
+        self.assertFalse(needed - hidden)
+        for module in needed:
+            self.assertTrue(Path(ROOT, module.replace(".", "/") + ".py").is_file())
+        self.assertFalse(needed - set(manifest.MAC_INCLUDES))
 
-    def test_web_stages_every_top_level_module(self):
-        staged = set(_literal_lists(self.html, {"SOURCE_FILES"}).get("SOURCE_FILES", []))
-        staged.add("soloud.py")  # deliberately desktop-only; see html_compilation's comment
-        missing = top_level_modules() - staged
-        self.assertEqual(missing, set(),
-                         "html_compilation.SOURCE_FILES is missing these; the web build "
-                         "would fail with ModuleNotFoundError in the browser only")
-
-    def test_web_stages_every_root_package(self):
-        staged = set(_literal_lists(self.html, {"SOURCE_PACKAGES"}).get("SOURCE_PACKAGES", []))
-        roots = {p.split(".")[0] for p in first_party_packages()}
-        self.assertEqual(roots - staged, set(), "html_compilation.SOURCE_PACKAGES is incomplete")
-
-    # --- windows -----------------------------------------------------------
-
-    def test_windows_copies_every_top_level_module(self):
-        staged = set(_for_loop_literal(self.windows, "py_file"))
-        missing = top_level_modules() - staged
-        self.assertEqual(missing, set(),
-                         "windows_compilation's py_file tuple is missing these; mods "
-                         "targeting them would be rejected as 'target file not found'")
-
-    def test_windows_copies_every_root_package(self):
-        staged = set(_literal_lists(self.windows, {"dirs_to_copy"}).get("dirs_to_copy", []))
-        roots = {p.split(".")[0] for p in first_party_packages()}
-        self.assertEqual(roots - staged, set(), "windows_compilation.dirs_to_copy is incomplete")
-
-    def test_build_filters_exclude_local_saves_and_custom_editor_maps(self):
-        windows_dirs = set(_literal_lists(self.windows, {"dirs_to_copy"})["dirs_to_copy"])
-        self.assertIn("saves", windows_dirs)
-        windows_save_filter = _nested_function(self.windows, "saves_ignore_func")
-        self.assertEqual(windows_save_filter("saves", ["local-save"]), ["local-save"])
-
-        web_dirs = _literal_lists(self.html, {"DATA_DIRS"})["DATA_DIRS"]
-        self.assertNotIn("saves", web_dirs)
-
-        for tree in (self.windows, self.html):
-            scenario_filter = _nested_function(tree, "scenarios_ignore_func")
-            self.assertEqual(
-                scenario_filter(os.path.join("scenarios", "map_editor"), ["custom-map"]),
-                ["custom-map"],
-            )
-            self.assertEqual(
-                scenario_filter(os.path.join("scenarios", "historical"), ["built-in-map"]),
-                [],
-            )
-
-        mac_filter = _nested_function(self.setup, "not_under_map_editor")
-        self.assertFalse(mac_filter(os.path.join("scenarios", "map_editor", "custom-map")))
-        self.assertTrue(mac_filter(os.path.join("scenarios", "historical", "built-in-map")))
-
-    def test_all_builds_reset_local_shuffle_exclusions(self):
-        """A packaged game must not inherit the developer's song preferences."""
-        for build_tree in (self.html, self.windows, self.macos):
-            strings = {node.value for node in ast.walk(build_tree)
-                       if isinstance(node, ast.Constant) and isinstance(node.value, str)}
-            self.assertIn("shuffle_disabled_tracks.json", strings)
-
-    def test_windows_hidden_imports_cover_sub_screen_opener(self):
-        """sub_screen_opener() (screens/menu_screens/map.py) late-imports a screen
-        via importlib.import_module() with a runtime string, which PyInstaller's
-        static analysis never sees -- each target needs its own --hidden-import
-        line in windows_compilation.py or the frozen exe raises ModuleNotFoundError
-        the moment that screen is opened, never at build time and never when
-        running from source. See the long comment above the pyinstaller cmd."""
-        needed = set(_sub_screen_opener_module_paths(self.map_screen))
-        declared = set(_windows_pyinstaller_hidden_imports(self.windows))
-        self.assertEqual(needed - declared, set(),
-                         "windows_compilation.py's pyinstaller --hidden-import list is "
-                         "missing these sub_screen_opener() targets")
-
-    # --- macOS -------------------------------------------------------------
-
-    def test_py2app_setup_runs_from_the_project_root(self):
-        """The macOS wrapper executes setup.py by path, not from its directory.
-
-        setup.py imports the root-level BeepBox asset filter, so this cheap
-        setuptools metadata command catches a broken repository-root sys.path
-        setup before a long py2app build is attempted.
-        """
-        result = subprocess.run(
-            [sys.executable, os.path.join(SCRIPTS, "setup.py"), "--name"],
-            cwd=ROOT,
-            capture_output=True,
-            text=True,
-        )
-        self.assertEqual(result.returncode, 0, result.stderr)
-
-    def test_py2app_lists_every_runtime_package(self):
-        """py2app bundles nothing it isn't told about, so OPTIONS['packages'] has
-        to name every sub-package explicitly -- a root entry does not recurse."""
-        declared = set(_dict_key_lists(self.setup, "OPTIONS", {"packages"}).get("packages", []))
-        missing = first_party_packages() - declared - DEV_ONLY_PACKAGES
-        self.assertEqual(missing, set(),
-                         "setup.py OPTIONS['packages'] is missing these sub-packages; "
-                         "py2app will not bundle them. If a package is genuinely "
-                         "dev-only, add it to DEV_ONLY_PACKAGES instead.")
+    def test_platform_native_dependencies(self):
+        args = manifest.windows_arguments()
+        for package in ("dragoman", "cryptography", "quickjs", "py_mini_racer"):
+            self.assertEqual(args[args.index(package) - 1], "--collect-all")
+            self.assertIn(package, manifest.NATIVE_PACKAGES)
+        self.assertEqual(set(manifest.DESKTOP_SOURCE_FILES) - set(manifest.WEB_SOURCE_FILES), {"soloud.py"})
+        self.assertIn("libdragoman.so", manifest.WEB_SOURCE_FILES)
+        self.assertTrue({"gameState", "ui_elements", "soloud"} <= set(manifest.MAC_INCLUDES))
 
     def test_dev_only_packages_really_are_unimported(self):
-        """Keeps DEV_ONLY_PACKAGES honest: if game code starts importing one of
-        these, it has to move into OPTIONS['packages'] or the macOS build ships
-        an app that crashes on that import."""
         importers = []
         for dirpath, dirnames, filenames in os.walk(ROOT):
-            rel = os.path.relpath(dirpath, ROOT).replace(os.sep, "/")
-            if rel.split("/")[0] in NON_PACKAGE_DIRS:
-                continue
             dirnames[:] = [d for d in dirnames if d not in NON_PACKAGE_DIRS]
             for filename in filenames:
                 if not filename.endswith(".py"):
                     continue
-                path = os.path.join(dirpath, filename)
-                module = os.path.relpath(path, ROOT).replace(os.sep, ".")[:-3]
+                path = Path(dirpath, filename)
+                module = str(path.relative_to(ROOT)).replace(os.sep, ".")[:-3]
                 if any(module.startswith(pkg) for pkg in DEV_ONLY_PACKAGES):
-                    continue  # a dev-only package may import itself
-                with open(path, encoding="utf-8") as fh:
-                    source = fh.read()
+                    continue
+                source = path.read_text(encoding="utf-8")
                 for pkg in DEV_ONLY_PACKAGES:
                     if f"import {pkg}" in source or f"from {pkg}" in source:
                         importers.append(f"{module} imports {pkg}")
         self.assertEqual(importers, [])
 
-    def test_py2app_includes_the_deferred_modules(self):
-        """main.py imports these from inside _import_project_modules(), so
-        py2app's static analysis never sees them."""
-        declared = set(_dict_key_lists(self.setup, "OPTIONS", {"includes"}).get("includes", []))
-        self.assertEqual(DEFERRED_IMPORT_MODULES - declared, set(),
-                         "setup.py OPTIONS['includes'] is missing these modules")
+    def test_build_entry_points_are_import_safe(self):
+        original = os.getcwd()
+        for module in ("html_compilation", "windows_compilation", "macos_compilation", "setup"):
+            with patch("subprocess.run", side_effect=AssertionError("process during import")):
+                importlib.import_module("compilation_scripts." + module)
+            self.assertEqual(os.getcwd(), original)
 
-    def test_py2app_ships_loose_copies_for_mod_targeting(self):
-        """mod_loader resolves a mod's target against a real file on disk, so
-        every top-level module needs a loose copy alongside the bundle."""
-        staged = set()
-        for node in ast.walk(self.setup):
-            if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
-                    and node.func.attr == "append"
-                    and isinstance(node.func.value, ast.Name)
-                    and node.func.value.id == "DATA_FILES"):
-                continue
-            try:
-                dest, files = ast.literal_eval(node.args[0])
-            except (ValueError, SyntaxError, IndexError):
-                continue
-            if dest == ".":
-                staged.update(files)
-        missing = top_level_modules() - staged - {"main.py"}  # main.py is APP
-        self.assertEqual(missing, set(),
-                         "setup.py DATA_FILES is missing loose copies of these; mods "
-                         "targeting them would be rejected as 'target file not found'")
+    def test_py2app_setup_runs_from_project_root(self):
+        result = subprocess.run([sys.executable, os.path.join(SCRIPTS, "setup.py"), "--name"],
+                                cwd=ROOT, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
 
-    # --- consistency between pipelines -------------------------------------
+    def test_staged_sources_saves_settings_and_scratch(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary, "source")
+            for relative in set(manifest.DESKTOP_SOURCE_FILES + manifest.WEB_SOURCE_FILES + ("mac64-libsoloud.dylib",)):
+                target = source / relative
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text("fixture")
+            files = {
+                "data/json/settings_config.json": '{"private": true}',
+                "data/json/shuffle_disabled_tracks.json": '["local"]',
+                "data/runtime.py": "pass", "data/__pycache__/runtime.pyc": "private",
+                "data/editors/tool.py": "pass", "data/generators/tool.py": "pass",
+                "screens/menu_screens/runtime.py": "pass", "ui/widget.py": "pass",
+                "map_logic/action.py": "pass", "saves/local/save.json": "private",
+                "tournament_saves/local.json": "private", "mods/local.py": "private",
+                "scenarios/map_editor/scratch.json": "private",
+                "scenarios/historical/map.json": "{}", "base_maps/map.json": "{}",
+            }
+            for relative, content in files.items():
+                target = source / relative
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(content)
+            image = source / "assets/image.png"
+            image.parent.mkdir(parents=True)
+            image.write_bytes(b"\x89PNG\r\n\x1a\nfixture")
+            for platform in ("web", "windows", "macos"):
+                destination = Path(temporary, platform)
+                with patch.object(support, "is_git_ignored", return_value=False):
+                    support.stage_release(source, destination, platform)
+                for directory in manifest.EMPTY_DIRS:
+                    self.assertEqual(list((destination / directory).iterdir()), [])
+                self.assertFalse((destination / "scenarios/map_editor/scratch.json").exists())
+                self.assertTrue((destination / "scenarios/historical/map.json").exists())
+                self.assertFalse((destination / "data/__pycache__/runtime.pyc").exists())
+                self.assertEqual((destination / "data/editors/tool.py").exists(), platform != "web")
+                for name, value in manifest.RUNTIME_JSON_DEFAULTS.items():
+                    self.assertEqual(json.loads((destination / "data/json" / name).read_text()), value)
+                for name in ("data/runtime.py", "screens/menu_screens/runtime.py", "ui/widget.py", "map_logic/action.py"):
+                    self.assertTrue((destination / name).is_file())
+                self.assertEqual(support.png_signature_mismatches(destination), [])
+                (destination / "assets/image.png").write_bytes(b"wrong format")
+                self.assertEqual(support.png_signature_mismatches(destination), [str(destination / "assets/image.png")])
+                if platform == "macos":
+                    with patch.object(support, "is_git_ignored", return_value=False):
+                        mac_files = {Path(f).relative_to(source) for _, files in support.mac_data_files(source) for f in files}
+                    self.assertIn(Path("data/runtime.py"), mac_files)
+                    self.assertNotIn(Path("saves/local/save.json"), mac_files)
 
-    def test_pipelines_agree_on_the_module_set(self):
-        web = set(_literal_lists(self.html, {"SOURCE_FILES"}).get("SOURCE_FILES", []))
-        windows = set(_for_loop_literal(self.windows, "py_file"))
-        # Windows additionally ships soloud.py, which the web build has no use for.
-        self.assertEqual(windows - web, {"soloud.py"},
-                         "the desktop and web module lists have drifted apart")
+    def test_audio_filter_preserves_platform_difference(self):
+        audio = Path(ROOT, "assets/local.mp3")
+        with patch("beepbox_audio.has_beepbox_replacement", return_value=True):
+            with patch.object(support, "is_git_ignored", side_effect=lambda p: str(p).endswith(".json")):
+                self.assertTrue(support.include_asset(audio, "web"))
+                self.assertFalse(support.include_asset(audio, "windows"))
+                self.assertFalse(support.include_asset(audio, "macos"))
+            with patch.object(support, "is_git_ignored", return_value=False):
+                self.assertFalse(support.include_asset(audio, "web"))
 
-    def test_desktop_builds_include_realtime_tls_dependency(self):
-        """Frozen desktop builds need certificate generation at runtime."""
-        windows_cmd_node = next(node for node in ast.walk(self.windows)
-                                if isinstance(node, ast.Assign)
-                                and any(isinstance(target, ast.Name) and target.id == "cmd"
-                                        for target in node.targets))
-        try:
-            windows_cmd = ast.literal_eval(windows_cmd_node.value)
-        except (ValueError, SyntaxError):
-            windows_cmd = [item.value for item in windows_cmd_node.value.elts
-                           if isinstance(item, ast.Constant)]
-        if isinstance(windows_cmd, str):
-            self.assertIn("--collect-all cryptography", windows_cmd)
-        else:
-            self.assertIn("--collect-all", windows_cmd)
-            self.assertIn("cryptography", windows_cmd)
-        packages = set(_dict_key_lists(self.setup, "OPTIONS", {"packages"}).get("packages", []))
-        self.assertIn("cryptography", packages)
-
-    def test_desktop_builds_include_native_beepbox_runtime(self):
-        windows_cmd_node = next(node for node in ast.walk(self.windows)
-                                if isinstance(node, ast.Assign)
-                                and any(isinstance(target, ast.Name) and target.id == "cmd"
-                                        for target in node.targets))
-        windows_cmd = [item.value for item in windows_cmd_node.value.elts
-                       if isinstance(item, ast.Constant)]
-        quickjs_index = windows_cmd.index("quickjs")
-        self.assertEqual(windows_cmd[quickjs_index - 1], "--collect-all")
-        mini_racer_index = windows_cmd.index("py_mini_racer")
-        self.assertEqual(windows_cmd[mini_racer_index - 1], "--collect-all")
-        packages = set(_dict_key_lists(self.setup, "OPTIONS", {"packages"}).get("packages", []))
-        self.assertIn("quickjs", packages)
-        self.assertIn("py_mini_racer", packages)
-
-    def test_web_exclusions_are_the_documented_ones(self):
-        """Guards the one intentional asymmetry: data/editors is tkinter-only and
-        dropped from the web build, so mods targeting it work on desktop only."""
-        self.assertIn("data.editors", first_party_packages())
-        self.assertEqual(WEB_EXCLUDED_SUBPACKAGES, {"data.editors"})
+    def test_cleanup_paths_are_contained(self):
+        with self.assertRaises(ValueError):
+            support.verified_build_path(ROOT, "..")
+        with self.assertRaises(ValueError):
+            support.verified_build_path(ROOT, ".")
+        self.assertEqual(support.verified_build_path(ROOT, "dist"), str(Path(ROOT, "dist")))
 
 
 if __name__ == "__main__":

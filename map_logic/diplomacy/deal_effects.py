@@ -13,6 +13,7 @@ any province whose owner had changed, silently; now the deal is re-validated and
 the dropped terms are reported back so the players can be told.
 """
 
+from data.state_access import world_for, session_for
 import data.constants as c
 from map_logic.diplomacy import deal as deal_mod
 from map_logic.diplomacy.diplomacy_events import log_global_event
@@ -48,9 +49,10 @@ def _hand_over_the_land_only(map_screen, prov, receiver):
 
 
 def _provinces_by_id(map_screen):
-    if getattr(map_screen, "id_to_province", None):
-        return map_screen.id_to_province
-    return {prov["id"]: prov for prov in map_screen.map_data.values()}
+    world_state = world_for(map_screen)
+    if getattr(world_for(map_screen), "id_to_province", None):
+        return world_state.id_to_province
+    return {prov["id"]: prov for prov in world_state.map_data.values()}
 
 
 def economies_for(map_screen):
@@ -67,6 +69,7 @@ def economies_for(map_screen):
     rather than a ceiling of zero, so a caller that cannot know what a nation
     produces does not silently cancel every payment in the treaty.
     """
+    world_state = world_for(map_screen)
     from data import queries
 
     supplied = getattr(map_screen, "economies", None)
@@ -77,10 +80,10 @@ def economies_for(map_screen):
     if world is not None:
         return world.economies
 
-    map_data = getattr(map_screen, "map_data", None)
+    map_data = getattr(world_for(map_screen), "map_data", None)
     if not map_data:
         return None
-    return queries.calculate_all_economies(map_data, map_screen.nation_data)
+    return queries.calculate_all_economies(map_data, world_state.nation_data)
 
 
 def _provinces(count):
@@ -102,10 +105,11 @@ def prune(deal, map_screen):
     Returns (deal, dropped) where `dropped` is a list of sentences describing
     what fell away, for the message that reports the settlement.
     """
+    world_state = world_for(map_screen)
     from map_logic.diplomacy import reach as reach_mod
 
     by_id = _provinces_by_id(map_screen)
-    nation_data = map_screen.nation_data
+    nation_data = world_state.nation_data
     prewar = deal_mod.prewar_index(nation_data)
     economies = economies_for(map_screen)
     # Every treaty in the game funnels through here on its way to executing, so
@@ -114,7 +118,7 @@ def prune(deal, map_screen):
     # It is also the only place that can be right about it: a province within
     # reach when the offer was written can be a province on the far side of a
     # collapsed front by the time it lands, a turn later.
-    reachable = reach_mod.index(map_screen.map_data)
+    reachable = reach_mod.index(world_state.map_data)
     receiver_ids = deal_mod.receiver_ids_by_recipient(deal)
 
     kept, dropped = [], []
@@ -219,6 +223,7 @@ def execute(map_screen, deal, escrowed=None):
     act of the treaty -- which is the order execute_peace_treaty used, and the
     order the message the players receive describes.
     """
+    world_state = world_for(map_screen)
     from map_logic.diplomacy.faction_actions import finalize_faction_leave
     from map_logic.diplomacy.puppet_actions import assign_puppet
     from map_logic.diplomacy.war_actions import finalize_neutral, remove_enemy
@@ -227,11 +232,11 @@ def execute(map_screen, deal, escrowed=None):
         return []
 
     deal, dropped = prune(deal, map_screen)
-    nation_data = map_screen.nation_data
+    nation_data = world_state.nation_data
     by_id = _provinces_by_id(map_screen)
 
     # --- 1. Territory ---
-    transfers = deal_mod.tile_transfers(deal, map_screen.map_data, nation_data)
+    transfers = deal_mod.tile_transfers(deal, world_state.map_data, nation_data)
     for prov_id, receiver in transfers.items():
         prov = by_id.get(int(prov_id))
         if prov is not None and prov.get("owner") != receiver:
@@ -296,7 +301,7 @@ def execute(map_screen, deal, escrowed=None):
         kind = clause.get("type")
 
         if kind == deal_mod.VASSALIZE:
-            assign_puppet(map_screen.map_data, nation_data,
+            assign_puppet(world_state.map_data, nation_data,
                           clause["master"], clause["subject"])
 
         elif kind == deal_mod.DEMILITARIZE:
@@ -358,10 +363,11 @@ def restore_occupied(map_screen, deal, ceded):
     live map while execution measured against the pre-war one -- the game
     priced, drew and explained a different treaty from the one it carried out.
     """
-    baseline = deal_mod.baseline_owners(deal, map_screen.map_data, map_screen.nation_data)
+    world_state = world_for(map_screen)
+    baseline = deal_mod.baseline_owners(deal, world_state.map_data, world_state.nation_data)
 
     returned = 0
-    for prov in map_screen.map_data.values():
+    for prov in world_state.map_data.values():
         if prov["id"] in ceded:
             continue
         was = baseline.get(int(prov["id"]))
@@ -390,6 +396,7 @@ def announce(map_screen, deal, dropped=()):
     a "diplomatic agreement reached" line in diplomacy_processor; announcing
     every exchange of fuel as world news would bury the wars that end.
     """
+    world_state = world_for(map_screen)
     if not deal_mod.ends_war(deal):
         return
 
@@ -398,12 +405,12 @@ def announce(map_screen, deal, dropped=()):
     b = ", ".join(sides.get("b", [])) or "?"
 
     if deal_mod.is_white_peace(deal):
-        log_global_event(map_screen.nation_data, f"PEACE: {a} and {b} have agreed a white peace.")
+        log_global_event(world_state.nation_data, f"PEACE: {a} and {b} have agreed a white peace.")
     else:
-        log_global_event(map_screen.nation_data, f"PEACE: {a} and {b} have signed a settlement.")
+        log_global_event(world_state.nation_data, f"PEACE: {a} and {b} have signed a settlement.")
 
     for note in dropped:
-        log_global_event(map_screen.nation_data, f"Treaty note: {note}")
+        log_global_event(world_state.nation_data, f"Treaty note: {note}")
 
 
 # ==========================================

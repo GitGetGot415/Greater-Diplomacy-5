@@ -22,6 +22,7 @@ enough.
 Stdlib, `data` and war_score only.
 """
 
+from data.state_access import world_for, session_for
 import random
 
 import data.constants as c
@@ -60,7 +61,8 @@ def outweighs(map_screen, nation, world=None):
     False for anyone with no leader to be ahead of, so a caller can ask this of
     any nation without checking first.
     """
-    leader = _leader_of(nation, map_screen.nation_data)
+    world_state = world_for(map_screen)
+    leader = _leader_of(nation, world_state.nation_data)
     if not leader:
         return False
 
@@ -78,8 +80,9 @@ def turns_held(nation, nation_data):
 
 def can_claim(map_screen, nation):
     """Whether the claim would succeed if it were made this turn."""
-    return (eligible(nation, map_screen.nation_data)
-            and turns_held(nation, map_screen.nation_data) >= c.FACTION_CHALLENGE_TURNS)
+    world_state = world_for(map_screen)
+    return (eligible(nation, world_state.nation_data)
+            and turns_held(nation, world_state.nation_data) >= c.FACTION_CHALLENGE_TURNS)
 
 
 def strongest_claimants(map_screen, nations, world=None):
@@ -89,11 +92,12 @@ def strongest_claimants(map_screen, nations, world=None):
     nation_power measure as the challenge rule. If powers tie exactly, choose
     randomly among the strongest members.
     """
+    world_state = world_for(map_screen)
     grouped = {}
     for nation in set(nations):
         if not can_claim(map_screen, nation):
             continue
-        faction = map_screen.nation_data.get(nation, {}).get("faction", "")
+        faction = world_state.nation_data.get(nation, {}).get("faction", "")
         if faction:
             grouped.setdefault(faction, []).append(nation)
 
@@ -112,9 +116,10 @@ def standing(map_screen, nation, world=None):
     What the faction screen prints. None when the question does not apply --
     no faction, already leading it, or a puppet.
     """
-    if not eligible(nation, map_screen.nation_data):
+    world_state = world_for(map_screen)
+    if not eligible(nation, world_state.nation_data):
         return None
-    return (turns_held(nation, map_screen.nation_data), c.FACTION_CHALLENGE_TURNS,
+    return (turns_held(nation, world_state.nation_data), c.FACTION_CHALLENGE_TURNS,
             outweighs(map_screen, nation, world))
 
 
@@ -138,7 +143,7 @@ def contenders(nation_data, faction):
 def _holds_land(map_screen, nation):
     """Whether this nation is still on the map at all."""
     return any(prov.get("owner") == nation
-               for prov in getattr(map_screen, "map_data", {}).values())
+               for prov in getattr(world_for(map_screen), "map_data", {}).values())
 
 
 def promote(map_screen, faction, world=None):
@@ -157,7 +162,8 @@ def promote(map_screen, faction, world=None):
     in which case the empty faction is cleared away rather than left as a name
     on a dead nation's roster.
     """
-    nation_data = map_screen.nation_data
+    world_state = world_for(map_screen)
+    nation_data = world_state.nation_data
     if not faction or queries.get_faction_leader(faction, nation_data):
         return None
 
@@ -192,7 +198,8 @@ def repair_leaderless_factions(map_screen, world=None):
     Returns the factions whose roster changed.  The deterministic order keeps
     load migration stable when several old factions need repair at once.
     """
-    nation_data = map_screen.nation_data
+    world_state = world_for(map_screen)
+    nation_data = world_state.nation_data
     factions = sorted({data.get("faction", "") for data in nation_data.values()
                        if isinstance(data, dict) and data.get("faction")})
     repaired = []
@@ -211,7 +218,8 @@ def tick(map_screen, world=None):
     sees, the number the AI decides on and the state the claim executes against
     are the same one.
     """
-    nation_data = map_screen.nation_data
+    world_state = world_for(map_screen)
+    nation_data = world_state.nation_data
 
     leaders = {}
     members = {}

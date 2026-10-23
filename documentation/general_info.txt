@@ -31,7 +31,7 @@ Long rejection details support scrolling.
 Unreadable files, invalid keys, malformed data, unauthorized orders, wrong sessions, wrong turns, and duplicate submissions cannot be accepted.
 Rejected files do not change host state.
 
-Numeric differences in matched ground-unit statistics or new administrative durations require host review.
+Numeric differences in matched ground-unit statistics or new production timing and refunds require host review.
 The comparison uses the host's current units and scenario settings.
 Aircraft statistics remain under host control.
 Aircraft cargo statistics also remain under host control.
@@ -49,7 +49,8 @@ All checks for malformed data, permissions, sessions, turns, and duplicates stil
 Duplicate checks cover all selected files and the associated review callbacks.
 Separate imports can replace a country's earlier draft, as before.
 The final notification gives accepted, rejected, and overridden counts.
-Move files and saved games require no new fields.
+New move files include additive schema fields. Older files remain supported.
+See documentation/data_migrations.txt for the input adapters.
 These controls do not change real-time multiplayer or local game modes.
 
 UNIT RANGE SETTINGS
@@ -126,6 +127,85 @@ Saving an older game selects the smaller representation. No turns or messages ar
 Delta history files require a game version with delta decoding support.
 Regular metadata and map_data.json remain readable JSON.
 Real-time commands and state filtering do not change. Real-time host saves use the same history writer.
+
+STATE AND ACTION OWNERS
+=======================
+
+data/game_state.py defines WorldState.
+It owns countries, provinces, time, geometry references, scenario settings, script variables, and history.
+data/session_state.py defines SessionState.
+It owns participants, control identity, viewing identity, tactical control, and processing progress.
+Neither container owns widgets, surfaces, audio engines, or network transports.
+
+data/state_access.py provides explicit compatibility properties and BackendState.
+Existing map attributes refer to the canonical owners. They do not hold duplicate world or session data.
+Loaders update shared dictionaries in place.
+Draft copies isolate their containers before replacing world data.
+data/map/load_map.py loads backend worlds without a map screen or display.
+The real-time server uses this path. Its client map remains a presentation owner.
+
+The map screen owns selection, cameras, brushes, widgets, and cached presentation.
+AI snapshots, movement indexes, and aircraft geometry remain temporary computation data.
+Actions return changed domains. Presentation adapters invalidate their cached records at state boundaries.
+Planning frames continue to reuse cached presentation data.
+
+map_logic/production_actions.py owns production validation, queue construction, charging, cancellation, and refunds.
+The player screen, AI, and both multiplayer adapters use its shared rules.
+AI construction retains its existing manpower policy. Emergency cancellation retains its recorded-refund policy.
+Network adapters retain authentication, schema limits, partial-state handling, and host review.
+
+data/queries.py previews research selections with authoritative progress and prerequisites.
+map_logic/turn_processing/research_processor.py applies those selections.
+AI research retains its existing selection order and restart policy.
+Country appearance fields use one shared mutation helper in data/queries.py.
+Adapters retain their existing mode permissions and input limits.
+Movement, armies, transport, subjects, and faction effects retain their existing domain owners.
+See documentation/consolidation_audit.md for the caller and verification inventory.
+
+UNIT IDENTITY METADATA
+======================
+
+data/generators/recipes.py generates unit metadata alongside the existing library fields.
+data/json/unit_data.json remains the runtime source.
+metadata.family and metadata.tier_order identify a unit family and its tier order.
+metadata.research identifies the primary research track.
+metadata.requirements lists the required technology levels and year conditions.
+metadata.recruitment identifies the industry and coastal requirements.
+Additional metadata retains existing display labels, art selection, and AI quota categories.
+
+data/queries.py reads metadata from the active library.
+Divisions do not duplicate this library metadata.
+Indexes detect library changes, metadata edits, research-year edits, and obsolescence changes.
+Library reloads also invalidate art-name caches.
+See documentation/data_migrations.txt for libraries without metadata and invalid explicit fields.
+
+SETTINGS LOADING
+================
+
+data/io/settings_schema.py owns defaults, current JSON keys, aliases, coercion, and serialization.
+keybind_io.load_settings_result returns named keybinds and normalized values.
+The controller reads that result directly.
+load_settings retains its positional result for older callers.
+The positional order is an interface contract. Settings files use JSON keys.
+
+BUILD POLICY
+============
+
+compilation_scripts/build_manifest.py owns source inventory, dynamic imports, native dependencies, platform exclusions, and runtime JSON defaults.
+compilation_scripts/build_support.py owns filtering, staging, empty directories, resets, and build-path checks.
+Both modules are safe to import without game or native audio initialization.
+Platform entry points retain their packaging tools and native archive procedures.
+
+Windows retains explicit PyInstaller hidden imports.
+macOS retains explicit py2app packages, the tkinter recipe workaround, and the ditto archive procedure.
+Desktop packages retain loose source copies for the existing source-replacement loader.
+Web retains libdragoman.so, the HTML template, and staged audio conversion.
+Native and web audio filters retain their separate replacement rules.
+Distributed saves and mods remain empty. Local settings, playlist choices, and editor scratch scenarios are excluded or reset.
+
+tests/test_build_manifest.py compares manifest declarations with independent repository scans.
+It also checks actual staging with temporary directories.
+Platform builds and browser checks remain separate verification steps.
 
 PROJECT FILES
 =============

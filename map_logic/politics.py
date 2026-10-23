@@ -16,6 +16,7 @@ Stdlib and `data.constants` only, so it imports under Pyodide and can be
 imported at module level from combat_rules without joining the queries cycle.
 """
 
+from data.state_access import world_for, session_for
 import data.constants as c
 
 #: Where the two scalars live on nation_data[name]. Flat and defaulted, never
@@ -396,15 +397,16 @@ def tick(map_screen):
     to" then become the same state, which is what the map button's arrow badge
     reads and what keeps the AI from re-deciding a move it cannot make.
     """
-    for name, stats in map_screen.nation_data.items():
+    world_state = world_for(map_screen)
+    for name, stats in world_state.nation_data.items():
         if name == "GLOBAL_EVENTS" or name in c.UNPLAYABLE_NATIONS:
             continue
 
-        direction = drift(map_screen.nation_data, name)
+        direction = drift(world_state.nation_data, name)
         if not direction:
             continue
 
-        new_value = clamp(value(map_screen.nation_data, name) + direction * c.POLITICS_STEP)
+        new_value = clamp(value(world_state.nation_data, name) + direction * c.POLITICS_STEP)
         stats[VALUE_KEY] = new_value
         if at_limit(new_value):
             stats[DRIFT_KEY] = 0
@@ -413,11 +415,11 @@ def tick(map_screen):
     # An activated policy becomes effective on the third processed turn; a
     # cancellation completes on the next one.  Losing eligibility is immediate
     # and removes the effects before any phase of that turn can use them.
-    for name, stats in map_screen.nation_data.items():
+    for name, stats in world_state.nation_data.items():
         if name == "GLOBAL_EVENTS" or name in c.UNPLAYABLE_NATIONS:
             continue
-        reconcile_policy(map_screen.nation_data, name)
-        for policy_id, state in tuple(policy_states(map_screen.nation_data, name).items()):
+        reconcile_policy(world_state.nation_data, name)
+        for policy_id, state in tuple(policy_states(world_state.nation_data, name).items()):
             if state["status"] == POLICY_ACTIVE:
                 continue
             turns_left = max(0, int(state.get("turns_remaining", 0)) - 1)

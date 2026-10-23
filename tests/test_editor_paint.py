@@ -152,9 +152,8 @@ class EditorPaintInputTests(unittest.TestCase):
                       editor_history=[], editor_redo_history=[],
                       navigation_intro_popup=None, camera=mock.Mock(),
                       queue_editor_visual_refresh=mock.Mock())
-        self.context = mock.patch.dict(self.game.__dict__, values)
-        self.context.start()
-        self.addCleanup(self.context.stop)
+        self.context = app_harness.patch_map(self.game, values)
+        self.enterContext(self.context)
         self.visual = mock.patch.object(ownership.map_utils, "update_single_province_surface")
         self.visual.start()
         self.addCleanup(self.visual.stop)

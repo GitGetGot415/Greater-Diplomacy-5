@@ -4,6 +4,7 @@ diplomatic state (wars, peace, factions) down a master's puppet tree.
 See map_logic/diplomacy/diplomacy_agreements.py for how this fits alongside
 war_actions.py and faction_actions.py.
 """
+from data.state_access import world_for, session_for
 import copy
 from map_logic.turn_processing import edit_province_ownership
 from data import migrations, queries
@@ -242,7 +243,8 @@ def _clear_country_relationships(nation_data, country):
 
 def finalize_spectator_country_removal(map_screen, country, annexer=None):
     """Annex a country immediately, or delete its live state and preserve history."""
-    nation_data, map_data = map_screen.nation_data, map_screen.map_data
+    world_state = world_for(map_screen)
+    nation_data, map_data = world_state.nation_data, world_state.map_data
     if (not queries.can_use_spectator_country_actions(map_screen)
             or not queries.is_playable(country, nation_data)):
         return False

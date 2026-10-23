@@ -2460,3 +2460,8 @@ def apply_runtime_settings(values):
             globals()[constant] = (
                 normalize_mouse_button_actions(values[name])
                 if name == "mouse_button_actions" else values[name])
+
+
+# Country identity fields shared by local editors and multiplayer projections.
+COUNTRY_APPEARANCE_FIELDS = ("name", "adjective", "leader_name", "leader_title",
+                             "flag_data", "portrait_data", "color")

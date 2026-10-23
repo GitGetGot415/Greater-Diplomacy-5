@@ -130,6 +130,57 @@ class TournamentMoveTests(unittest.TestCase):
         move["provinces"]["P1"]["units"][0]["attack"] += 1
         return move
 
+    def test_modern_production_uses_shared_costs_and_rejects_cumulative_overspend(self):
+        from map_logic import production_actions
+        from tests.test_unit_metadata import fixture_metadata
+        library = {"Fixture recruit": {"metadata": fixture_metadata(level=0),
+                                      "cost_materials": 11, "cost_manpower": 3, "cost_fuel": 2,
+                                      "production_time": 4}}
+        for affordable in (True, False):
+            with self.subTest(affordable=affordable), tempfile.TemporaryDirectory() as directory:
+                host = Host()
+                cost = library["Fixture recruit"]["cost_materials"]
+                host.nation_data["Leader"]["materials"] = 2 * cost if affordable else 2 * cost - 1
+                host.map_data = {str(number): {"id": number, "json_key": str(number), "owner": "Leader",
+                                              "cores": ["Leader"], "units": [], "unit_queue": []}
+                                 for number in (1, 2)}
+                with mock.patch.object(queries, "get_unit_library", return_value=library):
+                    queues = {key: {"unit_queue": [production_actions.prepare_production(
+                        host, "Leader", province, "unit_queue", {"unit_type": "Fixture recruit"}).order]}
+                              for key, province in host.map_data.items()}
+                    move = self.player_data("Leader", host, production_schema_version=1, provinces=queues)
+                    for resource in c.ECON_RESOURCE_KEYS:
+                        move["nation_data"][resource] -= 2 * library["Fixture recruit"][f"cost_{resource}"]
+                    before = copy.deepcopy((host.nation_data, host.map_data))
+                    path = self.write_move(directory, "production.gd5move", "Leader", move)
+                    result = self.import_moves(host, [path], accept_stat_mismatches=True)
+                self.assertEqual(result["loaded"], int(affordable))
+                if affordable:
+                    for key in host.map_data:
+                        self.assertEqual(host.map_data[key]["unit_queue"], queues[key]["unit_queue"])
+                else:
+                    self.assertEqual((host.nation_data, host.map_data), before)
+                    self.assertFalse(result["rejections"][0]["overridable"])
+
+    def test_modern_response_references_are_checked_before_country_merge(self):
+        from map_logic.diplomacy import diplomacy_messages
+        for correct in (True, False):
+            with self.subTest(correct=correct), tempfile.TemporaryDirectory() as directory:
+                host = Host()
+                request = diplomacy_messages.set_pending(host.nation_data, "Member", "Leader", "TRADE", turns=1)
+                move = self.player_data("Leader", host, diplomacy_schema_version=1)
+                move["nation_data"] = copy.deepcopy(move["nation_data"])
+                move["nation_data"]["diplo_responses"] = {"Member": {
+                    "action": "TRADE", "verdict": "ACCEPT", "message": "",
+                    "request_id": request["request_id"] if correct else "cancelled-request"}}
+                before = copy.deepcopy(host.nation_data)
+                path = self.write_move(directory, "reply.gd5move", "Leader", move)
+                result = self.import_moves(host, [path], accept_stat_mismatches=True)
+                self.assertEqual(result["loaded"], int(correct))
+                if not correct:
+                    self.assertEqual(host.nation_data, before)
+                    self.assertFalse(result["rejections"][0]["overridable"])
+
     def test_imported_conscription_changes_only_the_submitting_countrys_damage_bonus(self):
         host = Host()
         host.nation_data["Member"]["conscription_slider"] = 0.5

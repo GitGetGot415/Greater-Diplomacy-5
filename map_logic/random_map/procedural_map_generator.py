@@ -1,3 +1,4 @@
+from data.state_access import world_for, session_for, replace_mapping
 import pygame
 import random
 import numpy as np
@@ -111,6 +112,7 @@ def _summarize_grid_provinces(grid, num_provinces):
 
 def _process_grid_to_map(map_screen, grid, width, height, num_provinces):
     """Takes a generated ID map and securely converts it to Pygame surfarrays & game dictionaries."""
+    world_state = world_for(map_screen)
     colors = {}
     centers = {}
     terrains = {}
@@ -162,8 +164,8 @@ def _process_grid_to_map(map_screen, grid, width, height, num_provinces):
             ocean_ids.add(i)
             
     # 3. Apply to engine map_data structure
-    map_screen.map_data = {}
-    map_screen.id_to_province = {}
+    replace_mapping(world_state, "map_data", {})
+    replace_mapping(world_state, "id_to_province", {})
     
     for i in range(1, num_provinces + 1):
         color_id = colors[i]
@@ -186,10 +188,10 @@ def _process_grid_to_map(map_screen, grid, width, height, num_provinces):
             "json_key": f"({color_id[0]}, {color_id[1]}, {color_id[2]})",
             "map_color": color_id
         }
-        map_screen.map_data[color_id] = prov_data
-        map_screen.id_to_province[int(i)] = prov_data
+        world_state.map_data[color_id] = prov_data
+        world_state.id_to_province[int(i)] = prov_data
         
-    for p_data in map_screen.map_data.values():
+    for p_data in world_state.map_data.values():
         if p_data["terrain"] != "ocean":
             if any(n_id in ocean_ids for n_id in p_data["neighbors"]):
                 p_data["is_coastal"] = True
@@ -224,6 +226,6 @@ def _process_grid_to_map(map_screen, grid, width, height, num_provinces):
     map_screen.id_map = id_surf
     map_screen.political_map = id_surf.copy()
     map_screen.cores_map = id_surf.copy()
-    map_screen.raw_json_data = map_screen.map_data
+    replace_mapping(world_state, "raw_json_data", world_state.map_data)
     from data import queries
     queries.build_air_geometry(map_screen)

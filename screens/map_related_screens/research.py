@@ -909,14 +909,13 @@ class Research_Screen(GameState):
         if self.editing_research_levels or not self.can_edit:
             return
         player_data = self.subject_data
-        progress_cache = player_data.setdefault("research_progress", {})
-        total_cost = self.tech_cost(tech_name)
-        points_remaining = progress_cache.pop(tech_name, total_cost)
-            
-        player_data["research_queue"].append({
-            "tech_name": tech_name, 
-            "points_remaining": points_remaining
-        })
+        from map_logic.turn_processing.research_processor import select_research
+        requested = [project["tech_name"] for project in player_data.get("research_queue", [])]
+        try:
+            select_research(player_data, requested + [tech_name], self.tech_tree)
+        except ValueError as error:
+            self.map_screen.show_feedback(str(error))
+            return
         self._mark_draft_changed()
         self.refresh_ui()
 
@@ -924,14 +923,15 @@ class Research_Screen(GameState):
         if self.editing_research_levels or not self.can_edit:
             return
         player_data = self.subject_data
-        queue = player_data.get("research_queue", [])
-        progress_cache = player_data.setdefault("research_progress", {})
-        for i, project in enumerate(queue):
-            if project["tech_name"] == tech_name:
-                progress_cache[tech_name] = project["points_remaining"]
-                queue.pop(i)
-                self._mark_draft_changed()
-                break
+        from map_logic.turn_processing.research_processor import select_research
+        requested = [project["tech_name"] for project in player_data.get("research_queue", [])
+                     if project["tech_name"] != tech_name]
+        try:
+            select_research(player_data, requested, self.tech_tree)
+        except ValueError as error:
+            self.map_screen.show_feedback(str(error))
+            return
+        self._mark_draft_changed()
         self.refresh_ui()
 
     def draw_timeline_axis(self, surface):

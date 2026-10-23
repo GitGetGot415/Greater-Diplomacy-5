@@ -250,7 +250,7 @@ def buildable_units(research, unit_library):
     # also changes when library names or research rules are edited in place.
     index = queries.get_unit_research_index(unit_library)
     if _BUILDABLE_CACHE_LIBRARY is not index:
-        _BUILDABLE_CACHE = {}
+        _BUILDABLE_CACHE.clear()
         _BUILDABLE_CACHE_LIBRARY = index
 
     key = tuple(sorted((tech, lvl) for tech, lvl in research.items() if lvl))

@@ -1,3 +1,4 @@
+from data.state_access import world_for, session_for
 import data.queries as queries
 from map_logic.ai import ai_construction, ai_movement, ai_research
 
@@ -34,27 +35,33 @@ def clear_player_construction(map_screen):
     Both queues go through the same refund rule the Production screen's Cancel
     button uses, which honours the "refund" each entry recorded at purchase.
     """
-    player = map_screen.player_country
-    player_data = map_screen.nation_data[player]
+    world_state = world_for(map_screen)
+    session_state = session_for(map_screen)
+    player = session_state.player_country
+    player_data = world_state.nation_data[player]
 
-    for prov in map_screen.map_data.values():
+    for prov in world_state.map_data.values():
         if prov.get("owner") != player:
             continue
         for queue_key in ("building_queue", "unit_queue"):
             for item in prov.get(queue_key, []):
-                queries.refund_queue_item(player_data, item, player, map_screen.map_data)
+                queries.refund_queue_item(player_data, item, player, world_state.map_data)
             prov[queue_key] = []
 
 def clear_player_movement(map_screen):
-    player = map_screen.player_country
-    for prov in map_screen.map_data.values():
+    world_state = world_for(map_screen)
+    session_state = session_for(map_screen)
+    player = session_state.player_country
+    for prov in world_state.map_data.values():
         for unit in prov.get("units", []):
             if unit.get("owner") == player:
                 unit["order"] = {}
 
 def clear_player_research(map_screen):
-    player = map_screen.player_country
-    player_data = map_screen.nation_data.get(player, {})
+    world_state = world_for(map_screen)
+    session_state = session_for(map_screen)
+    player = session_state.player_country
+    player_data = world_state.nation_data.get(player, {})
     queue = player_data.get("research_queue", [])
     progress_cache = player_data.setdefault("research_progress", {})
     for project in queue:

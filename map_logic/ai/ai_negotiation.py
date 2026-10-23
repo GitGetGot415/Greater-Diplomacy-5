@@ -17,6 +17,7 @@ will not meet again for several turns. Off entirely unless both nations are
 model-driven, so FULL and below pay nothing.
 """
 
+from data.state_access import world_for, session_for
 import data.constants as c
 from data import queries
 from data.platform import IS_WEB
@@ -185,10 +186,11 @@ def validate_terms(world, a, b, raw_terms):
 
 def apply_terms(map_screen, a, b, terms, total_turns):
     """Turns validated terms into commitments, and returns what was agreed."""
+    world_state = world_for(map_screen)
     made = []
     for term in terms:
         entry = ai_commitments.make(
-            map_screen.nation_data, a, b, term["type"], target=term.get("target"),
+            world_state.nation_data, a, b, term["type"], target=term.get("target"),
             turns=term["turns"], params=term.get("params"), made_turn=total_turns)
         if entry:
             made.append(term)

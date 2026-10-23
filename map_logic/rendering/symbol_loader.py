@@ -646,6 +646,13 @@ def _unit_art_request(name):
     other tiered families use Roman numerals. Bare families have a None level
     and therefore only match a bare ``family.png`` baseline.
     """
+    from data import queries
+    library = queries.get_unit_library()
+    if name in library:
+        metadata = queries.get_unit_metadata(name, library)
+        family = metadata.get("settings_family", metadata["family"])
+        return _normalize_family(family), metadata["tier_order"] or None
+    # Synthetic art keys and metadata-free assets retain the filename adapter.
     year_match = re.fullmatch(r"(.+?) Type (\d{4})", name, re.IGNORECASE)
     if year_match:
         return _normalize_family(year_match.group(1)), int(year_match.group(2))

@@ -35,6 +35,15 @@ LIBRARY = {
 }
 
 
+# These artificial units need no industry or research. Purchase tests isolate budgets.
+for _name, _stats in LIBRARY.items():
+    _stats["metadata"] = {
+        "family": _name, "tier_order": 0,
+        "research": {"tech": "fixture", "level": 0}, "requirements": [],
+        "recruitment": {"industry": "none", "coastal": False},
+    }
+
+
 def value(name, score):
     """Just the two fields the picker reads."""
     return ai_unit_eval.UnitValue(

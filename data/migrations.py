@@ -11,6 +11,7 @@ import copy
 import gzip
 import json
 import uuid
+import re
 
 import data.constants as c
 
@@ -90,6 +91,77 @@ def normalize_air_category(value):
         return "AIR"
     return value
 
+
+
+def legacy_unit_tech_key(family):
+    """Read research identifiers from older family names."""
+    key = re.sub(r'[^a-z0-9 ]', '', family.lower())
+    key = re.sub(r'\s+', '_', key.strip())
+    return c.UNIT_TECH_KEY_OVERRIDES.get(key, key)
+
+def legacy_unit_metadata(name, stats):
+    """Infer metadata only for libraries which omit explicit unit identity."""
+    family = re.sub(r'\s+\d{4}$', '', name)
+    family = re.sub(r'\s+[IVXLCDM]+$', '', family).strip()
+    key = legacy_unit_tech_key(family)
+    year = re.search(r'\s+(\d{4})$', name)
+    roman = re.search(r'\s+([IVXLCDM]+)$', name)
+    tier = 0
+    if year:
+        tier = int(year.group(1))
+    elif roman:
+        letters = roman.group(1)
+        values = c.ROMAN_LETTER_VALUES
+        tier = sum(-values[ch] if i + 1 < len(letters) and values[ch] < values[letters[i + 1]]
+                   else values[ch] for i, ch in enumerate(letters))
+    research = {"tech": key, "level": max(1, tier if roman else 0)}
+    if key == "infantry_type" and year:
+        research = {"tech": key, "year": tier}
+    requirements = [research.copy()]
+    if key in c.VEHICLE_INFANTRY_GATES:
+        requirements = [{"tech": c.VEHICLE_INFANTRY_GATES[key], "level": 1},
+                        {"tech": "infantry_type", "minimum_year": tier if year else None}]
+    display_year = re.search(r'\b(\d{4})\b', name)
+    display_roman = re.search(r'\b([IVXLCDM]+)$', name)
+    suffix = display_year.group(1) if display_year else display_roman.group(1) if display_roman else ""
+    return {"family": family, "tier_order": tier, "research": research,
+            "tier_kind": "year" if year else "roman" if roman else "single",
+            "tier_label": name[len(family):].strip(), "division_suffix": suffix,
+            "settings_family": family.removesuffix(" Type"),
+            "production_group": legacy_unit_group(family, stats),
+            "ai_tank": "Tank" in name or "Armored" in name or name == "Cavalry",
+            "ai_force_category": legacy_ai_force_category(name, family, stats),
+            "requirements": requirements,
+            "recruitment": {"industry": "industry" if family == "Militia" else "basic_factory",
+                            "coastal": bool(stats.get("naval_unit", False))}}
+
+
+
+def legacy_unit_group(family, stats):
+    """Preserve older production grouping when metadata is absent."""
+    if family.startswith("Truck"):
+        return "Infantry"
+    if family.startswith("Convoy"):
+        return "Navy"
+    group = normalize_air_category(stats.get("production_group"))
+    if group in ("Infantry", "Tanks", "Navy", "Air"):
+        return group
+    if stats.get("naval_unit", False):
+        return "Navy"
+    if "Tank" in family or "Armored Car" in family or family in c.TANK_GROUP_EXTRAS:
+        return "Tanks"
+    return "Infantry"
+
+
+def legacy_ai_force_category(name, family, stats):
+    """Preserve the AI quota groups independently from production categories."""
+    if "Infantry" in name or family == "Militia":
+        return "INFANTRY"
+    if "Tank" in name or "Armored" in name or name == "Cavalry":
+        return "TANKS"
+    if stats.get("naval_unit", False) and not name.startswith("Convoy"):
+        return "NAVY"
+    return None
 
 def normalize_cached_json_names(cache_key, data):
     """Migrate names when data enters the cache. Keep shared dictionaries in place."""
@@ -592,6 +664,75 @@ def pending_diplomacy_action(entry):
     return entry.get("action") if isinstance(entry, dict) else entry
 
 
+DIPLOMACY_SCHEMA_VERSION = 1
+PRODUCTION_SCHEMA_VERSION = 1
+
+
+def validate_diplomacy_schema(payload):
+    version = payload.get("diplomacy_schema_version", 0)
+    if type(version) is not int or not 0 <= version <= DIPLOMACY_SCHEMA_VERSION:
+        raise ValueError("Unsupported diplomacy schema version. Use a compatible GD5 build.")
+    return version
+
+
+
+def tournament_production_version(payload):
+    version = payload.get("production_schema_version", 0)
+    if type(version) is not int or not 0 <= version <= PRODUCTION_SCHEMA_VERSION:
+        raise ValueError("Unsupported tournament production schema version.")
+    return version
+
+def normalize_diplomatic_request(entry, sender, target):
+    """Give older requests reproducible identities without gameplay randomness."""
+    if isinstance(entry, str):
+        entry = {"action": entry, "turns": 1, "timer": 0}
+    if not isinstance(entry, dict):
+        raise ValueError("A diplomatic request must be an action or a record.")
+    identity = entry.get("request_id")
+    if identity is None:
+        payload = json.dumps([sender, target, entry], sort_keys=True, separators=(",", ":"))
+        entry["request_id"] = uuid.uuid5(uuid.NAMESPACE_URL, "gd5:diplomacy:" + payload).hex
+    elif not isinstance(identity, str) or not identity or len(identity) > 128:
+        raise ValueError("A diplomatic request_id must be a nonempty string of at most 128 characters.")
+    return entry
+
+
+def migrate_diplomatic_records(nation_data):
+    """Normalize both channels after loading requests, preserving unknown fields."""
+    for sender, country in nation_data.items():
+        if not isinstance(country, dict):
+            continue
+        pending = country.get("pending_diplomacy", {})
+        for target, entry in list(pending.items()):
+            pending[target] = normalize_diplomatic_request(entry, sender, target)
+    for recipient, country in nation_data.items():
+        if not isinstance(country, dict):
+            continue
+        for sender, response in country.get("diplo_responses", {}).items():
+            if not isinstance(response, dict) or "request_id" in response:
+                continue
+            request = nation_data.get(sender, {}).get("pending_diplomacy", {}).get(recipient, {})
+            if isinstance(request, dict) and request.get("action") == response.get("action"):
+                response["request_id"] = request["request_id"]
+            else:
+                # Older saves could contain standalone responses with copied terms.
+                response["legacy_unmatched"] = True
+    for signatory, country in nation_data.items():
+        if not isinstance(country, dict):
+            continue
+        treaty = country.get("pending_treaty")
+        if not isinstance(treaty, dict):
+            continue
+        if not treaty.get("treaty_id"):
+            payload = json.dumps([signatory, treaty], sort_keys=True, separators=(",", ":"))
+            treaty["treaty_id"] = uuid.uuid5(uuid.NAMESPACE_URL, "gd5:ratification:" + payload).hex
+        for member in treaty.get("awaiting", []):
+            request = nation_data.get(member, {}).get("pending_ratification")
+            if isinstance(request, dict):
+                request.setdefault("treaty_id", treaty["treaty_id"])
+    return nation_data
+
+
 def ensure_message_id(message):
     """Give an older message a stable reference when it is first forwarded."""
     message_id = message.get("message_id")
@@ -624,7 +765,7 @@ def migrate_pending_responses(nation_data):
                     }
                     del pending[other]
                     break
-    return nation_data
+    return migrate_diplomatic_records(nation_data)
 
 
 def from_legacy_string(peace_type, proposer, target):

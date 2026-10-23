@@ -518,7 +518,7 @@ class UnitViewControlTests(unittest.TestCase):
                   "order": {"type": "MOVE", "path": [index + 2]}}
                  for index, name in enumerate(library)]
         origin = {"id": 1, "center": (100, 100), "units": units}
-        with (patch.dict(game.__dict__, map_data={"one": origin},
+        with (app_harness.patch_map(game, map_data={"one": origin},
                          _unit_render_index_cache=None),
               patch.object(queries, "get_unit_library", return_value=library),
               patch.object(overlay_renderer, "draw_overlay_content", return_value=[]),

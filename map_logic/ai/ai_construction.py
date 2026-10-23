@@ -1,3 +1,5 @@
+from data.state_access import world_for, session_for
+from map_logic import production_actions
 import random
 import data.constants as c
 from data import queries
@@ -87,9 +89,9 @@ def tactical_player_unit(map_screen):
     Both passes skip it at selection rather than refusing to disband at the end,
     so the host still balances its books; it just gives up the next unit along.
     """
-    if not getattr(map_screen, "tactical_mode", False):
+    if not getattr(session_for(map_screen), "tactical_mode", False):
         return None
-    return getattr(map_screen, "player_unit", None)
+    return getattr(session_for(map_screen), "player_unit", None)
 
 
 def _disband_peacetime_militia(ai_name, my_provs, at_war, protected=None):
@@ -234,15 +236,16 @@ def _is_frontline(map_screen, ai_name, prov):
     Same two questions the panic-militia pass asks, in the same order, since
     "somewhere the war is" is one idea and not two.
     """
-    if queries.is_nation_in_combat_here(ai_name, prov, map_screen.nation_data):
+    world_state = world_for(map_screen)
+    if queries.is_nation_in_combat_here(ai_name, prov, world_state.nation_data):
         return True
     for n_id in prov.get("neighbors", []):
-        n_prov = map_screen.id_to_province.get(n_id)
+        n_prov = world_state.id_to_province.get(n_id)
         if not n_prov:
             continue
-        visible_units = queries.filter_visible_units(n_prov.get("units", []), ai_name, n_prov, map_screen.nation_data)
+        visible_units = queries.filter_visible_units(n_prov.get("units", []), ai_name, n_prov, world_state.nation_data)
         for u in visible_units:
-            if queries.are_at_war(ai_name, u.get("owner"), map_screen.nation_data):
+            if queries.are_at_war(ai_name, u.get("owner"), world_state.nation_data):
                 return True
     return False
 
@@ -286,6 +289,7 @@ def _disband_worst_unit_if_deficit(map_screen, data, my_provs, ai_name, deficits
     money for. `deficits` is already narrowed to what is actually running out
     (see _short_of_runway); this narrows the other axis.
     """
+    world_state = world_for(map_screen)
     if not deficits:
         return
 
@@ -297,7 +301,7 @@ def _disband_worst_unit_if_deficit(map_screen, data, my_provs, ai_name, deficits
     # Cheap on purpose: this is the first half of _is_frontline and needs no
     # neighbour walk, because the question is whether an enemy is *on* my
     # ground, not merely next to it.
-    if any(queries.is_nation_in_combat_here(ai_name, prov, map_screen.nation_data)
+    if any(queries.is_nation_in_combat_here(ai_name, prov, world_state.nation_data)
            for prov in my_provs):
         return
 
@@ -347,19 +351,20 @@ def _panic_militia_and_tally_forces(map_screen, ai_name, data, my_provs, unit_li
     """Section: per-province pass that clears losing tiles' build queues,
     panic-queues a Militia on any core threatened by an adjacent enemy, and
     tallies current + queued forces (by role) and land/sea border counts."""
+    world_state = world_for(map_screen)
     role_counts = {}
     land_border_count = 0
     sea_border_count = 0
 
     for prov in my_provs:
-        in_combat = queries.is_nation_in_combat_here(ai_name, prov, map_screen.nation_data)
+        in_combat = queries.is_nation_in_combat_here(ai_name, prov, world_state.nation_data)
         has_factory = queries.has_industry(prov)
 
         # 1. Clear queues on tiles in active combat if we are losing
         if in_combat:
-            friendly_nations = queries.get_all_friendly_nations(ai_name, map_screen.nation_data)
+            friendly_nations = queries.get_all_friendly_nations(ai_name, world_state.nation_data)
             my_units = [u for u in prov.get("units", []) if u.get("owner") in friendly_nations]
-            enemy_units = [u for u in prov.get("units", []) if queries.are_at_war(ai_name, u.get("owner"), map_screen.nation_data)]
+            enemy_units = [u for u in prov.get("units", []) if queries.are_at_war(ai_name, u.get("owner"), world_state.nation_data)]
 
             my_str = sum(queries.calculate_unit_strength(u) for u in my_units)
             enemy_str = sum(queries.calculate_unit_strength(u) for u in enemy_units)
@@ -378,13 +383,13 @@ def _panic_militia_and_tally_forces(map_screen, ai_name, data, my_provs, unit_li
         if has_factory and queries.has_core(ai_name, prov):
             enemy_adjacent = False
             for n_id in prov.get("neighbors", []):
-                n_prov = map_screen.id_to_province.get(n_id)
+                n_prov = world_state.id_to_province.get(n_id)
                 if not n_prov: continue
                 # Are there enemy units here? A hidden submarine sitting quietly
                 # offshore doesn't get to trigger a panic build.
-                visible_units = queries.filter_visible_units(n_prov.get("units", []), ai_name, n_prov, map_screen.nation_data)
+                visible_units = queries.filter_visible_units(n_prov.get("units", []), ai_name, n_prov, world_state.nation_data)
                 for u in visible_units:
-                    if queries.are_at_war(ai_name, u.get("owner"), map_screen.nation_data):
+                    if queries.are_at_war(ai_name, u.get("owner"), world_state.nation_data):
                         enemy_adjacent = True
                         break
                 if enemy_adjacent: break
@@ -406,14 +411,15 @@ def _panic_militia_and_tally_forces(map_screen, ai_name, data, my_provs, unit_li
                 militia_stats = unit_library.get(militia_name, {})
                 militia_time = militia_stats.get("production_time", 1)
 
-                if not restrictions.can_raise_units(ai_name, map_screen.nation_data):
+                if not restrictions.can_raise_units(ai_name, world_state.nation_data):
                     safe_to_panic = False  # demilitarized by treaty; not even in a panic
 
                 if safe_to_panic and militia_time == 1 and (not queue or queries.get_base_unit_name(queue[0].get("unit_type", "")) != "Militia"):
                     # Cancel existing queue
                     while queue:
-                        item = queue.pop(0)
-                        if "refund" in item: queries.refund_resources(data, item["refund"])
+                        production_actions.cancel_production(
+                            map_screen, ai_name, prov, "unit_queue", 0,
+                            authority="ai", recorded_refund_only=True)
 
                     # Queue Militia
                     c_mat = militia_stats.get("cost_materials", 0)
@@ -421,9 +427,9 @@ def _panic_militia_and_tally_forces(map_screen, ai_name, data, my_provs, unit_li
                     c_fuel = militia_stats.get("cost_fuel", 0)
 
                     if data.get("materials", 0) >= c_mat and data.get("manpower", 0) >= c_man and data.get("fuel", 0) >= c_fuel:
-                        data["materials"] -= c_mat
-                        data["manpower"] -= c_man
-                        data["fuel"] -= c_fuel
+                        production_actions.submit_production(
+                            map_screen, ai_name, prov, "unit_queue", {"unit_type": militia_name},
+                            authority="ai", unit_library=unit_library)
 
                         # Adjust upkeep tracking
                         militia_upkeep = queries.get_unit_upkeep(militia_stats)
@@ -433,12 +439,7 @@ def _panic_militia_and_tally_forces(map_screen, ai_name, data, my_provs, unit_li
                         militia_role = roles.get(militia_name, ai_unit_eval.ROLE_LINE)
                         role_counts[militia_role] = role_counts.get(militia_role, 0) + 1
 
-                        order = {
-                            "unit_type": militia_name,
-                            "turns_remaining": max(1, militia_stats.get("production_time", 1)),
-                            "refund": {"cost_materials": c_mat, "cost_manpower": c_man, "cost_fuel": c_fuel}
-                        }
-                        prov.setdefault("unit_queue", []).append(order)
+
 
         # Count what we have and what is already on order, together --
         # the two loops applied the same rule and differed only in which
@@ -457,7 +458,7 @@ def _panic_militia_and_tally_forces(map_screen, ai_name, data, my_provs, unit_li
         is_land_border = False
         is_coast = False
         for n_id in prov.get("neighbors", []):
-            n_prov = map_screen.id_to_province.get(n_id)
+            n_prov = world_state.id_to_province.get(n_id)
             if n_prov:
                 if n_prov.get("terrain") in c.OCEAN_TERRAINS:
                     is_coast = True
@@ -505,14 +506,15 @@ def _recruit_sites(map_screen, ai_name, my_provs):
     per iteration meant rescanning every province the nation owns up to six
     hundred times a turn, which was most of what this pass cost.
     """
+    world_state = world_for(map_screen)
     usable = [p for p in my_provs
               if queries.has_core(ai_name, p)
-              and not queries.is_nation_in_combat_here(ai_name, p, map_screen.nation_data)]
+              and not queries.is_nation_in_combat_here(ai_name, p, world_state.nation_data)]
 
     militia = [p for p in usable if queries.has_industry(p)]
     factory = [p for p in usable if queries.has_basic_factory(p)]
     naval = [p for p in factory if p.get("is_coastal", False)
-             and queries.borders_ocean(p, map_screen.id_to_province)]
+             and queries.borders_ocean(p, world_state.id_to_province)]
     return {"militia": militia, "factory": factory, "naval": naval}
 
 
@@ -558,6 +560,7 @@ def _run_purchase_loop(map_screen, ai_name, data, my_provs, unit_library, tech_t
       - the fuel_shortage boolean and both of its fallback branches, subsumed by
         pricing fuel against the nation's own income and reserves
     """
+    world_state = world_for(map_screen)
     target_man, target_mat = state["target_man"], state["target_mat"]
     target_fuel = state["target_fuel"]
     inc_man, inc_mat, inc_fuel = state["inc_man"], state["inc_mat"], state["inc_fuel"]
@@ -573,7 +576,7 @@ def _run_purchase_loop(map_screen, ai_name, data, my_provs, unit_library, tech_t
     # A treaty can bar this nation from raising anything at all. Checked before
     # the budget is worked out rather than at the queue, so a demilitarized
     # nation banks its income instead of computing a shopping list it cannot use.
-    if not restrictions.can_raise_units(ai_name, map_screen.nation_data):
+    if not restrictions.can_raise_units(ai_name, world_state.nation_data):
         return
 
     best_overall = max((v.score for v in values.values()), default=0.0)
@@ -644,10 +647,6 @@ def _run_purchase_loop(map_screen, ai_name, data, my_provs, unit_library, tech_t
         cost_man = stats.get("cost_manpower", 0)
         cost_fuel = stats.get("cost_fuel", 0)
 
-        data["materials"] -= cost_mat
-        data["manpower"] -= cost_man
-        data["fuel"] -= cost_fuel
-
         upkeep = queries.get_unit_upkeep(stats)
         upk_man += upkeep["manpower"]
         upk_mat += upkeep["materials"]
@@ -656,12 +655,10 @@ def _run_purchase_loop(map_screen, ai_name, data, my_provs, unit_library, tech_t
 
         # Spread the load rather than stacking one province's queue.
         target_prov = min(deployable[pick.name], key=lambda p: len(p.get("unit_queue", [])))
-        target_prov.setdefault("unit_queue", []).append({
-            "unit_type": pick.name,
-            "turns_remaining": max(1, stats.get("production_time", 1)),
-            "refund": {"cost_materials": cost_mat, "cost_manpower": cost_man,
-                       "cost_fuel": cost_fuel},
-        })
+        production_actions.submit_production(
+            map_screen, ai_name, target_prov, "unit_queue", {"unit_type": pick.name},
+            authority="ai", unit_library=unit_library)
+
 
         # The stockpile just shrank, so what is scarce may have changed. Only
         # the prices moved, so this rescores rather than re-deriving.
@@ -675,10 +672,11 @@ def _run_purchase_loop(map_screen, ai_name, data, my_provs, unit_library, tech_t
 def _apply_coring_priority(map_screen, ai_name, data, my_provs):
     """Section: AI CORING PRIORITY -- spends surplus manpower coring the best
     available uncored province (prioritizing ones with factories)."""
+    world_state = world_for(map_screen)
     # Nothing to core when cores are disabled -- every tile already counts
     # as cored, so skip straight past this without spending resources.
     surplus_manpower = c.AI_SURPLUS_MANPOWER_FOR_CORING
-    if not queries.is_administrative_action_enabled("CORE", map_screen.scenario_settings) or data.get("manpower", 0) <= surplus_manpower:
+    if not queries.is_administrative_action_enabled("CORE", world_state.scenario_settings) or data.get("manpower", 0) <= surplus_manpower:
         return
 
     uncored_provs = [p for p in my_provs if ai_name not in p.get("cores", []) and not any(q.get("order_type") == "CORE" for q in p.get("building_queue", []))]
@@ -686,7 +684,7 @@ def _apply_coring_priority(map_screen, ai_name, data, my_provs):
         return
 
     valid_uncored = []
-    has_any_core = any(ai_name in p.get("cores", []) for p in map_screen.map_data.values())
+    has_any_core = any(ai_name in p.get("cores", []) for p in world_state.map_data.values())
     for p in uncored_provs:
         can_core = False
         if not has_any_core:
@@ -695,7 +693,7 @@ def _apply_coring_priority(map_screen, ai_name, data, my_provs):
             can_core = True
         else:
             for n_id in p.get("neighbors", []):
-                n_prov = map_screen.id_to_province.get(n_id)
+                n_prov = world_state.id_to_province.get(n_id)
                 if n_prov and ai_name in n_prov.get("cores", []):
                     can_core = True
                     break
@@ -708,23 +706,18 @@ def _apply_coring_priority(map_screen, ai_name, data, my_provs):
     # Prioritize territories with factories
     valid_uncored.sort(key=lambda p: (queries.has_industry(p), p.get("is_coastal", False)), reverse=True)
     target_core_prov = valid_uncored[0]
-    core_data = queries.get_core_cost(ai_name, map_screen.map_data, map_screen.scenario_settings)
+    core_data = queries.get_core_cost(ai_name, world_state.map_data, world_state.scenario_settings)
     if queries.can_afford(data, core_data):
-        queries.deduct_resources(data, core_data)
-        order = {
-            "order_type": "CORE",
-            "item_name": "Core Territory",
-            "turns_remaining": core_data["time"],
-            "group": "administration",
-            "refund": {"cost_materials": core_data.get("cost_materials", 0), "cost_manpower": core_data.get("cost_manpower", 0), "cost_fuel": core_data.get("cost_fuel", 0)}
-        }
-        target_core_prov.setdefault("building_queue", []).append(order)
+        production_actions.submit_production(
+            map_screen, ai_name, target_core_prov, "building_queue", {"order_type": "CORE"}, authority="ai")
+
 
 
 def _apply_construction_logic(map_screen, ai_name, data, my_provs, building_library):
     """Section: EVALUATE CONSTRUCTION LOGIC -- if the AI has an excess hoard
     of materials, invests it back into the next industry or recruitment
     building tier it has available and a free build slot for, one per turn."""
+    world_state = world_for(map_screen)
     if data.get("materials", 0) <= c.AI_MIN_MATERIALS_FOR_CONSTRUCTION:
         return
 
@@ -784,22 +777,15 @@ def _apply_construction_logic(map_screen, ai_name, data, my_provs, building_libr
 
         if target_bldg:
             # We have the tech and the physical foundation, now check dynamic costs
-            b_stats = queries.get_building_cost(target_bldg, ai_name, map_screen.map_data, building_library)
+            b_stats = queries.get_building_cost(target_bldg, ai_name, world_state.map_data, building_library)
             c_mat = b_stats.get("cost_materials", 0)
             c_fuel = b_stats.get("cost_fuel", 0)
 
             if data.get("materials", 0) >= c_mat and data.get("fuel", 0) >= c_fuel:
-                data["materials"] -= c_mat
-                data["fuel"] -= c_fuel
-
-                order = {
-                    "order_type": "BUILDING",
-                    "item_name": target_bldg,
-                    "turns_remaining": max(1, b_stats.get("time", 1)),
-                    "group": b_stats["group"],
-                    "refund": {"cost_materials": c_mat, "cost_manpower": 0, "cost_fuel": c_fuel}
-                }
-                prov.setdefault("building_queue", []).append(order)
+                production_actions.submit_production(
+                    map_screen, ai_name, prov, "building_queue",
+                    {"order_type": "BUILDING", "item_name": target_bldg},
+                    authority="ai", policy=production_actions.AI_POLICY, building_library=building_library)
 
                 # Successfully queued a building. Break out of the loop so it only queues one per turn
                 # to avoid instantly draining its treasury on 30 workshops at once.
@@ -808,12 +794,13 @@ def _apply_construction_logic(map_screen, ai_name, data, my_provs, building_libr
 
 def process_ai_economy_decisions(map_screen):
     """Handles AI unit recruitment and building construction based on economy."""
+    world_state = world_for(map_screen)
     unit_library = queries.get_unit_library()
     building_library = queries.get_building_library()
 
     tech_tree = queries.get_tech_tree()
 
-    all_econ = queries.calculate_all_economies(map_screen.map_data, map_screen.nation_data)
+    all_econ = queries.calculate_all_economies(world_state.map_data, world_state.nation_data)
 
     # Border and coast counts, and the enemy stacks each nation is facing, all
     # come off this turn's snapshot rather than being re-derived per nation.
@@ -821,7 +808,7 @@ def process_ai_economy_decisions(map_screen):
 
     # Pre-group provinces by owner for efficiency
     nation_provs = {}
-    for prov in map_screen.map_data.values():
+    for prov in world_state.map_data.values():
         owner = prov.get("owner")
         # Prevent AI from treating bugged water tiles as valid build sites
         if owner and not queries.is_water_province(prov):
@@ -830,7 +817,7 @@ def process_ai_economy_decisions(map_screen):
     ai_nations = queries.get_active_ai_nations(map_screen)
 
     for ai_name in ai_nations:
-        data = map_screen.nation_data[ai_name]
+        data = world_state.nation_data[ai_name]
         econ = all_econ.get(ai_name)
         if not econ: continue
 

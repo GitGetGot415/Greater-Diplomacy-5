@@ -25,6 +25,9 @@ unrelated offers. Its own channel cannot collide with anything.
     nation_data[signatory]["pending_treaty"]     -- the deal, waiting on replies
 """
 
+from data.state_access import world_for, session_for
+import uuid
+from map_logic.diplomacy import diplomacy_lifecycle as lifecycle
 import data.constants as c
 from map_logic.diplomacy import deal as deal_mod
 from map_logic.diplomacy import deal_effects
@@ -54,10 +57,11 @@ def _members_with_something_to_lose(map_screen, deal, signatory):
     Swiss provinces its leader gave back on its behalf. What a treaty does not
     say is exactly what a member most needs a vote on.
     """
+    world_state = world_for(map_screen)
     from data import queries
     from map_logic.diplomacy import war_score
 
-    nation_data = map_screen.nation_data
+    nation_data = world_state.nation_data
     ours = set(deal["sides"][deal_mod.side_of(deal, signatory) or "a"])
 
     def may_refuse(nation):
@@ -71,9 +75,9 @@ def _members_with_something_to_lose(map_screen, deal, signatory):
 
     theirs = set(deal_mod.opponents_of(deal, signatory))
     prewar = war_score.prewar_index(nation_data)
-    kept = deal_mod.tile_transfers(deal, map_screen.map_data, nation_data)
+    kept = deal_mod.tile_transfers(deal, world_state.map_data, nation_data)
 
-    for prov in map_screen.map_data.values():
+    for prov in world_state.map_data.values():
         holder = prov.get("owner")
         if holder in bound or not may_refuse(holder):
             continue
@@ -86,11 +90,12 @@ def _members_with_something_to_lose(map_screen, deal, signatory):
 
 
 def _ai_ratifies(map_screen, member, deal):
+    world_state = world_for(map_screen)
     from map_logic.ai import ai_opinion, ai_world
 
     world = map_screen.ai_world or ai_world.for_screen(map_screen)
-    return ai_opinion.ratifies(world, member, deal, map_screen.map_data,
-                               map_screen.scenario_settings)
+    return ai_opinion.ratifies(world, member, deal, world_state.map_data,
+                               world_state.scenario_settings)
 
 
 def open_round(map_screen, signatory, opponent, deal, escrow=None):
@@ -101,7 +106,9 @@ def open_round(map_screen, signatory, opponent, deal, escrow=None):
     an answer, in which case the deal waits in `pending_treaty` and
     process_ratifications finishes it.
     """
-    nation_data = map_screen.nation_data
+    world_state = world_for(map_screen)
+    session_state = session_for(map_screen)
+    nation_data = world_state.nation_data
 
     # Both negotiators, because either of them can be speaking for a bloc. The
     # message a member gets has to name the one that bound *it*, which is not
@@ -115,10 +122,11 @@ def open_round(map_screen, signatory, opponent, deal, escrow=None):
             bound.append((member, binder, other))
 
     refused, awaiting = [], []
+    treaty_id = uuid.uuid4().hex
     for member, binder, other in bound:
-        if member in map_screen.active_players:
+        if member in session_state.active_players:
             nation_data.setdefault(member, {})["pending_ratification"] = {
-                "signatory": binder, "opponent": other, "deal": deal, "turns": 0}
+                "signatory": binder, "opponent": other, "deal": deal, "turns": 0, "treaty_id": treaty_id}
             send_message(map_screen, binder, member,
                          _ask_text(binder, other), "DIPLOMACY",
                          extra={"action": "RATIFY_TREATY", "parameters": deal})
@@ -129,7 +137,7 @@ def open_round(map_screen, signatory, opponent, deal, escrow=None):
     if awaiting:
         nation_data.setdefault(signatory, {})["pending_treaty"] = {
             "deal": deal, "opponent": opponent, "escrow": escrow,
-            "awaiting": awaiting, "refused": refused, "turns": 0}
+            "awaiting": awaiting, "refused": refused, "turns": 0, "treaty_id": treaty_id}
         return False
 
     settle(map_screen, signatory, deal, opponent, refused, escrow)
@@ -147,7 +155,7 @@ def answer(nation_data, member, verdict):
     entry = nation_data.get(member, {}).get("pending_ratification")
     if not isinstance(entry, dict):
         return ""
-    entry["verdict"] = verdict
+    lifecycle.answer_ratification(nation_data, member, verdict)
     return ("Terms ratified." if verdict == RATIFY
             else "Terms refused -- you will leave the faction and fight on alone.")
 
@@ -165,7 +173,8 @@ def process_ratifications(map_screen):
     RATIFICATION_TURNS: a leader's authority is the whole point of bloc peace,
     and silence should not be able to hold a settlement open forever.
     """
-    nation_data = map_screen.nation_data
+    world_state = world_for(map_screen)
+    nation_data = world_state.nation_data
 
     for signatory, data in list(nation_data.items()):
         if not isinstance(data, dict):
@@ -205,9 +214,10 @@ def settle(map_screen, signatory, deal, opponent, refused, escrow=None):
     so finalize_neutral never runs for it: it keeps its land, loses its faction,
     and is still at war with the other side in the morning.
     """
+    world_state = world_for(map_screen)
     from map_logic.diplomacy.faction_actions import finalize_faction_leave
 
-    nation_data = map_screen.nation_data
+    nation_data = world_state.nation_data
 
     for member in refused or []:
         deal = deal_mod.without_nation(deal, member)

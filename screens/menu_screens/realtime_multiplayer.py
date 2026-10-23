@@ -206,9 +206,9 @@ class Realtime_Host_Setup(GameState):
             self.local_address = default_advertised_address()
             if self._address_is_detected:
                 self.address = self.local_address
-            from screens.menu_screens.map import Map
-            server_map = Map(load_path=self.scenario_path, is_scenario=True,
-                             map_settings=copy.deepcopy(self.settings))
+            from data.map.load_map import load_backend_state
+            server_map = load_backend_state(self.scenario_path, is_scenario=True,
+                                            scenario_settings=copy.deepcopy(self.settings))
             countries = queries.get_active_playable_nations(server_map.map_data, server_map.nation_data)
             if self.capacity is None:
                 self.capacity = min(MAX_PLAYER_CAPACITY, len(countries))
@@ -629,7 +629,8 @@ class Realtime_Lobby(GameState):
         try:
             from screens.menu_screens.map import Map
             settings = copy.deepcopy(self.session.config.scenario_settings)
-            replacement_map = Map(load_path=path, is_scenario=True, map_settings=settings)
+            from data.map.load_map import load_backend_state
+            replacement_map = load_backend_state(path, is_scenario=True, scenario_settings=settings)
             countries = queries.get_active_playable_nations(replacement_map.map_data,
                                                              replacement_map.nation_data)
             default_capacity = min(MAX_PLAYER_CAPACITY, len(countries))

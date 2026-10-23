@@ -175,7 +175,7 @@ class ExportOverwriteTests(unittest.TestCase):
         turn = game.time_manager.total_turns
         destination = self.downloads / f"Turn_{turn}_{player}.gd5move"
         destination.write_bytes(b"original move")
-        with mock.patch.dict(game.__dict__, {
+        with app_harness.patch_map(game, {
                 "player_country": player, "multiplayer_mode": True,
                 "realtime_multiplayer": False, "multiplayer_player_key": "player-key"}), \
                 mock.patch.object(c, "TOURNAMENT_SAVES_DIR", str(self.downloads)), \

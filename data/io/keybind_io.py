@@ -72,19 +72,14 @@ def _load_keybinds(saved_data, default_binds):
     return binds
 
 
-def load_settings(default_binds, default_volume=0.5, default_music_volume=0.5):
-    """Loads all settings, falling back to defaults for anything missing.
-
-    Returns the same positional tuple it always has -- keybinds first, then
-    settings_schema.SETTINGS_FIELDS in order -- because main.py unpacks it by
-    index. The order lives in one place now instead of five.
-    """
+def load_settings_result(default_binds, default_volume=0.5, default_music_volume=0.5):
+    """Load named settings and retain caller volume defaults and keybind behavior."""
     fallback = settings_schema.defaults()
     fallback["sfx_volume"] = default_volume
     fallback["music_volume"] = default_music_volume
 
     if not os.path.exists(CONFIG_PATH):
-        return settings_schema.to_tuple(fallback, default_binds)
+        return settings_schema.SettingsLoadResult(dict(default_binds), fallback)
 
     try:
         saved_data = queries.get_settings()
@@ -99,7 +94,12 @@ def load_settings(default_binds, default_volume=0.5, default_music_volume=0.5):
         if "music_volume" not in saved_data:
             values["music_volume"] = default_music_volume
 
-        return settings_schema.to_tuple(values, _load_keybinds(saved_data, default_binds))
+        return settings_schema.SettingsLoadResult(_load_keybinds(saved_data, default_binds), values)
     except Exception as e:
         print(f"Error loading settings: {e}")
-        return settings_schema.to_tuple(fallback, default_binds)
+        return settings_schema.SettingsLoadResult(dict(default_binds), fallback)
+
+
+def load_settings(default_binds, default_volume=0.5, default_music_volume=0.5):
+    """Preserve the positional interface for older callers."""
+    return load_settings_result(default_binds, default_volume, default_music_volume).as_tuple()

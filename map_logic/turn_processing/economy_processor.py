@@ -1,28 +1,31 @@
+from data.state_access import world_for, session_for
 import data.constants as c
 from data import migrations, queries
 
 def process_economy(map_screen):
     """Calculates income, applies building yields, and deducts unit upkeep."""
+    world_state = world_for(map_screen)
+    session_state = session_for(map_screen)
     
     # --- TACTICAL ECONOMY OVERRIDE ---
-    if map_screen.tactical_mode and map_screen.player_unit:
-        u_type = map_screen.player_unit.get("original_type", map_screen.player_unit.get("type"))
+    if session_state.tactical_mode and session_state.player_unit:
+        u_type = session_state.player_unit.get("original_type", session_state.player_unit.get("type"))
         stats = queries.get_unit_library().get(u_type, {})
         
         upkeep = queries.get_unit_upkeep(stats)
         
-        morale = map_screen.player_unit.get("morale", c.DEFAULT_UNIT_MORALE)
+        morale = session_state.player_unit.get("morale", c.DEFAULT_UNIT_MORALE)
         desertion_cost = upkeep["manpower"] * ((100.0 - float(morale)) / 100.0)
         
-        map_screen.unit_economy["fuel_inc"] = upkeep["fuel"] # Stored cleanly for movement calcs
+        session_state.unit_economy["fuel_inc"] = upkeep["fuel"] # Stored cleanly for movement calcs
         
-        map_screen.unit_economy["manpower"] = max(0, min(map_screen.unit_economy.get("manpower", 0) + upkeep["manpower"] - desertion_cost, c.TACTICAL_MAX_MANPOWER))
-        map_screen.unit_economy["materials"] = min(map_screen.unit_economy.get("materials", 0) + upkeep["materials"], c.TACTICAL_MAX_MATERIALS)
-        map_screen.unit_economy["fuel"] = min(map_screen.unit_economy.get("fuel", 0) + upkeep["fuel"], c.TACTICAL_MAX_FUEL)
+        session_state.unit_economy["manpower"] = max(0, min(session_state.unit_economy.get("manpower", 0) + upkeep["manpower"] - desertion_cost, c.TACTICAL_MAX_MANPOWER))
+        session_state.unit_economy["materials"] = min(session_state.unit_economy.get("materials", 0) + upkeep["materials"], c.TACTICAL_MAX_MATERIALS)
+        session_state.unit_economy["fuel"] = min(session_state.unit_economy.get("fuel", 0) + upkeep["fuel"], c.TACTICAL_MAX_FUEL)
 
-    all_econ = queries.calculate_all_economies(map_screen.map_data, map_screen.nation_data)
+    all_econ = queries.calculate_all_economies(world_state.map_data, world_state.nation_data)
 
-    for name, stats in map_screen.nation_data.items():
+    for name, stats in world_state.nation_data.items():
         # Explicitly skip the global events log 
         if name == "GLOBAL_EVENTS" or name in c.UNPLAYABLE_NATIONS or name not in all_econ:
             continue
@@ -38,27 +41,29 @@ def process_economy(map_screen):
         for res in c.ECON_RESOURCE_KEYS:
             stats[res] = max(0, stats[res])
 
-    return map_screen.nation_data.get(map_screen.player_country, {}).get("manpower", 0)
+    return world_state.nation_data.get(session_state.player_country, {}).get("manpower", 0)
 
 def process_queues(map_screen):
     """Processes only the VERY FIRST item in the unit and building queues sequentially."""
+    world_state = world_for(map_screen)
+    session_state = session_for(map_screen)
     # REPLACE DISK I/O WITH CACHED QUERIES
     unit_library = queries.get_unit_library()
 
     # --- NEW: Check if AI is disabled to freeze their queues ---
-    ai_disabled = queries.get_scenario_flag("ai_disabled", c.DEFAULT_AI_DISABLED, map_screen.scenario_settings)
+    ai_disabled = queries.get_scenario_flag("ai_disabled", c.DEFAULT_AI_DISABLED, world_state.scenario_settings)
     
     # --- Build active unit counters once per turn for new deployments ---
-    active_unit_counters = queries.build_active_unit_counters(map_screen.map_data)
+    active_unit_counters = queries.build_active_unit_counters(world_state.map_data)
 
-    for province in map_screen.map_data.values():
+    for province in world_state.map_data.values():
         current_owner = province.get("owner", "None")
         
         # Freeze AI queues if AI is disabled
-        if ai_disabled and current_owner not in map_screen.active_players:
+        if ai_disabled and current_owner not in session_state.active_players:
             continue
 
-        in_combat = queries.is_province_in_active_combat(province, map_screen.nation_data)
+        in_combat = queries.is_province_in_active_combat(province, world_state.nation_data)
         
         # --- BUILDING QUEUE ---
         b_queue = province.get("building_queue", [])
@@ -72,7 +77,7 @@ def process_queues(map_screen):
                 if item.get("order_type") == "CORE":
                     if current_owner not in province.get("cores", []):
                         province.setdefault("cores", []).append(current_owner)
-                    if current_owner == map_screen.player_country:
+                    if current_owner == session_state.player_country:
                         map_screen.show_feedback(f"CORED: Province {province.get('id')}")
                         
                 elif item.get("order_type") == "REMOVE_CORE":
@@ -85,11 +90,11 @@ def process_queues(map_screen):
                     
                     # Apply relation penalty to the countries whose cores were removed
                     for fc in foreign_cores:
-                        if fc in map_screen.nation_data:
-                            existing_mods = map_screen.nation_data[fc].get("temp_modifiers", {}).get(current_owner, {})
+                        if fc in world_state.nation_data:
+                            existing_mods = world_state.nation_data[fc].get("temp_modifiers", {}).get(current_owner, {})
                             current_penalty = existing_mods.get("removed_cores", 0)
                             new_penalty = max(c.REL_MOD_MAX_REMOVE_CORE_PENALTY, current_penalty + c.REL_MOD_REMOVE_CORE)
-                            queries.add_temporary_modifier(fc, current_owner, "removed_cores", new_penalty, map_screen.nation_data)
+                            queries.add_temporary_modifier(fc, current_owner, "removed_cores", new_penalty, world_state.nation_data)
                     
                     # Remove all foreign cores, solidify player core
                     province["cores"] = [current_owner]
@@ -98,7 +103,7 @@ def process_queues(map_screen):
                     primary_core = foreign_cores[0] if foreign_cores else None
                     
                     # Determine Militia Level natively
-                    current_year = map_screen.time_manager.year
+                    current_year = world_state.time_manager.year
                     tech_tree = queries.get_tech_tree()
                     militia_years = tech_tree.get("militia", {}).get("years", [1910, 1915, 1920, 1925, 1930, 1935])
                     
@@ -111,7 +116,7 @@ def process_queues(map_screen):
                     reb_color = [200, 30, 30]
                     reb_flag_data = "DEFAULT"
                     if primary_core:
-                        core_data = map_screen.nation_data.get(primary_core, {})
+                        core_data = world_state.nation_data.get(primary_core, {})
                         if not core_data:
                             core_data = country_io.get_country_stats(primary_core)
                         if core_data.get("color"):
@@ -129,7 +134,7 @@ def process_queues(map_screen):
                     
                     # --- Helper to create a rebellion country and spawn militia ---
                     def _spawn_rebellion(target_prov, cores_for_naming, militia_count):
-                        reb_id, reb_name = queries.generate_rebellion_name(cores_for_naming, map_screen.nation_data)
+                        reb_id, reb_name = queries.generate_rebellion_name(cores_for_naming, world_state.nation_data)
                         
                         reb_data = {
                             "name": reb_name,
@@ -154,10 +159,10 @@ def process_queues(map_screen):
                             "materials": 0,
                             "fuel": 0
                         }
-                        map_screen.nation_data[reb_id] = reb_data
+                        world_state.nation_data[reb_id] = reb_data
                         
-                        if reb_id not in map_screen.nation_data[current_owner].get("at_war_with", []):
-                            map_screen.nation_data[current_owner].setdefault("at_war_with", []).append(reb_id)
+                        if reb_id not in world_state.nation_data[current_owner].get("at_war_with", []):
+                            world_state.nation_data[current_owner].setdefault("at_war_with", []).append(reb_id)
                         
                         if hasattr(map_screen, 'nation_colors'):
                             map_screen.nation_colors[reb_id] = tuple(reb_color)
@@ -175,7 +180,7 @@ def process_queues(map_screen):
                             target_prov.setdefault("units", []).append(u_dict)
                         
                         # Give the rebellion cores globally on all territories that share its founding cores
-                        for map_prov in map_screen.map_data.values():
+                        for map_prov in world_state.map_data.values():
                             if any(core in map_prov.get("cores", []) for core in cores_for_naming):
                                 if reb_id not in map_prov.get("cores", []):
                                     map_prov.setdefault("cores", []).append(reb_id)
@@ -191,10 +196,10 @@ def process_queues(map_screen):
                     primary_reb_id = _spawn_rebellion(province, foreign_cores, primary_militia)
                     
                     # --- SECONDARY/TERTIARY REBELLIONS (nearby tiles with matching cores) ---
-                    if primary_core and hasattr(map_screen, 'id_to_province'):
+                    if primary_core and hasattr(world_for(map_screen), 'id_to_province'):
                         spread_candidates = queries.find_nearby_matching_core_tiles(
                             province["id"], primary_core, current_owner,
-                            map_screen.map_data, map_screen.id_to_province, c.REBELLION_MAX_SPREAD_DISTANCE
+                            world_state.map_data, world_state.id_to_province, c.REBELLION_MAX_SPREAD_DISTANCE
                         )
                         
                         # Secondary rebellion
@@ -211,7 +216,7 @@ def process_queues(map_screen):
                             if ter_cores:
                                 _spawn_rebellion(ter_prov, ter_cores, c.REBELLION_TERTIARY_MILITIA)
                     
-                    if current_owner == map_screen.player_country:
+                    if current_owner == session_state.player_country:
                         map_screen.show_feedback(f"CORES REMOVED: Rebellion Sparked in {province.get('id')}!")
                         
                         
@@ -242,7 +247,7 @@ def process_queues(map_screen):
                         province["buildings"] = new_buildings
                         province["buildings"].append(b_name)
                         
-                        if current_owner == map_screen.player_country:
+                        if current_owner == session_state.player_country:
                             map_screen.show_feedback(f"CONSTRUCTED: {b_name}")
         
                 # --- CRITICAL FIX: Safely remove the item, accounting for list replacement ---
@@ -267,7 +272,7 @@ def process_queues(map_screen):
                 new_unit_data["custom_name"] = queries.generate_unit_custom_name(new_unit_data, active_unit_counters)
                 
                 province["units"].append(new_unit_data)
-                if current_owner == map_screen.player_country:
+                if current_owner == session_state.player_country:
                     map_screen.show_feedback(f"DEPLOYED: {unit_type}")
         
                 # --- CRITICAL FIX: Safely remove the item, accounting for list replacement ---
@@ -275,3 +280,9 @@ def process_queues(map_screen):
                     u_queue.remove(item)
                 if item in province.get("unit_queue", []):
                     province["unit_queue"].remove(item)
+
+
+def initialize_income(context, *, skip=False):
+    """Apply the existing fresh-world income once during construction."""
+    if world_for(context).time_manager.total_turns == 0 and not session_for(context).is_editor and not skip:
+        process_economy(context)

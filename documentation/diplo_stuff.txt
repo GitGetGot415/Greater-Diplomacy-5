@@ -40,6 +40,17 @@ These controls do not add AI actions or multiplayer commands.
 Shared processing and save data
 ------------------------------
 
+map_logic/diplomacy/diplomacy_lifecycle.py owns request creation, replacement, removal, response binding, and timing transitions.
+diplomacy_messages.py retains its public accessors and correspondence functions.
+The processor retains its existing phase order. Treaty effects remain in treaty_effects.py and the agreement modules.
+
+RequestState gives explicit draft, scheduled, reply, reaction, and expired states.
+The existing turns field remains the authoritative request age. State derives from that age, action, and schedule.
+Responses remain independent records without travelling request counters.
+Stable request references prevent an old response from resolving a replacement request.
+Ratification uses a separate round reference and its existing member-answer rules.
+See documentation/data_migrations.txt for saved identities and older-input adapters.
+
 Friendly countries are faction members and members of the same imperial family.
 There is no separate direct-alliance list or action.
 See documentation/data_migrations.txt for older country records.

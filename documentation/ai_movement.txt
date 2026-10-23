@@ -32,6 +32,9 @@ map_logic/turn_processing/combat_rules.py
 
 data/queries.py
     Shared movement and aircraft helpers define legal orders and paths.
+    Unit upgrade targets use active library metadata.
+    canonical_unit_order remains the shared multiplayer validation boundary.
+    World and session access uses data/state_access.py without requiring a map screen.
 
 MOVEMENT CACHES
 ---------------

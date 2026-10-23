@@ -7,6 +7,7 @@ the tournament system.
 
 from __future__ import annotations
 
+from data.state_access import world_for, session_for
 import base64
 import copy
 import asyncio
@@ -758,25 +759,28 @@ class MapRealtimeDriver:
     """
     _UNIT_MUTABLE_KEYS = {"order", "custom_name", "combat_stance", "lane_target"}
     _AUTOMATION_KEYS = {"construction", "movement", "research"}
-    _APPEARANCE_KEYS = {"name", "adjective", "leader_name", "leader_title",
-                        "flag_data", "portrait_data", "color"}
+    _APPEARANCE_KEYS = set(c.COUNTRY_APPEARANCE_FIELDS)
     _MAX_CLAIM_DRAFTS = 100
     _MAX_QUEUE_ITEMS = 100
 
-    def __init__(self, map_ref):
-        self.map_ref = map_ref
+    def __init__(self, map_ref, session=None):
+        from data.game_state import WorldState
+        from data.state_access import BackendState
+        self.map_ref = BackendState(map_ref, session) if isinstance(map_ref, WorldState) else map_ref
+        self.world = world_for(self.map_ref)
+        self.session = session_for(self.map_ref)
 
     def configure_scenario_settings(self, settings):
         """Apply host lobby ranges before snapshots or player commands use them."""
         from data import queries
         queries.refresh_unit_range_overrides(settings)
-        self.map_ref.scenario_settings = copy.deepcopy(settings)
+        self.world.scenario_settings = copy.deepcopy(settings)
 
     def start_game(self, countries: list[str]) -> None:
-        self.map_ref.active_players = list(countries)
+        self.session.active_players = list(countries)
         # A server is not a player: this prevents player automation/UI-only
         # behavior from giving its local process a country.
-        self.map_ref.player_country = "None"
+        self.session.player_country = "None"
 
     def validate_draft(self, country_id: str, commands: list[dict[str, Any]]) -> list[dict[str, Any]]:
         from data import queries
@@ -790,6 +794,7 @@ class MapRealtimeDriver:
         has_research_command = False
         seen = set()
         seen_units = set()
+        seen_queues = set()
         for command in commands:
             if not isinstance(command, dict):
                 raise RealtimeError("Invalid order command.")
@@ -813,7 +818,12 @@ class MapRealtimeDriver:
             elif kind == "air_transport":
                 continue  # The complete cargo projection was validated above.
             elif kind == "province_queue":
-                canonical.append(self._validate_queue(country_id, command))
+                entry = self._validate_queue(country_id, command)
+                key = (entry["province_id"], entry["queue"])
+                if key in seen_queues:
+                    raise RealtimeError("Only one projection is allowed per province queue.")
+                seen_queues.add(key)
+                canonical.append(entry)
             elif kind == "research_queue":
                 if has_research_command:
                     raise RealtimeError("Only one research selection may be submitted per turn.")
@@ -850,8 +860,8 @@ class MapRealtimeDriver:
         supplied = command.get("armies", [])
         if not isinstance(supplied, list) or len(supplied) > 200:
             raise RealtimeError("Invalid army roster.")
-        queries.ensure_unit_ids(self.map_ref.map_data)
-        owned = {unit.get("unit_id") for province in self.map_ref.map_data.values()
+        queries.ensure_unit_ids(self.world.map_data)
+        owned = {unit.get("unit_id") for province in self.world.map_data.values()
                  for unit in queries.units_with_air_cargo(province.get("units", []))
                  if unit.get("owner") == country_id}
         armies, army_ids, assigned = [], set(), set()
@@ -882,7 +892,7 @@ class MapRealtimeDriver:
             valid_defense_area = (
                 isinstance(defense_area, list)
                 and queries.normalize_army_defense_area(
-                    defense_area, self.map_ref.map_data) == defense_area)
+                    defense_area, self.world.map_data) == defense_area)
             if (not isinstance(army_id, str) or not army_id or len(army_id) > 80
                     or army_id == c.UNASSIGNED_ARMY_ID
                     or army_id in army_ids or not isinstance(name, str)
@@ -906,8 +916,8 @@ class MapRealtimeDriver:
                                "custom_symbol": copy.deepcopy(custom_symbol),
                                "defense_area": list(defense_area)})
         try:
-            queries.validate_air_drop_recovery_armies(country_id, armies, self.map_ref.nation_data,
-                                                      self.map_ref.map_data)
+            queries.validate_air_drop_recovery_armies(country_id, armies, self.world.nation_data,
+                                                      self.world.map_data)
         except ValueError as exc:
             raise RealtimeError(str(exc)) from exc
         return {"type": "army_roster", "armies": armies}
@@ -933,7 +943,7 @@ class MapRealtimeDriver:
             raise RealtimeError("The selected volunteer divisions exceed your available capacity.")
 
     def _country(self, country_id: str) -> dict[str, Any]:
-        country = self.map_ref.nation_data.get(country_id)
+        country = self.world.nation_data.get(country_id)
         if not isinstance(country, dict):
             raise RealtimeError("Unknown player country.")
         return country
@@ -972,7 +982,7 @@ class MapRealtimeDriver:
             raise RealtimeError("A selected custom unit is not researched.")
         try:
             policies = politics.canonicalize_policy_draft(
-                self.map_ref.nation_data, country_id, command.get(politics.POLICY_KEY, {}))
+                self.world.nation_data, country_id, command.get(politics.POLICY_KEY, {}))
         except ValueError as exc:
             raise RealtimeError(str(exc)) from exc
         return {"type": "country_preferences", "political_drift": drift,
@@ -1056,7 +1066,7 @@ class MapRealtimeDriver:
                     or not isinstance(recipient, str) or province_id in returned_ids):
                 raise RealtimeError("Invalid territory return.")
             province = self._province(province_id)
-            recipient_data = self.map_ref.nation_data.get(recipient)
+            recipient_data = self.world.nation_data.get(recipient)
             if province.get("owner") != country_id or not isinstance(recipient_data, dict):
                 raise RealtimeError("Invalid territory return.")
             if recipient not in province.get("cores", []) and province_id not in recipient_data.get("claims", []):
@@ -1075,26 +1085,7 @@ class MapRealtimeDriver:
     def _validate_country_appearance(self, country_id: str, command: dict[str, Any]) -> dict[str, Any]:
         """Allow identity changes without allowing a client to alter gameplay data."""
         self._country(country_id)
-        appearance = command.get("appearance")
-        if not isinstance(appearance, dict) or set(appearance) - self._APPEARANCE_KEYS:
-            raise RealtimeError("Invalid country appearance.")
-        canonical = {}
-        for key in ("name", "adjective", "leader_name", "leader_title"):
-            value = appearance.get(key, "")
-            if not isinstance(value, str) or len(value) > 120 or any(ord(ch) < 32 for ch in value):
-                raise RealtimeError("Invalid country appearance text.")
-            canonical[key] = value
-        for key in ("flag_data", "portrait_data"):
-            value = appearance.get(key, "DEFAULT")
-            if not isinstance(value, str) or len(value) > 4_000_000:
-                raise RealtimeError("Invalid country appearance image.")
-            canonical[key] = value
-        color = appearance.get("color")
-        if (not isinstance(color, list) or len(color) not in (3, 4) or
-                any(not isinstance(channel, int) or not 0 <= channel <= 255 for channel in color)):
-            raise RealtimeError("Invalid country color.")
-        canonical["color"] = list(color)
-        return {"type": "country_appearance", "appearance": canonical}
+        return {"type": "country_appearance", "appearance": self._canonical_appearance(command.get("appearance"))}
 
     def _canonical_appearance(self, appearance: Any) -> dict[str, Any]:
         """Use the same narrow identity schema for a player and their subject."""
@@ -1134,7 +1125,7 @@ class MapRealtimeDriver:
             raise RealtimeError("Invalid puppet release queue.")
         canonical_siphons = {}
         for puppet, values in siphons.items():
-            puppet_data = self.map_ref.nation_data.get(puppet)
+            puppet_data = self.world.nation_data.get(puppet)
             if (puppet not in controlled or not isinstance(puppet_data, dict)
                     or puppet_data.get("puppet_type") != c.PUPPET_TYPE_INTEGRATED
                     or not isinstance(values, dict)):
@@ -1148,7 +1139,7 @@ class MapRealtimeDriver:
             canonical_siphons[puppet] = rates
         canonical_appearances = {}
         for puppet, appearance in appearances.items():
-            puppet_data = self.map_ref.nation_data.get(puppet)
+            puppet_data = self.world.nation_data.get(puppet)
             if (puppet not in controlled or not isinstance(puppet_data, dict)
                     or puppet_data.get("puppet_type") != c.PUPPET_TYPE_INTEGRATED):
                 raise RealtimeError("You may only edit an integrated subject.")
@@ -1156,7 +1147,7 @@ class MapRealtimeDriver:
         from map_logic.diplomacy.puppet_actions import canonical_puppet_release_queue
         try:
             canonical_releases = canonical_puppet_release_queue(
-                self.map_ref.map_data, self.map_ref.nation_data, country_id, releases,
+                self.world.map_data, self.world.nation_data, country_id, releases,
                 country.get("release_puppet_queue", []))
         except ValueError as error:
             raise RealtimeError(str(error)) from error
@@ -1179,7 +1170,7 @@ class MapRealtimeDriver:
         from map_logic.diplomacy import faction_actions
         # Validate against a copy: the helper owns the collision and membership
         # rules, while the real mutation waits for atomic turn processing.
-        probe = copy.deepcopy(self.map_ref.nation_data)
+        probe = copy.deepcopy(self.world.nation_data)
         if not faction_actions.rename_faction(probe, country_id, old_name, name.strip()):
             raise RealtimeError("That faction name is unavailable.")
         return {"type": "faction_rename", "name": name.strip()}
@@ -1191,17 +1182,20 @@ class MapRealtimeDriver:
             raise RealtimeError("Invalid treaty ratification response.")
         if verdict is not None and not isinstance(pending, dict):
             raise RealtimeError("There is no treaty awaiting ratification.")
-        return {"type": "ratification_response", "verdict": verdict}
+        reference = command.get("treaty_id")
+        if reference is not None and (not isinstance(pending, dict) or reference != pending.get("treaty_id")):
+            raise RealtimeError("That ratification refers to an expired treaty.")
+        return {"type": "ratification_response", "verdict": verdict, "treaty_id": reference}
 
     def _validate_volunteer_draft(self, country_id: str, command: dict[str, Any]) -> dict[str, Any]:
         """Identify divisions by their authoritative province/index, never data."""
         from data import queries
         target, units = command.get("target"), command.get("units", [])
-        if (not isinstance(target, str) or target == country_id or target not in self.map_ref.nation_data
+        if (not isinstance(target, str) or target == country_id or target not in self.world.nation_data
                 or not isinstance(units, list) or not units or len(units) > 100):
             raise RealtimeError("Invalid volunteer offer.")
         from map_logic.diplomacy import volunteers
-        legal, reason = volunteers.is_eligible(country_id, target, self.map_ref.nation_data)
+        legal, reason = volunteers.is_eligible(country_id, target, self.world.nation_data)
         if not legal:
             raise RealtimeError(reason)
         canonical, seen = [], set()
@@ -1228,8 +1222,12 @@ class MapRealtimeDriver:
         In-flight proposals remain on the authoritative map; clients can only
         replace their own unsent proposals and responses for the current turn.
         """
-        from data import queries
+        from data import queries, migrations
 
+        try:
+            version = migrations.validate_diplomacy_schema(command)
+        except ValueError as error:
+            raise RealtimeError(str(error)) from error
         self._country(country_id)
         pending = command.get("pending", {})
         responses = command.get("responses", {})
@@ -1242,7 +1240,7 @@ class MapRealtimeDriver:
 
         def target_ok(target: Any) -> str:
             if (not isinstance(target, str) or target == country_id or
-                    target not in self.map_ref.nation_data):
+                    target not in self.world.nation_data):
                 raise RealtimeError("Invalid diplomacy target.")
             return target
 
@@ -1265,7 +1263,7 @@ class MapRealtimeDriver:
             elif action not in allowed_actions:
                 raise RealtimeError("Unknown diplomatic action.")
             leadership_error = queries.faction_request_leadership_error(
-                country_id, target, action, self.map_ref.nation_data)
+                country_id, target, action, self.world.nation_data)
             if leadership_error:
                 raise RealtimeError(leadership_error)
             timer = info.get("timer", 0)
@@ -1302,6 +1300,12 @@ class MapRealtimeDriver:
                 if len(encoded) > 50_000:
                     raise RealtimeError("Diplomacy terms are too large.")
                 entry["parameters"] = copy.deepcopy(info["parameters"])
+            from map_logic.diplomacy import diplomacy_lifecycle as lifecycle
+            try:
+                entry.update(lifecycle.canonical_response_reference(
+                    self.world.nation_data, country_id, target, info, version=version))
+            except ValueError as error:
+                raise RealtimeError(str(error)) from error
             canonical_responses[target] = entry
 
         canonical_lists = {}
@@ -1318,7 +1322,7 @@ class MapRealtimeDriver:
 
     def _province(self, province_id: Any):
         try:
-            return self.map_ref.id_to_province[int(province_id)]
+            return self.world.id_to_province[int(province_id)]
         except (KeyError, TypeError, ValueError) as exc:
             raise RealtimeError("Unknown province in order.") from exc
 
@@ -1359,8 +1363,8 @@ class MapRealtimeDriver:
             raise RealtimeError("Invalid combat stance.")
         lane_target = command.get("lane_target")
         if lane_target is not None and (not isinstance(lane_target, str)
-                                        or lane_target not in self.map_ref.nation_data
-                                        or not queries.are_at_war(country_id, lane_target, self.map_ref.nation_data)):
+                                        or lane_target not in self.world.nation_data
+                                        or not queries.are_at_war(country_id, lane_target, self.world.nation_data)):
             raise RealtimeError("Invalid battle lane target.")
         return {"type": "unit_order", "province_id": province["id"],
                 "unit_index": index, "unit_id": unit.get("unit_id"), "order": canonical_order,
@@ -1388,102 +1392,33 @@ class MapRealtimeDriver:
             raise RealtimeError("Invalid province queue.")
         if len(items) > self._MAX_QUEUE_ITEMS or any(not isinstance(item, dict) for item in items):
             raise RealtimeError("Invalid province queue contents.")
-        # Existing orders are preserved exactly; new entries are rebuilt from
-        # server libraries and costs rather than the client's refund/timer data.
-        remaining = [copy.deepcopy(item) for item in province.get(queue_type, []) if isinstance(item, dict)]
-        canonical, new_costs = [], []
-        for item in items:
-            match_index = next((index for index, existing in enumerate(remaining) if existing == item), None)
-            if match_index is not None:
-                canonical.append(remaining.pop(match_index))
-                continue
-            rebuilt, cost = self._build_queue_item(country_id, province, queue_type, item)
-            canonical.append(rebuilt)
-            new_costs.append(cost)
-        return {"type": "province_queue", "province_id": province["id"], "queue": queue_type,
-                "items": canonical, "cancelled": remaining, "new_costs": new_costs}
+        from map_logic import production_actions
+        try:
+            return production_actions.reconstruct_queue(
+                self.map_ref, country_id, province, queue_type, items,
+                policy=production_actions.REALTIME_POLICY)
+        except ValueError as error:
+            raise RealtimeError(str(error)) from error
 
     def _build_queue_item(self, country_id: str, province: dict[str, Any], queue_type: str,
                           intent: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
-        """Build a queue entry using the same data the normal UI uses."""
-        from data import queries
-        country = self._country(country_id)
-        if queue_type == "building_queue":
-            order_type = intent.get("order_type", "BUILDING")
-            if not isinstance(order_type, str):
-                raise RealtimeError("Invalid building order type.")
-            if (order_type in queries.ADMINISTRATIVE_ACTIONS
-                    and not queries.is_administrative_action_enabled(order_type, self.map_ref.scenario_settings)):
-                raise RealtimeError("That administrative action is disabled.")
-            if order_type == "CORE":
-                if country_id in province.get("cores", []):
-                    raise RealtimeError("That territory is already cored.")
-                cost = queries.get_core_cost(country_id, self.map_ref.map_data, self.map_ref.scenario_settings)
-                item_name, group = "Core Territory", "administration"
-            elif order_type == "REMOVE_CORE":
-                if not [core for core in province.get("cores", []) if core != country_id]:
-                    raise RealtimeError("That territory has no foreign cores to remove.")
-                cost = queries.get_remove_core_cost(country_id, self.map_ref.map_data, self.map_ref.scenario_settings)
-                item_name, group = "Remove Cores", "administration"
-            elif order_type == "BUILDING":
-                item_name = intent.get("item_name")
-                library = queries.get_building_library()
-                if (not isinstance(item_name, str) or item_name not in library
-                        or not queries.has_core(country_id, province)):
-                    raise RealtimeError("Invalid building order.")
-                requirement, level = queries.get_building_required_tech(item_name)
-                if requirement and country.get("research", {}).get(requirement, 0) < level:
-                    raise RealtimeError("Required building research is not complete.")
-                cost = queries.get_building_cost(item_name, country_id, self.map_ref.map_data, library)
-                group = cost.get("group", "")
-            else:
-                raise RealtimeError("Invalid building order.")
-            refund = {key: cost.get(key, 0) for key in ("cost_materials", "cost_manpower", "cost_fuel")}
-            return ({"order_type": order_type, "item_name": item_name,
-                     "turns_remaining": max(1, cost.get("time", 1)), "group": group,
-                     "refund": refund}, refund)
-        unit_name = intent.get("unit_type")
-        library = queries.get_unit_library()
-        if (not isinstance(unit_name, str) or unit_name not in library
-                or not queries.has_core(country_id, province)
-                or not queries.is_unit_unlocked(unit_name, country.get("research", {}))):
-            raise RealtimeError("Invalid unit production order.")
-        stats = library[unit_name]
-        if stats.get("naval_unit") and not province.get("is_coastal", False):
-            raise RealtimeError("Naval units require a coastal province.")
-        if queries.get_base_unit_name(unit_name) == "Militia":
-            factory_ok = queries.has_industry(province)
-        else:
-            factory_ok = queries.has_basic_factory(province)
-        from map_logic.diplomacy import restrictions
-        if not factory_ok or not restrictions.can_raise_units(country_id, self.map_ref.nation_data):
-            raise RealtimeError("That province cannot recruit this unit.")
-        refund = {key: stats.get(key, 0) for key in ("cost_materials", "cost_manpower", "cost_fuel")}
-        return ({"unit_type": unit_name, "turns_remaining": max(1, stats.get("production_time", 1)),
-                 "refund": refund}, refund)
+        """Reconstruct untrusted client intent through shared production rules."""
+        from map_logic import production_actions
+        try:
+            result = production_actions.prepare_production(
+                self.map_ref, country_id, province, queue_type, intent,
+                policy=production_actions.REALTIME_POLICY)
+        except ValueError as error:
+            raise RealtimeError(str(error)) from error
+        return result.order, result.cost
 
     def _validate_queue_budget(self, country_id: str, commands: list[dict[str, Any]]) -> None:
         """Ensure queue changes can be paid for before accepting a draft."""
-        from data import queries
-        country = self._country(country_id)
-        available = {key: float(country.get(key.replace("cost_", ""), 0))
-                     for key in ("cost_materials", "cost_manpower", "cost_fuel")}
-        for command in commands:
-            if command.get("type") == "province_queue":
-                for item in command.get("cancelled", []):
-                    refund = item.get("refund", {}) if isinstance(item, dict) else {}
-                    for key in available:
-                        available[key] += max(0, float(refund.get(key, 0)))
-                for cost in command.get("new_costs", []):
-                    for key in available:
-                        available[key] -= float(cost.get(key, 0))
-            elif command.get("type") == "unit_order":
-                order = command.get("order")
-                if isinstance(order, dict) and order.get("type") == "REPAIR":
-                    for key in available:
-                        available[key] -= float(order["realtime_cost"].get(key, 0))
-        if any(value < 0 for value in available.values()):
-            raise RealtimeError("These production and repair orders exceed available resources.")
+        from map_logic.production_actions import validate_queue_budget
+        try:
+            validate_queue_budget(self._country(country_id), commands)
+        except ValueError as error:
+            raise RealtimeError(str(error)) from error
 
     def _validate_research_queue(self, country_id: str, command: dict[str, Any]) -> dict[str, Any]:
         """Replay a player's start/pause choices without trusting client points.
@@ -1495,66 +1430,16 @@ class MapRealtimeDriver:
         """
         from data import queries
 
-        requested = command.get("tech_names")
-        if (not isinstance(requested, list) or len(requested) > c.RESEARCH_SLOTS or
-                any(not isinstance(tech, str) for tech in requested) or
-                len(set(requested)) != len(requested)):
-            raise RealtimeError("Invalid research selection.")
-        country_data = self.map_ref.nation_data.get(country_id)
-        if not isinstance(country_data, dict):
-            raise RealtimeError("Unknown country research selection.")
-        tech_tree = queries.get_tech_tree()
-        research = country_data.get("research", {})
-        if not isinstance(research, dict):
-            raise RealtimeError("Invalid authoritative research data.")
-        current_queue = country_data.get("research_queue", [])
-        if not isinstance(current_queue, list):
-            raise RealtimeError("Invalid authoritative research queue.")
-        running = {project.get("tech_name"): project for project in current_queue
-                   if isinstance(project, dict) and isinstance(project.get("tech_name"), str)}
-        progress = copy.deepcopy(country_data.get("research_progress", {}))
-        if not isinstance(progress, dict):
-            progress = {}
-
-        # Paused projects retain the authoritative remaining point total.
-        for tech_name, project in running.items():
-            if tech_name not in requested:
-                remaining = project.get("points_remaining", tech_tree.get(tech_name, {}).get("cost", 0))
-                if isinstance(remaining, (int, float)) and remaining >= 0:
-                    progress[tech_name] = remaining
-
-        canonical_projects = []
-        for tech_name in requested:
-            tech = tech_tree.get(tech_name)
-            if not isinstance(tech, dict):
-                raise RealtimeError("Unknown research technology.")
-            if tech_name in running:
-                # Keep the server's project object and progress, never the
-                # similarly shaped value supplied by a client.
-                project = copy.deepcopy(running[tech_name])
-            else:
-                current_level = research.get(tech_name, 0)
-                if not isinstance(current_level, int) or current_level < 0:
-                    raise RealtimeError("Invalid research level.")
-                if current_level >= tech.get("max_lvl", 0):
-                    raise RealtimeError("That research is already complete.")
-                if not queries.check_tech_requirements(research, tech.get("req", {}), current_level + 1):
-                    raise RealtimeError("Research requirements are not met.")
-                cost = tech.get("cost")
-                if not isinstance(cost, (int, float)) or cost <= 0:
-                    raise RealtimeError("Invalid research technology.")
-                remaining = progress.pop(tech_name, cost)
-                if not isinstance(remaining, (int, float)) or remaining < 0:
-                    remaining = cost
-                project = {"tech_name": tech_name, "points_remaining": remaining}
-            progress.pop(tech_name, None)
-            canonical_projects.append(project)
-        return {"type": "research_queue", "projects": canonical_projects,
-                "research_progress": progress}
+        try:
+            result = queries.canonical_research_selection(self.world.nation_data.get(country_id),
+                                                          command.get("tech_names"))
+        except ValueError as error:
+            raise RealtimeError(str(error)) from error
+        return {"type": "research_queue", **result}
 
     def process_turn(self, drafts: dict[str, list[dict[str, Any]]]) -> None:
         for country_id, commands in drafts.items():
-            country_data = self.map_ref.nation_data[country_id]
+            country_data = self.world.nation_data[country_id]
             from data import queries
             queries.apply_air_transport_commands(self.map_ref, country_id,
                 [command for command in commands if command["type"] == "air_transport"])
@@ -1580,16 +1465,11 @@ class MapRealtimeDriver:
                         else:
                             unit[key] = value
                 elif command["type"] == "province_queue":
-                    province = self._province(command["province_id"])
-                    from data import queries
-                    for item in command.get("cancelled", []):
-                        queries.refund_queue_item(country_data, item, country_id, self.map_ref.map_data)
-                    for cost in command.get("new_costs", []):
-                        queries.deduct_resources(country_data, cost)
-                    province[command["queue"]] = copy.deepcopy(command["items"])
+                    from map_logic.production_actions import apply_queue_change
+                    apply_queue_change(self.map_ref, country_id, command)
                 elif command["type"] == "research_queue":
-                    country_data["research_queue"] = copy.deepcopy(command["projects"])
-                    country_data["research_progress"] = copy.deepcopy(command["research_progress"])
+                    from map_logic.turn_processing.research_processor import apply_research_selection
+                    apply_research_selection(country_data, command)
                 elif command["type"] == "country_preferences":
                     country_data["political_drift"] = command["political_drift"]
                     country_data["automation"] = copy.deepcopy(command["automation"])
@@ -1607,38 +1487,33 @@ class MapRealtimeDriver:
                     country_data["revoke_queue"] = copy.deepcopy(command["revokes"])
                     country_data["return_queue"] = copy.deepcopy(command["returns"])
                 elif command["type"] == "country_appearance":
-                    country_data.update(copy.deepcopy(command["appearance"]))
+                    queries.apply_country_appearance(self.world.nation_data, country_id, command["appearance"])
                     self.map_ref.nation_colors[country_id] = tuple(country_data["color"])
                 elif command["type"] == "country_diplomacy":
                     # A proposal already travelling belongs to the server and
                     # cannot be cancelled or rewritten by a stale client view.
-                    existing = country_data.get("pending_diplomacy", {})
-                    in_flight = {target: copy.deepcopy(info) for target, info in existing.items()
-                                 if isinstance(info, dict) and info.get("turns", 0) > 0}
-                    in_flight.update(copy.deepcopy(command["pending"]))
-                    country_data["pending_diplomacy"] = in_flight
-                    country_data["diplo_responses"] = copy.deepcopy(command["responses"])
-                    country_data["draft_lists"] = copy.deepcopy(command["draft_lists"])
+                    from map_logic.diplomacy import diplomacy_lifecycle as lifecycle
+                    lifecycle.apply_draft(self.world.nation_data, country_id,
+                                          command["pending"], command["responses"], command["draft_lists"])
                 elif command["type"] == "puppet_draft":
                     country_data["puppets"] = list(command["puppet_order"])
                     country_data["release_puppet_queue"] = copy.deepcopy(command["release_subjects"])
                     for puppet, rates in command["siphons"].items():
-                        self.map_ref.nation_data[puppet]["siphon_rates"] = copy.deepcopy(rates)
+                        self.world.nation_data[puppet]["siphon_rates"] = copy.deepcopy(rates)
                     for puppet, appearance in command["appearances"].items():
-                        subject = self.map_ref.nation_data[puppet]
-                        subject.update(copy.deepcopy(appearance))
+                        subject = self.world.nation_data[puppet]
+                        queries.apply_country_appearance(self.world.nation_data, puppet, appearance)
                         self.map_ref.nation_colors[puppet] = tuple(subject["color"])
                 elif command["type"] == "faction_rename" and command.get("name"):
                     from map_logic.diplomacy import faction_actions
-                    faction_actions.rename_faction(self.map_ref.nation_data, country_id,
+                    faction_actions.rename_faction(self.world.nation_data, country_id,
                                                    country_data.get("faction", ""), command["name"])
                 elif command["type"] == "ratification_response":
                     pending = country_data.get("pending_ratification")
                     if isinstance(pending, dict):
-                        if command["verdict"] is None:
-                            pending.pop("verdict", None)
-                        else:
-                            pending["verdict"] = command["verdict"]
+                        from map_logic.diplomacy import diplomacy_lifecycle as lifecycle
+                        lifecycle.answer_ratification(self.world.nation_data, country_id, command["verdict"],
+                                                      treaty_id=command.get("treaty_id"))
             # Volunteer reservations must be created after their diplomatic
             # request has been placed on the server map, just like the normal
             # player UI does in an offline game.
@@ -1664,13 +1539,13 @@ class MapRealtimeDriver:
         # therefore cannot use that single-player hook directly; replay it for
         # each opted-in real-time player at the same point in the turn instead.
         from map_logic.ai import automation_logic
-        original_player = self.map_ref.player_country
+        original_player = self.session.player_country
         try:
             for country_id in drafts:
-                automation = self.map_ref.nation_data.get(country_id, {}).get("automation", {})
+                automation = self.world.nation_data.get(country_id, {}).get("automation", {})
                 if not isinstance(automation, dict):
                     continue
-                self.map_ref.player_country = country_id
+                self.session.player_country = country_id
                 if automation.get("construction"):
                     automation_logic.automate_player_construction(self.map_ref)
                 if automation.get("movement"):
@@ -1678,12 +1553,12 @@ class MapRealtimeDriver:
                 if automation.get("research"):
                     automation_logic.automate_player_research(self.map_ref)
         finally:
-            self.map_ref.player_country = original_player
+            self.session.player_country = original_player
 
     def is_eliminated(self, country_id: str) -> bool:
         from data import queries
         return country_id not in queries.get_politically_active_nations(
-            self.map_ref.map_data, self.map_ref.nation_data)
+            self.world.map_data, self.world.nation_data)
 
     def snapshot(self) -> dict[str, Any]:
         from data import queries
@@ -1705,7 +1580,7 @@ class MapRealtimeDriver:
             images[name] = base64.b64encode(raw).decode("ascii")
         if not {"terrain.png", "id_map.png"}.issubset(images):
             raise RealtimeError("Host map is missing required PNG assets.")
-        return {"raw_map_data": copy.deepcopy(self.map_ref.raw_json_data),
+        return {"raw_map_data": copy.deepcopy(self.world.raw_json_data),
                 "snapshot": self.snapshot(), "images": images}
 
 
@@ -1715,10 +1590,11 @@ def collect_map_commands(map_ref, country_id: str) -> list[dict[str, Any]]:
     This deliberately reads only player choices, never mutable combat,
     resource, research-progress, or claim-timer fields from the client map.
     """
+    world_state = world_for(map_ref)
     from data import queries
-    queries.ensure_unit_ids(map_ref.map_data)
+    queries.ensure_unit_ids(world_state.map_data)
     commands: list[dict[str, Any]] = queries.air_transport_commands(map_ref, country_id)
-    for province in map_ref.map_data.values():
+    for province in world_state.map_data.values():
         for index, unit in enumerate(province.get("units", [])):
             if unit.get("owner") == country_id:
                 commands.append({"type": "unit_order", "province_id": province["id"],
@@ -1735,8 +1611,8 @@ def collect_map_commands(map_ref, country_id: str) -> list[dict[str, Any]]:
                                  "queue": queue_name,
                                  "items": copy.deepcopy(province.get(queue_name, []))})
     from data import queries
-    queries.normalize_armies(map_ref.nation_data, map_ref.map_data)
-    country_data = map_ref.nation_data.get(country_id, {})
+    queries.normalize_armies(world_state.nation_data, world_state.map_data)
+    country_data = world_state.nation_data.get(country_id, {})
     commands.append({"type": "army_roster",
                      "armies": copy.deepcopy(country_data.get("armies", []))})
     research_queue = country_data.get("research_queue", []) if isinstance(country_data, dict) else []
@@ -1752,7 +1628,7 @@ def collect_map_commands(map_ref, country_id: str) -> list[dict[str, Any]]:
                      "mat_to_fuel_slider": country_data.get("mat_to_fuel_slider", 0.0),
                      "custom_production_units": copy.deepcopy(country_data.get("custom_production_units", [])),
                      politics.POLICY_KEY: politics.policy_draft_projection(
-                         map_ref.nation_data, country_id)})
+                         world_state.nation_data, country_id)})
     # Claim timers are server state. A client only says which existing/new
     # claims should remain queued; validation restores server timers and gives
     # new claims the standard fabrication time.
@@ -1782,7 +1658,7 @@ def collect_map_commands(map_ref, country_id: str) -> list[dict[str, Any]]:
     draft_lists = country_data.get("draft_lists", {})
     if not isinstance(draft_lists, dict):
         draft_lists = {}
-    commands.append({"type": "country_diplomacy",
+    commands.append({"type": "country_diplomacy", "diplomacy_schema_version": 1,
                      "pending": {target: copy.deepcopy(info) for target, info in pending.items()
                                  if isinstance(target, str) and isinstance(info, dict)
                                  and info.get("turns", 0) <= 0},
@@ -1791,7 +1667,7 @@ def collect_map_commands(map_ref, country_id: str) -> list[dict[str, Any]]:
     controlled = country_data.get("puppets", []) if isinstance(country_data, dict) else []
     siphons = {}
     for puppet in controlled:
-        subject = map_ref.nation_data.get(puppet, {})
+        subject = world_state.nation_data.get(puppet, {})
         if isinstance(subject, dict) and subject.get("puppet_type") == c.PUPPET_TYPE_INTEGRATED:
             siphons[puppet] = copy.deepcopy(subject.get("siphon_rates", {}))
     commands.append({"type": "puppet_draft", "puppet_order": list(controlled), "siphons": siphons,
@@ -1804,7 +1680,8 @@ def collect_map_commands(map_ref, country_id: str) -> list[dict[str, Any]]:
     commands.append({"type": "faction_rename", "name": country_data.get("faction", "")})
     pending_ratification = country_data.get("pending_ratification", {})
     commands.append({"type": "ratification_response",
-                     "verdict": pending_ratification.get("verdict") if isinstance(pending_ratification, dict) else None})
+                     "verdict": pending_ratification.get("verdict") if isinstance(pending_ratification, dict) else None,
+                     "treaty_id": pending_ratification.get("treaty_id") if isinstance(pending_ratification, dict) else None})
     volunteer_drafts = getattr(map_ref, "realtime_volunteer_drafts", {})
     if isinstance(volunteer_drafts, dict):
         for target, units in volunteer_drafts.items():
@@ -1848,6 +1725,7 @@ class RemoteSessionView:
 
 def apply_authoritative_snapshot(map_ref, snapshot: dict[str, Any]) -> None:
     """Replace mutable game state on a client map after a server broadcast."""
+    world_state = world_for(map_ref)
     if not isinstance(snapshot, dict):
         return
     settings = snapshot.get("scenario_settings")
@@ -1858,7 +1736,7 @@ def apply_authoritative_snapshot(map_ref, snapshot: dict[str, Any]) -> None:
         previous = getattr(map_ref, "scenario_settings", {})
         if previous.get("unit_range_overrides", {}) != settings.get("unit_range_overrides", {}):
             queries.refresh_unit_range_overrides(settings)
-        map_ref.scenario_settings = copy.deepcopy(settings)
+        world_state.scenario_settings = copy.deepcopy(settings)
     from map_logic.turn_processing import unit_events
     # Badges are local preferences. Server broadcasts must not mark them unread again.
     local_event_reads = unit_events.saved_reads(map_ref) if hasattr(map_ref, "time_manager") else {}
@@ -1883,9 +1761,11 @@ def apply_authoritative_snapshot(map_ref, snapshot: dict[str, Any]) -> None:
                 if key in message
             }
 
-    nation_data = copy.deepcopy(snapshot.get("nation_data", map_ref.nation_data))
+    nation_data = copy.deepcopy(snapshot.get("nation_data", world_state.nation_data))
     from data import migrations
+    migrations.validate_diplomacy_schema(snapshot)
     migrations.migrate_country_records(nation_data)
+    migrations.migrate_diplomatic_records(nation_data)
     incoming_player = nation_data.get(player_country, {}) if isinstance(nation_data, dict) else {}
     for message in incoming_player.get("inbox", []) if isinstance(incoming_player, dict) else []:
         if not isinstance(message, dict):
@@ -1893,9 +1773,10 @@ def apply_authoritative_snapshot(map_ref, snapshot: dict[str, Any]) -> None:
         saved_state = local_message_state.get(message.get("message_id"))
         if saved_state:
             message.update(saved_state)
-    map_ref.nation_data = nation_data
+    from data.state_access import replace_mapping
+    replace_mapping(world_for(map_ref), "nation_data", nation_data)
     map_ref.country_economy_summaries = copy.deepcopy(snapshot.get("country_economy_summaries", {}))
-    by_json_key = {province.get("json_key"): province for province in map_ref.map_data.values()}
+    by_json_key = {province.get("json_key"): province for province in world_state.map_data.values()}
     for json_key, update in snapshot.get("provinces", {}).items():
         province = by_json_key.get(json_key)
         if not province or not isinstance(update, dict):
@@ -1905,10 +1786,10 @@ def apply_authoritative_snapshot(map_ref, snapshot: dict[str, Any]) -> None:
                 province[key] = copy.deepcopy(update[key])
     date = snapshot.get("date", {})
     if isinstance(date, dict) and hasattr(map_ref, "time_manager"):
-        map_ref.time_manager.day = date.get("day", map_ref.time_manager.day)
-        map_ref.time_manager.month_index = date.get("month", map_ref.time_manager.month_index)
-        map_ref.time_manager.year = date.get("year", map_ref.time_manager.year)
-        map_ref.time_manager.total_turns = date.get("total_turns", map_ref.time_manager.total_turns)
+        world_state.time_manager.day = date.get("day", world_state.time_manager.day)
+        world_state.time_manager.month_index = date.get("month", world_state.time_manager.month_index)
+        world_state.time_manager.year = date.get("year", world_state.time_manager.year)
+        world_state.time_manager.total_turns = date.get("total_turns", world_state.time_manager.total_turns)
     if hasattr(map_ref, "time_manager"):
         unit_events.restore(map_ref, snapshot | {"unit_event_read_turns": local_event_reads})
     # These are local intent buffers.  The processed server snapshot has now

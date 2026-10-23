@@ -7,11 +7,12 @@ import sys
 # DATA_DIRS, etc.) is meant to resolve against the actual project root, so hop up one
 # level and put the root on sys.path before importing first-party packages.
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, REPO_ROOT)
-os.chdir(REPO_ROOT)
+if __name__ == "__main__" and REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
 
 import data.constants as c
-from beepbox_audio import has_beepbox_replacement
+from compilation_scripts import build_manifest as manifest
+from compilation_scripts.build_support import include_asset, is_git_ignored, stage_release, verified_build_path
 
 # Build-time only tools (not needed to run the game itself, so not in requirements.txt,
 # same convention as PyInstaller/py2app for the other two platform builds):
@@ -19,113 +20,28 @@ from beepbox_audio import has_beepbox_replacement
 
 STAGE_DIR = "web_stage"
 
-# main.py ships source (not a frozen binary) into the browser's virtual FS, so unlike
-# windows_compilation.py/macos_compilation.py this script also has to stage the first-party
-# Python packages themselves, not just data directories.
-# libdragoman.so is the translation layer, and it is a FILE at the repository
-# root rather than a package, so it has to be named here or the browser build
-# stages everything except the one thing map_logic/odtl.py loads. That is
-# exactly what happened: the library was committed, the web build had no copy
-# of it, and the Translate screen reported it missing from web_stage/assets.
-SOURCE_FILES = ["main.py", "mod_loader.py", "gameState.py", "ui_elements.py",
-                "libdragoman.so", "beepbox_audio.py"]
-# The multiplayer menu screen lives in screens/menu_screens and is included by
-# this whole-package copy, so it stays available in the web build automatically.
-SOURCE_PACKAGES = ["data", "ui", "screens", "map_logic"]
-# The data package includes migrations.py for older saves and settings.
-# map_logic includes air_processor.py and unit_events.py in turn_processing/.
-# screens includes the Unit events screen. These modules also run on web builds.
-# The screens package also includes the scenario Unit Stats Editor.
-DATA_DIRS = ["assets", "base_maps", "scenarios", "tournament_saves"]
+# Source is staged in the browser virtual filesystem. Native SoLoud stays desktop-only.
+SOURCE_FILES = manifest.WEB_SOURCE_FILES
+SOURCE_PACKAGES = manifest.SOURCE_PACKAGES
+DATA_DIRS = manifest.DATA_DIRS
 
-
-def _is_git_ignored(path):
-    try:
-        return subprocess.run(["git", "check-ignore", "-q", path]).returncode == 0
-    except Exception as e:
-        print(f"Error checking git ignore for {path}: {e}")
-        return False
+# Retain the existing build-filter import paths.
+_is_git_ignored = is_git_ignored
 
 
 def _ignore_web_asset(path):
-    """Filter gitignored assets and audio replaced by a shipped BeepBox JSON."""
-    if _is_git_ignored(path):
-        return True
-    if has_beepbox_replacement(path):
-        song_json = os.path.splitext(path)[0] + ".json"
-        return not _is_git_ignored(song_json)
-    return False
+    return not include_asset(path, "web")
 
 
 def main():
-    if os.path.exists(STAGE_DIR):
+    os.chdir(REPO_ROOT)
+    stage_path = verified_build_path(REPO_ROOT, STAGE_DIR)
+    if os.path.exists(stage_path):
         print("Cleaning web_stage folder...")
-        shutil.rmtree(STAGE_DIR)
-    os.makedirs(STAGE_DIR)
-
-    # 1. Copy first-party source. data/editors (tkinter dev tools) is excluded since it's
-    # never imported by main.py's runtime import graph; map_tools/ (standalone dev tools)
-    # and soloud.py/native SoLoud binaries (only imported when USE_SOLOUD, which is always
-    # False on web) are deliberately not staged at all.
-    def pycache_ignore(dir_name, contents):
-        return [e for e in contents if e == "__pycache__"]
-
-    def data_pkg_ignore(dir_name, contents):
-        if os.path.normpath(dir_name).endswith(os.path.join("data", "editors")):
-            return contents
-        return pycache_ignore(dir_name, contents)
-
-    print("Copying first-party source...")
-    for f in SOURCE_FILES:
-        shutil.copy2(f, os.path.join(STAGE_DIR, f))
-
-    for pkg in SOURCE_PACKAGES:
-        dst = os.path.join(STAGE_DIR, pkg)
-        ignore_fn = data_pkg_ignore if pkg == "data" else pycache_ignore
-        shutil.copytree(pkg, dst, ignore=ignore_fn)
-
-    # Staged, not merely present in the repository. A missing library here is a
-    # browser build whose Translate screen cannot work, and nothing later in
-    # this script would notice.
-    staged_lib = os.path.join(STAGE_DIR, "libdragoman.so")
-    if not os.path.exists(staged_lib):
-        print("ERROR: libdragoman.so was not staged, so the web build would have "
-              "no translation layer. Is it still in SOURCE_FILES?")
-        sys.exit(1)
-
-    # 2. Copy asset/data dirs, reusing the same git-ignore-based filtering
-    # windows_compilation.py uses so the web bundle's music/scenario footprint matches
-    # the desktop builds (gitignored local-only OSTs, etc. aren't shipped).
-    def assets_ignore_func(dir_name, contents):
-        return [entry for entry in contents
-                if _ignore_web_asset(os.path.join(dir_name, entry))]
-
-    def scenarios_ignore_func(dir_name, contents):
-        parts = os.path.normpath(dir_name).split(os.sep)
-        if "map_editor" in parts:
-            return contents
-        return []
-
-    for d in DATA_DIRS:
-        src = d
-        dst = os.path.join(STAGE_DIR, d)
-
-        if not os.path.exists(src):
-            if d == "tournament_saves":
-                os.makedirs(dst, exist_ok=True)
-            else:
-                print(f"Source directory {src} does not exist, skipping.")
-            continue
-
-        print(f"Copying {src} to {dst}...")
-        if d == "assets":
-            shutil.copytree(src, dst, ignore=assets_ignore_func)
-        elif d == "scenarios":
-            shutil.copytree(src, dst, ignore=scenarios_ignore_func)
-        elif d == "tournament_saves":
-            shutil.copytree(src, dst, ignore=lambda dn, c: c)
-        else:
-            shutil.copytree(src, dst)
+        shutil.rmtree(stage_path)
+    stage_release(REPO_ROOT, stage_path, "web")
+    if not os.path.isfile(os.path.join(stage_path, "libdragoman.so")):
+        raise FileNotFoundError("Web staging requires libdragoman.so")
 
     # 2b. Transcode remaining soundtrack MP3s to OGG for the web bundle only.
     # Confirmed via real browser testing: this pygame-ce/SDL_mixer WASM build cannot
@@ -160,28 +76,6 @@ def main():
                         print(f"  Failed to transcode {src_path}: {result.stderr.decode(errors='replace')}")
                         continue
                     os.remove(src_path)
-
-    # saves/ ships empty, same as windows_compilation.py. Saves made in the browser
-    # build persist across reloads via data/platform.py's own IndexedDB mirroring
-    # (restored/synced from main.py, save_map.py, gameState.py, queries.py) -- not
-    # anything pygbag provides automatically; its bundled WASM runtime only links
-    # MEMFS in, so without that, an empty starting folder would stay empty forever.
-    os.makedirs(os.path.join(STAGE_DIR, "saves"), exist_ok=True)
-
-    # Reset runtime-state JSON to defaults, identical to windows_compilation.py, so the
-    # web build doesn't carry over whatever local settings the dev machine had
-    for rel, content in [
-        (os.path.join("data", "json", "active_albums.json"), "[]"),
-        (os.path.join("data", "json", "shuffle_disabled_tracks.json"), "[]"),
-        (os.path.join("data", "json", "scenario_settings.json"), "{}"),
-        (os.path.join("data", "json", "settings_config.json"), "{}"),
-        (os.path.join("data", "json", "starting_song.json"), "{}"),
-        (os.path.join("data", "json", "hildehrand_choice.json"), "{}"),
-    ]:
-        path = os.path.join(STAGE_DIR, rel)
-        if os.path.exists(os.path.dirname(path)):
-            with open(path, "w") as f:
-                f.write(content)
 
     print("Copying finished successfully.")
 

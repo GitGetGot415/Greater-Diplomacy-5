@@ -13,6 +13,7 @@ them; it is not the only way one could.
 Stdlib and `data` only.
 """
 
+from data.state_access import world_for, session_for
 import data.constants as c
 from data import queries
 from map_logic.ai import ai_personality
@@ -142,9 +143,10 @@ def tick(map_screen):
     is stored with decay 0 precisely so this still stings in fifty turns, which
     is what makes keeping one worth anything.
     """
+    world_state = world_for(map_screen)
     from map_logic.diplomacy.diplomacy_events import log_global_event
 
-    nation_data = map_screen.nation_data
+    nation_data = world_state.nation_data
     handled = set()
 
     for nation in list(nation_data):
@@ -160,7 +162,7 @@ def tick(map_screen):
             if entry_id in handled:
                 continue
 
-            violated, broken_by = _violation(nation_data, map_screen.map_data,
+            violated, broken_by = _violation(nation_data, world_state.map_data,
                                              nation, partner, entry)
             if violated:
                 handled.add(entry_id)
