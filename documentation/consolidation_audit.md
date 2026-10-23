@@ -45,7 +45,7 @@ Editors retain immediate setup actions. Those actions do not become ordinary pla
 - AI recruitment avoids combat sites and applies its existing ocean-border policy. These remain AI selection rules.
 - AI research keeps its existing full-cost restart behavior. Player and real-time research resume authoritative saved progress.
 - Tournament moves remain partial country and province projections. They do not become real-time commands.
-- Older tournament moves retain administrative duration review. Current moves add shared queue legality and aggregate budget validation.
+- Tournament moves share queue legality and aggregate budget validation. Missing fields receive supported defaults and retain administrative review.
 - Local appearance editing retains its existing mode policy. Network adapters retain their narrower subject and identity checks.
 - Scripted events and editors keep their existing setup authority. They do not require a local player identity.
 
@@ -56,7 +56,7 @@ Invalid or unauthorized callbacks cannot add orders or remove paid work.
 Current tournament production input uses cumulative affordability checks before host mutation.
 Real-time drafts reject repeated projections of the same province queue.
 Stable request references prevent old responses from resolving cancelled or replaced requests.
-Current network input rejects stale response references and unsupported schema versions.
+Network input rejects explicit stale response references. Missing references use the shared input adapter.
 Older-input adapters retain their documented compatibility policies.
 
 ## State boundaries
@@ -141,6 +141,9 @@ Transport objects and authentication routing remain in presentation adapters. Th
 
 ## Verification record
 
+This record describes the original consolidation checkpoint.
+The follow-up below records removal of schema numbering after that checkpoint.
+
 ### Automated checks
 
 `python run_tests.py` ran 2,807 tests without failures. Five tests were skipped.
@@ -152,7 +155,7 @@ Tests use mocked model services. They do not require an external model provider.
 Focused checks passed during each implementation stage.
 The final action group passed 154 tests.
 The final legacy metadata interface group passed 36 tests.
-The tournament group passed 32 tests, including current-schema budget and response-reference cases.
+The tournament group passed 32 tests, including budget and response-reference cases.
 
 `python data/generators/generate_data.py --check` reported three unchanged generated files.
 All generated files match the recipes.
@@ -213,4 +216,30 @@ Edge reached the loading screen but timed out while fetching the external pygame
 The retry also remained on the loading screen.
 Browser gameplay, save synchronization, and import/export remain unverified.
 The web archive and source checks passed independently of that runtime limitation.
+
+## Schema-number removal follow-up
+
+Save, tournament, and diplomacy output no longer writes schema numbers.
+Input adapters inspect actual supported fields. Old schema-number fields are ignored.
+Supported missing fields receive defaults in `data/migrations.py`.
+The normal rules still check supplied references, permissions, costs, sessions, and turns.
+Explicit stale references and unaffordable submissions fail before host mutation.
+
+All tournament production submissions now share legality and aggregate budget checks.
+Missing payment fields receive constructor defaults. Existing paid work keeps its countdown.
+Explicit timing and refund differences still require host review.
+Older reply actions and omitted references adapt to the existing internal channels.
+The host retains travelling requests and active ratification rounds.
+
+The existing real-time transport protocol remains compatible, as requested.
+Existing release labels, history decoding, and supported save-stat conversion remain unchanged.
+`AGENTS.md` now prohibits new schema numbers and format dispatch systems.
+
+Focused migration, lifecycle, tournament, save, real-time, fog, production, and build-manifest checks passed.
+The final focused action group ran 142 tests without failures.
+The aircraft, tournament, and production group ran 47 tests without failures.
+`python run_tests.py` ran 2,812 tests without failures. Five tests were skipped.
+The full run took approximately 86 seconds. `git diff --check` passed.
+Platform packages were not rebuilt for this follow-up. Earlier archive results describe the consolidation checkpoint.
+No player controls, assets, or rendering rules changed. No additional visual check was required.
 

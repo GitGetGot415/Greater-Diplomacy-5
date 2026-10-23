@@ -235,6 +235,17 @@ def migrate_production_queue_item(entry):
     return entry
 
 
+def normalize_production_order(entry, expected):
+    """Complete older queue entries without replacing explicit countdowns or payments."""
+    result = copy.deepcopy(entry)
+    migrate_production_queue_item(result)
+    defaults = copy.deepcopy(expected)
+    migrate_production_queue_item(defaults)
+    for key, value in defaults.items():
+        result.setdefault(key, value)
+    return result
+
+
 def discard_legacy_deployment_queue(province):
     """Keep Data Refresh's existing removal of obsolete deployment data."""
     province.pop("deployment_queue", None)
@@ -664,23 +675,25 @@ def pending_diplomacy_action(entry):
     return entry.get("action") if isinstance(entry, dict) else entry
 
 
-DIPLOMACY_SCHEMA_VERSION = 1
-PRODUCTION_SCHEMA_VERSION = 1
+def normalize_response_reference(nation_data, recipient, sender, response):
+    """Bind omitted older references and validate supplied references against host state."""
+    request = nation_data.get(sender, {}).get("pending_diplomacy", {}).get(recipient)
+    if request is not None:
+        request = normalize_diplomatic_request(copy.deepcopy(request), sender, recipient)
+    reference = response.get("request_id")
+    if reference is not None:
+        if (not isinstance(reference, str) or not isinstance(request, dict)
+                or reference != request.get("request_id") or response.get("action") != request.get("action")):
+            raise ValueError("That response refers to an expired diplomatic request.")
+        return {"request_id": reference}
+    existing = nation_data.get(recipient, {}).get("diplo_responses", {}).get(sender)
+    if isinstance(existing, dict) and existing.get("legacy_unmatched") and response == existing:
+        return {"legacy_unmatched": True}
+    if isinstance(request, dict) and response.get("action") == request.get("action"):
+        return {"request_id": request["request_id"]}
+    # Older files can contain standalone responses with copied treaty terms.
+    return {"legacy_unmatched": True}
 
-
-def validate_diplomacy_schema(payload):
-    version = payload.get("diplomacy_schema_version", 0)
-    if type(version) is not int or not 0 <= version <= DIPLOMACY_SCHEMA_VERSION:
-        raise ValueError("Unsupported diplomacy schema version. Use a compatible GD5 build.")
-    return version
-
-
-
-def tournament_production_version(payload):
-    version = payload.get("production_schema_version", 0)
-    if type(version) is not int or not 0 <= version <= PRODUCTION_SCHEMA_VERSION:
-        raise ValueError("Unsupported tournament production schema version.")
-    return version
 
 def normalize_diplomatic_request(entry, sender, target):
     """Give older requests reproducible identities without gameplay randomness."""

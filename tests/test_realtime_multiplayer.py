@@ -77,6 +77,7 @@ class HostSnapshotTests(unittest.TestCase):
                                  refresh_all_maps=mock.Mock())
         totals = {"B": {"available": True, "resources": [{"income": 123}]}}
         snapshot = {"nation_data": {"A": {}, "B": {}}, "country_economy_summaries": totals}
+        snapshot["diplomacy_schema_version"] = "obsolete marker"
         apply_authoritative_snapshot(client, snapshot)
         self.assertEqual(client.country_economy_summaries, totals)
         self.assertIsNot(client.country_economy_summaries, totals)
@@ -814,6 +815,7 @@ class RealtimeSessionTests(unittest.TestCase):
             })
         commands = collect_map_commands(map_ref, "A")
         diplomacy = next(command for command in commands if command["type"] == "country_diplomacy")
+        self.assertNotIn("diplomacy_schema_version", diplomacy)
         self.assertEqual(set(diplomacy["pending"]), {"B"})
         driver = MapRealtimeDriver(map_ref)
         canonical = driver.validate_draft("A", [diplomacy])[0]

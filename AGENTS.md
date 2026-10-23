@@ -160,7 +160,18 @@ Success in one does not prove compatibility with the other.
 
 ### Saves and Caches
 
-- Treat a new saved field as a schema change.
+- Preserve existing supported public interfaces, saved data, and configuration behavior.
+  Change them only when the user explicitly requests a breaking change.
+- Do not introduce schema version numbers, numbered data formats, or version dispatch systems.
+- Prefer additive, optional fields with defaults that preserve old behavior.
+  Keep existing field meanings stable.
+- Adapt supported older data at the input boundary.
+  Keep adaptation rules in one clear place and use one consistent representation internally.
+- Base compatibility handling on actual supported formats and callers.
+  Do not invent hypothetical legacy cases.
+- Do not remove existing compatibility mechanisms merely to simplify code.
+- Explain concrete compatibility conflicts before making a breaking change.
+- Treat a new saved field as a data-format change.
   Define its owner, writer, loader, and old-save default.
   Test round trips and legacy loading.
 - Put older GD5 data conversion rules and identifier aliases in `data/migrations.py`.

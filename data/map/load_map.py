@@ -159,7 +159,6 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
     if os.path.exists(meta_path):
         with open(meta_path, "r") as f:
             save_meta = json.load(f)
-        migrations.validate_diplomacy_schema(save_meta)
 
     # 3. OVERRIDE: If we are loading an existing save file, prefer settings from inside the save
     # Do NOT override if we are in selection mode (starting a new scenario), so player UI choices are respected.

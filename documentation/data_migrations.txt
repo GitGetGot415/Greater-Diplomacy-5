@@ -92,8 +92,9 @@ See documentation/general_info.txt for metadata ownership and cache invalidation
 DIPLOMATIC RECORD IDENTITIES
 ---------------------------
 
-diplomacy_schema_version identifies the additive request-reference format.
-Missing versions use the older-input adapter. Unsupported versions produce an explicit compatibility error.
+Input adapters inspect supported fields and fill missing values at the input boundary.
+They do not select conversions from schema numbers.
+Old schema-number fields have no effect when present. New output does not write them.
 Requests remain in each country's pending_diplomacy channel.
 Responses remain in diplo_responses. They do not gain request travel counters.
 
@@ -111,14 +112,16 @@ Older active rounds receive reproducible identities. Human waiting periods and i
 Saves, history, tournament files, and real-time snapshots retain these fields in their existing country-owned channels.
 Private real-time channels remain filtered before transmission.
 
-New tournament moves include production_schema_version.
-Their new queue entries use shared legality, cost, and aggregate budget checks.
-Existing paid entries retain progress. Numeric timing and refund differences retain host review.
-Older moves retain the existing partial-state and administrative-review adapter.
-Authentication, session checks, turn checks, and duplicate checks apply before either adapter changes host state.
+All tournament production queues use shared legality, cost, and aggregate budget checks.
+Missing queue fields receive defaults from the shared constructor.
+Existing paid entries retain progress. Explicit timing and refund differences retain host review.
+Older moves retain partial-state handling and administrative review.
+Authentication, session checks, turn checks, and duplicate checks apply before host state changes.
 
-Current diplomacy commands validate response references against host-owned requests.
-Supported older commands bind omitted references through the explicit older-input adapter.
+Diplomacy commands validate supplied response references against host-owned requests.
+The input adapter binds omitted references to matching current requests.
+Older standalone responses retain their existing compatibility handling.
+An omitted reference cannot identify a replaced request. Explicit stale references remain invalid.
 A client-supplied identity never proves ownership or permission.
 
 ADDING A MIGRATION

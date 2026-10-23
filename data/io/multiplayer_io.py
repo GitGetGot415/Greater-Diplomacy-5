@@ -562,8 +562,6 @@ def export_move_file(map_ref, file_path, player_key):
         # nothing left to serialize.  New hosts use this marker to replace
         # the submitting country's complete map-unit snapshot atomically.
         "unit_snapshot": True,
-        "production_schema_version": migrations.PRODUCTION_SCHEMA_VERSION,
-        "diplomacy_schema_version": migrations.DIPLOMACY_SCHEMA_VERSION,
         "aircraft_orders": [],
         "air_transport": queries.air_transport_commands(map_ref, cid),
         "release_subjects": [{"core_nation": entry["core_nation"],
@@ -738,7 +736,7 @@ def _apply_faction_renames(map_ref, country_id, player_data, nation_update):
     return applied
 
 
-def _prepare_player_nation_data(map_ref, country_id, nation_update, *, diplomacy_version=0):
+def _prepare_player_nation_data(map_ref, country_id, nation_update):
     """Prepare a player's record without changing host state.
 
     Faction membership is shared state.  The player can queue a leave/invite
@@ -775,46 +773,56 @@ def _prepare_player_nation_data(map_ref, country_id, nation_update, *, diplomacy
     else:
         merged.pop(politics.POLICY_KEY, None)
 
-    if diplomacy_version >= 1:
-        from map_logic.diplomacy import diplomacy_lifecycle as lifecycle
-        probe = copy.deepcopy(world_state.nation_data)
-        pending = merged.get("pending_diplomacy", {})
-        responses = merged.get("diplo_responses", {})
-        if not isinstance(pending, dict) or not isinstance(responses, dict):
-            raise ValueError("Invalid diplomatic channels.")
-        drafts = {}
-        for target, record in pending.items():
-            if not isinstance(record, dict):
-                raise ValueError("Invalid diplomatic request.")
-            if record.get("turns", 0) > 0:
-                host_record = existing.get("pending_diplomacy", {}).get(target)
-                if not isinstance(host_record, dict) or record.get("request_id") != host_record.get("request_id"):
-                    raise ValueError("A travelling request does not belong to this move.")
-            else:
-                drafts[target] = record
-        canonical_responses = {}
-        for target, response in responses.items():
-            if not isinstance(response, dict):
-                raise ValueError("Invalid diplomatic response.")
-            canonical = dict(response)
-            canonical.pop("legacy_unmatched", None)
-            canonical.update(lifecycle.canonical_response_reference(
-                world_state.nation_data, country_id, target, response, version=diplomacy_version))
-            canonical_responses[target] = canonical
-        lifecycle.apply_draft(probe, country_id, drafts, canonical_responses, merged.get("draft_lists", {}))
-        for channel in ("pending_diplomacy", "diplo_responses", "draft_lists"):
-            merged[channel] = probe[country_id].get(channel, {})
-        ratification = merged.get("pending_ratification")
-        host_ratification = existing.get("pending_ratification")
-        if isinstance(ratification, dict):
-            if (not isinstance(host_ratification, dict)
-                    or ratification.get("treaty_id") != host_ratification.get("treaty_id")):
-                raise ValueError("That ratification refers to an expired treaty.")
-            merged["pending_ratification"] = copy.deepcopy(host_ratification)
-            if "verdict" in ratification:
-                merged["pending_ratification"]["verdict"] = ratification["verdict"]
-            else:
-                merged["pending_ratification"].pop("verdict", None)
+    from map_logic.diplomacy import diplomacy_lifecycle as lifecycle
+    probe = copy.deepcopy(world_state.nation_data)
+    migrations.migrate_pending_responses(probe)
+    pending = merged.get("pending_diplomacy", {})
+    responses = merged.get("diplo_responses", {})
+    draft_lists = merged.get("draft_lists", {})
+    if not all(isinstance(channel, dict) for channel in (pending, responses, draft_lists)):
+        raise ValueError("Invalid diplomatic channels.")
+    if any(not isinstance(record, (dict, str)) for record in pending.values()):
+        raise ValueError("Invalid diplomatic request.")
+    if any(not isinstance(response, dict) for response in responses.values()):
+        raise ValueError("Invalid diplomatic response.")
+    submitted = {country_id: copy.deepcopy(merged)}
+    migrations.migrate_pending_responses(submitted)
+    drafts = {}
+    for target, record in submitted[country_id]["pending_diplomacy"].items():
+        if record.get("turns", 0) > 0:
+            host_record = probe[country_id].get("pending_diplomacy", {}).get(target)
+            supplied = pending[target]
+            reference = supplied.get("request_id") if isinstance(supplied, dict) else None
+            if (not isinstance(host_record, dict) or record.get("action") != host_record.get("action")
+                    or (reference is not None and reference != host_record.get("request_id"))):
+                raise ValueError("A travelling request does not belong to this move.")
+        else:
+            drafts[target] = record
+    canonical_responses = {}
+    for target, response in submitted[country_id]["diplo_responses"].items():
+        canonical = dict(response)
+        canonical.pop("legacy_unmatched", None)
+        canonical.update(lifecycle.canonical_response_reference(probe, country_id, target, response))
+        canonical_responses[target] = canonical
+    lifecycle.apply_draft(probe, country_id, drafts, canonical_responses, draft_lists)
+    for channel in ("pending_diplomacy", "diplo_responses", "draft_lists"):
+        merged[channel] = probe[country_id].get(channel, {})
+    ratification = merged.get("pending_ratification")
+    host_ratification = probe[country_id].get("pending_ratification")
+    if isinstance(ratification, dict):
+        reference = ratification.get("treaty_id")
+        if (not isinstance(host_ratification, dict)
+                or (reference is not None and reference != host_ratification.get("treaty_id"))):
+            raise ValueError("That ratification refers to an expired treaty.")
+        merged["pending_ratification"] = copy.deepcopy(host_ratification)
+        if "verdict" in ratification:
+            merged["pending_ratification"]["verdict"] = ratification["verdict"]
+        else:
+            merged["pending_ratification"].pop("verdict", None)
+    elif ratification is not None:
+        raise ValueError("Invalid treaty ratification.")
+    elif isinstance(host_ratification, dict):
+        merged["pending_ratification"] = copy.deepcopy(host_ratification)
     return migrations.migrate_country_record(merged)
 
 
@@ -1171,8 +1179,7 @@ def load_move_files(map_ref, move_file_paths, keys_dict, *, accept_stat_mismatch
             canonical_releases = canonical_puppet_release_queue(
                 world_state.map_data, world_state.nation_data, cid, releases, existing_releases)
             warnings = _validate_administrative_orders(map_ref, cid, provs)
-            if migrations.tournament_production_version(player_data) >= 1:
-                warnings.extend(_validate_production_projection(map_ref, cid, provs))
+            warnings.extend(_validate_production_projection(map_ref, cid, provs))
             transport_view, transport_commands = queries.air_transport_draft(
                 map_ref, cid, player_data.get("air_transport", []))
             cargo_ids = {u["unit_id"] for p in world_state.map_data.values()
@@ -1183,8 +1190,7 @@ def load_move_files(map_ref, move_file_paths, keys_dict, *, accept_stat_mismatch
                 transport_view, cid, player_data, provs, cargo_ids)
             nd = dict(nd)
             nd["release_puppet_queue"] = canonical_releases
-            merged = _prepare_player_nation_data(
-                map_ref, cid, nd, diplomacy_version=migrations.validate_diplomacy_schema(player_data))
+            merged = _prepare_player_nation_data(map_ref, cid, nd)
         except ValueError as error:
             reject(file_path, cid, str(error))
             continue
@@ -1292,9 +1298,13 @@ def _validate_production_projection(map_ref, country_id, provinces):
             if province.get("owner") != country_id:
                 raise ValueError("Foreign production order.")
             command = production_actions.reconstruct_queue(map_ref, country_id, province, queue, update[queue])
+            normalized = []
             for supplied, expected in zip(update[queue], command["items"]):
-                if supplied != expected:
+                supplied = migrations.normalize_production_order(supplied, expected)
+                normalized.append(supplied)
+                if supplied != migrations.normalize_production_order(expected, {}):
                     warnings.append(f"Province {key}: production timing or refund differs from host data.")
+            update[queue] = normalized
             commands.append(command)
     production_actions.validate_queue_budget(world.nation_data[country_id], commands)
     return warnings

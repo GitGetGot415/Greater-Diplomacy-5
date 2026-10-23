@@ -94,28 +94,10 @@ def response_matches_request(response, request):
             and response.get("action") == request.get("action"))
 
 
-def canonical_response_reference(nation_data, recipient, sender, response, *, version=0):
+def canonical_response_reference(nation_data, recipient, sender, response):
     """Adapt supported older input and check references against host-owned requests."""
-    import copy
-    from data.migrations import normalize_diplomatic_request
-    request = nation_data.get(sender, {}).get("pending_diplomacy", {}).get(recipient)
-    if request is not None:
-        request = normalize_diplomatic_request(copy.deepcopy(request), sender, recipient)
-    reference = response.get("request_id")
-    if reference is not None:
-        if (not isinstance(reference, str) or not isinstance(request, dict)
-                or reference != request.get("request_id") or response.get("action") != request.get("action")):
-            raise ValueError("That response refers to an expired diplomatic request.")
-        return {"request_id": reference}
-    existing = nation_data.get(recipient, {}).get("diplo_responses", {}).get(sender)
-    if isinstance(existing, dict) and existing.get("legacy_unmatched") and response == existing:
-        return {"legacy_unmatched": True}
-    if version >= 1:
-        raise ValueError("A diplomatic response must identify its request.")
-    if isinstance(request, dict) and response.get("action") == request.get("action"):
-        return {"request_id": request["request_id"]}
-    # Explicit older-input policy preserves standalone responses from old files.
-    return {"legacy_unmatched": True}
+    from data.migrations import normalize_response_reference
+    return normalize_response_reference(nation_data, recipient, sender, response)
 
 
 def apply_draft(nation_data, sender, pending, responses, draft_lists):

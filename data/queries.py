@@ -3485,7 +3485,6 @@ def build_save_dict(map_screen, *, include_provinces=True, compact_nations=False
     save_dict = {
         "version": c.GAME_VERSION,
         "generated_at": datetime.now().isoformat(),
-        "diplomacy_schema_version": migrations.DIPLOMACY_SCHEMA_VERSION,
         "date": {
             "day": world_state.time_manager.day,
             "month": world_state.time_manager.month_index,

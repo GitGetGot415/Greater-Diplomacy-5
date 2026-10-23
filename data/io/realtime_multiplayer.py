@@ -1222,12 +1222,8 @@ class MapRealtimeDriver:
         In-flight proposals remain on the authoritative map; clients can only
         replace their own unsent proposals and responses for the current turn.
         """
-        from data import queries, migrations
+        from data import queries
 
-        try:
-            version = migrations.validate_diplomacy_schema(command)
-        except ValueError as error:
-            raise RealtimeError(str(error)) from error
         self._country(country_id)
         pending = command.get("pending", {})
         responses = command.get("responses", {})
@@ -1303,7 +1299,7 @@ class MapRealtimeDriver:
             from map_logic.diplomacy import diplomacy_lifecycle as lifecycle
             try:
                 entry.update(lifecycle.canonical_response_reference(
-                    self.world.nation_data, country_id, target, info, version=version))
+                    self.world.nation_data, country_id, target, info))
             except ValueError as error:
                 raise RealtimeError(str(error)) from error
             canonical_responses[target] = entry
@@ -1658,7 +1654,7 @@ def collect_map_commands(map_ref, country_id: str) -> list[dict[str, Any]]:
     draft_lists = country_data.get("draft_lists", {})
     if not isinstance(draft_lists, dict):
         draft_lists = {}
-    commands.append({"type": "country_diplomacy", "diplomacy_schema_version": 1,
+    commands.append({"type": "country_diplomacy",
                      "pending": {target: copy.deepcopy(info) for target, info in pending.items()
                                  if isinstance(target, str) and isinstance(info, dict)
                                  and info.get("turns", 0) <= 0},
@@ -1763,7 +1759,6 @@ def apply_authoritative_snapshot(map_ref, snapshot: dict[str, Any]) -> None:
 
     nation_data = copy.deepcopy(snapshot.get("nation_data", world_state.nation_data))
     from data import migrations
-    migrations.validate_diplomacy_schema(snapshot)
     migrations.migrate_country_records(nation_data)
     migrations.migrate_diplomatic_records(nation_data)
     incoming_player = nation_data.get(player_country, {}) if isinstance(nation_data, dict) else {}

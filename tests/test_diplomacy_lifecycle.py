@@ -70,7 +70,7 @@ class DiplomacyLifecycleTests(unittest.TestCase):
         request = messages.set_pending(self.nations, "A", "B", "TRADE", turns=1)
         before = copy.deepcopy(context.world.nation_data)
         driver = MapRealtimeDriver(context)
-        command = {"type": "country_diplomacy", "diplomacy_schema_version": 1,
+        command = {"type": "country_diplomacy",
                    "responses": {"A": {"action": "TRADE", "verdict": "ACCEPT", "request_id": "wrong"}}}
         with self.assertRaises(RealtimeError):
             driver.validate_draft("B", [command])
@@ -78,9 +78,19 @@ class DiplomacyLifecycleTests(unittest.TestCase):
         command["responses"]["A"]["request_id"] = request["request_id"]
         validated = driver.validate_draft("B", [command])[0]
         self.assertEqual(validated["responses"]["A"]["request_id"], request["request_id"])
-        command["diplomacy_schema_version"] = migrations.DIPLOMACY_SCHEMA_VERSION + 1
-        with self.assertRaises(RealtimeError):
-            driver.validate_draft("B", [command])
+        command["diplomacy_schema_version"] = "obsolete marker"
+        self.assertEqual(driver.validate_draft("B", [command]), [validated])
+
+    def test_server_binds_an_older_response_without_a_reference(self):
+        context = BackendState()
+        context.world.nation_data.update(self.nations)
+        request = messages.set_pending(self.nations, "A", "B", "TRADE", turns=1)
+        driver = MapRealtimeDriver(context)
+        command = {"type": "country_diplomacy", "responses": {
+            "A": {"action": "TRADE", "verdict": "ACCEPT"}}}
+        validated = driver.validate_draft("B", [command])[0]
+        self.assertEqual(validated["responses"]["A"]["request_id"], request["request_id"])
+        self.assertNotIn("request_id", command["responses"]["A"])
 
     def test_ratification_references_reject_an_answer_to_a_previous_round(self):
         self.nations["B"]["pending_ratification"] = {"treaty_id": "current"}
