@@ -769,6 +769,18 @@ def _resolved_base_img(name, style, country):
     return base_img, source_style, base_name
 
 
+def get_family_symbols(library, fit_size):
+    """Prepare one icon per family from its first library entry and the active art style."""
+    from data.queries import get_base_item_name
+
+    icons = {}
+    for name in library:
+        family = get_base_item_name(name)
+        if family not in icons:
+            icons[family] = get_symbol(name, zoom=1, fit_size=fit_size)
+    return icons
+
+
 def get_native_size(name, style=None, country=None):
     """The unscaled pixel size of whatever `get_symbol` would draw for this
     name/style/country, or None if nothing resolves. Lets a caller work out a

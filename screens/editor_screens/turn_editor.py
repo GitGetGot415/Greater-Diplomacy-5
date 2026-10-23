@@ -20,6 +20,7 @@ from ui import confirm_dialog
 from ui.bars import ui_bars
 from ui.modal_screen import ModalScreen
 from ui_elements import Button, Slider, TextField, make_back_button
+from map_logic.rendering import symbol_loader
 from map_logic.rendering.font_manager import fonts
 
 
@@ -50,6 +51,9 @@ class TurnEditorScreen(ModalScreen):
     CHECK_SIZE = 30
     CONVERSION_ROW_HEIGHT = 64
     CONVERSION_SLIDER_WIDTH = 240
+    ROW_ICON_SIZE = (48, 28)
+    ROW_ICON_GAP = 10
+    ROW_LABEL_INSET = 8
 
     def __init__(self, settings=None, persist=True):
         # Standalone editor: there is no host screen to take keybinds from.
@@ -80,6 +84,8 @@ class TurnEditorScreen(ModalScreen):
                                         self.settings.setdefault("building_disabled", []),
                                         "time", "Building Type"),
         }
+        for key, library in (("unit", full_unit_library), ("building", full_building_library)):
+            self.tabs[key]["icons"] = symbol_loader.get_family_symbols(library, self.ROW_ICON_SIZE)
         self.tabs["administrative"] = self._build_tab(
             queries.get_administrative_library(),
             self.settings.setdefault("administrative_turn_overrides", {}),
@@ -118,7 +124,7 @@ class TurnEditorScreen(ModalScreen):
 
         return {"label": label, "names": sorted(base_types, key=str.lower),
                 "defaults": defaults, "values": values, "overrides": overrides,
-                "disabled_set": set(disabled_list)}
+                "disabled_set": set(disabled_list), "icons": {}}
 
     # ------------------------------------------------------------------ #
     #                               EDITING                              #
@@ -303,8 +309,15 @@ class TurnEditorScreen(ModalScreen):
                     pygame.draw.rect(surface, (44, 44, 56),
                                      pygame.Rect(p.x + self.PAD, y, p.width - 2 * self.PAD, row_height))
 
+                label_x = p.x + self.PAD + self.ROW_LABEL_INSET
+                if self.active_tab in ("unit", "building"):
+                    icon = self.tab["icons"].get(btype)
+                    if icon is not None:
+                        center = (label_x + self.ROW_ICON_SIZE[0] // 2, y + row_height // 2)
+                        surface.blit(icon, icon.get_rect(center=center))
+                    label_x += self.ROW_ICON_SIZE[0] + self.ROW_ICON_GAP
                 label = font.render(btype, True, (225, 225, 225))
-                surface.blit(label, label.get_rect(midleft=(p.x + self.PAD + 8, y + row_height // 2)))
+                surface.blit(label, label.get_rect(midleft=(label_x, y + row_height // 2)))
 
                 default = self.tab["defaults"][btype]
                 hint = small.render(f"default: {default}", True, (150, 150, 165))

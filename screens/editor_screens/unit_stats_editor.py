@@ -1,8 +1,11 @@
 """Edit scenario unit ranges in a draft, separate from the active game library."""
+import json
+
 import pygame
 
 from data import queries
 import data.constants as c
+from map_logic.rendering import symbol_loader
 from map_logic.rendering.font_manager import fonts
 from ui import confirm_dialog
 from ui.bars import ui_bars
@@ -18,12 +21,20 @@ class UnitStatsEditorScreen(ModalScreen):
     FIELD_WIDTH = 110
     START_RIGHT_OFF = 210
     STEP_RIGHT_OFF = 60
+    ROW_ICON_SIZE = (52, 40)
+    ROW_ICON_GAP = 10
+    ROW_LABEL_INSET = 8
+    DIVIDER_LABEL_GAP = 12
 
     def __init__(self, settings=None, persist=True):
         super().__init__(None, "Unit Stats Editor")
         self.target_settings = settings if settings is not None else queries.get_scenario_settings()
         self.persist = persist
-        self.defaults = queries.get_unit_range_defaults()
+        # The live library can omit families disabled in the previous game.
+        with open(c.UNIT_DATA_PATH, encoding="utf-8") as handle:
+            unit_library = json.load(handle)
+        self.defaults = queries.get_unit_range_defaults(unit_library)
+        self.icons = symbol_loader.get_family_symbols(unit_library, self.ROW_ICON_SIZE)
         overrides = queries.get_unit_range_overrides(self.target_settings, self.defaults)
         self.values = {
             family: {key: f"{overrides.get(family, {}).get(key, default):g}"
@@ -31,9 +42,12 @@ class UnitStatsEditorScreen(ModalScreen):
             for family, fields in self.defaults.items()
         }
         families = sorted(self.defaults.items(), key=lambda item: item[0].lower())
-        self.rows = [(family, key)
-                     for key in ("bombard_range", "air_range_start")
-                     for family, fields in families if key in fields]
+        self.rows = []
+        for key in ("bombard_range", "air_range_start"):
+            group = [(family, key) for family, fields in families if key in fields]
+            if self.rows and group:
+                self.rows.append((None, None))
+            self.rows.extend(group)
         self.list_top = self.panel_rect.y + self.LIST_TOP_OFF
         self.list_view_h = self.panel_rect.bottom - 66 - self.list_top
         self.refresh_ui()
@@ -92,6 +106,8 @@ class UnitStatsEditorScreen(ModalScreen):
             cull_bottom=self.list_top + self.list_view_h - self.ROW_HEIGHT + 2))
         for index, y in self._row_layout:
             family, key = self.rows[index]
+            if family is None:
+                continue
             self._add_field(family, key, p.right - self.START_RIGHT_OFF - self.FIELD_WIDTH, y + 10)
             if key == "air_range_start":
                 self._add_field(family, "air_range_per_level",
@@ -135,17 +151,34 @@ class UnitStatsEditorScreen(ModalScreen):
                                         draw_top=self.scroll_y != 0, draw_bottom=self.scroll_y > self.max_scroll):
             for index, y in self._row_layout:
                 family, key = self.rows[index]
+                if family is None:
+                    label = font.render("Aircraft", True, c.UI_TEXT_DIM)
+                    rect = label.get_rect(center=(p.centerx, y + self.ROW_HEIGHT // 2))
+                    pygame.draw.line(surface, c.UI_TEXT_DIM,
+                                     (p.x + self.PAD + self.ROW_LABEL_INSET, rect.centery),
+                                     (rect.left - self.DIVIDER_LABEL_GAP, rect.centery))
+                    pygame.draw.line(surface, c.UI_TEXT_DIM,
+                                     (rect.right + self.DIVIDER_LABEL_GAP, rect.centery),
+                                     (p.right - self.PAD - self.ROW_LABEL_INSET, rect.centery))
+                    surface.blit(label, rect)
+                    continue
                 if index % 2 == 0:
                     pygame.draw.rect(surface, (44, 44, 56),
                                      (p.x + self.PAD, y, p.width - 2 * self.PAD, self.ROW_HEIGHT))
-                surface.blit(font.render(family, True, c.UI_TEXT_LIGHT), (p.x + self.PAD + 8, y + 4))
+                icon_x = p.x + self.PAD + self.ROW_LABEL_INSET
+                icon = self.icons.get(family)
+                if icon is not None:
+                    center = (icon_x + self.ROW_ICON_SIZE[0] // 2, y + self.ROW_HEIGHT // 2)
+                    surface.blit(icon, icon.get_rect(center=center))
+                label_x = icon_x + self.ROW_ICON_SIZE[0] + self.ROW_ICON_GAP
+                surface.blit(font.render(family, True, c.UI_TEXT_LIGHT), (label_x, y + 4))
                 default = self.defaults[family]
                 if key == "bombard_range":
                     hint = f"Bombardment (tiles); default: {default[key]:g}"
                 else:
                     hint = (f"Flight (map px); default: {default[key]:g}"
                             f" + {default['air_range_per_level']:g} per level")
-                surface.blit(small.render(hint, True, c.UI_TEXT_DIM), (p.x + self.PAD + 8, y + 29))
+                surface.blit(small.render(hint, True, c.UI_TEXT_DIM), (label_x, y + 29))
             for element in self.elements:
                 if getattr(element, "is_scrollable", False):
                     element.draw(surface)
