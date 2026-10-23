@@ -142,7 +142,7 @@ Transport objects and authentication routing remain in presentation adapters. Th
 ## Verification record
 
 This record describes the original consolidation checkpoint.
-The follow-up below records removal of schema numbering after that checkpoint.
+Later input compatibility checks are recorded at the end.
 
 ### Automated checks
 
@@ -217,29 +217,25 @@ The retry also remained on the loading screen.
 Browser gameplay, save synchronization, and import/export remain unverified.
 The web archive and source checks passed independently of that runtime limitation.
 
-## Schema-number removal follow-up
+## Input compatibility verification
 
-Save, tournament, and diplomacy output no longer writes schema numbers.
-Input adapters inspect actual supported fields. Old schema-number fields are ignored.
+Input adapters inspect actual supported fields.
 Supported missing fields receive defaults in `data/migrations.py`.
 The normal rules still check supplied references, permissions, costs, sessions, and turns.
 Explicit stale references and unaffordable submissions fail before host mutation.
 
-All tournament production submissions now share legality and aggregate budget checks.
+All tournament production submissions use shared legality and aggregate budget checks.
 Missing payment fields receive constructor defaults. Existing paid work keeps its countdown.
 Explicit timing and refund differences still require host review.
 Older reply actions and omitted references adapt to the existing internal channels.
 The host retains travelling requests and active ratification rounds.
 
-The existing real-time transport protocol remains compatible, as requested.
+The existing real-time transport protocol remains compatible.
 Existing release labels, history decoding, and supported save-stat conversion remain unchanged.
-`AGENTS.md` now prohibits new schema numbers and format dispatch systems.
 
-Focused migration, lifecycle, tournament, save, real-time, fog, production, and build-manifest checks passed.
-The final focused action group ran 142 tests without failures.
-The aircraft, tournament, and production group ran 47 tests without failures.
-`python run_tests.py` ran 2,812 tests without failures. Five tests were skipped.
-The full run took approximately 86 seconds. `git diff --check` passed.
+Focused lifecycle, save, real-time, and tournament checks ran 116 tests without failures.
+`python run_tests.py` ran 2,811 tests without failures. Five tests were skipped.
+The full run took approximately 85 seconds. `git diff --check` passed.
 Platform packages were not rebuilt for this follow-up. Earlier archive results describe the consolidation checkpoint.
 No player controls, assets, or rendering rules changed. No additional visual check was required.
 

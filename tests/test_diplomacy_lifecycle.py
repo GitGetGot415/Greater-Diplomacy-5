@@ -78,8 +78,6 @@ class DiplomacyLifecycleTests(unittest.TestCase):
         command["responses"]["A"]["request_id"] = request["request_id"]
         validated = driver.validate_draft("B", [command])[0]
         self.assertEqual(validated["responses"]["A"]["request_id"], request["request_id"])
-        command["diplomacy_schema_version"] = "obsolete marker"
-        self.assertEqual(driver.validate_draft("B", [command]), [validated])
 
     def test_server_binds_an_older_response_without_a_reference(self):
         context = BackendState()

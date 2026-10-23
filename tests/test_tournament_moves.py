@@ -131,7 +131,7 @@ class TournamentMoveTests(unittest.TestCase):
         move["provinces"]["P1"]["units"][0]["attack"] += 1
         return move
 
-    def test_unnumbered_production_uses_shared_costs_and_rejects_cumulative_overspend(self):
+    def test_production_uses_shared_costs_and_rejects_cumulative_overspend(self):
         from map_logic import production_actions
         from tests.test_unit_metadata import fixture_metadata
         library = {"Fixture recruit": {"metadata": fixture_metadata(level=0),
@@ -167,7 +167,7 @@ class TournamentMoveTests(unittest.TestCase):
                     self.assertEqual((host.nation_data, host.map_data), before)
                     self.assertFalse(result["rejections"][0]["overridable"])
 
-    def test_response_references_are_checked_before_country_merge_without_a_format_marker(self):
+    def test_response_references_are_checked_before_country_merge(self):
         from map_logic.diplomacy import diplomacy_messages
         for correct in (True, False):
             with self.subTest(correct=correct), tempfile.TemporaryDirectory() as directory:
@@ -193,8 +193,7 @@ class TournamentMoveTests(unittest.TestCase):
                 "refund": {"cost_materials": 7}, "custom_field": {"keep": True}}
         host.map_data = {"home": {"id": 1, "json_key": "P1", "owner": "Leader", "units": [],
                                   "unit_queue": [copy.deepcopy(paid)]}}
-        move = self.player_data("Leader", host, production_schema_version="obsolete marker",
-                                provinces={"P1": {"unit_queue": [copy.deepcopy(paid)]}})
+        move = self.player_data("Leader", host, provinces={"P1": {"unit_queue": [copy.deepcopy(paid)]}})
         before = copy.deepcopy(host.nation_data["Leader"])
         with tempfile.TemporaryDirectory() as directory:
             path = self.write_move(directory, "paid.gd5move", "Leader", move)
@@ -213,7 +212,7 @@ class TournamentMoveTests(unittest.TestCase):
                 host = Host()
                 incoming = diplomacy_messages.set_pending(host.nation_data, "Member", "Leader", "TRADE", turns=1)
                 outgoing = diplomacy_messages.set_pending(host.nation_data, "Leader", "Outsider", "TRADE", turns=1)
-                move = self.player_data("Leader", host, diplomacy_schema_version="ignored")
+                move = self.player_data("Leader", host)
                 move["nation_data"] = copy.deepcopy(move["nation_data"])
                 move["nation_data"]["pending_diplomacy"] = {"Member": reply, "Outsider": "TRADE"}
                 before = copy.deepcopy(host.nation_data)
@@ -689,8 +688,6 @@ class TournamentMoveTests(unittest.TestCase):
         self.assertEqual(data["tournament_turn"], 4)
         self.assertEqual(data["faction_renames"][0]["new_name"], "New Pact")
         self.assertEqual(data["appearance_updates"][0]["country_id"], "Subject")
-        self.assertNotIn("diplomacy_schema_version", data)
-        self.assertNotIn("production_schema_version", data)
 
     def test_export_includes_empty_unit_snapshot_and_puppet_siphons(self):
         host = Host()

@@ -49,7 +49,7 @@ All checks for malformed data, permissions, sessions, turns, and duplicates stil
 Duplicate checks cover all selected files and the associated review callbacks.
 Separate imports can replace a country's earlier draft, as before.
 The final notification gives accepted, rejected, and overridden counts.
-Move files need no schema numbers. Input adapters read supported fields and complete missing defaults.
+Input adapters read supported fields and complete missing defaults.
 See documentation/data_migrations.txt for the input adapters.
 These controls do not change real-time multiplayer or local game modes.
 

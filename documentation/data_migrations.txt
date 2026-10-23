@@ -93,8 +93,6 @@ DIPLOMATIC RECORD IDENTITIES
 ---------------------------
 
 Input adapters inspect supported fields and fill missing values at the input boundary.
-They do not select conversions from schema numbers.
-Old schema-number fields have no effect when present. New output does not write them.
 Requests remain in each country's pending_diplomacy channel.
 Responses remain in diplo_responses. They do not gain request travel counters.
 

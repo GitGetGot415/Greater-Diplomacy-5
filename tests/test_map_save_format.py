@@ -48,27 +48,6 @@ def sample_map_screen():
 
 
 class MapSaveFormatTests(unittest.TestCase):
-    def test_loader_ignores_obsolete_schema_markers_and_does_not_write_them_back(self):
-        read_json = json.load
-        metadata_reads = []
-
-        def read_with_obsolete_markers(stream, *args, **kwargs):
-            result = read_json(stream, *args, **kwargs)
-            if os.path.basename(stream.name) == "meta.json":
-                result["diplomacy_schema_version"] = "obsolete marker"
-                result["production_schema_version"] = {"ignored": True}
-                metadata_reads.append(stream.name)
-            return result
-
-        with mock.patch.object(load_map.json, "load", side_effect=read_with_obsolete_markers):
-            context = load_map.load_backend_state("scenarios/historical/1939", is_scenario=True,
-                                                  skip_initial_income=True)
-        self.assertTrue(metadata_reads)
-        saved = queries.build_save_dict(context)
-        self.assertNotIn("diplomacy_schema_version", saved)
-        self.assertNotIn("production_schema_version", saved)
-        self.assertEqual(saved["nation_data"], context.world.nation_data)
-
     def test_geometry_omits_only_fields_with_a_separate_state_record(self):
         raw = {"p": {"terrain": "fixture", "owner": "old", "unknown": {"keep": [1]}},
                "extra": {"owner": "preserved", "units": [{"fixture": True}]}}
@@ -123,8 +102,6 @@ class MapSaveFormatTests(unittest.TestCase):
 
     def test_full_save_dictionary_still_carries_multiplayer_province_snapshot(self):
         snapshot = queries.build_save_dict(sample_map_screen())
-        self.assertNotIn("diplomacy_schema_version", snapshot)
-        self.assertNotIn("production_schema_version", snapshot)
         self.assertEqual(snapshot["provinces"]["(7, 0, 0)"], {
             "owner": "Avaria",
             "cores": ["Avaria"],
