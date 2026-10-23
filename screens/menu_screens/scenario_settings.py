@@ -50,8 +50,8 @@ DEFENSE_FLOOR_ROW_Y = LEFT_TOP_Y + 11 * ROW_H
 RESET_ROW_Y = 615
 TURN_EDITOR_ROW_Y = 675
 EDITOR_BUTTON_GAP = 20
-UNIT_EDITOR_X = (c.SCREEN_WIDTH - c.SIZES["scenario_setting_button"][0]) // 2
-TURN_EDITOR_X = UNIT_EDITOR_X + c.SIZES["scenario_setting_button"][0] + EDITOR_BUTTON_GAP
+TURN_EDITOR_X = (c.SCREEN_WIDTH - c.SIZES["scenario_setting_button"][0]) // 2
+UNIT_EDITOR_X = TURN_EDITOR_X + c.SIZES["scenario_setting_button"][0] + EDITOR_BUTTON_GAP
 
 # ==========================================
 # TOGGLES

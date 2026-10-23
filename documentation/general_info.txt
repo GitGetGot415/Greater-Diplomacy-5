@@ -55,7 +55,7 @@ These controls do not change real-time multiplayer or local game modes.
 UNIT RANGE SETTINGS
 ===================
 
-Select Edit Unit Stats in Scenario Settings. This button is left of Edit Construction Turns.
+Select Edit Unit Stats in Scenario Settings. This button is right of Edit Construction Turns.
 The Range category lists bombardment families and aircraft families from the complete unit library.
 Disabled families remain available in this editor.
 
