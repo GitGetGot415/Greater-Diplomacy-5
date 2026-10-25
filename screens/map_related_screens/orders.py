@@ -5,6 +5,7 @@ from gameState import GameState, resolve_keybind
 from ui_elements import Button, process_text_input, draw_text_box
 from map_logic.rendering.font_manager import fonts
 from data import queries
+from map_logic import unit_actions
 from ui.text_utils import fit_text, wrap_text
 from map_logic.rendering import symbol_loader
 from map_logic.rendering import overlay_renderer
@@ -209,7 +210,7 @@ class Orders_Screen(GameState):
         self.panel_top = PANEL_Y + LIST_TOP_OFFSET_Y
         self.panel_max_h = self.panel_rect.bottom - self.panel_top
 
-        self.unit_library = queries.get_unit_library()
+        self.unit_library = queries.get_unit_library(self.map_screen)
 
     def _mark_draft_changed(self):
         """Publish one order-edit boundary to the hosting map cache/sync path."""
@@ -489,11 +490,11 @@ class Orders_Screen(GameState):
             elif command == "UPGRADE":
                 target = queries.get_upgrade_target(
                     unit.get("type", ""), player_research, self.unit_library,
-                    queries.get_tech_tree())
+                    queries.get_tech_tree(self.map_screen))
                 if not in_combat and queries.has_industry(province) and target:
                     candidates.append((unit, province, target))
             elif command == "MISSION":
-                if not queries.is_air_unit(unit):
+                if not queries.is_air_unit(unit, context=self.map_screen):
                     continue
                 if province_key not in indexes_by_province:
                     indexes_by_province[province_key] = {
@@ -504,7 +505,7 @@ class Orders_Screen(GameState):
                 # Launch legality depends on the base and combat owner. Keep
                 # this result only for this snapshot; callbacks check again.
                 launch_key = (province_key, queries.get_unit_combat_owner(unit))
-                if queries.air_unit_has_mission(unit):
+                if queries.air_unit_has_mission(unit, context=self.map_screen):
                     candidates.append((unit, province))
                     continue
                 if launch_key not in launch_by_base:
@@ -514,21 +515,7 @@ class Orders_Screen(GameState):
         return candidates
 
     def _repair_costs(self, unit):
-        """The canonical per-unit repair price used by single and batch orders."""
-        if queries.get_scenario_flag(
-                "free_repairs", c.DEFAULT_FREE_REPAIRS,
-                self.map_screen.scenario_settings):
-            return {"cost_materials": 0, "cost_manpower": 0, "cost_fuel": 0}
-
-        stats = self.unit_library.get(
-            unit.get("original_type", unit.get("type", "")), {})
-        missing_pct = ((unit.get("max_health", 1) - unit.get("health", 0))
-                       / max(1, unit.get("max_health", 1)))
-        return {
-            "cost_materials": int(stats.get("cost_materials", 0) * missing_pct),
-            "cost_manpower": int(stats.get("cost_manpower", 0) * missing_pct),
-            "cost_fuel": int(stats.get("cost_fuel", 0) * missing_pct),
-        }
+        return unit_actions.repair_costs(self.map_screen, unit, self.unit_library)
 
     def _selected_units_with_order(self, order_type, records=None):
         """Selected commandable units currently carrying one named order."""
@@ -548,9 +535,8 @@ class Orders_Screen(GameState):
         ordered_units = self._selected_units_with_order(order_type)
         if not ordered_units:
             return
-        self._refund_batch_orders(ordered_units)
-        for unit, _province in ordered_units:
-            del unit["order"]
+        unit_actions.apply_batch(self.map_screen, self.map_screen.player_country,
+                                 [(unit, province, None) for unit, province in ordered_units])
         self._mark_draft_changed()
         self.map_screen.show_feedback(
             f"Cancelled {order_type.lower()} for {len(ordered_units)} selected "
@@ -559,64 +545,25 @@ class Orders_Screen(GameState):
 
     def disband_selected_units(self):
         candidates = self._batch_command_candidates("DISBAND")
-        self._refund_batch_orders(candidates)
-        for unit, _province in candidates:
-            unit["order"] = {"type": "DISBAND", "turns_left": 1}
+        unit_actions.apply_batch(self.map_screen, self.map_screen.player_country,
+            [(unit, province, {"type": "DISBAND"}) for unit, province in candidates])
         self._finish_batch_command("Disband", len(candidates))
-
-    def _batch_order_refunds(self, candidates):
-        """Combined paid escrow for a pending batch replacement."""
-        return {
-            key: sum(
-                candidate[0].get("order", {}).get("refund", {}).get(key, 0)
-                if isinstance(candidate[0].get("order"), dict) else 0
-                for candidate in candidates)
-            for key in ("cost_materials", "cost_manpower", "cost_fuel")
-        }
-
-    def _refund_batch_orders(self, candidates):
-        refunds = self._batch_order_refunds(candidates)
-        if any(refunds.values()):
-            player_data = self.map_screen.nation_data[self.map_screen.player_country]
-            queries.refund_resources(player_data, refunds)
-
-    def _refund_unit_order(self, unit):
-        """Return a replaced paid order's escrow to the unit's controller."""
-        order = unit.get("order")
-        if not isinstance(order, dict) or "refund" not in order:
-            return
-        if self.map_screen.tactical_mode and unit is self.map_screen.player_unit:
-            player_data = self.map_screen.unit_economy
-        else:
-            player_data = self.map_screen.nation_data[self.map_screen.player_country]
-        queries.refund_resources(player_data, order["refund"])
 
     def repair_selected_units(self):
         candidates = self._batch_command_candidates("REPAIR")
-        costs = {key: sum(self._repair_costs(unit)[key]
-                          for unit, _province in candidates)
-                 for key in ("cost_materials", "cost_manpower", "cost_fuel")}
-        player_data = self.map_screen.nation_data[self.map_screen.player_country]
-        available_after_refunds = dict(player_data)
-        queries.refund_resources(available_after_refunds,
-                                 self._batch_order_refunds(candidates))
-        if candidates and not queries.can_afford(available_after_refunds, costs):
-            self.map_screen.show_feedback("Cannot afford repairs for all selected units!")
+        try:
+            unit_actions.apply_batch(self.map_screen, self.map_screen.player_country,
+                [(unit, province, {"type": "REPAIR"}) for unit, province in candidates])
+        except ValueError as error:
+            self.map_screen.show_feedback(str(error))
             return
-        if candidates:
-            self._refund_batch_orders(candidates)
-            queries.deduct_resources(player_data, costs)
-            for unit, _province in candidates:
-                unit["order"] = {"type": "REPAIR", "turns_left": 1,
-                                 "refund": self._repair_costs(unit)}
         self._finish_batch_command("Repair", len(candidates))
 
     def upgrade_selected_units(self):
         candidates = self._batch_command_candidates("UPGRADE")
-        self._refund_batch_orders(candidates)
-        for unit, _province, target in candidates:
-            unit["order"] = {"type": "UPGRADE", "turns_left": 1,
-                             "target_type": target, "refund": {}}
+        unit_actions.apply_batch(self.map_screen, self.map_screen.player_country,
+            [(unit, province, {"type": "UPGRADE", "target_type": target})
+             for unit, province, target in candidates])
         self._finish_batch_command("Upgrade", len(candidates))
 
     def _finish_batch_command(self, label, count):
@@ -685,8 +632,7 @@ class Orders_Screen(GameState):
                 # Mixed groups skip unsupported defense choices or invalid bases.
                 # Keep those units' orders and reserved payment.
                 continue
-            self._refund_unit_order(unit)
-            unit["order"] = order
+            unit_actions.apply_action(self.map_screen, unit["owner"], province, unit, order)
             count += 1
         self.cancel_bombard_targeting(refresh=False)
         self._finish_batch_command("Air mission", count)
@@ -791,7 +737,7 @@ class Orders_Screen(GameState):
         order_type = order.get("type", "")
         is_convoy = unit_name.startswith("Convoy")
         is_truck = unit_name.startswith("Truck")
-        is_naval = queries.is_naval_unit(unit_name)
+        is_naval = queries.is_naval_unit(unit_name, context=self.map_screen)
         is_tactical = self.map_screen.tactical_mode
         buttons = []
 
@@ -818,8 +764,8 @@ class Orders_Screen(GameState):
         elif in_combat:
             btn_conv = add(ACTION_COL_CONVERT, "grey", "Convert: unavailable in combat",
                            lambda: None, convert_icon, enabled=False)
-        elif queries.air_conversion_order(unit):
-            conversion = queries.air_conversion_order(unit)
+        elif queries.air_conversion_order(unit, context=self.map_screen):
+            conversion = queries.air_conversion_order(unit, context=self.map_screen)
             enabled = not is_water and (is_convoy or is_coastal)
             btn_conv = add(ACTION_COL_CONVERT, "blue" if enabled else "grey",
                            f"Convert to {conversion['to']} ({conversion['turns_left']} turn)"
@@ -900,7 +846,7 @@ class Orders_Screen(GameState):
                               lambda idx=index, p=province: self.cancel_unit_order(idx, p), "Upgrading")
         else:
             upgrade_target = queries.get_upgrade_target(
-                unit_name, player_research, self.unit_library, queries.get_tech_tree())
+                unit_name, player_research, self.unit_library, queries.get_tech_tree(self.map_screen))
             if not upgrade_target:
                 btn_upgrade = add(ACTION_COL_UPGRADE, "grey", "Upgrade: maximum level reached",
                                   lambda: None, "Upgrading", enabled=False)
@@ -916,7 +862,7 @@ class Orders_Screen(GameState):
                     lambda idx=index, target=upgrade_target, p=province: self.upgrade_unit(idx, target, p),
                     "Upgrading")
 
-        if queries.is_air_unit(unit):
+        if queries.is_air_unit(unit, context=self.map_screen):
             mission = queries.air_unit_mission_icon(unit)
             targeting = any(current is unit for current, _base in self._air_target_records)
             if targeting and not unit.get("air_cargo"):
@@ -930,7 +876,7 @@ class Orders_Screen(GameState):
             btn_bombard = add(ACTION_COL_BOMBARD, "red", "Cancel bombardment",
                               lambda idx=index, p=province: self.cancel_unit_order(idx, p),
                               "Bombardment Arrows")
-        elif not queries.can_bombard(unit_name):
+        elif not queries.can_bombard(unit_name, context=self.map_screen):
             btn_bombard = add(ACTION_COL_BOMBARD, "grey", "Bombard: unit has no bombardment",
                               lambda: None, "Bombardment Arrows", enabled=False)
         elif is_water and not is_naval:
@@ -1031,13 +977,13 @@ class Orders_Screen(GameState):
             if profile not in preview_rules:
                 if self._air_target_records:
                     if (self._air_target_mission == "MOVE"
-                            and queries.air_unit_can_move_on_ground(unit)):
+                            and queries.air_unit_can_move_on_ground(unit, context=self.map_screen)):
                         preview_rules[profile] = None
                         continue
                     kind = queries.AIR_TARGET_MISSION_TYPES[self._air_target_mission]
                 else:
                     kind = queries.air_range_preview_kind(self.map_screen, unit, destination)
-                preview_rules[profile] = kind, queries.air_order_radius(unit, kind)
+                preview_rules[profile] = kind, queries.air_order_radius(unit, kind, context=self.map_screen)
             preview = preview_rules[profile]
             if preview is None:
                 continue
@@ -1082,7 +1028,7 @@ class Orders_Screen(GameState):
         if self.target_province is not None:
             sidebar_info.prepare_unit_roster(self.map_screen, self.target_province)
         self._air_range_records = [(unit, base)
-            for unit, base in selected_records if queries.is_air_unit(unit)]
+            for unit, base in selected_records if queries.is_air_unit(unit, context=self.map_screen)]
         self._air_range_input_key = None
         self._refresh_air_range_previews(self._air_range_hover_target)
         if getattr(self.map_screen, "realtime_multiplayer", False):
@@ -1351,26 +1297,15 @@ class Orders_Screen(GameState):
         unit = units[index]
         if self._command_blocked(unit):
             return
-        costs = self._repair_costs(unit)
-
-        is_tactical = self.map_screen.tactical_mode and unit is self.map_screen.player_unit
-        if is_tactical:
-            p_data = self.map_screen.unit_economy
-        else:
-            p_data = self.map_screen.nation_data[self.map_screen.player_country]
-
-        if queries.can_afford(p_data, costs):
-            queries.deduct_resources(p_data, costs)
-            unit["order"] = {
-                "type": "REPAIR",
-                "turns_left": 1,
-                "refund": costs
-            }
-            self._mark_draft_changed()
-            self.map_screen.show_feedback("Repair ordered (1 turn).")
-            self.refresh_ui()
-        else:
-            self.map_screen.show_feedback("Cannot afford repair!")
+        try:
+            unit_actions.apply_action(self.map_screen, self.map_screen.player_country,
+                                      province, unit, {"type": "REPAIR"})
+        except ValueError as error:
+            self.map_screen.show_feedback(str(error))
+            return
+        self._mark_draft_changed()
+        self.map_screen.show_feedback("Repair ordered (1 turn).")
+        self.refresh_ui()
 
     def upgrade_unit(self, index, target_type, province=None):
         province = province or self.target_province
@@ -1394,17 +1329,16 @@ class Orders_Screen(GameState):
             return
         research = self.map_screen.nation_data[unit["owner"]].get("research", {})
         expected = queries.get_upgrade_target(unit.get("type", ""), research,
-                                             self.unit_library, queries.get_tech_tree())
+                                             self.unit_library, queries.get_tech_tree(self.map_screen))
         if expected is None or target_type != expected:
             self.map_screen.show_feedback("No legal numbered-unit upgrade is available.")
             return
-        self._refund_unit_order(unit)
-        unit["order"] = {
+        unit_actions.apply_action(self.map_screen, unit["owner"], province, unit, {
             "type": "UPGRADE",
             "turns_left": 1,
             "target_type": target_type,
             "refund": {}
-        }
+        })
         self._mark_draft_changed()
         self.map_screen.show_feedback(f"Upgrade to {target_type} ordered (1 turn).")
         self.refresh_ui()
@@ -1419,13 +1353,13 @@ class Orders_Screen(GameState):
             return
 
         unit = units[index]
-        if queries.is_air_unit(unit):
+        if queries.is_air_unit(unit, context=self.map_screen):
             self.set_air_mission(unit, province, "STRIKE", row_key)
             return
         self.cancel_bombard_targeting(refresh=False)
         self.targeting_label = "bombardment"
         self.bombard_target_preview = queries.get_bombardment_targets(
-            province, self.map_screen.id_to_province, queries.get_bombardment_range(unit.get("type", "")))
+            province, self.map_screen.id_to_province, queries.get_bombardment_range(unit.get("type", ""), context=self.map_screen))
 
         self.bombarding_unit_index = index if row_key is None else row_key
         self.bombarding_unit_province = province
@@ -1457,20 +1391,20 @@ class Orders_Screen(GameState):
         u_type = unit.get("type", "")
         if self._command_blocked(unit):
             return
-        if queries.is_air_unit(unit):
+        if queries.is_air_unit(unit, context=self.map_screen):
             return
 
         # The same rule process_bombardments applies: guns fire from land, and
         # ships that carry them (Battleship, Dreadnought, Carrier) fire from the
         # water by design.
         if (queries.is_water_province(province)
-                and not (unit.get("naval_unit") or queries.is_naval_unit(u_type))):
+                and not (unit.get("naval_unit") or queries.is_naval_unit(u_type, context=self.map_screen))):
             self.map_screen.show_feedback("This unit cannot bombard from the water!")
             self.cancel_bombard_targeting(refresh=False)
             self.refresh_ui()
             return
 
-        bomb_range = queries.get_bombardment_range(u_type)
+        bomb_range = queries.get_bombardment_range(u_type, context=self.map_screen)
         in_range = queries.get_bombardment_targets(province, self.map_screen.id_to_province, bomb_range)
 
         if dest["id"] not in in_range:
@@ -1478,7 +1412,7 @@ class Orders_Screen(GameState):
             return
 
         # A gun that is firing stays put, so any queued movement is dropped
-        unit["order"] = {"type": "BOMBARD", "target_id": dest["id"]}
+        unit_actions.apply_action(self.map_screen, unit["owner"], province, unit, {"type": "BOMBARD", "target_id": dest["id"]})
         self._mark_draft_changed()
         self.cancel_bombard_targeting(refresh=False)
         self.map_screen.show_feedback(f"Bombarding Province {dest['id']} (cannot move this turn)")
@@ -1494,7 +1428,7 @@ class Orders_Screen(GameState):
             if unit.get("air_cargo"):
                 self.map_screen.show_feedback("Release cargo before disbanding its carrier.")
                 return
-            unit["order"] = {"type": "DISBAND", "turns_left": 1}
+            unit_actions.apply_action(self.map_screen, unit["owner"], province, unit, {"type": "DISBAND", "turns_left": 1})
             self._mark_draft_changed()
             self.map_screen.show_feedback(f"Disbanding {unit.get('type')} (1 turn)")
             self.refresh_ui()
@@ -1516,7 +1450,7 @@ class Orders_Screen(GameState):
                 return
             u_type = unit.get("type", "")
 
-            air_conversion = queries.air_conversion_order(unit)
+            air_conversion = queries.air_conversion_order(unit, context=self.map_screen)
             if air_conversion:
                 try:
                     air_conversion = queries.canonical_unit_order(
@@ -1528,7 +1462,7 @@ class Orders_Screen(GameState):
             elif u_type.startswith("Convoy"):
                 target_type = "Land Unit"
                 turns = 1
-            elif (conversion := queries.truck_ship_conversion_order(unit, self.map_screen.scenario_settings)):
+            elif (conversion := queries.truck_ship_conversion_order(unit, self.map_screen.scenario_settings, context=self.map_screen)):
                 try:
                     conversion = queries.canonical_unit_order(
                         self.map_screen, unit["owner"], province, unit, conversion)
@@ -1540,7 +1474,7 @@ class Orders_Screen(GameState):
                 target_type = "Convoy"
                 turns = 1
 
-            unit["order"] = {"type": "CONVERT", "turns_left": turns, "to": target_type}
+            unit_actions.apply_action(self.map_screen, unit["owner"], province, unit, {"type": "CONVERT", "turns_left": turns, "to": target_type})
 
             self._mark_draft_changed()
             self.map_screen.show_feedback(f"Converting to {target_type} ({turns} turns)")
@@ -1551,7 +1485,7 @@ class Orders_Screen(GameState):
         if not 0 <= index < len(units):
             return
         unit = units[index]
-        if self._command_blocked(unit) or not queries.is_air_unit(unit):
+        if self._command_blocked(unit) or not queries.is_air_unit(unit, context=self.map_screen):
             return
         if self._open_loaded_transport_menu(unit, province):
             return
@@ -1569,7 +1503,7 @@ class Orders_Screen(GameState):
             return None
         index = (unit_indexes.get(id(unit)) if unit_indexes is not None else
                  next((i for i, current in enumerate(province.get("units", [])) if current is unit), None))
-        if index is None or not queries.is_air_unit(unit) or self._command_blocked_silent(unit):
+        if index is None or not queries.is_air_unit(unit, context=self.map_screen) or self._command_blocked_silent(unit):
             return None
         return index
 
@@ -1596,8 +1530,7 @@ class Orders_Screen(GameState):
         except ValueError as exc:
             self.map_screen.show_feedback(str(exc))
             return
-        self._refund_unit_order(unit)
-        unit["order"] = order
+        unit_actions.apply_action(self.map_screen, unit["owner"], province, unit, order)
         self.cancel_bombard_targeting(refresh=False)
         self._mark_draft_changed()
         self.refresh_ui()
@@ -1609,16 +1542,16 @@ class Orders_Screen(GameState):
         queries.ensure_unit_ids(self.map_screen.map_data)
         from ui.list_select_screen import ListSelectScreen
         from ui.screen_runner import _run_pygame_sub_screen
-        capacity = queries.air_transport_capacity(plane)
+        capacity = queries.air_transport_capacity(plane, context=self.map_screen)
 
         def picker_items():
             cargo = plane.get("air_cargo", [])
             items = [(f"Release: {unit.get('custom_name') or unit['type']}", ("RELEASE", unit["unit_id"]))
                      for unit in cargo]
             items.extend((f"Load: {unit.get('custom_name') or unit['type']}", ("LOAD", unit["unit_id"]))
-                         for unit in province.get("units", []) if queries.air_cargo_is_eligible(plane, unit)
+                         for unit in province.get("units", []) if queries.air_cargo_is_eligible(plane, unit, context=self.map_screen)
                          and not self._command_blocked_silent(unit))
-            if queries.air_unit_can_air_drop(plane):
+            if queries.air_unit_can_air_drop(plane, context=self.map_screen):
                 items.append(("Air Drop (select enemy land)", ("AIR_DROP", None)))
             return items
 
@@ -1696,10 +1629,9 @@ class Orders_Screen(GameState):
             except ValueError as exc:
                 self.map_screen.show_feedback(str(exc))
                 return
-            planned.append((unit, order))
-        for unit, order in planned:
-            self._refund_unit_order(unit)
-            unit["order"] = order
+            planned.append((unit, base, order))
+        for unit, base, order in planned:
+            unit_actions.apply_action(self.map_screen, unit["owner"], base, unit, order)
         self.cancel_bombard_targeting(refresh=False)
         self._finish_batch_command("Air mission", len(planned))
 
@@ -1712,8 +1644,7 @@ class Orders_Screen(GameState):
             if any(unit is units[index] for unit, _base in self._air_target_records):
                 self.cancel_bombard_targeting(refresh=False)
             if "order" in units[index]:
-                self._refund_unit_order(units[index])
-                del units[index]["order"]
+                unit_actions.cancel_action(self.map_screen, units[index]["owner"], province, units[index])
                 self._mark_draft_changed()
                 self.map_screen.show_feedback("Order Cancelled")
                 self.refresh_ui()
@@ -1732,8 +1663,9 @@ class Orders_Screen(GameState):
         for unit in units:
             if unit.get("owner") == self.map_screen.player_country and not self._command_blocked_silent(unit):
                 if "order" in unit:
-                    self._refund_unit_order(unit)
-                    del unit["order"]
+                    province = next(province for province in self.map_screen.map_data.values()
+                                    if any(current is unit for current in province.get("units", [])))
+                    unit_actions.cancel_action(self.map_screen, unit["owner"], province, unit)
                     cleared_any = True
 
         if cleared_any:
@@ -2031,7 +1963,7 @@ class Orders_Screen(GameState):
         order = unit.get("order", {})
         path = order.get("path", []) if isinstance(order, dict) else []
         current = self.map_screen.id_to_province.get(path[-1]) if path else self.target_province
-        return queries.can_unit_move_step(unit, current, dest, self.map_screen.nation_data)
+        return queries.can_unit_move_step(unit, current, dest, self.map_screen.nation_data, context=self.map_screen)
 
     def _order_summary(self, unit_index, unit):
         """Short status text and color for a compact roster row."""
@@ -2378,7 +2310,7 @@ class Orders_Screen(GameState):
         self.draw_target_markers(surface, aiming_province, self.bombard_target_preview, BOMBARD_TARGET_COLOR)
         hovered = queries.get_clicked_province(pygame.mouse.get_pos(), self.map_screen)
         if hovered and hovered["id"] in self.bombard_target_preview:
-            bomb_range = queries.get_bombardment_range(focused_units[aiming_index].get("type", ""))
+            bomb_range = queries.get_bombardment_range(focused_units[aiming_index].get("type", ""), context=self.map_screen)
             overlay_renderer.draw_bombardment_arrow(surface, self.map_screen, aiming_province,
                 hovered["id"], bomb_range, alpha=BOMBARD_PREVIEW_ALPHA, force_visible=True)
 
@@ -2439,7 +2371,7 @@ class Orders_Screen(GameState):
                     unit.get("speed", 1), owner_color, force_visible=True)
             elif order.get("type") == "BOMBARD":
                 target_id = order.get("target_id")
-                bomb_range = queries.get_bombardment_range(unit.get("type", ""))
+                bomb_range = queries.get_bombardment_range(unit.get("type", ""), context=self.map_screen)
                 overlay_renderer.draw_bombardment_arrow(
                     surface, self.map_screen, origin, target_id,
                     bomb_range, force_visible=True)

@@ -606,8 +606,8 @@ def handle_map_events(map_screen, event):
                     if owner in c.UNPLAYABLE_NATIONS:
                         map_screen.show_feedback("Cannot place units in unowned territory!")
                     else:
-                        new_unit = queries.create_unit_dict(map_screen.brush_unit, owner, queries.get_unit_library())
-                        if queries.is_air_unit(new_unit) and queries.is_water_province(map_screen.hovered_province):
+                        new_unit = queries.create_unit_dict(map_screen.brush_unit, owner, queries.get_unit_library(map_screen))
+                        if queries.is_air_unit(new_unit, context=map_screen) and queries.is_water_province(map_screen.hovered_province):
                             map_screen.show_feedback("Aircraft need a land base.")
                         else:
                             map_screen.hovered_province.setdefault("units", []).append(new_unit)

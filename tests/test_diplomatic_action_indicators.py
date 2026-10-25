@@ -38,7 +38,8 @@ class BilateralResponseIndicatorTests(unittest.TestCase):
                                          "SEND_MILITARY_ATTACHE"),
             "YES")
 
-    def test_human_target_is_always_unpredictable(self):
+    def test_legal_human_target_is_unpredictable(self):
+        self.screen.nation_data["Target"]["at_war_with"] = ["Enemy"]
         self.screen.active_players.append("Target")
         self.assertEqual(
             bilateral_response_indicator(self.screen, "Target",

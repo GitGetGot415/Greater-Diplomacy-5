@@ -8,6 +8,7 @@ read back by the resolver, and that an impossible order is ignored rather than
 raising in the middle of a turn.
 """
 
+import copy
 import os
 import sys
 import unittest
@@ -68,6 +69,11 @@ class BattleScreenTestCase(unittest.TestCase):
                                        (self.y, "", [self.a, self.b, self.x])):
             self.enterContext(mock.patch.dict(game_map.nation_data[name],
                                              faction=faction, at_war_with=list(enemies)))
+
+        from map_logic.diplomacy import faction_records
+        original_factions = copy.deepcopy(game_map.world.factions)
+        self.addCleanup(faction_records.restore, game_map, original_factions)
+        faction_records.restore(game_map)
 
         self.province = next(p for p in game_map.map_data.values()
                              if not queries.is_water_province(p))

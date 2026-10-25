@@ -10,7 +10,7 @@ def process_economy(map_screen):
     # --- TACTICAL ECONOMY OVERRIDE ---
     if session_state.tactical_mode and session_state.player_unit:
         u_type = session_state.player_unit.get("original_type", session_state.player_unit.get("type"))
-        stats = queries.get_unit_library().get(u_type, {})
+        stats = queries.get_unit_library(map_screen).get(u_type, {})
         
         upkeep = queries.get_unit_upkeep(stats)
         
@@ -23,7 +23,7 @@ def process_economy(map_screen):
         session_state.unit_economy["materials"] = min(session_state.unit_economy.get("materials", 0) + upkeep["materials"], c.TACTICAL_MAX_MATERIALS)
         session_state.unit_economy["fuel"] = min(session_state.unit_economy.get("fuel", 0) + upkeep["fuel"], c.TACTICAL_MAX_FUEL)
 
-    all_econ = queries.calculate_all_economies(world_state.map_data, world_state.nation_data)
+    all_econ = queries.calculate_all_economies(world_state.map_data, world_state.nation_data, context=map_screen)
 
     for name, stats in world_state.nation_data.items():
         # Explicitly skip the global events log 
@@ -48,13 +48,13 @@ def process_queues(map_screen):
     world_state = world_for(map_screen)
     session_state = session_for(map_screen)
     # REPLACE DISK I/O WITH CACHED QUERIES
-    unit_library = queries.get_unit_library()
+    unit_library = queries.get_unit_library(map_screen)
 
     # --- NEW: Check if AI is disabled to freeze their queues ---
     ai_disabled = queries.get_scenario_flag("ai_disabled", c.DEFAULT_AI_DISABLED, world_state.scenario_settings)
     
     # --- Build active unit counters once per turn for new deployments ---
-    active_unit_counters = queries.build_active_unit_counters(world_state.map_data)
+    active_unit_counters = queries.build_active_unit_counters(world_state.map_data, context=map_screen)
 
     for province in world_state.map_data.values():
         current_owner = province.get("owner", "None")
@@ -104,7 +104,7 @@ def process_queues(map_screen):
                     
                     # Determine Militia Level natively
                     current_year = world_state.time_manager.year
-                    tech_tree = queries.get_tech_tree()
+                    tech_tree = queries.get_tech_tree(map_screen)
                     militia_years = tech_tree.get("militia", {}).get("years", [1910, 1915, 1920, 1925, 1930, 1935])
                     
                     militia_lvl = 1
@@ -167,7 +167,7 @@ def process_queues(map_screen):
                         if hasattr(map_screen, 'nation_colors'):
                             map_screen.nation_colors[reb_id] = tuple(reb_color)
                         
-                        militia_name = queries.get_best_preferred_unit(reb_data["research"], unit_library, ["Militia"]) or "Militia I"
+                        militia_name = queries.get_best_preferred_unit(reb_data["research"], unit_library, ["Militia"], context=map_screen) or "Militia I"
                         
                         # Transfer ownership
                         edit_province_ownership.conquer_province(map_screen, target_prov, reb_id)
@@ -176,7 +176,7 @@ def process_queues(map_screen):
                         # Spawn militia
                         for _ in range(militia_count):
                             u_dict = queries.create_unit_dict(militia_name, reb_id, unit_library)
-                            u_dict["custom_name"] = queries.generate_unit_custom_name(u_dict, active_unit_counters)
+                            u_dict["custom_name"] = queries.generate_unit_custom_name(u_dict, active_unit_counters, context=map_screen)
                             target_prov.setdefault("units", []).append(u_dict)
                         
                         # Give the rebellion cores globally on all territories that share its founding cores
@@ -269,7 +269,7 @@ def process_queues(map_screen):
                 new_unit_data = queries.create_unit_dict(unit_type, current_owner, unit_library)
                 
                 # Apply dynamic custom name for standard unit recruitment
-                new_unit_data["custom_name"] = queries.generate_unit_custom_name(new_unit_data, active_unit_counters)
+                new_unit_data["custom_name"] = queries.generate_unit_custom_name(new_unit_data, active_unit_counters, context=map_screen)
                 
                 province["units"].append(new_unit_data)
                 if current_owner == session_state.player_country:

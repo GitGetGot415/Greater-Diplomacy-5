@@ -76,6 +76,8 @@ def install_air_fixture(case):
         with open(path, "w", encoding="utf-8") as handle:
             json.dump(data, handle)
         case.enterContext(patch.object(c, field, path))
+        key = "unit_library" if field == "UNIT_DATA_PATH" else "tech_tree"
+        case.enterContext(patch.dict(queries._JSON_CACHE[key], {"path": path, "data": data}))
     case.enterContext(patch.object(queries, "get_unit_library", return_value=library))
     case.enterContext(patch.object(queries, "get_tech_tree", return_value=tree))
 
@@ -1245,7 +1247,7 @@ class AirGroundTransportTests(unittest.TestCase):
                 self.game.id_map.fill((0, 0, 0), pygame.Rect(80, 0, 2300, 32))
                 target = tile(self.game, 4, int(self.base["center"][0] + radius + 8), owner="B")
                 queries.build_air_geometry(self.game)
-                with patch.object(c, "USE_FOG_OF_WAR", False):
+                with patch.dict(self.game.scenario_settings, {"fog_of_war": False}):
                     ai_movement._assign_air_orders(self.game, "A", [(unit, self.base)])
                 self.assertEqual(unit["order"], {"type": "MOVE", "path": [2]})
 
@@ -1275,12 +1277,12 @@ class AirGroundTransportTests(unittest.TestCase):
         radius = queries.air_order_radius(unit, "AIR_ATTACK")
         tile(self.game, 4, int(self.base["center"][0] + radius + 8), owner="B")
         queries.build_air_geometry(self.game)
-        with patch.object(c, "USE_FOG_OF_WAR", False):
+        with patch.dict(self.game.scenario_settings, {"fog_of_war": False}):
             ai_movement._assign_air_orders(self.game, "A", [(unit, self.base)])
         self.assertEqual(unit["order"], queries.air_conversion_order(unit))
         movement_processor.process_conversions(self.game)
         self.assertTrue(queries.is_air_transport(unit))
-        with patch.object(c, "USE_FOG_OF_WAR", False):
+        with patch.dict(self.game.scenario_settings, {"fog_of_war": False}):
             ai_movement._assign_air_orders(self.game, "A", [(unit, self.base)])
         self.assertEqual(unit["order"], {"type": "MOVE", "path": [3, 2]})
 
@@ -1730,7 +1732,7 @@ class GroupAirMissionSelectionTests(unittest.TestCase):
         self.assertFalse(queries.air_unit_can_patrol(self.ground))
 
     def test_heuristic_bomber_defends_when_no_visible_enemy_target_exists(self):
-        with patch.object(c, "USE_FOG_OF_WAR", True), \
+        with patch.dict(self.game.scenario_settings, {"fog_of_war": True}), \
                 patch.object(queries, "get_visible_provinces", return_value=({1, 3}, set())):
             ai_movement._assign_air_orders(self.game, "A", [(self.bomber, self.remote)])
         self.assertEqual(self.bomber["order"], queries.canonical_air_order(self.game, self.bomber, self.remote,

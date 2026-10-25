@@ -1241,18 +1241,18 @@ AIR_STACK_MIN_ATTACK_EFFICIENCY = 0.25
 #
 # Player-editable in scenario settings (see screens/menu_screens/
 # scenario_settings.py) as "damage_at_zero_health"; this is only the value a
-# reset scenario falls back to, mirrored onto this constant by
-# queries.apply_global_scenario_flags.
+# reset scenario uses. Active overrides belong to each world's runtime rules.
 DAMAGE_AT_ZERO_HEALTH = 0.0
+DEFAULT_DAMAGE_AT_ZERO_HEALTH = DAMAGE_AT_ZERO_HEALTH
 
 # Same idea as DAMAGE_AT_ZERO_HEALTH, but for the defense a wounded unit still
 # offers -- see combat_rules.health_defense_multiplier. 0 means a unit at 0%
 # health blocks nothing; 1 means health has no effect on defense.
 #
 # Player-editable in scenario settings as "defense_at_zero_health"; this is
-# only the value a reset scenario falls back to, mirrored onto this constant
-# by queries.apply_global_scenario_flags.
+# the default for a reset scenario. Active overrides belong to each world.
 DEFENSE_AT_ZERO_HEALTH = 0.0
+DEFAULT_DEFENSE_AT_ZERO_HEALTH = DEFENSE_AT_ZERO_HEALTH
 
 # Floor on a lane's per-side allowance, so a two-unit ally is never squeezed out
 # of the fight by a fifty-unit one. When lanes * 2 * this exceeds COMBAT_WIDTH
@@ -2046,27 +2046,7 @@ MAX_RESEARCH_TURN_SIMULATION = 5000
 # ==========================================
 
 # Actions that happen instantly and do not require the target's consent
-UNILATERAL_ACTIONS = [
-    "WAR_DECLARATION",
-    "BREAK_ALLIANCE",
-    "KICK_FACTION_MEMBER",
-    "LEAVE_FACTION",
-    "DISBAND_FACTION",
-    "CLAIM_FACTION_LEADERSHIP",
-    "JUSTIFY_WARGOAL",
-    "ANNEX_PUPPET",
-    "RELEASE_PUPPET",
-    "TAKE_PUPPETS",
-    "CANCEL_MILITARY_ACCESS",
-    "REVOKE_MILITARY_ACCESS",
-    "FORWARD_MESSAGE",
-    "RECALL_VOLUNTEERS",
-    "SEND_HOME_VOLUNTEERS",
-    "GUARANTEE",
-    "REVOKE_GUARANTEE",
-    "WITHDRAW_MILITARY_ATTACHE",
-    "REVOKE_MILITARY_ATTACHE",
-]
+from map_logic.diplomacy.action_definitions import UNILATERAL_ACTIONS
 
 # What kind of act a message announced, for anyone reading a list of them.
 #
@@ -2157,19 +2137,7 @@ MESSAGE_FORWARDED_ROW_COLOR = (36, 74, 48)
 # cooldown at all. See _process_ai_retaliation.
 SELF_TARGETED_ACTIONS = ("LEAVE_FACTION", "DISBAND_FACTION")
 
-BILATERAL_ACTIONS = [
-    "JOIN_WARS",
-    "FACTION_INVITE",
-    "JOIN_FACTION_REQ",
-    "CEASEFIRE",
-    "CALL_TO_ARMS",
-    "CREATE_FACTION",
-    "PEACE_TREATY",
-    "TRADE",
-    "REQ_MILITARY_ACCESS",
-    "SEND_MILITARY_ATTACHE",
-    "SEND_VOLUNTEERS"
-]
+from map_logic.diplomacy.action_definitions import BILATERAL_ACTIONS
 
 # ==========================================
 # RELATION MODIFIERS & COLORS

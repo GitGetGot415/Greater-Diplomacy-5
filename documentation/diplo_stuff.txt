@@ -43,6 +43,10 @@ Shared processing and save data
 map_logic/diplomacy/diplomacy_lifecycle.py owns request creation, replacement, removal, response binding, and timing transitions.
 diplomacy_messages.py retains its public accessors and correspondence functions.
 The processor retains its existing phase order. Treaty effects remain in treaty_effects.py and the agreement modules.
+action_definitions.py declares action categories, availability handlers, and existing execution phases.
+Controls, AI candidates, scripts, current multiplayer drafts, and send processing use shared availability.
+Request cancellation precedes new-proposal checks. A changed leadership position cannot block cancellation of an unsent invitation.
+Effect owners retain their existing resolution checks. AI preferences remain separate from gameplay availability.
 
 RequestState gives explicit draft, scheduled, reply, reaction, and expired states.
 The existing turns field remains the authoritative request age. State derives from that age, action, and schedule.
@@ -208,6 +212,14 @@ UI rendering must not consume game randomness to predict those conditions.
 
 Faction leadership
 ------------------
+
+WorldState.factions owns stable faction identities, display names, leaders, ordered members, and faction pre-war borders.
+faction_records.py derives country membership indexes and compatibility fields from those records.
+Faction services use this boundary for membership, leadership, names, and disbanding.
+Country-owned leadership pressure and tenure remain separate.
+Renaming and succession preserve faction identity. Identity creation does not consume gameplay randomness.
+Country pre-war borders remain separate from faction pre-war borders.
+See documentation/data_migrations.txt for older saves, history, and snapshot projections.
 
 Only the current faction leader can invite countries into an existing faction.
 queries.can_invite_to_faction defines this restriction.

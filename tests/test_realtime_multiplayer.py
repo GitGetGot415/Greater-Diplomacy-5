@@ -89,8 +89,8 @@ class HostSnapshotTests(unittest.TestCase):
         snapshot = {"nation_data": {"A": {"allied_with": ["B"], "faction": "Pact", "future": 17},
                                    "B": {"allied_with": ["A"], "faction": "Pact"}}}
         apply_authoritative_snapshot(client, snapshot)
-        self.assertEqual(client.nation_data["A"], {"faction": "Pact", "future": 17})
-        self.assertEqual(client.nation_data["B"], {"faction": "Pact"})
+        self.assertEqual(client.nation_data["A"], {"faction": "Pact", "future": 17, "is_faction_leader": False})
+        self.assertEqual(client.nation_data["B"], {"faction": "Pact", "is_faction_leader": False})
         self.assertEqual(snapshot["nation_data"]["A"]["allied_with"], ["B"])
 
     def test_host_view_refreshes_from_server_before_the_next_turn_draft(self):
@@ -1163,7 +1163,10 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
             return None
         before = map_ref.nation_data["A"]["materials"]
         with mock.patch("map_logic.turn_processing.turn_processor.prepare_turn", new=no_op), \
-             mock.patch("map_logic.turn_processing.turn_processor.resolve_turn_logic", new=no_op):
+             mock.patch("map_logic.turn_processing.turn_processor.resolve_turn_logic", new=no_op), \
+             mock.patch("data.queries.get_unit_library", return_value={"Infantry": {
+                 "cost_materials": 20, "cost_manpower": 10, "cost_fuel": 4}}), \
+             mock.patch("data.queries.get_scenario_flag", return_value=False):
             driver.process_turn({"A": command})
         self.assertEqual(map_ref.nation_data["A"]["materials"], before - 10)
         self.assertNotIn("realtime_cost", map_ref.map_data["home"]["units"][0]["order"])

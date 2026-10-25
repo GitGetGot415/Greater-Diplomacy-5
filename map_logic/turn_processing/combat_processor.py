@@ -17,7 +17,7 @@ MeetingResult = namedtuple("MeetingResult", "survivors1 survivors2 fought")
 CHARGE_SIDE = 1
 
 
-def apply_group_damage(total_atk, target_units, defense_bonus_fn=None, *, sources=None, tile=None):
+def apply_group_damage(total_atk, target_units, defense_bonus_fn=None, *, sources=None, tile=None, nation_data=None):
     """Distributes attack after health-scaled unit defense and flat bonuses.
 
     Fortification defense is a property of the tile, not the individual unit,
@@ -30,7 +30,7 @@ def apply_group_damage(total_atk, target_units, defense_bonus_fn=None, *, source
 
     for u in target_units:
         defense_bonus = defense_bonus_fn(u) if defense_bonus_fn else 0
-        defense = (u.get("defense", 0) * combat_rules.health_defense_multiplier(u)
+        defense = (u.get("defense", 0) * combat_rules.health_defense_multiplier(u, nation_data)
                    + defense_bonus)
         actual_dmg = max(0, damage_per_unit - defense)
 
@@ -56,7 +56,7 @@ def process_bombardments(map_screen):
 
     for province in world_state.map_data.values():
         for unit in province.get("units", []):
-            if queries.is_air_unit(unit):
+            if queries.is_air_unit(unit, context=map_screen):
                 continue
             order = unit.get("order")
             if not isinstance(order, dict) or order.get("type") != "BOMBARD":
@@ -64,14 +64,14 @@ def process_bombardments(map_screen):
 
             target_id = order.get("target_id")
             u_type = unit.get("type", "")
-            bomb_range = queries.get_bombardment_range(u_type)
+            bomb_range = queries.get_bombardment_range(u_type, context=map_screen)
 
             # A field gun has nothing to stand on out at sea. Asked of the unit
             # rather than the tile because shore bombardment is a real order --
             # Battleships, Dreadnoughts and Carriers are all in
             # c.BOMBARDMENT_UNITS and fire from the water by design.
             afloat = (queries.is_water_province(province)
-                      and not (unit.get("naval_unit") or queries.is_naval_unit(u_type)))
+                      and not (unit.get("naval_unit") or queries.is_naval_unit(u_type, context=map_screen)))
 
             # Drop the order if the gun can no longer make the shot
             if (bomb_range <= 0 or afloat
@@ -100,7 +100,7 @@ def process_bombardments(map_screen):
                                                      world_state.nation_data)):
                 fort_hits = sum(
                     not (gun.get("naval_unit")
-                         or queries.is_naval_unit(gun.get("type", "")))
+                         or queries.is_naval_unit(gun.get("type", ""), context=map_screen))
                     for gun in guns
                 )
 
@@ -112,7 +112,7 @@ def process_bombardments(map_screen):
                 # the volley.
                 for _ in range(fort_hits):
                     queries.damage_fort(
-                        target_prov, world_state.nation_data, world_state.map_data)
+                        target_prov, world_state.nation_data, world_state.map_data, context=map_screen)
                 continue
 
             # Every gun that aimed here contributes; unlike a stack fight this
@@ -126,13 +126,13 @@ def process_bombardments(map_screen):
                     total_atk, hit_targets,
                     lambda unit, province=target_prov: queries.get_fort_defense_bonus(
                         province, unit, world_state.nation_data, combat_active=True),
-                    sources=sources, tile=target_id)
+                    sources=sources, tile=target_id, nation_data=world_state.nation_data)
 
             # Resolve the fort damage after this volley has been calculated so
             # the fort's current level protects against the shells that hit it.
             for _ in range(fort_hits):
                 queries.damage_fort(
-                    target_prov, world_state.nation_data, world_state.map_data)
+                    target_prov, world_state.nation_data, world_state.map_data, context=map_screen)
 
             for u in targets:
                 u["_in_combat_this_turn"] = True
@@ -152,7 +152,7 @@ def process_pinning(map_screen):
     incoming_attacks = {}
     for province in world_state.map_data.values():
         for unit in province.get("units", []):
-            if queries.is_air_unit(unit) and not queries.air_unit_can_move_on_ground(unit):
+            if queries.is_air_unit(unit, context=map_screen) and not queries.air_unit_can_move_on_ground(unit, context=map_screen):
                 continue
             order = unit.get("order")
             if order and order.get("type") == "MOVE" and order.get("path"):
@@ -208,7 +208,7 @@ def process_pinning(map_screen):
         # apart the moment either is tuned.
         attacker_units_only = [a_unit for a_unit, _ in hostile_attackers]
         queries.prepare_aircraft_for_ground_combat(friendly_defenders, world_state.nation_data,
-                                                  attacker_units_only)
+                                                  attacker_units_only, context=map_screen)
         probe = combat_rules.build_battle(
             [friendly_defenders, attacker_units_only], world_state.nation_data,
             terrain=dest_prov.get("terrain"))
@@ -240,7 +240,7 @@ def process_pinning(map_screen):
         attackers_survive = any(
             probe.profiles.get(id(a_unit), a_unit).get("health", 1) > 0 and
             max(0, incoming_on_charge.get(id(a_unit), 0.0)
-                - a_unit.get("defense", 0) * combat_rules.health_defense_multiplier(a_unit))
+                - a_unit.get("defense", 0) * combat_rules.health_defense_multiplier(a_unit, world_state.nation_data))
             < a_unit.get("health", 1)
             for a_unit in attacker_units_only)
 
@@ -254,7 +254,7 @@ def process_pinning(map_screen):
                         province, unit, world_state.nation_data, combat_active=True),
                     sources=[(unit, combat_rules.volley([unit], probe.shares, world_state.nation_data))
                              for unit in sources], tile=dest_id,
-                )
+                nation_data=world_state.nation_data)
 
             for lane in probe.lanes:
                 for u in lane.a.front + lane.b.front:
@@ -281,7 +281,7 @@ def process_pinning(map_screen):
     # --- STANDARD PINNING LOGIC ---
     for province in world_state.map_data.values():
         for unit in province.get("units", []):
-            if queries.is_air_unit(unit) and not queries.air_unit_can_move_on_ground(unit):
+            if queries.is_air_unit(unit, context=map_screen) and not queries.air_unit_can_move_on_ground(unit, context=map_screen):
                 continue
             order = unit.get("order")
             if order and order.get("type") == "MOVE" and order.get("path"):
@@ -335,9 +335,9 @@ def resolve_meeting_engagement(prov1, prov2, units1, units2, nation_data):
     unit_events.set_locations(prov1, units1)
     unit_events.set_locations(prov2, units2)
     queries.prepare_aircraft_for_ground_combat(units1, nation_data, units2,
-                                             on_land=not queries.is_water_province(prov1))
+                                             on_land=not queries.is_water_province(prov1), context=nation_data)
     queries.prepare_aircraft_for_ground_combat(units2, nation_data, units1,
-                                             on_land=not queries.is_water_province(prov2))
+                                             on_land=not queries.is_water_province(prov2), context=nation_data)
     battle = combat_rules.build_battle(
         [units1, units2], nation_data,
         width=combat_rules.meeting_combat_width(prov1, prov2),
@@ -365,11 +365,11 @@ def resolve_meeting_engagement(prov1, prov2, units1, units2, nation_data):
             continue
         for u in side_units:
             if id(u) in fought and u.get("type", "").startswith("Convoy"):
-                queries.revert_transport(u)
+                queries.revert_transport(u, context=nation_data)
 
     # Measured before any of it lands, so the exchange is simultaneous.
     for targets, total_atk, sources in combat_rules.exchange(battle, nation_data, with_sources=True):
-        apply_group_damage(total_atk, targets, sources=sources)
+        apply_group_damage(total_atk, targets, sources=sources, nation_data=nation_data)
 
     # Only the front rank is in combat: a reserve rests and recovers morale
     # while the units ahead of it bleed, which is the pressure to rotate.
@@ -437,7 +437,7 @@ def process_combat(map_screen):
         is_land = not queries.is_water_province(province)
         unit_events.set_locations(province, units)
 
-        queries.prepare_aircraft_for_ground_combat(units, world_state.nation_data, on_land=is_land)
+        queries.prepare_aircraft_for_ground_combat(units, world_state.nation_data, on_land=is_land, context=map_screen)
 
         battle = combat_rules.build_battle(
             [units], world_state.nation_data, terrain=province.get("terrain"))
@@ -447,7 +447,7 @@ def process_combat(map_screen):
         if is_land:
             for u in units:
                 if queries.get_unit_combat_owner(u) in fighters and u.get("type", "").startswith("Convoy"):
-                    queries.revert_transport(u)
+                    queries.revert_transport(u, context=map_screen)
 
         # Every volley is measured before any of it lands, so the fight is
         # simultaneous: a nation wiped out this turn still fires this turn, and
@@ -459,7 +459,7 @@ def process_combat(map_screen):
                 lambda unit, province=province: queries.get_fort_defense_bonus(
                     province, unit, world_state.nation_data, combat_active=True),
                 sources=sources, tile=province["id"],
-            )
+                nation_data=world_state.nation_data)
 
         # Only the front rank is in combat: a reserve rests and recovers morale
         # while the units ahead of it bleed, which is the pressure to rotate.
@@ -491,7 +491,7 @@ def process_combat(map_screen):
                         u["order"]["path"] = []
 
                 # Immediately destroy warships caught in land combat
-                if is_land and queries.is_warship(u.get("type", "")):
+                if is_land and queries.is_warship(u.get("type", ""), context=map_screen):
                     u["health"] = 0
 
             # Filter dead ships out
@@ -504,7 +504,7 @@ def check_for_post_combat_captures(map_screen):
         if queries.is_water_province(province):
             continue
 
-        units = [unit for unit in province.get("units", []) if not queries.is_air_unit(unit)]
+        units = [unit for unit in province.get("units", []) if not queries.is_air_unit(unit, context=map_screen)]
         if not units:
             continue
 
@@ -584,7 +584,7 @@ def check_for_post_combat_captures(map_screen):
             is_land = not queries.is_water_province(province)
             if is_land:
                 for u in units:
-                    if queries.is_warship(u.get("type", "")):
+                    if queries.is_warship(u.get("type", ""), context=map_screen):
                         # Use capturer instead of true_owner here so ships are correctly scuttled even if core transferred
                         if queries.is_hostile_territory(capturer, u["owner"], world_state.nation_data):
                             u["health"] = 0

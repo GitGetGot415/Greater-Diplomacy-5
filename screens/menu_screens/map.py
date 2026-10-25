@@ -673,6 +673,9 @@ def bilateral_response_indicator(map_screen, target, action):
     """
     if target not in map_screen.nation_data:
         return None
+    from map_logic.diplomacy.action_definitions import availability
+    if not availability(map_screen, map_screen.player_country, target, action).allowed:
+        return "NO"
     if queries.faction_request_leadership_error(
             map_screen.player_country, target, action, map_screen.nation_data):
         return "NO"
@@ -717,13 +720,31 @@ def bilateral_response_indicator(map_screen, target, action):
     return "YES" if verdict.accepted else "NO"
 
 
+def cached_bilateral_response_indicator(map_screen, target, action):
+    """Reuse proposal availability and forecasts until input or world state changes."""
+    revision = getattr(map_screen, "_presentation_cache_revision", None)
+    if revision is None or not hasattr(map_screen, "world"):
+        return bilateral_response_indicator(map_screen, target, action)
+    world = map_screen.world
+    stamp = (revision, world.diplomacy_revision, world.runtime_rules.revision,
+             world.time_manager.total_turns, map_screen.player_country, tuple(map_screen.active_players))
+    cache = getattr(map_screen, "_bilateral_response_indicator_cache", None)
+    if cache is None or cache[0] != stamp:
+        cache = (stamp, {})
+        map_screen._bilateral_response_indicator_cache = cache
+    key = (target, action)
+    if key not in cache[1]:
+        cache[1][key] = bilateral_response_indicator(map_screen, target, action)
+    return cache[1][key]
+
+
 def set_bilateral_response_indicator(map_screen, button, target, action,
                                     applicable=True):
     """Attach or remove one outgoing-proposal response image from a button."""
     button.right_image = None
     if not applicable:
         return
-    response = bilateral_response_indicator(map_screen, target, action)
+    response = cached_bilateral_response_indicator(map_screen, target, action)
     if response:
         button.right_image = getattr(map_screen, "ai_response_images", {}).get(
             response)
@@ -944,7 +965,7 @@ def update_button_states(map_screen):
         map_screen.btn_gp_faction.disabled = not bool(my_faction)
 
         # DISABLE BUTTONS FOR BATTLE ROYALE
-        if c.BATTLE_ROYALE_MODE:
+        if queries.get_scenario_flag("battle_royale", c.DEFAULT_BATTLE_ROYALE, map_screen.scenario_settings):
             map_screen.btn_gp_faction.disabled = True
             map_screen.btn_gp_claims.disabled = True
 
@@ -1098,7 +1119,7 @@ def update_button_states(map_screen):
                         dw_text = f"Truce Active ({truce_turns})"
                     else:
                         if at_war or faction_peace_active:
-                            if c.BATTLE_ROYALE_MODE:
+                            if queries.get_scenario_flag("battle_royale", c.DEFAULT_BATTLE_ROYALE, map_screen.scenario_settings):
                                 dw_text = "Battle Royale (No Peace)"
                                 dw_enabled = False
                             else:
@@ -1212,7 +1233,7 @@ def update_button_states(map_screen):
                         "Undo Revoke Their Attaché" if pending_revoke_their_attache
                         else "Revoke Their Attaché", "red")
 
-                factions_disabled = getattr(c, 'DISABLE_FACTIONS', False)
+                factions_disabled = queries.get_scenario_flag("disable_factions", c.DEFAULT_DISABLE_FACTIONS, map_screen.scenario_settings)
 
                 # A puppet's alignment is its master's, both ways round: it may
                 # not be invited in, and may not ask to join. Greyed out here so
@@ -1289,7 +1310,7 @@ def update_button_states(map_screen):
                                                      action, applicable)
 
                 # HIDE ALLIANCE/FACTION BUTTONS IN BATTLE ROYALE
-                if c.BATTLE_ROYALE_MODE:
+                if queries.get_scenario_flag("battle_royale", c.DEFAULT_BATTLE_ROYALE, map_screen.scenario_settings):
                     map_screen.btn_join_wars.visible = False
                     map_screen.btn_call_to_arms.visible = False
                     map_screen.btn_fac_invite.visible = False
@@ -2080,6 +2101,7 @@ class Map(StateAccess, GameState):
         self.change_state("MENU")
 
     def show_feedback(self, text):
+        self._bilateral_response_indicator_cache = None
         self.feedback_text, self.feedback_timer = text, pygame.time.get_ticks()
         print(f"[UI EVENT] {text}")
 
@@ -2213,7 +2235,7 @@ class Map(StateAccess, GameState):
             return False
         planned = []
         for unit, origin in records:
-            is_aircraft = queries.is_air_unit(unit)
+            is_aircraft = queries.is_air_unit(unit, context=self)
             air_mission = queries.air_unit_mission(unit) if is_aircraft else None
             if air_mission in queries.AIR_INTERCEPTION_PRIORITIES:
                 self.show_feedback("Choose Move or Strike, or cancel the aircraft's defense mission, before moving.")
@@ -2222,7 +2244,7 @@ class Map(StateAccess, GameState):
             if isinstance(order, dict) and order.get("type") in c.ORDERS_BLOCKING_MOVEMENT:
                 self.show_feedback("Cannot move units with a blocking order.")
                 return False
-            if is_aircraft and (not queries.air_unit_can_move_on_ground(unit)
+            if is_aircraft and (not queries.air_unit_can_move_on_ground(unit, context=self)
                     or air_mission == "STRIKE"
                     or (air_mission != "MOVE" and queries.air_move_is_strike(self, unit, destination))):
                 try:
@@ -2230,7 +2252,7 @@ class Map(StateAccess, GameState):
                 except ValueError as exc:
                     self.show_feedback(str(exc))
                     return False
-                planned.append((unit, air_order))
+                planned.append((unit, origin, air_order))
                 continue
             old_path = (list(order.get("path", [])) if append and isinstance(order, dict)
                         and order.get("type") == "MOVE" else [])
@@ -2239,7 +2261,7 @@ class Map(StateAccess, GameState):
                 self.show_feedback("A selected unit has an invalid queued route.")
                 return False
             segment = queries.find_unit_move_path(
-                unit, start, destination["id"], self.id_to_province, self.nation_data)
+                unit, start, destination["id"], self.id_to_province, self.nation_data, context=self)
             if segment is None:
                 self.show_feedback("No legal route exists for every selected unit.")
                 return False
@@ -2249,15 +2271,13 @@ class Map(StateAccess, GameState):
                 if self.player_fuel < queries.get_tactical_fuel_cost_per_tile(unit, fuel_inc):
                     self.show_feedback("Not enough fuel!")
                     return False
-            planned.append((unit, old_path + segment))
+            planned.append((unit, origin, old_path + segment))
 
-        for unit, path in planned:
-            if isinstance(path, dict):
-                unit["order"] = path
-            elif path:
-                unit["order"] = {"type": "MOVE", "path": path}
-            else:
-                unit.pop("order", None)
+        from map_logic import unit_actions
+        choices = [(unit, origin, path if isinstance(path, dict) else
+                    {"type": "MOVE", "path": path} if path else None)
+                   for unit, origin, path in planned]
+        unit_actions.apply_batch(self, self.player_country, choices)
         self.invalidate_map_presentation_cache()
         self.show_feedback(f"{len(planned)} unit{'s' if len(planned) != 1 else ''} routed to province {destination['id']}")
         return True
@@ -2339,8 +2359,8 @@ class Map(StateAccess, GameState):
         self.change_state("ORDERS")
 
     def sync_units_to_data(self):
-        unit_library = queries.get_unit_library()
-        building_library = queries.get_building_library()
+        unit_library = queries.get_unit_library(self)
+        building_library = queries.get_building_library(self)
         if not unit_library:
             self.show_feedback("Error: unit library not found!")
             return
@@ -2594,7 +2614,7 @@ class Map(StateAccess, GameState):
                 n_data["portrait_data"] = "DEFAULT"
 
             # Clean up obsolete research for EVERY nation currently on the map
-        tech_tree = queries.get_tech_tree()
+        tech_tree = queries.get_tech_tree(self)
         for country, data in self.nation_data.items():
             if "research" in data:
                 obsolete_keys = [k for k in data["research"].keys() if k not in tech_tree]

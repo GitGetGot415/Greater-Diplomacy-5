@@ -45,7 +45,7 @@ def clear_player_construction(map_screen):
             continue
         for queue_key in ("building_queue", "unit_queue"):
             for item in prov.get(queue_key, []):
-                queries.refund_queue_item(player_data, item, player, world_state.map_data)
+                queries.refund_queue_item(player_data, item, player, world_state.map_data, context=map_screen)
             prov[queue_key] = []
 
 def clear_player_movement(map_screen):

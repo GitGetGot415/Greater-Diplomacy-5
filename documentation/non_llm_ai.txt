@@ -59,6 +59,9 @@ Selection order, budgets, emergency behavior, site selection, and tactical-unit 
 AI building purchases retain their separate manpower policy.
 Research queue construction uses the shared research owner. Its AI restart policy remains explicit.
 See documentation/general_info.txt for state and action ownership.
+AI maintenance and unit orders use map_logic/unit_actions.py after selection.
+The diplomatic candidate collector checks shared availability before ranking or model selection.
+AIWorld retains its source world's scenario settings. Evaluation reads that world's active libraries.
 
 AIRCRAFT VALUATION
 ------------------

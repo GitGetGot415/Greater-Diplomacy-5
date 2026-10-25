@@ -234,11 +234,11 @@ class AircraftValuationTests(unittest.TestCase):
                    "C": {"at_war_with": []}}
         province = {"id": 1, "owner": "B", "neighbors": [], "units": [
             dict(self.library["Dahlia"], type="Dahlia", owner="B")]}
-        return SimpleNamespace(map_data={1: province}, id_to_province={1: province}, nation_data=nations)
+        return SimpleNamespace(map_data={1: province}, id_to_province={1: province}, nation_data=nations, scenario_settings={})
 
     def test_visible_air_threat_falls_as_owned_and_queued_cover_increases(self):
         world = self.threat_world()
-        with patch.object(c, "USE_FOG_OF_WAR", False):
+        with patch.dict(world.scenario_settings, {"fog_of_war": False}):
             before = ue.air_threat_profile(world, "A", self.library)[0]
             home = {"id": 2, "owner": "A", "neighbors": [], "units": [
                 dict(self.library["Aster"], type="Aster", owner="A")]}
@@ -252,10 +252,10 @@ class AircraftValuationTests(unittest.TestCase):
     def test_hidden_neutral_and_immune_aircraft_do_not_create_interception_demand(self):
         from data import queries
         world = self.threat_world()
-        with patch.object(c, "USE_FOG_OF_WAR", True), patch.object(
+        with patch.dict(world.scenario_settings, {"fog_of_war": True}), patch.object(
                 queries, "get_visible_provinces", return_value=(set(), set())):
             self.assertEqual(ue.air_threat_profile(world, "A", self.library)[0], 0)
-        with patch.object(c, "USE_FOG_OF_WAR", False):
+        with patch.dict(world.scenario_settings, {"fog_of_war": False}):
             world.map_data[1]["units"][0]["owner"] = "C"
             self.assertEqual(ue.air_threat_profile(world, "A", self.library)[0], 0)
             world.map_data[1]["units"][0]["owner"] = "B"

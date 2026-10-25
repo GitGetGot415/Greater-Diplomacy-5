@@ -118,7 +118,7 @@ def strip_sensitive_data_for_player(map_ref, country_id):
     world_state = world_for(map_ref)
     session_state = session_for(map_ref)
     map_ref.country_economy_summaries = queries.get_shared_country_economy_summaries(
-        country_id, world_state.map_data, world_state.nation_data)
+        country_id, world_state.map_data, world_state.nation_data, context=map_ref)
     session_state.multiplayer_mode = True
     session_state.player_country = country_id
     session_state.active_players = [country_id]
@@ -554,7 +554,7 @@ def export_move_file(map_ref, file_path, player_key):
     save_dict = queries.build_save_dict(map_ref)
     
     player_data = {
-        "nation_data": save_dict.get("nation_data", {}).get(cid, {}),
+        "nation_data": copy.deepcopy(save_dict.get("nation_data", {}).get(cid, {})),
         "provinces": {},
         # A move must be able to say "I have no units left".  Older moves
         # inferred that from a non-empty province update, which lost an
@@ -606,6 +606,19 @@ def export_move_file(map_ref, file_path, player_key):
                                    "siphon_rates": puppet_data.get("siphon_rates", {})})
     if siphon_updates:
         player_data["puppet_siphon_updates"] = siphon_updates
+
+    from map_logic.player_actions import collect_map_commands
+    player_data["player_intents"] = collect_map_commands(map_ref, cid)
+    for command in player_data["player_intents"]:
+        if command["type"] == "army_roster":
+            player_data["nation_data"]["armies"] = copy.deepcopy(command["armies"])
+        if command["type"] == "faction_rename" and pending_renames:
+            command["name"] = pending_renames[-1]["new_name"]
+        elif command["type"] == "puppet_draft" and pending_appearances:
+            command["appearances"] = {
+                target: {**{key: copy.deepcopy(world_state.nation_data[target].get(key))
+                            for key in c.COUNTRY_APPEARANCE_FIELDS}, **appearance}
+                for target, appearance in pending_appearances.items()}
     
     for prov_key, prov_data in save_dict.get("provinces", {}).items():
         prov_updates = {}
@@ -619,7 +632,7 @@ def export_move_file(map_ref, file_path, player_key):
         for unit in prov_data.get("units", []):
             if unit.get("owner") != cid:
                 continue
-            if queries.is_air_unit(unit) or queries.is_air_transport(unit):
+            if queries.is_air_unit(unit, context=map_ref) or queries.is_air_transport(unit, context=map_ref):
                 # Position, health and transported stats always belong to the
                 # host. A planning file carries only identity and desired orders.
                 player_data["aircraft_orders"].append({
@@ -737,93 +750,8 @@ def _apply_faction_renames(map_ref, country_id, player_data, nation_update):
 
 
 def _prepare_player_nation_data(map_ref, country_id, nation_update):
-    """Prepare a player's record without changing host state.
-
-    Faction membership is shared state.  The player can queue a leave/invite
-    in their normal diplomacy data, but the authoritative outcome is resolved
-    by the host at turn processing.  A member's old move must therefore not
-    restore the previous faction string after its leader has renamed the bloc.
-    """
-    world_state = world_for(map_ref)
-    if not isinstance(nation_update, dict) or country_id not in world_state.nation_data:
-        raise ValueError("The move does not contain a valid country record.")
-
-    existing = world_state.nation_data[country_id]
-    faction_state = {
-        key: existing[key]
-        for key in ("faction", "is_faction_leader", "faction_pressure", "faction_tenure")
-        if key in existing
-    }
-    merged = dict(nation_update)
-    for key in ("faction", "is_faction_leader", "faction_pressure", "faction_tenure"):
-        if key in faction_state:
-            merged[key] = faction_state[key]
-        else:
-            merged.pop(key, None)
-
-    # Tournament moves carry a full country record, but policy countdowns are
-    # host-owned turn state.  Read only the player's requested lifecycle
-    # statuses and rebuild the timers from the host's existing country record.
-    from map_logic import politics
-    requested_policies = politics.policy_draft_projection({country_id: merged}, country_id)
-    canonical_policies = politics.canonicalize_policy_draft(
-        world_state.nation_data, country_id, requested_policies)
-    if canonical_policies:
-        merged[politics.POLICY_KEY] = canonical_policies
-    else:
-        merged.pop(politics.POLICY_KEY, None)
-
-    from map_logic.diplomacy import diplomacy_lifecycle as lifecycle
-    probe = copy.deepcopy(world_state.nation_data)
-    migrations.migrate_pending_responses(probe)
-    pending = merged.get("pending_diplomacy", {})
-    responses = merged.get("diplo_responses", {})
-    draft_lists = merged.get("draft_lists", {})
-    if not all(isinstance(channel, dict) for channel in (pending, responses, draft_lists)):
-        raise ValueError("Invalid diplomatic channels.")
-    if any(not isinstance(record, (dict, str)) for record in pending.values()):
-        raise ValueError("Invalid diplomatic request.")
-    if any(not isinstance(response, dict) for response in responses.values()):
-        raise ValueError("Invalid diplomatic response.")
-    submitted = {country_id: copy.deepcopy(merged)}
-    migrations.migrate_pending_responses(submitted)
-    drafts = {}
-    for target, record in submitted[country_id]["pending_diplomacy"].items():
-        if record.get("turns", 0) > 0:
-            host_record = probe[country_id].get("pending_diplomacy", {}).get(target)
-            supplied = pending[target]
-            reference = supplied.get("request_id") if isinstance(supplied, dict) else None
-            if (not isinstance(host_record, dict) or record.get("action") != host_record.get("action")
-                    or (reference is not None and reference != host_record.get("request_id"))):
-                raise ValueError("A travelling request does not belong to this move.")
-        else:
-            drafts[target] = record
-    canonical_responses = {}
-    for target, response in submitted[country_id]["diplo_responses"].items():
-        canonical = dict(response)
-        canonical.pop("legacy_unmatched", None)
-        canonical.update(lifecycle.canonical_response_reference(probe, country_id, target, response))
-        canonical_responses[target] = canonical
-    lifecycle.apply_draft(probe, country_id, drafts, canonical_responses, draft_lists)
-    for channel in ("pending_diplomacy", "diplo_responses", "draft_lists"):
-        merged[channel] = probe[country_id].get(channel, {})
-    ratification = merged.get("pending_ratification")
-    host_ratification = probe[country_id].get("pending_ratification")
-    if isinstance(ratification, dict):
-        reference = ratification.get("treaty_id")
-        if (not isinstance(host_ratification, dict)
-                or (reference is not None and reference != host_ratification.get("treaty_id"))):
-            raise ValueError("That ratification refers to an expired treaty.")
-        merged["pending_ratification"] = copy.deepcopy(host_ratification)
-        if "verdict" in ratification:
-            merged["pending_ratification"]["verdict"] = ratification["verdict"]
-        else:
-            merged["pending_ratification"].pop("verdict", None)
-    elif ratification is not None:
-        raise ValueError("Invalid treaty ratification.")
-    elif isinstance(host_ratification, dict):
-        merged["pending_ratification"] = copy.deepcopy(host_ratification)
-    return migrations.migrate_country_record(merged)
+    """Preserve the public adapter for older country projections."""
+    return migrations.legacy_player_country(map_ref, country_id, nation_update)
 
 
 def _apply_appearance_updates(map_ref, country_id, player_data):
@@ -918,7 +846,7 @@ def _validate_aircraft_orders(map_ref, country_id, player_data, provinces, cargo
     live = {unit.get("unit_id"): (unit, province)
             for province in world_state.map_data.values()
             for unit in queries.units_with_air_cargo(province.get("units", []))
-            if queries.is_air_unit(unit) or queries.is_air_transport(unit)
+            if queries.is_air_unit(unit, context=map_ref) or queries.is_air_transport(unit, context=map_ref)
             or unit.get("unit_id") in cargo_ids or queries.unit_is_air_drop_recovering(unit)}
     for updates in provinces.values():
         if not isinstance(updates, dict) or not isinstance(updates.get("units", []), list):
@@ -929,9 +857,9 @@ def _validate_aircraft_orders(map_ref, country_id, player_data, provinces, cargo
                 raise ValueError("Invalid snapshot unit.")
             if not isinstance(unit.get("type", ""), str):
                 raise ValueError("Invalid snapshot unit type.")
-            if unit.get("air_cargo") and not queries.is_air_unit(unit):
+            if unit.get("air_cargo") and not queries.is_air_unit(unit, context=map_ref):
                 raise ValueError("Unauthorized snapshot cargo.")
-            if queries.is_air_unit(unit) or queries.is_air_transport(unit):
+            if queries.is_air_unit(unit, context=map_ref) or queries.is_air_transport(unit, context=map_ref):
                 if unit.get("unit_id") not in live or unit.get("owner") != country_id:
                     raise ValueError("Unauthorized snapshot aircraft.")
     commands = migrations.tournament_aircraft_commands(player_data, provinces, live)
@@ -1066,7 +994,7 @@ def _validate_move_snapshot(map_ref, country_id, nation_update, provinces, prote
             if isinstance(order, dict) and order.get("type") == "CONVERT":
                 # Legacy snapshots without IDs cannot supply trusted progress.
                 source = original if original is not None else dict(unit, order=None)
-                if (queries.truck_ship_conversion_order(source) is not None
+                if (queries.truck_ship_conversion_order(source, context=map_ref) is not None
                         or order.get("to") in ("Truck", "Ship")):
                     if original is not None and not any(current is original for current in province.get("units", [])):
                         raise ValueError("A converting unit cannot change province.")
@@ -1082,7 +1010,7 @@ def _validate_move_snapshot(map_ref, country_id, nation_update, provinces, prote
                         and stat in original and unit.get(stat) != original[stat]
                         and uid not in protected_unit_ids
                         and not queries.unit_is_air_drop_recovering(original)
-                        and not queries.is_air_unit(unit) and not queries.is_air_transport(unit)):
+                        and not queries.is_air_unit(unit, context=map_ref) and not queries.is_air_transport(unit, context=map_ref)):
                     warnings.append(f"Unit {uid}, {stat}: move has {unit.get(stat)!r}; "
                                     f"host has {original[stat]!r}.")
     return warnings
@@ -1098,7 +1026,6 @@ def load_move_files(map_ref, move_file_paths, keys_dict, *, accept_stat_mismatch
     loaded_countries preserves batch duplicate checks during a host's review callbacks.
     """
     world_state = world_for(map_ref)
-    processed_cids = set()
     processed_move_cids = set(loaded_countries)
     summary = {"loaded": 0, "rejected": 0, "legacy": 0,
                "faction_renames": 0, "appearance_updates": 0,
@@ -1152,6 +1079,29 @@ def load_move_files(map_ref, move_file_paths, keys_dict, *, accept_stat_mismatch
         context_error = _move_context_error(map_ref, player_data)
         if context_error:
             reject(file_path, cid, f"The move {context_error}.")
+            continue
+        if "factions" in player_data:
+            reject(file_path, cid, "Players cannot replace faction records.")
+            continue
+        if "player_intents" in player_data:
+            if cid in processed_move_cids:
+                reject(file_path, cid, "This country already has a loaded move in this import.")
+                continue
+            from map_logic.player_actions import PlayerActions
+            try:
+                commands = migrations.tournament_player_intents(player_data, world_state.map_data)
+                service = PlayerActions(map_ref)
+                validated = service.validate_draft(cid, commands)
+            except ValueError as error:
+                reject(file_path, cid, str(error))
+                continue
+            service.apply_validated_drafts({cid: validated})
+            processed_move_cids.add(cid)
+            if not hasattr(map_ref, "submitted_moves"):
+                map_ref.submitted_moves = set()
+            map_ref.submitted_moves.add(cid)
+            summary["loaded"] += 1
+            summary["loaded_countries"].append(cid)
             continue
         if ("nation_data" in player_data) != ("provinces" in player_data):
             reject(file_path, cid, "The move must contain both country and province records.")
@@ -1217,50 +1167,11 @@ def load_move_files(map_ref, move_file_paths, keys_dict, *, accept_stat_mismatch
         summary["puppet_siphon_updates"] += _apply_puppet_siphon_updates(
             map_ref, cid, player_data)
             
-        # ``unit_snapshot`` was added after the original .gd5move format.
-        # Preserve old files' behavior, but make every newly-created move
-        # replace even an empty army so disbands and volunteer offers survive.
-        apply_unit_snapshot = player_data.get("unit_snapshot") is True or bool(provs)
-        if apply_unit_snapshot:
-            if cid not in processed_cids:
-                for target_prov in world_state.map_data.values():
-                    target_prov["units"] = [u for u in target_prov.get("units", [])
-                                            if u.get("owner") != cid or u.get("unit_id") in live_aircraft]
-                processed_cids.add(cid)
-                
-            # Create a lookup for json_key -> tuple key
-            json_key_map = {v.get("json_key"): k for k, v in world_state.map_data.items()}
-                
-            for prov_key, updates in provs.items():
-                real_key = json_key_map.get(prov_key)
-                if real_key not in world_state.map_data:
-                    continue
-                target_prov = world_state.map_data[real_key]
-                
-                if "building_queue" in updates:
-                    target_prov["building_queue"] = updates["building_queue"]
-                if "unit_queue" in updates:
-                    target_prov["unit_queue"] = updates["unit_queue"]
-                    
-                if "units" in updates:
-                    if "units" not in target_prov:
-                        target_prov["units"] = []
-                    target_prov["units"].extend(u for u in updates["units"] if isinstance(u, dict)
-                        and u.get("owner") == cid and u.get("unit_id") not in live_aircraft
-                        and not queries.is_air_unit(u) and not queries.is_air_transport(u)
-                        and not (isinstance(u.get("order"), dict)
-                                 and isinstance(u["order"].get("type"), str)
-                                 and u["order"].get("type") in queries.AIR_ORDER_TYPES))
+        from map_logic.player_actions import PlayerActions
+        PlayerActions(map_ref).apply_legacy_unit_projection(
+            cid, provs, live_aircraft, aircraft_orders,
+            replace_units=player_data.get("unit_snapshot") is True or bool(provs))
 
-        for unit, order, name in aircraft_orders:
-            uid = unit["unit_id"]
-            current = next(u for p in world_state.map_data.values()
-                           for u in queries.units_with_air_cargo(p.get("units", []))
-                           if u.get("unit_id") == uid)
-            current["order"] = order or {"type": "MOVE", "path": []}
-            if name:
-                current["custom_name"] = name
-            
         # Also mark this country as having submitted a move
         if not hasattr(map_ref, 'submitted_moves'):
             map_ref.submitted_moves = set()

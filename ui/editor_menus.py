@@ -115,7 +115,7 @@ def open_editor_claims(map_screen):
 
 def select_building_brush(map_screen):
     """Opens a selection window for building types and sets mode to BUILDING."""
-    bldg_lib = queries.get_building_library()
+    bldg_lib = queries.get_building_library(map_screen)
     items = ["None"] + list(bldg_lib.keys()) if bldg_lib else ["None"]
     _select_brush(map_screen, "BUILDING", "brush_building", items,
                   "Select Building", "Select Building to Place:")
@@ -151,7 +151,7 @@ def open_editor_economy(map_screen):
         return
 
     active_countries = sorted(queries.get_living_nations(map_screen.map_data))
-    all_econ = queries.calculate_all_economies(map_screen.map_data, map_screen.nation_data)
+    all_econ = queries.calculate_all_economies(map_screen.map_data, map_screen.nation_data, context=map_screen)
 
     def get_stats(cid, res_key):
         d = all_econ[cid]
@@ -312,7 +312,7 @@ def open_map_research_editor(map_screen):
 
 def select_unit_brush(map_screen):
     """Opens a selection window for unit types and sets mode to UNIT."""
-    items = ["None", "Convoy", "----------"] + list(queries.get_unit_library().keys())
+    items = ["None", "Convoy", "----------"] + list(queries.get_unit_library(map_screen).keys())
     _select_brush(map_screen, "UNIT", "brush_unit", items,
                   "Select Unit", "Select Unit to Place:")
 

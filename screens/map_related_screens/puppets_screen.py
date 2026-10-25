@@ -189,7 +189,7 @@ class Puppets_Screen(MapOverlayScreen):
 
                     # Show siphoned amounts below sliders
                     if p_type == c.PUPPET_TYPE_INTEGRATED:
-                        econ_tuple = queries.get_economy_projections(p, self.map_screen.map_data, self.map_screen.nation_data)
+                        econ_tuple = queries.get_economy_projections(p, self.map_screen.map_data, self.map_screen.nation_data, context=self.map_screen)
                         if len(econ_tuple) == 3:
                             _, _, breakdown = econ_tuple
                             siphoned_man = abs(breakdown.get('manpower', {}).get('siphon', 0))

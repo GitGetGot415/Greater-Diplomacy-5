@@ -124,7 +124,7 @@ def randomize_all_provinces(map_screen, settings):
                             n_prov["cores"].append(nation)
 
     # --- Step C: Tech & Building Assignment ---
-    baseline_tech = queries.get_time_appropriate_research(start_year)
+    baseline_tech = queries.get_time_appropriate_research(start_year, context=map_screen)
 
     # Apply base tech to all active nations
     for nation in active_nations:
@@ -245,11 +245,11 @@ def randomize_all_provinces(map_screen, settings):
 
     # --- Step E: Generate Starting Armies & Spread Across Borders ---
     if c.RANDOM_SCENARIO_SPAWN_UNITS:
-        unit_library = queries.get_unit_library()
-        tech_tree = queries.get_tech_tree()
+        unit_library = queries.get_unit_library(map_screen)
+        tech_tree = queries.get_tech_tree(map_screen)
 
         # Calculate starting economy so we can budget the starting armies
-        all_econ = queries.calculate_all_economies(world_state.map_data, world_state.nation_data)
+        all_econ = queries.calculate_all_economies(world_state.map_data, world_state.nation_data, context=map_screen)
 
         # Helper to generate a fresh unit dictionary so pointers aren't shared across provinces
         def generate_unit(nation, u_name):
@@ -274,9 +274,9 @@ def randomize_all_provinces(map_screen, settings):
 
             # 2. Get highest unlocked tech
             res_levels = data.get("research", {})
-            best_inf = queries.get_highest_infantry(data, tech_tree, unit_library)
-            best_tank = queries.get_best_offensive_unit(res_levels, unit_library)
-            best_navy = queries.get_best_naval_unit(res_levels, unit_library)
+            best_inf = queries.get_highest_infantry(data, tech_tree, unit_library, context=map_screen)
+            best_tank = queries.get_best_offensive_unit(res_levels, unit_library, context=map_screen)
+            best_navy = queries.get_best_naval_unit(res_levels, unit_library, context=map_screen)
 
             # 3. Identify physical boundaries for deployment
             border_provs = []

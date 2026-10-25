@@ -19,6 +19,68 @@ import data.constants as c
 # SETTINGS AND DATA LIBRARIES
 # ===========================
 
+
+def tournament_player_intents(payload, map_data=None):
+    """Read optional intents and reject conflicting older choice projections."""
+    commands = payload["player_intents"]
+    if not isinstance(commands, list):
+        raise ValueError("Player intents must be a list.")
+    country = payload.get("nation_data", {})
+    provinces = payload.get("provinces", {})
+    if not isinstance(country, dict) or not isinstance(provinces, dict):
+        raise ValueError("Invalid compatibility projection.")
+    transport = [command for command in commands
+                 if isinstance(command, dict) and command.get("type") == "air_transport"]
+    if "air_transport" in payload and payload["air_transport"] != transport:
+        raise ValueError("Conflicting aircraft cargo choices in the move file.")
+    by_id = {province["id"]: province.get("json_key") for province in (map_data or {}).values()}
+    # Current intents establish state. Older projections are retained for supported readers.
+    # A field present in both representations must describe the same choice.
+    unit_choices = {unit.get("unit_id"): unit for province in provinces.values()
+                    if isinstance(province, dict) for unit in province.get("units", [])
+                    if isinstance(unit, dict) and unit.get("unit_id")}
+    unit_choices.update({unit.get("unit_id"): unit for unit in payload.get("aircraft_orders", [])
+                         if isinstance(unit, dict) and unit.get("unit_id")})
+    for province in provinces.values():
+        if not isinstance(province, dict):
+            raise ValueError("Invalid province compatibility projection.")
+        for unit in province.get("units", []):
+            if not isinstance(unit, dict) or not isinstance(unit.get("type"), str):
+                raise ValueError("Invalid unit compatibility projection.")
+    for command in commands:
+        if not isinstance(command, dict):
+            raise ValueError("Invalid player intent.")
+        kind = command.get("type")
+        if kind == "province_queue":
+            older = provinces.get(by_id.get(command.get("province_id")), {})
+            queue = command.get("queue")
+            if queue in older and older[queue] != command.get("items"):
+                raise ValueError("Conflicting production choices in the move file.")
+        elif kind == "research_queue" and "research_queue" in country:
+            if [entry.get("tech_name") for entry in country["research_queue"]] != command.get("tech_names"):
+                raise ValueError("Conflicting research choices in the move file.")
+        elif kind == "army_roster" and "armies" in country:
+            if country["armies"] != command.get("armies"):
+                raise ValueError("Conflicting army choices in the move file.")
+        elif kind == "unit_order" and command.get("unit_id") in unit_choices:
+            older = unit_choices[command["unit_id"]]
+            for key in ("order", "custom_name", "combat_stance", "lane_target"):
+                if key in older and older[key] != command.get(key):
+                    raise ValueError("Conflicting unit choices in the move file.")
+        elif kind == "country_preferences":
+            for key in ("political_drift", "automation", "conscription_slider",
+                        "mat_to_fuel_slider", "custom_production_units"):
+                if key in country and country[key] != command.get(key):
+                    raise ValueError("Conflicting country choices in the move file.")
+        elif kind == "country_appearance":
+            for key, value in command.get("appearance", {}).items():
+                if key in country and country[key] != value:
+                    raise ValueError("Conflicting country appearance in the move file.")
+        elif kind == "faction_rename" and payload.get("faction_renames"):
+            if command.get("name") != payload["faction_renames"][-1].get("new_name"):
+                raise ValueError("Conflicting faction renames in the move file.")
+    return copy.deepcopy(commands)
+
 SETTING_ALIASES = {
     "gemini_api_key": ("api_key",),
     "ollama_base_url": ("ollama_api_key",),
@@ -283,11 +345,11 @@ def migrate_loaded_units(map_data, nation_data, unit_library, save_version):
         migrate_units_to_current_stats(map_data, unit_library)
         print(f"[SYSTEM] Migrated save from version '{save_version or 'unversioned'}' to '{c.GAME_VERSION}'.")
     # These aircraft corrections also apply to older saves with the current version.
-    migrate_aircraft_stats(map_data)
+    migrate_aircraft_stats(map_data, unit_library)
     normalize_air_orders(map_data)
 
 
-def ensure_unit_ids(map_data):
+def ensure_unit_ids(map_data, nation_data=None):
     """Give every live unit one unique persistent ID and return the IDs added.
 
     Old maps never had unit IDs.  This migration is intentionally tolerant of
@@ -296,8 +358,12 @@ def ensure_unit_ids(map_data):
     """
     from data import queries
     seen, added = set(), []
-    for province in (map_data or {}).values():
-        for unit in queries.units_with_air_cargo(province.get("units", [])) if isinstance(province, dict) else ():
+    groups = [queries.units_with_air_cargo(province.get("units", []))
+              for province in (map_data or {}).values() if isinstance(province, dict)]
+    if nation_data is not None:
+        groups.append(queries.held_volunteer_units(nation_data))
+    for group in groups:
+        for unit in group:
             unit_id = unit.get("unit_id")
             if not isinstance(unit_id, str) or not unit_id or unit_id in seen:
                 unit_id = uuid.uuid4().hex
@@ -467,6 +533,46 @@ def repair_faction_rosters(nation_data, map_data):
             nation_data[leaver]["is_faction_leader"] = False
 
 
+def faction_records(nation_data, records=None):
+    """Read canonical factions or convert repaired country projections once."""
+    import hashlib
+    import copy
+
+    if records is not None:
+        if not isinstance(records, dict):
+            raise ValueError("Faction records must be a mapping.")
+        result = copy.deepcopy(records)
+        assigned = set()
+        for identity, record in result.items():
+            if (not isinstance(identity, str) or not identity or not isinstance(record, dict)
+                    or not isinstance(record.get("name"), str) or not record["name"]
+                    or not isinstance(record.get("members"), list)
+                    or not record["members"] or (record.get("leader") is not None
+                                                and record["leader"] not in record["members"])
+                    or not isinstance(record.get("pre_war_borders", {}), dict)):
+                raise ValueError("Invalid faction record.")
+            for member in record["members"]:
+                if not isinstance(member, str) or member not in nation_data or member in assigned:
+                    raise ValueError("Faction members must be distinct existing countries.")
+                assigned.add(member)
+            record.setdefault("pre_war_borders", {})
+        return result
+    groups = {}
+    for country, data in nation_data.items():
+        if isinstance(data, dict) and data.get("faction"):
+            groups.setdefault(data["faction"], []).append(country)
+    result = {}
+    for name, members in groups.items():
+        leader = next((member for member in members
+                       if nation_data[member].get("is_faction_leader")), None)
+        # Existing leadership repair selects a successor after loading land and units.
+        identity = "faction-" + hashlib.sha256(name.encode("utf-8")).hexdigest()[:24]
+        result[identity] = {"name": name, "leader": leader, "members": members,
+                            "pre_war_borders": copy.deepcopy(
+                                nation_data.get("FACTION_WAR_MAPS", {}).get(name, {}))}
+    return result
+
+
 def migrate_units_to_current_stats(map_data, unit_library):
     """
     Rescales every unit's frozen stats (max_health/attack/defense/speed/naval_unit)
@@ -537,7 +643,7 @@ def migrate_aircraft_names(map_data, nation_data=None):
                 LEGACY_AIRCRAFT_NAMES.get(name, name) for name in country["custom_production_units"]]
 
 
-def migrate_aircraft_stats(map_data):
+def migrate_aircraft_stats(map_data, unit_library=None):
     """Refresh aircraft stats and unpack obsolete aircraft Trucks safely.
 
     Old saves can share this release's version. Always refresh these explicit
@@ -545,13 +651,14 @@ def migrate_aircraft_stats(map_data):
     fields, so the migration is safe to repeat.
     """
     from data import queries
+    library = queries.get_unit_library() if unit_library is None else unit_library
     for province in map_data.values():
         for unit in province.get("units", []):
             transported = queries.is_air_transport(unit)
             if transported and not unit.get("original_type"):
                 # Some legacy transports only stored the name wrapper.
                 unit["original_type"] = unit["type"].split(" (", 1)[1][:-1]
-            stats = queries.get_unit_library().get(unit.get("original_type") if transported else unit.get("type"), {})
+            stats = library.get(unit.get("original_type") if transported else unit.get("type"), {})
             if not stats.get("air_role"):
                 continue
             if transported:
@@ -846,3 +953,100 @@ def migrate_legacy_deal(params, proposer, target, kind=None):
         return agreement
 
     return from_legacy_string(params, proposer, target)
+
+
+def legacy_player_country(map_ref, country_id, nation_update):
+    """Prepare a player's record without changing host state.
+
+    Faction membership is shared state.  The player can queue a leave/invite
+    in their normal diplomacy data, but the authoritative outcome is resolved
+    by the host at turn processing.  A member's old move must therefore not
+    restore the previous faction string after its leader has renamed the bloc.
+    """
+    from data.state_access import world_for
+    from data import queries
+    world_state = world_for(map_ref)
+    if not isinstance(nation_update, dict) or country_id not in world_state.nation_data:
+        raise ValueError("The move does not contain a valid country record.")
+
+    existing = world_state.nation_data[country_id]
+    faction_state = {
+        key: existing[key]
+        for key in ("faction", "is_faction_leader", "faction_pressure", "faction_tenure")
+        if key in existing
+    }
+    merged = dict(nation_update)
+    for key in ("faction", "is_faction_leader", "faction_pressure", "faction_tenure"):
+        if key in faction_state:
+            merged[key] = faction_state[key]
+        else:
+            merged.pop(key, None)
+
+    # Tournament moves carry a full country record, but policy countdowns are
+    # host-owned turn state.  Read only the player's requested lifecycle
+    # statuses and rebuild the timers from the host's existing country record.
+    from map_logic import politics
+    requested_policies = politics.policy_draft_projection({country_id: merged}, country_id)
+    canonical_policies = politics.canonicalize_policy_draft(
+        world_state.nation_data, country_id, requested_policies)
+    if canonical_policies:
+        merged[politics.POLICY_KEY] = canonical_policies
+    else:
+        merged.pop(politics.POLICY_KEY, None)
+
+    from map_logic.diplomacy import diplomacy_lifecycle as lifecycle
+    probe = copy.deepcopy(world_state.nation_data)
+    migrate_pending_responses(probe)
+    pending = merged.get("pending_diplomacy", {})
+    responses = merged.get("diplo_responses", {})
+    draft_lists = merged.get("draft_lists", {})
+    if not all(isinstance(channel, dict) for channel in (pending, responses, draft_lists)):
+        raise ValueError("Invalid diplomatic channels.")
+    if any(not isinstance(record, (dict, str)) for record in pending.values()):
+        raise ValueError("Invalid diplomatic request.")
+    if any(not isinstance(response, dict) for response in responses.values()):
+        raise ValueError("Invalid diplomatic response.")
+    submitted = {country_id: copy.deepcopy(merged)}
+    migrate_pending_responses(submitted)
+    drafts = {}
+    for target, record in submitted[country_id]["pending_diplomacy"].items():
+        if record.get("turns", 0) > 0:
+            host_record = probe[country_id].get("pending_diplomacy", {}).get(target)
+            supplied = pending[target]
+            reference = supplied.get("request_id") if isinstance(supplied, dict) else None
+            if (not isinstance(host_record, dict) or record.get("action") != host_record.get("action")
+                    or (reference is not None and reference != host_record.get("request_id"))):
+                raise ValueError("A travelling request does not belong to this move.")
+        else:
+            from map_logic.diplomacy.action_definitions import availability
+            available = availability(map_ref, country_id, target, record.get("action", ""))
+            if not available.allowed:
+                # Older snapshots discard invalid drafts while retaining unrelated choices.
+                continue
+            drafts[target] = record
+    canonical_responses = {}
+    for target, response in submitted[country_id]["diplo_responses"].items():
+        canonical = dict(response)
+        canonical.pop("legacy_unmatched", None)
+        canonical.update(lifecycle.canonical_response_reference(probe, country_id, target, response))
+        canonical_responses[target] = canonical
+    lifecycle.apply_draft(probe, country_id, drafts, canonical_responses, draft_lists)
+    for channel in ("pending_diplomacy", "diplo_responses", "draft_lists"):
+        merged[channel] = probe[country_id].get(channel, {})
+    ratification = merged.get("pending_ratification")
+    host_ratification = probe[country_id].get("pending_ratification")
+    if isinstance(ratification, dict):
+        reference = ratification.get("treaty_id")
+        if (not isinstance(host_ratification, dict)
+                or (reference is not None and reference != host_ratification.get("treaty_id"))):
+            raise ValueError("That ratification refers to an expired treaty.")
+        merged["pending_ratification"] = copy.deepcopy(host_ratification)
+        if "verdict" in ratification:
+            merged["pending_ratification"]["verdict"] = ratification["verdict"]
+        else:
+            merged["pending_ratification"].pop("verdict", None)
+    elif ratification is not None:
+        raise ValueError("Invalid treaty ratification.")
+    elif isinstance(host_ratification, dict):
+        merged["pending_ratification"] = copy.deepcopy(host_ratification)
+    return migrate_country_record(merged)

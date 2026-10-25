@@ -101,10 +101,10 @@ def assign_puppet(map_data, nation_data, master, puppet, puppet_type=c.PUPPET_TY
     # Transfer leadership if puppet was a leader
     if p_data.get("is_faction_leader", False):
         fac = p_data.get("faction", "")
-        p_data["is_faction_leader"] = False
+        queries.set_faction_leadership(nation_data, puppet, False)
         if fac:
-            m_data["faction"] = fac
-            m_data["is_faction_leader"] = True
+            queries.set_country_faction(nation_data, master, fac)
+            queries.set_faction_leadership(nation_data, master, True)
 
     # Auto-pull puppet into master's faction
     master_fac = m_data.get("faction", "")
@@ -143,8 +143,8 @@ def pull_puppets_into_peace(master, target, nation_data):
         remove_enemy(nation_data, target, p)
         for country, other in ((p, target), (target, p)):
             truces = nation_data.setdefault(country, {}).setdefault("truces", {})
-            if c.TRUCE_TURNS > 0:
-                truces[other] = c.TRUCE_TURNS
+            if queries.world_truce_turns(nation_data) > 0:
+                truces[other] = queries.world_truce_turns(nation_data)
             else:
                 truces.pop(other, None)
     apply_to_puppets_recursively(master, nation_data, _remove_war)
@@ -153,16 +153,16 @@ def pull_puppets_into_faction(master, fac, map_data, nation_data):
     from map_logic.diplomacy.faction_actions import settle_with_faction
 
     def _set_fac(p):
-        nation_data[p]["faction"] = fac
-        nation_data[p]["is_faction_leader"] = False
+        queries.set_country_faction(nation_data, p, fac)
+        queries.set_faction_leadership(nation_data, p, False)
         settle_with_faction(nation_data, p, fac)
 
     apply_to_puppets_recursively(master, nation_data, _set_fac)
 
 def pull_puppets_out_of_faction(master, nation_data):
     def _clear_fac(p):
-        nation_data[p]["faction"] = ""
-        nation_data[p]["is_faction_leader"] = False
+        queries.set_country_faction(nation_data, p, "")
+        queries.set_faction_leadership(nation_data, p, False)
     apply_to_puppets_recursively(master, nation_data, _clear_fac)
 
 def finalize_annexation(map_data, nation_data, master, puppet, map_screen, *, force=False):
@@ -313,6 +313,7 @@ def finalize_spectator_country_removal(map_screen, country, annexer=None):
     _clear_country_relationships(nation_data, country)
     if country in nation_data:
         data = nation_data[country]
+        queries.set_country_faction(nation_data, country, "")
         data.update(master="", puppet_type="", puppets=[], faction="", is_faction_leader=False,
                     at_war_with=[], pending_diplomacy={}, diplo_responses={},
                     volunteer_missions={}, scripted_events=[], armies=[], claim_queue=[],

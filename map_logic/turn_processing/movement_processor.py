@@ -47,7 +47,7 @@ def process_dead_nations(map_screen):
 def process_disbands(map_screen):
     """Processes the 1-turn timer for disbanding units and refunds their cost."""
     world_state = world_for(map_screen)
-    unit_library = queries.get_unit_library()
+    unit_library = queries.get_unit_library(map_screen)
 
     for province in world_state.map_data.values():
         units_to_keep = []
@@ -76,7 +76,7 @@ def process_disbands(map_screen):
 def process_upgrades(map_screen):
     """Processes the 1-turn timer for upgrading units to a new type."""
     world_state = world_for(map_screen)
-    unit_library = queries.get_unit_library()
+    unit_library = queries.get_unit_library(map_screen)
 
     for province in world_state.map_data.values():
         if not province.get("units"):
@@ -92,14 +92,14 @@ def process_upgrades(map_screen):
         for unit in province["units"]:
             order = unit.get("order")
             if isinstance(order, dict) and order.get("type") == "UPGRADE":
-                if queries.is_air_unit(unit):
+                if queries.is_air_unit(unit, context=map_screen):
                     # Aircraft upgrades must retain their family at resolution.
                     try:
                         queries.canonical_unit_order(map_screen, unit["owner"], province, unit, order)
                     except ValueError:
                         unit["order"] = {"type": "MOVE", "path": []}
                         continue
-                if not has_factory or queries.get_unit_tier(unit.get("type", "")) <= 0:
+                if not has_factory or queries.get_unit_tier(unit.get("type", ""), context=map_screen) <= 0:
                     unit["order"] = {"type": "MOVE", "path": []}
                     continue
 
@@ -149,7 +149,7 @@ def process_conversions(map_screen):
         for unit in province.get("units", []):
             order = unit.get("order")
             if isinstance(order, dict) and order.get("type") == "CONVERT":
-                if queries.is_air_unit(unit) or queries.is_air_transport(unit):
+                if queries.is_air_unit(unit, context=map_screen) or queries.is_air_transport(unit, context=map_screen):
                     try:
                         queries.canonical_unit_order(map_screen, unit["owner"], province, unit, order)
                     except ValueError:
@@ -161,9 +161,9 @@ def process_conversions(map_screen):
                     target = order.get("to")
 
                     if target in ["Convoy", "Truck"]:
-                        queries.load_transport(unit, target)
+                        queries.load_transport(unit, target, context=map_screen)
                     else:
-                        queries.revert_transport(unit)
+                        queries.revert_transport(unit, context=map_screen)
 
                     # Reset back to a blank move order so they can be selected again
                     unit["order"] = {"type": "MOVE", "path": []}
@@ -260,11 +260,11 @@ def process_movement(map_screen):
                 continue
 
             order = unit.get("order")
-            if queries.is_air_unit(unit) and not queries.air_unit_can_move_on_ground(unit):
+            if queries.is_air_unit(unit, context=map_screen) and not queries.air_unit_can_move_on_ground(unit, context=map_screen):
                 units_to_keep.append(unit)
                 continue
             if order and order.get("type") == "MOVE" and order.get("path"):
-                if queries.is_air_unit(unit) or queries.is_air_transport(unit):
+                if queries.is_air_unit(unit, context=map_screen) or queries.is_air_transport(unit, context=map_screen):
                     try:
                         queries.canonical_unit_order(map_screen, unit["owner"], province, unit, order)
                     except ValueError:
@@ -282,7 +282,7 @@ def process_movement(map_screen):
     if not moving_units: return
 
     if not hasattr(map_screen, 'cached_unit_library'):
-        map_screen.cached_unit_library = queries.get_unit_library()
+        map_screen.cached_unit_library = queries.get_unit_library(map_screen)
 
     # --- NEW HELPER FOR TACTICAL SPEED ---
     def get_eff_speed(u):
@@ -307,7 +307,7 @@ def process_movement(map_screen):
             target_id = order["path"][0]
             target_prov = world_state.id_to_province.get(target_id)
             if not target_prov: continue
-            if ((queries.is_air_unit(unit) or queries.is_air_transport(unit))
+            if ((queries.is_air_unit(unit, context=map_screen) or queries.is_air_transport(unit, context=map_screen))
                     and not queries.is_water_province(target_prov)
                     and not queries.air_unit_can_land(unit, target_prov, world_state.nation_data)):
                 order["path"] = []
@@ -394,8 +394,8 @@ def process_movement(map_screen):
 
                 # --- INSTANT CONVERT FOR CONVOYS UPON LANDING ---
                 if is_convoy and not dest_is_water:
-                    queries.revert_transport(unit)
-                    if queries.is_air_unit(unit):
+                    queries.revert_transport(unit, context=map_screen)
+                    if queries.is_air_unit(unit, context=map_screen):
                         # Aircraft unload at the landing boundary, then must use
                         # flight orders (or a new ground route for missiles).
                         order["path"] = []
@@ -405,7 +405,7 @@ def process_movement(map_screen):
                 if not defenders:
                     if dest_owner == "Unclaimed" or dest_owner in player_data.get("at_war_with", []):
                         # Prevent capturing water tiles via movement
-                        if not queries.is_water_province(target_prov) and not queries.is_air_unit(unit):
+                        if not queries.is_water_province(target_prov) and not queries.is_air_unit(unit, context=map_screen):
                             capturer = combat_owner
                             # faction core transfer stuff
                             true_owner = queries.get_faction_core_transfer_target(capturer, target_prov, world_state.nation_data)
@@ -497,7 +497,7 @@ def is_land_unit(unit, unit_library=None):
     """Whether this unit walks. Naval units follow separate coastal rules."""
     library = unit_library if unit_library is not None else queries.get_unit_library()
     stats = library.get(unit.get("type", ""), {})
-    return not (queries.is_air_unit(unit) or unit.get("naval_unit") or stats.get("naval_unit", False))
+    return not (stats.get("air_role") or unit.get("naval_unit") or stats.get("naval_unit", False))
 
 
 def process_beached_units(map_screen):
@@ -517,7 +517,7 @@ def process_beached_units(map_screen):
     damaged, and closes off any other route to the same state.
     """
     world_state = world_for(map_screen)
-    unit_library = queries.get_unit_library()
+    unit_library = queries.get_unit_library(map_screen)
 
     for province in world_state.map_data.values():
         if not queries.is_water_province(province):
@@ -530,9 +530,9 @@ def process_beached_units(map_screen):
             # A Truck is a land transport, so it is caught by the same net.
             # Unload it first rather than wrapping one carrier inside another.
             if unit.get("type", "").startswith("Truck ("):
-                queries.revert_transport(unit)
+                queries.revert_transport(unit, context=map_screen)
 
-            queries.load_transport(unit, "Convoy")
+            queries.load_transport(unit, "Convoy", context=map_screen)
 
 
 def process_stranded_units(map_screen):
@@ -545,7 +545,7 @@ def process_stranded_units(map_screen):
     mirroring EU4-style "exiled army" handling.
     """
     world_state = world_for(map_screen)
-    unit_library = queries.get_unit_library()
+    unit_library = queries.get_unit_library(map_screen)
 
     for province in list(world_state.map_data.values()):
         owner = province.get("owner")

@@ -40,6 +40,7 @@ from types import SimpleNamespace
 
 import data.constants as c
 from data import queries
+from data.state_access import world_for
 
 RESOURCES = ("manpower", "materials", "fuel")
 
@@ -97,7 +98,7 @@ def air_threat_profile(world, nation, unit_library):
     ground_attack, air_attack, cover = 0.0, 0.0, 0.0
     defenses, counts = [], []
     for province in world.map_data.values():
-        if c.USE_FOG_OF_WAR and visible is not None and province["id"] not in visible:
+        if queries.get_scenario_flag("fog_of_war", c.DEFAULT_FOG_OF_WAR, getattr(world, "scenario_settings", {})) and visible is not None and province["id"] not in visible:
             continue
         aircraft = []
         for unit in queries.filter_visible_units(province.get("units", []), nation,
@@ -249,12 +250,21 @@ def buildable_units(research, unit_library):
     # large integers previously wiped this cache every call). Its identity
     # also changes when library names or research rules are edited in place.
     index = queries.get_unit_research_index(unit_library)
-    if _BUILDABLE_CACHE_LIBRARY is not index:
-        _BUILDABLE_CACHE.clear()
-        _BUILDABLE_CACHE_LIBRARY = index
+    from data.runtime_rules import ActiveLibrary
+    if isinstance(unit_library, ActiveLibrary):
+        owner = unit_library.runtime_rules.indexes.setdefault("ai_buildable", {})
+        if owner.get("index") is not index:
+            owner.clear()
+            owner["index"] = index
+        cache = owner.setdefault("choices", {})
+    else:
+        if _BUILDABLE_CACHE_LIBRARY is not index:
+            _BUILDABLE_CACHE.clear()
+            _BUILDABLE_CACHE_LIBRARY = index
+        cache = _BUILDABLE_CACHE
 
     key = tuple(sorted((tech, lvl) for tech, lvl in research.items() if lvl))
-    cached = _BUILDABLE_CACHE.get(key)
+    cached = cache.get(key)
     if cached is not None:
         return cached
 
@@ -263,12 +273,12 @@ def buildable_units(research, unit_library):
         if queries.is_unit_obsolete(base, research):
             continue
         for name, _tier, requirement in tiers:
-            if queries.unit_requirement_is_met(requirement, research):
+            if queries.unit_requirement_is_met(requirement, research, context=unit_library):
                 best.append(name)
                 break
 
     result = sorted(best)
-    _BUILDABLE_CACHE[key] = result
+    cache[key] = result
     return result
 
 

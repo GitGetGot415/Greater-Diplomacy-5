@@ -4,6 +4,7 @@ import heapq
 from types import SimpleNamespace
 import data.constants as c
 from data import queries
+from map_logic import unit_actions
 from map_logic.ai import ai_unit_eval, ai_world
 from map_logic.turn_processing import combat_rules
 
@@ -14,7 +15,7 @@ def legal_air_candidates(map_screen, unit, base):
     candidates = []
     if not queries.air_unit_can_launch(map_screen, unit, base):
         return candidates
-    if queries.air_unit_can_patrol(unit):
+    if queries.air_unit_can_patrol(unit, context=map_screen):
         candidates.append(queries.canonical_air_order(map_screen, unit, base,
             {"type": "AIR_PATROL", "priority": queries.AIR_DEFAULT_PRIORITY}))
     for kind in queries.AIR_TARGET_MISSION_TYPES.values():
@@ -41,11 +42,11 @@ def _air_base_threats(map_screen, country, visible):
     world_state = world_for(map_screen)
     threatened = set()
     for province in world_state.map_data.values():
-        if c.USE_FOG_OF_WAR and visible is not None and province["id"] not in visible:
+        if queries.get_scenario_flag("fog_of_war", c.DEFAULT_FOG_OF_WAR, map_screen.scenario_settings) and visible is not None and province["id"] not in visible:
             continue
         for unit in queries.filter_visible_units(province.get("units", []), country,
                                                  province, world_state.nation_data):
-            if (unit.get("health", 0) <= 0 or queries.is_air_unit(unit)
+            if (unit.get("health", 0) <= 0 or queries.is_air_unit(unit, context=map_screen)
                     or not queries.are_at_war(country, queries.get_unit_combat_owner(unit), world_state.nation_data)):
                 continue
             reached = {province["id"]}
@@ -57,7 +58,7 @@ def _air_base_threats(map_screen, country, visible):
                         if target_id in reached:
                             continue
                         target = world_state.id_to_province.get(target_id)
-                        if target and queries.can_unit_move_step(unit, current, target, world_state.nation_data):
+                        if target and queries.can_unit_move_step(unit, current, target, world_state.nation_data, context=map_screen):
                             reached.add(target_id)
                             next_frontier.append(target)
                 frontier = next_frontier
@@ -88,13 +89,13 @@ def _air_exchange_value(map_screen, wings, opponents, *, air_combat=False, targe
     def losses(units):
         return sum(min(unit.get("health", 0), damage.get(id(unit), 0))
                    / max(1, unit.get("max_health", c.DEFAULT_UNIT_HP))
-                   * ai_unit_eval.unit_pain(queries.air_unit_stats(unit), prices) for unit in units)
+                   * ai_unit_eval.unit_pain(queries.air_unit_stats(unit, context=map_screen), prices) for unit in units)
     value = losses(opponents) - losses(wings)
     if target:
-        hits = sum(queries.air_unit_can_damage_forts(unit) and queries.are_at_war(
+        hits = sum(queries.air_unit_can_damage_forts(unit, context=map_screen) and queries.are_at_war(
             queries.get_unit_combat_owner(unit), target.get("owner"), world_state.nation_data) for unit in wings)
         level = queries.get_fort_level(target)
-        library = queries.get_building_library()
+        library = queries.get_building_library(map_screen)
         for lost_level in range(level, max(0, level - hits), -1):
             stats = queries.get_building_cost(f"Fort Lvl {lost_level}", target.get("owner"),
                                              world_state.map_data, library)
@@ -111,11 +112,11 @@ def _air_patrol_threats(map_screen, country, visible):
                      for unit in province.get("units", []))}
     threats = {}
     for base in world_state.map_data.values():
-        if c.USE_FOG_OF_WAR and visible is not None and base["id"] not in visible:
+        if queries.get_scenario_flag("fog_of_war", c.DEFAULT_FOG_OF_WAR, map_screen.scenario_settings) and visible is not None and base["id"] not in visible:
             continue
         for unit in queries.filter_visible_units(base.get("units", []), country, base, world_state.nation_data):
-            if (unit.get("health", 0) <= 0 or not queries.is_air_unit(unit)
-                    or queries.air_unit_stats(unit).get("air_interception_immune")
+            if (unit.get("health", 0) <= 0 or not queries.is_air_unit(unit, context=map_screen)
+                    or queries.air_unit_stats(unit, context=map_screen).get("air_interception_immune")
                     or not queries.are_at_war(country, queries.get_unit_combat_owner(unit), world_state.nation_data)
                     or not queries.air_unit_can_launch(map_screen, unit, base)):
                 continue
@@ -129,7 +130,7 @@ def _assign_air_orders(map_screen, country, units_info):
     world_state = world_for(map_screen)
     all_units_info = units_info
     units_info = [(unit, base) for unit, base in units_info
-                  if queries.is_air_unit(unit) or queries.is_air_transport(unit)]
+                  if queries.is_air_unit(unit, context=map_screen) or queries.is_air_transport(unit, context=map_screen)]
     if not units_info:
         return
     view = SimpleNamespace(player_country=country, map_data=world_state.map_data,
@@ -137,12 +138,12 @@ def _assign_air_orders(map_screen, country, units_info):
         tactical_mode=False, player_unit=None)
     visible, _partial = queries.get_visible_provinces(view)
     enemies = [province for province in world_state.map_data.values()
-               if (not c.USE_FOG_OF_WAR or visible is None or province["id"] in visible)
+               if (not queries.get_scenario_flag("fog_of_war", c.DEFAULT_FOG_OF_WAR, map_screen.scenario_settings) or visible is None or province["id"] in visible)
                and queries.air_target_is_hostile({"owner": country}, province,
                    world_state.nation_data, visible_only=True)]
     threatened = _air_base_threats(map_screen, country, visible)
-    unit_library = queries.get_unit_library()
-    tech_tree = queries.get_tech_tree()
+    unit_library = queries.get_unit_library(map_screen)
+    tech_tree = queries.get_tech_tree(map_screen)
     research = world_state.nation_data[country].get("research", {})
     patrol_threats = _air_patrol_threats(map_screen, country, visible)
     patrol_cover = {}
@@ -157,7 +158,7 @@ def _assign_air_orders(map_screen, country, units_info):
             for target_id in queries.get_air_targets(map_screen, unit, base, "AIR_PATROL"):
                 patrol_cover.setdefault(target_id, []).append(unit)
         elif order.get("type") == "AIR_ATTACK":
-            key = (order["target_id"], bool(queries.air_unit_stats(unit).get("air_interception_immune")))
+            key = (order["target_id"], bool(queries.air_unit_stats(unit, context=map_screen).get("air_interception_immune")))
             strike_cover.setdefault(key, []).append(unit)
 
     enemy_ids = {province["id"] for province in enemies}
@@ -189,15 +190,15 @@ def _assign_air_orders(map_screen, country, units_info):
     # Plan stronger interceptors first. Unit names do not define the preference.
     units_info.sort(key=lambda item: item[0].get("attack", 0)
                     * combat_rules.effective_damage_multiplier(item[0], world_state.nation_data)
-                    * (queries.unit_target_damage_multiplier(item[0], item[0], air_to_air=True) - 1),
+                    * (queries.unit_target_damage_multiplier(item[0], item[0], air_to_air=True, context=map_screen) - 1),
                     reverse=True)
     for unit, base in units_info:
         if queries.is_tactical_player_unit(map_screen, unit):
             continue
-        if queries.is_air_transport(unit):
+        if queries.is_air_transport(unit, context=map_screen):
             if not queries.is_nation_in_combat_here(country, base, world_state.nation_data):
                 original = {"type": unit["original_type"]}
-                radius = queries.air_order_radius(original, "AIR_ATTACK")
+                radius = queries.air_order_radius(original, "AIR_ATTACK", context=map_screen)
                 target = max(enemies, key=lambda p: (value(p), -p["id"])) if enemies else None
                 path = None
                 if target and queries.air_distance_squared(map_screen, base, target["id"]) > radius * radius:
@@ -206,31 +207,31 @@ def _assign_air_orders(map_screen, country, units_info):
                         and queries.air_distance_squared(map_screen, p, target["id"]) <= radius * radius]
                     for destination in sorted(destinations, key=lambda p: p["id"]):
                         path = queries.find_unit_move_path(unit, base, destination["id"],
-                            world_state.id_to_province, world_state.nation_data)
+                            world_state.id_to_province, world_state.nation_data, context=map_screen)
                         if path:
                             break
-                unit["order"] = ({"type": "MOVE", "path": path} if path else
+                unit_actions.apply_action(map_screen, country, base, unit, {"type": "MOVE", "path": path} if path else
                     {"type": "MOVE", "path": []} if queries.is_water_province(base) else
-                    queries.air_conversion_order(unit))
+                    queries.air_conversion_order(unit, context=map_screen), authority="ai")
             continue
-        if (not queries.is_air_unit(unit) or queries.is_water_province(base)
+        if (not queries.is_air_unit(unit, context=map_screen) or queries.is_water_province(base)
                 or queries.is_nation_in_combat_here(country, base, world_state.nation_data)):
             continue
         candidates = legal_air_candidates(map_screen, unit, base)
         safe_repositions = [order for order in candidates if order["type"] == "AIR_REPOSITION"
                             and order["target_id"] != base["id"] and order["target_id"] not in threatened]
         if base["id"] in threatened and safe_repositions:
-            unit["order"] = min(safe_repositions, key=lambda order: (
-                queries.air_distance_squared(map_screen, base, order["target_id"]), order["target_id"]))
+            unit_actions.apply_action(map_screen, country, base, unit, min(safe_repositions, key=lambda order: (
+                queries.air_distance_squared(map_screen, base, order["target_id"]), order["target_id"])), authority="ai")
             continue
-        if queries.air_unit_can_transport(unit):
+        if queries.air_unit_can_transport(unit, context=map_screen):
             _assign_air_transport(map_screen, country, unit, base, safe_repositions, enemies, all_units_info)
             continue
         if base["id"] not in threatened and queries.has_industry(base):
             target = queries.get_upgrade_target(unit["type"], research, unit_library, tech_tree)
             if target:
-                unit["order"] = queries.canonical_unit_order(map_screen, country, base, unit,
-                    {"type": "UPGRADE", "target_type": target})
+                unit_actions.apply_action(map_screen, country, base, unit, queries.canonical_unit_order(map_screen, country, base, unit,
+                    {"type": "UPGRADE", "target_type": target}), authority="ai")
                 continue
         attacks = [order for order in candidates if order["type"] == "AIR_ATTACK"
                    and order["target_id"] in enemy_ids]
@@ -245,7 +246,7 @@ def _assign_air_orders(map_screen, country, units_info):
 
             def strike_value(order):
                 target = world_state.id_to_province[order["target_id"]]
-                key = (target["id"], bool(queries.air_unit_stats(unit).get("air_interception_immune")))
+                key = (target["id"], bool(queries.air_unit_stats(unit, context=map_screen).get("air_interception_immune")))
                 committed = strike_cover.get(key, [])
                 return (committed_strike_value(committed + [unit], target)
                         - committed_strike_value(committed, target))
@@ -254,42 +255,42 @@ def _assign_air_orders(map_screen, country, units_info):
                     value(world_state.id_to_province[order["target_id"]]), -order["target_id"]))
             attack_value = strike_value(attack_order) if attack_order else 0.0
             if defense_value > max(0.0, attack_value):
-                unit["order"] = patrol
+                unit_actions.apply_action(map_screen, country, base, unit, patrol, authority="ai")
                 for target_id in coverage:
                     patrol_cover.setdefault(target_id, []).append(unit)
                 continue
         if attack_order:
-            unit["order"] = attack_order
-            key = (attack_order["target_id"], bool(queries.air_unit_stats(unit).get("air_interception_immune")))
+            unit_actions.apply_action(map_screen, country, base, unit, attack_order, authority="ai")
+            key = (attack_order["target_id"], bool(queries.air_unit_stats(unit, context=map_screen).get("air_interception_immune")))
             strike_cover.setdefault(key, []).append(unit)
             continue
         # Rebase on friendly land nearer a known enemy; no hidden target stacks
         # influence the choice. One-use weapons travel at their land speed.
         if enemies:
             target = max(enemies, key=lambda p: (value(p), -p["id"]))
-            radius = queries.air_order_radius(unit, "AIR_ATTACK")
+            radius = queries.air_order_radius(unit, "AIR_ATTACK", context=map_screen)
             friendly = [p for p in world_state.map_data.values()
                         if not queries.is_water_province(p) and p.get("owner") == country
                         and p["id"] != base["id"] and p["id"] not in threatened]
-            if queries.air_unit_stats(unit).get("air_consumable"):
+            if queries.air_unit_stats(unit, context=map_screen).get("air_consumable"):
                 destinations = [p for p in friendly if queries.air_distance_squared(
                     map_screen, p, target["id"]) <= radius * radius]
                 relocation = None
                 for destination in sorted(destinations, key=lambda p: p["id"]):
                     path = queries.find_unit_move_path(unit, base,
-                        destination["id"], world_state.id_to_province, world_state.nation_data)
+                        destination["id"], world_state.id_to_province, world_state.nation_data, context=map_screen)
                     if path:
                         relocation = {"type": "MOVE", "path": path}
                         break
                 if relocation is None and base.get("is_coastal", False):
                     transport = dict(unit)
-                    queries.load_transport(transport, "Convoy")
+                    queries.load_transport(transport, "Convoy", context=map_screen)
                     if any(queries.find_unit_move_path(transport, base, destination["id"],
-                            world_state.id_to_province, world_state.nation_data) for destination in destinations):
+                            world_state.id_to_province, world_state.nation_data, context=map_screen) for destination in destinations):
                         relocation = queries.canonical_unit_order(map_screen, country, base, unit,
-                                                                 queries.air_conversion_order(unit))
+                                                                 queries.air_conversion_order(unit, context=map_screen))
                 if relocation:
-                    unit["order"] = relocation
+                    unit_actions.apply_action(map_screen, country, base, unit, relocation, authority="ai")
             else:
                 reachable = {order["target_id"]: order for order in candidates
                              if order["type"] == "AIR_REPOSITION"}
@@ -299,12 +300,12 @@ def _assign_air_orders(map_screen, country, units_info):
                         queries.air_distance_squared(map_screen, p, target["id"]), p["id"]))
                     if queries.air_distance_squared(map_screen, destination, target["id"]) < queries.air_distance_squared(
                             map_screen, base, target["id"]):
-                        unit["order"] = reachable[destination["id"]]
+                        unit_actions.apply_action(map_screen, country, base, unit, reachable[destination["id"]], authority="ai")
                         continue
         if (unit.get("order") or {}).get("type") == "CONVERT":
             continue
         if patrol:
-            unit["order"] = patrol
+            unit_actions.apply_action(map_screen, country, base, unit, patrol, authority="ai")
             for target_id in queries.get_air_targets(map_screen, unit, base, "AIR_PATROL"):
                 patrol_cover.setdefault(target_id, []).append(unit)
 
@@ -313,10 +314,10 @@ def _assign_air_transport(map_screen, country, plane, base, repositions, enemies
     world_state = world_for(map_screen)
     cargo = plane.get("air_cargo", [])
     selected = cargo or sorted((unit for unit in base.get("units", [])
-        if queries.air_cargo_is_eligible(plane, unit)
+        if queries.air_cargo_is_eligible(plane, unit, context=map_screen)
         and not queries.is_tactical_player_unit(map_screen, unit)
         and not queries.unit_has_active_order(unit)),
-        key=queries.calculate_unit_strength, reverse=True)[:queries.air_transport_capacity(plane)]
+        key=queries.calculate_unit_strength, reverse=True)[:queries.air_transport_capacity(plane, context=map_screen)]
     # Evaluate a possible load without changing state when no flight is useful.
     loaded = dict(plane, air_cargo=selected)
     dropped = [dict(unit) for unit in selected]
@@ -336,8 +337,8 @@ def _assign_air_transport(map_screen, country, plane, base, repositions, enemies
         if not cargo:
             queries.ensure_unit_ids(world_state.map_data)
             queries.set_air_cargo(map_screen, country, plane, base, [unit["unit_id"] for unit in selected])
-        plane["order"] = min(drops, key=lambda order: (
-            queries.air_distance_squared(map_screen, base, order["target_id"]), order["target_id"]))
+        unit_actions.apply_action(map_screen, country, base, plane, min(drops, key=lambda order: (
+            queries.air_distance_squared(map_screen, base, order["target_id"]), order["target_id"])), authority="ai")
         return
     target = min(enemies, key=lambda p: (queries.air_distance_squared(map_screen, base, p["id"]), p["id"])) if enemies else None
     destination = min(repositions, key=lambda order: (
@@ -358,7 +359,7 @@ def _assign_air_transport(map_screen, country, plane, base, repositions, enemies
             return
         queries.ensure_unit_ids(world_state.map_data)
         queries.set_air_cargo(map_screen, country, plane, base, [unit["unit_id"] for unit in selected])
-    plane["order"] = destination
+    unit_actions.apply_action(map_screen, country, base, plane, destination, authority="ai")
 
 
 def build_neighbor_index(id_to_province):
@@ -621,7 +622,8 @@ def _reset_orders_and_collect_units(map_screen, ai_nations):
                 continue  # Already committed; leave it be and do not re-task it.
 
             # Clear old path so the AI can rethink its strategy every turn
-            unit["order"] = {"type": "MOVE", "path": []}
+            unit_actions.apply_action(map_screen, ai_name, prov, unit,
+                                      {"type": "MOVE", "path": []}, authority="ai")
             nation_units[ai_name].append((unit, prov))
 
     return nation_units, nation_provs
@@ -661,7 +663,7 @@ def _compute_unsafe_waters(map_screen, ai_name):
         visible_units = queries.filter_visible_units(p.get("units", []), ai_name, p, world_state.nation_data)
         enemy_str = sum(u.get("attack", c.DEFAULT_UNIT_ATK) + u.get("defense", 0) for u in visible_units
                         if queries.are_at_war(ai_name, u.get("owner"), world_state.nation_data)
-                        and queries.is_naval_unit(u.get("type", "")))
+                        and queries.is_naval_unit(u.get("type", ""), context=map_screen))
         if enemy_str > 0:
             unsafe_waters[p["id"]] = enemy_str
     return unsafe_waters
@@ -1105,7 +1107,7 @@ def _try_bombard(map_screen, ai_name, unit, prov):
     The order is reissued every turn, because process_bombardments clears it
     after firing and the best target moves.
     """
-    bomb_range = queries.get_bombardment_range(unit.get("type", ""))
+    bomb_range = queries.get_bombardment_range(unit.get("type", ""), context=map_screen)
     if bomb_range <= 0:
         return False
 
@@ -1113,7 +1115,7 @@ def _try_bombard(map_screen, ai_name, unit, prov):
     if target_id is None:
         return False
 
-    unit["order"] = {"type": "BOMBARD", "target_id": target_id}
+    unit_actions.apply_action(map_screen, ai_name, prov, unit, {"type": "BOMBARD", "target_id": target_id}, authority="ai")
     return True
 
 
@@ -1159,10 +1161,12 @@ def _assign_unit_orders(map_screen, ai_name, units_info, ctx, allowed_prov_ids, 
         return _tile_pressure(target_assignments, target_stacks, tile, target_capacity)
 
     for unit, prov in units_info:
+        if not any(current is unit for current in prov.get("units", [])):
+            continue
         attacker_signature = combat_rules.single_attacker_signature(unit)
         u_type = unit.get("type", "")
         is_convoy = u_type.startswith("Convoy")
-        is_naval_combatant = queries.is_naval_unit(u_type) and not is_convoy
+        is_naval_combatant = queries.is_naval_unit(u_type, context=map_screen) and not is_convoy
 
         curr_id = prov["id"]
 
@@ -1414,7 +1418,7 @@ def _assign_unit_orders(map_screen, ai_name, units_info, ctx, allowed_prov_ids, 
 
             if next_is_water and not is_convoy and not is_naval_combatant:
                 # Cannot step onto water, must explicitly convert first
-                unit["order"] = {"type": "CONVERT", "turns_left": 1, "to": "Convoy"}
+                unit_actions.apply_action(map_screen, ai_name, prov, unit, {"type": "CONVERT", "turns_left": 1, "to": "Convoy"}, authority="ai")
             else:
                 # Truncate the AI's path to match its actual movement speed
                 speed = unit.get("speed", 1)
@@ -1427,7 +1431,8 @@ def _assign_unit_orders(map_screen, ai_name, units_info, ctx, allowed_prov_ids, 
                         break
                     final_path.append(step_id)
 
-                unit["order"]["path"] = final_path
+                unit_actions.apply_action(map_screen, ai_name, prov, unit,
+                    {"type": "MOVE", "path": final_path}, authority="ai")
 
             # Tell the system this unit is taking this target, reducing its
             # priority -- and filling a slot on it, so the next unit to look
@@ -1536,13 +1541,11 @@ def _assign_maintenance_orders(map_screen, ai_name, units_info, ctx,
     moment it stops making sense.
     """
     world_state = world_for(map_screen)
-    unit_library = queries.get_unit_library()
+    unit_library = queries.get_unit_library(map_screen)
     path_cache = {}
-    tech_tree = queries.get_tech_tree()
+    tech_tree = queries.get_tech_tree(map_screen)
     nation = world_state.nation_data.get(ai_name, {})
     research = nation.get("research", {})
-    free_repairs = queries.get_scenario_flag(
-        "free_repairs", c.DEFAULT_FREE_REPAIRS, world_state.scenario_settings)
 
     war_borders = ctx["war_borders"]
     active_battles = ctx["active_battles"]
@@ -1553,24 +1556,13 @@ def _assign_maintenance_orders(map_screen, ai_name, units_info, ctx,
     def health_fraction(unit):
         return unit.get("health", 0) / max(1.0, unit.get("max_health", 1))
 
-    def repair_costs(unit):
-        """What the orders panel would charge for this repair, or all zeroes."""
-        if free_repairs:
-            return {"cost_materials": 0, "cost_manpower": 0, "cost_fuel": 0}
-        m_hp = unit.get("max_health", 1)
-        missing_pct = (m_hp - unit.get("health", 0)) / max(1, m_hp)
-        stats = unit_library.get(unit.get("original_type", unit.get("type", "")), {})
-        return {res: int(stats.get(res, 0) * missing_pct)
-                for res in ("cost_materials", "cost_manpower", "cost_fuel")}
-
     def start_repair(unit):
-        """Issues REPAIR if the nation can pay for it. True if it did."""
-        costs = repair_costs(unit)
+        costs = unit_actions.repair_costs(map_screen, unit, unit_library)
         if not queries.can_afford(nation, costs):
             return False
-        queries.deduct_resources(nation, costs)
+        unit_actions.apply_action(map_screen, ai_name, prov, unit,
+                                  {"type": "REPAIR"}, authority="ai")
         unit.pop("repair_trip", None)
-        unit["order"] = {"type": "REPAIR", "turns_left": 1, "refund": costs}
         return True
 
     def route(unit, curr_id, targets):
@@ -1605,7 +1597,7 @@ def _assign_maintenance_orders(map_screen, ai_name, units_info, ctx,
         speed = unit.get("speed", 1)
         u_type = unit.get("type", "")
         is_convoy = u_type.startswith("Convoy")
-        is_naval_combatant = queries.is_naval_unit(u_type) and not is_convoy
+        is_naval_combatant = queries.is_naval_unit(u_type, context=map_screen) and not is_convoy
         marches = not is_convoy and not is_naval_combatant
 
         # --- a trip already under way ---------------------------------------
@@ -1623,7 +1615,8 @@ def _assign_maintenance_orders(map_screen, ai_name, units_info, ctx,
             else:
                 path = route(unit, curr_id, {trip})
                 if path:
-                    unit["order"]["path"] = path[:speed]
+                    unit_actions.apply_action(map_screen, ai_name, prov, unit,
+                        {"type": "MOVE", "path": path[:speed]}, authority="ai")
                     continue
                 # The way home is cut. Fight where it stands.
                 unit.pop("repair_trip", None)
@@ -1648,7 +1641,8 @@ def _assign_maintenance_orders(map_screen, ai_name, units_info, ctx,
             path = route(unit, curr_id, march_targets)
             if path:
                 unit["repair_trip"] = path[-1]
-                unit["order"]["path"] = path[:speed]
+                unit_actions.apply_action(map_screen, ai_name, prov, unit,
+                    {"type": "MOVE", "path": path[:speed]}, authority="ai")
                 trips += 1
                 continue
 
@@ -1679,8 +1673,8 @@ def _assign_maintenance_orders(map_screen, ai_name, units_info, ctx,
         if is_idle:
             target = queries.get_upgrade_target(u_type, research, unit_library, tech_tree)
             if target:
-                unit["order"] = {"type": "UPGRADE", "turns_left": 1,
-                                 "target_type": target, "refund": {}}
+                unit_actions.apply_action(map_screen, ai_name, prov, unit, {"type": "UPGRADE", "turns_left": 1,
+                                 "target_type": target, "refund": {}}, authority="ai")
                 continue
 
         remaining.append((unit, prov))
@@ -1823,7 +1817,7 @@ def _generate_unit_orders(map_screen):
 
         _assign_air_orders(map_screen, ai_name, units_info)
         units_info = [(unit, base) for unit, base in units_info
-                      if not queries.is_air_unit(unit) and not queries.is_air_transport(unit)
+                      if not queries.is_air_unit(unit, context=map_screen) and not queries.is_air_transport(unit, context=map_screen)
                       and any(current is unit for current in base.get("units", []))]
         if not units_info:
             continue

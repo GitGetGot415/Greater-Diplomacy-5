@@ -6,6 +6,7 @@ UI means user interface.
 The model layer selects legal actions and writes messages.
 Rule-based AI supplies the candidates and checks their legality.
 The model cannot create an action that the rules forbid.
+Diplomatic candidates pass shared availability checks in map_logic/diplomacy/action_definitions.py before model selection.
 
 See documentation/non_llm_ai.txt for rule-based AI, shared game rules, and message metadata.
 See documentation/ai_movement.txt for rule-based unit-order planning.

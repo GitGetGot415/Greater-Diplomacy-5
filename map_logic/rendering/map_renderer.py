@@ -237,7 +237,7 @@ def draw_map_screen(map_screen, surface):
                 if order.get("type") == "BOMBARD":
                     target_id = order.get("target_id")
                     if target_id is not None:
-                        bomb_range = queries.get_bombardment_range(unit.get("type", ""))
+                        bomb_range = queries.get_bombardment_range(unit.get("type", ""), context=map_screen)
                         overlay_renderer.draw_bombardment_arrow(
                             surface, map_screen, province, target_id, bomb_range,
                             force_visible=force_vis)

@@ -20,7 +20,7 @@ def process_air_orders(map_screen):
         # A base already occupied by hostile troops cannot launch aircraft out
         # of an ongoing ground engagement to evade immediate destruction.
         queries.prepare_aircraft_for_ground_combat(base.get("units", []), world_state.nation_data,
-                                                 on_land=not queries.is_water_province(base))
+                                                 on_land=not queries.is_water_province(base), context=map_screen)
         for unit in base.get("units", []):
             order = unit.get("order")
             if (not isinstance(order, dict) or not isinstance(order.get("type"), str)
@@ -40,7 +40,7 @@ def process_air_orders(map_screen):
                 # All interceptable aircraft aiming at this target form one
                 # battle, including multiple hostile powers (the shared lanes
                 # decide their wars). V2s form a separate immune mission.
-                immune = bool(queries.air_unit_stats(unit).get("air_interception_immune"))
+                immune = bool(queries.air_unit_stats(unit, context=map_screen).get("air_interception_immune"))
                 missions.setdefault((order["target_id"], immune), []).append(unit)
 
     coverage = {id(unit): queries.get_air_targets(map_screen, unit, base, "AIR_PATROL")
@@ -99,7 +99,7 @@ def process_air_orders(map_screen):
                 battle = combat_rules.build_battle([force + defenders], world_state.nation_data,
                                                    air_combat=True)
                 for targets, attack, sources in combat_rules.exchange(battle, world_state.nation_data, with_sources=True):
-                    combat_processor.apply_group_damage(attack, targets, sources=sources, tile=key[0])
+                    combat_processor.apply_group_damage(attack, targets, sources=sources, tile=key[0], nation_data=world_state.nation_data)
                 for lane in battle.lanes:
                     for unit in lane.a.front + lane.b.front:
                         unit["_in_combat_this_turn"] = True
@@ -144,7 +144,7 @@ def process_air_orders(map_screen):
                 combat_processor.apply_group_damage(attack, targets, lambda unit:
                     queries.get_fort_defense_bonus(target, unit, world_state.nation_data,
                                                   combat_active=True)
-                    if id(unit) in garrison_ids else 0, sources=sources, tile=target["id"])
+                    if id(unit) in garrison_ids else 0, sources=sources, tile=target["id"], nation_data=world_state.nation_data)
             for lane in battle.lanes:
                 for unit in lane.a.front + lane.b.front:
                     unit["_in_combat_this_turn"] = True
@@ -155,12 +155,12 @@ def process_air_orders(map_screen):
         fort_hits = 0
         for owner, wings in by_owner.items():
             if queries.are_at_war(owner, target.get("owner"), world_state.nation_data):
-                fort_hits += sum(queries.air_unit_can_damage_forts(wing) for wing in wings)
+                fort_hits += sum(queries.air_unit_can_damage_forts(wing, context=map_screen) for wing in wings)
         for _ in range(fort_hits):
-            queries.damage_fort(target, world_state.nation_data, world_state.map_data)
+            queries.damage_fort(target, world_state.nation_data, world_state.map_data, context=map_screen)
         for unit in survivors:
             unit["order"] = {"type": "MOVE", "path": []}
-            if queries.air_unit_stats(unit).get("air_consumable"):
+            if queries.air_unit_stats(unit, context=map_screen).get("air_consumable"):
                 unit_events.record_expended(unit, target["id"])
                 unit["health"] = 0
         _cleanup(map_screen)

@@ -132,7 +132,7 @@ STATE AND ACTION OWNERS
 =======================
 
 data/game_state.py defines WorldState.
-It owns countries, provinces, time, geometry references, scenario settings, script variables, and history.
+It owns countries, provinces, time, geometry references, scenario settings, script variables, history, faction records, and runtime rules.
 data/session_state.py defines SessionState.
 It owns participants, control identity, viewing identity, tactical control, and processing progress.
 Neither container owns widgets, surfaces, audio engines, or network transports.
@@ -141,6 +141,17 @@ data/state_access.py provides explicit compatibility properties and BackendState
 Existing map attributes refer to the canonical owners. They do not hold duplicate world or session data.
 Loaders update shared dictionaries in place.
 Draft copies isolate their containers before replacing world data.
+WorldNations attaches the country mapping to its explicit world owner.
+Plain dictionaries remain supported at compatibility boundaries.
+
+data/runtime_rules.py builds each world's active unit, building, and research libraries from defaults and scenario settings.
+Runtime libraries and indexes are temporary. Saves retain scenario settings instead.
+Active libraries carry their runtime owner through library-based AI and research interfaces.
+Loading, lobby changes, and authoritative snapshots rebuild only the affected world's active libraries.
+Rebuilds retain dictionary references held by screens. Draft copies isolate nested settings and active libraries.
+Pass the world or backend context to library queries during gameplay.
+No-context library queries read shared default content for editors, import adapters, and older callers.
+The compatibility apply_global_scenario_flags function is not part of world loading or gameplay execution.
 data/map/load_map.py loads backend worlds without a map screen or display.
 The real-time server uses this path. Its client map remains a presentation owner.
 
@@ -153,6 +164,22 @@ map_logic/production_actions.py owns production validation, queue construction, 
 The player screen, AI, and both multiplayer adapters use its shared rules.
 AI construction retains its existing manpower policy. Emergency cancellation retains its recorded-refund policy.
 Network adapters retain authentication, schema limits, partial-state handling, and host review.
+
+map_logic/unit_actions.py prepares, applies, replaces, and cancels unit orders.
+It owns repair prices, payment accounts, reserved payments, refunds, and aggregate batch payment.
+Orders controls, selected-unit movement, AI, and current multiplayer drafts use this owner.
+Unchanged paid orders retain their progress and payment.
+Batch selection and AI policies remain with their callers. Movement and combat resolution remain with their processors.
+
+map_logic/player_actions.py validates and applies player intents without network imports.
+An intent contains a player's choice. It cannot establish resources, ownership, unit statistics, or faction membership.
+Current tournament exports and real-time drafts use these domain commands.
+Older tournament snapshots retain an input-only application path for supported host-reviewed differences.
+See documentation/data_migrations.txt for precedence and compatibility limits.
+
+map_logic/diplomacy/action_definitions.py owns diplomatic categories, availability checks, and existing execution-phase declarations.
+Public action lists in data/constants.py derive from these definitions.
+See documentation/diplo_stuff.txt for lifecycle and faction ownership.
 
 data/queries.py previews research selections with authoritative progress and prerequisites.
 map_logic/turn_processing/research_processor.py applies those selections.

@@ -43,6 +43,9 @@ class StateAccess:
         for name in ("world", "session"):
             original = getattr(self, name)
             owner = copy.copy(original)
+            if name == "world":
+                result.world = owner
+                continue
             for item in fields(owner):
                 value = getattr(owner, item.name)
                 if isinstance(value, (dict, list)):

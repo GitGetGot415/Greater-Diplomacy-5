@@ -3,6 +3,7 @@
 from data.state_access import world_for, session_for
 from collections import deque
 import math
+import copy
 
 from data import queries
 from map_logic.turn_processing import movement_processor
@@ -56,8 +57,42 @@ def ai_can_accept(donor, host, nation_data):
     return True, ""
 
 
-def _is_land(unit):
-    return movement_processor.is_land_unit(unit)
+def _is_land(unit, context=None):
+    return movement_processor.is_land_unit(unit, queries.get_unit_library(context))
+
+
+def unsent_offers(context, donor):
+    world = world_for(context)
+    pending = world.nation_data[donor].get("pending_diplomacy", {})
+    return {host: mission for host, mission in missions(world.nation_data, donor).items()
+            if mission.get("state") == AWAITING
+            and isinstance(pending.get(host), dict)
+            and pending[host].get("action") == ACTION and pending[host].get("turns", 0) <= 0}
+
+
+def release_draft_reservations(context, donor):
+    """Release unsent reservations before installing a complete replacement draft."""
+    pending = world_for(context).nation_data[donor].get("pending_diplomacy", {})
+    for host in list(unsent_offers(context, donor)):
+        request = pending[host]
+        cancel_offer(context, donor, host)
+        # The lifecycle owner decides whether the request changes or is cancelled.
+        pending[host] = request
+
+
+def draft_context(context, donor, *, always_copy=False):
+    """Restore unsent held units on an isolated world for intent validation."""
+    if not always_copy and not unsent_offers(context, donor):
+        return context
+    world = world_for(context)
+    draft = copy.copy(context)
+    # State containers already copy country data. Flat compatibility contexts do not.
+    if draft.nation_data is world.nation_data:
+        draft.nation_data = copy.deepcopy(world.nation_data)
+    draft.map_data = copy.deepcopy(world.map_data)
+    draft.id_to_province = {province["id"]: province for province in draft.map_data.values()}
+    release_draft_reservations(draft, donor)
+    return draft
 
 
 def _held_count(mission):
@@ -109,10 +144,10 @@ def total_divisions(map_screen, donor):
     count = 0
     for province in world_state.map_data.values():
         count += sum(1 for unit in queries.units_with_air_cargo(province.get("units", []))
-                     if unit.get("owner") == donor and _is_land(unit))
+                     if unit.get("owner") == donor and _is_land(unit, map_screen))
     for mission in missions(world_state.nation_data, donor).values():
         count += sum(1 for entry in mission.get("held_units", [])
-                     if _is_land(entry.get("unit", {})))
+                     if _is_land(entry.get("unit", {}), map_screen))
     return count
 
 
@@ -131,7 +166,7 @@ def available_units(map_screen, donor):
     result = []
     for province in world_state.map_data.values():
         for unit in province.get("units", []):
-            if (unit.get("owner") == donor and _is_land(unit)
+            if (unit.get("owner") == donor and _is_land(unit, map_screen)
                     and not unit.get("volunteer_host") and not queries.unit_is_air_drop_recovering(unit)):
                 result.append((province, unit))
     return result
@@ -242,7 +277,7 @@ def create_offer(map_screen, donor, host, chosen):
     capacity = remaining_capacity(map_screen, donor)
     valid = [(province, unit) for province, unit in chosen
              if unit in province.get("units", []) and unit.get("owner") == donor
-             and _is_land(unit) and not unit.get("volunteer_host")
+             and _is_land(unit, map_screen) and not unit.get("volunteer_host")
              and not queries.unit_is_air_drop_recovering(unit)]
     if not valid:
         return None, "Select at least one land division."

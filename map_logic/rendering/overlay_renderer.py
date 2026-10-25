@@ -333,7 +333,7 @@ def _simulate_combat(sides, nation_data, province=None, max_turns=100, grounded_
                    [unit for other_index, other_side in enumerate(simulated_sides)
                     if index != other_index for unit in other_side])
         queries.prepare_aircraft_for_ground_combat(side, nation_data, enemies,
-            on_land=index in grounded_sides)
+            on_land=index in grounded_sides, context=nation_data)
     simulated_sides = [[unit for unit in side if unit.get("health", 0) > 0]
                        for side in simulated_sides]
 
@@ -1268,7 +1268,7 @@ def draw_overlay_content(map_screen, surface, draw_combat=True):
                     # the middle and recruitment centers on top.  The sprites
                     # share a visual baseline even though fort sprites grow in
                     # height with their level.
-                    b_lib = queries.get_building_library()
+                    b_lib = queries.get_building_library(map_screen)
                     layer_order = {"fortification": 0, "industry": 1, "recruitment": 2}
                     buildings = sorted(
                         buildings,

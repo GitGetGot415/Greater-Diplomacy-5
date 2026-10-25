@@ -28,9 +28,9 @@ info_rect = pygame.Rect(SIDEBAR_INFO_X, SIDEBAR_INFO_Y, SIDEBAR_INFO_WIDTH, SIDE
 
 def unit_roster_row(profile, province, nation_data, is_combat):
     """Presentation numbers derived from the shared damage/defense rules."""
-    stats = queries.get_unit_library().get(profile.get("type", ""), {})
+    stats = queries.get_unit_library(nation_data).get(profile.get("type", ""), {})
     damage = combat_rules.effective_damage_multiplier(profile, nation_data)
-    defense = combat_rules.health_defense_multiplier(profile) if is_combat else 1
+    defense = combat_rules.health_defense_multiplier(profile, nation_data) if is_combat else 1
     return {
         "profile": profile,
         "attack": profile.get("attack", 0) * damage,

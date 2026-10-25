@@ -147,7 +147,7 @@ class Research_List_Screen(MapOverlayScreen):
 
     def _get_default_research(self):
         map_screen = self.map_screen
-        struct = queries.get_tech_tree()
+        struct = queries.get_tech_tree(self.map_screen)
         fresh_template = {tech: (1800 if data["max_lvl"] == 9999 else 0) for tech, data in struct.items()}
         if "infantry_type" in fresh_template: fresh_template["infantry_type"] = 1
         if "cavalry" in fresh_template: fresh_template["cavalry"] = 1
@@ -204,7 +204,7 @@ class Research_List_Screen(MapOverlayScreen):
     def _open_editor(self, title, base_data, on_save):
         for k, v in self.default_research.items():
             base_data.setdefault(k, v)
-        screen = Research_Edit_Screen(self.map_screen, title, base_data, queries.get_tech_tree(), on_save)
+        screen = Research_Edit_Screen(self.map_screen, title, base_data, queries.get_tech_tree(self.map_screen), on_save)
         _run_pygame_sub_screen(self.map_screen, screen, on_done=self.refresh_ui)
 
     def edit_country(self, cid):

@@ -57,6 +57,10 @@ def toggle_diplomacy_action(nation_data, player_name, target_name, action_type, 
             return "A diplomatic action is already pending with this nation!"
 
     # Cancelling an unsent request above needs no leadership check.
+    from map_logic.diplomacy.action_definitions import availability
+    available = availability(nation_data, player_name, target_name, action_type)
+    if not available.allowed:
+        return available.reason
     leadership_error = queries.faction_request_leadership_error(
         player_name, target_name, action_type, nation_data)
     if leadership_error:
@@ -174,111 +178,14 @@ def _decay_modifiers_and_truces(map_screen):
 
 
 def action_is_legal(map_screen, sender, target, action_type):
-    """Return whether a diplomatic action is currently legal, plus a reason.
-
-    The player UI has friendly, action-specific checks, but scripted events and
-    AI follow-ups place their actions straight into ``pending_diplomacy``.
-    Keeping their structural checks here means those alternate routes cannot
-    create a state the ordinary buttons would refuse. This is deliberately
-    about rules, rather than AI preferences such as cooldowns or war appetite.
-    """
-    world_state = world_for(map_screen)
-    nation_data = world_state.nation_data
-    sender_data = nation_data.get(sender)
-    target_data = nation_data.get(target)
-
-    if not isinstance(sender_data, dict) or not isinstance(target_data, dict):
-        return False, "one of the countries no longer exists"
-    if action_type.startswith("MSG:"):
-        return True, ""
-
-    if action_type == "WAR_DECLARATION":
-        if sender == target:
-            return False, "a country cannot declare war on itself"
-        if queries.are_at_war(sender, target, nation_data):
-            return False, "the countries are already at war"
-        sender_master = sender_data.get("master", "")
-        target_master = target_data.get("master", "")
-        sender_type = sender_data.get("puppet_type", "")
-        target_type = target_data.get("puppet_type", "")
-        if sender_master and sender_master != target:
-            return False, "a puppet may only declare war on its master"
-        if target_master and target_type == c.PUPPET_TYPE_INTEGRATED:
-            return False, "integrated puppets cannot be declared on"
-        subject_war = ((sender_master == target and sender_type == c.PUPPET_TYPE_AUTONOMOUS)
-                       or (target_master == sender and target_type == c.PUPPET_TYPE_AUTONOMOUS))
-        if queries.are_in_same_faction(sender, target, nation_data) and not subject_war:
-            return False, "the countries are in the same faction"
-        if queries.has_active_truce(sender, target, nation_data):
-            return False, "the countries have an active truce"
-
-    elif action_type in ("CEASEFIRE", "PEACE_TREATY"):
-        if not peace_scope.has_settleable_war(sender, target, nation_data):
-            return False, "there is no war these countries may settle"
-
-    elif action_type == "FACTION_INVITE":
-        if getattr(c, "DISABLE_FACTIONS", False):
-            return False, "factions are disabled"
-        leadership_error = queries.faction_request_leadership_error(sender, target, action_type, nation_data)
-        if leadership_error:
-            return False, leadership_error
-        if not queries.can_choose_own_faction(target, nation_data):
-            return False, "a puppet follows its master's faction"
-        if target_data.get("faction", ""):
-            return False, "the target is already in a faction"
-
-    elif action_type == "JOIN_FACTION_REQ":
-        if getattr(c, "DISABLE_FACTIONS", False):
-            return False, "factions are disabled"
-        if not queries.can_choose_own_faction(sender, nation_data):
-            return False, "a puppet follows its master's faction"
-        if sender_data.get("faction", ""):
-            return False, "the sender is already in a faction"
-        leadership_error = queries.faction_request_leadership_error(sender, target, action_type, nation_data)
-        if leadership_error:
-            return False, leadership_error
-        if queries.are_at_war(sender, target, nation_data):
-            return False, "the countries are at war"
-
-    elif action_type == "CREATE_FACTION":
-        if getattr(c, "DISABLE_FACTIONS", False):
-            return False, "factions are disabled"
-        if (not queries.can_choose_own_faction(sender, nation_data)
-                or not queries.can_choose_own_faction(target, nation_data)):
-            return False, "puppets cannot found factions independently"
-        if sender_data.get("faction", "") or target_data.get("faction", ""):
-            return False, "both founders must be outside factions"
-
-    elif action_type == "GUARANTEE":
-        legal, reason = guarantees.is_eligible(sender, target, nation_data)
-        if not legal:
-            return False, reason
-
-    elif action_type == "SEND_MILITARY_ATTACHE":
-        legal, reason = military_attaches.is_eligible(sender, target, nation_data)
-        if not legal:
-            return False, reason
-
-    elif action_type == "REQ_MILITARY_ACCESS":
-        if sender == target:
-            return False, "a country already has access to itself"
-        if queries.are_at_war(sender, target, nation_data):
-            return False, "enemies cannot request military access"
-        if queries.has_military_access(sender, target, nation_data):
-            return False, "military access is already granted"
-
-    elif action_type in ("JOIN_WARS", "CALL_TO_ARMS"):
-        if not queries.are_in_same_faction(sender, target, nation_data):
-            return False, "the countries are not in the same faction"
-        if not war_calls.is_honest(action_type, sender, target, nation_data):
-            return False, "there is no unshared war to join"
-
-    elif action_type == "LEAVE_FACTION":
-        blocked = why_an_ai_may_not_leave(sender, nation_data)
+    """Preserve the AI follow-up policy around shared gameplay legality."""
+    from map_logic.diplomacy.action_definitions import availability
+    result = availability(map_screen, sender, target, action_type)
+    if result.allowed and action_type == "LEAVE_FACTION":
+        blocked = why_an_ai_may_not_leave(sender, world_for(map_screen).nation_data)
         if blocked:
             return False, blocked
-
-    return True, ""
+    return result.allowed, result.reason
 
 
 def _follow_up_is_legal(map_screen, sender, target, action_type):
@@ -1056,6 +963,11 @@ def _process_pass1_immediate_actions(map_screen):
                     turns = 0 # Force execution this turn
 
             if turns == 0:
+                from map_logic.diplomacy.action_definitions import availability
+                available = availability(map_screen, country_name, target, action, phase="send")
+                if not available.allowed:
+                    actions_to_clear.append(target)
+                    continue
                 # Recheck imported drafts and leadership changes before delivery.
                 leadership_error = queries.faction_request_leadership_error(
                     country_name, target, action, world_state.nation_data)

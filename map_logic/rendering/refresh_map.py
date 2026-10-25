@@ -405,7 +405,7 @@ def refresh_fog_map(map_screen):
     timer = pygame.time.get_ticks()
     
     # Turn off the fog entirely if disabled in constants OR if the player is currently selecting a country
-    if not c.USE_FOG_OF_WAR or map_screen.selection_mode:
+    if not queries.get_scenario_flag("fog_of_war", c.DEFAULT_FOG_OF_WAR, map_screen.scenario_settings) or map_screen.selection_mode:
         map_screen.fog_map = None
         map_screen.visible_provinces = None
         map_screen.partial_visible_provinces = None

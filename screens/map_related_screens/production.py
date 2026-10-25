@@ -96,13 +96,13 @@ class Production_Screen(GameState):
         self.btn_back = None
         self.cancel_hitboxes = []
         
-        self.unit_library = queries.get_unit_library()
-        self.building_library = queries.get_building_library()
-        self.tech_tree = queries.get_tech_tree()
+        self.unit_library = queries.get_unit_library(self.map_screen)
+        self.building_library = queries.get_building_library(self.map_screen)
+        self.tech_tree = queries.get_tech_tree(self.map_screen)
         
         # Use the centralized query
         (self.infantry_groups, self.tank_groups, self.navy_groups,
-         self.air_groups) = queries.get_ordered_unit_groups(self.unit_library)
+         self.air_groups) = queries.get_ordered_unit_groups(self.unit_library, context=self.map_screen)
         self.active_bars = []
         self.air_damage_labels = {}
 
@@ -417,7 +417,7 @@ class Production_Screen(GameState):
         # --- UNIT LOGIC ---
         def render_unit_button(unit_name, btn_color, x_offset=0):
             nonlocal y_offset
-            factory = queries.get_unit_metadata(unit_name, self.unit_library)["recruitment"]["industry"]
+            factory = queries.get_unit_metadata(unit_name, self.unit_library, context=self.map_screen)["recruitment"]["industry"]
             can_build = (factory == "none" or (queries.has_industry(self.target_province)
                          if factory == "industry" else queries.has_basic_factory(self.target_province)))
 
@@ -499,7 +499,7 @@ class Production_Screen(GameState):
 
             mode, prefix = resolve_variant(self.infantry_mode, INFANTRY_VARIANTS)
             self.infantry_mode = mode
-            unit_name = queries.get_unit_for_family_tier(self.unit_library, prefix or "Infantry Type", base_year)
+            unit_name = queries.get_unit_for_family_tier(self.unit_library, prefix or "Infantry Type", base_year, context=self.map_screen)
             if unit_name is None:
                 return
 
@@ -517,7 +517,7 @@ class Production_Screen(GameState):
             gets its own independent toggle (see self.custom_infantry_modes)."""
             mode, prefix = resolve_variant(self.custom_infantry_modes.get(base_name, "normal"), INFANTRY_VARIANTS)
             self.custom_infantry_modes[base_name] = mode
-            unit_name = (queries.get_unit_for_family_tier(self.unit_library, prefix, queries.get_unit_tier(base_name))
+            unit_name = (queries.get_unit_for_family_tier(self.unit_library, prefix, queries.get_unit_tier(base_name, context=self.map_screen), context=self.map_screen)
                          if prefix else base_name)
             if unit_name is None:
                 return
@@ -535,9 +535,9 @@ class Production_Screen(GameState):
             Militia, Tanks, Navies, ...) the player's research covers, or None."""
             highest_lvl, highest_unlocked = -1, None
             for name in self.unit_library:
-                if queries.get_base_unit_name(name) == group_name:
-                    lvl = queries.get_unit_tier(name, self.unit_library)
-                    if queries.is_unit_unlocked(name, player_research, self.unit_library) and lvl > highest_lvl:
+                if queries.get_base_unit_name(name, context=self.map_screen) == group_name:
+                    lvl = queries.get_unit_tier(name, self.unit_library, context=self.map_screen)
+                    if queries.is_unit_unlocked(name, player_research, self.unit_library, context=self.map_screen) and lvl > highest_lvl:
                         highest_lvl, highest_unlocked = lvl, name
             return highest_unlocked
 
@@ -554,7 +554,7 @@ class Production_Screen(GameState):
 
             mode, prefix = resolve_variant(self.artillery_mode, ARTILLERY_VARIANTS)
             self.artillery_mode = mode
-            unit_name = (queries.get_unit_for_family_tier(self.unit_library, prefix, queries.get_unit_tier(highest_unlocked))
+            unit_name = (queries.get_unit_for_family_tier(self.unit_library, prefix, queries.get_unit_tier(highest_unlocked, context=self.map_screen), context=self.map_screen)
                          if prefix else highest_unlocked)
             if unit_name is None:
                 return
@@ -572,7 +572,7 @@ class Production_Screen(GameState):
             independent toggle (see self.custom_artillery_modes)."""
             mode, prefix = resolve_variant(self.custom_artillery_modes.get(base_name, "normal"), ARTILLERY_VARIANTS)
             self.custom_artillery_modes[base_name] = mode
-            unit_name = (queries.get_unit_for_family_tier(self.unit_library, prefix, queries.get_unit_tier(base_name))
+            unit_name = (queries.get_unit_for_family_tier(self.unit_library, prefix, queries.get_unit_tier(base_name, context=self.map_screen), context=self.map_screen)
                          if prefix else base_name)
             if unit_name is None:
                 return
@@ -599,12 +599,12 @@ class Production_Screen(GameState):
                     continue
 
                 highest_unlocked = None
-                tech_key = queries.get_unit_tech_key(group_name)
+                tech_key = queries.get_unit_tech_key(group_name, context=self.map_screen)
 
                 if tech_key in ("infantry_type", "motorized_infantry", "mechanized_infantry", "infantry_fighting_vehicle"):
                     year = queries.get_infantry_family_year(tech_key, player_research, self.tech_tree)
                     if year is not None:
-                        highest_unlocked = queries.get_unit_for_family_tier(self.unit_library, group_name, year)
+                        highest_unlocked = queries.get_unit_for_family_tier(self.unit_library, group_name, year, context=self.map_screen)
                 else:
                     # Let the Roman Numeral block perfectly handle Cavalry, Tanks, Navies, and Militia
                     highest_unlocked = highest_unlocked_roman_tier(group_name)
@@ -658,7 +658,7 @@ class Production_Screen(GameState):
         owner_valid = p_data is not None
 
         custom_units = p_data.get("custom_production_units", []) if owner_valid else []
-        valid_custom_units = [u for u in custom_units if u in self.unit_library and queries.is_unit_unlocked(u, player_research)]
+        valid_custom_units = [u for u in custom_units if u in self.unit_library and queries.is_unit_unlocked(u, player_research, context=self.map_screen)]
         if owner_valid and valid_custom_units != custom_units:
             p_data["custom_production_units"] = valid_custom_units
         custom_units = valid_custom_units
@@ -677,7 +677,7 @@ class Production_Screen(GameState):
         self.custom_artillery_modes = {k: v for k, v in self.custom_artillery_modes.items() if k in custom_units}
 
         for unit_name in sorted(custom_units, key=unit_speed_sort_key):
-            base_name = queries.get_base_unit_name(unit_name)
+            base_name = queries.get_base_unit_name(unit_name, context=self.map_screen)
             if base_name == "Infantry Type":
                 render_custom_infantry_row(unit_name, "yellow")
             elif base_name == "Artillery":
@@ -753,11 +753,11 @@ class Production_Screen(GameState):
         # to build that variant instead.
         categorized = queries.get_grouped_units(
             self.unit_library, by_family=False,
-            unit_filter=lambda name, stats: queries.is_unit_unlocked(name, player_research))
+            unit_filter=lambda name, stats: queries.is_unit_unlocked(name, player_research, context=self.map_screen), context=self.map_screen)
 
         for names in categorized.values():
             names[:] = [n for n in names
-                        if queries.get_base_unit_name(n) not in (
+                        if queries.get_base_unit_name(n, context=self.map_screen) not in (
                             "Motorized Infantry Type", "Mechanized Infantry Type",
                             "Infantry Fighting Vehicle Type", "Heavy Artillery")]
             names.sort()

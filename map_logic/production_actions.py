@@ -68,20 +68,20 @@ def prepare_production(context, country_id, province, queue, intent, *,
         raise ValueError("Invalid production order.")
     if queue == "unit_queue":
         name = intent.get("unit_type")
-        library = queries.get_unit_library() if unit_library is None else unit_library
+        library = queries.get_unit_library(context) if unit_library is None else unit_library
         if not isinstance(name, str) or name not in library:
             raise ValueError("Invalid unit production order.")
         if not queries.has_core(country_id, province):
             raise ValueError("Must core territory before recruiting!")
         stats = library[name]
-        requirements = queries.get_unit_metadata(name, library)["recruitment"]
+        requirements = queries.get_unit_metadata(name, library, context=context)["recruitment"]
         if requirements["coastal"] and not province.get("is_coastal", False):
             raise ValueError("Naval units require a coastal province.")
         factory = requirements["industry"]
         if ((factory == "industry" and not queries.has_industry(province)) or
                 (factory == "basic_factory" and not queries.has_basic_factory(province))):
             raise ValueError("That province cannot recruit this unit.")
-        if not queries.is_unit_unlocked(name, country.get("research", {}), library):
+        if not queries.is_unit_unlocked(name, country.get("research", {}), library, context=context):
             raise ValueError("Required unit research is not complete.")
         if not restrictions.can_raise_units(country_id, world.nation_data):
             raise ValueError("That country cannot recruit units under its treaty restrictions.")
@@ -108,7 +108,7 @@ def prepare_production(context, country_id, province, queue, intent, *,
         group = "administration"
     elif order_type == "BUILDING":
         name = intent.get("item_name")
-        library = queries.get_building_library() if building_library is None else building_library
+        library = queries.get_building_library(context) if building_library is None else building_library
         if not isinstance(name, str) or name not in library:
             raise ValueError("Invalid building order.")
         if not queries.has_core(country_id, province):
@@ -152,7 +152,7 @@ def cancel_production(context, country_id, province, queue, index, *, authority=
     world = world_for(context)
     item = items.pop(index)
     if not recorded_refund_only or "refund" in item:
-        queries.refund_queue_item(world.nation_data[country_id], item, country_id, world.map_data)
+        queries.refund_queue_item(world.nation_data[country_id], item, country_id, world.map_data, context=context)
     return ProductionResult(queue, item, item.get("refund", {}), "cancelled", province_id=province.get("id"))
 
 
@@ -169,6 +169,8 @@ def validate_queue_budget(country, commands):
                 for key in available:
                     available[key] -= float(cost.get(key, 0))
         elif command.get("type") == "unit_order":
+            for key in available:
+                available[key] += float(command.get("unit_refund", {}).get(key, 0))
             order = command.get("order")
             if isinstance(order, dict) and order.get("type") == "REPAIR":
                 for key in available:
@@ -178,7 +180,29 @@ def validate_queue_budget(country, commands):
     return available
 
 
-def apply_queue_change(context, country_id, command):
+def settle_draft_budget(country, commands):
+    """Settle the validated combined budget before installing domain changes."""
+    validate_queue_budget(country, commands)
+    refunds = dict.fromkeys(COST_KEYS, 0)
+    costs = dict.fromkeys(COST_KEYS, 0)
+    for command in commands:
+        if command.get("type") == "province_queue":
+            for item in command.get("cancelled", []):
+                for key in COST_KEYS:
+                    refunds[key] += item.get("refund", {}).get(key, 0)
+            for cost in command.get("new_costs", []):
+                for key in COST_KEYS:
+                    costs[key] += cost.get(key, 0)
+        elif command.get("type") == "unit_order":
+            order = command.get("order") or {}
+            for key in COST_KEYS:
+                refunds[key] += command.get("unit_refund", {}).get(key, 0)
+                costs[key] += order.get("realtime_cost", {}).get(key, 0)
+    queries.refund_resources(country, refunds)
+    queries.deduct_resources(country, costs)
+
+
+def apply_queue_change(context, country_id, command, *, payment_settled=False):
     """Apply a validated paid projection, preserving existing orders and progress."""
     import copy
     world = world_for(context)
@@ -186,10 +210,11 @@ def apply_queue_change(context, country_id, command):
     if province.get("owner") != country_id:
         raise ValueError("Players may only change queues in their own provinces.")
     country = world.nation_data[country_id]
-    for item in command.get("cancelled", []):
-        queries.refund_queue_item(country, item, country_id, world.map_data)
-    for cost in command.get("new_costs", []):
-        queries.deduct_resources(country, cost)
+    if not payment_settled:
+        for item in command.get("cancelled", []):
+            queries.refund_queue_item(country, item, country_id, world.map_data, context=context)
+        for cost in command.get("new_costs", []):
+            queries.deduct_resources(country, cost)
     province[command["queue"]] = copy.deepcopy(command["items"])
 
 

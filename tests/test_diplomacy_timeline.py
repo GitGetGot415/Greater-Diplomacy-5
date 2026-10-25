@@ -34,7 +34,7 @@ REJECT = diplomacy_messages.RESPONSE_REJECT
 
 class SubmittedTurnDiplomacyTests(unittest.TestCase):
     def test_submitted_player_cannot_call_a_faction_member_to_arms(self):
-        game = StubMapScreen(["A", "B"], human_players=["A"])
+        game = StubMapScreen(["A", "B", "C"], human_players=["A"])
         game.set_faction("Pact", "A", "B")
         game.nation_data["A"]["at_war_with"] = ["C"]
         game.selected_province = game.home_of("B")
@@ -54,16 +54,18 @@ class BilateralDeliveryTests(unittest.TestCase):
 
     def _setup_for(self, action):
         """Builds whatever world state makes `action` legal between A and B."""
-        game = StubMapScreen(["A", "B"], human_players=["A"])
+        game = StubMapScreen(["A", "B", "C"], human_players=["A"])
         if action in ("JOIN_WARS", "CALL_TO_ARMS"):
             game.set_faction("Pact", "A", "B")
-            game.nation_data["A"]["at_war_with"] = ["C"]
+            game.set_war("B" if action == "JOIN_WARS" else "A", "C")
         elif action == "FACTION_INVITE":
             game.set_faction("Pact", "A")
         elif action == "JOIN_FACTION_REQ":
             game.set_faction("Pact", "B")
         elif action in ("CEASEFIRE", "PEACE_TREATY"):
             game.set_war("A", "B")
+        elif action in ("SEND_MILITARY_ATTACHE", "SEND_VOLUNTEERS"):
+            game.set_war("B", "C")
         return game
 
     def test_every_bilateral_action_delivers_a_message_on_turn_1(self):

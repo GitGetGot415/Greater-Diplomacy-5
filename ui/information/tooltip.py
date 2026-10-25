@@ -80,7 +80,7 @@ def draw_tooltip(map_screen, surface):
 
                     if level > 0:
                         # refactor: Use 'Type' for Infantry, 'Lvl' for others
-                        base_name = queries.get_base_unit_name(u_name)
+                        base_name = queries.get_base_unit_name(u_name, context=map_screen)
                         label = "Type" if base_name == "Infantry" else "Lvl"
                         lines.append(f"- {u_name} ({label} {level})")
                     else:
@@ -136,7 +136,7 @@ def draw_tooltip(map_screen, surface):
         else:
             buildings = prov.get("buildings", [])
             if buildings:
-                bldg_lib = queries.get_building_library()
+                bldg_lib = queries.get_building_library(map_screen)
                 building_mult = 1.0 if is_core else c.NON_CORE_BUILDING_MULTIPLIER
                 for b in buildings:
                     # Determine production text dynamically based on building stats

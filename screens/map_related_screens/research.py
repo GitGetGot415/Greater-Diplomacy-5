@@ -235,9 +235,9 @@ class Research_Screen(GameState):
         self.current_category = "INFANTRY" 
 
         # REPLACED DISK I/O WITH CACHED QUERIES
-        self.tech_tree = queries.get_tech_tree()
-        self.unit_library = queries.get_unit_library()
-        self.building_library = queries.get_building_library()
+        self.tech_tree = queries.get_tech_tree(self.map_screen)
+        self.unit_library = queries.get_unit_library(self.map_screen)
+        self.building_library = queries.get_building_library(self.map_screen)
         
         self.active_modal = None
 
@@ -540,9 +540,9 @@ class Research_Screen(GameState):
             self.research_edit_country = self.subject
             self.research_edit_original = queries.country_research_edit_state(map_ref.nation_data[self.subject])
             self.spectator_draft = queries.country_research_edit_state(map_ref.nation_data[self.subject])
-        self.tech_tree = queries.get_tech_tree()
-        self.unit_library = queries.get_unit_library()
-        self.building_library = queries.get_building_library()
+        self.tech_tree = queries.get_tech_tree(map_ref)
+        self.unit_library = queries.get_unit_library(map_ref)
+        self.building_library = queries.get_building_library(map_ref)
         self.current_category = "INFANTRY"
         self.active_modal = None
         self.scroll_x = 0
@@ -723,7 +723,7 @@ class Research_Screen(GameState):
                     
             btn_color = self.tech_button_color(tech_key, lvl, status)
 
-            unlocks = queries.get_tech_unlocks(tech_key, lvl)
+            unlocks = queries.get_tech_unlocks(tech_key, lvl, context=self.map_screen)
             is_large = (self.building_library.get(tech_key, {}).get("group") in c.LARGE_ICON_BUILDING_GROUPS or 
                         any(self.building_library.get(u, {}).get("group") in c.LARGE_ICON_BUILDING_GROUPS for u in unlocks))
             
@@ -798,7 +798,7 @@ class Research_Screen(GameState):
             else:
                 if not self.can_edit or self.subject != self.research_edit_country or self.spectator_draft is None:
                     raise ValueError("Research editing requires a permitted local spectator.")
-                preview, lost_projects = queries.preview_country_research_edit(self.spectator_draft, tech_key, level)
+                preview, lost_projects = queries.preview_country_research_edit(self.spectator_draft, tech_key, level, context=self.map_screen)
                 token = self.research_edit_token
                 before = self.spectator_draft
 
@@ -815,7 +815,7 @@ class Research_Screen(GameState):
                     self.refresh_ui()
 
                 if lost_projects:
-                    names = ", ".join(queries.get_tech_display_name(key) for key in sorted(lost_projects))
+                    names = ", ".join(queries.get_tech_display_name(key, context=self.map_screen) for key in sorted(lost_projects))
                     message = (f"This edit affects research in progress: {names}.\n"
                                "The affected projects and their progress will be lost.\n"
                                "Changing technologies back will not restore this progress.\n"

@@ -515,7 +515,7 @@ class _EventEditScreen(_ModalScreen):
         self.trigger_type = event_data.get("trigger_type", "AI Only")
 
         self.countries = sorted(queries.get_living_nations(map_ref.map_data))
-        self.unit_types = list(queries.get_unit_library().keys())
+        self.unit_types = list(queries.get_unit_library(map_ref).keys())
 
         p = self.panel_rect
         self.list_x = p.x + self.PAD

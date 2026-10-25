@@ -7,13 +7,13 @@ def process_ai_research(map_screen):
     """Automates research queueing for AI nations."""
     world_state = world_for(map_screen)
     # REPLACED DISK I/O WITH CACHED QUERIES
-    tech_tree = queries.get_tech_tree()
+    tech_tree = queries.get_tech_tree(map_screen)
     if not tech_tree:
         return
 
-    unit_library = queries.get_unit_library()
-    building_library = queries.get_building_library()
-    all_econ = queries.calculate_all_economies(world_state.map_data, world_state.nation_data)
+    unit_library = queries.get_unit_library(map_screen)
+    building_library = queries.get_building_library(map_screen)
+    all_econ = queries.calculate_all_economies(world_state.map_data, world_state.nation_data, context=map_screen)
     world = ai_world.for_screen(map_screen)
 
     ai_nations = queries.get_active_ai_nations(map_screen)

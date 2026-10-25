@@ -38,7 +38,7 @@ class AirMissionPlanningTests(unittest.TestCase):
         self.ground = wing(self.enemy, "Ground Target", "B")
 
     def plan(self):
-        with patch.object(c, "USE_FOG_OF_WAR", False):
+        with patch.dict(self.game.scenario_settings, {"fog_of_war": False}):
             ai_movement._assign_air_orders(self.game, "A",
                 [(self.support, self.base), (self.screen, self.base)])
 
@@ -51,7 +51,7 @@ class AirMissionPlanningTests(unittest.TestCase):
 
     def test_another_interceptor_strikes_after_cover_saturates(self):
         another = wing(self.base, "Screen Wing")
-        with patch.object(c, "USE_FOG_OF_WAR", False):
+        with patch.dict(self.game.scenario_settings, {"fog_of_war": False}):
             ai_movement._assign_air_orders(self.game, "A",
                 [(self.screen, self.base), (another, self.base)])
         self.assertEqual(self.screen["order"]["type"], "AIR_PATROL")
@@ -83,7 +83,7 @@ class AirMissionPlanningTests(unittest.TestCase):
         hidden = tile(self.game, 3, 50, owner="B")
         self.enemy["units"].remove(self.incoming)
         hidden["units"].append(self.incoming)
-        with patch.object(c, "USE_FOG_OF_WAR", True), patch.object(
+        with patch.dict(self.game.scenario_settings, {"fog_of_war": True}), patch.object(
                 queries, "get_visible_provinces", return_value=({1, 2}, set())):
             ai_movement._assign_air_orders(self.game, "A", [(self.screen, self.base)])
         self.assertEqual(self.screen["order"]["type"], "AIR_ATTACK")
@@ -409,7 +409,7 @@ class AirMoveSafetyTests(unittest.TestCase):
         attacker = wing(self.enemy, "Infantry Type 1910", "B")
         attacker["speed"] = 1
         self.enemy["neighbors"] = [self.base["id"]]
-        with patch.object(c, "USE_FOG_OF_WAR", False):
+        with patch.dict(self.game.scenario_settings, {"fog_of_war": False}):
             ai_movement._assign_air_orders(self.game, "A", [(self.plane, self.base)])
         self.assertEqual(self.plane["order"]["type"], "AIR_REPOSITION")
         self.assertEqual(self.plane["order"]["target_id"], self.safe["id"])
@@ -421,10 +421,10 @@ class AirMoveSafetyTests(unittest.TestCase):
         attacker["speed"] = 1
         self.enemy["neighbors"] = [self.base["id"], self.safe["id"]]
         inland = tile(self.game, 4, 110)
-        with patch.object(c, "USE_FOG_OF_WAR", False):
+        with patch.dict(self.game.scenario_settings, {"fog_of_war": False}):
             ai_movement._assign_air_orders(self.game, "A", [(self.plane, self.base)])
         self.assertEqual(self.plane["order"]["target_id"], inland["id"])
-        with patch.object(c, "USE_FOG_OF_WAR", True), patch.object(
+        with patch.dict(self.game.scenario_settings, {"fog_of_war": True}), patch.object(
                 queries, "get_visible_provinces", return_value=({1, 3, 4}, set())):
             self.assertEqual(ai_movement._air_base_threats(self.game, "A", {1, 3, 4}), set())
             ai_movement._assign_air_orders(self.game, "A", [(self.plane, self.base)])
@@ -437,7 +437,7 @@ class AirMoveSafetyTests(unittest.TestCase):
         before = dict(self.plane["order"])
         wing(self.enemy, "Infantry Type 1910", "B")
         self.enemy["neighbors"] = [1]
-        with patch.object(c, "USE_FOG_OF_WAR", False):
+        with patch.dict(self.game.scenario_settings, {"fog_of_war": False}):
             ai_movement._assign_air_orders(self.game, "A", [(self.plane, self.base)])
         self.assertEqual(self.plane["order"], before)
 
@@ -447,7 +447,7 @@ class AirMoveSafetyTests(unittest.TestCase):
         self.enemy["neighbors"] = [middle["id"]]
         middle["neighbors"] = [self.base["id"]]
         attacker["order"] = {"type": "MOVE", "path": []}
-        with patch.object(c, "USE_FOG_OF_WAR", False):
+        with patch.dict(self.game.scenario_settings, {"fog_of_war": False}):
             attacker["speed"] = 1
             self.assertNotIn(1, ai_movement._air_base_threats(self.game, "A", None))
             attacker["speed"] = 2

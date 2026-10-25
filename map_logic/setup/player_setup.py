@@ -23,7 +23,7 @@ def select_tactical_unit(map_screen, province, candidate_units=None):
     if not units:
         # SPAWN A BLANK UNIT
         nation_data = map_screen.nation_data.get(owner, {})
-        unit_type = queries.get_highest_infantry(nation_data, queries.get_tech_tree(), queries.get_unit_library(), allow_fuel_units=False)
+        unit_type = queries.get_highest_infantry(nation_data, queries.get_tech_tree(map_screen), queries.get_unit_library(map_screen), allow_fuel_units=False, context=map_screen)
 
         if unit_type is None:
             map_screen.show_feedback("No buildable unit available to spawn (Infantry may be disabled for this scenario)")
@@ -33,11 +33,11 @@ def select_tactical_unit(map_screen, province, candidate_units=None):
         if unit_type == f"Infantry Type {c.START_YEAR}":
             unit_type = f"Infantry Type {c.TACTICAL_DEFAULT_YEAR}"
 
-        new_unit = queries.create_unit_dict(unit_type, owner, queries.get_unit_library())
+        new_unit = queries.create_unit_dict(unit_type, owner, queries.get_unit_library(map_screen))
         new_unit["_is_tactical_ghost"] = True # Tag it so we can delete it if they cancel
         
-        active_counters = queries.build_active_unit_counters(map_screen.map_data)
-        new_unit["custom_name"] = queries.generate_unit_custom_name(new_unit, active_counters)
+        active_counters = queries.build_active_unit_counters(map_screen.map_data, context=map_screen)
+        new_unit["custom_name"] = queries.generate_unit_custom_name(new_unit, active_counters, context=map_screen)
         
         province.setdefault("units", []).append(new_unit)
         _stage_tactical_selection(map_screen, new_unit, owner, province)
@@ -72,7 +72,7 @@ def confirm_player_country(map_screen):
             
             # Start the game with max fuel
             u_type = map_screen.player_unit.get("original_type", map_screen.player_unit.get("type"))
-            stats = queries.get_unit_library().get(u_type, {})
+            stats = queries.get_unit_library(map_screen).get(u_type, {})
             map_screen.unit_economy["fuel"] = c.TACTICAL_MAX_FUEL
             map_screen.unit_economy["fuel_inc"] = queries.get_unit_upkeep(stats)["fuel"]
             

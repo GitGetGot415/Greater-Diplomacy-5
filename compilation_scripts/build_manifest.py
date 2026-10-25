@@ -27,6 +27,9 @@ HIDDEN_IMPORTS = (
     "data.migrations",
     "map_logic.diplomacy.diplomacy_lifecycle",
     "map_logic.production_actions",
+    "map_logic.unit_actions", "map_logic.player_actions",
+    "map_logic.diplomacy.action_definitions", "map_logic.diplomacy.faction_records",
+    "data.runtime_rules", "data.world_nations",
     "data.game_state", "data.session_state", "data.state_access",
 )
 RUNTIME_PACKAGES = (

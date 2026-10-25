@@ -7,7 +7,7 @@ def process_national_research(map_screen):
     # Load template to know costs (REPLACED WITH CACHE)
     world_state = world_for(map_screen)
     session_state = session_for(map_screen)
-    template = queries.get_tech_tree()
+    template = queries.get_tech_tree(map_screen)
     
     # Uses the new constant
     days_per_turn = queries.get_days_per_turn(world_state.scenario_settings)
@@ -57,7 +57,7 @@ def process_national_research(map_screen):
                     country_data["research_progress"].pop(tech_key, None)
                 
                 if country_name == session_state.player_country:
-                    map_screen.show_feedback(f"TECH FINISHED: {queries.get_tech_display_name(tech_key)}")
+                    map_screen.show_feedback(f"TECH FINISHED: {queries.get_tech_display_name(tech_key, context=map_screen)}")
                 
                 # Remove completed tech from queue
                 queue.pop(i)

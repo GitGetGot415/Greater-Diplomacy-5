@@ -175,7 +175,7 @@ class Economy_Screen(GameState):
         """Cache income and the damage caption when economy inputs change."""
         country = self.map_screen.nation_data[self.map_screen.player_country]
         self.econ_cache = queries.get_economy_projections(
-            self.map_screen.player_country, self.map_screen.map_data, self.map_screen.nation_data)
+            self.map_screen.player_country, self.map_screen.map_data, self.map_screen.nation_data, context=self.map_screen)
         bonus = queries.get_conscription_damage_bonus(country)
         self.conscription_damage_caption = f"dmg modifier: +{bonus:.2%}"
         self.conscription_damage_color = conscription_damage_color(bonus)
@@ -214,7 +214,7 @@ class Economy_Screen(GameState):
         
         if is_tactical and self.map_screen.player_unit:
             u_type = self.map_screen.player_unit.get("original_type", self.map_screen.player_unit.get("type"))
-            stats = queries.get_unit_library().get(u_type, {})
+            stats = queries.get_unit_library(self.map_screen).get(u_type, {})
             
             total_inc = queries.get_unit_upkeep(stats)
             
@@ -334,7 +334,7 @@ class Economy_Screen(GameState):
 
         # Retrieve all currently owned units and the base unit stat library
         _, units = queries.get_nation_provinces_and_units(self.map_screen.player_country, self.map_screen.map_data)
-        unit_lib = queries.get_unit_library()
+        unit_lib = queries.get_unit_library(self.map_screen)
 
         individual_rows, grouped_rows = expense_table_rows(units, unit_lib)
 

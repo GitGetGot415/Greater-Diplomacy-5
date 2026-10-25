@@ -24,7 +24,7 @@ class Convoy_Converter_Screen(MapOverlayScreen):
         super().__init__(map_screen, pygame.Rect(0, 0, 560, c.SCREEN_HEIGHT - 160))
         self.back_state = "MAP"
         self.province = province
-        self.unit_lib = queries.get_unit_library()
+        self.unit_lib = queries.get_unit_library(map_screen)
         self.selected = {i for i, unit in enumerate(province.get("units", [])) if "original_type" in unit}
         self.refresh_ui()
 
@@ -74,10 +74,10 @@ class Convoy_Converter_Screen(MapOverlayScreen):
                 name = unit.get("type", "Unknown")
                 is_naval = self.unit_lib.get(name, {}).get("naval_unit", False)
                 target = "Truck" if is_naval else "Convoy"
-                queries.load_transport(unit, target)
+                queries.load_transport(unit, target, context=self.map_screen)
                 changed = True
             elif not want and "original_type" in unit:
-                queries.revert_transport(unit)
+                queries.revert_transport(unit, context=self.map_screen)
                 changed = True
 
         if changed:

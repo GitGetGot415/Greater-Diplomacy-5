@@ -177,6 +177,8 @@ class TheWalkHomeTests(unittest.TestCase):
     def test_it_keeps_walking_the_next_turn(self):
         hurt, provs = self.setup()
         hurt["repair_trip"] = 3
+        provs[0]["units"].remove(hurt)
+        provs[1]["units"].append(hurt)
         run(Screen(provs), provs, [(hurt, provs[1])])  # now standing on the middle tile
         self.assertEqual(hurt["order"]["path"], [3])
         self.assertEqual(hurt["repair_trip"], 3)
@@ -272,13 +274,15 @@ class UpgradeReachabilityTests(unittest.TestCase):
         prov = province(prov_id, [idle], industry=industry)
         provs = [prov]
 
-        import data.queries as queries
-        real = queries.get_upgrade_target
-        queries.get_upgrade_target = lambda t, r, lib, tree: "Militia II"
-        try:
-            run(Screen(provs, at_war=()), provs, [(idle, prov)], **ctx_over)
-        finally:
-            queries.get_upgrade_target = real
+        from data import queries
+        from unittest.mock import patch
+        from tests.test_unit_metadata import fixture_metadata
+        library = {"Militia I": {"metadata": fixture_metadata(tier=1)},
+                   "Militia II": {"metadata": fixture_metadata(tier=2, level=2)}}
+        screen = Screen(provs, at_war=())
+        screen.nation_data["Avaria"]["research"] = {"fixture_track": 2}
+        with patch.object(queries, "get_unit_library", return_value=library):
+            run(screen, provs, [(idle, prov)], **ctx_over)
         return idle
 
     def test_a_quiet_interior_province_can_upgrade(self):

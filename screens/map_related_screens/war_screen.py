@@ -20,7 +20,7 @@ class Declare_War_Screen(MapOverlayScreen):
 
         has_wg = queries.has_wargoal(map_screen.player_country, target_nation, map_screen.nation_data, map_screen.map_data)
 
-        cb_required = queries.get_scenario_flag("casus_belli_required", c.CASUS_BELLI_REQUIRED, map_screen.scenario_settings)
+        cb_required = queries.get_scenario_flag("casus_belli_required", c.DEFAULT_CASUS_BELLI, map_screen.scenario_settings)
 
         # Spectator / Override catch: if it's the spectator, let them force it anyway
         if map_screen.player_country == "Spectator":

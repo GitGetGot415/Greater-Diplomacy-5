@@ -35,6 +35,9 @@ def add_enemy(nation_data, country, other):
     if other in enemies:
         return False
     enemies.append(other)
+    world = queries.world_for(nation_data)
+    if not isinstance(world, dict):
+        world.diplomacy_revision += 1
     return True
 
 
@@ -48,6 +51,9 @@ def remove_enemy(nation_data, country, other):
     if not enemies or other not in enemies:
         return False
     enemies.remove(other)
+    world = queries.world_for(nation_data)
+    if not isinstance(world, dict):
+        world.diplomacy_revision += 1
     return True
 
 
@@ -259,8 +265,8 @@ def finalize_neutral(nation_data, a, b):
         # Apply Non-Aggression Pact. A zero-turn setting means there is no
         # truce to record at all, rather than a stale zero-valued entry.
         truces = nation_data[country].setdefault("truces", {})
-        if c.TRUCE_TURNS > 0:
-            truces[other] = c.TRUCE_TURNS
+        if queries.world_truce_turns(nation_data) > 0:
+            truces[other] = queries.world_truce_turns(nation_data)
         else:
             truces.pop(other, None)
 

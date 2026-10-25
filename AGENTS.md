@@ -44,8 +44,12 @@ A change is complete only when all affected game modes, state transitions, UI co
 | `data/queries.py` | Shared state queries, rule helpers, caches, and the save-dictionary builder. |
 | `data/migrations.py` | Older GD5 identifiers, saved-data conversions, and load repairs. |
 | `data/game_state.py`, `data/session_state.py` | World data, participants, control permissions, and processing progress. |
+| `data/runtime_rules.py`, `data/world_nations.py` | World-specific active libraries, derived indexes, and explicit country-mapping context. |
 | `data/state_access.py` | Explicit state access, map compatibility properties, and backend execution context. |
 | `map_logic/production_actions.py` | Shared production validation, queue construction, charging, cancellation, and refunds. |
+| `map_logic/unit_actions.py` | Shared unit-order preparation, execution, replacement, payment, and cancellation. |
+| `map_logic/player_actions.py` | Shared multiplayer intent validation and application, plus the validated older projection adapter. |
+| `map_logic/diplomacy/action_definitions.py`, `map_logic/diplomacy/faction_records.py` | Diplomatic categories and availability; authoritative faction mutations and compatibility projections. |
 | `map_logic/diplomacy/diplomacy_lifecycle.py` | Request identity, channel writes, timing transitions, and response references. |
 | `data/json/` | Data libraries and AI response text used without an LLM. |
 | `data/map/save_map.py`, `data/map/load_map.py` | Saves, loads, defaults, and migration calls. |
@@ -185,6 +189,8 @@ Success in one does not prove compatibility with the other.
 - Preserve unknown or older valid data where possible.
   Migration must produce predictable results and be safe to run once on load.
 - Reuse caches instead of reading disk in frame or turn loops.
+  Pass an explicit world context to active library queries. No-context library access reads shared default content.
+  Change faction membership and leadership through faction services. Country faction fields are derived projections.
   Define when each cache fills and becomes invalid.
   Update shared cached dictionaries in place when screens retain references to them.
 - **Planning-phase rendering must use cached presentation data.**

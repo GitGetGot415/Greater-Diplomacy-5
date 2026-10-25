@@ -142,6 +142,8 @@ def snapshot_history(map_screen):
         "month": world_state.time_manager.month_index,
         "year": world_state.time_manager.year,
         "nation_data": nation_snap,
+        "factions": copy_history_value(world_state.factions) if hasattr(world_state, "factions")
+                    else queries.migrations.faction_records(world_state.nation_data),
         "provinces": {}
     }
     

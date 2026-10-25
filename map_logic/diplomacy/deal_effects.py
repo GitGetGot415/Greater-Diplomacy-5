@@ -83,7 +83,7 @@ def economies_for(map_screen):
     map_data = getattr(world_for(map_screen), "map_data", None)
     if not map_data:
         return None
-    return queries.calculate_all_economies(map_data, world_state.nation_data)
+    return queries.calculate_all_economies(map_data, world_state.nation_data, context=map_screen)
 
 
 def _provinces(count):

@@ -382,6 +382,7 @@ class OrdersBatchCommandsTests(unittest.TestCase):
         screen.unit_library = {"Infantry": {"cost_materials": 100,
                                              "cost_manpower": 50,
                                              "cost_fuel": 0}}
+        self.enterContext(patch.object(queries, "get_unit_library", return_value=screen.unit_library))
         screen.refresh_ui = lambda: None
         screen._mark_draft_changed = Mock()
         return screen, map_stub, feedback
@@ -438,12 +439,14 @@ class OrdersBatchCommandsTests(unittest.TestCase):
         second = {"owner": "A", "type": "Infantry", "order": {"path": [3]}}
         screen, _map_stub, feedback = self._screen(first, second)
 
-        with patch("screens.map_related_screens.orders.queries.get_upgrade_target",
-                   return_value="Infantry Type 1940"):
-            screen.upgrade_selected_units()
+        from tests.test_unit_metadata import fixture_metadata
+        screen.unit_library["Infantry"]["metadata"] = fixture_metadata(tier=1)
+        screen.unit_library["Fixture upgraded infantry"] = {"metadata": fixture_metadata(tier=2, level=2)}
+        _map_stub.nation_data["A"]["research"] = {"fixture_track": 2}
+        screen.upgrade_selected_units()
 
-        self.assertEqual(first["order"]["target_type"], "Infantry Type 1940")
-        self.assertEqual(second["order"]["target_type"], "Infantry Type 1940")
+        self.assertEqual(first["order"]["target_type"], "Fixture upgraded infantry")
+        self.assertEqual(second["order"]["target_type"], "Fixture upgraded infantry")
         self.assertIn("2 selected units", feedback[-1])
 
     def test_cancel_selected_disband_removes_every_selected_disband_order(self):
@@ -527,6 +530,8 @@ class MapOrderGestureTests(unittest.TestCase):
         screen.exit_screen = Mock()
         screen.refresh_ui = lambda: None
         screen.map_screen = type("MapStub", (), {
+            "player_country": "A",
+            "tactical_mode": False,
             "unit_selection_drag": None,
             "unit_stack_hitboxes": [],
             "id_to_province": {1: origin, 2: destination},

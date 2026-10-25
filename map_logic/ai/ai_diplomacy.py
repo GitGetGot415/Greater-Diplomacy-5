@@ -1015,7 +1015,7 @@ def _invite_friends_to_faction(bag, map_screen, ai_name, data, active_nations, w
     asking to be let in, so a strong bloc never courted anyone.
     """
     world_state = world_for(map_screen)
-    if not queries.can_invite_to_faction(ai_name, world_state.nation_data) or getattr(c, "DISABLE_FACTIONS", False):
+    if not queries.can_invite_to_faction(ai_name, world_state.nation_data) or queries.get_scenario_flag("disable_factions", c.DEFAULT_DISABLE_FACTIONS, world_state.scenario_settings):
         return
 
     for other in sorted(active_nations):
@@ -1082,7 +1082,7 @@ def _claim_faction_leadership(bag, map_screen, ai_name, world, scenario_settings
     strongest army in every bloc from mechanically ending up at its head.
     """
     world_state = world_for(map_screen)
-    if getattr(c, "DISABLE_FACTIONS", False):
+    if queries.get_scenario_flag("disable_factions", c.DEFAULT_DISABLE_FACTIONS, world_state.scenario_settings):
         return
     if not faction_leadership.can_claim(map_screen, ai_name):
         return
@@ -1235,7 +1235,7 @@ def _run_basic_proactive_ai(map_screen):
         # upkeep above still applies to every nation -- this used to `return`
         # from inside the loop, which skipped that upkeep for every nation
         # after the first and left the loading bar stuck below its total.
-        if c.BATTLE_ROYALE_MODE:
+        if queries.get_scenario_flag("battle_royale", c.DEFAULT_BATTLE_ROYALE, map_screen.scenario_settings):
             session_state.proactive_tasks_completed += 1
             continue
 
@@ -1247,13 +1247,13 @@ def _run_basic_proactive_ai(map_screen):
         # rest were silently discarded -- a Call to Arms from section 2 starved
         # the war declaration section 4 wanted to send to the same nation, and
         # nothing anywhere compared the two.
-        bag = ai_candidates.Collector(ai_name, pending)
+        bag = ai_candidates.Collector(ai_name, pending, context=map_screen)
 
         if is_already_at_war:
             _seek_ceasefire_if_unreachable(bag, map_screen, ai_name, my_enemies, active_nations, world)
             _offer_peace_when_losing(bag, map_screen, ai_name, my_enemies, active_nations, world)
 
-        if is_already_at_war and not my_faction and not getattr(c, "DISABLE_FACTIONS", False):
+        if is_already_at_war and not my_faction and not queries.get_scenario_flag("disable_factions", c.DEFAULT_DISABLE_FACTIONS, world_state.scenario_settings):
             _seek_defensive_faction(bag, map_screen, ai_name, pending, my_enemies, active_nations, world)
 
         if is_already_at_war and my_faction:
@@ -1269,7 +1269,7 @@ def _run_basic_proactive_ai(map_screen):
 
         _drain_llm_requests(bag, map_screen, ai_name, data, my_enemies, active_nations, world)
 
-        if not getattr(c, "DISABLE_FACTIONS", False):
+        if not queries.get_scenario_flag("disable_factions", c.DEFAULT_DISABLE_FACTIONS, world_state.scenario_settings):
             _invite_friends_to_faction(bag, map_screen, ai_name, data, active_nations, world)
 
         _offer_trades(bag, map_screen, ai_name, active_nations, world)
@@ -1742,7 +1742,7 @@ def process_scripted_events(map_screen, preview_request=None):
                                 if prov:
                                     if must_control and prov.get("owner") != nation_name:
                                         continue
-                                    new_unit = queries.create_unit_dict(unit_type, a_target, queries.get_unit_library())
+                                    new_unit = queries.create_unit_dict(unit_type, a_target, queries.get_unit_library(map_screen))
                                     prov.setdefault("units", []).append(new_unit)
                         continue
                     

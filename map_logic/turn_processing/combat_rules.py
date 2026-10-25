@@ -583,19 +583,19 @@ def build_battle(sides, nation_data, width=None, full_rank_for=None, terrain=Non
             caught_by_owner = {}
             for unit in side:
                 profile = unit
-                if queries.is_air_transport(unit):
+                if queries.is_air_transport(unit, context=nation_data):
                     profile = dict(unit)
-                    queries.revert_transport(profile)
-                if not queries.is_air_unit(profile):
+                    queries.revert_transport(profile, context=nation_data)
+                if not queries.is_air_unit(profile, context=nation_data):
                     continue
                 owner = queries.get_unit_combat_owner(profile)
                 # Aircraft at this endpoint share opponents. Hostility depends
                 # on combat owner, so scan those opponents once per country.
                 if owner not in caught_by_owner:
                     caught_by_owner[owner] = queries.aircraft_caught_in_ground_combat(
-                        profile, enemies, nation_data)
+                        profile, enemies, nation_data, context=nation_data)
                 if caught_by_owner[owner]:
-                    profiles[id(unit)] = queries.ground_combat_profile(profile)
+                    profiles[id(unit)] = queries.ground_combat_profile(profile, context=nation_data)
     columns = _columns([[unit for unit in side
                          if profiles.get(id(unit), unit).get("health", 1) > 0]
                         for side in sides])
@@ -612,7 +612,7 @@ def build_battle(sides, nation_data, width=None, full_rank_for=None, terrain=Non
     slots = 0 if air_combat else lane_slots(len(duels), width)
     lanes_of, foes = _lane_membership(columns, groups, duels, can_fight)
     available = _availability(columns, profiles)
-    flying = {i: [unit for unit in units if queries.is_air_unit(unit)]
+    flying = {i: [unit for unit in units if queries.is_air_unit(unit, context=nation_data)]
               for i, (side_index, _owner, units) in enumerate(columns)
               if side_index in air_mission_sides and i in lanes_of}
     flying_ids = {id(unit) for units in flying.values() for unit in units}
@@ -722,34 +722,31 @@ def build_battle(sides, nation_data, width=None, full_rank_for=None, terrain=Non
                   shares, profiles, air_combat)
 
 
-def health_damage_multiplier(unit):
-    """How much of a unit's attack lands, scaled by how hurt it is.
+def health_damage_multiplier(unit, nation_data=None):
+    """Scale attack linearly from the scenario health floor to full attack.
 
-    1.0 at full health, c.DAMAGE_AT_ZERO_HEALTH at 0 health, linear between --
-    a wounded unit still fights, just weaker. c.DAMAGE_AT_ZERO_HEALTH = 1
-    disables this entirely (every unit always deals full damage). The constant
-    is a live mirror of the scenario's "damage_at_zero_health" setting -- see
-    queries.apply_global_scenario_flags -- so a slider change takes effect
-    without threading a settings dict through every combat call.
-    """
+    World-owned country mappings supply their own scenario settings.
+    Standalone callers retain the constant-based compatibility behavior."""
     max_hp = unit.get("max_health") or c.DEFAULT_UNIT_HP
     frac = max(0.0, min(1.0, unit.get("health", 0) / max_hp))
     floor = c.DAMAGE_AT_ZERO_HEALTH
+    if nation_data is not None and hasattr(nation_data, "world"):
+        from data.runtime_rules import value
+        floor = value(nation_data.world, "damage_at_zero_health", c.DEFAULT_DAMAGE_AT_ZERO_HEALTH)
     return floor + (1.0 - floor) * frac
 
 
-def health_defense_multiplier(unit):
-    """How much of a unit's defense still blocks incoming damage, scaled by how hurt it is.
+def health_defense_multiplier(unit, nation_data=None):
+    """Scale defense linearly from the scenario health floor to full defense.
 
-    Mirrors health_damage_multiplier: 1.0 at full health, c.DEFENSE_AT_ZERO_HEALTH
-    at 0 health, linear between. c.DEFENSE_AT_ZERO_HEALTH = 1 disables this
-    entirely (defense always holds at full value). The constant is a live
-    mirror of the scenario's "defense_at_zero_health" setting -- see
-    queries.apply_global_scenario_flags.
-    """
+    World-owned country mappings supply their own scenario settings.
+    Standalone callers retain the constant-based compatibility behavior."""
     max_hp = unit.get("max_health") or c.DEFAULT_UNIT_HP
     frac = max(0.0, min(1.0, unit.get("health", 0) / max_hp))
     floor = c.DEFENSE_AT_ZERO_HEALTH
+    if nation_data is not None and hasattr(nation_data, "world"):
+        from data.runtime_rules import value
+        floor = value(nation_data.world, "defense_at_zero_health", c.DEFAULT_DEFENSE_AT_ZERO_HEALTH)
     return floor + (1.0 - floor) * frac
 
 
@@ -768,7 +765,7 @@ def effective_damage_multiplier(unit, nation_data=None):
         return 0.0
     national = (queries.get_country_damage_multiplier(unit.get("owner"), nation_data)
                 if nation_data else 1.0)
-    return health_damage_multiplier(unit) * national
+    return health_damage_multiplier(unit, nation_data) * national
 
 
 def volley(units, shares=None, nation_data=None, profiles=None):
@@ -824,7 +821,7 @@ def damage_shots(units, targets, shares=None, nation_data=None, attack_field="at
     for target in targets:
         signature = tuple(queries.unit_target_damage_multiplier(
             (profiles or {}).get(id(unit), unit), (profiles or {}).get(id(target), target),
-            air_to_air=air_to_air) for unit in units)
+            air_to_air=air_to_air, context=nation_data) for unit in units)
         groups.setdefault(signature, []).append(target)
     shots = []
     for multipliers, group in groups.items():
@@ -862,7 +859,7 @@ def projected_incoming_damage(battle, nation_data=None, defense_bonus_fn=None):
             profile = battle.profiles.get(id(unit), unit)
             defense_bonus = defense_bonus_fn(profile) if defense_bonus_fn else 0
             defense = (profile.get("defense", 0)
-                       * health_defense_multiplier(profile)
+                       * health_defense_multiplier(profile, nation_data)
                        + defense_bonus)
             incoming[id(unit)] = incoming.get(id(unit), 0.0) + max(
                 0.0, damage_per_unit - defense) * unit.get("max_health", 1) / max(1, profile.get("max_health", 1))
@@ -942,7 +939,7 @@ def find_meeting_pairs(map_data, nation_data, visible_to=None):
     incoming = {}
     for province in map_data.values():
         for unit in province.get("units", []):
-            if queries.is_air_unit(unit) and not queries.air_unit_can_move_on_ground(unit):
+            if queries.is_air_unit(unit, context=nation_data) and not queries.air_unit_can_move_on_ground(unit, context=nation_data):
                 continue
             order = unit.get("order") or {}
             if order.get("type") != "MOVE" or not order.get("path"):

@@ -106,33 +106,45 @@ class BombardmentTests(unittest.TestCase):
     a barrage, then walked them into melee to swing a much smaller melee attack.
     """
 
-    def gun(self, kind="Artillery III"):
-        return {"type": kind, "owner": "Avaria", "health": 200,
+    def setUp(self):
+        from unittest.mock import patch
+        from data import queries
+        base = {"health": 200, "attack": 10, "defense": 0, "speed": 1,
+                "cost_materials": 10, "cost_manpower": 10, "cost_fuel": 0, "production_time": 1}
+        library = {"Fixture Gun": dict(base, bombard_attack=30, bombard_range=1),
+                   "Fixture Long Gun": dict(base, bombard_attack=30, bombard_range=2),
+                   "Fixture Rifles": dict(base)}
+        self.enterContext(patch.object(queries, "get_unit_library", return_value=library))
+
+    def gun(self, screen, kind="Fixture Gun"):
+        unit = {"type": kind, "owner": "Avaria", "health": 200,
                 "order": {"type": "MOVE", "path": []}}
+        screen.map_data["home"]["units"].append(unit)
+        return unit
 
     def test_a_gun_shells_an_adjacent_enemy_instead_of_charging_it(self):
         screen = BombardmentScreen(near_units=[enemy()])
-        gun = self.gun()
+        gun = self.gun(screen)
         fired = ai_movement._try_bombard(screen, "Avaria", gun, screen.map_data["home"])
         self.assertTrue(fired)
         self.assertEqual(gun["order"], {"type": "BOMBARD", "target_id": 2})
 
     def test_a_gun_with_nothing_in_range_is_left_to_move(self):
         screen = BombardmentScreen()
-        gun = self.gun()
+        gun = self.gun(screen)
         self.assertFalse(ai_movement._try_bombard(screen, "Avaria", gun, screen.map_data["home"]))
         self.assertEqual(gun["order"], {"type": "MOVE", "path": []})
 
     def test_an_ordinary_unit_never_bombards(self):
         screen = BombardmentScreen(near_units=[enemy()])
-        rifles = self.gun("Infantry Type 1936")
+        rifles = self.gun(screen, "Fixture Rifles")
         self.assertFalse(ai_movement._try_bombard(screen, "Avaria", rifles,
                                                   screen.map_data["home"]))
 
     def test_range_two_reaches_past_the_next_tile(self):
-        """A Railgun outranges an Artillery piece, and must use it."""
+        """The artificial long-range gun can reach the farther tile."""
         screen = BombardmentScreen(far_units=[enemy()])
-        short, long = self.gun("Artillery III"), self.gun("WW2 Railroad Gun")
+        short, long = self.gun(screen, "Fixture Gun"), self.gun(screen, "Fixture Long Gun")
         self.assertFalse(ai_movement._try_bombard(screen, "Avaria", short,
                                                   screen.map_data["home"]))
         self.assertTrue(ai_movement._try_bombard(screen, "Avaria", long,
@@ -142,21 +154,21 @@ class BombardmentTests(unittest.TestCase):
     def test_the_heaviest_enemy_stack_is_picked(self):
         screen = BombardmentScreen(near_units=[enemy(attack=10, health=10)],
                                    far_units=[enemy(attack=900, health=5000)])
-        gun = self.gun("WW2 Railroad Gun")
+        gun = self.gun(screen, "Fixture Long Gun")
         ai_movement._try_bombard(screen, "Avaria", gun, screen.map_data["home"])
         self.assertEqual(gun["order"]["target_id"], 3)
 
     def test_a_tile_holding_only_non_enemies_is_not_shelled(self):
         neutral = dict(enemy(), owner="Cirenia")
         screen = BombardmentScreen(near_units=[neutral])
-        gun = self.gun()
+        gun = self.gun(screen)
         self.assertFalse(ai_movement._try_bombard(screen, "Avaria", gun,
                                                   screen.map_data["home"]))
 
     def test_a_gun_riding_a_convoy_cannot_fire(self):
         """The loaded name is not in the unit library and not in the table."""
         screen = BombardmentScreen(near_units=[enemy()])
-        loaded = self.gun("Convoy (Artillery III)")
+        loaded = self.gun(screen, "Convoy (Fixture Gun)")
         self.assertFalse(ai_movement._try_bombard(screen, "Avaria", loaded,
                                                   screen.map_data["home"]))
 

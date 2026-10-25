@@ -174,8 +174,8 @@ def promote(map_screen, faction, world=None):
         # Nothing left to lead. Puppets in here follow their masters, who are
         # not in this faction either, so let go of the whole thing.
         for member in queries.get_faction_members(faction, nation_data):
-            nation_data[member]["faction"] = ""
-            nation_data[member]["is_faction_leader"] = False
+            queries.set_country_faction(nation_data, member, "")
+            queries.set_faction_leadership(nation_data, member, False)
             nation_data[member].pop("faction_pressure", None)
         (nation_data.get("FACTION_WAR_MAPS") or {}).pop(faction, None)
         return None
@@ -281,11 +281,11 @@ def transfer(nation_data, old_leader, new_leader):
     faction = nation_data.get(new_leader, {}).get("faction", "")
 
     for member in queries.get_faction_members(faction, nation_data):
-        nation_data[member]["is_faction_leader"] = (member == new_leader)
+        queries.set_faction_leadership(nation_data, member, member == new_leader)
         nation_data[member].pop("faction_pressure", None)
 
     if old_leader in nation_data:
-        nation_data[old_leader]["is_faction_leader"] = False
+        queries.set_faction_leadership(nation_data, old_leader, False)
         queries.add_temporary_modifier(old_leader, new_leader, "deposed",
                                        c.REL_MOD_DEPOSED, nation_data)
     return faction

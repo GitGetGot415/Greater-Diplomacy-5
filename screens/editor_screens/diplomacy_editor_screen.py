@@ -182,17 +182,21 @@ class Diplomacy_Editor_Screen(ScrollPanes, MapOverlayScreen):
 
         # 2. Faction membership.
         new_faction = self.faction_field.text.strip()
-        data["faction"] = new_faction
-        data["is_faction_leader"] = self.is_leader
+        old_faction = data.get("faction", "")
+        if old_faction and new_faction and old_faction != new_faction and data.get("is_faction_leader"):
+            from map_logic.diplomacy.faction_actions import rename_faction
+            rename_faction(nation_data, target, old_faction, new_faction)
+        queries.set_country_faction(nation_data, target, new_faction)
+        queries.set_faction_leadership(nation_data, target, self.is_leader)
 
         for name in self.others:
             if name in self.members:
-                nation_data[name]["faction"] = new_faction
+                queries.set_country_faction(nation_data, name, new_faction)
                 if new_faction:
-                    nation_data[name]["is_faction_leader"] = False
+                    queries.set_faction_leadership(nation_data, name, False)
             elif new_faction and nation_data[name].get("faction", "") == new_faction:
-                nation_data[name]["faction"] = ""
-                nation_data[name]["is_faction_leader"] = False
+                queries.set_country_faction(nation_data, name, "")
+                queries.set_faction_leadership(nation_data, name, False)
 
         # 3. Puppet state.
         old_master = data.get("master", "")

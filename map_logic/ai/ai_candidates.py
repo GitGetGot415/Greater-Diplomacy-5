@@ -51,8 +51,9 @@ class Collector:
     proposals aimed at the same nation.
     """
 
-    def __init__(self, nation, pending):
+    def __init__(self, nation, pending, *, context=None):
         self.nation = nation
+        self.context = context
         self.pending = pending
         self._by_target = {}
 
@@ -60,6 +61,10 @@ class Collector:
         """Offers a candidate. The better of two aimed at the same target wins."""
         if candidate is None:
             return False
+        if self.context is not None:
+            from map_logic.diplomacy.action_definitions import availability
+            if not availability(self.context, self.nation, candidate.target, candidate.action).allowed:
+                return False
         if not self._target_is_free(candidate.target):
             return False
 

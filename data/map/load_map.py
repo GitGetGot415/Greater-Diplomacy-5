@@ -46,6 +46,10 @@ def _apply_history_snapshot(save_meta, history, history_turn):
         save_meta["nation_data"] = copy.deepcopy(snap["nation_data"])
     if isinstance(snap.get("provinces"), dict):
         save_meta["provinces"] = copy.deepcopy(snap["provinces"])
+    if "factions" in snap:
+        save_meta["factions"] = copy.deepcopy(snap["factions"])
+    else:
+        save_meta.pop("factions", None)
 
     if "date" not in save_meta:
         save_meta["date"] = {}
@@ -68,6 +72,8 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
     replace_mapping(world_state, "map_data", {})
     replace_mapping(world_state, "id_to_province", {})
     replace_mapping(world_state, "nation_data", {})
+    world_state.factions = {}
+    world_state.factions_initialized = False
     map_screen.country_economy_summaries = {}
     replace_mapping(world_state, "history", {})
     replace_mapping(world_state, "raw_json_data", {})
@@ -83,8 +89,6 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
         "truce_turns": c.DEFAULT_TRUCE_TURNS,
         "force_time_appropriate_research": c.DEFAULT_FORCE_TIME_APPROPRIATE_RESEARCH,
     })
-    queries.apply_global_scenario_flags(world_state.scenario_settings)
-    print(f"[SYSTEM] Fog of War set to: {c.USE_FOG_OF_WAR}")
 
     # --- PROCEDURAL INTERCEPT ---
     if load_path == "PROCEDURAL":
@@ -102,8 +106,8 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
         replace_mapping(world_state, "nation_data", copy.deepcopy(country_io.load_all_country_data()))
         _load_default_images(map_screen, scrub_images=load_presentation)
         map_screen.nation_colors = country_io.nation_colors_from(world_state.nation_data)
-        queries.apply_unit_range_overrides(
-            queries.reload_game_library("unit_library"), world_state.scenario_settings)
+        from data.runtime_rules import rebuild
+        rebuild(map_screen)
         return
 
     # --- ZIP FILE INTERCEPT ---
@@ -170,7 +174,6 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
             # Editor's current state (whatever it's since been changed to) must
             # never reach back into an already-played save.
             replace_mapping(world_state, "scenario_settings", save_meta["scenario_settings"])
-            queries.apply_global_scenario_flags(world_state.scenario_settings)
         else:
             # Inject built-in scenario constants that shouldn't be wiped by the user's UI settings
             if "base_days_per_turn" in save_meta["scenario_settings"]:
@@ -191,64 +194,15 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
         c.DEFAULT_FORCE_TIME_APPROPRIATE_RESEARCH,
     )
 
-    # --- APPLY TURN OVERRIDES ---
-    # Clear and reload libraries to ensure a clean slate before applying overrides
-    # We MUST mutate the dictionaries inplace because UI screens hold pointers to them!
-    unit_lib = queries.reload_game_library("unit_library")
-    building_lib = queries.reload_game_library("building_library")
-    queries.apply_unit_range_overrides(unit_lib, world_state.scenario_settings)
-
-    # Same family-name rule the turn editor writes these overrides with, so the
-    # keys it saves always match the ones looked up here.
-    for library, overrides, time_key in (
-        (unit_lib, world_state.scenario_settings.get("unit_turn_overrides", {}), "production_time"),
-        (building_lib, world_state.scenario_settings.get("building_turn_overrides", {}), "time"),
-    ):
-        for name, data in library.items():
-            btype = queries.get_base_item_name(name)
-            if btype in overrides:
-                data[time_key] = overrides[btype]
-
-    # --- APPLY DISABLED UNITS/BUILDINGS ---
-    # A disabled base type is simply dropped from its library, which is already
-    # how the rest of the codebase treats "doesn't exist" for buildability
-    # (see the building filter below, and is_unit_unlocked's bare library
-    # membership checks) -- there is no separate buildable/researchable flag.
-    # Every tech key a removed variant would have unlocked is collected so the
-    # tech tree can be pruned to match.
+    # Active libraries and indexes belong to this world.
+    from data.runtime_rules import rebuild
+    runtime = rebuild(map_screen)
+    unit_lib = runtime.libraries["unit_library"]
+    building_lib = runtime.libraries["building_library"]
+    tech_tree = runtime.libraries["tech_tree"]
+    disabled_tech_keys = runtime.disabled_tech_keys
     disabled_units = set(world_state.scenario_settings.get("unit_disabled", []))
     disabled_buildings = set(world_state.scenario_settings.get("building_disabled", []))
-    disabled_tech_keys = set()
-
-    for name in [n for n in unit_lib if queries.get_base_item_name(n) in disabled_units]:
-        tech_key = queries.get_unit_research_requirement(name, unit_lib)[0]
-        if tech_key:
-            disabled_tech_keys.add(tech_key)
-        del unit_lib[name]
-
-    for name in [n for n in building_lib if queries.get_base_item_name(n) in disabled_buildings]:
-        tech_key, _lvl = queries.get_building_required_tech(name)
-        if tech_key:
-            disabled_tech_keys.add(tech_key)
-        del building_lib[name]
-
-    # Always reload tech_tree fresh from disk first, exactly like unit_lib/
-    # building_lib above -- otherwise re-enabling a previously-disabled tech
-    # leaves it pruned forever (this block would only ever repair keys that
-    # are *currently* disabled, never undo a prune from an earlier load where
-    # they weren't), and it'd keep looking that way until the app restarts
-    # and the cache gets rebuilt from scratch.
-    tech_tree = queries.reload_game_library("tech_tree")
-
-    if disabled_tech_keys:
-        for key in disabled_tech_keys:
-            tech_tree.pop(key, None)
-
-        # Any other tech that required a now-disabled tech has that leaf
-        # bypassed (assumed fulfilled) rather than becoming permanently stuck.
-        for tech_data in tech_tree.values():
-            tech_data["req"] = queries.strip_disabled_tech_requirements(
-                tech_data.get("req", {}), disabled_tech_keys)
 
     if load_path:
         # Prefers the compressed form, falls back to the plain history.json that
@@ -273,11 +227,11 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
     # Relation scores are derived on demand by queries.get_relation_score from
     # at_war_with / faction / master / temp_modifiers / claims, so there is no
     # stored table to seed here.
-    if c.DISABLE_FACTIONS:
+    if queries.get_scenario_flag("disable_factions", c.DEFAULT_DISABLE_FACTIONS, world_state.scenario_settings):
         for c_name, c_data in world_state.nation_data.items():
             c_data["faction"] = ""
 
-    if c.BATTLE_ROYALE_MODE:
+    if queries.get_scenario_flag("battle_royale", c.DEFAULT_BATTLE_ROYALE, world_state.scenario_settings):
         playable_nations = [n for n in world_state.nation_data.keys() if queries.is_playable(n, world_state.nation_data)]
         for c_name in playable_nations:
             c_data = world_state.nation_data[c_name]
@@ -367,7 +321,7 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
         replace_mapping(world_state, "raw_json_data", json.load(f))
 
     # Load building library to scrub removed buildings (like fuel refineries) from old saves
-    bldg_lib = queries.get_building_library()
+    bldg_lib = queries.get_building_library(map_screen)
 
     def _unit_base_type(unit):
         """Resolves a stored unit's real type down to its turn-editor base type,
@@ -377,7 +331,7 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
             match = re.search(r'\((.*?)\)', u_type)
             if match:
                 u_type = match.group(1).strip()
-        return queries.get_base_item_name(u_type)
+        return queries.get_base_item_name(u_type, context=map_screen)
 
     # Older saves kept mutable province values in meta.json. New saves store
     # those values directly in map_data.json; this overlay remains for old saves
@@ -424,7 +378,17 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
     # --- REPAIR FACTION ROSTERS ---
     # Runs before the pre-war maps below, which are built off the rosters.
     migrations.migrate_pending_responses(world_state.nation_data)
-    migrations.repair_faction_rosters(world_state.nation_data, world_state.map_data)
+    from map_logic.diplomacy import faction_records
+    if save_meta and "factions" in save_meta:
+        faction_records.restore(map_screen, save_meta["factions"])
+    else:
+        # Preserve the established repair order before converting old country fields.
+        migrations.repair_faction_rosters(dict(world_state.nation_data), world_state.map_data)
+        faction_records.restore(map_screen)
+    if (queries.get_scenario_flag("disable_factions", c.DEFAULT_DISABLE_FACTIONS, world_state.scenario_settings)
+            or queries.get_scenario_flag("battle_royale", c.DEFAULT_BATTLE_ROYALE, world_state.scenario_settings)):
+        world_state.factions.clear()
+        faction_records.project(map_screen)
 
     # A saved game can be written immediately after the last territorial
     # faction member falls. Do not revive that exhausted bloc on load: without
@@ -458,7 +422,7 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
     for prov in world_state.map_data.values():
         for unit in queries.units_with_air_cargo(prov.get("units", [])):
             if not unit.get("custom_name"):
-                unit["custom_name"] = queries.generate_unit_custom_name(unit, unit_counters)
+                unit["custom_name"] = queries.generate_unit_custom_name(unit, unit_counters, context=map_screen)
 
     # Army rosters are saved on countries while their members live in
     # provinces.  Repair both ends together after every map load, including

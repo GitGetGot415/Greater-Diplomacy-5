@@ -3,6 +3,7 @@ from map_logic import production_actions
 import random
 import data.constants as c
 from data import queries
+from map_logic import unit_actions
 from map_logic.ai import ai_unit_eval, ai_world
 from map_logic.diplomacy import restrictions
 
@@ -94,7 +95,7 @@ def tactical_player_unit(map_screen):
     return getattr(session_for(map_screen), "player_unit", None)
 
 
-def _disband_peacetime_militia(ai_name, my_provs, at_war, protected=None):
+def _disband_peacetime_militia(ai_name, my_provs, at_war, protected=None, *, context=None):
     """Militia are for wars. At peace, stand them down.
 
     Runs after the purchase loop rather than before it, and skips any type on
@@ -115,10 +116,11 @@ def _disband_peacetime_militia(ai_name, my_provs, at_war, protected=None):
             if (u.get("owner") == ai_name
                     and u is not protected
                     and not queries.unit_is_air_drop_recovering(u)
-                    and queries.get_base_unit_name(u.get("type", "")) == "Militia"
+                    and queries.get_base_unit_name(u.get("type", ""), context=context) == "Militia"
                     and u.get("type", "") not in on_order
                     and u.get("order", {}).get("type") != "DISBAND"):
-                u["order"] = {"type": "DISBAND", "turns_left": 1}
+                unit_actions.apply_action(context, ai_name, prov, u,
+                                          {"type": "DISBAND"}, authority="ai")
 
 
 def _compute_economy_ratios(map_screen, ai_name, data, my_provs, econ, unit_library):
@@ -333,7 +335,7 @@ def _disband_worst_unit_if_deficit(map_screen, data, my_provs, ai_name, deficits
         # and this passed "Heavy Tank I", so the primary sort key never matched
         # a level-suffixed unit and ranking fell entirely to value.score.
         # ai_unit_eval asks the same question the same way.
-        is_obs = queries.is_unit_obsolete(queries.get_base_unit_name(u_type), res_levels)
+        is_obs = queries.is_unit_obsolete(queries.get_base_unit_name(u_type, context=map_screen), res_levels)
         value = values.get(u_type)
         # Outdated units (is_obs=True) have priority (0). Then the one the
         # nation's own valuation rates lowest. An unscored type sorts first
@@ -344,7 +346,10 @@ def _disband_worst_unit_if_deficit(map_screen, data, my_provs, ai_name, deficits
 
     # Disband the worst unit
     worst_unit = candidates[0][0]
-    worst_unit["order"] = {"type": "DISBAND", "turns_left": 1}
+    province = next(province for province in my_provs
+                    if any(unit is worst_unit for unit in province.get("units", [])))
+    unit_actions.apply_action(map_screen, ai_name, province, worst_unit,
+                              {"type": "DISBAND"}, authority="ai")
 
 
 def _panic_militia_and_tally_forces(map_screen, ai_name, data, my_provs, unit_library, state, roles):
@@ -401,20 +406,20 @@ def _panic_militia_and_tally_forces(map_screen, ai_name, data, my_provs, unit_li
                 if queue:
                     first_item = queue[0]
                     u_type = first_item.get("unit_type", "")
-                    is_naval = queries.is_naval_unit(u_type) if u_type else False
+                    is_naval = queries.is_naval_unit(u_type, context=map_screen) if u_type else False
                     turns = first_item.get("turns_remaining", 999)
 
                     if not is_naval and turns <= 1:
                         safe_to_panic = False # Let the ground unit finish!
 
-                militia_name = queries.get_best_preferred_unit(data.get("research", {}), unit_library, ["Militia"]) or "Militia I"
+                militia_name = queries.get_best_preferred_unit(data.get("research", {}), unit_library, ["Militia"], context=map_screen) or "Militia I"
                 militia_stats = unit_library.get(militia_name, {})
                 militia_time = militia_stats.get("production_time", 1)
 
                 if not restrictions.can_raise_units(ai_name, world_state.nation_data):
                     safe_to_panic = False  # demilitarized by treaty; not even in a panic
 
-                if safe_to_panic and militia_time == 1 and (not queue or queries.get_base_unit_name(queue[0].get("unit_type", "")) != "Militia"):
+                if safe_to_panic and militia_time == 1 and (not queue or queries.get_base_unit_name(queue[0].get("unit_type", ""), context=map_screen) != "Militia"):
                     # Cancel existing queue
                     while queue:
                         production_actions.cancel_production(
@@ -795,12 +800,12 @@ def _apply_construction_logic(map_screen, ai_name, data, my_provs, building_libr
 def process_ai_economy_decisions(map_screen):
     """Handles AI unit recruitment and building construction based on economy."""
     world_state = world_for(map_screen)
-    unit_library = queries.get_unit_library()
-    building_library = queries.get_building_library()
+    unit_library = queries.get_unit_library(map_screen)
+    building_library = queries.get_building_library(map_screen)
 
-    tech_tree = queries.get_tech_tree()
+    tech_tree = queries.get_tech_tree(map_screen)
 
-    all_econ = queries.calculate_all_economies(world_state.map_data, world_state.nation_data)
+    all_econ = queries.calculate_all_economies(world_state.map_data, world_state.nation_data, context=map_screen)
 
     # Border and coast counts, and the enemy stacks each nation is facing, all
     # come off this turn's snapshot rather than being re-derived per nation.
@@ -894,7 +899,7 @@ def process_ai_economy_decisions(map_screen):
 
         # After the purchases, so it can see what was actually ordered.
         _disband_peacetime_militia(ai_name, my_provs, state["at_war"],
-                                   protected=tactical_player_unit(map_screen))
+                                   protected=tactical_player_unit(map_screen), context=map_screen)
 
         # --- AI CORING PRIORITY ---
         _apply_coring_priority(map_screen, ai_name, data, my_provs)

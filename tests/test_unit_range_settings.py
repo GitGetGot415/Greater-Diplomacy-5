@@ -300,8 +300,8 @@ class UnitRangePersistenceTests(unittest.TestCase):
         with mock.patch.object(queries, "get_scenario_settings", return_value={}):
             loaded = Map(load_path=str(path), skip_initial_income=True)
             self.assertEqual(loaded.scenario_settings["unit_range_overrides"], self.settings["unit_range_overrides"])
-            self.assertEqual(queries.air_order_radius(loaded.id_to_province[1]["units"][0], "AIR_ATTACK"), 128)
-            self.assertEqual(queries.get_bombardment_range("Fixture Gun III"), 4)
+            self.assertEqual(queries.air_order_radius(loaded.id_to_province[1]["units"][0], "AIR_ATTACK", context=loaded), 128)
+            self.assertEqual(queries.get_bombardment_range("Fixture Gun III", context=loaded), 4)
             snapshot = json.loads(json.dumps(queries.build_save_dict(loaded)))
             self.assertEqual(snapshot["scenario_settings"]["unit_range_overrides"], self.settings["unit_range_overrides"])
             meta_path = path / "meta.json"
@@ -326,8 +326,8 @@ class UnitRangePersistenceTests(unittest.TestCase):
             loaded = Map(load_path=str(path), is_scenario=True,
                          map_settings=self.settings, skip_initial_income=True)
         self.assertIs(queries.get_unit_library(), library)
-        self.assertEqual(queries.get_bombardment_range("Fixture Gun III"), 4)
-        self.assertEqual(queries.air_order_radius({"type": "Fixture Wing IV"}, "AIR_ATTACK"), 144)
+        self.assertEqual(queries.get_bombardment_range("Fixture Gun III", context=loaded), 4)
+        self.assertEqual(queries.air_order_radius({"type": "Fixture Wing IV"}, "AIR_ATTACK", context=loaded), 144)
         self.assertEqual(loaded.scenario_settings["unit_range_overrides"], self.settings["unit_range_overrides"])
 
     def test_lobby_host_updates_and_resets_ranges_before_snapshot(self):
@@ -344,9 +344,9 @@ class UnitRangePersistenceTests(unittest.TestCase):
         self.assertIs(queries.get_unit_library(), library)
         self.assertEqual(game.scenario_settings, self.settings)
         self.assertEqual(driver.snapshot()["scenario_settings"]["unit_range_overrides"], self.settings["unit_range_overrides"])
-        self.assertEqual(queries.get_bombardment_range("Fixture Gun I"), 4)
+        self.assertEqual(queries.get_bombardment_range("Fixture Gun I", context=game), 4)
         session.set_scenario_settings(session.host_id, {})
-        self.assertEqual(queries.get_bombardment_range("Fixture Gun I"), 1)
+        self.assertEqual(queries.get_bombardment_range("Fixture Gun I", context=game), 1)
         self.assertEqual(library["Fixture Wing IV"]["air_range_px"], 55)
         self.assertEqual(library["Fixture Gun I"]["production_time"], 9)
 
@@ -357,8 +357,8 @@ class UnitRangePersistenceTests(unittest.TestCase):
         snapshot["scenario_settings"] = copy.deepcopy(self.settings)
         apply_authoritative_snapshot(game, snapshot)
         self.assertEqual(game.scenario_settings, self.settings)
-        self.assertEqual(queries.get_bombardment_range("Fixture Gun I"), 4)
-        self.assertEqual(queries.air_order_radius({"type": "Fixture Wing II"}, "AIR_ATTACK"), 128)
+        self.assertEqual(queries.get_bombardment_range("Fixture Gun I", context=game), 4)
+        self.assertEqual(queries.air_order_radius({"type": "Fixture Wing II"}, "AIR_ATTACK", context=game), 128)
         snapshot["scenario_settings"] = {}
         apply_authoritative_snapshot(game, snapshot)
         self.assertEqual(queries.get_unit_library(), range_library())

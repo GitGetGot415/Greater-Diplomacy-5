@@ -10,17 +10,10 @@ import data.constants as c
 
 
 def rename_faction(nation_data, leader, old_name, new_name):
-    """Rename a faction without changing its membership or war bookkeeping.
+    """Rename a faction while retaining its identity, membership, and war bookkeeping.
 
-    A faction has no object of its own: each member stores the same faction
-    string, and its pre-war border snapshot is keyed by that string.  Keeping
-    this mutation here gives the regular UI and tournament move importer one
-    authoritative implementation instead of letting either leave a member or
-    a ``FACTION_WAR_MAPS`` entry behind under the old name.
-
-    Only the current leader may rename the faction.  Existing faction names
-    are rejected rather than silently merging two unrelated alliances.
-    """
+    World records own the data. Country fields remain compatibility projections.
+    Only the current leader can rename it. Existing faction names are rejected."""
     if not isinstance(old_name, str) or not isinstance(new_name, str):
         return False
 
@@ -40,8 +33,14 @@ def rename_faction(nation_data, leader, old_name, new_name):
     if not members:
         return False
 
-    for member in members:
-        nation_data[member]["faction"] = new_name
+    from map_logic.diplomacy import faction_records
+    record = faction_records.find(nation_data, old_name)
+    if record is not None:
+        record["name"] = new_name
+        faction_records.project(nation_data)
+    else:
+        for member in members:
+            queries.set_country_faction(nation_data, member, new_name)
 
     faction_war_maps = nation_data.get("FACTION_WAR_MAPS")
     if isinstance(faction_war_maps, dict) and old_name in faction_war_maps:
@@ -103,8 +102,8 @@ def leave_faction(nation_data, leaver):
         _keep_own_pre_war_borders(nation_data, leaver, fac)
         queries.remove_member_from_pre_war_map(leaver, fac, nation_data)
 
-    nation_data[leaver]["faction"] = ""
-    nation_data[leaver]["is_faction_leader"] = False
+    queries.set_country_faction(nation_data, leaver, "")
+    queries.set_faction_leadership(nation_data, leaver, False)
     # Whatever claim it had built up on the leadership goes with it. Walking out
     # is not a way to bank six turns of pressure against a bloc you might rejoin.
     nation_data[leaver].pop("faction_pressure", None)
@@ -146,19 +145,19 @@ def finalize_create_faction(map_data, nation_data, creator):
     from map_logic.diplomacy.puppet_actions import pull_puppets_into_faction
     from map_logic.diplomacy import guarantees
 
-    if getattr(c, "DISABLE_FACTIONS", False):
+    if queries.get_scenario_flag("disable_factions", c.DEFAULT_DISABLE_FACTIONS, getattr(queries.world_for(nation_data), "scenario_settings", {})):
         return
 
     master = nation_data.get(creator, {}).get("master", "")
     leader = master if master else creator
 
     fac = f"The {nation_data[leader].get('name', leader)} Pact"
-    nation_data[leader]["faction"] = fac
-    nation_data[leader]["is_faction_leader"] = True
+    queries.set_country_faction(nation_data, leader, fac)
+    queries.set_faction_leadership(nation_data, leader, True)
 
     if master:
-        nation_data[creator]["faction"] = fac
-        nation_data[creator]["is_faction_leader"] = False
+        queries.set_country_faction(nation_data, creator, fac)
+        queries.set_faction_leadership(nation_data, creator, False)
 
     if queries.is_faction_at_war(fac, nation_data):
         queries.save_faction_pre_war_map(fac, map_data, nation_data)
@@ -181,11 +180,8 @@ def finalize_disband_faction(nation_data, leader):
 def disband_faction(nation_data, faction):
     """Clear one faction roster and its faction-wide historical border record.
 
-    A faction is represented by its members' shared string, rather than a
-    separate object.  Keeping this mutation here makes voluntary disbands and
-    collapse after every member enters exile clean up exactly the same state.
-    Returns the roster as it existed before the disband.
-    """
+    Voluntary disbanding and collapse after exile use the same mutation boundary.
+    Return the roster as it existed before disbanding."""
     if not faction:
         return []
 
@@ -199,8 +195,8 @@ def disband_faction(nation_data, faction):
 
     for member in members:
         data = nation_data[member]
-        data["faction"] = ""
-        data["is_faction_leader"] = False
+        queries.set_country_faction(nation_data, member, "")
+        queries.set_faction_leadership(nation_data, member, False)
         data.pop("faction_pressure", None)
         data.pop("faction_tenure", None)
     return members
@@ -247,8 +243,8 @@ def finalize_faction_join(map_data, nation_data, host, joiner):
     if not fac:
         return False
 
-    nation_data[joiner]["faction"] = fac
-    nation_data[joiner]["is_faction_leader"] = False
+    queries.set_country_faction(nation_data, joiner, fac)
+    queries.set_faction_leadership(nation_data, joiner, False)
 
     settle_with_faction(nation_data, joiner, fac)
 

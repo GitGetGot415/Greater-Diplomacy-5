@@ -118,7 +118,7 @@ def diplomacy_snapshot(freeze_access=True):
 
     _DIPLO_LOCAL.store = {
         "friendly": {},
-        "faction_members": None,
+        "faction_members": {},
         "entry": {} if freeze_access else None,
     }
     try:
@@ -154,10 +154,11 @@ def friendly_nations_view(nation, nation_data):
     if store is None:
         return _compute_friendly_nations(nation, nation_data)
 
-    cached = store["friendly"].get(nation)
+    key = (id(nation_data), nation)
+    cached = store["friendly"].get(key)
     if cached is None:
         cached = frozenset(_compute_friendly_nations(nation, nation_data))
-        store["friendly"][nation] = cached
+        store["friendly"][key] = cached
     return cached
 
 def get_all_friendly_nations(nation, nation_data):
@@ -419,12 +420,16 @@ def get_truce_turns(scenario_settings=None):
     return max(c.MIN_TRUCE_TURNS, min(c.MAX_TRUCE_TURNS, value))
 
 
-def apply_global_scenario_flags(scenario_settings):
-    """Pushes the scenario's rules onto their live constants.
+def world_truce_turns(nation_data):
+    # Plain country dictionaries retain the supported no-world behavior.
+    world = world_for(nation_data)
+    return get_truce_turns(None if isinstance(world, dict) else world.scenario_settings)
 
-    Called on map load and again whenever a save overrides the session settings;
-    keeping the flag/value lists in one table each is what stops the two paths
-    drifting apart.
+
+def apply_global_scenario_flags(scenario_settings):
+    """Preserve constant updates for older no-context callers.
+
+    Active world loading and gameplay use explicit world settings instead.
     """
     for flag_name, (const_name, default) in GLOBAL_SCENARIO_FLAGS.items():
         setattr(c, const_name, get_scenario_flag(flag_name, default, scenario_settings))
@@ -523,9 +528,9 @@ def refresh_unit_range_overrides(settings):
                 stats.pop(key, None)
 
 
-def _unit_range_level(name):
+def _unit_range_level(name, *, context=None):
     """Return the numbered family level, or one for an unnumbered unit."""
-    return max(1, get_unit_research_requirement(name)[1])
+    return max(1, get_unit_research_requirement(name, context=context)[1])
 
 
 def get_unit_range_overrides(settings, defaults):
@@ -556,19 +561,19 @@ def scenario_has_unit_stat_customizations(settings):
     return bool(get_unit_range_overrides(settings, get_unit_range_defaults()))
 
 
-def apply_unit_range_overrides(unit_library, settings):
+def apply_unit_range_overrides(unit_library, settings, *, context=None):
     """Apply scenario ranges to a freshly loaded library before units are restored."""
     defaults = get_unit_range_defaults(unit_library)
     overrides = get_unit_range_overrides(settings, defaults)
     for name, stats in unit_library.items():
-        family = get_base_item_name(name)
+        family = get_base_item_name(name, context=context)
         changed = overrides.get(family, {})
-        if "bombard_range" in changed and get_bombardment_range(name, stats) > 0:
+        if "bombard_range" in changed and get_bombardment_range(name, stats, context=context) > 0:
             stats["bombard_range"] = changed["bombard_range"]
         if stats.get("air_role") and ("air_range_start" in changed or "air_range_per_level" in changed):
             start = changed.get("air_range_start", defaults[family]["air_range_start"])
             step = changed.get("air_range_per_level", defaults[family]["air_range_per_level"])
-            stats["air_range_px"] = start + (_unit_range_level(name) - 1) * step
+            stats["air_range_px"] = start + (_unit_range_level(name, context=context) - 1) * step
 
 
 def save_scenario_settings(data):
@@ -635,10 +640,13 @@ def invalidate_unit_metadata():
     if symbols is not None:
         symbols.clear_caches()
 
-def reload_game_library(cache_key):
+def reload_game_library(cache_key, context=None):
     """Reload a game library and preserve references held by screens."""
     if cache_key not in ("unit_library", "building_library", "tech_tree"):
         raise ValueError(f"Not a game library: {cache_key}")
+    if context is not None:
+        from data.runtime_rules import rebuild
+        return rebuild(context, reload_defaults=True).libraries[cache_key]
     return _load_cached_json(cache_key, reload=True)
 
 def save_cached_json(cache_key, new_data):
@@ -726,9 +734,20 @@ def get_keybind_changes_screen(action):
         return False
     return bool(get_settings().get(key, True))
 
-def get_unit_library(): return _load_cached_json("unit_library")
-def get_building_library(): return _load_cached_json("building_library")
-def get_tech_tree(): return _load_cached_json("tech_tree")
+def _game_library(name, context):
+    # No-context callers edit or inspect default content, never an active world.
+    from data.runtime_rules import ActiveLibrary
+    if isinstance(context, ActiveLibrary):
+        return context.runtime_rules.libraries[name]
+    if context is None or isinstance(context, dict) and world_for(context) is context:
+        return _load_cached_json(name)
+    from data.runtime_rules import for_world
+    return for_world(context).libraries[name]
+
+
+def get_unit_library(context=None): return _game_library("unit_library", context)
+def get_building_library(context=None): return _game_library("building_library", context)
+def get_tech_tree(context=None): return _game_library("tech_tree", context)
 def get_country_data(): return _load_cached_json("country_data")
 def get_ai_responses(): return _load_cached_json("ai_responses")
 def get_historical_leader_timeline(): return _load_cached_json("historical_leaders")
@@ -818,9 +837,9 @@ def get_hildehrand_choice():
     variant = data.get("variant") if isinstance(data, dict) else None
     return variant if variant in discover_character_images() else DEFAULT_PORTRAIT
 
-def get_time_appropriate_research(start_year):
+def get_time_appropriate_research(start_year, *, context=None):
     """Calculates time-appropriate research level mapping for a given start year."""
-    struct = get_tech_tree()
+    struct = get_tech_tree(context)
     if not struct:
         return {}
 
@@ -861,7 +880,7 @@ def apply_time_appropriate_research_to_map(map_screen, year):
     can't drift into computing this differently.
     """
     world_state = world_for(map_screen)
-    time_app_res = get_time_appropriate_research(year)
+    time_app_res = get_time_appropriate_research(year, context=map_screen)
     world_state.default_research = time_app_res.copy()
     for cid in get_living_nations(world_state.map_data):
         world_state.nation_data[cid]["research"] = time_app_res.copy()
@@ -1030,6 +1049,10 @@ def is_hostile_territory(moving_nation, target_owner, nation_data):
 
 def are_in_same_faction(nation_a, nation_b, nation_data):
     """Returns True if both nations share a faction string."""
+    from map_logic.diplomacy.faction_records import records_for
+    if records_for(nation_data) is not None:
+        index = world_for(nation_data).faction_membership
+        return nation_a in index and index[nation_a] == index.get(nation_b)
     fac_a = nation_data.get(nation_a, {}).get("faction", "")
     fac_b = nation_data.get(nation_b, {}).get("faction", "")
     return fac_a != "" and fac_a == fac_b
@@ -1037,6 +1060,10 @@ def are_in_same_faction(nation_a, nation_b, nation_data):
 def get_faction_members(faction_name, nation_data):
     """Returns a list of all nations currently in the specified faction."""
     if not faction_name: return []
+    from map_logic.diplomacy import faction_records
+    if faction_records.records_for(nation_data) is not None:
+        record = faction_records.find(nation_data, faction_name)
+        return list(record["members"]) if record else []
 
     store = getattr(_DIPLO_LOCAL, "store", None)
     if store is None:
@@ -1045,14 +1072,14 @@ def get_faction_members(faction_name, nation_data):
     # Under a snapshot, one pass over nation_data answers every faction instead
     # of one pass per question. Still hands back a fresh list each time, since
     # callers do stash and mutate what they get back.
-    index = store["faction_members"]
+    index = store["faction_members"].get(id(nation_data))
     if index is None:
         index = {}
         for n, d in list(nation_data.items()):
             fac = d.get("faction") if isinstance(d, dict) else None
             if fac:
                 index.setdefault(fac, []).append(n)
-        store["faction_members"] = index
+        store["faction_members"][id(nation_data)] = index
     return list(index.get(faction_name, ()))
 
 def get_faction_research_bonus(nation, tech_key, target_level, nation_data):
@@ -1086,13 +1113,37 @@ def get_faction_research_bonus(nation, tech_key, target_level, nation_data):
 def get_faction_leader(faction_name, nation_data):
     """Returns the leader of the specified faction."""
     if not faction_name: return None
+    from map_logic.diplomacy import faction_records
+    if faction_records.records_for(nation_data) is not None:
+        record = faction_records.find(nation_data, faction_name)
+        return record["leader"] if record else None
     for n, d in list(nation_data.items()):
         if d.get("faction") == faction_name and d.get("is_faction_leader", False):
             return n
     return None
 
+def set_country_faction(nation_data, country, faction):
+    from map_logic.diplomacy.faction_records import set_membership
+    set_membership(nation_data, country, faction)
+
+
+def get_country_faction_id(context, country):
+    from map_logic.diplomacy.faction_records import records_for
+    records_for(context)
+    return world_for(context).faction_membership.get(country)
+
+
+def set_faction_leadership(nation_data, country, is_leader):
+    from map_logic.diplomacy.faction_records import set_leadership
+    set_leadership(nation_data, country, is_leader)
+
+
 def is_faction_leader(nation, nation_data):
     """Returns True if the nation is currently a faction leader."""
+    from map_logic.diplomacy.faction_records import records_for
+    records = records_for(nation_data)
+    if records is not None:
+        return any(record["leader"] == nation for record in records.values())
     return nation_data.get(nation, {}).get("is_faction_leader", False)
 
 def can_invite_to_faction(nation, nation_data):
@@ -1163,6 +1214,10 @@ def save_faction_pre_war_map(faction_name, map_data, nation_data):
             pre_war_map[str(prov["id"])] = owner
 
     nation_data["FACTION_WAR_MAPS"][faction_name] = pre_war_map
+    from map_logic.diplomacy.faction_records import find
+    record = find(nation_data, faction_name)
+    if record is not None:
+        record["pre_war_borders"] = pre_war_map
 
 def _modify_pre_war_map(faction_name, nation_data, modify_func):
     """Helper to safely access and modify the pre-war map."""
@@ -1188,6 +1243,10 @@ def remove_member_from_pre_war_map(member_name, faction_name, nation_data):
 def clear_faction_pre_war_map_if_peace(faction_name, nation_data):
     """Clears the pre-war map if the faction is no longer at war."""
     if not is_faction_at_war(faction_name, nation_data):
+        from map_logic.diplomacy.faction_records import find
+        record = find(nation_data, faction_name)
+        if record is not None:
+            record["pre_war_borders"].clear()
         if "FACTION_WAR_MAPS" in nation_data and faction_name in nation_data["FACTION_WAR_MAPS"]:
             del nation_data["FACTION_WAR_MAPS"][faction_name]
 
@@ -1306,7 +1365,7 @@ def _can_enter_owned_tile(moving_nation, target_owner, nation_data):
 
     # The answer turns on who owns the tile, not which tile it is, so a snapshot
     # only has to settle it once per nation pairing instead of once per tile.
-    key = (moving_nation, target_owner)
+    key = (id(nation_data), moving_nation, target_owner)
     if key not in entry:
         entry[key] = _resolve_owned_tile_entry(moving_nation, target_owner, nation_data)
     return entry[key]
@@ -1340,20 +1399,22 @@ def can_land_units_enter(moving_nation, target_province, nation_data):
     return _can_enter_owned_tile(moving_nation, target_owner, nation_data)
 
 
-def can_unit_move_step(unit, current_province, destination, nation_data):
+def can_unit_move_step(unit, current_province, destination, nation_data, *, context=None):
     """Whether ``unit`` may take one currently legal map edge.
 
     This is deliberately a planning-time rule: combat can still stop a queued
     route during turn resolution, but UI route finding and real-time command
     validation must agree on terrain, convoy, naval, and access constraints.
     """
+    if context is None:
+        context = nation_data
     if unit_is_air_drop_recovering(unit) or not current_province or not destination:
         return False
-    if is_air_unit(unit) and not air_unit_can_move_on_ground(unit):
+    if is_air_unit(unit, context=context) and not air_unit_can_move_on_ground(unit, context=context):
         return False  # Reusable aircraft use flight orders; missiles use land edges.
-    if is_air_unit(unit) and not air_unit_can_land(unit, destination, nation_data):
+    if is_air_unit(unit, context=context) and not air_unit_can_land(unit, destination, nation_data):
         return False
-    if (is_air_transport(unit) and not is_water_province(destination)
+    if (is_air_transport(unit, context=context) and not is_water_province(destination)
             and not air_unit_can_land(unit, destination, nation_data)):
         return False
     if destination.get("id") not in current_province.get("neighbors", []):
@@ -1365,18 +1426,20 @@ def can_unit_move_step(unit, current_province, destination, nation_data):
             return False
         return (is_water_province(destination)
                 or can_land_units_enter(combat_owner, destination, nation_data))
-    if is_naval_unit(unit_type):
+    if is_naval_unit(unit_type, context=context):
         return can_ships_enter(combat_owner, destination, nation_data)
     return can_land_units_enter(combat_owner, destination, nation_data)
 
 
-def find_unit_move_path(unit, start_province, destination_id, id_to_province, nation_data):
+def find_unit_move_path(unit, start_province, destination_id, id_to_province, nation_data, *, context=None):
     """Return a deterministic shortest legal route, or ``None`` if blocked.
 
     Paths contain destination province IDs only, matching the persisted MOVE
     order contract.  Neighbours are sorted so identical maps produce identical
     routes on every client and server.
     """
+    if context is None:
+        context = nation_data
     if not start_province or destination_id not in id_to_province:
         return None
     start_id = start_province.get("id")
@@ -1394,7 +1457,7 @@ def find_unit_move_path(unit, start_province, destination_id, id_to_province, na
             if neighbor_id in previous:
                 continue
             neighbor = id_to_province.get(neighbor_id)
-            if not can_unit_move_step(unit, current, neighbor, nation_data):
+            if not can_unit_move_step(unit, current, neighbor, nation_data, context=context):
                 continue
             previous[neighbor_id] = current_id
             if neighbor_id == destination_id:
@@ -1550,7 +1613,7 @@ def get_combat_location_category(province, perspective_nation, nation_data,
 
     return COMBAT_LOCATION_GENERIC
 
-def damage_fort(province, nation_data, map_data=None):
+def damage_fort(province, nation_data, map_data=None, *, context=None):
     """Removes one fort level and cancels/refunds queued fort upgrades.
 
     The queue belongs to the province, while its construction cost was paid by
@@ -1560,6 +1623,8 @@ def damage_fort(province, nation_data, map_data=None):
 
     Returns the new fort level, or ``None`` when the province had no fort.
     """
+    if context is None:
+        context = nation_data
     current_level = get_fort_level(province)
     if current_level <= 0:
         return None
@@ -1580,7 +1645,7 @@ def damage_fort(province, nation_data, map_data=None):
         for item in queue:
             if (item.get("order_type") == "BUILDING"
                     and re.fullmatch(r"Fort Lvl (\d+)", item.get("item_name", ""))):
-                refund_queue_item(owner_data, item, owner, map_data)
+                refund_queue_item(owner_data, item, owner, map_data, context=context)
                 cancelled = True
             else:
                 kept_queue.append(item)
@@ -1610,15 +1675,15 @@ def get_fort_defense_bonus(province, unit, nation_data, combat_active=None):
         return 0
     return level * c.FORT_DEFENSE_PER_LEVEL
 
-def get_tech_display_name(tech_key):
+def get_tech_display_name(tech_key, *, context=None):
     """Keep research labels independent of stable save/protocol IDs."""
-    return get_tech_tree().get(tech_key, {}).get("display_name", tech_key.replace("_", " ").title())
+    return get_tech_tree(context).get(tech_key, {}).get("display_name", tech_key.replace("_", " ").title())
 
 
-def get_tech_unlocks(tech_key, level):
+def get_tech_unlocks(tech_key, level, *, context=None):
     """Returns a list of strings detailing what this tech unlocks."""
     unlocks = []
-    bldg_lib = get_building_library()
+    bldg_lib = get_building_library(context)
     for b_name in bldg_lib.keys():
         req_tech, req_lvl = get_building_required_tech(b_name)
         if req_tech == tech_key and req_lvl == level:
@@ -1652,9 +1717,9 @@ def get_tech_unlocks(tech_key, level):
     if tech_key == "submarine":
         unlocks.append("Invisible to neutral/enemy nations unless engaged in active combat")
 
-    for name, stats in get_unit_library().items():
-        if stats.get("air_role") and get_unit_research_requirement(name) == (tech_key, level):
-            unlocks.extend(get_air_unit_traits(name))
+    for name, stats in get_unit_library(context).items():
+        if stats.get("air_role") and get_unit_research_requirement(name, context=context) == (tech_key, level):
+            unlocks.extend(get_air_unit_traits(name, context=context))
 
     return unlocks
 
@@ -1683,16 +1748,16 @@ def get_infantry_family_year(family_key, player_research, tech_tree):
     years = tech_tree.get(year_source, {}).get("years", [c.START_YEAR])
     return years[max(0, min(lvl - 1, len(years) - 1))]
 
-def get_unit_for_family_tier(unit_library, family, tier):
+def get_unit_for_family_tier(unit_library, family, tier, *, context=None):
     """Find an exact family tier without constructing a content identifier."""
     for name in unit_library:
-        metadata = get_unit_metadata(name, unit_library)
+        metadata = get_unit_metadata(name, unit_library, context=context)
         if metadata["family"] == family and metadata["tier_order"] == tier:
             return name
     return None
 
 
-def get_highest_infantry(nation_data_block, tech_tree, unit_library, allow_fuel_units=True):
+def get_highest_infantry(nation_data_block, tech_tree, unit_library, allow_fuel_units=True, *, context=None):
     """Preserve vehicle preference and the starting infantry fallback."""
     research = nation_data_block.get("research", {})
     tracks = (["infantry_fighting_vehicle", "mechanized_infantry", "motorized_infantry"]
@@ -1702,19 +1767,19 @@ def get_highest_infantry(nation_data_block, tech_tree, unit_library, allow_fuel_
         if year is None:
             continue
         for name in unit_library:
-            metadata = get_unit_metadata(name, unit_library)
+            metadata = get_unit_metadata(name, unit_library, context=context)
             if metadata["research"]["tech"] == track and metadata["tier_order"] == year:
                 return name
     for name in unit_library:
-        metadata = get_unit_metadata(name, unit_library)
+        metadata = get_unit_metadata(name, unit_library, context=context)
         if metadata["research"]["tech"] == "infantry_type" and metadata["tier_order"] == c.START_YEAR:
             return name
     return None
 
 
-def get_upgrade_target(unit_type, player_research, unit_library, tech_tree):
+def get_upgrade_target(unit_type, player_research, unit_library, tech_tree, *, context=None):
     """Return the exact researched tier within the existing numbered family."""
-    current = get_unit_metadata(unit_type, unit_library)
+    current = get_unit_metadata(unit_type, unit_library, context=context)
     if current["tier_order"] <= 0:
         return None
     track = current["research"]["tech"]
@@ -1725,7 +1790,7 @@ def get_upgrade_target(unit_type, player_research, unit_library, tech_tree):
     if target is None or target <= 0:
         return None
     for name in unit_library:
-        metadata = get_unit_metadata(name, unit_library)
+        metadata = get_unit_metadata(name, unit_library, context=context)
         if metadata["family"] != current["family"] or metadata["tier_order"] <= current["tier_order"]:
             continue
         level = metadata["tier_order"] if yearly else metadata["research"].get("level", 1)
@@ -1734,18 +1799,18 @@ def get_upgrade_target(unit_type, player_research, unit_library, tech_tree):
     return None
 
 
-def get_best_preferred_unit(player_research, unit_library, preference_list):
+def get_best_preferred_unit(player_research, unit_library, preference_list, *, context=None):
     """Find the highest available tier in the existing family preference order."""
     for family in reversed(preference_list):
         candidates = [name for name in unit_library
-                      if get_base_unit_name(name, unit_library) == family
-                      and is_unit_unlocked(name, player_research, unit_library)]
+                      if get_base_unit_name(name, unit_library, context=context) == family
+                      and is_unit_unlocked(name, player_research, unit_library, context=context)]
         if candidates:
-            return max(candidates, key=lambda name: get_unit_tier(name, unit_library))
+            return max(candidates, key=lambda name: get_unit_tier(name, unit_library, context=context))
     return None
 
 
-def _best_unit_for_role(player_research, unit_library, role, preference_list):
+def _best_unit_for_role(player_research, unit_library, role, preference_list, *, context=None):
     """Highest-scoring unlocked unit filling a role, by stats rather than by name.
 
     These two used to walk a hand-written list in constants.py backwards, so the
@@ -1768,19 +1833,19 @@ def _best_unit_for_role(player_research, unit_library, role, preference_list):
             ai_unit_eval.evaluate(candidates, unit_library, ctx), role)
         if best:
             return best
-    return get_best_preferred_unit(player_research, unit_library, preference_list)
+    return get_best_preferred_unit(player_research, unit_library, preference_list, context=context)
 
-def get_best_offensive_unit(player_research, unit_library):
+def get_best_offensive_unit(player_research, unit_library, *, context=None):
     """Finds the best offensive unit the nation has unlocked."""
     from map_logic.ai import ai_unit_eval
     return _best_unit_for_role(player_research, unit_library,
-                               ai_unit_eval.ROLE_ASSAULT, c.AI_OFFENSIVE_UNIT_PREFERENCE)
+                               ai_unit_eval.ROLE_ASSAULT, c.AI_OFFENSIVE_UNIT_PREFERENCE, context=context)
 
-def get_best_naval_unit(player_research, unit_library):
+def get_best_naval_unit(player_research, unit_library, *, context=None):
     """Finds the best naval unit the nation has unlocked."""
     from map_logic.ai import ai_unit_eval
     return _best_unit_for_role(player_research, unit_library,
-                               ai_unit_eval.ROLE_NAVAL, c.AI_NAVAL_UNIT_PREFERENCE)
+                               ai_unit_eval.ROLE_NAVAL, c.AI_NAVAL_UNIT_PREFERENCE, context=context)
 
 REQ_GROUP_KEYS = ("OR", "AND")
 
@@ -1808,9 +1873,9 @@ def check_tech_requirements(res_levels, reqs, target_lvl=1):
     return all(res_levels.get(k, 0) >= tech_requirement_level(v, target_lvl) for k, v in reqs.items())
 
 
-def edited_research_levels(research, tech_key, level, researched, tech_tree=None):
+def edited_research_levels(research, tech_key, level, researched, tech_tree=None, *, context=None):
     """Grant prerequisites or remove dependent levels without changing the input."""
-    tree = get_tech_tree() if tech_tree is None else tech_tree
+    tree = get_tech_tree(context) if tech_tree is None else tech_tree
     if not isinstance(tech_key, str) or tech_key not in tree:
         raise ValueError("This technology is not available in this map.")
     if isinstance(level, bool) or not isinstance(level, int) or not 1 <= level <= tree[tech_key]["max_lvl"]:
@@ -1912,7 +1977,7 @@ def toggle_country_research(map_screen, country_id, tech_key, level):
     if not can_edit_country_research(map_screen, country_id):
         raise ValueError("Research editing requires a local map editor or permitted spectator.")
     country = world_state.nation_data[country_id]
-    state, _ = preview_country_research_edit(country, tech_key, level)
+    state, _ = preview_country_research_edit(country, tech_key, level, context=map_screen)
     changed = {key for key, value in state["research"].items() if value != country.get("research", {}).get(key, 0)}
     _apply_country_research_state(country, state)
     return changed
@@ -1926,12 +1991,12 @@ def country_research_edit_state(country):
     return {key: copy.deepcopy(country[key]) for key in RESEARCH_EDIT_FIELDS if key in country}
 
 
-def preview_country_research_edit(country, tech_key, level):
+def preview_country_research_edit(country, tech_key, level, *, context=None):
     """Return changed research fields and the projects whose progress is discarded."""
     country = country_research_edit_state(country)
     research = country.get("research", {})
-    tree = get_tech_tree()
-    result = edited_research_levels(research, tech_key, level, None, tree)
+    tree = get_tech_tree(context)
+    result = edited_research_levels(research, tech_key, level, None, tree, context=context)
     changed = {key for key in result if result[key] != research.get(key, 0)}
     research = country.setdefault("research", {})
     research.update(result)
@@ -2023,10 +2088,10 @@ def strip_disabled_tech_requirements(reqs, disabled_techs):
 
     return {k: v for k, v in reqs.items() if k not in disabled_techs}
 
-def is_training_troops(province, view_filter=None):
+def is_training_troops(province, view_filter=None, *, context=None):
     """Return whether the deployment queue contains a matching unit category."""
     return any("unit_type" in item and (view_filter is None or unit_matches_view_filter(
-        {"type": item["unit_type"]}, view_filter)) for item in province.get("unit_queue", []))
+        {"type": item["unit_type"]}, view_filter, context=context)) for item in province.get("unit_queue", []))
 
 def is_constructing_building(province):
     """Returns True if the province has any buildings in its deployment queue."""
@@ -2080,9 +2145,9 @@ def get_front_and_relief(units, count=None, terrain=None):
         count = int(slots * c.AI_RESERVE_DEPTH)
     return sorted(units, key=calculate_unit_strength, reverse=True)[:count]
 
-def is_warship(unit_type):
+def is_warship(unit_type, *, context=None):
     """Returns True if the unit is a combat naval vessel."""
-    return is_naval_unit(unit_type) and not unit_type.startswith("Convoy")
+    return is_naval_unit(unit_type, context=context) and not unit_type.startswith("Convoy")
 
 def get_wrapped_x(x1, x2, map_w, loop_map):
     """Returns the modified x2 to account for shortest map wrap distance."""
@@ -2169,12 +2234,12 @@ def get_conversion_library():
             for action, (name, _constant) in CONVERSION_ACTIONS.items()}
 
 
-def truck_ship_conversion_order(unit, scenario_settings=None):
+def truck_ship_conversion_order(unit, scenario_settings=None, *, context=None):
     """Use one timer for both directions. Aircraft and Convoys have separate rules."""
     source = unit.get("type", "")
     if source.startswith("Truck"):
         target = "Ship"
-    elif not source.startswith("Convoy") and is_naval_unit(source):
+    elif not source.startswith("Convoy") and is_naval_unit(source, context=context):
         target = "Truck"
     else:
         return None
@@ -2335,7 +2400,7 @@ def _modify_resources(nation_data_block, costs_dict, is_refund=False):
 def refund_resources(nation_data_block, costs_dict): _modify_resources(nation_data_block, costs_dict, is_refund=True)
 def deduct_resources(nation_data_block, costs_dict): _modify_resources(nation_data_block, costs_dict, is_refund=False)
 
-def refund_queue_item(nation_data_block, item, owner=None, map_data=None):
+def refund_queue_item(nation_data_block, item, owner=None, map_data=None, *, context=None):
     """Refunds one cancelled production/construction queue entry.
 
     Entries carry a "refund" dict recording what was actually paid, which is
@@ -2353,9 +2418,9 @@ def refund_queue_item(nation_data_block, item, owner=None, map_data=None):
 
     stats = {}
     if item.get("order_type") == "BUILDING":
-        stats = get_building_cost(item.get("item_name"), owner, map_data, get_building_library())
+        stats = get_building_cost(item.get("item_name"), owner, map_data, get_building_library(context))
     elif "unit_type" in item:
-        stats = get_unit_library().get(item["unit_type"], {})
+        stats = get_unit_library(context).get(item["unit_type"], {})
     refund_resources(nation_data_block, stats)
 
 
@@ -2404,10 +2469,12 @@ def get_siphon_rates(nation_data_block):
     """Returns a puppet's per-resource siphon rates, creating the block if missing."""
     return nation_data_block.setdefault("siphon_rates", {res: 0.0 for res in c.ECON_RESOURCE_KEYS})
 
-def calculate_all_economies(map_data, nation_data):
+def calculate_all_economies(map_data, nation_data, *, context=None):
     """Standardized economy calculator. Single source of truth for UI and Turn Processor."""
-    unit_lib = get_unit_library()
-    bldg_lib = get_building_library()
+    if context is None:
+        context = nation_data
+    unit_lib = get_unit_library(context)
+    bldg_lib = get_building_library(context)
 
     # Initialize data structure for all active nations
     econ_data = {}
@@ -2597,14 +2664,14 @@ def get_resource_hud_strings(map_screen, include_net=False, target_nation=None):
     if include_net:
         if is_tactical and target_nation == session_state.player_country:
             u_type = session_state.player_unit.get("original_type", session_state.player_unit.get("type"))
-            stats = get_unit_library().get(u_type, {})
+            stats = get_unit_library(map_screen).get(u_type, {})
             total_inc = get_unit_upkeep(stats)
             morale = session_state.player_unit.get("morale", c.DEFAULT_UNIT_MORALE)
             desertion_cost = total_inc.get("manpower", 0) * ((100.0 - float(morale)) / 100.0)
             total_upkeep["manpower"] = desertion_cost
         else:
             if not hasattr(map_screen, 'econ_cache_time') or pygame.time.get_ticks() - map_screen.econ_cache_time > 1000 or getattr(map_screen, 'econ_cache_target', None) != target_nation:
-                map_screen.econ_cache = get_economy_projections(target_nation, world_state.map_data, world_state.nation_data)
+                map_screen.econ_cache = get_economy_projections(target_nation, world_state.map_data, world_state.nation_data, context=map_screen)
                 map_screen.econ_cache_time = pygame.time.get_ticks()
                 map_screen.econ_cache_target = target_nation
                 
@@ -2634,9 +2701,11 @@ def get_resource_hud_strings(map_screen, include_net=False, target_nation=None):
             
     return hud_strings
 
-def get_economy_projections(target_nation, map_data, nation_data):
+def get_economy_projections(target_nation, map_data, nation_data, *, context=None):
     """Pulls a specific nation's UI data from the unified calculator."""
-    all_econ = calculate_all_economies(map_data, nation_data)
+    if context is None:
+        context = nation_data
+    all_econ = calculate_all_economies(map_data, nation_data, context=context)
     p_econ = all_econ.get(target_nation, {})
     
     if not p_econ:
@@ -2682,13 +2751,27 @@ def create_unit_dict(unit_type, owner, unit_library):
     }
 
 
-def _army_unit_ids_by_owner(map_data, *, controllable_only=False):
+def held_volunteer_units(nation_data):
+    for country in nation_data.values():
+        if not isinstance(country, dict):
+            continue
+        for mission in country.get("volunteer_missions", {}).values():
+            for entry in mission.get("held_units", []):
+                yield entry["unit"]
+
+
+def _army_unit_ids_by_owner(map_data, *, controllable_only=False, nation_data=None):
     """Return the live persistent unit IDs indexed by their owning country."""
     owners = {}
     for province in (map_data or {}).values():
         for unit in units_with_air_cargo(province.get("units", [])) if isinstance(province, dict) else ():
             if controllable_only and unit_is_air_drop_recovering(unit):
                 continue
+            owner, unit_id = unit.get("owner"), unit.get("unit_id")
+            if isinstance(owner, str) and isinstance(unit_id, str) and unit_id:
+                owners.setdefault(owner, set()).add(unit_id)
+    if nation_data is not None and not controllable_only:
+        for unit in held_volunteer_units(nation_data):
             owner, unit_id = unit.get("owner"), unit.get("unit_id")
             if isinstance(owner, str) and isinstance(unit_id, str) and unit_id:
                 owners.setdefault(owner, set()).add(unit_id)
@@ -2790,8 +2873,8 @@ def normalize_armies(nation_data, map_data):
     has no useful UI representation.  This is the canonical cleanup path for
     load, turn resolution, and multiplayer imports.
     """
-    ensure_unit_ids(map_data)
-    live_by_owner = _army_unit_ids_by_owner(map_data)
+    ensure_unit_ids(map_data, nation_data)
+    live_by_owner = _army_unit_ids_by_owner(map_data, nation_data=nation_data)
     for country_id, country in (nation_data or {}).items():
         if (country_id in ("GLOBAL_EVENTS", "FACTION_WAR_MAPS")
                 or country_id in c.UNPLAYABLE_NATIONS or not isinstance(country, dict)):
@@ -3083,7 +3166,7 @@ def validate_air_drop_recovery_armies(country_id, armies, nation_data, map_data)
 
 
 def find_unit_move_paths_to_destinations(unit, start_province, destination_ids,
-                                         id_to_province, nation_data):
+                                         id_to_province, nation_data, *, context=None):
     """Return each legal route from ``start_province`` to a target-area tile.
 
     ``find_unit_move_path`` remains the movement-rule owner.  Keeping the
@@ -3091,6 +3174,8 @@ def find_unit_move_paths_to_destinations(unit, start_province, destination_ids,
     an uncovered tile instead of independently selecting every unit's nearest
     tile.
     """
+    if context is None:
+        context = nation_data
     if not isinstance(start_province, dict):
         return {}
     paths = {}
@@ -3100,7 +3185,7 @@ def find_unit_move_paths_to_destinations(unit, start_province, destination_ids,
         if destination_id not in id_to_province:
             continue
         path = find_unit_move_path(unit, start_province, destination_id,
-                                   id_to_province, nation_data)
+                                   id_to_province, nation_data, context=context)
         if path is not None:
             paths[destination_id] = path
     return paths
@@ -3136,7 +3221,7 @@ def _queue_army_balanced_area_orders(map_screen, country_id, army, destination_i
             province_id = province.get("id")
             if province_id in coverage:
                 coverage[province_id] += 1
-                if air_unit_has_mission(unit):
+                if air_unit_has_mission(unit, context=map_screen):
                     continue
                 if (not only_idle and isinstance(order, dict)
                         and order.get("type") == "MOVE"):
@@ -3144,7 +3229,7 @@ def _queue_army_balanced_area_orders(map_screen, country_id, army, destination_i
                     # defender rather than continue along an old route.
                     unit.pop("order", None)
                 continue
-            if (id(unit) in excluded or air_unit_has_mission(unit)
+            if (id(unit) in excluded or air_unit_has_mission(unit, context=map_screen)
                     or (only_idle and unit_has_active_order(unit))):
                 continue
             if (not only_idle and isinstance(order, dict)
@@ -3152,7 +3237,7 @@ def _queue_army_balanced_area_orders(map_screen, country_id, army, destination_i
                 continue
             paths = find_unit_move_paths_to_destinations(
                 unit, province, destinations, world_state.id_to_province,
-                world_state.nation_data)
+                world_state.nation_data, context=map_screen)
             if not paths:
                 continue
             candidates.append((unit, paths))
@@ -3469,6 +3554,9 @@ def build_save_dict(map_screen, *, include_provinces=True, compact_nations=False
     they do not rely on the recipient having an identical country catalog.
     """
     world_state = world_for(map_screen)
+    from map_logic.diplomacy import faction_records
+    if hasattr(world_state, "factions"):
+        faction_records.records_for(world_state)
     session_state = session_for(map_screen)
     from map_logic.turn_processing import unit_events
     migrations.migrate_country_records(world_state.nation_data)
@@ -3499,6 +3587,8 @@ def build_save_dict(map_screen, *, include_provinces=True, compact_nations=False
         "script_variables": world_state.script_variables,
         "default_research": world_state.default_research,
         "nation_data": world_state.nation_data,
+        "factions": copy.deepcopy(world_state.factions) if hasattr(world_state, "factions")
+                    else migrations.faction_records(world_state.nation_data),
         "unit_event_log": unit_events.saved_log(map_screen),
         "unit_event_read_turns": unit_events.saved_reads(map_screen),
     }
@@ -3539,11 +3629,16 @@ def player_snapshot_projection(map_screen, snapshot, country_id):
     fog = get_scenario_flag("fog_of_war", c.DEFAULT_FOG_OF_WAR,
                             getattr(world_for(map_screen), "scenario_settings", {}))
     result["country_economy_summaries"] = get_shared_country_economy_summaries(
-        country_id, world_state.map_data, world_state.nation_data)
+        country_id, world_state.map_data, world_state.nation_data, context=map_screen)
     private_fields = ("production_queue", "current_research", "research_queue", "research_progress",
         "research", "inbox", "pending_diplomacy", "diplo_responses", "diplo_draft_lists",
         "queued_ai_actions", "orders", "armies", "automation", "materials", "manpower", "fuel",
         "manpower_pool", "materials_pool", "fuel_pool")
+    # New record fields must not bypass the established country visibility policy.
+    result["factions"] = {
+        identity: {key: copy.deepcopy(record[key])
+                   for key in ("name", "leader", "members", "pre_war_borders") if key in record}
+        for identity, record in result.get("factions", {}).items()}
     for cid, country in result.get("nation_data", {}).items():
         if cid != country_id and isinstance(country, dict):
             for field in private_fields:
@@ -3690,14 +3785,16 @@ def _country_economy_summary(country, income, expenses):
     }
 
 
-def get_shared_country_economy_summaries(viewer, map_data, nation_data):
+def get_shared_country_economy_summaries(viewer, map_data, nation_data, *, context=None):
     """Prepare permitted foreign totals before a network view removes private source data."""
+    if context is None:
+        context = nation_data
     shared = [country_id for country_id in nation_data
               if country_id != viewer and shares_country_economy(viewer, country_id, nation_data)]
     if not shared:
         return {}
     # Projection can initialize siphon rates. Do not change the authoritative state.
-    economies = calculate_all_economies(map_data, copy.deepcopy(nation_data))
+    economies = calculate_all_economies(map_data, copy.deepcopy(nation_data), context=context)
     empty = {resource: 0 for resource in c.ECON_RESOURCE_KEYS}
     return {country_id: _country_economy_summary(
         nation_data[country_id], economies.get(country_id, {}).get("total_inc", empty),
@@ -3768,7 +3865,7 @@ def get_country_summary(map_screen, country_id):
             # Economy queries can initialize missing siphon rates. Inspection must
             # not initialize or change any saved country state.
             income, expenses, _breakdown = get_economy_projections(
-                country_id, world_state.map_data, copy.deepcopy(nation_data))
+                country_id, world_state.map_data, copy.deepcopy(nation_data), context=map_screen)
             economy = _country_economy_summary(country, income, expenses)
 
     faction = country.get("faction", "")
@@ -4244,9 +4341,9 @@ def is_foreign_playable(owner, player_country, nation_data):
         return False
     return owner != player_country and owner in nation_data and nation_data[owner].get("is_playable", False)
 
-def get_unit_metadata(unit_name, unit_library=None):
+def get_unit_metadata(unit_name, unit_library=None, *, context=None):
     """Read active identity metadata. Infer names only for older content."""
-    library = get_unit_library() if unit_library is None else unit_library
+    library = get_unit_library(context) if unit_library is None else unit_library
     stats = library.get(unit_name, {})
     metadata = stats.get("metadata")
     if "metadata" not in stats:
@@ -4279,9 +4376,9 @@ def get_unit_metadata(unit_name, unit_library=None):
     return metadata
 
 
-def get_base_unit_name(unit_name, unit_library=None):
+def get_base_unit_name(unit_name, unit_library=None, *, context=None):
     """Return the explicit family, with a boundary adapter for older content."""
-    return get_unit_metadata(unit_name, unit_library)["family"]
+    return get_unit_metadata(unit_name, unit_library, context=context)["family"]
 
 # Word-for-word shorthand used ONLY by get_condensed_unit_name, for the tightly
 # spaced production unit list and garrison rosters. Every other screen shows
@@ -4373,7 +4470,7 @@ def get_condensed_building_name(building_name):
     unchanged. Everywhere else should keep showing the full name."""
     return _condense_words(building_name, CONDENSED_BUILDING_NAME_WORDS)
 
-def get_base_item_name(name):
+def get_base_item_name(name, *, context=None):
     """Collapses a unit OR building name down to the family the turn overrides key off.
 
     Unlike get_base_unit_name this also folds the tier separators away, so
@@ -4381,9 +4478,9 @@ def get_base_item_name(name):
     "Factory". The trailing-numeral test runs through roman_to_int rather than a
     hardcoded numeral list, so it keeps working past whatever tier someone adds.
     """
-    library = get_unit_library()
+    library = get_unit_library(context)
     if name in library:
-        metadata = get_unit_metadata(name, library)
+        metadata = get_unit_metadata(name, library, context=context)
         return metadata.get("settings_family", metadata["family"])
     if " Type " in name: return name.split(" Type ")[0]
     if " Lvl " in name: return name.split(" Lvl ")[0]
@@ -4424,39 +4521,39 @@ AI_FORCE_TANKS = "TANKS"
 AI_FORCE_NAVY = "NAVY"
 
 
-def is_ai_tank(unit_type):
+def is_ai_tank(unit_type, *, context=None):
     """Whether the AI counts this unit towards its armour quota."""
-    return bool(get_unit_metadata(unit_type).get("ai_tank", False))
+    return bool(get_unit_metadata(unit_type, context=context).get("ai_tank", False))
 
 
-def ai_force_category(unit_type):
+def ai_force_category(unit_type, *, context=None):
     """Read the AI quota group independently from production presentation."""
     if not unit_type:
         return None
-    return get_unit_metadata(unit_type).get("ai_force_category")
+    return get_unit_metadata(unit_type, context=context).get("ai_force_category")
 
 
-def get_formatted_division_name(unit_type):
+def get_formatted_division_name(unit_type, *, context=None):
     """Standardizes parsing unit names into division categories while preserving case."""
     # Use regex to strip out " type" case-insensitively, without lowercasing the entire string
-    base_name = re.sub(r'(?i)\s+type', '', get_base_unit_name(unit_type))
+    base_name = re.sub(r'(?i)\s+type', '', get_base_unit_name(unit_type, context=context))
     
     # Use a lowercase check for the logic, but append to the preserved case string
     check_name = base_name.lower()
-    if "division" not in check_name and not is_naval_unit(unit_type) and "convoy" not in check_name and "truck" not in check_name:
+    if "division" not in check_name and not is_naval_unit(unit_type, context=context) and "convoy" not in check_name and "truck" not in check_name:
         base_name += " Division"
         
     return base_name
 
-def get_unit_tech_key(base_name, unit_library=None):
+def get_unit_tech_key(base_name, unit_library=None, *, context=None):
     """Read a family's explicit research track, with an older-content adapter."""
-    library = get_unit_library() if unit_library is None else unit_library
+    library = get_unit_library(context) if unit_library is None else unit_library
     if base_name in library:
-        return get_unit_metadata(base_name, library)["research"]["tech"]
+        return get_unit_metadata(base_name, library, context=context)["research"]["tech"]
     for name, stats in library.items():
         metadata = stats.get("metadata")
         if isinstance(metadata, dict) and metadata.get("family") == base_name:
-            return get_unit_metadata(name, library)["research"]["tech"]
+            return get_unit_metadata(name, library, context=context)["research"]["tech"]
     return migrations.legacy_unit_tech_key(base_name)
 
 
@@ -4480,29 +4577,29 @@ def roman_to_int(s):
         else: res += s1; i += 1
     return res
 
-def _unit_research_pair(requirement):
+def _unit_research_pair(requirement, *, context=None):
     tech = requirement["tech"]
     if "year" in requirement:
-        years = get_tech_tree().get(tech, {}).get("years", [])
+        years = get_tech_tree(context).get(tech, {}).get("years", [])
         year = requirement["year"]
         return tech, years.index(year) + 1 if year in years else 1
     return tech, requirement.get("level", 1)
 
 
-def get_unit_research_requirement(unit_name, unit_library=None):
+def get_unit_research_requirement(unit_name, unit_library=None, *, context=None):
     """Return the primary research pair for compatibility and research displays."""
-    return _unit_research_pair(get_unit_metadata(unit_name, unit_library)["research"])
+    return _unit_research_pair(get_unit_metadata(unit_name, unit_library, context=context)["research"], context=context)
 
 
-def get_unit_requirements(unit_name, unit_library=None):
+def get_unit_requirements(unit_name, unit_library=None, *, context=None):
     """Return explicit compound requirements for one unit."""
-    return {"all": get_unit_metadata(unit_name, unit_library)["requirements"]}
+    return {"all": get_unit_metadata(unit_name, unit_library, context=context)["requirements"]}
 
 
-def get_unit_unlock_requirement(unit_name, unit_library=None):
+def get_unit_unlock_requirement(unit_name, unit_library=None, *, context=None):
     """Preserve the older three-field requirement interface for existing callers."""
-    metadata = get_unit_metadata(unit_name, unit_library)
-    tech, level = _unit_research_pair(metadata["research"])
+    metadata = get_unit_metadata(unit_name, unit_library, context=context)
+    tech, level = _unit_research_pair(metadata["research"], context=context)
     if tech in c.VEHICLE_INFANTRY_GATES:
         for requirement in metadata["requirements"]:
             if "minimum_year" in requirement:
@@ -4510,44 +4607,47 @@ def get_unit_unlock_requirement(unit_name, unit_library=None):
     return tech, level, None
 
 
-def unit_requirement_is_met(requirement, player_research):
+def unit_requirement_is_met(requirement, player_research, *, context=None):
     """Evaluate a parsed rule; shared by exact-tier UI checks and AI indexes."""
     if isinstance(requirement, dict):
         for item in requirement["all"]:
             tech = item["tech"]
             if "minimum_year" in item:
-                year = get_infantry_family_year(tech, player_research, get_tech_tree())
+                year = get_infantry_family_year(tech, player_research, get_tech_tree(context))
                 minimum = item["minimum_year"]
                 if minimum is None or year is None or year < minimum:
                     return False
             else:
-                tech, level = _unit_research_pair(item)
+                tech, level = _unit_research_pair(item, context=context)
                 if player_research.get(tech, 0) < level:
                     return False
         return True
     # Older callers can still pass the former three-field requirement.
     tech_key, required_lvl, year = requirement
     if required_lvl is None:
-        unlocked_year = get_infantry_family_year(tech_key, player_research, get_tech_tree())
+        unlocked_year = get_infantry_family_year(tech_key, player_research, get_tech_tree(context))
         return year is not None and unlocked_year is not None and year <= unlocked_year
     return player_research.get(tech_key, 0) >= required_lvl
 
 
-def is_unit_unlocked(unit_name, player_research, unit_library=None):
+def is_unit_unlocked(unit_name, player_research, unit_library=None, *, context=None):
     """Returns True if player_research meets the requirement for this exact unit tier,
     independent of whether it's the group's currently-highest tier (see Custom production)."""
-    return unit_requirement_is_met(get_unit_requirements(unit_name, unit_library), player_research)
+    from data.runtime_rules import ActiveLibrary
+    if context is None and isinstance(unit_library, ActiveLibrary):
+        context = unit_library
+    return unit_requirement_is_met(get_unit_requirements(unit_name, unit_library, context=context), player_research, context=context)
 
 
-def get_unit_tier(unit_name, unit_library=None):
+def get_unit_tier(unit_name, unit_library=None, *, context=None):
     """Read the active family's tier order without parsing a display name."""
-    return get_unit_metadata(unit_name, unit_library)["tier_order"]
+    return get_unit_metadata(unit_name, unit_library, context=context)["tier_order"]
 
 
 _UNIT_RESEARCH_INDEX_CACHE = None
 
 
-def get_unit_research_index(unit_library):
+def get_unit_research_index(unit_library, *, context=None):
     """Families with tiers and canonical unlock rules, parsed once per schema.
 
     The library's names and the rules' contents detect in-place editor/mod
@@ -4557,39 +4657,47 @@ def get_unit_research_index(unit_library):
     This is transient derived state and never enters a save or snapshot.
     """
     global _UNIT_RESEARCH_INDEX_CACHE
+    from data.runtime_rules import ActiveLibrary
+    if context is None and isinstance(unit_library, ActiveLibrary):
+        context = unit_library
     schema = (
         tuple((name, repr(stats.get("metadata"))) for name, stats in unit_library.items()),
-        tuple((key, tuple(info.get("years", ()))) for key, info in get_tech_tree().items()),
+        tuple((key, tuple(info.get("years", ()))) for key, info in get_tech_tree(context).items()),
         tuple(sorted(c.VEHICLE_INFANTRY_GATES.items())),
         tuple(sorted(c.UNIT_TECH_KEY_OVERRIDES.items())),
         tuple(sorted((base, tuple(techs)) for base, techs in c.OBSOLESCENCE_RULES.items())),
     )
-    cached = _UNIT_RESEARCH_INDEX_CACHE
+    from data.runtime_rules import for_world
+    indexes = for_world(context).indexes if context is not None else None
+    cached = indexes.get("unit_research") if indexes is not None else _UNIT_RESEARCH_INDEX_CACHE
     if cached is not None and cached[0] is unit_library and cached[1] == schema:
         return cached[2]
 
     families = {}
     for name in unit_library:
-        families.setdefault(get_base_unit_name(name, unit_library), []).append(
-            (name, get_unit_tier(name, unit_library), get_unit_requirements(name, unit_library)))
+        families.setdefault(get_base_unit_name(name, unit_library, context=context), []).append(
+            (name, get_unit_tier(name, unit_library, context=context), get_unit_requirements(name, unit_library, context=context)))
     index = tuple(
         (base, tuple(sorted(tiers, key=lambda tier: tier[1], reverse=True)))
         for base, tiers in families.items()
     )
-    _UNIT_RESEARCH_INDEX_CACHE = (unit_library, schema, index)
+    if indexes is None:
+        _UNIT_RESEARCH_INDEX_CACHE = (unit_library, schema, index)
+    else:
+        indexes["unit_research"] = (unit_library, schema, index)
     return index
 
 
-def is_naval_unit(unit_type):
+def is_naval_unit(unit_type, *, context=None):
     """Checks if a unit is a naval unit based on its type name or unit library stats."""
     if unit_type.startswith("Convoy"):
         return True
     if unit_type.startswith("Truck"):
         return False
-    stats = get_unit_library().get(unit_type, {})
+    stats = get_unit_library(context).get(unit_type, {})
     return stats.get("naval_unit", False)
 
-def get_bombardment_range(unit_type, stats=None):
+def get_bombardment_range(unit_type, stats=None, *, context=None):
     """Returns how many tiles this unit class can shell, or 0 if it cannot bombard.
 
     The unit's own bombard_range wins, so adding one in unit_data.json is all it
@@ -4603,15 +4711,15 @@ def get_bombardment_range(unit_type, stats=None):
     not in the table either.
     """
     if stats is None:
-        stats = get_unit_library().get(unit_type) or {}
+        stats = get_unit_library(context).get(unit_type) or {}
     from_stats = stats.get("bombard_range")
     if from_stats:
         return int(from_stats)
-    return c.BOMBARDMENT_UNITS.get(get_base_unit_name(unit_type), 0)
+    return c.BOMBARDMENT_UNITS.get(get_base_unit_name(unit_type, context=context), 0)
 
-def can_bombard(unit_type):
+def can_bombard(unit_type, *, context=None):
     """Returns True if this unit class can shell a nearby tile instead of moving."""
-    return get_bombardment_range(unit_type) > 0
+    return get_bombardment_range(unit_type, context=context) > 0
 
 def get_bombardment_arrow_icon(bomb_range):
     """Picks the barrage sprite matching a gun's reach (long guns get their own art)."""
@@ -4648,16 +4756,16 @@ def get_ordinal(n):
         return str(n) + "th"
     return str(n) + {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
 
-def generate_unit_custom_name(unit, unit_counters):
+def generate_unit_custom_name(unit, unit_counters, *, context=None):
     """Generates a dynamic custom name for a unit based on its type and country count."""
     owner = unit.get("owner", "Unclaimed")
     unit_type = unit.get("type", "Infantry")
     
-    label = get_unit_metadata(unit_type).get("division_suffix", "")
+    label = get_unit_metadata(unit_type, context=context).get("division_suffix", "")
     suffix = f" ({label})" if label else ""
 
     # Clean up the base name using our new unified string parser
-    base_name = get_formatted_division_name(unit_type)
+    base_name = get_formatted_division_name(unit_type, context=context)
     
     # Track count per owner per base type
     count = unit_counters.setdefault(owner, {}).get(base_name, 0) + 1
@@ -4666,18 +4774,18 @@ def generate_unit_custom_name(unit, unit_counters):
     ordinal = get_ordinal(count)
     return f"{ordinal} {base_name}{suffix}"
 
-def build_active_unit_counters(map_data):
+def build_active_unit_counters(map_data, *, context=None):
     """Sweeps the map and returns a dictionary of current unit counts for accurate naming."""
     unit_counters = {}
     for prov in map_data.values():
         for unit in units_with_air_cargo(prov.get("units", [])):
             owner = unit.get("owner", "Unclaimed")
-            base_name = get_formatted_division_name(unit.get("type", "Infantry"))
+            base_name = get_formatted_division_name(unit.get("type", "Infantry"), context=context)
             unit_counters.setdefault(owner, {})[base_name] = unit_counters.setdefault(owner, {}).get(base_name, 0) + 1
     return unit_counters
 
 # i don't know if this would really count as a query...
-def load_transport(unit, target):
+def load_transport(unit, target, *, context=None):
     """Puts a unit aboard a Convoy or into a Truck, remembering what it was.
 
     The mirror of revert_transport, and the other half of what used to live
@@ -4687,7 +4795,7 @@ def load_transport(unit, target):
     """
     if target not in ("Convoy", "Truck"):
         return
-    if target == "Truck" and is_air_unit(unit):
+    if target == "Truck" and is_air_unit(unit, context=context):
         raise ValueError("Air units can only be loaded into Convoys.")
 
     unit["original_type"] = unit["type"]
@@ -4725,8 +4833,8 @@ AIR_DEFAULT_PRIORITY = "WEAKEST"
 AIR_CONVERT_TURNS = 1
 
 
-def air_unit_stats(unit):
-    return get_unit_library().get(unit.get("type", ""), {})
+def air_unit_stats(unit, *, context=None):
+    return get_unit_library(context).get(unit.get("type", ""), {})
 
 
 def is_tactical_player_unit(map_screen, unit):
@@ -4735,8 +4843,8 @@ def is_tactical_player_unit(map_screen, unit):
     return bool(getattr(session_for(map_screen), "tactical_mode", False) and unit is session_state.player_unit)
 
 
-def is_air_unit(unit):
-    return bool(air_unit_stats(unit).get("air_role"))
+def is_air_unit(unit, *, context=None):
+    return bool(air_unit_stats(unit, context=context).get("air_role"))
 
 
 def air_stack_attack_efficiency(aircraft_count):
@@ -4749,24 +4857,24 @@ def air_stack_attack_efficiency(aircraft_count):
     return max(c.AIR_STACK_MIN_ATTACK_EFFICIENCY, efficiency)
 
 
-def air_unit_can_patrol(unit):
+def air_unit_can_patrol(unit, *, context=None):
     """Reusable combat aircraft can defend an area."""
-    return (is_air_unit(unit) and not air_unit_stats(unit).get("air_consumable", False)
-            and not air_unit_can_transport(unit))
+    return (is_air_unit(unit, context=context) and not air_unit_stats(unit, context=context).get("air_consumable", False)
+            and not air_unit_can_transport(unit, context=context))
 
 
-def air_transport_capacity(unit):
+def air_transport_capacity(unit, *, context=None):
     """Read cargo capacity from the current aircraft data."""
-    stats = air_unit_stats(unit)
+    stats = air_unit_stats(unit, context=context)
     return max(0, int(stats.get("air_transport_capacity", 0))) if stats.get("air_role") else 0
 
 
-def air_unit_can_transport(unit):
-    return air_transport_capacity(unit) > 0
+def air_unit_can_transport(unit, *, context=None):
+    return air_transport_capacity(unit, context=context) > 0
 
 
-def air_unit_can_strike(unit):
-    return is_air_unit(unit) and not air_unit_can_transport(unit)
+def air_unit_can_strike(unit, *, context=None):
+    return is_air_unit(unit, context=context) and not air_unit_can_transport(unit, context=context)
 
 
 def units_with_air_cargo(units):
@@ -4782,21 +4890,21 @@ def set_unit_owner(unit, country_id):
         member["owner"] = country_id
 
 
-def air_cargo_is_eligible(plane, cargo):
+def air_cargo_is_eligible(plane, cargo, *, context=None):
     """A carrier accepts living ground units controlled by the same country."""
     return (cargo is not plane and cargo.get("health", 0) > 0
             and not unit_is_air_drop_recovering(cargo)
             and cargo.get("owner") == plane.get("owner")
             and get_unit_combat_owner(cargo) == get_unit_combat_owner(plane)
-            and unit_display_domain(cargo) == "LAND" and not is_air_transport(cargo)
+            and unit_display_domain(cargo, context=context) == "LAND" and not is_air_transport(cargo, context=context)
             and not cargo.get("air_cargo"))
 
 
-def air_unit_can_air_drop(unit):
+def air_unit_can_air_drop(unit, *, context=None):
     """An air drop requires a transport with living, eligible ground cargo."""
     cargo = unit.get("air_cargo", [])
-    return (air_unit_can_transport(unit) and 0 < len(cargo) <= air_transport_capacity(unit)
-            and all(air_cargo_is_eligible(unit, member) for member in cargo))
+    return (air_unit_can_transport(unit, context=context) and 0 < len(cargo) <= air_transport_capacity(unit, context=context)
+            and all(air_cargo_is_eligible(unit, member, context=context) for member in cargo))
 
 
 def air_drop_target_is_legal(unit, target, nation_data):
@@ -4811,7 +4919,7 @@ def set_air_cargo(map_screen, country_id, plane, base, cargo_ids):
     if (world_state.id_to_province.get(base["id"]) is not base
             or not any(unit is plane for unit in base.get("units", []))
             or plane.get("owner") != country_id or plane.get("health", 0) <= 0
-            or not air_unit_can_transport(plane)):
+            or not air_unit_can_transport(plane, context=map_screen)):
         raise ValueError("Transport requires your aircraft at its current base.")
     if (not isinstance(cargo_ids, list) or any(not isinstance(uid, str) or not uid for uid in cargo_ids)
             or len(set(cargo_ids)) != len(cargo_ids)):
@@ -4820,7 +4928,7 @@ def set_air_cargo(map_screen, country_id, plane, base, cargo_ids):
     previous_ids = [unit["unit_id"] for unit in previous]
     if cargo_ids == previous_ids:
         return
-    if len(cargo_ids) > air_transport_capacity(plane):
+    if len(cargo_ids) > air_transport_capacity(plane, context=map_screen):
         raise ValueError("The transport aircraft has insufficient cargo capacity.")
     if not air_unit_can_launch(map_screen, plane, base):
         raise ValueError("Load or release cargo on land outside ground combat.")
@@ -4828,7 +4936,7 @@ def set_air_cargo(map_screen, country_id, plane, base, cargo_ids):
     selected = []
     for uid in cargo_ids:
         cargo = available.get(uid)
-        if cargo is None or not air_cargo_is_eligible(plane, cargo):
+        if cargo is None or not air_cargo_is_eligible(plane, cargo, context=map_screen):
             raise ValueError("Cargo must be your ground unit on the aircraft's tile.")
         if is_tactical_player_unit(map_screen, cargo):
             raise ValueError("The tactical player's division cannot be loaded by another unit.")
@@ -4860,7 +4968,7 @@ def air_transport_commands(map_screen, country_id):
              "province_id": base["id"],
              "cargo_ids": [unit["unit_id"] for unit in plane.get("air_cargo", [])]}
             for base in world_state.map_data.values() for plane in base.get("units", [])
-            if plane.get("owner") == country_id and air_unit_can_transport(plane)]
+            if plane.get("owner") == country_id and air_unit_can_transport(plane, context=map_screen)]
 
 
 def apply_air_transport_commands(map_screen, country_id, commands):
@@ -4941,7 +5049,7 @@ def apply_unit_health_loss(unit, damage, *, sources=None, tile=None):
 def air_unit_can_launch(map_screen, unit, base):
     """A mission needs an unpacked aircraft at a land base outside ground combat."""
     world_state = world_for(map_screen)
-    return (is_air_unit(unit) and not is_water_province(base)
+    return (is_air_unit(unit, context=map_screen) and not is_water_province(base)
             and not is_nation_in_combat_here(get_unit_combat_owner(unit), base, world_state.nation_data))
 
 
@@ -4976,15 +5084,15 @@ def air_move_is_strike(map_screen, unit, destination):
 def available_air_missions(map_screen, unit, base):
     """Read mission capabilities and launch legality for a mission selector."""
     missions = {"NONE"}
-    if is_air_unit(unit) and air_unit_can_launch(map_screen, unit, base):
+    if is_air_unit(unit, context=map_screen) and air_unit_can_launch(map_screen, unit, base):
         missions.add("MOVE")
-        if air_unit_can_transport(unit):
+        if air_unit_can_transport(unit, context=map_screen):
             missions.add("TRANSPORT")
-        if air_unit_can_air_drop(unit):
+        if air_unit_can_air_drop(unit, context=map_screen):
             missions.add("AIR_DROP")
-        if air_unit_can_strike(unit):
+        if air_unit_can_strike(unit, context=map_screen):
             missions.add("STRIKE")
-        if air_unit_can_patrol(unit):
+        if air_unit_can_patrol(unit, context=map_screen):
             missions.update(AIR_INTERCEPTION_PRIORITIES)
     return missions
 
@@ -4995,7 +5103,7 @@ def air_move_order(map_screen, unit, base, destination, mission=None):
     if mission is None:
         current = air_unit_mission(unit)
         mission = current if current in AIR_TARGET_MISSION_TYPES else (
-            "AIR_DROP" if air_unit_can_air_drop(unit) and air_drop_target_is_legal(
+            "AIR_DROP" if air_unit_can_air_drop(unit, context=map_screen) and air_drop_target_is_legal(
                 unit, destination, world_state.nation_data) else
             "STRIKE" if air_move_is_strike(map_screen, unit, destination) else "MOVE")
     if mission not in AIR_TARGET_MISSION_TYPES:
@@ -5004,9 +5112,9 @@ def air_move_order(map_screen, unit, base, destination, mission=None):
         raise ValueError("Air missions require a land base outside ground combat.")
     if mission == "STRIKE" and not air_move_is_strike(map_screen, unit, destination):
         raise ValueError("Air strikes require enemy territory or visible enemy units.")
-    if mission == "MOVE" and air_unit_can_move_on_ground(unit):
+    if mission == "MOVE" and air_unit_can_move_on_ground(unit, context=map_screen):
         path = find_unit_move_path(unit, base, destination["id"],
-                                   world_state.id_to_province, world_state.nation_data)
+                                   world_state.id_to_province, world_state.nation_data, context=map_screen)
         if path is None:
             raise ValueError("No legal ground route exists for this aircraft.")
         return canonical_unit_order(map_screen, unit["owner"], base, unit,
@@ -5016,14 +5124,14 @@ def air_move_order(map_screen, unit, base, destination, mission=None):
                                {"type": kind, "target_id": destination["id"]})
 
 
-def air_unit_can_move_on_ground(unit):
+def air_unit_can_move_on_ground(unit, *, context=None):
     """One-use air weapons relocate along land edges at their listed speed."""
-    return is_air_unit(unit) and bool(air_unit_stats(unit).get("air_consumable"))
+    return is_air_unit(unit, context=context) and bool(air_unit_stats(unit, context=context).get("air_consumable"))
 
 
-def air_unit_can_damage_forts(unit):
+def air_unit_can_damage_forts(unit, *, context=None):
     """Current unit-library capability; missing flags and transports cannot strike forts."""
-    stats = air_unit_stats(unit)
+    stats = air_unit_stats(unit, context=context)
     return bool(stats.get("air_role") and stats.get("air_damages_forts", False))
 
 
@@ -5031,11 +5139,11 @@ UNIT_VIEW_FILTERS = ("NAVAL", "LAND", "AIR", "ALL")
 DEFAULT_UNIT_VIEW_FILTER = "ALL"
 
 
-def unit_display_domain(unit):
+def unit_display_domain(unit, *, context=None):
     """Return the map category for the unit's current form."""
-    if is_air_unit(unit):
+    if is_air_unit(unit, context=context):
         return "AIR"
-    return "NAVAL" if is_naval_unit(unit.get("type", "")) else "LAND"
+    return "NAVAL" if is_naval_unit(unit.get("type", ""), context=context) else "LAND"
 
 
 def air_unit_mission(unit):
@@ -5063,9 +5171,9 @@ def air_unit_mission_icon(unit):
     return "TRANSPORT" if unit.get("air_cargo") else air_unit_mission(unit)
 
 
-def air_unit_has_mission(unit):
+def air_unit_has_mission(unit, *, context=None):
     """Aircraft movement and mission buttons use the same active-order state."""
-    return is_air_unit(unit) and air_unit_mission(unit) != "NONE"
+    return is_air_unit(unit, context=context) and air_unit_mission(unit) != "NONE"
 
 
 def air_range_preview_kind(map_screen, unit, destination=None):
@@ -5074,18 +5182,18 @@ def air_range_preview_kind(map_screen, unit, destination=None):
     order = unit.get("order")
     if isinstance(order, dict) and order.get("type") in AIR_ORDER_TYPES:
         return order["type"]
-    if (air_unit_can_air_drop(unit) and destination is not None
+    if (air_unit_can_air_drop(unit, context=map_screen) and destination is not None
             and air_drop_target_is_legal(unit, destination, world_state.nation_data)):
         return "AIR_DROP"
-    if air_unit_can_strike(unit) and (air_unit_can_move_on_ground(unit) or (
+    if air_unit_can_strike(unit, context=map_screen) and (air_unit_can_move_on_ground(unit, context=map_screen) or (
             destination is not None and air_move_is_strike(map_screen, unit, destination))):
         return "AIR_ATTACK"
     return "AIR_REPOSITION"
 
 
-def unit_map_stack_key(unit):
+def unit_map_stack_key(unit, *, context=None):
     """Keep map boxes separate by current domain and aircraft mission."""
-    domain = unit_display_domain(unit)
+    domain = unit_display_domain(unit, context=context)
     return domain, air_unit_mission_icon(unit) if domain == "AIR" else None
 
 
@@ -5095,66 +5203,66 @@ def can_view_unit_orders(unit, player_country, viewing_ai_moves=False):
             or viewing_ai_moves)
 
 
-def unit_matches_view_filter(unit, view_filter):
+def unit_matches_view_filter(unit, view_filter, *, context=None):
     """Classify the current form, including carried units, for map display."""
     if view_filter == "ALL":
         return True
     if view_filter not in UNIT_VIEW_FILTERS:
         raise ValueError(f"Unknown unit view filter: {view_filter}")
-    return view_filter == unit_display_domain(unit)
+    return view_filter == unit_display_domain(unit, context=context)
 
 
-def is_air_transport(unit):
+def is_air_transport(unit, *, context=None):
     name = unit.get("type", "")
     # Truck names remain recognizable at the legacy-save/import boundary.
     for carrier in ("Convoy", "Truck"):
         prefix = carrier + " ("
         if name.startswith(prefix) and name.endswith(")"):
             original = unit.get("original_type") or name[len(prefix):-1]
-            return bool(get_unit_library().get(original, {}).get("air_role"))
+            return bool(get_unit_library(context).get(original, {}).get("air_role"))
     return False
 
 
-def air_order_radius(unit, kind):
+def air_order_radius(unit, kind, *, context=None):
     """Air drops reserve half the transport's listed movement range for the return."""
-    stats = air_unit_stats(unit)
+    stats = air_unit_stats(unit, context=context)
     radius = stats.get("air_range_px", 0)
     if kind == "AIR_DROP":
         return radius / 2
-    if kind == "AIR_REPOSITION" and not air_unit_can_transport(unit):
+    if kind == "AIR_REPOSITION" and not air_unit_can_transport(unit, context=context):
         return radius * 2
     return radius
 
 
-def get_air_unit_traits(unit_type):
+def get_air_unit_traits(unit_type, *, context=None):
     """Research details derived from the same capabilities as aircraft orders."""
     unit = {"type": unit_type}
-    stats = air_unit_stats(unit)
+    stats = air_unit_stats(unit, context=context)
     if not stats.get("air_role"):
         return []
-    if air_unit_can_transport(unit):
-        reposition = air_order_radius(unit, "AIR_REPOSITION")
+    if air_unit_can_transport(unit, context=context):
+        reposition = air_order_radius(unit, "AIR_REPOSITION", context=context)
         return [f"Move range: {reposition:g} map pixels.",
-                f"Air Drop range: {air_order_radius(unit, 'AIR_DROP'):g} map pixels; returns to base.",
-                f"Transport capacity: {air_transport_capacity(unit)} ground units.",
+                f"Air Drop range: {air_order_radius(unit, 'AIR_DROP', context=context):g} map pixels; returns to base.",
+                f"Transport capacity: {air_transport_capacity(unit, context=context)} ground units.",
                 "Move, Transport, and Air Drop missions; no strikes or area defense.",
                 "Load and release your ground units on the same tile.",
                 "Cargo shares the carrier's proportional health loss.",
                 "Destroyed immediately when caught in ground combat."]
-    strike = air_order_radius(unit, "AIR_ATTACK")
+    strike = air_order_radius(unit, "AIR_ATTACK", context=context)
     if stats.get("air_consumable"):
         traits = [f"Strike range: {strike:g} map pixels; consumed after impact.",
                   "No patrol or air reposition; relocate on land at listed ground speed.",
                   "Immune to interception." if stats.get("air_interception_immune")
                   else "Can be intercepted by enemy fighters."]
     else:
-        reposition = air_order_radius(unit, "AIR_REPOSITION")
+        reposition = air_order_radius(unit, "AIR_REPOSITION", context=context)
         traits = [f"Strike / Patrol range: {strike:g} map px; reposition: {reposition:g} px."]
-        patrol = air_order_radius(unit, "AIR_PATROL")
+        patrol = air_order_radius(unit, "AIR_PATROL", context=context)
         if stats["air_role"] == "fighter":
-            multiplier = unit_target_damage_multiplier(unit, unit, air_to_air=True)
+            multiplier = unit_target_damage_multiplier(unit, unit, air_to_air=True, context=context)
             traits.append(f"Air-to-air damage x{multiplier:g}; no bonus against ground targets.")
-    traits.append("Strikes damage forts." if air_unit_can_damage_forts(unit)
+    traits.append("Strikes damage forts." if air_unit_can_damage_forts(unit, context=context)
                   else "Strikes do not damage forts.")
     return traits
 
@@ -5214,18 +5322,18 @@ def air_distance_squared(map_screen, base, target_id):
 def air_target_in_range(map_screen, unit, base, kind, target_id):
     """One tile's mission reach; validating a command never sweeps the map."""
     world_state = world_for(map_screen)
-    if kind not in AIR_ORDER_TYPES or not is_air_unit(unit) or is_water_province(base):
+    if kind not in AIR_ORDER_TYPES or not is_air_unit(unit, context=map_screen) or is_water_province(base):
         return False
-    stats = air_unit_stats(unit)
-    if (kind == "AIR_PATROL" and not air_unit_can_patrol(unit)
-            or kind == "AIR_ATTACK" and not air_unit_can_strike(unit)
-            or kind == "AIR_DROP" and not air_unit_can_air_drop(unit)
+    stats = air_unit_stats(unit, context=map_screen)
+    if (kind == "AIR_PATROL" and not air_unit_can_patrol(unit, context=map_screen)
+            or kind == "AIR_ATTACK" and not air_unit_can_strike(unit, context=map_screen)
+            or kind == "AIR_DROP" and not air_unit_can_air_drop(unit, context=map_screen)
             or kind == "AIR_REPOSITION" and stats.get("air_consumable", False)):
         return False
     target = world_state.id_to_province.get(target_id)
     if target is None or kind in ("AIR_REPOSITION", "AIR_DROP") and is_water_province(target):
         return False
-    radius = air_order_radius(unit, kind)
+    radius = air_order_radius(unit, kind, context=map_screen)
     return air_distance_squared(map_screen, base, target_id) <= radius * radius
 
 
@@ -5249,9 +5357,9 @@ def canonical_air_order(map_screen, unit, base, order):
     if not air_unit_can_launch(map_screen, unit, base):
         raise ValueError("Air missions require a land base outside ground combat.")
     kind = order["type"]
-    if kind == "AIR_ATTACK" and not air_unit_can_strike(unit):
+    if kind == "AIR_ATTACK" and not air_unit_can_strike(unit, context=map_screen):
         raise ValueError("Transport aircraft cannot strike.")
-    if kind == "AIR_DROP" and not air_unit_can_air_drop(unit):
+    if kind == "AIR_DROP" and not air_unit_can_air_drop(unit, context=map_screen):
         raise ValueError("Air drops require a transport aircraft carrying ground units.")
     base_id = order.get("base_id", base["id"])
     if type(base_id) is not int or base_id != base["id"]:
@@ -5259,7 +5367,7 @@ def canonical_air_order(map_screen, unit, base, order):
     result = {"type": kind, "base_id": base_id}
     if kind == "AIR_PATROL":
         priority = order.get("priority", AIR_DEFAULT_PRIORITY)
-        if not air_unit_can_patrol(unit) or priority not in AIR_INTERCEPTION_PRIORITIES:
+        if not air_unit_can_patrol(unit, context=map_screen) or priority not in AIR_INTERCEPTION_PRIORITIES:
             raise ValueError("Only reusable aircraft can patrol with a valid interception priority.")
         result["priority"] = priority
     else:
@@ -5279,49 +5387,53 @@ def canonical_air_order(map_screen, unit, base, order):
     return result
 
 
-def air_conversion_order(unit):
-    if is_air_unit(unit):
+def air_conversion_order(unit, *, context=None):
+    if is_air_unit(unit, context=context):
         return {"type": "CONVERT", "to": "Convoy", "turns_left": AIR_CONVERT_TURNS}
-    if is_air_transport(unit):
+    if is_air_transport(unit, context=context):
         return {"type": "CONVERT", "to": "Air Unit", "turns_left": AIR_CONVERT_TURNS}
     return None
 
 
-def unit_target_damage_multiplier(attacker, target, air_to_air=False, *, unit_library=None):
+def unit_target_damage_multiplier(attacker, target, air_to_air=False, *, unit_library=None, context=None):
     """Target-specific damage, shared by combat, bombardment and previews."""
-    library = get_unit_library() if unit_library is None else unit_library
+    library = get_unit_library(context) if unit_library is None else unit_library
     if not library.get(target.get("type", ""), {}).get("air_role"):
         return 1.0
     name = attacker.get("type", "")
     stats = library.get(name, {})
-    if classify_unit_group(get_base_unit_name(name), stats) == UNIT_GROUP_TANKS:
+    if classify_unit_group(get_base_unit_name(name, context=context), stats) == UNIT_GROUP_TANKS:
         return 0.0
     return (stats.get("air_attack_multiplier", 1.0)
             if air_to_air and stats.get("air_role") else 1.0)
 
 
-def aircraft_caught_in_ground_combat(unit, opponents, nation_data):
+def aircraft_caught_in_ground_combat(unit, opponents, nation_data, *, context=None):
     """A based aircraft sharing a ground battle with its enemy is a casualty."""
     # Recovery blocks normal attacks, but troops still occupy the aircraft's base.
-    return is_air_unit(unit) and any(
+    if context is None:
+        context = nation_data
+    return is_air_unit(unit, context=context) and any(
         other is not unit
         and are_at_war(get_unit_combat_owner(unit), get_unit_combat_owner(other), nation_data)
         for other in opponents)
 
 
-def prepare_aircraft_for_ground_combat(units, nation_data, opponents=None, on_land=True):
+def prepare_aircraft_for_ground_combat(units, nation_data, opponents=None, on_land=True, *, context=None):
     """Destroy based aircraft before assembling a ground battle or launching."""
+    if context is None:
+        context = nation_data
     enemies = units if opponents is None else opponents
     if not on_land:
         return
     for unit in units:
-        if is_air_transport(unit) and any(
+        if is_air_transport(unit, context=context) and any(
                 other is not unit and other.get("health", 0) > 0
                 and are_at_war(get_unit_combat_owner(unit), get_unit_combat_owner(other), nation_data)
                 for other in enemies):
-            revert_transport(unit)
+            revert_transport(unit, context=context)
     for unit in units:
-        if aircraft_caught_in_ground_combat(unit, enemies, nation_data):
+        if aircraft_caught_in_ground_combat(unit, enemies, nation_data, context=context):
             sources = [(enemy, 1) for enemy in enemies if enemy is not unit
                        and are_at_war(
                 get_unit_combat_owner(unit), get_unit_combat_owner(enemy), nation_data)]
@@ -5329,16 +5441,16 @@ def prepare_aircraft_for_ground_combat(units, nation_data, opponents=None, on_la
             unit["order"] = {"type": "MOVE", "path": []}
 
 
-def ground_combat_profile(unit):
+def ground_combat_profile(unit, *, context=None):
     """Non-mutating casualty profile for UI/AI estimates of a caught aircraft."""
-    if not is_air_unit(unit):
+    if not is_air_unit(unit, context=context):
         return unit
     profile = dict(unit)
     profile.update(health=0, attack=0, defense=0)
     return profile
 
 
-def revert_transport(unit):
+def revert_transport(unit, *, context=None):
     """Reverts a transport (like a Convoy) back to its original unit type."""
     if "original_type" not in unit:
         return
@@ -5352,7 +5464,7 @@ def revert_transport(unit):
     unit["defense"] = unit.get("original_defense", c.DEFAULT_UNIT_DEF)
 
     unit["health"] = unit["max_health"] * pct
-    unit["naval_unit"] = is_naval_unit(unit["type"])
+    unit["naval_unit"] = is_naval_unit(unit["type"], context=context)
 
     for key in ["original_type", "original_speed", "original_max_health", "original_attack", "original_defense"]:
         if key in unit: del unit[key]
@@ -5453,7 +5565,7 @@ def get_combat_predictions(map_screen):
     incoming = {}
     for prov in map_data.values():
         for u in prov.get("units", []):
-            if (is_air_unit(u) and not air_unit_can_move_on_ground(u)) or id(u) in meeting_unit_ids:
+            if (is_air_unit(u, context=map_screen) and not air_unit_can_move_on_ground(u, context=map_screen)) or id(u) in meeting_unit_ids:
                 continue
             order = u.get("order")
             if order and order.get("type") == "MOVE" and order.get("path"):
@@ -5803,7 +5915,7 @@ def will_ai_accept_peace(target_nation, proposer_nation, peace_type, map_data, n
 # DATA SYNC & REFRESH
 # ==========================================
 
-def refresh_map_directories(screen, dirs_to_check, success_message="Data refreshed successfully!", options=None):
+def refresh_map_directories(screen, dirs_to_check, success_message="Data refreshed successfully!", options=None, *, context=None):
     """Headlessly instantiates maps on a background thread to prevent UI freezing."""
     # An empty dict behaves the same as None below (every lookup defaults to True),
     # so this also keeps refresh_nation_data's own default-options branch out of play.
@@ -5878,7 +5990,7 @@ def refresh_map_directories(screen, dirs_to_check, success_message="Data refresh
                 scrub_default_images(temp_map_context.nation_data)
 
                 # --- BUG FIX: Fix lowercase unit types and custom names ---
-                unit_lib = get_unit_library()
+                unit_lib = get_unit_library(context)
                 for prov in temp_map_context.map_data.values():
                     for unit in prov.get("units", []):
                         u_type = unit.get("type", "")
@@ -6159,7 +6271,7 @@ def redo_editor_state(map_screen):
 # UI ABSTRACTION QUERIES
 # ==========================================
 
-def get_grouped_units(unit_library, by_family=True, unit_filter=None):
+def get_grouped_units(unit_library, by_family=True, unit_filter=None, *, context=None):
     """Buckets a unit library into production categories via classify_unit_group.
 
     `by_family=True` lists each base class once (the production columns);
@@ -6170,16 +6282,16 @@ def get_grouped_units(unit_library, by_family=True, unit_filter=None):
     for name, stats in unit_library.items():
         if unit_filter and not unit_filter(name, stats):
             continue
-        base = get_base_unit_name(name, unit_library)
+        base = get_base_unit_name(name, unit_library, context=context)
         entry = base if by_family else name
         bucket = groups[classify_unit_group(base, stats)]
         if entry not in bucket:
             bucket.append(entry)
     return groups
 
-def get_ordered_unit_groups(unit_library):
+def get_ordered_unit_groups(unit_library, *, context=None):
     """Returns unit families in the canonical production category order."""
-    groups = get_grouped_units(unit_library)
+    groups = get_grouped_units(unit_library, context=context)
     return tuple(groups[group] for group in UNIT_GROUPS)
 
 def was_original_owner(prov, nation, nation_data):
@@ -6535,107 +6647,9 @@ def province_for_order(map_screen, province_id):
 
 
 def canonical_unit_order(map_screen, country_id, province, unit, order):
-    """Host/server validation shared with tournament aircraft commands."""
-    world_state = world_for(map_screen)
-    if unit_is_air_drop_recovering(unit):
-        validate_air_drop_recovery_draft(unit, {"order": order})
-        return copy.deepcopy(unit["order"])
-    if order is not None and not isinstance(order, dict):
-        raise ValueError("Invalid unit order.")
-    if order is None or order == {}:
-        return None
-    kind = order.get("type")
-    if not isinstance(kind, str):
-        raise ValueError("Invalid unit order type.")
-    if kind in AIR_ORDER_TYPES:
-        return canonical_air_order(map_screen, unit, province, order)
-    if kind == "MOVE":
-        path = order.get("path", [])
-        if (not isinstance(path, list) or len(path) > MAX_UNIT_ORDER_PATH
-                or any(isinstance(province_id, bool) or not isinstance(province_id, int)
-                       for province_id in path)):
-            raise ValueError("Invalid movement path.")
-        previous = province
-        for province_id in path:
-            destination = province_for_order(map_screen, province_id)
-            if not can_unit_move_step(
-                    unit, previous, destination, world_state.nation_data):
-                raise ValueError("That unit cannot enter a province in this path.")
-            previous = destination
-        return {"type": "MOVE", "path": list(path)}
-    if kind == "BOMBARD":
-        if is_air_unit(unit):
-            raise ValueError("Aircraft must use a supported air mission.")
-        target = province_for_order(map_screen, order.get("target_id"))
-        unit_type = unit.get("type", "")
-        if (is_water_province(province)
-                and not (unit.get("naval_unit") or is_naval_unit(unit_type))):
-            raise ValueError("That unit cannot bombard from water.")
-        targets = get_bombardment_targets(
-            province, world_state.id_to_province, get_bombardment_range(unit_type))
-        if target["id"] not in targets:
-            raise ValueError("Bombardment target is out of range.")
-        return {"type": "BOMBARD", "target_id": target["id"]}
-    if kind == "DISBAND":
-        if unit.get("air_cargo"):
-            raise ValueError("Release cargo before disbanding its carrier.")
-        return {"type": "DISBAND", "turns_left": 1}
-    if kind == "REPAIR":
-        if is_nation_in_combat_here(country_id, province, world_state.nation_data):
-            raise ValueError("Units cannot repair in combat.")
-        unit_type = unit.get("original_type", unit.get("type", ""))
-        stats = get_unit_library().get(unit_type, {})
-        if get_scenario_flag("free_repairs", c.DEFAULT_FREE_REPAIRS,
-                                     world_state.scenario_settings):
-            cost = {"cost_materials": 0, "cost_manpower": 0, "cost_fuel": 0}
-        else:
-            missing = (unit.get("max_health", 1) - unit.get("health", 0)) / max(1, unit.get("max_health", 1))
-            cost = {key: int(stats.get(key, 0) * missing)
-                    for key in ("cost_materials", "cost_manpower", "cost_fuel")}
-        return {"type": "REPAIR", "turns_left": 1, "refund": cost, "realtime_cost": cost}
-    if kind == "UPGRADE":
-        target_type = order.get("target_type")
-        unit_library = get_unit_library()
-        research = world_state.nation_data[country_id].get("research", {})
-        if (not isinstance(target_type, str) or target_type not in unit_library
-                or target_type != get_upgrade_target(unit.get("type", ""), research,
-                                                     unit_library, get_tech_tree())
-                or not is_unit_unlocked(target_type, research)
-                or not has_industry(province)
-                or is_nation_in_combat_here(country_id, province, world_state.nation_data)):
-            raise ValueError("Invalid unit upgrade.")
-        return {"type": "UPGRADE", "turns_left": 1, "target_type": target_type, "refund": {}}
-    if kind == "CONVERT":
-        source = unit.get("type", "")
-        if is_nation_in_combat_here(country_id, province, world_state.nation_data):
-            raise ValueError("Units cannot convert in combat.")
-        air_conversion = air_conversion_order(unit)
-        if air_conversion:
-            if is_water_province(province):
-                raise ValueError("Aircraft conversion requires land.")
-            if is_air_unit(unit) and not province.get("is_coastal", False):
-                raise ValueError("Convoy conversion requires a coast.")
-            expected, turns = air_conversion["to"], air_conversion["turns_left"]
-        elif source.startswith("Convoy"):
-            expected, turns = "Land Unit", 1
-        elif source.startswith("Truck") or is_naval_unit(source):
-            conversion = truck_ship_conversion_order(unit, world_state.scenario_settings)
-            if (conversion["to"] == "Truck"
-                    and world_state.nation_data[country_id].get("research", {}).get("trucks", 0) < 1):
-                raise ValueError("Trucks research is required for this conversion.")
-            expected, turns = conversion["to"], conversion["turns_left"]
-        else:
-            expected, turns = "Convoy", 1
-        if order.get("to") != expected:
-            raise ValueError("Invalid unit conversion.")
-        existing = unit.get("order")
-        if (expected in ("Truck", "Ship") and isinstance(existing, dict)
-                and existing.get("type") == "CONVERT" and existing.get("to") == expected
-                and type(existing.get("turns_left")) is int and existing["turns_left"] > 0):
-            # A new draft cannot shorten or restart host-owned progress.
-            return copy.deepcopy(existing)
-        return {"type": "CONVERT", "turns_left": turns, "to": expected}
-    raise ValueError("Unknown unit order.")
+    """Preserve the public order-validation interface."""
+    from map_logic.unit_actions import canonical_order
+    return canonical_order(map_screen, country_id, province, unit, order)
 
 
 def build_research_project(tech_name, points_remaining):
@@ -6643,7 +6657,7 @@ def build_research_project(tech_name, points_remaining):
     return {"tech_name": tech_name, "points_remaining": points_remaining}
 
 
-def canonical_research_selection(country_data, requested, tech_tree=None):
+def canonical_research_selection(country_data, requested, tech_tree=None, *, context=None):
     """Preview an ordered selection using authoritative progress and prerequisites."""
     if (not isinstance(requested, list) or len(requested) > c.RESEARCH_SLOTS or
             any(not isinstance(tech, str) for tech in requested) or
@@ -6651,7 +6665,7 @@ def canonical_research_selection(country_data, requested, tech_tree=None):
         raise ValueError("Invalid research selection.")
     if not isinstance(country_data, dict):
         raise ValueError("Unknown country research selection.")
-    tech_tree = get_tech_tree() if tech_tree is None else tech_tree
+    tech_tree = get_tech_tree(context) if tech_tree is None else tech_tree
     research = country_data.get("research", {})
     if not isinstance(research, dict):
         raise ValueError("Invalid authoritative research data.")
