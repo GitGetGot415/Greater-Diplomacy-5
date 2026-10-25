@@ -1,6 +1,5 @@
 # TODO
 
-!!! Transporting troops with planes will be lovely
 !!! release nations or puppets from spectator mode
 
 make it so that you can IMPORT AN IMAGE and have it turned into a map maybe
@@ -70,7 +69,6 @@ Ultimatums: Kind of like how diplomatic plays work, ultimatums essentially allow
 
 ### Exodus
 
-- Box selection of units in the unit orders menu
 - let Allies see your active movement arrows
 - QUEUE UNITS ACROSS OCEANS
 - Add statistics.
@@ -131,7 +129,6 @@ Ultimatums: Kind of like how diplomatic plays work, ultimatums essentially allow
 
 ## Combat and units
 
-- Make terrain affect combat and movement
 - Add HOI4-style entrenchment
 - Let artillery pierce defense, or deal percentage damage. If both are used, use the higher result (maybe, maybe, let me think about this)
 - Decide whether overkill can kill a unit before the rest of the damage is applied (is this added? genuine question because i really dont know)
