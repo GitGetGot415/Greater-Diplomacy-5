@@ -15,6 +15,8 @@ def process_ai_research(map_screen):
     building_library = queries.get_building_library(map_screen)
     all_econ = queries.calculate_all_economies(world_state.map_data, world_state.nation_data, context=map_screen)
     world = ai_world.for_screen(map_screen)
+    # Content stays fixed during this pass. Validate its index once for all countries.
+    research_index = queries.get_unit_research_index(unit_library)
 
     ai_nations = queries.get_active_ai_nations(map_screen)
 
@@ -72,13 +74,13 @@ def process_ai_research(map_screen):
         econ = all_econ.get(ai_name, {})
         available_techs = _rank_for_nation(
             available_techs, ai_name, data, econ, world,
-            unit_library, building_library, current_year)
+            unit_library, building_library, current_year, research_index=research_index)
 
         _fill_queue(queue, available_techs, data.get("research", {}),
-                    unit_library, tech_tree)
+                    unit_library, tech_tree, research_index=research_index)
 
 
-def _fill_queue(queue, ranked, research, unit_library, tech_tree):
+def _fill_queue(queue, ranked, research, unit_library, tech_tree, *, research_index=None):
     """Takes the best techs, but never leaves the army entirely unresearched.
 
     Economic techs are repeatable and compound, so on raw value they win every
@@ -89,8 +91,10 @@ def _fill_queue(queue, ranked, research, unit_library, tech_tree):
     nation facing armour and a nation facing militia make different choices.
     """
     reserved = c.AI_RESEARCH_MILITARY_SLOTS
+    index = (queries.get_unit_research_index(unit_library)
+             if research_index is None else research_index)
     military_taken = any(
-        ai_tech_eval.units_unlocked_by(q["tech_name"], research, unit_library)
+        ai_tech_eval.units_unlocked_by(q["tech_name"], research, unit_library, research_index=index)
         for q in queue)
 
     while len(queue) < c.RESEARCH_SLOTS and ranked:
@@ -100,12 +104,12 @@ def _fill_queue(queue, ranked, research, unit_library, tech_tree):
         pick = None
         if need_military:
             pick = next((t for t in ranked
-                         if ai_tech_eval.units_unlocked_by(t[0], research, unit_library)), None)
+                         if ai_tech_eval.units_unlocked_by(t[0], research, unit_library, research_index=index)), None)
         if pick is None:
             pick = ranked[0]
 
         ranked.remove(pick)
-        if ai_tech_eval.units_unlocked_by(pick[0], research, unit_library):
+        if ai_tech_eval.units_unlocked_by(pick[0], research, unit_library, research_index=index):
             military_taken = True
 
         from map_logic.turn_processing.research_processor import enqueue_research
@@ -113,13 +117,15 @@ def _fill_queue(queue, ranked, research, unit_library, tech_tree):
 
 
 def _rank_for_nation(available_techs, ai_name, data, econ, world,
-                     unit_library, building_library, current_year):
+                     unit_library, building_library, current_year, *, research_index=None):
     """Best-first order of the techs this nation could start next."""
     if not available_techs:
         return available_techs
 
     research = data.get("research", {})
-    candidates = ai_unit_eval.buildable_units(research, unit_library)
+    index = (queries.get_unit_research_index(unit_library)
+             if research_index is None else research_index)
+    candidates = ai_unit_eval.buildable_units(research, unit_library, research_index=index)
     volley, enemy_def, enemy_stack = ai_unit_eval.threat_profile(
         world, ai_name, unit_library, candidates)
     air_pressure, air_enemy_def, air_enemy_stack = ai_unit_eval.air_threat_profile(
@@ -140,4 +146,4 @@ def _rank_for_nation(available_techs, ai_name, data, econ, world,
 
     return ai_tech_eval.rank_available(
         available_techs, research, unit_library, building_library, ctx,
-        set(candidates), current_year, econ.get("total_inc", {}), built, provinces=provinces)
+        set(candidates), current_year, econ.get("total_inc", {}), built, provinces=provinces, research_index=index)

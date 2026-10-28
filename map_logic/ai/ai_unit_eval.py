@@ -235,7 +235,7 @@ _BUILDABLE_CACHE = {}
 _BUILDABLE_CACHE_LIBRARY = None
 
 
-def buildable_units(research, unit_library):
+def buildable_units(research, unit_library, *, research_index=None):
     """The best unlocked, non-obsolete tier of each unit family.
 
     The same set the production screen offers a player by default, for the same
@@ -249,7 +249,8 @@ def buildable_units(research, unit_library):
     # Compare the parsed index itself, not id() integers (identity tests on
     # large integers previously wiped this cache every call). Its identity
     # also changes when library names or research rules are edited in place.
-    index = queries.get_unit_research_index(unit_library)
+    index = (queries.get_unit_research_index(unit_library)
+             if research_index is None else research_index)
     from data.runtime_rules import ActiveLibrary
     if isinstance(unit_library, ActiveLibrary):
         owner = unit_library.runtime_rules.indexes.setdefault("ai_buildable", {})

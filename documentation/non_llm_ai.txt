@@ -56,6 +56,8 @@ Invalidate it after library edits, metadata edits, research-year changes, gate c
 This includes changes made in place.
 
 These indexes are temporary. They are not saved game fields.
+AI research validates the unit index once per pass and shares it across country rankings and queue selection.
+Each new pass checks content changes again. Direct queries still detect changes made in place.
 
 AI construction submits selected purchases through map_logic/production_actions.py.
 Selection order, budgets, emergency behavior, site selection, and tactical-unit protection retain their existing rules.

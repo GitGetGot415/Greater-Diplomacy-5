@@ -49,13 +49,14 @@ def _research_key(research):
     return tuple(sorted((tech, lvl) for tech, lvl in research.items() if lvl))
 
 
-def units_unlocked_by(tech_key, research, unit_library):
+def units_unlocked_by(tech_key, research, unit_library, *, research_index=None):
     """The units one more level of `tech_key` would newly make buildable."""
     global _UNLOCK_CACHE, _UNLOCK_CACHE_LIBRARY
 
     # Use the same schema identity as buildable_units, including in-place
     # library/rule edits and JSON refreshes, rather than just the library id.
-    index = queries.get_unit_research_index(unit_library)
+    index = (queries.get_unit_research_index(unit_library)
+             if research_index is None else research_index)
     if _UNLOCK_CACHE_LIBRARY is not index:
         _UNLOCK_CACHE = {}
         _UNLOCK_CACHE_LIBRARY = index
@@ -65,10 +66,10 @@ def units_unlocked_by(tech_key, research, unit_library):
     if cached is not None:
         return cached
 
-    before = set(ai_unit_eval.buildable_units(research, unit_library))
+    before = set(ai_unit_eval.buildable_units(research, unit_library, research_index=index))
     ahead = dict(research)
     ahead[tech_key] = ahead.get(tech_key, 0) + 1
-    after = set(ai_unit_eval.buildable_units(ahead, unit_library))
+    after = set(ai_unit_eval.buildable_units(ahead, unit_library, research_index=index))
 
     # Anything newly available, plus anything whose tier improved -- both show up
     # as a name in `after` that was not in `before`.
@@ -147,8 +148,10 @@ class UnitGains:
     per nation, which on a 33-nation map came to three seconds a turn.
     """
 
-    def __init__(self, tech_keys, research, unit_library, ctx, current_names):
-        self._unlocks = {t: units_unlocked_by(t, research, unit_library) for t in tech_keys}
+    def __init__(self, tech_keys, research, unit_library, ctx, current_names, *, research_index=None):
+        index = (queries.get_unit_research_index(unit_library)
+                 if research_index is None else research_index)
+        self._unlocks = {t: units_unlocked_by(t, research, unit_library, research_index=index) for t in tech_keys}
 
         reachable = set(current_names)
         for names in self._unlocks.values():
@@ -328,7 +331,7 @@ def schedule_pressure(current_year, target_year):
 
 
 def rank_available(available, research, unit_library, building_library, ctx,
-                   current_names, current_year, income, built=None, *, provinces=()):
+                   current_names, current_year, income, built=None, *, provinces=(), research_index=None):
     """Orders candidate techs best-first.
 
     `available` is (tech_key, target_year, cost, is_new). Value per point of
@@ -347,7 +350,7 @@ def rank_available(available, research, unit_library, building_library, ctx,
         return available
 
     gains = UnitGains([entry[0] for entry in available], research, unit_library,
-                      ctx, current_names)
+                      ctx, current_names, research_index=research_index)
 
     # Unit gain and economy gain are not natively comparable: one is an
     # improvement in combat-per-cost, the other is resources per turn. Bridging

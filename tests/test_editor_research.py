@@ -181,7 +181,7 @@ class LevelRequirementTests(unittest.TestCase):
                 stack.enter_context(patch.object(queries, name, return_value=result))
             game.map_data = {}
             stack.enter_context(patch.object(ai_research.ai_world, "for_screen", return_value=None))
-            stack.enter_context(patch.object(ai_research, "_rank_for_nation", side_effect=lambda available, *args: available))
+            stack.enter_context(patch.object(ai_research, "_rank_for_nation", side_effect=lambda available, *args, **kwargs: available))
             ai_research.process_ai_research(game)
             self.assertEqual([project["tech_name"] for project in game.nation_data["A"]["research_queue"]], ["left"])
             game.nation_data["A"].update(research={"root": 2, "left": 1}, research_queue=[])

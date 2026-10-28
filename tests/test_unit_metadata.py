@@ -1,10 +1,12 @@
 """Check content identity and compound requirements with artificial libraries."""
 
 import unittest
+from contextlib import ExitStack
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from data import migrations, queries
-from map_logic.ai import ai_unit_eval
+from map_logic.ai import ai_research, ai_tech_eval, ai_unit_eval
 
 
 def fixture_metadata(*, family="Fixture", tier=1, level=1):
@@ -50,6 +52,39 @@ class UnitMetadataTests(unittest.TestCase):
             self.assertEqual(ai_unit_eval.buildable_units({"custom_years": 1}, library), [])
             library.clear()
             self.assertEqual(ai_unit_eval.buildable_units({"locked": 1}, library), [])
+
+    def test_research_pass_checks_the_library_once_and_refreshes_after_an_edit(self):
+        library = {
+            name: {"metadata": fixture_metadata(tier=level, level=level), "attack": level * 10,
+                   "health": 100, "defense": 0, "speed": 1, "cost_materials": 100,
+                   "cost_manpower": 100, "cost_fuel": 0, "production_time": 1, "naval_unit": False}
+            for name, level in (("early", 1), ("later", 2))}
+        tree = {key: {"max_lvl": 2, "cost": 100, "years": [2000, 2001], "req": {}}
+                for key in ("fixture_track", "other")}
+        research = {"fixture_track": 1}
+        game = SimpleNamespace(map_data={}, time_manager=SimpleNamespace(year=2001), nation_data={
+            name: {"research": dict(research), "research_queue": []} for name in ("A", "B")})
+        with ExitStack() as stack:
+            for name, result in (("get_tech_tree", tree), ("get_unit_library", library),
+                                 ("get_building_library", {}), ("calculate_all_economies", {}),
+                                 ("get_active_ai_nations", ["A", "B"])):
+                stack.enter_context(patch.object(queries, name, return_value=result))
+            stack.enter_context(patch.object(ai_research.ai_world, "for_screen", return_value=None))
+            checks = stack.enter_context(patch.object(queries, "get_unit_research_index",
+                                                     wraps=queries.get_unit_research_index))
+            ai_research.process_ai_research(game)
+            self.assertEqual(checks.call_count, 1)
+            self.assertEqual(game.nation_data["A"]["research_queue"], game.nation_data["B"]["research_queue"])
+            self.assertEqual({project["tech_name"] for project in game.nation_data["A"]["research_queue"]},
+                             set(tree))
+            self.assertEqual(ai_tech_eval.units_unlocked_by("fixture_track", research, library), ("later",))
+            checks.reset_mock()
+            library["later"]["metadata"]["requirements"].append({"tech": "locked", "level": 1})
+            for country in game.nation_data.values():
+                country["research_queue"].clear()
+            ai_research.process_ai_research(game)
+            self.assertEqual(checks.call_count, 1)
+            self.assertEqual(ai_tech_eval.units_unlocked_by("fixture_track", research, library), ())
 
     def test_legacy_content_is_adapted_without_overwriting_explicit_or_unknown_fields(self):
         old = migrations.legacy_unit_metadata("Fixture Model XII", {})
