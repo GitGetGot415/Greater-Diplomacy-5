@@ -1,5 +1,7 @@
 """Keep country mappings attached to their explicit world owner."""
 
+import copy
+
 
 class WorldNations(dict):
     def __init__(self, world, values=()):
@@ -11,7 +13,6 @@ class WorldNations(dict):
         return dict(self)
 
     def __deepcopy__(self, memo):
-        import copy
         result = {}
         memo[id(self)] = result
         result.update(copy.deepcopy(dict(self), memo))

@@ -3,6 +3,9 @@ import data.constants as c
 from data import queries
 from map_logic.ai import ai_tech_eval, ai_unit_eval, ai_world
 
+from map_logic.system32.research_processor import enqueue_research
+
+
 def process_ai_research(map_screen):
     """Automates research queueing for AI nations."""
     world_state = world_for(map_screen)
@@ -112,7 +115,6 @@ def _fill_queue(queue, ranked, research, unit_library, tech_tree, *, research_in
         if ai_tech_eval.units_unlocked_by(pick[0], research, unit_library, research_index=index):
             military_taken = True
 
-        from map_logic.system32.research_processor import enqueue_research
         enqueue_research(queue, pick[0], pick[2])
 
 

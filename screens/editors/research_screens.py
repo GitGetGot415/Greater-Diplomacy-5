@@ -10,6 +10,9 @@ from ui.bars import ui_bars
 from ui.navigation.screen_runner import _run_pygame_sub_screen
 from ui.rendering.font_manager import fonts
 
+from screens.game.research import Research_Screen
+
+
 # ==========================================
 # MAP RESEARCH (TECH) EDITOR
 # ==========================================
@@ -208,7 +211,6 @@ class Research_List_Screen(MapOverlayScreen):
         _run_pygame_sub_screen(self.map_screen, screen, on_done=self.refresh_ui)
 
     def edit_country(self, cid):
-        from screens.game.research import Research_Screen
         if not queries.can_edit_starting_research(self.map_screen, cid):
             self.map_screen.show_feedback("Country research editing requires the local map editor.")
             return

@@ -7,6 +7,9 @@ from ui.widgets import flag_icons, text_utils
 from ui.widgets.table_screen import TableColumn, TableScreen
 from ui_elements import Button
 
+from ui import dialogs as confirm_dialog
+
+
 BACKGROUND_COLOR = (80, 60, 40)
 ROW_COLOR = (48, 35, 25)
 TABLE_MARGIN = 25
@@ -105,7 +108,6 @@ class UnitEventsScreen(TableScreen):
         self.draw_checkerboard_background(surface, self.bg_color)
 
     def show_event(self, row):
-        from ui import dialogs as confirm_dialog
         amount = f"\nHealth: {row['amount']:.2f}" if row["amount"] else ""
         confirm_dialog.show_info(row["event_label"],
             f"{row['unit_name']}\nTile: {row['tile_id']}{amount}\n{row['details']}",

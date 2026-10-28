@@ -15,6 +15,12 @@ from screens.game import map_input as event_handler
 from screens.game import battle_screen
 from ui.navigation.modal_screen import ModalScreen
 
+from ui.dialogs.list_select_screen import ListSelectScreen
+from ui.panels import sidebar_info
+from ui.rendering import map_utils
+from ui.navigation import screen_runner
+
+
 # ==========================================
 # COMPACT ORDERS PANEL LAYOUT
 # ==========================================
@@ -583,12 +589,11 @@ class Orders_Screen(GameState):
             return
         # Keep the original selection. A later snapshot/selection change must
         # not redirect this popup's callback to different units.
-        from ui.navigation.screen_runner import _run_pygame_sub_screen
         popup = _AirMissionSelectScreen(self, AIR_MISSION_CHOICES,
             lambda mission: self.set_selected_air_mission(mission, records),
             enabled_missions=set().union(*(queries.available_air_missions(
                 self.map_screen, unit, base) for unit, base in records)))
-        _run_pygame_sub_screen(self.map_screen, popup)
+        screen_runner._run_pygame_sub_screen(self.map_screen, popup)
 
     def set_selected_air_mission(self, mission, records=None):
         if mission not in AIR_MISSION_ICONS:
@@ -602,11 +607,9 @@ class Orders_Screen(GameState):
             if len(eligible) == 1:
                 self.open_air_transport(*eligible[0])
             elif eligible:
-                from ui.dialogs.list_select_screen import ListSelectScreen
-                from ui.navigation.screen_runner import _run_pygame_sub_screen
                 items = [(f"{unit.get('custom_name') or unit['type']} (tile {base['id']})", (unit, base))
                          for unit, base in eligible]
-                _run_pygame_sub_screen(self.map_screen, ListSelectScreen(
+                screen_runner._run_pygame_sub_screen(self.map_screen, ListSelectScreen(
                     self.map_screen, "Select transport aircraft", "Choose an aircraft", items,
                     lambda record: self.open_air_transport(*record)))
             return
@@ -1024,7 +1027,6 @@ class Orders_Screen(GameState):
             self._refresh_air_range_previews(destination)
 
     def refresh_ui(self):
-        from ui.panels import sidebar_info
         selected_records = self.map_screen.selected_unit_records()
         if self.target_province is not None:
             sidebar_info.prepare_unit_roster(self.map_screen, self.target_province)
@@ -1491,11 +1493,10 @@ class Orders_Screen(GameState):
         if self._open_loaded_transport_menu(unit, province):
             return
         enabled_missions = queries.available_air_missions(self.map_screen, unit, province)
-        from ui.navigation.screen_runner import _run_pygame_sub_screen
         popup = _AirMissionSelectScreen(self, AIR_MISSION_CHOICES,
             lambda mission: self.set_air_mission(unit, province, mission, row_key),
             enabled_missions=enabled_missions)
-        _run_pygame_sub_screen(self.map_screen, popup)
+        screen_runner._run_pygame_sub_screen(self.map_screen, popup)
 
     def _air_mission_unit_index(self, unit, province, unit_indexes=None):
         # The selector may outlive a snapshot, a country switch, or a unit's
@@ -1541,8 +1542,6 @@ class Orders_Screen(GameState):
                 or "TRANSPORT" not in queries.available_air_missions(self.map_screen, plane, province)):
             return
         queries.ensure_unit_ids(self.map_screen.map_data)
-        from ui.dialogs.list_select_screen import ListSelectScreen
-        from ui.navigation.screen_runner import _run_pygame_sub_screen
         capacity = queries.air_transport_capacity(plane, context=self.map_screen)
 
         def picker_items():
@@ -1573,7 +1572,7 @@ class Orders_Screen(GameState):
             picker_items(), select_cargo,
             is_enabled=lambda item: item[1][0] != "LOAD" or len(plane.get('air_cargo', [])) < capacity,
             close_on_select=False)
-        _run_pygame_sub_screen(self.map_screen, popup)
+        screen_runner._run_pygame_sub_screen(self.map_screen, popup)
 
     def change_air_transport(self, plane, province, action, unit_id):
         if self._air_mission_unit_index(plane, province) is None:
@@ -1945,7 +1944,6 @@ class Orders_Screen(GameState):
             if self.map_screen.hovered_province:
                 curr_id = self.map_screen.hovered_province["id"]
                 if curr_id != self.map_screen.last_hovered_id:
-                    from ui.rendering import map_utils
                     self.map_screen.hover_glow_surf, self.map_screen.hover_glow_rect = map_utils.create_glow_surface(
                         self.map_screen.id_map, self.map_screen.hovered_province["map_color"]
                     )

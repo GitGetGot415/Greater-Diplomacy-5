@@ -10,6 +10,21 @@ import data.constants as c
 from data.state_access import world_for, session_for
 from map_logic import politics
 
+from data.game_state import WorldState
+from data.state_access import BackendState
+from data import queries
+from map_logic.diplomacy import volunteers, faction_actions, diplomacy_lifecycle as lifecycle
+from map_logic.diplomacy.puppet_actions import canonical_puppet_release_queue
+from map_logic.diplomacy.action_definitions import availability
+from map_logic.actions import unit_actions, production_actions
+from map_logic.actions.production_actions import (
+    validate_queue_budget,
+    settle_draft_budget,
+    apply_queue_change,
+)
+from map_logic.actions.unit_actions import apply_action
+from map_logic.system32.research_processor import apply_research_selection
+
 
 class PlayerActionError(ValueError):
     """A player choice cannot be applied to the current world."""
@@ -24,18 +39,14 @@ class PlayerActions:
     _MAX_QUEUE_ITEMS = 100
 
     def __init__(self, map_ref, session=None):
-        from data.game_state import WorldState
-        from data.state_access import BackendState
         self.map_ref = BackendState(map_ref, session) if isinstance(map_ref, WorldState) else map_ref
         self.world = world_for(self.map_ref)
         self.session = session_for(self.map_ref)
 
     def validate_draft(self, country_id: str, commands: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        from data import queries
         if not isinstance(commands, list):
             raise PlayerActionError("Player intents must be a list.")
         self._country(country_id)
-        from map_logic.diplomacy import volunteers
         planning_view = self._planning_view(country_id, commands)
         transport_commands = [command for command in commands
                               if isinstance(command, dict) and command.get("type") == "air_transport"]
@@ -109,7 +120,6 @@ class PlayerActions:
 
     def _validate_army_roster(self, country_id: str, command: dict[str, Any], *, map_ref=None) -> dict[str, Any]:
         """Validate organization metadata without trusting client unit ownership."""
-        from data import queries
         supplied = command.get("armies", [])
         if not isinstance(supplied, list) or len(supplied) > 200:
             raise PlayerActionError("Invalid army roster.")
@@ -177,7 +187,6 @@ class PlayerActions:
 
     def _validate_volunteer_commands(self, country_id: str, commands: list[dict[str, Any]], *, map_ref=None) -> None:
         """Keep a volunteer request and its reserved divisions inseparable."""
-        from map_logic.diplomacy import volunteers
         pending_targets = set()
         offered_targets, offered_count = set(), 0
         reserved_units = set()
@@ -211,14 +220,12 @@ class PlayerActions:
         return country
 
     def _planning_view(self, country_id, commands):
-        from map_logic.diplomacy import volunteers
         if any(isinstance(command, dict) and command.get("type") == "country_diplomacy" for command in commands):
             return volunteers.draft_context(self.map_ref, country_id)
         return self.map_ref
 
     def _validate_country_preferences(self, country_id: str, command: dict[str, Any]) -> dict[str, Any]:
         """Validate politics, automation, economy, and custom unit choices."""
-        from data import queries
 
         country = self._country(country_id)
         drift = command.get("political_drift", 0)
@@ -412,7 +419,6 @@ class PlayerActions:
                     or puppet_data.get("puppet_type") != c.PUPPET_TYPE_INTEGRATED):
                 raise PlayerActionError("You may only edit an integrated subject.")
             canonical_appearances[puppet] = self._canonical_appearance(appearance)
-        from map_logic.diplomacy.puppet_actions import canonical_puppet_release_queue
         try:
             canonical_releases = canonical_puppet_release_queue(
                 self.world.map_data, self.world.nation_data, country_id, releases,
@@ -435,7 +441,6 @@ class PlayerActions:
             return {"type": "faction_rename", "name": None}
         if not country.get("is_faction_leader") or not old_name:
             raise PlayerActionError("Only a faction leader may rename their faction.")
-        from map_logic.diplomacy import faction_actions
         # Validate against a copy: the helper owns the collision and membership
         # rules, while the real mutation waits for atomic turn processing.
         probe = copy.deepcopy(self.world.nation_data)
@@ -457,12 +462,10 @@ class PlayerActions:
 
     def _validate_volunteer_draft(self, country_id: str, command: dict[str, Any], *, map_ref=None) -> dict[str, Any]:
         """Identify divisions by their authoritative province/index, never data."""
-        from data import queries
         target, units = command.get("target"), command.get("units", [])
         if (not isinstance(target, str) or target == country_id or target not in self.world.nation_data
                 or not isinstance(units, list) or not units or len(units) > 100):
             raise PlayerActionError("Invalid volunteer offer.")
-        from map_logic.diplomacy import volunteers
         legal, reason = volunteers.is_eligible(country_id, target, self.world.nation_data)
         if not legal:
             raise PlayerActionError(reason)
@@ -499,7 +502,6 @@ class PlayerActions:
         In-flight proposals remain on the authoritative map; clients can only
         replace their own unsent proposals and responses for the current turn.
         """
-        from data import queries
 
         self._country(country_id)
         pending = command.get("pending", {})
@@ -535,7 +537,6 @@ class PlayerActions:
                 text(action[4:], "message")
             elif action not in allowed_actions:
                 raise PlayerActionError("Unknown diplomatic action.")
-            from map_logic.diplomacy.action_definitions import availability
             available = availability(self.map_ref, country_id, target, action)
             if not available.allowed:
                 raise PlayerActionError(available.reason)
@@ -577,7 +578,6 @@ class PlayerActions:
                 if len(encoded) > 50_000:
                     raise PlayerActionError("Diplomacy terms are too large.")
                 entry["parameters"] = copy.deepcopy(info["parameters"])
-            from map_logic.diplomacy import diplomacy_lifecycle as lifecycle
             try:
                 entry.update(lifecycle.canonical_response_reference(
                     self.world.nation_data, country_id, target, info))
@@ -604,7 +604,6 @@ class PlayerActions:
             raise PlayerActionError("Unknown province in order.") from exc
 
     def _validate_unit_order(self, country_id: str, command: dict[str, Any], *, map_ref=None) -> dict[str, Any]:
-        from data import queries
         map_ref = self.map_ref if map_ref is None else map_ref
         try:
             province = queries.province_for_order(map_ref, command.get("province_id"))
@@ -630,7 +629,6 @@ class PlayerActions:
         order = command.get("order")
         if order is not None and not isinstance(order, dict):
             raise PlayerActionError("Invalid unit order.")
-        from map_logic.actions import unit_actions
         try:
             prepared = unit_actions.prepare_action(map_ref, country_id, province, unit, order)
         except ValueError as error:
@@ -659,7 +657,6 @@ class PlayerActions:
     def _canonical_unit_order(self, country_id: str, province: dict[str, Any], unit: dict[str, Any],
                               order: dict[str, Any] | None, *, map_ref=None) -> dict[str, Any] | None:
         """Use the same rule as tournament's host-validated aircraft orders."""
-        from data import queries
         try:
             return queries.canonical_unit_order(self.map_ref if map_ref is None else map_ref,
                                                 country_id, province, unit, order)
@@ -667,7 +664,6 @@ class PlayerActions:
             raise PlayerActionError(str(exc)) from exc
 
     def _validate_queue(self, country_id: str, command: dict[str, Any]) -> dict[str, Any]:
-        from data import queries
         province = self._province(command.get("province_id"))
         if province.get("owner") != country_id:
             raise PlayerActionError("Players may only change queues in their own provinces.")
@@ -677,7 +673,6 @@ class PlayerActions:
             raise PlayerActionError("Invalid province queue.")
         if len(items) > self._MAX_QUEUE_ITEMS or any(not isinstance(item, dict) for item in items):
             raise PlayerActionError("Invalid province queue contents.")
-        from map_logic.actions import production_actions
         try:
             return production_actions.reconstruct_queue(
                 self.map_ref, country_id, province, queue_type, items,
@@ -688,7 +683,6 @@ class PlayerActions:
     def _build_queue_item(self, country_id: str, province: dict[str, Any], queue_type: str,
                           intent: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
         """Reconstruct untrusted client intent through shared production rules."""
-        from map_logic.actions import production_actions
         try:
             result = production_actions.prepare_production(
                 self.map_ref, country_id, province, queue_type, intent,
@@ -699,7 +693,6 @@ class PlayerActions:
 
     def _validate_queue_budget(self, country_id: str, commands: list[dict[str, Any]]) -> None:
         """Ensure queue changes can be paid for before accepting a draft."""
-        from map_logic.actions.production_actions import validate_queue_budget
         try:
             validate_queue_budget(self._country(country_id), commands)
         except ValueError as error:
@@ -713,7 +706,6 @@ class PlayerActions:
         and resuming restores it. A forged client therefore cannot finish a
         technology by claiming a smaller point cost.
         """
-        from data import queries
 
         try:
             result = queries.canonical_research_selection(self.world.nation_data.get(country_id),
@@ -734,12 +726,9 @@ class PlayerActions:
         drafts = {country: self._refresh_payments(country, commands)
                   for country, commands in drafts.items()}
         for country_id, commands in drafts.items():
-            from map_logic.diplomacy import volunteers
             if any(command["type"] == "country_diplomacy" for command in commands):
                 volunteers.release_draft_reservations(self.map_ref, country_id)
             country_data = self.world.nation_data[country_id]
-            from data import queries
-            from map_logic.actions.production_actions import settle_draft_budget
             settle_draft_budget(country_data, commands)
             queries.apply_air_transport_commands(self.map_ref, country_id,
                 [command for command in commands if command["type"] == "air_transport"])
@@ -750,7 +739,6 @@ class PlayerActions:
                     province = self._province(command["province_id"])
                     unit = (next(u for u in province["units"] if u.get("unit_id") == command["unit_id"])
                             if command.get("unit_id") else province["units"][command["unit_index"]])
-                    from map_logic.actions.unit_actions import apply_action
                     apply_action(self.map_ref, country_id, province, unit,
                                  command["order"], authority="server", payment_settled=True)
                     for key in ("custom_name", "combat_stance", "lane_target"):
@@ -760,10 +748,8 @@ class PlayerActions:
                         else:
                             unit[key] = value
                 elif command["type"] == "province_queue":
-                    from map_logic.actions.production_actions import apply_queue_change
                     apply_queue_change(self.map_ref, country_id, command, payment_settled=True)
                 elif command["type"] == "research_queue":
-                    from map_logic.system32.research_processor import apply_research_selection
                     apply_research_selection(country_data, command)
                 elif command["type"] == "country_preferences":
                     country_data["political_drift"] = command["political_drift"]
@@ -787,7 +773,6 @@ class PlayerActions:
                 elif command["type"] == "country_diplomacy":
                     # A proposal already travelling belongs to the server and
                     # cannot be cancelled or rewritten by a stale client view.
-                    from map_logic.diplomacy import diplomacy_lifecycle as lifecycle
                     lifecycle.apply_draft(self.world.nation_data, country_id,
                                           command["pending"], command["responses"], command["draft_lists"])
                 elif command["type"] == "puppet_draft":
@@ -800,13 +785,11 @@ class PlayerActions:
                         queries.apply_country_appearance(self.world.nation_data, puppet, appearance)
                         self.map_ref.nation_colors[puppet] = tuple(subject["color"])
                 elif command["type"] == "faction_rename" and command.get("name"):
-                    from map_logic.diplomacy import faction_actions
                     faction_actions.rename_faction(self.world.nation_data, country_id,
                                                    country_data.get("faction", ""), command["name"])
                 elif command["type"] == "ratification_response":
                     pending = country_data.get("pending_ratification")
                     if isinstance(pending, dict):
-                        from map_logic.diplomacy import diplomacy_lifecycle as lifecycle
                         lifecycle.answer_ratification(self.world.nation_data, country_id, command["verdict"],
                                                       treaty_id=command.get("treaty_id"))
             # Volunteer reservations must be created after their diplomatic
@@ -818,7 +801,6 @@ class PlayerActions:
                 pending = country_data.get("pending_diplomacy", {}).get(command["target"], {})
                 if not isinstance(pending, dict) or pending.get("action") != "SEND_VOLUNTEERS":
                     continue
-                from map_logic.diplomacy import volunteers
                 chosen = []
                 for ref in command["units"]:
                     province = self._province(ref["province_id"])
@@ -830,8 +812,6 @@ class PlayerActions:
                     raise PlayerActionError(error)
 
     def _refresh_payments(self, country_id, commands):
-        from data import queries
-        from map_logic.diplomacy import volunteers
         planning_view = self._planning_view(country_id, commands)
         transport = [command for command in commands if command["type"] == "air_transport"]
         view = queries.air_transport_draft(planning_view, country_id, transport)[0] if transport else planning_view
@@ -851,7 +831,6 @@ class PlayerActions:
         This input adapter preserves approved stats and queue overrides.
         Current player intents cannot reach this method.
         """
-        from data import queries
         world_state = self.world
         # ``unit_snapshot`` was added after the original .gd5move format.
         # Preserve old files' behavior, but make every newly-created move
@@ -903,7 +882,6 @@ def collect_map_commands(map_ref, country_id: str) -> list[dict[str, Any]]:
     This deliberately reads only player choices, never mutable combat,
     resource, research-progress, or claim-timer fields from the client map.
     """
-    from map_logic.diplomacy import volunteers
     held_offers = volunteers.unsent_offers(map_ref, country_id)
     volunteer_choices = {target: [{"province_id": entry["origin_id"],
                                   "unit_id": entry["unit"].get("unit_id")}
@@ -911,7 +889,6 @@ def collect_map_commands(map_ref, country_id: str) -> list[dict[str, Any]]:
                          for target, mission in held_offers.items()}
     map_ref = volunteers.draft_context(map_ref, country_id)
     world_state = world_for(map_ref)
-    from data import queries
     queries.ensure_unit_ids(world_state.map_data)
     commands: list[dict[str, Any]] = queries.air_transport_commands(map_ref, country_id)
     for province in world_state.map_data.values():
@@ -930,7 +907,6 @@ def collect_map_commands(map_ref, country_id: str) -> list[dict[str, Any]]:
                 commands.append({"type": "province_queue", "province_id": province["id"],
                                  "queue": queue_name,
                                  "items": copy.deepcopy(province.get(queue_name, []))})
-    from data import queries
     queries.normalize_armies(world_state.nation_data, world_state.map_data)
     country_data = world_state.nation_data.get(country_id, {})
     commands.append({"type": "army_roster",

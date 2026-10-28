@@ -13,6 +13,13 @@ from map_logic.diplomacy.war_actions import (
 )
 import data.constants as c
 
+from map_logic.diplomacy import faction_records, guarantees
+from map_logic.diplomacy.puppet_actions import (
+    pull_puppets_out_of_faction,
+    pull_puppets_into_faction,
+    pull_puppets_into_war,
+)
+
 
 def rename_faction(nation_data, leader, old_name, new_name):
     """Rename a faction while retaining its identity, membership, and war bookkeeping.
@@ -38,7 +45,6 @@ def rename_faction(nation_data, leader, old_name, new_name):
     if not members:
         return False
 
-    from map_logic.diplomacy import faction_records
     record = faction_records.find(nation_data, old_name)
     if record is not None:
         record["name"] = new_name
@@ -100,7 +106,6 @@ def leave_faction(nation_data, leaver):
     The shared body of leaving voluntarily and being kicked out. What differs
     is only who resents whom afterwards, which stays with the two callers.
     """
-    from map_logic.diplomacy.puppet_actions import pull_puppets_out_of_faction
 
     fac = nation_data[leaver].get("faction", "")
     if fac:
@@ -147,8 +152,6 @@ def resent_departure(nation_data, a, b):
 
 
 def finalize_create_faction(map_data, nation_data, creator):
-    from map_logic.diplomacy.puppet_actions import pull_puppets_into_faction
-    from map_logic.diplomacy import guarantees
 
     if queries.get_scenario_flag("disable_factions", c.DEFAULT_DISABLE_FACTIONS, getattr(queries.world_for(nation_data), "scenario_settings", {})):
         return
@@ -171,7 +174,6 @@ def finalize_create_faction(map_data, nation_data, creator):
     guarantees.reconcile(nation_data)
 
 def finalize_disband_faction(nation_data, leader):
-    from map_logic.diplomacy.puppet_actions import pull_puppets_out_of_faction
 
     fac = nation_data[leader].get("faction", "")
     if not fac:
@@ -227,8 +229,6 @@ def disband_exhausted_factions(map_data, nation_data):
 
 def finalize_faction_join(map_data, nation_data, host, joiner):
     """Returns True if the join happened, False if it was skipped."""
-    from map_logic.diplomacy.puppet_actions import pull_puppets_into_faction
-    from map_logic.diplomacy import guarantees
 
     # A puppet has no alignment of its own; it follows its master in through
     # pull_puppets_into_faction below, which sets `faction` directly and so does
@@ -345,7 +345,6 @@ def join_faction_wars(map_data, nation_data, joiner, faction_member):
     The pact is still honoured for every other war of the caller. Only the
     settled one is left alone, and only for as long as the truce lasts.
     """
-    from map_logic.diplomacy.puppet_actions import pull_puppets_into_war
 
     fac = nation_data[faction_member].get("faction", "")
     if fac and not queries.is_faction_at_war(fac, nation_data):

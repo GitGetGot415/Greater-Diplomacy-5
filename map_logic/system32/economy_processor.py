@@ -1,6 +1,12 @@
+import random
+
 from data.state_access import world_for, session_for
 import data.constants as c
 from data import queries
+
+from data.io import country_io
+from map_logic.territory import ownership as edit_province_ownership
+
 
 def process_economy(map_screen):
     """Calculates income, applies building yields, and deducts unit upkeep."""
@@ -80,9 +86,6 @@ def process_queues(map_screen):
                         map_screen.show_feedback(f"CORED: Province {province.get('id')}")
                         
                 elif item.get("order_type") == "REMOVE_CORE":
-                    import random
-                    from map_logic.territory import ownership as edit_province_ownership
-                    from data.io import country_io
                     
                     # Save foreign cores before removal for naming/flag/spread
                     foreign_cores = [core for core in province.get("cores", []) if core != current_owner]

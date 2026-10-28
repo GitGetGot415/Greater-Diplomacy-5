@@ -9,6 +9,10 @@
 # non-interactive scripts (main.py), which hangs instead of resuming. Harmless
 # comment for desktop Python.
 
+import shutil
+import json
+import random
+
 import asyncio
 import os
 import sys
@@ -491,7 +495,6 @@ class Controller:
                 render_buttons(realtime_map)
             elif hasattr(previous_state, "selected_realtime_client"):
                 view = previous_state.selected_realtime_view
-                import shutil
                 from data.multiplayer.realtime.session import materialize_map_bundle
                 bundle_path = materialize_map_bundle(previous_state.selected_realtime_client.map_bundle)
                 try:
@@ -563,7 +566,6 @@ class Controller:
                         multiplayer_io.strip_sensitive_data_for_tournament_spectator(
                             self.states["MAP"])
 
-                    import shutil
                     shutil.rmtree(temp_dir, ignore_errors=True)
 
                     self.states["MAP"].refresh_all_maps()
@@ -625,7 +627,6 @@ class Controller:
         self.active_state = self.states[next_state_name]
 
     def load_music_data(self):
-        import os, json
         import beepbox_audio
         # Scan the hard drive to find whatever is actually there!
         synced_albums = {}
@@ -783,7 +784,6 @@ class Controller:
                 pygame.mixer.music.stop()
             return
 
-        import random
 
         # Check if we have more than one song and if the current song is in the playlist
         if len(available_tracks) > 1 and self.now_playing in available_tracks:

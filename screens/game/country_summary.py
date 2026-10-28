@@ -11,6 +11,9 @@ from ui.bars import ui_bars
 from ui.widgets.text_utils import fit_text, render_inline_text, wrap_text
 from ui_elements import make_back_button
 
+from ui.navigation import screen_runner
+
+
 PAGE_MARGIN = 40
 COLUMN_GAP = 24
 CARD_GAP = 20
@@ -195,5 +198,4 @@ def open_country_summary(map_screen, country_id):
     """Open a country inspection without changing the selected tile or player."""
     if country_id not in map_screen.nation_data or country_id in c.UNPLAYABLE_NATIONS:
         return
-    from ui.navigation.screen_runner import _run_pygame_sub_screen
-    _run_pygame_sub_screen(map_screen, CountrySummaryScreen(map_screen, country_id))
+    screen_runner._run_pygame_sub_screen(map_screen, CountrySummaryScreen(map_screen, country_id))

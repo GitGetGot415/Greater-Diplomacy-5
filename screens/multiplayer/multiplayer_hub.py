@@ -3,6 +3,9 @@ from ui_elements import Button, make_back_button
 import data.constants as c
 from data import queries
 
+from ui import dialogs as confirm_dialog
+
+
 class Multiplayer_Hub(GameState):
     back_state = "MULTIPLAYER_MENU"
 
@@ -21,7 +24,6 @@ class Multiplayer_Hub(GameState):
         ]
 
     def show_help(self):
-        from ui import dialogs as confirm_dialog
         help_text = (
             "Tournaments allow for asynchronous multiplayer gameplay.\n\n"
             "Host: Create a new tournament, distribute the generated .gd5tour file and the player keys to your friends. "

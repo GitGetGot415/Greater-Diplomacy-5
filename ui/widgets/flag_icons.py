@@ -19,6 +19,9 @@ import pygame
 
 import data.constants as c
 
+from data import queries
+
+
 #: Row-sized flag, matching the c.FLAG_SIZE aspect ratio.
 ROW_FLAG_SIZE = (18, 12)
 
@@ -34,7 +37,6 @@ def flag_surface(nation, nation_data, size=ROW_FLAG_SIZE):
     flag_data = (nation_data.get(nation) or {}).get("flag_data", "DEFAULT")
     key = (nation, flag_data, size)
     if key not in _cache:
-        from data import queries
 
         full = queries.decode_b64_to_surf(flag_data, c.FLAG_SIZE,
                                           is_portrait=False, country_name=nation)

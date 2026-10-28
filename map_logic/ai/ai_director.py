@@ -23,6 +23,8 @@ import json
 
 import data.constants as c
 
+from map_logic.ai import ai_candidates, ai_prompts
+
 
 def top_scored(candidates, limit):
     """What the heuristic layer would do on its own. Every fallback lands here."""
@@ -57,7 +59,6 @@ def build_prompt(world, nation, candidates, limit, personality_note=""):
     is being addressed is established in the context's own per-nation tail
     instead, which sits after everything the nations share.
     """
-    from map_logic.ai import ai_candidates, ai_prompts
 
     lines = []
     for cand in candidates:
@@ -129,7 +130,6 @@ def messages_from(reply, nation=None, nation_data=None):
     from Switzerland; a dropped line costs one piece of flavour, a kept one
     reads as a bug.
     """
-    from map_logic.ai import ai_prompts
 
     if not isinstance(reply, dict):
         return {}

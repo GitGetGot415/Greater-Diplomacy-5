@@ -28,6 +28,9 @@ from ui.bars import ui_bars
 from ui.widgets.scroll_panes import ScrollPanes
 from ui_elements import Button
 
+from data import queries
+from ui import dialogs as confirm_dialog
+
 
 class ModalScreen(ScrollPanes, GameState):
     """A dimmed freeze-frame behind a bordered panel -- the shape every converted
@@ -90,8 +93,6 @@ class ModalScreen(ScrollPanes, GameState):
                            lambda: self._choose(title, options, on_pick))
 
     def _choose(self, title, options, on_pick):
-        from data import queries
-        from ui import dialogs as confirm_dialog
 
         options = list(options)
         if not options:

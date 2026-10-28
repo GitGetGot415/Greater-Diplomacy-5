@@ -14,6 +14,7 @@ from unittest import mock
 
 import pygame
 
+import data.constants as c
 from tests import app_harness
 from ui import dialogs as confirm_dialog
 from ui.navigation import modal_stack
@@ -35,6 +36,8 @@ class DialogTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         _controller, cls.surface = app_harness.boot()
+        # Other test modules can resize the cached application display.
+        cls.surface = pygame.display.set_mode((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
 
     def setUp(self):
         while not modal_stack.is_empty():

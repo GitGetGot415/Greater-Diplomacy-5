@@ -11,6 +11,8 @@ from ui_elements import make_back_button
 from ui.widgets.flag_icons import draw_flag
 from ui.panels.map_top_right_layout import realtime_status_rect
 
+from ui.navigation import screen_runner
+
 
 def _ping_text(player, host_id):
     if not getattr(player, "connected", True):
@@ -66,8 +68,7 @@ class _MatchDetails(GameState):
 
 def show_details(map_screen):
     """Open the roster without blocking the map or networking event loop."""
-    from ui.navigation.screen_runner import _run_pygame_sub_screen
-    _run_pygame_sub_screen(map_screen, _MatchDetails(map_screen))
+    screen_runner._run_pygame_sub_screen(map_screen, _MatchDetails(map_screen))
 
 
 def draw(map_screen, surface):

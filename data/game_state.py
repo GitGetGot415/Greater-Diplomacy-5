@@ -1,8 +1,13 @@
 """Own world data without presentation or transports."""
 
+import copy
+
+
 from dataclasses import dataclass, field
 from data.runtime_rules import RuntimeRules
 from map_logic.system32.time_handler import TimeHandler
+
+from data.world_nations import WorldNations
 
 
 @dataclass
@@ -28,7 +33,6 @@ class WorldState:
 
     def __setattr__(self, name, value):
         if name == "nation_data":
-            from data.world_nations import WorldNations
             value = WorldNations(self, value)
             if "nation_data" in self.__dict__:
                 object.__setattr__(self, "factions", {})
@@ -37,8 +41,6 @@ class WorldState:
         object.__setattr__(self, name, value)
 
     def __copy__(self):
-        import copy
-        from data.world_nations import WorldNations
         result = object.__new__(type(self))
         for name, value in self.__dict__.items():
             if name in ("scenario_settings", "runtime_rules", "factions", "faction_membership"):
@@ -50,8 +52,6 @@ class WorldState:
         return result
 
     def __deepcopy__(self, memo):
-        import copy
-        from data.world_nations import WorldNations
         result = object.__new__(type(self))
         memo[id(self)] = result
         for name, value in self.__dict__.items():

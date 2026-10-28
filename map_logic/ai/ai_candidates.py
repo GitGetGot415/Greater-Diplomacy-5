@@ -23,6 +23,11 @@ import hashlib
 import data.constants as c
 from data import queries
 
+from map_logic.diplomacy.action_definitions import availability
+from map_logic.ai import ai_personality, ai_unit_eval
+from map_logic.diplomacy import deal as deal_mod
+
+
 #: One legal, executable action.
 #:
 #: cid       -- index within this nation's list; what the model answers with,
@@ -62,7 +67,6 @@ class Collector:
         if candidate is None:
             return False
         if self.context is not None:
-            from map_logic.diplomacy.action_definitions import availability
             if not availability(self.context, self.nation, candidate.target, candidate.action).allowed:
                 return False
         if not self._target_is_free(candidate.target):
@@ -160,8 +164,6 @@ def resource_offer(world, nation, partner, scenario_settings=None):
     would actually say out loud -- and what it offers in return is priced against
     that ask rather than against its own bank balance.
     """
-    from map_logic.ai import ai_personality, ai_unit_eval
-    from map_logic.diplomacy import deal as deal_mod
 
     econ_a = world.economies.get(nation, {})
     econ_b = world.economies.get(partner, {})

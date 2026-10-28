@@ -22,6 +22,9 @@ from ui.navigation.modal_screen import ModalScreen
 from ui.widgets.table_screen import truncate
 from ui_elements import Button, TextField, make_back_button
 
+from ui.navigation import screen_runner
+
+
 # ==========================================
 # OPTION LISTS
 # ==========================================
@@ -154,8 +157,7 @@ class _ModalScreen(ModalScreen):
 
 
 def _run(screen):
-    from ui.navigation.screen_runner import run_screen
-    return run_screen(screen)
+    return screen_runner.run_screen(screen)
 
 
 # ==========================================

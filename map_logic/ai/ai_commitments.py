@@ -18,6 +18,9 @@ import data.constants as c
 from data import queries
 from map_logic.ai import ai_personality
 
+from map_logic.diplomacy.diplomacy_events import log_global_event
+
+
 #: What two nations can promise each other. Anything not on this list is
 #: discarded when a transcript is turned into state -- the model proposes,
 #: the whitelist disposes.
@@ -144,7 +147,6 @@ def tick(map_screen):
     is what makes keeping one worth anything.
     """
     world_state = world_for(map_screen)
-    from map_logic.diplomacy.diplomacy_events import log_global_event
 
     nation_data = world_state.nation_data
     handled = set()

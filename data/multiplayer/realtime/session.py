@@ -5,7 +5,14 @@ module uses a small, versioned TLS protocol and has no file-format overlap with
 the tournament system.
 """
 
+# relay imports this module for protocol types. Keep relay imports local to avoid a cycle.
+
+
 from __future__ import annotations
+
+import shutil
+from datetime import datetime, timedelta, timezone
+
 
 from data.state_access import world_for, session_for
 import base64
@@ -34,6 +41,13 @@ from data.map import history_io
 from data.platform import IS_WEB
 from map_logic import politics
 from map_logic.actions.player_actions import PlayerActions, PlayerActionError, collect_map_commands
+
+from data.runtime_rules import rebuild
+from data import queries
+from data.state_access import replace_mapping
+from map_logic.system32 import turn_processor, unit_events
+from map_logic.ai import automation_logic
+from map_logic.diplomacy import diplomacy_lifecycle, faction_records
 
 
 PROTOCOL_VERSION = 1
@@ -164,7 +178,6 @@ def persist_reconnect_token(invite: dict[str, Any], token: str, display_name: st
     """
     if IS_WEB:
         return ""
-    from data import constants as c
     directory = Path(c.SAVES_DIR)
     directory.mkdir(parents=True, exist_ok=True)
     path = directory / ".gd5_realtime_reconnect.json"
@@ -191,7 +204,6 @@ def load_reconnect_token(invite: dict[str, Any]) -> str:
     session_id, fingerprint = invite.get("session"), invite.get("fingerprint")
     if not isinstance(session_id, str) or not isinstance(fingerprint, str):
         return ""
-    from data import constants as c
     path = Path(c.SAVES_DIR) / ".gd5_realtime_reconnect.json"
     try:
         records = json.loads(path.read_text(encoding="utf-8"))
@@ -769,7 +781,6 @@ class MapRealtimeDriver(PlayerActions):
     def configure_scenario_settings(self, settings):
         """Apply host lobby ranges before snapshots or player commands use them."""
         self.world.scenario_settings = copy.deepcopy(settings)
-        from data.runtime_rules import rebuild
         rebuild(self.map_ref)
 
     def start_game(self, countries: list[str]) -> None:
@@ -780,14 +791,12 @@ class MapRealtimeDriver(PlayerActions):
 
     def process_turn(self, drafts: dict[str, list[dict[str, Any]]]) -> None:
         self.apply_validated_drafts(drafts)
-        from map_logic.system32 import turn_processor
         asyncio.run(turn_processor.prepare_turn(self.map_ref))
         asyncio.run(turn_processor.resolve_turn_logic(self.map_ref))
         # In a normal game this hook runs *after* resolution, so its orders
         # genuinely prepare the next turn.  The server has no local player and
         # therefore cannot use that single-player hook directly; replay it for
         # each opted-in real-time player at the same point in the turn instead.
-        from map_logic.ai import automation_logic
         original_player = self.session.player_country
         try:
             for country_id in drafts:
@@ -805,12 +814,10 @@ class MapRealtimeDriver(PlayerActions):
             self.session.player_country = original_player
 
     def is_eliminated(self, country_id: str) -> bool:
-        from data import queries
         return country_id not in queries.get_politically_active_nations(
             self.world.map_data, self.world.nation_data)
 
     def snapshot(self) -> dict[str, Any]:
-        from data import queries
         return queries.build_save_dict(self.map_ref)
 
     def map_bundle(self) -> dict[str, Any]:
@@ -831,8 +838,6 @@ class MapRealtimeDriver(PlayerActions):
             raise RealtimeError("Host map is missing required PNG assets.")
         return {"raw_map_data": copy.deepcopy(self.world.raw_json_data),
                 "snapshot": self.snapshot(), "images": images}
-
-
 
 
 class RemoteSessionView:
@@ -877,9 +882,7 @@ def apply_authoritative_snapshot(map_ref, snapshot: dict[str, Any]) -> None:
     settings = snapshot.get("scenario_settings")
     if isinstance(settings, dict):
         world_state.scenario_settings = copy.deepcopy(settings)
-        from data.runtime_rules import rebuild
         rebuild(map_ref)
-    from map_logic.system32 import unit_events
     # Badges are local preferences. Server broadcasts must not mark them unread again.
     local_event_reads = unit_events.saved_reads(map_ref) if hasattr(map_ref, "time_manager") else {}
     clear_selection = getattr(map_ref, "clear_map_unit_selection", None)
@@ -904,13 +907,11 @@ def apply_authoritative_snapshot(map_ref, snapshot: dict[str, Any]) -> None:
             }
 
     nation_data = copy.deepcopy(snapshot.get("nation_data", world_state.nation_data))
-    from data import migrations, queries
     if "nation_data" in snapshot:
         research_snapshot = {"nation_data": nation_data}
         if "research_years" in snapshot:
             research_snapshot["research_years"] = snapshot["research_years"]
         migrations.migrate_infantry_research(research_snapshot, queries.get_tech_tree(map_ref))
-    from map_logic.diplomacy import diplomacy_lifecycle
     diplomacy_lifecycle.normalize_diplomatic_records(nation_data)
     incoming_player = nation_data.get(player_country, {}) if isinstance(nation_data, dict) else {}
     for message in incoming_player.get("inbox", []) if isinstance(incoming_player, dict) else []:
@@ -919,9 +920,7 @@ def apply_authoritative_snapshot(map_ref, snapshot: dict[str, Any]) -> None:
         saved_state = local_message_state.get(message.get("message_id"))
         if saved_state:
             message.update(saved_state)
-    from data.state_access import replace_mapping
     replace_mapping(world_for(map_ref), "nation_data", nation_data)
-    from map_logic.diplomacy import faction_records
     # Older snapshot fixtures use flat contexts without a declared faction mapping.
     if not hasattr(world_state, "factions"):
         world_state.factions = {}
@@ -982,7 +981,6 @@ def materialize_map_bundle(bundle: dict[str, Any]) -> str:
                 raise RealtimeError("Host sent an invalid PNG asset.")
             Path(destination, name).write_bytes(raw)
     except Exception:
-        import shutil
         shutil.rmtree(destination, ignore_errors=True)
         raise
     return destination
@@ -993,11 +991,11 @@ def create_match_certificate(directory: str | os.PathLike[str]) -> tuple[str, st
     if IS_WEB:
         raise RealtimeError("Real-time multiplayer is available on desktop builds only.")
     try:
+        # TLS certificates need the optional desktop cryptography package only when hosting.
         from cryptography import x509
         from cryptography.hazmat.primitives import hashes, serialization
         from cryptography.hazmat.primitives.asymmetric import ec
         from cryptography.x509.oid import NameOID
-        from datetime import datetime, timedelta, timezone
     except ImportError as exc:
         raise RealtimeError("The desktop cryptography dependency is unavailable.") from exc
     key = ec.generate_private_key(ec.SECP256R1())
@@ -1319,7 +1317,6 @@ class RealtimeServer:
 
     def _project_payload(self, payload, player_id):
         """Guests never receive the host's canonical hidden state."""
-        from data import queries
         map_ref = getattr(self.session.driver, "map_ref", None)
         if map_ref is None:  # Protocol-only drivers have no game snapshot.
             return payload

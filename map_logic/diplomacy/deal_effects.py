@@ -19,6 +19,13 @@ from map_logic.diplomacy import deal as deal_mod
 from map_logic.diplomacy.diplomacy_events import log_global_event
 from map_logic.territory import ownership as edit_province_ownership
 
+from data import queries
+from map_logic.system32 import movement_processor
+from map_logic.diplomacy import reach as reach_mod
+from map_logic.diplomacy.faction_actions import finalize_faction_leave
+from map_logic.diplomacy.puppet_actions import assign_puppet
+from map_logic.diplomacy.war_actions import finalize_neutral, remove_enemy
+
 
 def _hand_over_the_land_only(map_screen, prov, receiver):
     """Marches everyone else's army off a province that has just changed hands.
@@ -37,7 +44,6 @@ def _hand_over_the_land_only(map_screen, prov, receiver):
     are by the end-of-turn pass -- they answer to coastal access, not to who
     owns the shore.
     """
-    from map_logic.system32 import movement_processor
 
     for unit in list(prov.get("units", ())):
         owner = unit.get("owner")
@@ -70,7 +76,6 @@ def economies_for(map_screen):
     produces does not silently cancel every payment in the treaty.
     """
     world_state = world_for(map_screen)
-    from data import queries
 
     supplied = getattr(map_screen, "economies", None)
     if supplied:
@@ -106,7 +111,6 @@ def prune(deal, map_screen):
     what fell away, for the message that reports the settlement.
     """
     world_state = world_for(map_screen)
-    from map_logic.diplomacy import reach as reach_mod
 
     by_id = _provinces_by_id(map_screen)
     nation_data = world_state.nation_data
@@ -224,9 +228,6 @@ def execute(map_screen, deal, escrowed=None):
     order the message the players receive describes.
     """
     world_state = world_for(map_screen)
-    from map_logic.diplomacy.faction_actions import finalize_faction_leave
-    from map_logic.diplomacy.puppet_actions import assign_puppet
-    from map_logic.diplomacy.war_actions import finalize_neutral, remove_enemy
 
     if not deal_mod.is_deal(deal):
         return []

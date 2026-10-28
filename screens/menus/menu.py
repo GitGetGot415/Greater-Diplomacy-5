@@ -1,3 +1,5 @@
+import time
+
 import pygame
 import webbrowser
 import threading
@@ -11,6 +13,10 @@ import data.constants as c
 from data import queries
 from data.platform import IS_WEB
 from ui.rendering.font_manager import fonts
+
+from ui.dialogs.character_select_screen import CHARACTERS_DIR
+from ui import dialogs as confirm_dialog
+
 
 def _ease_out_expo(t):
     """Fast start that eases into the resting position: 1 - 2^-10t."""
@@ -139,7 +145,6 @@ class Menu(GameState):
 
         self.hildehrand_choice = queries.get_hildehrand_choice()
         try:
-            from ui.dialogs.character_select_screen import CHARACTERS_DIR
 
             self.hildehrand_image = _load_scaled_image(f"{CHARACTERS_DIR}/{self.hildehrand_choice}",
                                                         self.HILDEHRAND_SCALE)
@@ -363,7 +368,6 @@ class Menu(GameState):
         queries.open_character_picker(self, self.hildehrand_choice, self._set_hildehrand_choice)
 
     def confirm_exit(self):
-        from ui import dialogs as confirm_dialog
 
         confirm_dialog.ask_yes_no(
             "Exit Game",
@@ -380,7 +384,6 @@ class Menu(GameState):
             pygame.event.post(pygame.event.Event(pygame.QUIT))
 
     def _set_hildehrand_choice(self, rel_path):
-        from ui.dialogs.character_select_screen import CHARACTERS_DIR
         try:
             image = _load_scaled_image(f"{CHARACTERS_DIR}/{rel_path}", self.HILDEHRAND_SCALE)
         except Exception as e:
@@ -424,7 +427,6 @@ class Menu(GameState):
                 # If we hit the GitHub API rate limit (60 requests/hr for unauthenticated),
                 # fallback to the raw CDN URL which might be delayed but won't crash
                 if e.code == 403 or e.code == 429:
-                    import time
                     bust_url = f"{c.VERSION_CHECK_URL}?t={int(time.time())}"
                     req = urllib.request.Request(bust_url, headers={'User-Agent': 'Greater-Diplomacy-5-Game'})
                     response = urllib.request.urlopen(req, timeout=3, context=ctx)
@@ -458,7 +460,6 @@ class Menu(GameState):
                     webbrowser.open(item["url"])
 
                     # Play the UI click sound for auditory feedback
-                    from data import queries
                     queries.play_click_sound()
 
     def update(self):

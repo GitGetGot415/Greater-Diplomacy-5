@@ -1,3 +1,5 @@
+import random
+
 from data.state_access import world_for, session_for
 import data.constants as c
 from data import queries
@@ -50,7 +52,6 @@ def randomize_all_provinces(map_screen, settings):
             
     if not valid_land_provinces: return
 
-    import random
     random.shuffle(playable_nations)
     
     # 1. Adjust country count to not exceed available valid provinces

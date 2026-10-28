@@ -11,6 +11,9 @@ from ui.rendering.font_manager import fonts
 from map_logic.diplomacy.diplomacy_agreements import assign_puppet, would_create_puppet_cycle
 from map_logic.diplomacy import guarantees, military_attaches
 
+from map_logic.diplomacy.faction_actions import rename_faction
+
+
 # ==========================================
 # GLOBAL DIPLOMACY & FACTIONS EDITOR
 # ==========================================
@@ -184,7 +187,6 @@ class Diplomacy_Editor_Screen(ScrollPanes, MapOverlayScreen):
         new_faction = self.faction_field.text.strip()
         old_faction = data.get("faction", "")
         if old_faction and new_faction and old_faction != new_faction and data.get("is_faction_leader"):
-            from map_logic.diplomacy.faction_actions import rename_faction
             rename_faction(nation_data, target, old_faction, new_faction)
         queries.set_country_faction(nation_data, target, new_faction)
         queries.set_faction_leadership(nation_data, target, self.is_leader)

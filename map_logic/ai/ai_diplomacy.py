@@ -11,6 +11,19 @@ from map_logic.diplomacy import (diplomacy_messages, diplomacy_events,
 from data import queries
 import data.constants as c
 
+from map_logic.diplomacy import (
+    peace_scope,
+    deal as deal_mod,
+    treaty_effects,
+    war_score,
+    volunteers,
+    guarantees,
+    military_attaches,
+)
+from map_logic.territory import ownership as edit_province_ownership
+from map_logic.diplomacy.diplomacy_processor import action_is_legal
+
+
 def _longest_waiting_first(map_screen, jobs):
     """Puts whoever has gone longest without the model at the front of the queue.
 
@@ -498,7 +511,6 @@ def _may_settle(nation_data, ai_name, enemy):
     no authority to answer. That used to be the only rule here, which is how the
     proactive pass could aim a ceasefire at one nation of a bloc.
     """
-    from map_logic.diplomacy import peace_scope
 
     return (peace_scope.negotiation_role(ai_name, enemy, nation_data) is not None
             and queries.can_negotiate_peace(enemy, ai_name, nation_data))
@@ -515,8 +527,6 @@ def _white_peace_terms(map_screen, ai_name, enemy):
     "peace treaty" as a white peace that transferred nothing.
     """
     world_state = world_for(map_screen)
-    from map_logic.diplomacy import deal as deal_mod
-    from map_logic.diplomacy import peace_scope
 
     mine, theirs = peace_scope.deal_sides(ai_name, enemy, world_state.nation_data)
     return _with_the_price_of_walking_out(
@@ -539,7 +549,6 @@ def _with_the_price_of_walking_out(map_screen, ai_name, enemy, deal):
     with the Allies, and the Axis was empty by the morning.
     """
     world_state = world_for(map_screen)
-    from map_logic.diplomacy import treaty_effects
 
     return treaty_effects.with_separate_peace_cost(deal, ai_name, enemy,
                                                   world_state.nation_data)
@@ -568,8 +577,6 @@ def _victors_terms(map_screen, ai_name, enemy, leverage):
     and offers the status quo, which is what suing for peace is supposed to be.
     """
     world_state = world_for(map_screen)
-    from map_logic.diplomacy import deal as deal_mod
-    from map_logic.diplomacy import peace_scope, war_score
 
     mine, theirs = peace_scope.deal_sides(ai_name, enemy, world_state.nation_data)
     prewar = war_score.prewar_index(world_state.nation_data)
@@ -630,7 +637,6 @@ def _seek_ceasefire_if_unreachable(bag, map_screen, ai_name, my_enemies, active_
     membership check below -- it is not a reason to walk out of the bloc either.
     """
     world_state = world_for(map_screen)
-    from map_logic.diplomacy import peace_scope, war_score
 
     for enemy in my_enemies:
         if enemy not in active_nations: continue
@@ -664,8 +670,6 @@ def _offer_peace_when_losing(bag, map_screen, ai_name, my_enemies, active_nation
     had no way to ask for terms and simply fought until it was gone.
     """
     world_state = world_for(map_screen)
-    from map_logic.diplomacy import deal as deal_mod
-    from map_logic.diplomacy import war_score
 
     for enemy in my_enemies:
         if enemy not in active_nations: continue
@@ -1509,7 +1513,6 @@ def process_scripted_events(map_screen, preview_request=None):
                     # These counts deliberately follow the same definition as
                     # the volunteer picker: a division in an outstanding
                     # offer, travelling, or deployed is committed capacity.
-                    from map_logic.diplomacy import volunteers
 
                     current_v = (volunteers.committed_count(map_screen, nation_name)
                                  if c_type == "Volunteer Divisions Sent"
@@ -1556,13 +1559,11 @@ def process_scripted_events(map_screen, preview_request=None):
                     elif c_type == "Occupying All Claims":
                         res = all(world_state.nation_data.get(t, {}).get("claims") and all(world_state.id_to_province.get(pid, {}).get("owner") == nation_name for pid in world_state.nation_data.get(t, {}).get("claims", [])) for t in targets)
                     elif c_type in ("Guaranteeing", "Not Guaranteeing"):
-                        from map_logic.diplomacy import guarantees
                         promised = set(guarantees.guaranteed_targets(nation_name, world_state.nation_data))
                         expected = c_type == "Guaranteeing"
                         res = all(t in active_nations and ((t in promised) == expected)
                                   for t in targets)
                     elif c_type in ("Has Military Attaché", "Doesn't Have Military Attaché"):
-                        from map_logic.diplomacy import military_attaches
                         hosts = set(military_attaches.hosts_for(nation_name, world_state.nation_data))
                         expected = c_type == "Has Military Attaché"
                         res = all(t in active_nations and ((t in hosts) == expected)
@@ -1712,7 +1713,6 @@ def process_scripted_events(map_screen, preview_request=None):
                         target_list = [t.strip() for t in str(raw_targets).split(",") if t.strip()]
                         tiles = [t.strip() for t in str(act.get("message", "")).split(",") if t.strip()]
                         must_control = act.get("ai_generate", False)
-                        from map_logic.territory import ownership as edit_province_ownership
                         for a_target in target_list:
                             if a_target not in active_nations:
                                 continue
@@ -1820,7 +1820,6 @@ def process_scripted_events(map_screen, preview_request=None):
                             # of eligible divisions in the stable map order;
                             # this creates the same reversible offer and
                             # travel state as the normal picker.
-                            from map_logic.diplomacy import volunteers
 
                             if a_target in pending:
                                 continue
@@ -1866,7 +1865,6 @@ def process_scripted_events(map_screen, preview_request=None):
                                 # authored event from starting an illegal war,
                                 # faction change, or diplomatic request merely
                                 # because the board changed since it was made.
-                                from map_logic.diplomacy.diplomacy_processor import action_is_legal
                                 legal, reason = action_is_legal(
                                     map_screen, nation_name, a_target, eng_action)
                                 if not legal:

@@ -75,6 +75,10 @@ Keep this name unless the user explicitly requests a different name.
 Its shared rule helpers, caches, and save-dictionary builder remain there.
 The source reorganization changes its import references only.
 
+Read [AGENTS.md, Imports](../AGENTS.md#imports) for the import policy.
+Game startup installs mods before importing game modules.
+Deferred imports avoid initialization cycles and preserve headless execution and optional platform features.
+
 ## Development commands
 
 Run commands from the repository root.

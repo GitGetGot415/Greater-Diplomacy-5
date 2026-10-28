@@ -1,5 +1,11 @@
 """Declare diplomatic categories, legality, and existing execution phases."""
 
+# Constants import these definitions during initialization. Load rule dependencies inside checks so definitions remain available during that import.
+
+
+from types import SimpleNamespace
+
+
 from dataclasses import dataclass
 
 
@@ -225,7 +231,6 @@ def availability(context, sender, target, action, *, phase="draft"):
     world = world_for(context)
     if isinstance(world, dict):
         # Public helpers also accept standalone country records at input boundaries.
-        from types import SimpleNamespace
         world = SimpleNamespace(nation_data=world, scenario_settings={})
         context = world
     nation_data = world.nation_data

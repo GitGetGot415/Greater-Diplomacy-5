@@ -1,3 +1,6 @@
+from data.platform import IS_WEB
+from map_logic.diplomacy.action_definitions import BILATERAL_ACTIONS, UNILATERAL_ACTIONS
+
 # Used for logical ownership assignment
 WATER_MAPPING = {
     "ocean": "Ocean", 
@@ -545,7 +548,6 @@ FUEL_CONVERSION_RATIO = 0.1 # 10 materials -> 1 fuel
 # AUDIO DEFAULTS
 # ==========================================
 
-from data.platform import IS_WEB
 
 USE_SOLOUD = not IS_WEB # SoLoud has no browser build; Pygame Mixer is forced on web
 
@@ -2056,7 +2058,6 @@ MAX_RESEARCH_TURN_SIMULATION = 5000
 # ==========================================
 
 # Actions that happen instantly and do not require the target's consent
-from map_logic.diplomacy.action_definitions import UNILATERAL_ACTIONS
 
 # What kind of act a message announced, for anyone reading a list of them.
 #
@@ -2147,7 +2148,6 @@ MESSAGE_FORWARDED_ROW_COLOR = (36, 74, 48)
 # cooldown at all. See _process_ai_retaliation.
 SELF_TARGETED_ACTIONS = ("LEAVE_FACTION", "DISBAND_FACTION")
 
-from map_logic.diplomacy.action_definitions import BILATERAL_ACTIONS
 
 # ==========================================
 # RELATION MODIFIERS & COLORS
@@ -2376,6 +2376,7 @@ def default_mouse_button_actions():
 
 def normalize_mouse_button_actions(value):
     """Validate mouse controls after the shared older-format conversion."""
+    # Migrations import constants. Load this adapter after constants initialize.
     from data.migrations import migrate_mouse_button_actions
     value = migrate_mouse_button_actions(value)
     normalized = default_mouse_button_actions()

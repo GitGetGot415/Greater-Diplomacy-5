@@ -4,6 +4,9 @@ diplomatic state (wars, peace, factions) down a master's puppet tree.
 See map_logic/diplomacy/diplomacy_agreements.py for how this fits alongside
 war_actions.py and faction_actions.py.
 """
+
+# Faction actions call subject actions. Keep imports of faction mutations local to avoid that reciprocal dependency.
+
 from data.state_access import world_for, session_for
 import copy
 from map_logic.territory import ownership as edit_province_ownership
@@ -11,6 +14,11 @@ from data import queries
 from map_logic.diplomacy.diplomacy_events import log_global_event
 from map_logic.diplomacy.war_actions import sever_military_access, link_war, remove_enemy, finalize_neutral
 import data.constants as c
+
+from data.io import country_io
+from map_logic.territory.ownership import retire_landless_nation
+from map_logic.diplomacy import volunteers, faction_leadership
+
 
 # --- RECURSIVE PUPPET HELPERS ---
 def break_puppet_link(nation_data, master, puppet):
@@ -189,7 +197,6 @@ def finalize_annexation(map_data, nation_data, master, puppet, map_screen, *, fo
     # loser once its last one changes hands -- but a puppet that already held
     # nothing never enters that loop, and used to stay on its faction's roster
     # for the rest of the game.
-    from map_logic.territory.ownership import retire_landless_nation
     retire_landless_nation(map_screen, puppet, force=force)
 
     break_puppet_link(nation_data, master, puppet)
@@ -251,7 +258,7 @@ def finalize_spectator_country_removal(map_screen, country, annexer=None):
     if annexer is not None and (annexer == country or not queries.is_playable(annexer, nation_data)
                                or annexer not in queries.get_living_nations(map_data)):
         return False
-    from map_logic.diplomacy import volunteers, faction_actions, faction_leadership
+    from map_logic.diplomacy import faction_actions
     country_name = queries.get_country_display_name(country, nation_data)
     volunteers.end_country_missions(map_screen, country, annexer)
     for province in map_data.values():
@@ -381,7 +388,6 @@ def finalize_create_puppet(map_data, nation_data, master, core_nation, map_scree
     master_name = master_data.get("name", master)
     master_adjective = master_data.get("adjective", "")
     integrated = release_type == c.PUPPET_TYPE_INTEGRATED
-    from data.io import country_io
 
     # Load from active data or from disk if dead
     if core_nation in nation_data:

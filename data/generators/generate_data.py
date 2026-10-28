@@ -117,6 +117,7 @@ def main():
 
     if not args.check:
         try:
+            # Cache invalidation is optional; offline generation does not require the game runtime.
             from data import queries
             queries.clear_json_caches()
         except Exception:

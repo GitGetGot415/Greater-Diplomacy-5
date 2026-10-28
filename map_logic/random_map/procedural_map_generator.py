@@ -4,6 +4,9 @@ import random
 import numpy as np
 import data.constants as c
 
+from data import queries
+
+
 # vectorized loops make generating maps faster!
 
 def generate_new_world(map_screen):
@@ -227,5 +230,4 @@ def _process_grid_to_map(map_screen, grid, width, height, num_provinces):
     map_screen.political_map = id_surf.copy()
     map_screen.cores_map = id_surf.copy()
     replace_mapping(world_state, "raw_json_data", world_state.map_data)
-    from data import queries
     queries.build_air_geometry(map_screen)

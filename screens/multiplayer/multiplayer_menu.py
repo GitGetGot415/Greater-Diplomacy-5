@@ -4,6 +4,8 @@ from ui.rendering.font_manager import fonts
 import data.constants as c
 import ui_elements
 
+from data.platform import IS_WEB
+
 
 class Multiplayer_Menu(GameState):
     """Choose between the available multiplayer modes."""
@@ -45,7 +47,6 @@ class Real_Time_Multiplayer(GameState):
         ]
 
     def additional_draw(self, surface):
-        from data.platform import IS_WEB
         text = ("Desktop-only: host directly over LAN or a forwarded WAN port."
                 if not IS_WEB else "Real-time multiplayer is available in desktop builds only.")
         font = fonts.get("normal")

@@ -23,6 +23,8 @@ from ui_elements import Button, Slider, TextField, make_back_button
 from ui.rendering import symbol_loader
 from ui.rendering.font_manager import fonts
 
+from ui.navigation import screen_runner
+
 
 class _ConversionTurnSlider(Slider):
     """Snap the shared slider to whole turns within the conversion limits."""
@@ -340,8 +342,7 @@ def open_turn_editor(on_done=None, settings=None, persist=True):
     `on_done` lets a caller (e.g. Scenario Settings) refresh itself once the
     editor closes, since it runs as a non-blocking modal (see ui/navigation/modal_stack.py).
     """
-    from ui.navigation.screen_runner import run_screen
-    run_screen(lambda: TurnEditorScreen(settings=settings, persist=persist),
+    screen_runner.run_screen(lambda: TurnEditorScreen(settings=settings, persist=persist),
                on_done=on_done, caption="Construction Turns Editor")
 
 

@@ -8,6 +8,10 @@ from ui.rendering.font_manager import fonts
 from ui.bars import ui_bars
 from ui import dialogs as confirm_dialog
 
+from map_logic.ai import ai_handler
+from screens.menus.keybinds import default_keybinds
+
+
 # --- Settings screen button layout ---
 SETTINGS_RIGHT_COL_X = c.SCREEN_WIDTH - 260
 SETTINGS_BACK_POS = (50, 50)
@@ -414,7 +418,6 @@ class Settings(GameState):
         self.active_input = None # Deselect input box when switching modes
         # Provider clients and the shared HTTP session are cached between turns;
         # drop them so the next call is built against the provider just picked.
-        from map_logic.ai import ai_handler
         ai_handler.reset_clients()
         self.refresh_ui()
 
@@ -446,7 +449,6 @@ class Settings(GameState):
             self.set_ai_mode("OFF")
 
     def reset_defaults(self):
-        from screens.menus.keybinds import default_keybinds
         self.controller.keybinds = default_keybinds()
         self.controller.target_fps = c.TARGET_FPS
 

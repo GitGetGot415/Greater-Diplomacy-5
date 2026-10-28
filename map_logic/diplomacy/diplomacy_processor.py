@@ -20,6 +20,13 @@ from map_logic.diplomacy.diplomacy_agreements import (
     why_an_ai_may_not_leave
 )
 
+from map_logic.diplomacy.action_definitions import availability
+from map_logic.ai import ai_handler, ai_world
+from map_logic.diplomacy import deal as deal_mod, deal_effects
+from map_logic.territory import ownership as edit_province_ownership
+from map_logic.diplomacy.puppet_actions import finalize_create_puppet
+
+
 def toggle_diplomacy_action(nation_data, player_name, target_name, action_type, custom_msg="", timer=0, parameters=None):
     """Queues (or cancels) an OUTGOING proposal aimed at target_name.
 
@@ -57,7 +64,6 @@ def toggle_diplomacy_action(nation_data, player_name, target_name, action_type, 
             return "A diplomatic action is already pending with this nation!"
 
     # Cancelling an unsent request above needs no leadership check.
-    from map_logic.diplomacy.action_definitions import availability
     available = availability(nation_data, player_name, target_name, action_type)
     if not available.allowed:
         return available.reason
@@ -179,7 +185,6 @@ def _decay_modifiers_and_truces(map_screen):
 
 def action_is_legal(map_screen, sender, target, action_type):
     """Preserve the AI follow-up policy around shared gameplay legality."""
-    from map_logic.diplomacy.action_definitions import availability
     result = availability(map_screen, sender, target, action_type)
     if result.allowed and action_type == "LEAVE_FACTION":
         blocked = why_an_ai_may_not_leave(sender, world_for(map_screen).nation_data)
@@ -424,7 +429,6 @@ def _get_fallback_ai_result(task, nation_data=None, world=None, map_data=None,
     asked anything, so `accepted` is meaningless for them and they keep the flat
     answer they always had.
     """
-    from map_logic.ai import ai_evaluation
 
     action = task["action"]
     if action == "CUSTOM_MSG":
@@ -467,7 +471,7 @@ def _execute_ai_tasks(map_screen, ai_tasks, active_nations_list):
         session_state.responsive_tasks_completed = 0
         return ai_results
 
-    from map_logic.ai import ai_handler # Import this to safely check the mode
+    # Import this to safely check the mode
 
     human_players = session_state.active_players
 
@@ -480,7 +484,6 @@ def _execute_ai_tasks(map_screen, ai_tasks, active_nations_list):
     # Diplomacy resolves after the AI phases have torn down their snapshot, so
     # this pass builds its own. Verdicts read relations, war odds and prices off
     # it; without one they fall back to the old threshold rules.
-    from map_logic.ai import ai_world
     verdict_world = ai_world.for_screen(map_screen)
     scenario_settings = getattr(world_for(map_screen), "scenario_settings", None)
 
@@ -781,7 +784,6 @@ def _decline_cooldown(map_screen, sender, target, action):
 
 
 def _offer_kind(action):
-    from map_logic.diplomacy import deal as deal_mod
     return deal_mod.KIND_PEACE if action in ("PEACE_TREATY", "CEASEFIRE") else deal_mod.KIND_TRADE
 
 
@@ -799,8 +801,6 @@ def _hold_offer_escrow(map_screen, sender, target, info):
     offer it had never funded. Both sides go through here now.
     """
     world_state = world_for(map_screen)
-    from map_logic.diplomacy import deal as deal_mod
-    from map_logic.diplomacy import deal_effects
 
     params = info.get("parameters")
     if not params:
@@ -814,7 +814,6 @@ def _hold_offer_escrow(map_screen, sender, target, info):
 
 def _refund_offer_escrow(nation_data, sender, info):
     """Gives back an offer's escrow. Safe to call on an offer that never held any."""
-    from map_logic.diplomacy import deal_effects
 
     held = info.pop("escrow", None) if isinstance(info, dict) else None
     if held:
@@ -959,7 +958,6 @@ def _process_pass1_immediate_actions(map_screen):
                     turns = 0 # Force execution this turn
 
             if turns == 0:
-                from map_logic.diplomacy.action_definitions import availability
                 available = availability(map_screen, country_name, target, action, phase="send")
                 if not available.allowed:
                     actions_to_clear.append(target)
@@ -1479,7 +1477,6 @@ def _process_claim_queues(map_screen):
 
                     prov = world_state.id_to_province.get(prov_id)
                     if prov and prov.get("owner") == country_name:
-                        from map_logic.territory import ownership as edit_province_ownership
                         # Return the province to the intended recipient!
                         edit_province_ownership.conquer_province(map_screen, prov, recipient)
 
@@ -1500,7 +1497,6 @@ def _process_claim_queues(map_screen):
             for rq in ready_to_release:
                 core_nation = rq["core_nation"]
                 keep_cores = rq.get("keep_cores", False)
-                from map_logic.diplomacy.puppet_actions import finalize_create_puppet
                 release_type = rq["release_type"]
                 created = finalize_create_puppet(world_state.map_data, world_state.nation_data,
                                                 country_name, core_nation, map_screen, keep_cores, release_type)

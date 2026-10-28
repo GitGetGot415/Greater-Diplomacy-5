@@ -5,6 +5,10 @@ import json
 import numpy as np
 import data.constants as c
 
+from data import queries
+from data.queries import get_base_item_name
+
+
 SYMBOLS = {}
 COLORED_SYMBOLS = {}
 
@@ -646,7 +650,6 @@ def _unit_art_request(name):
     other tiered families use Roman numerals. Bare families have a None level
     and therefore only match a bare ``family.png`` baseline.
     """
-    from data import queries
     library = queries.get_unit_library()
     if name in library:
         metadata = queries.get_unit_metadata(name, library)
@@ -742,7 +745,6 @@ def _resolve_name_uncached(name, style=None, country=None):
     if style is None:
         style = c.UNIT_ART_STYLE
 
-    from data import queries
     stats = queries.get_unit_library().get(name, {})
     name = stats.get("metadata", {}).get("art_name", name)
 
@@ -784,7 +786,6 @@ def _resolved_base_img(name, style, country):
 
 def get_family_symbols(library, fit_size):
     """Prepare one icon per family from its first library entry and the active art style."""
-    from data.queries import get_base_item_name
 
     icons = {}
     for name in library:

@@ -12,6 +12,8 @@ from ui.bars import ui_bars
 from ui.navigation.modal_screen import ModalScreen
 from ui_elements import Button, TextField, make_back_button
 
+from ui.navigation import screen_runner
+
 
 class UnitStatsEditorScreen(ModalScreen):
     PANEL_SIZE = (900, 640)
@@ -189,6 +191,5 @@ class UnitStatsEditorScreen(ModalScreen):
 
 def open_unit_stats_editor(on_done=None, settings=None, persist=True):
     """Open a nonblocking editor with the same settings owner as its caller."""
-    from ui.navigation.screen_runner import run_screen
-    run_screen(lambda: UnitStatsEditorScreen(settings=settings, persist=persist),
+    screen_runner.run_screen(lambda: UnitStatsEditorScreen(settings=settings, persist=persist),
                on_done=on_done, caption="Unit Stats Editor")

@@ -6,6 +6,11 @@ import data.constants as c
 from data import queries
 from ui.panels import turn_progress as loading_screen
 
+from screens.setup.scenario_settings import Scenario_Settings
+from screens.editors.historical_leaders_editor import open_historical_leaders_editor
+from ui.dialogs.checkbox_list_screen import CheckboxItem
+
+
 class New_Game(GameState):
     back_state = "MENU"
 
@@ -114,12 +119,10 @@ class New_Game(GameState):
             loading_screen.draw_simple_refresh_bar(surface, self.refresh_status, self.refresh_completed, self.refresh_total)
 
     def scenario_settings(self):
-        from screens.setup.scenario_settings import Scenario_Settings
         Scenario_Settings.back_state = "NEW_GAME"
         self.go_to("SCENARIO_SETTINGS")
 
     def open_historical_leaders_editor(self):
-        from screens.editors.historical_leaders_editor import open_historical_leaders_editor
         open_historical_leaders_editor(on_done=lambda screen: self.refresh_ui())
 
     def start_scenario(self, scenario_name, directory):
@@ -141,9 +144,6 @@ class New_Game(GameState):
 
     def trigger_global_data_refresh(self):
         """Calls the unified data refresh query for playable scenarios."""
-        from data import queries
-        import data.constants as c
-        from ui.dialogs.checkbox_list_screen import CheckboxItem
 
         def on_picked(picked):
             if picked is None:

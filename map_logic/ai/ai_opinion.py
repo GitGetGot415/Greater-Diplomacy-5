@@ -25,6 +25,10 @@ from data import queries
 from map_logic.ai import ai_commitments, ai_personality
 from map_logic.diplomacy import guarantees
 
+from map_logic.diplomacy import deal as deal_mod, war_score
+from map_logic.ai import ai_unit_eval
+
+
 def _sigmoid(value, midpoint, steepness):
     """0..1, crossing 0.5 at `midpoint`. The soft version of a threshold."""
     try:
@@ -226,8 +230,6 @@ def peace_verdict(world, nation, proposer, agreement, scenario_settings=None):
     of the same nation priced the same way. They were not, which made it far too
     strict in exactly the situation it was written for -- see the note there.
     """
-    from map_logic.diplomacy import deal as deal_mod
-    from map_logic.diplomacy import war_score
 
     if not deal_mod.is_deal(agreement):
         agreement = deal_mod.coerce(agreement, proposer, nation, kind=deal_mod.KIND_PEACE)
@@ -302,7 +304,6 @@ def _pct(fraction):
 
 def _worst_hit_member(deal, nation, map_data, nation_data):
     """The heaviest loss any one nation on our side is being asked to take."""
-    from map_logic.diplomacy import deal as deal_mod
 
     side = deal_mod.side_of(deal, nation)
     if not side:
@@ -330,7 +331,6 @@ def _land_cap_breach(deal, nation, map_data, nation_data, net_demand):
     Checked at both levels, each against itself: a coalition cannot be stripped
     beyond what is held of it, and neither can any one member of it.
     """
-    from map_logic.diplomacy import deal as deal_mod
 
     side = deal_mod.side_of(deal, nation)
     if not side:
@@ -415,7 +415,6 @@ def ratifies(world, member, deal, map_data, scenario_settings=None):
     faction and leaves it at war alone -- so this weighs exactly what the deal
     costs *it*, not what the bloc as a whole came out with.
     """
-    from map_logic.diplomacy import deal as deal_mod
 
     loss = deal_mod.demand_fraction(deal, member, map_data, world.nation_data,
                                     whole_side=False)
@@ -466,7 +465,6 @@ def trade_appetite(world, nation, sender, receive, give, prices, scenario_settin
 
 def _trade_prices(world, nation):
     """What this nation's own scarcity says its goods are worth."""
-    from map_logic.ai import ai_unit_eval
 
     return ai_unit_eval.resource_prices(world.economies.get(nation, {}),
                                         world.nation_data.get(nation, {}))
@@ -501,7 +499,6 @@ def trade_balance(world, nation, sender, agreement, scenario_settings=None,
     material, and why the AI's own explanation of it read "they are asking
     nothing of us": it was telling the truth about what it could see.
     """
-    from map_logic.diplomacy import deal as deal_mod
 
     map_data = getattr(world, "map_data", {}) or {}
     nation_data = world.nation_data
@@ -578,7 +575,6 @@ def trade_verdict(world, nation, sender, agreement, scenario_settings=None):
     poor one province by province in peacetime. Neither applies to a peace
     treaty, where losing the country is what losing means.
     """
-    from map_logic.diplomacy import deal as deal_mod
 
     if not deal_mod.is_deal(agreement):
         agreement = deal_mod.coerce(agreement, sender, nation, kind=deal_mod.KIND_TRADE)

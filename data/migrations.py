@@ -4,7 +4,7 @@ The game version is the save version. Each version step converts all older data
 to the format of one game version. See documentation/data_migrations.txt.
 Keep imports from other games in their separate translation modules.
 Loaders own saved-file access. Shared gameplay modules own current rules and validation.
-Import gameplay helpers inside functions to avoid startup import cycles.
+Queries import migrations. Keep query imports local to avoid that cycle.
 Preserve unknown valid fields.
 """
 
@@ -15,6 +15,12 @@ import uuid
 import re
 
 import data.constants as c
+
+from data.state_access import world_for
+from map_logic.diplomacy.diplomacy_events import log_global_event
+from map_logic import politics
+from map_logic.diplomacy import diplomacy_lifecycle as lifecycle
+from map_logic.diplomacy.action_definitions import availability
 
 
 # GAME VERSIONS
@@ -233,7 +239,6 @@ def normalize_air_category(value):
     return value
 
 
-
 def legacy_unit_tech_key(family):
     """Read research identifiers from older family names."""
     key = re.sub(r'[^a-z0-9 ]', '', family.lower())
@@ -280,7 +285,6 @@ def legacy_unit_metadata(name, stats):
             "requirements": requirements,
             "recruitment": {"industry": "industry" if family == "Militia" else "basic_factory",
                             "coastal": bool(stats.get("naval_unit", False))}}
-
 
 
 def legacy_unit_group(family, stats):
@@ -414,7 +418,6 @@ def repair_faction_rosters(nation_data, map_data):
     session and the next is traceable rather than mysterious.
     """
     from data import queries
-    from map_logic.diplomacy.diplomacy_events import log_global_event
 
     for name, data in list(nation_data.items()):
         if not isinstance(data, dict) or not data.get("faction"):
@@ -490,7 +493,6 @@ def legacy_player_country(map_ref, country_id, nation_update):
     by the host at turn processing.  A member's old move must therefore not
     restore the previous faction string after its leader has renamed the bloc.
     """
-    from data.state_access import world_for
     from data import queries
     world_state = world_for(map_ref)
     if not isinstance(nation_update, dict) or country_id not in world_state.nation_data:
@@ -512,7 +514,6 @@ def legacy_player_country(map_ref, country_id, nation_update):
     # Tournament moves carry a full country record, but policy countdowns are
     # host-owned turn state.  Read only the player's requested lifecycle
     # statuses and rebuild the timers from the host's existing country record.
-    from map_logic import politics
     requested_policies = politics.policy_draft_projection({country_id: merged}, country_id)
     canonical_policies = politics.canonicalize_policy_draft(
         world_state.nation_data, country_id, requested_policies)
@@ -521,7 +522,6 @@ def legacy_player_country(map_ref, country_id, nation_update):
     else:
         merged.pop(politics.POLICY_KEY, None)
 
-    from map_logic.diplomacy import diplomacy_lifecycle as lifecycle
     probe = copy.deepcopy(world_state.nation_data)
     lifecycle.normalize_diplomacy_channels(probe)
     pending = merged.get("pending_diplomacy", {})
@@ -545,7 +545,6 @@ def legacy_player_country(map_ref, country_id, nation_update):
                     or (reference is not None and reference != host_record.get("request_id"))):
                 raise ValueError("A travelling request does not belong to this move.")
         else:
-            from map_logic.diplomacy.action_definitions import availability
             available = availability(map_ref, country_id, target, record.get("action", ""))
             if not available.allowed:
                 # Older snapshots discard invalid drafts while retaining unrelated choices.

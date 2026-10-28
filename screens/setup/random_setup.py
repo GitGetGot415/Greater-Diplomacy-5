@@ -5,6 +5,9 @@ from ui.bars import ui_bars
 from ui_elements import Button, Slider, make_back_button
 from data import queries
 
+from screens.setup.scenario_settings import Scenario_Settings
+
+
 class Random_Setup(GameState):
     back_state = "NEW_GAME"
 
@@ -96,7 +99,6 @@ class Random_Setup(GameState):
         self.refresh_ui()
 
     def scenario_settings(self):
-        from screens.setup.scenario_settings import Scenario_Settings
         Scenario_Settings.back_state = "RANDOM_SETUP"
         self.go_to("SCENARIO_SETTINGS")
 

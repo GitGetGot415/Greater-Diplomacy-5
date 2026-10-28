@@ -58,6 +58,10 @@ from ui import dialogs as confirm_dialog
 from ui_elements import Button, UI_ICONS, make_back_button
 from ui.widgets.flag_icons import flag_surface
 
+from data.map.load_map import load_backend_state
+from screens.setup.scenario_settings import Scenario_Settings
+from screens.game.map import Map
+
 
 def _delete_relay_quietly(token, droplet_id, firewall_id=None):
     """Best-effort background cleanup; a provider dashboard remains fallback."""
@@ -213,7 +217,6 @@ class Realtime_Host_Setup(GameState):
         self._integer("Player Capacity", "capacity", f"Maximum connected players ({MIN_PLAYER_CAPACITY} to {MAX_PLAYER_CAPACITY}):", MIN_PLAYER_CAPACITY, MAX_PLAYER_CAPACITY)
 
     def edit_settings(self):
-        from screens.setup.scenario_settings import Scenario_Settings
         Scenario_Settings.configure_realtime_session(self.settings, "REALTIME_HOST_SETUP")
         self.go_to("SCENARIO_SETTINGS")
 
@@ -228,7 +231,6 @@ class Realtime_Host_Setup(GameState):
             self.local_address = default_advertised_address()
             if self._address_is_detected:
                 self.address = self.local_address
-            from data.map.load_map import load_backend_state
             server_map = load_backend_state(self.scenario_path, is_scenario=True,
                                             scenario_settings=copy.deepcopy(self.settings))
             countries = queries.get_active_playable_nations(server_map.map_data, server_map.nation_data)
@@ -649,9 +651,7 @@ class Realtime_Lobby(GameState):
         if not self.session:
             return
         try:
-            from screens.game.map import Map
             settings = copy.deepcopy(self.session.config.scenario_settings)
-            from data.map.load_map import load_backend_state
             replacement_map = load_backend_state(path, is_scenario=True, scenario_settings=settings)
             countries = queries.get_active_playable_nations(replacement_map.map_data,
                                                              replacement_map.nation_data)
@@ -730,7 +730,6 @@ class Realtime_Lobby(GameState):
     def edit_scenario_settings(self):
         if not self.session:
             return
-        from screens.setup.scenario_settings import Scenario_Settings
         # Work on an isolated copy. Closing the shared screen atomically
         # applies and broadcasts the whole rules bundle rather than leaking a
         # partially edited dict into the live session between clicks.
@@ -1111,7 +1110,6 @@ class Realtime_Lan_Browser(GameState):
                                         lambda selected=match: self.join_match(selected)))
 
     def join_match(self, match):
-        from data.multiplayer.realtime.session import encode_invite
         self.join_screen.invite_text = encode_invite(match.invite["host"], match.invite["port"],
                                                      match.invite["session"], match.invite["fingerprint"])
         self.join_screen.reconnect_token = load_reconnect_token(decode_invite(self.join_screen.invite_text))

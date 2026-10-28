@@ -8,6 +8,10 @@ from ui.rendering.font_manager import fonts
 from map_logic.diplomacy import faction_actions, faction_leadership
 from data import queries
 
+from map_logic.diplomacy import player_diplomacy_actions
+from ui.rendering import country_names
+from screens.game import map_input as event_handler
+
 
 # The roster deliberately ends above the action buttons.  Its content can grow
 # freely; this fixed viewport, rather than a growing sequence of row positions,
@@ -156,7 +160,6 @@ class Faction_Screen(GameState):
     def confirm_rename(self):
         if not self.map_screen: return
         if getattr(self.map_screen, "realtime_multiplayer", False):
-            from map_logic.diplomacy import player_diplomacy_actions
             if not player_diplomacy_actions.can_edit_diplomacy(self.map_screen):
                 return
         player_country = self.map_screen.player_country
@@ -179,7 +182,6 @@ class Faction_Screen(GameState):
                     pending.append({"old_name": old_name, "new_name": new_name})
 
                 self.map_screen.show_feedback(f"Faction renamed to {new_name}")
-                from ui.rendering import country_names
                 country_names.clear_country_name_cache(self.map_screen)
                 self.map_screen.refresh_diplomacy_maps()
             else:
@@ -372,7 +374,6 @@ class Faction_Territories_Screen(GameState):
             position = getattr(event, "pos", None)
             if position is None:
                 position = pygame.mouse.get_pos()
-            from screens.game import map_input as event_handler
             on_ui = event_handler.map_ui_bar_at_position(self.map_screen, position)
             self.map_screen.camera.handle_input(event, self.map_screen, on_ui)
 

@@ -29,6 +29,9 @@ from ui.widgets.table_screen import truncate
 from ui_elements import Button, TextField, make_back_button
 from ui.rendering.font_manager import fonts
 
+from ui.navigation import screen_runner
+
+
 PAD = 20
 TOP_Y = 100
 ROSTER_W = 300
@@ -610,5 +613,4 @@ class Historical_Leaders_Editor(ScrollPanes, GameState):
 
 
 def open_historical_leaders_editor(on_done=None):
-    from ui.navigation.screen_runner import run_screen
-    run_screen(Historical_Leaders_Editor, on_done=on_done, caption="Historical Leaders & Names")
+    screen_runner.run_screen(Historical_Leaders_Editor, on_done=on_done, caption="Historical Leaders & Names")

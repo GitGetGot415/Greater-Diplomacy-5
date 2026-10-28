@@ -34,6 +34,12 @@ from map_logic.diplomacy import deal_effects
 from map_logic.diplomacy.diplomacy_events import log_global_event
 from map_logic.diplomacy.diplomacy_messages import send_message
 
+from data import queries
+from map_logic.diplomacy import war_score
+from map_logic.ai import ai_opinion, ai_world
+from map_logic.diplomacy.faction_actions import finalize_faction_leave
+
+
 RATIFY = "RATIFY"
 REFUSE = "REFUSE"
 
@@ -58,8 +64,6 @@ def _members_with_something_to_lose(map_screen, deal, signatory):
     say is exactly what a member most needs a vote on.
     """
     world_state = world_for(map_screen)
-    from data import queries
-    from map_logic.diplomacy import war_score
 
     nation_data = world_state.nation_data
     ours = set(deal["sides"][deal_mod.side_of(deal, signatory) or "a"])
@@ -91,7 +95,6 @@ def _members_with_something_to_lose(map_screen, deal, signatory):
 
 def _ai_ratifies(map_screen, member, deal):
     world_state = world_for(map_screen)
-    from map_logic.ai import ai_opinion, ai_world
 
     world = map_screen.ai_world or ai_world.for_screen(map_screen)
     return ai_opinion.ratifies(world, member, deal, world_state.map_data,
@@ -215,7 +218,6 @@ def settle(map_screen, signatory, deal, opponent, refused, escrow=None):
     and is still at war with the other side in the morning.
     """
     world_state = world_for(map_screen)
-    from map_logic.diplomacy.faction_actions import finalize_faction_leave
 
     nation_data = world_state.nation_data
 

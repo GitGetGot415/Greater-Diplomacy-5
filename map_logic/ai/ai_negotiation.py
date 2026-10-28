@@ -23,6 +23,8 @@ from data import queries
 from data.platform import IS_WEB
 from map_logic.ai import ai_commitments, ai_personality
 
+from map_logic.ai import ai_opinion
+
 
 def enabled():
     """Summits are desktop-only, like every other networked part of the AI."""
@@ -42,7 +44,6 @@ def pressure(world, a, b, scenario_settings=None):
     whether *both* sides want out, which is what a stalemate actually is: one
     side steamrolling the other scores nothing here however long it takes.
     """
-    from map_logic.ai import ai_opinion
 
     nation_data = world.nation_data
     score = 0.0

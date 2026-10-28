@@ -17,6 +17,11 @@ from ui.navigation.modal_screen import ModalScreen
 from ui_elements import Button
 from ui.rendering.font_manager import fonts
 
+from data import queries
+from data.platform import sync_persisted_dir
+from ui.bars import ui_bars
+
+
 CHARACTERS_DIR = "assets/characters"
 
 #: Portraits imported via the "+ Add New" tile live here, one level under
@@ -130,7 +135,6 @@ class CharacterSelectScreen(ModalScreen):
         image is chosen into assets/characters/custom/, then refreshes the
         grid so it shows up right away -- no confirm dialog, since unlike a
         mod import this can't run any code, it's just a picture."""
-        from data import queries
         queries.import_character_portrait(self, on_success=self._on_custom_imported)
 
     def _on_custom_imported(self, rel_path):
@@ -159,7 +163,6 @@ class CharacterSelectScreen(ModalScreen):
             path = os.path.join(CHARACTERS_DIR, rel_path)
             if os.path.exists(path):
                 os.remove(path)
-                from data.platform import sync_persisted_dir
                 sync_persisted_dir(os.path.join(CHARACTERS_DIR, CUSTOM_SUBDIR))
             # Deleting the portrait currently in use elsewhere would leave that
             # screen holding a path that no longer resolves on the next load --
@@ -279,7 +282,6 @@ class CharacterSelectScreen(ModalScreen):
         """Dims the panel and asks for Enter/Escape -- same shape as
         gameState.FolderListState.draw_delete_confirm, hand-rolled here since
         this screen isn't (and doesn't otherwise need to be) a FolderListState."""
-        from ui.bars import ui_bars
 
         ui_bars.draw_fullscreen_overlay(surface, 180)
 

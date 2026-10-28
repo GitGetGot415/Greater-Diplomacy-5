@@ -1,5 +1,8 @@
 """Resolve scenario rules and active content for one world."""
 
+# state_access constructs WorldState, which imports RuntimeRules. Keep queries and state_access imports local to avoid that cycle.
+
+
 import copy
 from dataclasses import dataclass, field
 

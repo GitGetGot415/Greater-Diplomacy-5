@@ -7,6 +7,10 @@ import data.constants as c
 from data import queries
 from map_logic.diplomacy import diplomacy_lifecycle as lifecycle
 
+from map_logic.diplomacy import deal as deal_mod
+from map_logic.ai import ai_prompts
+
+
 # ==========================================
 # PENDING DIPLOMACY ACCESS
 # ==========================================
@@ -48,7 +52,6 @@ def describe_trade(params, viewer_is_proposer=False, subject=None, viewer=None,
 
     Returns [] when there is nothing to say, so a caller can skip the bubble.
     """
-    from map_logic.diplomacy import deal as deal_mod
 
     if deal_mod.is_deal(params):
         return deal_mod.describe(params, viewer=viewer, nation_data=nation_data)
@@ -425,7 +428,6 @@ def announcement_for(action, custom_msg=""):
         # the other side's inbox rather than arriving blank.
         return f"We propose {action.replace('_', ' ').lower()}."
     if isinstance(default, tuple):
-        from map_logic.ai import ai_prompts
         return ai_prompts.AI_FALLBACK_RESPONSES.get(default[0], default[1])
     return default
 

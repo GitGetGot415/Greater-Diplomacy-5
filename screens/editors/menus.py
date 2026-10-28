@@ -4,6 +4,15 @@ import data.constants as c
 from data.map import load_map
 from data import queries
 
+from data.io import country_io
+from screens import editors as editor_screens
+from ui.widgets.table_screen import TableScreen, TableColumn, truncate
+from screens.game.research import ResearchCountrySelectScreen
+from map_logic.diplomacy import diplomacy_messages
+from ui.widgets.text_detail_screen import TextDetailScreen
+from ui.navigation import screen_runner
+
+
 # ==========================================
 # EDITOR MENUS
 # ==========================================
@@ -28,15 +37,13 @@ def _has_active_countries(map_screen):
 
 def _launch(map_screen, screen):
     """Runs `screen` as a modal sub-screen of the editor."""
-    from ui.navigation.screen_runner import _run_pygame_sub_screen
-    _run_pygame_sub_screen(map_screen, screen)
+    screen_runner._run_pygame_sub_screen(map_screen, screen)
 
 
 def _launch_editor_screen(map_screen, class_name, *args, needs_countries=False):
     """Opens one of screens.editors' screens, looked up by name."""
     if needs_countries and not _has_active_countries(map_screen):
         return
-    from screens import editors as editor_screens
     _launch(map_screen, getattr(editor_screens, class_name)(map_screen, *args))
 
 
@@ -45,7 +52,6 @@ def _launch_table(map_screen, title, columns, rows, empty_message="Nothing to sh
     """Opens a full-screen sortable table over `rows`."""
     if needs_countries and not _has_active_countries(map_screen):
         return
-    from ui.widgets.table_screen import TableScreen
     _launch(map_screen, TableScreen(map_screen, title, columns, rows,
                                     empty_message=empty_message,
                                     on_row_click=on_row_click,
@@ -105,7 +111,6 @@ def open_editor_claims(map_screen):
             rows.append({"country": queries.get_country_display_name(c_name, map_screen.nation_data),
                          "claims": ", ".join(map(str, claims))})
 
-    from ui.widgets.table_screen import TableColumn
     columns = [
         TableColumn("country", "Country", 180, align="left"),
         TableColumn("claims", "Claimed Provinces", 700, align="left"),
@@ -135,9 +140,7 @@ def spec_select_research_country(map_screen):
     """Choose View or Edit and a country for the spectator research tree."""
     if not _has_active_countries(map_screen):
         return
-    from screens.game.research import ResearchCountrySelectScreen
-    from ui.navigation.screen_runner import _run_pygame_sub_screen
-    _run_pygame_sub_screen(map_screen, ResearchCountrySelectScreen(map_screen))
+    screen_runner._run_pygame_sub_screen(map_screen, ResearchCountrySelectScreen(map_screen))
 
 
 def open_editor_date(map_screen):
@@ -174,7 +177,6 @@ def open_editor_economy(map_screen):
             row[f"{prefix}_bld"], row[f"{prefix}_upk"], row[f"{prefix}_net"] = bld, upk, net
         rows.append(row)
 
-    from ui.widgets.table_screen import TableColumn
     columns = [TableColumn("country", "Country", 160, align="left")]
     for group, prefix in (("Manpower", "p"), ("Materials", "m"), ("Fuel", "f")):
         for stat, label in (("cur", "Cur"), ("inc", "Inc"), ("bld", "Bld"), ("upk", "Upk"), ("net", "Net")):
@@ -191,7 +193,6 @@ def open_spectator_messages(map_screen):
     if not _has_active_countries(map_screen):
         return
 
-    from map_logic.diplomacy import diplomacy_messages
 
     all_msgs = []
     months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
@@ -249,7 +250,6 @@ def open_spectator_messages(map_screen):
 
     all_msgs.sort(key=lambda m: m["date_sort"], reverse=True)
 
-    from ui.widgets.table_screen import TableColumn, truncate
     columns = [
         TableColumn("date", "Date", 130, fmt=display_date, sort_key=lambda r: r["date_sort"]),
         TableColumn("sender", "Sender", 120),
@@ -262,7 +262,6 @@ def open_spectator_messages(map_screen):
     # The column has to truncate -- there is no width at which some message
     # does not overflow -- so a row opens the whole thing instead.
     def open_message(row):
-        from ui.widgets.text_detail_screen import TextDetailScreen
         body = row.get("message", "")
 
         # The sent copies are dropped above, so the surviving copy is always
@@ -343,7 +342,6 @@ def open_politics_editor(map_screen):
 
 def open_edited_countries(map_screen):
     """Opens a full-screen sortable table of countries with edited properties."""
-    from data.io import country_io
     default_data = country_io.load_all_country_data()
 
     rows = []
@@ -383,7 +381,6 @@ def open_edited_countries(map_screen):
                 "portrait": changes.get("portrait", "-"),
             })
 
-    from ui.widgets.table_screen import TableColumn
     columns = [
         TableColumn("id", "ID", 150, align="left"),
         TableColumn("name", "Name", 150),

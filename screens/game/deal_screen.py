@@ -39,6 +39,9 @@ from ui.bars import ui_bars
 from ui.navigation.screen_runner import _run_pygame_sub_screen
 from ui_elements import Button, draw_text_box, process_text_input
 
+from map_logic.ai.ai_diplomacy import scripted_event_response_preview
+
+
 #: Which side of the table a picked province belongs to.
 TAKE = "TAKE"
 GIVE = "GIVE"
@@ -879,7 +882,6 @@ class Deal_Screen(MapOverlayScreen):
                 and queries.get_scenario_flag(
                     "use_scripted_events", c.DEFAULT_USE_SCRIPTED_EVENTS,
                     self.map_screen.scenario_settings)):
-            from map_logic.ai.ai_diplomacy import scripted_event_response_preview
 
             action = "PEACE_TREATY" if self.is_peace else "TRADE"
             scripted_response = scripted_event_response_preview(

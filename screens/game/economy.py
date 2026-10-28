@@ -7,6 +7,9 @@ from ui.rendering.font_manager import fonts
 from data import queries
 from ui.widgets.table_screen import TableScreen, TableColumn
 
+from ui.navigation import screen_runner
+
+
 # ==========================================
 # LAYOUT
 # ==========================================
@@ -338,6 +341,5 @@ class Economy_Screen(GameState):
 
         individual_rows, grouped_rows = expense_table_rows(units, unit_lib)
 
-        from ui.navigation.screen_runner import _run_pygame_sub_screen
-        _run_pygame_sub_screen(self.map_screen,
+        screen_runner._run_pygame_sub_screen(self.map_screen,
                                ExpensesTableScreen(self, individual_rows, grouped_rows))

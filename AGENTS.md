@@ -145,6 +145,16 @@ Do not queue skipped spawns for later.
   Keep local layout constants out of `data/constants.py`.
 - Use data tables instead of repeated condition chains when content is likely to grow.
 
+### Imports
+
+- Place imports at the top of the file by default.
+- Keep local imports when initialization order, circular dependencies, platform compatibility, or optional dependencies require them.
+- Explain non-obvious exceptions with a short comment near the import or its shared dependency boundary.
+- Do not place an import inside a function merely because only that function uses it.
+- Preserve mod startup order and headless execution when moving imports.
+- Import the owning module when callbacks must resolve a replaceable helper at execution time.
+- Keep test imports local when fixtures, environment settings, or mocks must be installed before importing the module.
+
 ### Tuning Data
 
 Tuning data means current unit and building statistics, research settings, costs, and combat capabilities.

@@ -1,3 +1,5 @@
+import math
+
 import pygame
 from gameState import GameState, ScreenLayer
 import data.constants as c
@@ -11,6 +13,9 @@ from map_logic import politics
 from ui.widgets.text_utils import wrap_text
 from ui.dialogs.list_select_screen import ListSelectScreen
 from ui import dialogs as confirm_dialog
+
+from map_logic.system32.research_processor import select_research
+
 
 # ==========================================
 # LAYOUT
@@ -930,7 +935,6 @@ class Research_Screen(GameState):
         if self.editing_research_levels or not self.can_edit:
             return
         player_data = self.subject_data
-        from map_logic.system32.research_processor import select_research
         requested = [project["tech_name"] for project in player_data.get("research_queue", [])]
         try:
             select_research(player_data, requested + [tech_name], self.tech_tree)
@@ -944,7 +948,6 @@ class Research_Screen(GameState):
         if self.editing_research_levels or not self.can_edit:
             return
         player_data = self.subject_data
-        from map_logic.system32.research_processor import select_research
         requested = [project["tech_name"] for project in player_data.get("research_queue", [])
                      if project["tech_name"] != tech_name]
         try:
@@ -983,7 +986,6 @@ class Research_Screen(GameState):
 
     def cache_connections(self, res_levels):
         """Prepare prerequisite lines and arrows at state or category changes."""
-        import math
         self.connection_segments = []
         nodes = self.nodes.get(self.current_category, [])
         lookup = {(n["key"], n["lvl"]): n for n in nodes}

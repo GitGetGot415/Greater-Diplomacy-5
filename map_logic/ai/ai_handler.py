@@ -50,6 +50,20 @@ from map_logic.ai.ai_settings import (
     get_ollama_url,
 )
 
+from data.migrations import normalize_ai_mode
+# Re-exported so `ai_handler.evaluate_diplomatic_proposal(...)` etc. keep
+# working -- see this module's docstring for why these moved but FORCE_SKIP /
+# CURRENT_TURN_ID / ACTIVE_OLLAMA_CONNECTIONS did not.
+from map_logic.ai.ai_evaluation import (
+    _reply,
+    LITE_RESPONSE_KEYS,
+    get_world_context,
+    evaluate_diplomatic_proposal,
+    process_custom_message,
+    generate_proactive_text,
+)
+
+
 # --- NEW GLOBAL ABORT FLAG ---
 FORCE_SKIP = False
 CURRENT_TURN_ID = 0
@@ -82,6 +96,7 @@ def _session():
 
 def _gemini_client():
     """The shared genai client, rebuilt only when the API key changes."""
+    # Load the optional Gemini SDK only when this provider is used.
     from google import genai
 
     api_key = get_gemini_api_key()
@@ -341,7 +356,6 @@ def _call_provider(mode, system_prompt, user_prompt, turn_id):
 
 
 def _dispatch(mode, system_prompt, user_prompt, turn_id):
-    from data.migrations import normalize_ai_mode
     mode = normalize_ai_mode(mode)
     if mode == "OLLAMA":
         return call_ollama(system_prompt, user_prompt, turn_id)
@@ -369,7 +383,6 @@ def _run_provider(mode, system_prompt, user_prompt, turn_id, canned, accepted=No
     "OLLAMA ERROR: No response" in front of the player instead, which meant
     pressing Force Skip produced an error message dressed as a diplomatic cable.
     """
-    from map_logic.ai.ai_evaluation import _reply
 
     result = _call_provider(mode, system_prompt, user_prompt, turn_id)
     if raw:
@@ -482,15 +495,3 @@ def call_ollama(system_prompt, user_prompt, turn_id=None):
             conn.close()
         except:
             pass
-
-
-# Re-exported so `ai_handler.evaluate_diplomatic_proposal(...)` etc. keep
-# working -- see this module's docstring for why these moved but FORCE_SKIP /
-# CURRENT_TURN_ID / ACTIVE_OLLAMA_CONNECTIONS did not.
-from map_logic.ai.ai_evaluation import (
-    LITE_RESPONSE_KEYS,
-    get_world_context,
-    evaluate_diplomatic_proposal,
-    process_custom_message,
-    generate_proactive_text,
-)

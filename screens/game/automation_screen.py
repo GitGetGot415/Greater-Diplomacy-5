@@ -9,6 +9,9 @@ from map_logic.ai.automation_logic import (
     automate_player_research, clear_player_research
 )
 
+from ui.dialogs import ask_yes_no
+
+
 #: label, automation-state key, "do it now" action, "undo it" action.
 #: One list: the drawing pass used to carry its own copy of just the labels,
 #: which is how a row could be renamed in one place and not the other.
@@ -81,7 +84,6 @@ class Automation_Screen(GameState):
         `confirm_action`/`confirm_text` on the screen; ask_yes_no is the same
         prompt with Enter/Esc handling and the standard chrome.
         """
-        from ui.dialogs import ask_yes_no
 
         def answered(confirmed):
             if confirmed and self.can_edit_realtime():

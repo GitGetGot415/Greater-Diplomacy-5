@@ -23,6 +23,8 @@ import pygame
 
 import data.constants as c
 
+from ui.bars import ui_bars
+
 
 class ScrollPanes:
     """Adds multi-pane scrolling to any GameState subclass.
@@ -119,7 +121,7 @@ class ScrollPanes:
         needs -- a flag, a line of stat icons -- since a Button can only render
         one string and the decoration has to crop with the row it belongs to.
         """
-        from ui.bars import ui_bars  # deferred: keeps this module a leaf
+        # ui_bars owns clipping and scroll indicators for every pane.
 
         rects = self.pane_rects() if rects is None else rects
         for name, rect in rects.items():

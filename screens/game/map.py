@@ -1,4 +1,14 @@
 # Standard Library & Third Party
+
+# Load real-time networking inside its callbacks. This map screen also serves local and browser games.
+
+from importlib import import_module
+import asyncio
+import traceback
+import threading
+import re
+import json
+
 import pygame
 import os
 import sys
@@ -34,6 +44,28 @@ from ui.rendering.font_manager import fonts
 from ui.rendering.country_names import update_country_centers as calc_country_centers
 from screens.setup import player_setup
 from screens.editors import scripted_events_editor
+
+from data.io import country_io
+from ui import dialogs as confirm_dialog
+from ui.panels.multiplayer_host_panel import (
+    show_move_rejection,
+    manage_players_panel,
+    export_next_turn,
+    manage_keys_panel,
+)
+from ui.bars import resource_hud
+from screens.game.politics_screen import Politics_Screen
+from ui.panels import realtime_status_panel, sidebar_info
+from map_logic.diplomacy.action_definitions import availability
+from map_logic.ai.ai_diplomacy import scripted_event_response_preview
+from map_logic.ai.ai_evaluation import evaluate_verdict
+from map_logic.diplomacy import diplomacy_lifecycle
+from map_logic.system32 import economy_processor, turn_processor
+from map_logic.ai import ai_handler
+from map_logic.actions import unit_actions
+from ui.information import feedback_text
+from data.multiplayer.tournament import files as multiplayer_io
+from ui.navigation import screen_runner
 
 
 def _delete_relay_safely(token, droplet_id, firewall_id=None):
@@ -219,7 +251,6 @@ def render_buttons(map_screen):
     if getattr(map_screen, "realtime_multiplayer", False):
         def rt_submit():
             from data.multiplayer.realtime.session import collect_map_commands, RealtimeError
-            from ui import dialogs as confirm_dialog
 
             def confirmed(accepted):
                 if not accepted:
@@ -258,7 +289,6 @@ def render_buttons(map_screen):
 
         def rt_unsubmit():
             from data.multiplayer.realtime.session import RealtimeError
-            from ui import dialogs as confirm_dialog
 
             def confirmed(accepted):
                 if not accepted:
@@ -282,8 +312,6 @@ def render_buttons(map_screen):
         map_screen.btn_import_turn = Button(-1000, -1000, "small", "grey", "Import Turn", lambda: None)
     elif getattr(map_screen, 'multiplayer_mode', False):
         def m_export():
-            from data.multiplayer.tournament.files import export_move_file
-            import os
             turn = map_screen.time_manager.total_turns if hasattr(map_screen, 'time_manager') else 1
             cid = map_screen.player_country
             save_name = f"Turn_{turn}_{cid}.gd5move"
@@ -291,7 +319,7 @@ def render_buttons(map_screen):
             player_key = getattr(map_screen, 'multiplayer_player_key', '')
 
             def export():
-                export_move_file(map_screen, export_path, player_key)
+                multiplayer_io.export_move_file(map_screen, export_path, player_key)
                 map_screen.show_feedback(f"Move exported to {export_path}")
 
             queries.export_with_overwrite_confirmation(export_path, export)
@@ -299,8 +327,6 @@ def render_buttons(map_screen):
         map_screen.btn_next_turn = Button(EDITOR_BOT_BTN_START_X, c.BOTTOM_BAR_UI_CENTER_Y, "small", "purple", "Export Turn", m_export)
 
         def m_import():
-            from data.multiplayer.tournament.files import load_move_files
-            import os
 
             def on_picked(file_path):
                 if file_path:
@@ -308,9 +334,8 @@ def render_buttons(map_screen):
                     player_key = getattr(map_screen, 'multiplayer_player_key', '')
                     keys_dict = {cid: player_key}
 
-                    summary = load_move_files(map_screen, [file_path], keys_dict)
+                    summary = multiplayer_io.load_move_files(map_screen, [file_path], keys_dict)
                     if not summary["loaded"]:
-                        from ui.panels.multiplayer_host_panel import show_move_rejection
                         for rejection in summary["rejections"]:
                             show_move_rejection(map_screen, rejection)
                         map_screen.show_feedback("Move import rejected. See the notification for details.")
@@ -340,12 +365,9 @@ def render_buttons(map_screen):
         map package, which is the module currently being built.
         """
         def open_it():
-            from importlib import import_module
-            from ui.navigation.screen_runner import _run_pygame_sub_screen
-            _run_pygame_sub_screen(map_screen, getattr(import_module(module_path), class_name)(map_screen))
+            screen_runner._run_pygame_sub_screen(map_screen, getattr(import_module(module_path), class_name)(map_screen))
         return open_it
 
-    from ui.bars import resource_hud
     report_rect = resource_hud.unit_event_button_rect()
     map_screen.btn_unit_events = Button(
         report_rect.x, report_rect.y, "small_square", "yellow", "Unit events",
@@ -404,9 +426,7 @@ def render_buttons(map_screen):
         if (not owner or owner == map_screen.player_country
                 or owner not in map_screen.nation_data):
             return
-        from screens.game.politics_screen import Politics_Screen
-        from ui.navigation.screen_runner import _run_pygame_sub_screen
-        _run_pygame_sub_screen(map_screen, Politics_Screen(map_screen, country_id=owner))
+        screen_runner._run_pygame_sub_screen(map_screen, Politics_Screen(map_screen, country_id=owner))
 
     econ_callback = editor_or(editor_menus.open_starting_economy_editor, "ECONOMY")
     msgs_callback = editor_or(editor_menus.open_spectator_messages, "MESSAGES")
@@ -533,15 +553,12 @@ def render_buttons(map_screen):
         map_screen.country_action_buttons.append(button)
 
     def host_manage_players():
-        from ui.panels.multiplayer_host_panel import manage_players_panel
         manage_players_panel(map_screen)
 
     def host_export_turn():
-        from ui.panels.multiplayer_host_panel import export_next_turn
         export_next_turn(map_screen)
 
     def host_manage_keys():
-        from ui.panels.multiplayer_host_panel import manage_keys_panel
         manage_keys_panel(map_screen)
 
     map_screen.btn_spec_mp_manage = Button(MP_HOST_MANAGE_X, MP_HOST_BTN_Y, MP_HOST_MANAGE_SIZE, "blue", "Manage Players", host_manage_players)
@@ -571,7 +588,6 @@ def render_buttons(map_screen):
     map_screen.btn_tactical = Button(LEFT_UI_BAR_X + BTN_TACTICAL_OFFSET_X, BTN_SPECTATOR_Y, "medium", "orange", "Tactical Mode", toggle_tactical_action)
     map_screen.btn_close_info = Button(TOP_RIGHT_BTN_X, c.TOP_BAR_UI_CENTER_Y, "small", "red", "X", map_screen.deselect_province)
     map_screen.btn_exit_to_menu = Button(TOP_RIGHT_BTN_X, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Exit", map_screen.exit_to_menu)
-    from ui.panels import realtime_status_panel
     map_screen.btn_realtime_details = Button(TOP_RIGHT_BTN_X + 30, c.TOP_BAR_UI_CENTER_Y + 120,
                                               "tiny", "blue", "Details",
                                               lambda: realtime_status_panel.show_details(map_screen))
@@ -675,7 +691,6 @@ def bilateral_response_indicator(map_screen, target, action):
     """
     if target not in map_screen.nation_data:
         return None
-    from map_logic.diplomacy.action_definitions import availability
     if not availability(map_screen, map_screen.player_country, target, action).allowed:
         return "NO"
     if queries.faction_request_leadership_error(
@@ -706,7 +721,6 @@ def bilateral_response_indicator(map_screen, target, action):
 
         cache_key = (target, map_screen.player_country, action)
         if cache_key not in cache["responses"]:
-            from map_logic.ai.ai_diplomacy import scripted_event_response_preview
 
             cache["responses"][cache_key] = scripted_event_response_preview(
                 map_screen, target, map_screen.player_country, action)
@@ -714,7 +728,6 @@ def bilateral_response_indicator(map_screen, target, action):
         if scripted_response is not None:
             return scripted_response
 
-    from map_logic.ai.ai_evaluation import evaluate_verdict
 
     verdict = evaluate_verdict(map_screen.nation_data, map_screen.map_data,
                                target, map_screen.player_country, action,
@@ -1337,7 +1350,6 @@ class Map(StateAccess, GameState):
         # GameState can refresh during construction before Map has a selection.
         province = getattr(self, "selected_province", None)
         if province is not None:
-            from ui.panels import sidebar_info
             sidebar_info.prepare_unit_roster(self, province)
 
     def __init__(self, load_path=None, is_scenario=False, is_random=False, force_editor=False, random_settings=None, map_settings=None, num_players=1, history_turn=None, skip_initial_income=False):
@@ -1565,7 +1577,6 @@ class Map(StateAccess, GameState):
 
         render_buttons(self)
 
-        from map_logic.diplomacy import diplomacy_lifecycle
         diplomacy_lifecycle.normalize_diplomacy_channels(self.nation_data)
 
         # A loaded save may have been written immediately before a faction join
@@ -1578,7 +1589,6 @@ class Map(StateAccess, GameState):
 
         # --- 5. INITIALIZE INCOME ---
         # Provide 1 turn of simulated income so nations don't spawn with 0 resources
-        from map_logic.system32 import economy_processor
         economy_processor.initialize_income(self, skip=skip_initial_income)
         # Build unit membership after loading, before any planning-frame draw.
         overlay_renderer._unit_render_index(self)
@@ -1754,7 +1764,6 @@ class Map(StateAccess, GameState):
         self.show_feedback(f"View Mode: {self.secondary_mode}")
 
     def trigger_multi_turn(self):
-        from ui import dialogs as confirm_dialog
 
         def on_turns(turns):
             if turns:
@@ -1769,10 +1778,6 @@ class Map(StateAccess, GameState):
                                    on_turns, minvalue=1, maxvalue=5000)
 
     async def _run_multi_turn_thread(self, turns):
-        from map_logic.system32 import turn_processor
-        from map_logic.ai import ai_handler
-        import asyncio
-        import traceback
 
         try:
             ai_handler.FORCE_SKIP = True
@@ -1947,7 +1952,6 @@ class Map(StateAccess, GameState):
         # The inspector projects aircraft caught in ground combat as casualties.
         # Build its roster at this boundary, never during the frame draw.
         if getattr(self, "selected_province", None) is not None:
-            from ui.panels import sidebar_info
             sidebar_info.prepare_unit_roster(self, self.selected_province)
         map_renderer.clear_viewport_scale_cache(self)
         # A real-time draft is a state snapshot, not per-frame presentation.
@@ -2003,11 +2007,9 @@ class Map(StateAccess, GameState):
 
     def show_navigation_tutorial(self):
         """Open the map tutorial again from the persistent Help button."""
-        from ui import dialogs as confirm_dialog
         confirm_dialog.show_navigation_intro(self)
 
     def auto_assign_cores(self):
-        from ui import dialogs as confirm_dialog
 
         def on_confirm(confirm):
             if confirm:
@@ -2032,7 +2034,6 @@ class Map(StateAccess, GameState):
             session = self.realtime_session
             is_host = (self.realtime_player_id == getattr(session, "host_id", None))
             if not is_host:
-                from ui import dialogs as confirm_dialog
 
                 def leave_match(confirmed):
                     if not confirmed:
@@ -2059,7 +2060,6 @@ class Map(StateAccess, GameState):
                 self.change_state("MULTIPLAYER_MENU")
                 return
 
-            from ui import dialogs as confirm_dialog
             def close_match(confirmed):
                 if not confirmed:
                     return
@@ -2090,7 +2090,6 @@ class Map(StateAccess, GameState):
         self.realtime_temporary_relay = None
         try:
             from data.multiplayer.realtime.relay import destroy_temporary_relay
-            import threading
             threading.Thread(target=lambda: _delete_relay_safely(token, relay.droplet_id, relay.firewall_id), daemon=True).start()
         except (ImportError, AttributeError):
             pass
@@ -2133,7 +2132,6 @@ class Map(StateAccess, GameState):
         for event in events:
             event_handler.resolve_map_mouse_gesture_conflict(self, event)
             popup = self.navigation_intro_popup
-            from ui.panels import diplomatic_popups
             if (popup is not None and diplomatic_popups.map_message_popups_visible(self)
                     and popup.handle_event(event)):
                 continue
@@ -2276,7 +2274,6 @@ class Map(StateAccess, GameState):
                     return False
             planned.append((unit, origin, old_path + segment))
 
-        from map_logic.actions import unit_actions
         choices = [(unit, origin, path if isinstance(path, dict) else
                     {"type": "MOVE", "path": path} if path else None)
                    for unit, origin, path in planned]
@@ -2346,7 +2343,6 @@ class Map(StateAccess, GameState):
             return False
         self.select_map_units([unit for unit, _province in records])
         self.selected_province = records[0][1]
-        from ui.panels import sidebar_info
         sidebar_info.prepare_unit_roster(self, self.selected_province)
         self.focus_camera_on_army(records)
         if open_orders:
@@ -2380,7 +2376,6 @@ class Map(StateAccess, GameState):
 
                 # Handle dynamic transport names
                 if base_type.startswith("Convoy (") or base_type.startswith("Truck ("):
-                    import re
                     match = re.search(r'\((.*?)\)', base_type)
                     if match:
                         base_type = match.group(1).strip()
@@ -2511,7 +2506,6 @@ class Map(StateAccess, GameState):
         super().draw(surface)
         map_renderer.draw_badges(self, surface)
 
-        from ui.panels import realtime_status_panel
         realtime_status_panel.draw(self, surface)
         army_panel.draw(self, surface)
 
@@ -2550,7 +2544,6 @@ class Map(StateAccess, GameState):
 
             return
 
-        from ui.information import feedback_text
         feedback_text.draw_feedback(self, surface)
 
     def refresh_nation_data(self, options=None):
@@ -2563,7 +2556,6 @@ class Map(StateAccess, GameState):
                 "reset_colors": True,
             }
 
-        from data.io import country_io
         new_data = country_io.load_all_country_data()
         added_count = 0
         updated_count = 0
@@ -2702,7 +2694,6 @@ class Map(StateAccess, GameState):
                 # every frame made an idle planning turn do map-wide work just
                 # to rediscover an unchanged draft.
                 from data.multiplayer.realtime.session import collect_map_commands, RealtimeError
-                import json
                 commands = collect_map_commands(self, self.player_country)
                 fingerprint = f"{session.turn_number}:" + json.dumps(commands, sort_keys=True, separators=(",", ":"))
                 if fingerprint != getattr(self, "_realtime_draft_fingerprint", None):
@@ -2788,7 +2779,6 @@ class Map(StateAccess, GameState):
 
         if (is_playing and getattr(self, '_popup_presentation_revision', None)
                 != self._presentation_cache_revision):
-            from ui.panels import diplomatic_popups
             diplomatic_popups.spawn_popups_for_player(self)
             self._popup_presentation_revision = self._presentation_cache_revision
 

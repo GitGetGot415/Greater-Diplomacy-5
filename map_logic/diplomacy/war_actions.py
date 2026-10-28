@@ -4,10 +4,16 @@ military-access helper the puppet/faction paths also reach for.
 See map_logic/diplomacy/diplomacy_agreements.py for how this fits alongside
 puppet_actions.py and faction_actions.py.
 """
+
+# Faction, subject, and deal mutations call war actions. Keep their imports local to avoid cycles.
+
 from data import queries
 from map_logic.diplomacy.diplomacy_events import log_global_event
 from map_logic.diplomacy.diplomacy_messages import clear_pending
 import data.constants as c
+
+from map_logic.diplomacy import guarantees, military_attaches, deal as deal_mod
+
 
 # --- SHARED STATE EDITS ---
 # The small, repeated edits to a nation's diplomatic bookkeeping. Each was
@@ -163,7 +169,6 @@ def clear_own_pre_war_map_if_peace(nation_data, nation):
 def finalize_war(map_data, nation_data, a, b, activate_guarantees=True):
     from map_logic.diplomacy.faction_actions import finalize_faction_leave, leave_faction
     from map_logic.diplomacy.puppet_actions import pull_puppets_into_war, pull_master_into_war
-    from map_logic.diplomacy import guarantees, military_attaches
 
     master_a = nation_data.get(a, {}).get("master", "")
     master_b = nation_data.get(b, {}).get("master", "")
@@ -254,7 +259,6 @@ def finalize_war(map_data, nation_data, a, b, activate_guarantees=True):
 
 def finalize_neutral(nation_data, a, b):
     from map_logic.diplomacy.puppet_actions import pull_puppets_into_peace
-    from map_logic.diplomacy import military_attaches
 
     for country, other in [(a, b), (b, a)]:
         remove_enemy(nation_data, country, other)
@@ -295,7 +299,6 @@ def execute_peace_treaty(map_data, nation_data, proposer, target, peace_type, ma
     deal path; they stay in the signature because diplomacy_agreements re-exports
     this function and a mod may be calling it.
     """
-    from map_logic.diplomacy import deal as deal_mod
     from map_logic.diplomacy import deal_effects
 
     agreement = deal_mod.coerce(peace_type, proposer, target, kind=deal_mod.KIND_PEACE)

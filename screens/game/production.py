@@ -19,6 +19,9 @@ from map_logic.diplomacy import restrictions
 from ui.bars import resource_hud, view_mode_buttons
 from screens.game import map_input as event_handler
 
+from ui.dialogs.checkbox_list_screen import CheckboxItem, SectionHeader
+
+
 # ==========================================
 # LAYOUT
 # ==========================================
@@ -774,7 +777,6 @@ class Production_Screen(GameState):
                             "Infantry Fighting Vehicle Type", "Heavy Artillery")]
             names.sort()
 
-        from ui.dialogs.checkbox_list_screen import CheckboxItem, SectionHeader
 
         items = []
         for category, names in categorized.items():

@@ -6,6 +6,9 @@ Split out of map_logic/ai/ai_handler.py, which re-exports every name here so
 existing `ai_handler.evaluate_diplomatic_proposal(...)`-style call sites keep
 working.
 """
+
+# ai_handler imports and re-exports these evaluation functions. Import the handler locally when a provider request runs.
+
 import collections
 
 import data.constants as c
@@ -13,6 +16,8 @@ from map_logic.ai import ai_commitments, ai_opinion, ai_settings, ai_world
 from data import queries
 from map_logic.ai import ai_prompts
 from map_logic.diplomacy import diplomacy_messages
+
+from map_logic.diplomacy import deal as deal_mod, volunteers, military_attaches
 
 
 def _to_int(value, default=0):
@@ -286,7 +291,6 @@ def _peace_terms(nation_data, sender_nation, ai_nation, custom_msg):
     exist; the message is the fallback, and coerce reads free prose as the white
     peace such an offer always executed as anyway.
     """
-    from map_logic.diplomacy import deal as deal_mod
 
     pending = nation_data.get(sender_nation, {}).get("pending_diplomacy", {}).get(ai_nation, {})
     params = pending.get("parameters") if isinstance(pending, dict) else None
@@ -330,7 +334,6 @@ def evaluate_verdict(nation_data, map_data, ai_nation, sender_nation, action_typ
     # Volunteers are welcome unless the donor is supporting one of the host's
     # enemies through another volunteer mission or military attaché.
     if action_type == "SEND_VOLUNTEERS":
-        from map_logic.diplomacy import volunteers
         accepted, reason = volunteers.ai_can_accept(
             sender_nation, ai_nation, nation_data)
         return Verdict(accepted, 1.0 if accepted else 0.0,
@@ -339,7 +342,6 @@ def evaluate_verdict(nation_data, map_data, ai_nation, sender_nation, action_typ
     # The host is otherwise happy to share battlefield intelligence, except with
     # a country supporting one of the other side's war effort.
     if action_type == "SEND_MILITARY_ATTACHE":
-        from map_logic.diplomacy import military_attaches
         accepted, reason = military_attaches.ai_can_accept(
             sender_nation, ai_nation, nation_data)
         return Verdict(accepted, 1.0 if accepted else 0.0,
@@ -435,7 +437,6 @@ def evaluate_verdict(nation_data, map_data, ai_nation, sender_nation, action_typ
 
     # --- NEW AI TRADE LOGIC ---
     elif action_type == "TRADE":
-        from map_logic.diplomacy import deal as deal_mod
 
         pending = nation_data.get(sender_nation, {}).get("pending_diplomacy", {}).get(ai_nation, {})
         params = pending.get("parameters", {})

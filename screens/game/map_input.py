@@ -10,6 +10,12 @@ from map_logic.diplomacy import diplomacy_logic
 from screens.game import battle_screen
 from ui.bars import flag_renderer, ui_bars
 
+from ui.panels import sidebar_info, diplomatic_popups
+from map_logic.ai import ai_handler
+from screens.editors.menus import open_convoy_converter
+from screens.game import country_summary
+
+
 # The three panels that sit on the map at fixed screen rects: Buildings/Garrison,
 # Diplomatic Info and the production queue overlay. Each publishes a rect and a
 # scroll ceiling under these attribute prefixes, and all three want identical
@@ -90,7 +96,6 @@ def _select_map_province(map_screen, position, navigate=True):
             and not queries.is_province_visible(map_screen, province["id"])):
         return False
     map_screen.selected_province = province
-    from ui.panels import sidebar_info
     sidebar_info.prepare_unit_roster(map_screen, province)
     camera_handler.center_camera_on_province(
         map_screen.camera, province["center"], c.SCREEN_WIDTH, c.SCREEN_HEIGHT,
@@ -252,7 +257,6 @@ def handle_map_events(map_screen, event):
     mx, my = event_pos
 
     # --- POPUP INTERCEPT ---
-    from ui.panels import diplomatic_popups
     if diplomatic_popups.handle_events(map_screen, event):
         return
 
@@ -293,7 +297,6 @@ def handle_map_events(map_screen, event):
                 map_screen.force_skip_llm = True
 
                 # --- IMPORTANT: Set the module-level abort flag so running threads instantly die ---
-                from map_logic.ai import ai_handler
                 ai_handler.FORCE_SKIP = True
                 ai_handler.abort_ai_generation()
 
@@ -307,8 +310,7 @@ def handle_map_events(map_screen, event):
     flag_rect = flag_renderer.flag_button_rect(map_screen)
     if flag_rect and flag_rect.collidepoint(event_pos):
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            from screens.game.country_summary import open_country_summary
-            open_country_summary(map_screen, flag_renderer.summary_country(map_screen))
+            country_summary.open_country_summary(map_screen, flag_renderer.summary_country(map_screen))
             return
         if event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP,
                           pygame.MOUSEMOTION, pygame.MOUSEWHEEL):
@@ -597,7 +599,6 @@ def handle_map_events(map_screen, event):
                         editor_changed = True
                         map_screen.show_feedback("Units cleared from province")
                 elif map_screen.brush_unit == "Convoy":
-                    from screens.editors.menus import open_convoy_converter
                     open_convoy_converter(map_screen, map_screen.hovered_province)
                 elif map_screen.brush_unit == "----------":
                     pass

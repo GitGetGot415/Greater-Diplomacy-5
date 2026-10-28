@@ -37,6 +37,9 @@ Stdlib and `data` only, so the AI layers and the screens can both import it.
 import data.constants as c
 from data import queries
 
+from map_logic.diplomacy import reach as reach_mod
+
+
 VERSION = 1
 
 KIND_PEACE = "PEACE"
@@ -207,7 +210,6 @@ def tile_transfers(deal, map_data=None, nation_data=None):
     disagree the way the string-based versions did. `map_data`/`nation_data` are
     only needed to expand a legacy clause's `plus_originals`.
     """
-    from data import queries
 
     transfers = {}
     for clause in clauses(deal):
@@ -349,7 +351,6 @@ def _out_of_reach(clause, map_data, reach_index=None, pending=()):
     reach.py) -- so a demand does not fail just because the province that
     would connect it to friendly soil was written into a separate clause.
     """
-    from map_logic.diplomacy import reach as reach_mod
 
     receiver = clause.get("to")
     ids = clause.get("ids") or ()
@@ -558,7 +559,6 @@ def tile_moves(clause, map_data, nation_data, baseline=None):
     Provinces the baseline already hands to the receiver are not moves at all
     and are left out.
     """
-    from data import queries
 
     giver, receiver = clause.get("from"), clause.get("to")
     wanted = {int(i) for i in clause.get("ids", [])}

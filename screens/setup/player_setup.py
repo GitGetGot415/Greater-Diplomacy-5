@@ -1,6 +1,8 @@
 import data.constants as c
 from data import queries
 
+# The map imports player_setup. Keep map-screen callbacks local to avoid that cycle.
+
 def select_player_country(map_screen, province):
     owner = province.get("owner", "Unclaimed")
     if owner in map_screen.nation_data and map_screen.nation_data[owner].get("is_playable"):
@@ -13,7 +15,6 @@ def select_player_country(map_screen, province):
 def select_tactical_unit(map_screen, province, candidate_units=None):
     """Choose a tactical division from a tile or one of its rendered stacks."""
     owner = province.get("owner", "Unclaimed")
-    import data.constants as c
     if owner in c.UNPLAYABLE_NATIONS:
         map_screen.show_feedback("Cannot spawn in unplayable territory!")
         return

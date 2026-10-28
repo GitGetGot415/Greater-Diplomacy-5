@@ -5,6 +5,14 @@ target (Windows/macOS/Linux desktop, PyInstaller, py2app) reports its normal
 platform string. Import IS_WEB instead of re-checking sys.platform so the
 detection logic only ever lives in one place.
 """
+
+# Browser helpers import platform after the web runtime supplies platform.window.
+
+
+from pathlib import Path
+import json
+import shutil
+
 import asyncio
 import os
 import sys
@@ -21,7 +29,6 @@ def downloads_dir():
     import. On web there is no real home directory to resolve, so callers
     write into the virtual FS and hand the result to download_file().
     """
-    from pathlib import Path
     return str(Path.home() / "Downloads")
 
 
@@ -124,8 +131,6 @@ def pick_upload_file(on_result, extensions=None, multiple=False):
         return
 
     global _upload_js_defined
-    import json
-    import shutil
     import platform  # stdlib `platform`, patched by pygbag with `.window` on web
 
     if not _upload_js_defined:
@@ -304,8 +309,7 @@ def _persisted_roots():
     # Lazy import: data.constants imports IS_WEB from this module, so this
     # module can't import data.constants back at top level.
     import data.constants as c
-    # Also lazy: ui.dialogs.character_select_screen isn't otherwise on this module's
-    # import graph, and doesn't need to be at module scope just for this path.
+    # The character picker imports this platform module. Keep its storage path lookup local to avoid a startup cycle.
     from ui.dialogs.character_select_screen import CHARACTERS_DIR, CUSTOM_SUBDIR
     custom_characters_dir = os.path.join(CHARACTERS_DIR, CUSTOM_SUBDIR)
     return (c.SAVES_DIR, c.TOURNAMENT_SAVES_DIR, c.MODS_DIR, custom_characters_dir)

@@ -1,3 +1,9 @@
+
+# Keep presentation imports local so tournament file operations do not initialize UI support.
+
+import concurrent.futures
+import shutil
+
 from data.state_access import world_for, session_for
 import os
 import json
@@ -9,12 +15,19 @@ import copy
 import gzip
 import zlib
 import math
+import pygame
 from cryptography.fernet import Fernet, InvalidToken
 import data.constants as c
 from data import migrations, queries
 from data.map import history_io
 from data.map.map_cache import remove_optional_layer_files
 from data.platform import sync_persisted_dir
+
+from map_logic.actions.player_actions import collect_map_commands, PlayerActions
+from map_logic.diplomacy import faction_actions
+from map_logic.diplomacy.puppet_actions import canonical_puppet_release_queue
+from map_logic.actions import production_actions
+
 
 TOURNAMENT_GZIP_LEVEL = 6
 TOURNAMENT_UNIT_STATS = ("health", "max_health", "morale", "speed", "attack", "defense", "level")
@@ -41,8 +54,6 @@ def run_with_progress(jobs, worker, caption, on_result):
     identical copy of this loop, down to the pygame.event.pump() that keeps the
     window responsive while the pool works.
     """
-    import concurrent.futures
-    import pygame
     from ui.panels import turn_progress as loading_screen
 
     surface = pygame.display.get_surface()
@@ -286,7 +297,6 @@ def export_tournament(map_ref, file_path, master_key, keys_dict):
     if is_reserved_tournament_key(master_key):
         raise ValueError("'Spectator' is reserved for tournament spectator access and cannot be a Master Key.")
 
-    import shutil
     output_dir = os.path.dirname(file_path)
     os.makedirs(output_dir, exist_ok=True)
     
@@ -323,7 +333,6 @@ def export_tournament(map_ref, file_path, master_key, keys_dict):
         save_dict["_raw_map_data"] = queries.build_map_geometry_save(
             world_state.raw_json_data, save_dict["provinces"])
         
-    import pygame
     temp_img_dir = os.path.join(c.TOURNAMENT_SAVES_DIR, "temp_img_export")
     os.makedirs(temp_img_dir, exist_ok=True)
     images = {}
@@ -614,7 +623,6 @@ def export_move_file(map_ref, file_path, player_key):
     if siphon_updates:
         player_data["puppet_siphon_updates"] = siphon_updates
 
-    from map_logic.actions.player_actions import collect_map_commands
     player_data["player_intents"] = collect_map_commands(map_ref, cid)
     for command in player_data["player_intents"]:
         if command["type"] == "army_roster":
@@ -712,7 +720,6 @@ def _apply_faction_renames(map_ref, country_id, player_data, nation_update):
     a later move from another member cannot undo an already accepted rename.
     """
     world_state = world_for(map_ref)
-    from map_logic.diplomacy import faction_actions
 
     has_commands = "faction_renames" in player_data
     commands = player_data.get("faction_renames", ())
@@ -1117,7 +1124,6 @@ def load_move_files(map_ref, move_file_paths, keys_dict, *, accept_stat_mismatch
             if cid in processed_move_cids:
                 reject(file_path, cid, "This country already has a loaded move in this import.")
                 continue
-            from map_logic.actions.player_actions import PlayerActions
             try:
                 commands = migrations.tournament_player_intents(player_data, world_state.map_data)
                 service = PlayerActions(map_ref)
@@ -1158,7 +1164,6 @@ def load_move_files(map_ref, move_file_paths, keys_dict, *, accept_stat_mismatch
             queries.validate_air_drop_recovery_armies(
                 cid, nd.get("armies", world_state.nation_data[cid].get("armies", [])),
                 world_state.nation_data, world_state.map_data)
-            from map_logic.diplomacy.puppet_actions import canonical_puppet_release_queue
             existing_releases = world_state.nation_data[cid].get("release_puppet_queue", [])
             releases = player_data.get("release_subjects", existing_releases)
             canonical_releases = canonical_puppet_release_queue(
@@ -1202,7 +1207,6 @@ def load_move_files(map_ref, move_file_paths, keys_dict, *, accept_stat_mismatch
         summary["puppet_siphon_updates"] += _apply_puppet_siphon_updates(
             map_ref, cid, player_data)
             
-        from map_logic.actions.player_actions import PlayerActions
         PlayerActions(map_ref).apply_legacy_unit_projection(
             cid, provs, live_aircraft, aircraft_orders,
             replace_units=player_data.get("unit_snapshot") is True or bool(provs))
@@ -1230,7 +1234,6 @@ def load_move_files(map_ref, move_file_paths, keys_dict, *, accept_stat_mismatch
 
 def _validate_production_projection(map_ref, country_id, provinces):
     """Use shared production rules while retaining numeric host-review overrides."""
-    from map_logic.actions import production_actions
     world = world_for(map_ref)
     by_key = {province.get("json_key"): province for province in world.map_data.values()}
     commands, warnings = [], []

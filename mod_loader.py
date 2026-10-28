@@ -48,6 +48,10 @@ Deliberately dependency-free (stdlib only) so it can run as the very first
 thing main.py does, before anything else -- including data.constants -- has
 loaded.
 """
+
+import asyncio
+import traceback
+
 import importlib.abc
 import importlib.util
 import json
@@ -680,7 +684,6 @@ async def restore_mods_dir_from_indexeddb():
     """
     if sys.platform != "emscripten":
         return
-    import asyncio
     import platform  # stdlib `platform`, patched by pygbag with `.window` on web
 
     # print() apparently doesn't reach the browser devtools console under
@@ -855,7 +858,6 @@ def install():
         if sys.platform == "emscripten":
             try:
                 import platform
-                import traceback
                 platform.window.console.log(f"[gd5 mods] install() raised: {e}")
                 platform.window.console.log(traceback.format_exc())
             except Exception:

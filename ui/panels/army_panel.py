@@ -9,6 +9,9 @@ from ui.rendering.font_manager import fonts
 from ui.panels import map_top_right_layout
 from ui_elements import process_text_input
 
+from screens.game.defense_area_screen import DefenseAreaScreen
+from ui.navigation import screen_runner
+
 
 TRAY_BG = (15, 22, 42, 225)
 CARD_BG = (38, 67, 112)
@@ -199,9 +202,7 @@ def _open_target_area(map_screen, army):
     if not map_screen.can_select_map_units():
         map_screen.show_feedback("Turn submitted or unavailable; unsubmit to edit target areas.")
         return
-    from screens.game.defense_area_screen import DefenseAreaScreen
-    from ui.navigation.screen_runner import _run_pygame_sub_screen
-    _run_pygame_sub_screen(map_screen, DefenseAreaScreen(map_screen, army["id"]))
+    screen_runner._run_pygame_sub_screen(map_screen, DefenseAreaScreen(map_screen, army["id"]))
 
 
 def _blank_custom_symbol():

@@ -1,9 +1,18 @@
+import secrets
+import re
+
 import os
 import pygame
 from gameState import GameState
 from ui_elements import Button, make_back_button
 import data.constants as c
 from data import queries
+
+from data.multiplayer.tournament import files as multiplayer_io
+from screens.setup.scenario_settings import Scenario_Settings
+from screens.game.map import Map
+from ui import dialogs as confirm_dialog
+
 
 class Multiplayer_New(GameState):
     back_state = "MULTIPLAYER_HOST"
@@ -40,16 +49,10 @@ class Multiplayer_New(GameState):
     def scenario_settings(self):
         # Point Scenario_Settings back here, the same way New_Game claims it,
         # so its Back button returns to the host list instead of the new-game menu.
-        from screens.setup.scenario_settings import Scenario_Settings
         Scenario_Settings.back_state = "MULTIPLAYER_NEW"
         self.go_to("SCENARIO_SETTINGS")
 
     def start_host_setup(self, scenario_name, directory=c.SCENARIOS_CUSTOM_DIR):
-        import secrets
-        from data.multiplayer.tournament import files as multiplayer_io
-        from screens.game.map import Map
-        from ui import dialogs as confirm_dialog
-        import re
 
         def ask_tour_name():
             def on_name(tour_name):

@@ -29,6 +29,8 @@ from ui.bars import ui_bars
 from ui.navigation.screen_runner import _run_pygame_sub_screen
 from ui_elements import make_back_button
 
+from ui.rendering import overlay_renderer
+
 
 class View_Peace_Treaty_Screen(MapOverlayScreen):
     overlay_alpha = 0
@@ -155,7 +157,6 @@ def draw_projected_deal_map(surface, map_screen, transfers, parties=(), baseline
         _draw_swapped_in(surface, map_screen, preview)
         return
 
-    from ui.rendering import overlay_renderer
 
     for prov_id, new_owner in transfers.items():
         prov = map_screen.id_to_province.get(int(prov_id))

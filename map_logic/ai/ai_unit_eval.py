@@ -42,6 +42,10 @@ import data.constants as c
 from data import queries
 from data.state_access import world_for
 
+from data.runtime_rules import ActiveLibrary
+from map_logic.system32 import combat_rules
+
+
 RESOURCES = ("manpower", "materials", "fuel")
 
 ROLE_ASSAULT = "ASSAULT"    # holds a front slot and does the killing
@@ -251,7 +255,6 @@ def buildable_units(research, unit_library, *, research_index=None):
     # also changes when library names or research rules are edited in place.
     index = (queries.get_unit_research_index(unit_library)
              if research_index is None else research_index)
-    from data.runtime_rules import ActiveLibrary
     if isinstance(unit_library, ActiveLibrary):
         owner = unit_library.runtime_rules.indexes.setdefault("ai_buildable", {})
         if owner.get("index") is not index:
@@ -553,7 +556,6 @@ def threat_profile(world, nation, unit_library, candidates):
     collapsing to zero and making every unit look immortal and every attack
     look devastating.
     """
-    from map_logic.system32 import combat_rules
 
     volleys, defenses, stacks = [], [], []
 

@@ -26,6 +26,10 @@ from collections import namedtuple
 
 from data.platform import IS_WEB
 
+from data import queries
+from map_logic.ai import ai_settings, ai_handler
+
+
 #: What a batch actually managed. `abandoned` is how many jobs never got an
 #: answer because the budget ran out or Force Skip was pressed -- which used to
 #: be invisible, so a turn that served one nation of twelve looked exactly like
@@ -62,7 +66,6 @@ def begin_turn(map_screen):
     bought 135 seconds of model time, and the first phase in the turn -- summits
     -- could take a full third of it and still be told it was inside budget.
     """
-    from data import queries
 
     budget = queries.get_ai_turn_budget_seconds()
     map_screen.llm_deadline = time.monotonic() + budget if budget else None
@@ -80,7 +83,6 @@ def turn_deadline(map_screen=None, share=1.0):
     and any caller outside a turn reach it -- it falls back to the whole budget
     measured from now, which is what it used to do for everyone.
     """
-    from data import queries
 
     end = getattr(map_screen, "llm_deadline", None)
     if end is None:
@@ -124,8 +126,6 @@ def report_unserved(map_screen, outcome, what):
         note = (f"{what}: skipped {outcome.abandoned} of {outcome.total}; "
                 f"they used their staff's plan.")
     else:
-        from data import queries
-        from map_logic.ai import ai_settings
 
         budget = queries.get_ai_turn_budget_seconds()
         levers = "ai_turn_budget_seconds"
@@ -154,7 +154,6 @@ def affordable(deadline, calls):
     """
     if deadline is None:
         return True
-    from map_logic.ai import ai_handler
 
     typical = ai_handler.typical_call_seconds()
     if not typical:
@@ -306,7 +305,6 @@ def _hang_up():
     happen after both are loaded.
     """
     try:
-        from map_logic.ai import ai_handler
         ai_handler.abort_active_requests()
     except Exception:
         # Never let tidying up be the thing that ends a turn.

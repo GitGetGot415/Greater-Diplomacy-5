@@ -3,6 +3,9 @@ from ui_elements import Button, make_back_button
 import data.constants as c
 from data import queries
 
+from ui import dialogs as confirm_dialog
+
+
 class Multiplayer_Join(GameState):
     back_state = "MULTIPLAYER_HUB"
 
@@ -19,7 +22,6 @@ class Multiplayer_Join(GameState):
         ]
 
     def load_tour_file(self):
-        from ui import dialogs as confirm_dialog
 
         def after_file(file_path):
             if not file_path:

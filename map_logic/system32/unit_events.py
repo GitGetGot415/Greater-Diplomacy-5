@@ -1,4 +1,7 @@
 """Record the latest resolved turn without changing game rules."""
+
+from types import SimpleNamespace
+
 from data.state_access import world_for, session_for
 from contextlib import contextmanager
 from contextvars import ContextVar
@@ -184,7 +187,6 @@ class _TurnRecorder:
         tile = self.tile(unit)
         if unit.get("owner") != viewer:
             if viewer not in self.visibility:
-                from types import SimpleNamespace
                 tactical = self.map_screen.tactical_mode and viewer == self.map_screen.player_country
                 view = SimpleNamespace(player_country=viewer, map_data=self.map_screen.map_data,
                     nation_data=self.map_screen.nation_data, id_to_province=self.map_screen.id_to_province,

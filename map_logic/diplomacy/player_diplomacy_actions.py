@@ -1,3 +1,6 @@
+
+# Screen helpers import these action callbacks. Load screens inside callbacks to avoid cycles and backend screen dependencies.
+
 from data.state_access import world_for, session_for
 from data import queries
 from map_logic.diplomacy import diplomacy_logic, peace_scope, ratification

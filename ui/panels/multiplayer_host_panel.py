@@ -4,10 +4,11 @@ from data import queries
 import data.constants as c
 from ui.dialogs.checkbox_list_screen import CheckboxItem
 
+from ui import dialogs as confirm_dialog
+
 
 def show_move_rejection(map_ref, rejection, on_result=None):
     """Show the file, country, and full rejection reason in a scrollable dialog."""
-    from ui import dialogs as confirm_dialog
 
     file_name = os.path.basename(rejection["file_path"])
     cid = rejection["country_id"]
@@ -20,7 +21,6 @@ def show_move_rejection(map_ref, rejection, on_result=None):
 
 def load_multiplayer_moves(map_ref, on_result):
     """Multi-select move import. Answers on_result(True) when files were actually loaded."""
-    from ui import dialogs as confirm_dialog
 
     def can_import():
         return (getattr(map_ref, "multiplayer_host_mode", False)

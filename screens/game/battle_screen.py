@@ -42,6 +42,10 @@ from ui_elements import (draw_wrapped_icon_row, get_combat_stat_entries,
                           get_bombardment_stat_entries)
 from ui.widgets.text_utils import fit_text
 
+from ui.rendering import overlay_renderer
+from ui.navigation import screen_runner
+
+
 #: Panes, left to right. Lane list, then the selected lane's three columns.
 PANE_LANES = "lanes"
 PANE_FRONT = "front"
@@ -565,9 +569,7 @@ class Battle_Screen(ModalScreen):
 
     def _estimate_lane_outcome(self, lane):
         """Project this lane independently, including its waiting reserves."""
-        # Import locally: overlay_renderer imports the combat processor and is
-        # also reached from the map event/render path that opens this screen.
-        from ui.rendering import overlay_renderer
+        # Use the same combat projection as the map renderer.
 
         sides = [
             list(lane.a.front) + list(lane.a.reserve),
@@ -804,9 +806,8 @@ def open_battle_screen(map_screen, origin_screen=None):
             open_panel()
             return
 
-    from ui.navigation.screen_runner import _run_pygame_sub_screen
 
     province = map_screen.selected_province
     if not province:
         return
-    _run_pygame_sub_screen(map_screen, Battle_Screen(map_screen, province, origin_screen=origin_screen))
+    screen_runner._run_pygame_sub_screen(map_screen, Battle_Screen(map_screen, province, origin_screen=origin_screen))

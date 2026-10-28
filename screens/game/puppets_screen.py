@@ -9,6 +9,10 @@ from ui.bars import ui_bars
 from ui.navigation.screen_runner import _run_pygame_sub_screen
 from ui.widgets.text_utils import fit_text
 
+from data.io import country_io
+from map_logic.diplomacy.player_diplomacy_actions import can_edit_diplomacy
+from map_logic.diplomacy.puppet_actions import canonical_puppet_release_queue
+
 
 class Puppets_Screen(MapOverlayScreen):
     # The panel covers most of the screen, so the wheel always drives the list.
@@ -27,7 +31,6 @@ class Puppets_Screen(MapOverlayScreen):
     def refresh_ui(self):
         self.elements = [make_back_button(self.exit_screen, style="map")]
         self.elements.append(Button(c.SCREEN_WIDTH - 300, c.TOP_BAR_UI_CENTER_Y, "large", "blue", "Release Nation", self.open_create_puppet))
-
 
 
         puppets = self.map_screen.nation_data.get(self.player, {}).get("puppets", [])
@@ -240,7 +243,6 @@ class Create_Puppet_Screen(MapOverlayScreen):
         if not queries.can_release_nations_for(self.map_screen, self.releasing_country):
             self.map_screen.show_feedback("You cannot release nations for this country.")
             return False
-        from map_logic.diplomacy.player_diplomacy_actions import can_edit_diplomacy
         return can_edit_diplomacy(self.map_screen)
 
     def set_release_type(self, release_type):
@@ -297,7 +299,6 @@ class Create_Puppet_Screen(MapOverlayScreen):
         for index, subject in enumerate(self.valid_subjects):
             name = queries.get_country_display_name(subject, self.map_screen.nation_data)
             if subject not in self.map_screen.nation_data:
-                from data.io import country_io
                 name = country_io.get_country_stats(subject).get("name", name)
             entry = queued.get(subject)
             available = queries.get_puppet_release_provinces(
@@ -342,7 +343,6 @@ class Create_Puppet_Screen(MapOverlayScreen):
     def queue_creation(self, subject):
         if not self.can_edit_realtime():
             return
-        from map_logic.diplomacy.puppet_actions import canonical_puppet_release_queue
         country = self.map_screen.nation_data[self.releasing_country]
         queue = country.get("release_puppet_queue", [])
         requested = queue + [{"core_nation": subject, "keep_cores": self.keep_cores,

@@ -9,6 +9,9 @@ run_file_browser() is the blocking entry point. It works with no pygame display
 already up (the standalone map_tools scripts) by opening its own window, the
 same trick ui/dialogs/ uses.
 """
+
+# Keep ctypes imports inside the Windows-only drive helpers.
+
 import os
 import string
 import pygame
@@ -18,6 +21,9 @@ from ui.navigation.modal_screen import ModalScreen
 from ui.widgets import text_utils
 from ui_elements import Button, TextField
 from ui.rendering.font_manager import fonts
+
+from ui.navigation import screen_runner
+
 
 IS_WINDOWS = os.name == "nt"
 
@@ -515,10 +521,9 @@ def run_file_browser(title, start_dir=None, mode="open_file", extensions=None,
     scripts and Tk editor windows (a window is created for the duration and
     on_result fires synchronously before this returns -- see run_screen).
     """
-    from ui.navigation.screen_runner import run_screen
 
     result = {}
-    run_screen(lambda: FileBrowserScreen(game_state, title, start_dir,
+    screen_runner.run_screen(lambda: FileBrowserScreen(game_state, title, start_dir,
                                          lambda picked: result.setdefault("picked", picked),
                                          mode=mode, extensions=extensions,
                                          confirm_label=confirm_label),

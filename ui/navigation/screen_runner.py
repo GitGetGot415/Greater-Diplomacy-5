@@ -12,12 +12,17 @@ display yet at all, i.e. a standalone dev tool with no main loop running -- fall
 back to a short-lived blocking loop of its own and calls on_done() right before
 returning. See ui/navigation/modal_stack.py's docstring for why the non-blocking path exists.
 """
+
+import sys
+
 import pygame
 import data.constants as c
 from gameState import (dispatch_global_keys, synthesize_keybind_mouse_events,
                        keyboard_input_is_captured)
 from ui.navigation import modal_stack
 from ui.bars import ui_bars
+
+from ui.dialogs import _hide_tk_chain, _show_tk_chain
 
 
 class _ScreenModal:
@@ -60,7 +65,6 @@ def _run_screen_standalone(screen, on_done, tk_parent, surface):
     """No main loop is pumping frames here, so resolve with our own blocking loop."""
     hidden_tk = []
     if tk_parent is not None:
-        from ui.dialogs import _hide_tk_chain
         hidden_tk = _hide_tk_chain(tk_parent)
 
     screen.done = False
@@ -73,7 +77,6 @@ def _run_screen_standalone(screen, on_done, tk_parent, surface):
                 events, allow_keydown=not keyboard_input_is_captured(screen))
             for event in events:
                 if event.type == pygame.QUIT:
-                    import sys
                     pygame.quit()
                     sys.exit()
                 dispatch_global_keys(screen, event)
@@ -84,7 +87,6 @@ def _run_screen_standalone(screen, on_done, tk_parent, surface):
             clock.tick(c.TARGET_FPS)
     finally:
         if hidden_tk:
-            from ui.dialogs import _show_tk_chain
             _show_tk_chain(hidden_tk)
         pygame.display.quit()
 

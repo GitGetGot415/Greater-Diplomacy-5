@@ -10,6 +10,9 @@ from ui.rendering.font_manager import fonts
 import data.constants as c
 from beepbox_audio import source_seconds_from_timeline, timeline_seconds_from_source
 
+from ui import dialogs as confirm_dialog
+
+
 # ==========================================
 # LAYOUT
 # ==========================================
@@ -710,7 +713,6 @@ class Music_Player(ScrollPanes, GameState):
 
     def show_timeline_and_queue_help(self):
         """Explain pitch timeline options and random-song exclusions."""
-        from ui import dialogs as confirm_dialog
 
         confirm_dialog.show_info(
             "Music Player Help",

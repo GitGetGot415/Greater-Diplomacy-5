@@ -3,6 +3,11 @@ from collections import namedtuple
 import data.constants as c
 from data import queries
 
+from map_logic.diplomacy.puppet_actions import finalize_spectator_country_removal
+from ui import dialogs as confirm_dialog
+from map_logic.diplomacy import diplomacy_logic
+
+
 def force_war_menu(map_screen): 
     open_spectator_action_menu(map_screen, "WAR")
 
@@ -21,6 +26,7 @@ def _refresh_country_removal(map_screen):
     map_screen.clear_map_unit_selection()
     map_screen.refresh_map_layers(*map_screen.ALL_MAP_LAYERS)
     map_screen.update_country_centers()
+    # The map imports these spectator controls before its button helpers exist.
     from screens.game.map import update_button_states
     update_button_states(map_screen)
 
@@ -37,7 +43,6 @@ def spec_annex_country(map_screen):
         if (_selected_country_for_removal(map_screen) != source
                 or target not in queries.get_living_nations(map_screen.map_data)):
             return
-        from map_logic.diplomacy.puppet_actions import finalize_spectator_country_removal
         target_name = queries.get_country_display_name(target, map_screen.nation_data)
         if finalize_spectator_country_removal(map_screen, target, source):
             _refresh_country_removal(map_screen)
@@ -57,12 +62,10 @@ def spec_delete_country(map_screen):
     def confirmed(accepted):
         if not accepted or _selected_country_for_removal(map_screen) != country:
             return
-        from map_logic.diplomacy.puppet_actions import finalize_spectator_country_removal
         if finalize_spectator_country_removal(map_screen, country):
             _refresh_country_removal(map_screen)
             map_screen.show_feedback(f"Deleted {name}.")
 
-    from ui import dialogs as confirm_dialog
     confirm_dialog.ask_yes_no(
         "Delete Country", f"Delete {name}? Its territory will become unclaimed. "
         "All its cores and units will be removed. History will remain unchanged.",
@@ -78,7 +81,6 @@ def _spec_faction_action(map_screen, finalizer, verb, wants_map_data=False):
     """
     if not map_screen.selected_province: return
     source_nation = map_screen.selected_province.get("owner")
-    from map_logic.diplomacy import diplomacy_logic
     fn = getattr(diplomacy_logic, finalizer)
     if wants_map_data:
         fn(map_screen.map_data, map_screen.nation_data, source_nation)
@@ -172,7 +174,6 @@ def open_spectator_action_menu(map_screen, action_type):
                 map_screen.show_feedback(leadership_error)
                 return
         if action.apply:
-            from map_logic.diplomacy import diplomacy_logic
             action.apply(diplomacy_logic, map_screen, source_nation, target_nation)
             map_screen.show_feedback(action.feedback.format(
                 src=queries.get_country_display_name(source_nation, map_screen.nation_data),

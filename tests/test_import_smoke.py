@@ -1,16 +1,8 @@
-"""Imports every first-party module, so a refactor can't silently break one.
+"""Check runtime imports and initialization boundaries in fresh interpreters.
 
-The existing suite only exercises map_logic/diplomacy, and CI only runs
-compileall + a narrow flake8 selection -- neither of which executes an import.
-That leaves import cycles, missed renames and bad `from X import name` edits
-invisible until someone launches the game.
-
-screens.setup.player_setup and map_logic.system32.turn_manager both
-call into screens.game.map's render_buttons, which in turn imports
-player_setup at module level -- resolved with deferred (function-local)
-imports on the player_setup/turn_manager side rather than relying on import
-order, but this file still imports modules in a shuffled order as well as
-individually to guard against that pattern regressing.
+The map, player setup, and turn manager have reciprocal dependencies.
+Backend state and game rules must also load without creating a map screen.
+Fresh-process probes detect cycles hidden by an already populated module cache.
 """
 
 import importlib
@@ -91,11 +83,20 @@ class ImportSmokeTests(unittest.TestCase):
         differently once sys.modules is already populated by the test above."""
         names = first_party_modules()
         random.Random(0).shuffle(names)
-        # A handful of representative entry points; importing all of them in
-        # separate interpreters would dominate the suite's runtime.
+        # Include deeper boundaries affected by imports moving to module scope.
         probes = [n for n in names if n.count(".") <= 1][:12]
+        probes += [
+            "data.queries", "data.runtime_rules", "data.migrations",
+            "data.multiplayer.realtime.session",
+            "map_logic.actions.player_actions",
+            "map_logic.ai.ai_handler", "map_logic.ai.ai_evaluation",
+            "map_logic.diplomacy.action_definitions",
+            "map_logic.system32.turn_processor",
+            "screens.game.map", "screens.game.orders",
+            "screens.setup.player_setup", "ui.dialogs",
+        ]
         failures = []
-        for name in probes:
+        for name in dict.fromkeys(probes):
             proc = subprocess.run(
                 [sys.executable, "-c", f"import {name}"],
                 cwd=ROOT, capture_output=True, text=True,
@@ -105,6 +106,19 @@ class ImportSmokeTests(unittest.TestCase):
                 failures.append(f"{name}: {proc.stderr.strip().splitlines()[-1:]}")
         self.assertEqual(failures, [], "modules failed to import standalone:\n  "
                                        + "\n  ".join(failures))
+
+    def test_main_waits_for_mod_installation_before_loading_game_modules(self):
+        script = """
+import sys
+import main
+for name in ('data.constants', 'data.queries', 'ui_elements', 'screens.game.map'):
+    assert name not in sys.modules, name
+"""
+        result = subprocess.run(
+            [sys.executable, "-c", script], cwd=ROOT,
+            capture_output=True, text=True, timeout=30,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
 
 if __name__ == "__main__":

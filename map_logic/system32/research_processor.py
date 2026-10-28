@@ -1,3 +1,5 @@
+import copy
+
 from data.state_access import world_for, session_for
 import data.constants as c
 from data import queries
@@ -63,7 +65,6 @@ def process_national_research(map_screen):
 
 def apply_research_selection(country, result):
     """Apply a canonical queue projection after its adapter validates authority."""
-    import copy
     country["research_queue"] = copy.deepcopy(result["projects"])
     country["research_progress"] = copy.deepcopy(result["research_progress"])
 

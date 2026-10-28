@@ -143,6 +143,7 @@ async def _resolve_turn_and_refresh(map_screen):
             session_state.player_country = session_state.active_players[session_state.current_player_index]
             map_screen.show_player_ready_screen = True
 
+        # The map imports turn_manager. Load its UI helper after both modules initialize.
         from screens.game.map import render_buttons
         render_buttons(map_screen)
 

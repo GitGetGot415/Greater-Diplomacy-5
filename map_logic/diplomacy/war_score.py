@@ -34,6 +34,9 @@ from data.number_utils import clamp01
 from data import queries
 from map_logic.diplomacy import deal as deal_mod
 
+from map_logic.diplomacy import peace_scope
+
+
 # ==========================================
 # WHOSE LAND IS IT REALLY
 # ==========================================
@@ -172,7 +175,6 @@ def between(map_screen, nation, opponent, world=None):
     {"mine": 0..1, "theirs": 0..1, ...}.
     """
     world_state = world_for(map_screen)
-    from map_logic.diplomacy import peace_scope
 
     side_mine, side_theirs = peace_scope.war_sides(nation, opponent, world_state.nation_data)
     scores = leverage(map_screen, side_mine, side_theirs, world)

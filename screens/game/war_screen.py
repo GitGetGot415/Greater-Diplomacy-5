@@ -8,6 +8,8 @@ from ui_elements import Button
 from ui.navigation.screen_runner import _run_pygame_sub_screen
 from screens.game.diplomacy_screen_widgets import build_choice_button
 
+from screens.game.claims_screen import open_claim_picker
+
 
 class Declare_War_Screen(MapOverlayScreen):
     pans_camera = False
@@ -100,7 +102,6 @@ class Declare_War_Screen(MapOverlayScreen):
                        font_preset="normal"))
 
     def open_justification(self):
-        from screens.game.claims_screen import open_claim_picker
 
         open_claim_picker(self.map_screen, self.target_nation)
         self._reread_wargoals()

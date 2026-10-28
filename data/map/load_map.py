@@ -1,3 +1,5 @@
+import struct
+
 from data.state_access import world_for, session_for, replace_mapping
 import pygame
 import json
@@ -12,6 +14,13 @@ from data import migrations, queries
 from data.migrations import repair_faction_rosters
 from data.map import history_io
 from data.map.map_cache import OPTIONAL_LAYER_FILES
+
+from data.runtime_rules import rebuild
+from data.state_access import BackendState
+from map_logic.random_map import procedural_map_generator
+from map_logic.system32 import unit_events, movement_processor, economy_processor
+from map_logic.diplomacy import diplomacy_lifecycle, faction_records, faction_leadership
+from map_logic.territory import ownership as edit_province_ownership
 
 
 def read_save_files(load_path):
@@ -154,7 +163,6 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
 
     # --- PROCEDURAL INTERCEPT ---
     if load_path == "PROCEDURAL":
-        from map_logic.random_map import procedural_map_generator
         procedural_map_generator.generate_new_world(map_screen)
 
         # After generating the base geography, setup standard variables
@@ -168,7 +176,6 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
         replace_mapping(world_state, "nation_data", copy.deepcopy(country_io.load_all_country_data()))
         _load_default_images(map_screen, scrub_images=load_presentation)
         map_screen.nation_colors = country_io.nation_colors_from(world_state.nation_data)
-        from data.runtime_rules import rebuild
         rebuild(map_screen)
         return
 
@@ -212,7 +219,6 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
             map_screen.cores_map = map_screen.id_map.copy()
 
     else:
-        import struct
         with open(os.path.join(load_path, "id_map.png"), "rb") as stream:
             header = stream.read(24)
         if len(header) != 24 or not header.startswith(b"\x89PNG\r\n\x1a\n"):
@@ -254,7 +260,6 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
     )
 
     # Active libraries and indexes belong to this world.
-    from data.runtime_rules import rebuild
     runtime = rebuild(map_screen)
     unit_lib = runtime.libraries["unit_library"]
     building_lib = runtime.libraries["building_library"]
@@ -351,7 +356,6 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
         world_state.script_variables = []
         world_state.time_manager = TimeHandler(start_year=c.START_YEAR)
 
-    from map_logic.system32 import unit_events
     unit_events.restore(map_screen, {} if session_state.selection_mode or session_state.is_editor else save_meta or {})
 
     # Loading a scenario supplies its saved/default player metadata, which is
@@ -430,9 +434,7 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
 
     # --- REPAIR FACTION ROSTERS ---
     # Runs before the pre-war maps below, which are built off the rosters.
-    from map_logic.diplomacy import diplomacy_lifecycle
     diplomacy_lifecycle.normalize_diplomacy_channels(world_state.nation_data)
-    from map_logic.diplomacy import faction_records
     if save_meta and "factions" in save_meta:
         faction_records.restore(map_screen, save_meta["factions"])
     else:
@@ -448,8 +450,6 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
     # faction member falls. Do not revive that exhausted bloc on load: without
     # a member that owns land, its exiles have no path back into the world.
     if not session_state.is_editor:
-        from map_logic.territory import ownership as edit_province_ownership
-        from map_logic.system32 import movement_processor
         exhausted_factions = edit_province_ownership.retire_exhausted_factions(map_screen)
         if exhausted_factions:
             # Retiring a normal nation removes its diplomacy immediately; this
@@ -459,7 +459,6 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
     # A faction needs a chair before any screen, peace negotiation, or AI can
     # reason about it.  Turn processing heals this state too, but a loaded save
     # must already be internally consistent before its first turn.
-    from map_logic.diplomacy import faction_leadership
     faction_leadership.repair_leaderless_factions(map_screen)
 
     # Init Pre-War Maps for Factions starting at war
@@ -499,8 +498,6 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
 def load_backend_state(load_path, *, is_scenario=False, scenario_settings=None, history_turn=None,
                        skip_initial_income=False, feedback=None):
     """Load the same world rules without surfaces, widgets, or a map screen."""
-    from data.state_access import BackendState
-    from map_logic.system32 import economy_processor
     context = BackendState(feedback=feedback)
     context.load_path = load_path
     context.history_turn = history_turn

@@ -8,6 +8,9 @@ from gameState import FolderListState
 from ui_elements import Button, make_back_button
 import data.constants as c
 
+from data.map.load_map import newer_version_message
+
+
 class Load_Game(FolderListState):
     back_state = "MENU"
 
@@ -99,7 +102,6 @@ class Load_Game(FolderListState):
                                       items, on_select)
 
     def load_specific_save(self, folder_name, history_turn=None):
-        from data.map.load_map import newer_version_message
         message = newer_version_message(os.path.join(self.managed_dir, folder_name))
         if message:
             confirm_dialog.show_info("Update Required", message)

@@ -6,6 +6,12 @@ from data import queries
 from data.platform import sync_persisted_dir
 from ui.bars import ui_bars
 
+from ui.information import feedback_text
+from map_logic.diplomacy import diplomacy_logic
+from ui_elements import process_text_input, draw_text_box, make_back_button
+from ui.rendering.font_manager import fonts
+
+
 def resolve_keybind(state, action, default):
     """Resolves a rebindable action's pygame key code.
 
@@ -568,7 +574,6 @@ class GameState:
 
     def draw_feedback(self, surface):
         if self.map_screen:
-            from ui.information import feedback_text
             feedback_text.draw_feedback(self.map_screen, surface)
 
     def queue_diplomacy_action(self, target, action, params=""):
@@ -576,10 +581,8 @@ class GameState:
 
         Every "queue this for next turn" button on a map-layered screen does
         the same three things -- toggle, report the returned message, refresh --
-        and each one used to spell them out. The import is deferred because
-        map_logic.diplomacy imports back into the UI.
+        and each one used to spell them out. They now use the same diplomacy owner.
         """
-        from map_logic.diplomacy import diplomacy_logic
         msg = diplomacy_logic.toggle_diplomacy_action(
             self.map_screen.nation_data, self.map_screen.player_country,
             target, action, params)
@@ -665,7 +668,6 @@ class FolderListState(GameState):
     def handle_name_prompt_event(self, event):
         """Feeds an event to whichever prompt is open. True means it was consumed."""
         if self.renaming_item:
-            from ui_elements import process_text_input
             is_valid_char = lambda ch: ch.isalnum() or ch in " _-"
             self.new_name_text, status = process_text_input(event, self.new_name_text,
                                                            validation_func=is_valid_char)
@@ -695,8 +697,6 @@ class FolderListState(GameState):
 
     def draw_rename_box(self, surface, x, y):
         """Draws the inline name-entry box in place of the row being renamed."""
-        from ui.rendering.font_manager import fonts
-        from ui_elements import draw_text_box
         input_rect = pygame.Rect(x, y, *self.rename_box_size)
         # Only drawn in place of the row being renamed, so always focused.
         draw_text_box(surface, input_rect, self.new_name_text, active=True,
@@ -707,7 +707,6 @@ class FolderListState(GameState):
 
     def draw_delete_confirm(self, surface, center=None):
         """Dims the screen and asks for Enter/Escape on the pending deletion."""
-        from ui.rendering.font_manager import fonts
         ui_bars.draw_fullscreen_overlay(surface, 180)
 
         pop_rect = pygame.Rect((0, 0), self.delete_popup_size)
@@ -868,7 +867,6 @@ class NationListOverlayScreen(MapOverlayScreen):
         pass
 
     def refresh_ui(self):
-        from ui_elements import make_back_button
 
         panel = self.panel_rect
         self.elements = [make_back_button(self.exit_screen, style="map")] + self.list_header_elements()

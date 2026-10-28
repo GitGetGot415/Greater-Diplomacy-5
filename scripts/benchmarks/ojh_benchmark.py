@@ -48,6 +48,8 @@ import random
 import sys
 import time
 
+# Game imports stay inside entry points so SDL setup and mod installation happen first.
+
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 DEFAULT_SCENARIO = "scenarios/historical/1939"

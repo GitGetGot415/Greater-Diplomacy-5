@@ -16,8 +16,7 @@ opposite order. Predictably they drifted:
 There is one implementation now, phrased in terms of who proposed and who
 accepted rather than which pass is running, so the two can no longer disagree.
 
-data.queries and the agreement helpers stay deferred imports: this module is
-reached from diplomacy_processor, which they in turn reach back into.
+The processor calls this shared implementation for both player and AI acceptance.
 """
 
 from collections import namedtuple
@@ -25,6 +24,16 @@ from collections import namedtuple
 from map_logic.ai import ai_prompts
 from map_logic.diplomacy import deal as deal_mod
 from map_logic.diplomacy import war_calls
+
+from data import queries
+from map_logic.diplomacy import peace_scope, deal_effects, ratification, military_attaches, volunteers
+from map_logic.diplomacy.diplomacy_agreements import (
+    finalize_create_faction,
+    finalize_faction_join,
+    join_faction_wars,
+)
+from map_logic.diplomacy.diplomacy_events import log_global_event
+
 
 #: blocked  -- set when the agreement turned out not to be possible after all,
 #:             so the reply has to say so whatever either side wanted to write.
@@ -68,7 +77,6 @@ def _bloc_ceasefire(proposer, accepter, nation_data):
     sides were factions, which is how a member could quietly stop fighting while
     its bloc carried on.
     """
-    from map_logic.diplomacy import peace_scope
 
     sides = peace_scope.deal_sides(proposer, accepter, nation_data)
     return deal_mod.new(deal_mod.KIND_PEACE, sides[0], sides[1], [deal_mod.white_peace()])
@@ -89,7 +97,6 @@ def with_separate_peace_cost(agreement, proposer, accepter, nation_data):
     being handed. ai_diplomacy builds its offers through this for that reason,
     and this call stays as the backstop it always was.
     """
-    from map_logic.diplomacy import peace_scope
 
     role = peace_scope.negotiation_role(proposer, accepter, nation_data)
     if not peace_scope.costs_membership(role):
@@ -111,11 +118,6 @@ def apply_treaty_effect(host, action, proposer, accepter, params=None, escrow=No
     payment half of a trade or a reparations clause is delivered rather than
     charged twice. See deal_effects for why that no longer lives in the UI.
     """
-    from data import queries
-    from map_logic.diplomacy import deal_effects, peace_scope, ratification
-    from map_logic.diplomacy.diplomacy_agreements import (
-        finalize_create_faction, finalize_faction_join, join_faction_wars)
-    from map_logic.diplomacy.diplomacy_events import log_global_event
 
     nation_data = host.nation_data
     map_data = host.map_data
@@ -218,7 +220,6 @@ def apply_treaty_effect(host, action, proposer, accepter, params=None, escrow=No
         return _canned("ACCEPT_MILITARY_ACCESS")
 
     elif action == "SEND_MILITARY_ATTACHE":
-        from map_logic.diplomacy import military_attaches
 
         sent, reason = military_attaches.send(proposer, accepter, nation_data)
         if not sent:
@@ -228,7 +229,6 @@ def apply_treaty_effect(host, action, proposer, accepter, params=None, escrow=No
         return TreatyOutcome(None, "Military attaché accepted.")
 
     elif action == "SEND_VOLUNTEERS":
-        from map_logic.diplomacy import volunteers
         accepted, reason = volunteers.accept_offer(host, proposer, accepter)
         if not accepted:
             return _blocked(reason)

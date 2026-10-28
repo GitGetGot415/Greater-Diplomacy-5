@@ -6,6 +6,9 @@ from ui.navigation.modal_screen import ModalScreen
 from ui_elements import Button
 from ui.rendering.font_manager import fonts
 
+from ui_elements import process_text_input
+
+
 class ListSelectScreen(ModalScreen):
     """In-engine stand-in for a tkinter listbox picker.
 
@@ -105,7 +108,6 @@ class ListSelectScreen(ModalScreen):
             self.exit_screen()
 
     def _handle_search_key(self, event):
-        from ui_elements import process_text_input
         if event.key == pygame.K_RETURN:
             for item in self.visible_items:
                 if self._item_enabled(item):

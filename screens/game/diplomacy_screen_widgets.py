@@ -1,5 +1,8 @@
 from ui_elements import Button
 
+from map_logic.diplomacy import deal as deal_mod
+from screens.game.peace_screen import draw_projected_deal_map
+
 
 def build_choice_button(x, y, size, label, enabled, selected, callback, font_preset="button"):
     """One button in a mutually exclusive option row.
@@ -34,8 +37,6 @@ def draw_projected_peace_map(surface, map_screen, peace_type, proposer, target):
     so the preview and the outcome could differ. A deal states its own transfers
     now; see peace_screen.draw_projected_deal_map, which this forwards to.
     """
-    from map_logic.diplomacy import deal as deal_mod
-    from screens.game.peace_screen import draw_projected_deal_map
 
     agreement = deal_mod.coerce(peace_type, proposer, target, kind=deal_mod.KIND_PEACE)
     transfers = deal_mod.tile_transfers(agreement, map_screen.map_data, map_screen.nation_data)

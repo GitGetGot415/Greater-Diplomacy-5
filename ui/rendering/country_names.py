@@ -4,6 +4,8 @@ import data.constants as c
 from data import queries
 from ui.rendering.font_manager import fonts
 
+from ui.rendering import map_utils
+
 
 # A name's source surface, landmass geometry, zoom and tilt completely define
 # its transformed pixels.  Retain the modest set visible at nearby zoom levels
@@ -51,7 +53,6 @@ def _transformed_name_surfaces(map_screen, surf, shadow, blob):
         scaled_text = pygame.transform.rotate(scaled_text, angle)
         scaled_shadow = pygame.transform.rotate(scaled_shadow, angle)
 
-    from ui.rendering import map_utils
     scaled_text = map_utils.apply_tilt(
         scaled_text, map_screen.camera.tilt_factor, c.APPLY_TILT_TO_TEXT)
     scaled_shadow = map_utils.apply_tilt(
@@ -94,7 +95,6 @@ def draw_country_names(map_screen, surface):
         # 2 & 3. Draw the names at full opacity whenever the player has
         # enabled them.  Zoom changes their scale, never their visibility.
         if hasattr(map_screen, 'country_text_blobs'):
-            import math
             
             drawn_countries = set()
             drawn_factions = set() # Keep track of which factions have already been drawn!

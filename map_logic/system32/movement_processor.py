@@ -1,3 +1,6 @@
+
+# Faction and agreement cleanup calls movement helpers. Keep those mutation imports local to avoid cycles.
+
 from data.state_access import world_for, session_for
 from collections import deque
 
@@ -5,6 +8,9 @@ import data.constants as c
 from data import queries
 from map_logic.system32 import combat_processor
 from map_logic.territory import ownership as edit_province_ownership
+
+from map_logic.diplomacy.diplomacy_events import log_global_event
+
 
 def process_dead_nations(map_screen):
     """Removes defunct units and updates wars, preserving faction exiles."""
@@ -42,7 +48,6 @@ def process_dead_nations(map_screen):
         if master and master not in active_nations:
             from map_logic.diplomacy.diplomacy_agreements import break_puppet_link
             break_puppet_link(world_state.nation_data, master, nation)
-            from map_logic.diplomacy.diplomacy_events import log_global_event
             log_global_event(world_state.nation_data, f"{nation} has achieved independence following the collapse of {master}!")
 
 def process_disbands(map_screen):

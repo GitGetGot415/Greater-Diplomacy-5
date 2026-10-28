@@ -12,6 +12,9 @@ from data.platform import downloads_dir
 from data.io.country_io import DEFAULT_NATION_COLOR
 from ui.rendering import country_names
 
+from ui.bars import ui_bars
+
+
 # ==========================================
 # LAYOUT
 # ==========================================
@@ -566,7 +569,6 @@ class Edit_Country_Screen(GameState):
         used to be written out separately, box-relative here and centre-relative
         there, and only agreed because the box happened to be 200 tall.
         """
-        from ui.bars import ui_bars
 
         box_rect = pygame.Rect(0, 0, 450, 200)
         box_rect.center = (c.SCREEN_WIDTH // 2 + x_offset_confirmation, c.SCREEN_HEIGHT // 2)

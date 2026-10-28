@@ -102,6 +102,7 @@ def _load():
 
     if not IS_WEB:
         try:
+            # Translation can be unavailable without preventing the rest of the game from loading.
             import dragoman
         except Exception as exc:
             _load_error = f"open-dragoman is not installed ({exc})"

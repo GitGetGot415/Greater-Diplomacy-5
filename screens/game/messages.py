@@ -8,6 +8,11 @@ from ui.rendering.font_manager import fonts
 from map_logic.diplomacy import diplomacy_logic, diplomacy_messages, volunteers
 from data import queries
 
+from map_logic.diplomacy import player_diplomacy_actions, ratification
+from screens.game.peace_screen import open_view_peace_treaty_menu, open_view_trade_deal_menu
+from screens.game.deal_screen import open_trade_menu
+
+
 # ==========================================
 # LAYOUT
 # ==========================================
@@ -84,14 +89,12 @@ class Messages_Screen(GameState):
         return self.selected_recipient is not None
 
     def accept_proposal(self, target):
-        from map_logic.diplomacy import player_diplomacy_actions
         custom_msg = self.compose_text.strip()
         player_diplomacy_actions.handle_accept_req(self.map_screen, target, custom_msg)
         self.compose_text = ""
         self.refresh_ui()
 
     def reject_proposal(self, target):
-        from map_logic.diplomacy import player_diplomacy_actions
         custom_msg = self.compose_text.strip()
         player_diplomacy_actions.handle_reject_req(self.map_screen, target, custom_msg)
         self.compose_text = ""
@@ -99,13 +102,11 @@ class Messages_Screen(GameState):
 
     def view_peace_treaty(self, target):
         self.save_current_draft()
-        from screens.game.peace_screen import open_view_peace_treaty_menu
         open_view_peace_treaty_menu(self.map_screen, target)
         self.refresh_ui()
 
     def view_trade_deal(self, target):
         self.save_current_draft()
-        from screens.game.peace_screen import open_view_trade_deal_menu
         open_view_trade_deal_menu(self.map_screen, target)
         self.refresh_ui()
 
@@ -574,7 +575,6 @@ class Messages_Screen(GameState):
         that nation stays out of the way -- answering the treaty is the only
         thing that matters while one is on the table.
         """
-        from map_logic.diplomacy import ratification
 
         asked = ratification.pending_for(self.map_screen.nation_data,
                                          self.map_screen.player_country)
@@ -605,17 +605,14 @@ class Messages_Screen(GameState):
         return True
 
     def answer_ratification(self, accept):
-        from map_logic.diplomacy import player_diplomacy_actions
 
         player_diplomacy_actions.handle_ratify_treaty(self.map_screen, accept)
         self.refresh_ui()
 
     def clear_ratification(self):
         """Takes back an answer, while the leader is still waiting on it."""
-        from map_logic.diplomacy import player_diplomacy_actions
         if not player_diplomacy_actions.can_edit_diplomacy(self.map_screen):
             return
-        from map_logic.diplomacy import ratification
 
         ratification.pending_for(self.map_screen.nation_data,
                                  self.map_screen.player_country).pop("verdict", None)
@@ -623,7 +620,6 @@ class Messages_Screen(GameState):
 
     def open_trade(self):
         self.save_current_draft()
-        from screens.game.deal_screen import open_trade_menu
         open_trade_menu(self.map_screen, self.selected_recipient)
         self.refresh_ui()
 

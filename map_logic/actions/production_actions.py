@@ -1,5 +1,8 @@
 """Validate production and own paid queue entries and cancellation effects."""
 
+import copy
+
+
 from dataclasses import dataclass
 
 import data.constants as c
@@ -204,7 +207,6 @@ def settle_draft_budget(country, commands):
 
 def apply_queue_change(context, country_id, command, *, payment_settled=False):
     """Apply a validated paid projection, preserving existing orders and progress."""
-    import copy
     world = world_for(context)
     province = queries.province_for_order(context, command["province_id"])
     if province.get("owner") != country_id:
@@ -220,7 +222,6 @@ def apply_queue_change(context, country_id, command, *, payment_settled=False):
 
 def reconstruct_queue(context, country_id, province, queue, items, *, policy=PLAYER_POLICY):
     """Match paid orders once and rebuild only new intent from active libraries."""
-    import copy
     if queue not in ("building_queue", "unit_queue") or not isinstance(items, list):
         raise ValueError("Invalid province queue.")
     if any(not isinstance(item, dict) for item in items):

@@ -1,13 +1,19 @@
+
+# Faction actions use territory retirement. Import faction mutations locally to avoid that reciprocal dependency.
+
 from data.state_access import world_for, session_for
 import data.constants as c
 from data.io import country_io
 from ui.rendering import map_utils, refresh_map
 
+from data import queries
+from map_logic.diplomacy import faction_leadership
+
+
 def apply_editor_territory_brush(map_screen, province, remove=False):
     """Apply Brush or Paint to territory or cores. Return changed map layers."""
     world_state = world_for(map_screen)
     session_state = session_for(map_screen)
-    from data import queries
 
     mode = map_screen.editor_mode
     if (not session_state.is_editor or mode not in ("NATION", "CORE")
@@ -175,7 +181,6 @@ def retire_landless_nation(map_screen, nation, *, force=False):
         # Nobody is still allied with, at war with, or in a bloc with a nation
         # that no longer holds any ground.
         from map_logic.diplomacy.faction_actions import leave_faction
-        from map_logic.diplomacy import faction_leadership
         fac = data.get("faction", "")
         was_leader = bool(data.get("is_faction_leader", False))
         if fac:

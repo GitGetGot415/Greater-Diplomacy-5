@@ -1,3 +1,11 @@
+
+# UI, AI, and rule modules import queries. Load those callers inside helpers to avoid cycles and screen initialization.
+# NumPy stays local to pixel-geometry helpers, which backend state can omit.
+
+from types import SimpleNamespace
+import time
+from pathlib import Path
+
 from data.state_access import world_for, session_for
 import collections
 import contextlib
@@ -26,6 +34,15 @@ from data import migrations
 
 # Library names convert when the data enters the cache. See data.migrations.
 from data.migrations import normalize_air_category, normalize_cached_json_names
+
+from data.runtime_rules import rebuild, ActiveLibrary, for_world
+from data.io import settings_schema
+from data.map import history_io
+from data.map.map_cache import remove_optional_layer_files
+from data.platform import pick_upload_file
+from map_logic.diplomacy.faction_records import records_for, set_membership, set_leadership, find
+from map_logic.diplomacy import faction_records, diplomacy_lifecycle
+
 
 # Faction and alliance membership are pure derived data, but resolving either
 # means scanning every nation -- and AI pathfinding asks for them hundreds of
@@ -627,7 +644,6 @@ def _load_cached_json(cache_key, *, reload=False):
     return cache_obj["data"]
 
 
-
 def invalidate_unit_metadata():
     """Discard unit indexes and any loaded art-name resolutions after content edits."""
     global _UNIT_RESEARCH_INDEX_CACHE
@@ -641,7 +657,6 @@ def reload_game_library(cache_key, context=None):
     if cache_key not in ("unit_library", "building_library", "tech_tree"):
         raise ValueError(f"Not a game library: {cache_key}")
     if context is not None:
-        from data.runtime_rules import rebuild
         return rebuild(context, reload_defaults=True).libraries[cache_key]
     return _load_cached_json(cache_key, reload=True)
 
@@ -667,7 +682,7 @@ def save_global_settings(controller):
     saved. It was missing from the old list, so saving any setting quietly reset
     the tournament folder to its default.
     """
-    from data.io import keybind_io, settings_schema
+    from data.io import keybind_io
 
     keybind_io.save_settings(controller.keybinds,
                              **settings_schema.from_controller(controller))
@@ -732,12 +747,10 @@ def get_keybind_changes_screen(action):
 
 def _game_library(name, context):
     # No-context callers edit or inspect default content, never an active world.
-    from data.runtime_rules import ActiveLibrary
     if isinstance(context, ActiveLibrary):
         return context.runtime_rules.libraries[name]
     if context is None or isinstance(context, dict) and world_for(context) is context:
         return _load_cached_json(name)
-    from data.runtime_rules import for_world
     return for_world(context).libraries[name]
 
 
@@ -1058,7 +1071,6 @@ def is_hostile_territory(moving_nation, target_owner, nation_data):
 
 def are_in_same_faction(nation_a, nation_b, nation_data):
     """Returns True if both nations share a faction string."""
-    from map_logic.diplomacy.faction_records import records_for
     if records_for(nation_data) is not None:
         index = world_for(nation_data).faction_membership
         return nation_a in index and index[nation_a] == index.get(nation_b)
@@ -1069,7 +1081,6 @@ def are_in_same_faction(nation_a, nation_b, nation_data):
 def get_faction_members(faction_name, nation_data):
     """Returns a list of all nations currently in the specified faction."""
     if not faction_name: return []
-    from map_logic.diplomacy import faction_records
     if faction_records.records_for(nation_data) is not None:
         record = faction_records.find(nation_data, faction_name)
         return list(record["members"]) if record else []
@@ -1122,7 +1133,6 @@ def get_faction_research_bonus(nation, tech_key, target_level, nation_data):
 def get_faction_leader(faction_name, nation_data):
     """Returns the leader of the specified faction."""
     if not faction_name: return None
-    from map_logic.diplomacy import faction_records
     if faction_records.records_for(nation_data) is not None:
         record = faction_records.find(nation_data, faction_name)
         return record["leader"] if record else None
@@ -1132,24 +1142,20 @@ def get_faction_leader(faction_name, nation_data):
     return None
 
 def set_country_faction(nation_data, country, faction):
-    from map_logic.diplomacy.faction_records import set_membership
     set_membership(nation_data, country, faction)
 
 
 def get_country_faction_id(context, country):
-    from map_logic.diplomacy.faction_records import records_for
     records_for(context)
     return world_for(context).faction_membership.get(country)
 
 
 def set_faction_leadership(nation_data, country, is_leader):
-    from map_logic.diplomacy.faction_records import set_leadership
     set_leadership(nation_data, country, is_leader)
 
 
 def is_faction_leader(nation, nation_data):
     """Returns True if the nation is currently a faction leader."""
-    from map_logic.diplomacy.faction_records import records_for
     records = records_for(nation_data)
     if records is not None:
         return any(record["leader"] == nation for record in records.values())
@@ -1223,7 +1229,6 @@ def save_faction_pre_war_map(faction_name, map_data, nation_data):
             pre_war_map[str(prov["id"])] = owner
 
     nation_data["FACTION_WAR_MAPS"][faction_name] = pre_war_map
-    from map_logic.diplomacy.faction_records import find
     record = find(nation_data, faction_name)
     if record is not None:
         record["pre_war_borders"] = pre_war_map
@@ -1252,7 +1257,6 @@ def remove_member_from_pre_war_map(member_name, faction_name, nation_data):
 def clear_faction_pre_war_map_if_peace(faction_name, nation_data):
     """Clears the pre-war map if the faction is no longer at war."""
     if not is_faction_at_war(faction_name, nation_data):
-        from map_logic.diplomacy.faction_records import find
         record = find(nation_data, faction_name)
         if record is not None:
             record["pre_war_borders"].clear()
@@ -3758,12 +3762,10 @@ def build_save_dict(map_screen, *, include_provinces=True, compact_nations=False
     they do not rely on the recipient having an identical country catalog.
     """
     world_state = world_for(map_screen)
-    from map_logic.diplomacy import faction_records
     if hasattr(world_state, "factions"):
         faction_records.records_for(world_state)
     session_state = session_for(map_screen)
     from map_logic.system32 import unit_events
-    from map_logic.diplomacy import diplomacy_lifecycle
     diplomacy_lifecycle.normalize_diplomatic_records(world_state.nation_data)
     scenario_settings = getattr(world_for(map_screen), 'scenario_settings', {}) or {}
     # Keep this setting explicit in every new save. Older base maps omit it,
@@ -3816,7 +3818,6 @@ def build_save_dict(map_screen, *, include_provinces=True, compact_nations=False
 def player_snapshot_projection(map_screen, snapshot, country_id):
     """Filter a network save before transmission, including raw map geometry."""
     world_state = world_for(map_screen)
-    from types import SimpleNamespace
     result = copy.deepcopy(snapshot)
     from map_logic.system32 import unit_events
     report = unit_events.normalize_log(result.get("unit_event_log"),
@@ -4837,7 +4838,6 @@ def unit_requirement_is_met(requirement, player_research, *, context=None):
 def is_unit_unlocked(unit_name, player_research, unit_library=None, *, context=None):
     """Returns True if player_research meets the requirement for this exact unit tier,
     independent of whether it's the group's currently-highest tier (see Custom production)."""
-    from data.runtime_rules import ActiveLibrary
     if context is None and isinstance(unit_library, ActiveLibrary):
         context = unit_library
     return unit_requirement_is_met(get_unit_requirements(unit_name, unit_library, context=context), player_research, context=context)
@@ -4861,7 +4861,6 @@ def get_unit_research_index(unit_library, *, context=None):
     This is transient derived state and never enters a save or snapshot.
     """
     global _UNIT_RESEARCH_INDEX_CACHE
-    from data.runtime_rules import ActiveLibrary
     if context is None and isinstance(unit_library, ActiveLibrary):
         context = unit_library
     schema = (
@@ -4871,7 +4870,6 @@ def get_unit_research_index(unit_library, *, context=None):
         tuple(sorted(c.UNIT_TECH_KEY_OVERRIDES.items())),
         tuple(sorted((base, tuple(techs)) for base, techs in c.OBSOLESCENCE_RULES.items())),
     )
-    from data.runtime_rules import for_world
     indexes = for_world(context).indexes if context is not None else None
     cached = indexes.get("unit_research") if indexes is not None else _UNIT_RESEARCH_INDEX_CACHE
     if cached is not None and cached[0] is unit_library and cached[1] == schema:
@@ -5178,7 +5176,6 @@ def air_transport_commands(map_screen, country_id):
 def apply_air_transport_commands(map_screen, country_id, commands):
     """Validate a complete transport draft before applying it to host state."""
     world_state = world_for(map_screen)
-    from types import SimpleNamespace
     if not isinstance(commands, list):
         raise ValueError("Invalid transport commands.")
     if not commands:
@@ -6295,8 +6292,6 @@ def refresh_map_directories(screen, dirs_to_check, success_message="Data refresh
                     temp_map_context, include_provinces=False, compact_nations=True)
 
                 # 5. Perform the manual write operations in-place
-                from data.map import history_io
-                from data.map.map_cache import remove_optional_layer_files
 
                 with open(os.path.join(scenario_path, "meta.json"), "w") as f:
                     f.write(history_io.dump_text(save_dict, indent=c.SAVE_INDENT))
@@ -6322,7 +6317,6 @@ def refresh_map_directories(screen, dirs_to_check, success_message="Data refresh
 
         screen.refresh_status = f"{success_message} Processed {maps_processed} maps."
         # Allow a short delay for the user to read the success message before closing the bar
-        import time
         time.sleep(1.5)
         screen.is_refreshing = False
 
@@ -6407,7 +6401,6 @@ def open_file_browser(game_state, title, start_dir=None, mode="open_file", exten
             confirm_dialog.show_error("Not Available", "Choosing a folder isn't supported in the browser build.", tk_parent=tk_parent)
             _on_result(None)
             return
-        from data.platform import pick_upload_file
         pick_upload_file(_on_result, extensions=extensions, multiple=(mode == "open_files"))
         return
 
@@ -6473,7 +6466,6 @@ def get_editor_paint_region(province, id_to_province, mode):
 
 def _get_current_map_state(map_screen):
     world_state = world_for(map_screen)
-    import copy
     state = {}
     for color_key, prov in world_state.map_data.items():
         state[color_key] = {
@@ -6487,7 +6479,6 @@ def _get_current_map_state(map_screen):
 
 def _apply_map_state(map_screen, state):
     world_state = world_for(map_screen)
-    import copy
     for color_key, saved_prov in state.items():
         prov = world_state.map_data.get(color_key)
         if prov:
@@ -6745,7 +6736,6 @@ def import_zip_to_dir(game_state, target_parent_dir, on_success=None):
     Shared by the save and scenario import buttons; both used to open their own
     transient Tk root and duplicate the "_imported" collision suffix logic.
     """
-    from pathlib import Path
     from ui import dialogs as confirm_dialog
 
     def _after_pick(file_path):

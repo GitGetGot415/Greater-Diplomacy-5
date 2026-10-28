@@ -8,6 +8,10 @@ from ui.rendering.font_manager import fonts
 from data import queries
 from map_logic.system32 import turn_manager
 
+from map_logic.territory import ownership as edit_province_ownership
+from map_logic.diplomacy.diplomacy_events import log_global_event
+
+
 # Longest core name shown on a selection button before it is ellipsised.
 CORE_NAME_MAX_CHARS = 15
 
@@ -140,7 +144,6 @@ class Declare_Independence_Screen(MapOverlayScreen):
                 break
                 
         if unit_prov:
-            from map_logic.territory import ownership as edit_province_ownership
             edit_province_ownership.conquer_province(self.map_screen, unit_prov, new_tag)
             edit_province_ownership.add_core(self.map_screen, unit_prov, new_tag)
             if old_tag not in c.UNPLAYABLE_NATIONS:
@@ -168,7 +171,6 @@ class Declare_Independence_Screen(MapOverlayScreen):
             idx = self.map_screen.active_players.index(old_tag)
             self.map_screen.active_players[idx] = new_tag
             
-        from map_logic.diplomacy.diplomacy_events import log_global_event
         log_global_event(self.map_screen.nation_data, f"{base_tag} has declared its independence from {old_tag}!")
         
         self.map_screen.nation_colors[new_tag] = tuple(self.new_country_color)

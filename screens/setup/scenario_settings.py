@@ -5,6 +5,11 @@ import data.constants as c
 from data import queries
 from ui import dialogs as confirm_dialog
 
+from ui.rendering.font_manager import fonts
+from screens.editors import turn_editor
+from screens.editors import unit_stats_editor
+
+
 # ==========================================
 # LAYOUT
 # ==========================================
@@ -331,17 +336,15 @@ class Scenario_Settings(GameState):
 
     def open_turn_editor(self):
         try:
-            from screens.editors.turn_editor import open_turn_editor
             # Refresh the badge from the shared settings after the modal closes;
             # unsaved edits stay inside the editor draft.
-            open_turn_editor(on_done=lambda screen: self.refresh_ui(), settings=self.settings,
+            turn_editor.open_turn_editor(on_done=lambda screen: self.refresh_ui(), settings=self.settings,
                              persist=not getattr(self, "_session_bound", False))
         except ImportError as e:
             print(f"Error importing turn editor: {e}")
 
     def open_unit_stats_editor(self):
-        from screens.editors.unit_stats_editor import open_unit_stats_editor
-        open_unit_stats_editor(on_done=lambda screen: self.refresh_ui(), settings=self.settings,
+        unit_stats_editor.open_unit_stats_editor(on_done=lambda screen: self.refresh_ui(), settings=self.settings,
                                persist=not getattr(self, "_session_bound", False))
 
     def cycle_days_per_turn(self):
@@ -374,7 +377,6 @@ class Scenario_Settings(GameState):
         super().update()
 
     def additional_draw(self, surface):
-        from ui.rendering.font_manager import fonts
 
         left_center_x = LEFT_INFO_X + (LEFT_BTN_X + c.SIZES["scenario_setting_button"][0] - LEFT_INFO_X) // 2
         header_font = fonts.get("heading2")

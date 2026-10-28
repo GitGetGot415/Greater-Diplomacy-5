@@ -13,6 +13,10 @@ from map_logic import politics
 import data.constants as c
 from data import queries
 
+from map_logic.diplomacy import faction_records
+from map_logic.system32 import unit_events, air_processor
+
+
 async def prepare_turn(map_screen):
     """Phase 1: Calculate diplomacy and generate AI movement paths.
 
@@ -140,7 +144,6 @@ def snapshot_history(map_screen):
         return value
 
     nation_snap = copy_history_value(world_state.nation_data)
-    from map_logic.diplomacy import faction_records
 
     snapshot = {
         "date_str": world_state.time_manager.get_date_string(),
@@ -162,7 +165,6 @@ def snapshot_history(map_screen):
     world_state.history[turn_idx] = snapshot
 
 async def resolve_turn_logic(map_screen):
-    from map_logic.system32 import unit_events
     with unit_events.record_turn(map_screen):
         await _resolve_turn_logic(map_screen)
 
@@ -176,7 +178,6 @@ async def _resolve_turn_logic(map_screen): # Renamed from resolve_turn
     world_state = world_for(map_screen)
     session_state = session_for(map_screen)
     print("\n--- [PHASE 2] TURN RESOLUTION START ---")
-    from map_logic.system32 import unit_events
     
     recovering_units = [unit for province in world_state.map_data.values()
                         for unit in queries.units_with_air_cargo(province.get("units", []))
@@ -212,7 +213,6 @@ async def _resolve_turn_logic(map_screen): # Renamed from resolve_turn
     await asyncio.sleep(0)
 
     # Pre-Movement Combat Mechanics
-    from map_logic.system32 import air_processor
     unit_events.run_step(map_screen, "Air missions", air_processor.process_air_orders)
     unit_events.run_step(map_screen, "Bombardment", combat_processor.process_bombardments)
     unit_events.run_step(map_screen, "Pinning", combat_processor.process_pinning)

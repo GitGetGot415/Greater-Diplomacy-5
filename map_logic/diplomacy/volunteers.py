@@ -8,6 +8,9 @@ import copy
 from data import queries
 from map_logic.system32 import movement_processor
 
+from map_logic.diplomacy import military_attaches
+
+
 ACTION = "SEND_VOLUNTEERS"
 RECALL_ACTION = "RECALL_VOLUNTEERS"
 SEND_HOME_ACTION = "SEND_HOME_VOLUNTEERS"
@@ -51,7 +54,6 @@ def ai_can_accept(donor, host, nation_data):
     legal, reason = is_eligible(donor, host, nation_data)
     if not legal:
         return False, reason
-    from map_logic.diplomacy import military_attaches
     if military_attaches.supports_an_enemy(donor, host, nation_data):
         return False, "You are supporting a country we are at war with."
     return True, ""
@@ -397,7 +399,6 @@ def schedule_conflict_send_homes_for_ai_hosts(nation_data, human_hosts=()):
     on the following turn. That preserves simultaneous diplomacy: two hostile
     hosts can both accept offers before either learns of the other mission.
     """
-    from map_logic.diplomacy import military_attaches
 
     human_hosts = set(human_hosts)
     missions_snapshot = {

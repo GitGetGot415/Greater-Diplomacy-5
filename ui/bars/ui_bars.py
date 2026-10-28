@@ -3,6 +3,9 @@ import os
 from contextlib import contextmanager
 import data.constants as c
 
+from ui.rendering.font_manager import fonts
+
+
 # Cache the images using a tuple (filename, scale, directory) as the key
 _ui_images_cache = {}
 
@@ -157,7 +160,6 @@ def draw_confirm_prompt(surface, box_rect, question, subtitle=None,
     `overlay_alpha` stays a parameter because the country picker deliberately
     dims less -- you are meant to keep seeing the map you are choosing from.
     """
-    from ui.rendering.font_manager import fonts
 
     draw_fullscreen_overlay(surface, overlay_alpha)
     draw_modal_box(surface, box_rect, bg_color=bg, border_color=border, border_width=border_width)
@@ -232,7 +234,6 @@ def release_surface(owns_display):
 
 def draw_centered_title(surface, text, y_pos, font_preset="heading1", color=(255, 255, 255), shadow=False):
     """Draws centered title text to standardize headers."""
-    from ui.rendering.font_manager import fonts
     title_font = fonts.get(font_preset)
     title_surf = title_font.render(text, True, color)
     x_pos = c.SCREEN_WIDTH // 2 - title_surf.get_width() // 2

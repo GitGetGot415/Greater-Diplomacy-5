@@ -69,6 +69,10 @@ from collections import namedtuple
 
 import data.constants as c
 
+from data import queries
+from data.runtime_rules import value
+
+
 #: One nation's contribution to one side of one duel. `slots` is its share of
 #: the side's allowance; `front` fire and are fired at; `reserve` are present and
 #: pinned but untouched until a front slot opens; `targets` are the opposing
@@ -112,7 +116,6 @@ def _hostile(nation_data):
     differently depending on the order the units happened to sit in the
     province -- which is not a rule, it is an accident.
     """
-    from data import queries
 
     def hostile(a, b):
         return (queries.are_at_war(a, b, nation_data)
@@ -128,7 +131,6 @@ def _columns(sides):
     units marching both ways down the same edge fields one column per direction,
     since those are two bodies of troops meeting two different enemies.
     """
-    from data import queries
 
     columns = []
     seen = {}
@@ -159,7 +161,6 @@ def _coalition_groups(columns, nation_data):
     it is a strict generalisation of the pairwise answer rather than a different
     rule for a special case.
     """
-    from data import queries
 
     hostile = _hostile(nation_data)
     parent = list(range(len(columns)))
@@ -522,7 +523,6 @@ def single_attacker_signature(unit):
     cosmetic text and movement orders do not affect that preview. The caller
     must scope cached verdicts to unchanged defenders, terrain and nation rules.
     """
-    from data import queries
     return (unit.get("owner"), unit.get("volunteer_host"),
             unit.get("attack", c.DEFAULT_UNIT_ATK), unit.get("defense", 0),
             unit.get("health"), unit.get("max_health") or c.DEFAULT_UNIT_HP,
@@ -565,7 +565,6 @@ def build_battle(sides, nation_data, width=None, full_rank_for=None, terrain=Non
     width limits. Each coalition's engaged aircraft share one attack efficiency.
     Garrison units retain terrain width. Profiles hold temporary attack values.
     """
-    from data import queries
     hostile = _hostile(nation_data)
     if air_mission_sides is None:
         air_mission_sides = set(range(len(sides))) if air_combat else set()
@@ -731,7 +730,6 @@ def health_damage_multiplier(unit, nation_data=None):
     frac = max(0.0, min(1.0, unit.get("health", 0) / max_hp))
     floor = c.DAMAGE_AT_ZERO_HEALTH
     if nation_data is not None and hasattr(nation_data, "world"):
-        from data.runtime_rules import value
         floor = value(nation_data.world, "damage_at_zero_health", c.DEFAULT_DAMAGE_AT_ZERO_HEALTH)
     return floor + (1.0 - floor) * frac
 
@@ -745,7 +743,6 @@ def health_defense_multiplier(unit, nation_data=None):
     frac = max(0.0, min(1.0, unit.get("health", 0) / max_hp))
     floor = c.DEFENSE_AT_ZERO_HEALTH
     if nation_data is not None and hasattr(nation_data, "world"):
-        from data.runtime_rules import value
         floor = value(nation_data.world, "defense_at_zero_health", c.DEFAULT_DEFENSE_AT_ZERO_HEALTH)
     return floor + (1.0 - floor) * frac
 
@@ -759,7 +756,6 @@ def effective_damage_multiplier(unit, nation_data=None):
     Omit it when comparing raw unit types for production or research.
     Health scaling still applies without country data.
     """
-    from data import queries
 
     if queries.unit_is_air_drop_recovering(unit):
         return 0.0
@@ -816,7 +812,6 @@ def damage_shots(units, targets, shares=None, nation_data=None, attack_field="at
     stack still divides its volley across the original front, even when one
     target is immune; that damage is not redirected to its neighbors.
     """
-    from data import queries
     groups = {}
     for target in targets:
         signature = tuple(queries.unit_target_damage_multiplier(
@@ -911,7 +906,6 @@ def movers_into(province, dest_id, visible_to=None):
     Only MOVE orders carry a path, so testing for one is the same as testing
     the order type; both call sites did it one way or the other.
     """
-    from data import queries
 
     movers = []
     for unit in province.get("units", []):
@@ -933,7 +927,6 @@ def find_meeting_pairs(map_data, nation_data, visible_to=None):
     Returned as sorted (id_a, id_b) tuples, each appearing once, in the order
     they were found -- the resolver depends on processing them one at a time.
     """
-    from data import queries
 
     # Who is stepping into where, and from where.
     incoming = {}
