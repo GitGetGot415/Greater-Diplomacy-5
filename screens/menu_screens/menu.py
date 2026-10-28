@@ -433,9 +433,7 @@ class Menu(GameState):
 
             fetched_version = response.read().decode('utf-8').strip()
             
-            from data.migrations import version_number
-            # A development build is one version above the latest release.
-            if version_number(fetched_version) <= version_number(c.GAME_VERSION):
+            if fetched_version == c.GAME_VERSION:
                 self.version_status = f"Version: {c.GAME_VERSION} (Up to date)"
                 self.version_color = c.COLOR_SUCCESS_GREEN # Green
             else:

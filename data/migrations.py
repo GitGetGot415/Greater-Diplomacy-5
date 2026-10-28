@@ -53,6 +53,8 @@ def upgrade_save(save_meta, map_data, history):
     save_meta is meta.json, map_data is map_data.json by JSON key, and history
     holds the decoded turn snapshots. A selected history turn becomes live
     state, so every step also converts every snapshot. Return the saved version.
+    A step for the next release also runs on saves of this release, so it must
+    be safe to repeat.
     """
     version = check_version(save_meta.get("version"))
     for target, step in SAVE_STEPS:
@@ -62,7 +64,7 @@ def upgrade_save(save_meta, map_data, history):
     return version
 
 
-#: Move files gained game_version in v47. An unstamped move is from v46 or earlier.
+#: Move files gained game_version after v46. An unstamped move is from v46 or earlier.
 LAST_UNSTAMPED_VERSION = 46
 
 
@@ -614,9 +616,13 @@ def _v47_aircraft_name(name):
     return name
 
 
+def _is_count(value):
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
 def _v47_production_turns(entry):
     """Replace the production day countdown. The older field has priority."""
-    if "days_remaining" in entry:
+    if _is_count(entry.get("days_remaining")):
         entry["turns_remaining"] = max(1, entry.pop("days_remaining") // c.DEFAULT_DAYS_PER_TURN)
 
 
@@ -640,9 +646,9 @@ def _v47_country(country):
     """Convert one country record."""
     country.pop("allied_with", None)
     for project in country.get("research_queue", []):
-        if isinstance(project, dict) and "points_remaining" not in project:
-            project["points_remaining"] = (project.get("days_remaining", LEGACY_RESEARCH_DEFAULT_DAYS)
-                                           * LEGACY_RESEARCH_POINTS_PER_DAY)
+        days = project.get("days_remaining", LEGACY_RESEARCH_DEFAULT_DAYS) if isinstance(project, dict) else None
+        if _is_count(days) and "points_remaining" not in project:
+            project["points_remaining"] = days * LEGACY_RESEARCH_POINTS_PER_DAY
     if isinstance(country.get("custom_production_units"), list):
         country["custom_production_units"] = [
             _v47_aircraft_name(name) for name in country["custom_production_units"]]
@@ -704,7 +710,8 @@ def _v47_province(province, terrain):
         order = unit.get("order")
         if isinstance(order, dict) and "target_type" in order:
             order["target_type"] = _v47_aircraft_name(order["target_type"])
-        if not queries.is_air_transport(unit):
+        # Move files are player input. Validation reports malformed units after conversion.
+        if not isinstance(unit.get("type"), str) or not queries.is_air_transport(unit):
             continue
         if not unit.get("original_type"):
             # Some older transports stored only the name wrapper.
@@ -745,7 +752,9 @@ _V46_MOVE_SECTIONS = ("nation_data", "provinces", "aircraft_orders", "release_su
 
 def _v47_move(player_data):
     """Convert the country record and province updates in a v46 move."""
-    if any(section not in player_data for section in _V46_MOVE_SECTIONS):
+    # A stamped move is from after v46. Only an unstamped move can be older than v46.
+    if ("game_version" not in player_data
+            and any(section not in player_data for section in _V46_MOVE_SECTIONS)):
         raise ValueError(
             "This move was made with a game version older than v46. "
             f"The player must update to {c.GAME_VERSION} and export the move again.")

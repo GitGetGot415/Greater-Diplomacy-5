@@ -597,9 +597,26 @@ class TournamentMoveTests(unittest.TestCase):
         self.assertEqual(release["release_type"], c.PUPPET_TYPE_INTEGRATED)
         self.assertEqual(release["turns_left"], 1)
 
+    def previous_release_move(self, country_id, host):
+        from data import migrations
+        return self.v46_move(country_id, host, game_version=f"v{migrations.CURRENT_VERSION - 1}")
+
+    def test_move_from_this_release_converts_without_host_review(self):
+        host = Host()
+        move = self.v46_move("Leader", host, release_subjects=[{"core_nation": "Outsider"}])
+        host.map_data = {"land": {"id": 1, "owner": "Leader", "cores": ["Outsider"],
+                                  "terrain": "plains", "units": []}}
+        with tempfile.TemporaryDirectory() as directory:
+            path = self.write_move(directory, "this-release.gd5move", "Leader", move)
+            summary = self.import_moves(host, [path])
+        self.assertEqual(summary["loaded"], 1, summary["rejections"])
+        self.assertEqual(summary["converted"], 0)
+        self.assertEqual(host.nation_data["Leader"]["release_puppet_queue"][0]["release_type"],
+                         c.PUPPET_TYPE_INTEGRATED)
+
     def test_older_move_waits_for_host_conversion_then_validates_normally(self):
         host = Host()
-        move = self.v46_move("Leader", host)
+        move = self.previous_release_move("Leader", host)
         move["nation_data"]["conscription_slider"] = 0.25
         with tempfile.TemporaryDirectory() as directory:
             path = self.write_move(directory, "v46.gd5move", "Leader", move)
@@ -655,7 +672,7 @@ class TournamentMoveTests(unittest.TestCase):
                 host.multiplayer_keys_dict = self.keys
                 host.show_feedback = mock.Mock()
                 host.refresh_all_maps = mock.Mock()
-                path = self.write_move(directory, "v46.gd5move", "Leader", self.v46_move("Leader", host))
+                path = self.write_move(directory, "older.gd5move", "Leader", self.previous_release_move("Leader", host))
                 completed = mock.Mock()
                 with mock.patch.object(queries, "open_file_browser") as browser, \
                         mock.patch.object(confirm_dialog, "show_message") as message, \

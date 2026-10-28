@@ -177,7 +177,8 @@ Keep tuning data in its source files:
   Do not add another version number, schema name, or numbered format.
 - A version step converts all older data to the format of one game version.
   Put each step in `SAVE_STEPS` or `MOVE_STEPS` in `data/migrations.py`.
-  Give the step the current development version. See `documentation/data_migrations.txt` for the procedure.
+  Give the step the next release version, one above `GAME_VERSION`. Do not change `GAME_VERSION` or `version.txt`.
+  See `documentation/data_migrations.txt` for the procedure.
 - A file from a newer version is refused with an error that tells the player to update.
 - Prefer additive, optional fields with defaults that preserve old behavior.
   Add a version step when a field changes meaning, moves, or changes shape.

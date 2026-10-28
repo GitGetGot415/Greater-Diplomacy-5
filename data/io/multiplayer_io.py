@@ -1091,19 +1091,20 @@ def load_move_files(map_ref, move_file_paths, keys_dict, *, accept_stat_mismatch
         except ValueError as error:
             reject(file_path, cid, str(error))
             continue
-        if version < migrations.CURRENT_VERSION:
-            if not accept_older_versions:
-                reject(file_path, cid,
-                       f"This move was made with game version v{version}. The host runs {c.GAME_VERSION}. "
-                       "The host can convert it. The converted move must then pass all normal checks.",
-                       override="version")
-                continue
-            try:
-                migrations.upgrade_move(player_data)
-            except ValueError as error:
-                reject(file_path, cid, str(error))
-                continue
-            summary["converted"] += 1
+        older_release = version < migrations.CURRENT_VERSION
+        if older_release and not accept_older_versions:
+            reject(file_path, cid,
+                   f"This move was made with game version v{version}. The host runs {c.GAME_VERSION}. "
+                   "The host can convert it. The converted move must then pass all normal checks.",
+                   override="version")
+            continue
+        try:
+            # Steps for the next release also convert moves from this release.
+            migrations.upgrade_move(player_data)
+        except ValueError as error:
+            reject(file_path, cid, str(error))
+            continue
+        summary["converted"] += older_release
 
         context_error = _move_context_error(map_ref, player_data)
         if context_error:

@@ -26,9 +26,10 @@ GAME VERSIONS
 -------------
 
 The game version is the save version.
-version.txt holds the latest release. GAME_VERSION in data/constants.py holds the version of this build.
-Between releases, GAME_VERSION is one version above version.txt.
-A release commit sets version.txt to GAME_VERSION.
+version.txt and GAME_VERSION in data/constants.py hold the latest release.
+A release commit sets both to the new version.
+Version steps do not change either value.
+A step for the next release runs on every load until that release, because saves of this build have an older version.
 
 Saves, tournament files, and move files record the version that wrote them.
 Saves use the version field. Move files use the game_version field.
@@ -173,6 +174,7 @@ TOURNAMENT MOVE VERSIONS
 
 A move lasts one turn. Only moves from the previous release convert.
 A host that runs v48 converts v47 moves and refuses v46 moves.
+A move from the host's own release also runs the steps for the next release. The host is not asked.
 
 1. The host loads a move from the previous release.
 2. The import rejects the move with a "version" override. The rejection does not change host state.
@@ -215,8 +217,8 @@ ADDING A VERSION STEP
 Add a step when a saved field changes meaning, moves, or changes shape.
 An additive field with a default that keeps old behavior needs no step.
 
-1. Make sure GAME_VERSION is one version above version.txt.
-2. Write the step in data/migrations.py, in a section named for GAME_VERSION.
+1. Use the next release version, one above GAME_VERSION. Do not change GAME_VERSION or version.txt.
+2. Write the step in data/migrations.py, in a section named for that version.
 3. Convert country records, province records, meta.json fields, and every history snapshot.
 4. Add the step to SAVE_STEPS. If move files contain the changed data, add a move step to MOVE_STEPS.
 5. Change gameplay code to read only the new format. Remove any read-time adapter for the old format.

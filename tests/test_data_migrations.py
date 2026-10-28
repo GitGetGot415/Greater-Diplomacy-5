@@ -42,15 +42,15 @@ class GameVersionTests(unittest.TestCase):
             with self.subTest(missing=missing):
                 self.assertEqual(migrations.version_number(missing), 0)
 
-    def test_game_version_is_the_release_or_the_next_development_version(self):
+    def test_game_version_matches_the_released_version(self):
         released = (ROOT / "version.txt").read_text(encoding="utf-8").strip()
-        self.assertIn(migrations.CURRENT_VERSION - migrations.version_number(released), (0, 1))
+        self.assertEqual(c.GAME_VERSION, released)
 
-    def test_every_step_targets_a_version_this_game_can_write(self):
+    def test_steps_target_released_versions_or_the_next_release(self):
         for steps in (migrations.SAVE_STEPS, migrations.MOVE_STEPS):
             targets = [target for target, _step in steps]
             self.assertEqual(targets, sorted(set(targets)))
-            self.assertLessEqual(targets[-1], migrations.CURRENT_VERSION)
+            self.assertLessEqual(targets[-1], migrations.CURRENT_VERSION + 1)
 
     def test_newer_saves_are_refused_with_an_update_message(self):
         newer = f"v{migrations.CURRENT_VERSION + 1}"
@@ -64,15 +64,26 @@ class GameVersionTests(unittest.TestCase):
                 json.dump({"version": c.GAME_VERSION}, file)
             self.assertIsNone(load_map.newer_version_message(directory))
 
-    def test_steps_run_once_and_stamp_the_current_version(self):
-        old = {"nation_data": {"A": {"allied_with": ["B"]}}}
-        upgraded(old)
-        self.assertEqual(old["version"], c.GAME_VERSION)
-        self.assertNotIn("allied_with", old["nation_data"]["A"])
-        # A current save skips every step. Load repairs, not steps, handle current data.
-        current = {"version": c.GAME_VERSION, "nation_data": {"A": {"allied_with": ["B"]}}}
-        migrations.upgrade_save(current, {}, {})
-        self.assertEqual(current["nation_data"]["A"]["allied_with"], ["B"])
+    def test_only_steps_newer_than_the_save_run_and_the_save_is_stamped(self):
+        calls = []
+        steps = ((migrations.CURRENT_VERSION, lambda *parts: calls.append("this release")),
+                 (migrations.CURRENT_VERSION + 1, lambda *parts: calls.append("next release")))
+        with mock.patch.object(migrations, "SAVE_STEPS", steps):
+            old = {"version": f"v{migrations.CURRENT_VERSION - 1}"}
+            migrations.upgrade_save(old, {}, {})
+            self.assertEqual(calls, ["this release", "next release"])
+            self.assertEqual(old["version"], c.GAME_VERSION)
+            calls.clear()
+            # A save of this release runs only the step for the next release.
+            migrations.upgrade_save(old, {}, {})
+            self.assertEqual(calls, ["next release"])
+
+    def test_the_next_release_step_is_safe_to_repeat_on_this_release(self):
+        saved = {"nation_data": {"A": {"allied_with": ["B"], "research_queue": [{"tech_name": "a"}]}}}
+        upgraded(saved)
+        once = copy.deepcopy(saved)
+        migrations.upgrade_save(saved, {}, {})
+        self.assertEqual(saved, once)
 
 
 class Version47StepTests(unittest.TestCase):
