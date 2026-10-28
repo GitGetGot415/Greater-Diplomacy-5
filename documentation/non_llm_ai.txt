@@ -58,6 +58,7 @@ AI construction submits selected purchases through map_logic/production_actions.
 Selection order, budgets, emergency behavior, site selection, and tactical-unit protection retain their existing rules.
 AI building purchases retain their separate manpower policy.
 Research queue construction uses the shared research owner. Its AI restart policy remains explicit.
+Research selection checks the active technology prerequisites for each new project.
 See documentation/general_info.txt for state and action ownership.
 AI maintenance and unit orders use map_logic/unit_actions.py after selection.
 The diplomatic candidate collector checks shared availability before ranking or model selection.

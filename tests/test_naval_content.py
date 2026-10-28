@@ -57,7 +57,7 @@ class NavalContentTests(unittest.TestCase):
                     self.assertEqual(unit[field], self.library[name][field])
 
     def test_prerequisites_and_costs_agree_for_local_and_server_research(self):
-        for tech in (*SHIPS.values(), "dreadnought"):
+        for tech in (*SHIPS.values(), "dreadnought", "destroyer", "submarine"):
             requirements = self.tree[tech]["req"]
             for prerequisite, level in requirements.items():
                 self.country["research"] = dict(requirements, **{prerequisite: level - 1})
@@ -95,6 +95,22 @@ class NavalContentTests(unittest.TestCase):
             self.assertGreater(granted[tech], 0)
         removed = queries.edited_research_levels(granted, "carrack", 1, False, self.tree)
         for tech in (*SHIPS.values(), "dreadnought"):
+            self.assertEqual(removed[tech], 0)
+
+    def test_destroyer_and_submarine_levels_require_dreadnought_and_follow_editor_dependencies(self):
+        for tech in ("destroyer", "submarine"):
+            entry = self.tree[tech]
+            self.assertIn("dreadnought", entry["req"])
+            for level in range(1, entry["max_lvl"] + 1):
+                country = {"research": {tech: level - 1}}
+                with self.subTest(tech=tech, level=level), self.assertRaises(ValueError):
+                    queries.canonical_research_selection(country, [tech], self.tree)
+                country["research"].update(entry["req"])
+                self.assertEqual(queries.canonical_research_selection(country, [tech], self.tree)
+                                 ["projects"][0]["tech_name"], tech)
+            granted = queries.edited_research_levels({}, tech, entry["max_lvl"], True, self.tree)
+            self.assertTrue(queries.check_tech_requirements(granted, entry["req"]))
+            removed = queries.edited_research_levels(granted, "dreadnought", 1, False, self.tree)
             self.assertEqual(removed[tech], 0)
 
     def test_time_appropriate_research_uses_each_ships_library_year(self):
