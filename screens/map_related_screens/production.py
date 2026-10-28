@@ -378,6 +378,10 @@ class Production_Screen(GameState):
                 if target:
                     # Dynamically calculate the visual cost for the player
                     data = queries.get_building_cost(target, owner_nation, self.map_screen.map_data, self.building_library)
+                    output = queries.get_province_building_output(
+                        {"owner": owner_nation, "cores": self.target_province.get("cores", []), "buildings": [target]},
+                        player_research, self.building_library, context=self.map_screen)
+                    data.update({f"prod_{res}": amount for res, amount in output.items()})
                     is_building = any(q.get("group") == data["group"] for q in building_queue)
                     req_tech, req_lvl = queries.get_building_required_tech(target)
 

@@ -710,6 +710,29 @@ class RealtimeSessionTests(unittest.TestCase):
             paused = driver.validate_draft("A", [{"type": "research_queue", "tech_names": []}])
         self.assertEqual(paused[0]["research_progress"], {"test_tech": 125})
 
+    def test_factory_output_research_uses_server_prerequisites_and_costs(self):
+        from data import queries
+        tree = queries.get_tech_tree()
+        for tech, prerequisite in (("bessemer_process", "basic_factory"),
+                                   ("assembly_line", "bessemer_process"), ("factory", "assembly_line")):
+            map_ref = SimpleNamespace(nation_data={"A": {"research": {}, "research_queue": []}},
+                                      map_data={}, id_to_province={})
+            driver = MapRealtimeDriver(map_ref)
+            command = {"type": "research_queue", "tech_names": [tech], "points_remaining": 0,
+                       "research": {prerequisite: 1}}
+            with self.subTest(tech=tech):
+                with self.assertRaises(RealtimeError):
+                    driver.validate_draft("A", [command])
+                map_ref.nation_data["A"]["research"][prerequisite] = 1
+                canonical = driver.validate_draft("A", [command])
+                self.assertEqual(canonical[0]["projects"],
+                                 [{"tech_name": tech, "points_remaining": tree[tech]["cost"]}])
+                with self.assertRaises(RealtimeError):
+                    driver.validate_draft("A", [dict(command, tech_names=tech)])
+                with self.assertRaises(RealtimeError):
+                    driver.validate_draft("Unknown country", [command])
+                self.assertEqual(map_ref.nation_data["A"]["research_queue"], [])
+
     def test_collects_empty_and_nonempty_research_selection(self):
         map_ref = SimpleNamespace(
             map_data={},

@@ -31,8 +31,7 @@ from map_logic.ai import ai_unit_eval
 
 
 #: Techs whose whole effect is a flat economic bonus per level, mapped to the
-#: resource and the per-level amount. Everything else earns its value by
-#: unlocking a unit or a building.
+#: resource and the per-level amount. Building output upgrades use research data.
 FLAT_ECONOMY_TECHS = {
     "general_recruitment": ("manpower", float(c.GENERAL_RECRUITMENT_BONUS)),
     "bergius_process": ("fuel", float(c.BERGIUS_FUEL_BONUS)),
@@ -97,10 +96,8 @@ def _yield_value(stats, prices, key_prefix="prod_"):
 def _replaced_building(name, building_library):
     """The building in the same group this one supersedes, if any.
 
-    Upgrading does not stack: economy_processor drops every other member of the
-    group from the province before appending the new one, so a Factory Lvl 8
-    province produces 8000/turn, not 1000+2000+...+8000. The `req` field names
-    exactly what is being torn down.
+    An upgrade replaces the previous building in its group.
+    The req field identifies the previous building.
     """
     req = (building_library.get(name) or {}).get("req")
     if not req or req == "null" or req not in building_library:
@@ -114,7 +111,7 @@ def _build_cost(name, stats, prices):
         # Its JSON costs are zeros standing in for a figure worked out per
         # nation by queries.get_building_cost, which scales with how many
         # factories the nation already has. Taken at face value it read as a
-        # free +500/turn. Nothing here has map access, so the base is the
+        # free building. Nothing here has map access, so the base is the
         # honest floor.
         base = float(c.BASIC_FACTORY_BASE_COST_X)
         costs = {"materials": base * 2, "manpower": base, "fuel": 0.0}
@@ -221,20 +218,31 @@ def built_levels(provinces, building_library):
     return best
 
 
-def economy_gain(tech_key, level, prices, building_library, income, built=None):
+def economy_gain(tech_key, level, prices, building_library, income, built=None, *,
+                 research=None, provinces=(), context=None):
     """Per-turn economic value of a tech that unlocks a building or a flat bonus.
 
     Priced with the same scarcity vector as units, so a refinery is worth more
     to a nation that has run dry than to one sitting on a fuel mountain.
 
-    Everything here is MARGINAL -- what this level adds over the one below it.
-    The building branch used to credit the new building's whole output, which
-    for a chain that replaces rather than stacks overstated it by a factor of
-    the level: Factory Lvl 8 was scored at 8000 materials a turn when upgrading
-    a Lvl 7 province to it actually gains 1000, against the same flat 30,000
-    build cost every level charges. The error grew with the level, so the higher
-    and less reachable the tier, the better a deal the AI thought it was.
+    Value only the output added by this level.
+    Building upgrades subtract the replaced building's output and include completed research bonuses.
+    Output research uses the nation's existing buildings and construction projects.
     """
+    if context is None:
+        context = building_library
+    research = research or {}
+    if queries.get_tech_tree(context).get(tech_key, {}).get("building_output_bonuses"):
+        ahead = dict(research, **{tech_key: level})
+        before_mult = queries.get_building_output_multipliers(research, building_library, context=context)
+        after_mult = queries.get_building_output_multipliers(ahead, building_library, context=context)
+        gain = 0.0
+        for province in provinces:
+            before = queries.get_province_building_output(province, research, building_library, multipliers=before_mult)
+            after = queries.get_province_building_output(province, ahead, building_library, multipliers=after_mult)
+            gain += sum(prices[res] * (after[res] - before[res]) for res in ai_unit_eval.RESOURCES)
+        return max(0.0, gain)
+
     flat = FLAT_ECONOMY_TECHS.get(tech_key)
     if flat:
         resource, amount = flat
@@ -263,10 +271,12 @@ def economy_gain(tech_key, level, prices, building_library, income, built=None):
 
         # What the province gains, net of what the level below it stops
         # producing the moment this one is built on top.
-        gain = _yield_value(stats, prices)
+        output = queries.get_building_output(name, research, building_library, context=context)
+        gain = sum(prices[res] * output[res] for res in ai_unit_eval.RESOURCES)
         replaced = _replaced_building(name, building_library)
         if replaced:
-            gain -= _yield_value(building_library[replaced], prices)
+            old_output = queries.get_building_output(replaced, research, building_library, context=context)
+            gain -= sum(prices[res] * old_output[res] for res in ai_unit_eval.RESOURCES)
 
         # Net of what it costs to put up, spread over the period a building is
         # given to earn that back -- it keeps producing long after the twenty
@@ -300,7 +310,7 @@ def schedule_pressure(current_year, target_year):
 
 
 def rank_available(available, research, unit_library, building_library, ctx,
-                   current_names, current_year, income, built=None):
+                   current_names, current_year, income, built=None, *, provinces=()):
     """Orders candidate techs best-first.
 
     `available` is (tech_key, target_year, cost, is_new). Value per point of
@@ -337,7 +347,8 @@ def rank_available(available, research, unit_library, building_library, ctx,
 
         # Applied across the army this nation can afford, not to one unit.
         military = gains.gain(tech_key) * max(1.0, ctx.budget)
-        economic = (economy_gain(tech_key, level, ctx.prices, building_library, income, built)
+        economic = (economy_gain(tech_key, level, ctx.prices, building_library, income, built,
+                                 research=research, provinces=provinces, context=building_library)
                     * buy_rate * horizon * c.AI_TECH_ECONOMY_WEIGHT)
 
         pace = schedule_pressure(current_year, target_year)

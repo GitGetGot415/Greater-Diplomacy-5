@@ -206,6 +206,47 @@ Country appearance fields use one shared mutation helper in data/queries.py.
 Adapters retain their existing mode permissions and input limits.
 Movement, armies, transport, subjects, and faction effects retain their existing domain owners.
 
+BUILDING OUTPUT RESEARCH
+========================
+
+data/json/research_template.json defines building output upgrades in building_output_bonuses.
+data/generators/recipes.py defines the matching generation recipes.
+
+Each bonus selects building_families, building_groups, or both. Either selector can match a building.
+Family names come from queries.get_base_item_name. Group names come from data/json/building_data.json.
+The outputs dictionary maps materials, manpower, or fuel to a fractional increase per completed research level.
+Oil production uses the fuel resource key.
+
+Example bonus: {"building_groups": ["recruitment"], "outputs": {"manpower": 0.5, "fuel": 0.25}}.
+This example increases manpower output by 50% and fuel output by 25% per level for recruitment buildings.
+It does not create output where the building's base output is zero.
+Use building_families to select specific families within a group.
+Use the existing req, years, max_lvl, cost, and display_name fields for the technology.
+Add its timeline row in screens/map_related_screens/research.py and its PNG image in assets/images.
+
+Bonuses multiply together. Each completed research level multiplies the selected output by one plus its fractional increase.
+Two 100% bonuses give four times the base output.
+Bonuses affect existing buildings, new buildings, and Basic Factory construction yields.
+Unselected outputs, province yields, and natural resources retain their existing rules.
+
+Territory penalties apply after research bonuses. Round down each building's output after the territory penalty.
+
+data/queries.py owns output multipliers, building yields, province building yields, and bonus descriptions.
+Turn income, economy reports, production previews, research details, and AI research valuation use these helpers.
+Production previews include the selected province's territory penalty. Research details show output before that penalty.
+Presentation caches update when their screens refresh. Frame drawing reads the cached yields.
+
+AI values output upgrades from its existing buildings and construction projects, with territory penalties.
+AI also includes completed bonuses when it values building upgrades.
+
+Completed levels use each country's existing research dictionary. No additional saved bonus state is required.
+Missing technology keys count as unresearched. Existing factory levels remain complete without automatic grants of new technologies.
+
+New research selections use the active prerequisites. Existing research projects keep their recorded progress.
+Editor grants and removals use the shared prerequisite rules.
+Both multiplayer systems retain their existing research commands, host validation, and privacy rules.
+Completed buildings without active library entries produce no output.
+
 UNIT IDENTITY METADATA
 ======================
 

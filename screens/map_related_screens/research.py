@@ -355,7 +355,8 @@ class Research_Screen(GameState):
             "v1_flying_bomb": y4, "v2_rocket": y4,
             "monoplane_transport": y2,
             "jet_engine": y2, "jet_fighter": y1, "jet_bomber": y2, "jet_transport": y3,
-            "workshop": y1, "basic_factory": y1, "factory": y1,
+            "workshop": y1, "basic_factory": y1, "bessemer_process": y1,
+            "assembly_line": y1, "factory": y1,
             "bergius_process": y4, "fuel_refining": y4,
             "basic_recruitment": y2, "recruitment_buildings": y2,
             "general_recruitment": y3,
@@ -884,7 +885,12 @@ class Research_Screen(GameState):
     def cache_modal_unlocks(self):
         """Wrap capability notes once when the research detail panel changes."""
         self.modal_unlocks = queries.get_tech_unlocks(
-            self.active_modal["tech_key"], self.active_modal["level"])
+            self.active_modal["tech_key"], self.active_modal["level"], context=self.map_screen)
+        self.modal_building_outputs = {
+            name: queries.get_building_output(name, self.subject_data.get("research", {}),
+                                             self.building_library, context=self.map_screen)
+            for name in [self.active_modal["display_name"], *self.modal_unlocks]
+            if name in self.building_library}
         has_air_traits = self.unit_library.get(self.active_modal["display_name"], {}).get("air_role")
         font = fonts.get("small" if has_air_traits else "normal")
         width = MODAL_WIDTH - MODAL_TEXT_X - MODAL_TEXT_RIGHT_MARGIN
@@ -1246,7 +1252,9 @@ class Research_Screen(GameState):
                 
                 draw_resource_string(
                     surface, font_small, "Yield (Per Turn):   ",
-                    s.get('prod_materials', 0), s.get('prod_manpower', 0), s.get('prod_fuel', 0),
+                    self.modal_building_outputs[entity]["materials"],
+                    self.modal_building_outputs[entity]["manpower"],
+                    self.modal_building_outputs[entity]["fuel"],
                     text_x, y_off, (150, 255, 150), is_yield=True
                 )
                 y_off += MODAL_LINE_STEP_Y

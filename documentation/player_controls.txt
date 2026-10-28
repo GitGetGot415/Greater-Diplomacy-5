@@ -88,6 +88,14 @@ Disable a switch to permit viewing without the corresponding editing ability.
 
 See documentation/diplo_stuff.txt for spectator annexation, deletion, and releases from cores.
 
+RESEARCH OUTPUT BONUSES
+-----------------------
+
+Research details list each output bonus and its affected building families or groups.
+Building yields include the selected country's completed output research.
+Production previews also include the selected province's territory penalty.
+See documentation/general_info.txt, BUILDING OUTPUT RESEARCH, for stacking, saved research, and data sources.
+
 RESEARCH EDITING
 ----------------
 

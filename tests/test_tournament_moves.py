@@ -121,6 +121,35 @@ class TournamentMoveTests(unittest.TestCase):
         result.update(extra)
         return result
 
+    def test_factory_output_research_intents_require_host_prerequisites_and_current_turn(self):
+        tree = queries.get_tech_tree()
+        for tech, prerequisite in (("bessemer_process", "basic_factory"),
+                                   ("assembly_line", "bessemer_process"), ("factory", "assembly_line")):
+            for mode in ("valid", "locked", "malformed", "stale", "wrong_key"):
+                with self.subTest(tech=tech, mode=mode), tempfile.TemporaryDirectory() as directory:
+                    host = Host()
+                    host.nation_data["Leader"]["research"] = {} if mode == "locked" else {prerequisite: 1}
+                    move = {"player_intents": [{"type": "research_queue",
+                            "tech_names": tech if mode == "malformed" else [tech], "points_remaining": 0}],
+                            "tournament_session": host.multiplayer_session_key,
+                            "tournament_turn": host.time_manager.total_turns - int(mode == "stale")}
+                    before = copy.deepcopy(host.nation_data)
+                    path = self.write_move(directory, "research.gd5move", "Leader", move)
+                    if mode == "wrong_key":
+                        with open(path) as file:
+                            payload = json.load(file)
+                        payload["hash"] = multiplayer_io.hash_key(self.keys["Member"])
+                        with open(path, "w") as file:
+                            json.dump(payload, file)
+                    result = self.import_moves(host, [path])
+                    self.assertEqual(result["loaded"], int(mode == "valid"), result["rejections"])
+                    if mode == "valid":
+                        self.assertEqual(host.nation_data["Leader"]["research_queue"],
+                                         [{"tech_name": tech, "points_remaining": tree[tech]["cost"]}])
+                        self.assertEqual(host.nation_data["Member"], before["Member"])
+                    else:
+                        self.assertEqual(host.nation_data, before)
+
     def stat_move(self, host):
         unit = {"unit_id": "test-unit", "owner": "Leader", "type": "Test ground unit",
                 "health": 12, "max_health": 20, "attack": 4, "defense": 3,

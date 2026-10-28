@@ -118,6 +118,9 @@ Building research
     The upgrade removes the previous building level.
     A province can queue only the next building in its chain.
     Do not credit an unreachable upgrade as an immediate benefit.
+    Include completed building output bonuses in upgrade values.
+    Value output research from existing buildings and construction projects through the shared province output helper.
+    See documentation/general_info.txt, BUILDING OUTPUT RESEARCH, for bonus data and stacking rules.
 
 Purchase and disbanding
     Use ai_unit_eval's marginal value for both decisions.
