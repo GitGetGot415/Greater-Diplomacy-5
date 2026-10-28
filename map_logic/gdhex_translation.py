@@ -384,7 +384,7 @@ def _build_map_assets(raw_map, width, height):
 
 def build_save_payload(parsed):
     """Create GD5 metadata, structural map data, images, and conversion notes."""
-    # GD5's data, research, and timeline begin at START_YEAR. Hex Edition can
+    # GD5's timeline begins at START_YEAR. Hex Edition can
     # save earlier dates, so clamp them to January; imported saves always use
     # the established mid-month turn date below.
     months = max(int(math.floor(parsed["time"])), c.START_YEAR * 12)

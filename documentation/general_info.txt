@@ -200,6 +200,9 @@ metadata.requirements lists the required technology levels and year conditions.
 metadata.recruitment identifies the industry and coastal requirements.
 Additional metadata retains existing display labels, art selection, and AI quota categories.
 
+When you add unit tiers, update their research recipes and regenerate both runtime files.
+Keep existing unit identifiers and research level meanings. Older saves retain their completed research and can use additional levels.
+
 data/queries.py reads metadata from the active library.
 Divisions do not duplicate this library metadata.
 Indexes detect library changes, metadata edits, research-year edits, and obsolescence changes.

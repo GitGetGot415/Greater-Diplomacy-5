@@ -1770,9 +1770,11 @@ def get_highest_infantry(nation_data_block, tech_tree, unit_library, allow_fuel_
             metadata = get_unit_metadata(name, unit_library, context=context)
             if metadata["research"]["tech"] == track and metadata["tier_order"] == year:
                 return name
+    starting_years = tech_tree.get("infantry_type", {}).get("years", [])
     for name in unit_library:
         metadata = get_unit_metadata(name, unit_library, context=context)
-        if metadata["research"]["tech"] == "infantry_type" and metadata["tier_order"] == c.START_YEAR:
+        if (starting_years and metadata["research"]["tech"] == "infantry_type"
+                and metadata["tier_order"] == starting_years[0]):
             return name
     return None
 

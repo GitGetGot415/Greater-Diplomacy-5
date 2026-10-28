@@ -1,0 +1,90 @@
+"""Check generated unit progression through shared gameplay interfaces."""
+
+import json
+import unittest
+from pathlib import Path
+
+from data import constants as c, queries
+from data.generators import generate_data
+from map_logic.ai import ai_tech_eval, ai_unit_eval
+from tests.test_map_save_format import sample_map_screen
+
+
+class UnitProgressionTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.library = queries.get_unit_library()
+        cls.tree = queries.get_tech_tree()
+
+    def final_research(self):
+        return {key: entry['max_lvl'] for key, entry in self.tree.items()}
+
+    def test_generated_runtime_data_matches_recipes(self):
+        for path, builder in ((c.UNIT_DATA_PATH, generate_data.build_unit_data_text),
+                              (c.RESEARCH_TEMPLATE_PATH, generate_data.build_research_template_text)):
+            with self.subTest(path=path):
+                self.assertEqual(json.loads(Path(path).read_text(encoding='utf-8')), json.loads(builder()))
+
+    def test_ongoing_unit_tracks_reach_the_timeline_end_at_their_own_intervals(self):
+        tracks = ('infantry_type', 'militia', 'artillery', 'armored_car', 'light_tank',
+                  'main_battle_tank', 'destroyer', 'submarine', 'aircraft_carrier',
+                  'jet_fighter', 'jet_bomber', 'jet_transport')
+        for key in tracks:
+            with self.subTest(tech=key):
+                entry = self.tree[key]
+                years = entry['years']
+                self.assertEqual(entry['max_lvl'], len(years))
+                interval = years[-1] - years[-2]
+                self.assertGreater(interval, 0)
+                self.assertLessEqual(years[-1], c.END_YEAR)
+                self.assertGreater(years[-1] + interval, c.END_YEAR)
+
+    def test_final_unit_tiers_agree_for_unlocks_upgrades_and_ai(self):
+        research = self.final_research()
+        candidates = ai_unit_eval.buildable_units(research, self.library)
+        for family, tiers in queries.get_unit_research_index(self.library):
+            if len(tiers) < 2:
+                continue
+            latest, _, requirement = tiers[0]
+            previous = tiers[1][0]
+            # Some historical families retain library tiers beyond their research cap.
+            if not queries.unit_requirement_is_met(requirement, research):
+                continue
+            with self.subTest(family=family):
+                self.assertTrue(queries.is_unit_unlocked(latest, research, self.library))
+                self.assertEqual(queries.get_upgrade_target(previous, research, self.library, self.tree), latest)
+                if queries.is_unit_obsolete(family, research):
+                    continue
+                self.assertIn(latest, candidates)
+                tech, level = queries.get_unit_research_requirement(latest, self.library)
+                if tech in c.VEHICLE_INFANTRY_GATES:
+                    tech = 'infantry_type'
+                    level = research[tech]
+                before = dict(research, **{tech: level - 1})
+                self.assertFalse(queries.is_unit_unlocked(latest, before, self.library))
+                self.assertIn(latest, ai_tech_eval.units_unlocked_by(tech, before, self.library))
+
+    def test_railgun_research_date_uses_the_new_timeline_endpoint(self):
+        self.assertEqual(self.tree['railgun']['years'], [c.END_YEAR])
+        tech, level = queries.get_unit_research_requirement('Railgun', self.library)
+        self.assertTrue(queries.is_unit_unlocked('Railgun', {tech: level}, self.library))
+        self.assertFalse(queries.is_unit_unlocked('Railgun', {tech: level - 1}, self.library))
+
+    def test_latest_units_and_research_survive_save_data_round_trip(self):
+        game = sample_map_screen()
+        research = self.final_research()
+        units = [queries.create_unit_dict(name, game.player_country, self.library)
+                 for name in ai_unit_eval.buildable_units(research, self.library)]
+        game.time_manager.year = c.END_YEAR
+        game.nation_data[game.player_country]['research'] = research
+        province = next(iter(game.map_data.values()))
+        province['units'] = units
+        saved = json.loads(json.dumps(queries.build_save_dict(game)))
+        loaded_provinces = queries.map_data_with_saved_provinces(game.raw_json_data, saved['provinces'])
+        self.assertEqual(saved['date']['year'], c.END_YEAR)
+        loaded_research = saved['nation_data'][game.player_country]['research']
+        self.assertEqual(loaded_research, research)
+        loaded_units = next(iter(loaded_provinces.values()))['units']
+        self.assertEqual(loaded_units, units)
+        for unit in loaded_units:
+            self.assertTrue(queries.is_unit_unlocked(unit['type'], loaded_research, self.library))

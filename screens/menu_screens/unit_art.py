@@ -72,10 +72,10 @@ SHOW_ALL_ART_FONT = "small"
 
 
 def _merge_label(first, last):
-    """first and last are the endpoints of a run of unit names that all
-    resolve to the same piece of art. Collapses their shared prefix so a
-    hundred-year run of identical Infantry art reads as one row -- 'Infantry
-    Type 1910-2010' -- instead of repeating the whole name twice."""
+    """Combine the endpoints of unit names that use the same art.
+
+    Keep the shared family prefix once. Show both tier suffixes as a range.
+    """
     if first == last:
         return first
     common = os.path.commonprefix([first, last])

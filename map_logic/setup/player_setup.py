@@ -30,7 +30,8 @@ def select_tactical_unit(map_screen, province, candidate_units=None):
             return
 
         # Enforce default year if they literally have nothing
-        if unit_type == f"Infantry Type {c.START_YEAR}":
+        infantry_years = queries.get_tech_tree(map_screen).get("infantry_type", {}).get("years", [])
+        if infantry_years and unit_type == f"Infantry Type {infantry_years[0]}":
             unit_type = f"Infantry Type {c.TACTICAL_DEFAULT_YEAR}"
 
         new_unit = queries.create_unit_dict(unit_type, owner, queries.get_unit_library(map_screen))

@@ -658,8 +658,8 @@ CPU_LIMITER = 10
 # STARTING GAME RULES & TIMING
 # ==========================================
 
-START_YEAR = 1910
-END_YEAR = 2010
+START_YEAR = 1800
+END_YEAR = 2030
 RESEARCH_TIMELINE_SPACING = 70 # Width between years on the research timeline
 
 BASE_RESEARCH_POINTS_PER_DAY = 10

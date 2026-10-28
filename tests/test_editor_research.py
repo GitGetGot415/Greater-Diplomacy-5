@@ -38,6 +38,21 @@ class PrerequisiteTests(unittest.TestCase):
     def setUp(self):
         self.tree = tech_tree()
 
+    def test_starting_infantry_fallback_uses_first_research_year(self):
+        year = c.START_YEAR + 40
+        tree = {"infantry_type": {"years": [year]}}
+        library = {"first": {}}
+        metadata = {"research": {"tech": "infantry_type"}, "tier_order": year}
+        with patch.object(queries, "get_unit_metadata", return_value=metadata):
+            self.assertEqual(queries.get_highest_infantry({}, tree, library), "first")
+
+    def test_starting_research_uses_industry_years(self):
+        year = c.START_YEAR + 40
+        tree = {"basic_factory": {"category": "INDUSTRY", "years": [year], "max_lvl": 1}}
+        with patch.object(queries, "get_tech_tree", return_value=tree):
+            self.assertEqual(queries.get_time_appropriate_research(year)["basic_factory"], 0)
+            self.assertEqual(queries.get_time_appropriate_research(year + 1)["basic_factory"], 1)
+
     def edit(self, research, key, level, researched=True):
         return queries.edited_research_levels(research, key, level, researched, self.tree)
 
