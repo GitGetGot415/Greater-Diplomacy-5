@@ -200,6 +200,11 @@ metadata.requirements lists the required technology levels and year conditions.
 metadata.recruitment identifies the industry and coastal requirements.
 Additional metadata retains existing display labels, art selection, and AI quota categories.
 
+Historical naval units use the same research, coastal production, combat, and transport rules as other ships.
+Their metadata connects each ship to its research track.
+Research prerequisites also apply when an editor grants or removes technology.
+Existing completed research stays intact. Missing research levels count as unresearched.
+
 When you add unit tiers, update their research recipes and regenerate both runtime files.
 Keep existing unit identifiers and research level meanings. Older saves retain their completed research and can use additional levels.
 

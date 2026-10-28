@@ -873,6 +873,7 @@ OBSOLESCENCE_RULES = {
     "Heavy Tank": ["super_heavy_tank"],
     "WW1 Railroad Gun": ["ww2_railroad_gun"],
     "Landkreuzer P.1000 Ratte": ["landkreuzer_p1500_monster"],
+    "Carrack": ["ironclad"],
     "Dreadnought": ["battleship"],
     "Battleship": ["aircraft_carrier"],
     "V1 Flying Bomb": ["v2_rocket"],
@@ -1384,6 +1385,7 @@ TANK_GROUP_EXTRAS = [
 # "heavy_artillery" rides the plain "artillery" tech instead of a track of its
 # own, so researching Artillery unlocks both variants at the same levels.
 UNIT_TECH_KEY_OVERRIDES = {
+    "predreadnought": "pre-dreadnought",
     # Keep saved research IDs stable when aircraft display names change.
     "biplane_fighter": "biplane",
     "monoplane_fighter": "piston_fighter",

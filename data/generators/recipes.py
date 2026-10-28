@@ -314,6 +314,18 @@ UNIT_SECTIONS = [
         }),
     ],
     [
+        UnitFamily("Carrack", single(), {
+            "health": 1000, "attack": 400, "defense": 0, "speed": 1,
+            "cost_materials": 2000, "cost_manpower": 500, "cost_fuel": 0, "production_time": 4,
+        }, naval_unit=True),
+        UnitFamily("Ironclad", single(), {
+            "health": 2000, "attack": 800, "defense": 200, "speed": 1,
+            "cost_materials": 8000, "cost_manpower": 1000, "cost_fuel": 100, "production_time": 6,
+        }, naval_unit=True),
+        UnitFamily("Pre-Dreadnought", single(), {
+            "health": 3000, "attack": 1200, "defense": 300, "speed": 1,
+            "cost_materials": 12000, "cost_manpower": 2000, "cost_fuel": 250, "production_time": 8,
+        }, naval_unit=True),
         # Can bombard an adjacent tile (see c.BOMBARDMENT_UNITS); bombard_attack
         # is tracked separately from melee "attack" so the two stay tunable independently.
         UnitFamily("Dreadnought", single(), {
@@ -543,7 +555,13 @@ RESEARCH_SECTIONS = [
                                "req": {"AND": [{"heavy_tank": 1}, {"ww1_railroad_gun": 1}]}, "years": years_range(1932, 1, 1)}),
     ],
     [
-        ("dreadnought", {"category": "NAVY", "max_lvl": 1, "cost": 2400, "req": {},
+        ("carrack", {"category": "NAVY", "max_lvl": 1, "cost": 600, "req": {},
+                      "years": [1800]}),
+        ("ironclad", {"category": "NAVY", "max_lvl": 1, "cost": 2400, "req": {"carrack": 1},
+                       "years": [1860]}),
+        ("pre-dreadnought", {"category": "NAVY", "max_lvl": 1, "cost": 2400, "req": {"ironclad": 1},
+                             "years": [1880]}),
+        ("dreadnought", {"category": "NAVY", "max_lvl": 1, "cost": 2400, "req": {"pre-dreadnought": 1},
                           "years": years_range(1910, 1, 1)}),
         ("battleship", {"category": "NAVY", "max_lvl": 1, "cost": 2400,
                          "req": {"dreadnought": 1}, "years": years_range(1920, 1, 1)}),

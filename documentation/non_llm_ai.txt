@@ -121,6 +121,7 @@ Purchase and disbanding
 
 Obsolescence
     Aircraft, land units, and naval units use constants.OBSOLESCENCE_RULES.
+    Obsolescence requires completed replacement research. A queued research project does not make units obsolete.
     A researched replacement removes its older family from default production and AI build candidates.
     The disband pass uses the same obsolescence query.
     Players can still choose researched older aircraft through Custom production.
