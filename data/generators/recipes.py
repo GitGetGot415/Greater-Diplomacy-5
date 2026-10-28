@@ -558,7 +558,7 @@ RESEARCH_SECTIONS = [
         ("basic_factory", {"category": "INDUSTRY", "max_lvl": 1, "cost": 1200, "req": {},
                             "years": years_range(1800, 1, 1)}),
         ("factory", {"category": "INDUSTRY", "max_lvl": 25, "cost": 1200,
-                      "req": {"basic_factory": 1}, "years": years_range(1810, 10, 25)}),
+                      "req": {"basic_factory": 1}, "years": years_range(1910, 5, 25)}),
         ("bergius_process", {"category": "INDUSTRY", "max_lvl": 1, "cost": 1200, "req": {},
                               "years": years_range(1910, 1, 1)}),
         ("fuel_refining", {"category": "INDUSTRY", "max_lvl": 50, "cost": 1200,
