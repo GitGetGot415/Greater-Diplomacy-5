@@ -109,6 +109,16 @@ Success in one does not prove compatibility with the other.
 
 ## Code and Data Design
 
+### Simplicity (KISS)
+
+- Follow KISS (Keep It Simple, Stupid).
+  Use the simplest solution that meets the request and existing rules.
+  Add abstractions, state, queues, or fallback behavior only when the required behavior needs them.
+
+Example: An object spawns every five seconds.
+If the screen is at its object cap, skip that spawn.
+Do not queue skipped spawns for later.
+
 ### One Source of Truth
 
 - Match identifiers, data keys, constants, and documentation to player-facing names for the same thing.
@@ -116,7 +126,8 @@ Success in one does not prove compatibility with the other.
 - Preserve older settings, saves, and protocol values through shared migration rules when names change.
 - Test legacy loading and new-data round trips after a stored name changes.
 - Check existing helpers before you add another function.
-- Combine duplicate calculations, variables, rules, functions, and state changes in one named helper.
+- Follow DRY (Don't Repeat Yourself).
+  Combine duplicate calculations, variables, rules, functions, and state changes in one named helper.
   Use the same path for similar behavior unless a documented gameplay rule requires a difference.
 - Remove unused functions and organize imports when those changes are in scope.
 - Use shared legality, cost, effect, timing, and valuation helpers across execution, UI, AI, scripts, editors, and multiplayer.
@@ -161,7 +172,7 @@ Keep tuning data in its source files:
 
 - Preserve existing supported public interfaces, saved data, and configuration behavior.
   Change them only when the user explicitly requests a breaking change.
-- Do not introduce schema version numbers, numbered data formats, or version dispatch systems.
+- Do not introduce save schemas, schema version numbers, numbered data formats, version dispatch systems, or similar serialization frameworks.
 - Prefer additive, optional fields with defaults that preserve old behavior.
   Keep existing field meanings stable.
 - Adapt supported older data at the input boundary.
@@ -206,6 +217,8 @@ Keep tuning data in its source files:
   Use `queries.country_picker_items` for pickers that return IDs.
 - A visible control does not grant permission.
   Recheck ownership and permission where state changes.
+- Prefer showing unavailable buttons as disabled instead of hiding them.
+  Preserve explicit mode, visibility, and privacy rules.
 - Tactical players command one division while the host country remains AI-controlled.
   Existing spectator flags control spectator editing.
   Check the actual modes and flags. Do not infer a mode from a related attribute.
