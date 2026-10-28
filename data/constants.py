@@ -659,7 +659,7 @@ CPU_LIMITER = 10
 # ==========================================
 
 START_YEAR = 1800
-END_YEAR = 2050
+END_YEAR = 2150
 RESEARCH_TIMELINE_SPACING = 70 # Width between years on the research timeline
 
 BASE_RESEARCH_POINTS_PER_DAY = 10
