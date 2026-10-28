@@ -1,7 +1,7 @@
 from data.state_access import world_for, session_for
 from map_logic.ai import ai_commitments, ai_evaluation, ai_llm_runner, ai_prompts
 import data.constants as c
-from data import migrations, queries
+from data import queries
 from map_logic.diplomacy import diplomacy_lifecycle as lifecycle
 
 # Import from our newly created submodules
@@ -830,7 +830,7 @@ def _process_queued_responses(map_screen):
     and one-way agreements (military access) stay one-way.
     """
     world_state = world_for(map_screen)
-    migrations.migrate_diplomatic_records(world_state.nation_data)
+    lifecycle.normalize_diplomatic_records(world_state.nation_data)
     for country_name, data in list(world_state.nation_data.items()):
         if not isinstance(data, dict):
             continue
@@ -1552,7 +1552,7 @@ def _schedule_conflicting_ai_volunteer_send_homes(map_screen):
 
 def process_diplomacy_turn(map_screen):
     world_state = world_for(map_screen)
-    migrations.normalize_diplomacy_channels(world_state.nation_data)
+    lifecycle.normalize_diplomacy_channels(world_state.nation_data)
     _decay_modifiers_and_truces(map_screen)
     volunteers.tick(map_screen)
     _process_scheduled_ai_attache_revocations(map_screen)

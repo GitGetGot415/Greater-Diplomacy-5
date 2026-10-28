@@ -140,7 +140,7 @@ class FactionOwnerTests(unittest.TestCase):
         nations = {"A": {"faction": "Pact", "is_faction_leader": True},
                    "B": {"faction": "Pact"}, "FACTION_WAR_MAPS": {"Pact": {"1": "A"}},
                    "WAR_PRE_MAPS": {"A": {"2": "A"}}}
-        self.assertEqual(migrations.faction_records(nations), migrations.faction_records(copy.deepcopy(nations)))
+        self.assertEqual(faction_records.canonical_records(nations), faction_records.canonical_records(copy.deepcopy(nations)))
         context = BackendState(WorldState(nation_data=nations))
         faction_records.restore(context)
         identity = queries.get_country_faction_id(context, "A")

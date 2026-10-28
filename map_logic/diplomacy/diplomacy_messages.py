@@ -4,7 +4,7 @@ import copy
 import uuid
 
 import data.constants as c
-from data import migrations, queries
+from data import queries
 from map_logic.diplomacy import diplomacy_lifecycle as lifecycle
 
 # ==========================================
@@ -144,7 +144,7 @@ def set_response(nation_data, player_name, sender_name, verdict, action, **extra
     pending = get_pending_map(nation_data, sender_name)
     request = pending.get(player_name)
     if request is not None:
-        pending[player_name] = migrations.normalize_diplomatic_request(request, sender_name, player_name)
+        pending[player_name] = lifecycle.normalize_diplomatic_request(request, sender_name, player_name)
     return lifecycle.put_response(nation_data, player_name, sender_name, verdict, action, **extra)
 
 

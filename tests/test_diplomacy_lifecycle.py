@@ -54,11 +54,11 @@ class DiplomacyLifecycleTests(unittest.TestCase):
                                                        "escrow": {"materials": 4}, "future": 7}}},
                     "B": {"diplo_responses": {"A": {"action": "TRADE", "verdict": "ACCEPT"}}}}
         first, second = copy.deepcopy(original), copy.deepcopy(original)
-        migrations.migrate_diplomatic_records(first)
-        migrations.migrate_diplomatic_records(second)
+        lifecycle.normalize_diplomatic_records(first)
+        lifecycle.normalize_diplomatic_records(second)
         self.assertEqual(first, second)
         saved = json.loads(json.dumps(first))
-        migrations.migrate_diplomatic_records(saved)
+        lifecycle.normalize_diplomatic_records(saved)
         self.assertEqual(saved, first)
         self.assertEqual(saved["A"]["pending_diplomacy"]["B"]["future"], 7)
         self.assertEqual(saved["B"]["diplo_responses"]["A"]["request_id"],

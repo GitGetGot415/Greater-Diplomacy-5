@@ -8,7 +8,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # Data & Constants
 import data.constants as c
-from data import migrations, queries
+from data import queries
 from data.state_access import StateAccess
 from data.map import load_map, save_map
 from data.platform import run_background
@@ -1563,7 +1563,8 @@ class Map(StateAccess, GameState):
 
         render_buttons(self)
 
-        migrations.normalize_diplomacy_channels(self.nation_data)
+        from map_logic.diplomacy import diplomacy_lifecycle
+        diplomacy_lifecycle.normalize_diplomacy_channels(self.nation_data)
 
         # A loaded save may have been written immediately before a faction join
         # or war was resolved. Reconcile once on load so its UI never advertises

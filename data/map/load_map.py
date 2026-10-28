@@ -430,7 +430,8 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
 
     # --- REPAIR FACTION ROSTERS ---
     # Runs before the pre-war maps below, which are built off the rosters.
-    migrations.normalize_diplomacy_channels(world_state.nation_data)
+    from map_logic.diplomacy import diplomacy_lifecycle
+    diplomacy_lifecycle.normalize_diplomacy_channels(world_state.nation_data)
     from map_logic.diplomacy import faction_records
     if save_meta and "factions" in save_meta:
         faction_records.restore(map_screen, save_meta["factions"])
@@ -468,7 +469,7 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
             if fac not in world_state.nation_data["FACTION_WAR_MAPS"]:
                 queries.save_faction_pre_war_map(fac, world_state.map_data, world_state.nation_data)
 
-    migrations.migrate_spawned_territories(world_state.nation_data, world_state.map_data)
+    queries.repair_spawned_territories(world_state.nation_data, world_state.map_data)
 
     # --- AUTO NAME STARTING UNITS ---
     unit_counters = {}

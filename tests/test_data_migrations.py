@@ -16,6 +16,7 @@ os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 
 from data import constants as c, migrations, queries
 from data.map import history_io, load_map
+from map_logic.diplomacy import diplomacy_lifecycle
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -145,7 +146,7 @@ class Version47StepTests(unittest.TestCase):
                    "rejected": "REJECT_FIXTURE", "proposal": proposal}
         meta, _map, _history = upgraded({"nation_data": {"country": {"pending_diplomacy": pending}}})
         countries = meta["nation_data"]
-        migrations.normalize_diplomacy_channels(countries)
+        diplomacy_lifecycle.normalize_diplomacy_channels(countries)
         self.assertEqual(set(pending), {"proposal"})
         self.assertIs(pending["proposal"], proposal)
         responses = countries["country"]["diplo_responses"]
@@ -156,7 +157,7 @@ class Version47StepTests(unittest.TestCase):
                                                "message": "", "parameters": None,
                                                "legacy_unmatched": True})
         restored = round_trip(countries)
-        migrations.normalize_diplomacy_channels(restored)
+        diplomacy_lifecycle.normalize_diplomacy_channels(restored)
         self.assertEqual(restored, countries)
 
     def test_scripted_events_gain_condition_and_action_lists(self):
@@ -267,13 +268,13 @@ class LoadRepairTests(unittest.TestCase):
         units = [{"unit_id": "existing"}, {"unit_id": "existing"},
                  {"air_cargo": [{"unit_id": ""}, {}]}]
         map_data = {"province": {"units": units}}
-        added = migrations.ensure_unit_ids(map_data)
+        added = queries.ensure_unit_ids(map_data)
         all_ids = [unit["unit_id"] for unit in queries.units_with_air_cargo(units)]
         self.assertEqual(units[0]["unit_id"], "existing")
         self.assertEqual(len(added), 4)
         self.assertEqual(len(all_ids), len(set(all_ids)))
         restored = round_trip(map_data)
-        self.assertEqual(migrations.ensure_unit_ids(restored), [])
+        self.assertEqual(queries.ensure_unit_ids(restored), [])
         self.assertEqual(restored, map_data)
 
 

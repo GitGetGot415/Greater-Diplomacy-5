@@ -393,63 +393,6 @@ def normalize_production_order(entry, expected):
     return result
 
 
-def ensure_unit_ids(map_data, nation_data=None):
-    """Give every live unit one unique persistent ID and return the IDs added.
-
-    Old maps never had unit IDs.  This migration is intentionally tolerant of
-    malformed or duplicate values: the loaded map becomes safe before any
-    army roster can refer to it, and the repaired IDs are saved normally.
-    """
-    from data import queries
-    seen, added = set(), []
-    groups = [queries.units_with_air_cargo(province.get("units", []))
-              for province in (map_data or {}).values() if isinstance(province, dict)]
-    if nation_data is not None:
-        groups.append(queries.held_volunteer_units(nation_data))
-    for group in groups:
-        for unit in group:
-            unit_id = unit.get("unit_id")
-            if not isinstance(unit_id, str) or not unit_id or unit_id in seen:
-                unit_id = uuid.uuid4().hex
-                while unit_id in seen:
-                    unit_id = uuid.uuid4().hex
-                unit["unit_id"] = unit_id
-                added.append(unit_id)
-            seen.add(unit_id)
-    return added
-
-
-def migrate_spawned_territories(nation_data, map_data):
-    """Restore missing starting territory lists for Integrated puppets."""
-    for name, country in nation_data.items():
-        if country.get("puppet_type") == c.PUPPET_TYPE_INTEGRATED and "spawned_territories" not in country:
-            country["spawned_territories"] = [province["id"] for province in map_data.values()
-                                               if province.get("owner") == name]
-
-
-def overlay_saved_province_data(map_data, saved_provinces):
-    """Apply legacy or history province overlays to their map-data records."""
-    malformed_resources = 0
-    for json_key, saved_province in saved_provinces.items():
-        province = map_data.get(json_key)
-        if province is not None and saved_province:
-            if not isinstance(saved_province, dict):
-                continue
-            # A pre-fix history snapshot could contain resource names as a
-            # list: snapshot_history used a list copier on the resources dict.
-            # Do not replace a valid current resource mapping with that known
-            # malformed value.  There is no amount data to recover from it,
-            # but preserving the current mapping avoids silent resource loss.
-            overlay = copy.deepcopy(saved_province)
-            resources = overlay.get("resources")
-            if "resources" in overlay and not isinstance(resources, dict):
-                malformed_resources += 1
-                del overlay["resources"]
-            province.update(overlay)
-    if malformed_resources:
-        print(f"[WARN] Ignored malformed saved resources in {malformed_resources} province overlay(s).")
-
-
 def repair_faction_rosters(nation_data, map_data):
     """Drops from every faction roster the members who should never have been on it.
 
@@ -526,69 +469,6 @@ def repair_faction_rosters(nation_data, map_data):
             nation_data[leaver]["is_faction_leader"] = False
 
 
-def faction_records(nation_data, records=None):
-    """Read canonical factions or convert repaired country projections once."""
-    import hashlib
-    import copy
-
-    if records is not None:
-        if not isinstance(records, dict):
-            raise ValueError("Faction records must be a mapping.")
-        result = copy.deepcopy(records)
-        assigned = set()
-        for identity, record in result.items():
-            if (not isinstance(identity, str) or not identity or not isinstance(record, dict)
-                    or not isinstance(record.get("name"), str) or not record["name"]
-                    or not isinstance(record.get("members"), list)
-                    or not record["members"] or (record.get("leader") is not None
-                                                and record["leader"] not in record["members"])
-                    or not isinstance(record.get("pre_war_borders", {}), dict)):
-                raise ValueError("Invalid faction record.")
-            for member in record["members"]:
-                if not isinstance(member, str) or member not in nation_data or member in assigned:
-                    raise ValueError("Faction members must be distinct existing countries.")
-                assigned.add(member)
-            record.setdefault("pre_war_borders", {})
-        return result
-    groups = {}
-    for country, data in nation_data.items():
-        if isinstance(data, dict) and data.get("faction"):
-            groups.setdefault(data["faction"], []).append(country)
-    result = {}
-    for name, members in groups.items():
-        leader = next((member for member in members
-                       if nation_data[member].get("is_faction_leader")), None)
-        # Existing leadership repair selects a successor after loading land and units.
-        identity = "faction-" + hashlib.sha256(name.encode("utf-8")).hexdigest()[:24]
-        result[identity] = {"name": name, "leader": leader, "members": members,
-                            "pre_war_borders": copy.deepcopy(
-                                nation_data.get("FACTION_WAR_MAPS", {}).get(name, {}))}
-    return result
-
-
-def normalize_air_orders(map_data):
-    """Repair saved recovery timers and aircraft orders. Old units need no recovery."""
-    from data import queries
-    for province in map_data.values():
-        for unit in queries.units_with_air_cargo(province.get("units", [])):
-            order = unit.get("order")
-            if isinstance(order, dict) and order.get("type") == "AIR_DROP_RECOVERY":
-                if not queries.unit_is_air_drop_recovering(unit):
-                    unit["order"] = {"type": "MOVE", "path": []}
-                continue
-            if not queries.is_air_unit(unit) or not isinstance(order, dict):
-                continue
-            if isinstance(order.get("type"), str) and order["type"] in queries.AIR_ORDER_TYPES:
-                order.setdefault("base_id", province["id"])
-                if order["type"] == "AIR_PATROL":
-                    order.setdefault("priority", queries.AIR_DEFAULT_PRIORITY)
-            elif order.get("type") == "MOVE" and not queries.air_unit_can_move_on_ground(unit):
-                order["path"] = []
-            elif order.get("type") == "CONVERT" and order.get("to") == "Truck":
-                unit["order"] = (queries.air_conversion_order(unit) if province.get("is_coastal", False)
-                                 else {"type": "MOVE", "path": []})
-
-
 # SCRIPTED EVENTS AND DIPLOMACY
 # =============================
 
@@ -598,155 +478,6 @@ def decode_saved_json(payload):
     if payload.startswith(b'\x1f\x8b'):
         payload = gzip.decompress(payload)
     return json.loads(payload.decode('utf-8'))
-
-
-def normalize_response_reference(nation_data, recipient, sender, response):
-    """Bind omitted older references and validate supplied references against host state."""
-    request = nation_data.get(sender, {}).get("pending_diplomacy", {}).get(recipient)
-    if request is not None:
-        request = normalize_diplomatic_request(copy.deepcopy(request), sender, recipient)
-    reference = response.get("request_id")
-    if reference is not None:
-        if (not isinstance(reference, str) or not isinstance(request, dict)
-                or reference != request.get("request_id") or response.get("action") != request.get("action")):
-            raise ValueError("That response refers to an expired diplomatic request.")
-        return {"request_id": reference}
-    existing = nation_data.get(recipient, {}).get("diplo_responses", {}).get(sender)
-    if isinstance(existing, dict) and existing.get("legacy_unmatched") and response == existing:
-        return {"legacy_unmatched": True}
-    if isinstance(request, dict) and response.get("action") == request.get("action"):
-        return {"request_id": request["request_id"]}
-    # Older files can contain standalone responses with copied treaty terms.
-    return {"legacy_unmatched": True}
-
-
-def normalize_diplomatic_request(entry, sender, target):
-    """Give older requests reproducible identities without gameplay randomness."""
-    if isinstance(entry, str):
-        entry = {"action": entry, "turns": 1, "timer": 0}
-    if not isinstance(entry, dict):
-        raise ValueError("A diplomatic request must be an action or a record.")
-    identity = entry.get("request_id")
-    if identity is None:
-        payload = json.dumps([sender, target, entry], sort_keys=True, separators=(",", ":"))
-        entry["request_id"] = uuid.uuid5(uuid.NAMESPACE_URL, "gd5:diplomacy:" + payload).hex
-    elif not isinstance(identity, str) or not identity or len(identity) > 128:
-        raise ValueError("A diplomatic request_id must be a nonempty string of at most 128 characters.")
-    return entry
-
-
-def migrate_diplomatic_records(nation_data):
-    """Normalize both channels after loading requests, preserving unknown fields."""
-    for sender, country in nation_data.items():
-        if not isinstance(country, dict):
-            continue
-        pending = country.get("pending_diplomacy", {})
-        for target, entry in list(pending.items()):
-            pending[target] = normalize_diplomatic_request(entry, sender, target)
-    for recipient, country in nation_data.items():
-        if not isinstance(country, dict):
-            continue
-        for sender, response in country.get("diplo_responses", {}).items():
-            if not isinstance(response, dict) or "request_id" in response:
-                continue
-            request = nation_data.get(sender, {}).get("pending_diplomacy", {}).get(recipient, {})
-            if isinstance(request, dict) and request.get("action") == response.get("action"):
-                response["request_id"] = request["request_id"]
-            else:
-                # Older saves could contain standalone responses with copied terms.
-                response["legacy_unmatched"] = True
-    for signatory, country in nation_data.items():
-        if not isinstance(country, dict):
-            continue
-        treaty = country.get("pending_treaty")
-        if not isinstance(treaty, dict):
-            continue
-        if not treaty.get("treaty_id"):
-            payload = json.dumps([signatory, treaty], sort_keys=True, separators=(",", ":"))
-            treaty["treaty_id"] = uuid.uuid5(uuid.NAMESPACE_URL, "gd5:ratification:" + payload).hex
-        for member in treaty.get("awaiting", []):
-            request = nation_data.get(member, {}).get("pending_ratification")
-            if isinstance(request, dict):
-                request.setdefault("treaty_id", treaty["treaty_id"])
-    return nation_data
-
-
-def normalize_diplomacy_channels(nation_data):
-    """Give every country its diplomatic channels and identify their records."""
-    for country in nation_data.values():
-        country.setdefault("at_war_with", [])
-        country.setdefault("guarantees", [])
-        country.setdefault("military_attaches", [])
-        country.setdefault("pending_diplomacy", {})
-        country.setdefault("diplo_responses", {})
-    return migrate_diplomatic_records(nation_data)
-
-
-def from_legacy_string(peace_type, proposer, target):
-    """Turns one of the three old peace sentences into a deal.
-
-    Saves made before the rework can have a peace offer in flight, and the AI's
-    own offers carried free prose where the terms were supposed to be. Anything
-    that is not recognisably a demand is read as a white peace, which is what
-    those offers already did when they executed -- treaty_effects fell back to
-    PEACE_WHITE_PEACE whenever the parameters were empty.
-    """
-    from data import queries
-    from map_logic.diplomacy import deal
-
-    terms = peace_type if isinstance(peace_type, str) else ""
-
-    if not (terms.startswith(c.PEACE_DEMAND_CLAIMS) or terms.startswith(c.PEACE_SURRENDER)):
-        return deal.ceasefire_deal(proposer, target)
-
-    winner, loser = queries.get_peace_winner_loser(terms, proposer, target)
-    frozen = queries.parse_peace_frozen_ids(terms)
-    return deal.new(deal.KIND_PEACE, [proposer], [target],
-               [deal.tiles_clause(loser, winner, frozen, plus_originals=True)])
-
-
-def migrate_legacy_deal(params, proposer, target, kind=None):
-    """Whatever was stored on a pending action, as a deal.
-
-    Three shapes reach this: a real deal, one of the old peace strings, and the
-    old four-key trade dict {give_materials, take_fuel, puppet_state, ...}. Pass
-    `kind` when the caller knows which it should be -- an AI peace offer carried
-    free prose where the terms belonged, and reading that as a trade would be
-    worse than reading it as the white peace it always executed as.
-    """
-    from map_logic.diplomacy import deal
-    if deal.is_deal(params):
-        return params
-
-    if kind == deal.KIND_PEACE:
-        return from_legacy_string(params if isinstance(params, str) else "", proposer, target)
-
-    if isinstance(params, dict):
-        agreement = deal.new(deal.KIND_TRADE, [proposer], [target])
-        for resource in c.TRADE_RESOURCE_KEYS:
-            given = int(params.get(f"give_{resource}", 0) or 0)
-            taken = int(params.get(f"take_{resource}", 0) or 0)
-            if given > 0:
-                agreement = deal.add_clause(agreement, deal.resources_clause(proposer, target, resource, given))
-            if taken > 0:
-                agreement = deal.add_clause(agreement, deal.resources_clause(target, proposer, resource, taken))
-
-        # "SENDER", "NONE" and "RECEIVER" are the three the old trade screen
-        # wrote. Anything else is read as a vassalage term all the same, in the
-        # sender's favour: the check it replaced was `!= "NONE"`, so an
-        # unrecognised value was refused rather than waved through, and a value
-        # this does not understand is the last thing that should quietly become
-        # no clause at all.
-        puppet_state = params.get("puppet_state") or "NONE"
-        if puppet_state == "RECEIVER":
-            agreement = deal.add_clause(agreement, {"type": deal.VASSALIZE, "master": target, "subject": proposer,
-                                     "puppet_type": c.PUPPET_TYPE_AUTONOMOUS})
-        elif puppet_state != "NONE":
-            agreement = deal.add_clause(agreement, {"type": deal.VASSALIZE, "master": proposer, "subject": target,
-                                     "puppet_type": c.PUPPET_TYPE_AUTONOMOUS})
-        return agreement
-
-    return from_legacy_string(params, proposer, target)
 
 
 def legacy_player_country(map_ref, country_id, nation_update):
@@ -790,7 +521,7 @@ def legacy_player_country(map_ref, country_id, nation_update):
 
     from map_logic.diplomacy import diplomacy_lifecycle as lifecycle
     probe = copy.deepcopy(world_state.nation_data)
-    normalize_diplomacy_channels(probe)
+    lifecycle.normalize_diplomacy_channels(probe)
     pending = merged.get("pending_diplomacy", {})
     responses = merged.get("diplo_responses", {})
     draft_lists = merged.get("draft_lists", {})
@@ -801,7 +532,7 @@ def legacy_player_country(map_ref, country_id, nation_update):
     if any(not isinstance(response, dict) for response in responses.values()):
         raise ValueError("Invalid diplomatic response.")
     submitted = {country_id: copy.deepcopy(merged)}
-    normalize_diplomacy_channels(submitted)
+    lifecycle.normalize_diplomacy_channels(submitted)
     drafts = {}
     for target, record in submitted[country_id]["pending_diplomacy"].items():
         if record.get("turns", 0) > 0:
