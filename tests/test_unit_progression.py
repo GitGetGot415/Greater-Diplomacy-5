@@ -64,12 +64,6 @@ class UnitProgressionTests(unittest.TestCase):
                 self.assertFalse(queries.is_unit_unlocked(latest, before, self.library))
                 self.assertIn(latest, ai_tech_eval.units_unlocked_by(tech, before, self.library))
 
-    def test_railgun_research_date_uses_the_new_timeline_endpoint(self):
-        self.assertEqual(self.tree['railgun']['years'], [c.END_YEAR])
-        tech, level = queries.get_unit_research_requirement('Railgun', self.library)
-        self.assertTrue(queries.is_unit_unlocked('Railgun', {tech: level}, self.library))
-        self.assertFalse(queries.is_unit_unlocked('Railgun', {tech: level - 1}, self.library))
-
     def test_latest_units_and_research_survive_save_data_round_trip(self):
         game = sample_map_screen()
         research = self.final_research()

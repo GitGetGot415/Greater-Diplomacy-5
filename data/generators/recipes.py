@@ -170,17 +170,17 @@ class UnitFamily:
 # written between blocks, matching the hand-maintained file's formatting.
 UNIT_SECTIONS = [
     [
-        UnitFamily("Infantry Type", year_suffixes(1910, 121), {
+        UnitFamily("Infantry Type", year_suffixes(1910, 141), {
             "health": linear(1000, 50), "attack": linear(100, 10), "defense": const(0),
             "speed": const(1), "cost_materials": linear(500, 5), "cost_manpower": const(1000),
             "cost_fuel": const(0), "production_time": const(2),
         }),
-        UnitFamily("Motorized Infantry Type", year_suffixes(1910, 121), {
+        UnitFamily("Motorized Infantry Type", year_suffixes(1910, 141), {
             "health": linear(1000, 50), "attack": linear(100, 10), "defense": const(0),
             "speed": const(2), "cost_materials": linear(800, 8), "cost_manpower": const(1000),
             "cost_fuel": linear(10, 1), "production_time": const(2),
         }),
-        UnitFamily("Mechanized Infantry Type", year_suffixes(1910, 121), {
+        UnitFamily("Mechanized Infantry Type", year_suffixes(1910, 141), {
             "health": linear(1000, 50), "attack": linear(100, 10),
             "defense": linear(0, 4),
             "speed": const(2), "cost_materials": linear(2000, 20), "cost_manpower": const(1000),
@@ -189,7 +189,7 @@ UNIT_SECTIONS = [
         # Identical to Mechanized Infantry Type in every stat except 1.5x attack
         # and double cost_materials - the premium tier Armored Personnel Carriers
         # open the door to once Infantry Fighting Vehicles are researched.
-        UnitFamily("Infantry Fighting Vehicle Type", year_suffixes(1910, 121), {
+        UnitFamily("Infantry Fighting Vehicle Type", year_suffixes(1910, 141), {
             "health": linear(1000, 50), "attack": linear(150, 15),
             "defense": linear(0, 4),
             "speed": const(2), "cost_materials": linear(3000, 30), "cost_manpower": const(1000),
@@ -200,7 +200,7 @@ UNIT_SECTIONS = [
             "speed": const(2), "cost_materials": const(1000), "cost_manpower": const(2000),
             "cost_fuel": const(0), "production_time": const(3),
         }),
-        UnitFamily("Militia", roman_suffixes(25), {
+        UnitFamily("Militia", roman_suffixes(29), {
             "health": linear(500, 100), "attack": linear(50, 10), "defense": const(0),
             "speed": const(1), "cost_materials": const(300), "cost_manpower": const(1000),
             "cost_fuel": const(0), "production_time": const(1),
@@ -209,7 +209,7 @@ UNIT_SECTIONS = [
         # an adjacent tile (see c.BOMBARDMENT_UNITS) rather than from stacking up.
         # Artillery uses Roman numeral tiers. Each tier matches its research level.
         # Keep bombardment damage separate from direct attack damage.
-        UnitFamily("Artillery", roman_suffixes(25), {
+        UnitFamily("Artillery", roman_suffixes(29), {
             "health": linear(100, 50), "attack": linear(120, 60),
             # Bombardment damage, tracked separately from melee "attack" so the
             # two can be tuned independently. Currently mirrors attack 1:1.
@@ -222,7 +222,7 @@ UNIT_SECTIONS = [
         # separate research of its own) and identical in every stat except
         # double cost_materials and much heavier damage, mirrored 1:1 between
         # melee and bombardment like Artillery itself.
-        UnitFamily("Heavy Artillery", roman_suffixes(25), {
+        UnitFamily("Heavy Artillery", roman_suffixes(29), {
             "health": linear(100, 50), "attack": linear(240, 120),
             "bombard_attack": linear(240, 120),
             "defense": const(0),
@@ -239,14 +239,14 @@ UNIT_SECTIONS = [
             "health": 1000, "attack": 300, "defense": 50, "speed": 2,
             "cost_materials": 3000, "cost_manpower": 1000, "cost_fuel": 100, "production_time": 4,
         }),
-        UnitFamily("Armored Car", roman_suffixes(29), {
+        UnitFamily("Armored Car", roman_suffixes(34), {
             "health": linear(1000, 100), "attack": linear(400, 100), "defense": linear(60, 10),
             # speed steps: I=2, II-IV=3, V+=4
             "speed": piecewise([(0, 2, 0), (1, 3, 0), (4, 4, 0)]),
             "cost_materials": linear(3000, 200), "cost_manpower": const(1000),
             "cost_fuel": linear(100, 5), "production_time": const(4),
         }),
-        UnitFamily("Light Tank", roman_suffixes(29), {
+        UnitFamily("Light Tank", roman_suffixes(34), {
             "health": linear(1800, 200), "attack": linear(1200, 150), "defense": linear(80, 10),
             # speed steps: I-III=2, IV+=3
             "speed": piecewise([(0, 2, 0), (3, 3, 0)]),
@@ -290,7 +290,7 @@ UNIT_SECTIONS = [
             "speed": 1, "cost_materials": 80000, "cost_manpower": 2000,
             "cost_fuel": 3000, "production_time": 10,
         }),
-        UnitFamily("Main Battle Tank", roman_suffixes(18), {
+        UnitFamily("Main Battle Tank", roman_suffixes(22), {
             "health": linear(5000, 500), "attack": linear(5000, 500), "defense": linear(250, 25),
             "speed": const(2), "cost_materials": linear(16000, 1000), "cost_manpower": const(1000),
             "cost_fuel": linear(240, 10), "production_time": const(6),
@@ -326,12 +326,12 @@ UNIT_SECTIONS = [
             "bombard_attack": 500,
             "cost_materials": 20000, "cost_manpower": 2000, "cost_fuel": 400, "production_time": 10,
         }, naval_unit=True),
-        UnitFamily("Destroyer", roman_suffixes(31), {
+        UnitFamily("Destroyer", roman_suffixes(36), {
             "health": linear(2400, 400), "attack": linear(1200, 300), "defense": linear(200, 20),
             "speed": const(1), "cost_materials": linear(10000, 500), "cost_manpower": const(1000),
             "cost_fuel": linear(250, 5), "production_time": const(8),
         }, naval_unit=True),
-        UnitFamily("Submarine", roman_suffixes(31), {
+        UnitFamily("Submarine", roman_suffixes(36), {
             "health": linear(1200, 200),
             # attack climbs 300/level through IX, jumps to 4000 at X, then 200/level
             # "attack": piecewise([(0, 1200, 300), (9, 4000, 200)]),
@@ -342,7 +342,7 @@ UNIT_SECTIONS = [
         }, naval_unit=True),
         # Can bombard an adjacent tile (see c.BOMBARDMENT_UNITS); bombard_attack
         # is tracked separately from melee "attack" so the two stay tunable independently.
-        UnitFamily("Aircraft Carrier", roman_suffixes(21), {
+        UnitFamily("Aircraft Carrier", roman_suffixes(25), {
             "health": linear(800, 200), "attack": linear(600, 120), "defense": linear(200, 20),
             "bombard_attack": linear(600, 120),
             "speed": const(1), "cost_materials": linear(20000, 1000), "cost_manpower": const(2000),
@@ -358,9 +358,9 @@ UNIT_SECTIONS = [
         UnitFamily('Monoplane Transport', roman_suffixes(3), {'health': 1000, 'attack': 0, 'defense': 0, 'speed': 1, 'cost_materials': linear(9000, 500), 'cost_manpower': 1000, 'cost_fuel': 200, 'production_time': 4, 'production_group': 'Air', 'air_role': 'transport', 'air_range_px': linear(60, 10), 'air_transport_capacity': 1}),
         UnitFamily('V1 Flying Bomb', single(), {'health': 1000, 'attack': 800, 'defense': 0, 'speed': 1, 'cost_materials': 2000, 'cost_manpower': 0, 'cost_fuel': 60, 'production_time': 2, 'production_group': 'Air', 'air_role': 'strike', 'air_range_px': 200, 'air_consumable': True, 'air_damages_forts': True}),
         UnitFamily('V2 Rocket', single(), {'health': 2000, 'attack': 1200, 'defense': 0, 'speed': 1, 'cost_materials': 4000, 'cost_manpower': 0, 'cost_fuel': 80, 'production_time': 4, 'production_group': 'Air', 'air_role': 'strike', 'air_range_px': 300, 'air_consumable': True, 'air_interception_immune': True, 'air_damages_forts': True}),
-        UnitFamily('Jet Fighter', roman_suffixes(21), {'health': linear(4000, 200), 'attack':  linear(1000, 100), 'defense':  linear(100, 20), 'speed': 1, 'cost_materials':  linear(5000, 200), 'cost_manpower': 500, 'cost_fuel': linear(160, 10), 'production_time': 4, 'production_group': 'Air', 'air_role': 'fighter', 'air_range_px': linear(200, 5), 'air_attack_multiplier': 4}),
-        UnitFamily('Jet Bomber', roman_suffixes(16), {'health': linear(6000, 200), 'attack':  linear(1600, 200), 'defense':  linear(200, 20), 'speed': 1, 'cost_materials':  linear(6000, 500), 'cost_manpower': 500, 'cost_fuel': linear(160, 20), 'production_time': 6, 'production_group': 'Air', 'air_role': 'bomber', 'air_range_px': linear(300, 10), 'air_damages_forts': True}),
-        UnitFamily('Jet Transport', roman_suffixes(16), {'health': linear(2000, 200), 'attack': 0, 'defense': 0, 'speed': 1, 'cost_materials': linear(25000, 1000), 'cost_manpower': 1000, 'cost_fuel': 500, 'production_time': 6, 'production_group': 'Air', 'air_role': 'transport', 'air_range_px': linear(100, 20), 'air_transport_capacity': 2}),
+        UnitFamily('Jet Fighter', roman_suffixes(26), {'health': linear(4000, 200), 'attack':  linear(1000, 100), 'defense':  linear(100, 20), 'speed': 1, 'cost_materials':  linear(5000, 200), 'cost_manpower': 500, 'cost_fuel': linear(160, 10), 'production_time': 4, 'production_group': 'Air', 'air_role': 'fighter', 'air_range_px': linear(200, 5), 'air_attack_multiplier': 4}),
+        UnitFamily('Jet Bomber', roman_suffixes(20), {'health': linear(6000, 200), 'attack':  linear(1600, 200), 'defense':  linear(200, 20), 'speed': 1, 'cost_materials':  linear(6000, 500), 'cost_manpower': 500, 'cost_fuel': linear(160, 20), 'production_time': 6, 'production_group': 'Air', 'air_role': 'bomber', 'air_range_px': linear(300, 10), 'air_damages_forts': True}),
+        UnitFamily('Jet Transport', roman_suffixes(20), {'health': linear(2000, 200), 'attack': 0, 'defense': 0, 'speed': 1, 'cost_materials': linear(25000, 1000), 'cost_manpower': 1000, 'cost_fuel': 500, 'production_time': 6, 'production_group': 'Air', 'air_role': 'transport', 'air_range_px': linear(100, 20), 'air_transport_capacity': 2}),
     ],
 ]
 
@@ -485,14 +485,14 @@ BUILDING_CHAINS = [
 # Sections separated by a blank spacer line, matching the current file.
 RESEARCH_SECTIONS = [
     [
-        ("infantry_type", {"category": "INFANTRY", "max_lvl": 121, "cost": 900, "req": {},
-                            "years": years_range(1910, 1, 121)}),
+        ("infantry_type", {"category": "INFANTRY", "max_lvl": 141, "cost": 900, "req": {},
+                            "years": years_range(1910, 1, 141)}),
         ("cavalry", {"category": "INFANTRY", "max_lvl": 5, "cost": 1200, "req": {},
                       "years": years_range(1910, 4, 5)}),
-        ("militia", {"category": "INFANTRY", "max_lvl": 25, "cost": 600, "req": {},
-                      "years": years_range(1910, 5, 25)}),
-        ("artillery", {"category": "INFANTRY", "max_lvl": 25, "cost": 900, "req": {},
-                        "years": years_range(1910, 5, 25)}),
+        ("militia", {"category": "INFANTRY", "max_lvl": 29, "cost": 600, "req": {},
+                      "years": years_range(1910, 5, 29)}),
+        ("artillery", {"category": "INFANTRY", "max_lvl": 29, "cost": 900, "req": {},
+                        "years": years_range(1910, 5, 29)}),
         # One-time unlocks rather than leveled techs: owning them lets a nation build
         # Motorized/Mechanized Infantry up to whatever year its own infantry_type
         # research has reached (see queries.get_infantry_family_year), instead of
@@ -512,14 +512,14 @@ RESEARCH_SECTIONS = [
                            "years": years_range(1910, 1, 1)}),
         ("ww1_armored_car", {"category": "TANKS", "max_lvl": 1, "cost": 2400,
                               "req": {"civilian_car": 1}, "years": years_range(1912, 1, 1)}),
-        ("armored_car", {"category": "TANKS", "max_lvl": 29, "cost": 2400,
-                          "req": {"ww1_armored_car": 1}, "years": years_range(1916, 4, 29)}),
+        ("armored_car", {"category": "TANKS", "max_lvl": 34, "cost": 2400,
+                          "req": {"ww1_armored_car": 1}, "years": years_range(1916, 4, 34)}),
     ],
     [
         ("ww1_tank", {"category": "TANKS", "max_lvl": 1, "cost": 2400,
                        "req": {"ww1_armored_car": 1}, "years": years_range(1914, 1, 1)}),
-        ("light_tank", {"category": "TANKS", "max_lvl": 29, "cost": 2400,
-                         "req": {"ww1_tank": 1}, "years": years_range(1918, 4, 29)}),
+        ("light_tank", {"category": "TANKS", "max_lvl": 34, "cost": 2400,
+                         "req": {"ww1_tank": 1}, "years": years_range(1918, 4, 34)}),
         ("medium_tank", {"category": "TANKS", "max_lvl": 4, "cost": 2400,
                           "req": {"light_tank": 1}, "years": years_range(1925, 5, 4)}),
         ("heavy_tank", {"category": "TANKS", "max_lvl": 4, "cost": 2400,
@@ -534,9 +534,9 @@ RESEARCH_SECTIONS = [
                                        "years": years_range(1980, 1, 1)}),
         ("railgun", {"category": "TANKS", "max_lvl": 1, "cost": 3600,
                       "req": {"electromagnetic_launcher": 1}, "years": years_range(2030, 1, 1)}),
-        ("main_battle_tank", {"category": "TANKS", "max_lvl": 18, "cost": 2400,
+        ("main_battle_tank", {"category": "TANKS", "max_lvl": 22, "cost": 2400,
                                "req": {"OR": [{"medium_tank": 4}, {"heavy_tank": 4}]},
-                               "years": years_range(1945, 5, 18)}),
+                               "years": years_range(1945, 5, 22)}),
         ("ww1_railroad_gun", {"category": "TANKS", "max_lvl": 1, "cost": 2400,
                                "req": {"ww1_tank": 1}, "years": years_range(1918, 1, 1)}),
         ("ww2_railroad_gun", {"category": "TANKS", "max_lvl": 1, "cost": 2400,
@@ -547,18 +547,18 @@ RESEARCH_SECTIONS = [
                           "years": years_range(1910, 1, 1)}),
         ("battleship", {"category": "NAVY", "max_lvl": 1, "cost": 2400,
                          "req": {"dreadnought": 1}, "years": years_range(1920, 1, 1)}),
-        ("destroyer", {"category": "NAVY", "max_lvl": 31, "cost": 2400, "req": {},
-                        "years": years_range(1910, 4, 31)}),
-        ("aircraft_carrier", {"category": "NAVY", "max_lvl": 21, "cost": 2400,
-                               "req": {"battleship": 1}, "years": years_range(1930, 5, 21)}),
-        ("submarine", {"category": "NAVY", "max_lvl": 31, "cost": 2400, "req": {},
-                        "years": years_range(1910, 4, 31)}),
+        ("destroyer", {"category": "NAVY", "max_lvl": 36, "cost": 2400, "req": {},
+                        "years": years_range(1910, 4, 36)}),
+        ("aircraft_carrier", {"category": "NAVY", "max_lvl": 25, "cost": 2400,
+                               "req": {"battleship": 1}, "years": years_range(1930, 5, 25)}),
+        ("submarine", {"category": "NAVY", "max_lvl": 36, "cost": 2400, "req": {},
+                        "years": years_range(1910, 4, 36)}),
     ],
     [
         ("basic_factory", {"category": "INDUSTRY", "max_lvl": 1, "cost": 1200, "req": {},
-                            "years": years_range(1900, 1, 1)}),
+                            "years": years_range(1800, 1, 1)}),
         ("factory", {"category": "INDUSTRY", "max_lvl": 25, "cost": 1200,
-                      "req": {"basic_factory": 1}, "years": years_range(1914, 4, 25)}),
+                      "req": {"basic_factory": 1}, "years": years_range(1810, 10, 25)}),
         ("bergius_process", {"category": "INDUSTRY", "max_lvl": 1, "cost": 1200, "req": {},
                               "years": years_range(1910, 1, 1)}),
         ("fuel_refining", {"category": "INDUSTRY", "max_lvl": 50, "cost": 1200,
@@ -584,8 +584,8 @@ RESEARCH_SECTIONS = [
         ('v1_flying_bomb', {'category': 'AIR', 'display_name': 'V1 Flying Bomb', 'max_lvl': 1, 'cost': 900, 'req': {}, 'years': [1940]}),
         ('v2_rocket', {'category': 'AIR', 'display_name': 'V2 Rocket', 'max_lvl': 1, 'cost': 1200, 'req': {'v1_flying_bomb': 1}, 'years': [1945]}),
         ('jet_engine', {'category': 'AIR', 'display_name': 'Jet Engine', 'max_lvl': 1, 'cost': 2400, 'req': {}, 'years': [1945]}),
-        ('jet_fighter', {'category': 'AIR', 'display_name': 'Jet Fighter', 'max_lvl': 21, 'cost': 1800, 'req': {'piston_fighter': 5, 'jet_engine': 1}, 'years': years_range(1950, 4, 21)}),
-        ('jet_bomber', {'category': 'AIR', 'display_name': 'Jet Bomber', 'max_lvl': 16, 'cost': 2400, 'req': {'piston_bomber': 5, 'jet_fighter': 1}, 'years': years_range(1955, 5, 16)}),
-        ('jet_transport', {'category': 'AIR', 'display_name': 'Jet Transport', 'max_lvl': 16, 'cost': 2400, 'req': {'piston_bomber': 5}, 'years': years_range(1955, 5, 16)}),
+        ('jet_fighter', {'category': 'AIR', 'display_name': 'Jet Fighter', 'max_lvl': 26, 'cost': 1800, 'req': {'piston_fighter': 5, 'jet_engine': 1}, 'years': years_range(1950, 4, 26)}),
+        ('jet_bomber', {'category': 'AIR', 'display_name': 'Jet Bomber', 'max_lvl': 20, 'cost': 2400, 'req': {'piston_bomber': 5, 'jet_fighter': 1}, 'years': years_range(1955, 5, 20)}),
+        ('jet_transport', {'category': 'AIR', 'display_name': 'Jet Transport', 'max_lvl': 20, 'cost': 2400, 'req': {'piston_bomber': 5}, 'years': years_range(1955, 5, 20)}),
     ],
 ]
