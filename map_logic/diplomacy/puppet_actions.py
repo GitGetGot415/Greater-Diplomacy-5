@@ -6,7 +6,7 @@ war_actions.py and faction_actions.py.
 """
 from data.state_access import world_for, session_for
 import copy
-from map_logic.turn_processing import edit_province_ownership
+from map_logic.territory import ownership as edit_province_ownership
 from data import queries
 from map_logic.diplomacy.diplomacy_events import log_global_event
 from map_logic.diplomacy.war_actions import sever_military_access, link_war, remove_enemy, finalize_neutral
@@ -189,7 +189,7 @@ def finalize_annexation(map_data, nation_data, master, puppet, map_screen, *, fo
     # loser once its last one changes hands -- but a puppet that already held
     # nothing never enters that loop, and used to stay on its faction's roster
     # for the rest of the game.
-    from map_logic.turn_processing.edit_province_ownership import retire_landless_nation
+    from map_logic.territory.ownership import retire_landless_nation
     retire_landless_nation(map_screen, puppet, force=force)
 
     break_puppet_link(nation_data, master, puppet)

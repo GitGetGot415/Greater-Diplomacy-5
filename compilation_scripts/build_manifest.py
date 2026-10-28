@@ -9,35 +9,39 @@ DESKTOP_SOURCE_FILES = SOURCE_FILES + ("soloud.py",)
 WEB_SOURCE_FILES = SOURCE_FILES + ("libdragoman.so",)
 DATA_DIRS = ("assets", "base_maps", "scenarios")
 EMPTY_DIRS = ("saves", "tournament_saves", "mods")
-WEB_EXCLUDED_SUBPACKAGES = ("data.editors",)
+WEB_EXCLUDED_SUBPACKAGES = ()
 DEV_ONLY_PACKAGES = ("data.generators",)
 DEV_ONLY_FILES = ("run_tests.py", "simulate_crash.py", "temp_multiplayer_io.py")
 
 # Keep each dynamic import explicit. Package discovery previously omitted screens
 # from Windows archives even when discovery reported them.
 HIDDEN_IMPORTS = (
-    "screens.map_related_screens.automation_screen",
-    "screens.map_related_screens.declare_independence",
-    "screens.map_related_screens.politics_screen",
-    "screens.map_related_screens.unit_events_screen",
-    "screens.map_related_screens.country_summary",
-    "screens.editor_screens.unit_stats_editor",
+    "screens.game.automation_screen",
+    "screens.game.declare_independence",
+    "screens.game.politics_screen",
+    "screens.game.unit_events_screen",
+    "screens.game.country_summary",
+    "screens.editors.unit_stats_editor",
     "map_logic.turn_processing.unit_events",
     "map_logic.turn_processing.air_processor",
     "data.migrations",
     "map_logic.diplomacy.diplomacy_lifecycle",
-    "map_logic.production_actions",
-    "map_logic.unit_actions", "map_logic.player_actions",
+    "map_logic.actions.production_actions",
+    "map_logic.actions.unit_actions", "map_logic.actions.player_actions",
     "map_logic.diplomacy.action_definitions", "map_logic.diplomacy.faction_records",
     "data.runtime_rules", "data.world_nations",
     "data.game_state", "data.session_state", "data.state_access",
 )
 RUNTIME_PACKAGES = (
-    "screens", "screens.menu_screens", "screens.map_related_screens", "screens.editor_screens",
-    "map_logic", "map_logic.ai", "map_logic.camera", "map_logic.diplomacy",
-    "map_logic.random_map", "map_logic.rendering", "map_logic.setup", "map_logic.turn_processing",
-    "ui", "ui.bars", "ui.information", "ui.confirm_dialog",
-    "data", "data.editors", "data.io", "data.map",
+    "screens", "screens.menus", "screens.setup", "screens.multiplayer",
+    "screens.game", "screens.editors",
+    "map_logic", "map_logic.actions", "map_logic.ai", "map_logic.diplomacy",
+    "map_logic.imports", "map_logic.random_map", "map_logic.territory",
+    "map_logic.turn_processing",
+    "ui", "ui.bars", "ui.camera", "ui.dialogs", "ui.information",
+    "ui.navigation", "ui.panels", "ui.rendering", "ui.widgets",
+    "data", "data.io", "data.map", "data.multiplayer",
+    "data.multiplayer.tournament", "data.multiplayer.realtime",
 )
 NATIVE_PACKAGES = ("dragoman", "cryptography", "quickjs", "py_mini_racer")
 MAC_INCLUDES = tuple(dict.fromkeys(("gameState", "ui_elements", "soloud", "pygame", "tkinter") + HIDDEN_IMPORTS))

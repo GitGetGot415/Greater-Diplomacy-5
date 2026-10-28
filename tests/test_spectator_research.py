@@ -196,7 +196,7 @@ class SubjectTests(unittest.TestCase):
             self.assertEqual(self.map.nation_data[target]["research"], {})
 
     def test_exit_popup_save_preserves_live_references_and_other_fields(self):
-        from ui import confirm_dialog
+        from ui import dialogs as confirm_dialog
         target = self.others()[0]
         country = self.map.nation_data[target]
         research, queue, progress = country["research"], country["research_queue"], country["research_progress"]
@@ -219,7 +219,7 @@ class SubjectTests(unittest.TestCase):
         self.assertIsNone(self.screen.spectator_draft)
 
     def test_exit_and_back_key_popup_discard_all_draft_changes(self):
-        from ui import confirm_dialog
+        from ui import dialogs as confirm_dialog
         target = self.others()[0]
         before = deepcopy(self.map.nation_data[target])
         for exit_method in ("Exit", "back"):
@@ -242,7 +242,7 @@ class SubjectTests(unittest.TestCase):
                 self.assertEqual(self.map.nation_data[target], before)
 
     def test_exit_prompt_blocks_duplicate_prompts_and_edits_until_answered(self):
-        from ui import confirm_dialog
+        from ui import dialogs as confirm_dialog
         target = self.others()[0]
         self.spectate(target, "EDIT")
         before = deepcopy(self.screen.spectator_draft)
@@ -258,7 +258,7 @@ class SubjectTests(unittest.TestCase):
         self.assertTrue(self.screen.done)
 
     def test_go_back_preserves_draft_and_view_and_allows_further_editing(self):
-        from ui import confirm_dialog
+        from ui import dialogs as confirm_dialog
         target = self.others()[0]
         self.spectate(target, "EDIT")
         self.screen.toggle_editor_tech("test_research", 1)
@@ -286,7 +286,7 @@ class SubjectTests(unittest.TestCase):
         self.assertTrue(self.screen.done)
 
     def test_old_exit_callback_cannot_save_a_reopened_edit(self):
-        from ui import confirm_dialog
+        from ui import dialogs as confirm_dialog
         target = self.others()[0]
         self.spectate(target, "EDIT")
         self.screen.toggle_editor_tech("test_research", 1)
@@ -300,7 +300,7 @@ class SubjectTests(unittest.TestCase):
         self.assertEqual(self.screen.spectator_draft["research"], {})
 
     def test_real_go_back_popup_keeps_edit_open_and_cancel_still_discards(self):
-        from ui import modal_stack
+        from ui.navigation import modal_stack
         self.enterContext(patch.object(modal_stack, "_stack", []))
         target = self.others()[0]
         self.spectate(target, "EDIT")
@@ -323,7 +323,7 @@ class SubjectTests(unittest.TestCase):
         self.assertEqual(self.map.nation_data[target]["research"], {})
 
     def test_popup_save_rechecks_permission_and_leaves_draft_open_on_failure(self):
-        from ui import confirm_dialog
+        from ui import dialogs as confirm_dialog
         target = self.others()[0]
         self.spectate(target, "EDIT")
         self.screen.toggle_editor_tech("test_research", 1)
@@ -339,7 +339,7 @@ class SubjectTests(unittest.TestCase):
         self.assertTrue(self.screen.done)
 
     def test_view_and_player_exit_do_not_open_save_popup(self):
-        from ui import confirm_dialog
+        from ui import dialogs as confirm_dialog
         target = self.others()[0]
         with patch.object(confirm_dialog, "ask_yes_no") as ask:
             self.spectate(target)
@@ -353,7 +353,7 @@ class SubjectTests(unittest.TestCase):
             ask.assert_not_called()
 
     def test_progress_warning_no_preserves_draft_and_yes_discards_only_draft_progress(self):
-        from ui import confirm_dialog
+        from ui import dialogs as confirm_dialog
         target = self.others()[0]
         country = self.map.nation_data[target]
         country.update(research_queue=[{"tech_name": "test_research", "points_remaining": 40}],
@@ -383,7 +383,7 @@ class SubjectTests(unittest.TestCase):
         self.assertEqual(country, before)
 
     def test_paused_progress_requires_warning_and_is_cleared_on_confirm(self):
-        from ui import confirm_dialog
+        from ui import dialogs as confirm_dialog
         target = self.others()[0]
         country = self.map.nation_data[target]
         country["research_progress"] = {"test_research": 40}
@@ -398,7 +398,7 @@ class SubjectTests(unittest.TestCase):
         self.assertEqual(country["research"], {"test_research": 1})
 
     def test_warning_callbacks_cannot_change_a_cancelled_or_reopened_edit(self):
-        from ui import confirm_dialog
+        from ui import dialogs as confirm_dialog
         target = self.others()[0]
         self.map.nation_data[target]["research_progress"] = {"test_research": 40}
         before = deepcopy(self.map.nation_data[target])
@@ -472,12 +472,12 @@ class PickerTests(unittest.TestCase):
             self.enterContext(patch.object(app_harness.state_owner(self.map, name), name, value, create=True))
 
     def picker(self):
-        from screens.map_related_screens.research import ResearchCountrySelectScreen
+        from screens.game.research import ResearchCountrySelectScreen
         return ResearchCountrySelectScreen(self.map)
 
     def test_the_picker_offers_living_nations_and_routes_view_and_edit_to_the_tree(self):
-        from ui import editor_menus
-        from ui import screen_runner
+        from screens.editors import menus as editor_menus
+        from ui.navigation import screen_runner
         for mode in ("VIEW", "EDIT"):
             with self.subTest(mode=mode), patch.object(screen_runner, "_run_pygame_sub_screen") as launch:
                 editor_menus.spec_select_research_country(self.map)

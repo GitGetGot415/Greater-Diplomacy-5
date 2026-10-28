@@ -53,11 +53,11 @@ class WarScreenTestCase(unittest.TestCase):
         self.map.selected_province = self.their_prov
 
     def war_screen(self):
-        from screens.map_related_screens.war_screen import Declare_War_Screen
+        from screens.game.war_screen import Declare_War_Screen
         return Declare_War_Screen(self.map, self.target)
 
     def picker(self):
-        from screens.map_related_screens.claims_screen import Claims_Screen
+        from screens.game.claims_screen import Claims_Screen
         return Claims_Screen(self.map, self.target)
 
 
@@ -132,7 +132,7 @@ class ClaimPickerTests(WarScreenTestCase):
         self.assertEqual(entry["turns_left"], c.CLAIM_TURN_NON_CORE)
 
     def test_the_editor_overview_still_browses_every_claim(self):
-        from screens.map_related_screens.claims_screen import Claims_Screen
+        from screens.game.claims_screen import Claims_Screen
 
         self.map.is_editor = True
         try:

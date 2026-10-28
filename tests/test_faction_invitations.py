@@ -5,10 +5,10 @@ import unittest
 from unittest import mock
 
 from data import queries
-from data.io.realtime_multiplayer import MapRealtimeDriver, RealtimeError
+from data.multiplayer.realtime.session import MapRealtimeDriver, RealtimeError
 from map_logic.diplomacy import diplomacy_processor, faction_leadership, player_diplomacy_actions
 from tests.stub_map_screen import StubMapScreen
-from ui import spectator_menus
+from screens.game import spectator_controls as spectator_menus
 
 
 class FactionInvitationTests(unittest.TestCase):
@@ -156,7 +156,7 @@ class FactionInvitationButtonTests(unittest.TestCase):
         cls.game = app_harness.boot_map()
 
     def setUp(self):
-        from screens.menu_screens import map as map_module
+        from screens.game import map as map_module
         self.map_module = map_module
         game = self.game
         countries = sorted(queries.get_living_nations(game.map_data))[:3]

@@ -3,7 +3,7 @@ import asyncio
 import pygame
 from data.platform import run_background
 from map_logic.turn_processing import turn_processor
-from ui import diplomatic_popups
+from ui.panels import diplomatic_popups
 from map_logic.ai import ai_handler
 from data import queries
 
@@ -143,7 +143,7 @@ async def _resolve_turn_and_refresh(map_screen):
             session_state.player_country = session_state.active_players[session_state.current_player_index]
             map_screen.show_player_ready_screen = True
 
-        from screens.menu_screens.map import render_buttons
+        from screens.game.map import render_buttons
         render_buttons(map_screen)
 
         elapsed_seconds = (pygame.time.get_ticks() - session_state.turn_start_time) / 1000.0

@@ -14,9 +14,10 @@ import data.constants as c
 from data import queries
 from map_logic import politics
 from map_logic.turn_processing import combat_rules
-from screens.map_related_screens.country_summary import CountrySummaryScreen, open_country_summary
+from screens.game.country_summary import CountrySummaryScreen, open_country_summary
 from tests.stub_map_screen import StubMapScreen
-from ui import event_handler, modal_stack
+from screens.game import map_input as event_handler
+from ui.navigation import modal_stack
 from ui.bars import flag_renderer
 
 
@@ -222,7 +223,7 @@ class CountrySummaryTests(unittest.TestCase):
         self.assertEqual(summary["economy"], {"available": False, "resources": []})
 
     def test_tournament_projection_keeps_shared_totals_before_removing_private_plans(self):
-        from data.io import multiplayer_io
+        from data.multiplayer.tournament import files as multiplayer_io
         game = world()
         game.nation_data["B"].update(master="A", puppet_type=c.PUPPET_TYPE_INTEGRATED)
         game.nation_data["A"]["puppets"] = ["B"]
@@ -270,8 +271,8 @@ class CountrySummaryTests(unittest.TestCase):
             with self.subTest(country=expected):
                 game.selected_province = selected
                 event = pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=flag_renderer.FLAG_RECT.center)
-                with patch("ui.diplomatic_popups.handle_events", return_value=False), \
-                        patch("screens.map_related_screens.country_summary.open_country_summary") as open_summary, \
+                with patch("ui.panels.diplomatic_popups.handle_events", return_value=False), \
+                        patch("screens.game.country_summary.open_country_summary") as open_summary, \
                         patch.object(event_handler, "_select_map_province", side_effect=AssertionError("Click reached map")):
                     event_handler.handle_map_events(game, event)
                 open_summary.assert_called_once_with(game, expected)
@@ -297,8 +298,8 @@ class CountrySummaryTests(unittest.TestCase):
         surface = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
         with patch.object(queries, "get_country_summary", side_effect=AssertionError("Frame summary")), \
                 patch.object(queries, "get_economy_projections", side_effect=AssertionError("Frame economy")), \
-                patch("ui.flag_icons.flag_surface", side_effect=AssertionError("Frame flags")), \
-                patch("screens.map_related_screens.country_summary.render_inline_text",
+                patch("ui.widgets.flag_icons.flag_surface", side_effect=AssertionError("Frame flags")), \
+                patch("screens.game.country_summary.render_inline_text",
                       side_effect=AssertionError("Frame text layout")), \
                 patch.object(combat_rules, "volley", side_effect=AssertionError("Frame damage")):
             screen.draw(surface)

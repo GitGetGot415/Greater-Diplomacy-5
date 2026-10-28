@@ -18,7 +18,7 @@ INTENTIONALLY_UNSTAGED_FILES = set(manifest.DEV_ONLY_FILES)
 NON_PACKAGE_DIRS = {
     ".git", ".github", ".eggs", "__pycache__", "venv", ".venv", "build", "dist",
     "web_stage", "assets", "base_maps", "saves", "scenarios", "tournament_saves",
-    "compilation_scripts", "context", "map_tools", "mods", "tests",
+    "compilation_scripts", "context", "map_tools", "scripts", "mods", "tests",
 }
 DEV_ONLY_PACKAGES = set(manifest.DEV_ONLY_PACKAGES)
 
@@ -64,7 +64,7 @@ class BuildManifestTests(unittest.TestCase):
         self.assertFalse({p.split(".")[0] for p in packages} - set(manifest.SOURCE_PACKAGES))
 
     def test_dynamic_screens_have_explicit_hidden_imports(self):
-        tree = ast.parse(Path(ROOT, "screens/menu_screens/map.py").read_text(encoding="utf-8"))
+        tree = ast.parse(Path(ROOT, "screens/game/map.py").read_text(encoding="utf-8"))
         needed = set(_sub_screen_opener_module_paths(tree))
         args = manifest.windows_arguments()
         hidden = {args[i + 1] for i, arg in enumerate(args[:-1]) if arg == "--hidden-import"}
@@ -122,8 +122,9 @@ class BuildManifestTests(unittest.TestCase):
                 "data/json/settings_config.json": '{"private": true}',
                 "data/json/shuffle_disabled_tracks.json": '["local"]',
                 "data/runtime.py": "pass", "data/__pycache__/runtime.pyc": "private",
-                "data/editors/tool.py": "pass", "data/generators/tool.py": "pass",
-                "screens/menu_screens/runtime.py": "pass", "ui/widget.py": "pass",
+                "scripts/editors/tool.py": "pass", "data/generators/tool.py": "pass",
+                "screens/game/runtime.py": "pass", "ui/rendering/widget.py": "pass",
+                "data/multiplayer/realtime/relay_service.py": "pass",
                 "map_logic/action.py": "pass", "saves/local/save.json": "private",
                 "tournament_saves/local.json": "private", "mods/local.py": "private",
                 "scenarios/map_editor/scratch.json": "private",
@@ -145,10 +146,11 @@ class BuildManifestTests(unittest.TestCase):
                 self.assertFalse((destination / "scenarios/map_editor/scratch.json").exists())
                 self.assertTrue((destination / "scenarios/historical/map.json").exists())
                 self.assertFalse((destination / "data/__pycache__/runtime.pyc").exists())
-                self.assertEqual((destination / "data/editors/tool.py").exists(), platform != "web")
+                self.assertFalse((destination / "scripts/editors/tool.py").exists())
                 for name, value in manifest.RUNTIME_JSON_DEFAULTS.items():
                     self.assertEqual(json.loads((destination / "data/json" / name).read_text()), value)
-                for name in ("data/runtime.py", "screens/menu_screens/runtime.py", "ui/widget.py", "map_logic/action.py"):
+                for name in ("data/runtime.py", "screens/game/runtime.py", "ui/rendering/widget.py",
+                             "data/multiplayer/realtime/relay_service.py", "map_logic/action.py"):
                     self.assertTrue((destination / name).is_file())
                 self.assertEqual(support.png_signature_mismatches(destination), [])
                 (destination / "assets/image.png").write_bytes(b"wrong format")

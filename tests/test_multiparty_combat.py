@@ -42,7 +42,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import data.constants as c
 from data import queries
-from map_logic.rendering import overlay_renderer
+from ui.rendering import overlay_renderer
 from map_logic.turn_processing import combat_processor, combat_rules, movement_processor
 
 

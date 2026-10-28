@@ -12,8 +12,9 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 
 from data import constants as c, queries
-from data.io import multiplayer_io
-from ui import confirm_dialog, multiplayer_host_panel
+from data.multiplayer.tournament import files as multiplayer_io
+from ui import dialogs as confirm_dialog
+from ui.panels import multiplayer_host_panel
 
 
 class ExportOverwriteTests(unittest.TestCase):
@@ -165,7 +166,7 @@ class ExportOverwriteTests(unittest.TestCase):
         host.show_feedback.assert_called_once()
 
     def test_player_export_button_waits_for_overwrite_confirmation(self):
-        from screens.menu_screens.map import render_buttons
+        from screens.game.map import render_buttons
         from tests import app_harness
 
         game = app_harness.boot_map()

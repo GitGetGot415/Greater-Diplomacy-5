@@ -6,9 +6,9 @@ from unittest.mock import patch
 
 import data.constants as c
 from data.state_access import BackendState
-from data.io.realtime_multiplayer import MapRealtimeDriver, RealtimeError
-from data.io.multiplayer_io import _validate_production_projection
-from map_logic import production_actions as actions
+from data.multiplayer.realtime.session import MapRealtimeDriver, RealtimeError
+from data.multiplayer.tournament.files import _validate_production_projection
+from map_logic.actions import production_actions as actions
 from tests.test_unit_metadata import fixture_metadata
 
 

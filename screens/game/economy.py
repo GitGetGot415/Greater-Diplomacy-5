@@ -1,0 +1,343 @@
+import pygame
+from gameState import GameState
+import data.constants as c
+from ui.bars import ui_bars
+from ui_elements import Button, Slider, make_back_button
+from ui.rendering.font_manager import fonts
+from data import queries
+from ui.widgets.table_screen import TableScreen, TableColumn
+
+# ==========================================
+# LAYOUT
+# ==========================================
+
+TITLE_Y = 40
+EXPENSES_BTN_OFFSET_X = 120 # Measured in from the right edge
+
+# Resource rows
+ROW_START_Y = 120
+ROW_STEP_Y = 120
+ROW_WIDTH = 1200
+ROW_HEIGHT = 100
+
+# Sliders below the rows
+SLIDER_WIDTH = 400
+CONSCRIPTION_SLIDER_Y = 530
+CONVERSION_SLIDER_Y = CONSCRIPTION_SLIDER_Y + 70
+SLIDER_CAPTION_OFFSET_Y = 25
+SLIDER_SIDE_CAPTION_GAP = 20
+
+CONSCRIPTION_DAMAGE_COLOR_STOPS = (
+    (0.0, c.UI_ACCENT_BLUE),
+    (0.05, c.COLOR_SUCCESS_GREEN),
+    (0.10, c.COLOR_GOLD_HIGHLIGHT),
+    (0.20, (255, 80, 80)),
+)
+
+# Zeroed income breakdown, used when there is nothing real to show yet.
+EMPTY_BREAKDOWN = {"core": 0, "non_core": 0, "buildings": 0, "resources": 0, "conversion": 0}
+
+# Expenses table controls and columns
+EXPENSES_TOGGLE_Y = 65
+EXPENSES_TOGGLE_WIDTH = 130
+EXPENSES_TOGGLE_HEIGHT = 28
+EXPENSES_TOGGLE_GAP = 10
+EXPENSES_UNIT_WIDTH = 220
+EXPENSES_DETAIL_WIDTH = 180
+EXPENSES_RESOURCE_WIDTH = 120
+
+
+def conscription_damage_color(bonus):
+    """Interpolate exponentially between the damage bonus color stops."""
+    if bonus <= CONSCRIPTION_DAMAGE_COLOR_STOPS[0][0]:
+        return CONSCRIPTION_DAMAGE_COLOR_STOPS[0][1]
+    for (low, low_color), (high, high_color) in zip(
+            CONSCRIPTION_DAMAGE_COLOR_STOPS, CONSCRIPTION_DAMAGE_COLOR_STOPS[1:]):
+        if bonus <= high:
+            fraction = (bonus - low) / (high - low)
+            blend = 2.0 ** fraction - 1.0
+            return tuple(round(start + (end - start) * blend)
+                         for start, end in zip(low_color, high_color))
+    return CONSCRIPTION_DAMAGE_COLOR_STOPS[-1][1]
+
+
+def expense_table_columns(grouped):
+    detail = (TableColumn("count", "Count", EXPENSES_DETAIL_WIDTH) if grouped else
+              TableColumn("location", "Location (Prov ID)", EXPENSES_DETAIL_WIDTH))
+    return [
+        TableColumn("unit", "Unit", EXPENSES_UNIT_WIDTH, align="left"),
+        detail,
+        *(TableColumn(resource, resource.title(), EXPENSES_RESOURCE_WIDTH,
+                      align="right", fmt=lambda value: f"{value:.2f}")
+          for resource in c.ECON_RESOURCE_KEYS),
+    ]
+
+
+def expense_table_rows(units, unit_library):
+    """Build individual and grouped presentation rows from the same unit upkeep."""
+    individual = []
+    grouped = {}
+    for unit, prov in units:
+        # Use original_type to properly account for converted units like Convoys and Trucks.
+        u_type = unit.get("original_type", unit.get("type"))
+        upkeep = queries.get_unit_upkeep(unit_library.get(u_type, {}))
+        unit_name = unit.get("type")
+        individual.append({"unit": unit_name, "location": prov["id"], **upkeep})
+
+        if unit_name not in grouped:
+            grouped[unit_name] = {"unit": unit_name, "count": 0,
+                                  **{resource: 0 for resource in c.ECON_RESOURCE_KEYS}}
+        group = grouped[unit_name]
+        group["count"] += 1
+        for resource in c.ECON_RESOURCE_KEYS:
+            group[resource] += upkeep[resource]
+    return individual, list(grouped.values())
+
+
+class ExpensesTableScreen(TableScreen):
+    HEADER_Y = 108
+    ROW_TOP = 150
+
+    def __init__(self, game_state, individual_rows, grouped_rows):
+        self.individual_rows = individual_rows
+        self.grouped_rows = grouped_rows
+        self.grouped = False
+        super().__init__(game_state, "Military Upkeep Expenses",
+                         expense_table_columns(False), individual_rows,
+                         empty_message="No units to show expenses for.")
+
+    def set_grouped(self, grouped):
+        if self.grouped == grouped:
+            return
+        self.grouped = grouped
+        self.columns = expense_table_columns(grouped)
+        self.rows = self.grouped_rows if grouped else self.individual_rows
+        self.scroll_y = 0
+        self.max_scroll = 0
+        self.sort_reverse.clear()
+        self.refresh_ui()
+
+    def refresh_ui(self):
+        super().refresh_ui()
+        left = c.SCREEN_WIDTH // 2 - EXPENSES_TOGGLE_WIDTH - EXPENSES_TOGGLE_GAP // 2
+        for grouped, label in ((False, "Individual"), (True, "Grouped")):
+            x = left + (EXPENSES_TOGGLE_WIDTH + EXPENSES_TOGGLE_GAP) * int(grouped)
+            color = "orange" if self.grouped == grouped else "blue"
+            self.elements.append(Button(x, EXPENSES_TOGGLE_Y,
+                                        (EXPENSES_TOGGLE_WIDTH, EXPENSES_TOGGLE_HEIGHT),
+                                        color, label, lambda value=grouped: self.set_grouped(value),
+                                        font_preset="button_small"))
+
+class Economy_Screen(GameState):
+    back_state = "MAP"
+
+    def __init__(self):
+        super().__init__()
+        self.bg_color = (30, 35, 40)
+        self.map_screen = None
+
+    def start_economy(self, map_ref):
+        self.map_screen = map_ref
+        self.refresh_ui()
+
+    def refresh_ui(self):
+        self.elements = [make_back_button(self.exit_screen)]
+        
+        # Expenses button positioned in the top right corner
+        btn_expenses = Button(c.SCREEN_WIDTH - EXPENSES_BTN_OFFSET_X, c.BACK_BTN_TOPLEFT[1], "small", "orange", "Expenses", self.open_expenses_table)
+        if self.map_screen.tactical_mode:
+            btn_expenses.apply_state(enabled=False)
+        self.elements.append(btn_expenses)
+        
+        # Conversion Slider positioned below the resource rows
+        p_data = self.map_screen.nation_data[self.map_screen.player_country]
+        
+        # Fetch the max allowed conversion limit based on tech
+        max_allowed = queries.get_max_fuel_conversion(p_data)
+        
+        # Safely clamp the loaded slider value just in case they lost tech
+        slider_val = min(p_data.get("mat_to_fuel_slider", 0.0), max_allowed)
+        p_data["mat_to_fuel_slider"] = slider_val
+        
+        conscript_val = p_data.get("conscription_slider", 1.0)
+        p_data["conscription_slider"] = conscript_val
+        
+        if not self.map_screen.tactical_mode:
+            conscription = Slider(c.SCREEN_WIDTH // 2 - SLIDER_WIDTH // 2, CONSCRIPTION_SLIDER_Y, SLIDER_WIDTH, "Conscription (Keep Manpower %)", conscript_val, self.set_conscription, visual_max=1.0, allowed_max=1.0)
+            self.conscription_slider = conscription
+            conversion = Slider(c.SCREEN_WIDTH // 2 - SLIDER_WIDTH // 2, CONVERSION_SLIDER_Y, SLIDER_WIDTH, "Convert % Mats to Fuel", slider_val, self.set_conversion, visual_max=c.MAX_CONVERSION_SLIDER_VAL, allowed_max=max_allowed)
+            for slider in (conscription, conversion):
+                slider.click_guard = self.can_edit_realtime
+                self.elements.append(slider)
+            self.refresh_economy_preview()
+
+    def refresh_economy_preview(self):
+        """Cache income and the damage caption when economy inputs change."""
+        country = self.map_screen.nation_data[self.map_screen.player_country]
+        self.econ_cache = queries.get_economy_projections(
+            self.map_screen.player_country, self.map_screen.map_data, self.map_screen.nation_data, context=self.map_screen)
+        bonus = queries.get_conscription_damage_bonus(country)
+        self.conscription_damage_caption = f"dmg modifier: +{bonus:.2%}"
+        self.conscription_damage_color = conscription_damage_color(bonus)
+
+    def set_conscription(self, val):
+        if not self.map_screen or self.map_screen.tactical_mode: return
+        if not self.can_edit_realtime(): return
+        p_data = self.map_screen.nation_data[self.map_screen.player_country]
+        p_data["conscription_slider"] = val
+        self.refresh_economy_preview()
+        self.map_screen.invalidate_map_presentation_cache()
+
+    def set_conversion(self, val):
+        if not self.map_screen or self.map_screen.tactical_mode: return
+        if not self.can_edit_realtime(): return
+        p_data = self.map_screen.nation_data[self.map_screen.player_country]
+        p_data["mat_to_fuel_slider"] = val
+        self.refresh_economy_preview()
+
+    def can_edit_realtime(self):
+        if not getattr(self.map_screen, "realtime_multiplayer", False):
+            return True
+        session = getattr(self.map_screen, "realtime_session", None)
+        player = session.players.get(getattr(self.map_screen, "realtime_player_id", "")) if session else None
+        if session and session.phase == "TURN" and player and not player.submitted and not player.eliminated:
+            return True
+        self.map_screen.show_feedback("Turn submitted or unavailable; unsubmit to change the economy.")
+        return False
+
+    def additional_draw(self, surface):
+        if not self.map_screen: return
+        
+        is_tactical = self.map_screen.tactical_mode
+        title_text = "Tactical Unit Economy" if is_tactical else "National Economy"
+        ui_bars.draw_centered_title(surface, title_text, TITLE_Y)
+        
+        if is_tactical and self.map_screen.player_unit:
+            u_type = self.map_screen.player_unit.get("original_type", self.map_screen.player_unit.get("type"))
+            stats = queries.get_unit_library(self.map_screen).get(u_type, {})
+            
+            total_inc = queries.get_unit_upkeep(stats)
+            
+            morale = self.map_screen.player_unit.get("morale", c.DEFAULT_UNIT_MORALE)
+            desertion_cost = total_inc.get("manpower", 0) * ((100.0 - float(morale)) / 100.0)
+            
+            upkeep = {"manpower": desertion_cost, "materials": 0, "fuel": 0} 
+            breakdown = {k: EMPTY_BREAKDOWN.copy() for k in c.ECON_RESOURCE_KEYS}
+            
+            breakdown["manpower"]["morale"] = morale
+            breakdown["manpower"]["desertion"] = desertion_cost
+            
+            max_res = {
+                "manpower": c.TACTICAL_MAX_MANPOWER,
+                "materials": c.TACTICAL_MAX_MATERIALS,
+                "fuel": c.TACTICAL_MAX_FUEL
+            }
+        else:
+            econ_tuple = self.econ_cache
+            if len(econ_tuple) == 3:
+                total_inc, upkeep, breakdown = econ_tuple
+            else:
+                total_inc, upkeep = econ_tuple
+                breakdown = {k: EMPTY_BREAKDOWN.copy() for k in c.ECON_RESOURCE_KEYS}
+            
+        font_large = fonts.get("heading1")
+        font_med = fonts.get("heading2")
+        font_small = fonts.get("normal")
+        
+        y_offset = ROW_START_Y
+        resources = [
+            ("manpower", "Manpower", self.map_screen.player_manpower, c.COLOR_RESOURCE_MANPOWER),
+            ("materials", "Materials", self.map_screen.player_materials, c.COLOR_RESOURCE_MATERIALS),
+            ("fuel", "Fuel", self.map_screen.player_fuel, c.COLOR_RESOURCE_FUEL)
+        ]
+        
+        for res_key, name, current, color in resources:
+            inc = total_inc.get(res_key, 0)
+            exp = upkeep.get(res_key, 0)
+            bd = breakdown.get(res_key, {})
+            net = inc - exp
+            net_str = f"+{int(net)}" if net >= 0 else str(int(net))
+            
+            # Row Background (Made taller to fit details)
+            row_rect = pygame.Rect(c.SCREEN_WIDTH // 2 - ROW_WIDTH // 2, y_offset, ROW_WIDTH, ROW_HEIGHT)
+            pygame.draw.rect(surface, (40, 40, 50), row_rect)
+            pygame.draw.rect(surface, (100, 100, 100), row_rect, 1)
+            
+            # Current Resource Amount
+            if is_tactical:
+                max_val = max_res.get(res_key, 0)
+                surface.blit(font_large.render(f"{name}: {int(current)}/{int(max_val)}", True, color), (row_rect.x + 20, row_rect.y + 15))
+            else:
+                surface.blit(font_large.render(f"{name}: {int(current)}", True, color), (row_rect.x + 20, row_rect.y + 15))
+            
+            if is_tactical:
+                main_breakdown = f"Income: +{int(inc)}   |   Upkeep: -{int(exp)}   |   Net: {net_str}"
+                detail_breakdown = "Tactical Unit Subsistence (Income is supplied directly by HQ)"
+                if res_key == "manpower":
+                    morale_val = bd.get("morale", c.DEFAULT_UNIT_MORALE)
+                    desertion_val = bd.get("desertion", 0.0)
+                    detail_breakdown += f"  |  Morale: {int(morale_val)}%  |  Desertion Cost: -{int(desertion_val)}"
+            else:
+                main_breakdown = f"Total Income: +{int(inc)}   |   Upkeep: -{int(exp)}   |   Net: {net_str}"
+                detail_breakdown = f"Details -> Base: +{int(bd.get('base',0))}  |  Core: +{int(bd.get('core',0))}  |  Non-Core: +{int(bd.get('non_core',0))}  |  Buildings: +{int(bd.get('buildings',0))}  |  Resources: +{int(bd.get('resources',0))}"
+                if bd.get('conscription', 0) != 0:
+                    cons_val = int(bd.get('conscription', 0))
+                    sign = "+" if cons_val > 0 else ""
+                    label = "Unused Equipment Income" if cons_val > 0 else "Relaxed Conscription Cost"
+                    detail_breakdown += f"  |  {label}: {sign}{cons_val}"
+                if bd.get('conversion', 0) != 0:
+                    conv_val = int(bd.get('conversion', 0))
+                    sign = "+" if conv_val > 0 else ""
+                    label = "Conversion Income" if conv_val > 0 else "Conversion Cost"
+                    detail_breakdown += f"  |  {label}: {sign}{conv_val}"
+
+                if bd.get('policy', 0) != 0:
+                    policy_val = int(bd.get('policy', 0))
+                    sign = "+" if policy_val > 0 else ""
+                    detail_breakdown += f"  |  Policy: {sign}{policy_val}"
+                    
+                if bd.get('siphon', 0) != 0:
+                    detail_breakdown += f"  |  Siphoned to Master: {int(bd.get('siphon', 0))}"
+                if bd.get('siphon_income', 0) != 0:
+                    detail_breakdown += f"  |  Siphon Income: +{int(bd.get('siphon_income', 0))}"
+
+            # Stats Breakdown (Main)
+            surface.blit(font_med.render(main_breakdown, True, c.UI_TEXT_LIGHT), (row_rect.x + 350, row_rect.y + 18))
+            
+            # Detailed Breakdown
+            surface.blit(font_small.render(detail_breakdown, True, c.UI_TEXT_MUTED), (row_rect.x + 0, row_rect.y + 60))
+            
+            y_offset += ROW_STEP_Y
+
+        if not is_tactical:
+            damage_txt = font_small.render(self.conscription_damage_caption, True, self.conscription_damage_color)
+            surface.blit(damage_txt, damage_txt.get_rect(midleft=(
+                self.conscription_slider.rect.right + SLIDER_SIDE_CAPTION_GAP,
+                self.conscription_slider.rect.centery)))
+
+            # Draw dynamic conversion info below sliders.
+            man_lost = -breakdown.get("manpower", {}).get("conscription", 0)
+            mat_gained = breakdown.get("materials", {}).get("conscription", 0)
+            if man_lost > 0:
+                cons_txt = font_small.render(f"Converting {int(man_lost)} Manpower -> {int(mat_gained)} Materials", True, c.COLOR_GOLD_HIGHLIGHT)
+                surface.blit(cons_txt, (c.SCREEN_WIDTH // 2 - cons_txt.get_width() // 2,
+                                       CONSCRIPTION_SLIDER_Y + SLIDER_CAPTION_OFFSET_Y))
+
+            mat_lost = -breakdown.get("materials", {}).get("conversion", 0)
+            fuel_gained = breakdown.get("fuel", {}).get("conversion", 0)
+            if mat_lost > 0:
+                conv_txt = font_small.render(f"Converting {int(mat_lost)} Materials -> {int(fuel_gained)} Fuel", True, c.COLOR_GOLD_HIGHLIGHT)
+                surface.blit(conv_txt, (c.SCREEN_WIDTH // 2 - conv_txt.get_width() // 2, CONVERSION_SLIDER_Y + SLIDER_CAPTION_OFFSET_Y))
+
+    def open_expenses_table(self):
+        if not self.map_screen: return
+
+        # Retrieve all currently owned units and the base unit stat library
+        _, units = queries.get_nation_provinces_and_units(self.map_screen.player_country, self.map_screen.map_data)
+        unit_lib = queries.get_unit_library(self.map_screen)
+
+        individual_rows, grouped_rows = expense_table_rows(units, unit_lib)
+
+        from ui.navigation.screen_runner import _run_pygame_sub_screen
+        _run_pygame_sub_screen(self.map_screen,
+                               ExpensesTableScreen(self, individual_rows, grouped_rows))

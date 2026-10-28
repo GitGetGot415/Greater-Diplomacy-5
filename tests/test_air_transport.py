@@ -10,12 +10,12 @@ from unittest.mock import AsyncMock, Mock, patch
 
 from data import queries
 from data import constants as c
-from data.io import multiplayer_io
-from data.io.realtime_multiplayer import MapRealtimeDriver, RealtimeError, collect_map_commands
+from data.multiplayer.tournament import files as multiplayer_io
+from data.multiplayer.realtime.session import MapRealtimeDriver, RealtimeError, collect_map_commands
 from map_logic.ai import ai_movement
 from map_logic.ai import ai_unit_eval
 from map_logic.turn_processing import air_processor, combat_processor, movement_processor, unit_events
-from screens.map_related_screens.orders import Orders_Screen, _AirMissionSelectScreen
+from screens.game.orders import Orders_Screen, _AirMissionSelectScreen
 from tests import test_air_mechanics as air_tests
 from tests.test_air_mechanics import install_air_fixture, world, tile, wing
 from tests.test_tournament_moves import synchronous_progress
@@ -222,7 +222,7 @@ class TransportTests(unittest.TestCase):
         self.assertNotIn(self.cargo, target["units"])
 
     def test_map_movement_click_routes_loaded_transport_to_air_drop(self):
-        from screens.menu_screens.map import Map
+        from screens.game.map import Map
         target = self.plan_drop()
         self.plane.pop("order")
         self.game.can_select_map_units = lambda: True
@@ -289,7 +289,7 @@ class TransportTests(unittest.TestCase):
         target = self.plan_drop()
         self.plane.pop("order")
         screen = self.screen()
-        with patch("ui.screen_runner._run_pygame_sub_screen") as runner:
+        with patch("ui.navigation.screen_runner._run_pygame_sub_screen") as runner:
             screen.open_air_transport(self.plane, self.base)
         popup = runner.call_args.args[1]
         popup.select(next(item for item in popup.items if item[1][0] == "AIR_DROP"))
@@ -529,12 +529,12 @@ class TransportTests(unittest.TestCase):
 
     def test_ui_picker_has_load_release_callbacks_and_rechecks_permission(self):
         screen = self.screen()
-        with patch("ui.screen_runner._run_pygame_sub_screen") as runner:
+        with patch("ui.navigation.screen_runner._run_pygame_sub_screen") as runner:
             screen.open_air_transport(self.plane, self.base)
         popup = runner.call_args.args[1]
         popup.select(popup.items[0])
         self.assertEqual(self.plane["air_cargo"], [self.cargo])
-        with patch("ui.screen_runner._run_pygame_sub_screen") as runner:
+        with patch("ui.navigation.screen_runner._run_pygame_sub_screen") as runner:
             screen.set_air_mission(self.plane, self.base, "TRANSPORT")
         popup = runner.call_args.args[1]
         screen.read_only = True
@@ -547,15 +547,15 @@ class TransportTests(unittest.TestCase):
     def test_loaded_transport_air_mission_button_opens_cargo_picker_directly(self):
         self.load()
         screen = self.screen()
-        with patch("screens.map_related_screens.orders._AirMissionSelectScreen") as mission_picker, \
-                patch("ui.screen_runner._run_pygame_sub_screen") as runner:
+        with patch("screens.game.orders._AirMissionSelectScreen") as mission_picker, \
+                patch("ui.navigation.screen_runner._run_pygame_sub_screen") as runner:
             screen.open_air_mission_select(0, self.base)
         mission_picker.assert_not_called()
         self.assertEqual(runner.call_args.args[1].title, "Air transport")
 
         screen._batch_command_candidates = Mock(return_value=[(self.plane, self.base)])
-        with patch("screens.map_related_screens.orders._AirMissionSelectScreen") as mission_picker, \
-                patch("ui.screen_runner._run_pygame_sub_screen") as runner:
+        with patch("screens.game.orders._AirMissionSelectScreen") as mission_picker, \
+                patch("ui.navigation.screen_runner._run_pygame_sub_screen") as runner:
             screen.open_selected_air_mission_select()
         mission_picker.assert_not_called()
         self.assertEqual(runner.call_args.args[1].title, "Air transport")
@@ -564,7 +564,7 @@ class TransportTests(unittest.TestCase):
         queries.air_unit_stats(self.plane)["air_transport_capacity"] = 2
         second = wing(self.base, "Fixture Cargo")
         screen = self.screen()
-        with patch("ui.screen_runner._run_pygame_sub_screen") as runner:
+        with patch("ui.navigation.screen_runner._run_pygame_sub_screen") as runner:
             screen.open_air_transport(self.plane, self.base)
         popup = runner.call_args.args[1]
 
@@ -594,7 +594,7 @@ class TransportTests(unittest.TestCase):
     def test_cargo_picker_disables_loading_when_full_and_keeps_release_available(self):
         self.load()
         extra = wing(self.base, "Fixture Cargo")
-        with patch("ui.screen_runner._run_pygame_sub_screen") as runner:
+        with patch("ui.navigation.screen_runner._run_pygame_sub_screen") as runner:
             self.screen().open_air_transport(self.plane, self.base)
         popup = runner.call_args.args[1]
         load = next(item for item in popup.items if item[1][1] == extra["unit_id"])
@@ -742,7 +742,7 @@ class TransportSaveSmokeTests(unittest.TestCase):
             cargo["health"] /= 2
             plane["order"] = queries.air_move_order(game, plane, base, game.id_to_province[2])
             from data.map import save_map
-            from screens.menu_screens.map import Map
+            from screens.game.map import Map
             with patch.object(c, "SAVES_DIR", directory):
                 asyncio.run(save_map.save_map_data(game, "cargo"))
             loaded = Map(load_path=os.path.join(directory, "cargo"), skip_initial_income=True)
@@ -786,7 +786,7 @@ class TransportSaveSmokeTests(unittest.TestCase):
             game.scenario_settings["unit_disabled"] = ["Fixture Disabled"]
 
             from data.map import save_map
-            from screens.menu_screens.map import Map
+            from screens.game.map import Map
             with patch.object(c, "SAVES_DIR", directory):
                 asyncio.run(save_map.save_map_data(game, "cargo-migrations"))
             loaded = Map(load_path=os.path.join(directory, "cargo-migrations"),

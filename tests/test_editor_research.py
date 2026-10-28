@@ -10,8 +10,8 @@ import pygame
 
 import data.constants as c
 from data import queries
-from screens.editor_screens import research_screens
-from screens.map_related_screens.research import Research_Screen
+from screens.editors import research_screens
+from screens.game.research import Research_Screen
 from tests import app_harness
 from tests.test_map_save_format import sample_map_screen
 
@@ -360,7 +360,7 @@ class EditorResearchTreeTests(unittest.TestCase):
             self.assertEqual(self.map.nation_data[self.country]["research"], {"root": 2, "branch": 0, "tip": 0})
 
     def test_spectator_warns_when_prerequisite_removal_invalidates_a_project(self):
-        from ui import confirm_dialog
+        from ui import dialogs as confirm_dialog
         country = self.map.nation_data[self.country]
         country.update(research={"root": 2, "branch": 2, "tip": 1},
                        research_queue=[{"tech_name": "tip", "points_remaining": 40}])
@@ -381,7 +381,7 @@ class EditorResearchTreeTests(unittest.TestCase):
             self.assertEqual(country["research"], {"root": 2, "branch": 0, "tip": 0})
 
     def test_spectator_preserves_progress_when_an_alternative_prerequisite_remains(self):
-        from ui import confirm_dialog
+        from ui import dialogs as confirm_dialog
         country = self.map.nation_data[self.country]
         country.update(research={"root": 1, "left": 2, "right": 1},
                        research_queue=[{"tech_name": "choice", "points_remaining": 40}])

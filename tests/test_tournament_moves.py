@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import data.constants as c
 from data import queries
-from data.io import multiplayer_io
+from data.multiplayer.tournament import files as multiplayer_io
 
 
 class Time:
@@ -184,7 +184,7 @@ class TournamentMoveTests(unittest.TestCase):
         return move
 
     def test_production_uses_shared_costs_and_rejects_cumulative_overspend(self):
-        from map_logic import production_actions
+        from map_logic.actions import production_actions
         from tests.test_unit_metadata import fixture_metadata
         library = {"Fixture recruit": {"metadata": fixture_metadata(level=0),
                                       "cost_materials": 11, "cost_manpower": 3, "cost_fuel": 2,
@@ -437,7 +437,8 @@ class TournamentMoveTests(unittest.TestCase):
                     self.assertEqual(host.map_data["home"]["building_queue"][0]["turns_remaining"], 8)
 
     def test_host_ui_reviews_each_file_and_waits_for_acceptance(self):
-        from ui import confirm_dialog, multiplayer_host_panel
+        from ui import dialogs as confirm_dialog
+        from ui.panels import multiplayer_host_panel
 
         for choice in (False, True):
             with self.subTest(choice=choice), tempfile.TemporaryDirectory() as directory:
@@ -470,7 +471,8 @@ class TournamentMoveTests(unittest.TestCase):
                 self.assertEqual(host.refresh_all_maps.call_count, int(choice))
 
     def test_host_ui_rechecks_turn_and_permissions_after_confirmation(self):
-        from ui import confirm_dialog, multiplayer_host_panel
+        from ui import dialogs as confirm_dialog
+        from ui.panels import multiplayer_host_panel
 
         for change in ("turn", "permission"):
             with self.subTest(change=change), tempfile.TemporaryDirectory() as directory:
@@ -501,7 +503,7 @@ class TournamentMoveTests(unittest.TestCase):
                 self.assertEqual(host.submitted_moves, set())
 
     def test_nonhosts_cannot_open_move_import(self):
-        from ui import multiplayer_host_panel
+        from ui.panels import multiplayer_host_panel
 
         for flags in ({}, {"multiplayer_host_mode": True, "realtime_multiplayer": True}):
             host = Host()
@@ -663,7 +665,8 @@ class TournamentMoveTests(unittest.TestCase):
                 self.assertEqual(host.nation_data, before)
 
     def test_host_ui_converts_an_older_move_only_after_approval(self):
-        from ui import confirm_dialog, multiplayer_host_panel
+        from ui import dialogs as confirm_dialog
+        from ui.panels import multiplayer_host_panel
 
         for choice in (False, True):
             with self.subTest(choice=choice), tempfile.TemporaryDirectory() as directory:

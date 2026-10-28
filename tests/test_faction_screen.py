@@ -13,7 +13,7 @@ import pygame
 
 import data.constants as c
 from map_logic.diplomacy import faction_leadership
-from screens.map_related_screens.faction import Faction_Screen
+from screens.game.faction import Faction_Screen
 from tests.stub_map_screen import StubMapScreen
 
 
@@ -53,7 +53,7 @@ class FactionScreenTests(unittest.TestCase):
         screen.start_faction(game)
         surface = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
 
-        with patch("screens.map_related_screens.faction.draw_flag_centered",
+        with patch("screens.game.faction.draw_flag_centered",
                    side_effect=lambda _surface, _nation, _data, x, _y, _h: x + 24) as flags:
             screen.additional_draw(surface)
 
@@ -72,7 +72,7 @@ class FactionScreenTests(unittest.TestCase):
         screen.start_faction(game)
         surface = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
 
-        with patch("screens.map_related_screens.faction.draw_flag_centered",
+        with patch("screens.game.faction.draw_flag_centered",
                    side_effect=lambda _surface, _nation, _data, x, _y, _h: x + 24) as flags:
             screen.additional_draw(surface)
 

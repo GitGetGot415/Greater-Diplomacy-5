@@ -5,7 +5,7 @@ from unittest import mock
 
 import pygame
 
-from screens.menu_screens import map as map_module
+from screens.game import map as map_module
 from tests import app_harness
 
 
@@ -62,7 +62,7 @@ class MapMenuControlTests(unittest.TestCase):
 
     def test_ai_personality_opens_the_personality_editor(self):
         """The control opens its intended editor once."""
-        from ui import editor_menus
+        from screens.editors import menus as editor_menus
         opened = []
         original = editor_menus.open_personality_editor
         editor_menus.open_personality_editor = lambda ms: opened.append(ms)

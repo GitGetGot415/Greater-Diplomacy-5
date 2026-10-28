@@ -9,7 +9,7 @@ os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from map_logic.ai import ai_world
-from map_logic.rendering.overlay_renderer import _UnitRenderIndex
+from ui.rendering.overlay_renderer import _UnitRenderIndex
 
 
 class PerformanceIndexTests(unittest.TestCase):

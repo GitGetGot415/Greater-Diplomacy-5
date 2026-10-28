@@ -4,7 +4,7 @@ import heapq
 from types import SimpleNamespace
 import data.constants as c
 from data import queries
-from map_logic import unit_actions
+from map_logic.actions import unit_actions
 from map_logic.ai import ai_unit_eval, ai_world
 from map_logic.turn_processing import combat_rules
 

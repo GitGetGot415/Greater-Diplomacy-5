@@ -3,9 +3,9 @@ import json
 import sys, os
 
 sys.path.append(os.path.abspath(os.path.join('..', 'greater-diplomacy-5')))
-from map_logic.rendering.font_manager import fonts
+from ui.rendering.font_manager import fonts
 import data.constants as c
-from ui.file_browser_screen import run_file_browser
+from ui.dialogs.file_browser_screen import run_file_browser
 
 # Ask which map to test BEFORE starting Pygame. The browser opens (and tears
 # down) its own window when no display exists yet, resolving on_result

@@ -296,7 +296,7 @@ CHECKERBOARD_WATER = False
 # the screen you're on -- Orders/Battle/Production are reached only through
 # their own explicit buttons. "PREEMPTIVE" is the newer behaviour: a click (or
 # a view-mode button) jumps straight into whatever screen the current view
-# mode implies. See ui/event_handler.py's navigate_view_mode. Defaults to
+# mode implies. See screens/game/map_input.py's navigate_view_mode. Defaults to
 # CLASSIC -- it is the behaviour the game shipped with the longest. Split from
 # its default so Settings' "Reset
 # Defaults" has a fixed value to reset back to rather than whatever this is
@@ -319,11 +319,11 @@ ARMY_GROUP_ANIMATIONS = DEFAULT_ARMY_GROUP_ANIMATIONS
 DEFAULT_SHOW_UNCLAIMED = True
 SHOW_UNCLAIMED = DEFAULT_SHOW_UNCLAIMED
 
-# Which unit art set map_logic.rendering.symbol_loader draws unit icons from.
+# Which unit art set ui.rendering.symbol_loader draws unit icons from.
 # "classic" is the flat assets/images set every icon has always shipped with;
 # any other style (e.g. "hanskolmer") discovers unit art from filenames under
 # its own assets/<style> folder. Both fall back to "classic" when they do not
-# cover a request. See screens/menu_screens/unit_art.py for the picker.
+# cover a request. See screens/menus/unit_art.py for the picker.
 DEFAULT_UNIT_ART_STYLE = "classic"
 UNIT_ART_STYLE = DEFAULT_UNIT_ART_STYLE
 UNIT_ART_STYLES = ("classic", "hanskolmer")
@@ -385,7 +385,7 @@ DEFAULT_DISABLE_CORES = False
 # --- REPAIRS ---
 # Whether repairing a damaged unit costs nothing at all. Off makes repair cost
 # materials/manpower/fuel proportional to missing health -- see
-# screens.map_related_screens.orders.Orders_Screen.repair_unit.
+# screens.game.orders.Orders_Screen.repair_unit.
 DEFAULT_FREE_REPAIRS = False
 
 # ==========================================
@@ -1122,7 +1122,7 @@ EDITOR_COLOR_PALETTE = [
 # ==========================================
 
 # Unread-mail badge on the map screen; the rest of the messaging layout lives
-# in screens/map_related_screens/messages.py.
+# in screens/game/messages.py.
 MSG_NOTIFICATION_COLOR = (255, 50, 50)
 
 # ==========================================
@@ -1248,7 +1248,7 @@ AIR_STACK_MIN_ATTACK_EFFICIENCY = 0.25
 # damage at all; 1 means health has no effect on damage, as if this mechanic
 # did not exist.
 #
-# Player-editable in scenario settings (see screens/menu_screens/
+# Player-editable in scenario settings (see screens/setup/
 # scenario_settings.py) as "damage_at_zero_health"; this is only the value a
 # reset scenario uses. Active overrides belong to each world's runtime rules.
 DAMAGE_AT_ZERO_HEALTH = 0.0

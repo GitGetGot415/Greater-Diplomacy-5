@@ -53,7 +53,7 @@ class PoliticsScreenEditGuardTests(unittest.TestCase):
         pygame.display.set_mode((1, 1))
 
     def screen(self, tactical_mode):
-        from screens.map_related_screens.politics_screen import Politics_Screen
+        from screens.game.politics_screen import Politics_Screen
 
         map_screen = type("MapScreen", (), {})()
         map_screen.player_country = "A"
@@ -92,7 +92,7 @@ class PoliticsScreenEditGuardTests(unittest.TestCase):
         self.assertEqual(screen.policies_rect.bottom, c.SCREEN_HEIGHT - 20)
 
     def test_foreign_politics_view_is_read_only(self):
-        from screens.map_related_screens.politics_screen import Politics_Screen
+        from screens.game.politics_screen import Politics_Screen
 
         map_screen = type("MapScreen", (), {})()
         map_screen.player_country = "A"
@@ -555,7 +555,7 @@ class DisplayedDamageTests(unittest.TestCase):
                                    msg=f"panel and resolver disagree at {value:+d}")
 
     def test_the_map_combat_bubble_reads_the_same_number(self):
-        from map_logic.rendering import overlay_renderer
+        from ui.rendering import overlay_renderer
 
         for value in (c.POLITICS_MIN, c.POLITICS_START, c.POLITICS_MAX):
             screen, _prov = two_nation_tile(a_value=value)

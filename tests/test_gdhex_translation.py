@@ -5,7 +5,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from map_logic import gdhex_translation as gdhex
+from map_logic.imports import gdhex_translation as gdhex
 
 
 ROOT = Path(__file__).resolve().parent.parent

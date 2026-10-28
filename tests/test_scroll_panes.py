@@ -1,4 +1,4 @@
-"""Unit tests for ui/scroll_panes.py.
+"""Unit tests for ui/widgets/scroll_panes.py.
 
 Exercises the pane bookkeeping directly rather than through a screen: name
 generation, row culling, the scroll limit, and wheel routing. The two settled
@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import pygame
 
 from gameState import GameState
-from ui.scroll_panes import ScrollPanes
+from ui.widgets.scroll_panes import ScrollPanes
 
 _REAL_GET_POS = pygame.mouse.get_pos
 

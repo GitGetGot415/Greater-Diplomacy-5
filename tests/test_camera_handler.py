@@ -7,7 +7,7 @@ from unittest.mock import patch
 import pygame
 
 from data import constants as c
-from map_logic.camera.camera_handler import MapCamera
+from ui.camera.camera_handler import MapCamera
 
 
 def _map(loop_map):
@@ -33,7 +33,7 @@ class MapCameraBoundsTests(unittest.TestCase):
             ((cursor[1] - self_map.top_ui_height) / camera.zoom) + camera.pos.y,
         )
 
-        with patch("map_logic.camera.camera_handler.pygame.mouse.get_pos", return_value=cursor):
+        with patch("ui.camera.camera_handler.pygame.mouse.get_pos", return_value=cursor):
             camera.update(self_map, 720)
 
         visible_world = pygame.Vector2(
@@ -52,7 +52,7 @@ class MapCameraBoundsTests(unittest.TestCase):
         self_map = _map(False)
         self_map.min_zoom = 2
 
-        with patch("map_logic.camera.camera_handler.pygame.mouse.get_pressed", return_value=(0, 0, 0)):
+        with patch("ui.camera.camera_handler.pygame.mouse.get_pressed", return_value=(0, 0, 0)):
             camera.handle_input(pygame.event.Event(pygame.MOUSEWHEEL, y=1), self_map, False)
 
         self.assertFalse(camera.focus_animation)
@@ -82,7 +82,7 @@ class MapCameraBoundsTests(unittest.TestCase):
         camera.zoom = camera.target_zoom = 2
         self_map = _map(loop_map=False)
 
-        with patch("map_logic.camera.camera_handler.pygame.mouse.get_pressed",
+        with patch("ui.camera.camera_handler.pygame.mouse.get_pressed",
                    return_value=(0, 0, 0)):
             camera.handle_input(
                 pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(100, 100), button=3),
@@ -95,7 +95,7 @@ class MapCameraBoundsTests(unittest.TestCase):
         self.assertEqual(camera.pos, pygame.Vector2(-15, -10))
         self.assertTrue(camera.finish_right_drag())
 
-        with patch("map_logic.camera.camera_handler.pygame.mouse.get_pressed",
+        with patch("ui.camera.camera_handler.pygame.mouse.get_pressed",
                    return_value=(0, 0, 0)):
             camera.handle_input(
                 pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(130, 120), button=3),
@@ -129,7 +129,7 @@ class MapCameraBoundsTests(unittest.TestCase):
         def keybind(action, default):
             return pygame.K_a if action == "PAN_LEFT" else default
 
-        with patch("map_logic.camera.camera_handler.queries.get_keybind",
+        with patch("ui.camera.camera_handler.queries.get_keybind",
                    side_effect=keybind):
             camera.handle_input(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_a),
                                 self_map, False)
@@ -146,11 +146,11 @@ class MapCameraBoundsTests(unittest.TestCase):
             def __getitem__(self, key):
                 return key == pygame.K_RIGHT
 
-        with (patch("map_logic.camera.camera_handler.pygame.display.get_surface",
+        with (patch("ui.camera.camera_handler.pygame.display.get_surface",
                     return_value=object()),
-              patch("map_logic.camera.camera_handler.pygame.key.get_pressed",
+              patch("ui.camera.camera_handler.pygame.key.get_pressed",
                     return_value=PressedKeys()),
-              patch("map_logic.camera.camera_handler.pygame.time.get_ticks",
+              patch("ui.camera.camera_handler.pygame.time.get_ticks",
                     side_effect=(1000, 1050))):
             camera.handle_input(
                 pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RIGHT),
@@ -170,11 +170,11 @@ class MapCameraBoundsTests(unittest.TestCase):
             def __getitem__(self, key):
                 raise AssertionError(f"cleared keybind was indexed: {key!r}")
 
-        with (patch("map_logic.camera.camera_handler.pygame.display.get_surface",
+        with (patch("ui.camera.camera_handler.pygame.display.get_surface",
                     return_value=object()),
-              patch("map_logic.camera.camera_handler.pygame.key.get_pressed",
+              patch("ui.camera.camera_handler.pygame.key.get_pressed",
                     return_value=PressedKeys()),
-              patch("map_logic.camera.camera_handler.queries.get_keybind",
+              patch("ui.camera.camera_handler.queries.get_keybind",
                     return_value=None)):
             camera._pan_held_navigation_keys()
 

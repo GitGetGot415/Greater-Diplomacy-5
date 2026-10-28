@@ -34,10 +34,10 @@ map_logic/turn_processing/combat_rules.py
 data/queries.py
     Shared movement and aircraft helpers define legal orders and paths.
     Unit upgrade targets use active library metadata.
-    canonical_unit_order remains a compatibility adapter to map_logic/unit_actions.py.
+    canonical_unit_order remains a compatibility adapter to map_logic/actions/unit_actions.py.
     World and session access uses data/state_access.py without requiring a map screen.
 
-map_logic/unit_actions.py
+map_logic/actions/unit_actions.py
     Shared execution owns order validation, repair pricing, payment, replacement, and cancellation.
     AI policies choose actions before calling this owner with explicit AI authority.
     Rule queries use the current world's active libraries.

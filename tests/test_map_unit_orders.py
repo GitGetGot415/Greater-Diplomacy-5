@@ -12,12 +12,12 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from data import queries
 import data.constants as c
-from map_logic.camera import camera_handler
-from map_logic.rendering import overlay_renderer
-from screens.menu_screens.map import Map
-from screens.map_related_screens.orders import Orders_Screen, _OrdersRowHitbox
-from ui import event_handler
-from map_logic.setup import player_setup
+from ui.camera import camera_handler
+from ui.rendering import overlay_renderer
+from screens.game.map import Map
+from screens.game.orders import Orders_Screen, _OrdersRowHitbox
+from screens.game import map_input as event_handler
+from screens.setup import player_setup
 from map_logic.turn_processing.time_handler import TimeHandler
 
 
@@ -94,7 +94,7 @@ class MapOrderTests(unittest.TestCase):
         """pygame.Rect.normalize mutates; it must never be used as a return value."""
         game = object.__new__(Map)
         game.unit_selection_drag = {"start": (200, 200), "current": (100, 100)}
-        with patch("screens.menu_screens.map.map_renderer.draw_map_screen"):
+        with patch("screens.game.map.map_renderer.draw_map_screen"):
             Map.additional_draw(game, pygame.Surface((400, 300)))
 
     def test_plain_click_focuses_one_member_and_shift_click_adds_another(self):
@@ -146,7 +146,7 @@ class MapOrderTests(unittest.TestCase):
         game.camera = object()
         game.total_ui_h = 120
 
-        with patch("screens.menu_screens.map.camera_handler.center_camera_on_province") as center:
+        with patch("screens.game.map.camera_handler.center_camera_on_province") as center:
             self.assertTrue(Map.focus_camera_on_army(
                 game, [(first, first_province), (second, second_province)]))
 
@@ -206,7 +206,7 @@ class OrdersSelectionRowsTests(unittest.TestCase):
         screen.map_screen = object()
         screen.elements = [row]
 
-        with patch("screens.map_related_screens.orders.army_panel.handle_event",
+        with patch("screens.game.orders.army_panel.handle_event",
                    return_value=False):
             screen.handle_events([pygame.event.Event(
                 pygame.MOUSEBUTTONDOWN, button=3, pos=(20, 20))])
@@ -277,7 +277,7 @@ class OrdersSelectionRowsTests(unittest.TestCase):
 
         self.assertEqual([unit for _key, unit, _province, _index in screen._visible_rows()],
                          [first, second])
-        with patch("screens.map_related_screens.orders.pygame.key.get_mods", return_value=0):
+        with patch("screens.game.orders.pygame.key.get_mods", return_value=0):
             screen.toggle_selected_unit(second, origin)
 
         self.assertEqual(screen.scroll_y, -80)
@@ -506,12 +506,12 @@ class MapOrderGestureTests(unittest.TestCase):
         screen.is_content_dragging = lambda _attr: False
         screen.read_only = False
 
-        with (patch("screens.map_related_screens.orders.event_handler.resolve_map_mouse_gesture_conflict"),
-              patch("screens.map_related_screens.orders.event_handler.mouse_button_has_action",
+        with (patch("screens.game.orders.event_handler.resolve_map_mouse_gesture_conflict"),
+              patch("screens.game.orders.event_handler.mouse_button_has_action",
                     return_value=True),
-              patch("screens.map_related_screens.orders.pygame.mouse.get_pos",
+              patch("screens.game.orders.pygame.mouse.get_pos",
                     return_value=(400, 300)),
-              patch("screens.map_related_screens.orders.queries.get_clicked_province") as hit_test):
+              patch("screens.game.orders.queries.get_clicked_province") as hit_test):
             screen.additional_events(pygame.event.Event(
                 pygame.MOUSEBUTTONUP, pos=(400, 550), button=3))
 
@@ -538,10 +538,10 @@ class MapOrderGestureTests(unittest.TestCase):
             "show_feedback": lambda self, _message: None,
         })()
 
-        with (patch("screens.map_related_screens.orders.event_handler.resolve_map_mouse_gesture_conflict"),
-              patch("screens.map_related_screens.orders.pygame.mouse.get_pos",
+        with (patch("screens.game.orders.event_handler.resolve_map_mouse_gesture_conflict"),
+              patch("screens.game.orders.pygame.mouse.get_pos",
                     return_value=(150, 150)),
-              patch("screens.map_related_screens.orders.queries.get_clicked_province",
+              patch("screens.game.orders.queries.get_clicked_province",
                     return_value=destination)):
             screen.additional_events(
                 pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=(150, 150)))
@@ -573,7 +573,7 @@ class MapOrderGestureTests(unittest.TestCase):
             }],
         })()
 
-        with patch("ui.event_handler.player_setup.select_tactical_unit") as select_unit:
+        with patch("screens.game.map_input.player_setup.select_tactical_unit") as select_unit:
             self.assertTrue(event_handler._select_tactical_unit_stack(map_stub, (15, 15)))
 
         select_unit.assert_called_once_with(map_stub, origin, candidate_units=[unit])
@@ -592,8 +592,8 @@ class MapOrderGestureTests(unittest.TestCase):
             "issue_selected_move_orders": lambda self, dest, append=False: calls.append((dest, append)),
         })()
 
-        with (patch("ui.event_handler.queries.get_clicked_province", return_value=destination),
-              patch("ui.event_handler.pygame.key.get_mods", return_value=0)):
+        with (patch("screens.game.map_input.queries.get_clicked_province", return_value=destination),
+              patch("screens.game.map_input.pygame.key.get_mods", return_value=0)):
             self.assertTrue(event_handler._handle_map_unit_selection(
                 map_stub, pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(20, 20), button=3), False))
             self.assertTrue(event_handler._handle_map_unit_selection(
@@ -618,7 +618,7 @@ class MapOrderGestureTests(unittest.TestCase):
             "open_orders_for_unit_stack": lambda self, prov, units: opened.append((prov, units)),
         })()
 
-        with patch("ui.event_handler.pygame.key.get_mods", return_value=0):
+        with patch("screens.game.map_input.pygame.key.get_mods", return_value=0):
             self.assertTrue(event_handler._handle_map_unit_selection(
                 map_stub, pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(15, 15), button=1), False))
             self.assertTrue(event_handler._handle_map_unit_selection(
@@ -654,7 +654,7 @@ class MapOrderGestureTests(unittest.TestCase):
         opened = []
         map_stub.open_orders_for_unit_stack = lambda prov, units: opened.append((prov, units))
 
-        with patch("ui.event_handler.pygame.key.get_mods", return_value=0):
+        with patch("screens.game.map_input.pygame.key.get_mods", return_value=0):
             event_handler._handle_map_unit_selection(
                 map_stub, pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(15, 15), button=1), False)
             self.assertTrue(event_handler._handle_map_unit_selection(
@@ -711,11 +711,11 @@ class MapOrderGestureTests(unittest.TestCase):
             "unit_stack_hitboxes": [],
         })()
 
-        with (patch("screens.map_related_screens.orders.event_handler.resolve_map_mouse_gesture_conflict"),
-              patch("screens.map_related_screens.orders.event_handler._select_map_province",
+        with (patch("screens.game.orders.event_handler.resolve_map_mouse_gesture_conflict"),
+              patch("screens.game.orders.event_handler._select_map_province",
                     return_value=True) as select_province,
-              patch("screens.map_related_screens.orders.pygame.key.get_mods", return_value=0),
-              patch("screens.map_related_screens.orders.pygame.mouse.get_pos", return_value=(5, 5))):
+              patch("screens.game.orders.pygame.key.get_mods", return_value=0),
+              patch("screens.game.orders.pygame.mouse.get_pos", return_value=(5, 5))):
             screen.additional_events(
                 pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(5, 5), button=1))
             screen.additional_events(
@@ -755,8 +755,8 @@ class MapOrderGestureTests(unittest.TestCase):
         screen._replace_roster_with_selection = lambda: None
         screen.refresh_ui = lambda: None
 
-        with (patch("screens.map_related_screens.orders.pygame.key.get_mods", return_value=0),
-              patch("screens.map_related_screens.orders.pygame.mouse.get_pos", return_value=(5, 5))):
+        with (patch("screens.game.orders.pygame.key.get_mods", return_value=0),
+              patch("screens.game.orders.pygame.mouse.get_pos", return_value=(5, 5))):
             screen.additional_events(pygame.event.Event(
                 pygame.MOUSEBUTTONDOWN, pos=(5, 5), button=1))
             screen.additional_events(pygame.event.Event(
@@ -794,8 +794,8 @@ class MapOrderGestureTests(unittest.TestCase):
         screen.bombarding_unit_index = None
         screen.refresh_ui = lambda: None
 
-        with (patch("screens.map_related_screens.orders.pygame.key.get_mods", return_value=0),
-              patch("screens.map_related_screens.orders.pygame.mouse.get_pos", return_value=(15, 15))):
+        with (patch("screens.game.orders.pygame.key.get_mods", return_value=0),
+              patch("screens.game.orders.pygame.mouse.get_pos", return_value=(15, 15))):
             screen.additional_events(pygame.event.Event(
                 pygame.MOUSEBUTTONDOWN, pos=(15, 15), button=1))
             screen.additional_events(pygame.event.Event(
@@ -863,7 +863,7 @@ class MapViewDefaultTests(unittest.TestCase):
             "refresh_map_layers": lambda self, *_layers: None,
         })()
 
-        with patch("screens.menu_screens.map.render_buttons"):
+        with patch("screens.game.map.render_buttons"):
             player_setup.confirm_player_country(map_stub)
 
         self.assertEqual(map_stub.player_country, "A")
@@ -886,7 +886,7 @@ class MapViewDefaultTests(unittest.TestCase):
             "refresh_map_layers": lambda self, *_layers: None,
         })()
 
-        with patch("screens.menu_screens.map.render_buttons"):
+        with patch("screens.game.map.render_buttons"):
             player_setup.start_spectator(map_stub)
 
         self.assertEqual(map_stub.player_country, "Spectator")

@@ -44,7 +44,7 @@ class DiplomacySelectionTests(unittest.TestCase):
 
     def test_valid_selection_still_opens_war_menu(self):
         self.game.selected_province = self.game.home_of("B")
-        with patch("screens.map_related_screens.war_screen.open_wargoal_selection_menu") as opened:
+        with patch("screens.game.war_screen.open_wargoal_selection_menu") as opened:
             actions.handle_declare_war(self.game)
         opened.assert_called_once_with(self.game, "B")
 
@@ -52,7 +52,7 @@ class DiplomacySelectionTests(unittest.TestCase):
         self.game.selected_province = self.game.home_of("B")
         self.game.nation_data["A"]["at_war_with"] = ["B"]
         self.game.nation_data["B"]["at_war_with"] = ["A"]
-        with patch("screens.map_related_screens.deal_screen.open_peace_menu") as opened:
+        with patch("screens.game.deal_screen.open_peace_menu") as opened:
             actions.handle_declare_war(self.game)
         opened.assert_called_once_with(self.game, "B")
 
@@ -74,7 +74,7 @@ class DiplomacySelectionTests(unittest.TestCase):
         self.game.realtime_player_id = "local"
         self.game.realtime_session = SimpleNamespace(
             phase="TURN", players={"local": SimpleNamespace(submitted=True, eliminated=False)})
-        with patch("screens.map_related_screens.war_screen.open_wargoal_selection_menu") as opened:
+        with patch("screens.game.war_screen.open_wargoal_selection_menu") as opened:
             actions.handle_declare_war(self.game)
         opened.assert_not_called()
         self.assertTrue(self.game.feedback)

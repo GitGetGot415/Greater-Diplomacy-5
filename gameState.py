@@ -695,7 +695,7 @@ class FolderListState(GameState):
 
     def draw_rename_box(self, surface, x, y):
         """Draws the inline name-entry box in place of the row being renamed."""
-        from map_logic.rendering.font_manager import fonts
+        from ui.rendering.font_manager import fonts
         from ui_elements import draw_text_box
         input_rect = pygame.Rect(x, y, *self.rename_box_size)
         # Only drawn in place of the row being renamed, so always focused.
@@ -707,7 +707,7 @@ class FolderListState(GameState):
 
     def draw_delete_confirm(self, surface, center=None):
         """Dims the screen and asks for Enter/Escape on the pending deletion."""
-        from map_logic.rendering.font_manager import fonts
+        from ui.rendering.font_manager import fonts
         ui_bars.draw_fullscreen_overlay(surface, 180)
 
         pop_rect = pygame.Rect((0, 0), self.delete_popup_size)

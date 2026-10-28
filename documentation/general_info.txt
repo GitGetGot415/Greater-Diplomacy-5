@@ -2,6 +2,8 @@ GUIDE INDEX
 ===========
 
 documentation/general_info.txt: storage, scenario settings, state ownership, build policy, and project files.
+documentation/code_layout.md: directory responsibilities and task-to-code references.
+documentation/source_layout_changes.md: previous and current source paths.
 documentation/non_llm_ai.txt: rule-based AI and shared combat rules.
 documentation/player_controls.txt: player and editor controls, mode permissions, reports, map display, and army groups.
 documentation/ai_movement.txt: AI unit orders, movement caches, aircraft missions, attack checks, rotation, and movement tuning.
@@ -11,13 +13,13 @@ documentation/air_stuff.txt: aircraft controls and rules.
 documentation/data_migrations.txt: compatibility with older GD5 data.
 documentation/other/ai_responses_gd4_reference.txt: archived Greater Diplomacy 4 response text.
 documentation/other/recommended-relay-defaults.txt: relay setup defaults.
-documentation/other/sandboxed_mods_info.txt: sandboxed mods.
+documentation/other/sandbox_security.md: sandbox rules and limitations.
 README.md, For MacOS Users: macOS quarantine instructions.
 
 TOURNAMENT FILE STORAGE
 =======================
 
-data/io/multiplayer_io.py owns tournament archive storage.
+data/multiplayer/tournament/files.py owns tournament archive storage.
 Hosts and country players load one shared, encrypted game snapshot.
 Each country key decrypts a small record that contains the shared session key.
 Adding country keys does not add copies of the map, images, or country data.
@@ -183,18 +185,18 @@ AI snapshots, movement indexes, and aircraft geometry remain temporary computati
 Actions return changed domains. Presentation adapters invalidate their cached records at state boundaries.
 Planning frames continue to reuse cached presentation data.
 
-map_logic/production_actions.py owns production validation, queue construction, charging, cancellation, and refunds.
+map_logic/actions/production_actions.py owns production validation, queue construction, charging, cancellation, and refunds.
 The player screen, AI, and both multiplayer adapters use its shared rules.
 AI construction retains its existing manpower policy. Emergency cancellation retains its recorded-refund policy.
 Network adapters retain authentication, schema limits, partial-state handling, and host review.
 
-map_logic/unit_actions.py prepares, applies, replaces, and cancels unit orders.
+map_logic/actions/unit_actions.py prepares, applies, replaces, and cancels unit orders.
 It owns repair prices, payment accounts, reserved payments, refunds, and aggregate batch payment.
 Orders controls, selected-unit movement, AI, and current multiplayer drafts use this owner.
 Unchanged paid orders retain their progress and payment.
 Batch selection and AI policies remain with their callers. Movement and combat resolution remain with their processors.
 
-map_logic/player_actions.py validates and applies player intents without network imports.
+map_logic/actions/player_actions.py validates and applies player intents without network imports.
 An intent contains a player's choice. It cannot establish resources, ownership, unit statistics, or faction membership.
 Current tournament exports and real-time drafts use these domain commands.
 Older tournament snapshots retain an input-only application path for supported host-reviewed differences.
@@ -229,7 +231,7 @@ Percentage bonuses do not create output where the building's base output is zero
 Flat bonuses can add output to a resource with zero base output.
 Use building_families to select specific families within a group.
 Use the existing req, years, max_lvl, cost, and display_name fields for the technology.
-Add its timeline row in screens/map_related_screens/research.py and its PNG image in assets/images.
+Add its timeline row in screens/game/research.py and its PNG image in assets/images.
 
 Add flat bonuses to the building's base output first.
 Percentage bonuses multiply that total. Each completed level multiplies the selected output by one plus its fractional increase.
@@ -328,23 +330,23 @@ Platform builds and browser checks remain separate verification steps.
 DISPLAY SUPPORT
 ===============
 
-map_logic/rendering/symbol_loader.py caches symbol-name results and scaled images.
-map_logic/rendering/overlay_renderer.py caches complete unit-box images in UNIT_BOXES.
+ui/rendering/symbol_loader.py caches symbol-name results and scaled images.
+ui/rendering/overlay_renderer.py caches complete unit-box images in UNIT_BOXES.
 Treat shared cached images as read-only.
 Pass alpha to get_symbol instead of changing a shared image's alpha.
 Map culling checks both width and height.
 These caches reduce repeated work when many units use the same image.
 See documentation/player_controls.txt, MAP DISPLAY, for display behavior and invalidation rules.
 
-ui/flag_icons.py caches small national flags for country lists and combat rows.
-draw_panes(foregrounds=) in ui/scroll_panes.py draws row flags and stat icons.
+ui/widgets/flag_icons.py caches small national flags for country lists and combat rows.
+draw_panes(foregrounds=) in ui/widgets/scroll_panes.py draws row flags and stat icons.
 ui/bars/ui_bars.py draws its shared textured bar.
-ui/event_handler.py uses the same rectangle to block clicks through the bar.
+screens/game/map_input.py uses the same rectangle to block clicks through the bar.
 
 TUTORIAL ICON MARKERS
 ====================
 
-The map tutorial uses image markers in UNIT_VIEW_NOTE in ui/confirm_dialog/message_box.py.
+The map tutorial uses image markers in UNIT_VIEW_NOTE in ui/dialogs/message_box.py.
 Move a [icon:naval:18] marker to change its position.
 Change 18 to set the maximum image dimension in pixels.
 Use an icon name from ui_elements.UI_ICONS.
@@ -358,37 +360,66 @@ AGENTS.md: repository rules for AI-assisted changes and maintenance preferences.
 assets/: images and audio.
 base_maps/: base maps used by the game.
 context/: development notes and source export tools. The export script combines source files into a text file.
-data/: game data and tools. See STATE AND ACTION OWNERS for module responsibilities.
+data/: world state, content, settings, storage, and multiplayer protocols.
+    See STATE AND ACTION OWNERS for module responsibilities.
     json/unit_data.json, json/building_data.json, and json/research_template.json own current unit, building, and research settings.
     generators/recipes.py defines data generation. Read current tuning from these sources instead of documentation.
+    map/: regular saves, loads, history, and derived-layer files.
+    io/: settings, country content, and shared JSON file helpers.
+    multiplayer/tournament/: tournament archives and player move files.
+    multiplayer/realtime/: authoritative sessions, network transports, and relays.
 documentation/: project guides and design notes. See GUIDE INDEX.
 dist/: generated distribution packages. Do not edit these as source.
 
 map_logic/: game rules and processing.
+    actions/: shared player intents, production actions, and unit orders.
     ai/: computer-controlled countries. Module lists are in the AI guides.
-    camera/: camera movement. This folder does not control camera tilt.
     diplomacy/: shared diplomatic actions and compatibility exports. See documentation/diplo_stuff.txt.
+    imports/: map and save conversion from other games.
     random_map/: random map and scenario generation.
-    rendering/: map rendering, UI bars, buttons, and symbols. See DISPLAY SUPPORT.
-    setup/: scenario setup and initial country selection.
-    turn_processing/: turn resolution. This folder replaced the old system32/ folder.
+    territory/: ownership, cores, claims, and country retirement.
+    turn_processing/: turn preparation, coordination, movement, combat, economy, research, and reports.
 
 map_tools/: map creation and validation.
     validation/check_flags.py and check_adjectives.py check data/json/countries_data.json.
     interactive_map_tester.py is the interactive pygame map tester. Its earlier name was tester.py.
     automatic_map_painter.py and reset_map_data.py are separate map-authoring tools.
+    Previous benchmark, dependency-download, and preview commands remain available as launchers.
+
+scripts/: offline development tools. Builds do not include this folder.
+    data/: country-content maintenance.
+    editors/: standalone desktop content editors.
+    dependencies/: dependency download tools.
+    benchmarks/: Objective Judge Horizon entry points.
+    previews/: interactive UI development previews.
+    test_mod_loader_security.py launches the sandbox tests from their previous command path.
+
+tests/: functional and regression tests, plus shared fixtures and application support.
+    Test files retain their existing module names for focused test commands.
+    test_mod_loader_security.py also runs during normal test discovery.
+
 saves/: saved games.
 scenarios/: scenario data.
 
 screens/: complete screens. Each screen builds its own buttons.
-    menu_screens/: main menu, settings, new-game setup, and other main navigation screens.
-    map_related_screens/: Orders, Battle, Research, Production, Mail, Economy, diplomacy, country summaries, and unit reports.
-    editor_screens/: economy, date, research, brushes, diplomacy, events, leaders, and turn settings.
+    menus/: main navigation, settings, media, assets, mods, and translation screens.
+    setup/: new-game configuration, scenario settings, and initial player selection.
+    multiplayer/: tournament and real-time setup, joining, hosting, and lobby screens.
+    game/: the map screen, map input, spectator controls, and in-game feature screens.
+    editors/: country, economy, date, research, brushes, diplomacy, events, leaders, and turn settings.
     See documentation/player_controls.txt for controls and permissions.
 
-ui/: shared widgets, bars, dialogs, popups, and event handling. Complete feature screens belong in screens/.
-    Map buttons belong in screens/menu_screens/map.py.
-    Country-edit buttons belong in screens/map_related_screens/edit_country.py.
-    Settings buttons belong in screens/menu_screens/settings.py.
-    confirm_dialog/: pygame dialogs that replace tkinter dialogs. base.py provides the shared structure.
-    yes_no.py, text_input.py, message_box.py, and person_info.py provide specific dialogs.
+ui/: shared presentation and navigation support. Complete feature screens belong in screens/.
+    Map buttons belong in screens/game/map.py.
+    Country-edit buttons belong in screens/editors/edit_country.py.
+    Settings buttons belong in screens/menus/settings.py.
+    rendering/: cached map layers, overlays, labels, fonts, and symbols. See DISPLAY SUPPORT.
+    camera/: map camera movement. Camera tilt also uses rendering/map_utils.py.
+    dialogs/: confirmation, text input, notifications, and reusable pickers.
+    navigation/: screen runners, modal screens, and the modal stack.
+    panels/: map panels, progress drawing, status displays, and shared panel layout.
+    widgets/: text, flags, tables, and scrolling support.
+    bars/: the map HUD and view controls.
+    information/: hover feedback, tooltips, and unit information popups.
+
+See documentation/code_layout.md for task-to-code references.

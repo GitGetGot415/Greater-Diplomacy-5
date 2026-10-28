@@ -448,7 +448,8 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
     # faction member falls. Do not revive that exhausted bloc on load: without
     # a member that owns land, its exiles have no path back into the world.
     if not session_state.is_editor:
-        from map_logic.turn_processing import edit_province_ownership, movement_processor
+        from map_logic.territory import ownership as edit_province_ownership
+        from map_logic.turn_processing import movement_processor
         exhausted_factions = edit_province_ownership.retire_exhausted_factions(map_screen)
         if exhausted_factions:
             # Retiring a normal nation removes its diplomacy immediately; this

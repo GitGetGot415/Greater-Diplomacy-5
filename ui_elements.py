@@ -12,8 +12,8 @@ except Exception:
     pass
 import data.constants as c
 from data import queries
-from map_logic.rendering.font_manager import fonts
-from map_logic.rendering import symbol_loader
+from ui.rendering.font_manager import fonts
+from ui.rendering import symbol_loader
 
 soloud_engine = None
 click_sound = None

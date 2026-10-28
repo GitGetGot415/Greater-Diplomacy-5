@@ -348,7 +348,7 @@ class OutputResearchScreenTests(unittest.TestCase):
         self.game.nation_data[self.country].update(research={"basic_factory": 1}, research_queue=[], research_progress={})
 
     def test_new_research_node_opens_details_and_starts_the_authoritative_project(self):
-        from screens.map_related_screens.research import Research_Screen
+        from screens.game.research import Research_Screen
         self.game.nation_data[self.country]["research"]["waltham_system"] = 1
         screen = Research_Screen()
         screen.start_research(self.game)
@@ -367,7 +367,7 @@ class OutputResearchScreenTests(unittest.TestCase):
         self.assertNotIn("bessemer_process", country["research"])
 
     def test_added_industry_nodes_open_details_and_queue_through_player_controls(self):
-        from screens.map_related_screens.research import Research_Screen
+        from screens.game.research import Research_Screen
         for tech in ("waltham_system", "conveyor_belt", "just_in_time_manufacturing"):
             with self.subTest(tech=tech):
                 country = self.game.nation_data[self.country]
@@ -388,7 +388,7 @@ class OutputResearchScreenTests(unittest.TestCase):
                     "points_remaining": queries.get_tech_tree(self.game)[tech]["cost"]}])
 
     def test_production_prepares_effective_yields_once_and_keeps_library_data_unchanged(self):
-        from screens.map_related_screens.production import Production_Screen
+        from screens.game.production import Production_Screen
         library = {"Basic Factory": building(31, 7, 5, "industry"),
                    "Factory Lvl 1": dict(building(47, 11, 13, "industry"), req="Basic Factory")}
         original = copy.deepcopy(library)

@@ -11,10 +11,10 @@ import pygame
 import data.constants as c
 from data import queries
 from map_logic.diplomacy import diplomacy_processor, puppet_actions
-from screens.map_related_screens import puppets_screen
+from screens.game import puppets_screen
 from tests import app_harness
 from tests.test_map_save_format import sample_map_screen
-from ui import modal_stack
+from ui.navigation import modal_stack
 
 
 def release_map(player="Master"):

@@ -61,7 +61,7 @@ class MapSaveFormatTests(unittest.TestCase):
         self.assertEqual(raw["p"]["unknown"]["keep"], [1])
 
     def test_unassigned_is_rebuilt_from_saved_units_without_a_new_saved_field(self):
-        from ui import army_panel
+        from ui.panels import army_panel
         map_screen = sample_map_screen()
         army_panel.prepare(map_screen)
         before = map_screen.unassigned_army_card

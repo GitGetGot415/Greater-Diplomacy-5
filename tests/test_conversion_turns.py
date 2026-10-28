@@ -5,7 +5,7 @@ import unittest
 from unittest.mock import patch
 
 from data import constants as c, queries
-from data.io.realtime_multiplayer import MapRealtimeDriver, RealtimeError
+from data.multiplayer.realtime.session import MapRealtimeDriver, RealtimeError
 from map_logic.ai import ai_movement
 from map_logic.turn_processing import air_processor, movement_processor
 from tests import test_air_transport as transport_tests

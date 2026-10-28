@@ -6,10 +6,10 @@ import unittest
 from types import SimpleNamespace
 
 from data import constants as c, migrations, queries
-from data.io.multiplayer_io import _validate_production_projection
-from data.io.realtime_multiplayer import MapRealtimeDriver, RealtimeError
+from data.multiplayer.tournament.files import _validate_production_projection
+from data.multiplayer.realtime.session import MapRealtimeDriver, RealtimeError
 from data.state_access import BackendState
-from map_logic import production_actions
+from map_logic.actions import production_actions
 from map_logic.ai import ai_tech_eval, ai_unit_eval
 from map_logic.turn_processing.research_processor import process_national_research
 from tests.test_map_save_format import sample_map_screen

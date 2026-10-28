@@ -7,7 +7,7 @@ import unittest
 
 from data import migrations
 from data.state_access import BackendState
-from data.io.realtime_multiplayer import MapRealtimeDriver, RealtimeError
+from data.multiplayer.realtime.session import MapRealtimeDriver, RealtimeError
 from map_logic.diplomacy import diplomacy_lifecycle as lifecycle, diplomacy_messages as messages
 from map_logic.diplomacy.diplomacy_processor import _process_queued_responses
 

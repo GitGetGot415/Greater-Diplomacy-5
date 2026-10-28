@@ -1,4 +1,4 @@
-"""Unit tests for ui/text_utils.py.
+"""Unit tests for ui/widgets/text_utils.py.
 
 Uses a stand-in font whose width is a fixed multiple of the character count, so
 the expected wrap points can be reasoned about exactly and the tests need no
@@ -11,7 +11,7 @@ import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from ui import text_utils
+from ui.widgets import text_utils
 
 
 class FixedWidthFont:

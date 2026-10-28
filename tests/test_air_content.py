@@ -14,7 +14,7 @@ os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 
 import data.constants as c
 from data import queries
-from data.io.realtime_multiplayer import MapRealtimeDriver, RealtimeError
+from data.multiplayer.realtime.session import MapRealtimeDriver, RealtimeError
 from map_logic.ai import ai_tech_eval, ai_unit_eval
 from map_logic.turn_processing.research_processor import process_national_research
 from tests import app_harness
@@ -86,7 +86,7 @@ class AirCategoryMigrationTests(unittest.TestCase):
                     self.assertEqual(json.loads(path.read_text(encoding="utf-8")), expected)
 
     def test_research_accepts_legacy_category_selection(self):
-        from screens.map_related_screens.research import Research_Screen
+        from screens.game.research import Research_Screen
         screen = object.__new__(Research_Screen)
         with mock.patch.object(screen, "enforce_scroll_bounds"), mock.patch.object(screen, "refresh_ui"):
             screen.set_category("AEROSPACE")
@@ -445,7 +445,7 @@ class AirRealtimeTests(unittest.TestCase):
                 self.driver.validate_draft("A", [command])
 
     def test_tournament_import_preserves_air_in_existing_move_fields(self):
-        from map_logic import production_actions
+        from map_logic.actions import production_actions
         for tech_key, unit_name in aircraft_cases():
             self.setUp()
             harness = tournament_harness.TournamentMoveTests()
@@ -547,7 +547,7 @@ class AirScreenTests(unittest.TestCase):
             self.assertEqual(self.research.tech_year(tech, level), self.research.tech_tree[tech]["years"][level - 1])
 
     def test_production_fighter_labels_use_current_multipliers_and_cache_results(self):
-        from map_logic.rendering.font_manager import fonts
+        from ui.rendering.font_manager import fonts
         library = dict(self.production.unit_library)
         fighters = [name for name, stats in library.items() if stats.get("air_role") == "fighter"]
         # Use an artificial multiplier to check data propagation.
@@ -569,7 +569,7 @@ class AirScreenTests(unittest.TestCase):
         self.production.additional_draw(self.surface)
         self.assertTrue(all(self.production.air_damage_labels[key] is label for key, label in labels.items()))
     def test_production_groups_air_and_recruitment_rows(self):
-        from screens.map_related_screens.production import SECTION_PANELS
+        from screens.game.production import SECTION_PANELS
         self.production.start_with_province(self.province, self.map)
         air_rows = recruitment_rows = 0
         for rect, stats, y, kind in self.production.active_bars:

@@ -632,7 +632,7 @@ def invalidate_unit_metadata():
     """Discard unit indexes and any loaded art-name resolutions after content edits."""
     global _UNIT_RESEARCH_INDEX_CACHE
     _UNIT_RESEARCH_INDEX_CACHE = None
-    symbols = sys.modules.get("map_logic.rendering.symbol_loader")
+    symbols = sys.modules.get("ui.rendering.symbol_loader")
     if symbols is not None:
         symbols.clear_caches()
 
@@ -721,7 +721,7 @@ def get_keybind_changes_screen(action):
     """Whether the ORDERS/ECONOMY keybind also jumps straight to the screen
     its view mode implies -- the small toggle beside that row on the Keybinds
     screen. Independent of Settings' Classic/Preemptive map-navigation toggle
-    (see ui.event_handler.navigate_view_mode / handle_view_mode_keybind).
+    (see screens.game.map_input.navigate_view_mode / handle_view_mode_keybind).
     Reads straight from saved settings, same as get_keybind, since most
     screens never get a controller reference wired up. Defaults on.
     """
@@ -828,7 +828,7 @@ def get_hildehrand_choice():
     """Returns the remembered menu portrait, as a path relative to
     assets/characters/ (e.g. "Hildehrand/F/2.png"), defaulting to Hildehrand F/2
     if unset or if the remembered file no longer exists."""
-    from ui.character_select_screen import DEFAULT_PORTRAIT, discover_character_images
+    from ui.dialogs.character_select_screen import DEFAULT_PORTRAIT, discover_character_images
     data = _load_cached_json("hildehrand_choice")
     variant = data.get("variant") if isinstance(data, dict) else None
     return variant if variant in discover_character_images() else DEFAULT_PORTRAIT
@@ -6212,7 +6212,7 @@ def refresh_map_directories(screen, dirs_to_check, success_message="Data refresh
                 total_maps += 1
     
     if total_maps == 0:
-        from ui import confirm_dialog
+        from ui import dialogs as confirm_dialog
         confirm_dialog.show_info("Data Refresh", "No maps found to refresh.")
         return
 
@@ -6223,7 +6223,7 @@ def refresh_map_directories(screen, dirs_to_check, success_message="Data refresh
     screen.refresh_status = "Initializing..."
 
     def _refresh_thread():
-        from screens.menu_screens.map import Map
+        from screens.game.map import Map
         maps_processed = 0
 
         for scenario_dir, name, scenario_path, map_json_path in valid_scenarios:
@@ -6333,8 +6333,8 @@ def open_listbox_selector(game_state, title, prompt, items, on_confirm_callback,
                           close_on_select=True):
     """In-engine listbox picker for editor tools and spectators: dims and freezes
     the current frame, then shows a clickable list of rows in a modal panel."""
-    from ui.list_select_screen import ListSelectScreen
-    from ui.screen_runner import _run_pygame_sub_screen
+    from ui.dialogs.list_select_screen import ListSelectScreen
+    from ui.navigation.screen_runner import _run_pygame_sub_screen
     screen = ListSelectScreen(game_state, title, prompt, items, on_confirm_callback,
                               is_enabled=is_enabled, close_on_select=close_on_select)
     _run_pygame_sub_screen(game_state, screen)
@@ -6349,12 +6349,12 @@ def open_checkbox_list(game_state, title, prompt, items, on_result, confirm_labe
                        show_select_all=True, extra_buttons=None, footnote=None):
     """In-engine multi-toggle picker: replaces the scrollable tk.Checkbutton panels.
 
-    `items` are ui.checkbox_list_screen CheckboxItem / SectionHeader objects.
+    `items` are ui.dialogs.checkbox_list_screen CheckboxItem / SectionHeader objects.
     Answers on_result with the list of checked keys -- empty when nothing was
     ticked, None when the user cancelled, so the two cases stay distinguishable.
     """
-    from ui.checkbox_list_screen import CheckboxListScreen
-    from ui.screen_runner import run_screen
+    from ui.dialogs.checkbox_list_screen import CheckboxListScreen
+    from ui.navigation.screen_runner import run_screen
     result = {}
     def _on_done(screen):
         _clear_phantom_hover(game_state)
@@ -6368,16 +6368,16 @@ def open_checkbox_list(game_state, title, prompt, items, on_result, confirm_labe
 
 def open_color_picker(game_state, title, initial_color, on_confirm_callback):
     """In-engine RGB/hex color picker: replaces tkinter.colorchooser.askcolor."""
-    from ui.color_picker_screen import ColorPickerScreen
-    from ui.screen_runner import _run_pygame_sub_screen
+    from ui.dialogs.color_picker_screen import ColorPickerScreen
+    from ui.navigation.screen_runner import _run_pygame_sub_screen
     screen = ColorPickerScreen(game_state, title, initial_color, on_confirm_callback)
     _run_pygame_sub_screen(game_state, screen)
 
 def open_character_picker(game_state, current_path, on_confirm_callback):
     """In-engine grid picker for choosing a character portrait: shows a
     thumbnail for every image under assets/characters/."""
-    from ui.character_select_screen import CharacterSelectScreen
-    from ui.screen_runner import _run_pygame_sub_screen
+    from ui.dialogs.character_select_screen import CharacterSelectScreen
+    from ui.navigation.screen_runner import _run_pygame_sub_screen
     screen = CharacterSelectScreen(game_state, current_path, on_confirm_callback)
     _run_pygame_sub_screen(game_state, screen)
 
@@ -6403,7 +6403,7 @@ def open_file_browser(game_state, title, start_dir=None, mode="open_file", exten
             # There's no native browser equivalent of "pick a folder on my
             # real disk" (a browser sandbox has no notion of an arbitrary
             # host path) -- not supported on web.
-            from ui import confirm_dialog
+            from ui import dialogs as confirm_dialog
             confirm_dialog.show_error("Not Available", "Choosing a folder isn't supported in the browser build.", tk_parent=tk_parent)
             _on_result(None)
             return
@@ -6411,7 +6411,7 @@ def open_file_browser(game_state, title, start_dir=None, mode="open_file", exten
         pick_upload_file(_on_result, extensions=extensions, multiple=(mode == "open_files"))
         return
 
-    from ui.file_browser_screen import run_file_browser
+    from ui.dialogs.file_browser_screen import run_file_browser
     run_file_browser(title, start_dir, mode=mode, extensions=extensions,
                      game_state=game_state, tk_parent=tk_parent, on_result=_on_result)
 
@@ -6625,7 +6625,7 @@ def export_with_overwrite_confirmation(file_path, export, parent=None):
     if not os.path.exists(file_path):
         return export()
 
-    from ui import confirm_dialog
+    from ui import dialogs as confirm_dialog
 
     def after_choice(overwrite):
         if overwrite:
@@ -6651,7 +6651,7 @@ def _export_to_downloads(file_name, produce, parent=None):
     zipped folder and copying one file -- the destination, the web/desktop
     split and the success/error dialogs were written out twice, identically.
     """
-    from ui import confirm_dialog
+    from ui import dialogs as confirm_dialog
     dest_path = file_name if IS_WEB else os.path.join(downloads_dir(), file_name)
 
     def export():
@@ -6723,7 +6723,7 @@ def import_json_file(game_state, title, on_loaded):
     the caller -- different JSON files have different schemas, this just
     covers the shared "pick a file, parse it, report a read error" part.
     """
-    from ui import confirm_dialog
+    from ui import dialogs as confirm_dialog
 
     def _after_pick(file_path):
         if not file_path:
@@ -6746,7 +6746,7 @@ def import_zip_to_dir(game_state, target_parent_dir, on_success=None):
     transient Tk root and duplicate the "_imported" collision suffix logic.
     """
     from pathlib import Path
-    from ui import confirm_dialog
+    from ui import dialogs as confirm_dialog
 
     def _after_pick(file_path):
         if not file_path:
@@ -6784,7 +6784,7 @@ def import_mod_file(game_state, on_success=None):
     game is restarted -- Python only imports a module once per process, so
     anything already running has already loaded the unmodded version.
     """
-    from ui import confirm_dialog
+    from ui import dialogs as confirm_dialog
 
     def _do_copy(file_path):
         target_name = os.path.basename(file_path)
@@ -6828,8 +6828,8 @@ def import_character_portrait(game_state, on_success=None):
     on_success, if given, is called with the new portrait's path relative to
     CHARACTERS_DIR (e.g. "Custom/photo.png").
     """
-    from ui import confirm_dialog
-    from ui.character_select_screen import CHARACTERS_DIR, CUSTOM_SUBDIR, IMAGE_EXTENSIONS
+    from ui import dialogs as confirm_dialog
+    from ui.dialogs.character_select_screen import CHARACTERS_DIR, CUSTOM_SUBDIR, IMAGE_EXTENSIONS
 
     custom_dir = os.path.join(CHARACTERS_DIR, CUSTOM_SUBDIR)
 
@@ -6859,8 +6859,8 @@ def ask_directory(game_state, title, initialdir, on_result):
 
 def ask_color(game_state, title, initial, on_result):
     """Native color picker; answers on_result with an (r, g, b) tuple, or None if cancelled."""
-    from ui.color_picker_screen import ColorPickerScreen
-    from ui.screen_runner import _run_pygame_sub_screen
+    from ui.dialogs.color_picker_screen import ColorPickerScreen
+    from ui.navigation.screen_runner import _run_pygame_sub_screen
     result = {}
     screen = ColorPickerScreen(game_state, title, initial, lambda color: result.setdefault("color", color))
     _run_pygame_sub_screen(game_state, screen, on_done=lambda: on_result(result.get("color")))
@@ -6926,7 +6926,7 @@ def province_for_order(map_screen, province_id):
 
 def canonical_unit_order(map_screen, country_id, province, unit, order):
     """Preserve the public order-validation interface."""
-    from map_logic.unit_actions import canonical_order
+    from map_logic.actions.unit_actions import canonical_order
     return canonical_order(map_screen, country_id, province, unit, order)
 
 

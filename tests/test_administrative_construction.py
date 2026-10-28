@@ -7,8 +7,8 @@ from unittest import mock
 
 from data import queries
 import data.constants as c
-from data.io.multiplayer_io import _validate_administrative_orders
-from data.io.realtime_multiplayer import MapRealtimeDriver, RealtimeError
+from data.multiplayer.tournament.files import _validate_administrative_orders
+from data.multiplayer.realtime.session import MapRealtimeDriver, RealtimeError
 from map_logic.ai.ai_construction import _apply_coring_priority
 from tests.test_map_save_format import sample_map_screen
 
@@ -113,7 +113,7 @@ class AdministrativeConstructionTests(unittest.TestCase):
         self.assertEqual(queries.get_administrative_turns("REMOVE_CORE", restored), c.REMOVE_CORE_TURNS + 3)
 
     def test_production_permissions_and_disabled_callback_cannot_spend(self):
-        from screens.map_related_screens.production import Production_Screen
+        from screens.game.production import Production_Screen
         screen = object.__new__(Production_Screen)
         screen.map_screen = self.world
         screen.target_province = self.province

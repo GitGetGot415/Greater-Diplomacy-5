@@ -16,7 +16,7 @@ import data.constants as c
 from data import queries
 from map_logic.ai import ai_opinion
 from map_logic.diplomacy import deal as deal_mod
-from screens.map_related_screens import deal_screen
+from screens.game import deal_screen
 from tests import app_harness
 
 
@@ -61,7 +61,7 @@ class DealScreenTestCase(unittest.TestCase):
         self.map.nation_data[self.enemy]["war_durations"][self.player] = 10
 
     def screen(self, kind=deal_mod.KIND_PEACE):
-        from screens.map_related_screens.deal_screen import Deal_Screen
+        from screens.game.deal_screen import Deal_Screen
         return Deal_Screen(self.map, self.enemy, kind)
 
     def their_province(self):
@@ -472,7 +472,7 @@ class ProjectedMapTests(DealScreenTestCase):
 
     def treaty_screen(self):
         from map_logic.diplomacy import deal as dm
-        from screens.map_related_screens.peace_screen import View_Peace_Treaty_Screen
+        from screens.game.peace_screen import View_Peace_Treaty_Screen
 
         # They are demanding one of ours, so the preview has something to repaint.
         wanted = self.my_province()["id"]
@@ -502,7 +502,7 @@ class ProjectedMapTests(DealScreenTestCase):
                       "the preview outlived the screen that wanted it")
 
     def test_a_transferred_province_is_painted_for_its_new_owner(self):
-        from map_logic.rendering import refresh_map
+        from ui.rendering import refresh_map
 
         painted = {}
         original = refresh_map._build_map_surface
@@ -527,7 +527,7 @@ class ProjectedMapTests(DealScreenTestCase):
     def test_a_trade_view_projects_its_transferred_province(self):
         """Trade land is no less real than treaty land in the map preview."""
         from map_logic.diplomacy import deal as dm
-        from screens.map_related_screens.peace_screen import View_Trade_Deal_Screen
+        from screens.game.peace_screen import View_Trade_Deal_Screen
 
         wanted = self.my_province()["id"]
         agreement = dm.new(dm.KIND_TRADE, [self.enemy], [self.player],
@@ -545,7 +545,7 @@ class IncomingTradeButtonTests(DealScreenTestCase):
     def test_an_incoming_trade_has_a_view_trade_deal_button(self):
         """The offer's map view must be reachable before its answer buttons."""
         from map_logic.diplomacy import deal as dm
-        from screens.map_related_screens.messages import Messages_Screen
+        from screens.game.messages import Messages_Screen
 
         agreement = dm.new(dm.KIND_TRADE, [self.enemy], [self.player],
                            [dm.tiles_clause(self.player, self.enemy,

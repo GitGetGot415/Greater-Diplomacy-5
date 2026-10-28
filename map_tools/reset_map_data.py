@@ -5,7 +5,7 @@ import sys
 # Add the parent directory (project root) to the Python path so the picker's imports resolve
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from ui.file_browser_screen import run_file_browser
+from ui.dialogs.file_browser_screen import run_file_browser
 
 # Ask the user which base map to reset (resolves synchronously -- see run_file_browser)
 _picked = {}

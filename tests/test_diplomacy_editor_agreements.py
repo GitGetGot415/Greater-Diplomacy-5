@@ -5,7 +5,7 @@ import unittest
 
 import data.constants as c
 from tests.stub_map_screen import StubMapScreen
-from screens.editor_screens.diplomacy_editor_screen import Diplomacy_Editor_Screen
+from screens.editors.diplomacy_editor_screen import Diplomacy_Editor_Screen
 from map_logic.diplomacy import guarantees, military_attaches
 
 

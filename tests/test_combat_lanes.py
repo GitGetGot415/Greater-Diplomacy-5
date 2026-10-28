@@ -181,7 +181,7 @@ class WidthTests(unittest.TestCase):
                              c.COMBAT_WIDTH)
 
     def test_prediction_and_resolution_apply_the_same_terrain_width(self):
-        from map_logic.rendering import overlay_renderer
+        from ui.rendering import overlay_renderer
 
         for terrain in ("mountain", "plains", "hills"):
             with self.subTest(terrain=terrain):

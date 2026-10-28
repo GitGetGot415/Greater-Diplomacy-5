@@ -1,9 +1,9 @@
 from data.state_access import world_for, session_for
-from map_logic import production_actions
+from map_logic.actions import production_actions
 import random
 import data.constants as c
 from data import queries
-from map_logic import unit_actions
+from map_logic.actions import unit_actions
 from map_logic.ai import ai_unit_eval, ai_world
 from map_logic.diplomacy import restrictions
 

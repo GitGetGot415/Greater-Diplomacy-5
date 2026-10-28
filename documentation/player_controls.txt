@@ -9,7 +9,7 @@ See documentation/air_stuff.txt for aircraft controls and rules.
 COUNTRY SUMMARY
 ---------------
 
-screens/map_related_screens/country_summary.py shows the summary.
+screens/game/country_summary.py shows the summary.
 
 Hover over the flag in the top left to highlight it.
 Click the flag to open that country's summary.
@@ -49,7 +49,7 @@ Flag inspection is unavailable during country selection, hidden UI, turn process
 BATTLE CONTROLS
 ---------------
 
-screens/map_related_screens/battle_screen.py edits the combat model in map_logic/turn_processing/combat_rules.py.
+screens/game/battle_screen.py edits the combat model in map_logic/turn_processing/combat_rules.py.
 Battle replaces Give Orders on a tile where combat is active.
 Battle columns belong to combat sides, which can include several countries.
 The reserve column also shows allied units that the player cannot edit.
@@ -156,7 +156,7 @@ editing_country serves the same purpose for the identity editor.
 LAST-TURN UNIT EVENTS
 ---------------------
 
-screens/map_related_screens/unit_events_screen.py shows the sortable report.
+screens/game/unit_events_screen.py shows the sortable report.
 
 The yellow mail button beside the resources opens Unit events.
 The orange screen lists unit names, tile IDs, events, health changes, and sources.
@@ -306,7 +306,7 @@ Right-click assignment applies only to saved army groups.
 Unassigned units keep their normal map display, without army symbols or color bands.
 
 data/queries.py derives Unassigned from current units and saved army membership.
-ui/army_panel.py caches this entry when map state changes.
+ui/panels/army_panel.py caches this entry when map state changes.
 Frame rendering reads the cached entry.
 Saves and multiplayer rosters contain only saved army groups.
 Loading units and memberships recreates Unassigned without a new saved field.

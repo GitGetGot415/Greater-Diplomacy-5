@@ -3,7 +3,8 @@ from collections import deque
 
 import data.constants as c
 from data import queries
-from map_logic.turn_processing import combat_processor, edit_province_ownership
+from map_logic.turn_processing import combat_processor
+from map_logic.territory import ownership as edit_province_ownership
 
 def process_dead_nations(map_screen):
     """Removes defunct units and updates wars, preserving faction exiles."""

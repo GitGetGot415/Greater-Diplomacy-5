@@ -11,10 +11,10 @@ from unittest.mock import patch
 from data import migrations, queries
 from data.game_state import WorldState
 from data.state_access import BackendState
-from data.io import multiplayer_io
-from data.io.realtime_multiplayer import MapRealtimeDriver, apply_authoritative_snapshot
-from map_logic import unit_actions
-from map_logic.player_actions import PlayerActions, collect_map_commands
+from data.multiplayer.tournament import files as multiplayer_io
+from data.multiplayer.realtime.session import MapRealtimeDriver, apply_authoritative_snapshot
+from map_logic.actions import unit_actions
+from map_logic.actions.player_actions import PlayerActions, collect_map_commands
 from map_logic.diplomacy import faction_actions, faction_leadership, faction_records
 from map_logic.diplomacy.action_definitions import availability
 from tests.test_unit_metadata import fixture_metadata
@@ -65,10 +65,10 @@ class RuntimeOwnerTests(unittest.TestCase):
             self.assertEqual(buildable_units(research, queries.get_unit_library(first)), ["Fixture"])
             self.assertEqual(buildable_units(research, queries.get_unit_library(second)), [])
     def test_planning_frames_reuse_forecasts_until_state_changes(self):
-        from screens.menu_screens.map import cached_bilateral_response_indicator
+        from screens.game.map import cached_bilateral_response_indicator
         context = game()
         context._presentation_cache_revision = 0
-        with patch("screens.menu_screens.map.bilateral_response_indicator", return_value="YES") as forecast:
+        with patch("screens.game.map.bilateral_response_indicator", return_value="YES") as forecast:
             for _ in range(3):
                 self.assertEqual(cached_bilateral_response_indicator(context, "B", "TRADE"), "YES")
             self.assertEqual(forecast.call_count, 1)

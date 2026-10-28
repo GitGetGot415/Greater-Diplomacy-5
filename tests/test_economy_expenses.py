@@ -13,7 +13,7 @@ import pygame
 
 import data.constants as c
 from data import queries
-from screens.map_related_screens.economy import Economy_Screen, ExpensesTableScreen, expense_table_rows
+from screens.game.economy import Economy_Screen, ExpensesTableScreen, expense_table_rows
 from tests.stub_map_screen import StubMapScreen
 
 
@@ -88,9 +88,9 @@ class ExpensesTableTests(unittest.TestCase):
         economy = Economy_Screen()
         economy.map_screen = game
         library = {"Infantry 1914": {"cost_materials": 20}}
-        with patch("screens.map_related_screens.economy.queries.get_unit_library",
+        with patch("screens.game.economy.queries.get_unit_library",
                    return_value=library), \
-                patch("ui.screen_runner._run_pygame_sub_screen") as open_table:
+                patch("ui.navigation.screen_runner._run_pygame_sub_screen") as open_table:
             economy.open_expenses_table()
 
         table = open_table.call_args.args[1]
@@ -111,9 +111,9 @@ class ExpensesTableTests(unittest.TestCase):
             "Fixture Transport": {"cost_materials": 30},
             "Fixture Infantry": {"cost_manpower": 20},
         }
-        with patch("screens.map_related_screens.economy.queries.get_unit_library",
+        with patch("screens.game.economy.queries.get_unit_library",
                    return_value=library), \
-                patch("ui.screen_runner._run_pygame_sub_screen") as open_table:
+                patch("ui.navigation.screen_runner._run_pygame_sub_screen") as open_table:
             economy.open_expenses_table()
 
         table = open_table.call_args.args[1]

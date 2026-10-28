@@ -1479,7 +1479,7 @@ def _process_claim_queues(map_screen):
 
                     prov = world_state.id_to_province.get(prov_id)
                     if prov and prov.get("owner") == country_name:
-                        from map_logic.turn_processing import edit_province_ownership
+                        from map_logic.territory import ownership as edit_province_ownership
                         # Return the province to the intended recipient!
                         edit_province_ownership.conquer_province(map_screen, prov, recipient)
 

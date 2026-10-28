@@ -79,7 +79,7 @@ SETTINGS_FIELDS = (
     _field("map_navigation_mode", "map_navigation_mode", lambda: c.DEFAULT_MAP_NAVIGATION_MODE),
     # Per-keybind "change screen with this keybind" toggle next to the Orders/
     # Production rows on the Keybinds screen -- independent of
-    # map_navigation_mode, see ui.event_handler.handle_view_mode_keybind.
+    # map_navigation_mode, see screens.game.map_input.handle_view_mode_keybind.
     # On by default, and Keybinds' "Reset Keybinds" restores that.
     _field("orders_key_changes_screen", "orders_key_changes_screen", lambda: True),
     _field("economy_key_changes_screen", "economy_key_changes_screen", lambda: True),

@@ -12,12 +12,12 @@ import pygame
 
 import data.constants as c
 from data import queries
-from map_logic.rendering import overlay_renderer, map_renderer
-from screens.menu_screens.map import Map, update_button_states
+from ui.rendering import overlay_renderer, map_renderer
+from screens.game.map import Map, update_button_states
 from tests import app_harness
-from ui import event_handler
+from screens.game import map_input as event_handler
 from ui.bars import ui_bars
-from ui.confirm_dialog.message_box import _NavigationIntroPopup
+from ui.dialogs.message_box import _NavigationIntroPopup
 from ui.information import tooltip
 
 
@@ -348,7 +348,7 @@ class UnitViewFilterTests(unittest.TestCase):
                                  for unit in self.province["units"] for line in partial_lines))
 
     def test_selected_province_roster_retains_other_categories(self):
-        from ui import sidebar_info
+        from ui.panels import sidebar_info
         self.game.unit_view_filter = "AIR"
         with (patch.object(queries, "is_province_in_active_combat", return_value=False),
               patch.object(sidebar_info.combat_rules, "build_battle",
@@ -535,8 +535,8 @@ class UnitViewControlTests(unittest.TestCase):
                 self.assertEqual([call.args[3] for call in arrows.call_args_list], expected)
 
     def test_tutorial_filter_content_is_cached_before_drawing(self):
-        from ui import text_utils
-        from ui.confirm_dialog import message_box
+        from ui.widgets import text_utils
+        from ui.dialogs import message_box
         icons = {}
         for index, view_filter in enumerate(queries.UNIT_VIEW_FILTERS):
             color = (40 + index * 30, 20, 70)
@@ -553,8 +553,8 @@ class UnitViewControlTests(unittest.TestCase):
             popup.draw(pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT)))
 
     def test_tutorial_image_markers_preserve_text_and_image_order(self):
-        from ui import text_utils
-        from ui.confirm_dialog import message_box
+        from ui.widgets import text_utils
+        from ui.dialogs import message_box
         icon = pygame.Surface((20, 10))
         icon.fill((17, 83, 121))
         note = "[icon:air:32] first\nChanged [icon:naval:12] repeated [icon:air] end"
@@ -569,8 +569,8 @@ class UnitViewControlTests(unittest.TestCase):
         self.assertEqual(parts[-1], (" end", None))
 
     def test_tutorial_without_markers_keeps_plain_text(self):
-        from ui import text_utils
-        from ui.confirm_dialog import message_box
+        from ui.widgets import text_utils
+        from ui.dialogs import message_box
         note = "Air and Naval can appear without images."
         with patch.object(_NavigationIntroPopup, "UNIT_VIEW_NOTE", note), \
                 patch.object(message_box, "render_inline_text", wraps=text_utils.render_inline_text) as render:

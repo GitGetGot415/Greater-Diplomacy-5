@@ -10,10 +10,13 @@ import pygame
 import data.constants as c
 from data import queries
 from map_logic.diplomacy import puppet_actions, volunteers, faction_leadership
-from map_logic.turn_processing import turn_processor, edit_province_ownership
+from map_logic.turn_processing import turn_processor
+from map_logic.territory import ownership as edit_province_ownership
 from tests import app_harness
 from tests.test_map_save_format import sample_map_screen
-from ui import spectator_menus, confirm_dialog, modal_stack
+from screens.game import spectator_controls as spectator_menus
+from ui import dialogs as confirm_dialog
+from ui.navigation import modal_stack
 
 
 def country(name):
@@ -264,7 +267,7 @@ class SpectatorRemovalButtonTests(unittest.TestCase):
         cls.game = app_harness.boot_map()
 
     def setUp(self):
-        from screens.menu_screens import map as map_module
+        from screens.game import map as map_module
         self.map_module = map_module
         self.addCleanup(map_module.update_button_states, self.game)
         selected = next(p for p in self.game.map_data.values()

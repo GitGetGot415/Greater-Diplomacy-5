@@ -15,13 +15,13 @@ import pygame
 import data.constants as c
 from data import queries
 from map_logic import politics
-from map_logic.rendering import overlay_renderer
+from ui.rendering import overlay_renderer
 from map_logic.turn_processing import combat_processor, combat_rules
-from screens.map_related_screens.economy import Economy_Screen
+from screens.game.economy import Economy_Screen
 from tests.stub_map_screen import StubMapScreen as EconomyMap
 from tests.test_map_save_format import sample_map_screen
 from tests.test_multiparty_combat import StubMapScreen as CombatMap
-from ui.sidebar_info import unit_roster_row
+from ui.panels.sidebar_info import unit_roster_row
 from ui_elements import Slider
 
 

@@ -420,7 +420,7 @@ class OverviewTests(unittest.TestCase):
 
     def build(self):
         """Runs open_spectator_messages and captures what it would show."""
-        from ui import editor_menus
+        from screens.editors import menus as editor_menus
         captured = {}
 
         def fake_launch(map_screen, screen):
@@ -507,7 +507,7 @@ class OverviewTests(unittest.TestCase):
         table = self.build()
         row = next(r for r in table.rows if r["message"] == "Another proposal.")
 
-        from ui import editor_menus
+        from screens.editors import menus as editor_menus
         captured = {}
         original = editor_menus._launch
         editor_menus._launch = lambda ms, screen: captured.setdefault("screen", screen)

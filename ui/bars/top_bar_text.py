@@ -1,6 +1,6 @@
 import pygame
 import data.constants as c
-from map_logic.rendering.font_manager import fonts
+from ui.rendering.font_manager import fonts
 from ui.bars import ui_bars
 
 # ==========================================

@@ -5,11 +5,11 @@ from unittest.mock import Mock, patch
 
 from data import queries
 import data.constants as c
-from data.io import multiplayer_io
-from data.io.realtime_multiplayer import MapRealtimeDriver, RealtimeError
+from data.multiplayer.tournament import files as multiplayer_io
+from data.multiplayer.realtime.session import MapRealtimeDriver, RealtimeError
 from map_logic.ai import ai_movement, ai_unit_eval
 from map_logic.turn_processing import air_processor, combat_rules, movement_processor
-from screens.menu_screens.map import Map
+from screens.game.map import Map
 from tests.test_air_mechanics import controlled_air_library, world, tile, wing
 
 
@@ -196,7 +196,7 @@ class AirMoveSafetyTests(unittest.TestCase):
         self.assertTrue(queries.air_move_is_strike(self.game, self.plane, self.enemy))
 
     def test_patrols_block_movement_atomically_until_canceled(self):
-        from screens.map_related_screens.orders import Orders_Screen
+        from screens.game.orders import Orders_Screen
         other = wing(self.base, "Test Wing")
         self.game.selected_unit_records = lambda: [(other, self.base), (self.plane, self.base)]
         screen = Orders_Screen()
@@ -264,7 +264,7 @@ class AirMoveSafetyTests(unittest.TestCase):
         self.assertEqual(self.plane["order"]["type"], "AIR_ATTACK")
 
     def test_preview_uses_the_current_mission_or_the_visible_hover_target(self):
-        from screens.map_related_screens.orders import Orders_Screen
+        from screens.game.orders import Orders_Screen
         screen = Orders_Screen()
         screen.map_screen = self.game
         screen._air_range_records = [(self.plane, self.base)]
@@ -314,7 +314,7 @@ class AirMoveSafetyTests(unittest.TestCase):
         self.assertEqual(queries.queue_army_defense_orders(self.game, "A", army["id"]), 1)
 
     def test_cancel_then_move_drafts_remain_valid_for_both_multiplayer_hosts(self):
-        from screens.map_related_screens.orders import Orders_Screen
+        from screens.game.orders import Orders_Screen
         screen = Orders_Screen()
         screen.map_screen = self.game
         screen.refresh_ui = Mock()

@@ -6,7 +6,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from map_logic import gd4_translation as gd4
+from map_logic.imports import gd4_translation as gd4
 
 
 ROOT = Path(__file__).resolve().parent.parent

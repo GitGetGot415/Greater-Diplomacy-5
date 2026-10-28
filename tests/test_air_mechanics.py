@@ -14,14 +14,19 @@ os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 import pygame
 from data import migrations, queries
 import data.constants as c
-from data.io import multiplayer_io
-from data.io.realtime_multiplayer import (MapRealtimeDriver, RealtimeError, RealtimeServer,
-                                         RealtimeSession, RealtimeConfig)
+from data.multiplayer.tournament import files as multiplayer_io
+from data.multiplayer.realtime.session import (
+    MapRealtimeDriver,
+    RealtimeError,
+    RealtimeServer,
+    RealtimeSession,
+    RealtimeConfig,
+)
 from map_logic.ai import ai_movement
 from map_logic import politics
 from map_logic.turn_processing import air_processor, combat_processor, combat_rules, movement_processor
-from screens.map_related_screens.orders import Orders_Screen
-from screens.menu_screens.map import Map
+from screens.game.orders import Orders_Screen
+from screens.game.map import Map
 from tests.test_tournament_moves import synchronous_progress
 
 
@@ -1192,7 +1197,7 @@ class AirGroundTransportTests(unittest.TestCase):
             queries.canonical_unit_order(self.game, "A", self.sea, unit, queries.air_conversion_order(unit))
 
     def test_ui_and_editor_conversion_use_convoys(self):
-        from screens.editor_screens.brush_screens import Convoy_Converter_Screen
+        from screens.editors.brush_screens import Convoy_Converter_Screen
         unit = wing(self.base)
         self.game.show_feedback = Mock()
         self.game.queue_editor_visual_refresh = Mock()
@@ -1316,7 +1321,7 @@ class AirGroundTransportTests(unittest.TestCase):
         self.assertEqual(unit["original_attack"], queries.get_unit_library()["Monoplane Bomber I"]["attack"])
 
     def test_missile_crossing_a_ground_enemy_dies_without_dealing_damage(self):
-        from map_logic.rendering import overlay_renderer
+        from ui.rendering import overlay_renderer
         self.land["owner"] = "B"
         missile = wing(self.base, "V2 Rocket", order={"type": "MOVE", "path": [2]})
         enemy = wing(self.land, "Infantry Type 1910", "B", {"type": "MOVE", "path": [1]})
@@ -1330,7 +1335,7 @@ class AirGroundTransportTests(unittest.TestCase):
         self.assertFalse(enemy.get("_combat_locked", False))
 
     def test_air_convoy_crossing_a_shore_enemy_keeps_its_sea_profile(self):
-        from map_logic.rendering import overlay_renderer
+        from ui.rendering import overlay_renderer
         convoy = wing(self.sea)
         queries.load_transport(convoy, "Convoy")
         enemy = wing(self.base, "Infantry Type 1910", "B")
@@ -1414,7 +1419,7 @@ class AirMissionSelectionTests(unittest.TestCase):
         return {call.args[2]: call for call in add.call_args_list}
 
     def test_icon_tracks_each_mission_and_upgrade_stays_separate(self):
-        from screens.map_related_screens.orders import ACTION_COL_BOMBARD, ACTION_COL_UPGRADE
+        from screens.game.orders import ACTION_COL_BOMBARD, ACTION_COL_UPGRADE
         for mission, icon in (("NONE", "No Mission"), ("WEAKEST", "Weakest First"),
                               ("STRONGEST", "Strongest First"), ("RANDOM", "Random First")):
             with self.subTest(mission=mission):
@@ -1428,7 +1433,7 @@ class AirMissionSelectionTests(unittest.TestCase):
 
     def test_move_icon_tracks_relocation_and_ground_movement(self):
         from pathlib import Path
-        from screens.map_related_screens.orders import ACTION_COL_BOMBARD
+        from screens.game.orders import ACTION_COL_BOMBARD
         asset = Path(__file__).resolve().parents[1] / "assets" / "images" / "Air Move.png"
         self.assertEqual(asset.read_bytes()[:8], b"\x89PNG\r\n\x1a\n")
         for name, order in (("Monoplane Fighter I", {"type": "AIR_REPOSITION", "target_id": 2}),
@@ -1448,8 +1453,8 @@ class AirMissionSelectionTests(unittest.TestCase):
             with self.subTest(unit=name):
                 self.unit["type"] = name
                 before = dict(self.unit["order"])
-                with patch("screens.map_related_screens.orders._AirMissionSelectScreen") as popup, \
-                        patch("ui.screen_runner._run_pygame_sub_screen"):
+                with patch("screens.game.orders._AirMissionSelectScreen") as popup, \
+                        patch("ui.navigation.screen_runner._run_pygame_sub_screen"):
                     self.screen.open_air_mission_select(0, self.base)
                 choices = [choice[0] for choice in popup.call_args.args[1]]
                 self.assertEqual(choices, [choice[0] for choice in c.AIR_MISSION_CHOICES])
@@ -1531,7 +1536,7 @@ class AirMissionSelectionTests(unittest.TestCase):
                     self.screen._mark_draft_changed.assert_not_called()
 
     def test_active_mission_button_opens_selector_and_no_mission_cancels(self):
-        from screens.map_related_screens.orders import ACTION_COL_BOMBARD
+        from screens.game.orders import ACTION_COL_BOMBARD
         missions = [{"type": "AIR_PATROL", "priority": priority}
                     for priority in queries.AIR_INTERCEPTION_PRIORITIES]
         missions += [{"type": "AIR_ATTACK", "target_id": self.target["id"]},
@@ -1540,8 +1545,8 @@ class AirMissionSelectionTests(unittest.TestCase):
             with self.subTest(mission=mission):
                 self.unit["order"] = queries.canonical_air_order(self.game, self.unit, self.base, mission)
                 before = deepcopy(self.unit["order"])
-                with patch("screens.map_related_screens.orders._AirMissionSelectScreen") as popup, \
-                        patch("ui.screen_runner._run_pygame_sub_screen"):
+                with patch("screens.game.orders._AirMissionSelectScreen") as popup, \
+                        patch("ui.navigation.screen_runner._run_pygame_sub_screen"):
                     self.buttons()[ACTION_COL_BOMBARD].args[5]()
                     popup.assert_called_once()
                     self.assertEqual(self.unit["order"], before)
@@ -1608,7 +1613,7 @@ class AirMissionSelectionTests(unittest.TestCase):
         self.assertEqual(self.unit["type"], "Monoplane Fighter I")
 
     def test_numbered_aircraft_use_existing_upgrade_button_and_rule(self):
-        from screens.map_related_screens.orders import ACTION_COL_UPGRADE
+        from screens.game.orders import ACTION_COL_UPGRADE
         # Artificial numbered family isolates the control from content tuning.
         stats = dict(queries.get_unit_library()[self.unit["type"]])
         library = {"Test Plane I": stats, "Test Plane II": dict(stats)}
@@ -1628,7 +1633,7 @@ class AirMissionSelectionTests(unittest.TestCase):
             self.assertEqual(self.unit["type"], target)
 
     def test_aircraft_upgrades_agree_in_ui_ai_networks_and_resolution(self):
-        from screens.map_related_screens.orders import ACTION_COL_UPGRADE
+        from screens.game.orders import ACTION_COL_UPGRADE
         library, tree = queries.get_unit_library(), queries.get_tech_tree()
         for name, stats in library.items():
             if not stats.get("air_role") or queries.get_unit_tier(name) != 1:
@@ -1755,12 +1760,12 @@ class GroupAirMissionSelectionTests(unittest.TestCase):
             {"type": "AIR_PATROL", "priority": queries.AIR_DEFAULT_PRIORITY}))
 
     def test_group_selector_counts_aircraft_and_always_offers_every_choice(self):
-        from screens.map_related_screens.orders import AIR_MISSION_CHOICES
+        from screens.game.orders import AIR_MISSION_CHOICES
         self.assertEqual(len(self.screen._batch_command_candidates("MISSION")), 4)
         # Even a selection containing only missiles retains the defense choices.
         self.records = [(self.v1, self.base), (self.v2, self.remote)]
-        with patch("screens.map_related_screens.orders._AirMissionSelectScreen") as popup, \
-                patch("ui.screen_runner._run_pygame_sub_screen"):
+        with patch("screens.game.orders._AirMissionSelectScreen") as popup, \
+                patch("ui.navigation.screen_runner._run_pygame_sub_screen"):
             self.screen.open_selected_air_mission_select()
         self.assertEqual(popup.call_args.args[1], AIR_MISSION_CHOICES)
         self.records = [(self.bomber, self.remote)]
@@ -1816,8 +1821,8 @@ class GroupAirMissionSelectionTests(unittest.TestCase):
         before = deepcopy(self.ground["order"])
         # An invalid launch base must still allow cancellation.
         self.remote["terrain"] = c.WATER_TERRAINS[0]
-        with patch("screens.map_related_screens.orders._AirMissionSelectScreen") as popup, \
-                patch("ui.screen_runner._run_pygame_sub_screen"):
+        with patch("screens.game.orders._AirMissionSelectScreen") as popup, \
+                patch("ui.navigation.screen_runner._run_pygame_sub_screen"):
             self.screen.open_selected_air_mission_select()
             popup.assert_called_once()
             self.assertEqual(idle["order"], idle_order)
@@ -1910,7 +1915,7 @@ class AirAppSmokeTests(unittest.TestCase):
         install_air_fixture(self)
 
     def test_orders_command_icons_are_cached_per_request(self):
-        from screens.map_related_screens.orders import AIR_MISSION_CHOICES
+        from screens.game.orders import AIR_MISSION_CHOICES
         screen = Orders_Screen()
         for button_size in (c.SIZES["orders_action_icon"], c.SIZES["list_row"]):
             for _mission, _label, name in AIR_MISSION_CHOICES:
@@ -2011,8 +2016,8 @@ class AirAppSmokeTests(unittest.TestCase):
             self.assertEqual(restored["order"]["priority"], "RANDOM")
 
     def test_group_mission_callback_sets_orders_and_draws_from_cache(self):
-        from ui import modal_stack
-        from screens.map_related_screens.orders import BATCH_BTN_ROW_OFFSET_Y, PANEL_Y, ACTION_COL_BOMBARD
+        from ui.navigation import modal_stack
+        from screens.game.orders import BATCH_BTN_ROW_OFFSET_Y, PANEL_Y, ACTION_COL_BOMBARD
         with tempfile.TemporaryDirectory() as directory:
             _original, _fighter, _rocket, path = self.make_runtime_save(directory)
             loaded = Map(load_path=path, skip_initial_income=True)
@@ -2097,8 +2102,8 @@ class AirAppSmokeTests(unittest.TestCase):
 
     def test_air_mission_popup_loads_valid_assets_and_applies_a_choice(self):
         from pathlib import Path
-        from ui import modal_stack
-        from map_logic.rendering import symbol_loader
+        from ui.navigation import modal_stack
+        from ui.rendering import symbol_loader
         with tempfile.TemporaryDirectory() as directory:
             _original, _fighter, _rocket, path = self.make_runtime_save(directory)
             loaded = Map(load_path=path, skip_initial_income=True)
@@ -2133,7 +2138,7 @@ class AirAppSmokeTests(unittest.TestCase):
 
     def test_menu_move_and_strike_accept_both_clicks_retarget_and_survive_save_load(self):
         from data.map import save_map
-        from ui import modal_stack
+        from ui.navigation import modal_stack
         for mission in ("MOVE", "STRIKE"):
             for button in (1, 3):
                 with self.subTest(mission=mission, button=button), tempfile.TemporaryDirectory() as directory:
@@ -2185,7 +2190,7 @@ class AirAppSmokeTests(unittest.TestCase):
                     self.assertEqual(recovered.id_to_province[1]["units"][0]["order"], unit["order"])
 
     def test_unavailable_air_missions_remain_visible_and_ignore_clicks(self):
-        from ui import modal_stack
+        from ui.navigation import modal_stack
         for name, invalid_base in (("V1 Flying Bomb", False), ("V2 Rocket", False),
                                    ("Monoplane Fighter I", True)):
             with self.subTest(unit=name, invalid_base=invalid_base):
@@ -2220,7 +2225,7 @@ class AirAppSmokeTests(unittest.TestCase):
                         modal_stack.pop()
 
     def test_dismissing_air_mission_popup_preserves_idle_order(self):
-        from ui import modal_stack
+        from ui.navigation import modal_stack
         game = world()
         base = tile(game, 1, 8)
         fighter = wing(base, "Monoplane Fighter I")
@@ -2405,7 +2410,7 @@ class AirAppSmokeTests(unittest.TestCase):
                 self.assertEqual(screen.air_strike_range_previews, expected_strike)
 
     def test_air_range_previews_deduplicate_and_use_cached_rules(self):
-        from screens.map_related_screens.orders import MOVE_TARGET_COLOR, BOMBARD_TARGET_COLOR
+        from screens.game.orders import MOVE_TARGET_COLOR, BOMBARD_TARGET_COLOR
         with tempfile.TemporaryDirectory() as directory:
             _original, _fighter, _rocket, path = self.make_runtime_save(directory)
             loaded = Map(load_path=path, skip_initial_income=True)
@@ -2438,7 +2443,7 @@ class AirAppSmokeTests(unittest.TestCase):
                     self.assertEqual(self.surface.get_clip(), clip_before)
 
     def test_air_range_hover_events_switch_the_cached_circle_and_lock_active_missions(self):
-        from screens.map_related_screens.orders import MOVE_TARGET_COLOR, BOMBARD_TARGET_COLOR
+        from screens.game.orders import MOVE_TARGET_COLOR, BOMBARD_TARGET_COLOR
         with tempfile.TemporaryDirectory() as directory:
             _original, _fighter, _rocket, path = self.make_runtime_save(directory)
             loaded = Map(load_path=path, skip_initial_income=True)
@@ -2633,8 +2638,8 @@ class AirAppSmokeTests(unittest.TestCase):
                 self.assertIn(hidden, far["units"])
 
     def test_ground_combat_rosters_show_cached_casualties_without_mutating_aircraft(self):
-        from ui import sidebar_info
-        from screens.map_related_screens.battle_screen import Battle_Screen
+        from ui.panels import sidebar_info
+        from screens.game.battle_screen import Battle_Screen
         with tempfile.TemporaryDirectory() as directory:
             _original, _fighter, _rocket, path = self.make_runtime_save(directory)
             loaded = Map(load_path=path, skip_initial_income=True)
@@ -2659,7 +2664,7 @@ class AirAppSmokeTests(unittest.TestCase):
             self.assertTrue(queries.is_air_unit(aircraft))
 
     def test_editor_air_brush_requires_land(self):
-        from ui import event_handler
+        from screens.game import map_input as event_handler
         with tempfile.TemporaryDirectory() as directory:
             _original, _fighter, _rocket, path = self.make_runtime_save(directory)
             loaded = Map(load_path=path, force_editor=True, skip_initial_income=True)

@@ -1,7 +1,7 @@
 import pygame
 import data.constants as c
 from data import queries
-from map_logic.rendering import overlay_renderer
+from ui.rendering import overlay_renderer
 
 UNIT_PREVIEW_LIMIT = 5
 

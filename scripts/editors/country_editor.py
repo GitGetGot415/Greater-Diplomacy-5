@@ -1,0 +1,307 @@
+import sys
+import os
+
+# Add the parent directory (project root) to the Python path so it can find the 'data' module
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+
+import tkinter as tk
+from tkinter import messagebox, colorchooser
+import data.constants as c
+import json
+
+import colorsys
+from data import queries
+from data.io.country_io import DEFAULT_NATION_COLOR
+from data.io.json_io import load_json_or_empty
+from ui import dialogs as confirm_dialog
+
+PATH = c.COUNTRIES_DATA_PATH
+
+class CountryEditor:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Greater Diplomacy - Country Editor")
+        self.data = self.load_data()
+        self.sort_mode = "NAME"
+
+        # --- Editor UI (Top) ---
+        editor_frame = tk.LabelFrame(root, text="Country Details", padx=10, pady=10)
+        editor_frame.pack(fill="x", padx=10, pady=5)
+
+        self.color_preview = tk.Canvas(editor_frame, width=50, height=25, bg="grey", highlightthickness=1)
+        self.color_preview.grid(row=0, column=2, padx=5)
+
+        tk.Label(editor_frame, text="Internal ID:").grid(row=0, column=0, sticky="w")
+        self.id_ent = tk.Entry(editor_frame)
+        self.id_ent.grid(row=0, column=1, sticky="we")
+
+        tk.Label(editor_frame, text="Display Name:").grid(row=1, column=0, sticky="w")
+        self.name_ent = tk.Entry(editor_frame)
+        self.name_ent.grid(row=1, column=1, sticky="we")
+
+        tk.Label(editor_frame, text="Adjective:").grid(row=2, column=0, sticky="w")
+        self.adjective_ent = tk.Entry(editor_frame)
+        self.adjective_ent.grid(row=2, column=1, sticky="we")
+
+        tk.Label(editor_frame, text="Leader Name:").grid(row=3, column=0, sticky="w")
+        self.leader_name_ent = tk.Entry(editor_frame)
+        self.leader_name_ent.grid(row=3, column=1, sticky="we")
+
+        tk.Label(editor_frame, text="Leader Title:").grid(row=4, column=0, sticky="w")
+        self.leader_title_ent = tk.Entry(editor_frame)
+        self.leader_title_ent.grid(row=4, column=1, sticky="we")
+
+        self.color_btn = tk.Button(editor_frame, text="Pick Color", command=self.pick_color)
+        self.color_btn.grid(row=5, column=0, columnspan=2, sticky="we", pady=5)
+        self.current_color = list(DEFAULT_NATION_COLOR)
+
+        tk.Button(editor_frame, text="Save/Update Country", bg="#4CAF50", fg="white", 
+                  command=self.save_country).grid(row=6, column=0, columnspan=3, sticky="we")
+
+        # --- Utility Bar (New Section for Bulk Actions) ---
+        util_frame = tk.Frame(root, padx=10)
+        util_frame.pack(fill="x", pady=5)
+        
+        tk.Button(util_frame, text="⚠️ Reset All Countries to Template ⚠️", bg="#f44336", fg="white",
+                  command=self.bulk_reset_template).pack(fill="x")
+
+        # --- Control Bar (Middle) ---
+        controls_frame = tk.Frame(root, padx=10)
+        controls_frame.pack(fill="x", pady=5)
+
+        tk.Label(controls_frame, text="Search:").pack(side="left")
+        self.search_var = tk.StringVar()
+        self.search_var.trace_add("write", lambda *args: self.refresh_list())
+        self.search_ent = tk.Entry(controls_frame, textvariable=self.search_var)
+        self.search_ent.pack(side="left", fill="x", expand=True, padx=5)
+
+        self.btn_sort = tk.Button(controls_frame, text="Sort: Name", width=12, command=self.toggle_sort)
+        self.btn_sort.pack(side="right")
+
+        # --- Country List UI (Bottom) ---
+        list_container = tk.Frame(root)
+        list_container.pack(fill="both", expand=True, padx=10, pady=10)
+
+        self.canvas = tk.Canvas(list_container)
+        scrollbar = tk.Scrollbar(list_container, orient="vertical", command=self.canvas.yview)
+        self.scrollable_frame = tk.Frame(self.canvas)
+
+        self.scrollable_frame.bind(
+            "<Configure>",
+            lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+        )
+
+        self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+        self.canvas.configure(yscrollcommand=scrollbar.set)
+        self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
+
+        self.canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        self.refresh_list()
+
+    def save_to_disk(self):
+        """Writes the country table out and drops the game's cached copy.
+
+        Both halves have to happen together -- a write without the cache bust
+        leaves the running game reading the old data -- so the three places
+        that saved used to spell out the pair, and the comment about it, each
+        in their own way.
+        """
+        with open(PATH, "w") as f:
+            json.dump(self.data, f, indent=c.SAVE_INDENT)
+        queries.clear_json_caches()
+
+    def get_default_research_dict(self):
+        """Helper to build a starting research dict from the structural template."""
+        template_path = c.RESEARCH_TEMPLATE_PATH
+        if os.path.exists(template_path):
+            with open(template_path, "r") as f:
+                struct = json.load(f)
+            
+            # Everyone starts completely at 0 now. No more infinite math layers.
+            res_dict = {tech: 0 for tech in struct.keys()}
+            
+            # The basics that you start natively with
+            if "infantry_type" in res_dict: res_dict["infantry_type"] = 1
+            if "cavalry" in res_dict: res_dict["cavalry"] = 1
+                
+            return res_dict
+            
+        # Hardcoded fallback
+        return {"infantry_type": 1, "cavalry": 1}
+
+    def bulk_reset_template(self):
+        """Synchronizes all countries to have every tech defined in the template."""
+        msg = ("This will add any NEW technologies from your JSON to ALL countries.\n"
+               "Existing research levels will NOT be preserved. Proceed?")
+
+        def on_confirm(ok):
+            if not ok:
+                return
+
+            default_research = self.get_default_research_dict()
+
+            for int_id in self.data:
+                # 1. Ensure the 'research' key exists
+                if "research" not in self.data[int_id]:
+                    self.data[int_id]["research"] = default_research.copy()
+                else:
+                    # 2. Add missing keys from the template to existing research dicts
+                    current_res = self.data[int_id]["research"]
+                    for tech_key, start_val in default_research.items():
+                        #if tech_key not in current_res:
+                            current_res[tech_key] = start_val
+                            print(f"Added {tech_key} to {int_id}")
+
+                # 3. Ensure other basic keys exist (money, manpower, etc)
+                for key in c.ECON_RESOURCE_KEYS:
+                    self.data[int_id].setdefault(key, 0)
+
+                self.data[int_id].setdefault("at_war_with", [])
+
+                self.data[int_id].setdefault("adjective", "")
+                self.data[int_id].setdefault("leader_name", "")
+                self.data[int_id].setdefault("leader_title", "")
+                self.data[int_id].setdefault("flag_data", "")
+                self.data[int_id].setdefault("portrait_data", "")
+
+            self.save_to_disk()
+
+            messagebox.showinfo("Success", "All countries synchronized to the current tech tree.")
+            self.refresh_list()
+
+        confirm_dialog.ask_yes_no("Confirm Sync", msg, on_confirm, tk_parent=self.root)
+
+    def save_country(self):
+        """Saves or updates a country using the dynamic tech template."""
+        int_id = self.id_ent.get().strip()
+        disp_name = self.name_ent.get().strip() or int_id
+        adjective = self.adjective_ent.get().strip()
+        leader_name = self.leader_name_ent.get().strip()
+        leader_title = self.leader_title_ent.get().strip()
+        
+        if not int_id: 
+            messagebox.showwarning("Error", "Internal ID cannot be empty")
+            return
+        
+        if int_id in self.data:
+            self.data[int_id]["name"] = disp_name
+            self.data[int_id]["color"] = self.current_color
+            self.data[int_id]["adjective"] = adjective
+            self.data[int_id]["leader_name"] = leader_name
+            self.data[int_id]["leader_title"] = leader_title
+        else:
+            # New Country: use the dynamic template
+            self.data[int_id] = {
+                "name": disp_name,
+                "color": self.current_color,
+                "research": self.get_default_research_dict(),
+                 "manpower": 0, "materials": 0, "fuel": 0,     
+                "is_playable": True,
+                "at_war_with": [],
+                "adjective": adjective,
+                "leader_name": leader_name,
+                "leader_title": leader_title,
+                "flag_data": "",
+                "portrait_data": ""
+            }
+        
+        self.save_to_disk()
+        
+        self.refresh_list()
+        self.id_ent.delete(0, tk.END)
+        self.name_ent.delete(0, tk.END)
+        self.adjective_ent.delete(0, tk.END)
+        self.leader_name_ent.delete(0, tk.END)
+        self.leader_title_ent.delete(0, tk.END)
+
+    def toggle_sort(self):
+        if self.sort_mode == "NAME":
+            self.sort_mode = "COLOR"
+            self.btn_sort.config(text="Sort: Color")
+        else:
+            self.sort_mode = "NAME"
+            self.btn_sort.config(text="Sort: Name")
+        self.refresh_list()
+
+    def _on_mousewheel(self, event):
+        self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+
+    def load_data(self):
+        return load_json_or_empty(PATH)
+
+    def pick_color(self):
+        color = colorchooser.askcolor(title="Choose Country Color")
+        if color[0]: 
+            self.current_color = [int(c) for c in color[0]]
+            hex_color = '#%02x%02x%02x' % tuple(self.current_color)
+            self.color_preview.config(bg=hex_color)
+
+    def delete_country(self, int_id):
+        def on_confirm(ok):
+            if not ok:
+                return
+            del self.data[int_id]
+            self.save_to_disk()
+
+            self.refresh_list()
+
+        confirm_dialog.ask_yes_no("Confirm", f"Delete {int_id}?", on_confirm, tk_parent=self.root)
+
+    def load_into_editor(self, int_id):
+        country = self.data[int_id]
+        self.id_ent.delete(0, tk.END)
+        self.id_ent.insert(0, int_id)
+        self.name_ent.delete(0, tk.END)
+        self.name_ent.insert(0, country.get("name", int_id))
+        self.current_color = country.get("color", DEFAULT_NATION_COLOR)
+        hex_color = '#%02x%02x%02x' % tuple(self.current_color)
+        self.color_preview.config(bg=hex_color)
+        
+        self.adjective_ent.delete(0, tk.END)
+        self.adjective_ent.insert(0, country.get("adjective", ""))
+        self.leader_name_ent.delete(0, tk.END)
+        self.leader_name_ent.insert(0, country.get("leader_name", ""))
+        self.leader_title_ent.delete(0, tk.END)
+        self.leader_title_ent.insert(0, country.get("leader_title", ""))
+
+    def get_sort_key(self, int_id):
+        if self.sort_mode == "NAME":
+            return int_id.lower()
+        else:
+            rgb = self.data[int_id].get("color", [0, 0, 0])
+            return colorsys.rgb_to_hsv(rgb[0]/255, rgb[1]/255, rgb[2]/255)
+
+    def refresh_list(self):
+        for widget in self.scrollable_frame.winfo_children():
+            widget.destroy()
+
+        search_query = self.search_var.get().lower()
+        sorted_keys = sorted(self.data.keys(), key=self.get_sort_key)
+
+        for int_id in sorted_keys:
+            disp_name = self.data[int_id].get("name", int_id)
+            if search_query and search_query not in int_id.lower() and search_query not in disp_name.lower():
+                continue
+
+            country_row = tk.Frame(self.scrollable_frame, pady=2, padx=5)
+            country_row.pack(fill="x", expand=True)
+
+            rgb = self.data[int_id].get("color", DEFAULT_NATION_COLOR)
+            hex_color = '#%02x%02x%02x' % tuple(rgb)
+
+            tk.Label(country_row, bg=hex_color, width=3, relief="ridge").pack(side="left")
+            list_txt = f"{int_id} ({disp_name})" if int_id != disp_name else int_id
+            tk.Label(country_row, text=list_txt, width=30, anchor="w").pack(side="left", padx=5)
+            
+            tk.Button(country_row, text="Del", fg="red", width=3, 
+                      command=lambda i=int_id: self.delete_country(i)).pack(side="right", padx=2)
+            tk.Button(country_row, text="Edit", width=4, 
+                      command=lambda i=int_id: self.load_into_editor(i)).pack(side="right", padx=2)
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    root.geometry("500x800")
+    CountryEditor(root)
+    root.mainloop()

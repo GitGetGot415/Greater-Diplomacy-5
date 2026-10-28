@@ -14,9 +14,9 @@ from map_logic.ai import ai_evaluation
 from map_logic.diplomacy import diplomacy_logic, diplomacy_messages, volunteers
 from map_logic.diplomacy import military_attaches
 from map_logic.turn_processing import combat_processor
-from map_logic.rendering import overlay_renderer
+from ui.rendering import overlay_renderer
 from map_logic.turn_processing import combat_rules
-from screens.map_related_screens.battle_screen import Battle_Screen
+from screens.game.battle_screen import Battle_Screen
 
 
 def division(owner):
@@ -173,7 +173,7 @@ class VolunteerTests(unittest.TestCase):
         self.assertFalse(game.pending_action("A", "B"))
 
     def test_orders_uses_volunteer_host_for_neutral_territory_entry(self):
-        from screens.map_related_screens.orders import Orders_Screen
+        from screens.game.orders import Orders_Screen
 
         game = self.game()
         host_home = game.home_of("B")

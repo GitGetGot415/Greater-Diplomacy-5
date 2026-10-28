@@ -10,28 +10,55 @@ import pygame
 from types import SimpleNamespace
 from unittest import mock
 
-from data.io.realtime_multiplayer import (
-    DEFAULT_MAX_TURNS, RealtimeConfig, RealtimeError, RealtimeSession,
-    RealtimeClient, RealtimeServer, create_match_certificate, decode_invite,
-    encode_invite, encode_relay_invite, read_message, sanitize_display_name, MapRealtimeDriver,
-    apply_authoritative_snapshot, collect_map_commands, default_advertised_address,
-    load_reconnect_token, persist_reconnect_token, encode_message, GameVersionError,
+from data.multiplayer.realtime.session import (
+    DEFAULT_MAX_TURNS,
+    RealtimeConfig,
+    RealtimeError,
+    RealtimeSession,
+    RealtimeClient,
+    RealtimeServer,
+    create_match_certificate,
+    decode_invite,
+    encode_invite,
+    encode_relay_invite,
+    read_message,
+    sanitize_display_name,
+    MapRealtimeDriver,
+    apply_authoritative_snapshot,
+    collect_map_commands,
+    default_advertised_address,
+    load_reconnect_token,
+    persist_reconnect_token,
+    encode_message,
+    GameVersionError,
 )
 import data.constants as c
 import json
 from data import migrations
-from data.io.realtime_relay import (RelayHostTransport, relay_cloud_init, validate_relay_invite,
-                                    _relay_firewall_payload, DigitalOceanRelayTask)
-from data.io.realtime_relay_service import Relay
+from data.multiplayer.realtime.relay import (
+    RelayHostTransport,
+    relay_cloud_init,
+    validate_relay_invite,
+    _relay_firewall_payload,
+    DigitalOceanRelayTask,
+)
+from data.multiplayer.realtime.relay_service import Relay
 from data.map.load_map import _saved_player_view
-from data.io.realtime_networking import (
-    LanMatchAdvertiser, PortMappingResult, automatic_tcp_port_mapping, host_network_diagnostics,
-    is_public_ipv4, make_lan_announcement, parse_lan_announcement,
+from data.multiplayer.realtime.networking import (
+    LanMatchAdvertiser,
+    PortMappingResult,
+    automatic_tcp_port_mapping,
+    host_network_diagnostics,
+    is_public_ipv4,
+    make_lan_announcement,
+    parse_lan_announcement,
 )
-from screens.menu_screens.realtime_multiplayer import (
-    Realtime_Join, Realtime_Relay_Provision, Realtime_Remote_Lobby,
+from screens.multiplayer.realtime_multiplayer import (
+    Realtime_Join,
+    Realtime_Relay_Provision,
+    Realtime_Remote_Lobby,
 )
-from screens.menu_screens.map import Map
+from screens.game.map import Map
 from ui_elements import Button
 
 
@@ -161,7 +188,7 @@ class HostSnapshotTests(unittest.TestCase):
 class AddressDetectionTests(unittest.TestCase):
     def test_default_address_uses_the_local_outbound_ipv4(self):
         probe = FakeAddressProbe()
-        with mock.patch("data.io.realtime_multiplayer.socket.socket", return_value=probe):
+        with mock.patch("data.multiplayer.realtime.session.socket.socket", return_value=probe):
             self.assertEqual(default_advertised_address(), "192.168.1.42")
         self.assertTrue(probe.closed)
 
@@ -206,8 +233,8 @@ class ConvenienceNetworkingTests(unittest.TestCase):
         failed = PortMappingResult("UPnP", "No UPnP gateway.")
         mapped = PortMappingResult("NAT-PMP", "Mapped", "203.0.113.20", 38475,
                                    _release=lambda: None)
-        with mock.patch("data.io.realtime_networking.try_upnp_port_mapping", return_value=failed), \
-             mock.patch("data.io.realtime_networking.try_natpmp_port_mapping", return_value=mapped):
+        with mock.patch("data.multiplayer.realtime.networking.try_upnp_port_mapping", return_value=failed), \
+             mock.patch("data.multiplayer.realtime.networking.try_natpmp_port_mapping", return_value=mapped):
             result = automatic_tcp_port_mapping("192.168.1.41", 38475)
         self.assertIs(result, mapped)
         self.assertFalse(is_public_ipv4("192.168.1.41"))
@@ -219,7 +246,7 @@ class ConvenienceNetworkingTests(unittest.TestCase):
 
     def test_default_address_falls_back_to_loopback_without_a_route(self):
         probe = FakeAddressProbe(error=OSError("no route"))
-        with mock.patch("data.io.realtime_multiplayer.socket.socket", return_value=probe):
+        with mock.patch("data.multiplayer.realtime.session.socket.socket", return_value=probe):
             self.assertEqual(default_advertised_address(), "127.0.0.1")
         self.assertTrue(probe.closed)
 
@@ -291,7 +318,7 @@ class RelayTransportTests(unittest.TestCase):
         screen.invite_text, screen.name = invite, "New Guest"
         screen.password, screen.reconnect_token = "", "old-reconnect-code"
         client = mock.Mock()
-        with mock.patch("screens.menu_screens.realtime_multiplayer.RealtimeClient", return_value=client):
+        with mock.patch("screens.multiplayer.realtime_multiplayer.RealtimeClient", return_value=client):
             Realtime_Join.connect(screen)
 
         client.connect.assert_called_once_with()
@@ -303,7 +330,7 @@ class RelayTransportTests(unittest.TestCase):
         screen.invite_text, screen.name = invite, "New Guest"
         screen.password, screen.reconnect_token = "", "old-reconnect-code"
         client = mock.Mock()
-        with mock.patch("screens.menu_screens.realtime_multiplayer.RealtimeClient", return_value=client):
+        with mock.patch("screens.multiplayer.realtime_multiplayer.RealtimeClient", return_value=client):
             Realtime_Join.reconnect(screen)
 
         client.send.assert_called_once_with("reconnect", {"reconnect_token": "old-reconnect-code"})
@@ -318,7 +345,7 @@ class RelayTransportTests(unittest.TestCase):
         def answer(_title, _message, callback, **_kwargs):
             callback("New Guest")
 
-        with mock.patch("ui.confirm_dialog.ask_string", side_effect=answer):
+        with mock.patch("ui.dialogs.ask_string", side_effect=answer):
             Realtime_Remote_Lobby.edit_name(screen)
 
         screen.client.send.assert_called_once_with("rename", {"name": "New Guest"})
@@ -329,7 +356,7 @@ class RelayTransportTests(unittest.TestCase):
 
         client = RealtimeClient({"session": "test"})
         client.socket = Socket()
-        with mock.patch("data.io.realtime_multiplayer.read_message",
+        with mock.patch("data.multiplayer.realtime.session.read_message",
                         side_effect=[TimeoutError("idle"), ConnectionError("closed")]) as read:
             client._receive_loop()
 
@@ -346,7 +373,7 @@ class RelayTransportTests(unittest.TestCase):
         client.socket = connection
         shutdown = {"session_id": "test", "type": "shutdown",
                     "payload": {"message": "The host ended the match."}}
-        with mock.patch("data.io.realtime_multiplayer.read_message", return_value=shutdown):
+        with mock.patch("data.multiplayer.realtime.session.read_message", return_value=shutdown):
             client._receive_loop()
 
         self.assertTrue(connection.closed)
@@ -365,7 +392,7 @@ class RelayTransportTests(unittest.TestCase):
         client.socket = connection
         kicked = {"session_id": "test", "type": "kicked",
                   "payload": {"message": "The host removed you from the real-time lobby."}}
-        with mock.patch("data.io.realtime_multiplayer.read_message", return_value=kicked):
+        with mock.patch("data.multiplayer.realtime.session.read_message", return_value=kicked):
             client._receive_loop()
 
         self.assertTrue(connection.closed)
@@ -447,7 +474,7 @@ class RealtimeExitTests(unittest.TestCase):
         def confirm(_title, _message, callback, **_labels):
             callback(True)
 
-        with mock.patch("ui.confirm_dialog.ask_yes_no", side_effect=confirm) as ask:
+        with mock.patch("ui.dialogs.ask_yes_no", side_effect=confirm) as ask:
             Map.exit_to_menu(map_ref)
 
         self.assertEqual(ask.call_args.args[0], "Leave Real-Time Match")
@@ -476,7 +503,7 @@ class RealtimeExitTests(unittest.TestCase):
         def confirm(_title, _message, callback, **_labels):
             callback(True)
 
-        with mock.patch("ui.confirm_dialog.ask_yes_no", side_effect=confirm):
+        with mock.patch("ui.dialogs.ask_yes_no", side_effect=confirm):
             Map.exit_to_menu(map_ref)
 
         server.stop.assert_called_once_with(
@@ -487,7 +514,7 @@ class RealtimeExitTests(unittest.TestCase):
         button = Button(100, 100, "small", "blue", "Details", lambda: None)
         map_ref = SimpleNamespace(thread_error=None, elements=[button])
         event = pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=(110, 110))
-        with mock.patch("screens.menu_screens.map.event_handler.handle_map_events") as handle:
+        with mock.patch("screens.game.map.event_handler.handle_map_events") as handle:
             Map.additional_events(map_ref, event)
         handle.assert_not_called()
 
@@ -1104,7 +1131,7 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
     def test_unassigned_is_local_presentation_and_cannot_be_submitted_as_an_army(self):
         map_ref = self.make_map()
         map_ref.player_country = "A"
-        from ui import army_panel
+        from ui.panels import army_panel
         army_panel.prepare(map_ref)
         self.assertTrue(map_ref.unassigned_army_card["unit_ids"])
         commands = collect_map_commands(map_ref, "A")

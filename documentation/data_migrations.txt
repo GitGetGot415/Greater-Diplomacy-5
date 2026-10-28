@@ -10,8 +10,8 @@ OWNERSHIP
 ---------
 
 Keep GD5 version steps and older identifiers in data/migrations.py.
-Keep GD4 conversion rules in map_logic/gd4_translation.py.
-Keep Greater Diplomacy Hex Edition conversion rules in map_logic/gdhex_translation.py.
+Keep GD4 conversion rules in map_logic/imports/gd4_translation.py.
+Keep Greater Diplomacy Hex Edition conversion rules in map_logic/imports/gdhex_translation.py.
 Keep current settings fields and defaults in data/io/settings_schema.py.
 Keep current gameplay rules and validation in their shared rule modules.
 Keep saved-file access, compression formats, and storage synchronization in their input and output modules.

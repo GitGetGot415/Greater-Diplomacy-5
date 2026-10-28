@@ -1,4 +1,4 @@
-"""Contract tests for map_tools/ojh_benchmark.py, the Objective Judge Horizon hooks.
+"""Contract tests for scripts/benchmarks/ojh_benchmark.py, the Objective Judge Horizon hooks.
 
 The tool's whole value is that a benchmark turn is the game's own turn, so the
 turn test plays one real turn of a real scenario and checks that both
@@ -19,7 +19,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 def load_tool():
-    path = os.path.join(ROOT, "map_tools", "ojh_benchmark.py")
+    path = os.path.join(ROOT, "scripts", "benchmarks", "ojh_benchmark.py")
     spec = importlib.util.spec_from_file_location("ojh_benchmark", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

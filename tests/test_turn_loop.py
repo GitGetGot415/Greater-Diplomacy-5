@@ -22,7 +22,7 @@ class TurnLoopTests(unittest.TestCase):
     def setUpClass(cls):
         cls.controller, cls.surface = app_harness.boot()
         from data import queries
-        from screens.menu_screens.map import Map
+        from screens.game.map import Map
         cls.map = Map(load_path=app_harness.SCENARIO_PATH, is_scenario=True, num_players=1)
         cls.map.selection_mode = False
         cls.map.force_skip_llm = True
@@ -89,7 +89,7 @@ class TurnLoopTests(unittest.TestCase):
     def test_the_ai_builds_things(self):
         """Check AI production execution without assuming net army growth after combat."""
         from data import queries
-        from map_logic import production_actions
+        from map_logic.actions import production_actions
         from map_logic.turn_processing import economy_processor
         from tests.test_consolidated_actions import game
         context = game()

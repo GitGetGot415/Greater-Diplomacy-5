@@ -10,8 +10,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import pygame
 
 import data.constants as c
-from screens.menu_screens.mouse_settings import Mouse_Settings, mouse_control_warnings
-from ui import event_handler
+from screens.menus.mouse_settings import Mouse_Settings, mouse_control_warnings
+from screens.game import map_input as event_handler
 
 
 class MouseSettingsTests(unittest.TestCase):
@@ -47,7 +47,7 @@ class MouseSettingsTests(unittest.TestCase):
                             if element.text == "" and element.callback is not None)
         self.assertTrue(left_exclude.disabled)
 
-        with mock.patch("screens.menu_screens.mouse_settings.queries.save_global_settings"):
+        with mock.patch("screens.menus.mouse_settings.queries.save_global_settings"):
             screen.toggle_action("left", "pan_map")
         left_exclude = next(element for element in screen.elements
                             if element.text == "" and element.callback is not None)
@@ -58,7 +58,7 @@ class MouseSettingsTests(unittest.TestCase):
             "mouse_button_actions": c.default_mouse_button_actions(),
         })()
         screen = Mouse_Settings(controller)
-        with mock.patch("screens.menu_screens.mouse_settings.queries.save_global_settings") as save:
+        with mock.patch("screens.menus.mouse_settings.queries.save_global_settings") as save:
             screen.toggle_action("middle", "issue_orders")
 
         self.assertTrue(controller.mouse_button_actions["middle"]["issue_orders"])
@@ -73,7 +73,7 @@ class MouseSettingsTests(unittest.TestCase):
         controller = type("Controller", (), {"mouse_button_actions": actions})()
         screen = Mouse_Settings(controller)
 
-        with mock.patch("screens.menu_screens.mouse_settings.queries.save_global_settings") as save:
+        with mock.patch("screens.menus.mouse_settings.queries.save_global_settings") as save:
             screen.reset_defaults()
 
         self.assertEqual(controller.mouse_button_actions, c.default_mouse_button_actions())

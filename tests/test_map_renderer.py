@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 import pygame
 
-from map_logic.rendering import hover_renderer, map_renderer
+from ui.rendering import hover_renderer, map_renderer
 
 
 class NonLoopingMapRendererTests(unittest.TestCase):

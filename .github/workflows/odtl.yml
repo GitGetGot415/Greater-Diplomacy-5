@@ -144,7 +144,7 @@ jobs:
           import os, sys
           os.chdir("/game")
           sys.path.insert(0, "/game")
-          from map_logic import odtl
+          from map_logic.imports import odtl
 
           assert sys.platform == "emscripten", sys.platform
           assert odtl.available(), odtl.unavailable_reason()

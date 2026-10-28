@@ -3,7 +3,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 import data.constants as c
-from screens.menu_screens.music_player import Music_Player
+from screens.menus.music_player import Music_Player
 
 
 class FakeBeepBoxStream:
@@ -94,7 +94,7 @@ class MusicPitchTimelineTests(unittest.TestCase):
         player = make_player(controller)
         player._track_lengths["song.mp3"] = 480
 
-        with patch("screens.menu_screens.music_player.c.USE_SOLOUD", True):
+        with patch("screens.menus.music_player.c.USE_SOLOUD", True):
             self.assertEqual(player.get_current_track_length(), 600)
             self.assertAlmostEqual(player.get_current_track_pos(), 300)
 
@@ -102,7 +102,7 @@ class MusicPitchTimelineTests(unittest.TestCase):
 
         self.assertEqual(soloud.speed_changes, [1.0])
         self.assertEqual(controller._frozen_time, 240)
-        with patch("screens.menu_screens.music_player.c.USE_SOLOUD", True):
+        with patch("screens.menus.music_player.c.USE_SOLOUD", True):
             self.assertEqual(player.get_current_track_length(), 480)
             self.assertAlmostEqual(player.get_current_track_pos(), 240)
 
@@ -124,7 +124,7 @@ class MusicPitchTimelineTests(unittest.TestCase):
         player = make_player(controller)
         player._track_lengths["song.mp3"] = 480
 
-        with patch("screens.menu_screens.music_player.c.USE_SOLOUD", True):
+        with patch("screens.menus.music_player.c.USE_SOLOUD", True):
             player.scrub_music(0.5)
 
         self.assertAlmostEqual(soloud.seeks[0], 239.8)
@@ -168,7 +168,7 @@ class MusicPitchTimelineTests(unittest.TestCase):
         player = make_player(controller)
         player._track_lengths["song.mp3"] = 480
 
-        with patch("screens.menu_screens.music_player.c.USE_SOLOUD", True):
+        with patch("screens.menus.music_player.c.USE_SOLOUD", True):
             player.scrub_music(0.5)
 
         self.assertAlmostEqual(soloud.seeks[0], 239.75)

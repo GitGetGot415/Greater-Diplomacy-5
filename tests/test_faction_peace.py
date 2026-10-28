@@ -375,7 +375,7 @@ class LeaderToMemberPeaceTests(unittest.TestCase):
         self.game.nation_data["T"]["at_war_with"].remove("A")
         self.game.selected_province = self.game.home_of("T")
 
-        with mock.patch("screens.map_related_screens.deal_screen.open_peace_menu") as open_menu:
+        with mock.patch("screens.game.deal_screen.open_peace_menu") as open_menu:
             player_diplomacy_actions.handle_declare_war(self.game)
 
         open_menu.assert_called_once_with(self.game, "T")

@@ -1,33 +1,5 @@
 SANDBOXED MODS
 ==============
 
-The sandbox checks the direct caller of a protected operation.
-It blocks the operation when mod code is that caller.
-This restriction does not apply when existing game code performs the operation.
-
-Blocked operations
-------------------
-
-- open()
-- os.remove, rmdir, rename, mkdir, makedirs, chmod, chown, link, and symlink
-- os.listdir and scandir
-- os.system, popen, spawn*, exec*, fork, and kill
-- os.putenv, unsetenv, and startfile
-- subprocess.Popen
-- shutil.rmtree, copyfile, copytree, and move
-- All socket.* and ctypes.* calls
-
-shutil and pathlib also use protected open and os operations internally.
-Those operations remain subject to the direct-caller check.
-
-Allowed operations
-------------------
-
-- Define or override functions and classes.
-- Run calculations that do not use blocked operations.
-- Import modules, including os.
-- Use permitted helpers such as os.path.join.
-- Call existing game functions, including functions that normally read or write files.
-
-For example, a mod can call queries.save_game().
-The game's save code, rather than the mod, directly calls open().
+Read documentation/other/sandbox_security.md for the sandbox rules and limitations.
+Use documentation/source_layout_changes.md to update source-replacement mod targets after file moves.

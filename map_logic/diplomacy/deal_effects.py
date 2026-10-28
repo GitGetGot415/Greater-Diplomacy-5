@@ -17,7 +17,7 @@ from data.state_access import world_for, session_for
 import data.constants as c
 from map_logic.diplomacy import deal as deal_mod
 from map_logic.diplomacy.diplomacy_events import log_global_event
-from map_logic.turn_processing import edit_province_ownership
+from map_logic.territory import ownership as edit_province_ownership
 
 
 def _hand_over_the_land_only(map_screen, prov, receiver):

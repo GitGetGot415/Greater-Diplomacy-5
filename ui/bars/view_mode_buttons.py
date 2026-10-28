@@ -25,7 +25,7 @@ RESOURCE_BAR_OFFSET_X = START_X + STEP_X * len(MODES) + 40
 
 def build(navigate):
     """Returns the four buttons. `navigate(mode)` fires on click -- pass a
-    closure bound to the calling screen (see ui.event_handler.navigate_view_mode)
+    closure bound to the calling screen (see screens.game.map_input.navigate_view_mode)
     so the jump lands correctly regardless of which screen this row is drawn on.
     """
     icons = ui_elements.UI_ICONS

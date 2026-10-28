@@ -362,7 +362,7 @@ class SuccessionTests(Bloc):
 
     def orphan(self):
         """Take the leader off the map the way a conquest does."""
-        from map_logic.turn_processing import edit_province_ownership
+        from map_logic.territory import ownership as edit_province_ownership
 
         for prov in list(self.game.map_data.values()):
             if prov.get("owner") == "Leader":
@@ -407,7 +407,7 @@ class SuccessionTests(Bloc):
         self.assertEqual(self.leader(), "Loyal")
 
     def test_a_faction_with_no_territory_is_disbanded(self):
-        from map_logic.turn_processing import edit_province_ownership
+        from map_logic.territory import ownership as edit_province_ownership
 
         for prov in list(self.game.map_data.values()):
             if prov.get("owner") in ("Leader", "Rival", "Loyal"):

@@ -23,9 +23,9 @@ import pygame
 import data.constants as c
 from data import queries
 from map_logic.turn_processing import combat_rules
-from screens.map_related_screens import battle_screen
+from screens.game import battle_screen
 from tests import app_harness
-from ui import army_panel
+from ui.panels import army_panel
 
 
 class BattleScreenTestCase(unittest.TestCase):
@@ -108,7 +108,7 @@ class BattleScreenTestCase(unittest.TestCase):
 
 class BuildAndPaintTests(BattleScreenTestCase):
     def test_battle_and_sidebar_field_the_terrain_front_rank(self):
-        from ui import sidebar_info
+        from ui.panels import sidebar_info
         from tests.test_multiparty_combat import unit
 
         previous_terrain = self.province["terrain"]
@@ -162,7 +162,7 @@ class BuildAndPaintTests(BattleScreenTestCase):
         screen.draw(self.surface)
 
     def test_embedded_battle_builds_and_paints_beside_orders(self):
-        from screens.map_related_screens.orders import Orders_Screen
+        from screens.game.orders import Orders_Screen
 
         orders = Orders_Screen()
         orders.start_with_province(self.province, self.map)
@@ -175,7 +175,7 @@ class BuildAndPaintTests(BattleScreenTestCase):
         self.assertFalse(army_panel._visible(self.map, orders))
 
     def test_combat_bubble_entry_opens_the_battle_inspector(self):
-        from screens.map_related_screens.orders import Orders_Screen
+        from screens.game.orders import Orders_Screen
 
         self.map._orders_entered_from_combat_bubble = True
         orders = Orders_Screen()
@@ -186,7 +186,7 @@ class BuildAndPaintTests(BattleScreenTestCase):
         self.assertFalse(hasattr(self.map, "_orders_entered_from_combat_bubble"))
 
     def test_combat_bubble_orders_exit_returns_to_the_map(self):
-        from screens.map_related_screens.orders import Orders_Screen
+        from screens.game.orders import Orders_Screen
 
         old_navigation = c.MAP_NAVIGATION_MODE
         self.addCleanup(setattr, c, "MAP_NAVIGATION_MODE", old_navigation)
@@ -222,7 +222,7 @@ class BuildAndPaintTests(BattleScreenTestCase):
         self.assertIsInstance(screen.lane_outcome, dict)
 
     def test_combat_outlook_estimate_identifies_the_expected_winner(self):
-        from map_logic.rendering import overlay_renderer
+        from ui.rendering import overlay_renderer
 
         library = queries.get_unit_library()
         winner = queries.create_unit_dict("Infantry", self.a, library)
@@ -574,7 +574,7 @@ class ReadOnlyOrdersTests(BattleScreenTestCase):
     """The Orders screen on a province the player commands nothing in."""
 
     def orders_screen(self, player):
-        from screens.map_related_screens.orders import Orders_Screen
+        from screens.game.orders import Orders_Screen
 
         self.map.player_country = player
         screen = Orders_Screen()
@@ -617,7 +617,7 @@ class OrdersScreenRegressionTests(BattleScreenTestCase):
     """The compact Orders roster and its screen-specific Clear shortcut."""
 
     def orders_screen(self, player=None):
-        from screens.map_related_screens.orders import Orders_Screen
+        from screens.game.orders import Orders_Screen
 
         self.map.player_country = self.a if player is None else player
         previous_selection_mode = self.map.selection_mode
@@ -812,7 +812,7 @@ class ButtonSwapTests(BattleScreenTestCase):
     """Orders remains the map entry point, including while the tile fights."""
 
     def visible_pair(self):
-        from screens.menu_screens import map as map_module
+        from screens.game import map as map_module
 
         shown = {}
 
@@ -837,7 +837,7 @@ class ButtonSwapTests(BattleScreenTestCase):
             if queries.is_playable(n, self.map.nation_data)
             and n not in (self.a, self.b, self.x, self.y))
 
-        from screens.menu_screens import map as map_module
+        from screens.game import map as map_module
 
         enabled = {}
 
@@ -849,7 +849,7 @@ class ButtonSwapTests(BattleScreenTestCase):
         self.assertEqual(enabled[id(self.map.btn_go_battle)], (False, False))
 
     def test_orders_screen_offers_battle_button_for_a_fighting_tile(self):
-        from screens.map_related_screens.orders import Orders_Screen
+        from screens.game.orders import Orders_Screen
 
         orders = Orders_Screen()
         orders.start_with_province(self.province, self.map)
@@ -858,7 +858,7 @@ class ButtonSwapTests(BattleScreenTestCase):
         self.assertIn("Manage Battle", labels)
 
     def test_orders_opens_battle_beside_itself(self):
-        from screens.map_related_screens.orders import Orders_Screen
+        from screens.game.orders import Orders_Screen
 
         orders = Orders_Screen()
         orders.start_with_province(self.province, self.map)
@@ -870,7 +870,7 @@ class ButtonSwapTests(BattleScreenTestCase):
         self.assertEqual(orders.battle_screen.panel_rect, orders.battle_panel_rect())
 
     def test_closing_embedded_battle_keeps_orders_open(self):
-        from screens.map_related_screens.orders import Orders_Screen
+        from screens.game.orders import Orders_Screen
 
         orders = Orders_Screen()
         orders.start_with_province(self.province, self.map)
@@ -885,7 +885,7 @@ class ButtonSwapTests(BattleScreenTestCase):
         self.assertIs(self.map.selected_province, self.province)
 
     def test_closing_orders_removes_embedded_battle_with_it(self):
-        from screens.map_related_screens.orders import Orders_Screen
+        from screens.game.orders import Orders_Screen
 
         orders = Orders_Screen()
         orders.start_with_province(self.province, self.map)
@@ -897,7 +897,7 @@ class ButtonSwapTests(BattleScreenTestCase):
         self.assertTrue(orders.done)
 
     def test_closing_battle_modal_reveals_its_orders_screen(self):
-        from screens.map_related_screens.orders import Orders_Screen
+        from screens.game.orders import Orders_Screen
 
         orders = Orders_Screen()
         orders.start_with_province(self.province, self.map)
@@ -911,7 +911,7 @@ class ButtonSwapTests(BattleScreenTestCase):
         self.assertIs(self.map.selected_province, self.province)
 
     def test_preemptive_fighting_tile_enters_orders_before_battle(self):
-        from ui import event_handler
+        from screens.game import map_input as event_handler
 
         old_navigation = c.MAP_NAVIGATION_MODE
         old_done = self.map.done

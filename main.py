@@ -121,51 +121,57 @@ def _import_project_modules():
     if os.name == 'nt':
         os.add_dll_directory(os.path.dirname(os.path.abspath(__file__)))
 
-    from screens.map_related_screens.messages import Messages_Screen
+    from screens.game.messages import Messages_Screen
     from gameState import (dispatch_global_keys, synthesize_keybind_mouse_events,
                            keyboard_input_is_captured)
-    from map_logic.rendering.font_manager import fonts
+    from ui.rendering.font_manager import fonts
     import ui_elements
     import data.constants as c
     from data import queries
-    from screens.menu_screens.load_game import Load_Game
-    from screens.menu_screens.map import Map
-    from screens.menu_screens.menu import Menu
-    from screens.menu_screens.new_game import New_Game
-    from screens.menu_screens.settings import Settings
-    from screens.menu_screens.credits import Credits
-    from screens.menu_screens.translate import Translate
-    from screens.menu_screens.translation_menu import (
+    from screens.menus.load_game import Load_Game
+    from screens.game.map import Map
+    from screens.menus.menu import Menu
+    from screens.setup.new_game import New_Game
+    from screens.menus.settings import Settings
+    from screens.menus.credits import Credits
+    from screens.menus.translate import Translate
+    from screens.menus.translation_menu import (
         Translation_Menu,
         Greater_Diplomacy_4_Translation,
         Greater_Diplomacy_Hex_Translation,
     )
-    from screens.menu_screens.music_player import Music_Player
-    from screens.menu_screens.view_assets import View_Assets
-    from screens.menu_screens.mods import Mods
-    from screens.menu_screens.unit_art import Unit_Art
-    from screens.menu_screens.keybinds import Keybinds, default_keybinds
-    from screens.menu_screens.mouse_settings import Mouse_Settings
-    from screens.map_related_screens.orders import Orders_Screen
+    from screens.menus.music_player import Music_Player
+    from screens.menus.view_assets import View_Assets
+    from screens.menus.mods import Mods
+    from screens.menus.unit_art import Unit_Art
+    from screens.menus.keybinds import Keybinds, default_keybinds
+    from screens.menus.mouse_settings import Mouse_Settings
+    from screens.game.orders import Orders_Screen
     from data.io import keybind_io, settings_schema
-    from map_logic.rendering import symbol_loader
-    from ui import modal_stack
-    from screens.map_related_screens.research import Research_Screen
-    from screens.map_related_screens.economy import Economy_Screen
-    from screens.map_related_screens.edit_country import Edit_Country_Screen
-    from screens.map_related_screens.production import Production_Screen
-    from screens.map_related_screens.faction import Faction_Screen, Faction_Territories_Screen
-    from screens.menu_screens.select_base_map import Select_Base_Map
-    from screens.menu_screens.random_setup import Random_Setup
-    from screens.menu_screens.scenario_settings import Scenario_Settings
-    from screens.menu_screens.multiplayer_menu import Multiplayer_Menu, Real_Time_Multiplayer
-    from screens.menu_screens.multiplayer_hub import Multiplayer_Hub
-    from screens.menu_screens.multiplayer_host import Multiplayer_Host
-    from screens.menu_screens.multiplayer_join import Multiplayer_Join
-    from screens.menu_screens.multiplayer_new import Multiplayer_New
-    from screens.menu_screens.realtime_multiplayer import (
-        Realtime_Host_Setup, Realtime_Scenario_Select, Realtime_Lobby, Realtime_Join, Realtime_Lan_Browser,
-        Realtime_Remote_Lobby, Realtime_Relay_Setup, Realtime_Relay_Provision,
+    from ui.rendering import symbol_loader
+    from ui.navigation import modal_stack
+    from screens.game.research import Research_Screen
+    from screens.game.economy import Economy_Screen
+    from screens.editors.edit_country import Edit_Country_Screen
+    from screens.game.production import Production_Screen
+    from screens.game.faction import Faction_Screen, Faction_Territories_Screen
+    from screens.setup.select_base_map import Select_Base_Map
+    from screens.setup.random_setup import Random_Setup
+    from screens.setup.scenario_settings import Scenario_Settings
+    from screens.multiplayer.multiplayer_menu import Multiplayer_Menu, Real_Time_Multiplayer
+    from screens.multiplayer.multiplayer_hub import Multiplayer_Hub
+    from screens.multiplayer.multiplayer_host import Multiplayer_Host
+    from screens.multiplayer.multiplayer_join import Multiplayer_Join
+    from screens.multiplayer.multiplayer_new import Multiplayer_New
+    from screens.multiplayer.realtime_multiplayer import (
+        Realtime_Host_Setup,
+        Realtime_Scenario_Select,
+        Realtime_Lobby,
+        Realtime_Join,
+        Realtime_Lan_Browser,
+        Realtime_Remote_Lobby,
+        Realtime_Relay_Setup,
+        Realtime_Relay_Provision,
     )
 
     pygame.display.set_caption("Greater Diplomacy 5")
@@ -350,9 +356,9 @@ class Controller:
             self.play_startup_song()
 
         # Say where this game is, for anything that wants to translate a map
-        # into it. Best effort and never fatal -- see map_logic/odtl.py.
+        # into it. Best effort and never fatal -- see map_logic/imports/odtl.py.
         try:
-            from map_logic import odtl
+            from map_logic.imports import odtl
             odtl.write_locator()
         except Exception:
             pass
@@ -481,12 +487,12 @@ class Controller:
                 # of waiting for the first processed turn to do it for us.
                 realtime_map.refresh_map_layers("relations", "faction_territories", "fog")
                 self.states["MAP"] = realtime_map
-                from screens.menu_screens.map import render_buttons
+                from screens.game.map import render_buttons
                 render_buttons(realtime_map)
             elif hasattr(previous_state, "selected_realtime_client"):
                 view = previous_state.selected_realtime_view
                 import shutil
-                from data.io.realtime_multiplayer import materialize_map_bundle
+                from data.multiplayer.realtime.session import materialize_map_bundle
                 bundle_path = materialize_map_bundle(previous_state.selected_realtime_client.map_bundle)
                 try:
                     realtime_map = Map(load_path=bundle_path, is_scenario=False,
@@ -507,13 +513,13 @@ class Controller:
                 # The map was loaded before the remote player's country was
                 # known; initialize that player's visibility immediately.
                 realtime_map.refresh_map_layers("relations", "faction_territories", "fog")
-                from data.io.realtime_multiplayer import apply_authoritative_snapshot
+                from data.multiplayer.realtime.session import apply_authoritative_snapshot
                 if view.snapshot:
                     apply_authoritative_snapshot(realtime_map, view.snapshot)
                     realtime_map._realtime_snapshot_turn = view.turn_number
                     realtime_map._realtime_snapshot_phase = view.phase
                 self.states["MAP"] = realtime_map
-                from screens.menu_screens.map import render_buttons
+                from screens.game.map import render_buttons
                 render_buttons(realtime_map)
             elif previous_state == self.states["RANDOM_SETUP"]:
                 self.states["MAP"] = Map(is_scenario=True, is_random=True, random_settings=previous_state.random_settings, num_players=self.num_players)
@@ -522,7 +528,7 @@ class Controller:
                 path = previous_state.selected_tournament_path
                 key = previous_state.selected_tournament_key
 
-                from data.io import multiplayer_io
+                from data.multiplayer.tournament import files as multiplayer_io
                 res = multiplayer_io.load_tournament(path, key)
                 if len(res) >= 8:
                     success, role, cid, temp_dir, keys_dict, msg, session_key, ver_table = res[:8]
@@ -561,13 +567,13 @@ class Controller:
                     shutil.rmtree(temp_dir, ignore_errors=True)
 
                     self.states["MAP"].refresh_all_maps()
-                    from screens.menu_screens.map import render_buttons
+                    from screens.game.map import render_buttons
                     render_buttons(self.states["MAP"])
                 else:
                     print(f"Failed to load tournament: {msg}")
 
                     # Show popup to user
-                    from ui import confirm_dialog
+                    from ui import dialogs as confirm_dialog
                     confirm_dialog.show_error("Load Failed", msg)
 
                     # Abort transition
@@ -976,7 +982,7 @@ class Controller:
                     # and stop the game loop instead.
                     return
 
-            # MODAL STACK: dialogs/prompts/sub-screens (ui/modal_stack.py) take over
+            # MODAL STACK: dialogs/prompts/sub-screens (ui/navigation/modal_stack.py) take over
             # events/update/draw from active_state while any are open, instead of
             # running their own nested blocking loop (see modal_stack.py's docstring
             # for why -- a nested loop never yields back to asyncio.sleep(0) below).
@@ -1058,7 +1064,7 @@ async def _bootstrap():
     if IS_WEB:
         await restore_persisted_dir(c.SAVES_DIR)
         await restore_persisted_dir(c.TOURNAMENT_SAVES_DIR)
-        from ui.character_select_screen import CHARACTERS_DIR, CUSTOM_SUBDIR
+        from ui.dialogs.character_select_screen import CHARACTERS_DIR, CUSTOM_SUBDIR
         await restore_persisted_dir(os.path.join(CHARACTERS_DIR, CUSTOM_SUBDIR))
     game = Controller()
     await game.run()

@@ -13,7 +13,7 @@ from data.io import country_io
 from data.map import load_map
 from map_tools import compact_country_records
 from tests.test_map_save_format import sample_map_screen
-from ui import editor_menus
+from screens.editors import menus as editor_menus
 
 
 def templates():

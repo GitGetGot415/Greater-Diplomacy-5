@@ -8,7 +8,7 @@ from types import SimpleNamespace
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from map_logic.rendering import overlay_renderer
+from ui.rendering import overlay_renderer
 import pygame
 from pygame.math import Vector2
 
@@ -38,7 +38,7 @@ class BouncePreviewTests(unittest.TestCase):
     def setUpClass(cls):
         pygame.init()
         pygame.display.set_mode((400, 300))
-        from map_logic.rendering import symbol_loader
+        from ui.rendering import symbol_loader
         symbol_loader.load_symbols()
 
     def setUp(self):

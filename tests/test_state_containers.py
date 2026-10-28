@@ -57,7 +57,7 @@ from map_logic.ai import ai_handler
 from map_logic.turn_processing import turn_processor
 context = load_backend_state("scenarios/historical/1939", is_scenario=True)
 assert pygame.display.get_surface() is None
-assert "screens.menu_screens.map" not in sys.modules
+assert "screens.game.map" not in sys.modules
 assert not hasattr(context, "id_map")
 context.session.force_skip_llm = True
 ai_handler.FORCE_SKIP = True
@@ -66,7 +66,7 @@ asyncio.run(turn_processor.prepare_turn(context))
 asyncio.run(turn_processor.resolve_turn_logic(context))
 assert context.world.time_manager.total_turns == before + 1
 assert pygame.display.get_surface() is None
-assert "screens.menu_screens.map" not in sys.modules
+assert "screens.game.map" not in sys.modules
 '''
         result = subprocess.run([sys.executable, "-c", script], cwd=Path(__file__).resolve().parents[1],
                                 capture_output=True, text=True, timeout=60)

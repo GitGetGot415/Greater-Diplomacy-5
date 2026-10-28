@@ -35,29 +35,29 @@ class EditorScreenSmokeTests(unittest.TestCase):
         screen.handle_events([wheel(-1), wheel(1)])
         screen.draw(self.surface)
 
-    # -- screens/editor_screens/scripted_events_editor.py -----------------
+    # -- screens/editors/scripted_events_editor.py -----------------
 
     def test_scripted_events_editor(self):
-        from screens.editor_screens import scripted_events_editor as se
+        from screens.editors import scripted_events_editor as se
         self.exercise(se.Scripted_Events_Editor_Screen(self.map))
 
     def test_scripted_events_help(self):
-        from screens.editor_screens import scripted_events_editor as se
+        from screens.editors import scripted_events_editor as se
         self.exercise(se._HelpScreen(self.map))
 
     def test_scripted_events_variables(self):
-        from screens.editor_screens import scripted_events_editor as se
+        from screens.editors import scripted_events_editor as se
         self.exercise(se._VariablesScreen(self.map, self.map))
 
     def test_scripted_events_event_edit(self):
-        from screens.editor_screens import scripted_events_editor as se
+        from screens.editors import scripted_events_editor as se
         target = self.map.player_country
         self.exercise(se._EventEditScreen(self.map, self.map, target))
 
-    # -- screens/editor_screens/ (date_economy/research/brush/diplomacy) --
+    # -- screens/editors/ (date_economy/research/brush/diplomacy) --
 
     def test_map_editor_screens(self):
-        from screens import editor_screens
+        from screens import editors as editor_screens
         for name in ("Editor_Date_Screen", "Starting_Economy_List_Screen",
                      "Research_List_Screen", "Resource_Brush_Screen",
                      "Clear_Map_Screen", "Diplomacy_Editor_Screen",
@@ -66,29 +66,29 @@ class EditorScreenSmokeTests(unittest.TestCase):
                 self.exercise(getattr(editor_screens, name)(self.map))
 
     def test_diplomacy_editor_agreements_view(self):
-        from screens import editor_screens
+        from screens import editors as editor_screens
         screen = editor_screens.Diplomacy_Editor_Screen(self.map)
         screen.set_relationship_view("agreements")
         self.exercise(screen)
 
     def test_convoy_converter(self):
         """Takes a province as well as the map, unlike its siblings."""
-        from screens import editor_screens
+        from screens import editors as editor_screens
         self.exercise(editor_screens.Convoy_Converter_Screen(self.map, self.map.selected_province))
 
     def test_personality_edit(self):
         """Takes a country as well as the map, unlike its siblings."""
-        from screens import editor_screens
+        from screens import editors as editor_screens
         self.exercise(editor_screens.Personality_Edit_Screen(self.map, self.map.player_country))
 
     # -- the other modal tool windows ------------------------------------
 
     def test_historical_leaders_editor(self):
-        from screens.editor_screens.historical_leaders_editor import Historical_Leaders_Editor
+        from screens.editors.historical_leaders_editor import Historical_Leaders_Editor
         self.exercise(Historical_Leaders_Editor())
 
     def test_turn_editor(self):
-        from screens.editor_screens.turn_editor import TurnEditorScreen
+        from screens.editors.turn_editor import TurnEditorScreen
         screen = TurnEditorScreen()
         self.exercise(screen)
         screen.select_tab("administrative")
@@ -97,7 +97,7 @@ class EditorScreenSmokeTests(unittest.TestCase):
         self.exercise(screen)
 
     def test_conversion_sliders_snap_save_cancel_and_reset(self):
-        from screens.editor_screens.turn_editor import TurnEditorScreen
+        from screens.editors.turn_editor import TurnEditorScreen
         from data import constants as c, queries
         from ui_elements import Slider, TextField
         settings = {}
@@ -127,7 +127,7 @@ class EditorScreenSmokeTests(unittest.TestCase):
         screen.select_tab("conversion")
         self.assertTrue(all(value == str(maximum) for value in screen.tab["values"].values()))
         with mock.patch.object(queries, "save_scenario_settings") as save, \
-                mock.patch("ui.confirm_dialog.show_success"):
+                mock.patch("ui.dialogs.show_success"):
             screen.save_all()
         save.assert_not_called()
         self.assertNotIn("conversion_disabled", settings)
@@ -135,14 +135,14 @@ class EditorScreenSmokeTests(unittest.TestCase):
             self.assertEqual(queries.get_conversion_turns(action, settings), maximum)
         self.assertTrue(queries.scenario_has_construction_customizations(settings))
         reopened = TurnEditorScreen(settings=settings, persist=False)
-        with mock.patch("ui.confirm_dialog.ask_yes_no", side_effect=lambda _title, _text, cb: cb(True)), \
-                mock.patch("ui.confirm_dialog.show_success"):
+        with mock.patch("ui.dialogs.ask_yes_no", side_effect=lambda _title, _text, cb: cb(True)), \
+                mock.patch("ui.dialogs.show_success"):
             reopened.reset_to_defaults()
         self.assertEqual(settings["conversion_turn_overrides"], {})
         self.assertFalse(queries.scenario_has_construction_customizations(settings))
 
     def test_conversion_editor_repairs_malformed_override_blocks(self):
-        from screens.editor_screens.turn_editor import TurnEditorScreen
+        from screens.editors.turn_editor import TurnEditorScreen
         from data import queries
         for value in (None, [], "invalid"):
             with self.subTest(value=value):
@@ -155,7 +155,7 @@ class EditorScreenSmokeTests(unittest.TestCase):
                                      str(queries.get_conversion_turns(action)))
 
     def test_administrative_editor_saves_all_tabs_and_cancels_cleanly(self):
-        from screens.editor_screens.turn_editor import TurnEditorScreen
+        from screens.editors.turn_editor import TurnEditorScreen
         from data import queries
         settings = {}
         screen = TurnEditorScreen(settings=settings, persist=False)
@@ -167,7 +167,7 @@ class EditorScreenSmokeTests(unittest.TestCase):
         screen.toggle_disabled(name)
         self.assertEqual(settings, {})  # An abandoned modal has no side effects.
         with mock.patch.object(queries, "save_scenario_settings") as save, \
-                mock.patch("ui.confirm_dialog.show_success"):
+                mock.patch("ui.dialogs.show_success"):
             screen.save_all()
         save.assert_not_called()  # Lobby settings stay in the session.
         self.assertEqual(settings["administrative_turn_overrides"][name], duration)
@@ -175,31 +175,31 @@ class EditorScreenSmokeTests(unittest.TestCase):
         self.assertTrue(queries.scenario_has_construction_customizations(settings))
         reopened = TurnEditorScreen(settings=settings, persist=False)
         self.assertEqual(reopened.tabs["administrative"]["values"][name], str(duration))
-        with mock.patch("ui.confirm_dialog.ask_yes_no", side_effect=lambda _title, _text, cb: cb(True)), \
-                mock.patch("ui.confirm_dialog.show_success"):
+        with mock.patch("ui.dialogs.ask_yes_no", side_effect=lambda _title, _text, cb: cb(True)), \
+                mock.patch("ui.dialogs.show_success"):
             reopened.reset_to_defaults()
         self.assertFalse(queries.scenario_has_construction_customizations(settings))
 
     def test_list_select_screen(self):
-        from ui.list_select_screen import ListSelectScreen
+        from ui.dialogs.list_select_screen import ListSelectScreen
         items = [f"Item {i}" for i in range(60)]
         self.exercise(ListSelectScreen(self.map, "Pick", "Choose one:", items, lambda _v: None))
 
     def test_checkbox_list_screen(self):
-        from ui.checkbox_list_screen import CheckboxListScreen, CheckboxItem
+        from ui.dialogs.checkbox_list_screen import CheckboxListScreen, CheckboxItem
         items = [CheckboxItem(f"opt{i}", f"Option {i}") for i in range(60)]
         self.exercise(CheckboxListScreen(self.map, "Pick", "Choose some:", items, lambda _v: None))
 
     def test_color_picker_screen(self):
-        from ui.color_picker_screen import ColorPickerScreen
+        from ui.dialogs.color_picker_screen import ColorPickerScreen
         self.exercise(ColorPickerScreen(self.map, "Color", (120, 40, 200), lambda _v: None))
 
     def test_file_browser_screen(self):
-        from ui.file_browser_screen import FileBrowserScreen
+        from ui.dialogs.file_browser_screen import FileBrowserScreen
         self.exercise(FileBrowserScreen(self.map, "Open", ".", lambda _v: None))
 
     def test_table_screen(self):
-        from ui.table_screen import TableScreen, TableColumn
+        from ui.widgets.table_screen import TableScreen, TableColumn
         columns = [TableColumn("name", "Name", 300, align="left"),
                    TableColumn("value", "Value", 150)]
         rows = [{"name": f"Row {i}", "value": i} for i in range(80)]

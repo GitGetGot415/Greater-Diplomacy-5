@@ -19,8 +19,9 @@ import pygame
 from data import constants as c, queries
 from map_logic.ai import ai_movement, ai_unit_eval, ai_tech_eval
 from map_logic.diplomacy import diplomacy_processor as dp, diplomacy_messages as messages
-from map_logic.rendering import refresh_map
-from map_logic.turn_processing import combat_rules, edit_province_ownership
+from ui.rendering import refresh_map
+from map_logic.turn_processing import combat_rules
+from map_logic.territory import ownership as edit_province_ownership
 from tests.stub_map_screen import StubMapScreen
 from tests import test_ai_orders
 

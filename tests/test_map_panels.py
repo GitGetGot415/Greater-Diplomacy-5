@@ -2,7 +2,7 @@
 Info and the production queue overlay.
 
 Each publishes a rect and a scroll ceiling under its own attribute prefix, and
-ui/event_handler.py gives all three identical treatment -- block map clicks
+screens/game/map_input.py gives all three identical treatment -- block map clicks
 underneath, take the wheel, and be draggable. That used to be nine copy-pasted
 blocks; these tests pin the behaviour the table-driven version has to keep.
 """
@@ -14,7 +14,7 @@ import pygame
 
 import data.constants as c
 from tests import app_harness
-from ui import event_handler
+from screens.game import map_input as event_handler
 
 
 def wheel(y, pos):
@@ -190,8 +190,8 @@ class MapPanelScrollTests(unittest.TestCase):
         self.assertIs(self.map.selected_province, replacement)
 
 class ExitConfirmationTests(unittest.TestCase):
-    """The quit-to-menu dialog is drawn by map_logic/rendering/map_renderer.py
-    and clicked in ui/event_handler.py. Its button geometry used to be written
+    """The quit-to-menu dialog is drawn by ui/rendering/map_renderer.py
+    and clicked in screens/game/map_input.py. Its button geometry used to be written
     out in both, in two different coordinate frames, agreeing only by accident
     of the box's height."""
 

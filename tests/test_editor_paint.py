@@ -9,10 +9,11 @@ import pygame
 
 from data import queries
 import data.constants as c
-from map_logic.turn_processing import edit_province_ownership as ownership
-from screens.menu_screens import map as map_module
+from map_logic.territory import ownership as ownership
+from screens.game import map as map_module
 from tests import app_harness
-from ui import diplomatic_popups, event_handler
+from ui.panels import diplomatic_popups
+from screens.game import map_input as event_handler
 
 
 def sample_editor():

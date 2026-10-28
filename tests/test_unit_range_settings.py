@@ -11,9 +11,13 @@ import pygame
 
 from data import queries
 import data.constants as c
-from data.io import multiplayer_io
-from data.io.realtime_multiplayer import (
-    MapRealtimeDriver, RealtimeConfig, RealtimeError, RealtimeSession, apply_authoritative_snapshot,
+from data.multiplayer.tournament import files as multiplayer_io
+from data.multiplayer.realtime.session import (
+    MapRealtimeDriver,
+    RealtimeConfig,
+    RealtimeError,
+    RealtimeSession,
+    apply_authoritative_snapshot,
 )
 from map_logic.ai import ai_movement, ai_unit_eval
 from map_logic.turn_processing import air_processor, combat_processor
@@ -174,7 +178,7 @@ class UnitRangeEditorTests(unittest.TestCase):
         self.enterContext(mock.patch.object(queries, "get_unit_range_defaults", return_value=self.defaults))
 
     def editor(self, settings=None, persist=False):
-        from screens.editor_screens.unit_stats_editor import UnitStatsEditorScreen
+        from screens.editors.unit_stats_editor import UnitStatsEditorScreen
         return UnitStatsEditorScreen(settings=settings if settings is not None else {}, persist=persist)
 
     def test_fields_save_to_draft_only_and_back_discards(self):
@@ -194,7 +198,7 @@ class UnitRangeEditorTests(unittest.TestCase):
                      if getattr(element, "entry_key", None) == "bombard_range")
         field.text = "4"
         with mock.patch.object(queries, "save_scenario_settings") as save, \
-                mock.patch("ui.confirm_dialog.show_success"):
+                mock.patch("ui.dialogs.show_success"):
             screen.save_all()
         save.assert_not_called()
         self.assertEqual(settings["unit_range_overrides"], {"Fixture Gun": {"bombard_range": 4}})
@@ -206,13 +210,13 @@ class UnitRangeEditorTests(unittest.TestCase):
         field = next(element for element in screen.elements
                      if getattr(element, "entry_key", None) == "air_range_start")
         field.text = ""
-        with mock.patch("ui.confirm_dialog.show_warning") as warning:
+        with mock.patch("ui.dialogs.show_warning") as warning:
             screen.save_all()
         warning.assert_called_once()
         self.assertEqual(settings, {})
 
     def test_scroll_keeps_edits_and_last_row_is_editable(self):
-        from screens.editor_screens.unit_stats_editor import UnitStatsEditorScreen
+        from screens.editors.unit_stats_editor import UnitStatsEditorScreen
         defaults = {f"Fixture Wing {index:02}": {"air_range_start": 40, "air_range_per_level": 5}
                     for index in range(30)}
         with mock.patch.object(queries, "get_unit_range_defaults", return_value=defaults):
@@ -230,8 +234,8 @@ class UnitRangeEditorTests(unittest.TestCase):
         settings = {"unit_range_overrides": {"Fixture Wing": {"air_range_start": 80, "air_range_per_level": 0}}}
         for answer in (False, True):
             screen = self.editor(settings, persist=True)
-            with mock.patch("ui.confirm_dialog.ask_yes_no", side_effect=lambda _t, _m, cb: cb(answer)), \
-                    mock.patch("ui.confirm_dialog.show_success"), \
+            with mock.patch("ui.dialogs.ask_yes_no", side_effect=lambda _t, _m, cb: cb(answer)), \
+                    mock.patch("ui.dialogs.show_success"), \
                     mock.patch.object(queries, "save_scenario_settings") as save:
                 screen.reset_to_defaults()
             if answer:
@@ -242,14 +246,14 @@ class UnitRangeEditorTests(unittest.TestCase):
                 self.assertTrue(settings["unit_range_overrides"])
 
     def test_scenario_button_refreshes_badge_and_uses_lobby_settings(self):
-        from screens.menu_screens.scenario_settings import Scenario_Settings
+        from screens.setup.scenario_settings import Scenario_Settings
         screen = Scenario_Settings()
         screen.settings = {"unit_range_overrides": {"Fixture Gun": {"bombard_range": 4}}}
         screen._session_bound = True
         screen.refresh_ui()
         button = next(element for element in screen.elements if getattr(element, "text", "") == "Edit Unit Stats")
         self.assertEqual(button.notification_text, "!")
-        with mock.patch("screens.editor_screens.unit_stats_editor.open_unit_stats_editor") as open_editor:
+        with mock.patch("screens.editors.unit_stats_editor.open_unit_stats_editor") as open_editor:
             button.callback()
         self.assertIs(open_editor.call_args.kwargs["settings"], screen.settings)
         self.assertFalse(open_editor.call_args.kwargs["persist"])
@@ -295,7 +299,7 @@ class UnitRangePersistenceTests(unittest.TestCase):
         return Path(self.directory, "ranges")
 
     def test_actual_load_roundtrip_legacy_default_and_no_leak_to_next_map(self):
-        from screens.menu_screens.map import Map
+        from screens.game.map import Map
         path = self.make_save()
         with mock.patch.object(queries, "get_scenario_settings", return_value={}):
             loaded = Map(load_path=str(path), skip_initial_income=True)
@@ -319,7 +323,7 @@ class UnitRangePersistenceTests(unittest.TestCase):
             self.assertEqual(queries.get_unit_library(), range_library())
 
     def test_explicit_new_game_settings_apply_during_load_and_preserve_references(self):
-        from screens.menu_screens.map import Map
+        from screens.game.map import Map
         path = self.make_save()
         library = queries.get_unit_library()
         with mock.patch.object(queries, "get_scenario_settings", return_value={}):

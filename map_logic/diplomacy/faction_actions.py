@@ -5,7 +5,12 @@ See map_logic/diplomacy/diplomacy_agreements.py for how this fits alongside
 war_actions.py and puppet_actions.py.
 """
 from data import queries
-from map_logic.diplomacy.war_actions import sever_military_access, finalize_neutral, link_war, clear_war_call_cooldowns
+from map_logic.diplomacy.war_actions import (
+    sever_military_access,
+    finalize_neutral,
+    link_war,
+    clear_war_call_cooldowns,
+)
 import data.constants as c
 
 

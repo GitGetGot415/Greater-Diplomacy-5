@@ -33,7 +33,7 @@ import pygame
 
 import data.constants as c
 from data import queries
-from map_logic.rendering import overlay_renderer, symbol_loader
+from ui.rendering import overlay_renderer, symbol_loader
 from tests import app_harness
 
 

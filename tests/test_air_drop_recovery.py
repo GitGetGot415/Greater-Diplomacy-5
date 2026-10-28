@@ -8,12 +8,18 @@ import unittest
 from unittest.mock import Mock, patch
 
 from data import constants as c, queries
-from data.io.realtime_multiplayer import MapRealtimeDriver, RealtimeError, collect_map_commands
+from data.multiplayer.realtime.session import MapRealtimeDriver, RealtimeError, collect_map_commands
 from map_logic.ai import ai_movement, ai_world
 from map_logic.diplomacy import volunteers
-from map_logic.turn_processing import air_processor, combat_processor, combat_rules, turn_processor, unit_events
-from screens.map_related_screens.battle_screen import Battle_Screen
-from screens.menu_screens.map import Map
+from map_logic.turn_processing import (
+    air_processor,
+    combat_processor,
+    combat_rules,
+    turn_processor,
+    unit_events,
+)
+from screens.game.battle_screen import Battle_Screen
+from screens.game.map import Map
 from tests import test_air_transport as transport_tests
 from tests.test_air_mechanics import tile, wing
 
@@ -316,7 +322,7 @@ class RecoveryRuntimeTests(unittest.TestCase):
 
     def test_recovery_survives_actual_save_load_and_keeps_orders_read_only(self):
         from data.map import save_map
-        from screens.map_related_screens.orders import Orders_Screen
+        from screens.game.orders import Orders_Screen
         with tempfile.TemporaryDirectory() as directory:
             game = self.runtime(directory)
             for action, (_name, constant) in queries.CONVERSION_ACTIONS.items():

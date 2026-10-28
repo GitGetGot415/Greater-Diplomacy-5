@@ -81,7 +81,7 @@ def process_queues(map_screen):
                         
                 elif item.get("order_type") == "REMOVE_CORE":
                     import random
-                    from map_logic.turn_processing import edit_province_ownership
+                    from map_logic.territory import ownership as edit_province_ownership
                     from data.io import country_io
                     
                     # Save foreign cores before removal for naming/flag/spread

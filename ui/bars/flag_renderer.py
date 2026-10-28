@@ -2,7 +2,7 @@ import pygame
 from functools import lru_cache
 
 import data.constants as c
-from ui import flag_icons
+from ui.widgets import flag_icons
 
 FLAG_RECT = pygame.Rect(20, 20, 120, 80)
 FLAG_HOVER_BRIGHTNESS = 35

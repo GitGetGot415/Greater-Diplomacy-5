@@ -5,7 +5,7 @@ entry's own dict kept tight on that line. The tkinter unit editor writes
 through the same renderer instead of carrying a second copy of that format.
 The editors also share the forgiving "read it or fall back to {}" loader.
 
-Kept stdlib-only and dependency-free so the standalone tools in data/editors
+Kept stdlib-only and dependency-free so the standalone tools in scripts/editors
 and data/generators can import it without pulling the game in behind them.
 """
 import json

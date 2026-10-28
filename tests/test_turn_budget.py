@@ -219,7 +219,7 @@ class SkipButtonReachableTests(Patcher):
     def drawn(self, screen):
         """Whether the loading screen offers a way out, this frame."""
         import pygame
-        from map_logic.turn_processing import loading_screen
+        from ui.panels import turn_progress as loading_screen
 
         screen.force_skip_btn_rect = None
         surface = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))

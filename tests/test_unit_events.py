@@ -12,8 +12,8 @@ from unittest.mock import patch
 import pygame
 import data.constants as c
 from data import queries
-from data.io import multiplayer_io
-from data.io.realtime_multiplayer import apply_authoritative_snapshot, collect_map_commands
+from data.multiplayer.tournament import files as multiplayer_io
+from data.multiplayer.realtime.session import apply_authoritative_snapshot, collect_map_commands
 from map_logic.turn_processing import combat_processor, combat_rules, unit_events, turn_processor
 from map_logic.turn_processing.time_handler import TimeHandler
 from tests import app_harness
@@ -521,7 +521,7 @@ class UnitEventScreenTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         app_harness.boot()
-        from screens.menu_screens.map import Map
+        from screens.game.map import Map
         cls.game = Map(load_path=app_harness.SCENARIO_PATH, is_scenario=True)
         cls.game.selection_mode = False
         cls.game.player_country = sorted(queries.get_living_nations(cls.game.map_data))[0]
@@ -534,8 +534,8 @@ class UnitEventScreenTests(unittest.TestCase):
         unit_events.refresh_presentation(self.game)
 
     def test_report_button_updates_unread_count_and_opens_reports(self):
-        from screens.menu_screens.map import update_button_states
-        from ui import modal_stack
+        from screens.game.map import update_button_states
+        from ui.navigation import modal_stack
         game = self.game
         update_button_states(game)
         button = game.btn_unit_events
@@ -549,7 +549,7 @@ class UnitEventScreenTests(unittest.TestCase):
         self.assertTrue(any(element.callback == screen.exit_screen for element in screen.elements))
 
     def test_table_uses_cached_rows_and_opens_complete_details(self):
-        from screens.map_related_screens.unit_events_screen import UnitEventsScreen
+        from screens.game.unit_events_screen import UnitEventsScreen
         game = self.game
         game.unit_event_log["events"][0]["details"] = "Long incident details " * 80
         screen = UnitEventsScreen(game)
@@ -557,12 +557,12 @@ class UnitEventScreenTests(unittest.TestCase):
         with patch.object(unit_events, "entries_for", side_effect=AssertionError("Frame queried reports")):
             screen.draw(surface)
             screen.draw(surface)
-        with patch("ui.confirm_dialog.show_info") as details:
+        with patch("ui.dialogs.show_info") as details:
             screen.show_event(screen.rows[0])
         self.assertIn(game.unit_event_log["events"][0]["details"], details.call_args.args[1])
     def test_owner_flags_follow_destroyed_units_after_sorting_and_filtering(self):
-        from screens.map_related_screens.unit_events_screen import UnitEventsScreen
-        from ui import flag_icons
+        from screens.game.unit_events_screen import UnitEventsScreen
+        from ui.widgets import flag_icons
         game = self.game
         events = [row(game.player_country) | {"unit_name": "Z destroyed unit"},
                   row("Historic country", event="MOVED") | {"unit_name": "A moving unit"}]
@@ -601,8 +601,9 @@ class UnitEventScreenTests(unittest.TestCase):
         check_draw()
 
     def test_detail_content_is_cached_before_table_and_popup_draw(self):
-        from screens.map_related_screens.unit_events_screen import UnitEventsScreen
-        from ui import flag_icons, modal_stack, text_utils
+        from screens.game.unit_events_screen import UnitEventsScreen
+        from ui.widgets import flag_icons, text_utils
+        from ui.navigation import modal_stack
         game = self.game
         parts = [{"text": "Ground combat: "}, {"text": "Same name (tile 1)", "owner": "B"},
                  {"text": "; "}, {"text": "Same name (tile 2)", "owner": "C"},
@@ -628,8 +629,9 @@ class UnitEventScreenTests(unittest.TestCase):
             popup.draw(surface)
 
     def test_long_details_popup_scrolls_and_closes(self):
-        from screens.map_related_screens.unit_events_screen import UnitEventsScreen
-        from ui import modal_stack, flag_icons
+        from screens.game.unit_events_screen import UnitEventsScreen
+        from ui.navigation import modal_stack
+        from ui.widgets import flag_icons
         game = self.game
         parts = [{"text": "Ground combat: "}]
         for index in range(30):
@@ -656,7 +658,7 @@ class UnitEventScreenTests(unittest.TestCase):
                 self.assertTrue(popup._resolved)
 
     def test_mark_all_unread_restores_badge_after_closing_until_reopened(self):
-        from screens.map_related_screens.unit_events_screen import UnitEventsScreen
+        from screens.game.unit_events_screen import UnitEventsScreen
         game = self.game
         before = copy.deepcopy(game.unit_event_log)
         screen = UnitEventsScreen(game)
@@ -673,8 +675,8 @@ class UnitEventScreenTests(unittest.TestCase):
         self.assertEqual(game.btn_unit_events.notification_count, 0)
 
     def test_empty_log_disables_mark_all_unread(self):
-        from screens.map_related_screens.unit_events_screen import UnitEventsScreen
-        from ui import modal_stack
+        from screens.game.unit_events_screen import UnitEventsScreen
+        from ui.navigation import modal_stack
         self.game.unit_event_log["events"] = []
         screen = UnitEventsScreen(self.game)
         self.assertTrue(screen.btn_mark_all_unread.disabled)
@@ -685,8 +687,8 @@ class UnitEventScreenTests(unittest.TestCase):
         self.assertTrue(all(not picker._item_enabled(item) for item in picker.items))
 
     def test_filter_picker_shows_only_the_selected_event_and_can_clear_it(self):
-        from screens.map_related_screens.unit_events_screen import UnitEventsScreen
-        from ui import modal_stack
+        from screens.game.unit_events_screen import UnitEventsScreen
+        from ui.navigation import modal_stack
         game = self.game
         game.unit_event_log["events"] += [row(game.player_country, event="MOVED"), row("Other country")]
         before = copy.deepcopy(game.unit_event_log)
@@ -708,8 +710,8 @@ class UnitEventScreenTests(unittest.TestCase):
         self.assertEqual(game.unit_event_log, before)
 
     def test_filter_picker_disables_empty_choices_during_search_and_keyboard_selection(self):
-        from screens.map_related_screens.unit_events_screen import UnitEventsScreen
-        from ui import modal_stack
+        from screens.game.unit_events_screen import UnitEventsScreen
+        from ui.navigation import modal_stack
         game = self.game
         game.unit_event_log["events"] += [row(game.player_country, event="MOVED"),
                                           row("Other country", event="REPAIRED")]
@@ -738,7 +740,7 @@ class UnitEventScreenTests(unittest.TestCase):
         self.assertEqual(screen.event_filter, "DESTROYED")
 
     def test_empty_filter_clears_click_targets_and_keeps_mark_all_unread_available(self):
-        from screens.map_related_screens.unit_events_screen import UnitEventsScreen
+        from screens.game.unit_events_screen import UnitEventsScreen
         game = self.game
         screen = UnitEventsScreen(game)
         surface = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
@@ -751,7 +753,7 @@ class UnitEventScreenTests(unittest.TestCase):
         self.assertEqual(screen.scroll_y, 0)
         with patch.object(unit_events, "entries_for", side_effect=AssertionError("Frame queried reports")):
             screen.draw(surface)
-        with patch("ui.confirm_dialog.show_info") as details:
+        with patch("ui.dialogs.show_info") as details:
             screen.additional_events(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=old_rect.center))
         details.assert_not_called()
         self.assertFalse(screen.btn_mark_all_unread.disabled)
@@ -764,7 +766,7 @@ class UnitEventScreenTests(unittest.TestCase):
         self.assertTrue(reopened.btn_mark_all_unread.disabled)
 
     def test_filter_respects_tactical_and_spectator_permissions(self):
-        from screens.map_related_screens.unit_events_screen import UnitEventsScreen
+        from screens.game.unit_events_screen import UnitEventsScreen
         game = self.game
         game.unit_event_log["events"] += [row(game.player_country, "other"), row("Other country")]
         for viewer, tactical, editor, expected in (
@@ -779,7 +781,7 @@ class UnitEventScreenTests(unittest.TestCase):
 
     def test_normal_save_loader_preserves_reports_and_legacy_has_empty_log(self):
         from data.map import save_map
-        from screens.menu_screens.map import Map
+        from screens.game.map import Map
         game = self.game
         entry = game.unit_event_log["events"][0]
         entry["detail_parts"] = [{"text": entry["details"], "owner": "B"}]

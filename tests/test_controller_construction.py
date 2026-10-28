@@ -97,9 +97,12 @@ class ControllerConstructionTests(unittest.TestCase):
             controller.states["MUSIC_PLAYER"].back_state = original_music_back
 
     def test_clear_orders_keybind_is_available_by_default(self):
-        from screens.menu_screens.keybinds import (
-            KEYBIND_ACTIONS, MAP_PANNING_KEYBIND_ACTIONS,
-            MOUSE_CLICK_KEYBIND_ACTIONS, default_keybinds, keybind_conflicts,
+        from screens.menus.keybinds import (
+            KEYBIND_ACTIONS,
+            MAP_PANNING_KEYBIND_ACTIONS,
+            MOUSE_CLICK_KEYBIND_ACTIONS,
+            default_keybinds,
+            keybind_conflicts,
         )
 
         defaults = {action: default for action, _label, default in KEYBIND_ACTIONS}
@@ -143,7 +146,7 @@ class ControllerConstructionTests(unittest.TestCase):
         self.assertTrue(translated[2].keybind_mouse)
 
     def test_keybind_screen_exposes_mouse_bindings_and_clear_controls(self):
-        from screens.menu_screens.keybinds import ALL_KEYBIND_ACTIONS
+        from screens.menus.keybinds import ALL_KEYBIND_ACTIONS
 
         screen = self.controller.states["KEYBINDS"]
         button_text = [element.text for element in screen.elements
@@ -169,7 +172,7 @@ class ControllerConstructionTests(unittest.TestCase):
     def test_editor_paint_selection_never_uses_the_unassigned_player_sentinel(self):
         """The loader must preserve editor mode and its UI must not expose
         player diplomacy when a paint stroke selects an ordinary province."""
-        from screens.menu_screens.map import update_button_states
+        from screens.game.map import update_button_states
         import main
 
         editor_map = main.Map(load_path=app_harness.SCENARIO_PATH,
@@ -186,7 +189,7 @@ class ControllerConstructionTests(unittest.TestCase):
 
     def test_map_help_button_reopens_the_navigation_tutorial(self):
         game_map = app_harness.boot_map()
-        with mock.patch("ui.confirm_dialog.show_navigation_intro") as show_tutorial:
+        with mock.patch("ui.dialogs.show_navigation_intro") as show_tutorial:
             game_map.btn_help.callback()
         show_tutorial.assert_called_once_with(game_map)
 
@@ -198,7 +201,7 @@ class ControllerConstructionTests(unittest.TestCase):
         fallback preserves map navigation and the close control, while keeping
         all country-owned actions unavailable until the assignment completes.
         """
-        from screens.menu_screens.map import update_button_states
+        from screens.game.map import update_button_states
 
         game_map = app_harness.boot_map()
         original_player = game_map.player_country
@@ -223,7 +226,7 @@ class ControllerConstructionTests(unittest.TestCase):
             update_button_states(game_map)
 
     def test_hotseat_ai_preview_keeps_resolution_settings_and_music_available(self):
-        from screens.menu_screens.map import render_buttons, update_button_states
+        from screens.game.map import render_buttons, update_button_states
         from map_logic.turn_processing import turn_manager
 
         game = app_harness.boot_map()
@@ -265,7 +268,7 @@ class ControllerConstructionTests(unittest.TestCase):
             resolve.assert_called_once_with(turn_manager._resolve_turn_and_refresh, game)
 
     def test_unassigned_turn_control_only_allows_idle_local_ai_preview(self):
-        from screens.menu_screens.map import update_button_states
+        from screens.game.map import update_button_states
 
         game = app_harness.boot_map()
         self.addCleanup(update_button_states, game)

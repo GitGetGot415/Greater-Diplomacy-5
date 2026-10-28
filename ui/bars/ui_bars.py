@@ -157,7 +157,7 @@ def draw_confirm_prompt(surface, box_rect, question, subtitle=None,
     `overlay_alpha` stays a parameter because the country picker deliberately
     dims less -- you are meant to keep seeing the map you are choosing from.
     """
-    from map_logic.rendering.font_manager import fonts
+    from ui.rendering.font_manager import fonts
 
     draw_fullscreen_overlay(surface, overlay_alpha)
     draw_modal_box(surface, box_rect, bg_color=bg, border_color=border, border_width=border_width)
@@ -209,7 +209,7 @@ def draw_panel_frame(surface, rect, title=None, bg=None, border=None, border_wid
 def acquire_surface(size=None, caption=None):
     """Returns (surface, owns_display), creating a window only when none exists.
 
-    Used by the standalone paths -- the dev tools in data/editors and the
+    Used by the standalone paths -- the dev tools in scripts/editors and the
     map_tools scripts run outside the game's main loop, with no display up yet.
     """
     surface = pygame.display.get_surface()
@@ -232,7 +232,7 @@ def release_surface(owns_display):
 
 def draw_centered_title(surface, text, y_pos, font_preset="heading1", color=(255, 255, 255), shadow=False):
     """Draws centered title text to standardize headers."""
-    from map_logic.rendering.font_manager import fonts
+    from ui.rendering.font_manager import fonts
     title_font = fonts.get(font_preset)
     title_surf = title_font.render(text, True, color)
     x_pos = c.SCREEN_WIDTH // 2 - title_surf.get_width() // 2

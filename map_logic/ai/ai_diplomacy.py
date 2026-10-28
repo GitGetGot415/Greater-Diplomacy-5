@@ -1712,7 +1712,7 @@ def process_scripted_events(map_screen, preview_request=None):
                         target_list = [t.strip() for t in str(raw_targets).split(",") if t.strip()]
                         tiles = [t.strip() for t in str(act.get("message", "")).split(",") if t.strip()]
                         must_control = act.get("ai_generate", False)
-                        from map_logic.turn_processing import edit_province_ownership
+                        from map_logic.territory import ownership as edit_province_ownership
                         for a_target in target_list:
                             if a_target not in active_nations:
                                 continue

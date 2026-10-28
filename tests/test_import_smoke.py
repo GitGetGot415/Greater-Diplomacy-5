@@ -5,8 +5,8 @@ compileall + a narrow flake8 selection -- neither of which executes an import.
 That leaves import cycles, missed renames and bad `from X import name` edits
 invisible until someone launches the game.
 
-map_logic.setup.player_setup and map_logic.turn_processing.turn_manager both
-call into screens.menu_screens.map's render_buttons, which in turn imports
+screens.setup.player_setup and map_logic.turn_processing.turn_manager both
+call into screens.game.map's render_buttons, which in turn imports
 player_setup at module level -- resolved with deferred (function-local)
 imports on the player_setup/turn_manager side rather than relying on import
 order, but this file still imports modules in a shuffled order as well as
@@ -34,10 +34,8 @@ SKIP_DIRS = {
     "map_tools",            # standalone dev scripts, not in the runtime graph
     "mods",                 # mod sources are loaded by mod_loader, not imported
     "tests",
-    "data/editors",         # tkinter-only dev tools, excluded from the web build
-    # One-shot maintenance scripts that do their work at module scope: importing
-    # context_generator rewrites combined_scripts.txt, and importing
-    # data/json/fix_countries.py rewrites countries_data.json.
+    "scripts",              # offline editors, maintenance, previews, and benchmarks
+    # The source export tool writes its output when imported.
     "context",
     "data/json",
 }

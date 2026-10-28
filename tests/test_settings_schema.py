@@ -322,13 +322,13 @@ class SettingsScreenTests(unittest.TestCase):
     def test_openrouter_button_editing_switching_and_save(self):
         import pygame
         from types import SimpleNamespace
-        from screens.menu_screens.settings import Settings
+        from screens.menus.settings import Settings
         pygame.font.init()
         controller = SimpleNamespace(**settings_schema.defaults(), keybinds={})
         controller.ai_mode = "GEMINI"
-        with mock.patch("screens.menu_screens.settings.queries.get_settings", return_value={}), \
+        with mock.patch("screens.menus.settings.queries.get_settings", return_value={}), \
                 mock.patch("map_logic.ai.ai_handler.reset_clients") as reset_clients, \
-                mock.patch("screens.menu_screens.settings.queries.save_global_settings") as save:
+                mock.patch("screens.menus.settings.queries.save_global_settings") as save:
             screen = Settings(controller)
             next(item for item in screen.elements if item.text == "OpenRouter").callback()
             self.assertEqual(controller.ai_mode, "OPENROUTER")
@@ -379,19 +379,19 @@ class SettingsScreenTests(unittest.TestCase):
     def test_ollama_url_control_updates_the_url_setting(self):
         import pygame
         from types import SimpleNamespace
-        from screens.menu_screens.settings import Settings
+        from screens.menus.settings import Settings
         from map_logic.ai import ai_settings
         pygame.font.init()
         controller = SimpleNamespace(**settings_schema.defaults(), keybinds={})
         controller.ai_mode = "OLLAMA"
-        with mock.patch("screens.menu_screens.settings.queries.get_settings", return_value={}):
+        with mock.patch("screens.menus.settings.queries.get_settings", return_value={}):
             screen = Settings(controller)
         screen.set_field("KEY", " http://localhost:12345/api/chat ")
         self.assertEqual(controller.ollama_base_url, "http://localhost:12345/api/chat")
         self.assertNotIn("ollama_api_key", vars(controller))
         with mock.patch("data.queries.get_settings", return_value=settings_schema.from_controller(controller)):
             self.assertEqual(ai_settings.get_ollama_url(), controller.ollama_base_url)
-        with mock.patch("screens.menu_screens.settings.queries.get_settings", return_value={}):
+        with mock.patch("screens.menus.settings.queries.get_settings", return_value={}):
             screen.clear_input("KEY")
         self.assertEqual(controller.ollama_base_url, "")
 
@@ -402,14 +402,14 @@ class SettingsScreenTests(unittest.TestCase):
         self.assertTrue(settings_schema.from_tuple(old_tuple)["show_unclaimed"])
 
     def test_show_unclaimed_toggle_updates_runtime_and_persists(self):
-        from screens.menu_screens.settings import Settings
+        from screens.menus.settings import Settings
         previous_setting = c.SHOW_UNCLAIMED
         self.addCleanup(setattr, c, "SHOW_UNCLAIMED", previous_setting)
         screen = object.__new__(Settings)
         screen.controller = ControllerTests.Fake()
         screen.show_unclaimed = True
         with mock.patch.object(Settings, "refresh_ui"), \
-                mock.patch("screens.menu_screens.settings.queries.save_global_settings") as save:
+                mock.patch("screens.menus.settings.queries.save_global_settings") as save:
             screen.toggle_show_unclaimed()
         self.assertFalse(screen.show_unclaimed)
         self.assertFalse(screen.controller.show_unclaimed)
@@ -418,18 +418,18 @@ class SettingsScreenTests(unittest.TestCase):
 
     def test_show_unclaimed_button_callback_and_reset(self):
         import pygame
-        from screens.menu_screens.settings import Settings
+        from screens.menus.settings import Settings
         from types import SimpleNamespace
         pygame.font.init()
         previous_setting = c.SHOW_UNCLAIMED
         self.addCleanup(setattr, c, "SHOW_UNCLAIMED", previous_setting)
         controller = SimpleNamespace(**settings_schema.defaults(), keybinds={})
         controller.ai_mode = "OFF"
-        with mock.patch("screens.menu_screens.settings.queries.get_settings", return_value={}):
+        with mock.patch("screens.menus.settings.queries.get_settings", return_value={}):
             screen = Settings(controller)
         unclaimed = next(item for item in screen.elements if item.text.startswith("Show Unclaimed:"))
-        with mock.patch("screens.menu_screens.settings.queries.get_settings", return_value={}), \
-                mock.patch("screens.menu_screens.settings.queries.save_global_settings"):
+        with mock.patch("screens.menus.settings.queries.get_settings", return_value={}), \
+                mock.patch("screens.menus.settings.queries.save_global_settings"):
             unclaimed.callback()
             self.assertFalse(controller.show_unclaimed)
             screen.reset_defaults()
@@ -438,7 +438,7 @@ class SettingsScreenTests(unittest.TestCase):
         self.assertTrue(c.SHOW_UNCLAIMED)
 
     def test_army_group_animation_toggle_updates_runtime_and_persists(self):
-        from screens.menu_screens.settings import Settings
+        from screens.menus.settings import Settings
 
         previous_setting = c.ARMY_GROUP_ANIMATIONS
         self.addCleanup(setattr, c, "ARMY_GROUP_ANIMATIONS", previous_setting)
@@ -448,7 +448,7 @@ class SettingsScreenTests(unittest.TestCase):
         screen.army_group_animations = True
 
         with mock.patch.object(Settings, "refresh_ui") as refresh, \
-                mock.patch("screens.menu_screens.settings.queries.save_global_settings") as save:
+                mock.patch("screens.menus.settings.queries.save_global_settings") as save:
             screen.toggle_army_group_animations()
 
         self.assertFalse(screen.army_group_animations)
@@ -462,7 +462,7 @@ class NavigationIntroPopupTests(unittest.TestCase):
     def test_intro_popup_handles_drag_navigation_and_persists_preferences(self):
         """The tutorial is a live map popup, not a snapshot modal screen."""
         import pygame
-        from ui.confirm_dialog import message_box
+        from ui.dialogs import message_box
 
         pygame.init()
         pygame.display.set_mode((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
@@ -540,7 +540,7 @@ class NavigationIntroPopupTests(unittest.TestCase):
         self.assertIsNone(map_stub.navigation_intro_popup)
 
     def test_map_message_popups_hide_for_a_province_menu_without_being_cleared(self):
-        from ui import diplomatic_popups
+        from ui.panels import diplomatic_popups
 
         map_stub = type("MapStub", (), {"selected_province": None})()
         self.assertTrue(diplomatic_popups.map_message_popups_visible(map_stub))

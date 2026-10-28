@@ -9,11 +9,11 @@ import pygame
 
 import data.constants as c
 from data import queries
-from map_logic.rendering import overlay_renderer
-from map_logic.rendering import country_names
-from map_logic.rendering import symbol_loader
-from screens.map_related_screens.orders import Orders_Screen
-from ui import army_panel, map_top_right_layout, minimap
+from ui.rendering import overlay_renderer
+from ui.rendering import country_names
+from ui.rendering import symbol_loader
+from screens.game.orders import Orders_Screen
+from ui.panels import army_panel, map_top_right_layout, minimap
 
 
 class CountryMapCenterTests(unittest.TestCase):
@@ -396,7 +396,7 @@ class ArmyControlTests(unittest.TestCase):
                 map_stub = self._name_editor_map()
                 copy = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_c,
                                           mod=modifiers, unicode="c")
-                with patch("ui.army_panel.queries.copy_to_clipboard", return_value=True) as clipboard:
+                with patch("ui.panels.army_panel.queries.copy_to_clipboard", return_value=True) as clipboard:
                     self.assertTrue(army_panel.handle_event(map_stub, copy))
                 clipboard.assert_called_once_with("Army 1")
                 self.assertEqual(map_stub.army_editor_state["name"], "Army 1")
@@ -1148,12 +1148,12 @@ class UnassignedArmyPanelTests(unittest.TestCase):
         self.assertIn(self.ids[0], army_panel._armies(self.map)[0]["unit_ids"])
 
     def test_selecting_unassigned_selects_its_current_units_and_checks_permissions(self):
-        from screens.menu_screens.map import Map
+        from screens.game.map import Map
         queries.create_army("A", [self.ids[0]], self.nations, self.world)
         self.map.select_map_units = Mock()
         self.map.focus_camera_on_army = Mock()
         self.map.change_state = Mock()
-        with patch("ui.sidebar_info.prepare_unit_roster"):
+        with patch("ui.panels.sidebar_info.prepare_unit_roster"):
             self.assertTrue(Map.select_army(self.map, c.UNASSIGNED_ARMY_ID))
         self.map.select_map_units.assert_called_once_with([self.world["home"]["units"][1]])
         self.map.change_state.assert_called_once_with("ORDERS")

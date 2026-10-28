@@ -7,7 +7,7 @@ import pygame
 import data.constants as c
 from data import queries
 from ui_elements import Button, Slider
-from screens.menu_screens.music_player import Music_Player
+from screens.menus.music_player import Music_Player
 
 
 def make_controller():
@@ -123,7 +123,7 @@ class ShuffleExclusionTests(unittest.TestCase):
     def test_timeline_help_explains_modes_and_shuffle_exclusions(self):
         player = object.__new__(Music_Player)
 
-        with patch("ui.confirm_dialog.show_info") as show_info:
+        with patch("ui.dialogs.show_info") as show_info:
             player.show_timeline_and_queue_help()
 
         title, message = show_info.call_args.args

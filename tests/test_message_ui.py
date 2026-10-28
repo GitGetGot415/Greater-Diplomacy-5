@@ -26,7 +26,7 @@ pygame.display.set_mode((800, 600))
 
 import data.constants as c
 from map_logic.diplomacy import diplomacy_messages as dm
-from ui import diplomatic_popups
+from ui.panels import diplomatic_popups
 
 
 class Clock:
@@ -246,7 +246,7 @@ class TableRowClickTests(unittest.TestCase):
     """A fixed-width column has to truncate; a row has to open the whole thing."""
 
     def build(self, on_row_click=None):
-        from ui.table_screen import TableScreen, TableColumn
+        from ui.widgets.table_screen import TableScreen, TableColumn
         rows = [{"message": "a" * 400, "sender": "Avaria"},
                 {"message": "short", "sender": "Borland"}]
         cols = [TableColumn("sender", "Sender", 120),
@@ -297,7 +297,7 @@ class TableRowClickTests(unittest.TestCase):
         self.assertEqual(opened, [])
 
     def test_the_detail_screen_renders_the_whole_message(self):
-        from ui.text_detail_screen import TextDetailScreen
+        from ui.widgets.text_detail_screen import TextDetailScreen
         long_text = " ".join(f"word{i}" for i in range(2000))
         detail = TextDetailScreen(Screen({}), "Avaria to Borland", long_text)
         detail.draw(pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT)))
@@ -306,7 +306,7 @@ class TableRowClickTests(unittest.TestCase):
         self.assertLess(detail.max_scroll, 0, "a long message must be scrollable")
 
     def test_a_short_message_needs_no_scrolling(self):
-        from ui.text_detail_screen import TextDetailScreen
+        from ui.widgets.text_detail_screen import TextDetailScreen
         detail = TextDetailScreen(Screen({}), "Avaria to Borland", "Short.")
         detail.draw(pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT)))
         self.assertEqual(detail.max_scroll, 0)

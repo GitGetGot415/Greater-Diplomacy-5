@@ -1,4 +1,4 @@
-"""Covers the four dialogs in ui/confirm_dialog/.
+"""Covers the four dialogs in ui/dialogs/.
 
 They are pushed onto the modal stack from deep inside other screens, so nothing
 else in the suite reaches them -- and they all now share one base class, so a
@@ -15,7 +15,8 @@ from unittest import mock
 import pygame
 
 from tests import app_harness
-from ui import confirm_dialog, modal_stack
+from ui import dialogs as confirm_dialog
+from ui.navigation import modal_stack
 
 
 def key(k):
@@ -89,7 +90,7 @@ class DialogTests(unittest.TestCase):
     def test_three_choice_keyboard_returns_to_screen_on_back(self):
         for keyboard_key, expected in ((pygame.K_RETURN, True), (pygame.K_n, False),
                                        (pygame.K_ESCAPE, None), (pygame.K_g, None), (pygame.K_F8, None)):
-            with self.subTest(key=keyboard_key), mock.patch("ui.confirm_dialog.yes_no._back_key", return_value=pygame.K_F8):
+            with self.subTest(key=keyboard_key), mock.patch("ui.dialogs.yes_no._back_key", return_value=pygame.K_F8):
                 self.answers.clear()
                 confirm_dialog.ask_yes_no("T", "Save?", self.answers.append, back_label="Go back")
                 modal_stack.active().handle_events([key(keyboard_key)])
@@ -97,7 +98,7 @@ class DialogTests(unittest.TestCase):
                 self.assertEqual(self.answers, [expected])
 
     def test_three_choice_standalone_preserves_go_back_result(self):
-        from ui.confirm_dialog import yes_no
+        from ui.dialogs import yes_no
         with mock.patch.object(pygame.display, "get_surface", return_value=None), \
                 mock.patch.object(yes_no, "_run_blocking", return_value=None) as run:
             confirm_dialog.ask_yes_no("T", "Save?", self.answers.append, back_label="Go back")
@@ -231,7 +232,7 @@ class DialogTests(unittest.TestCase):
 
     def credited_images(self):
         from data import constants as c
-        from ui.confirm_dialog.person_info import expand_credit_images
+        from ui.dialogs.person_info import expand_credit_images
         return next(images for entry in c.CREDITS_DATA
                     for person in entry.get("people", [])
                     for images in [expand_credit_images(person.get("images"))] if images
@@ -245,7 +246,7 @@ class DialogTests(unittest.TestCase):
         return path
 
     def test_credit_directory_lists_only_png_files_in_stable_order(self):
-        from ui.confirm_dialog.person_info import expand_credit_images
+        from ui.dialogs.person_info import expand_credit_images
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             second = self.save_credit_test_image(root, "zeta.PNG")
@@ -258,7 +259,7 @@ class DialogTests(unittest.TestCase):
                                   {"path": second.as_posix(), "text": second.name}])
 
     def test_credit_directory_supports_recursive_and_pattern_exclusions(self):
-        from ui.confirm_dialog.person_info import expand_credit_images
+        from ui.dialogs.person_info import expand_credit_images
         with tempfile.TemporaryDirectory() as directory:
             for name in ("keep.png", "skip.png", "Randomly_A.png", "culture/same.png",
                          "other/same.png", "culture/skip.png"):
@@ -272,7 +273,7 @@ class DialogTests(unittest.TestCase):
             self.assertEqual(descriptor["exclude"], ["skip.png", "Randomly_*.png", "culture/same.png"])
 
     def test_credit_directories_mix_with_explicit_images_and_keep_custom_labels(self):
-        from ui.confirm_dialog.person_info import expand_credit_images
+        from ui.dialogs.person_info import expand_credit_images
         with tempfile.TemporaryDirectory() as directory:
             first = self.save_credit_test_image(directory, "a.png")
             second = self.save_credit_test_image(directory, "b.png")
@@ -285,7 +286,7 @@ class DialogTests(unittest.TestCase):
             self.assertEqual(entries[0]["text"], "Custom label")
 
     def test_credit_directories_expand_only_on_open_and_detect_new_images_on_reopen(self):
-        from ui.confirm_dialog import person_info
+        from ui.dialogs import person_info
         with tempfile.TemporaryDirectory() as directory:
             self.save_credit_test_image(directory, "first.png")
             entries = [{"directory": directory}]
@@ -301,7 +302,7 @@ class DialogTests(unittest.TestCase):
                 self.assertEqual(expand.call_count, 2)
 
     def test_credit_directory_validation_exposes_bad_content(self):
-        from ui.confirm_dialog.person_info import expand_credit_images
+        from ui.dialogs.person_info import expand_credit_images
         with tempfile.TemporaryDirectory() as directory:
             with self.assertRaises(NotADirectoryError):
                 expand_credit_images([{"directory": str(Path(directory) / "missing")}])
@@ -324,7 +325,7 @@ class DialogTests(unittest.TestCase):
             self.assertEqual(path.read_bytes()[:8], b"\x89PNG\r\n\x1a\n")
 
     def test_credit_images_scroll_and_close_on_small_displays(self):
-        from ui.confirm_dialog.person_info import _PersonInfoModal
+        from ui.dialogs.person_info import _PersonInfoModal
         for size in ((520, 320), (360, 320), (1280, 720)):
             for align in ("left", "center", "right"):
                 with self.subTest(size=size, align=align):
@@ -339,7 +340,7 @@ class DialogTests(unittest.TestCase):
                     self.assertTrue(modal._resolved)
 
     def test_credit_images_forwarded_from_clickable_name(self):
-        from screens.menu_screens import credits
+        from screens.menus import credits
         images = self.credited_images()
         data = [{"main_text": "Art: ", "people": [{"link_text": "Artist", "images": images}]}]
         with mock.patch.object(credits.c, "CREDITS_DATA", data):
@@ -351,19 +352,19 @@ class DialogTests(unittest.TestCase):
         show.assert_called_once_with("Artist", "", [], "center", images=images)
 
     def test_credit_links_use_scrolled_hitboxes(self):
-        from ui.confirm_dialog.person_info import _PersonInfoModal
+        from ui.dialogs.person_info import _PersonInfoModal
         links = [{"text": "Site", "url": "https://example.invalid"}]
         surface = pygame.Surface((520, 320))
         modal = _PersonInfoModal(surface, "Artist", "Art", links, None,
                                  "left", self.credited_images())
         modal.handle_events([pygame.event.Event(pygame.MOUSEWHEEL, y=-100)])
         visible_link = modal.link_rects[0].move(0, -modal.scroll_y)
-        with mock.patch("ui.confirm_dialog.person_info.webbrowser.open") as open_url:
+        with mock.patch("ui.dialogs.person_info.webbrowser.open") as open_url:
             modal.handle_events([click(visible_link.center)])
         open_url.assert_called_once_with(links[0]["url"])
 
     def test_standalone_person_info_receives_images(self):
-        from ui.confirm_dialog import person_info
+        from ui.dialogs import person_info
         images = self.credited_images()
         calls = []
         with mock.patch.object(person_info, "_run_blocking") as run:
@@ -374,7 +375,7 @@ class DialogTests(unittest.TestCase):
         self.assertEqual(calls, [True])
 
     def scrollable_credit_modal(self):
-        from ui.confirm_dialog.person_info import _PersonInfoModal
+        from ui.dialogs.person_info import _PersonInfoModal
         return _PersonInfoModal(pygame.Surface((520, 320)), "Artist", "Art", [], None,
                                 "left", self.credited_images() * 3)
 
@@ -439,7 +440,7 @@ class ScreenRunnerTests(unittest.TestCase):
         return Trivial()
 
     def test_run_screen_pushes_then_pops(self):
-        from ui.screen_runner import run_screen
+        from ui.navigation.screen_runner import run_screen
 
         done = []
         screen = self.make_screen()
@@ -452,7 +453,7 @@ class ScreenRunnerTests(unittest.TestCase):
         self.assertEqual(done, [screen])
 
     def test_sub_screen_clears_hover_and_calls_back_with_no_args(self):
-        from ui.screen_runner import _run_pygame_sub_screen
+        from ui.navigation.screen_runner import _run_pygame_sub_screen
 
         class FakeMap:
             hovered_province = {"id": 1}
@@ -476,7 +477,7 @@ class ScreenRunnerTests(unittest.TestCase):
         import ast
         import os
 
-        allowed = {"ui/confirm_dialog/base.py", "ui/screen_runner.py"}
+        allowed = {"ui/dialogs/base.py", "ui/navigation/screen_runner.py"}
         offenders = []
         ui_dir = os.path.join(app_harness.ROOT, "ui")
         for dirpath, _dirnames, filenames in os.walk(ui_dir):
