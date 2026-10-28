@@ -27,6 +27,10 @@ AI means artificial intelligence. UI means user interface.
 - Use `color`, never `colour`, in identifiers, UI text, comments, and documentation.
 - Preserve intentional comments.
   Update inaccurate comments. Keep explanations of rules that are not obvious.
+- **Report every change that the user did not explicitly request.**
+  This includes obvious bug fixes, improvements, cleanups, version numbers, and changes to other files.
+  For each change, say exactly what you changed and why.
+  Give this report in the same handoff as the change. Do not wait until the user asks.
 - Do not change gameplay during a refactor.
   A behavior change needs a user request, an obvious bug, or a clear explanation to the user.
 - All repository image assets must be real PNG files with `.png` extensions.
