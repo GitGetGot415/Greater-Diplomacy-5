@@ -50,6 +50,8 @@ def load_multiplayer_moves(map_ref, on_result):
                 # Move imports can change cached map layers and order displays.
                 map_ref.refresh_all_maps()
             detail = f"Loaded {loaded} move file{'s' if loaded != 1 else ''}. Rejected {rejected}."
+            if summary["converted"]:
+                detail += f" Converted {summary['converted']} from an older game version."
             if summary["overridden"]:
                 detail += f" Accepted {summary['overridden']} despite stat warnings."
             if summary["legacy"]:
@@ -62,6 +64,10 @@ def load_multiplayer_moves(map_ref, on_result):
             if rejection is None:
                 finish()
                 return
+            review(rejection, frozenset())
+
+        def review(rejection, accepted_overrides):
+            """Show one rejection. Ask about its override, then retry with every accepted override."""
             file_name = os.path.basename(rejection["file_path"])
             cid = rejection["country_id"]
             country = queries.get_country_display_name(cid, map_ref.nation_data) if cid else "Unknown country"
@@ -73,19 +79,26 @@ def load_multiplayer_moves(map_ref, on_result):
 
                 def after_choice(accepted):
                     if accepted and can_import():
+                        overrides = accepted_overrides | {rejection["override"]}
                         # Read and validate again. The file or host turn may have changed.
                         retry = multiplayer_io.load_move_files(
                             map_ref, [rejection["file_path"]],
                             getattr(map_ref, "multiplayer_keys_dict", {}),
-                            accept_stat_mismatches=True,
+                            accept_stat_mismatches="stats" in overrides,
+                            accept_older_versions="version" in overrides,
                             loaded_countries=summary["loaded_countries"])
                         if retry["loaded"]:
                             summary["rejected"] -= 1
-                            for key in ("loaded", "legacy", "overridden"):
+                            for key in ("loaded", "legacy", "overridden", "converted"):
                                 summary[key] += retry[key]
                             summary["loaded_countries"].extend(retry["loaded_countries"])
                         elif retry["rejections"]:
-                            retry_message = f"{file_name}\n\n{retry['rejections'][0]['reason']}"
+                            again = retry["rejections"][0]
+                            if again["overridable"] and again["override"] not in overrides:
+                                # A converted move can still need stat approval.
+                                review(again, overrides)
+                                return
+                            retry_message = f"{file_name}\n\n{again['reason']}"
                             confirm_dialog.show_message(
                                 "Move still rejected",
                                 retry_message, kind="warning", on_result=review_next,
@@ -93,12 +106,19 @@ def load_multiplayer_moves(map_ref, on_result):
                             return
                     review_next()
 
+                if rejection["override"] == "version":
+                    title = "Convert older move?"
+                    question = ("This move was made with an older game version. Converting it can lose "
+                                "choices the current version reads differently. Convert and validate it?")
+                    yes_label = "Convert"
+                else:
+                    title = "Accept move anyway?"
+                    question = ("This move has stat mismatches. Accepting it can import incorrect values "
+                                "or unfair advantages. Accept it despite these risks?")
+                    yes_label = "Accept"
                 confirm_dialog.ask_yes_no(
-                    "Accept move anyway?",
-                    f"{file_name}\nCountry: {country}\n\n"
-                    "This move has stat mismatches. Accepting it can import incorrect values or unfair advantages. "
-                    "Accept it despite these risks?",
-                    on_result=after_choice, yes_label="Accept", no_label="Reject")
+                    title, f"{file_name}\nCountry: {country}\n\n{question}",
+                    on_result=after_choice, yes_label=yes_label, no_label="Reject")
 
             show_move_rejection(map_ref, rejection, on_result=after_details)
 

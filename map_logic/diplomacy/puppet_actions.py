@@ -7,7 +7,7 @@ war_actions.py and faction_actions.py.
 from data.state_access import world_for, session_for
 import copy
 from map_logic.turn_processing import edit_province_ownership
-from data import migrations, queries
+from data import queries
 from map_logic.diplomacy.diplomacy_events import log_global_event
 from map_logic.diplomacy.war_actions import sever_military_access, link_war, remove_enemy, finalize_neutral
 import data.constants as c
@@ -334,7 +334,7 @@ def finalize_take_puppets(map_data, nation_data, master, target_puppet):
         assign_puppet(map_data, nation_data, master, p, p_type)
 
 def canonical_puppet_release_queue(map_data, nation_data, master, entries, old_queue=()):
-    """Validate release choices. Preserve host countdowns and legacy Integrated releases."""
+    """Validate release choices. Preserve host countdowns."""
     if master not in nation_data or master in c.UNPLAYABLE_NATIONS or not isinstance(entries, list):
         raise ValueError("Invalid releasing country or release queue.")
     previous = {entry["core_nation"]: entry for entry in old_queue}
@@ -344,8 +344,8 @@ def canonical_puppet_release_queue(map_data, nation_data, master, entries, old_q
             raise ValueError("Invalid nation release entry.")
         subject = entry.get("core_nation")
         keep_cores = entry.get("keep_cores", False)
-        # Older saves and move files did not store a release type.
-        release_type = migrations.puppet_release_type(entry)
+        # A request can omit its release type. Integrated is the default.
+        release_type = entry.get("release_type", c.PUPPET_TYPE_INTEGRATED)
         if (not isinstance(subject, str) or subject == master or subject in c.UNPLAYABLE_NATIONS
                 or subject in seen or not isinstance(keep_cores, bool)
                 or not isinstance(release_type, str) or release_type not in c.PUPPET_RELEASE_TYPES):
@@ -353,7 +353,7 @@ def canonical_puppet_release_queue(map_data, nation_data, master, entries, old_q
         old = previous.get(subject)
         if old:
             if (old.get("keep_cores", False) != keep_cores
-                    or migrations.puppet_release_type(old) != release_type):
+                    or old["release_type"] != release_type):
                 raise ValueError("Cancel the existing release before changing its options.")
         elif not queries.get_puppet_release_provinces(master, subject, map_data, keep_cores, result):
             raise ValueError("That country has no eligible core territory to release.")

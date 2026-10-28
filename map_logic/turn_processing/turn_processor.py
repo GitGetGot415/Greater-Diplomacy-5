@@ -135,7 +135,8 @@ def snapshot_history(map_screen):
         return value
 
     nation_snap = copy_history_value(world_state.nation_data)
-    
+    from map_logic.diplomacy import faction_records
+
     snapshot = {
         "date_str": world_state.time_manager.get_date_string(),
         "day": world_state.time_manager.day,
@@ -143,7 +144,7 @@ def snapshot_history(map_screen):
         "year": world_state.time_manager.year,
         "nation_data": nation_snap,
         "factions": copy_history_value(world_state.factions) if hasattr(world_state, "factions")
-                    else queries.migrations.faction_records(world_state.nation_data),
+                    else faction_records.canonical_records(world_state.nation_data),
         "provinces": {}
     }
     

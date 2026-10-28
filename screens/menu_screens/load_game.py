@@ -99,6 +99,11 @@ class Load_Game(FolderListState):
                                       items, on_select)
 
     def load_specific_save(self, folder_name, history_turn=None):
+        from data.map.load_map import newer_version_message
+        message = newer_version_message(os.path.join(self.managed_dir, folder_name))
+        if message:
+            confirm_dialog.show_info("Update Required", message)
+            return
         self.selected_save_path = os.path.join(self.managed_dir, folder_name)
         self.selected_history_turn = history_turn
         self.go_to("MAP")

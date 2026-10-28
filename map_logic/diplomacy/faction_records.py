@@ -1,8 +1,47 @@
 """Adapt supported faction interfaces to world-owned records."""
 
+import copy
+import hashlib
 import uuid
 
 from data.state_access import world_for
+
+
+def canonical_records(nation_data, records=None):
+    """Read canonical factions or convert repaired country projections once."""
+    if records is not None:
+        if not isinstance(records, dict):
+            raise ValueError("Faction records must be a mapping.")
+        result = copy.deepcopy(records)
+        assigned = set()
+        for identity, record in result.items():
+            if (not isinstance(identity, str) or not identity or not isinstance(record, dict)
+                    or not isinstance(record.get("name"), str) or not record["name"]
+                    or not isinstance(record.get("members"), list)
+                    or not record["members"] or (record.get("leader") is not None
+                                                and record["leader"] not in record["members"])
+                    or not isinstance(record.get("pre_war_borders", {}), dict)):
+                raise ValueError("Invalid faction record.")
+            for member in record["members"]:
+                if not isinstance(member, str) or member not in nation_data or member in assigned:
+                    raise ValueError("Faction members must be distinct existing countries.")
+                assigned.add(member)
+            record.setdefault("pre_war_borders", {})
+        return result
+    groups = {}
+    for country, data in nation_data.items():
+        if isinstance(data, dict) and data.get("faction"):
+            groups.setdefault(data["faction"], []).append(country)
+    result = {}
+    for name, members in groups.items():
+        leader = next((member for member in members
+                       if nation_data[member].get("is_faction_leader")), None)
+        # Existing leadership repair selects a successor after loading land and units.
+        identity = "faction-" + hashlib.sha256(name.encode("utf-8")).hexdigest()[:24]
+        result[identity] = {"name": name, "leader": leader, "members": members,
+                            "pre_war_borders": copy.deepcopy(
+                                nation_data.get("FACTION_WAR_MAPS", {}).get(name, {}))}
+    return result
 
 
 def records_for(context):
@@ -11,9 +50,8 @@ def records_for(context):
     if isinstance(world, dict):
         return None
     if not getattr(world, "factions_initialized", False):
-        from data.migrations import faction_records
         if not world.factions:
-            world.factions.update(faction_records(dict(world.nation_data)))
+            world.factions.update(canonical_records(dict(world.nation_data)))
         project(world)
     return world.factions
 
@@ -94,7 +132,6 @@ def set_leadership(nation_data, country, is_leader):
 
 
 def restore(context, records=None):
-    from data.migrations import faction_records
     world = world_for(context)
-    world.factions = faction_records(dict(world.nation_data), records)
+    world.factions = canonical_records(dict(world.nation_data), records)
     project(context)

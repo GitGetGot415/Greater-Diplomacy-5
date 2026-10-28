@@ -1,10 +1,11 @@
 """Convert older Greater Diplomacy 5 (GD5) data to the current formats.
 
-Keep older GD5 identifiers, schema conversions, and load repairs in this module.
+The game version is the save version. Each version step converts all older data
+to the format of one game version. See documentation/data_migrations.txt.
 Keep imports from other games in their separate translation modules.
 Loaders own saved-file access. Shared gameplay modules own current rules and validation.
 Import gameplay helpers inside functions to avoid startup import cycles.
-Keep in-place conversions safe to repeat and preserve unknown valid fields.
+Preserve unknown valid fields.
 """
 
 import copy
@@ -14,6 +15,84 @@ import uuid
 import re
 
 import data.constants as c
+
+
+# GAME VERSIONS
+# =============
+
+
+class NewerVersionError(ValueError):
+    """Data from a newer game version. Only an update can read it."""
+
+
+def version_number(version):
+    """Read "v46" as 46. Data from before version stamps reads as 0."""
+    if isinstance(version, str):
+        match = re.fullmatch(r"v(\d+)", version.strip())
+        if match:
+            return int(match.group(1))
+    return 0
+
+
+CURRENT_VERSION = version_number(c.GAME_VERSION)
+
+
+def check_version(version, subject="This save"):
+    """Return the version number. Refuse data that a newer game wrote."""
+    number = version_number(version)
+    if number > CURRENT_VERSION:
+        raise NewerVersionError(
+            f"{subject} was made with game version {version}. "
+            f"This game is version {c.GAME_VERSION}. Update the game to open it.")
+    return number
+
+
+def upgrade_save(save_meta, map_data, history):
+    """Convert one loaded save to the current version in place.
+
+    save_meta is meta.json, map_data is map_data.json by JSON key, and history
+    holds the decoded turn snapshots. A selected history turn becomes live
+    state, so every step also converts every snapshot. Return the saved version.
+    A step for the next release also runs on saves of this release, so it must
+    be safe to repeat.
+    """
+    version = check_version(save_meta.get("version"))
+    for target, step in SAVE_STEPS:
+        if version < target:
+            step(save_meta, map_data, history)
+    save_meta["version"] = c.GAME_VERSION
+    return version
+
+
+#: Move files gained game_version after v46. An unstamped move is from v46 or earlier.
+LAST_UNSTAMPED_VERSION = 46
+
+
+def move_version(player_data):
+    """Return a move's version number. Refuse a move that no step can convert.
+
+    Moves last one turn, so only moves from the previous release convert.
+    """
+    version = (check_version(player_data["game_version"], "This move")
+               if "game_version" in player_data else LAST_UNSTAMPED_VERSION)
+    if version < CURRENT_VERSION - 1:
+        raise ValueError(
+            f"This move was made with an older game version than v{CURRENT_VERSION - 1}. "
+            f"The player must update to {c.GAME_VERSION} and export the move again.")
+    return version
+
+
+def upgrade_move(player_data):
+    """Convert a move file from the previous release in place.
+
+    The host approves each converted move. The move then passes normal validation.
+    """
+    version = move_version(player_data)
+    for target, step in MOVE_STEPS:
+        if version < target:
+            step(player_data)
+    player_data["game_version"] = c.GAME_VERSION
+    return version
 
 
 # SETTINGS AND DATA LIBRARIES
@@ -236,8 +315,6 @@ def normalize_cached_json_names(cache_key, data):
         return
     if cache_key == "settings":
         migrate_setting_names(data)
-    elif cache_key == "country_data":
-        migrate_country_records(data)
     elif cache_key in ("unit_library", "tech_tree"):
         field = "production_group" if cache_key == "unit_library" else "category"
         for entry in data.values():
@@ -248,31 +325,6 @@ def normalize_cached_json_names(cache_key, data):
 # SAVED MAPS, COUNTRIES, AND UNITS
 # ================================
 
-
-def migrate_country_record(country):
-    """Discard the obsolete direct-alliance field without changing faction or subject relationships."""
-    country.pop("allied_with", None)
-    return country
-
-
-def migrate_country_records(nation_data):
-    """Update country records in place, including records from older saved games."""
-    for country in nation_data.values():
-        if isinstance(country, dict):
-            migrate_country_record(country)
-    return nation_data
-
-
-def migrate_history_country_records(history):
-    """Remove obsolete country fields after complete historical snapshots are restored."""
-    for snapshot in history.values():
-        if isinstance(snapshot, dict) and isinstance(snapshot.get("nation_data"), dict):
-            migrate_country_records(snapshot["nation_data"])
-    return history
-
-
-LEGACY_RESEARCH_DEFAULT_DAYS = 30
-LEGACY_RESEARCH_POINTS_PER_DAY = 10
 
 # Original GD5 equipment dates. These describe older saved level numbers.
 LEGACY_INFANTRY_RESEARCH_YEARS = {
@@ -335,191 +387,12 @@ def migrate_infantry_research(saved, tech_tree, history=None):
     return saved
 
 
-def migrate_research_project(project):
-    """Convert the older research countdown only when research points are absent."""
-    if "points_remaining" not in project:
-        project["points_remaining"] = (project.get("days_remaining", LEGACY_RESEARCH_DEFAULT_DAYS)
-                                       * LEGACY_RESEARCH_POINTS_PER_DAY)
-    return project
-
-
-def _production_turns_from_days(days):
-    """Use the original production countdown conversion."""
-    return max(1, days // c.DEFAULT_DAYS_PER_TURN)
-
-
-def production_queue_turns(entry):
-    """Read a queue countdown without changing display state."""
-    return entry.get("turns_remaining", _production_turns_from_days(
-        entry.get("days_remaining", c.DEFAULT_DAYS_PER_TURN)))
-
-
-def migrate_production_queue_item(entry):
-    """Convert older production days when execution reaches the queue item."""
-    if "days_remaining" in entry:
-        # Execution historically gives the older field priority when both fields exist.
-        entry["turns_remaining"] = _production_turns_from_days(entry.pop("days_remaining"))
-    return entry
-
-
 def normalize_production_order(entry, expected):
     """Complete older queue entries without replacing explicit countdowns or payments."""
     result = copy.deepcopy(entry)
-    migrate_production_queue_item(result)
-    defaults = copy.deepcopy(expected)
-    migrate_production_queue_item(defaults)
-    for key, value in defaults.items():
+    for key, value in copy.deepcopy(expected).items():
         result.setdefault(key, value)
     return result
-
-
-def discard_legacy_deployment_queue(province):
-    """Keep Data Refresh's existing removal of obsolete deployment data."""
-    province.pop("deployment_queue", None)
-
-
-def migrate_province_record(province, building_library):
-    """Split old deployment queues and remove unavailable buildings on load."""
-    province["unit_queue"] = province.get("unit_queue", [])
-    province["building_queue"] = province.get("building_queue", [])
-    if "deployment_queue" in province:
-        for entry in province["deployment_queue"]:
-            queue = "building_queue" if entry.get("order_type") == "BUILDING" else "unit_queue"
-            province[queue].append(entry)
-        del province["deployment_queue"]
-    province["buildings"] = [name for name in province.get("buildings", []) if name in building_library]
-    resources = province.get("resources", {})
-    province["resources"] = resources if isinstance(resources, dict) else {}
-    return province
-
-
-def migrate_loaded_units(map_data, nation_data, unit_library, save_version):
-    """Apply saved-unit conversions in their required load order."""
-    from data import queries
-    # Older transports can contain defense inherited from the carried unit.
-    # Restore transport defense before applying the saved-version stat conversion.
-    for province in map_data.values():
-        for unit in queries.units_with_air_cargo(province.get("units", [])):
-            unit_type = unit.get("type", "")
-            if unit_type.startswith("Convoy ("):
-                unit["defense"] = c.CONVOY_DEF
-            elif unit_type.startswith("Truck ("):
-                unit["defense"] = c.TRUCK_DEF
-    migrate_aircraft_names(map_data, nation_data)
-    if save_version != c.GAME_VERSION:
-        migrate_units_to_current_stats(map_data, unit_library)
-        print(f"[SYSTEM] Migrated save from version '{save_version or 'unversioned'}' to '{c.GAME_VERSION}'.")
-    # These aircraft corrections also apply to older saves with the current version.
-    migrate_aircraft_stats(map_data, unit_library)
-    normalize_air_orders(map_data)
-
-
-def ensure_unit_ids(map_data, nation_data=None):
-    """Give every live unit one unique persistent ID and return the IDs added.
-
-    Old maps never had unit IDs.  This migration is intentionally tolerant of
-    malformed or duplicate values: the loaded map becomes safe before any
-    army roster can refer to it, and the repaired IDs are saved normally.
-    """
-    from data import queries
-    seen, added = set(), []
-    groups = [queries.units_with_air_cargo(province.get("units", []))
-              for province in (map_data or {}).values() if isinstance(province, dict)]
-    if nation_data is not None:
-        groups.append(queries.held_volunteer_units(nation_data))
-    for group in groups:
-        for unit in group:
-            unit_id = unit.get("unit_id")
-            if not isinstance(unit_id, str) or not unit_id or unit_id in seen:
-                unit_id = uuid.uuid4().hex
-                while unit_id in seen:
-                    unit_id = uuid.uuid4().hex
-                unit["unit_id"] = unit_id
-                added.append(unit_id)
-            seen.add(unit_id)
-    return added
-
-
-def migrate_spawned_territories(nation_data, map_data):
-    """Restore missing starting territory lists for Integrated puppets."""
-    for name, country in nation_data.items():
-        if country.get("puppet_type") == c.PUPPET_TYPE_INTEGRATED and "spawned_territories" not in country:
-            country["spawned_territories"] = [province["id"] for province in map_data.values()
-                                               if province.get("owner") == name]
-
-
-def overlay_saved_province_data(map_data, saved_provinces):
-    """Apply legacy or history province overlays to their map-data records."""
-    malformed_resources = 0
-    for json_key, saved_province in saved_provinces.items():
-        province = map_data.get(json_key)
-        if province is not None and saved_province:
-            if not isinstance(saved_province, dict):
-                continue
-            # A pre-fix history snapshot could contain resource names as a
-            # list: snapshot_history used a list copier on the resources dict.
-            # Do not replace a valid current resource mapping with that known
-            # malformed value.  There is no amount data to recover from it,
-            # but preserving the current mapping avoids silent resource loss.
-            overlay = copy.deepcopy(saved_province)
-            resources = overlay.get("resources")
-            if "resources" in overlay and not isinstance(resources, dict):
-                malformed_resources += 1
-                del overlay["resources"]
-            province.update(overlay)
-    if malformed_resources:
-        print(f"[WARN] Ignored malformed saved resources in {malformed_resources} province overlay(s).")
-
-
-def merge_country_templates(nation_data):
-    """Restore catalog countries and migrate missing fields in place.
-
-    Empty save records are references to the shared country catalog. Filling
-    them in place preserves the saved iteration order, including custom IDs,
-    and keeps catalog countries available unless a spectator explicitly deleted them.
-    Copies keep live edits from changing the process-wide template cache.
-    """
-    from data import queries
-    deleted = nation_data.get("GLOBAL_EVENTS", {}).get("deleted_countries", [])
-    for country in deleted:
-        nation_data.pop(country, None)
-    for country, template in queries.get_country_data().items():
-        if country in deleted:
-            continue
-        if country not in nation_data:
-            nation_data[country] = copy.deepcopy(template)
-            continue
-        current = nation_data[country]
-        # SYNC FIX: Merge missing top-level and research keys from the base
-        # template so old saves immediately get new fields and tech keys.
-        for key, value in template.items():
-            if key not in current:
-                current[key] = copy.deepcopy(value)
-        if "research" in template:
-            research = current.setdefault("research", {})
-            for key, value in template["research"].items():
-                if key not in research:
-                    research[key] = copy.deepcopy(value)
-    return migrate_country_records(nation_data)
-
-
-def saved_player_view(save_meta):
-    """Return the offline viewing identity and active-player list for a save.
-
-    Real-time matches save the authoritative server map. That map correctly
-    uses ``None`` during the live session, but a completed result loaded from
-    disk should be an ordinary offline spectator replay. The format check also
-    repairs completed real-time saves made before ``offline_view`` was added.
-    """
-    realtime_match = save_meta.get("realtime_match") if isinstance(save_meta, dict) else None
-    if isinstance(realtime_match, dict) and (
-            realtime_match.get("offline_view") == "spectator"
-            or realtime_match.get("format") == "gd5-realtime-v1"):
-        return "Spectator", []
-
-    player_country = save_meta.get("player_country", "None")
-    loaded_players = save_meta.get("active_players", [player_country])
-    return player_country, [] if loaded_players == ["None"] else loaded_players
 
 
 def repair_faction_rosters(nation_data, map_data):
@@ -598,208 +471,8 @@ def repair_faction_rosters(nation_data, map_data):
             nation_data[leaver]["is_faction_leader"] = False
 
 
-def faction_records(nation_data, records=None):
-    """Read canonical factions or convert repaired country projections once."""
-    import hashlib
-    import copy
-
-    if records is not None:
-        if not isinstance(records, dict):
-            raise ValueError("Faction records must be a mapping.")
-        result = copy.deepcopy(records)
-        assigned = set()
-        for identity, record in result.items():
-            if (not isinstance(identity, str) or not identity or not isinstance(record, dict)
-                    or not isinstance(record.get("name"), str) or not record["name"]
-                    or not isinstance(record.get("members"), list)
-                    or not record["members"] or (record.get("leader") is not None
-                                                and record["leader"] not in record["members"])
-                    or not isinstance(record.get("pre_war_borders", {}), dict)):
-                raise ValueError("Invalid faction record.")
-            for member in record["members"]:
-                if not isinstance(member, str) or member not in nation_data or member in assigned:
-                    raise ValueError("Faction members must be distinct existing countries.")
-                assigned.add(member)
-            record.setdefault("pre_war_borders", {})
-        return result
-    groups = {}
-    for country, data in nation_data.items():
-        if isinstance(data, dict) and data.get("faction"):
-            groups.setdefault(data["faction"], []).append(country)
-    result = {}
-    for name, members in groups.items():
-        leader = next((member for member in members
-                       if nation_data[member].get("is_faction_leader")), None)
-        # Existing leadership repair selects a successor after loading land and units.
-        identity = "faction-" + hashlib.sha256(name.encode("utf-8")).hexdigest()[:24]
-        result[identity] = {"name": name, "leader": leader, "members": members,
-                            "pre_war_borders": copy.deepcopy(
-                                nation_data.get("FACTION_WAR_MAPS", {}).get(name, {}))}
-    return result
-
-
-def migrate_units_to_current_stats(map_data, unit_library):
-    """
-    Rescales every unit's frozen stats (max_health/attack/defense/speed/naval_unit)
-    to match the currently loaded unit_library, preserving each unit's current
-    health as a percentage of its (possibly changed) max health.
-
-    Used when a save/map's version doesn't match c.GAME_VERSION (or has no
-    version at all), since older saves carry stat values baked in at whatever
-    balance patch they were created under.
-    """
-    from data import queries
-    for province in map_data.values():
-        for unit in queries.units_with_air_cargo(province.get("units", [])):
-            stats = unit_library.get(unit.get("type"))
-            if not stats:
-                continue
-
-            old_max_health = unit.get("max_health", 1)
-            hp_pct = unit.get("health", old_max_health) / max(1, old_max_health)
-
-            unit["max_health"] = stats.get("health", c.DEFAULT_UNIT_HP)
-            unit["attack"] = stats.get("attack", c.DEFAULT_UNIT_ATK)
-            unit["defense"] = stats.get("defense", c.DEFAULT_UNIT_DEF)
-            unit["speed"] = stats.get("speed", c.DEFAULT_UNIT_SPD)
-            unit["naval_unit"] = stats.get("naval_unit", queries.is_naval_unit(unit.get("type", "")))
-
-            unit["health"] = unit["max_health"] * hp_pct
-
-
-LEGACY_AIRCRAFT_NAMES = {
-    "Biplane": "Biplane Fighter I",
-    "Piston Fighter": "Monoplane Fighter I",
-    "Piston Bomber": "Monoplane Bomber I",
-    "Biplane Fighter": "Biplane Fighter I",
-    "Biplane Bomber": "Biplane Bomber I",
-    "Monoplane Fighter": "Monoplane Fighter I",
-    "Monoplane Bomber": "Monoplane Bomber I",
-    "Monoplane Transport": "Monoplane Transport I",
-    "Jet Fighter": "Jet Fighter I",
-}
-
-def migrate_aircraft_names(map_data, nation_data=None):
-    """Preserve old aircraft, transports, production choices, and upgrade orders."""
-    for province in map_data.values():
-        for unit in province.get("units", []):
-            for field in ("type", "original_type"):
-                name = unit.get(field)
-                if name in LEGACY_AIRCRAFT_NAMES:
-                    unit[field] = LEGACY_AIRCRAFT_NAMES[name]
-                elif isinstance(name, str):
-                    for carrier in ("Truck", "Convoy"):
-                        prefix = carrier + " ("
-                        if name.startswith(prefix) and name.endswith(")"):
-                            inner = name[len(prefix):-1]
-                            if inner in LEGACY_AIRCRAFT_NAMES:
-                                unit[field] = prefix + LEGACY_AIRCRAFT_NAMES[inner] + ")"
-            order = unit.get("order") or {}
-            target = order.get("target_type")
-            if target in LEGACY_AIRCRAFT_NAMES:
-                order["target_type"] = LEGACY_AIRCRAFT_NAMES[target]
-        for item in province.get("unit_queue", []):
-            name = item.get("unit_type")
-            if name in LEGACY_AIRCRAFT_NAMES:
-                item["unit_type"] = LEGACY_AIRCRAFT_NAMES[name]
-    for country in (nation_data or {}).values():
-        if "custom_production_units" in country:
-            country["custom_production_units"] = [
-                LEGACY_AIRCRAFT_NAMES.get(name, name) for name in country["custom_production_units"]]
-
-
-def migrate_aircraft_stats(map_data, unit_library=None):
-    """Refresh aircraft stats and unpack obsolete aircraft Trucks safely.
-
-    Old saves can share this release's version. Always refresh these explicit
-    library stats on load, preserving health fractions and original transport
-    fields, so the migration is safe to repeat.
-    """
-    from data import queries
-    library = queries.get_unit_library() if unit_library is None else unit_library
-    for province in map_data.values():
-        for unit in province.get("units", []):
-            transported = queries.is_air_transport(unit)
-            if transported and not unit.get("original_type"):
-                # Some legacy transports only stored the name wrapper.
-                unit["original_type"] = unit["type"].split(" (", 1)[1][:-1]
-            stats = library.get(unit.get("original_type") if transported else unit.get("type"), {})
-            if not stats.get("air_role"):
-                continue
-            if transported:
-                for field in ("max_health", "attack", "defense", "speed"):
-                    unit["original_" + field] = stats["health" if field == "max_health" else field]
-                if unit["type"].startswith("Truck ("):
-                    # Preserve the carried health fraction and identity without
-                    # leaving an obsolete land-transport capability in saves.
-                    queries.revert_transport(unit)
-                    if queries.is_water_province(province):
-                        queries.load_transport(unit, "Convoy")
-                    unit["order"] = {"type": "MOVE", "path": []}
-            else:
-                fraction = unit.get("health", 0) / max(1, unit.get("max_health", c.DEFAULT_UNIT_HP))
-                unit.update(max_health=stats["health"], health=stats["health"] * fraction,
-                            attack=stats["attack"], defense=stats["defense"], speed=stats["speed"])
-
-
-def normalize_air_orders(map_data):
-    """Repair saved recovery timers and aircraft orders. Old units need no recovery."""
-    from data import queries
-    for province in map_data.values():
-        for unit in queries.units_with_air_cargo(province.get("units", [])):
-            order = unit.get("order")
-            if isinstance(order, dict) and order.get("type") == "AIR_DROP_RECOVERY":
-                if not queries.unit_is_air_drop_recovering(unit):
-                    unit["order"] = {"type": "MOVE", "path": []}
-                continue
-            if not queries.is_air_unit(unit) or not isinstance(order, dict):
-                continue
-            if isinstance(order.get("type"), str) and order["type"] in queries.AIR_ORDER_TYPES:
-                order.setdefault("base_id", province["id"])
-                if order["type"] == "AIR_PATROL":
-                    order.setdefault("priority", queries.AIR_DEFAULT_PRIORITY)
-            elif order.get("type") == "MOVE" and not queries.air_unit_can_move_on_ground(unit):
-                order["path"] = []
-            elif order.get("type") == "CONVERT" and order.get("to") == "Truck":
-                unit["order"] = (queries.air_conversion_order(unit) if province.get("is_coastal", False)
-                                 else {"type": "MOVE", "path": []})
-
-
 # SCRIPTED EVENTS AND DIPLOMACY
 # =============================
-
-
-def puppet_release_type(entry):
-    """Read the Integrated release type used by older queues without this field."""
-    return entry.get("release_type", c.PUPPET_TYPE_INTEGRATED)
-
-
-def tournament_move_sections(payload):
-    """Read current partial-state moves or older country-only moves."""
-    if "nation_data" in payload and "provinces" in payload:
-        return payload["nation_data"], payload["provinces"]
-    return payload, {}
-
-
-def tournament_release_requests(payload, country_data, existing):
-    """Read explicit release requests or their older country-queue location."""
-    return payload.get("release_subjects", country_data.get("release_puppet_queue", existing))
-
-
-def tournament_aircraft_commands(payload, provinces, live_ids):
-    """Recover drafts from older aircraft snapshots before host validation."""
-    from data import queries
-    commands = payload.get("aircraft_orders")
-    if commands is None:
-        # Older files serialized full aircraft. Recover only order/name drafts.
-        # Ignore submitted stats and positions. Keep the existing land-unit path.
-        commands = [{"unit_id": unit.get("unit_id"), "order": unit.get("order"),
-                     "custom_name": unit.get("custom_name")}
-                    for updates in provinces.values() if isinstance(updates, dict)
-                    for unit in updates.get("units", []) if isinstance(unit, dict)
-                    and (queries.is_air_unit(unit) or queries.is_air_transport(unit)
-                         or unit.get("unit_id") in live_ids)]
-    return commands
 
 
 def decode_saved_json(payload):
@@ -807,217 +480,6 @@ def decode_saved_json(payload):
     if payload.startswith(b'\x1f\x8b'):
         payload = gzip.decompress(payload)
     return json.loads(payload.decode('utf-8'))
-
-
-def scripted_event_conditions(event, *, migrate=False):
-    """Read older conditions. Forecasts read them without changing saved state."""
-    if "conditions" in event:
-        return event["conditions"]
-    conditions = [{
-        "type": event.get("condition_type", "Turn Number"),
-        "operator": "==", "value": event.get("condition_val", ""), "chain": "AND",
-    }]
-    if migrate:
-        event["conditions"] = conditions
-        event["fire_once"] = True
-    return conditions
-
-
-def migrate_scripted_event(event):
-    """Update an older event's condition list in place."""
-    scripted_event_conditions(event, migrate=True)
-    return event
-
-
-def scripted_event_actions(event):
-    """Read an action list or the older single-action fields."""
-    actions = event.get("actions", [])
-    if not actions and "action_type" in event:
-        actions = [{"type": event["action_type"], "target": event.get("action_target", "None")}]
-    return actions
-
-
-def pending_diplomacy_entry(entry):
-    """Read an older bare action as a pending entry without changing its source."""
-    return entry if isinstance(entry, dict) else {"action": entry, "turns": 0}
-
-
-def pending_diplomacy_action(entry):
-    """Read a pending action and preserve the missing-entry value."""
-    return entry.get("action") if isinstance(entry, dict) else entry
-
-
-def normalize_response_reference(nation_data, recipient, sender, response):
-    """Bind omitted older references and validate supplied references against host state."""
-    request = nation_data.get(sender, {}).get("pending_diplomacy", {}).get(recipient)
-    if request is not None:
-        request = normalize_diplomatic_request(copy.deepcopy(request), sender, recipient)
-    reference = response.get("request_id")
-    if reference is not None:
-        if (not isinstance(reference, str) or not isinstance(request, dict)
-                or reference != request.get("request_id") or response.get("action") != request.get("action")):
-            raise ValueError("That response refers to an expired diplomatic request.")
-        return {"request_id": reference}
-    existing = nation_data.get(recipient, {}).get("diplo_responses", {}).get(sender)
-    if isinstance(existing, dict) and existing.get("legacy_unmatched") and response == existing:
-        return {"legacy_unmatched": True}
-    if isinstance(request, dict) and response.get("action") == request.get("action"):
-        return {"request_id": request["request_id"]}
-    # Older files can contain standalone responses with copied treaty terms.
-    return {"legacy_unmatched": True}
-
-
-def normalize_diplomatic_request(entry, sender, target):
-    """Give older requests reproducible identities without gameplay randomness."""
-    if isinstance(entry, str):
-        entry = {"action": entry, "turns": 1, "timer": 0}
-    if not isinstance(entry, dict):
-        raise ValueError("A diplomatic request must be an action or a record.")
-    identity = entry.get("request_id")
-    if identity is None:
-        payload = json.dumps([sender, target, entry], sort_keys=True, separators=(",", ":"))
-        entry["request_id"] = uuid.uuid5(uuid.NAMESPACE_URL, "gd5:diplomacy:" + payload).hex
-    elif not isinstance(identity, str) or not identity or len(identity) > 128:
-        raise ValueError("A diplomatic request_id must be a nonempty string of at most 128 characters.")
-    return entry
-
-
-def migrate_diplomatic_records(nation_data):
-    """Normalize both channels after loading requests, preserving unknown fields."""
-    for sender, country in nation_data.items():
-        if not isinstance(country, dict):
-            continue
-        pending = country.get("pending_diplomacy", {})
-        for target, entry in list(pending.items()):
-            pending[target] = normalize_diplomatic_request(entry, sender, target)
-    for recipient, country in nation_data.items():
-        if not isinstance(country, dict):
-            continue
-        for sender, response in country.get("diplo_responses", {}).items():
-            if not isinstance(response, dict) or "request_id" in response:
-                continue
-            request = nation_data.get(sender, {}).get("pending_diplomacy", {}).get(recipient, {})
-            if isinstance(request, dict) and request.get("action") == response.get("action"):
-                response["request_id"] = request["request_id"]
-            else:
-                # Older saves could contain standalone responses with copied terms.
-                response["legacy_unmatched"] = True
-    for signatory, country in nation_data.items():
-        if not isinstance(country, dict):
-            continue
-        treaty = country.get("pending_treaty")
-        if not isinstance(treaty, dict):
-            continue
-        if not treaty.get("treaty_id"):
-            payload = json.dumps([signatory, treaty], sort_keys=True, separators=(",", ":"))
-            treaty["treaty_id"] = uuid.uuid5(uuid.NAMESPACE_URL, "gd5:ratification:" + payload).hex
-        for member in treaty.get("awaiting", []):
-            request = nation_data.get(member, {}).get("pending_ratification")
-            if isinstance(request, dict):
-                request.setdefault("treaty_id", treaty["treaty_id"])
-    return nation_data
-
-
-def ensure_message_id(message):
-    """Give an older message a stable reference when it is first forwarded."""
-    message_id = message.get("message_id")
-    if not message_id:
-        message_id = uuid.uuid4().hex
-        message["message_id"] = message_id
-    return message_id
-
-
-def migrate_pending_responses(nation_data):
-    """Move older reply actions into the response channel in place."""
-    migrate_country_records(nation_data)
-    for country in nation_data.values():
-        country.setdefault("at_war_with", [])
-        country.setdefault("guarantees", [])
-        country.setdefault("military_attaches", [])
-        pending = country.setdefault("pending_diplomacy", {})
-        responses = country.setdefault("diplo_responses", {})
-        # Older replies occupied the proposal slot and could overwrite a travelling offer.
-        for other, entry in list(pending.items()):
-            action = pending_diplomacy_action(entry)
-            if not isinstance(action, str):
-                continue
-            for prefix, verdict in (("ACCEPT_", "ACCEPT"), ("REJECT_", "REJECT")):
-                if action.startswith(prefix):
-                    responses[other] = {
-                        "verdict": verdict, "action": action[len(prefix):],
-                        "message": entry.get("message", "") if isinstance(entry, dict) else "",
-                        "parameters": entry.get("parameters") if isinstance(entry, dict) else None,
-                    }
-                    del pending[other]
-                    break
-    return migrate_diplomatic_records(nation_data)
-
-
-def from_legacy_string(peace_type, proposer, target):
-    """Turns one of the three old peace sentences into a deal.
-
-    Saves made before the rework can have a peace offer in flight, and the AI's
-    own offers carried free prose where the terms were supposed to be. Anything
-    that is not recognisably a demand is read as a white peace, which is what
-    those offers already did when they executed -- treaty_effects fell back to
-    PEACE_WHITE_PEACE whenever the parameters were empty.
-    """
-    from data import queries
-    from map_logic.diplomacy import deal
-
-    terms = peace_type if isinstance(peace_type, str) else ""
-
-    if not (terms.startswith(c.PEACE_DEMAND_CLAIMS) or terms.startswith(c.PEACE_SURRENDER)):
-        return deal.ceasefire_deal(proposer, target)
-
-    winner, loser = queries.get_peace_winner_loser(terms, proposer, target)
-    frozen = queries.parse_peace_frozen_ids(terms)
-    return deal.new(deal.KIND_PEACE, [proposer], [target],
-               [deal.tiles_clause(loser, winner, frozen, plus_originals=True)])
-
-
-def migrate_legacy_deal(params, proposer, target, kind=None):
-    """Whatever was stored on a pending action, as a deal.
-
-    Three shapes reach this: a real deal, one of the old peace strings, and the
-    old four-key trade dict {give_materials, take_fuel, puppet_state, ...}. Pass
-    `kind` when the caller knows which it should be -- an AI peace offer carried
-    free prose where the terms belonged, and reading that as a trade would be
-    worse than reading it as the white peace it always executed as.
-    """
-    from map_logic.diplomacy import deal
-    if deal.is_deal(params):
-        return params
-
-    if kind == deal.KIND_PEACE:
-        return from_legacy_string(params if isinstance(params, str) else "", proposer, target)
-
-    if isinstance(params, dict):
-        agreement = deal.new(deal.KIND_TRADE, [proposer], [target])
-        for resource in c.TRADE_RESOURCE_KEYS:
-            given = int(params.get(f"give_{resource}", 0) or 0)
-            taken = int(params.get(f"take_{resource}", 0) or 0)
-            if given > 0:
-                agreement = deal.add_clause(agreement, deal.resources_clause(proposer, target, resource, given))
-            if taken > 0:
-                agreement = deal.add_clause(agreement, deal.resources_clause(target, proposer, resource, taken))
-
-        # "SENDER", "NONE" and "RECEIVER" are the three the old trade screen
-        # wrote. Anything else is read as a vassalage term all the same, in the
-        # sender's favour: the check it replaced was `!= "NONE"`, so an
-        # unrecognised value was refused rather than waved through, and a value
-        # this does not understand is the last thing that should quietly become
-        # no clause at all.
-        puppet_state = params.get("puppet_state") or "NONE"
-        if puppet_state == "RECEIVER":
-            agreement = deal.add_clause(agreement, {"type": deal.VASSALIZE, "master": target, "subject": proposer,
-                                     "puppet_type": c.PUPPET_TYPE_AUTONOMOUS})
-        elif puppet_state != "NONE":
-            agreement = deal.add_clause(agreement, {"type": deal.VASSALIZE, "master": proposer, "subject": target,
-                                     "puppet_type": c.PUPPET_TYPE_AUTONOMOUS})
-        return agreement
-
-    return from_legacy_string(params, proposer, target)
 
 
 def legacy_player_country(map_ref, country_id, nation_update):
@@ -1061,7 +523,7 @@ def legacy_player_country(map_ref, country_id, nation_update):
 
     from map_logic.diplomacy import diplomacy_lifecycle as lifecycle
     probe = copy.deepcopy(world_state.nation_data)
-    migrate_pending_responses(probe)
+    lifecycle.normalize_diplomacy_channels(probe)
     pending = merged.get("pending_diplomacy", {})
     responses = merged.get("diplo_responses", {})
     draft_lists = merged.get("draft_lists", {})
@@ -1072,7 +534,7 @@ def legacy_player_country(map_ref, country_id, nation_update):
     if any(not isinstance(response, dict) for response in responses.values()):
         raise ValueError("Invalid diplomatic response.")
     submitted = {country_id: copy.deepcopy(merged)}
-    migrate_pending_responses(submitted)
+    lifecycle.normalize_diplomacy_channels(submitted)
     drafts = {}
     for target, record in submitted[country_id]["pending_diplomacy"].items():
         if record.get("turns", 0) > 0:
@@ -1114,4 +576,200 @@ def legacy_player_country(map_ref, country_id, nation_update):
         raise ValueError("Invalid treaty ratification.")
     elif isinstance(host_ratification, dict):
         merged["pending_ratification"] = copy.deepcopy(host_ratification)
-    return migrate_country_record(merged)
+    return merged
+
+
+# VERSION 47
+# ==========
+# v47 added version steps. This step collects every conversion that v46 and
+# earlier applied on each load, or when gameplay first read an old entry.
+
+
+LEGACY_RESEARCH_DEFAULT_DAYS = 30
+LEGACY_RESEARCH_POINTS_PER_DAY = 10
+
+LEGACY_AIRCRAFT_NAMES = {
+    "Biplane": "Biplane Fighter I",
+    "Piston Fighter": "Monoplane Fighter I",
+    "Piston Bomber": "Monoplane Bomber I",
+    "Biplane Fighter": "Biplane Fighter I",
+    "Biplane Bomber": "Biplane Bomber I",
+    "Monoplane Fighter": "Monoplane Fighter I",
+    "Monoplane Bomber": "Monoplane Bomber I",
+    "Monoplane Transport": "Monoplane Transport I",
+    "Jet Fighter": "Jet Fighter I",
+}
+
+
+def _v47_aircraft_name(name):
+    """Number an unnumbered aircraft, including inside a transport name."""
+    if not isinstance(name, str):
+        return name
+    if name in LEGACY_AIRCRAFT_NAMES:
+        return LEGACY_AIRCRAFT_NAMES[name]
+    for carrier in ("Truck", "Convoy"):
+        prefix = carrier + " ("
+        if name.startswith(prefix) and name.endswith(")"):
+            inner = name[len(prefix):-1]
+            if inner in LEGACY_AIRCRAFT_NAMES:
+                return prefix + LEGACY_AIRCRAFT_NAMES[inner] + ")"
+    return name
+
+
+def _is_count(value):
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
+def _v47_production_turns(entry):
+    """Replace the production day countdown. The older field has priority."""
+    if _is_count(entry.get("days_remaining")):
+        entry["turns_remaining"] = max(1, entry.pop("days_remaining") // c.DEFAULT_DAYS_PER_TURN)
+
+
+def _v47_scripted_event(event):
+    """Give an event the condition and action lists that replaced single fields."""
+    if "conditions" not in event:
+        event["conditions"] = [{
+            "type": event.get("condition_type", "Turn Number"),
+            "operator": "==", "value": event.get("condition_val", ""), "chain": "AND",
+        }]
+        event["fire_once"] = True
+    if not event.get("actions") and "action_type" in event:
+        event["actions"] = [{"type": event["action_type"],
+                             "target": event.get("action_target", "None")}]
+    for action in event.get("actions", []):
+        if isinstance(action, dict) and action.get("type") == "Spawn Unit":
+            action["unit_type"] = _v47_aircraft_name(action.get("unit_type"))
+
+
+def _v47_country(country):
+    """Convert one country record."""
+    country.pop("allied_with", None)
+    for project in country.get("research_queue", []):
+        days = project.get("days_remaining", LEGACY_RESEARCH_DEFAULT_DAYS) if isinstance(project, dict) else None
+        if _is_count(days) and "points_remaining" not in project:
+            project["points_remaining"] = days * LEGACY_RESEARCH_POINTS_PER_DAY
+    if isinstance(country.get("custom_production_units"), list):
+        country["custom_production_units"] = [
+            _v47_aircraft_name(name) for name in country["custom_production_units"]]
+    for entry in country.get("release_puppet_queue", []):
+        if isinstance(entry, dict):
+            entry.setdefault("release_type", c.PUPPET_TYPE_INTEGRATED)
+    for event in country.get("scripted_events", []):
+        if isinstance(event, dict):
+            _v47_scripted_event(event)
+    for message in country.get("inbox", []):
+        if isinstance(message, dict) and not message.get("message_id"):
+            message["message_id"] = uuid.uuid4().hex
+    # Older replies occupied the proposal slot and could overwrite a travelling offer.
+    pending = country.get("pending_diplomacy", {})
+    responses = country.setdefault("diplo_responses", {}) if pending else {}
+    for other, entry in list(pending.items()):
+        action = entry.get("action") if isinstance(entry, dict) else entry
+        if not isinstance(action, str):
+            continue
+        for prefix, verdict in (("ACCEPT_", "ACCEPT"), ("REJECT_", "REJECT")):
+            if action.startswith(prefix):
+                responses[other] = {
+                    "verdict": verdict, "action": action[len(prefix):],
+                    "message": entry.get("message", "") if isinstance(entry, dict) else "",
+                    "parameters": entry.get("parameters") if isinstance(entry, dict) else None,
+                }
+                del pending[other]
+                break
+
+
+def _v47_nations(nation_data):
+    if isinstance(nation_data, dict):
+        for country in nation_data.values():
+            if isinstance(country, dict):
+                _v47_country(country)
+
+
+def _v47_province(province, terrain):
+    """Convert one province record. terrain is the province's map terrain."""
+    from data import queries
+    if "deployment_queue" in province:
+        province.setdefault("unit_queue", [])
+        province.setdefault("building_queue", [])
+        for entry in province.pop("deployment_queue"):
+            queue = "building_queue" if entry.get("order_type") == "BUILDING" else "unit_queue"
+            province[queue].append(entry)
+    for queue in ("unit_queue", "building_queue"):
+        for entry in province.get(queue, []):
+            if isinstance(entry, dict):
+                _v47_production_turns(entry)
+                if "unit_type" in entry:
+                    entry["unit_type"] = _v47_aircraft_name(entry["unit_type"])
+    for unit in province.get("units", []):
+        if not isinstance(unit, dict):
+            continue
+        for field in ("type", "original_type"):
+            if field in unit:
+                unit[field] = _v47_aircraft_name(unit[field])
+        order = unit.get("order")
+        if isinstance(order, dict) and "target_type" in order:
+            order["target_type"] = _v47_aircraft_name(order["target_type"])
+        # Move files are player input. Validation reports malformed units after conversion.
+        if not isinstance(unit.get("type"), str) or not queries.is_air_transport(unit):
+            continue
+        if not unit.get("original_type"):
+            # Some older transports stored only the name wrapper.
+            unit["original_type"] = unit["type"].split(" (", 1)[1][:-1]
+        if unit["type"].startswith("Truck ("):
+            # Aircraft no longer ride in Trucks. Unpack them on land, or move
+            # them into a Convoy at sea. The transport helpers keep identity and
+            # the health fraction.
+            queries.revert_transport(unit)
+            if terrain in c.WATER_TERRAINS:
+                queries.load_transport(unit, "Convoy")
+            unit["order"] = {"type": "MOVE", "path": []}
+
+
+def _v47_save(save_meta, map_data, history):
+    _v47_nations(save_meta.get("nation_data"))
+    for key, province in map_data.items():
+        _v47_province(province, province.get("terrain"))
+    for key, province in (save_meta.get("provinces") or {}).items():
+        if isinstance(province, dict):
+            _v47_province(province, map_data.get(key, {}).get("terrain"))
+    for snapshot in history.values():
+        if not isinstance(snapshot, dict):
+            continue
+        _v47_nations(snapshot.get("nation_data"))
+        for key, province in (snapshot.get("provinces") or {}).items():
+            if isinstance(province, dict):
+                _v47_province(province, map_data.get(key, {}).get("terrain"))
+    # Completed real-time saves made before offline_view open as spectator replays.
+    realtime_match = save_meta.get("realtime_match")
+    if isinstance(realtime_match, dict) and realtime_match.get("format") == "gd5-realtime-v1":
+        realtime_match.setdefault("offline_view", "spectator")
+
+
+#: Every v46 move file contains these sections. An older move file can omit them.
+_V46_MOVE_SECTIONS = ("nation_data", "provinces", "aircraft_orders", "release_subjects")
+
+
+def _v47_move(player_data):
+    """Convert the country record and province updates in a v46 move."""
+    # A stamped move is from after v46. Only an unstamped move can be older than v46.
+    if ("game_version" not in player_data
+            and any(section not in player_data for section in _V46_MOVE_SECTIONS)):
+        raise ValueError(
+            "This move was made with a game version older than v46. "
+            f"The player must update to {c.GAME_VERSION} and export the move again.")
+    country = player_data.get("nation_data")
+    if isinstance(country, dict):
+        _v47_country(country)
+    for entry in player_data.get("release_subjects", []):
+        if isinstance(entry, dict):
+            entry.setdefault("release_type", c.PUPPET_TYPE_INTEGRATED)
+    for province in (player_data.get("provinces") or {}).values():
+        if isinstance(province, dict):
+            # A move has no terrain, so a Truck aircraft unpacks as on land.
+            # Host validation then checks every unit against host state.
+            _v47_province(province, None)
+
+
+SAVE_STEPS = ((47, _v47_save),)
+MOVE_STEPS = ((47, _v47_move),)

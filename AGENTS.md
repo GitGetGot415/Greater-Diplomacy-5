@@ -27,6 +27,10 @@ AI means artificial intelligence. UI means user interface.
 - Use `color`, never `colour`, in identifiers, UI text, comments, and documentation.
 - Preserve intentional comments.
   Update inaccurate comments. Keep explanations of rules that are not obvious.
+- **Report every change that the user did not explicitly request.**
+  This includes obvious bug fixes, improvements, cleanups, version numbers, and changes to other files.
+  For each change, say exactly what you changed and why.
+  Give this report in the same handoff as the change. Do not wait until the user asks.
 - Do not change gameplay during a refactor.
   A behavior change needs a user request, an obvious bug, or a clear explanation to the user.
 - All repository image assets must be real PNG files with `.png` extensions.
@@ -172,14 +176,25 @@ Keep tuning data in its source files:
 
 - Preserve existing supported public interfaces, saved data, and configuration behavior.
   Change them only when the user explicitly requests a breaking change.
-- Do not introduce save schemas, schema version numbers, numbered data formats, version dispatch systems, or similar serialization frameworks.
+- The game version is the save version. `version.txt` and `GAME_VERSION` in `data/constants.py` give it.
+  Every save, tournament file, and move file records the version that wrote it.
+  Do not add another version number, schema name, or numbered format.
+- A version step converts all older data to the format of one game version.
+  Put each step in `SAVE_STEPS` or `MOVE_STEPS` in `data/migrations.py`.
+  Give the step the next release version, one above `GAME_VERSION`. Do not change `GAME_VERSION` or `version.txt`.
+  See `documentation/data_migrations.txt` for the procedure.
+- A file from a newer version is refused with an error that tells the player to update.
 - Prefer additive, optional fields with defaults that preserve old behavior.
+  Add a version step when a field changes meaning, moves, or changes shape.
   Keep existing field meanings stable.
 - Adapt supported older data at the input boundary.
   Keep adaptation rules in one clear place and use one consistent representation internally.
 - Base compatibility handling on actual supported formats and callers.
   Do not invent hypothetical legacy cases.
+- Convert older saves in their version step. Gameplay, UI, and AI code read only the current format.
+  Do not add read-time adapters for older save shapes.
 - Do not remove existing compatibility mechanisms merely to simplify code.
+  Move an adapter into a version step instead.
 - Explain concrete compatibility conflicts before making a breaking change.
 - Treat a new saved field as a data-format change.
   Define its owner, writer, loader, and old-save default.
@@ -194,6 +209,11 @@ Keep tuning data in its source files:
   Check settings defaults, saves, and loads after related changes.
 - Preserve unknown or older valid data where possible.
   Migration must produce predictable results and be safe to run once on load.
+- A save step also converts every history snapshot. A selected history turn becomes live game state.
+- Tournament move steps convert moves from the previous release only.
+  The host must approve each converted move. The converted move then passes all normal validation.
+- Load repairs are not version steps. They run on every load and fix invalid current data.
+  Examples are unit identities, army rosters, faction leaders, and units or buildings missing from the active library.
 - Reuse caches instead of reading disk in frame or turn loops.
   Pass an explicit world context to active library queries. No-context library access reads shared default content.
   Change faction membership and leadership through faction services. Country faction fields are derived projections.

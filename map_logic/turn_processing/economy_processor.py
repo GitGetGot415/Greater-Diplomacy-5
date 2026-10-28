@@ -1,6 +1,6 @@
 from data.state_access import world_for, session_for
 import data.constants as c
-from data import migrations, queries
+from data import queries
 
 def process_economy(map_screen):
     """Calculates income, applies building yields, and deducts unit upkeep."""
@@ -69,7 +69,6 @@ def process_queues(map_screen):
         b_queue = province.get("building_queue", [])
         if b_queue and not in_combat:
             item = b_queue[0]
-            migrations.migrate_production_queue_item(item)
             
             item["turns_remaining"] -= 1
             
@@ -260,7 +259,6 @@ def process_queues(map_screen):
         u_queue = province.get("unit_queue", [])
         if u_queue and not in_combat:
             item = u_queue[0]
-            migrations.migrate_production_queue_item(item)
             
             item["turns_remaining"] -= 1
             

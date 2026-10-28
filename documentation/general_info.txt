@@ -47,6 +47,11 @@ Long rejection details support scrolling.
 Unreadable files, invalid keys, malformed data, unauthorized orders, wrong sessions, wrong turns, and duplicate submissions cannot be accepted.
 Rejected files do not change host state.
 
+A move from the previous game release requires host review.
+The host can convert it. The converted move must then pass every normal check.
+Moves from newer or much older versions cannot be accepted. The player must update and export again.
+See documentation/data_migrations.txt, TOURNAMENT MOVE VERSIONS.
+
 Numeric differences in matched ground-unit statistics or new production timing and refunds require host review.
 The comparison uses the host's current units and scenario settings.
 Aircraft statistics remain under host control.

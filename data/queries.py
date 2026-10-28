@@ -24,12 +24,8 @@ from map_logic import politics
 import data.constants as c
 from data import migrations
 
-# Preserve older imports. All conversion rules live in data.migrations.
-from data.migrations import (
-    LEGACY_AIRCRAFT_NAMES, ensure_unit_ids, merge_country_templates, migrate_aircraft_names,
-    migrate_aircraft_stats, migrate_units_to_current_stats, normalize_air_category,
-    normalize_air_orders, normalize_cached_json_names, overlay_saved_province_data,
-)
+# Library names convert when the data enters the cache. See data.migrations.
+from data.migrations import normalize_air_category, normalize_cached_json_names
 
 # Faction and alliance membership are pure derived data, but resolving either
 # means scanning every nation -- and AI pathfinding asks for them hundreds of
@@ -2849,11 +2845,8 @@ def get_minimum_tank_count(material_income):
 
 def create_unit_dict(unit_type, owner, unit_library):
     """Generates a standard base unit dictionary to avoid redundant stat parsing."""
-    # Old scripted Spawn Unit actions can retain an unnumbered aircraft name.
-    if unit_type not in unit_library:
-        unit_type = LEGACY_AIRCRAFT_NAMES.get(unit_type, unit_type)
     stats = unit_library.get(unit_type, {})
-    hp = stats.get("health", c.DEFAULT_UNIT_HP)
+    combat = library_unit_stats(stats)
     return {
         # Unlike Python's ``id()``, this survives save/load, tournament files,
         # and authoritative real-time snapshots.  UI selection remains local,
@@ -2861,15 +2854,51 @@ def create_unit_dict(unit_type, owner, unit_library):
         "unit_id": uuid.uuid4().hex,
         "type": unit_type,
         "owner": owner,
-        "health": hp,
-        "max_health": hp,
+        "health": combat["max_health"],
+        "max_health": combat["max_health"],
         "morale": stats.get("morale", c.DEFAULT_UNIT_MORALE),
-        "speed": stats.get("speed", c.DEFAULT_UNIT_SPD),
-        "attack": stats.get("attack", c.DEFAULT_UNIT_ATK),
-        "defense": stats.get("defense", c.DEFAULT_UNIT_DEF),
+        "speed": combat["speed"],
+        "attack": combat["attack"],
+        "defense": combat["defense"],
         "level": 0,
         "order": {"type": "MOVE", "path": []}
     }
+
+
+def ensure_unit_ids(map_data, nation_data=None):
+    """Give every live unit one unique persistent ID and return the IDs added.
+
+    Old maps never had unit IDs.  This migration is intentionally tolerant of
+    malformed or duplicate values: the loaded map becomes safe before any
+    army roster can refer to it, and the repaired IDs are saved normally.
+    """
+    seen, added = set(), []
+    groups = [units_with_air_cargo(province.get("units", []))
+              for province in (map_data or {}).values() if isinstance(province, dict)]
+    if nation_data is not None:
+        groups.append(held_volunteer_units(nation_data))
+    for group in groups:
+        for unit in group:
+            unit_id = unit.get("unit_id")
+            if not isinstance(unit_id, str) or not unit_id or unit_id in seen:
+                unit_id = uuid.uuid4().hex
+                while unit_id in seen:
+                    unit_id = uuid.uuid4().hex
+                unit["unit_id"] = unit_id
+                added.append(unit_id)
+            seen.add(unit_id)
+    return added
+
+
+def repair_spawned_territories(nation_data, map_data):
+    """Restore missing starting territory lists for Integrated puppets.
+
+    Editor scenarios can create an Integrated puppet without this list, so this runs on every load.
+    """
+    for name, country in nation_data.items():
+        if country.get("puppet_type") == c.PUPPET_TYPE_INTEGRATED and "spawned_territories" not in country:
+            country["spawned_territories"] = [province["id"] for province in map_data.values()
+                                               if province.get("owner") == name]
 
 
 def held_volunteer_units(nation_data):
@@ -3541,6 +3570,60 @@ def army_color_for_unit(unit, nation_data):
     return tuple(normalize_army_symbol_color(army.get("symbol_color")))
 
 
+def merge_country_templates(nation_data):
+    """Restore catalog countries and add missing fields in place.
+
+    Empty save records are references to the shared country catalog. Filling
+    them in place preserves the saved iteration order, including custom IDs,
+    and keeps catalog countries available unless a spectator explicitly deleted them.
+    Copies keep live edits from changing the process-wide template cache.
+    """
+    deleted = nation_data.get("GLOBAL_EVENTS", {}).get("deleted_countries", [])
+    for country in deleted:
+        nation_data.pop(country, None)
+    for country, template in get_country_data().items():
+        if country in deleted:
+            continue
+        if country not in nation_data:
+            nation_data[country] = copy.deepcopy(template)
+            continue
+        current = nation_data[country]
+        # SYNC FIX: Merge missing top-level and research keys from the base
+        # template so old saves immediately get new fields and tech keys.
+        for key, value in template.items():
+            if key not in current:
+                current[key] = copy.deepcopy(value)
+        if "research" in template:
+            research = current.setdefault("research", {})
+            for key, value in template["research"].items():
+                if key not in research:
+                    research[key] = copy.deepcopy(value)
+    return nation_data
+
+
+def overlay_saved_province_data(map_data, saved_provinces):
+    """Apply legacy or history province overlays to their map-data records."""
+    malformed_resources = 0
+    for json_key, saved_province in saved_provinces.items():
+        province = map_data.get(json_key)
+        if province is not None and saved_province:
+            if not isinstance(saved_province, dict):
+                continue
+            # A pre-fix history snapshot could contain resource names as a
+            # list: snapshot_history used a list copier on the resources dict.
+            # Do not replace a valid current resource mapping with that known
+            # malformed value.  There is no amount data to recover from it,
+            # but preserving the current mapping avoids silent resource loss.
+            overlay = copy.deepcopy(saved_province)
+            resources = overlay.get("resources")
+            if "resources" in overlay and not isinstance(resources, dict):
+                malformed_resources += 1
+                del overlay["resources"]
+            province.update(overlay)
+    if malformed_resources:
+        print(f"[WARN] Ignored malformed saved resources in {malformed_resources} province overlay(s).")
+
+
 def build_saved_province_data(data):
     """Build the mutable province fields shared by map and save serializers."""
     return {
@@ -3680,8 +3763,8 @@ def build_save_dict(map_screen, *, include_provinces=True, compact_nations=False
         faction_records.records_for(world_state)
     session_state = session_for(map_screen)
     from map_logic.turn_processing import unit_events
-    migrations.migrate_country_records(world_state.nation_data)
-    migrations.migrate_diplomatic_records(world_state.nation_data)
+    from map_logic.diplomacy import diplomacy_lifecycle
+    diplomacy_lifecycle.normalize_diplomatic_records(world_state.nation_data)
     scenario_settings = getattr(world_for(map_screen), 'scenario_settings', {}) or {}
     # Keep this setting explicit in every new save. Older base maps omit it,
     # but their effective default is OFF and that default should survive the
@@ -3710,7 +3793,7 @@ def build_save_dict(map_screen, *, include_provinces=True, compact_nations=False
         "research_years": get_research_years(context=map_screen),
         "nation_data": world_state.nation_data,
         "factions": copy.deepcopy(world_state.factions) if hasattr(world_state, "factions")
-                    else migrations.faction_records(world_state.nation_data),
+                    else faction_records.canonical_records(world_state.nation_data),
         "unit_event_log": unit_events.saved_log(map_screen),
         "unit_event_read_turns": unit_events.saved_reads(map_screen),
     }
@@ -4170,7 +4253,6 @@ def get_diplomatic_status(sender, target, nation_data):
     """Safely unpacks the pending diplomacy dictionary. Returns (action_string, turns_int)."""
     pending = nation_data.get(sender, {}).get("pending_diplomacy", {}).get(target, {})
     
-    pending = migrations.pending_diplomacy_entry(pending)
     action = pending.get("action", "")
     turns = pending.get("turns", 0)
     
@@ -5590,6 +5672,80 @@ def revert_transport(unit, *, context=None):
 
     for key in ["original_type", "original_speed", "original_max_health", "original_attack", "original_defense"]:
         if key in unit: del unit[key]
+
+
+def normalize_air_orders(map_data):
+    """Repair saved recovery timers and aircraft orders. Old units need no recovery."""
+    for province in map_data.values():
+        for unit in units_with_air_cargo(province.get("units", [])):
+            order = unit.get("order")
+            if isinstance(order, dict) and order.get("type") == "AIR_DROP_RECOVERY":
+                if not unit_is_air_drop_recovering(unit):
+                    unit["order"] = {"type": "MOVE", "path": []}
+                continue
+            if not is_air_unit(unit) or not isinstance(order, dict):
+                continue
+            if isinstance(order.get("type"), str) and order["type"] in AIR_ORDER_TYPES:
+                order.setdefault("base_id", province["id"])
+                if order["type"] == "AIR_PATROL":
+                    order.setdefault("priority", AIR_DEFAULT_PRIORITY)
+            elif order.get("type") == "MOVE" and not air_unit_can_move_on_ground(unit):
+                order["path"] = []
+            elif order.get("type") == "CONVERT" and order.get("to") == "Truck":
+                unit["order"] = (air_conversion_order(unit) if province.get("is_coastal", False)
+                                 else {"type": "MOVE", "path": []})
+
+
+def refresh_unit_stats(map_data, nation_data, unit_library):
+    """Apply library stats to every map unit, carried unit, and held volunteer unit."""
+    for province in map_data.values():
+        for unit in units_with_air_cargo(province.get("units", [])):
+            apply_library_stats(unit, unit_library)
+    for unit in held_volunteer_units(nation_data):
+        apply_library_stats(unit, unit_library)
+
+
+def library_unit_stats(stats):
+    """Return the combat fields a unit record copies from its library entry."""
+    return {"max_health": stats.get("health", c.DEFAULT_UNIT_HP),
+            "attack": stats.get("attack", c.DEFAULT_UNIT_ATK),
+            "defense": stats.get("defense", c.DEFAULT_UNIT_DEF),
+            "speed": stats.get("speed", c.DEFAULT_UNIT_SPD)}
+
+
+def apply_library_stats(unit, unit_library):
+    """Set a unit's combat stats from the unit library and keep its health fraction.
+
+    The library is the only source of unit stats. Unit records hold a copy for
+    their readers. Every load and every type change refreshes that copy.
+    A Convoy or Truck takes its own stats from the shared constants and keeps
+    the carried unit's library stats in its original_* fields.
+    Return False for a type that is not in the library, and leave the unit unchanged.
+    """
+    unit_type = unit.get("type", "")
+    carrier = next((name for name in ("Convoy", "Truck") if unit_type.startswith(name + " (")), None)
+    stats = unit_library.get(unit.get("original_type") if carrier else unit_type)
+    if stats is None:
+        return False
+    old_max = unit.get("max_health")
+    values = library_unit_stats(stats)
+    if carrier == "Convoy":
+        unit.update({"original_" + field: value for field, value in values.items()})
+        values = {"max_health": c.CONVOY_MAX_HP, "attack": c.CONVOY_ATK,
+                  "defense": c.CONVOY_DEF, "speed": 1, "naval_unit": True}
+    elif carrier == "Truck":
+        unit.update({"original_" + field: value for field, value in values.items()})
+        values = {"max_health": c.TRUCK_MAX_HP, "attack": c.TRUCK_ATK,
+                  "defense": c.TRUCK_DEF, "speed": 1, "naval_unit": False}
+    else:
+        values["naval_unit"] = bool(stats.get("naval_unit", False))
+    # Rescale only a changed maximum. Repeated loads keep exact health values.
+    if "health" not in unit:
+        unit["health"] = values["max_health"]
+    elif values["max_health"] != old_max:
+        unit["health"] = values["max_health"] * unit["health"] / max(1, old_max or 1)
+    unit.update(values)
+    return True
 
 def has_units_in_province(nation, province):
     """Returns True if the given nation has any units in the target province."""

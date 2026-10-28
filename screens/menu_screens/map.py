@@ -8,7 +8,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # Data & Constants
 import data.constants as c
-from data import migrations, queries
+from data import queries
 from data.state_access import StateAccess
 from data.map import load_map, save_map
 from data.platform import run_background
@@ -1563,7 +1563,8 @@ class Map(StateAccess, GameState):
 
         render_buttons(self)
 
-        migrations.migrate_pending_responses(self.nation_data)
+        from map_logic.diplomacy import diplomacy_lifecycle
+        diplomacy_lifecycle.normalize_diplomacy_channels(self.nation_data)
 
         # A loaded save may have been written immediately before a faction join
         # or war was resolved. Reconcile once on load so its UI never advertises
@@ -2384,16 +2385,7 @@ class Map(StateAccess, GameState):
 
                 # Check if the unit is still valid
                 if base_type in unit_library or base_type in ["Convoy", "Truck"]:
-                    if u_type in unit_library:
-                        stats = unit_library[u_type]
-                        unit.update({
-                            "max_health": stats.get("health", c.DEFAULT_UNIT_HP),
-                            "attack": stats.get("attack", c.DEFAULT_UNIT_ATK),
-                            "defense": stats.get("defense", c.DEFAULT_UNIT_DEF),
-                            "speed": stats.get("speed", c.DEFAULT_UNIT_SPD)
-                        })
-                        # Cap health to new max
-                        unit["health"] = min(unit.get("health", stats.get("health", c.DEFAULT_UNIT_HP)), unit["max_health"])
+                    if queries.apply_library_stats(unit, unit_library):
                         updated_count += 1
                     units_to_keep.append(unit)
                 else:
@@ -2423,8 +2415,6 @@ class Map(StateAccess, GameState):
                         else:
                             removed_count += 1
                     province[queue_key] = valid_queue
-
-            migrations.discard_legacy_deployment_queue(province)
 
         army_panel.prepare(self)
         print(f"[MAP SCRUBBER] {updated_count} entities updated, {removed_count} obsolete entities vaporized.")

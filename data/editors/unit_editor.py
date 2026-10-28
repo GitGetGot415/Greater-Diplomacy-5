@@ -68,21 +68,24 @@ class UnitEditor:
     def save_unit(self):
         name = self.entries["name"].get().strip()
         if not name: return
-        
+        if name not in self.data:
+            # Every unit needs identity metadata, which only the generator writes.
+            messagebox.showerror("Error", "Add new units in data/generators/recipes.py.")
+            return
+
         try:
-            self.data[name] = {
-                "health": int(self.entries["health"].get() or 0), 
-                "attack": int(self.entries["attack"].get() or 0), 
-                "defense": int(self.entries["defense"].get() or 0), 
-                "speed": int(self.entries["speed"].get() or 1), 
-                "cost_materials": int(self.entries["cost_materials"].get() or 0), 
-                "cost_manpower": int(self.entries["cost_manpower"].get() or 0), 
-                "cost_fuel": int(self.entries["cost_fuel"].get() or 0), 
-                "production_time": int(self.entries["production_time"].get() or 5), 
-                "naval_unit": False, 
-                "order": {}
-            }
-            
+            # Change only the shown stats. Keep metadata and every other field.
+            self.data[name].update({
+                "health": int(self.entries["health"].get() or 0),
+                "attack": int(self.entries["attack"].get() or 0),
+                "defense": int(self.entries["defense"].get() or 0),
+                "speed": int(self.entries["speed"].get() or 1),
+                "cost_materials": int(self.entries["cost_materials"].get() or 0),
+                "cost_manpower": int(self.entries["cost_manpower"].get() or 0),
+                "cost_fuel": int(self.entries["cost_fuel"].get() or 0),
+                "production_time": int(self.entries["production_time"].get() or 5),
+            })
+
             self.save_data()
             
             messagebox.showinfo("Success", f"Updated {name}")

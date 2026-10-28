@@ -115,9 +115,17 @@ class TournamentMoveTests(unittest.TestCase):
         result = {
             "nation_data": dict(host.nation_data[country_id]),
             "provinces": {},
+            "game_version": c.GAME_VERSION,
             "tournament_session": host.multiplayer_session_key,
             "tournament_turn": host.time_manager.total_turns,
         }
+        result.update(extra)
+        return result
+
+    def v46_move(self, country_id, host, **extra):
+        """A move with the sections every v46 export wrote, and no version stamp."""
+        result = self.player_data(country_id, host, aircraft_orders=[], release_subjects=[])
+        result.pop("game_version")
         result.update(extra)
         return result
 
@@ -145,6 +153,7 @@ class TournamentMoveTests(unittest.TestCase):
                     host.nation_data["Leader"]["research"] = dict(locked if mode == "locked" else unlocked)
                     move = {"player_intents": [{"type": "research_queue",
                             "tech_names": tech if mode == "malformed" else [tech], "points_remaining": 0}],
+                            "game_version": c.GAME_VERSION,
                             "tournament_session": host.multiplayer_session_key,
                             "tournament_turn": host.time_manager.total_turns - int(mode == "stale")}
                     before = copy.deepcopy(host.nation_data)
@@ -230,20 +239,21 @@ class TournamentMoveTests(unittest.TestCase):
                     self.assertFalse(result["rejections"][0]["overridable"])
 
     def test_paid_older_queue_keeps_countdown_without_recharging_or_recruitment_checks(self):
-        from data import migrations
         host = Host()
         paid = {"unit_type": "Retired fixture unit", "days_remaining": 2 * c.DEFAULT_DAYS_PER_TURN,
                 "refund": {"cost_materials": 7}, "custom_field": {"keep": True}}
+        # The v46 move keeps the day countdown. Loading already converted the host's own queue.
+        converted = {key: value for key, value in paid.items() if key != "days_remaining"}
+        converted["turns_remaining"] = 2
         host.map_data = {"home": {"id": 1, "json_key": "P1", "owner": "Leader", "units": [],
-                                  "unit_queue": [copy.deepcopy(paid)]}}
-        move = self.player_data("Leader", host, provinces={"P1": {"unit_queue": [copy.deepcopy(paid)]}})
+                                  "unit_queue": [copy.deepcopy(converted)]}}
+        move = self.v46_move("Leader", host, provinces={"P1": {"unit_queue": [copy.deepcopy(paid)]}})
         before = copy.deepcopy(host.nation_data["Leader"])
         with tempfile.TemporaryDirectory() as directory:
             path = self.write_move(directory, "paid.gd5move", "Leader", move)
-            result = self.import_moves(host, [path])
+            result = self.import_moves(host, [path], accept_older_versions=True)
         self.assertEqual(result["loaded"], 1, result["rejections"])
-        expected = migrations.migrate_production_queue_item(copy.deepcopy(paid))
-        self.assertEqual(host.map_data["home"]["unit_queue"], [expected])
+        self.assertEqual(host.map_data["home"]["unit_queue"], [converted])
         for resource in c.ECON_RESOURCE_KEYS:
             self.assertEqual(host.nation_data["Leader"][resource], before[resource])
 
@@ -255,12 +265,12 @@ class TournamentMoveTests(unittest.TestCase):
                 host = Host()
                 incoming = diplomacy_messages.set_pending(host.nation_data, "Member", "Leader", "TRADE", turns=1)
                 outgoing = diplomacy_messages.set_pending(host.nation_data, "Leader", "Outsider", "TRADE", turns=1)
-                move = self.player_data("Leader", host)
+                move = self.v46_move("Leader", host)
                 move["nation_data"] = copy.deepcopy(move["nation_data"])
                 move["nation_data"]["pending_diplomacy"] = {"Member": reply, "Outsider": "TRADE"}
                 before = copy.deepcopy(host.nation_data)
                 path = self.write_move(directory, "older-reply.gd5move", "Leader", move)
-                result = self.import_moves(host, [path])
+                result = self.import_moves(host, [path], accept_older_versions=True)
                 self.assertEqual(result["loaded"], 1, result["rejections"])
                 response = host.nation_data["Leader"]["diplo_responses"]["Member"]
                 self.assertEqual(response["request_id"], incoming["request_id"])
@@ -307,11 +317,11 @@ class TournamentMoveTests(unittest.TestCase):
 
     def test_older_move_cannot_restore_the_removed_direct_alliance_field(self):
         host = Host()
-        move = self.player_data("Leader", host)
+        move = self.v46_move("Leader", host)
         move["nation_data"]["allied_with"] = ["Outsider"]
         with tempfile.TemporaryDirectory() as directory:
             path = self.write_move(directory, "older-country.gd5move", "Leader", move)
-            result = self.import_moves(host, [path])
+            result = self.import_moves(host, [path], accept_older_versions=True)
         self.assertEqual(result["loaded"], 1)
         self.assertNotIn("allied_with", host.nation_data["Leader"])
         self.assertNotIn("Outsider", queries.get_all_friendly_nations("Leader", host.nation_data))
@@ -573,19 +583,109 @@ class TournamentMoveTests(unittest.TestCase):
                 self.assertEqual(summary["loaded"], 0)
                 self.assertNotIn("release_puppet_queue", host.nation_data[country])
 
-    def test_legacy_country_record_releases_default_to_integrated(self):
+    def test_v46_release_requests_default_to_integrated(self):
         host = Host()
         host.map_data = {"land": {"id": 1, "owner": "Leader", "cores": ["Outsider"],
                                   "terrain": "plains", "units": []}}
-        player_data = self.player_data("Leader", host)
-        player_data["nation_data"]["release_puppet_queue"] = [{"core_nation": "Outsider", "turns_left": 0}]
+        player_data = self.v46_move("Leader", host)
+        player_data["release_subjects"] = [{"core_nation": "Outsider", "keep_cores": False}]
         with tempfile.TemporaryDirectory() as directory:
             path = self.write_move(directory, "move.gd5move", "Leader", player_data)
-            summary = self.import_moves(host, [path])
+            summary = self.import_moves(host, [path], accept_older_versions=True)
         self.assertEqual(summary["loaded"], 1)
         release = host.nation_data["Leader"]["release_puppet_queue"][0]
         self.assertEqual(release["release_type"], c.PUPPET_TYPE_INTEGRATED)
         self.assertEqual(release["turns_left"], 1)
+
+    def previous_release_move(self, country_id, host):
+        from data import migrations
+        return self.v46_move(country_id, host, game_version=f"v{migrations.CURRENT_VERSION - 1}")
+
+    def test_move_from_this_release_converts_without_host_review(self):
+        host = Host()
+        move = self.v46_move("Leader", host, release_subjects=[{"core_nation": "Outsider"}])
+        host.map_data = {"land": {"id": 1, "owner": "Leader", "cores": ["Outsider"],
+                                  "terrain": "plains", "units": []}}
+        with tempfile.TemporaryDirectory() as directory:
+            path = self.write_move(directory, "this-release.gd5move", "Leader", move)
+            summary = self.import_moves(host, [path])
+        self.assertEqual(summary["loaded"], 1, summary["rejections"])
+        self.assertEqual(summary["converted"], 0)
+        self.assertEqual(host.nation_data["Leader"]["release_puppet_queue"][0]["release_type"],
+                         c.PUPPET_TYPE_INTEGRATED)
+
+    def test_older_move_waits_for_host_conversion_then_validates_normally(self):
+        host = Host()
+        move = self.previous_release_move("Leader", host)
+        move["nation_data"]["conscription_slider"] = 0.25
+        with tempfile.TemporaryDirectory() as directory:
+            path = self.write_move(directory, "v46.gd5move", "Leader", move)
+            before = copy.deepcopy(host.nation_data)
+            held = self.import_moves(host, [path])
+            self.assertEqual(held["loaded"], 0)
+            self.assertEqual(held["rejections"][0]["override"], "version")
+            self.assertEqual(host.nation_data, before)
+            converted = self.import_moves(host, [path], accept_older_versions=True)
+        self.assertEqual(converted["loaded"], 1, converted["rejections"])
+        self.assertEqual(converted["converted"], 1)
+        self.assertEqual(host.nation_data["Leader"]["conscription_slider"], 0.25)
+
+    def test_converted_move_still_fails_normal_validation(self):
+        host = Host()
+        move = self.v46_move("Leader", host, tournament_turn=host.time_manager.total_turns + 1)
+        with tempfile.TemporaryDirectory() as directory:
+            path = self.write_move(directory, "v46.gd5move", "Leader", move)
+            before = copy.deepcopy(host.nation_data)
+            summary = self.import_moves(host, [path], accept_older_versions=True)
+        self.assertEqual(summary["loaded"], 0)
+        self.assertIn("turn", summary["rejections"][0]["reason"])
+        self.assertEqual(host.nation_data, before)
+
+    def test_moves_that_no_step_converts_are_refused_with_an_update_message(self):
+        from data import migrations
+        newer = {"game_version": f"v{migrations.CURRENT_VERSION + 1}"}
+        too_old = {"game_version": f"v{migrations.CURRENT_VERSION - 2}"}
+        for name, version in (("newer", newer), ("too old", too_old), ("before v46", None)):
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as directory:
+                host = Host()
+                if version is None:
+                    # Every v46 export wrote aircraft_orders. An older move is refused at conversion.
+                    move = self.v46_move("Leader", host)
+                    move.pop("aircraft_orders")
+                else:
+                    move = self.player_data("Leader", host, **version)
+                path = self.write_move(directory, "move.gd5move", "Leader", move)
+                before = copy.deepcopy(host.nation_data)
+                summary = self.import_moves(host, [path], accept_older_versions=True)
+                self.assertEqual(summary["loaded"], 0)
+                self.assertFalse(summary["rejections"][0]["overridable"])
+                self.assertIn("update", summary["rejections"][0]["reason"].lower())
+                self.assertEqual(host.nation_data, before)
+
+    def test_host_ui_converts_an_older_move_only_after_approval(self):
+        from ui import confirm_dialog, multiplayer_host_panel
+
+        for choice in (False, True):
+            with self.subTest(choice=choice), tempfile.TemporaryDirectory() as directory:
+                host = Host()
+                host.multiplayer_host_mode = True
+                host.multiplayer_keys_dict = self.keys
+                host.show_feedback = mock.Mock()
+                host.refresh_all_maps = mock.Mock()
+                path = self.write_move(directory, "older.gd5move", "Leader", self.previous_release_move("Leader", host))
+                completed = mock.Mock()
+                with mock.patch.object(queries, "open_file_browser") as browser, \
+                        mock.patch.object(confirm_dialog, "show_message") as message, \
+                        mock.patch.object(confirm_dialog, "ask_yes_no") as ask, \
+                        mock.patch.object(multiplayer_io, "run_with_progress", synchronous_progress):
+                    multiplayer_host_panel.load_multiplayer_moves(host, completed)
+                    browser.call_args.kwargs["on_result"]([path])
+                    message.call_args.kwargs["on_result"]()
+                    self.assertEqual(ask.call_args.args[0], "Convert older move?")
+                    completed.assert_not_called()
+                    ask.call_args.kwargs["on_result"](choice)
+                completed.assert_called_once_with(choice)
+                self.assertEqual(bool(host.submitted_moves), choice)
 
     def test_a_faction_exile_still_receives_a_tournament_move(self):
         host = Host()
@@ -651,12 +751,14 @@ class TournamentMoveTests(unittest.TestCase):
 
     def test_legacy_faction_rename_is_repaired_on_import(self):
         host = Host()
-        legacy_data = {"nation_data": dict(host.nation_data["Leader"]), "provinces": {}}
+        # A v46 host without a session key exported moves without session or turn fields.
+        legacy_data = {"nation_data": dict(host.nation_data["Leader"]), "provinces": {},
+                       "aircraft_orders": [], "release_subjects": []}
         legacy_data["nation_data"]["faction"] = "New Pact"
 
         with tempfile.TemporaryDirectory() as directory:
             path = self.write_move(directory, "legacy.gd5move", "Leader", legacy_data)
-            summary = self.import_moves(host, [path])
+            summary = self.import_moves(host, [path], accept_older_versions=True)
 
         self.assertEqual(summary["loaded"], 1)
         self.assertEqual(summary["legacy"], 1)
@@ -729,6 +831,7 @@ class TournamentMoveTests(unittest.TestCase):
         data = multiplayer_io.decrypt_dict(payload["data"], self.keys["Leader"])
         self.assertEqual(data["tournament_session"], "test-session")
         self.assertEqual(data["tournament_turn"], 4)
+        self.assertEqual(data["game_version"], c.GAME_VERSION)
         self.assertEqual(data["faction_renames"][0]["new_name"], "New Pact")
         self.assertEqual(data["appearance_updates"][0]["country_id"], "Subject")
 

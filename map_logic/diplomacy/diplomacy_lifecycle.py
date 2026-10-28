@@ -4,7 +4,9 @@ The existing turns field remains the canonical request age. State is derived
 from that age and the action. Responses have no travelling request age.
 """
 
+import copy
 from enum import Enum
+import json
 import uuid
 
 import data.constants as c
@@ -96,15 +98,12 @@ def response_matches_request(response, request):
 
 def canonical_response_reference(nation_data, recipient, sender, response):
     """Adapt supported older input and check references against host-owned requests."""
-    from data.migrations import normalize_response_reference
     return normalize_response_reference(nation_data, recipient, sender, response)
 
 
 def apply_draft(nation_data, sender, pending, responses, draft_lists):
     """Install validated intent while retaining server-owned travelling requests."""
-    import copy
-    from data.migrations import migrate_diplomatic_records
-    migrate_diplomatic_records(nation_data)
+    normalize_diplomatic_records(nation_data)
     country = nation_data[sender]
     current = country.setdefault("pending_diplomacy", {})
     in_flight = {target: record for target, record in current.items()
@@ -149,3 +148,85 @@ def answer_ratification(nation_data, member, verdict, *, treaty_id=None):
     else:
         request["verdict"] = verdict
     return True
+
+
+def normalize_response_reference(nation_data, recipient, sender, response):
+    """Bind omitted older references and validate supplied references against host state."""
+    request = nation_data.get(sender, {}).get("pending_diplomacy", {}).get(recipient)
+    if request is not None:
+        request = normalize_diplomatic_request(copy.deepcopy(request), sender, recipient)
+    reference = response.get("request_id")
+    if reference is not None:
+        if (not isinstance(reference, str) or not isinstance(request, dict)
+                or reference != request.get("request_id") or response.get("action") != request.get("action")):
+            raise ValueError("That response refers to an expired diplomatic request.")
+        return {"request_id": reference}
+    existing = nation_data.get(recipient, {}).get("diplo_responses", {}).get(sender)
+    if isinstance(existing, dict) and existing.get("legacy_unmatched") and response == existing:
+        return {"legacy_unmatched": True}
+    if isinstance(request, dict) and response.get("action") == request.get("action"):
+        return {"request_id": request["request_id"]}
+    # Older files can contain standalone responses with copied treaty terms.
+    return {"legacy_unmatched": True}
+
+
+def normalize_diplomatic_request(entry, sender, target):
+    """Give older requests reproducible identities without gameplay randomness."""
+    if isinstance(entry, str):
+        entry = {"action": entry, "turns": 1, "timer": 0}
+    if not isinstance(entry, dict):
+        raise ValueError("A diplomatic request must be an action or a record.")
+    identity = entry.get("request_id")
+    if identity is None:
+        payload = json.dumps([sender, target, entry], sort_keys=True, separators=(",", ":"))
+        entry["request_id"] = uuid.uuid5(uuid.NAMESPACE_URL, "gd5:diplomacy:" + payload).hex
+    elif not isinstance(identity, str) or not identity or len(identity) > 128:
+        raise ValueError("A diplomatic request_id must be a nonempty string of at most 128 characters.")
+    return entry
+
+
+def normalize_diplomatic_records(nation_data):
+    """Normalize both channels after loading requests, preserving unknown fields."""
+    for sender, country in nation_data.items():
+        if not isinstance(country, dict):
+            continue
+        pending = country.get("pending_diplomacy", {})
+        for target, entry in list(pending.items()):
+            pending[target] = normalize_diplomatic_request(entry, sender, target)
+    for recipient, country in nation_data.items():
+        if not isinstance(country, dict):
+            continue
+        for sender, response in country.get("diplo_responses", {}).items():
+            if not isinstance(response, dict) or "request_id" in response:
+                continue
+            request = nation_data.get(sender, {}).get("pending_diplomacy", {}).get(recipient, {})
+            if isinstance(request, dict) and request.get("action") == response.get("action"):
+                response["request_id"] = request["request_id"]
+            else:
+                # Older saves could contain standalone responses with copied terms.
+                response["legacy_unmatched"] = True
+    for signatory, country in nation_data.items():
+        if not isinstance(country, dict):
+            continue
+        treaty = country.get("pending_treaty")
+        if not isinstance(treaty, dict):
+            continue
+        if not treaty.get("treaty_id"):
+            payload = json.dumps([signatory, treaty], sort_keys=True, separators=(",", ":"))
+            treaty["treaty_id"] = uuid.uuid5(uuid.NAMESPACE_URL, "gd5:ratification:" + payload).hex
+        for member in treaty.get("awaiting", []):
+            request = nation_data.get(member, {}).get("pending_ratification")
+            if isinstance(request, dict):
+                request.setdefault("treaty_id", treaty["treaty_id"])
+    return nation_data
+
+
+def normalize_diplomacy_channels(nation_data):
+    """Give every country its diplomatic channels and identify their records."""
+    for country in nation_data.values():
+        country.setdefault("at_war_with", [])
+        country.setdefault("guarantees", [])
+        country.setdefault("military_attaches", [])
+        country.setdefault("pending_diplomacy", {})
+        country.setdefault("diplo_responses", {})
+    return normalize_diplomatic_records(nation_data)

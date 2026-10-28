@@ -418,7 +418,7 @@ Multiplayer authority and visibility
 Tournament files use authenticated aircraft_orders commands keyed by stable unit_id.
 The host validates position, type, and range against its own state.
 It retains its own health and stats.
-Legacy snapshots provide only order and name drafts for existing aircraft.
+Aircraft records in province snapshots cannot supply orders. Moves from before v46 are refused.
 
 See documentation/general_info.txt, TOURNAMENT FILE STORAGE, for archive encryption and snapshot visibility.
 

@@ -12,7 +12,7 @@ from unittest.mock import AsyncMock, Mock, patch
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 import pygame
-from data import queries
+from data import migrations, queries
 import data.constants as c
 from data.io import multiplayer_io
 from data.io.realtime_multiplayer import (MapRealtimeDriver, RealtimeError, RealtimeServer,
@@ -114,6 +114,23 @@ def wing(base, name="Monoplane Bomber I", owner="A", order=None):
     base["units"].append(unit)
     return unit
 
+
+
+def load_old_units(game):
+    """Convert fixture units as a load does: the version step, then the load repairs."""
+    migrations.upgrade_save({}, game.map_data, {})
+    queries.refresh_unit_stats(game.map_data, game.nation_data, queries.get_unit_library())
+    queries.normalize_air_orders(game.map_data)
+
+
+def remove_version_stamp(save_path):
+    """Make a save written by this game read as a save from before version stamps."""
+    meta_path = os.path.join(save_path, "meta.json")
+    with open(meta_path) as file:
+        meta = json.load(file)
+    meta.pop("version")
+    with open(meta_path, "w") as file:
+        json.dump(meta, file)
 
 class RangeTests(unittest.TestCase):
     def setUp(self):
@@ -852,11 +869,11 @@ class AirIntegrationTests(unittest.TestCase):
 
     def test_placeholder_migration_is_idempotent_and_preserves_damage(self):
         self.plane.update(max_health=1000, health=250, attack=100)
-        queries.migrate_aircraft_stats(self.game.map_data)
+        queries.refresh_unit_stats(self.game.map_data, {}, queries.get_unit_library())
         self.assertEqual(self.plane["attack"], queries.get_unit_library()[self.plane["type"]]["attack"])
         self.assertAlmostEqual(self.plane["health"] / self.plane["max_health"], 0.25)
         before = dict(self.plane)
-        queries.migrate_aircraft_stats(self.game.map_data)
+        queries.refresh_unit_stats(self.game.map_data, {}, queries.get_unit_library())
         self.assertEqual(self.plane, before)
 
     def test_ai_candidates_are_canonical_and_heuristic_issues_attack(self):
@@ -1026,10 +1043,11 @@ class AirIntegrationTests(unittest.TestCase):
             with self.subTest(commands=commands), self.assertRaises(ValueError):
                 multiplayer_io._validate_aircraft_orders(self.game, "A", {"aircraft_orders": commands}, {})
 
-    def test_tournament_legacy_snapshot_cannot_change_aircraft_health_or_location(self):
-        submitted = dict(self.plane, health=1, attack=100000,
-            order={"type": "AIR_ATTACK", "target_id": 2})
-        live, drafts = multiplayer_io._validate_aircraft_orders(self.game, "A", {},
+    def test_tournament_snapshot_cannot_change_aircraft_health_or_location(self):
+        # Every v46 and later move sends aircraft orders. Snapshot stats and positions are ignored.
+        submitted = dict(self.plane, health=1, attack=100000)
+        order = {"unit_id": self.plane["unit_id"], "order": {"type": "AIR_ATTACK", "target_id": 2}}
+        live, drafts = multiplayer_io._validate_aircraft_orders(self.game, "A", {"aircraft_orders": [order]},
             {self.target["json_key"]: {"units": [submitted]}})
         self.assertIn(self.plane["unit_id"], live)
         self.assertIs(drafts[0][0], self.plane)
@@ -1291,7 +1309,7 @@ class AirGroundTransportTests(unittest.TestCase):
         queries.load_transport(unit, "Convoy")
         unit.update(type="Truck (Monoplane Bomber I)", max_health=c.TRUCK_MAX_HP,
                     health=c.TRUCK_MAX_HP * 0.4, naval_unit=False)
-        queries.migrate_aircraft_stats(self.game.map_data)
+        load_old_units(self.game)
         self.assertEqual(unit["type"], "Convoy (Monoplane Bomber I)")
         self.assertTrue(unit["naval_unit"])
         self.assertAlmostEqual(unit["health"] / unit["max_health"], 0.4)
@@ -1363,8 +1381,7 @@ class AirGroundTransportTests(unittest.TestCase):
         pending["order"] = {"type": "CONVERT", "to": "Truck", "turns_left": 1}
         missile = wing(self.land, "V2 Rocket")
         missile["order"] = {"type": "MOVE", "path": [1]}
-        queries.migrate_aircraft_stats(self.game.map_data)
-        queries.normalize_air_orders(self.game.map_data)
+        load_old_units(self.game)
         self.assertTrue(queries.is_air_unit(carried))
         self.assertNotIn("original_type", carried)
         self.assertAlmostEqual(carried["health"] / carried["max_health"], 0.4)
@@ -1372,8 +1389,7 @@ class AirGroundTransportTests(unittest.TestCase):
         self.assertEqual(pending["order"], queries.air_conversion_order(pending))
         self.assertEqual(missile["order"]["path"], [1])
         saved = json.loads(json.dumps(queries.build_save_dict(self.game)))
-        queries.migrate_aircraft_stats(self.game.map_data)
-        queries.normalize_air_orders(self.game.map_data)
+        load_old_units(self.game)
         self.assertEqual(json.loads(json.dumps(queries.build_save_dict(self.game)))["provinces"], saved["provinces"])
 
 
@@ -1923,7 +1939,10 @@ class AirAppSmokeTests(unittest.TestCase):
         with patch.object(c, "SAVES_DIR", directory):
             from data.map import save_map
             asyncio.run(save_map.save_map_data(game, "air-roundtrip"))
-        return game, fighter, rocket, os.path.join(directory, "air-roundtrip")
+        path = os.path.join(directory, "air-roundtrip")
+        if legacy_truck:
+            remove_version_stamp(path)
+        return game, fighter, rocket, path
 
     def test_bomber_patrol_save_roundtrip_preserves_mission_and_priority(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -1959,14 +1978,16 @@ class AirAppSmokeTests(unittest.TestCase):
                     if legacy and tech != "jet_bomber":
                         aircraft["type"] = queries.get_base_unit_name(name)
                 queries.load_transport(base["units"][-1], "Convoy")
-                base["unit_queue"] = [{"unit_type": queries.get_base_unit_name(name) if legacy and queries.get_base_unit_name(name) in queries.LEGACY_AIRCRAFT_NAMES else name,
+                base["unit_queue"] = [{"unit_type": queries.get_base_unit_name(name) if legacy and queries.get_base_unit_name(name) in migrations.LEGACY_AIRCRAFT_NAMES else name,
                                        "turns_remaining": 1} for name in names]
                 country = game.nation_data["A"]
                 country.update(research=research, research_progress={"biplane": 123, "jet_bomber": 321},
                     research_queue=[{"tech_name": "biplane" if legacy else "jet_bomber", "points_remaining": 234}],
-                    custom_production_units=[queries.get_base_unit_name(name) if legacy and queries.get_base_unit_name(name) in queries.LEGACY_AIRCRAFT_NAMES else name for name in names])
+                    custom_production_units=[queries.get_base_unit_name(name) if legacy and queries.get_base_unit_name(name) in migrations.LEGACY_AIRCRAFT_NAMES else name for name in names])
                 with patch.object(c, "SAVES_DIR", directory):
                     asyncio.run(save_map.save_map_data(game, "air-levels"))
+                if legacy:
+                    remove_version_stamp(os.path.join(directory, "air-levels"))
                 loaded = Map(load_path=os.path.join(directory, "air-levels"), skip_initial_income=True)
                 restored = loaded.id_to_province[1]["units"]
                 self.assertEqual([unit["type"] for unit in restored], names[:-1] + [f"Convoy ({names[-1]})"])

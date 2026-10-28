@@ -15,9 +15,11 @@ from data.io.realtime_multiplayer import (
     RealtimeClient, RealtimeServer, create_match_certificate, decode_invite,
     encode_invite, encode_relay_invite, read_message, sanitize_display_name, MapRealtimeDriver,
     apply_authoritative_snapshot, collect_map_commands, default_advertised_address,
-    load_reconnect_token, persist_reconnect_token,
+    load_reconnect_token, persist_reconnect_token, encode_message, GameVersionError,
 )
 import data.constants as c
+import json
+from data import migrations
 from data.io.realtime_relay import (RelayHostTransport, relay_cloud_init, validate_relay_invite,
                                     _relay_firewall_payload, DigitalOceanRelayTask)
 from data.io.realtime_relay_service import Relay
@@ -83,15 +85,27 @@ class HostSnapshotTests(unittest.TestCase):
         apply_authoritative_snapshot(client, {"nation_data": {"A": {}}})
         self.assertEqual(client.country_economy_summaries, {})
 
-    def test_older_snapshot_drops_direct_alliances_without_changing_factions(self):
-        client = SimpleNamespace(player_country="A", nation_data={"A": {}}, map_data={},
-                                 refresh_all_maps=mock.Mock())
-        snapshot = {"nation_data": {"A": {"allied_with": ["B"], "faction": "Pact", "future": 17},
-                                   "B": {"allied_with": ["A"], "faction": "Pact"}}}
-        apply_authoritative_snapshot(client, snapshot)
-        self.assertEqual(client.nation_data["A"], {"faction": "Pact", "future": 17, "is_faction_leader": False})
-        self.assertEqual(client.nation_data["B"], {"faction": "Pact", "is_faction_leader": False})
-        self.assertEqual(snapshot["nation_data"]["A"]["allied_with"], ["B"])
+    def test_messages_from_another_game_version_are_refused(self):
+        # Snapshots are not version-converted, so every player needs the host's version.
+        for version in (None, "v1", f"v{migrations.CURRENT_VERSION + 1}"):
+            with self.subTest(version=version):
+                body = {"version": 1, "type": "ping", "session_id": "s", "payload": {}}
+                if version is not None:
+                    body["game_version"] = version
+                raw = json.dumps(body).encode("utf-8")
+                left, right = socket.socketpair()
+                try:
+                    right.sendall(struct.pack("!I", len(raw)) + raw)
+                    with self.assertRaisesRegex(GameVersionError, "same game version"):
+                        read_message(left)
+                finally:
+                    left.close(); right.close()
+        left, right = socket.socketpair()
+        try:
+            right.sendall(encode_message("ping", "s"))
+            self.assertEqual(read_message(left)["game_version"], c.GAME_VERSION)
+        finally:
+            left.close(); right.close()
 
     def test_host_view_refreshes_from_server_before_the_next_turn_draft(self):
         """The host UI is a separate map and must not retain turn-one units."""
@@ -631,10 +645,10 @@ class RealtimeSessionTests(unittest.TestCase):
         self.assertEqual((player, active_players), ("Spectator", []))
 
         # The first real-time format already existed before offline_view was
-        # stored. Keep those completed saves usable too.
-        legacy_player, legacy_active = _saved_player_view({
-            "player_country": "None", "realtime_match": {"format": "gd5-realtime-v1"},
-        })
+        # stored. The v47 step keeps those completed saves usable too.
+        legacy = {"player_country": "None", "realtime_match": {"format": "gd5-realtime-v1"}}
+        migrations.upgrade_save(legacy, {}, {})
+        legacy_player, legacy_active = _saved_player_view(legacy)
         self.assertEqual((legacy_player, legacy_active), ("Spectator", []))
 
     def test_timer_uses_server_clock_and_latest_draft(self):
@@ -1156,7 +1170,8 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
         with self.assertRaises(RealtimeError):
             driver.validate_draft("B", [dict(command, puppet_order=[], release_subjects=[{"core_nation": "P"}])])
         map_ref.nation_data["A"]["release_puppet_queue"] = [
-            {"core_nation": "P", "keep_cores": False, "turns_left": 1}]
+            {"core_nation": "P", "keep_cores": False, "release_type": c.PUPPET_TYPE_INTEGRATED,
+             "turns_left": 1}]
         with self.assertRaises(RealtimeError):
             driver.validate_draft("A", [dict(command, release_subjects=[
                 {"core_nation": "P", "release_type": c.PUPPET_TYPE_AUTONOMOUS}])])

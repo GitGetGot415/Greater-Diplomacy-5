@@ -8,7 +8,7 @@ from map_logic.ai import (ai_candidates, ai_commitments, ai_director, ai_evaluat
                           ai_personality, ai_politics, ai_prompts, ai_world)
 from map_logic.diplomacy import (diplomacy_messages, diplomacy_events,
                                  faction_leadership, war_calls)
-from data import migrations, queries
+from data import queries
 import data.constants as c
 
 def _longest_waiting_first(map_screen, jobs):
@@ -1404,10 +1404,7 @@ def process_scripted_events(map_screen, preview_request=None):
             if trigger_type == "Player Only" and nation_name not in human_players:
                 continue
             
-            evt_conditions = migrations.scripted_event_conditions(
-                evt, migrate=preview_request is None)
-
-            conditions = evt_conditions
+            conditions = evt.get("conditions", [])
             if not conditions:
                 continue
 
@@ -1636,7 +1633,7 @@ def process_scripted_events(map_screen, preview_request=None):
                     elif chain == "NAND": overall_met = not (overall_met and res)
                     
             if preview_request is not None:
-                actions = migrations.scripted_event_actions(evt)
+                actions = evt.get("actions", [])
                 matched, response = _scripted_event_response(
                     actions, preview_request[1], preview_request[2])
                 if matched and overall_met is None:
@@ -1648,7 +1645,7 @@ def process_scripted_events(map_screen, preview_request=None):
                 continue
 
             if overall_met:
-                actions = migrations.scripted_event_actions(evt)
+                actions = evt.get("actions", [])
                 
                 pending = data.setdefault("pending_diplomacy", {})
                 

@@ -9,9 +9,71 @@ from data.io import country_io
 import data.constants as c
 from data import migrations, queries
 # Preserve older imports without duplicate conversion rules.
-from data.migrations import repair_faction_rosters, saved_player_view as _saved_player_view
+from data.migrations import repair_faction_rosters
 from data.map import history_io
 from data.map.map_cache import OPTIONAL_LAYER_FILES
+
+
+def read_save_files(load_path):
+    """Read meta.json, map_data.json, and the history of one save folder.
+
+    Return (save_meta, map_data, history). save_meta is None for a map without
+    meta.json. The files are not converted. See migrations.upgrade_save.
+    """
+    save_meta = None
+    meta_path = os.path.join(load_path, "meta.json")
+    if os.path.exists(meta_path):
+        with open(meta_path, "r") as f:
+            save_meta = json.load(f)
+    json_path = os.path.join(load_path, "map_data.json")
+    if not os.path.exists(json_path):
+        raise FileNotFoundError(f"CRITICAL: map_data.json is missing from {load_path}")
+    with open(json_path, "r") as f:
+        map_data = json.load(f)
+    # Prefers the compressed form, falls back to the plain history.json that
+    # every save made before compression still carries.
+    return save_meta, map_data, history_io.read(load_path)
+
+
+def newer_version_message(load_path):
+    """Return the update message for a save from a newer game, or None."""
+    meta_path = os.path.join(load_path, "meta.json")
+    if not os.path.exists(meta_path):
+        return None
+    try:
+        with open(meta_path, "r") as f:
+            version = json.load(f).get("version")
+        migrations.check_version(version)
+    except migrations.NewerVersionError as error:
+        return str(error)
+    except (OSError, ValueError, AttributeError):
+        # The full load reports unreadable files with their own errors.
+        return None
+    return None
+
+
+def _saved_player_view(save_meta):
+    """Return the offline viewing identity and active-player list for a save.
+
+    Real-time matches save the authoritative server map. That map correctly
+    uses ``None`` during the live session, but a completed result loaded from
+    disk is an ordinary offline spectator replay.
+    """
+    realtime_match = save_meta.get("realtime_match")
+    if isinstance(realtime_match, dict) and realtime_match.get("offline_view") == "spectator":
+        return "Spectator", []
+    player_country = save_meta.get("player_country", "None")
+    loaded_players = save_meta.get("active_players", [player_country])
+    return player_country, [] if loaded_players == ["None"] else loaded_players
+
+
+def _repair_province(province, building_library):
+    """Give a loaded province its queue lists and drop buildings the active library lacks."""
+    province.setdefault("unit_queue", [])
+    province.setdefault("building_queue", [])
+    province["buildings"] = [name for name in province.get("buildings", []) if name in building_library]
+    resources = province.get("resources", {})
+    province["resources"] = resources if isinstance(resources, dict) else {}
 
 def _load_default_images(map_obj, *, scrub_images=True):
     """Helper to ensure image data keys exist."""
@@ -157,12 +219,9 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
             raise ValueError("The map id_map.png must be a PNG image.")
         world_state.map_w, world_state.map_h = struct.unpack(">II", header[16:24])
 
-   # 2. Load Metadata (The Save File)
-    save_meta = None
-    meta_path = os.path.join(load_path, "meta.json")
-    if os.path.exists(meta_path):
-        with open(meta_path, "r") as f:
-            save_meta = json.load(f)
+    # 2. Read the save and convert it to the current version before any of it is used.
+    save_meta, raw_map_data, history = read_save_files(load_path)
+    migrations.upgrade_save(save_meta if save_meta is not None else {}, raw_map_data, history)
 
     # 3. OVERRIDE: If we are loading an existing save file, prefer settings from inside the save
     # Do NOT override if we are in selection mode (starting a new scenario), so player UI choices are respected.
@@ -204,12 +263,10 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
     disabled_units = set(world_state.scenario_settings.get("unit_disabled", []))
     disabled_buildings = set(world_state.scenario_settings.get("building_disabled", []))
 
-    if load_path:
-        # Prefers the compressed form, falls back to the plain history.json that
-        # every save made before compression still carries.
-        replace_mapping(world_state, "history", history_io.read(load_path))
+    replace_mapping(world_state, "history", history)
 
     if save_meta:
+        # This compares saved research years with the active tree, so it runs on every load.
         migrations.migrate_infantry_research(save_meta, tech_tree, world_state.history)
 
     if map_screen.history_turn is not None and save_meta:
@@ -266,7 +323,7 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
 
     # --- 4. Set Player/Map Properties ---
     if save_meta:
-        saved_player_country, saved_active_players = migrations.saved_player_view(save_meta)
+        saved_player_country, saved_active_players = _saved_player_view(save_meta)
         session_state.player_country = saved_player_country
 
         # --- HOTSEAT FIX ---
@@ -316,14 +373,7 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
         queries.apply_historical_leader_timeline(world_state.nation_data, tm.year, tm.month_index, tm.day)
 
     # --- 5. Province Processing ---
-    json_path = os.path.join(load_path, "map_data.json")
-    if not os.path.exists(json_path):
-        raise FileNotFoundError(f"CRITICAL: map_data.json is missing from {load_path}")
-
-    with open(json_path, "r") as f:
-        replace_mapping(world_state, "raw_json_data", json.load(f))
-
-    # Load building library to scrub removed buildings (like fuel refineries) from old saves
+    replace_mapping(world_state, "raw_json_data", raw_map_data)
     bldg_lib = queries.get_building_library(map_screen)
 
     def _unit_base_type(unit):
@@ -362,16 +412,16 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
                 unit["air_cargo"] = [carried for carried in cargo
                                      if _unit_base_type(carried) not in disabled_units]
         v["units"] = [u for u in v.get("units", []) if _unit_base_type(u) not in disabled_units]
-        migrations.migrate_province_record(v, bldg_lib)
+        _repair_province(v, bldg_lib)
 
         v["json_key"], v["map_color"] = k, color_tuple
 
         world_state.map_data[color_tuple] = v
         world_state.id_to_province[v["id"]] = v
 
-    migrations.migrate_loaded_units(
-        world_state.map_data, world_state.nation_data, unit_lib,
-        save_meta.get("version") if save_meta else None)
+    # Units always take their stats from the active library.
+    queries.refresh_unit_stats(world_state.map_data, world_state.nation_data, unit_lib)
+    queries.normalize_air_orders(world_state.map_data)
     if load_presentation:
         queries.build_air_geometry(map_screen)
     else:
@@ -380,7 +430,8 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
 
     # --- REPAIR FACTION ROSTERS ---
     # Runs before the pre-war maps below, which are built off the rosters.
-    migrations.migrate_pending_responses(world_state.nation_data)
+    from map_logic.diplomacy import diplomacy_lifecycle
+    diplomacy_lifecycle.normalize_diplomacy_channels(world_state.nation_data)
     from map_logic.diplomacy import faction_records
     if save_meta and "factions" in save_meta:
         faction_records.restore(map_screen, save_meta["factions"])
@@ -418,7 +469,7 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
             if fac not in world_state.nation_data["FACTION_WAR_MAPS"]:
                 queries.save_faction_pre_war_map(fac, world_state.map_data, world_state.nation_data)
 
-    migrations.migrate_spawned_territories(world_state.nation_data, world_state.map_data)
+    queries.repair_spawned_territories(world_state.nation_data, world_state.map_data)
 
     # --- AUTO NAME STARTING UNITS ---
     unit_counters = {}

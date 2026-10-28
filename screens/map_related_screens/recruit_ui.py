@@ -1,6 +1,6 @@
 import pygame
 import data.constants as c
-from data import migrations, queries
+from data import queries
 from map_logic.rendering.font_manager import fonts
 from ui.bars import ui_bars
 from ui import text_utils
@@ -63,7 +63,7 @@ def get_queue_entry_text(item):
 
     raw_name = text_utils.truncate_chars(raw_name, ROW_NAME_MAX_CHARS)
 
-    turns = migrations.production_queue_turns(item)
+    turns = item["turns_remaining"]
     return f"{raw_name} ({turns}t)"
 
 

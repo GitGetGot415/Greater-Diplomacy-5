@@ -1,6 +1,6 @@
 from data.state_access import world_for, session_for
 import data.constants as c
-from data import migrations, queries
+from data import queries
 from map_logic import politics
 
 def process_national_research(map_screen):
@@ -44,8 +44,6 @@ def process_national_research(map_screen):
                                 * politics.research_multiplier(world_state.nation_data, country_name)
                                 * (1.0 + faction_bonus))
             # -----------------------------------
-            
-            migrations.migrate_research_project(project)
             
             project["points_remaining"] -= effective_points
 

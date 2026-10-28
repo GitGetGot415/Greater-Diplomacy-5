@@ -108,17 +108,9 @@ def process_upgrades(map_screen):
                 if order["turns_left"] <= 0:
                     target_type = order.get("target_type")
                     if target_type and target_type in unit_library:
-                        stats = unit_library[target_type]
-                        hp_pct = unit.get("health", 1) / max(1, unit.get("max_health", 1))
-
+                        # The shared stat refresh keeps the health fraction.
                         unit["type"] = target_type
-                        unit["max_health"] = stats.get("health", c.DEFAULT_UNIT_HP)
-                        unit["attack"] = stats.get("attack", c.DEFAULT_UNIT_ATK)
-                        unit["defense"] = stats.get("defense", c.DEFAULT_UNIT_DEF)
-                        unit["speed"] = stats.get("speed", c.DEFAULT_UNIT_SPD)
-
-                        # Maintain percentage health upon upgrading
-                        unit["health"] = unit["max_health"] * hp_pct
+                        queries.apply_library_stats(unit, unit_library)
 
                     # Reset back to a blank move order
                     unit["order"] = {"type": "MOVE", "path": []}
