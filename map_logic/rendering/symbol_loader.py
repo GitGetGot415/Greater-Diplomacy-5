@@ -651,6 +651,8 @@ def _unit_art_request(name):
     if name in library:
         metadata = queries.get_unit_metadata(name, library)
         family = metadata.get("settings_family", metadata["family"])
+        if metadata.get("tier_kind") == "roman":
+            return _normalize_family(family), ROMAN_TO_INT[metadata["tier_label"].casefold()]
         return _normalize_family(family), metadata["tier_order"] or None
     # Synthetic art keys and metadata-free assets retain the filename adapter.
     year_match = re.fullmatch(r"(.+?) Type (\d{4})", name, re.IGNORECASE)
@@ -739,6 +741,10 @@ def _resolve_name(name, style=None, country=None):
 def _resolve_name_uncached(name, style=None, country=None):
     if style is None:
         style = c.UNIT_ART_STYLE
+
+    from data import queries
+    stats = queries.get_unit_library().get(name, {})
+    name = stats.get("metadata", {}).get("art_name", name)
 
     if style != "classic":
         resolved = _resolve_filename_unit(name, style, country)

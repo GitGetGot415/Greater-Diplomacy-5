@@ -684,13 +684,18 @@ RANDOM_SCENARIO_SINGLE_TILE_START = False
 RANDOM_SCENARIO_DEFAULT_RESOURCE_CHANCE = 0.15
 
 # Unlocked tech exception for starting exactly in 1910
+# Infantry entries use equipment dates. Other entries specify starting levels.
 DEFAULT_1910_TECH = {
     "infantry_type": 1,
     "cavalry": 1,
     "militia": 1,
+    "artillery": 1,
     "destroyer": 1,
     "basic_factory": 1
 }
+
+# Save these year lists so inserted equipment stages preserve completed research.
+DATED_UNIT_RESEARCH_TRACKS = ("infantry_type", "cavalry", "militia", "artillery")
 
 # ==========================================
 # WARGOALS & PEACE TREATIES

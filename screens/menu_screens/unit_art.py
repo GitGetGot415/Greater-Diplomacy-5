@@ -100,9 +100,8 @@ def _family_kind(base, first_name):
     """Whether a family's tiers are suffixed with a roman numeral ('Light
     Tank I'), a calendar year ('Infantry Type 1910'), or nothing at all (a
     single-tier family like 'Railgun') -- drives how "years"/"numbers"
-    display mode reads a tier's level in _level_label. `first_name` is any
-    member of the family (its own suffix shape is the same for all of
-    them)."""
+    display mode reads a tier's level in _level_label.
+    The gallery checks for mixed suffix kinds before it uses this result."""
     return queries.get_unit_metadata(first_name).get("tier_kind", "other")
 
 
@@ -203,8 +202,10 @@ def build_gallery_rows(style, country=None, level_display="default", show_all_ar
         resolved = [symbol_loader.resolve(n, style, country) for n in names]
 
         kind = _family_kind(base, names[0])
+        if len({queries.get_unit_metadata(name).get("tier_kind", "other") for name in names}) > 1:
+            kind = "mixed"
         years_list = None
-        if level_display == "years" and kind in ("single", "roman"):
+        if level_display == "years" and kind in ("single", "roman", "mixed"):
             tech_key = queries.get_unit_tech_key(base)
             years_list = queries.get_tech_tree().get(tech_key, {}).get("years")
         idx_by_name = {name: i + 1 for i, name in enumerate(names)} if level_display == "numbers" else None

@@ -69,6 +69,28 @@ AI maintenance and unit orders use map_logic/unit_actions.py after selection.
 The diplomatic candidate collector checks shared availability before ranking or model selection.
 AIWorld retains its source world's scenario settings. Evaluation reads that world's active libraries.
 
+HISTORICAL INFANTRY EQUIPMENT
+----------------------------
+
+The Infantry category includes regular infantry, militia, cavalry, and artillery.
+These research tracks include equipment stages before the original 1910 units.
+Field artillery and heavy artillery use the same research track.
+Earlier units use existing images through metadata.art_name.
+Research labels and image requests come from level_names and level_icons in the active research library.
+
+Read equipment dates, statistics, prices, and research costs from data/json/unit_data.json and data/json/research_template.json.
+Edit data/generators/recipes.py to regenerate this content.
+Unit identifiers do not determine research levels.
+Explicit research metadata connects each unit to its equipment year.
+Older Roman-numeral unit identifiers remain valid.
+Upgrades stay within the same family and use the country's completed research.
+
+Time-appropriate starting research supplies equipment for the selected date.
+The first timeline year includes the factory research needed for army recruitment.
+The special 1910 starting package includes the original infantry, militia, cavalry, and artillery equipment.
+Vehicle infantry retains its separate vehicle unlocks.
+See documentation/data_migrations.txt for saved research compatibility.
+
 AIRCRAFT VALUATION
 ------------------
 

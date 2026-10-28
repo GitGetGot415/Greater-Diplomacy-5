@@ -209,6 +209,9 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
         # every save made before compression still carries.
         replace_mapping(world_state, "history", history_io.read(load_path))
 
+    if save_meta:
+        migrations.migrate_infantry_research(save_meta, tech_tree, world_state.history)
+
     if map_screen.history_turn is not None and save_meta:
         _apply_history_snapshot(save_meta, world_state.history, map_screen.history_turn)
 

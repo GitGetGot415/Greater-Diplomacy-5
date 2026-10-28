@@ -99,6 +99,11 @@ See documentation/general_info.txt, BUILDING OUTPUT RESEARCH, for stacking, save
 RESEARCH EDITING
 ----------------
 
+The Infantry category includes equipment stages before 1910.
+Technology details show the units unlocked by each stage.
+Earlier units use existing images.
+See documentation/non_llm_ai.txt, HISTORICAL INFANTRY EQUIPMENT, for shared equipment and upgrade rules.
+
 The editor's research screen sets a country's starting research.
 Select a country in Map Research Editor to open its research timeline and category tabs.
 Click an incomplete technology level to grant it and its prerequisites immediately.

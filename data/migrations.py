@@ -177,8 +177,13 @@ def legacy_unit_metadata(name, stats):
         tier = sum(-values[ch] if i + 1 < len(letters) and values[ch] < values[letters[i + 1]]
                    else values[ch] for i, ch in enumerate(letters))
     research = {"tech": key, "level": max(1, tier if roman else 0)}
-    if key == "infantry_type" and year:
+    if key in c.DATED_UNIT_RESEARCH_TRACKS and year:
         research = {"tech": key, "year": tier}
+    elif key in LEGACY_INFANTRY_RESEARCH_YEARS and roman:
+        years = LEGACY_INFANTRY_RESEARCH_YEARS[key]
+        if tier <= len(years):
+            tier = years[tier - 1]
+            research = {"tech": key, "year": tier}
     requirements = [research.copy()]
     if key in c.VEHICLE_INFANTRY_GATES:
         requirements = [{"tech": c.VEHICLE_INFANTRY_GATES[key], "level": 1},
@@ -268,6 +273,66 @@ def migrate_history_country_records(history):
 
 LEGACY_RESEARCH_DEFAULT_DAYS = 30
 LEGACY_RESEARCH_POINTS_PER_DAY = 10
+
+# Original GD5 equipment dates. These describe older saved level numbers.
+LEGACY_INFANTRY_RESEARCH_YEARS = {
+    "infantry_type": list(range(1910, 2051)),
+    "cavalry": list(range(1910, 1927, 4)),
+    "militia": list(range(1910, 2051, 5)),
+    "artillery": list(range(1910, 2051, 5)),
+}
+
+
+def migrate_infantry_research(saved, tech_tree, history=None):
+    """Preserve equipment years when earlier research stages are inserted."""
+    sources = saved.get("research_years", LEGACY_INFANTRY_RESEARCH_YEARS)
+    if not isinstance(sources, dict):
+        raise ValueError("Saved research_years must contain technology year lists.")
+    targets = {key: list(tech_tree[key]["years"])
+               for key in c.DATED_UNIT_RESEARCH_TRACKS if key in tech_tree}
+
+    def convert(research, pending=()):
+        if not isinstance(research, dict):
+            return
+        for key, target in targets.items():
+            if key not in sources or key not in research:
+                continue
+            source = sources[key]
+            if source == target:
+                continue
+            if (not isinstance(source, list) or not source
+                    or any(type(year) is not int for year in source)
+                    or source != sorted(set(source))):
+                raise ValueError(f"Saved research years for {key} must be increasing integers.")
+            level = research[key]
+            if type(level) is not int or level < 0:
+                raise ValueError(f"Saved research level for {key} must be a nonnegative integer.")
+            if level:
+                # Retain levels beyond an older content cap instead of discarding them.
+                year = source[min(level, len(source)) - 1]
+                research[key] = sum(value <= year for value in target) + max(0, level - len(source))
+            elif key in pending:
+                research[key] = sum(value < source[0] for value in target)
+
+    def convert_countries(countries):
+        if not isinstance(countries, dict):
+            return
+        for country in countries.values():
+            if not isinstance(country, dict):
+                continue
+            pending = set(country.get("research_progress", {}))
+            pending.update(project.get("tech_name") for project in country.get("research_queue", []))
+            if isinstance(country.get("current_research"), str):
+                pending.add(country["current_research"])
+            convert(country.get("research"), pending)
+
+    convert(saved.get("default_research"))
+    convert_countries(saved.get("nation_data"))
+    for snapshot in (history or {}).values():
+        if isinstance(snapshot, dict):
+            convert_countries(snapshot.get("nation_data"))
+    saved["research_years"] = targets
+    return saved
 
 
 def migrate_research_project(project):

@@ -555,6 +555,7 @@ def export_move_file(map_ref, file_path, player_key):
     
     player_data = {
         "nation_data": copy.deepcopy(save_dict.get("nation_data", {}).get(cid, {})),
+        "research_years": save_dict["research_years"],
         "provinces": {},
         # A move must be able to say "I have no units left".  Older moves
         # inferred that from a non-empty province update, which lost an
@@ -1120,6 +1121,11 @@ def load_move_files(map_ref, move_file_paths, keys_dict, *, accept_stat_mismatch
         try:
             if not isinstance(world_state.nation_data.get(cid), dict):
                 raise ValueError("The country does not exist in the host's game.")
+            research_snapshot = {"nation_data": {cid: copy.deepcopy(nd)}}
+            if "research_years" in player_data:
+                research_snapshot["research_years"] = player_data["research_years"]
+            migrations.migrate_infantry_research(research_snapshot, queries.get_tech_tree(map_ref))
+            nd = research_snapshot["nation_data"][cid]
             queries.validate_air_drop_recovery_armies(
                 cid, nd.get("armies", world_state.nation_data[cid].get("armies", [])),
                 world_state.nation_data, world_state.map_data)

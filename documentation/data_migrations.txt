@@ -39,6 +39,16 @@ Production queues, custom production choices, and upgrade targets use the same n
 Old scripted Spawn Unit actions also accept unnumbered names.
 Research levels and progress remain unchanged.
 
+Equipment research saves include research_years for infantry, cavalry, militia, and artillery.
+data/queries.py copies these public year lists from the active research library when it builds a save.
+The map loader converts completed research by equipment year before it restores country templates or selects a historical turn.
+History, default research, paused projects, and active project points retain their meaning.
+Older files without research_years use the original research dates in data/migrations.py.
+An older unfinished first project receives its earlier equipment stages before that project continues.
+An unresearched track without a pending project stays unresearched.
+New saves write the current year lists, so another load does not apply the conversion again.
+Tournament snapshots, older move projections, real-time snapshots, and imports use the same research-year representation.
+
 Older aircraft Trucks unpack on land or become Convoys at sea, preserving identity and health fraction.
 Old Truck conversion orders become Convoy orders on a coast and cancel inland.
 Keep land paths only when queries.air_unit_can_move_on_ground permits them.

@@ -837,6 +837,12 @@ def get_hildehrand_choice():
     variant = data.get("variant") if isinstance(data, dict) else None
     return variant if variant in discover_character_images() else DEFAULT_PORTRAIT
 
+def get_research_years(*, context=None):
+    """Copy equipment research dates for saves and snapshots."""
+    tree = get_tech_tree(context)
+    return {key: list(tree[key]["years"]) for key in c.DATED_UNIT_RESEARCH_TRACKS if key in tree}
+
+
 def get_time_appropriate_research(start_year, *, context=None):
     """Calculates time-appropriate research level mapping for a given start year."""
     struct = get_tech_tree(context)
@@ -850,7 +856,10 @@ def get_time_appropriate_research(start_year, *, context=None):
     tech_timeline = {tech: data.get("years", [1850]) for tech, data in struct.items()}
     
     if start_year == 1910:
-        baseline_tech = getattr(c, 'DEFAULT_1910_TECH', {}).copy()
+        baseline_tech = {
+            tech: (sum(year <= start_year for year in tech_timeline.get(tech, []))
+                   if struct.get(tech, {}).get("category") == "INFANTRY" else level)
+            for tech, level in c.DEFAULT_1910_TECH.items()}
     else:
         baseline_tech = {}
         for tech, years in tech_timeline.items():
@@ -861,6 +870,10 @@ def get_time_appropriate_research(start_year, *, context=None):
                 lvl = sum(1 for y in years if y < start_year)
             if lvl > 0:
                 baseline_tech[tech] = lvl
+
+    # The first timeline year needs the factory technology used for army recruitment.
+    if start_year == c.START_YEAR and "basic_factory" in struct:
+        baseline_tech["basic_factory"] = sum(year <= start_year for year in tech_timeline["basic_factory"])
 
     res = res_template.copy()
     res.update(baseline_tech)
@@ -1729,6 +1742,9 @@ def get_tech_unlocks(tech_key, level, *, context=None):
         unlocks.append("Invisible to neutral/enemy nations unless engaged in active combat")
 
     for name, stats in get_unit_library(context).items():
+        if (tech_key in c.DATED_UNIT_RESEARCH_TRACKS
+                and get_unit_research_requirement(name, context=context) == (tech_key, level)):
+            unlocks.append(name)
         if stats.get("air_role") and get_unit_research_requirement(name, context=context) == (tech_key, level):
             unlocks.extend(get_air_unit_traits(name, context=context))
 
@@ -3691,6 +3707,7 @@ def build_save_dict(map_screen, *, include_provinces=True, compact_nations=False
         "scenario_settings": scenario_settings,
         "script_variables": world_state.script_variables,
         "default_research": world_state.default_research,
+        "research_years": get_research_years(context=map_screen),
         "nation_data": world_state.nation_data,
         "factions": copy.deepcopy(world_state.factions) if hasattr(world_state, "factions")
                     else migrations.faction_records(world_state.nation_data),

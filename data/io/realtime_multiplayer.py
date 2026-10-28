@@ -895,7 +895,12 @@ def apply_authoritative_snapshot(map_ref, snapshot: dict[str, Any]) -> None:
             }
 
     nation_data = copy.deepcopy(snapshot.get("nation_data", world_state.nation_data))
-    from data import migrations
+    from data import migrations, queries
+    if "nation_data" in snapshot:
+        research_snapshot = {"nation_data": nation_data}
+        if "research_years" in snapshot:
+            research_snapshot["research_years"] = snapshot["research_years"]
+        migrations.migrate_infantry_research(research_snapshot, queries.get_tech_tree(map_ref))
     migrations.migrate_country_records(nation_data)
     migrations.migrate_diplomatic_records(nation_data)
     incoming_player = nation_data.get(player_country, {}) if isinstance(nation_data, dict) else {}

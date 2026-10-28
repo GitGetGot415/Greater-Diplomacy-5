@@ -480,6 +480,7 @@ def build_save_payload(parsed):
                               "ai_disabled": False},
         "script_variables": [],
         "default_research": research,
+        "research_years": queries.get_research_years(),
         "nation_data": nation_data,
         "provinces": {
             key: {

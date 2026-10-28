@@ -74,6 +74,8 @@ MODAL_BODY_START_Y = 170
 MODAL_LINE_STEP_Y = 30
 MODAL_SUBHEAD_STEP_Y = 25
 MODAL_ENTITY_PADDING_Y = 10
+MODAL_COMPACT_LINE_STEP_Y = 20
+MODAL_COMPACT_ENTITY_PADDING_Y = 5
 MODAL_TEXT_RIGHT_MARGIN = 20
 MODAL_TRAIT_LINE_GAP = 2
 MODAL_BTN_Y_OFFSET = 430
@@ -495,7 +497,11 @@ class Research_Screen(GameState):
         Tables define year labels, fixed names, and "<Name> Lvl <n>" labels.
         Other techs use the title-cased key and a Roman numeral.
         """
-        content_name = self.tech_tree.get(tech_key, {}).get("display_name")
+        tech = self.tech_tree.get(tech_key, {})
+        level_name = tech.get("level_names", {}).get(str(lvl))
+        if level_name:
+            return level_name
+        content_name = tech.get("display_name")
         if content_name:
             if self.tech_tree[tech_key]["max_lvl"] > 1:
                 return f"{content_name} {c.ROMAN_NUMERALS.get(lvl, str(lvl))}"
@@ -686,7 +692,8 @@ class Research_Screen(GameState):
             # 2. Use our new helper to get the size
             btn_size = self.get_button_size(tech_key, display_name)
             raw_btn_w, raw_btn_h = c.SIZES.get(btn_size, (80, 80))
-            icon_name = TECH_ICON_OVERRIDES.get(tech_key, display_name)
+            icon_name = self.tech_tree[tech_key].get("level_icons", {}).get(
+                str(lvl), TECH_ICON_OVERRIDES.get(tech_key, display_name))
 
             # A style's research_scale.json can ask for bigger/smaller node
             # buttons overall ("button_scale") and/or stretch a specific
@@ -886,18 +893,26 @@ class Research_Screen(GameState):
         """Wrap capability notes once when the research detail panel changes."""
         self.modal_unlocks = queries.get_tech_unlocks(
             self.active_modal["tech_key"], self.active_modal["level"], context=self.map_screen)
+        self.modal_entities = list(dict.fromkeys(
+            name for name in [self.active_modal["display_name"], *self.modal_unlocks]
+            if name in self.unit_library or name in self.building_library))
+        compact = len(self.modal_entities) > 1
+        self.modal_body_line_step = MODAL_COMPACT_LINE_STEP_Y if compact else MODAL_LINE_STEP_Y
+        self.modal_subhead_step = MODAL_COMPACT_LINE_STEP_Y if compact else MODAL_SUBHEAD_STEP_Y
+        self.modal_entity_padding = MODAL_COMPACT_ENTITY_PADDING_Y if compact else MODAL_ENTITY_PADDING_Y
         self.modal_building_outputs = {
             name: queries.get_building_output(name, self.subject_data.get("research", {}),
                                              self.building_library, context=self.map_screen)
             for name in [self.active_modal["display_name"], *self.modal_unlocks]
             if name in self.building_library}
         has_air_traits = self.unit_library.get(self.active_modal["display_name"], {}).get("air_role")
-        font = fonts.get("small" if has_air_traits else "normal")
+        self.modal_body_font = fonts.get("small" if has_air_traits or compact else "normal")
+        font = self.modal_body_font
         width = MODAL_WIDTH - MODAL_TEXT_X - MODAL_TEXT_RIGHT_MARGIN
         self.modal_unlock_surfaces = [font.render(line, True, (150, 255, 150))
             for unlock in self.modal_unlocks for line in wrap_text(f"- {unlock}", font, width)]
         self.modal_unlock_line_step = (font.get_height() + MODAL_TRAIT_LINE_GAP
-                                       if has_air_traits else MODAL_LINE_STEP_Y)
+                                       if has_air_traits else self.modal_body_line_step)
         
     def close_modal(self):
         self.active_modal = None
@@ -1185,22 +1200,15 @@ class Research_Screen(GameState):
         # Show what this tech unlocks - one per line so a long bonus string
         # doesn't get crammed alongside others and run off the edge of the modal.
         unlocks = self.modal_unlocks
+        font_small = self.modal_body_font
         if unlocks:
             surface.blit(font_small.render("Unlocks:", True, (150, 255, 150)), (text_x, y_off))
-            y_off += MODAL_LINE_STEP_Y
+            y_off += self.modal_body_line_step
             for rendered in self.modal_unlock_surfaces:
                 surface.blit(rendered, (text_x, y_off))
                 y_off += self.modal_unlock_line_step
             
-        # Collect entities to show stats for (both the tech itself AND anything it unlocks)
-        entities_to_show = []
-        if display_name in self.unit_library or display_name in self.building_library:
-            entities_to_show.append(display_name)
-            
-        for unlock in unlocks:
-            if unlock in self.unit_library or unlock in self.building_library:
-                if unlock not in entities_to_show:
-                    entities_to_show.append(unlock)
+        entities_to_show = self.modal_entities
                     
         # Fallback ONLY if there's no unit, no building, and no programmatic unlocks
         if not entities_to_show and not unlocks:
@@ -1214,7 +1222,7 @@ class Research_Screen(GameState):
             # Draw a sub-header if the tech unlocks multiple things or if the unlocked item has a different name than the tech
             if entity != display_name or len(entities_to_show) > 1:
                 surface.blit(font_small.render(f"Stats for {entity}:", True, c.COLOR_GOLD_HIGHLIGHT), (text_x, y_off))
-                y_off += MODAL_SUBHEAD_STEP_Y
+                y_off += self.modal_subhead_step
                 
             if entity in self.unit_library:
                 s = self.unit_library[entity]
@@ -1225,7 +1233,7 @@ class Research_Screen(GameState):
                     s.get('attack', 0), s.get('defense', 0), s.get('health', 0), s.get('speed', 0),
                     text_x, y_off, (200, 200, 200)
                 )
-                y_off += MODAL_LINE_STEP_Y
+                y_off += self.modal_body_line_step
 
                 if 'bombard_attack' in s:
                     draw_bombardment_stats(
@@ -1233,14 +1241,14 @@ class Research_Screen(GameState):
                         s.get('bombard_attack', 0), s.get('bombard_range', 0),
                         text_x, y_off, (200, 200, 200)
                     )
-                    y_off += MODAL_LINE_STEP_Y
+                    y_off += self.modal_body_line_step
 
                 draw_resource_string(
                     surface, font_small, "Production Cost:   ",
                     s.get('cost_materials', 0), s.get('cost_manpower', 0), s.get('cost_fuel', 0),
                     text_x, y_off, (200, 200, 200)
                 )
-                y_off += MODAL_LINE_STEP_Y
+                y_off += self.modal_body_line_step
                 
             elif entity in self.building_library:
                 if entity == "Basic Factory" and self.map_screen and self.subject in self.map_screen.nation_data:
@@ -1250,7 +1258,7 @@ class Research_Screen(GameState):
 
                 txt1 = f"Construction Time: {max(1, s.get('time',0) // 1)} turns"
                 surface.blit(font_small.render(txt1, True, c.UI_TEXT_LIGHT), (text_x, y_off))
-                y_off += MODAL_LINE_STEP_Y
+                y_off += self.modal_body_line_step
                 
                 draw_resource_string(
                     surface, font_small, "Yield (Per Turn):   ",
@@ -1259,16 +1267,16 @@ class Research_Screen(GameState):
                     self.modal_building_outputs[entity]["fuel"],
                     text_x, y_off, (150, 255, 150), is_yield=True
                 )
-                y_off += MODAL_LINE_STEP_Y
+                y_off += self.modal_body_line_step
                 
                 draw_resource_string(
                     surface, font_small, "Construction Cost:   ",
                     s.get('cost_materials', 0), s.get('cost_manpower', 0), s.get('cost_fuel', 0),
                     text_x, y_off, (200, 200, 200)
                 )
-                y_off += MODAL_LINE_STEP_Y
+                y_off += self.modal_body_line_step
                 
-            y_off += MODAL_ENTITY_PADDING_Y # Padding between items
+            y_off += self.modal_entity_padding
 
     def cache_completed_text_list(self, res_levels):
         """Lay out the completed overview at the input/state boundary."""

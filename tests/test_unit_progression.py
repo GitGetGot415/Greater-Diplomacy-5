@@ -25,7 +25,7 @@ class UnitProgressionTests(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertEqual(json.loads(Path(path).read_text(encoding='utf-8')), json.loads(builder()))
 
-    def test_ongoing_unit_tracks_reach_the_timeline_end_at_their_own_intervals(self):
+    def test_ongoing_unit_tracks_match_their_content_dates_within_the_timeline(self):
         tracks = ('infantry_type', 'militia', 'artillery', 'armored_car', 'light_tank',
                   'main_battle_tank', 'destroyer', 'submarine', 'aircraft_carrier',
                   'jet_fighter', 'jet_bomber', 'jet_transport')
@@ -34,10 +34,16 @@ class UnitProgressionTests(unittest.TestCase):
                 entry = self.tree[key]
                 years = entry['years']
                 self.assertEqual(entry['max_lvl'], len(years))
-                interval = years[-1] - years[-2]
-                self.assertGreater(interval, 0)
+                self.assertEqual(years, sorted(set(years)))
+                self.assertGreaterEqual(years[0], c.START_YEAR)
                 self.assertLessEqual(years[-1], c.END_YEAR)
-                self.assertGreater(years[-1] + interval, c.END_YEAR)
+                # Content can cover only part of the playable timeline.
+                # Every dated research level must still unlock equipment.
+                equipment_levels = {
+                    queries.get_unit_research_requirement(name, self.library)[1]
+                    for name, stats in self.library.items()
+                    if stats['metadata']['research']['tech'] == key}
+                self.assertEqual(equipment_levels, set(range(1, entry['max_lvl'] + 1)))
 
     def test_final_unit_tiers_agree_for_unlocks_upgrades_and_ai(self):
         research = self.final_research()

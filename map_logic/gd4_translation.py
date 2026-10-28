@@ -483,6 +483,7 @@ def build_save_payload(parsed, base_map_dir=None):
                               "days_per_turn": 30, "use_scripted_events": True,
                               "ai_disabled": False},
         "script_variables": [], "default_research": date_research,
+        "research_years": queries.get_research_years(),
         "nation_data": nation_data, "provinces": provinces,
     }
     notes = list(parsed.get("warnings", []))
