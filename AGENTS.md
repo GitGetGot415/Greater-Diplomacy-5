@@ -21,9 +21,7 @@ AI means artificial intelligence. UI means user interface.
 
 ## Required Rules
 
-- **Never commit to `main` without explicit user approval.**
-  Use a separate branch for risky or multi-part work if useful.
-  Do not create any commit unless the user requests or approves it.
+- **Never stage changes, commit to `main` or make another branch without explicit user approval.**
 - Use `color`, never `colour`, in identifiers, UI text, comments, and documentation.
 - Preserve intentional comments.
   Update inaccurate comments. Keep explanations of rules that are not obvious.
