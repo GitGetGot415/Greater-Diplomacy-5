@@ -1689,9 +1689,11 @@ def get_tech_unlocks(tech_key, level, *, context=None):
     for bonus in get_tech_tree(context).get(tech_key, {}).get("building_output_bonuses", []):
         targets = list(bonus.get("building_families", []))
         targets.extend(group.replace("_", " ").title() for group in bonus.get("building_groups", []))
-        for resource, amount in bonus["outputs"].items():
+        for resource, amount in bonus.get("outputs", {}).items():
             increase = ((1.0 + amount) ** level - 1.0) * 100
             unlocks.append(f"+{increase:g}% {resource.title()} Output: {', '.join(targets)}")
+        for resource, amount in bonus.get("flat_outputs", {}).items():
+            unlocks.append(f"+{amount * level:g} {resource.title()} Output: {', '.join(targets)}")
     bldg_lib = get_building_library(context)
     for b_name in bldg_lib.keys():
         req_tech, req_lvl = get_building_required_tech(b_name)
@@ -2500,8 +2502,8 @@ def get_siphon_rates(nation_data_block):
     return nation_data_block.setdefault("siphon_rates", {res: 0.0 for res in c.ECON_RESOURCE_KEYS})
 
 
-def get_building_output_multipliers(research, building_library=None, *, context=None):
-    """Multiply researched bonuses by building family or group and output resource."""
+def get_building_output_modifiers(research, building_library=None, *, context=None):
+    """Prepare percentage multipliers and flat additions for each building output."""
     if context is None:
         context = building_library
     if building_library is None:
@@ -2510,50 +2512,70 @@ def get_building_output_multipliers(research, building_library=None, *, context=
     bonuses = [(bonus, min(level, tree[tech]["max_lvl"]))
                for tech, level in research.items() if level > 0 and tech in tree
                for bonus in tree[tech].get("building_output_bonuses", [])]
-    if not bonuses:
-        return {}
     multipliers = {}
+    additions = {}
+    if not bonuses:
+        return {"multipliers": multipliers, "additions": additions}
     for name, stats in building_library.items():
         values = {res: 1.0 for res in c.ECON_RESOURCE_KEYS}
+        flat = {res: 0.0 for res in c.ECON_RESOURCE_KEYS}
         family = get_base_item_name(name, context=context)
         for bonus, level in bonuses:
             if (family in bonus.get("building_families", [])
                     or stats.get("group") in bonus.get("building_groups", [])):
-                for resource, amount in bonus["outputs"].items():
+                for resource, amount in bonus.get("outputs", {}).items():
                     values[resource] *= (1.0 + amount) ** level
+                for resource, amount in bonus.get("flat_outputs", {}).items():
+                    flat[resource] += amount * level
         multipliers[name] = values
-    return multipliers
+        additions[name] = flat
+    return {"multipliers": multipliers, "additions": additions}
 
 
-def get_building_output(building_name, research, building_library=None, *, context=None, multipliers=None):
+def get_building_output_multipliers(research, building_library=None, *, context=None):
+    """Return percentage multipliers for callers that use the existing interface."""
+    return get_building_output_modifiers(research, building_library, context=context)["multipliers"]
+
+
+def get_building_output(building_name, research, building_library=None, *, context=None, multipliers=None, modifiers=None):
     """Return building yields with national research bonuses before territory penalties."""
     if building_library is None:
         building_library = get_building_library(context)
+    if modifiers is None:
+        modifiers = get_building_output_modifiers(research, building_library, context=context)
     if multipliers is None:
-        multipliers = get_building_output_multipliers(research, building_library, context=context)
+        multipliers = modifiers["multipliers"]
     stats = building_library.get(building_name, {})
     values = multipliers.get(building_name, {})
-    return {res: stats.get(f"prod_{res}", 0) * values.get(res, 1.0) for res in c.ECON_RESOURCE_KEYS}
+    additions = modifiers["additions"].get(building_name, {})
+    return {res: (stats.get(f"prod_{res}", 0) + additions.get(res, 0)) * values.get(res, 1.0)
+            for res in c.ECON_RESOURCE_KEYS}
 
 
-def get_province_building_output(province, research, building_library=None, *, context=None, multipliers=None):
+def get_province_building_output(province, research, building_library=None, *, context=None, multipliers=None, modifiers=None):
     """Apply building bonuses and territory penalties, including factory construction yields."""
     if building_library is None:
         building_library = get_building_library(context)
+    if modifiers is None:
+        modifiers = get_building_output_modifiers(research, building_library, context=context)
     if multipliers is None:
-        multipliers = get_building_output_multipliers(research, building_library, context=context)
+        multipliers = modifiers["multipliers"]
     territory_mult = 1.0 if has_core(province.get("owner"), province) else c.NON_CORE_BUILDING_MULTIPLIER
     output = {res: 0 for res in c.ECON_RESOURCE_KEYS}
     for name in province.get("buildings", []):
-        yields = get_building_output(name, research, building_library, multipliers=multipliers)
+        yields = get_building_output(name, research, building_library, context=context,
+                                    multipliers=multipliers, modifiers=modifiers)
         for res in c.ECON_RESOURCE_KEYS:
             output[res] += int(yields[res] * territory_mult)
     for project in province.get("building_queue", []):
         if project.get("item_name") == "Basic Factory":
             remaining = project.get("turns_remaining", c.BASIC_FACTORY_TURNS)
-            materials = 400 if remaining < 5 else (320 if remaining < 9 else (240 if remaining < 13 else (160 if remaining < 17 else 80)))
-            bonus = multipliers.get("Basic Factory", {}).get("materials", 1.0)
-            output["materials"] += int(materials * bonus * territory_mult)
+            fractions = c.BASIC_FACTORY_CONSTRUCTION_OUTPUT_FRACTIONS
+            stage_turns = max(1, c.BASIC_FACTORY_TURNS // len(fractions))
+            stage = int(max(0, min(len(fractions) - 1, (c.BASIC_FACTORY_TURNS - remaining) // stage_turns)))
+            materials = get_building_output("Basic Factory", research, building_library, context=context,
+                                           multipliers=multipliers, modifiers=modifiers)["materials"]
+            output["materials"] += int(materials * fractions[stage] * territory_mult)
     return output
 
 
@@ -2563,13 +2585,13 @@ def calculate_all_economies(map_data, nation_data, *, context=None):
         context = nation_data
     unit_lib = get_unit_library(context)
     bldg_lib = get_building_library(context)
-    building_multipliers = {}
+    building_modifiers = {}
 
     # Initialize data structure for all active nations
     econ_data = {}
     for name, n_data in list(nation_data.items()):
         res_data = n_data.get("research", {})
-        building_multipliers[name] = get_building_output_multipliers(res_data, bldg_lib, context=context)
+        building_modifiers[name] = get_building_output_modifiers(res_data, bldg_lib, context=context)
         bergius_bonus = c.BERGIUS_FUEL_BONUS if res_data.get("bergius_process", 0) > 0 else 0
         manpower_bonus = res_data.get("general_recruitment", 0) * c.GENERAL_RECRUITMENT_BONUS
         resource_refining_mult = 1.0 + res_data.get("resource_refining", 0) * c.RESOURCE_REFINING_BONUS_PER_LVL
@@ -2617,7 +2639,7 @@ def calculate_all_economies(map_data, nation_data, *, context=None):
             # Buildings
             building_output = get_province_building_output(
                 province, nation_data[owner].get("research", {}), bldg_lib,
-                multipliers=building_multipliers[owner])
+                modifiers=building_modifiers[owner])
             for res in c.ECON_RESOURCE_KEYS:
                 bd[res]["buildings"] += building_output[res]
 

@@ -215,23 +215,28 @@ data/generators/recipes.py defines the matching generation recipes.
 Each bonus selects building_families, building_groups, or both. Either selector can match a building.
 Family names come from queries.get_base_item_name. Group names come from data/json/building_data.json.
 The outputs dictionary maps materials, manpower, or fuel to a fractional increase per completed research level.
+The optional flat_outputs dictionary adds a fixed amount per completed research level.
 Oil production uses the fuel resource key.
 
 Example bonus: {"building_groups": ["recruitment"], "outputs": {"manpower": 0.5, "fuel": 0.25}}.
 This example increases manpower output by 50% and fuel output by 25% per level for recruitment buildings.
-It does not create output where the building's base output is zero.
+Percentage bonuses do not create output where the building's base output is zero.
+Flat bonuses can add output to a resource with zero base output.
 Use building_families to select specific families within a group.
 Use the existing req, years, max_lvl, cost, and display_name fields for the technology.
 Add its timeline row in screens/map_related_screens/research.py and its PNG image in assets/images.
 
-Bonuses multiply together. Each completed research level multiplies the selected output by one plus its fractional increase.
+Add flat bonuses to the building's base output first.
+Percentage bonuses multiply that total. Each completed level multiplies the selected output by one plus its fractional increase.
 Two 100% bonuses give four times the base output.
 Bonuses affect existing buildings, new buildings, and Basic Factory construction yields.
+Basic Factory construction yields use a fraction of its completed materials output, including research bonuses.
+data/constants.py defines the construction output fractions and stage timing.
 Unselected outputs, province yields, and natural resources retain their existing rules.
 
 Territory penalties apply after research bonuses. Round down each building's output after the territory penalty.
 
-data/queries.py owns output multipliers, building yields, province building yields, and bonus descriptions.
+data/queries.py owns output modifiers, building yields, province building yields, and bonus descriptions.
 Turn income, economy reports, production previews, research details, and AI research valuation use these helpers.
 Production previews include the selected province's territory penalty. Research details show output before that penalty.
 Presentation caches update when their screens refresh. Frame drawing reads the cached yields.

@@ -234,12 +234,14 @@ def economy_gain(tech_key, level, prices, building_library, income, built=None, 
     research = research or {}
     if queries.get_tech_tree(context).get(tech_key, {}).get("building_output_bonuses"):
         ahead = dict(research, **{tech_key: level})
-        before_mult = queries.get_building_output_multipliers(research, building_library, context=context)
-        after_mult = queries.get_building_output_multipliers(ahead, building_library, context=context)
+        before_modifiers = queries.get_building_output_modifiers(research, building_library, context=context)
+        after_modifiers = queries.get_building_output_modifiers(ahead, building_library, context=context)
         gain = 0.0
         for province in provinces:
-            before = queries.get_province_building_output(province, research, building_library, multipliers=before_mult)
-            after = queries.get_province_building_output(province, ahead, building_library, multipliers=after_mult)
+            before = queries.get_province_building_output(province, research, building_library,
+                                                         context=context, modifiers=before_modifiers)
+            after = queries.get_province_building_output(province, ahead, building_library,
+                                                        context=context, modifiers=after_modifiers)
             gain += sum(prices[res] * (after[res] - before[res]) for res in ai_unit_eval.RESOURCES)
         return max(0.0, gain)
 

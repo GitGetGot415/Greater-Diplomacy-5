@@ -715,8 +715,10 @@ class RealtimeSessionTests(unittest.TestCase):
         tree = queries.get_tech_tree()
         cases = (("waltham_system", {}, {"basic_factory": 1}),
                  ("bessemer_process", {"basic_factory": 1}, {"waltham_system": 1}),
-                 ("conveyor_belt", {"factory": 2}, {"factory": 3}),
-                 ("just_in_time_manufacturing", {"factory": 7}, {"factory": 8}),
+                 ("conveyor_belt", {"factory": tree["conveyor_belt"]["req"]["factory"] - 1},
+                  dict(tree["conveyor_belt"]["req"])),
+                 ("just_in_time_manufacturing", {"factory": tree["just_in_time_manufacturing"]["req"]["factory"] - 1},
+                  dict(tree["just_in_time_manufacturing"]["req"])),
                  ("assembly_line", {"bessemer_process": 1}, {"factory": 1}),
                  ("factory", {}, {"bessemer_process": 1}),
                  ("factory", {"factory": 1, "bessemer_process": 1},

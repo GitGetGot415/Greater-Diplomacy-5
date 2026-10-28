@@ -59,6 +59,45 @@ class OutputBonusTests(unittest.TestCase):
                          {"materials": 0, "manpower": 58, "fuel": 25.5})
         self.assertEqual(self.output("Factory Lvl 1", {"recruit": 1}), self.output("Factory Lvl 1", {}))
 
+    def test_flat_bonuses_add_per_level_before_percentages_and_cap_at_maximum_level(self):
+        self.tree["flat"] = {"max_lvl": 2, "building_output_bonuses": [
+            {"building_families": ["Basic Factory"], "flat_outputs": {"materials": 13, "fuel": 17}}]}
+        research = {"flat": 9, "first": 1}
+        self.assertEqual(self.output("Basic Factory", research),
+                         {"materials": (31 + 26) * 1.5, "manpower": 7, "fuel": 5 + 34})
+        self.assertEqual(self.output("Factory Lvl 1", research), self.output("Factory Lvl 1", {"first": 1}))
+        self.library["Basic Factory"]["prod_fuel"] = 0
+        self.assertEqual(self.output("Basic Factory", {"flat": 1})["fuel"], 17)
+        self.tree["flat"]["building_output_bonuses"][0]["flat_outputs"]["materials"] = 19
+        self.assertEqual(self.output("Basic Factory", {"flat": 1})["materials"], 31 + 19)
+        self.assertTrue(queries.get_tech_unlocks("flat", 1))
+
+    def test_flat_bonus_reaches_income_construction_and_ai_without_affecting_other_factories(self):
+        self.tree["flat"] = {"max_lvl": 1, "building_output_bonuses": [
+            {"building_families": ["Basic Factory"], "flat_outputs": {"materials": 13}}]}
+        province = self.province()
+        province["buildings"] = ["Basic Factory", "Factory Lvl 1"]
+        research = {"flat": 1}
+        expected = 31 + 13 + 47
+        self.assertEqual(queries.get_province_building_output(province, research, self.library)["materials"], expected)
+        country = {"research": research, **dict.fromkeys(c.ECON_RESOURCE_KEYS, 0)}
+        game = SimpleNamespace(map_data={1: province}, nation_data={"A": country}, tactical_mode=False, player_country="A")
+        report = queries.calculate_all_economies(game.map_data, game.nation_data)["A"]
+        self.assertEqual(report["breakdown"]["materials"]["buildings"], expected)
+        economy_processor.process_economy(game)
+        self.assertEqual(country["materials"], report["total_inc"]["materials"])
+        prices = dict.fromkeys(c.ECON_RESOURCE_KEYS, 1)
+        self.assertEqual(ai_tech_eval.economy_gain("flat", 1, prices, self.library, {}, provinces=[province]), 13)
+        province["buildings"] = ["Factory Lvl 1"]
+        self.assertEqual(ai_tech_eval.economy_gain("flat", 1, prices, self.library, {}, provinces=[province]), 0)
+        province["buildings"] = []
+        province["building_queue"] = [{"item_name": "Basic Factory", "turns_remaining": 3}]
+        fraction = c.BASIC_FACTORY_CONSTRUCTION_OUTPUT_FRACTIONS[-1]
+        self.assertEqual(queries.get_province_building_output(province, research, self.library)["materials"],
+                         int((31 + 13) * fraction))
+        self.assertEqual(ai_tech_eval.economy_gain("flat", 1, prices, self.library, {}, provinces=[province]),
+                         int((31 + 13) * fraction) - int(31 * fraction))
+
     def test_output_changes_refresh_after_research_and_library_edits(self):
         research = {"first": 1}
         self.assertEqual(self.output("Basic Factory", research)["materials"], 31 * 1.5)
@@ -96,12 +135,13 @@ class OutputBonusTests(unittest.TestCase):
     def test_factory_construction_yields_use_the_same_bonus_and_territory_penalty(self):
         province = self.province(False)
         province["buildings"] = []
-        for remaining in (19, 15, 11, 7, 3):
+        fractions = c.BASIC_FACTORY_CONSTRUCTION_OUTPUT_FRACTIONS
+        for stage, fraction in enumerate(fractions):
+            remaining = c.BASIC_FACTORY_TURNS - stage * (c.BASIC_FACTORY_TURNS // len(fractions)) - 1
             province["building_queue"] = [{"item_name": "Basic Factory", "turns_remaining": remaining}]
-            with patch.object(c, "NON_CORE_BUILDING_MULTIPLIER", 1):
-                before = queries.get_province_building_output(province, {}, self.library)["materials"]
             after = queries.get_province_building_output(province, {"first": 2}, self.library)["materials"]
-            self.assertEqual(after, int(before * 1.5 ** 2 * c.NON_CORE_BUILDING_MULTIPLIER))
+            self.assertEqual(after, int(self.library["Basic Factory"]["prod_materials"] * fraction
+                                        * 1.5 ** 2 * c.NON_CORE_BUILDING_MULTIPLIER))
 
     def test_turn_processor_applies_the_reported_income(self):
         country = {"research": {"first": 1}, **dict.fromkeys(c.ECON_RESOURCE_KEYS, 0)}
@@ -156,31 +196,28 @@ class FactoryResearchContentTests(unittest.TestCase):
     def test_requested_chain_dates_and_factory_only_material_bonus(self):
         tree = queries.get_tech_tree()
         self.assertEqual(tree["bessemer_process"]["years"], [1850])
-        self.assertEqual(tree["assembly_line"]["years"], [1903])
         for tech, year in (("waltham_system", 1815), ("conveyor_belt", 1915),
                            ("just_in_time_manufacturing", 1945)):
             self.assertEqual(tree[tech]["years"], [year])
         self.assertEqual(tree["waltham_system"]["req"], {"basic_factory": 1})
         self.assertEqual(tree["waltham_system"]["building_output_bonuses"], [
-            {"building_families": ["Basic Factory", "Factory"], "outputs": {"materials": 0.5}}])
+            {"building_families": ["Basic Factory"], "flat_outputs": {"materials": 100}}])
+        self.assertEqual(tree["bessemer_process"]["building_output_bonuses"], [
+            {"building_families": ["Basic Factory"], "flat_outputs": {"materials": 200}}])
         self.assertEqual(tree["bessemer_process"]["req"], {"waltham_system": 1})
         self.assertEqual(tree["assembly_line"]["req"], {"factory": 1})
-        self.assertEqual(tree["conveyor_belt"]["req"], {"factory": 3})
-        self.assertEqual(tree["just_in_time_manufacturing"]["req"], {"factory": 8})
         self.assertEqual(tree["factory"]["req"], {"bessemer_process": 1})
-        self.assertEqual(tree["factory"]["level_reqs"], {
-            "2": {"assembly_line": 1}, "4": {"conveyor_belt": 1}, "9": {"just_in_time_manufacturing": 1}})
-        for tech in ("bessemer_process", "assembly_line"):
-            self.assertEqual(tree[tech]["max_lvl"], 1)
-            self.assertEqual(tree[tech]["building_output_bonuses"], [
-                {"building_families": ["Basic Factory", "Factory"], "outputs": {"materials": 1.0}}])
+        for target, requirements in tree["factory"]["level_reqs"].items():
+            for gate in requirements:
+                self.assertEqual(tree[gate]["req"], {"factory": int(target) - 1})
 
     def test_research_selections_require_completed_links_and_editor_grants_them(self):
         tree = queries.get_tech_tree()
         for tech, predecessor, required in (("waltham_system", "basic_factory", 1),
                                            ("bessemer_process", "waltham_system", 1),
-                                           ("assembly_line", "factory", 1), ("conveyor_belt", "factory", 3),
-                                           ("just_in_time_manufacturing", "factory", 8),
+                                           ("assembly_line", "factory", 1),
+                                           ("conveyor_belt", "factory", tree["conveyor_belt"]["req"]["factory"]),
+                                           ("just_in_time_manufacturing", "factory", tree["just_in_time_manufacturing"]["req"]["factory"]),
                                            ("factory", "bessemer_process", 1)):
             with self.subTest(tech=tech):
                 with self.assertRaises(ValueError):
@@ -193,13 +230,12 @@ class FactoryResearchContentTests(unittest.TestCase):
         for tech in ("basic_factory", "bessemer_process", "assembly_line"):
             self.assertEqual(levels[tech], 1)
         self.assertEqual(levels["factory"], 2)
-        for level in (1, 2):
-            country = {"research": {"factory": level, "bessemer_process": 1}}
-            with self.assertRaises(ValueError):
-                queries.canonical_research_selection(country, ["factory"], tree)
-            country["research"]["assembly_line"] = 1
-            self.assertEqual(queries.canonical_research_selection(country, ["factory"], tree)["projects"],
-                             [{"tech_name": "factory", "points_remaining": tree["factory"]["cost"]}])
+        country = {"research": {"factory": 1, "bessemer_process": 1}}
+        with self.assertRaises(ValueError):
+            queries.canonical_research_selection(country, ["factory"], tree)
+        country["research"]["assembly_line"] = 1
+        self.assertEqual(queries.canonical_research_selection(country, ["factory"], tree)["projects"],
+                         [{"tech_name": "factory", "points_remaining": tree["factory"]["cost"]}])
         without_assembly = queries.edited_research_levels(levels, "assembly_line", 1, False, tree)
         self.assertEqual(without_assembly["factory"], 1)
         removed = queries.edited_research_levels(levels, "bessemer_process", 1, False, tree)
@@ -209,7 +245,9 @@ class FactoryResearchContentTests(unittest.TestCase):
 
     def test_later_gates_grant_and_remove_only_the_dependent_factory_levels(self):
         tree = queries.get_tech_tree()
-        for gate, lower, upper in (("conveyor_belt", 3, 4), ("just_in_time_manufacturing", 8, 9)):
+        for gate in ("conveyor_belt", "just_in_time_manufacturing"):
+            lower = tree[gate]["req"]["factory"]
+            upper = lower + 1
             with self.subTest(gate=gate):
                 before = queries.edited_research_levels({}, "factory", lower, True, tree)
                 self.assertNotIn(gate, before)
@@ -225,20 +263,20 @@ class FactoryResearchContentTests(unittest.TestCase):
         for tech in ("bessemer_process", "assembly_line", "conveyor_belt", "just_in_time_manufacturing", "factory"):
             self.assertEqual(removed[tech], 0)
 
-    def test_output_upgrades_affect_every_factory_tier_and_only_its_materials(self):
+    def test_flat_upgrades_change_only_basic_factories_and_stack_with_other_research(self):
         library = queries.get_building_library()
         research = {"waltham_system": 1, "bessemer_process": 1, "assembly_line": 1}
-        material_factor = 1.0
-        for tech in research:
-            material_factor *= 1 + queries.get_tech_tree()[tech]["building_output_bonuses"][0]["outputs"]["materials"]
-        multipliers = queries.get_building_output_multipliers(research, library)
-        for name, stats in library.items():
-            is_factory = name == "Basic Factory" or name.startswith("Factory Lvl ")
+        base_research = {"assembly_line": 1}
+        for name in library:
             with self.subTest(building=name):
-                output = queries.get_building_output(name, research, library, multipliers=multipliers)
-                for res in c.ECON_RESOURCE_KEYS:
-                    factor = material_factor if is_factory and res == "materials" else 1
-                    self.assertEqual(output[res], stats.get(f"prod_{res}", 0) * factor)
+                output = queries.get_building_output(name, research, library)
+                if name != "Basic Factory":
+                    self.assertEqual(output, queries.get_building_output(name, base_research, library))
+        self.assertEqual(library["Basic Factory"]["prod_materials"], 200)
+        for levels, expected in (({}, 200), ({"waltham_system": 1}, 300),
+                                 ({"bessemer_process": 1}, 400),
+                                 ({"waltham_system": 1, "bessemer_process": 1}, 500)):
+            self.assertEqual(queries.get_building_output("Basic Factory", levels, library)["materials"], expected)
 
     def test_older_factory_projects_keep_progress_without_granting_the_new_technologies(self):
         project = {"tech_name": "factory", "points_remaining": 41}
@@ -257,8 +295,9 @@ class FactoryResearchContentTests(unittest.TestCase):
             saved = json.loads(json.dumps(queries.build_save_dict(game)))
             loaded = queries.merge_country_templates(saved["nation_data"])
             self.assertEqual(loaded["Avaria"]["research"], research)
-            self.assertEqual(queries.get_building_output("Factory Lvl 1", loaded["Avaria"]["research"]),
-                             queries.get_building_output("Factory Lvl 1", research))
+            for building_name in ("Basic Factory", "Factory Lvl 1"):
+                self.assertEqual(queries.get_building_output(building_name, loaded["Avaria"]["research"]),
+                                 queries.get_building_output(building_name, research))
 
     def test_completion_changes_yields_without_mutating_building_data(self):
         library = queries.get_building_library()
@@ -270,9 +309,10 @@ class FactoryResearchContentTests(unittest.TestCase):
         research_processor.process_national_research(game)
         country = game.nation_data["A"]
         self.assertEqual(country["research"]["bessemer_process"], 1)
-        for name in ("Basic Factory", "Factory Lvl 1"):
-            self.assertEqual(queries.get_building_output(name, country["research"])["materials"],
-                             library[name]["prod_materials"] * 2)
+        self.assertEqual(queries.get_building_output("Basic Factory", country["research"])["materials"],
+                         library["Basic Factory"]["prod_materials"] + 200)
+        self.assertEqual(queries.get_building_output("Factory Lvl 1", country["research"])["materials"],
+                         library["Factory Lvl 1"]["prod_materials"])
         self.assertEqual(library, original)
 
     def test_active_world_bonuses_do_not_leak_between_worlds(self):
@@ -362,9 +402,8 @@ class OutputResearchScreenTests(unittest.TestCase):
             stats = next(stats for _, stats, _, kind in screen.active_bars
                          if kind == "BUILDING" and stats.get("group") == "industry")
             for res in c.ECON_RESOURCE_KEYS:
-                bonus = 2 if res == "materials" else 1
                 self.assertEqual(stats[f"prod_{res}"],
-                                 int(library["Factory Lvl 1"][f"prod_{res}"] * bonus * c.NON_CORE_BUILDING_MULTIPLIER))
+                                 int(library["Factory Lvl 1"][f"prod_{res}"] * c.NON_CORE_BUILDING_MULTIPLIER))
             with patch.object(queries, "get_province_building_output", side_effect=AssertionError("frame output rules")):
                 screen.update()
                 screen.draw(self.surface)

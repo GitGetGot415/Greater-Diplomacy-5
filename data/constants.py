@@ -521,6 +521,9 @@ BASIC_FACTORY_BASE_COST_X = 10000
 BASIC_FACTORY_COST_MULTIPLIER = 1000
 BASIC_FACTORY_TURNS = 20
 
+# controls how much material income a Basic Factory produces while it is still being built
+BASIC_FACTORY_CONSTRUCTION_OUTPUT_FRACTIONS = (0.16, 0.32, 0.48, 0.64, 0.8)
+
 # Forts are available independently of the research tree.  Their level is
 # also the amount of defense they provide to friendly units during combat on
 # the tile.
