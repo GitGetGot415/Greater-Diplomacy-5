@@ -1,25 +1,48 @@
 """Applies .py source-patch mods before the rest of the game imports.
 
-A mod is a plain, syntactically valid .py file living in mods/: its first
-line is a comment naming the project-relative file it replaces (e.g.
-"#data/queries.py"), and the rest is that module's replacement source --
-normally started as a copy of the real file, so IDE syntax highlighting,
-linting and accurate line numbers in tracebacks all work exactly like
-editing the game itself. Unlike the old .GD5MOD design, the target file on
-disk is never written to -- an enabled mod's source is substituted in at
-import time via a sys.meta_path finder, so disabling or deleting a mod just
-reverts to the real file on the next launch, with nothing to restore and
-no risk of losing the original.
+A mod is a plain, syntactically valid .py file living in mods/. Its first line
+declares which project-relative file it replaces. Two header formats are
+accepted:
+
+  * Legacy (deprecated, still works, logs a one-line warning at install):
+        #data/queries.py
+        ...replacement source...
+
+  * Current manifest format (preferred):
+        # mod: target=data/queries.py sandbox=auto
+        ...replacement source...
+
+  In the manifest format, `sandbox` may be:
+    auto -- follow the user's per-mod toggle in enabled_mods.json (default)
+    on   -- force sandboxed, regardless of the user's toggle
+    off  -- force unsandboxed, regardless of the user's toggle (logged)
+
+The rest of the file is the replacement module's source -- normally started
+as a copy of the real file, so IDE syntax highlighting, linting and accurate
+line numbers in tracebacks all work exactly like editing the game itself.
+The target file on disk is never written to: an enabled mod's source is
+substituted in at import time via a sys.meta_path finder, so disabling or
+deleting a mod just reverts to the real file on the next launch.
 
 install() must run before any project module is imported (see the top of
 main.py): Python only executes a module's top-level code once per process
 and caches the result in sys.modules, so installing the finder any later
 would miss every module already imported by that point.
 
-Every mod is also either sandboxed or unsandboxed (sandboxed by default --
-see set_mod_sandboxed()/is_mod_sandboxed()). A sandboxed mod's own code
-can't touch the filesystem or spawn processes/sockets; see the "Sandboxing"
-section below for how and how well that's enforced.
+Every mod is also either sandboxed or unsandboxed. See docs/SANDBOX_SECURITY.md
+for the full sandbox model -- short version: a sandboxed mod's code (and any code
+called transitively from it) cannot touch the filesystem, spawn processes,
+or open sockets, enforced via PEP 578 audit hooks with a full call-stack
+walk. The sandbox marker is held privately inside this module via closures,
+NOT in the mod's own __dict__, so a sandboxed mod cannot delete its own
+marker to escape. The previous "best-effort, frame-1-only" design was
+trivially bypassable in one line -- see docs/SANDBOX_SECURITY.md and issue #50.
+
+A short list of project files are reserved and cannot be mod targets:
+mod_loader itself (would let a mod rewrite the sandbox rules), main (boot),
+and data.platform (the IndexedDB / FS sync layer on web). A mod file whose
+target is one of these is reported invalid in describe_mod() and skipped
+in install().
 
 Deliberately dependency-free (stdlib only) so it can run as the very first
 thing main.py does, before anything else -- including data.constants -- has
@@ -30,6 +53,7 @@ import importlib.util
 import json
 import os
 import sys
+
 
 def _base_dir():
     """The game folder mod targets are resolved against.
@@ -75,6 +99,31 @@ _active_sandbox = {}
 # know it's broken without running it.
 _broken_mods = {}
 
+# --- Reserved mod targets ---------------------------------------------
+#
+# Modules whose replacement at import time would compromise the sandbox or
+# the boot chain itself. A mod targeting any of these is refused at
+# install() time and reported invalid in describe_mod(). Frozen so a mod
+# that somehow reaches mod_loader._RESERVED_TARGETS can't add an entry that
+# silently un-reserves itself (it would have to reassign the name on the
+# module, but module-level lookups in the audit hook use closure-captured
+# copies, not this name -- see _install_sandbox_audit_hook).
+#
+#   - mod_loader  : the loader itself; a mod here could rewrite the sandbox
+#                  rules at runtime, or just uninstall the audit hook's
+#                  effective config by mutating our globals.
+#   - main        : bootstraps everything, including install(). A mod here
+#                  could skip install() entirely.
+#   - data.platform: the IndexedDB / FS sync layer on web; a mod here gets
+#                  direct, unsandboxed browser storage access on the web
+#                  build, where the Python-level sandbox doesn't apply
+#                  anyway.
+_RESERVED_TARGETS = frozenset({
+    "mod_loader",
+    "main",
+    "data.platform",
+})
+
 
 def is_mod_active(filename):
     return filename in _active_mods
@@ -94,7 +143,7 @@ def mod_files():
     if not os.path.isdir(MODS_DIR):
         return []
     return sorted(f for f in os.listdir(MODS_DIR)
-                  if f.lower().endswith(".py") and os.path.isfile(os.path.join(MODS_DIR, f)))
+                 if f.lower().endswith(".py") and os.path.isfile(os.path.join(MODS_DIR, f)))
 
 
 def _load_state():
@@ -175,10 +224,14 @@ def _path_to_module_name(rel_path):
 
 def _resolve_target(rel_path):
     """(module_name, abs_path) for a target that's a real .py file inside the
-    project, or (None, None) if the target is missing, malformed, or would
-    resolve outside the game folder."""
+    project, or (None, None) if the target is missing, malformed, would
+    resolve outside the game folder, or is on the reserved-targets blacklist.
+    Callers should also call _is_reserved_target() to produce a more useful
+    error message in the reserved case."""
     module_name = _path_to_module_name(rel_path)
     if not module_name:
+        return None, None
+    if module_name in _RESERVED_TARGETS:
         return None, None
     # Rebuilt from module_name's parts (always "/"-delimited, per
     # _path_to_module_name) rather than joining rel_path directly -- a mod
@@ -197,22 +250,80 @@ def _resolve_target(rel_path):
     return module_name, abs_target
 
 
+def _is_reserved_target(rel_path):
+    candidate = _path_to_module_name(rel_path)
+    return candidate is not None and candidate in _RESERVED_TARGETS
+
+
+def _parse_first_line(first_line):
+    """Parse a mod file's first line. Returns a dict with keys:
+      target           -- the project-relative path string (e.g. "data/queries.py"),
+                         or None if the line is malformed.
+      declared_sandbox -- "auto" (default), "on", or "off".
+      legacy_format    -- True if the line was the bare "#path" form, False
+                         if it was the manifest "# mod: ..." form.
+
+    Both formats are accepted; legacy emits a deprecation log when the mod
+    is actually loaded in install().
+    """
+    line = first_line.strip()
+    if not line.startswith("#"):
+        return {"target": None, "declared_sandbox": "auto", "legacy_format": False}
+
+    body = line[1:].strip()
+    # Manifest format: "# mod: target=... sandbox=auto"
+    if body.lower().startswith("mod:"):
+        fields = {}
+        for token in body[4:].split():
+            if "=" in token:
+                k, _, v = token.partition("=")
+                fields[k.strip().lower()] = v.strip()
+            # Bare tokens (no '=') are ignored for forward-compat.
+        target = fields.get("target")
+        sandbox = fields.get("sandbox", "auto").lower()
+        if sandbox not in ("auto", "on", "off"):
+            sandbox = "auto"
+        return {
+            "target": target or None,
+            "declared_sandbox": sandbox,
+            "legacy_format": False,
+        }
+    # Legacy format: bare path after the '#'.
+    return {
+        "target": body or None,
+        "declared_sandbox": "auto",
+        "legacy_format": True,
+    }
+
+
 def read_mod(filename):
-    """(target_rel_path, source_text) for a mod file. source_text is the
-    *entire* file, first line included -- it's left in place as an ordinary
-    comment rather than stripped, so a compile error inside the mod reports
-    the same line number the user sees in their editor. Raises ValueError on
-    an empty file or a first line that isn't a "#path" comment, instead of
-    letting a bad mod crash the caller with an IndexError."""
+    """Backward-compatible (target_rel_path, source_text) tuple for callers
+    that don't care about the manifest fields. Use _read_mod_full() for the
+    declared sandbox and legacy flag. Raises ValueError on an empty file or
+    a first line that isn't a recognized header comment, instead of letting
+    a bad mod crash the caller with an IndexError.
+
+    source_text is the *entire* file, first line included -- it's left in
+    place as an ordinary comment rather than stripped, so a compile error
+    inside the mod reports the same line number the user sees in their
+    editor.
+    """
+    target, source, _declared, _legacy = _read_mod_full(filename)
+    return target, source
+
+
+def _read_mod_full(filename):
+    """(target_rel_path, source_text, declared_sandbox, legacy_format)."""
     with open(os.path.join(MODS_DIR, filename), "r", encoding="utf-8") as f:
         text = f.read()
-    first_line = text.split("\n", 1)[0].strip()
-    if not first_line.startswith("#"):
-        raise ValueError('first line must be a "#path/to/target.py" comment')
-    target = first_line[1:].strip()
-    if not target:
-        raise ValueError("missing target file after the '#' on the first line")
-    return target, text
+    first_line = text.split("\n", 1)[0]
+    parsed = _parse_first_line(first_line)
+    if not parsed["target"]:
+        raise ValueError(
+            'first line must be "#path/to/target.py" (legacy) or '
+            '"# mod: target=path/to/target.py [sandbox=auto|on|off]" (current)'
+        )
+    return parsed["target"], text, parsed["declared_sandbox"], parsed["legacy_format"]
 
 
 def describe_mod(filename):
@@ -221,16 +332,26 @@ def describe_mod(filename):
     with a syntax error, which would otherwise only surface as a crash the
     moment something imports its target module) just comes back invalid with
     an explanation in "error"."""
-    info = {"target": None, "module": None, "valid": False, "error": None,
-            "enabled": is_mod_enabled(filename), "active": is_mod_active(filename),
-            "sandboxed": is_mod_sandboxed(filename),
-            "sandbox_active": is_mod_sandbox_active(filename)}
+    info = {
+        "target": None, "module": None, "valid": False, "error": None,
+        "enabled": is_mod_enabled(filename), "active": is_mod_active(filename),
+        "sandboxed": is_mod_sandboxed(filename),
+        "sandbox_active": is_mod_sandbox_active(filename),
+        "legacy_format": False,
+    }
     try:
-        target, source = read_mod(filename)
+        target, source, declared_sandbox, legacy = _read_mod_full(filename)
         info["target"] = target
+        info["legacy_format"] = legacy
         module_name, abs_target = _resolve_target(target)
         if module_name is None:
-            info["error"] = "target must be a .py file inside the game folder"
+            if _is_reserved_target(target):
+                info["error"] = (
+                    f"target {target} is reserved for the game's own boot/sandbox "
+                    "machinery and cannot be modded"
+                )
+            else:
+                info["error"] = "target must be a .py file inside the game folder"
         elif abs_target is None:
             info["error"] = f"target file not found: {target}"
         else:
@@ -255,29 +376,59 @@ def describe_mod(filename):
 
 # --- Sandboxing -------------------------------------------------------
 #
-# A sandboxed mod's own code shouldn't be able to touch the filesystem or
-# spawn processes/sockets. Stripping dangerous names out of its builtins
-# doesn't actually hold up: every other already-imported module's
-# __dict__["__builtins__"] still points at the real, unrestricted builtins,
-# so a mod could get back to the real open() just by importing something
-# harmless and reading it off there.
+# A sandboxed mod's code -- and anything called transitively from it --
+# cannot touch the filesystem, spawn processes, or open sockets.
 #
-# sys.addaudithook() (PEP 578) does hold up -- it intercepts these
-# operations at the C level no matter what name or module was used to reach
-# them, and once installed it can't be removed from Python. The hook below
-# only blocks the call when the *direct* Python caller of the audited
-# operation is a sandboxed mod's own code (marked via a sentinel key in its
-# module dict, i.e. every frame of every function that mod defines). If a
-# sandboxed mod calls into other, already-existing game code that does file
-# I/O as part of its normal job, that's the existing code's own business --
-# not a new capability the mod introduced -- so it's left alone.
+# HOW IT WORKS
 #
-# This is a best-effort guard against careless or lazily malicious mods, not
-# a hardened security boundary: a sufficiently determined mod could still
-# find another way to reach the filesystem through CPython internals. Only
-# install mods -- sandboxed or not -- from sources you trust.
+# PEP 578 (sys.addaudithook) intercepts these operations at the C level no
+# matter what name or module was used to reach them, and once installed an
+# audit hook cannot be removed from Python. The hook below walks the FULL
+# Python call stack (sys._getframe(1) and every f_back from there) and blocks
+# if ANY frame on the stack belongs to a sandboxed mod.
+#
+# Sandbox membership is keyed by id(frame.f_globals), not by a string the
+# mod can delete. Concretely: when _ModSourceLoader.exec_module is about to
+# run a sandboxed mod's source, it calls back into mod_loader to register
+# id(module.__dict__) into a private set captured by the audit hook's
+# closure. The set itself is not reachable from any mod's code (it's a
+# closure variable, not a module attribute), so a sandboxed mod cannot:
+#
+#   - delete its own marker to disarm the sandbox (there is no marker in
+#     module.__dict__ anymore -- the old _SANDBOX_MARKER design is gone);
+#   - mutate mod_loader._SANDBOX_BLOCKED_EVENTS to defang the hook (the
+#     hook reads a frozenset captured at install time, not the module
+#     attribute);
+#   - hop through a game function that does file I/O (the mod's frame is
+#     still on the stack underneath the game function's, so the walk finds
+#     it);
+#   - exec() fresh code with a freshly-minted globals dict and call it
+#     from the mod's own top-level code (same -- f_back is the mod frame).
+#
+# WHAT IT DOES NOT CLOSE
+#
+#   1. A mod that schedules a callback (threading.Timer, signal handler,
+#      atexit, an asyncio task) where the mod's own frame is NOT on the
+#      call stack at fire time. Strict stack-walking finds sandboxed
+#      frames by walking back; if there's nothing to walk back to, the
+#      sandbox can't see it. This is documented in docs/SANDBOX_SECURITY.md.
+#   2. CPython-internal escapes (ctypes, suspicious C extensions, crafting
+#      a code object whose globals happen to alias a non-sandboxed
+#      module's). The threat model is "careless or lazily malicious mod",
+#      not "CPython red team".
+#   3. On the web (pygbag/WASM) build, the sandbox is advisory only.
+#      platform.window is reachable from any Python code via `import
+#      platform` (stdlib, patched by pygbag) and gives the mod the full
+#      browser: fetch, XMLHttpRequest, localStorage, eval. None of those
+#      are CPython audit events. install() emits a clear warning when a
+#      sandboxed mod is enabled on web. See docs/SANDBOX_SECURITY.md
+#      and issue #51 for the long-term answer.
+#
+# Treat every enabled mod, sandboxed or not, as code you trust enough to
+# run on your machine. The sandbox narrows the blast radius of bugs and
+# lazy maliciousness; it does not turn an untrusted mod into a safe one.
 
-_SANDBOX_BLOCKED_EVENTS = {
+_SANDBOX_BLOCKED_EVENTS = frozenset({
     "open", "os.remove", "os.rmdir", "os.removedirs", "os.rename", "os.replace",
     "os.mkdir", "os.makedirs", "os.truncate", "os.chmod", "os.chown", "os.chflags",
     "os.lchflags", "os.link", "os.symlink", "os.listdir", "os.scandir", "os.system",
@@ -285,30 +436,134 @@ _SANDBOX_BLOCKED_EVENTS = {
     "os.kill", "os.killpg", "os.putenv", "os.unsetenv", "os.startfile",
     "subprocess.Popen", "shutil.rmtree", "shutil.copyfile", "shutil.copytree",
     "shutil.move",
-}
+})
 _SANDBOX_BLOCKED_PREFIXES = ("socket.", "ctypes.")
-_SANDBOX_MARKER = "__gd5_mod_sandbox__"
+
+# Module-name prefixes for CPython's own import machinery. When the *direct*
+# caller of a blocked event is one of these, the hook skips the stack walk
+# entirely: the import system legitimately opens .py files and lists
+# directories to load modules a sandboxed mod asked for, and blocking that
+# breaks every `import` statement a sandboxed mod issues. The threat model
+# is the mod's *own* code doing I/O, not the import system's bookkeeping.
+#
+# Walking the stack underneath import machinery would still catch the mod's
+# frame (which is what we want for game functions called by the mod, where
+# the direct caller is the game function -- NOT import machinery). So this
+# carve-out only applies when importlib itself is the immediate caller.
+_IMPORT_MACHINERY_PREFIXES = (
+    "_frozen_importlib",
+    "_frozen_importlib_external",
+    "importlib",
+)
+
 _audit_hook_installed = False
-
-
-def _sandbox_audit_hook(event, args):
-    if event not in _SANDBOX_BLOCKED_EVENTS and not event.startswith(_SANDBOX_BLOCKED_PREFIXES):
-        return
-    # frame 0 is this hook itself; frame 1 is whatever Python code directly
-    # invoked the audited operation.
-    caller = sys._getframe(1)
-    if caller is not None and caller.f_globals.get(_SANDBOX_MARKER):
-        raise PermissionError(
-            f"'{event}' is disabled because this mod is running sandboxed -- "
-            "switch it to Unsandboxed on the Mods screen if it needs file/system access."
-        )
+# Filled in by _install_sandbox_audit_hook(). _ModSourceLoader.exec_module
+# uses it to register each sandboxed mod's module __dict__ id. Storing the
+# *registrar* (rather than the set itself) as a module attribute is fine:
+# the set is captured in the registrar's closure and is not reachable by
+# reassigning this name. A sandboxed mod that reassigns
+# _register_sandboxed_module = lambda m: None only breaks *future*
+# registrations -- its own module was already registered before its
+# top-level code started running.
+_register_sandboxed_module = None
 
 
 def _install_sandbox_audit_hook():
-    global _audit_hook_installed
-    if not _audit_hook_installed:
-        sys.addaudithook(_sandbox_audit_hook)
-        _audit_hook_installed = True
+    """Install the PEP 578 audit hook. Captures the blocked-event tables
+    and the per-process sandboxed-module set in closures so a mod that
+    somehow reaches mod_loader's globals can't mutate them."""
+    global _audit_hook_installed, _register_sandboxed_module
+    if _audit_hook_installed:
+        return
+
+    # Snapshot at install time. Even if a mod reassigns the module-level
+    # _SANDBOX_BLOCKED_EVENTS later (e.g. via `import mod_loader;
+    # mod_loader._SANDBOX_BLOCKED_EVENTS = set()`), the hook keeps using
+    # these captured copies.
+    blocked_events = frozenset(_SANDBOX_BLOCKED_EVENTS)
+    blocked_prefixes = tuple(_SANDBOX_BLOCKED_PREFIXES)
+    import_prefixes = tuple(_IMPORT_MACHINERY_PREFIXES)
+
+    # id(module.__dict__) for every sandboxed module registered this
+    # process. We hold strong refs to the modules themselves so their
+    # __dict__ isn't GC'd before the module is (which would let a future
+    # dict get the same id() and falsely read as sandboxed).
+    sandboxed_dict_ids = set()
+    sandboxed_module_refs = []
+
+    def register(module):
+        sandboxed_dict_ids.add(id(module.__dict__))
+        sandboxed_module_refs.append(module)
+
+    def is_import_machinery(frame):
+        if frame is None:
+            return False
+        name = frame.f_globals.get("__name__", "")
+        if not name:
+            return False
+        for p in import_prefixes:
+            if name == p or name.startswith(p + "."):
+                return True
+        return False
+
+    def hook(event, args):
+        if event not in blocked_events and not any(
+            event.startswith(p) for p in blocked_prefixes
+        ):
+            return
+        # frame 0 is this hook itself; frame 1 is whatever Python code directly
+        # invoked the audited operation.
+        try:
+            frame = sys._getframe(1)
+        except (ValueError, RuntimeError):
+            # No Python frame at all (e.g. the event fired from a C-level
+            # call site with no Python caller). Be conservative: if we can't
+            # tell who called it, allow it. The common case is interpreter
+            # startup, not a mod smuggling an op through C.
+            return
+
+        # If the *direct* caller is Python's import machinery, skip the
+        # stack walk entirely. The import system legitimately opens .py
+        # files (read), lists directories, etc. to load modules a sandboxed
+        # mod asked for via `import`. Blocking that breaks every import a
+        # sandboxed mod issues, which makes the sandbox unusable rather than
+        # safer.
+        #
+        # The threat model the sandbox is closing is "the mod's own code
+        # does I/O via a game function it called" -- in that case the
+        # direct caller is the game function, NOT importlib, so the
+        # carve-out doesn't apply and the stack walk still catches the
+        # mod's frame underneath.
+        if is_import_machinery(frame):
+            return
+
+        # Walk the FULL call stack. If ANY frame on the stack has its
+        # f_globals registered as a sandboxed mod's module __dict__, block.
+        # This closes:
+        #
+        #   - the "delete your own marker" bypass (no marker in __dict__
+        #     anymore; sandboxed-ness is keyed by dict identity);
+        #   - the "hop through a game function that does file I/O" bypass
+        #     (the mod's frame is still on the stack underneath the game
+        #     function's);
+        #   - the "exec(open, fresh_globals)" bypass (same -- the mod's
+        #     frame is f_back of the exec'd frame).
+        #
+        # It does NOT close a mod scheduling a callback from a thread or
+        # timer where the mod's frame is not on the stack at fire time.
+        # See docs/SANDBOX_SECURITY.md.
+        while frame is not None:
+            if id(frame.f_globals) in sandboxed_dict_ids:
+                raise PermissionError(
+                    f"'{event}' is blocked because a sandboxed mod is on "
+                    "the call stack. Switch the mod to Unsandboxed on the "
+                    "Mods screen if it genuinely needs this capability."
+                )
+            frame = frame.f_back
+
+    sys.addaudithook(hook)
+    _register_sandboxed_module = register
+    _audit_hook_installed = True
 
 
 class _ModSourceLoader(importlib.abc.Loader):
@@ -328,10 +583,14 @@ class _ModSourceLoader(importlib.abc.Loader):
         # the mod instead of disk.
         module.__file__ = self.origin
         if self.sandboxed:
-            # Lives in the module's own globals, so every function this mod
-            # defines carries it forever (as f_globals), for as long as
-            # anything -- mod code or later game code -- calls into them.
-            module.__dict__[_SANDBOX_MARKER] = True
+            # Register BEFORE exec, so the sandbox catches any audited op
+            # the mod's top-level code triggers (including imports the mod
+            # does at module load time). The set the registrar mutates is
+            # a closure variable inside _install_sandbox_audit_hook -- it
+            # is NOT this module's _SANDBOX_MARKER in module.__dict__, so
+            # the mod cannot globals().pop(...) its way out.
+            if _register_sandboxed_module is not None:
+                _register_sandboxed_module(module)
         code = compile(self.source, self.origin, "exec")
         try:
             exec(code, module.__dict__)
@@ -413,9 +672,11 @@ async def restore_mods_dir_from_indexeddb():
     module is imported (see this file's own docstring), so this can't just
     delegate to data.platform.restore_persisted_dir() -- importing
     data.platform this early would let it dodge patching by any mod that
-    targets data/platform.py itself. So this duplicates just the read half
-    of data/platform.py's hand-rolled IndexedDB glue, kept self-contained
-    and stdlib-only like the rest of this file.
+    targets data/platform.py itself (now blocked by _RESERVED_TARGETS, but
+    this duplication predates that and is still a reasonable isolation).
+    So this duplicates just the read half of data/platform.py's
+    hand-rolled IndexedDB glue, kept self-contained and stdlib-only like
+    the rest of this file.
     """
     if sys.platform != "emscripten":
         return
@@ -488,6 +749,31 @@ async def restore_mods_dir_from_indexeddb():
     _log(f"[gd5 mods] mods/ dir now contains: {mod_files()}")
 
 
+def _effective_sandbox_setting(filename, declared_sandbox):
+    """Combine the user's per-mod toggle (enabled_mods.json) with the mod's
+    manifest-declared sandbox preference.
+
+      declared_sandbox == "auto" -> follow the user's toggle (default)
+      declared_sandbox == "on"   -> force sandboxed, regardless of toggle
+      declared_sandbox == "off"  -> force unsandboxed, regardless of toggle
+
+    A mod that declares sandbox=off while the user has it sandboxed in
+    enabled_mods.json is honored as sandboxed (user wins) with a logged
+    warning. This makes sandbox=off a "this mod needs file access to work"
+    hint, not a "bypass the user's safety preference" lever.
+    """
+    if declared_sandbox == "on":
+        return True
+    if declared_sandbox == "off":
+        if is_mod_sandboxed(filename):
+            print(f"Mod '{filename}' declares sandbox=off but the user has it sandboxed; "
+                  "honoring the user's setting (sandboxed). Switch it to Unsandboxed on "
+                  "the Mods screen if the mod genuinely needs file access.")
+            return True
+        return False
+    return is_mod_sandboxed(filename)
+
+
 def install():
     """Builds the override table from every enabled, valid mod and installs
     the import finder. Safe to call even with a corrupt state file or a
@@ -505,14 +791,22 @@ def install():
             if not is_mod_enabled(filename):
                 continue
             try:
-                target, source = read_mod(filename)
+                target, source, declared_sandbox, legacy = _read_mod_full(filename)
             except Exception as e:
                 print(f"Skipping mod '{filename}': {e}")
                 continue
 
+            if legacy:
+                print(f"Mod '{filename}' uses the legacy '#path' header format; "
+                      "consider migrating to '# mod: target=... sandbox=auto'.")
+
             module_name, abs_target = _resolve_target(target)
             if module_name is None:
-                print(f"Skipping mod '{filename}': target must be a .py file inside the game folder")
+                if _is_reserved_target(target):
+                    print(f"Skipping mod '{filename}': target {target} is a reserved "
+                          "module (mod_loader, main, or data.platform) and cannot be modded")
+                else:
+                    print(f"Skipping mod '{filename}': target must be a .py file inside the game folder")
                 continue
             if abs_target is None:
                 print(f"Skipping mod '{filename}': target file not found ({target})")
@@ -527,7 +821,20 @@ def install():
                 print(f"Skipping mod '{filename}': syntax error: {e}")
                 continue
 
-            sandboxed = is_mod_sandboxed(filename)
+            sandboxed = _effective_sandbox_setting(filename, declared_sandbox)
+
+            # On web, 'sandboxed' is advisory only. platform.window is
+            # reachable from any Python code via `import platform` (stdlib,
+            # patched by pygbag) and gives the mod the full browser: fetch,
+            # XMLHttpRequest, localStorage, eval. None of those are CPython
+            # audit events, so the audit hook can't see them. Tell the user
+            # in plain text -- don't pretend the sandbox holds.
+            if sandboxed and sys.platform == "emscripten":
+                print(f"Mod '{filename}' is marked sandboxed, but on the web build the "
+                      "Python-level sandbox does not extend to platform.window or browser "
+                      "APIs. Treat it as fully privileged. See issue #51 for the "
+                      "long-term fix.")
+
             overrides[module_name] = (source, abs_target, sandboxed, filename)
             _active_mods.add(filename)
             _active_sandbox[filename] = sandboxed
