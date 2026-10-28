@@ -232,7 +232,7 @@ class CapacityIsRoomNotGarrisonTests(unittest.TestCase):
         return screen, screen.add_province("p1", "A", units=units, terrain=terrain)
 
     def capacity(self, mine, theirs):
-        from map_logic.turn_processing import combat_rules
+        from map_logic.system32 import combat_rules
         screen, prov = self.tile(mine, theirs)
         return combat_rules.nation_front_capacity("A", prov, screen.nation_data)
 
@@ -240,7 +240,7 @@ class CapacityIsRoomNotGarrisonTests(unittest.TestCase):
         self.assertEqual(self.capacity(1, 8), c.LANE_SLOTS_TYPICAL)
 
     def test_an_empty_front_uses_its_terrain_width(self):
-        from map_logic.turn_processing import combat_rules
+        from map_logic.system32 import combat_rules
 
         for terrain in ("mountain", "plains", "hills"):
             with self.subTest(terrain=terrain):
@@ -254,7 +254,7 @@ class CapacityIsRoomNotGarrisonTests(unittest.TestCase):
                     expected)
 
     def test_a_contested_front_and_its_relief_use_terrain_capacity(self):
-        from map_logic.turn_processing import combat_rules
+        from map_logic.system32 import combat_rules
 
         for terrain in ("mountain", "plains", "hills"):
             with self.subTest(terrain=terrain):
@@ -283,7 +283,7 @@ class CapacityIsRoomNotGarrisonTests(unittest.TestCase):
         """Raising our demand must not take width off an ally who has bodies
         for it -- share_slots is still the thing dividing the lane."""
         from tests.test_multiparty_combat import StubMapScreen, unit
-        from map_logic.turn_processing import combat_rules
+        from map_logic.system32 import combat_rules
 
         screen = StubMapScreen()
         screen.add_nation("A", at_war_with=["B"])

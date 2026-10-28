@@ -54,7 +54,7 @@ class StateContainerTests(unittest.TestCase):
 import asyncio, sys, pygame
 from data.map.load_map import load_backend_state
 from map_logic.ai import ai_handler
-from map_logic.turn_processing import turn_processor
+from map_logic.system32 import turn_processor
 context = load_backend_state("scenarios/historical/1939", is_scenario=True)
 assert pygame.display.get_surface() is None
 assert "screens.game.map" not in sys.modules

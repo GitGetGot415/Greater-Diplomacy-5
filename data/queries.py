@@ -1590,7 +1590,7 @@ def get_combat_location_category(province, perspective_nation, nation_data,
             or perspective_nation in ("Spectator", "Editor")):
         return COMBAT_LOCATION_GENERIC
 
-    from map_logic.turn_processing import combat_rules
+    from map_logic.system32 import combat_rules
 
     battle = combat_rules.build_battle(
         [battle_units], nation_data, terrain=province.get("terrain"))
@@ -2182,7 +2182,7 @@ def get_front_and_relief(units, count=None, terrain=None):
     reach a slot before the tile resolves.
     """
     if count is None:
-        from map_logic.turn_processing import combat_rules
+        from map_logic.system32 import combat_rules
 
         slots = combat_rules.lane_slots(
             1, combat_rules.combat_width_for_terrain(terrain))
@@ -3762,7 +3762,7 @@ def build_save_dict(map_screen, *, include_provinces=True, compact_nations=False
     if hasattr(world_state, "factions"):
         faction_records.records_for(world_state)
     session_state = session_for(map_screen)
-    from map_logic.turn_processing import unit_events
+    from map_logic.system32 import unit_events
     from map_logic.diplomacy import diplomacy_lifecycle
     diplomacy_lifecycle.normalize_diplomatic_records(world_state.nation_data)
     scenario_settings = getattr(world_for(map_screen), 'scenario_settings', {}) or {}
@@ -3818,7 +3818,7 @@ def player_snapshot_projection(map_screen, snapshot, country_id):
     world_state = world_for(map_screen)
     from types import SimpleNamespace
     result = copy.deepcopy(snapshot)
-    from map_logic.turn_processing import unit_events
+    from map_logic.system32 import unit_events
     report = unit_events.normalize_log(result.get("unit_event_log"),
                                       result.get("date", {}).get("total_turns", 0))
     report["events"] = [row for row in report["events"] if row["owner"] == country_id]
@@ -4033,7 +4033,7 @@ def get_country_summary(map_screen, country_id):
     """
     world_state = world_for(map_screen)
     session_state = session_for(map_screen)
-    from map_logic.turn_processing import combat_rules
+    from map_logic.system32 import combat_rules
 
     nation_data = world_state.nation_data
     if country_id not in nation_data or country_id in c.UNPLAYABLE_NATIONS:
@@ -5238,7 +5238,7 @@ def air_transport_draft(map_screen, country_id, commands):
 
 def apply_unit_health_loss(unit, damage, *, sources=None, tile=None):
     """Cargo loses the same fraction of current health as its carrier."""
-    from map_logic.turn_processing import unit_events
+    from map_logic.system32 import unit_events
     health = max(0, unit.get("health", 0))
     loss = min(health, max(0, damage))
     unit_events.record_damage(unit, loss, sources, tile)
@@ -5814,7 +5814,7 @@ def get_combat_predictions(map_screen):
     # 1. Meeting engagements: use the same rule as the turn resolver, but only
     #    with movement orders the player is allowed to know. Faction and
     #    alliance membership does not disclose another nation's plans.
-    from map_logic.turn_processing import combat_rules
+    from map_logic.system32 import combat_rules
     visible_to = None if is_spectator else {player_country}
 
     # Layers hidden submarines out of the bubble the same way the map/sidebar

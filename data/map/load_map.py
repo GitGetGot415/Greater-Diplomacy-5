@@ -4,7 +4,7 @@ import json
 import os
 import re
 import copy
-from map_logic.turn_processing.time_handler import TimeHandler
+from map_logic.system32.time_handler import TimeHandler
 from data.io import country_io
 import data.constants as c
 from data import migrations, queries
@@ -351,7 +351,7 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
         world_state.script_variables = []
         world_state.time_manager = TimeHandler(start_year=c.START_YEAR)
 
-    from map_logic.turn_processing import unit_events
+    from map_logic.system32 import unit_events
     unit_events.restore(map_screen, {} if session_state.selection_mode or session_state.is_editor else save_meta or {})
 
     # Loading a scenario supplies its saved/default player metadata, which is
@@ -449,7 +449,7 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
     # a member that owns land, its exiles have no path back into the world.
     if not session_state.is_editor:
         from map_logic.territory import ownership as edit_province_ownership
-        from map_logic.turn_processing import movement_processor
+        from map_logic.system32 import movement_processor
         exhausted_factions = edit_province_ownership.retire_exhausted_factions(map_screen)
         if exhausted_factions:
             # Retiring a normal nation removes its diplomacy immediately; this
@@ -500,7 +500,7 @@ def load_backend_state(load_path, *, is_scenario=False, scenario_settings=None, 
                        skip_initial_income=False, feedback=None):
     """Load the same world rules without surfaces, widgets, or a map screen."""
     from data.state_access import BackendState
-    from map_logic.turn_processing import economy_processor
+    from map_logic.system32 import economy_processor
     context = BackendState(feedback=feedback)
     context.load_path = load_path
     context.history_turn = history_turn

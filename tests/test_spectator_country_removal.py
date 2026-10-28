@@ -10,7 +10,7 @@ import pygame
 import data.constants as c
 from data import queries
 from map_logic.diplomacy import puppet_actions, volunteers, faction_leadership
-from map_logic.turn_processing import turn_processor
+from map_logic.system32 import turn_processor
 from map_logic.territory import ownership as edit_province_ownership
 from tests import app_harness
 from tests.test_map_save_format import sample_map_screen

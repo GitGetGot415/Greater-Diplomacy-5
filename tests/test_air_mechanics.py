@@ -24,7 +24,7 @@ from data.multiplayer.realtime.session import (
 )
 from map_logic.ai import ai_movement
 from map_logic import politics
-from map_logic.turn_processing import air_processor, combat_processor, combat_rules, movement_processor
+from map_logic.system32 import air_processor, combat_processor, combat_rules, movement_processor
 from screens.game.orders import Orders_Screen
 from screens.game.map import Map
 from tests.test_tournament_moves import synchronous_progress
@@ -935,7 +935,7 @@ class AirIntegrationTests(unittest.TestCase):
             driver.validate_draft("A", [command, command])
 
     def test_realtime_strike_return_fire_occurs_only_at_server_resolution(self):
-        from map_logic.turn_processing import turn_processor
+        from map_logic.system32 import turn_processor
         self.target["buildings"] = ["Fort Lvl 5"]
         fort_level = queries.get_fort_level(self.target)
         defender = wing(self.target, "Infantry Type 1910", "B")

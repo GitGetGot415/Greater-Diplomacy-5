@@ -6,7 +6,7 @@ import math
 import copy
 
 from data import queries
-from map_logic.turn_processing import movement_processor
+from map_logic.system32 import movement_processor
 
 ACTION = "SEND_VOLUNTEERS"
 RECALL_ACTION = "RECALL_VOLUNTEERS"

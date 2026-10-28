@@ -37,7 +37,7 @@ def _hand_over_the_land_only(map_screen, prov, receiver):
     are by the end-of-turn pass -- they answer to coastal access, not to who
     owns the shore.
     """
-    from map_logic.turn_processing import movement_processor
+    from map_logic.system32 import movement_processor
 
     for unit in list(prov.get("units", ())):
         owner = unit.get("owner")

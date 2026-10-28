@@ -154,7 +154,7 @@ async def play_turn(map_screen):
     for resolution and the refresh passes. Both hand-offs are caught and awaited
     here so the turn is timed from its first call to its last refresh.
     """
-    from map_logic.turn_processing import turn_manager
+    from map_logic.system32 import turn_manager
 
     pending = []
 
@@ -360,7 +360,7 @@ def run_end_turn_scene(map_screen, surface):
     """Frames drawn while one turn resolves on its background thread, the way a
     player watching the loading bar sees it. Timed for the whole turn, with no
     settle: the turn is the scene."""
-    from map_logic.turn_processing import turn_manager
+    from map_logic.system32 import turn_manager
 
     frames = []
     started = time.perf_counter()

@@ -5,7 +5,7 @@ compileall + a narrow flake8 selection -- neither of which executes an import.
 That leaves import cycles, missed renames and bad `from X import name` edits
 invisible until someone launches the game.
 
-screens.setup.player_setup and map_logic.turn_processing.turn_manager both
+screens.setup.player_setup and map_logic.system32.turn_manager both
 call into screens.game.map's render_buttons, which in turn imports
 player_setup at module level -- resolved with deferred (function-local)
 imports on the player_setup/turn_manager side rather than relying on import

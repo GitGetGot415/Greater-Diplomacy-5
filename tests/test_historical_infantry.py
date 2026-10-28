@@ -17,7 +17,7 @@ from data.state_access import BackendState
 from data.map import history_io, load_map
 from map_logic.actions import production_actions
 from map_logic.ai import ai_tech_eval, ai_unit_eval
-from map_logic.turn_processing.research_processor import process_national_research
+from map_logic.system32.research_processor import process_national_research
 from screens.game.research import Research_Screen
 from tests.test_map_save_format import sample_map_screen
 

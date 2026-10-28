@@ -15,7 +15,7 @@ from data.platform import run_background
 
 # Core Game State & Global UI Elements
 from gameState import GameState
-from map_logic.turn_processing import turn_manager, unit_events
+from map_logic.system32 import turn_manager, unit_events
 from screens.game import map_input as event_handler
 
 # Game Logic & Rendering Submodules
@@ -1578,7 +1578,7 @@ class Map(StateAccess, GameState):
 
         # --- 5. INITIALIZE INCOME ---
         # Provide 1 turn of simulated income so nations don't spawn with 0 resources
-        from map_logic.turn_processing import economy_processor
+        from map_logic.system32 import economy_processor
         economy_processor.initialize_income(self, skip=skip_initial_income)
         # Build unit membership after loading, before any planning-frame draw.
         overlay_renderer._unit_render_index(self)
@@ -1769,7 +1769,7 @@ class Map(StateAccess, GameState):
                                    on_turns, minvalue=1, maxvalue=5000)
 
     async def _run_multi_turn_thread(self, turns):
-        from map_logic.turn_processing import turn_processor
+        from map_logic.system32 import turn_processor
         from map_logic.ai import ai_handler
         import asyncio
         import traceback

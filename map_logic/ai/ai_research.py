@@ -112,7 +112,7 @@ def _fill_queue(queue, ranked, research, unit_library, tech_tree, *, research_in
         if ai_tech_eval.units_unlocked_by(pick[0], research, unit_library, research_index=index):
             military_taken = True
 
-        from map_logic.turn_processing.research_processor import enqueue_research
+        from map_logic.system32.research_processor import enqueue_research
         enqueue_research(queue, pick[0], pick[2])
 
 

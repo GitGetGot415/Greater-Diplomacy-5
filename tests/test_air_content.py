@@ -16,7 +16,7 @@ import data.constants as c
 from data import queries
 from data.multiplayer.realtime.session import MapRealtimeDriver, RealtimeError
 from map_logic.ai import ai_tech_eval, ai_unit_eval
-from map_logic.turn_processing.research_processor import process_national_research
+from map_logic.system32.research_processor import process_national_research
 from tests import app_harness
 from tests.test_map_save_format import sample_map_screen
 from tests import test_tournament_moves as tournament_harness

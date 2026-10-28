@@ -22,7 +22,7 @@ import pygame
 
 import data.constants as c
 from data import queries
-from map_logic.turn_processing import combat_rules
+from map_logic.system32 import combat_rules
 from screens.game import battle_screen
 from tests import app_harness
 from ui.panels import army_panel

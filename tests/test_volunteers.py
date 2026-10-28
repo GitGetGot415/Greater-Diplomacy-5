@@ -13,9 +13,9 @@ import data.constants as c
 from map_logic.ai import ai_evaluation
 from map_logic.diplomacy import diplomacy_logic, diplomacy_messages, volunteers
 from map_logic.diplomacy import military_attaches
-from map_logic.turn_processing import combat_processor
+from map_logic.system32 import combat_processor
 from ui.rendering import overlay_renderer
-from map_logic.turn_processing import combat_rules
+from map_logic.system32 import combat_rules
 from screens.game.battle_screen import Battle_Screen
 
 

@@ -394,7 +394,7 @@ Flight never occupies or captures the target.
 
 air_damages_forts controls fort damage.
 The turn processor applies fort damage only when the current unit library permits it.
-Read the effect in map_logic/turn_processing/air_processor.py.
+Read the effect in map_logic/system32/air_processor.py.
 This also applies to empty tiles.
 Research unlock details show the capability.
 

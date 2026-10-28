@@ -227,7 +227,7 @@ class ControllerConstructionTests(unittest.TestCase):
 
     def test_hotseat_ai_preview_keeps_resolution_settings_and_music_available(self):
         from screens.game.map import render_buttons, update_button_states
-        from map_logic.turn_processing import turn_manager
+        from map_logic.system32 import turn_manager
 
         game = app_harness.boot_map()
         players = list(game.nation_data)[:2]

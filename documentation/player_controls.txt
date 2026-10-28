@@ -49,7 +49,7 @@ Flag inspection is unavailable during country selection, hidden UI, turn process
 BATTLE CONTROLS
 ---------------
 
-screens/game/battle_screen.py edits the combat model in map_logic/turn_processing/combat_rules.py.
+screens/game/battle_screen.py edits the combat model in map_logic/system32/combat_rules.py.
 Battle replaces Give Orders on a tile where combat is active.
 Battle columns belong to combat sides, which can include several countries.
 The reserve column also shows allied units that the player cannot edit.
@@ -186,7 +186,7 @@ Search keeps these states. Enter selects the first available search result.
 The filter changes only the local display. Saves and multiplayer commands do not include it.
 Opening the report and Mark all unread still affect all entries permitted for the current player.
 
-map_logic/turn_processing/unit_events.py records actual turn resolution, including losses and attacks by AI units.
+map_logic/system32/unit_events.py records actual turn resolution, including losses and attacks by AI units.
 AI plans and combat forecasts do not write entries.
 Damage dealt uses each source's share of the applied volley.
 Shares include target restrictions and combat modifiers.

@@ -6,7 +6,7 @@ Two questions live here.
 garrisons swapping places: the units in province P ordered into Q, against the
 units in Q ordered into P. Two places need to know about them -- the prediction
 bubble the player sees before ending their turn (data/queries.py) and the combat
-that actually resolves (map_logic/turn_processing/combat_processor.py) -- and
+that actually resolves (map_logic/system32/combat_processor.py) -- and
 each carried its own implementation of the same rule, so a change to one
 silently made the bubble lie about the other.
 

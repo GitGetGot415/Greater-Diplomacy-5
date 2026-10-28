@@ -10,7 +10,7 @@ import data.constants as c
 from data import queries
 from data.runtime_rules import ActiveLibrary, RuntimeRules
 from map_logic.ai import ai_tech_eval
-from map_logic.turn_processing import economy_processor, research_processor
+from map_logic.system32 import economy_processor, research_processor
 from tests.test_map_save_format import sample_map_screen
 
 

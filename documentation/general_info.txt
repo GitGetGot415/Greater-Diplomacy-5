@@ -207,7 +207,7 @@ Public action lists in data/constants.py derive from these definitions.
 See documentation/diplo_stuff.txt for lifecycle and faction ownership.
 
 data/queries.py previews research selections with authoritative progress and prerequisites.
-map_logic/turn_processing/research_processor.py applies those selections.
+map_logic/system32/research_processor.py applies those selections.
 AI research retains its existing selection order and restart policy.
 Country appearance fields use one shared mutation helper in data/queries.py.
 Adapters retain their existing mode permissions and input limits.
@@ -378,7 +378,7 @@ map_logic/: game rules and processing.
     imports/: map and save conversion from other games.
     random_map/: random map and scenario generation.
     territory/: ownership, cores, claims, and country retirement.
-    turn_processing/: turn preparation, coordination, movement, combat, economy, research, and reports.
+    system32/: turn preparation, coordination, movement, combat, economy, research, and reports.
 
 map_tools/: map creation and validation.
     validation/check_flags.py and check_adjectives.py check data/json/countries_data.json.

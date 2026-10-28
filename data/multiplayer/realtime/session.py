@@ -780,7 +780,7 @@ class MapRealtimeDriver(PlayerActions):
 
     def process_turn(self, drafts: dict[str, list[dict[str, Any]]]) -> None:
         self.apply_validated_drafts(drafts)
-        from map_logic.turn_processing import turn_processor
+        from map_logic.system32 import turn_processor
         asyncio.run(turn_processor.prepare_turn(self.map_ref))
         asyncio.run(turn_processor.resolve_turn_logic(self.map_ref))
         # In a normal game this hook runs *after* resolution, so its orders
@@ -879,7 +879,7 @@ def apply_authoritative_snapshot(map_ref, snapshot: dict[str, Any]) -> None:
         world_state.scenario_settings = copy.deepcopy(settings)
         from data.runtime_rules import rebuild
         rebuild(map_ref)
-    from map_logic.turn_processing import unit_events
+    from map_logic.system32 import unit_events
     # Badges are local preferences. Server broadcasts must not mark them unread again.
     local_event_reads = unit_events.saved_reads(map_ref) if hasattr(map_ref, "time_manager") else {}
     clear_selection = getattr(map_ref, "clear_map_unit_selection", None)

@@ -97,7 +97,7 @@ class RuntimeOwnerTests(unittest.TestCase):
         self.assertIs(queries.get_unit_research_index(queries.get_unit_library(second), context=second), second_index)
 
     def test_world_combat_settings_and_diplomacy_caches_do_not_cross(self):
-        from map_logic.turn_processing import combat_rules
+        from map_logic.system32 import combat_rules
         first, second = game(), game()
         unit = first.map_data[1]["units"][0]
         first.scenario_settings["damage_at_zero_health"] = 0

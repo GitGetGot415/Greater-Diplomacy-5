@@ -18,7 +18,7 @@ from screens.game.map import Map
 from screens.game.orders import Orders_Screen, _OrdersRowHitbox
 from screens.game import map_input as event_handler
 from screens.setup import player_setup
-from map_logic.turn_processing.time_handler import TimeHandler
+from map_logic.system32.time_handler import TimeHandler
 
 
 def province(province_id, neighbors):

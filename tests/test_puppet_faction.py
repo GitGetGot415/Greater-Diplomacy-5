@@ -25,7 +25,7 @@ from data import queries
 from data.map import load_map
 from map_logic.diplomacy import faction_actions, puppet_actions, treaty_effects
 from map_logic.territory import ownership as own
-from map_logic.turn_processing import movement_processor
+from map_logic.system32 import movement_processor
 
 
 def nation(**over):

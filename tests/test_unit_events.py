@@ -14,8 +14,8 @@ import data.constants as c
 from data import queries
 from data.multiplayer.tournament import files as multiplayer_io
 from data.multiplayer.realtime.session import apply_authoritative_snapshot, collect_map_commands
-from map_logic.turn_processing import combat_processor, combat_rules, unit_events, turn_processor
-from map_logic.turn_processing.time_handler import TimeHandler
+from map_logic.system32 import combat_processor, combat_rules, unit_events, turn_processor
+from map_logic.system32.time_handler import TimeHandler
 from tests import app_harness
 from tests import test_tournament_moves as tournament_tests
 
@@ -242,7 +242,7 @@ class UnitEventRulesTests(unittest.TestCase):
 
     def test_air_strikes_record_incident_tile_and_expended_weapon(self):
         from tests.test_air_mechanics import world, tile, wing
-        from map_logic.turn_processing import air_processor
+        from map_logic.system32 import air_processor
         game = world()
         game.is_editor = False
         base = tile(game, 1, 8)
@@ -275,7 +275,7 @@ class UnitEventRulesTests(unittest.TestCase):
         return game, attacker, patrol, garrison, target
 
     def test_interception_and_strikes_have_distinct_details_and_survive_projection(self):
-        from map_logic.turn_processing import air_processor
+        from map_logic.system32 import air_processor
         game, attacker, patrol, garrison, target = self.air_report_fixture()
         with unit_events.record_turn(game):
             unit_events.run_step(game, "Air missions", air_processor.process_air_orders)
@@ -302,7 +302,7 @@ class UnitEventRulesTests(unittest.TestCase):
 
     def test_large_air_stack_reports_credit_reduced_damage_to_every_aircraft(self):
         from tests.test_air_mechanics import wing
-        from map_logic.turn_processing import air_processor
+        from map_logic.system32 import air_processor
         game, attacker, patrol, garrison, target = self.air_report_fixture()
         base = game.id_to_province[1]
         game.id_to_province[3]["units"].remove(patrol)
@@ -324,7 +324,7 @@ class UnitEventRulesTests(unittest.TestCase):
             self.assertEqual(entry["tile_id"], target["id"])
 
     def test_air_destruction_retains_the_phase_of_the_fatal_exchange(self):
-        from map_logic.turn_processing import air_processor
+        from map_logic.system32 import air_processor
         for casualty, expected_phase in (("attacker", "Interception"),
                                          ("patrol", "Interception"),
                                          ("garrison", "Air missions")):
@@ -360,7 +360,7 @@ class UnitEventRulesTests(unittest.TestCase):
 
     def test_air_strike_reveals_attacker_without_revealing_hidden_base(self):
         from tests.test_air_mechanics import world, tile, wing
-        from map_logic.turn_processing import air_processor
+        from map_logic.system32 import air_processor
         game = world()
         game.is_editor = False
         game.player_country = "B"

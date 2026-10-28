@@ -51,7 +51,7 @@ class TurnLoopTests(unittest.TestCase):
 
     @staticmethod
     def run_turns(game_map, surface, count):
-        from map_logic.turn_processing import turn_manager, turn_processor
+        from map_logic.system32 import turn_manager, turn_processor
         from map_logic.ai import ai_handler
         from unittest.mock import patch
         import pygame
@@ -90,7 +90,7 @@ class TurnLoopTests(unittest.TestCase):
         """Check AI production execution without assuming net army growth after combat."""
         from data import queries
         from map_logic.actions import production_actions
-        from map_logic.turn_processing import economy_processor
+        from map_logic.system32 import economy_processor
         from tests.test_consolidated_actions import game
         context = game()
         province = context.map_data[1]

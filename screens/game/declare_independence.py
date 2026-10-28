@@ -6,7 +6,7 @@ from ui.widgets import text_utils
 from ui_elements import Button, process_text_input, make_back_button, draw_text_box
 from ui.rendering.font_manager import fonts
 from data import queries
-from map_logic.turn_processing import turn_manager
+from map_logic.system32 import turn_manager
 
 # Longest core name shown on a selection button before it is ellipsised.
 CORE_NAME_MAX_CHARS = 15

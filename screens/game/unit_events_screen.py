@@ -1,7 +1,7 @@
 """Show the current viewer's events from the last completed turn."""
 import data.constants as c
 from data import queries
-from map_logic.turn_processing import unit_events
+from map_logic.system32 import unit_events
 from ui.rendering.font_manager import fonts
 from ui.widgets import flag_icons, text_utils
 from ui.widgets.table_screen import TableColumn, TableScreen

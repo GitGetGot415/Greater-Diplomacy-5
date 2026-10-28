@@ -930,7 +930,7 @@ class Research_Screen(GameState):
         if self.editing_research_levels or not self.can_edit:
             return
         player_data = self.subject_data
-        from map_logic.turn_processing.research_processor import select_research
+        from map_logic.system32.research_processor import select_research
         requested = [project["tech_name"] for project in player_data.get("research_queue", [])]
         try:
             select_research(player_data, requested + [tech_name], self.tech_tree)
@@ -944,7 +944,7 @@ class Research_Screen(GameState):
         if self.editing_research_levels or not self.can_edit:
             return
         player_data = self.subject_data
-        from map_logic.turn_processing.research_processor import select_research
+        from map_logic.system32.research_processor import select_research
         requested = [project["tech_name"] for project in player_data.get("research_queue", [])
                      if project["tech_name"] != tech_name]
         try:

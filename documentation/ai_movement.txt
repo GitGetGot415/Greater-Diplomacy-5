@@ -11,7 +11,7 @@ See documentation/air_stuff.txt for the full aircraft rules.
 CODE LOCATIONS
 --------------
 
-map_logic/turn_processing/turn_processor.py
+map_logic/system32/turn_processor.py
     prepare_turn calls movement planning after AI research and construction.
     Turn processors execute the resulting orders later.
 
@@ -28,7 +28,7 @@ map_logic/ai/ai_movement.py
     legal_air_candidates obtains aircraft orders from shared legality helpers.
     _rotate_damaged_units rotates damaged units in active battles.
 
-map_logic/turn_processing/combat_rules.py
+map_logic/system32/combat_rules.py
     Shared combat capacity and damage rules support movement estimates.
 
 data/queries.py

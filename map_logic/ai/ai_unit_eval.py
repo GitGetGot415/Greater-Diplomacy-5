@@ -553,7 +553,7 @@ def threat_profile(world, nation, unit_library, candidates):
     collapsing to zero and making every unit look immortal and every attack
     look devastating.
     """
-    from map_logic.turn_processing import combat_rules
+    from map_logic.system32 import combat_rules
 
     volleys, defenses, stacks = [], [], []
 

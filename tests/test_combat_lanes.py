@@ -33,7 +33,7 @@ os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import data.constants as c
-from map_logic.turn_processing import combat_processor, combat_rules
+from map_logic.system32 import combat_processor, combat_rules
 
 from tests.test_multiparty_combat import StubMapScreen, damage_taken, unit
 
@@ -687,7 +687,7 @@ class HeldBackTests(unittest.TestCase):
                         f"slot(s) empty with men still standing")
 
     def test_a_stale_stance_is_dropped_when_the_unit_marches_away(self):
-        from map_logic.turn_processing import movement_processor
+        from map_logic.system32 import movement_processor
 
         screen = StubMapScreen()
         screen.add_nation("A", at_war_with=["B"])
@@ -794,7 +794,7 @@ class LaneOrderLifetimeTests(unittest.TestCase):
     """lane_target names an enemy on one tile, so it must not outlive the tile."""
 
     def test_a_lane_pin_is_dropped_when_the_unit_marches_away(self):
-        from map_logic.turn_processing import movement_processor
+        from map_logic.system32 import movement_processor
 
         screen = StubMapScreen()
         screen.add_nation("A", at_war_with=["B"])

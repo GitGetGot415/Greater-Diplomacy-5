@@ -32,7 +32,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import data.constants as c
 import pygame
 from map_logic import politics
-from map_logic.turn_processing import combat_processor, combat_rules
+from map_logic.system32 import combat_processor, combat_rules
 
 from tests.test_multiparty_combat import StubMapScreen, damage_taken, unit
 
@@ -605,7 +605,7 @@ class ResearchTests(unittest.TestCase):
     """The resolver reads the multiplier off the nation whose queue it is on."""
 
     def points_after_one_turn(self, value):
-        from map_logic.turn_processing import research_processor
+        from map_logic.system32 import research_processor
 
         class Screen:
             pass
@@ -681,7 +681,7 @@ class FactionResearchTests(unittest.TestCase):
             c.FACTION_RESEARCH_BONUS_CAP)
 
     def test_resolver_applies_the_shared_research_multiplier(self):
-        from map_logic.turn_processing import research_processor
+        from map_logic.system32 import research_processor
 
         class Screen:
             pass

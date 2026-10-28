@@ -65,7 +65,7 @@ class PlayTurnTests(unittest.TestCase):
         app_harness.boot()
         import main
         from map_logic.ai import ai_handler
-        from map_logic.turn_processing import turn_manager
+        from map_logic.system32 import turn_manager
         self.ai_handler = ai_handler
         self.turn_manager = turn_manager
         self.saved_force_skip = ai_handler.FORCE_SKIP

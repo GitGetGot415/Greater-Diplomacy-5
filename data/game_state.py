@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass, field
 from data.runtime_rules import RuntimeRules
-from map_logic.turn_processing.time_handler import TimeHandler
+from map_logic.system32.time_handler import TimeHandler
 
 
 @dataclass

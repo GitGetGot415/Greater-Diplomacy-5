@@ -1224,7 +1224,7 @@ MILITARY_STRENGTH_HEALTH_DIVISOR = 10.0
 # ==========================================
 # A tile does not fight as one pot. It splits into lanes -- one duel per pair of
 # hostile powers standing on it -- and these three numbers decide how many units
-# get to be in those duels. See map_logic/turn_processing/combat_rules.py.
+# get to be in those duels. See map_logic/system32/combat_rules.py.
 
 # Width covers ground and sea combat across every lane, rather than each nation.
 # Flying missions have no width limit. Terrain can override width in

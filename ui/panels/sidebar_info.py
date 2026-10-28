@@ -5,7 +5,7 @@ from data import queries
 from ui.bars import ui_bars
 from ui_elements import draw_combat_stats, draw_bombardment_stats
 from ui.widgets import flag_icons
-from map_logic.turn_processing import combat_rules
+from map_logic.system32 import combat_rules
 
 # Small inline flag icon used in the garrison list, matching the FLAG_SIZE aspect ratio
 GARRISON_FLAG_SIZE = flag_icons.ROW_FLAG_SIZE

@@ -8,7 +8,7 @@ from types import SimpleNamespace
 
 from data import queries
 from data.map import history_io, load_map
-from map_logic.turn_processing.turn_processor import snapshot_history
+from map_logic.system32.turn_processor import snapshot_history
 
 
 class HistoryMechanicTests(unittest.TestCase):

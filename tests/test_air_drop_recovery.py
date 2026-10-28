@@ -11,7 +11,7 @@ from data import constants as c, queries
 from data.multiplayer.realtime.session import MapRealtimeDriver, RealtimeError, collect_map_commands
 from map_logic.ai import ai_movement, ai_world
 from map_logic.diplomacy import volunteers
-from map_logic.turn_processing import (
+from map_logic.system32 import (
     air_processor,
     combat_processor,
     combat_rules,

@@ -870,8 +870,8 @@ class RealtimeSessionTests(unittest.TestCase):
             resolved_bonuses.update({country: queries.get_conscription_damage_bonus(data)
                                      for country, data in server_map.nation_data.items()})
 
-        with mock.patch("map_logic.turn_processing.turn_processor.prepare_turn", new=prepare), \
-                mock.patch("map_logic.turn_processing.turn_processor.resolve_turn_logic", new=resolve):
+        with mock.patch("map_logic.system32.turn_processor.prepare_turn", new=prepare), \
+                mock.patch("map_logic.system32.turn_processor.resolve_turn_logic", new=resolve):
             driver.process_turn({"A": canonical})
         self.assertEqual(resolved_bonuses["A"], queries.get_conscription_damage_bonus(
             {"conscription_slider": 0.25}))
@@ -1241,8 +1241,8 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
         async def no_op(_map_ref):
             return None
         before = map_ref.nation_data["A"]["materials"]
-        with mock.patch("map_logic.turn_processing.turn_processor.prepare_turn", new=no_op), \
-             mock.patch("map_logic.turn_processing.turn_processor.resolve_turn_logic", new=no_op), \
+        with mock.patch("map_logic.system32.turn_processor.prepare_turn", new=no_op), \
+             mock.patch("map_logic.system32.turn_processor.resolve_turn_logic", new=no_op), \
              mock.patch("data.queries.get_unit_library", return_value={"Infantry": {
                  "cost_materials": 20, "cost_manpower": 10, "cost_fuel": 4}}), \
              mock.patch("data.queries.get_scenario_flag", return_value=False):
@@ -1286,8 +1286,8 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
         async def no_op(*_args, **_kwargs):
             pass
 
-        with mock.patch("map_logic.turn_processing.turn_processor.prepare_turn", new=no_op), \
-                mock.patch("map_logic.turn_processing.turn_processor.resolve_turn_logic", new=no_op):
+        with mock.patch("map_logic.system32.turn_processor.prepare_turn", new=no_op), \
+                mock.patch("map_logic.system32.turn_processor.resolve_turn_logic", new=no_op):
             driver.process_turn({"A": [canonical]})
 
         self.assertEqual(politics.policy_state(map_ref.nation_data, "A", "research_subsidies")["status"],
@@ -1300,8 +1300,8 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
         # choice, so the authoritative server creates no countdown at all.
         map_ref.nation_data["A"].pop(politics.POLICY_KEY)
         empty = driver.validate_draft("A", [{**preferences, politics.POLICY_KEY: {}}])[0]
-        with mock.patch("map_logic.turn_processing.turn_processor.prepare_turn", new=no_op), \
-                mock.patch("map_logic.turn_processing.turn_processor.resolve_turn_logic", new=no_op):
+        with mock.patch("map_logic.system32.turn_processor.prepare_turn", new=no_op), \
+                mock.patch("map_logic.system32.turn_processor.resolve_turn_logic", new=no_op):
             driver.process_turn({"A": [empty]})
         self.assertNotIn(politics.POLICY_KEY, map_ref.nation_data["A"])
 

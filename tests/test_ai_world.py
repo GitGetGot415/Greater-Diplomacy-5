@@ -136,7 +136,7 @@ class AIWorldParityTests(unittest.TestCase):
                 f"{a} vs {b}")
 
     def test_border_strength_caps_front_and_relief_by_each_tiles_terrain(self):
-        from map_logic.turn_processing import combat_rules
+        from map_logic.system32 import combat_rules
 
         for terrain in ("mountain", "plains", "hills"):
             with self.subTest(terrain=terrain):

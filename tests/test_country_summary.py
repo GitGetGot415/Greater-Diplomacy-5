@@ -13,7 +13,7 @@ import pygame
 import data.constants as c
 from data import queries
 from map_logic import politics
-from map_logic.turn_processing import combat_rules
+from map_logic.system32 import combat_rules
 from screens.game.country_summary import CountrySummaryScreen, open_country_summary
 from tests.stub_map_screen import StubMapScreen
 from screens.game import map_input as event_handler

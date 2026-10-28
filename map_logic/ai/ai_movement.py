@@ -6,7 +6,7 @@ import data.constants as c
 from data import queries
 from map_logic.actions import unit_actions
 from map_logic.ai import ai_unit_eval, ai_world
-from map_logic.turn_processing import combat_rules
+from map_logic.system32 import combat_rules
 
 
 def legal_air_candidates(map_screen, unit, base):

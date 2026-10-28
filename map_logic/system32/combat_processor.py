@@ -1,7 +1,7 @@
 from data.state_access import world_for, session_for
 import data.constants as c
 from data import queries
-from map_logic.turn_processing import combat_rules, unit_events
+from map_logic.system32 import combat_rules, unit_events
 from map_logic.territory import ownership as edit_province_ownership
 import random # Imported for the random tiebreaker
 from collections import namedtuple

@@ -20,7 +20,7 @@ Read `source_layout_changes.md` for previous and current source paths.
 | `map_logic/ai/` | Rule-based decisions, legal candidates, valuation, and large language model integration. |
 | `map_logic/diplomacy/` | Diplomatic requests, agreements, wars, factions, subjects, and their effects. |
 | `map_logic/territory/` | Ownership, cores, claims, and country retirement. |
-| `map_logic/turn_processing/` | Turn preparation, coordination, resolution, and unit reports. |
+| `map_logic/system32/` | Turn preparation, coordination, resolution, and unit reports. |
 | `map_logic/random_map/` | World geometry and random scenario generation used by the game. |
 | `map_logic/imports/` | Map and save conversion from other games. |
 | `screens/menus/` | Main navigation, application settings, media, assets, mods, and translation screens. |
@@ -45,6 +45,9 @@ The folders identify owners. Some existing rules still call presentation helpers
 Turn coordination still connects AI, resolution, and presentation refreshes.
 Moving those files does not change execution order or permissions.
 
+The `map_logic/system32/` name is intentional.
+Keep this name unless the user explicitly requests a different name.
+
 ## Where to make a change
 
 | Task | Start here |
@@ -56,7 +59,7 @@ Moving those files does not change execution order or permissions.
 | Change unit-order validation, payment, or cancellation | `map_logic/actions/unit_actions.py` |
 | Validate a player command independently of its transport | `map_logic/actions/player_actions.py` |
 | Change territory ownership or cores | `map_logic/territory/ownership.py` |
-| Change turn sequencing | `map_logic/turn_processing/turn_processor.py` and `turn_manager.py` |
+| Change turn sequencing | `map_logic/system32/turn_processor.py` and `turn_manager.py` |
 | Change map buttons or map input | `screens/game/map.py` and `map_input.py` |
 | Change initial country or tactical-unit selection | `screens/setup/player_setup.py` |
 | Change country-edit controls | `screens/editors/edit_country.py` |

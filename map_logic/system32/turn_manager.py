@@ -2,7 +2,7 @@ from data.state_access import world_for, session_for
 import asyncio
 import pygame
 from data.platform import run_background
-from map_logic.turn_processing import turn_processor
+from map_logic.system32 import turn_processor
 from ui.panels import diplomatic_popups
 from map_logic.ai import ai_handler
 from data import queries

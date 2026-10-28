@@ -2,7 +2,7 @@
 from data.state_access import world_for, session_for
 import random
 from data import queries
-from map_logic.turn_processing import combat_rules, combat_processor, unit_events
+from map_logic.system32 import combat_rules, combat_processor, unit_events
 
 
 def _cleanup(map_screen):

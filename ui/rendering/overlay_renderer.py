@@ -5,7 +5,7 @@ import data.constants as c
 from data import queries
 from ui.rendering import map_utils, symbol_loader
 from ui.rendering.font_manager import fonts
-from map_logic.turn_processing import combat_processor, combat_rules
+from map_logic.system32 import combat_processor, combat_rules
 
 #: How far outside the viewport a province centre may sit and still be drawn.
 #: A province is culled by its centre, but what hangs off it is much bigger than

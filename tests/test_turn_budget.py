@@ -116,7 +116,7 @@ class SharedBudgetTests(Patcher):
         """prepare_turn has to be the thing that starts the clock; a phase
         opening it would reset it for the phases after it."""
         import inspect
-        from map_logic.turn_processing import turn_processor
+        from map_logic.system32 import turn_processor
         source = inspect.getsource(turn_processor.prepare_turn)
         self.assertIn("begin_turn", source)
 

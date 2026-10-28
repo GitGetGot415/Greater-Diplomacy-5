@@ -763,7 +763,7 @@ class PlayerActions:
                     from map_logic.actions.production_actions import apply_queue_change
                     apply_queue_change(self.map_ref, country_id, command, payment_settled=True)
                 elif command["type"] == "research_queue":
-                    from map_logic.turn_processing.research_processor import apply_research_selection
+                    from map_logic.system32.research_processor import apply_research_selection
                     apply_research_selection(country_data, command)
                 elif command["type"] == "country_preferences":
                     country_data["political_drift"] = command["political_drift"]

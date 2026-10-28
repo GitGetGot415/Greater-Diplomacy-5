@@ -32,7 +32,7 @@ import pygame
 
 import data.constants as c
 from data import queries
-from map_logic.turn_processing import combat_rules
+from map_logic.system32 import combat_rules
 from ui.rendering.font_manager import fonts
 from ui.widgets import flag_icons
 from ui.panels import sidebar_info

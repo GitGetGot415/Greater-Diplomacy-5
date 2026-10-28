@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import data.constants as c
 from data import queries
 from map_logic.ai import ai_construction
-from map_logic.turn_processing import combat_processor
+from map_logic.system32 import combat_processor
 import ui_elements
 
 

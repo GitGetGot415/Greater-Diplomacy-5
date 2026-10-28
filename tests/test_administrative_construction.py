@@ -140,7 +140,7 @@ class AdministrativeConstructionTests(unittest.TestCase):
             self.world.player_country = "A"
 
     def test_paid_core_order_finishes_after_its_configured_duration(self):
-        from map_logic.turn_processing.economy_processor import process_queues
+        from map_logic.system32.economy_processor import process_queues
         name = queries.ADMINISTRATIVE_ACTIONS["CORE"][0]
         self.settings["administrative_turn_overrides"][name] = 3  # Artificial short scenario.
         duration = queries.get_administrative_turns("CORE", self.settings)

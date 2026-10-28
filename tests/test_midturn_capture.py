@@ -26,7 +26,7 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from map_logic.turn_processing import combat_processor
+from map_logic.system32 import combat_processor
 
 
 class StubMapScreen:

@@ -12,6 +12,7 @@ The sandbox suite moves into `tests/` and also runs during normal test discovery
 
 | Previous path | Current path |
 | --- | --- |
+| `map_logic/turn_processing/` | `map_logic/system32/` |
 | `docs/SANDBOX_SECURITY.md` | `documentation/other/sandbox_security.md` |
 | `data/editors/country_editor.py` | `scripts/editors/country_editor.py` |
 | `data/editors/unit_editor.py` | `scripts/editors/unit_editor.py` |
@@ -133,6 +134,10 @@ The sandbox suite moves into `tests/` and also runs during normal test discovery
 | `ui/text_utils.py` | `ui/widgets/text_utils.py` |
 
 The previous sandbox guide paths now refer readers to the maintained guide.
+
+The turn-processing package now uses its original `map_logic/system32/` name.
+`AGENTS.md` explicitly requires this name unless the user requests another name.
+The historical source paths above remain unchanged where they record earlier file moves.
 
 ## Imports outside the reorganized folders
 

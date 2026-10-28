@@ -488,7 +488,7 @@ class EffectiveAttackTests(unittest.TestCase):
 class ThreatProfileTests(unittest.TestCase):
     def test_enemy_front_and_volley_use_border_terrain(self):
         from types import SimpleNamespace
-        from map_logic.turn_processing import combat_rules
+        from map_logic.system32 import combat_rules
         from tests.test_multiparty_combat import StubMapScreen, unit
 
         screen = StubMapScreen()

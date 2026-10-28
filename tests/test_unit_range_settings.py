@@ -20,7 +20,7 @@ from data.multiplayer.realtime.session import (
     apply_authoritative_snapshot,
 )
 from map_logic.ai import ai_movement, ai_unit_eval
-from map_logic.turn_processing import air_processor, combat_processor
+from map_logic.system32 import air_processor, combat_processor
 from tests import app_harness
 from tests.test_air_mechanics import world, tile, wing
 

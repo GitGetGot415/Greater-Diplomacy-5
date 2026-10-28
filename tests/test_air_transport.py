@@ -14,7 +14,7 @@ from data.multiplayer.tournament import files as multiplayer_io
 from data.multiplayer.realtime.session import MapRealtimeDriver, RealtimeError, collect_map_commands
 from map_logic.ai import ai_movement
 from map_logic.ai import ai_unit_eval
-from map_logic.turn_processing import air_processor, combat_processor, movement_processor, unit_events
+from map_logic.system32 import air_processor, combat_processor, movement_processor, unit_events
 from screens.game.orders import Orders_Screen, _AirMissionSelectScreen
 from tests import test_air_mechanics as air_tests
 from tests.test_air_mechanics import install_air_fixture, world, tile, wing
@@ -248,7 +248,7 @@ class TransportTests(unittest.TestCase):
         self.assertEqual(screen._air_target_records, records)
 
     def test_drop_and_strike_share_interception_but_only_bomber_strikes(self):
-        from map_logic.turn_processing import combat_rules
+        from map_logic.system32 import combat_rules
         target = self.plan_drop()
         bomber = wing(self.base, "Monoplane Bomber I", order={"type": "AIR_ATTACK", "target_id": target["id"]})
         defender = wing(target, "Monoplane Fighter I", "B", order={"type": "AIR_PATROL"})
@@ -324,8 +324,8 @@ class TransportTests(unittest.TestCase):
         driver = MapRealtimeDriver(self.game)
         canonical = driver.validate_draft("A", commands)
         self.assertEqual(self.base["units"], [self.plane, self.cargo])
-        with patch("map_logic.turn_processing.turn_processor.prepare_turn", new=AsyncMock()), \
-                patch("map_logic.turn_processing.turn_processor.resolve_turn_logic", new=AsyncMock()):
+        with patch("map_logic.system32.turn_processor.prepare_turn", new=AsyncMock()), \
+                patch("map_logic.system32.turn_processor.resolve_turn_logic", new=AsyncMock()):
             driver.process_turn({"A": canonical})
         self.assertEqual(queries.air_unit_mission(self.plane), "AIR_DROP")
         air_processor.process_air_orders(self.game)
@@ -614,8 +614,8 @@ class TransportTests(unittest.TestCase):
         driver = MapRealtimeDriver(self.game)
         canonical = driver.validate_draft("A", commands)
         self.assertEqual(self.base["units"], [self.plane, self.cargo])
-        with patch("map_logic.turn_processing.turn_processor.prepare_turn", new=AsyncMock()), \
-                patch("map_logic.turn_processing.turn_processor.resolve_turn_logic", new=AsyncMock()):
+        with patch("map_logic.system32.turn_processor.prepare_turn", new=AsyncMock()), \
+                patch("map_logic.system32.turn_processor.resolve_turn_logic", new=AsyncMock()):
             driver.process_turn({"A": canonical})
         self.assertEqual(self.plane["air_cargo"], [self.cargo])
         self.assertEqual(self.cargo["health"], self.cargo["max_health"])

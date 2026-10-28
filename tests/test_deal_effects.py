@@ -104,7 +104,7 @@ class PaymentTests(unittest.TestCase):
         it floors a stockpile at zero, and the ceiling on what may be promised is
         that same income -- so a treaty can spend the year's production and can
         never do worse than that."""
-        from map_logic.turn_processing import economy_processor
+        from map_logic.system32 import economy_processor
 
         self.game.nation_data["B"]["fuel"] = 50
         agreement = deal.new(deal.KIND_PEACE, ["A"], ["B"],

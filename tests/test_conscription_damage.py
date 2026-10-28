@@ -16,7 +16,7 @@ import data.constants as c
 from data import queries
 from map_logic import politics
 from ui.rendering import overlay_renderer
-from map_logic.turn_processing import combat_processor, combat_rules
+from map_logic.system32 import combat_processor, combat_rules
 from screens.game.economy import Economy_Screen
 from tests.stub_map_screen import StubMapScreen as EconomyMap
 from tests.test_map_save_format import sample_map_screen

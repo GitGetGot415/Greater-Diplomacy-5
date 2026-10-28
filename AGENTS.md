@@ -21,6 +21,10 @@ AI means artificial intelligence. UI means user interface.
 
 ## Required Rules
 
+- Keep `map_logic/system32/` as the turn-processing package.
+  The name `system32` is intentional.
+  Do not rename it during cleanup or refactoring.
+  Rename it only when the user explicitly requests a different name.
 - **Never stage changes, commit to `main` or make another branch without explicit user approval.**
 - Use `color`, never `colour`, in identifiers, UI text, comments, and documentation.
 - Preserve intentional comments.
@@ -57,7 +61,7 @@ AI means artificial intelligence. UI means user interface.
 | `data/map/save_map.py`, `data/map/load_map.py` | Saves, loads, defaults, and migration calls. |
 | `data/io/multiplayer_io.py` | Tournament files, player move export, host import, authentication, and filtering. |
 | `data/io/realtime_multiplayer.py` | Real-time protocol, server commands, snapshots, and filtered client state. |
-| `map_logic/turn_processing/` | Turns, movement, economy, research, and combat. |
+| `map_logic/system32/` | Turns, movement, economy, research, and combat. |
 | `map_logic/diplomacy/` | Shared diplomacy rules, messages, effects, and state changes. |
 | `map_logic/ai/` | Rule-based AI, legal candidates, valuation, LLM selection, and fallbacks. |
 | `map_logic/gd4_translation.py`, `map_logic/gdhex_translation.py` | Save imports from other games into GD5. |
@@ -77,7 +81,7 @@ Give a reason when a system does not apply.
 | System | Check | Likely locations |
 | --- | --- | --- |
 | Core rules | Share legality, cost, effect, timing, and calculation logic across callers. | `data/queries.py`, `map_logic/` |
-| Turn processing | Check order resolution, turn changes, removed countries, wars, and factions. | `map_logic/turn_processing/`, `map_logic/diplomacy/` |
+| Turn processing | Check order resolution, turn changes, removed countries, wars, and factions. | `map_logic/system32/`, `map_logic/diplomacy/` |
 | UI | Derive labels, previews, enabled controls, tooltips, popups, and numbers from execution rules. | `screens/`, `ui/` |
 | AI | Generate, value, select, perform, and answer actions without an LLM. Limit LLM choices to legal candidates. | `map_logic/ai/`, `data/json/ai_responses.json` |
 | Save/load | Write new state, use safe defaults, migrate old saves, and check a save/load round trip. | `data/queries.py`, `data/map/save_map.py`, `data/map/load_map.py` |
