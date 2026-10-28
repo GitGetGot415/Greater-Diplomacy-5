@@ -432,7 +432,7 @@ Network snapshots do not include the temporary geometry cache or interception li
 Last-turn reports
 -----------------
 
-See documentation/non_llm_ai.txt, LAST-TURN UNIT EVENTS, for report controls, visibility, persistence, and read status.
+See documentation/player_controls.txt, LAST-TURN UNIT EVENTS, for report controls, visibility, persistence, and read status.
 
 Interception damage and destroyed-unit entries use Interception in Details.
 Strike entries retain Air missions in Details.

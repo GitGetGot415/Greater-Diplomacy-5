@@ -1,0 +1,314 @@
+PLAYER CONTROLS AND PERMISSIONS
+===============================
+
+AI means artificial intelligence. UI means user interface.
+See documentation/non_llm_ai.txt for AI decisions and shared combat rules.
+See documentation/diplo_stuff.txt for diplomacy controls, timing, and effects.
+See documentation/air_stuff.txt for aircraft controls and rules.
+
+COUNTRY SUMMARY
+---------------
+
+screens/map_related_screens/country_summary.py shows the summary.
+
+Hover over the flag in the top left to highlight it.
+Click the flag to open that country's summary.
+Select another country's land tile to show its flag and summary.
+Selecting water keeps the current player's flag.
+The summary is read-only. Back returns to the same player and selected tile.
+
+Long summaries support the mouse wheel, scrollbar, Page Up, and Page Down.
+
+Military shows the combined attack of available units with their current health and national damage modifiers.
+Combat width, missions, and target defenses can change actual damage.
+
+Foreign military figures include only visible units. They do not reveal hidden cargo.
+Strategic players see their complete army. Tactical players keep their restricted battlefield visibility.
+Local spectators and editors can see complete armies.
+
+Politics shows the political position, direction, research modifier, and policy states.
+Diplomacy shows the faction, leader, members, overlord, puppets, and enemies.
+All country names use the shared display-name helper.
+
+Economy shows stockpiles, income, expenses, and net income when the viewer can inspect private economics.
+Text shows conscription and material conversion. The summary has no sliders.
+Private economies hide these values as well as resource figures.
+Players can inspect their own economy.
+Faction members, direct puppets, and the overlord share economy figures in all game modes.
+Other foreign economies require disabled fog, spectator mode, or editor mode in local games.
+Other foreign economies remain private in both multiplayer systems.
+Real-time clients receive shared totals from the server without private orders or research plans.
+The Tournament Spectator cannot inspect private economics.
+
+queries.get_country_summary prepares the screen's data when it opens.
+queries.get_country_damage_multiplier owns the combined national damage modifier for summaries and combat.
+Frame drawing and scrolling use cached presentation data.
+The summary adds no saved fields or multiplayer commands. It does not change country state.
+Flag inspection is unavailable during country selection, hidden UI, turn processing, saving, and blocking confirmations.
+
+BATTLE CONTROLS
+---------------
+
+screens/map_related_screens/battle_screen.py edits the combat model in map_logic/turn_processing/combat_rules.py.
+Battle replaces Give Orders on a tile where combat is active.
+Battle columns belong to combat sides, which can include several countries.
+The reserve column also shows allied units that the player cannot edit.
+Those units can replace losses in the front rank.
+See documentation/non_llm_ai.txt, LANE COMBAT, for combat rules and order permissions.
+
+TACTICAL PLAY
+-------------
+
+A tactical player commands one division.
+The host country remains AI-controlled.
+queries.get_active_ai_nations removes the human-country exclusion while tactical_mode is active.
+
+- The AI cannot disband the player's division.
+- Orders and Battle allow edits only to that division.
+  They still display other country units.
+- Diplomatic popups for the host's inbox do not interrupt tactical play.
+  diplomatic_popups.spawn_popups_for_player still marks those messages as shown.
+  This prevents old host messages from appearing after the player declares independence.
+
+Declaring independence ends tactical mode.
+map_screen.player_unit can remain after that change.
+Always check the mode instead of inferring it from the attribute.
+
+SPECTATOR PLAY
+--------------
+
+constants.py provides three spectator permission switches:
+
+SPECTATOR_CAN_EDIT_PRODUCTION
+SPECTATOR_CAN_EDIT_RESEARCH
+SPECTATOR_CAN_EDIT_APPEARANCE
+
+All default to True.
+Disable a switch to permit viewing without the corresponding editing ability.
+
+See documentation/diplo_stuff.txt for spectator annexation, deletion, and releases from cores.
+
+RESEARCH EDITING
+----------------
+
+The editor's research screen sets a country's starting research.
+Select a country in Map Research Editor to open its research timeline and category tabs.
+Click an incomplete technology level to grant it and its prerequisites immediately.
+This also grants earlier levels in the same technology.
+For an OR requirement, keep a completed branch or add the branch that needs the fewest additional levels.
+
+Click a completed level to remove it and later levels in the same technology.
+Remove dependent levels only when their remaining prerequisites no longer permit them.
+Another completed OR branch can preserve a dependent technology.
+Clear changed research projects and progress that no longer meets prerequisites.
+These controls change only the selected country. They do not change the map default.
+
+In the map research editor, purple marks the exact default level when it is missing.
+Pink marks that level when it is completed.
+Earlier and later levels keep their normal colors.
+Player and spectator research trees do not use these default colors.
+The Completed tab is a text list. It has no technology edit buttons.
+
+Edit ALL (Bulk) and Edit Map Default keep their separate Save controls.
+Starting research editing requires the local map editor.
+It is unavailable in tactical play, tournament multiplayer, and real-time multiplayer.
+
+A spectator selects a country and sees its live research tree and queue.
+Select View or Edit above the country search box before selecting a country.
+View opens technology details without allowing research changes.
+Edit previews technology changes, with the same prerequisite rules as the map editor.
+The spectator research permission switch must permit Edit.
+Tactical play and both multiplayer systems permit only View.
+
+Select Exit or press the Back key to open the exit popup.
+Select Save to apply the draft and leave the research screen.
+Select Cancel to discard all edits and leave the research screen.
+Select Go back to close the popup and keep the draft open.
+The Back key and Escape also select Go back in this popup.
+Draft changes do not change the country's saved research or progress.
+
+An edit that discards active or paused research opens a Yes or No confirmation.
+The message identifies the affected technologies and warns that progress will be lost.
+Select No to keep the draft unchanged.
+Select Yes to discard that progress in the draft.
+Changing technologies back cannot restore this progress.
+Cancel the entire edit to preserve the original research and progress.
+
+Save checks permissions again and rejects changes if live research changed during editing.
+A normal player sees their own research.
+map_screen.viewing_research_country passes the selected country to the research screen.
+map_screen.viewing_research_mode passes View or Edit. This temporary display choice is not saved.
+editing_country serves the same purpose for the identity editor.
+
+LAST-TURN UNIT EVENTS
+---------------------
+
+screens/map_related_screens/unit_events_screen.py shows the sortable report.
+
+The yellow mail button beside the resources opens Unit events.
+The orange screen lists unit names, tile IDs, events, health changes, and sources.
+Each unit name has its country's flag on the left.
+The flag uses the owner recorded in the event, including events for destroyed units.
+Click a column header to sort the table.
+Click a row to read its full details.
+
+The Details column and expanded view show country flags before identified unit names.
+Damage received and damage dealt identify all units involved, even when they are hidden.
+Hidden units keep their names and flags, but their province number shows ???.
+
+Use the mouse wheel or Page Up and Page Down to scroll long expanded details.
+Flag images and detail text are prepared when the screen or expanded view opens.
+
+Filter events appears to the left of Mark all unread.
+Select one event type to show only matching entries.
+Select No filter to show all permitted entries.
+The button is orange with a selected filter and blue without one.
+The selection stays when you reopen the report during the same turn.
+Each completed turn clears the filter, including turns received by real-time clients.
+
+The picker disables choices that would show no entries for the current viewer.
+Available choices stay blue, including the selected event type.
+Search keeps these states. Enter selects the first available search result.
+
+The filter changes only the local display. Saves and multiplayer commands do not include it.
+Opening the report and Mark all unread still affect all entries permitted for the current player.
+
+map_logic/turn_processing/unit_events.py records actual turn resolution, including losses and attacks by AI units.
+AI plans and combat forecasts do not write entries.
+Damage dealt uses each source's share of the applied volley.
+Shares include target restrictions and combat modifiers.
+The total credit equals the target's actual health loss.
+It excludes damage beyond the target's remaining health.
+
+Events also include destruction, disbanding, deployment, movement, repairs, upgrades, and transport or type changes.
+Destroyed units remain in the report after removal from the map.
+Normal players see their own units.
+Tactical players see only their selected division, including its loss.
+Normal spectators can see all recorded entries.
+Editors and tournament spectators receive no unit reports.
+
+The badge counts unread entries for the current player.
+Opening the report marks those entries as read.
+Click Mark all unread in the report to restore the current player's unread badge.
+Closing the report keeps this unread status. Opening it again marks the entries as read.
+Hotseat players have separate read status.
+The next completed turn replaces the report and clears old read status.
+Empty turns therefore remove earlier entries too.
+
+Saves retain only the latest report and its local read status.
+Older saves start with an empty report.
+History snapshots do not store copies of reports.
+Tournament archives retain all entries in the shared host and player snapshot.
+The tournament report screen shows only the receiving player's entries.
+Real-time snapshots include only the receiving player's entries.
+Combat details hide unit positions with ??? when the viewer cannot see the unit.
+Player move files and real-time commands cannot replace host reports.
+Real-time broadcasts preserve local read status for the same turn.
+
+Each new damage entry can include detail_parts with text fragments and identified units' recorded owners.
+Saves, tournament exports, and real-time snapshots retain these fragments.
+unit_events.normalize_log validates the fragments and preserves the original details text.
+Old reports without detail_parts keep plain text for other units until the next completed turn.
+Their main unit still has its recorded owner's flag.
+Existing Unknown unit entries cannot recover identities omitted by older recording rules.
+
+MAP DISPLAY
+-----------
+
+Display defaults:
+
+- Strategic country selection: Political layer, country names on, Units off.
+- Tactical country selection and play: Units on, country names off.
+- Normal strategic play and loaded games: start with Units on and country names off.
+
+Tactical rendering draws every visible division at every zoom.
+Do not apply strategic fading or zoomed-out army compression.
+In tactical country selection, a clicked unit box selects from that box's divisions.
+Fall back to the tile only when no rendered box exists there.
+
+Map refreshes calculate layer inputs when game state changes.
+They reuse pixel surfaces that have not changed.
+Fog updates current visibility even when it can reuse its image.
+Hotseat blanking and player changes still apply.
+
+After all local players submit orders, the viewer becomes n/a while AI moves are prepared.
+The AI preview must keep Resolve Turn, Settings, and Music available.
+Country-owned actions remain hidden because no player country is assigned.
+Hide Resolve Turn while AI preparation, map refresh, or saving is active.
+
+Editor painting invalidates the affected surface.
+Refresh Maps forces a full rebuild.
+Planning-frame rendering does not run map-wide calculations.
+
+In Economy view, factory icons turn gray while their province has units in production.
+Factories without queued units keep their normal colors.
+This display uses cached production status and does not depend on the Units view filter.
+Partial fog keeps the existing unknown building marker.
+
+Naval, Land, Air, and All form a vertical strip beside the lower left sidebar in Units view.
+They filter local unit stacks, army markers, and order arrows.
+Filter results are cached when load, state, or input changes.
+Hover previews list only visible units that match the selected category.
+Training icons use the queued unit's category, even when the province has no deployed units.
+Training icons do not depend on deployed unit boxes or compact markers.
+Hidden or partially visible provinces do not show training icons.
+Clicking a province still shows its full visible unit list.
+The filter uses the unit's current form.
+Convoys are naval, including transported aircraft. Trucks are land.
+All is selected when a game opens.
+
+Changing the filter clears local unit selection and compression animations.
+It does not change units, orders, AI decisions, fog permissions, saves, or multiplayer commands.
+Combat markers for matching units still estimate the complete battle.
+Unknown fogged stacks and generic combat markers appear only in All.
+Changing filters must not reveal hidden unit types.
+
+The bubble color uses the predicted winner among countries that participate in combat.
+Countries outside the combat lanes cannot determine the color, regardless of their health.
+The forecast ranks surviving participants by health, then attack, then speed.
+An unresolved forecast or a battle without surviving participants uses grey.
+
+Map boxes separate land, naval, and air units, including members of the same army.
+See documentation/air_stuff.txt, Mission controls, for aircraft grouping, mission badges, and strategic markers.
+
+The display cache refreshes when orders, unit forms, filters, or the viewer change.
+
+ARMY GROUPS
+-----------
+
+The army list starts with Unassigned when Show Unclaimed is enabled and owned units remain outside army groups.
+Unassigned includes all unit types, including units on foreign land.
+It hides when no owned units remain outside army groups, or Show Unclaimed is disabled.
+Settings places Show Unclaimed between Show FPS and Show Tutorial Popup.
+Show Unclaimed is enabled by default, including in older settings files.
+Reset Defaults enables it again.
+
+This local display setting does not change membership, orders, saves, or multiplayer commands.
+The card is dark grey and has no symbol.
+Click the card to select its units.
+The card cannot be edited, removed, moved, or given a target area.
+It gives no automatic orders.
+
+Right-click assignment applies only to saved army groups.
+Unassigned units keep their normal map display, without army symbols or color bands.
+
+data/queries.py derives Unassigned from current units and saved army membership.
+ui/army_panel.py caches this entry when map state changes.
+Frame rendering reads the cached entry.
+Saves and multiplayer rosters contain only saved army groups.
+Loading units and memberships recreates Unassigned without a new saved field.
+
+The real-time server rejects rosters that use the reserved Unassigned identifier.
+Save loading and tournament imports discard records that use this identifier.
+
+MAP EDITOR PAINTING
+-------------------
+
+Brush and Paint buttons sit between Nation Brush and Load.
+These buttons apply only to territory and cores. Other tools keep their existing behavior.
+Brush changes tiles during a drag. Each editor session starts with Brush selected.
+Paint changes one connected land region per click. Water tiles stop the fill.
+Territory Paint matches the clicked tile's owner. Core Paint matches its complete core set, regardless of list order.
+Left-click applies the selected nation. Unclaimed clears cores.
+Right-click removes the selected nation's cores, or picks a territory owner.
+Undo and Redo apply to the complete fill. The selected tool is not saved.

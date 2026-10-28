@@ -2,7 +2,6 @@
 
 This file gives the rules for AI-assisted changes in this repository.
 AI means artificial intelligence. UI means user interface.
-A change is complete only when all affected game modes, state transitions, UI controls, and builds use the same behavior.
 
 ## Before Editing
 
@@ -12,7 +11,8 @@ A change is complete only when all affected game modes, state transitions, UI co
 2. Check `git status`.
    Preserve unrelated user changes. Do not discard work to get a clean tree.
 3. Read the relevant design notes:
-   - `documentation/non_llm_ai.txt`: rule-based AI, combat, tactical play, and spectators.
+   - `documentation/non_llm_ai.txt`: rule-based AI and shared combat rules.
+   - `documentation/player_controls.txt`: player controls, tactical play, spectators, editors, reports, and map display.
    - `documentation/ai_movement.txt`: AI unit orders, movement caches, aircraft missions, and movement tuning.
    - `documentation/llm_ai.txt`: large language models (LLMs), prompts, budgets, cancellation, and fairness.
    - `documentation/diplo_stuff.txt`: diplomacy, messages, guarantees, volunteers, attach?s, factions, war, and peace.
@@ -68,7 +68,8 @@ A change is complete only when all affected game modes, state transitions, UI co
 ## Apply Changes to All Affected Systems
 
 Start with the shared rule.
-Check each row below and update every affected system in the same change.
+Complete this checklist before handoff. Update every affected system in the same change.
+Execution, UI, AI, and documentation must agree across affected modes and state transitions.
 Give a reason when a system does not apply.
 
 | System | Check | Likely locations |
@@ -80,7 +81,7 @@ Give a reason when a system does not apply.
 | Save/load | Write new state, use safe defaults, migrate old saves, and check a save/load round trip. | `data/queries.py`, `data/map/save_map.py`, `data/map/load_map.py` |
 | Tournament multiplayer | Authenticate and validate partial moves. Reject stale or duplicate input. Preserve shared changes and hidden information. | `data/io/multiplayer_io.py`, `tests/test_tournament_moves.py` |
 | Real-time multiplayer | Let only the server apply commands. Validate permissions, filter snapshots, and protect private state. | `data/io/realtime_multiplayer.py`, real-time UI, `tests/test_realtime_multiplayer.py`, `tests/test_realtime_fog.py` |
-| Other modes | Check single-player, hotseat, spectators, tactical control, AI countries, and editor permissions. | `screens/menu_screens/map.py`, affected screens, `data/queries.py` |
+| Other modes | Enforce permissions for single-player, hotseat, spectators, tactical players, AI, editors, tournament players/hosts, and real-time clients/hosts. | `screens/menu_screens/map.py`, affected screens, `data/queries.py` |
 | Content tools | Check scenario settings, map editing, scripted actions and conditions, and base data. | `screens/editor_screens/`, scenario screens, map and scenario JSON |
 | Builds | Include new modules, packages, data, dependencies, and dynamically imported screens. | Build files listed below |
 | Documentation/tests | Add regression coverage for the rule and failure. Update affected guides. | `tests/`, `documentation/`, `README.md` |
@@ -110,46 +111,40 @@ Success in one does not prove compatibility with the other.
 
 ### One Source of Truth
 
-- Match internal names to the names shown to players when they describe the same thing.
-- Use those names in identifiers, data keys, constants, and documentation.
-- Keep formatting differences, such as spaces and capitalization, where each format requires them.
+- Match identifiers, data keys, constants, and documentation to player-facing names for the same thing.
+  Keep required formatting differences, such as spaces and capitalization.
 - Preserve older settings, saves, and protocol values through shared migration rules when names change.
 - Test legacy loading and new-data round trips after a stored name changes.
 - Check existing helpers before you add another function.
 - Combine duplicate calculations, variables, rules, functions, and state changes in one named helper.
   Use the same path for similar behavior unless a documented gameplay rule requires a difference.
 - Remove unused functions and organize imports when those changes are in scope.
-- Make UI previews and AI scores use the shared gameplay rules.
-  Do not copy damage, price, eligibility, acceptance, capacity, or timing formulas into their callers.
+- Use shared legality, cost, effect, timing, and valuation helpers across execution, UI, AI, scripts, editors, and multiplayer.
+  Do not copy damage, price, eligibility, acceptance, capacity, or timing formulas into callers.
 - Put reusable questions about current state in `data/queries.py`.
   Put constants in `data/constants.py` only when modules share them.
 - Group a screen's layout values near the top of that screen file.
   Use one anchor or gap value to move a UI group.
   Keep local layout constants out of `data/constants.py`.
-- Keep unit and building tuning data in its source files.
-  Follow the test and documentation rules below.
 - Use data tables instead of repeated condition chains when content is likely to grow.
+
+### Tuning Data
+
+Tuning data means current unit and building statistics, research settings, costs, and combat capabilities.
+This includes research years, level counts, prerequisites, unlock lists, prices, production times, and resource output.
+It also includes health, attack, defense, speed, range, damage bonuses, immunity, and fort damage capability.
+
+Keep tuning data in its source files:
+
+- `data/json/unit_data.json`, `data/json/building_data.json`, and `data/json/research_template.json`: current settings.
+- `data/generators/recipes.py`: data generation.
+- `data/constants.py`: shared tuning.
+- Shared query and execution helpers: rules defined in code.
 
 ### Hardcoding and Fallbacks
 
 - Do not hardcode content, tuning values, or repeated unexplained numbers in behavior code.
   Use JSON data, named local constants, shared constants, or query helpers.
-- Derive gameplay test expectations from shared constants, data, or rule helpers.
-  Never make tests depend on current unit or building stats, research settings, costs, or combat capabilities.
-  Use artificial fixtures to test specific values, relationships, prerequisites, unlocks, and capabilities.
-  Use current data only to check that callers read and apply that data correctly.
-  Derive test setup and expected results from the same authoritative data when testing real content.
-  Do not fix balance values in tests unless they belong to an artificial test fixture.
-  A tuning change must not require unrelated test edits.
-- Do not assume incidental relationships between real units.
-  These include equal costs, equal stats, fixed ratios, or one unit always being stronger or faster.
-  Units can be tuned separately.
-  Check each unit against its own data, or compare artificial fixtures.
-  Test a fixed relationship only when a shared gameplay rule requires it.
-  Identify that rule in the test.
-- Treat editable UI and tutorial text as content.
-  Test navigation, callbacks, permissions, and state changes.
-  Check exact wording only for protocol values, identifiers, or a specific user requirement.
 - Store non-LLM diplomatic and AI text in `data/json/ai_responses.json`.
   Read it through `map_logic/ai/ai_prompts.py`.
   Do not embed it at call sites.
@@ -211,31 +206,18 @@ Success in one does not prove compatibility with the other.
   Use `queries.country_picker_items` for pickers that return IDs.
 - A visible control does not grant permission.
   Recheck ownership and permission where state changes.
-- Check normal players, hotseat, spectators, tactical players, tournament players and hosts, real-time clients and hosts, AI, and editors.
 - Tactical players command one division while the host country remains AI-controlled.
   Existing spectator flags control spectator editing.
   Check the actual modes and flags. Do not infer a mode from a related attribute.
-- Use these map display rules:
-  - Strategic country selection: Political layer, country names on, Units off.
-  - Tactical country selection and play: Units on, country names off.
-  - Normal strategic play and loaded games: start with Units on and country names off.
-  - Tactical rendering: draw every visible division at every zoom.
-    Do not apply strategic fading or zoomed-out army compression.
-  - Tactical country selection: a clicked unit box selects from that box's divisions.
-    Fall back to the tile only when no rendered box exists there.
-- Check appearance and layout manually.
-  Keep automated checks for input handling, navigation, permissions, and state changes.
+- Follow the display defaults, tactical rendering, and unit-box selection rules in `documentation/player_controls.txt`.
 
 ### AI and Diplomacy
 
-- Rule-based AI is authoritative and must work with the LLM disabled.
-  The model selects only actions already generated and validated as legal.
-- Reuse shared AI or rule valuations for units, technology, proposals, and diplomatic outcomes.
+- Keep rule-based AI authoritative when the LLM is enabled or disabled.
+  Follow the legal-candidate restriction in the systems checklist.
 - Preserve shared prompt prefixes, turn-budget cancellation, and fairness rules from `documentation/llm_ai.txt`.
-- Before changing diplomacy, read `documentation/diplo_stuff.txt`.
-  Test both directions and delayed resolution.
+- Test diplomacy in both directions and through delayed resolution.
   Preserve message timing, cancellation, crossing requests, and unilateral or bilateral behavior.
-- UI, AI, scripted events, editor setup, tournament import, and real-time diplomacy must use shared legality and effect functions.
 
 ## Add Files, Assets, or Dependencies
 
@@ -257,44 +239,40 @@ Success in one does not prove compatibility with the other.
 Use verification appropriate to each change.
 
 - Do not add tests that check only visual components.
-  Examples include colors, fonts, icons, spacing, alignment, dimensions, overlap, and pixel appearance.
-  A person can easily check these by looking at the UI.
-  Users can change appearance without updating tests.
-  Keep tests for backend behavior, including behavior reached through UI controls.
-  Keep checks for callbacks, input handling, permissions, game rules, data, persistence, caches, and runtime errors.
-  In mixed tests, remove appearance assertions and preserve functional assertions.
+  Check colors, fonts, icons, spacing, alignment, dimensions, overlap, and pixel appearance manually.
+  Test callbacks, input, navigation, permissions, game rules, data, persistence, caches, and runtime errors.
+  Include behavior reached through UI controls.
+  Remove appearance assertions from mixed tests. Preserve their functional assertions.
+- Treat editable UI and tutorial text as content.
+  Check exact wording only for protocol values, identifiers, or a specific user requirement.
+- Tests must not require real network services or an LLM unless marked as integration tests.
 
 1. Add or update focused regression tests for the rule and actual failure.
    Keep useful tests. Rewrite them around the required behavior when necessary.
-   Remove assumptions about current tuning from existing tests, including tests that still pass.
    Do not delete useful coverage or weaken assertions only to make a failing test pass.
-
 2. Run focused tests during development.
    Example: `python -m unittest tests.test_tournament_moves`.
-
+   Focused regression tests must pass before handoff.
 3. Run `python run_tests.py` before handoff when feasible.
-
-4. For gameplay, check execution, UI and AI agreement, saves, and both multiplayer systems where applicable.
-
-5. For UI, run functional smoke checks and check appearance manually.
+4. Complete the affected-systems checklist above.
+   For UI, run functional smoke checks and check appearance manually.
    Test alternative permissions and input handling.
-   Tests must not require real network services or an LLM unless marked as integration tests.
-
-6. State exactly which tests and builds ran and which did not.
 
 ### Unit, Building, and Research Tests
 
-- Never rely on current unit or building stats, research settings, costs, or combat capabilities in tests.
-  These can change frequently. Tests must check mechanics and data use without fixing current settings.
-- This includes research years, level counts, prerequisites, unlock lists, prices, production times, and resource output.
-  It also includes health, attack, defense, speed, range, damage bonuses, immunity, and fort damage capability.
-- Do not assume that a named unit has a particular capability or that real families have fixed relationships.
-  Do not use current costs, ranges, or research levels as hidden conditions in test setup.
-- Create explicit artificial fixtures for tests that require particular settings or outcomes.
+- Test mechanics and data use without fixing current values from [Tuning Data](#tuning-data).
+  Do not use current tuning as a hidden setup condition. A tuning change must not require unrelated test edits.
+- Use explicit artificial fixtures for specific values, outcomes, relationships, prerequisites, unlocks, or capabilities.
   Set every relevant field and restore patched data after each test.
   Do not copy real stats into a fixture and assume that unchanged fields will meet the test conditions.
-- For real-content checks, derive inputs and expectations from authoritative data, shared constants, or rule helpers.
+- Do not assume capabilities from unit names or incidental relationships between real units or families.
+  Examples include equal costs or stats, fixed ratios, and one unit always being stronger or faster.
+  Check each unit against its own data, or compare artificial fixtures.
+  Test a fixed relationship only when a shared gameplay rule requires it. Identify that rule in the test.
+- Derive gameplay test expectations from authoritative data, shared constants, or rule helpers.
+  For real-content checks, derive setup and expectations from the same authoritative sources.
   Check schema, data propagation, and agreement between systems.
+  Use current data only to check that callers read and apply it correctly.
   Preserve exact identifiers and migration rules when they define compatibility contracts.
 - When tuning exposes an old assumption, rewrite the test around its intended rule.
   Check other tests for the same assumption, including tests that still pass.
@@ -303,25 +281,17 @@ Use verification appropriate to each change.
 
 ### Shared Information
 
-- Keep each shared explanation in one primary documentation file.
-- Do not duplicate obvious information or complete rule descriptions across documentation files where possible.
-- Use a short reference when another guide needs the same information.
-- Keep local conditions, exceptions, permissions, and brief summaries needed to use a guide independently.
-- Check existing guides before adding documentation. Update the primary guide when its rules change.
+- Keep each shared explanation in one primary guide. Check existing guides before adding documentation.
+- Use short references elsewhere. Keep local conditions, exceptions, permissions, and summaries needed to use each guide independently.
+- Update the primary guide when its rules change.
 
 ### Unit, Building, and Research Data
 
-- Never document current unit or building stats, research settings, costs, or combat capabilities.
-  These can change frequently. Documentation must not duplicate them.
-- This includes research years, level counts, prerequisites, unlock lists, prices, production times, and resource output.
-  It also includes health, attack, defense, speed, range, damage bonuses, immunity, and fort damage capability.
-- Do not document these settings as tables, examples, named-unit lists, or comparisons.
+- Refer readers to the sources in [Tuning Data](#tuning-data) instead of duplicating current settings.
+  This includes tables, examples, named-unit lists, and comparisons.
   Do not claim that unit or building families have equal stats, equal costs, or fixed strength relationships.
 - Explain shared mechanics, data fields, source locations, and how the game reads current data.
   Preserve save formats, migration rules, permissions, and control instructions.
-- Refer readers to `data/json/unit_data.json`, `data/json/building_data.json`, and `data/json/research_template.json` for current settings.
-  Refer to `data/generators/recipes.py` for data generation and `data/constants.py` for shared tuning.
-  Refer to shared query and execution helpers for rules defined in code.
 - Apply this rule to guides, design notes, examples, explanatory comments, docstrings, and tutorial text.
   The game can display current values and capabilities when it derives them from authoritative data or shared rules.
 
@@ -348,9 +318,7 @@ Use verification appropriate to each change.
   Give required conditions before the steps.
   Separate rules, examples, and proposed features.
 - Apply these rules to design notes, agent guides, explanatory comments and docstrings.
-- Do not edit the TODO text file using this language.
-- Do not edit the tutorial help text using this language.
-- Do not edit the README markdown file in the root of the repository using this language.
+- These language rules do not apply to `context/TODO.txt`, tutorial help text, or the root `README.md`.
 - Preserve third-party licenses, source quotations, and archived source data.
   Simplify the project's explanation of that material, not the original text.
 - Check meaning against the code before handoff.
@@ -364,25 +332,14 @@ Update it when map navigation, unit selection, orders, or covered bottom-left co
 Add or update tests for changed tutorial behavior.
 
 Update affected documentation, comments, examples, tests, schemas, and UI text with the implementation.
-Update the guide that owns each changed rule. Check other guides that refer to it.
-Keep their local instructions and references accurate.
+Check guides that refer to each changed rule. Keep their local instructions and references accurate.
 See `documentation/general_info.txt` for the guide index.
 Update every description or preview of changed player behavior.
 
-At handoff, state the behavior change and verification results.
+### Handoff
+
+State the behavior change and verification results.
+Name the tests and builds that ran and those that did not.
 Link relevant files and name remaining risks or unverified platforms.
 Give a small example when it helps explain a change.
 Do not dump whole files or give a generic change log.
-
-## Completion Conditions
-
-A change is complete only when all applicable conditions are met:
-
-- One clear implementation owns the rule.
-- Execution, UI, AI, and documentation agree.
-- Old saves load safely and new state survives a round trip.
-- Both multiplayer systems are supported, or a concrete reason explains why they do not apply.
-- Affected player and editor modes enforce the correct permissions.
-- Build definitions include new runtime material.
-- Focused tests pass, and the full suite ran when feasible.
-- Relevant design notes are accurate.

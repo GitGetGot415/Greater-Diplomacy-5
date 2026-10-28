@@ -4,7 +4,8 @@ AI MOVEMENT AND UNIT ORDERS
 AI means artificial intelligence. LLM means large language model.
 Unit orders use rule-based AI. They do not require an LLM.
 This guide covers movement planning, aircraft orders, attack checks, rotation, and temporary movement caches.
-See documentation/non_llm_ai.txt for unit valuation, purchasing, disbanding, shared combat rules, and player-mode permissions.
+See documentation/non_llm_ai.txt for unit valuation, purchasing, disbanding, and shared combat rules.
+See documentation/player_controls.txt for player-mode permissions.
 See documentation/air_stuff.txt for the full aircraft rules.
 
 CODE LOCATIONS
