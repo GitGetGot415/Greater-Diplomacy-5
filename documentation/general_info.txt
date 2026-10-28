@@ -238,6 +238,8 @@ Presentation caches update when their screens refresh. Frame drawing reads the c
 
 AI values output upgrades from its existing buildings and construction projects, with territory penalties.
 AI also includes completed bonuses when it values building upgrades.
+AI values intermediate requirements when they permit the next reachable building research level.
+This value includes the cost of both research projects.
 
 Completed levels use each country's existing research dictionary. No additional saved bonus state is required.
 Missing technology keys count as unresearched. Existing factory levels remain complete without automatic grants of new technologies.
@@ -246,6 +248,19 @@ New research selections use the active prerequisites. Existing research projects
 Editor grants and removals use the shared prerequisite rules.
 Both multiplayer systems retain their existing research commands, host validation, and privacy rules.
 Completed buildings without active library entries produce no output.
+
+Research can require an intermediate technology between levels of the same track.
+The optional level_reqs dictionary adds requirements from a specified level onward.
+Its keys are level numbers stored as strings. Each value uses the same requirement format as req.
+Example: "level_reqs": {"2": {"intermediate_tech": 1}} requires intermediate_tech for level 2 and all later levels.
+
+Base req requirements still apply. Intermediate technologies can require an earlier level of the same track.
+Research selection, AI selection, timeline connections, and editor changes use queries.get_tech_requirements.
+Research details identify the levels that require an intermediate technology.
+Scenario settings that disable technology also remove its requirements from level_reqs.
+
+Older libraries without level_reqs keep their existing requirements.
+Use research_template.json for current factory requirements and research years.
 
 UNIT IDENTITY METADATA
 ======================

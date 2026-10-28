@@ -46,7 +46,7 @@ def process_ai_research(map_screen):
             lvl_to_research = cur_lvl + 1
             
             # --- THE FIX: Use the centralized query that knows how to do math ---
-            reqs = t_data.get("req", {})
+            reqs = queries.get_tech_requirements(t_data, lvl_to_research)
             if not queries.check_tech_requirements(res_levels, reqs, lvl_to_research):
                 continue
 

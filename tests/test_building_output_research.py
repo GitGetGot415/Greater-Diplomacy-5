@@ -132,15 +132,44 @@ class OutputBonusTests(unittest.TestCase):
         self.assertEqual(ai_tech_eval.economy_gain("factory", 1, prices, self.library, {}, research=research),
                          sum(new[res] - old[res] for res in prices))
 
+    def test_ai_values_a_gate_from_the_next_reachable_upgrade_and_both_research_costs(self):
+        self.tree.update(gate={"max_lvl": 1, "cost": 20}, factory={
+            "max_lvl": 2, "cost": 40, "level_reqs": {"2": {"gate": 1}}})
+        self.library["Factory Lvl 2"] = dict(building(100, 11, 13, "industry"), req="Factory Lvl 1")
+        prices = dict.fromkeys(c.ECON_RESOURCE_KEYS, 1)
+        research = {"factory": 1}
+        gain = (self.library["Factory Lvl 2"]["prod_materials"]
+                - self.library["Factory Lvl 1"]["prod_materials"])
+        value = ai_tech_eval.economy_gain("gate", 1, prices, self.library, {}, research=research)
+        self.assertAlmostEqual(value, gain * 20 / (20 + 40))
+        self.assertEqual(queries.get_tech_level_gate_unlocks("gate", 1), [("factory", 2)])
+        self.assertTrue(queries.get_tech_unlocks("gate", 1))
+        self.assertEqual(ai_tech_eval.economy_gain("gate", 1, prices, self.library, {}, research={}), 0)
+        with patch.object(c, "AI_MAX_BUILDING_RESEARCH_LEAD", 1):
+            self.assertEqual(ai_tech_eval.economy_gain("gate", 1, prices, self.library, {},
+                                                     built={"factory": 0}, research=research), 0)
+        self.tree["factory"]["req"] = {"other": 1}
+        self.assertEqual(ai_tech_eval.economy_gain("gate", 1, prices, self.library, {}, research=research), 0)
+
 
 class FactoryResearchContentTests(unittest.TestCase):
     def test_requested_chain_dates_and_factory_only_material_bonus(self):
         tree = queries.get_tech_tree()
         self.assertEqual(tree["bessemer_process"]["years"], [1850])
-        self.assertEqual(tree["assembly_line"]["years"], [1900])
-        self.assertEqual(tree["bessemer_process"]["req"], {"basic_factory": 1})
-        self.assertEqual(tree["assembly_line"]["req"], {"bessemer_process": 1})
-        self.assertEqual(tree["factory"]["req"], {"assembly_line": 1})
+        self.assertEqual(tree["assembly_line"]["years"], [1903])
+        for tech, year in (("waltham_system", 1815), ("conveyor_belt", 1915),
+                           ("just_in_time_manufacturing", 1945)):
+            self.assertEqual(tree[tech]["years"], [year])
+        self.assertEqual(tree["waltham_system"]["req"], {"basic_factory": 1})
+        self.assertEqual(tree["waltham_system"]["building_output_bonuses"], [
+            {"building_families": ["Basic Factory", "Factory"], "outputs": {"materials": 0.5}}])
+        self.assertEqual(tree["bessemer_process"]["req"], {"waltham_system": 1})
+        self.assertEqual(tree["assembly_line"]["req"], {"factory": 1})
+        self.assertEqual(tree["conveyor_belt"]["req"], {"factory": 3})
+        self.assertEqual(tree["just_in_time_manufacturing"]["req"], {"factory": 8})
+        self.assertEqual(tree["factory"]["req"], {"bessemer_process": 1})
+        self.assertEqual(tree["factory"]["level_reqs"], {
+            "2": {"assembly_line": 1}, "4": {"conveyor_belt": 1}, "9": {"just_in_time_manufacturing": 1}})
         for tech in ("bessemer_process", "assembly_line"):
             self.assertEqual(tree[tech]["max_lvl"], 1)
             self.assertEqual(tree[tech]["building_output_bonuses"], [
@@ -148,31 +177,67 @@ class FactoryResearchContentTests(unittest.TestCase):
 
     def test_research_selections_require_completed_links_and_editor_grants_them(self):
         tree = queries.get_tech_tree()
-        for tech, predecessor in (("bessemer_process", "basic_factory"),
-                                  ("assembly_line", "bessemer_process"), ("factory", "assembly_line")):
+        for tech, predecessor, required in (("waltham_system", "basic_factory", 1),
+                                           ("bessemer_process", "waltham_system", 1),
+                                           ("assembly_line", "factory", 1), ("conveyor_belt", "factory", 3),
+                                           ("just_in_time_manufacturing", "factory", 8),
+                                           ("factory", "bessemer_process", 1)):
             with self.subTest(tech=tech):
                 with self.assertRaises(ValueError):
                     queries.canonical_research_selection({"research": {}}, [tech], tree)
-                result = queries.canonical_research_selection({"research": {predecessor: 1}}, [tech], tree)
+                result = queries.canonical_research_selection({"research": {predecessor: required}}, [tech], tree)
                 self.assertEqual(result["projects"][0]["points_remaining"], tree[tech]["cost"])
         levels = queries.edited_research_levels({}, "factory", 1, True, tree)
-        for tech in ("basic_factory", "bessemer_process", "assembly_line", "factory"):
+        self.assertNotIn("assembly_line", levels)
+        levels = queries.edited_research_levels(levels, "factory", 2, True, tree)
+        for tech in ("basic_factory", "bessemer_process", "assembly_line"):
             self.assertEqual(levels[tech], 1)
+        self.assertEqual(levels["factory"], 2)
+        for level in (1, 2):
+            country = {"research": {"factory": level, "bessemer_process": 1}}
+            with self.assertRaises(ValueError):
+                queries.canonical_research_selection(country, ["factory"], tree)
+            country["research"]["assembly_line"] = 1
+            self.assertEqual(queries.canonical_research_selection(country, ["factory"], tree)["projects"],
+                             [{"tech_name": "factory", "points_remaining": tree["factory"]["cost"]}])
+        without_assembly = queries.edited_research_levels(levels, "assembly_line", 1, False, tree)
+        self.assertEqual(without_assembly["factory"], 1)
         removed = queries.edited_research_levels(levels, "bessemer_process", 1, False, tree)
         self.assertEqual(removed["basic_factory"], 1)
         for tech in ("bessemer_process", "assembly_line", "factory"):
             self.assertEqual(removed[tech], 0)
 
-    def test_both_upgrades_affect_every_factory_tier_and_only_its_materials(self):
+    def test_later_gates_grant_and_remove_only_the_dependent_factory_levels(self):
+        tree = queries.get_tech_tree()
+        for gate, lower, upper in (("conveyor_belt", 3, 4), ("just_in_time_manufacturing", 8, 9)):
+            with self.subTest(gate=gate):
+                before = queries.edited_research_levels({}, "factory", lower, True, tree)
+                self.assertNotIn(gate, before)
+                with self.assertRaises(ValueError):
+                    queries.canonical_research_selection({"research": before}, ["factory"], tree)
+                after = queries.edited_research_levels({}, "factory", upper, True, tree)
+                self.assertEqual(after[gate], 1)
+                removed = queries.edited_research_levels(after, gate, 1, False, tree)
+                self.assertEqual(removed["factory"], lower)
+        all_levels = queries.edited_research_levels({}, "factory", tree["factory"]["max_lvl"], True, tree)
+        removed = queries.edited_research_levels(all_levels, "waltham_system", 1, False, tree)
+        self.assertEqual(removed["basic_factory"], 1)
+        for tech in ("bessemer_process", "assembly_line", "conveyor_belt", "just_in_time_manufacturing", "factory"):
+            self.assertEqual(removed[tech], 0)
+
+    def test_output_upgrades_affect_every_factory_tier_and_only_its_materials(self):
         library = queries.get_building_library()
-        research = {"bessemer_process": 1, "assembly_line": 1}
+        research = {"waltham_system": 1, "bessemer_process": 1, "assembly_line": 1}
+        material_factor = 1.0
+        for tech in research:
+            material_factor *= 1 + queries.get_tech_tree()[tech]["building_output_bonuses"][0]["outputs"]["materials"]
         multipliers = queries.get_building_output_multipliers(research, library)
         for name, stats in library.items():
             is_factory = name == "Basic Factory" or name.startswith("Factory Lvl ")
             with self.subTest(building=name):
                 output = queries.get_building_output(name, research, library, multipliers=multipliers)
                 for res in c.ECON_RESOURCE_KEYS:
-                    factor = 4 if is_factory and res == "materials" else 1
+                    factor = material_factor if is_factory and res == "materials" else 1
                     self.assertEqual(output[res], stats.get(f"prod_{res}", 0) * factor)
 
     def test_older_factory_projects_keep_progress_without_granting_the_new_technologies(self):
@@ -184,7 +249,8 @@ class FactoryResearchContentTests(unittest.TestCase):
         self.assertEqual(country, before)
 
     def test_existing_save_and_missing_keys_preserve_research_without_bonus_grants(self):
-        for research in ({"factory": 2}, {"factory": 1, "bessemer_process": 1, "assembly_line": 1}):
+        completed = queries.edited_research_levels({}, "factory", 9, True)
+        for research in ({"factory": 2}, {"factory": 8, "bessemer_process": 1}, completed):
             game = sample_map_screen()
             game.nation_data["Avaria"]["research"] = dict(research)
             game.map_data[(7, 0, 0)]["buildings"] = ["Factory Lvl 1"]
@@ -243,6 +309,7 @@ class OutputResearchScreenTests(unittest.TestCase):
 
     def test_new_research_node_opens_details_and_starts_the_authoritative_project(self):
         from screens.map_related_screens.research import Research_Screen
+        self.game.nation_data[self.country]["research"]["waltham_system"] = 1
         screen = Research_Screen()
         screen.start_research(self.game)
         screen.set_category("INDUSTRY")
@@ -258,6 +325,27 @@ class OutputResearchScreenTests(unittest.TestCase):
         self.assertEqual(country["research_queue"], [{"tech_name": "bessemer_process",
             "points_remaining": queries.get_tech_tree(self.game)["bessemer_process"]["cost"]}])
         self.assertNotIn("bessemer_process", country["research"])
+
+    def test_added_industry_nodes_open_details_and_queue_through_player_controls(self):
+        from screens.map_related_screens.research import Research_Screen
+        for tech in ("waltham_system", "conveyor_belt", "just_in_time_manufacturing"):
+            with self.subTest(tech=tech):
+                country = self.game.nation_data[self.country]
+                levels = queries.edited_research_levels({}, tech, 1, True, context=self.game)
+                levels.pop(tech)
+                country.update(research=levels, research_queue=[], research_progress={})
+                screen = Research_Screen()
+                screen.start_research(self.game)
+                screen.set_category("INDUSTRY")
+                button = next(button for button in screen.elements
+                              if getattr(button, "text", "") == queries.get_tech_display_name(tech, context=self.game))
+                button.callback()
+                self.assertEqual(screen.active_modal["tech_key"], tech)
+                self.assertEqual(screen.active_modal["status"], "AVAILABLE")
+                self.assertTrue(screen.modal_unlocks)
+                screen.modal_start_research()
+                self.assertEqual(country["research_queue"], [{"tech_name": tech,
+                    "points_remaining": queries.get_tech_tree(self.game)[tech]["cost"]}])
 
     def test_production_prepares_effective_yields_once_and_keeps_library_data_unchanged(self):
         from screens.map_related_screens.production import Production_Screen

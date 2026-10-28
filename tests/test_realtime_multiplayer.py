@@ -713,17 +713,29 @@ class RealtimeSessionTests(unittest.TestCase):
     def test_factory_output_research_uses_server_prerequisites_and_costs(self):
         from data import queries
         tree = queries.get_tech_tree()
-        for tech, prerequisite in (("bessemer_process", "basic_factory"),
-                                   ("assembly_line", "bessemer_process"), ("factory", "assembly_line")):
-            map_ref = SimpleNamespace(nation_data={"A": {"research": {}, "research_queue": []}},
+        cases = (("waltham_system", {}, {"basic_factory": 1}),
+                 ("bessemer_process", {"basic_factory": 1}, {"waltham_system": 1}),
+                 ("conveyor_belt", {"factory": 2}, {"factory": 3}),
+                 ("just_in_time_manufacturing", {"factory": 7}, {"factory": 8}),
+                 ("assembly_line", {"bessemer_process": 1}, {"factory": 1}),
+                 ("factory", {}, {"bessemer_process": 1}),
+                 ("factory", {"factory": 1, "bessemer_process": 1},
+                  {"factory": 1, "bessemer_process": 1, "assembly_line": 1}),
+                 ("factory", {"factory": 3, "bessemer_process": 1, "assembly_line": 1},
+                  {"factory": 3, "bessemer_process": 1, "assembly_line": 1, "conveyor_belt": 1}),
+                 ("factory", {"factory": 8, "bessemer_process": 1, "assembly_line": 1, "conveyor_belt": 1},
+                  {"factory": 8, "bessemer_process": 1, "assembly_line": 1, "conveyor_belt": 1,
+                   "just_in_time_manufacturing": 1}))
+        for tech, locked, unlocked in cases:
+            map_ref = SimpleNamespace(nation_data={"A": {"research": dict(locked), "research_queue": []}},
                                       map_data={}, id_to_province={})
             driver = MapRealtimeDriver(map_ref)
             command = {"type": "research_queue", "tech_names": [tech], "points_remaining": 0,
-                       "research": {prerequisite: 1}}
+                       "research": unlocked}
             with self.subTest(tech=tech):
                 with self.assertRaises(RealtimeError):
                     driver.validate_draft("A", [command])
-                map_ref.nation_data["A"]["research"][prerequisite] = 1
+                map_ref.nation_data["A"]["research"].update(unlocked)
                 canonical = driver.validate_draft("A", [command])
                 self.assertEqual(canonical[0]["projects"],
                                  [{"tech_name": tech, "points_remaining": tree[tech]["cost"]}])

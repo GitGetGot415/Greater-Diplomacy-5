@@ -119,6 +119,76 @@ class PrerequisiteTests(unittest.TestCase):
                 self.edit({}, key, level)
 
 
+class LevelRequirementTests(unittest.TestCase):
+    def setUp(self):
+        self.tree = tech_tree()
+        self.tree["root"]["level_reqs"] = {"3": {"left": 1}}
+
+    def test_gate_applies_from_its_level_and_combines_with_base_and_nested_requirements(self):
+        data = {"req": {"branch": 1}, "level_reqs": {
+            "2": {"OR": [{"left": 1}, {"right": 1}]},
+            "3": {"root": "MATCH_LEVEL-1"}}}
+        for level, research, expected in (
+                (1, {"branch": 1}, True), (2, {"branch": 1}, False),
+                (2, {"branch": 1, "right": 1}, True), (2, {"right": 1}, False),
+                (3, {"branch": 1, "right": 1, "root": 1}, False),
+                (3, {"branch": 1, "right": 1, "root": 2}, True),
+                (4, {"branch": 1, "root": 3}, False)):
+            with self.subTest(level=level, research=research):
+                self.assertEqual(queries.check_tech_requirements(
+                    research, queries.get_tech_requirements(data, level), level), expected)
+
+    def test_editor_can_grant_an_intermediate_that_requires_an_earlier_level_of_the_same_track(self):
+        lower = queries.edited_research_levels({}, "root", 2, True, self.tree)
+        self.assertEqual(lower, {"root": 2})
+        higher = queries.edited_research_levels({}, "root", 4, True, self.tree)
+        self.assertEqual(higher, {"root": 4, "left": 1})
+        removed = queries.edited_research_levels(higher, "left", 1, False, self.tree)
+        self.assertEqual(removed, {"root": 2, "left": 0})
+
+    def test_editor_discards_a_project_and_paused_progress_when_its_gate_is_removed(self):
+        country = {"research": {"root": 2, "left": 1}, "research_queue": [
+            {"tech_name": "root", "points_remaining": 37}], "research_progress": {"root": 42}}
+        with patch.object(queries, "get_tech_tree", return_value=self.tree):
+            changed, lost = queries.preview_country_research_edit(country, "left", 1)
+        self.assertEqual(changed["research"]["root"], 2)
+        self.assertEqual(changed["research_queue"], [])
+        self.assertEqual(changed["research_progress"], {})
+        self.assertEqual(lost, {"root"})
+        self.assertEqual(country["research_queue"][0]["points_remaining"], 37)
+
+    def test_disabled_scenario_technology_is_removed_from_level_gates(self):
+        from data.runtime_rules import RuntimeRules
+        tree = {"basic_factory": {"max_lvl": 1}, "other": {
+            "max_lvl": 3, "level_reqs": {"2": {"basic_factory": 1}}}}
+        runtime = RuntimeRules()
+        runtime.rebuild({"building_disabled": ["Basic Factory"]}, {
+            "unit_library": {}, "building_library": {"Basic Factory": {}}, "tech_tree": tree})
+        active = runtime.libraries["tech_tree"]
+        self.assertNotIn("basic_factory", active)
+        self.assertTrue(queries.check_tech_requirements({}, queries.get_tech_requirements(active["other"], 2), 2))
+        self.assertEqual(tree["other"]["level_reqs"], {"2": {"basic_factory": 1}})
+
+    def test_ai_offers_the_intermediate_before_the_blocked_track(self):
+        from map_logic.ai import ai_research
+        tree = {key: self.tree[key] for key in ("root", "left")}
+        game = SimpleNamespace(nation_data={"A": {"research": {"root": 2}, "research_queue": []}},
+                               time_manager=SimpleNamespace(year=c.START_YEAR + 100))
+        with ExitStack() as stack:
+            for name, result in (("get_tech_tree", tree), ("get_unit_library", {}),
+                                 ("get_building_library", {}), ("calculate_all_economies", {}),
+                                 ("get_active_ai_nations", ["A"])):
+                stack.enter_context(patch.object(queries, name, return_value=result))
+            game.map_data = {}
+            stack.enter_context(patch.object(ai_research.ai_world, "for_screen", return_value=None))
+            stack.enter_context(patch.object(ai_research, "_rank_for_nation", side_effect=lambda available, *args: available))
+            ai_research.process_ai_research(game)
+            self.assertEqual([project["tech_name"] for project in game.nation_data["A"]["research_queue"]], ["left"])
+            game.nation_data["A"].update(research={"root": 2, "left": 1}, research_queue=[])
+            ai_research.process_ai_research(game)
+            self.assertIn("root", [project["tech_name"] for project in game.nation_data["A"]["research_queue"]])
+
+
 class EditorResearchStateTests(unittest.TestCase):
     def setUp(self):
         self.enterContext(patch.object(queries, "get_tech_tree", return_value=tech_tree()))
@@ -230,6 +300,15 @@ class EditorResearchTreeTests(unittest.TestCase):
         self.assertIsNone(self.screen.active_modal)
         self.node("branch", 1).callback()
         self.assertEqual(research, {"root": 2, "branch": 0, "tip": 0})
+
+    def test_node_click_handles_intermediate_requirements_and_preserves_lower_levels_on_removal(self):
+        self.tree["root"]["level_reqs"] = {"3": {"left": 1}}
+        self.screen.start_research(self.map, editor_country=self.country)
+        self.node("root", 3).callback()
+        research = self.map.nation_data[self.country]["research"]
+        self.assertEqual(research, {"root": 3, "left": 1})
+        self.node("left", 1).callback()
+        self.assertEqual(research, {"root": 2, "left": 0})
 
     def test_mouse_click_on_a_locked_visible_node_applies_the_editor_rule(self):
         button = self.node("tip", 2)

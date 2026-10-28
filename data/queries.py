@@ -1683,6 +1683,9 @@ def get_tech_display_name(tech_key, *, context=None):
 def get_tech_unlocks(tech_key, level, *, context=None):
     """Returns a list of strings detailing what this tech unlocks."""
     unlocks = []
+    for target_key, target_level in get_tech_level_gate_unlocks(tech_key, level, context=context):
+        name = get_tech_display_name(target_key, context=context)
+        unlocks.append(f"Research prerequisite: {name}, level {target_level}")
     for bonus in get_tech_tree(context).get(tech_key, {}).get("building_output_bonuses", []):
         targets = list(bonus.get("building_families", []))
         targets.extend(group.replace("_", " ").title() for group in bonus.get("building_groups", []))
@@ -1857,6 +1860,25 @@ def get_best_naval_unit(player_research, unit_library, *, context=None):
 
 REQ_GROUP_KEYS = ("OR", "AND")
 
+def get_tech_level_gate_unlocks(tech_key, level, *, context=None):
+    """Return research levels whose added requirements name this technology level."""
+    return [(key, int(target)) for key, data in get_tech_tree(context).items()
+            for target, requirements in data.get("level_reqs", {}).items()
+            if any(dependency == tech_key and tech_requirement_level(required, int(target)) == level
+                   for dependency, required in walk_tech_requirements(requirements))]
+
+
+def get_tech_requirements(tech_data, target_level=1):
+    """Combine base requirements with gates at or below the target level."""
+    requirements = [tech_data.get("req", {})]
+    requirements.extend(reqs for level, reqs in tech_data.get("level_reqs", {}).items()
+                        if int(level) <= target_level)
+    requirements = [reqs for reqs in requirements if reqs]
+    if not requirements:
+        return {}
+    return requirements[0] if len(requirements) == 1 else {"AND": requirements}
+
+
 def tech_requirement_level(value, target_level):
     """Resolve a fixed prerequisite level or a MATCH_LEVEL expression."""
     if isinstance(value, str) and value.startswith("MATCH_LEVEL"):
@@ -1900,7 +1922,7 @@ def edited_research_levels(research, tech_key, level, researched, tech_tree=None
         if key in visiting:
             raise ValueError("Research prerequisites contain a cycle.")
         for target in range(verified.get(key, 0) + 1, required + 1):
-            satisfy(tree[key].get("req", {}), target, state, visiting | {key}, verified)
+            satisfy(get_tech_requirements(tree[key], target), target, state, visiting | {key}, verified)
             state[key] = max(state.get(key, 0), target)
             verified[key] = target
 
@@ -1936,12 +1958,12 @@ def edited_research_levels(research, tech_key, level, researched, tech_tree=None
         while True:
             changed = False
             for key, data in tree.items():
-                requirements = data.get("req", {})
+                requirements = get_tech_requirements(data, data["max_lvl"])
                 if not any(dependency in affected for dependency, _ in walk_tech_requirements(requirements)):
                     continue
                 current = result.get(key, 0)
                 for target in range(1, current + 1):
-                    if not check_tech_requirements(result, requirements, target):
+                    if not check_tech_requirements(result, get_tech_requirements(data, target), target):
                         result[key] = target - 1
                         affected.add(key)
                         changed = True
@@ -2016,7 +2038,7 @@ def preview_country_research_edit(country, tech_key, level, *, context=None):
         pending.add(current_research)
     for key in pending:
         if key in tree and (research.get(key, 0) >= tree[key]["max_lvl"]
-                           or not check_tech_requirements(research, tree[key].get("req", {}),
+                           or not check_tech_requirements(research, get_tech_requirements(tree[key], research.get(key, 0) + 1),
                                                           research.get(key, 0) + 1)):
             invalidated.add(key)
     if "research_queue" in country:
@@ -6761,7 +6783,7 @@ def canonical_research_selection(country_data, requested, tech_tree=None, *, con
                 raise ValueError("Invalid research level.")
             if current_level >= tech.get("max_lvl", 0):
                 raise ValueError("That research is already complete.")
-            if not check_tech_requirements(research, tech.get("req", {}), current_level + 1):
+            if not check_tech_requirements(research, get_tech_requirements(tech, current_level + 1), current_level + 1):
                 raise ValueError("Research requirements are not met.")
             cost = tech.get("cost")
             if not isinstance(cost, (int, float)) or cost <= 0:

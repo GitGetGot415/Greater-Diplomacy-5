@@ -282,6 +282,22 @@ def economy_gain(tech_key, level, prices, building_library, income, built=None, 
         # given to earn that back -- it keeps producing long after the twenty
         # turns a division is costed against.
         best = max(best, gain - _build_cost(name, stats, prices) / c.AI_BUILDING_PAYBACK_TURNS)
+
+    # A gate has value when it enables the next reachable building research.
+    tree = queries.get_tech_tree(context)
+    ahead = dict(research, **{tech_key: level})
+    for target, target_level in queries.get_tech_level_gate_unlocks(tech_key, level, context=context):
+        if target_level != research.get(target, 0) + 1:
+            continue
+        requirements = queries.get_tech_requirements(tree[target], target_level)
+        if (queries.check_tech_requirements(research, requirements, target_level)
+                or not queries.check_tech_requirements(ahead, requirements, target_level)):
+            continue
+        gain = economy_gain(target, target_level, prices, building_library, income, built,
+                            research=ahead, provinces=provinces, context=context)
+        # Include both research projects when comparing value per point.
+        gate_cost = tree[tech_key]["cost"]
+        best = max(best, gain * gate_cost / (gate_cost + tree[target]["cost"]))
     return max(0.0, best)
 
 

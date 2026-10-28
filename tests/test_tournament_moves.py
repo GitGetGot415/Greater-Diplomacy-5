@@ -123,12 +123,24 @@ class TournamentMoveTests(unittest.TestCase):
 
     def test_factory_output_research_intents_require_host_prerequisites_and_current_turn(self):
         tree = queries.get_tech_tree()
-        for tech, prerequisite in (("bessemer_process", "basic_factory"),
-                                   ("assembly_line", "bessemer_process"), ("factory", "assembly_line")):
+        cases = (("waltham_system", {}, {"basic_factory": 1}),
+                 ("bessemer_process", {"basic_factory": 1}, {"waltham_system": 1}),
+                 ("conveyor_belt", {"factory": 2}, {"factory": 3}),
+                 ("just_in_time_manufacturing", {"factory": 7}, {"factory": 8}),
+                 ("assembly_line", {"bessemer_process": 1}, {"factory": 1}),
+                 ("factory", {}, {"bessemer_process": 1}),
+                 ("factory", {"factory": 1, "bessemer_process": 1},
+                  {"factory": 1, "bessemer_process": 1, "assembly_line": 1}),
+                 ("factory", {"factory": 3, "bessemer_process": 1, "assembly_line": 1},
+                  {"factory": 3, "bessemer_process": 1, "assembly_line": 1, "conveyor_belt": 1}),
+                 ("factory", {"factory": 8, "bessemer_process": 1, "assembly_line": 1, "conveyor_belt": 1},
+                  {"factory": 8, "bessemer_process": 1, "assembly_line": 1, "conveyor_belt": 1,
+                   "just_in_time_manufacturing": 1}))
+        for tech, locked, unlocked in cases:
             for mode in ("valid", "locked", "malformed", "stale", "wrong_key"):
                 with self.subTest(tech=tech, mode=mode), tempfile.TemporaryDirectory() as directory:
                     host = Host()
-                    host.nation_data["Leader"]["research"] = {} if mode == "locked" else {prerequisite: 1}
+                    host.nation_data["Leader"]["research"] = dict(locked if mode == "locked" else unlocked)
                     move = {"player_intents": [{"type": "research_queue",
                             "tech_names": tech if mode == "malformed" else [tech], "points_remaining": 0}],
                             "tournament_session": host.multiplayer_session_key,

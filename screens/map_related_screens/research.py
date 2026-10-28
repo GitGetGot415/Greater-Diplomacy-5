@@ -355,8 +355,8 @@ class Research_Screen(GameState):
             "v1_flying_bomb": y4, "v2_rocket": y4,
             "monoplane_transport": y2,
             "jet_engine": y2, "jet_fighter": y1, "jet_bomber": y2, "jet_transport": y3,
-            "workshop": y1, "basic_factory": y1, "bessemer_process": y1,
-            "assembly_line": y1, "factory": y1,
+            "workshop": y1, "basic_factory": y1, "waltham_system": y1, "bessemer_process": y1,
+            "assembly_line": y1, "conveyor_belt": y1, "just_in_time_manufacturing": y1, "factory": y1,
             "bergius_process": y4, "fuel_refining": y4,
             "basic_recruitment": y2, "recruitment_buildings": y2,
             "general_recruitment": y3,
@@ -716,7 +716,7 @@ class Research_Screen(GameState):
             elif is_researching and cur_lvl + 1 == lvl:
                 status = "RESEARCHING"
             elif cur_lvl == lvl - 1:
-                reqs = self.tech_tree[tech_key].get("req", {})
+                reqs = queries.get_tech_requirements(self.tech_tree[tech_key], lvl)
                 if self.check_requirements(res_levels, reqs, lvl):
                     status = "AVAILABLE"
                 else:
@@ -1015,15 +1015,17 @@ class Research_Screen(GameState):
             if l > 1:
                 draw_line_to_prev(k, l - 1)
                 
-            reqs = self.tech_tree[k].get("req", {})
+            reqs = queries.get_tech_requirements(self.tech_tree[k], l)
+            previous_reqs = (set(queries.walk_tech_requirements(
+                queries.get_tech_requirements(self.tech_tree[k], l - 1))) if l > 1 else set())
             
             def process_req(req_k, req_v):
                 # If the requirement is dynamic, draw it for EVERY level
                 if isinstance(req_v, str) and req_v.startswith("MATCH_LEVEL"):
                     req_val = queries.tech_requirement_level(req_v, l)
                     draw_line_to_prev(req_k, req_val)
-                # If the requirement is static (e.g. basic_factory 1), ONLY draw it from level 1
-                elif l == 1:
+                # Draw fixed requirements where they first enter the chain.
+                elif (req_k, req_v) not in previous_reqs:
                     draw_line_to_prev(req_k, req_v)
 
             # Draw an arrow per prerequisite, whatever OR/AND nesting it sits in

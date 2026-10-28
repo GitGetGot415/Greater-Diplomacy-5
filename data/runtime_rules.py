@@ -52,6 +52,10 @@ class RuntimeRules:
         if disabled:
             for stats in tree.values():
                 stats['req'] = queries.strip_disabled_tech_requirements(stats.get('req', {}), disabled)
+                if 'level_reqs' in stats:
+                    stats['level_reqs'] = {
+                        level: queries.strip_disabled_tech_requirements(reqs, disabled)
+                        for level, reqs in stats['level_reqs'].items()}
         for name, library in active.items():
             destination = self.libraries.setdefault(name, ActiveLibrary(self))
             destination.clear()
