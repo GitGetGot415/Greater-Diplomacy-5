@@ -7,7 +7,6 @@ import json
 from typing import Any
 
 import data.constants as c
-from data import migrations
 from data.state_access import world_for, session_for
 from map_logic import politics
 
@@ -996,7 +995,7 @@ def collect_map_commands(map_ref, country_id: str) -> list[dict[str, Any]]:
     commands.append({"type": "puppet_draft", "puppet_order": list(controlled), "siphons": siphons,
                      "release_subjects": [{"core_nation": entry.get("core_nation"),
                                            "keep_cores": bool(entry.get("keep_cores", False)),
-                                           "release_type": migrations.puppet_release_type(entry)}
+                                           "release_type": entry["release_type"]}
                                           for entry in country_data.get("release_puppet_queue", [])
                                           if isinstance(entry, dict)],
                      "appearances": copy.deepcopy(getattr(map_ref, "realtime_pending_appearance_updates", {}))})

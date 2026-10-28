@@ -155,23 +155,24 @@ class AirRulesTests(unittest.TestCase):
                                  bool(stats.get("air_damages_forts", False)))
 
     def test_legacy_production_choices_and_upgrade_targets_migrate_once(self):
-        province = {"units": [{"type": "Biplane Fighter", "unit_id": "old-wing",
+        from data import migrations
+        province = {"terrain": "plains",
+                    "units": [{"type": "Biplane Fighter", "unit_id": "old-wing",
                                "order": {"type": "UPGRADE", "target_type": "Biplane Fighter"}}]}
         country = {"research": {"biplane": 1}, "research_progress": {"biplane": 123},
                    "custom_production_units": ["Biplane Fighter", "Zeppelin"]}
-        queries.migrate_aircraft_names({1: province}, {"A": country})
+        saved = {"nation_data": {"A": country}}
+        migrations.upgrade_save(saved, {"P": province}, {})
         self.assertEqual(province["units"][0]["type"], "Biplane Fighter I")
         self.assertEqual(province["units"][0]["order"]["target_type"], "Biplane Fighter I")
         self.assertEqual(country["custom_production_units"], ["Biplane Fighter I", "Zeppelin"])
         self.assertEqual(country["research"], {"biplane": 1})
         self.assertEqual(country["research_progress"], {"biplane": 123})
         expected = copy.deepcopy((province, country))
-        queries.migrate_aircraft_names({1: province}, {"A": country})
+        migrations.upgrade_save(saved, {"P": province}, {})
         self.assertEqual((province, country), expected)
-        for old, new in queries.LEGACY_AIRCRAFT_NAMES.items():
-            unit = queries.create_unit_dict(old, "A", queries.get_unit_library())
-            self.assertEqual(unit["type"], new)
-            self.assertEqual(unit["health"], queries.get_unit_library()[new]["health"])
+        for new in migrations.LEGACY_AIRCRAFT_NAMES.values():
+            self.assertIn(new, queries.get_unit_library())
 
     def test_fort_damage_capabilities_survive_data_generation(self):
         from data.generators.generate_data import build_unit_data_text
@@ -228,22 +229,21 @@ class AirRulesTests(unittest.TestCase):
                 self.assertTrue(queries.is_unit_unlocked(obsolete, research))
 
     def test_legacy_aircraft_names_preserve_units_transports_and_queue(self):
-        province = {"units": [{"type": old} for old in queries.LEGACY_AIRCRAFT_NAMES],
-                    "unit_queue": [{"unit_type": old, "turns_remaining": 2}
-                                   for old in queries.LEGACY_AIRCRAFT_NAMES]}
-        province["units"].append({"type": "Truck (Piston Bomber)",
-                                   "original_type": "Piston Bomber", "health": 17})
-        queries.migrate_aircraft_names({1: province})
-        self.assertEqual([unit["type"] for unit in province["units"][:-1]],
-                         list(queries.LEGACY_AIRCRAFT_NAMES.values()))
-        self.assertEqual([item["unit_type"] for item in province["unit_queue"]],
-                         list(queries.LEGACY_AIRCRAFT_NAMES.values()))
-        self.assertEqual(province["units"][-1],
-                         {"type": "Truck (Monoplane Bomber I)",
-                          "original_type": "Monoplane Bomber I", "health": 17})
-        expected = copy.deepcopy(province)
-        queries.migrate_aircraft_names({1: province})
-        self.assertEqual(province, expected)
+        from data import migrations
+        names = migrations.LEGACY_AIRCRAFT_NAMES
+        province = {"terrain": "plains", "units": [{"type": old} for old in names],
+                    "unit_queue": [{"unit_type": old, "turns_remaining": 2} for old in names]}
+        # Aircraft no longer ride in Trucks. The step renames the cargo, then unpacks it on land.
+        province["units"].append({"type": "Truck (Piston Bomber)", "original_type": "Piston Bomber",
+                                  "unit_id": "bomber", "max_health": c.TRUCK_MAX_HP,
+                                  "health": c.TRUCK_MAX_HP / 2, "original_max_health": 100})
+        migrations.upgrade_save({}, {"P": province}, {})
+        self.assertEqual([unit["type"] for unit in province["units"][:-1]], list(names.values()))
+        self.assertEqual([item["unit_type"] for item in province["unit_queue"]], list(names.values()))
+        bomber = province["units"][-1]
+        self.assertEqual((bomber["type"], bomber["unit_id"], bomber["health"]),
+                         ("Monoplane Bomber I", "bomber", 50))
+        self.assertNotIn("original_type", bomber)
 
     def test_air_research_notes_follow_the_unit_capabilities(self):
         for key, (_, _, name) in AIR_CONTENT.items():

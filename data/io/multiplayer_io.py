@@ -496,6 +496,11 @@ def load_tournament(file_path, key):
     keys_dict = decrypted_session.get("keys_dict", {})
     if not isinstance(keys_dict, dict):
         return False, None, None, None, None, "Invalid key payload"
+    try:
+        # An older game cannot read a newer tournament. Older tournaments upgrade on load.
+        migrations.check_version(game_data.get("version"), "This tournament")
+    except migrations.NewerVersionError as error:
+        return False, None, None, None, None, str(error)
 
     temp_dir = os.path.join(c.TOURNAMENT_SAVES_DIR, "temp_load")
     os.makedirs(temp_dir, exist_ok=True)
@@ -565,9 +570,10 @@ def export_move_file(map_ref, file_path, player_key):
         "unit_snapshot": True,
         "aircraft_orders": [],
         "air_transport": queries.air_transport_commands(map_ref, cid),
+        "game_version": c.GAME_VERSION,
         "release_subjects": [{"core_nation": entry["core_nation"],
                               "keep_cores": entry.get("keep_cores", False),
-                              "release_type": migrations.puppet_release_type(entry)}
+                              "release_type": entry["release_type"]}
                              for entry in save_dict.get("nation_data", {}).get(cid, {}).get("release_puppet_queue", [])],
     }
 
@@ -842,7 +848,7 @@ def _apply_puppet_siphon_updates(map_ref, country_id, player_data):
 
 
 def _validate_aircraft_orders(map_ref, country_id, player_data, provinces, cargo_ids=()):
-    """Validate before any import mutation; also safely accept old snapshots."""
+    """Validate aircraft order commands before any import mutation."""
     world_state = world_for(map_ref)
     live = {unit.get("unit_id"): (unit, province)
             for province in world_state.map_data.values()
@@ -863,7 +869,7 @@ def _validate_aircraft_orders(map_ref, country_id, player_data, provinces, cargo
             if queries.is_air_unit(unit, context=map_ref) or queries.is_air_transport(unit, context=map_ref):
                 if unit.get("unit_id") not in live or unit.get("owner") != country_id:
                     raise ValueError("Unauthorized snapshot aircraft.")
-    commands = migrations.tournament_aircraft_commands(player_data, provinces, live)
+    commands = player_data.get("aircraft_orders", [])
     if not isinstance(commands, list):
         raise ValueError("Invalid aircraft commands.")
     commands = list(commands)
@@ -1018,25 +1024,28 @@ def _validate_move_snapshot(map_ref, country_id, nation_update, provinces, prote
 
 
 def load_move_files(map_ref, move_file_paths, keys_dict, *, accept_stat_mismatches=False,
-                    loaded_countries=()):
+                    accept_older_versions=False, loaded_countries=()):
     """
     Loads a list of .gd5move files and applies their orders to the host's map.
 
     Return counts and per-file rejection details. keys_dict maps country IDs to keys.
     accept_stat_mismatches permits numeric differences only. All other checks still apply.
+    accept_older_versions converts moves from the previous release. They are then validated normally.
+    A rejection the host can override names its override: "stats" or "version".
     loaded_countries preserves batch duplicate checks during a host's review callbacks.
     """
     world_state = world_for(map_ref)
     processed_move_cids = set(loaded_countries)
-    summary = {"loaded": 0, "rejected": 0, "legacy": 0,
+    summary = {"loaded": 0, "rejected": 0, "legacy": 0, "converted": 0,
                "faction_renames": 0, "appearance_updates": 0,
                "puppet_siphon_updates": 0, "rejections": [], "overridden": 0,
                "loaded_countries": []}
 
-    def reject(file_path, cid, reason, *, overridable=False):
+    def reject(file_path, cid, reason, *, override=None):
         summary["rejected"] += 1
         summary["rejections"].append({"file_path": file_path, "country_id": cid,
-                                      "reason": reason, "overridable": overridable})
+                                      "reason": reason, "overridable": override is not None,
+                                      "override": override})
 
     def _decrypt_move(file_path):
         try:
@@ -1077,6 +1086,25 @@ def load_move_files(map_ref, move_file_paths, keys_dict, *, accept_stat_mismatch
             reject(file_path, cid, error)
             continue
 
+        try:
+            version = migrations.move_version(player_data)
+        except ValueError as error:
+            reject(file_path, cid, str(error))
+            continue
+        if version < migrations.CURRENT_VERSION:
+            if not accept_older_versions:
+                reject(file_path, cid,
+                       f"This move was made with game version v{version}. The host runs {c.GAME_VERSION}. "
+                       "The host can convert it. The converted move must then pass all normal checks.",
+                       override="version")
+                continue
+            try:
+                migrations.upgrade_move(player_data)
+            except ValueError as error:
+                reject(file_path, cid, str(error))
+                continue
+            summary["converted"] += 1
+
         context_error = _move_context_error(map_ref, player_data)
         if context_error:
             reject(file_path, cid, f"The move {context_error}.")
@@ -1104,10 +1132,10 @@ def load_move_files(map_ref, move_file_paths, keys_dict, *, accept_stat_mismatch
             summary["loaded"] += 1
             summary["loaded_countries"].append(cid)
             continue
-        if ("nation_data" in player_data) != ("provinces" in player_data):
+        if "nation_data" not in player_data or "provinces" not in player_data:
             reject(file_path, cid, "The move must contain both country and province records.")
             continue
-        nd, provs = migrations.tournament_move_sections(player_data)
+        nd, provs = player_data["nation_data"], player_data["provinces"]
             
         if not isinstance(nd, dict) or not nd or not isinstance(provs, dict):
             reject(file_path, cid, "Invalid country or province records.")
@@ -1131,7 +1159,7 @@ def load_move_files(map_ref, move_file_paths, keys_dict, *, accept_stat_mismatch
                 world_state.nation_data, world_state.map_data)
             from map_logic.diplomacy.puppet_actions import canonical_puppet_release_queue
             existing_releases = world_state.nation_data[cid].get("release_puppet_queue", [])
-            releases = migrations.tournament_release_requests(player_data, nd, existing_releases)
+            releases = player_data.get("release_subjects", existing_releases)
             canonical_releases = canonical_puppet_release_queue(
                 world_state.map_data, world_state.nation_data, cid, releases, existing_releases)
             warnings = _validate_administrative_orders(map_ref, cid, provs)
@@ -1151,7 +1179,7 @@ def load_move_files(map_ref, move_file_paths, keys_dict, *, accept_stat_mismatch
             reject(file_path, cid, str(error))
             continue
         if warnings and not accept_stat_mismatches:
-            reject(file_path, cid, "\n".join(warnings), overridable=True)
+            reject(file_path, cid, "\n".join(warnings), override="stats")
             continue
         processed_move_cids.add(cid)
         if warnings:

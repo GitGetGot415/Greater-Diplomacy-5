@@ -10,7 +10,7 @@ import data.constants as c
 import json
 
 import colorsys
-from data import migrations, queries
+from data import queries
 from data.io.country_io import DEFAULT_NATION_COLOR
 from data.io.json_io import load_json_or_empty
 from ui import confirm_dialog
@@ -229,7 +229,7 @@ class CountryEditor:
         self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
 
     def load_data(self):
-        return migrations.migrate_country_records(load_json_or_empty(PATH))
+        return load_json_or_empty(PATH)
 
     def pick_color(self):
         color = colorchooser.askcolor(title="Choose Country Color")

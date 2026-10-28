@@ -135,7 +135,11 @@ class PuppetReleaseRuleTests(unittest.TestCase):
         self.assertIsNone(self.release("Unknown"))
 
     def test_legacy_queue_defaults_to_integrated_and_keeps_its_countdown(self):
-        old = [{"core_nation": "Core", "keep_cores": False, "turns_left": 2}]
+        from data import migrations
+        saved = {"nation_data": {"Master": {"release_puppet_queue": [
+            {"core_nation": "Core", "keep_cores": False, "turns_left": 2}]}}}
+        migrations.upgrade_save(saved, {}, {})
+        old = saved["nation_data"]["Master"]["release_puppet_queue"]
         canonical = self.canonical(old, old)
         self.assertEqual(canonical[0]["release_type"], c.PUPPET_TYPE_INTEGRATED)
         self.assertEqual(canonical[0]["turns_left"], 2)

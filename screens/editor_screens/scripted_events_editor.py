@@ -13,8 +13,7 @@ import re
 import pygame
 from gameState import GameState
 import data.constants as c
-from data import migrations, queries
-from data.migrations import migrate_scripted_event as _upgrade_legacy_event
+from data import queries
 from map_logic.turn_processing.time_handler import TimeHandler
 from map_logic.rendering.font_manager import fonts
 from ui import confirm_dialog
@@ -503,11 +502,10 @@ class _EventEditScreen(_ModalScreen):
         event_data = {}
         if event_idx is not None:
             event_data = map_ref.nation_data[target]["scripted_events"][event_idx]
-            _upgrade_legacy_event(event_data)
 
         conds_data = event_data.get("conditions") or [{"chain": "AND", "type": "Turn Number",
                                                        "operator": "==", "value": ""}]
-        acts_data = migrations.scripted_event_actions(event_data)
+        acts_data = event_data.get("actions", [])
 
         self.conds = [_CondRow(d) for d in conds_data]
         self.acts = [_ActRow(d) for d in acts_data]
@@ -957,10 +955,8 @@ class Scripted_Events_Editor_Screen(_ModalScreen):
 
     def _event_summary(self, evt, index):
         """The one-line description the original listbox showed, verbatim."""
-        _upgrade_legacy_event(evt)
-
         cond_strs = []
-        for idx, c_dict in enumerate(evt["conditions"]):
+        for idx, c_dict in enumerate(evt.get("conditions", [])):
             prefix = "" if idx == 0 else f" {c_dict.get('chain', 'AND')} "
             if c_dict.get("type") == "Turn Number":
                 cond_strs.append(f"{prefix}Turn {c_dict.get('operator', '==')} {c_dict.get('value')}")
@@ -972,7 +968,7 @@ class Scripted_Events_Editor_Screen(_ModalScreen):
 
         full_cond_str = truncate("".join(cond_strs), SUMMARY_MAX_CHARS)
 
-        actions = migrations.scripted_event_actions(evt)
+        actions = evt.get("actions", [])
 
         act_strs = []
         for a in actions:

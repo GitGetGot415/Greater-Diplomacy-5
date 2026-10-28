@@ -1,6 +1,6 @@
 import pygame
 import data.constants as c
-from data import migrations, queries
+from data import queries
 from gameState import MapOverlayScreen
 from ui_elements import Button, Slider, make_back_button
 from map_logic.rendering.font_manager import fonts
@@ -302,10 +302,10 @@ class Create_Puppet_Screen(MapOverlayScreen):
             entry = queued.get(subject)
             available = queries.get_puppet_release_provinces(
                 self.releasing_country, subject, self.map_screen.map_data, self.keep_cores, queue)
-            status = f" ({migrations.puppet_release_type(entry)} queued)" if entry else ""
+            status = f" ({entry['release_type']} queued)" if entry else ""
             self.release_rows.append((name + status, entry is not None))
             row_text = fit_text(name + status, row_font, self.ROW_TEXT_WIDTH)
-            text_color = (self.QUEUED_TEXT_COLORS[migrations.puppet_release_type(entry)]
+            text_color = (self.QUEUED_TEXT_COLORS[entry["release_type"]]
                           if entry else c.UI_TEXT_LIGHT)
             self.release_row_surfaces.append(row_font.render(
                 row_text, True, text_color))

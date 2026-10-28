@@ -378,10 +378,6 @@ def _gather_ai_tasks(map_screen):
 
         pending = data.get("pending_diplomacy", {})
         for target, info in pending.items():
-            if isinstance(info, str):
-                info = migrations.normalize_diplomatic_request(info, country_name, target)
-                pending[target] = info
-
             action = info.get("action", "")
             turns = info.get("turns", 0)
             custom_msg = info.get("message", "")
@@ -1505,7 +1501,7 @@ def _process_claim_queues(map_screen):
                 core_nation = rq["core_nation"]
                 keep_cores = rq.get("keep_cores", False)
                 from map_logic.diplomacy.puppet_actions import finalize_create_puppet
-                release_type = migrations.puppet_release_type(rq)
+                release_type = rq["release_type"]
                 created = finalize_create_puppet(world_state.map_data, world_state.nation_data,
                                                 country_name, core_nation, map_screen, keep_cores, release_type)
                 if created and country_name == session_state.player_country:
@@ -1556,7 +1552,7 @@ def _schedule_conflicting_ai_volunteer_send_homes(map_screen):
 
 def process_diplomacy_turn(map_screen):
     world_state = world_for(map_screen)
-    migrations.migrate_pending_responses(world_state.nation_data)
+    migrations.normalize_diplomacy_channels(world_state.nation_data)
     _decay_modifiers_and_truces(map_screen)
     volunteers.tick(map_screen)
     _process_scheduled_ai_attache_revocations(map_screen)

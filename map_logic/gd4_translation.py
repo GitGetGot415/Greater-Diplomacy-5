@@ -16,7 +16,7 @@ import shutil
 from datetime import datetime
 
 import data.constants as c
-from data import migrations, queries
+from data import queries
 from data.map import history_io
 from data.platform import sync_persisted_dir
 
@@ -286,7 +286,7 @@ def _unique_name(name, nation_data):
 def _make_country_names(records, base_nation_data):
     """GD4 country codes point to records; names may have changed in a save."""
     code_to_name = {}
-    nation_data = migrations.migrate_country_records(copy.deepcopy(base_nation_data))
+    nation_data = copy.deepcopy(base_nation_data)
     for index, record in enumerate(records):
         if not isinstance(record, list) or len(record) < 26:
             raise GD4TranslationError(f"GD4 country record {index + 1} is incomplete")

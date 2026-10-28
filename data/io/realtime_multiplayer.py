@@ -81,6 +81,10 @@ def default_advertised_address() -> str:
 RealtimeError = PlayerActionError
 
 
+class GameVersionError(RealtimeError):
+    """The other side runs a different game version. Snapshots are not version-converted."""
+
+
 def sanitize_display_name(value: Any) -> str:
     """Return a safe display name or raise a useful rejection.
 
@@ -203,7 +207,7 @@ def load_reconnect_token(invite: dict[str, Any]) -> str:
 
 def encode_message(message_type: str, session_id: str, payload: dict[str, Any] | None = None,
                    request_id: str | None = None) -> bytes:
-    body = {"version": PROTOCOL_VERSION, "type": message_type,
+    body = {"version": PROTOCOL_VERSION, "game_version": c.GAME_VERSION, "type": message_type,
             "session_id": session_id, "request_id": request_id or secrets.token_hex(8),
             "payload": payload or {}}
     raw = json.dumps(body, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
@@ -237,6 +241,11 @@ def read_message(sock: socket.socket) -> dict[str, Any]:
             or not isinstance(message.get("session_id"), str)
             or not isinstance(message.get("payload"), dict)):
         raise RealtimeError("Incompatible network message.")
+    if message.get("game_version") != c.GAME_VERSION:
+        # v46 and earlier did not send a game version.
+        raise GameVersionError(
+            f"The other side runs game version {message.get('game_version') or 'v46 or earlier'}. "
+            f"This game is {c.GAME_VERSION}. Every player needs the same game version.")
     return message
 
 
@@ -901,7 +910,6 @@ def apply_authoritative_snapshot(map_ref, snapshot: dict[str, Any]) -> None:
         if "research_years" in snapshot:
             research_snapshot["research_years"] = snapshot["research_years"]
         migrations.migrate_infantry_research(research_snapshot, queries.get_tech_tree(map_ref))
-    migrations.migrate_country_records(nation_data)
     migrations.migrate_diplomatic_records(nation_data)
     incoming_player = nation_data.get(player_country, {}) if isinstance(nation_data, dict) else {}
     for message in incoming_player.get("inbox", []) if isinstance(incoming_player, dict) else []:
@@ -1198,7 +1206,14 @@ class RealtimeServer:
             with self._connection_lock:
                 self._open_connections.add(connection)
             while not self._stopped.is_set():
-                message = read_message(connection)
+                try:
+                    message = read_message(connection)
+                except GameVersionError:
+                    # Tell the guest why before the connection closes. Older guests show this error too.
+                    self._send_message(connection, "error", {"message": (
+                        f"The host runs game version {c.GAME_VERSION}. "
+                        "Every player needs the host's game version to join.")})
+                    raise
                 if message["session_id"] != self.session.session_id:
                     raise RealtimeError("Wrong match session.")
                 try:

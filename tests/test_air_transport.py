@@ -513,7 +513,7 @@ class TransportTests(unittest.TestCase):
         self.assertIn(self.cargo["unit_id"], army["unit_ids"])
         self.cargo["health"] /= 2
         queries.get_unit_library()["Fixture Cargo"]["health"] *= 2
-        queries.migrate_units_to_current_stats(self.game.map_data, queries.get_unit_library())
+        queries.refresh_unit_stats(self.game.map_data, self.game.nation_data, queries.get_unit_library())
         self.assertEqual(self.cargo["health"] / self.cargo["max_health"], 0.5)
 
     def test_carrier_ownership_changes_include_cargo_and_division_counts(self):

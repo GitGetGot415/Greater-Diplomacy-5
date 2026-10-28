@@ -1,14 +1,13 @@
 """Older data keeps its meaning after conversion and serialization."""
 
-import contextlib
 import copy
 import gzip
-import io
 import json
 import os
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
 import unittest
 from unittest import mock
 
@@ -16,26 +15,76 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 
 from data import constants as c, migrations, queries
+from data.map import history_io, load_map
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def round_trip(value):
     return json.loads(json.dumps(value))
 
 
-class SavedDataMigrationTests(unittest.TestCase):
-    def test_obsolete_country_alliances_are_removed_without_changing_other_fields(self):
+def upgraded(save_meta=None, map_data=None, history=None):
+    """Run every save step on unstamped fixture data and return the three parts."""
+    save_meta = {} if save_meta is None else save_meta
+    map_data = {} if map_data is None else map_data
+    history = {} if history is None else history
+    migrations.upgrade_save(save_meta, map_data, history)
+    return save_meta, map_data, history
+
+
+class GameVersionTests(unittest.TestCase):
+    def test_version_numbers_read_stamps_and_treat_missing_stamps_as_oldest(self):
+        self.assertEqual(migrations.version_number("v46"), 46)
+        self.assertEqual(migrations.version_number(" v7 "), 7)
+        for missing in (None, "", "46", "version 46", "v4.6", 46):
+            with self.subTest(missing=missing):
+                self.assertEqual(migrations.version_number(missing), 0)
+
+    def test_game_version_is_the_release_or_the_next_development_version(self):
+        released = (ROOT / "version.txt").read_text(encoding="utf-8").strip()
+        self.assertIn(migrations.CURRENT_VERSION - migrations.version_number(released), (0, 1))
+
+    def test_every_step_targets_a_version_this_game_can_write(self):
+        for steps in (migrations.SAVE_STEPS, migrations.MOVE_STEPS):
+            targets = [target for target, _step in steps]
+            self.assertEqual(targets, sorted(set(targets)))
+            self.assertLessEqual(targets[-1], migrations.CURRENT_VERSION)
+
+    def test_newer_saves_are_refused_with_an_update_message(self):
+        newer = f"v{migrations.CURRENT_VERSION + 1}"
+        with self.assertRaisesRegex(migrations.NewerVersionError, "Update the game"):
+            migrations.upgrade_save({"version": newer}, {}, {})
+        with tempfile.TemporaryDirectory() as directory:
+            with open(os.path.join(directory, "meta.json"), "w") as file:
+                json.dump({"version": newer}, file)
+            self.assertIn("Update the game", load_map.newer_version_message(directory))
+            with open(os.path.join(directory, "meta.json"), "w") as file:
+                json.dump({"version": c.GAME_VERSION}, file)
+            self.assertIsNone(load_map.newer_version_message(directory))
+
+    def test_steps_run_once_and_stamp_the_current_version(self):
+        old = {"nation_data": {"A": {"allied_with": ["B"]}}}
+        upgraded(old)
+        self.assertEqual(old["version"], c.GAME_VERSION)
+        self.assertNotIn("allied_with", old["nation_data"]["A"])
+        # A current save skips every step. Load repairs, not steps, handle current data.
+        current = {"version": c.GAME_VERSION, "nation_data": {"A": {"allied_with": ["B"]}}}
+        migrations.upgrade_save(current, {}, {})
+        self.assertEqual(current["nation_data"]["A"]["allied_with"], ["B"])
+
+
+class Version47StepTests(unittest.TestCase):
+    def test_obsolete_country_alliances_are_removed_from_saves_and_history(self):
         for old_value in ([], ["B"], "B", None, {"invalid": True}):
             with self.subTest(old_value=old_value):
                 country = {"allied_with": old_value, "faction": "Pact", "master": "B",
                            "puppets": ["C"], "future_field": {"keep": [17]}}
-                expected = copy.deepcopy(country)
-                expected.pop("allied_with")
-                nested = country["future_field"]
-                self.assertIs(migrations.migrate_country_record(country), country)
-                self.assertEqual(country, expected)
-                self.assertIs(country["future_field"], nested)
-                migrations.migrate_country_record(country)
-                self.assertEqual(country, expected)
+                expected = {key: value for key, value in country.items() if key != "allied_with"}
+                history = {"1": {"nation_data": {"A": copy.deepcopy(country)}}}
+                meta, _map, history = upgraded({"nation_data": {"A": country}}, history=history)
+                self.assertEqual(meta["nation_data"]["A"], expected)
+                self.assertEqual(history["1"]["nation_data"]["A"], expected)
 
     def test_old_direct_alliances_do_not_affect_current_friendship_queries(self):
         countries = {"A": {"allied_with": ["OLD"], "faction": "Pact", "puppets": ["SUB"]},
@@ -44,139 +93,175 @@ class SavedDataMigrationTests(unittest.TestCase):
         with queries.diplomacy_snapshot():
             self.assertEqual(queries.get_all_friendly_nations("A", countries), {"A", "B", "SUB"})
 
-    def test_country_cache_and_template_merge_remove_the_obsolete_field(self):
-        catalog = {"A": {"name": "A", "allied_with": []},
-                   "B": {"name": "B", "allied_with": ["A"]}}
-        migrations.normalize_cached_json_names("country_data", catalog)
-        self.assertTrue(all("allied_with" not in country for country in catalog.values()))
-        saved = {"A": {"allied_with": ["B"], "future_field": 23},
-                 "Custom": {"allied_with": ["A"], "name": "Custom"}}
-        with mock.patch.object(queries, "get_country_data", return_value=catalog):
-            restored = migrations.merge_country_templates(saved)
-        self.assertIs(restored, saved)
-        self.assertEqual(restored["A"], {"name": "A", "future_field": 23})
-        self.assertEqual(restored["Custom"], {"name": "Custom"})
-        self.assertEqual(restored["B"], {"name": "B"})
-
-    def test_save_round_trip_does_not_write_the_obsolete_country_field(self):
-        from tests.test_map_save_format import sample_map_screen
-
-        for compact in (False, True):
-            with self.subTest(compact=compact):
-                game = sample_map_screen()
-                game.nation_data["Avaria"].update(allied_with=["Old Friend"], future_field={"keep": 7})
-                with mock.patch.object(queries, "get_country_data", return_value={"Avaria": {"name": "Avaria"}}):
-                    saved = round_trip(queries.build_save_dict(game, compact_nations=compact))
-                    loaded = migrations.merge_country_templates(saved["nation_data"])
-                self.assertNotIn("allied_with", loaded["Avaria"])
-                self.assertEqual(loaded["Avaria"]["future_field"], {"keep": 7})
-                self.assertNotIn("allied_with", game.nation_data["Avaria"])
-
-    def test_pending_response_migration_does_not_restore_obsolete_alliances(self):
-        countries = {"A": {"allied_with": ["B"], "faction": "Pact"}}
-        migrations.migrate_pending_responses(countries)
-        migrations.migrate_pending_responses(countries)
-        self.assertNotIn("allied_with", countries["A"])
-        self.assertEqual(countries["A"]["faction"], "Pact")
-
-    def test_full_and_delta_history_discard_only_obsolete_country_fields(self):
-        from data.map import history_io
-
+    def test_delta_history_round_trip_keeps_converted_snapshots(self):
         history = {"1": {"nation_data": {"A": {"allied_with": ["B"], "faction": "Pact", "future": 3}}},
                    "2": {"nation_data": {"A": {"allied_with": [], "faction": "Pact", "future": 4}}}}
-        expected = copy.deepcopy(history)
-        for snapshot in expected.values():
-            snapshot["nation_data"]["A"].pop("allied_with")
-        for payload in (copy.deepcopy(history), history_io.encode_history(history)):
-            self.assertEqual(history_io.decode_history(payload), expected)
+        decoded = history_io.decode_history(history_io.encode_history(history))
+        _meta, _map, decoded = upgraded(history=decoded)
+        self.assertEqual(decoded, {"1": {"nation_data": {"A": {"faction": "Pact", "future": 3}}},
+                                   "2": {"nation_data": {"A": {"faction": "Pact", "future": 4}}}})
+        self.assertEqual(history_io.decode_history(history_io.encode_history(decoded)), decoded)
 
-    def test_province_queues_keep_existing_entries_and_unknown_fields(self):
+    def test_deployment_queues_split_in_maps_meta_overlays_and_history(self):
+        def province():
+            return {"unit_queue": [{"unit_type": "Fixture Unit", "turns_remaining": 1}],
+                    "deployment_queue": [
+                        {"order_type": "BUILDING", "item_name": "Fixture Building", "turns_remaining": 2},
+                        {"unit_type": "Second Unit", "turns_remaining": 3}],
+                    "custom_field": {"value": 23}}
+        meta = {"provinces": {"P": province()}}
+        history = {"4": {"provinces": {"P": province()}}}
+        _meta, map_data, history = upgraded(meta, {"P": province()}, history)
+        for record in (map_data["P"], meta["provinces"]["P"], history["4"]["provinces"]["P"]):
+            self.assertNotIn("deployment_queue", record)
+            self.assertEqual([entry.get("unit_type") for entry in record["unit_queue"]],
+                             ["Fixture Unit", "Second Unit"])
+            self.assertEqual(record["building_queue"][0]["item_name"], "Fixture Building")
+            self.assertEqual(record["custom_field"], {"value": 23})
+
+    def test_research_projects_gain_points_and_keep_current_points(self):
+        projects = [{"tech_name": "a", "days_remaining": 7, "custom_field": "preserved"},
+                    {"tech_name": "b"}, {"tech_name": "c", "points_remaining": 0, "days_remaining": 7}]
+        meta, _map, _history = upgraded({"nation_data": {"A": {"research_queue": projects}}})
+        queue = meta["nation_data"]["A"]["research_queue"]
+        self.assertEqual(queue[0]["points_remaining"], 7 * migrations.LEGACY_RESEARCH_POINTS_PER_DAY)
+        self.assertEqual(queue[0]["custom_field"], "preserved")
+        self.assertEqual(queue[1]["points_remaining"], migrations.LEGACY_RESEARCH_DEFAULT_DAYS
+                         * migrations.LEGACY_RESEARCH_POINTS_PER_DAY)
+        self.assertEqual(queue[2]["points_remaining"], 0)
+
+    def test_production_day_countdowns_become_turns_with_their_existing_priority(self):
+        entries = [{"days_remaining": c.DEFAULT_DAYS_PER_TURN * 3, "turns_remaining": 8,
+                    "custom_field": "preserved"}, {"days_remaining": 0}, {"turns_remaining": 5}]
+        _meta, map_data, _history = upgraded(map_data={"P": {"building_queue": entries}})
+        self.assertEqual(map_data["P"]["building_queue"], [
+            {"turns_remaining": 3, "custom_field": "preserved"}, {"turns_remaining": 1},
+            {"turns_remaining": 5}])
+
+    def test_old_replies_move_without_overwriting_current_proposals(self):
+        proposal = {"action": "FIXTURE_PROPOSAL", "turns": 2, "custom_field": 7}
+        pending = {"accepted": {"action": "ACCEPT_FIXTURE", "message": "reply",
+                                "parameters": {"value": 9}},
+                   "rejected": "REJECT_FIXTURE", "proposal": proposal}
+        meta, _map, _history = upgraded({"nation_data": {"country": {"pending_diplomacy": pending}}})
+        countries = meta["nation_data"]
+        migrations.normalize_diplomacy_channels(countries)
+        self.assertEqual(set(pending), {"proposal"})
+        self.assertIs(pending["proposal"], proposal)
+        responses = countries["country"]["diplo_responses"]
+        self.assertEqual(responses["accepted"], {"verdict": "ACCEPT", "action": "FIXTURE",
+                                               "message": "reply", "parameters": {"value": 9},
+                                               "legacy_unmatched": True})
+        self.assertEqual(responses["rejected"], {"verdict": "REJECT", "action": "FIXTURE",
+                                               "message": "", "parameters": None,
+                                               "legacy_unmatched": True})
+        restored = round_trip(countries)
+        migrations.normalize_diplomacy_channels(restored)
+        self.assertEqual(restored, countries)
+
+    def test_scripted_events_gain_condition_and_action_lists(self):
+        old = {"condition_type": "Turn Number", "condition_val": "17",
+               "action_type": "Fixture Action", "action_target": "country", "custom_field": 9}
+        spawn = {"conditions": [], "fire_once": False,
+                 "actions": [{"type": "Spawn Unit", "unit_type": "Biplane"}]}
+        current = {"conditions": [], "actions": [], "fire_once": False}
+        meta, _map, _history = upgraded({"nation_data": {"A": {"scripted_events": [
+            old, spawn, copy.deepcopy(current)]}}})
+        old, spawn, unchanged = meta["nation_data"]["A"]["scripted_events"]
+        self.assertEqual(old["conditions"], [{"type": "Turn Number", "operator": "==",
+                                             "value": "17", "chain": "AND"}])
+        self.assertEqual(old["actions"], [{"type": "Fixture Action", "target": "country"}])
+        self.assertTrue(old["fire_once"])
+        self.assertEqual(old["custom_field"], 9)
+        self.assertEqual(spawn["actions"][0]["unit_type"], "Biplane Fighter I")
+        self.assertEqual(unchanged, current)
+
+    def test_messages_and_release_requests_gain_their_required_fields(self):
+        message = {"sender": "Fixture Country", "content": "Fixture message"}
+        kept = {"message_id": "kept", "content": "Current message"}
+        release = {"core_nation": "B", "turns_left": 2}
+        meta, _map, _history = upgraded({"nation_data": {"A": {
+            "inbox": [message, kept], "release_puppet_queue": [release]}}})
+        self.assertTrue(message["message_id"])
+        self.assertEqual(kept["message_id"], "kept")
+        self.assertEqual(release["release_type"], c.PUPPET_TYPE_INTEGRATED)
+        self.assertEqual(round_trip(meta), meta)
+
+    def test_completed_realtime_saves_from_before_offline_view_open_as_spectator(self):
+        meta, _map, _history = upgraded({"player_country": "None",
+                                         "realtime_match": {"format": "gd5-realtime-v1"}})
+        self.assertEqual(load_map._saved_player_view(meta), ("Spectator", []))
+
+    def test_old_aircraft_names_and_truck_cargo_convert_everywhere(self):
+        library = {"Biplane Fighter I": {"health": 100, "attack": 7, "defense": 4, "speed": 6,
+                                         "naval_unit": False, "air_role": "fighter",
+                                         "air_range": 20, "air_consumable": False}}
+        land_truck = {"type": "Truck (Biplane)", "max_health": c.TRUCK_MAX_HP,
+                      "health": c.TRUCK_MAX_HP / 2, "unit_id": "land", "original_max_health": 100,
+                      "order": {"type": "MOVE", "path": [2]}}
+        sea_truck = dict(copy.deepcopy(land_truck), unit_id="sea")
+        aircraft = {"type": "Biplane", "unit_id": "air", "order": {"type": "UPGRADE", "target_type": "Jet Fighter"}}
+        map_data = {"land": {"terrain": "plains", "units": [land_truck, aircraft],
+                             "unit_queue": [{"unit_type": "Piston Bomber"}]},
+                    "sea": {"terrain": next(iter(c.WATER_TERRAINS)), "units": [sea_truck]}}
+        meta = {"nation_data": {"A": {"custom_production_units": ["Biplane", "Fixture"]}}}
+        with mock.patch.object(queries, "get_unit_library", return_value=library):
+            upgraded(meta, map_data)
+        self.assertEqual(land_truck["type"], "Biplane Fighter I")
+        self.assertEqual(land_truck["health"], 50)
+        self.assertEqual(land_truck["order"], {"type": "MOVE", "path": []})
+        self.assertEqual(sea_truck["type"], "Convoy (Biplane Fighter I)")
+        self.assertEqual(sea_truck["unit_id"], "sea")
+        self.assertEqual(aircraft["type"], "Biplane Fighter I")
+        self.assertEqual(aircraft["order"]["target_type"], "Jet Fighter I")
+        self.assertEqual(map_data["land"]["unit_queue"][0]["unit_type"], "Monoplane Bomber I")
+        self.assertEqual(meta["nation_data"]["A"]["custom_production_units"],
+                         ["Biplane Fighter I", "Fixture"])
+
+
+class LoadRepairTests(unittest.TestCase):
+    LIBRARY = {"Fixture Ground": {"health": 40, "attack": 6, "defense": 3, "speed": 5},
+               "Fixture Ship": {"health": 90, "attack": 9, "defense": 2, "speed": 4, "naval_unit": True}}
+
+    def test_units_take_library_stats_and_keep_their_health_fraction(self):
+        ground = {"type": "Fixture Ground", "max_health": 200, "health": 100,
+                  "attack": 1, "unit_id": "ground", "custom_field": 9}
+        carried = {"type": "Convoy (Fixture Ground)", "original_type": "Fixture Ground",
+                   "max_health": c.CONVOY_MAX_HP, "health": c.CONVOY_MAX_HP / 4,
+                   "original_attack": 1, "unit_id": "carried"}
+        volunteer = {"type": "Fixture Ship", "max_health": 90, "health": 30, "attack": 1}
+        unknown = {"type": "Removed Fixture", "max_health": 10, "health": 5, "attack": 1}
+        map_data = {"P": {"units": [ground, carried, unknown]}}
+        nation_data = {"A": {"volunteer_missions": {"m": {"held_units": [{"unit": volunteer}]}}}}
+        queries.refresh_unit_stats(map_data, nation_data, self.LIBRARY)
+        self.assertEqual((ground["max_health"], ground["health"], ground["attack"]), (40, 20, 6))
+        self.assertFalse(ground["naval_unit"])
+        self.assertEqual(ground["custom_field"], 9)
+        self.assertEqual((carried["original_max_health"], carried["original_attack"]), (40, 6))
+        self.assertEqual((carried["max_health"], carried["health"]), (c.CONVOY_MAX_HP, c.CONVOY_MAX_HP / 4))
+        self.assertEqual((volunteer["health"], volunteer["attack"]), (30, 9))
+        self.assertTrue(volunteer["naval_unit"])
+        self.assertEqual(unknown["attack"], 1)
+        # A repeated refresh keeps exact values.
+        before = copy.deepcopy(map_data)
+        queries.refresh_unit_stats(map_data, nation_data, self.LIBRARY)
+        self.assertEqual(map_data, before)
+        self.assertEqual(round_trip(map_data), map_data)
+
+    def test_province_repair_drops_buildings_missing_from_the_active_library(self):
         units = [{"unit_type": "Fixture Unit"}]
-        buildings = [{"building_type": "Fixture Building"}]
         resources = {"fixture_resource": 17}
-        province = {
-            "unit_queue": units, "building_queue": buildings,
-            "deployment_queue": [
-                {"order_type": "BUILDING", "building_type": "Fixture Building"},
-                {"unit_type": "Second Unit"},
-            ],
-            "buildings": ["Fixture Building", "Removed Building"],
-            "resources": resources, "custom_field": {"value": 23},
-        }
-        migrations.migrate_province_record(province, {"Fixture Building": {}})
+        province = {"unit_queue": units, "buildings": ["Fixture Building", "Removed Building"],
+                    "resources": resources, "custom_field": {"value": 23}}
+        load_map._repair_province(province, {"Fixture Building": {}})
         self.assertIs(province["unit_queue"], units)
-        self.assertIs(province["building_queue"], buildings)
+        self.assertEqual(province["building_queue"], [])
         self.assertIs(province["resources"], resources)
-        self.assertEqual([entry["unit_type"] for entry in units], ["Fixture Unit", "Second Unit"])
-        self.assertEqual(len(buildings), 2)
-        self.assertNotIn("deployment_queue", province)
         self.assertEqual(province["buildings"], ["Fixture Building"])
         self.assertEqual(province["custom_field"], {"value": 23})
-        restored = round_trip(province)
-        migrations.migrate_province_record(restored, {"Fixture Building": {}})
-        self.assertEqual(restored, province)
-
-    def test_research_conversion_preserves_current_points(self):
-        old = {"days_remaining": 7, "custom_field": "preserved"}
-        migrations.migrate_research_project(old)
-        self.assertEqual(old["points_remaining"], 7 * migrations.LEGACY_RESEARCH_POINTS_PER_DAY)
-        restored = round_trip(old)
-        migrations.migrate_research_project(restored)
-        self.assertEqual(restored, old)
-        current = {"points_remaining": 0, "days_remaining": 7}
-        migrations.migrate_research_project(current)
-        self.assertEqual(current["points_remaining"], 0)
-        missing = migrations.migrate_research_project({})
-        self.assertEqual(missing["points_remaining"], migrations.LEGACY_RESEARCH_DEFAULT_DAYS
-                         * migrations.LEGACY_RESEARCH_POINTS_PER_DAY)
-
-    def test_production_preserves_display_and_execution_precedence(self):
-        old = {"days_remaining": c.DEFAULT_DAYS_PER_TURN * 3,
-               "turns_remaining": 8, "custom_field": "preserved"}
-        before = copy.deepcopy(old)
-        self.assertEqual(migrations.production_queue_turns(old), 8)
-        self.assertEqual(old, before)
-        migrations.migrate_production_queue_item(old)
-        self.assertEqual(old, {"turns_remaining": 3, "custom_field": "preserved"})
-        restored = round_trip(old)
-        migrations.migrate_production_queue_item(restored)
-        self.assertEqual(restored, old)
-        self.assertEqual(migrations.migrate_production_queue_item(
-            {"days_remaining": 0})["turns_remaining"], 1)
-
-    def test_unit_load_pipeline_preserves_version_gate_and_health_fraction(self):
-        library = {
-            "Fixture Ground": {"health": 40, "attack": 6, "defense": 3,
-                               "speed": 5, "naval_unit": False},
-            "Biplane Fighter I": {"health": 100, "attack": 7, "defense": 4,
-                                  "speed": 6, "naval_unit": False, "air_role": "fighter",
-                                  "air_range": 20, "air_consumable": False},
-        }
-        for old_version in (False, True):
-            with self.subTest(old_version=old_version):
-                ground = {"type": "Fixture Ground", "max_health": 200, "health": 100,
-                          "attack": 1, "unit_id": "ground-id", "custom_field": 9}
-                aircraft = {"type": "Biplane", "max_health": 200, "health": 100,
-                            "unit_id": "air-id", "order": {"type": "MOVE", "path": [2]}}
-                map_data = {"province": {"id": 1, "units": [ground, aircraft]}}
-                countries = {"country": {"custom_production_units": ["Biplane"]}}
-                with mock.patch.object(queries, "get_unit_library", return_value=library), \
-                        contextlib.redirect_stdout(io.StringIO()):
-                    version = "fixture-older-version" if old_version else c.GAME_VERSION
-                    migrations.migrate_loaded_units(map_data, countries, library, version)
-                    expected = copy.deepcopy(map_data)
-                    migrations.migrate_loaded_units(map_data, countries, library, version)
-                self.assertEqual(map_data, expected)
-                self.assertIs(map_data["province"]["units"][0], ground)
-                self.assertEqual(ground["health"], 20 if old_version else 100)
-                self.assertEqual(ground["max_health"], 40 if old_version else 200)
-                self.assertEqual(ground["attack"], 6 if old_version else 1)
-                self.assertEqual(ground["custom_field"], 9)
-                self.assertEqual(aircraft["type"], "Biplane Fighter I")
-                self.assertEqual(aircraft["health"], 50)
-                self.assertEqual(aircraft["order"], {"type": "MOVE", "path": []})
-                self.assertEqual(countries["country"]["custom_production_units"], ["Biplane Fighter I"])
-                self.assertEqual(round_trip(map_data), map_data)
+        malformed = {"resources": ["Oil"]}
+        load_map._repair_province(malformed, {})
+        self.assertEqual(malformed["resources"], {})
 
     def test_missing_and_duplicate_unit_ids_stay_stable_after_round_trip(self):
         units = [{"unit_id": "existing"}, {"unit_id": "existing"},
@@ -191,55 +276,37 @@ class SavedDataMigrationTests(unittest.TestCase):
         self.assertEqual(migrations.ensure_unit_ids(restored), [])
         self.assertEqual(restored, map_data)
 
-    def test_old_replies_move_without_overwriting_current_proposals(self):
-        proposal = {"action": "FIXTURE_PROPOSAL", "turns": 2, "custom_field": 7}
-        pending = {"accepted": {"action": "ACCEPT_FIXTURE", "message": "reply",
-                                "parameters": {"value": 9}},
-                   "rejected": "REJECT_FIXTURE", "proposal": proposal}
-        responses = {}
-        countries = {"country": {"pending_diplomacy": pending, "diplo_responses": responses}}
-        migrations.migrate_pending_responses(countries)
-        self.assertIs(countries["country"]["pending_diplomacy"], pending)
-        self.assertIs(countries["country"]["diplo_responses"], responses)
-        self.assertEqual(pending, {"proposal": proposal})
-        self.assertIs(pending["proposal"], proposal)
-        self.assertEqual(responses["accepted"], {"verdict": "ACCEPT", "action": "FIXTURE",
-                                               "message": "reply", "parameters": {"value": 9}, "legacy_unmatched": True})
-        self.assertEqual(responses["rejected"], {"verdict": "REJECT", "action": "FIXTURE",
-                                               "message": "", "parameters": None, "legacy_unmatched": True})
-        restored = round_trip(countries)
-        migrations.migrate_pending_responses(restored)
-        self.assertEqual(restored, countries)
 
-    def test_scripted_forecast_reads_old_fields_without_mutation(self):
-        old = {"condition_type": "Turn Number", "condition_val": "17",
-               "action_type": "Fixture Action", "action_target": "country",
-               "custom_field": 9}
-        before = copy.deepcopy(old)
-        conditions = migrations.scripted_event_conditions(old)
-        actions = migrations.scripted_event_actions(old)
-        self.assertEqual(conditions, [{"type": "Turn Number", "operator": "==",
-                                      "value": "17", "chain": "AND"}])
-        self.assertEqual(actions, [{"type": "Fixture Action", "target": "country"}])
-        self.assertEqual(old, before)
-        migrations.migrate_scripted_event(old)
-        self.assertEqual(old["conditions"], conditions)
-        self.assertTrue(old["fire_once"])
-        restored = round_trip(old)
-        migrations.migrate_scripted_event(restored)
-        self.assertEqual(restored, old)
-        current = {"conditions": [], "actions": [], "fire_once": False}
-        migrations.migrate_scripted_event(current)
-        self.assertEqual(current, {"conditions": [], "actions": [], "fire_once": False})
+class BuiltInMapTests(unittest.TestCase):
+    """Every shipped base map and scenario loads through the version steps."""
 
-    def test_message_reference_is_added_once_and_saved(self):
-        message = {"sender": "Fixture Country", "content": "Fixture message"}
-        reference = migrations.ensure_message_id(message)
-        restored = round_trip(message)
-        self.assertTrue(reference)
-        self.assertEqual(migrations.ensure_message_id(restored), reference)
-        self.assertEqual(restored, message)
+    def built_in_maps(self):
+        for root in (c.BASE_MAPS_DIR, c.SCENARIOS_HISTORICAL_DIR, c.SCENARIOS_ALTERNATE_DIR):
+            if not os.path.isdir(ROOT / root):
+                continue
+            for name in sorted(os.listdir(ROOT / root)):
+                path = os.path.join(root, name)
+                if os.path.isfile(os.path.join(path, "map_data.json")):
+                    yield path
 
+    def test_built_in_maps_load_and_round_trip(self):
+        from data.map.load_map import load_backend_state
+        maps = list(self.built_in_maps())
+        self.assertTrue(maps)
+        for path in maps:
+            with self.subTest(map=path):
+                context = load_backend_state(path, is_scenario=True)
+                self.assertTrue(context.map_data)
+                save = round_trip(queries.build_save_dict(context, include_provinces=False))
+                self.assertEqual(save["version"], c.GAME_VERSION)
+                map_data = round_trip(queries.build_map_data_save(context))
+                before = copy.deepcopy((save, map_data))
+                # A current save passes through every step unchanged.
+                migrations.upgrade_save(save, map_data, {})
+                self.assertEqual((save, map_data), before)
+
+
+class LibraryAndTournamentTests(unittest.TestCase):
     def test_encrypted_payload_decoder_supports_both_encodings(self):
         saved = {"country": {"custom_field": 7}}
         payload = json.dumps(saved).encode("utf-8")
@@ -248,18 +315,19 @@ class SavedDataMigrationTests(unittest.TestCase):
         with self.assertRaises(json.JSONDecodeError):
             migrations.decode_saved_json(b"invalid json")
 
-    def test_tournament_formats_preserve_explicit_request_priority(self):
-        country = {"release_puppet_queue": [{"core_nation": "old"}]}
-        existing = [{"core_nation": "host"}]
-        self.assertEqual(migrations.tournament_move_sections(country), (country, {}))
-        payload = {"nation_data": country, "provinces": {"province": {}}, "release_subjects": []}
-        self.assertEqual(migrations.tournament_move_sections(payload), (country, payload["provinces"]))
-        self.assertEqual(migrations.tournament_release_requests(payload, country, existing), [])
-        self.assertEqual(migrations.tournament_release_requests({}, country, existing), country["release_puppet_queue"])
-        self.assertIs(migrations.tournament_release_requests({}, {}, existing), existing)
+    def test_v46_moves_convert_their_country_and_province_records(self):
+        move = {"nation_data": {"allied_with": ["B"], "research_queue": [{"tech_name": "a"}]},
+                "provinces": {"P": {"unit_queue": [{"unit_type": "Biplane", "days_remaining": 0}]}},
+                "aircraft_orders": [], "release_subjects": [{"core_nation": "B"}]}
+        migrations.upgrade_move(move)
+        self.assertEqual(move["game_version"], c.GAME_VERSION)
+        self.assertNotIn("allied_with", move["nation_data"])
+        self.assertIn("points_remaining", move["nation_data"]["research_queue"][0])
+        self.assertEqual(move["provinces"]["P"]["unit_queue"],
+                         [{"unit_type": "Biplane Fighter I", "turns_remaining": 1}])
+        self.assertEqual(move["release_subjects"][0]["release_type"], c.PUPPET_TYPE_INTEGRATED)
 
     def test_cold_imports_work_from_each_entry_point(self):
-        root = Path(__file__).resolve().parents[1]
         for first in ("data.migrations", "data.constants", "data.io.settings_schema",
                       "data.queries", "map_logic.diplomacy.deal"):
             with self.subTest(first=first):
@@ -268,21 +336,10 @@ class SavedDataMigrationTests(unittest.TestCase):
                         "from map_logic.diplomacy import deal; "
                         "assert migrations.normalize_ai_mode('LING') == 'OPENROUTER'; "
                         "assert deal.coerce('old text', 'a', 'b', deal.KIND_PEACE)['kind'] == deal.KIND_PEACE")
-                result = subprocess.run([sys.executable, "-c", code], cwd=root,
+                result = subprocess.run([sys.executable, "-c", code], cwd=ROOT,
                                         capture_output=True, text=True, timeout=30)
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
-    def test_old_aircraft_snapshots_supply_drafts_without_submitted_stats(self):
-        snapshot = {"unit_id": "fixture-aircraft", "type": "Fixture Aircraft",
-                    "order": {"type": "MOVE", "path": []}, "custom_name": "Fixture Name",
-                    "attack": 999, "health": 999, "position": 999}
-        provinces = {"province": {"units": [snapshot]}}
-        before = copy.deepcopy(provinces)
-        with mock.patch.object(queries, "get_unit_library", return_value={
-                "Fixture Aircraft": {"air_role": "fighter"}}):
-            commands = migrations.tournament_aircraft_commands({}, provinces, {"fixture-aircraft"})
-            self.assertEqual(commands, [{"unit_id": "fixture-aircraft", "order": snapshot["order"],
-                                         "custom_name": "Fixture Name"}])
-            self.assertEqual(migrations.tournament_aircraft_commands(
-                {"aircraft_orders": []}, provinces, {"fixture-aircraft"}), [])
-        self.assertEqual(provinces, before)
+
+if __name__ == "__main__":
+    unittest.main()
