@@ -3,9 +3,10 @@
 import json
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from data import constants as c, queries
-from data.generators import generate_data
+from data.generators import generate_data, recipes
 from map_logic.ai import ai_tech_eval, ai_unit_eval
 from tests.test_map_save_format import sample_map_screen
 
@@ -24,6 +25,89 @@ class UnitProgressionTests(unittest.TestCase):
                               (c.RESEARCH_TEMPLATE_PATH, generate_data.build_research_template_text)):
             with self.subTest(path=path):
                 self.assertEqual(json.loads(Path(path).read_text(encoding='utf-8')), json.loads(builder()))
+
+    def test_equipment_profiles_generate_units_without_growth_formulas(self):
+        first = {"health": 120, "attack": 17, "defense": 3, "speed": 2,
+                 "cost_materials": 41, "cost_manpower": 11, "cost_fuel": 5,
+                 "production_time": 6, "art_name": "Fixture Existing Art A"}
+        second = {"health": 90, "attack": 31, "defense": 8, "speed": 1,
+                  "cost_materials": 23, "cost_manpower": 19, "cost_fuel": 0,
+                  "production_time": 4, "art_name": "Fixture Existing Art B"}
+        stages = [(1800, "Fixture First Stage", {"Infantry Type": first}),
+                  (1810, "Fixture Second Stage", {"Infantry Type": second})]
+        with patch.dict(recipes.EQUIPMENT_STAGES, {"infantry_type": stages}):
+            entries = recipes.equipment_family("Infantry Type", "infantry_type").entries()
+        for (year, label, profiles), (name, entry) in zip(stages, entries):
+            profile = profiles["Infantry Type"]
+            with self.subTest(stage=label):
+                self.assertEqual(name, label)
+                self.assertEqual({field: entry[field] for field in recipes.UNIT_STAT_KEYS},
+                                 {**{field: profile[field] for field in recipes.UNIT_STAT_KEYS}, "cost_fuel": 0})
+                self.assertEqual(entry["metadata"]["research"], {"tech": "infantry_type", "year": year})
+                self.assertEqual(entry["metadata"]["art_name"], profile["art_name"])
+
+    def test_vehicle_variants_derive_stats_from_base_infantry_without_changing_the_base(self):
+        base = {"health": 113, "attack": 80, "defense": 9, "speed": 1,
+                "cost_materials": 41, "cost_manpower": 13, "cost_fuel": 7,
+                "production_time": 5, "art_name": "Infantry Type 1910"}
+        expected = {"Motorized Infantry Type": (61.5, 80, 9),
+                    "Mechanized Infantry Type": (82, 80, 16),
+                    "Infantry Fighting Vehicle Type": (123, 120, 24)}
+        profiles = {"Infantry Type": base}
+        stages = [(recipes.INFANTRY_VARIANT_FIRST_YEAR - 1, "Fixture Earlier Infantry", profiles),
+                  (recipes.INFANTRY_VARIANT_FIRST_YEAR, "Fixture Infantry", profiles)]
+        original = dict(base)
+        with patch.dict(recipes.EQUIPMENT_STAGES, {"infantry_type": stages}):
+            foot = recipes.equipment_family("Infantry Type", "infantry_type").entries()[0][1]
+            self.assertEqual(foot["cost_fuel"], 0)
+            self.assertEqual(queries.get_unit_upkeep(foot)["fuel"], 0)
+            for family, (materials, attack, defense) in expected.items():
+                with self.subTest(family=family):
+                    entries = recipes.equipment_family(family, "infantry_type").entries()
+                    self.assertEqual(len(entries), 1)
+                    entry = entries[0][1]
+                    self.assertEqual((entry["cost_materials"], entry["attack"], entry["defense"]),
+                                     (materials, attack, defense))
+                    self.assertEqual(entry["speed"], 2)
+                    for field in ("health", "cost_manpower", "cost_fuel", "production_time"):
+                        self.assertEqual(entry[field], base[field])
+                    self.assertEqual(entry["metadata"]["art_name"], f"{family} 1910")
+            self.assertEqual(base, original)
+
+    def test_generated_vehicle_profiles_match_each_stages_base_and_shared_rules(self):
+        checked = set()
+        for year, _, profiles in recipes.EQUIPMENT_STAGES["infantry_type"]:
+            if year < recipes.INFANTRY_VARIANT_FIRST_YEAR:
+                continue
+            base = profiles["Infantry Type"]
+            for family in recipes.INFANTRY_VARIANT_RULES:
+                expected = recipes.equipment_profile(family, profiles)
+                name = queries.get_unit_for_family_tier(self.library, family, year)
+                with self.subTest(unit=name):
+                    self.assertIsNotNone(name)
+                    checked.add(name)
+                    for field in recipes.UNIT_STAT_KEYS:
+                        self.assertEqual(self.library[name][field], expected[field])
+                    self.assertEqual(self.library[name]["cost_fuel"], base["cost_fuel"])
+        self.assertTrue(checked)
+        self.assertEqual(checked, {name for name, stats in self.library.items()
+                                  if stats["metadata"]["family"] in recipes.INFANTRY_VARIANT_RULES})
+
+    def test_heavy_artillery_is_generated_from_independent_base_attack_and_bombardment(self):
+        base = {"health": 123, "attack": 13, "bombard_attack": 17, "defense": 4, "speed": 3,
+                "cost_materials": 41, "cost_manpower": 19, "cost_fuel": 7,
+                "production_time": 4, "art_name": "Artillery Fixture Art"}
+        original = dict(base)
+        stages = [(1800, "Fixture Artillery", {"Artillery": base})]
+        with patch.dict(recipes.EQUIPMENT_STAGES, {"artillery": stages}):
+            name, heavy = recipes.equipment_family("Heavy Artillery", "artillery").entries()[0]
+        self.assertEqual(name, "Heavy Fixture Artillery")
+        self.assertEqual((heavy["attack"], heavy["bombard_attack"], heavy["cost_materials"], heavy["production_time"]),
+                         (26, 34, 82, 7))
+        for field in ("health", "defense", "speed", "cost_manpower", "cost_fuel"):
+            self.assertEqual(heavy[field], base[field])
+        self.assertEqual(heavy["metadata"]["art_name"], "Heavy Artillery Fixture Art")
+        self.assertEqual(base, original)
 
     def test_ongoing_unit_tracks_match_their_content_dates_within_the_timeline(self):
         tracks = ('infantry_type', 'militia', 'artillery', 'armored_car', 'light_tank',

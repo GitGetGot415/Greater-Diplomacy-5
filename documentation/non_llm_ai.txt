@@ -76,15 +76,34 @@ The Infantry category includes regular infantry, militia, cavalry, and artillery
 These research tracks use named equipment stages across the full timeline.
 Field artillery and heavy artillery use the same research track.
 Vehicle infantry uses the regular infantry stages and separate vehicle unlocks.
-Each stage uses existing statistics and images. Equipment names do not add combat abilities.
-Later stages select statistics from the older unit at or before the stage year.
-The final cavalry stage uses the last existing cavalry statistics. Cavalry research stops in 1930.
+Each stage uses its base statistics and existing images. Equipment names do not add combat abilities.
+Stage profiles retain their existing statistics. Cavalry research stops in 1930.
 The final stage remains available after its research year.
 metadata.art_name selects existing images for each stage.
 Research labels and image requests come from level_names and level_icons in the active research library.
 
 Read equipment dates, statistics, prices, and research costs from data/json/unit_data.json and data/json/research_template.json.
 Edit data/generators/recipes.py to regenerate this content.
+EQUIPMENT_STAGES defines base statistics and existing artwork references.
+INFANTRY_VARIANT_RULES generates vehicle infantry statistics from regular infantry at the same stage.
+HEAVY_ARTILLERY_RULES generates heavy artillery statistics from regular artillery at the same stage.
+Derived artwork references keep the base image tier and replace its family name.
+Vehicle infantry starts at INFANTRY_VARIANT_FIRST_YEAR. Other research and vehicle unlock requirements still apply.
+
+All three vehicle variants use speed 2. They inherit infantry health, manpower cost, and production time.
+Motorized infantry uses 1.5 times the infantry material cost. It retains infantry attack and defense.
+Mechanized infantry uses twice the infantry material cost. Its defense is 20 percent of base infantry attack.
+
+Infantry fighting vehicles use three times the infantry material cost and 1.5 times base infantry attack.
+Their defense is 30 percent of base infantry attack, before the attack increase.
+The multipliers apply only to material cost. Fuel cost is the same for all three vehicle variants.
+
+The base infantry profile defines cost_fuel for vehicle generation. Generated regular infantry has zero fuel cost.
+Recruitment, refunds, upkeep, repairs, AI, and multiplayer use the generated unit library.
+
+Heavy artillery doubles material cost, direct attack, and bombardment attack. Production takes three additional turns.
+Other statistics come from regular artillery at the same stage.
+
 Unit identifiers do not determine research levels.
 Explicit research metadata connects each unit to its equipment year.
 The v47 migration converts older annual and Roman-numeral equipment identifiers to named stages.

@@ -10,8 +10,10 @@ every line, tweak the numbers here and run generate_data.py to rewrite the
 actual JSON files. The game itself only ever reads the JSON files in
 data/json/ - nothing about how it loads/uses that data changes.
 
-Equipment stages select existing statistics and artwork by equipment year.
-Edit their stage tables or source statistics below, then run the generator.
+EQUIPMENT_STAGES stores base statistics and artwork references for each equipment stage.
+Vehicle infantry statistics are generated from regular infantry through INFANTRY_VARIANT_RULES.
+Heavy artillery statistics are generated through HEAVY_ARTILLERY_RULES.
+Edit that table, then run the generator.
 To add a new unit/building level, bump a `count`/range end and re-run.
 """
 import sys
@@ -173,68 +175,100 @@ class UnitFamily:
         return out
 
 
-# Each stage defines year, research label, health, attack, and material cost.
-# Earlier equipment uses explicit values. Later stages sample the existing statistics.
-EARLY_INFANTRY_STAGES = {
-    "infantry_type": [
-        (1800, "Flintlock Infantry", 600, 50, 200),
-        (1830, "Percussion Infantry", 640, 60, 240),
-        (1850, "Rifle-Musket Infantry", 700, 70, 300),
-        (1865, "Breech-Loading Infantry", 760, 75, 350),
-        (1875, "Metallic-Cartridge Infantry", 820, 80, 390),
-        (1885, "Magazine-Rifle Infantry", 870, 85, 430),
-        (1895, "Smokeless-Rifle Infantry", 920, 90, 470),
-        (1905, "Supported Rifle Infantry", 970, 95, 490),
-    ],
-    "militia": [
-        (1800, "Local Militia", 200, 12, 100),
-        (1840, "Organized Militia", 280, 20, 150),
-        (1870, "Reserve Infantry", 360, 32, 210),
-        (1900, "Modern Militia", 440, 44, 270),
-    ],
-    "cavalry": [
-        (1800, "Early Cavalry", 350, 120, 450),
-        (1850, "Improved Cavalry", 400, 180, 600),
-        (1870, "Breech-Loading Carbines", 470, 220, 750),
-        (1890, "Magazine Carbines", 550, 260, 900),
-    ],
-    "artillery": [
-        (1800, "Smoothbore Artillery", 60, 50, 450),
-        (1830, "Improved Field Artillery", 65, 60, 650),
-        (1850, "Rifled Artillery", 75, 70, 850),
-        (1870, "Breech-Loading Artillery", 80, 80, 1050),
-        (1890, "Quick-Firing Artillery", 90, 90, 1250),
-        (1900, "Recoil-System Artillery", 95, 110, 1400),
-    ],
+# Defense multipliers use regular infantry's base attack, including for IFVs.
+# Material multipliers leave manpower, fuel, and production time unchanged.
+INFANTRY_VARIANT_RULES = {
+    "Motorized Infantry Type": {"speed": 2, "material_multiplier": 1.5, "attack_multiplier": 1, "defense_multiplier": None},
+    "Mechanized Infantry Type": {"speed": 2, "material_multiplier": 2, "attack_multiplier": 1, "defense_multiplier": 0.2},
+    "Infantry Fighting Vehicle Type": {"speed": 2, "material_multiplier": 3, "attack_multiplier": 1.5, "defense_multiplier": 0.3},
 }
 
+# Preserve the first existing vehicle stage independently of artwork selection.
+INFANTRY_VARIANT_FIRST_YEAR = 1905
+HEAVY_ARTILLERY_RULES = {"material_multiplier": 2, "attack_multiplier": 2, "bombard_multiplier": 2, "extra_production_time": 3}
+EQUIPMENT_VARIANT_BASES = {family: "Infantry Type" for family in INFANTRY_VARIANT_RULES}
+EQUIPMENT_VARIANT_BASES["Heavy Artillery"] = "Artillery"
 
+# Each row defines its year, name, base statistics, and existing artwork reference.
+# Variant statistics and artwork are generated. Infantry's cost_fuel applies only to vehicles.
+EQUIPMENT_COLUMNS = {
+    "HP": "health",
+    "ATK": "attack",
+    "DEF": "defense",
+    "SPD": "speed",
+    "MAT": "cost_materials",
+    "MAN": "cost_manpower",
+    "FUEL": "cost_fuel",
+    "TIME": "production_time",
+    "BOMB": "bombard_attack",
+    "ART": "art_name",
+}
+
+# Row columns match EQUIPMENT_COLUMNS after the year and name.
+# BOMB=None omits bombardment. ART refers to existing artwork.
 EQUIPMENT_STAGES = {
     "infantry_type": [
-        (1915, "Trench Infantry"),
-        (1925, "Squad-Automatic Infantry"),
-        (1940, "Semi-Automatic Infantry"),
-        (1955, "Battle-Rifle Infantry"),
-        (1970, "Assault-Rifle Infantry"),
-        (1985, "Night-Equipped Infantry"),
-        (2000, "Optics-Equipped Infantry"),
-        (2015, "Networked Infantry"),
-        (2030, "Drone-Integrated Infantry"),
-        (2040, "Sensor-Integrated Infantry"),
+        #  YR, NAME                              ,   HP,  ATK, DEF, SPD,  MAT,  MAN, FUEL, TIME, BOMB, ART
+        (1800, "Flintlock Infantry"              ,  600,   50,   0,   1,  200, 1000,   10,    2, None, "Infantry Type 1910"),
+        (1830, "Percussion Infantry"             ,  640,   60,   0,   1,  240, 1000,   10,    2, None, "Infantry Type 1910"),
+        (1850, "Rifle-Musket Infantry"           ,  700,   70,   0,   1,  300, 1000,   10,    2, None, "Infantry Type 1910"),
+        (1865, "Breech-Loading Infantry"         ,  760,   75,   0,   1,  350, 1000,   10,    2, None, "Infantry Type 1910"),
+        (1875, "Metallic-Cartridge Infantry"     ,  820,   80,   0,   1,  390, 1000,   10,    2, None, "Infantry Type 1910"),
+        (1885, "Magazine-Rifle Infantry"         ,  870,   85,   0,   1,  430, 1000,   10,    2, None, "Infantry Type 1910"),
+        (1895, "Smokeless-Rifle Infantry"        ,  920,   90,   0,   1,  470, 1000,   10,    2, None, "Infantry Type 1910"),
+        (1905, "Supported Rifle Infantry"        ,  970,   95,   0,   1,  490, 1000,   10,    2, None, "Infantry Type 1910"),
+        (1915, "Trench Infantry"                 , 1250,  150,   0,   1,  525, 1000,   15,    2, None, "Infantry Type 1915"),
+        (1925, "Squad-Automatic Infantry"        , 1750,  250,   0,   1,  575, 1000,   25,    2, None, "Infantry Type 1925"),
+        (1940, "Semi-Automatic Infantry"         , 2500,  400,   0,   1,  650, 1000,   40,    2, None, "Infantry Type 1940"),
+        (1955, "Battle-Rifle Infantry"           , 3250,  550,   0,   1,  725, 1000,   55,    2, None, "Infantry Type 1955"),
+        (1970, "Assault-Rifle Infantry"          , 4000,  700,   0,   1,  800, 1000,   70,    2, None, "Infantry Type 1970"),
+        (1985, "Night-Equipped Infantry"         , 4750,  850,   0,   1,  875, 1000,   85,    2, None, "Infantry Type 1985"),
+        (2000, "Optics-Equipped Infantry"        , 5500, 1000,   0,   1,  950, 1000,  100,    2, None, "Infantry Type 2000"),
+        (2015, "Networked Infantry"              , 6250, 1150,   0,   1, 1025, 1000,  115,    2, None, "Infantry Type 2015"),
+        (2030, "Drone-Integrated Infantry"       , 7000, 1300,   0,   1, 1100, 1000,  130,    2, None, "Infantry Type 2030"),
+        (2040, "Sensor-Integrated Infantry"      , 7500, 1400,   0,   1, 1150, 1000,  140,    2, None, "Infantry Type 2040"),
     ],
-    "cavalry": [(1910, "Supported Cavalry"), (1918, "Mounted Rifle Cavalry"), (1930, "Modern Cavalry")],
+    "cavalry": [
+        #  YR, NAME                              ,   HP,  ATK, DEF, SPD,  MAT,  MAN, FUEL, TIME, BOMB, ART
+        (1800, "Early Cavalry"                   ,  350,  120,   0,   2,  450, 2000,    0,    3, None, "Cavalry I"),
+        (1850, "Improved Cavalry"                ,  400,  180,   0,   2,  600, 2000,    0,    3, None, "Cavalry I"),
+        (1870, "Breech-Loading Carbines"         ,  470,  220,   0,   2,  750, 2000,    0,    3, None, "Cavalry I"),
+        (1890, "Magazine Carbines"               ,  550,  260,   0,   2,  900, 2000,    0,    3, None, "Cavalry I"),
+        (1910, "Supported Cavalry"               ,  600,  300,   0,   2, 1000, 2000,    0,    3, None, "Cavalry I"),
+        (1918, "Mounted Rifle Cavalry"           ,  800,  300,   0,   2, 1000, 2000,    0,    3, None, "Cavalry III"),
+        (1930, "Modern Cavalry"                  , 1000,  300,   0,   2, 1000, 2000,    0,    3, None, "Cavalry V"),
+    ],
     "militia": [
-        (1915, "Rifle Militia"), (1935, "Support-Weapon Militia"),
-        (1955, "Self-Loading Rifle Militia"), (1975, "Assault-Rifle Militia"),
-        (1995, "Radio-Equipped Militia"), (2015, "Optics-Equipped Militia"),
-        (2035, "Drone-Supported Militia"),
+        #  YR, NAME                              ,   HP,  ATK, DEF, SPD,  MAT,  MAN, FUEL, TIME, BOMB, ART
+        (1800, "Local Militia"                   ,  200,   12,   0,   1,  100, 1000,    0,    1, None, "Militia I"),
+        (1840, "Organized Militia"               ,  280,   20,   0,   1,  150, 1000,    0,    1, None, "Militia I"),
+        (1870, "Reserve Infantry"                ,  360,   32,   0,   1,  210, 1000,    0,    1, None, "Militia I"),
+        (1900, "Modern Militia"                  ,  440,   44,   0,   1,  270, 1000,    0,    1, None, "Militia I"),
+        (1915, "Rifle Militia"                   ,  600,   60,   0,   1,  300, 1000,    0,    1, None, "Militia II"),
+        (1935, "Support-Weapon Militia"          , 1000,  100,   0,   1,  300, 1000,    0,    1, None, "Militia VI"),
+        (1955, "Self-Loading Rifle Militia"      , 1400,  140,   0,   1,  300, 1000,    0,    1, None, "Militia X"),
+        (1975, "Assault-Rifle Militia"           , 1800,  180,   0,   1,  300, 1000,    0,    1, None, "Militia XIV"),
+        (1995, "Radio-Equipped Militia"          , 2200,  220,   0,   1,  300, 1000,    0,    1, None, "Militia XVIII"),
+        (2015, "Optics-Equipped Militia"         , 2600,  260,   0,   1,  300, 1000,    0,    1, None, "Militia XXII"),
+        (2035, "Drone-Supported Militia"         , 3000,  300,   0,   1,  300, 1000,    0,    1, None, "Militia XXVI"),
     ],
     "artillery": [
-        (1915, "Indirect-Fire Artillery"), (1930, "Modern Field Artillery"),
-        (1940, "Radio-Coordinated Artillery"), (1955, "Advanced-Ammunition Artillery"),
-        (1975, "Computer-Assisted Artillery"), (1995, "Digital Fire-Control Artillery"),
-        (2010, "Precision-Guided Artillery"), (2025, "Sensor-Linked Artillery"),
-        (2040, "Automated Fire-Control Artillery"),
+        #  YR, NAME                              ,   HP,  ATK, DEF, SPD,  MAT,  MAN, FUEL, TIME, BOMB, ART
+        (1800, "Smoothbore Artillery"            ,   60,   50,   0,   1,  450,  500,    0,    2,   50, "Artillery I"),
+        (1830, "Improved Field Artillery"        ,   65,   60,   0,   1,  650,  500,    0,    2,   60, "Artillery I"),
+        (1850, "Rifled Artillery"                ,   75,   70,   0,   1,  850,  500,    0,    2,   70, "Artillery I"),
+        (1870, "Breech-Loading Artillery"        ,   80,   80,   0,   1, 1050,  500,    0,    2,   80, "Artillery I"),
+        (1890, "Quick-Firing Artillery"          ,   90,   90,   0,   1, 1250,  500,    0,    2,   90, "Artillery I"),
+        (1900, "Recoil-System Artillery"         ,   95,  110,   0,   1, 1400,  500,    0,    2,  110, "Artillery I"),
+        (1915, "Indirect-Fire Artillery"         ,  150,  180,   0,   1, 1600,  500,    0,    2,  180, "Artillery II"),
+        (1930, "Modern Field Artillery"          ,  300,  360,   0,   1, 1900,  500,    0,    2,  360, "Artillery V"),
+        (1940, "Radio-Coordinated Artillery"     ,  400,  480,   0,   1, 2100,  500,    0,    2,  480, "Artillery VII"),
+        (1955, "Advanced-Ammunition Artillery"   ,  550,  660,   0,   1, 2400,  500,    0,    2,  660, "Artillery X"),
+        (1975, "Computer-Assisted Artillery"     ,  750,  900,   0,   1, 2800,  500,    0,    2,  900, "Artillery XIV"),
+        (1995, "Digital Fire-Control Artillery"  ,  950, 1140,   0,   1, 3200,  500,    0,    2, 1140, "Artillery XVIII"),
+        (2010, "Precision-Guided Artillery"      , 1100, 1320,   0,   1, 3500,  500,    0,    2, 1320, "Artillery XXI"),
+        (2025, "Sensor-Linked Artillery"         , 1250, 1500,   0,   1, 3800,  500,    0,    2, 1500, "Artillery XXIV"),
+        (2040, "Automated Fire-Control Artillery", 1400, 1680,   0,   1, 4100,  500,    0,    2, 1680, "Artillery XXVII"),
     ],
 }
 
@@ -259,242 +293,106 @@ class EquipmentFamily(UnitFamily):
         return result
 
 
-def equipment_family(prefix, tech, stats, *, step=1, last_source_year=2050):
-    """Select existing statistics and images at each stage's equipment year."""
-    stages = EQUIPMENT_STAGES[tech]
-    if tech == "infantry_type" and prefix != "Infantry Type":
-        # Vehicles share the 1905 stage. Its first existing vehicle source is 1910.
-        stages = [(1905, EARLY_INFANTRY_STAGES[tech][-1][1])] + stages
-    indices = [(min(last_source_year, max(1910, year)) - 1910) // step for year, _ in stages]
-    sampled = {key: (lambda i, gen=gen: gen(indices[i])) if callable(gen) else gen
-               for key, gen in stats.items()}
-    def art_name(i):
-        suffix = str(1910 + indices[i]) if tech == "infantry_type" else c.ROMAN_NUMERALS[indices[i] + 1]
-        return f"{prefix} {suffix}"
+def equipment_profile(prefix, stage):
+    """Derive variant statistics and artwork from their base family profiles."""
+    base_family = EQUIPMENT_VARIANT_BASES.get(prefix, prefix)
+    base = dict(zip(EQUIPMENT_COLUMNS.values(), stage[2:], strict=True))
+    if base["bombard_attack"] is None:
+        del base["bombard_attack"]
+    profile = dict(base, art_name=base["art_name"].replace(base_family, prefix, 1))
+    if prefix in INFANTRY_VARIANT_RULES:
+        rule = INFANTRY_VARIANT_RULES[prefix]
+        profile.update(speed=rule["speed"],
+                       cost_materials=base["cost_materials"] * rule["material_multiplier"],
+                       attack=base["attack"] * rule["attack_multiplier"])
+        if rule["defense_multiplier"] is not None:
+            profile["defense"] = base["attack"] * rule["defense_multiplier"]
+    elif prefix == "Heavy Artillery":
+        rule = HEAVY_ARTILLERY_RULES
+        profile.update(cost_materials=base["cost_materials"] * rule["material_multiplier"],
+                       attack=base["attack"] * rule["attack_multiplier"],
+                       bombard_attack=base["bombard_attack"] * rule["bombard_multiplier"],
+                       production_time=base["production_time"] + rule["extra_production_time"])
+    elif prefix == "Infantry Type":
+        profile["cost_fuel"] = 0
+    return profile
+
+
+def equipment_family(prefix, tech):
+    """Generate one family from base stages and shared variant rules."""
+    stages = [(stage[0], stage[1], equipment_profile(prefix, stage))
+              for stage in EQUIPMENT_STAGES[tech]
+              if prefix not in INFANTRY_VARIANT_RULES or stage[0] >= INFANTRY_VARIANT_FIRST_YEAR]
     key = prefix.lower().replace(" ", "_")
-    return EquipmentFamily(prefix, [str(year) for year, _ in stages], sampled,
-                           research_key=c.UNIT_TECH_KEY_OVERRIDES.get(key, tech),
-                           research_years=[year for year, _ in stages], art_name=art_name,
-                           stage_names=[label for _, label in stages])
-
-
-def early_infantry_family(prefix, tech, *, manpower, speed=1, production_time=2, damage_factor=1, material_factor=1):
-    """Generate earlier equipment in an existing family with existing image assets."""
-    stages = EARLY_INFANTRY_STAGES[tech]
-    stats = {
-        "health": lambda i: stages[i][2], "attack": lambda i: stages[i][3] * damage_factor,
-        "defense": 0, "speed": speed,
-        "cost_materials": lambda i: stages[i][4] * material_factor,
-        "cost_manpower": manpower, "cost_fuel": 0, "production_time": production_time,
-    }
-    if tech == "artillery":
-        stats["bombard_attack"] = stats["attack"]
-    return EquipmentFamily(prefix, [str(stage[0]) for stage in stages], stats, research_key=tech,
-                      research_years=[stage[0] for stage in stages],
-                      stage_names=[stage[1] for stage in stages],
-                      art_name=f"{prefix} {'1910' if tech == 'infantry_type' else 'I'}")
+    research_key = c.UNIT_TECH_KEY_OVERRIDES.get(key, tech)
+    fields = UNIT_STAT_KEYS + [field for field in OPTIONAL_UNIT_STAT_KEYS if field in stages[0][2]]
+    stats = {field: (lambda i, field=field: stages[i][2][field]) for field in fields}
+    return EquipmentFamily(prefix, [str(year) for year, _, _ in stages], stats,
+                           research_key=research_key,
+                           research_years=[year for year, _, _ in stages],
+                           art_name=lambda i: stages[i][2]["art_name"],
+                           stage_names=[label for _, label, _ in stages])
 
 
 # Each inner list is a contiguous block of families; a blank spacer line is
 # written between blocks, matching the hand-maintained file's formatting.
 UNIT_SECTIONS = [
     [
-        early_infantry_family("Infantry Type", "infantry_type", manpower=1000),
-        equipment_family("Infantry Type", "infantry_type", {
-            "health": linear(1000, 50), "attack": linear(100, 10), "defense": const(0),
-            "speed": const(1), "cost_materials": linear(500, 5), "cost_manpower": const(1000),
-            "cost_fuel": const(0), "production_time": const(2),
-        }),
-        equipment_family("Motorized Infantry Type", "infantry_type", {
-            "health": linear(1000, 50), "attack": linear(100, 10), "defense": const(0),
-            "speed": const(2), "cost_materials": linear(800, 8), "cost_manpower": const(1000),
-            "cost_fuel": linear(10, 1), "production_time": const(2),
-        }),
-        equipment_family("Mechanized Infantry Type", "infantry_type", {
-            "health": linear(1000, 50), "attack": linear(100, 10),
-            "defense": linear(0, 4),
-            "speed": const(2), "cost_materials": linear(2000, 20), "cost_manpower": const(1000),
-            "cost_fuel": linear(10, 1), "production_time": const(3),
-        }),
-        # Identical to Mechanized Infantry Type in every stat except 1.5x attack
-        # and double cost_materials - the premium tier Armored Personnel Carriers
-        # open the door to once Infantry Fighting Vehicles are researched.
-        equipment_family("Infantry Fighting Vehicle Type", "infantry_type", {
-            "health": linear(1000, 50), "attack": linear(150, 15),
-            "defense": linear(0, 4),
-            "speed": const(2), "cost_materials": linear(3000, 30), "cost_manpower": const(1000),
-            "cost_fuel": linear(10, 1), "production_time": const(3),
-        }),
-        early_infantry_family("Cavalry", "cavalry", manpower=2000, speed=2, production_time=3),
-        equipment_family("Cavalry", "cavalry", {
-            "health": linear(600, 100), "attack": const(300), "defense": const(0),
-            "speed": const(2), "cost_materials": const(1000), "cost_manpower": const(2000),
-            "cost_fuel": const(0), "production_time": const(3),
-        }, step=4, last_source_year=1926),
-        early_infantry_family("Militia", "militia", manpower=1000, production_time=1),
-        equipment_family("Militia", "militia", {
-            "health": linear(500, 100), "attack": linear(50, 10), "defense": const(0),
-            "speed": const(1), "cost_materials": const(300), "cost_manpower": const(1000),
-            "cost_fuel": const(0), "production_time": const(1),
-        }, step=5),
+        equipment_family("Infantry Type", "infantry_type"),
+        # Vehicle variants share infantry research and retain their separate unlocks.
+        equipment_family("Motorized Infantry Type", "infantry_type"),
+        equipment_family("Mechanized Infantry Type", "infantry_type"),
+        equipment_family("Infantry Fighting Vehicle Type", "infantry_type"),
+        equipment_family("Cavalry", "cavalry"),
+        equipment_family("Militia", "militia"),
         # Fragile in a straight fight - its damage is meant to come from bombarding
         # an adjacent tile (see c.BOMBARDMENT_UNITS) rather than from stacking up.
         # Field and heavy artillery share the same equipment stages.
-        # Keep bombardment damage separate from direct attack damage.
-        early_infantry_family("Artillery", "artillery", manpower=500),
-        equipment_family("Artillery", "artillery", {
-            "health": linear(100, 50), "attack": linear(120, 60),
-            # Bombardment damage, tracked separately from melee "attack" so the
-            # two can be tuned independently. Currently mirrors attack 1:1.
-            "bombard_attack": linear(120, 60),
-            "defense": const(0),
-            "speed": const(1), "cost_materials": linear(1500, 100), "cost_manpower": const(500),
-            "cost_fuel": const(0), "production_time": const(2),
-        }, step=5),
-        # Same tech track as Artillery (see c.UNIT_TECH_KEY_OVERRIDES -- no
-        # separate research of its own) and identical in every stat except
-        # double cost_materials and much heavier damage, mirrored 1:1 between
-        # melee and bombardment like Artillery itself.
-        early_infantry_family("Heavy Artillery", "artillery", manpower=500, production_time=5,
-                              damage_factor=2, material_factor=2),
-        equipment_family("Heavy Artillery", "artillery", {
-            "health": linear(100, 50), "attack": linear(240, 120),
-            "bombard_attack": linear(240, 120),
-            "defense": const(0),
-            "speed": const(1), "cost_materials": linear(3000, 200), "cost_manpower": const(500),
-            "cost_fuel": const(0), "production_time": const(5),
-        }, step=5),
+        # Direct attack and bombardment use separate fields for independent tuning.
+        equipment_family("Artillery", "artillery"),
+        equipment_family("Heavy Artillery", "artillery"),
     ],
     [
-        UnitFamily("WW1 Tank", single(), {
-            "health": 3000, "attack": 1500, "defense": 100, "speed": 1,
-            "cost_materials": 6000, "cost_manpower": 1000, "cost_fuel": 300, "production_time": 6,
-        }),
-        UnitFamily("WW1 Armored Car", single(), {
-            "health": 1000, "attack": 300, "defense": 50, "speed": 2,
-            "cost_materials": 3000, "cost_manpower": 1000, "cost_fuel": 100, "production_time": 4,
-        }),
-        UnitFamily("Armored Car", roman_suffixes(34), {
-            "health": linear(1000, 100), "attack": linear(400, 100), "defense": linear(60, 10),
-            # speed steps: I=2, II-IV=3, V+=4
-            "speed": piecewise([(0, 2, 0), (1, 3, 0), (4, 4, 0)]),
-            "cost_materials": linear(3000, 200), "cost_manpower": const(1000),
-            "cost_fuel": linear(100, 5), "production_time": const(4),
-        }),
-        UnitFamily("Light Tank", roman_suffixes(34), {
-            "health": linear(1800, 200), "attack": linear(1200, 150), "defense": linear(80, 10),
-            # speed steps: I-III=2, IV+=3
-            "speed": piecewise([(0, 2, 0), (3, 3, 0)]),
-            "cost_materials": linear(5000, 500), "cost_manpower": const(1000),
-            "cost_fuel": linear(150, 5), "production_time": const(5),
-        }),
-        UnitFamily("Medium Tank", roman_suffixes(4), {
-            "health": linear(2500, 500), "attack": linear(2400, 600), "defense": linear(150, 25),
-            "speed": const(2), "cost_materials": linear(9000, 1000), "cost_manpower": const(1000),
-            "cost_fuel": linear(200, 10), "production_time": const(6),
-        }),
-        UnitFamily("Heavy Tank", roman_suffixes(4), {
-            "health": linear(3000, 500), "attack": linear(3000, 500), "defense": linear(350, 50),
-            "speed": const(1), "cost_materials": linear(12000, 1000), "cost_manpower": const(1000),
-            "cost_fuel": linear(200, 10), "production_time": const(6),
-        }),
-        UnitFamily("Super Heavy Tank", roman_suffixes(5), {
-                    "health":  const(5000), "attack":  const(5000), "defense": linear(550, 50),
-                    "speed": const(1), "cost_materials": linear(16000, 2000), "cost_manpower": const(1000),
-                    "cost_fuel": linear(240, 20), "production_time": const(6),
-        }),
+        UnitFamily("WW1 Tank", single(), {"health": 3000, "attack": 1500, "defense": 100, "speed": 1, "cost_materials": 6000, "cost_manpower": 1000, "cost_fuel": 300, "production_time": 6}),
+        UnitFamily("WW1 Armored Car", single(), {"health": 1000, "attack": 300, "defense": 50, "speed": 2, "cost_materials": 3000, "cost_manpower": 1000, "cost_fuel": 100, "production_time": 4}),
+        # speed steps: I=2, II-IV=3, V+=4
+        UnitFamily("Armored Car", roman_suffixes(34), {"health": linear(1000, 100), "attack": linear(400, 100), "defense": linear(60, 10), "speed": piecewise([(0, 2, 0), (1, 3, 0), (4, 4, 0)]), "cost_materials": linear(3000, 200), "cost_manpower": const(1000), "cost_fuel": linear(100, 5), "production_time": const(4)}),
+        # speed steps: I-III=2, IV+=3
+        UnitFamily("Light Tank", roman_suffixes(34), {"health": linear(1800, 200), "attack": linear(1200, 150), "defense": linear(80, 10), "speed": piecewise([(0, 2, 0), (3, 3, 0)]), "cost_materials": linear(5000, 500), "cost_manpower": const(1000), "cost_fuel": linear(150, 5), "production_time": const(5)}),
+        UnitFamily("Medium Tank", roman_suffixes(4), {"health": linear(2500, 500), "attack": linear(2400, 600), "defense": linear(150, 25), "speed": const(2), "cost_materials": linear(9000, 1000), "cost_manpower": const(1000), "cost_fuel": linear(200, 10), "production_time": const(6)}),
+        UnitFamily("Heavy Tank", roman_suffixes(4), {"health": linear(3000, 500), "attack": linear(3000, 500), "defense": linear(350, 50), "speed": const(1), "cost_materials": linear(12000, 1000), "cost_manpower": const(1000), "cost_fuel": linear(200, 10), "production_time": const(6)}),
+        UnitFamily("Super Heavy Tank", roman_suffixes(5), {"health":  const(5000), "attack":  const(5000), "defense": linear(550, 50), "speed": const(1), "cost_materials": linear(16000, 2000), "cost_manpower": const(1000), "cost_fuel": linear(240, 20), "production_time": const(6)}),
         # Can bombard an adjacent tile (see c.BOMBARDMENT_UNITS); bombard_attack
         # is tracked separately from melee "attack" so the two stay tunable independently.
-        UnitFamily("Landkreuzer P.1000 Ratte", single(), {
-            "health": 10000, "attack": 6000, "defense": 400,
-            "bombard_attack": 1000,
-            "speed": 1, "cost_materials": 50000, "cost_manpower": 2000,
-            "cost_fuel": 1000, "production_time": 10,
-        }, division_suffix="1000"),
-        UnitFamily("Landkreuzer P.1500 Monster", single(), {
-            "health": 15000, "attack": 8000, "defense": 500,
-            "bombard_attack": 1200,
-            "speed": 1, "cost_materials": 60000, "cost_manpower": 2000,
-            "cost_fuel": 1200, "production_time": 12,
-        }, division_suffix="1500"),
+        UnitFamily("Landkreuzer P.1000 Ratte", single(), {"health": 10000, "attack": 6000, "defense": 400, "bombard_attack": 1000, "speed": 1, "cost_materials": 50000, "cost_manpower": 2000, "cost_fuel": 1000, "production_time": 10}, division_suffix="1000"),
+        UnitFamily("Landkreuzer P.1500 Monster", single(), {"health": 15000, "attack": 8000, "defense": 500, "bombard_attack": 1200, "speed": 1, "cost_materials": 60000, "cost_manpower": 2000, "cost_fuel": 1200, "production_time": 12}, division_suffix="1500"),
         # Simmilar stats to the Landkreuzer P.1500 Monster but reaches 3 tiles instead
         # of 2 (see c.BOMBARDMENT_UNITS) - the endgame answer to its siege role.
-        UnitFamily("Railgun", single(), {
-            "health": 10000, "attack": 10000, "defense": 500,
-            "bombard_attack": 10000,
-            "speed": 1, "cost_materials": 80000, "cost_manpower": 2000,
-            "cost_fuel": 3000, "production_time": 10,
-        }),
-        UnitFamily("Main Battle Tank", roman_suffixes(22), {
-            "health": linear(5000, 500), "attack": linear(5000, 500), "defense": linear(250, 25),
-            "speed": const(2), "cost_materials": linear(16000, 1000), "cost_manpower": const(1000),
-            "cost_fuel": linear(240, 10), "production_time": const(6),
-        }),
+        UnitFamily("Railgun", single(), {"health": 10000, "attack": 10000, "defense": 500, "bombard_attack": 10000, "speed": 1, "cost_materials": 80000, "cost_manpower": 2000, "cost_fuel": 3000, "production_time": 10}),
+        UnitFamily("Main Battle Tank", roman_suffixes(22), {"health": linear(5000, 500), "attack": linear(5000, 500), "defense": linear(250, 25), "speed": const(2), "cost_materials": linear(16000, 1000), "cost_manpower": const(1000), "cost_fuel": linear(240, 10), "production_time": const(6)}),
         # Siege pieces: reach 2 tiles instead of Artillery's 1 (see c.BOMBARDMENT_UNITS).
         # Two standalone guns (not a leveled family) - stats equal the old 5-level
         # Railroad Gun's level 1 and level 5 respectively.
-        UnitFamily("WW1 Railroad Gun", single(), {
-            "health": 1200, "attack": 500,
-            # Bombardment damage, tracked separately from melee "attack" so the
-            # two can be tuned independently. Currently mirrors attack 1:1.
-            "bombard_attack": 500,
-            "defense": 0, "speed": 1, "cost_materials": 5000, "cost_manpower": 1000,
-            "cost_fuel": 0, "production_time": 6,
-        }),
-        UnitFamily("WW2 Railroad Gun", single(), {
-            "health": 2000, "attack": 800,
-            "bombard_attack": 800,
-            "defense": 0, "speed": 1, "cost_materials": 8000, "cost_manpower": 1000,
-            "cost_fuel": 0, "production_time": 6,
-        }),
+        # Bombardment damage, tracked separately from melee "attack" so the
+        # two can be tuned independently. Currently mirrors attack 1:1.
+        UnitFamily("WW1 Railroad Gun", single(), {"health": 1200, "attack": 500, "bombard_attack": 500, "defense": 0, "speed": 1, "cost_materials": 5000, "cost_manpower": 1000, "cost_fuel": 0, "production_time": 6}),
+        UnitFamily("WW2 Railroad Gun", single(), {"health": 2000, "attack": 800, "bombard_attack": 800, "defense": 0, "speed": 1, "cost_materials": 8000, "cost_manpower": 1000, "cost_fuel": 0, "production_time": 6}),
     ],
     [
-        UnitFamily("Carrack", single(), {
-            "health": 1000, "attack": 400, "defense": 0, "speed": 1,
-            "cost_materials": 2000, "cost_manpower": 500, "cost_fuel": 0, "production_time": 4,
-        }, naval_unit=True),
-        UnitFamily("Ironclad", single(), {
-            "health": 2000, "attack": 800, "defense": 200, "speed": 1,
-            "cost_materials": 8000, "cost_manpower": 1000, "cost_fuel": 100, "production_time": 6,
-        }, naval_unit=True),
-        UnitFamily("Pre-Dreadnought", single(), {
-            "health": 3000, "attack": 1200, "defense": 300, "speed": 1,
-            "cost_materials": 12000, "cost_manpower": 2000, "cost_fuel": 250, "production_time": 8,
-        }, naval_unit=True),
+        UnitFamily("Carrack", single(), {"health": 1000, "attack": 400, "defense": 0, "speed": 1, "cost_materials": 2000, "cost_manpower": 500, "cost_fuel": 0, "production_time": 4}, naval_unit=True),
+        UnitFamily("Ironclad", single(), {"health": 2000, "attack": 800, "defense": 200, "speed": 1, "cost_materials": 8000, "cost_manpower": 1000, "cost_fuel": 100, "production_time": 6}, naval_unit=True),
+        UnitFamily("Pre-Dreadnought", single(), {"health": 3000, "attack": 1200, "defense": 300, "speed": 1, "cost_materials": 12000, "cost_manpower": 2000, "cost_fuel": 250, "production_time": 8}, naval_unit=True),
         # Can bombard an adjacent tile (see c.BOMBARDMENT_UNITS); bombard_attack
         # is tracked separately from melee "attack" so the two stay tunable independently.
-        UnitFamily("Dreadnought", single(), {
-            "health": 4000, "attack": 2400, "defense": 400, "speed": 1,
-            "bombard_attack": 300,
-            "cost_materials": 20000, "cost_manpower": 2000, "cost_fuel": 300, "production_time": 10,
-        }, naval_unit=True),
-        UnitFamily("Battleship", single(), {
-            "health": 6000, "attack": 4000, "defense": 600, "speed": 1,
-            "bombard_attack": 500,
-            "cost_materials": 20000, "cost_manpower": 2000, "cost_fuel": 400, "production_time": 10,
-        }, naval_unit=True),
-        UnitFamily("Destroyer", roman_suffixes(36), {
-            "health": linear(2400, 400), "attack": linear(1200, 300), "defense": linear(200, 20),
-            "speed": const(1), "cost_materials": linear(10000, 500), "cost_manpower": const(1000),
-            "cost_fuel": linear(250, 5), "production_time": const(8),
-        }, naval_unit=True),
-        UnitFamily("Submarine", roman_suffixes(36), {
-            "health": linear(1200, 200),
-            # attack climbs 300/level through IX, jumps to 4000 at X, then 200/level
-            # "attack": piecewise([(0, 1200, 300), (9, 4000, 200)]),
-            "attack": linear(600, 100),
-            "defense": const(0),
-            "speed": const(1), "cost_materials": linear(8000, 400), "cost_manpower": const(1000),
-            "cost_fuel": linear(150, 5), "production_time": const(6),
-        }, naval_unit=True),
+        UnitFamily("Dreadnought", single(), {"health": 4000, "attack": 2400, "defense": 400, "speed": 1, "bombard_attack": 300, "cost_materials": 20000, "cost_manpower": 2000, "cost_fuel": 300, "production_time": 10}, naval_unit=True),
+        UnitFamily("Battleship", single(), {"health": 6000, "attack": 4000, "defense": 600, "speed": 1, "bombard_attack": 500, "cost_materials": 20000, "cost_manpower": 2000, "cost_fuel": 400, "production_time": 10}, naval_unit=True),
+        UnitFamily("Destroyer", roman_suffixes(36), {"health": linear(2400, 400), "attack": linear(1200, 300), "defense": linear(200, 20), "speed": const(1), "cost_materials": linear(10000, 500), "cost_manpower": const(1000), "cost_fuel": linear(250, 5), "production_time": const(8)}, naval_unit=True),
+        # attack climbs 300/level through IX, jumps to 4000 at X, then 200/level
+        # "attack": piecewise([(0, 1200, 300), (9, 4000, 200)]),
+        UnitFamily("Submarine", roman_suffixes(36), {"health": linear(1200, 200), "attack": linear(600, 100), "defense": const(0), "speed": const(1), "cost_materials": linear(8000, 400), "cost_manpower": const(1000), "cost_fuel": linear(150, 5), "production_time": const(6)}, naval_unit=True),
         # Can bombard an adjacent tile (see c.BOMBARDMENT_UNITS); bombard_attack
         # is tracked separately from melee "attack" so the two stay tunable independently.
-        UnitFamily("Aircraft Carrier", roman_suffixes(25), {
-            "health": linear(800, 200), "attack": linear(600, 120), "defense": linear(200, 20),
-            "bombard_attack": linear(600, 120),
-            "speed": const(1), "cost_materials": linear(20000, 1000), "cost_manpower": const(2000),
-            "cost_fuel": linear(500, 25), "production_time": const(10),
-        }, naval_unit=True),
+        UnitFamily("Aircraft Carrier", roman_suffixes(25), {"health": linear(800, 200), "attack": linear(600, 120), "defense": linear(200, 20), "bombard_attack": linear(600, 120), "speed": const(1), "cost_materials": linear(20000, 1000), "cost_manpower": const(2000), "cost_fuel": linear(500, 25), "production_time": const(10)}, naval_unit=True),
     ],
     [
         UnitFamily('Biplane Fighter', roman_suffixes(5), {'health': linear(2000, 100), 'attack': linear(120, 20), 'defense': 0, 'speed': 1, 'cost_materials': 1000, 'cost_manpower': 500, 'cost_fuel': 60, 'production_time': 2, 'production_group': 'Air', 'air_role': 'fighter', 'air_range_px': linear(60, 5), 'air_attack_multiplier': 10}),
@@ -631,7 +529,7 @@ BUILDING_CHAINS = [
 
 def extend_infantry_research(tech, entry):
     """Use the same equipment stages for research and generated units."""
-    stages = EARLY_INFANTRY_STAGES[tech] + EQUIPMENT_STAGES[tech]
+    stages = EQUIPMENT_STAGES[tech]
     names = {str(i + 1): stage[1] for i, stage in enumerate(stages)}
     entry["years"] = [stage[0] for stage in stages]
     entry["max_lvl"] = len(entry["years"])
@@ -656,7 +554,7 @@ RESEARCH_SECTIONS = [
         # research has reached (see queries.get_infantry_family_year), instead of
         # requiring a separate research track for each vehicle family.
         ("trucks", {"category": "INFANTRY", "max_lvl": 1, "cost": 1800,
-                     "req": {"cavalry": len(EARLY_INFANTRY_STAGES["cavalry"]) + len(EQUIPMENT_STAGES["cavalry"])},
+                     "req": {"cavalry": len(EQUIPMENT_STAGES["cavalry"])},
                      "years": years_range(1930, 1, 1)}),
         ("armored_personnel_carriers", {"category": "INFANTRY", "max_lvl": 1, "cost": 1800,
                                          "req": {"trucks": 1},

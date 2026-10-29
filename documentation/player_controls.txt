@@ -101,7 +101,7 @@ RESEARCH EDITING
 
 The Infantry category uses named equipment stages for infantry, cavalry, militia, and artillery.
 Technology details show the units unlocked by each stage.
-All stages use existing images and statistics.
+All stages use existing images. Vehicle infantry statistics come from regular infantry and shared generation rules.
 See documentation/non_llm_ai.txt, HISTORICAL INFANTRY EQUIPMENT, for shared equipment and upgrade rules.
 
 The editor's research screen sets a country's starting research.

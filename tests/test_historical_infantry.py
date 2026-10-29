@@ -28,13 +28,17 @@ class HistoricalInfantryTests(unittest.TestCase):
         self.library = queries.get_unit_library()
         self.equipment = {name: stats for name, stats in self.library.items()
                           if stats["metadata"]["research"]["tech"] in c.DATED_UNIT_RESEARCH_TRACKS}
+        self.vehicles = {name: stats for name, stats in self.library.items()
+                         if stats["metadata"]["research"]["tech"] in c.VEHICLE_INFANTRY_GATES}
+        self.production_units = {**self.equipment, **self.vehicles}
+        self.final_research = {key: entry["max_lvl"] for key, entry in self.tree.items()}
         self.early = {name: stats for name, stats in self.equipment.items()
                       if stats["metadata"]["research"].get("year", 1910) < 1910}
         self.context = BackendState()
         self.context.session.player_country = "A"
         self.country = {"research": {}, "research_queue": [], "at_war_with": []}
         for resource in c.ECON_RESOURCE_KEYS:
-            self.country[resource] = 1 + sum(stats[f"cost_{resource}"] for stats in self.equipment.values())
+            self.country[resource] = 1 + sum(stats[f"cost_{resource}"] for stats in self.production_units.values())
         self.context.world.nation_data["A"] = self.country
         self.province = {"id": 1, "json_key": "home", "owner": "A", "cores": ["A"],
                          "is_coastal": True, "buildings": ["Basic Factory"],
@@ -110,9 +114,8 @@ class HistoricalInfantryTests(unittest.TestCase):
                 self.assertTrue(queries.is_unit_unlocked(name, self.country["research"], self.library))
 
     def test_paid_local_recruitment_reads_historical_unit_data(self):
-        for name, stats in self.equipment.items():
-            tech, level = queries.get_unit_research_requirement(name, self.library)
-            self.country["research"] = {tech: level}
+        for name, stats in self.production_units.items():
+            self.country["research"] = self.final_research.copy()
             before = copy.deepcopy(self.country)
             result = production_actions.submit_production(
                 self.context, "A", self.province, "unit_queue", {"unit_type": name})
@@ -123,9 +126,11 @@ class HistoricalInfantryTests(unittest.TestCase):
 
     def test_both_multiplayer_production_paths_use_host_research_and_costs(self):
         driver = MapRealtimeDriver(self.context)
-        for name in self.equipment:
+        for name in self.production_units:
             tech, level = queries.get_unit_research_requirement(name, self.library)
-            self.country["research"] = {tech: level}
+            tech = c.VEHICLE_INFANTRY_GATES.get(tech, tech)
+            research = dict(self.final_research, **{tech: level})
+            self.country["research"] = research.copy()
             intent = {"unit_type": name}
             command = {"type": "province_queue", "province_id": 1,
                        "queue": "unit_queue", "items": [intent]}
@@ -147,8 +152,36 @@ class HistoricalInfantryTests(unittest.TestCase):
                     with self.assertRaises(ValueError):
                         _validate_production_projection(self.context, "A", {"home": {"unit_queue": [intent.copy()]}})
                     self.assertEqual((self.country, self.province), before)
-                    self.country["research"] = {tech: level}
+                    self.country["research"] = research.copy()
                     self.province["owner"] = "A"
+
+    def test_vehicle_recruitment_requires_fuel_and_foot_infantry_does_not(self):
+        for name, stats in self.vehicles.items():
+            base_name = queries.get_unit_for_family_tier(
+                self.library, "Infantry Type", stats["metadata"]["tier_order"])
+            base = self.library[base_name]
+            self.country["research"] = self.final_research.copy()
+            for resource in c.ECON_RESOURCE_KEYS:
+                self.country[resource] = base[f"cost_{resource}"] + stats[f"cost_{resource}"]
+            self.country["fuel"] = 0
+            with self.subTest(unit=name):
+                paid = production_actions.submit_production(
+                    self.context, "A", self.province, "unit_queue", {"unit_type": base_name})
+                self.assertEqual(paid.cost["cost_fuel"], 0)
+                self.assertGreater(stats["cost_fuel"], 0)
+                before = copy.deepcopy((self.country, self.province))
+                with self.assertRaisesRegex(ValueError, "Insufficient resources"):
+                    production_actions.submit_production(
+                        self.context, "A", self.province, "unit_queue", {"unit_type": name})
+                self.assertEqual((self.country, self.province), before)
+                self.country["fuel"] = stats["cost_fuel"]
+                paid = production_actions.submit_production(
+                    self.context, "A", self.province, "unit_queue", {"unit_type": name})
+                self.assertEqual(paid.cost["cost_fuel"], stats["cost_fuel"])
+                self.assertEqual(self.country["fuel"], 0)
+                production_actions.cancel_production(
+                    self.context, "A", self.province, "unit_queue", len(self.province["unit_queue"]) - 1)
+                self.assertEqual(self.country["fuel"], stats["cost_fuel"])
 
     def test_named_research_stages_use_the_same_editor_prerequisite_path(self):
         screen = Research_Screen.__new__(Research_Screen)
@@ -252,6 +285,43 @@ class HistoricalInfantryTests(unittest.TestCase):
         game.refresh_all_maps = Mock()
         apply_authoritative_snapshot(game, snapshot)
         self.assertEqual(game.nation_data[game.player_country]["research"], research)
+
+    def test_current_vehicle_save_refreshes_stats_and_keeps_health_and_paid_queue(self):
+        game = sample_map_screen()
+        province = next(iter(game.map_data.values()))
+        names = {}
+        for name, stats in self.vehicles.items():
+            names.setdefault(stats["metadata"]["family"], name)
+        province["units"] = [{"type": name, "owner": game.player_country, "unit_id": family,
+                               "health": 25, "max_health": 100, "attack": 3, "defense": 1,
+                               "speed": 1, "order": {"type": "MOVE", "path": []}}
+                              for family, name in names.items()]
+        paid_queue = [{"unit_type": next(iter(names.values())), "turns_remaining": 7,
+                       "refund": {"cost_materials": 17.5, "cost_manpower": 13, "cost_fuel": 5}}]
+        province["unit_queue"] = copy.deepcopy(paid_queue)
+        province["buildings"] = ["Basic Factory"]
+        province["resources"] = {}
+        game.nation_data[game.player_country]["research"] = self.final_research.copy()
+        saved = queries.build_save_dict(game)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            pygame.image.save(pygame.Surface((1, 1)), root / "id_map.png")
+            (root / "map_data.json").write_text(json.dumps(queries.build_map_data_save(game)))
+            (root / "meta.json").write_text(json.dumps(saved))
+            loaded = load_map.load_backend_state(directory, skip_initial_income=True)
+            loaded_province = next(iter(loaded.map_data.values()))
+            self.assertEqual(loaded_province["unit_queue"], paid_queue)
+            for unit in loaded_province["units"]:
+                stats = self.library[unit["type"]]
+                self.assertEqual(unit["health"], stats["health"] / 4)
+                self.assertEqual(unit["unit_id"], stats["metadata"]["family"])
+                self.assertEqual((unit["max_health"], unit["attack"], unit["defense"], unit["speed"]),
+                                 (stats["health"], stats["attack"], stats["defense"], stats["speed"]))
+            current = queries.build_save_dict(loaded)
+            (root / "meta.json").write_text(json.dumps(current))
+            restored = load_map.load_backend_state(directory, skip_initial_income=True)
+            self.assertEqual(next(iter(restored.map_data.values()))["units"], loaded_province["units"])
+            self.assertEqual(next(iter(restored.map_data.values()))["unit_queue"], paid_queue)
 
     def test_disk_load_migrates_legacy_history_then_preserves_a_new_save(self):
         game = sample_map_screen()
