@@ -61,6 +61,38 @@ def render_research_file(sections):
     return "\r\n".join(lines)
 
 
+def render_unit_file(sections):
+    """Align unit names and fields within each section and field layout."""
+    lines = ["{"]
+    total_entries = sum(len(block) for block in sections)
+    written = 0
+    for block_index, block in enumerate(sections):
+        name_width = max((len(dump_compact(name)) + 1 for name, _ in block), default=0)
+        widths = {}
+        for _, entry in block:
+            layout = tuple(entry)
+            columns = [f'{dump_compact(key)}: {dump_compact(value)},' for key, value in entry.items()]
+            current = widths.setdefault(layout, [0] * len(columns))
+            for index, column in enumerate(columns):
+                current[index] = max(current[index], len(column))
+        for name, entry in block:
+            written += 1
+            columns = [f'{dump_compact(key)}: {dump_compact(value)},' for key, value in entry.items()]
+            padding = widths[tuple(entry)]
+            fields = " ".join(column.ljust(padding[index]) for index, column in enumerate(columns[:-1]))
+            if fields:
+                fields += " "
+            if columns:
+                fields += columns[-1][:-1]
+            comma = "," if written < total_entries else ""
+            name_column = (dump_compact(name) + ":").ljust(name_width)
+            lines.append(f'    {name_column} {{{fields}}}{comma}')
+        if block_index < len(sections) - 1:
+            lines.append("")
+    lines.append("}")
+    return "\r\n".join(lines) + "\r\n"
+
+
 def build_unit_data_text():
     sections = [[fam.entries() for fam in block] for block in r.UNIT_SECTIONS]
     flat_sections = []
@@ -69,8 +101,7 @@ def build_unit_data_text():
         for fam_entries in block:
             flat_block.extend(fam_entries)
         flat_sections.append(flat_block)
-    # unit_data.json keeps a trailing newline after the closing brace.
-    return render_flat_file(flat_sections, spacer="") + "\r\n"
+    return render_unit_file(flat_sections)
 
 
 def build_building_data_text():

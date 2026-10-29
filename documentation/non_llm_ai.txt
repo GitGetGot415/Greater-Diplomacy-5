@@ -100,6 +100,7 @@ The last upgrade must precede the next stage and stay within the game timeline.
 Run data/generators/generate_data.py after edits to update the runtime libraries.
 
 INFANTRY_VARIANT_RULES generates vehicle infantry statistics from regular infantry at the same stage.
+The generator rounds vehicle statistics to INFANTRY_VARIANT_DECIMAL_PLACES decimal places.
 HEAVY_ARTILLERY_RULES generates heavy artillery statistics from regular artillery at the same stage.
 Derived artwork references keep the base image tier and replace its family name.
 Vehicle infantry starts at INFANTRY_VARIANT_FIRST_YEAR. Other research and vehicle unlock requirements still apply.

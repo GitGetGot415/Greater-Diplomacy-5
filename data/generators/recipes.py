@@ -180,6 +180,8 @@ class UnitFamily:
 
 # Defense multipliers use regular infantry's base attack, including for IFVs.
 # Material multipliers leave manpower, fuel, and production time unchanged.
+# Round generated variant statistics to remove floating-point artifacts.
+INFANTRY_VARIANT_DECIMAL_PLACES = 10
 INFANTRY_VARIANT_RULES = {
     "Motorized Infantry Type": {"speed": 2, "material_multiplier": 1.5, "attack_multiplier": 1, "defense_multiplier": None},
     "Mechanized Infantry Type": {"speed": 2, "material_multiplier": 2, "attack_multiplier": 1, "defense_multiplier": 0.2},
@@ -303,10 +305,10 @@ def equipment_profile(prefix, stage):
     if prefix in INFANTRY_VARIANT_RULES:
         rule = INFANTRY_VARIANT_RULES[prefix]
         profile.update(speed=rule["speed"],
-                       cost_materials=base["cost_materials"] * rule["material_multiplier"],
-                       attack=base["attack"] * rule["attack_multiplier"])
+                       cost_materials=round(base["cost_materials"] * rule["material_multiplier"], INFANTRY_VARIANT_DECIMAL_PLACES),
+                       attack=round(base["attack"] * rule["attack_multiplier"], INFANTRY_VARIANT_DECIMAL_PLACES))
         if rule["defense_multiplier"] is not None:
-            profile["defense"] = base["attack"] * rule["defense_multiplier"]
+            profile["defense"] = round(base["attack"] * rule["defense_multiplier"], INFANTRY_VARIANT_DECIMAL_PLACES)
     elif prefix == "Heavy Artillery":
         rule = HEAVY_ARTILLERY_RULES
         profile.update(cost_materials=base["cost_materials"] * rule["material_multiplier"],

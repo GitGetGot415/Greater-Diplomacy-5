@@ -92,6 +92,16 @@ class UnitProgressionTests(unittest.TestCase):
         self.assertEqual(checked, {name for name, stats in self.library.items()
                                   if stats["metadata"]["family"] in recipes.INFANTRY_VARIANT_RULES})
 
+    def test_vehicle_multiplier_rounds_float_artifacts_and_keeps_fractions(self):
+        stage = (1905, "Fixture Infantry", 100, 131, 0, 1, 41, 50, 6, 2, None)
+        rule = {"speed": 2, "material_multiplier": 0.3, "attack_multiplier": 1.5,
+                "defense_multiplier": 0.2}
+        with patch.dict(recipes.INFANTRY_VARIANT_RULES, {"Fixture Vehicle": rule}):
+            profile = recipes.equipment_profile("Fixture Vehicle", stage)
+        self.assertEqual(profile["defense"], 26.2)
+        self.assertEqual(profile["cost_materials"], 12.3)
+        self.assertEqual(profile["attack"], 196.5)
+
     def test_infantry_upgrade_row_generates_units_and_research(self):
         stages = [(1905, "Fixture Infantry", 100, 20, 3, 1, 40, 50, 6, 2, None,
                    (3, 2, {"health": 7, "attack": 4, "cost_materials": 3})),
