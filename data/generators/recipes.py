@@ -86,6 +86,11 @@ def years_range(start, step, count):
     return [start + i * step for i in range(count)]
 
 
+def table_values(columns, values):
+    """Translate one editable row to full JSON field names and check its column count."""
+    return dict(zip(columns.values(), values, strict=True))
+
+
 # ===========================================================================
 # UNIT_DATA.JSON
 # ===========================================================================
@@ -296,7 +301,7 @@ class EquipmentFamily(UnitFamily):
 def equipment_profile(prefix, stage):
     """Derive variant statistics and artwork from their base family profiles."""
     base_family = EQUIPMENT_VARIANT_BASES.get(prefix, prefix)
-    base = dict(zip(EQUIPMENT_COLUMNS.values(), stage[2:], strict=True))
+    base = table_values(EQUIPMENT_COLUMNS, stage[2:])
     if base["bombard_attack"] is None:
         del base["bombard_attack"]
     profile = dict(base, art_name=base["art_name"].replace(base_family, prefix, 1))
@@ -336,6 +341,109 @@ def equipment_family(prefix, tech):
 
 # Each inner list is a contiguous block of families; a blank spacer line is
 # written between blocks, matching the hand-maintained file's formatting.
+# Family rows retain live const, linear, piecewise, and suffix generators.
+# None omits an optional statistic. OPTIONS contains constructor settings.
+UNIT_RECIPE_COLUMNS = {
+    "HP": "health",
+    "ATK": "attack",
+    "DEF": "defense",
+    "SPD": "speed",
+    "MAT": "cost_materials",
+    "MAN": "cost_manpower",
+    "FUEL": "cost_fuel",
+    "TIME": "production_time",
+    "BOMB": "bombard_attack",
+}
+AIR_RECIPE_COLUMNS = {
+    "HP": "health",
+    "ATK": "attack",
+    "DEF": "defense",
+    "SPD": "speed",
+    "MAT": "cost_materials",
+    "MAN": "cost_manpower",
+    "FUEL": "cost_fuel",
+    "TIME": "production_time",
+    "ROLE": "air_role",
+    "RNG": "air_range_px",
+    "AAMULT": "air_attack_multiplier",
+    "CONSUME": "air_consumable",
+    "IMMUNE": "air_interception_immune",
+    "FORT": "air_damages_forts",
+    "CARGO": "air_transport_capacity",
+}
+
+LAND_UNIT_RECIPES = [
+    #NAME,                         TIERS,              HP,                ATK,               DEF,             SPD,                                          MAT,                 MAN,         FUEL,            TIME,     BOMB,  OPTIONS
+    ("WW1 Tank",                   single(),           3000,              1500,              100,             1,                                            6000,                1000,        300,             6,        None,  {}),
+    ("WW1 Armored Car",            single(),           1000,              300,               50,              2,                                            3000,                1000,        100,             4,        None,  {}),
+    # speed steps: I=2, II-IV=3, V+=4
+    ("Armored Car",                roman_suffixes(34), linear(1000, 100), linear(400, 100),  linear(60, 10),  piecewise([(0, 2, 0), (1, 3, 0), (4, 4, 0)]), linear(3000, 200),   const(1000), linear(100, 5),  const(4), None,  {}),
+    # speed steps: I-III=2, IV+=3
+    ("Light Tank",                 roman_suffixes(34), linear(1800, 200), linear(1200, 150), linear(80, 10),  piecewise([(0, 2, 0), (3, 3, 0)]),            linear(5000, 500),   const(1000), linear(150, 5),  const(5), None,  {}),
+    ("Medium Tank",                roman_suffixes(4),  linear(2500, 500), linear(2400, 600), linear(150, 25), const(2),                                     linear(9000, 1000),  const(1000), linear(200, 10), const(6), None,  {}),
+    ("Heavy Tank",                 roman_suffixes(4),  linear(3000, 500), linear(3000, 500), linear(350, 50), const(1),                                     linear(12000, 1000), const(1000), linear(200, 10), const(6), None,  {}),
+    ("Super Heavy Tank",           roman_suffixes(5),  const(5000),       const(5000),       linear(550, 50), const(1),                                     linear(16000, 2000), const(1000), linear(240, 20), const(6), None,  {}),
+    # Can bombard an adjacent tile (see c.BOMBARDMENT_UNITS); bombard_attack
+    # is tracked separately from melee "attack" so the two stay tunable independently.
+    ("Landkreuzer P.1000 Ratte",   single(),           10000,             6000,              400,             1,                                            50000,               2000,        1000,            10,       1000,  {"division_suffix": "1000"}),
+    ("Landkreuzer P.1500 Monster", single(),           15000,             8000,              500,             1,                                            60000,               2000,        1200,            12,       1200,  {"division_suffix": "1500"}),
+    # Simmilar stats to the Landkreuzer P.1500 Monster but reaches 3 tiles instead
+    # of 2 (see c.BOMBARDMENT_UNITS) - the endgame answer to its siege role.
+    ("Railgun",                    single(),           10000,             10000,             500,             1,                                            80000,               2000,        3000,            10,       10000, {}),
+    ("Main Battle Tank",           roman_suffixes(22), linear(5000, 500), linear(5000, 500), linear(250, 25), const(2),                                     linear(16000, 1000), const(1000), linear(240, 10), const(6), None,  {}),
+    # Siege pieces: reach 2 tiles instead of Artillery's 1 (see c.BOMBARDMENT_UNITS).
+    # Two standalone guns (not a leveled family) - stats equal the old 5-level
+    # Railroad Gun's level 1 and level 5 respectively.
+    # Bombardment damage, tracked separately from melee "attack" so the
+    # two can be tuned independently. Currently mirrors attack 1:1.
+    ("WW1 Railroad Gun",           single(),           1200,              500,               0,               1,                                            5000,                1000,        0,               6,        500,   {}),
+    ("WW2 Railroad Gun",           single(),           2000,              800,               0,               1,                                            8000,                1000,        0,               6,        800,   {}),
+]
+
+NAVAL_UNIT_RECIPES = [
+    #NAME,               TIERS,              HP,                ATK,               DEF,             SPD,      MAT,                 MAN,         FUEL,            TIME,      BOMB,             OPTIONS
+    ("Carrack",          single(),           1000,              400,               0,               1,        2000,                500,         0,               4,         None,             {}),
+    ("Ironclad",         single(),           2000,              800,               200,             1,        8000,                1000,        100,             6,         None,             {}),
+    ("Pre-Dreadnought",  single(),           3000,              1200,              300,             1,        12000,               2000,        250,             8,         None,             {}),
+    # Can bombard an adjacent tile (see c.BOMBARDMENT_UNITS); bombard_attack
+    # is tracked separately from melee "attack" so the two stay tunable independently.
+    ("Dreadnought",      single(),           4000,              2400,              400,             1,        20000,               2000,        300,             10,        300,              {}),
+    ("Battleship",       single(),           6000,              4000,              600,             1,        20000,               2000,        400,             10,        500,              {}),
+    ("Destroyer",        roman_suffixes(36), linear(2400, 400), linear(1200, 300), linear(200, 20), const(1), linear(10000, 500),  const(1000), linear(250, 5),  const(8),  None,             {}),
+    # attack climbs 300/level through IX, jumps to 4000 at X, then 200/level
+    # "attack": piecewise([(0, 1200, 300), (9, 4000, 200)]),
+    ("Submarine",        roman_suffixes(36), linear(1200, 200), linear(600, 100),  const(0),        const(1), linear(8000, 400),   const(1000), linear(150, 5),  const(6),  None,             {}),
+    # Can bombard an adjacent tile (see c.BOMBARDMENT_UNITS); bombard_attack
+    # is tracked separately from melee "attack" so the two stay tunable independently.
+    ("Aircraft Carrier", roman_suffixes(25), linear(800, 200),  linear(600, 120),  linear(200, 20), const(1), linear(20000, 1000), const(2000), linear(500, 25), const(10), linear(600, 120), {}),
+]
+
+AIR_UNIT_RECIPES = [
+# NAME                        , TIERS             , HP               , ATK              , DEF            , SPD                                         , MAT                , MAN        , FUEL           , TIME     , ROLE            , RNG                        , AAMULT, CONSUME, IMMUNE, FORT, CARGO, OPTIONS
+    ('Biplane Fighter',     roman_suffixes(5),  linear(2000, 100), linear(120, 20),   0,               1, 1000,                500,  60,              2, 'fighter',   linear(60, 5),   10,   None, None, None, None, {}),
+    ('Biplane Bomber',      roman_suffixes(5),  linear(3000, 500), linear(600, 100),  0,               1, 2000,                500,  80,              3, 'bomber',    linear(80, 10),  None, None, None, True, None, {}),
+    ('Zeppelin',            single(),           3000,              300,               0,               1, 2000,                500,  60,              4, 'bomber',    120,             None, None, None, True, None, {}),
+    ('Monoplane Fighter',   roman_suffixes(5),  linear(3000, 200), linear(250, 50),   linear(50, 10),  1, 3000,                500,  100,             3, 'fighter',   linear(100, 5),  8,    None, None, None, None, {}),
+    ('Monoplane Bomber',    roman_suffixes(5),  linear(5000, 200), linear(1000, 100), linear(120, 20), 1, linear(4000, 400),   500,  120,             4, 'bomber',    linear(120, 20), None, None, None, True, None, {}),
+    ('Monoplane Transport', roman_suffixes(3),  1000,              0,                 0,               1, linear(9000, 500),   1000, 200,             4, 'transport', linear(60, 10),  None, None, None, None, 1,    {}),
+    ('V1 Flying Bomb',      single(),           1000,              800,               0,               1, 2000,                0,    60,              2, 'strike',    200,             None, True, None, True, None, {}),
+    ('V2 Rocket',           single(),           2000,              1200,              0,               1, 4000,                0,    80,              4, 'strike',    300,             None, True, True, True, None, {}),
+    ('Jet Fighter',         roman_suffixes(26), linear(4000, 200), linear(1000, 100), linear(100, 20), 1, linear(5000, 200),   500,  linear(160, 10), 4, 'fighter',   linear(200, 5),  4,    None, None, None, None, {}),
+    ('Jet Bomber',          roman_suffixes(20), linear(6000, 200), linear(1600, 200), linear(200, 20), 1, linear(6000, 500),   500,  linear(160, 20), 6, 'bomber',    linear(300, 10), None, None, None, True, None, {}),
+    ('Jet Transport',       roman_suffixes(20), linear(2000, 200), 0,                 0,               1, linear(25000, 1000), 1000, 500,             6, 'transport', linear(100, 20), None, None, None, None, 2,    {}),
+]
+
+
+def unit_family(row, *, naval_unit=False, air=False):
+    """Translate an aligned family recipe while retaining its growth functions."""
+    prefix, suffixes, *values, options = row
+    columns = AIR_RECIPE_COLUMNS if air else UNIT_RECIPE_COLUMNS
+    stats = {field: value for field, value in table_values(columns, values).items() if value is not None}
+    if air:
+        stats["production_group"] = "Air"
+    return UnitFamily(prefix, suffixes, stats, naval_unit=naval_unit, **options)
+
+
 UNIT_SECTIONS = [
     [
         equipment_family("Infantry Type", "infantry_type"),
@@ -352,61 +460,9 @@ UNIT_SECTIONS = [
         equipment_family("Artillery", "artillery"),
         equipment_family("Heavy Artillery", "artillery"),
     ],
-    [
-        UnitFamily("WW1 Tank", single(), {"health": 3000, "attack": 1500, "defense": 100, "speed": 1, "cost_materials": 6000, "cost_manpower": 1000, "cost_fuel": 300, "production_time": 6}),
-        UnitFamily("WW1 Armored Car", single(), {"health": 1000, "attack": 300, "defense": 50, "speed": 2, "cost_materials": 3000, "cost_manpower": 1000, "cost_fuel": 100, "production_time": 4}),
-        # speed steps: I=2, II-IV=3, V+=4
-        UnitFamily("Armored Car", roman_suffixes(34), {"health": linear(1000, 100), "attack": linear(400, 100), "defense": linear(60, 10), "speed": piecewise([(0, 2, 0), (1, 3, 0), (4, 4, 0)]), "cost_materials": linear(3000, 200), "cost_manpower": const(1000), "cost_fuel": linear(100, 5), "production_time": const(4)}),
-        # speed steps: I-III=2, IV+=3
-        UnitFamily("Light Tank", roman_suffixes(34), {"health": linear(1800, 200), "attack": linear(1200, 150), "defense": linear(80, 10), "speed": piecewise([(0, 2, 0), (3, 3, 0)]), "cost_materials": linear(5000, 500), "cost_manpower": const(1000), "cost_fuel": linear(150, 5), "production_time": const(5)}),
-        UnitFamily("Medium Tank", roman_suffixes(4), {"health": linear(2500, 500), "attack": linear(2400, 600), "defense": linear(150, 25), "speed": const(2), "cost_materials": linear(9000, 1000), "cost_manpower": const(1000), "cost_fuel": linear(200, 10), "production_time": const(6)}),
-        UnitFamily("Heavy Tank", roman_suffixes(4), {"health": linear(3000, 500), "attack": linear(3000, 500), "defense": linear(350, 50), "speed": const(1), "cost_materials": linear(12000, 1000), "cost_manpower": const(1000), "cost_fuel": linear(200, 10), "production_time": const(6)}),
-        UnitFamily("Super Heavy Tank", roman_suffixes(5), {"health":  const(5000), "attack":  const(5000), "defense": linear(550, 50), "speed": const(1), "cost_materials": linear(16000, 2000), "cost_manpower": const(1000), "cost_fuel": linear(240, 20), "production_time": const(6)}),
-        # Can bombard an adjacent tile (see c.BOMBARDMENT_UNITS); bombard_attack
-        # is tracked separately from melee "attack" so the two stay tunable independently.
-        UnitFamily("Landkreuzer P.1000 Ratte", single(), {"health": 10000, "attack": 6000, "defense": 400, "bombard_attack": 1000, "speed": 1, "cost_materials": 50000, "cost_manpower": 2000, "cost_fuel": 1000, "production_time": 10}, division_suffix="1000"),
-        UnitFamily("Landkreuzer P.1500 Monster", single(), {"health": 15000, "attack": 8000, "defense": 500, "bombard_attack": 1200, "speed": 1, "cost_materials": 60000, "cost_manpower": 2000, "cost_fuel": 1200, "production_time": 12}, division_suffix="1500"),
-        # Simmilar stats to the Landkreuzer P.1500 Monster but reaches 3 tiles instead
-        # of 2 (see c.BOMBARDMENT_UNITS) - the endgame answer to its siege role.
-        UnitFamily("Railgun", single(), {"health": 10000, "attack": 10000, "defense": 500, "bombard_attack": 10000, "speed": 1, "cost_materials": 80000, "cost_manpower": 2000, "cost_fuel": 3000, "production_time": 10}),
-        UnitFamily("Main Battle Tank", roman_suffixes(22), {"health": linear(5000, 500), "attack": linear(5000, 500), "defense": linear(250, 25), "speed": const(2), "cost_materials": linear(16000, 1000), "cost_manpower": const(1000), "cost_fuel": linear(240, 10), "production_time": const(6)}),
-        # Siege pieces: reach 2 tiles instead of Artillery's 1 (see c.BOMBARDMENT_UNITS).
-        # Two standalone guns (not a leveled family) - stats equal the old 5-level
-        # Railroad Gun's level 1 and level 5 respectively.
-        # Bombardment damage, tracked separately from melee "attack" so the
-        # two can be tuned independently. Currently mirrors attack 1:1.
-        UnitFamily("WW1 Railroad Gun", single(), {"health": 1200, "attack": 500, "bombard_attack": 500, "defense": 0, "speed": 1, "cost_materials": 5000, "cost_manpower": 1000, "cost_fuel": 0, "production_time": 6}),
-        UnitFamily("WW2 Railroad Gun", single(), {"health": 2000, "attack": 800, "bombard_attack": 800, "defense": 0, "speed": 1, "cost_materials": 8000, "cost_manpower": 1000, "cost_fuel": 0, "production_time": 6}),
-    ],
-    [
-        UnitFamily("Carrack", single(), {"health": 1000, "attack": 400, "defense": 0, "speed": 1, "cost_materials": 2000, "cost_manpower": 500, "cost_fuel": 0, "production_time": 4}, naval_unit=True),
-        UnitFamily("Ironclad", single(), {"health": 2000, "attack": 800, "defense": 200, "speed": 1, "cost_materials": 8000, "cost_manpower": 1000, "cost_fuel": 100, "production_time": 6}, naval_unit=True),
-        UnitFamily("Pre-Dreadnought", single(), {"health": 3000, "attack": 1200, "defense": 300, "speed": 1, "cost_materials": 12000, "cost_manpower": 2000, "cost_fuel": 250, "production_time": 8}, naval_unit=True),
-        # Can bombard an adjacent tile (see c.BOMBARDMENT_UNITS); bombard_attack
-        # is tracked separately from melee "attack" so the two stay tunable independently.
-        UnitFamily("Dreadnought", single(), {"health": 4000, "attack": 2400, "defense": 400, "speed": 1, "bombard_attack": 300, "cost_materials": 20000, "cost_manpower": 2000, "cost_fuel": 300, "production_time": 10}, naval_unit=True),
-        UnitFamily("Battleship", single(), {"health": 6000, "attack": 4000, "defense": 600, "speed": 1, "bombard_attack": 500, "cost_materials": 20000, "cost_manpower": 2000, "cost_fuel": 400, "production_time": 10}, naval_unit=True),
-        UnitFamily("Destroyer", roman_suffixes(36), {"health": linear(2400, 400), "attack": linear(1200, 300), "defense": linear(200, 20), "speed": const(1), "cost_materials": linear(10000, 500), "cost_manpower": const(1000), "cost_fuel": linear(250, 5), "production_time": const(8)}, naval_unit=True),
-        # attack climbs 300/level through IX, jumps to 4000 at X, then 200/level
-        # "attack": piecewise([(0, 1200, 300), (9, 4000, 200)]),
-        UnitFamily("Submarine", roman_suffixes(36), {"health": linear(1200, 200), "attack": linear(600, 100), "defense": const(0), "speed": const(1), "cost_materials": linear(8000, 400), "cost_manpower": const(1000), "cost_fuel": linear(150, 5), "production_time": const(6)}, naval_unit=True),
-        # Can bombard an adjacent tile (see c.BOMBARDMENT_UNITS); bombard_attack
-        # is tracked separately from melee "attack" so the two stay tunable independently.
-        UnitFamily("Aircraft Carrier", roman_suffixes(25), {"health": linear(800, 200), "attack": linear(600, 120), "defense": linear(200, 20), "bombard_attack": linear(600, 120), "speed": const(1), "cost_materials": linear(20000, 1000), "cost_manpower": const(2000), "cost_fuel": linear(500, 25), "production_time": const(10)}, naval_unit=True),
-    ],
-    [
-        UnitFamily('Biplane Fighter', roman_suffixes(5), {'health': linear(2000, 100), 'attack': linear(120, 20), 'defense': 0, 'speed': 1, 'cost_materials': 1000, 'cost_manpower': 500, 'cost_fuel': 60, 'production_time': 2, 'production_group': 'Air', 'air_role': 'fighter', 'air_range_px': linear(60, 5), 'air_attack_multiplier': 10}),
-        UnitFamily('Biplane Bomber', roman_suffixes(5), {'health': linear(3000, 500), 'attack': linear(600, 100), 'defense': 0, 'speed': 1, 'cost_materials': 2000, 'cost_manpower': 500, 'cost_fuel': 80, 'production_time': 3, 'production_group': 'Air', 'air_role': 'bomber', 'air_range_px': linear(80, 10), 'air_damages_forts': True}),
-        UnitFamily('Zeppelin', single(), {'health': 3000, 'attack': 300, 'defense': 0, 'speed': 1, 'cost_materials': 2000, 'cost_manpower': 500, 'cost_fuel': 60, 'production_time': 4, 'production_group': 'Air', 'air_role': 'bomber', 'air_range_px': 120, 'air_damages_forts': True}),
-        UnitFamily('Monoplane Fighter', roman_suffixes(5), {'health': linear(3000, 200), 'attack': linear(250, 50), 'defense': linear(50, 10), 'speed': 1, 'cost_materials': 3000, 'cost_manpower': 500, 'cost_fuel': 100, 'production_time': 3, 'production_group': 'Air', 'air_role': 'fighter', 'air_range_px': linear(100, 5), 'air_attack_multiplier': 8}),
-        UnitFamily('Monoplane Bomber', roman_suffixes(5), {'health': linear(5000, 200), 'attack': linear(1000, 100), 'defense': linear(120, 20), 'speed': 1, 'cost_materials': linear(4000, 400), 'cost_manpower': 500, 'cost_fuel': 120, 'production_time': 4, 'production_group': 'Air', 'air_role': 'bomber', 'air_range_px': linear(120, 20), 'air_damages_forts': True}),
-        UnitFamily('Monoplane Transport', roman_suffixes(3), {'health': 1000, 'attack': 0, 'defense': 0, 'speed': 1, 'cost_materials': linear(9000, 500), 'cost_manpower': 1000, 'cost_fuel': 200, 'production_time': 4, 'production_group': 'Air', 'air_role': 'transport', 'air_range_px': linear(60, 10), 'air_transport_capacity': 1}),
-        UnitFamily('V1 Flying Bomb', single(), {'health': 1000, 'attack': 800, 'defense': 0, 'speed': 1, 'cost_materials': 2000, 'cost_manpower': 0, 'cost_fuel': 60, 'production_time': 2, 'production_group': 'Air', 'air_role': 'strike', 'air_range_px': 200, 'air_consumable': True, 'air_damages_forts': True}),
-        UnitFamily('V2 Rocket', single(), {'health': 2000, 'attack': 1200, 'defense': 0, 'speed': 1, 'cost_materials': 4000, 'cost_manpower': 0, 'cost_fuel': 80, 'production_time': 4, 'production_group': 'Air', 'air_role': 'strike', 'air_range_px': 300, 'air_consumable': True, 'air_interception_immune': True, 'air_damages_forts': True}),
-        UnitFamily('Jet Fighter', roman_suffixes(26), {'health': linear(4000, 200), 'attack':  linear(1000, 100), 'defense':  linear(100, 20), 'speed': 1, 'cost_materials':  linear(5000, 200), 'cost_manpower': 500, 'cost_fuel': linear(160, 10), 'production_time': 4, 'production_group': 'Air', 'air_role': 'fighter', 'air_range_px': linear(200, 5), 'air_attack_multiplier': 4}),
-        UnitFamily('Jet Bomber', roman_suffixes(20), {'health': linear(6000, 200), 'attack':  linear(1600, 200), 'defense':  linear(200, 20), 'speed': 1, 'cost_materials':  linear(6000, 500), 'cost_manpower': 500, 'cost_fuel': linear(160, 20), 'production_time': 6, 'production_group': 'Air', 'air_role': 'bomber', 'air_range_px': linear(300, 10), 'air_damages_forts': True}),
-        UnitFamily('Jet Transport', roman_suffixes(20), {'health': linear(2000, 200), 'attack': 0, 'defense': 0, 'speed': 1, 'cost_materials': linear(25000, 1000), 'cost_manpower': 1000, 'cost_fuel': 500, 'production_time': 6, 'production_group': 'Air', 'air_role': 'transport', 'air_range_px': linear(100, 20), 'air_transport_capacity': 2}),
-    ],
+    [unit_family(row) for row in LAND_UNIT_RECIPES],
+    [unit_family(row, naval_unit=True) for row in NAVAL_UNIT_RECIPES],
+    [unit_family(row, air=True) for row in AIR_UNIT_RECIPES],
 ]
 
 
@@ -461,62 +517,44 @@ class BuildingChain:
         return out
 
 
-BUILDING_CHAINS = [
-    BuildingChain(
-        base_name="Basic Factory",
-        # NOTE: req is the literal string "null" here (not JSON null) - a
-        # pre-existing quirk in the data file, preserved intentionally.
-        base_req="null",
-        base_stats={
-            # cost_* stay 0 -- Basic Factory cost is computed dynamically from
-            # factory count in queries.get_building_cost(), not read from here.
-            "time": 20, "group": "industry", "cost_materials": 0, "cost_manpower": 0,
-            "cost_fuel": 0, "prod_materials": 200, "prod_manpower": 0, "prod_fuel": 0,
-        },
-        level_prefix="Factory Lvl",
-        count=25,
-        stats={
-            "time": const(12), "group": const("industry"), "cost_materials": const(30000),
-            "cost_manpower": const(0), "cost_fuel": const(1000),
-            "prod_materials": lambda n: 100 * n + 500, "prod_manpower": const(0),
-            "prod_fuel": lambda n: 10 * n,
-        },
-    ),
-    BuildingChain(
-        base_name="Basic Recruitment Center",
-        base_req=None,
-        base_stats={
-            "time": 6, "group": "recruitment", "cost_materials": 2500, "cost_manpower": 0,
-            "cost_fuel": 0, "prod_materials": 0, "prod_manpower": 50, "prod_fuel": 0,
-        },
-        level_prefix="Recruitment Building Lvl",
-        count=50,
-        stats={
-            "time": const(6), "group": const("recruitment"), "cost_materials": const(5000),
-            "cost_manpower": const(0), "cost_fuel": const(0), "prod_materials": const(0),
-            "prod_manpower": lambda n: 100 * n, "prod_fuel": const(0),
-        },
-    ),
-    BuildingChain(
-        base_name="Fort Lvl 1",
-        base_req=None,
-        base_stats={
-            "time": 1, "group": "fortification", "cost_materials": 5000,
-            "cost_manpower": 0, "cost_fuel": 0, "prod_materials": 0,
-            "prod_manpower": 0, "prod_fuel": 0,
-        },
-        level_prefix="Fort Lvl",
-        count=c.FORT_MAX_LEVEL,
-        skip_generated_base=True,
-        stats={
-            "time": const(1), "group": const("fortification"),
-            "cost_materials": lambda n: 4000 + (1000 * n),
-            "cost_manpower": const(0), "cost_fuel": const(0),
-            "prod_materials": const(0), "prod_manpower": const(0),
-            "prod_fuel": const(0),
-        },
-    ),
+BUILDING_RECIPE_COLUMNS = {
+    "TIME": "time",
+    "GROUP": "group",
+    "MAT": "cost_materials",
+    "MAN": "cost_manpower",
+    "FUEL": "cost_fuel",
+    "OUTMAT": "prod_materials",
+    "OUTMAN": "prod_manpower",
+    "OUTFUEL": "prod_fuel",
+}
+
+# Base requirements preserve the literal "null" string separately from None.
+# Basic Factory costs remain dynamic in queries.get_building_cost; its stored costs stay zero.
+BUILDING_BASE_RECIPES = [
+# NAME                      , REQ   , TIME, GROUP          , MAT , MAN, FUEL, OUTMAT, OUTMAN, OUTFUEL
+    ("Basic Factory",            "null", 20, "industry",      0,    0, 0, 200, 0,  0),
+    ("Basic Recruitment Center", None,   6,  "recruitment",   2500, 0, 0, 0,   50, 0),
+    ("Fort Lvl 1",               None,   1,  "fortification", 5000, 0, 0, 0,   0,  0),
 ]
+
+# Growth functions receive the numbered building level, starting at 1.
+BUILDING_GROWTH_RECIPES = [
+# NAME                      , PREFIX                    , COUNT           , TIME     , GROUP                 , MAT                        , MAN     , FUEL       , OUTMAT                 , OUTMAN           , OUTFUEL         , OPTIONS
+    ("Basic Factory",            "Factory Lvl",              25,               const(12), const("industry"),      const(30000),                const(0), const(1000), lambda n: 100 * n + 500, const(0),          lambda n: 10 * n, {}),
+    ("Basic Recruitment Center", "Recruitment Building Lvl", 50,               const(6),  const("recruitment"),   const(5000),                 const(0), const(0),    const(0),                lambda n: 100 * n, const(0),         {}),
+    ("Fort Lvl 1",               "Fort Lvl",                 c.FORT_MAX_LEVEL, const(1),  const("fortification"), lambda n: 4000 + (1000 * n), const(0), const(0),    const(0),                const(0),          const(0),         {"skip_generated_base": True}),
+]
+
+
+def building_chain(row):
+    """Translate base and growth recipes without expanding their formulas."""
+    name, prefix, count, *values, options = row
+    base = next(base for base in BUILDING_BASE_RECIPES if base[0] == name)
+    return BuildingChain(name, table_values(BUILDING_RECIPE_COLUMNS, base[2:]), base[1],
+                         prefix, count, table_values(BUILDING_RECIPE_COLUMNS, values), **options)
+
+
+BUILDING_CHAINS = [building_chain(row) for row in BUILDING_GROWTH_RECIPES]
 
 
 # ===========================================================================
@@ -537,89 +575,117 @@ def extend_infantry_research(tech, entry):
 
 
 # Sections separated by a blank spacer line, matching the current file.
-RESEARCH_SECTIONS = [
+RESEARCH_RECIPE_COLUMNS = {"CAT": "category", "LVLS": "max_lvl", "COST": "cost", "REQ": "req", "YRS": "years"}
+RESEARCH_OPTION_COLUMNS = {"NAME": "display_name", "GATES": "level_reqs", "BONUS": "building_output_bonuses"}
+
+# None for both LVLS and YRS derives equipment research from EQUIPMENT_STAGES.
+# Other rows retain their years_range expressions and prerequisite dictionaries.
+RESEARCH_RECIPES = [
     [
-        ("infantry_type", extend_infantry_research("infantry_type", { "category": "INFANTRY", "cost": 900, "req": {}})),
-        ("cavalry", extend_infantry_research("cavalry", { "category": "INFANTRY", "cost": 1200, "req": {}})),
-        ("militia", extend_infantry_research("militia", { "category": "INFANTRY", "cost": 600, "req": {}})),
-        ("artillery", extend_infantry_research("artillery", { "category": "INFANTRY", "cost": 900, "req": {}})),
+# ID                          , CAT       , LVLS, COST, REQ                                                  , YRS                           , OPTIONS
+        ("infantry_type",              "INFANTRY", None, 900,  {},                                                    None,                           {}),
+        ("cavalry",                    "INFANTRY", None, 1200, {},                                                    None,                           {}),
+        ("militia",                    "INFANTRY", None, 600,  {},                                                    None,                           {}),
+        ("artillery",                  "INFANTRY", None, 900,  {},                                                    None,                           {}),
         # One-time unlocks rather than leveled techs: owning them lets a nation build
         # Motorized/Mechanized Infantry up to whatever year its own infantry_type
         # research has reached (see queries.get_infantry_family_year), instead of
         # requiring a separate research track for each vehicle family.
-        ("trucks", {"category": "INFANTRY", "max_lvl": 1, "cost": 1800, "req": {"cavalry": len(EQUIPMENT_STAGES["cavalry"])}, "years": years_range(1930, 1, 1)}),
-        ("armored_personnel_carriers", {"category": "INFANTRY", "max_lvl": 1, "cost": 1800, "req": {"trucks": 1}, "years": years_range(1940, 1, 1)}),
-        ("infantry_fighting_vehicle", {"category": "INFANTRY", "max_lvl": 1, "cost": 1800, "req": {"armored_personnel_carriers": 1}, "years": years_range(1950, 1, 1)}),
+        ("trucks",                     "INFANTRY", 1,    1800, {"cavalry": len(EQUIPMENT_STAGES["cavalry"])},         years_range(1930, 1, 1),        {}),
+        ("armored_personnel_carriers", "INFANTRY", 1,    1800, {"trucks": 1},                                         years_range(1940, 1, 1),        {}),
+        ("infantry_fighting_vehicle",  "INFANTRY", 1,    1800, {"armored_personnel_carriers": 1},                     years_range(1950, 1, 1),        {}),
     ],
     [
-        ("civilian_car", {"category": "TANKS", "max_lvl": 1, "cost": 2400, "req": {}, "years": years_range(1910, 1, 1)}),
-        ("ww1_armored_car", {"category": "TANKS", "max_lvl": 1, "cost": 2400, "req": {"civilian_car": 1}, "years": years_range(1912, 1, 1)}),
-        ("armored_car", {"category": "TANKS", "max_lvl": 34, "cost": 2400, "req": {"ww1_armored_car": 1}, "years": years_range(1916, 4, 34)}),
+# ID                          , CAT       , LVLS, COST, REQ                                                  , YRS                           , OPTIONS
+        ("civilian_car",               "TANKS",    1,    2400, {},                                                    years_range(1910, 1, 1),        {}),
+        ("ww1_armored_car",            "TANKS",    1,    2400, {"civilian_car": 1},                                   years_range(1912, 1, 1),        {}),
+        ("armored_car",                "TANKS",    34,   2400, {"ww1_armored_car": 1},                                years_range(1916, 4, 34),       {}),
     ],
     [
-        ("ww1_tank", {"category": "TANKS", "max_lvl": 1, "cost": 2400, "req": {"ww1_armored_car": 1}, "years": years_range(1914, 1, 1)}),
-        ("light_tank", {"category": "TANKS", "max_lvl": 34, "cost": 2400, "req": {"ww1_tank": 1}, "years": years_range(1918, 4, 34)}),
-        ("medium_tank", {"category": "TANKS", "max_lvl": 4, "cost": 2400, "req": {"light_tank": 1}, "years": years_range(1925, 5, 4)}),
-        ("heavy_tank", {"category": "TANKS", "max_lvl": 4, "cost": 2400, "req": {"medium_tank": 1}, "years": years_range(1929, 4, 4)}),
-        ("super_heavy_tank", {"category": "TANKS", "max_lvl": 5, "cost": 2400, "req": {"heavy_tank": 4}, "years": years_range(1945, 4, 5)}),
-        ("landkreuzer_p1000_ratte", {"category": "TANKS", "max_lvl": 1, "cost": 3000, "req": {"ww2_railroad_gun": 1}, "years": years_range(1944, 6, 1)}),
-        ("landkreuzer_p1500_monster", {"category": "TANKS", "max_lvl": 1, "cost": 3600, "req": {"landkreuzer_p1000_ratte": 1}, "years": years_range(1956, 8, 1)}),
-        ("electromagnetic_launcher", {"category": "TANKS", "max_lvl": 1, "cost": 3000, "req": {}, "years": years_range(1980, 1, 1)}),
-        ("railgun", {"category": "TANKS", "max_lvl": 1, "cost": 3600, "req": {"electromagnetic_launcher": 1}, "years": years_range(2030, 1, 1)}),
-        ("main_battle_tank", {"category": "TANKS", "max_lvl": 22, "cost": 2400, "req": {"OR": [{"medium_tank": 4}, {"heavy_tank": 4}]}, "years": years_range(1945, 5, 22)}),
-        ("ww1_railroad_gun", {"category": "TANKS", "max_lvl": 1, "cost": 2400, "req": {"ww1_tank": 1}, "years": years_range(1918, 1, 1)}),
-        ("ww2_railroad_gun", {"category": "TANKS", "max_lvl": 1, "cost": 2400, "req": {"AND": [{"heavy_tank": 1}, {"ww1_railroad_gun": 1}]}, "years": years_range(1932, 1, 1)}),
+# ID                          , CAT       , LVLS, COST, REQ                                                  , YRS                           , OPTIONS
+        ("ww1_tank",                   "TANKS",    1,    2400, {"ww1_armored_car": 1},                                years_range(1914, 1, 1),        {}),
+        ("light_tank",                 "TANKS",    34,   2400, {"ww1_tank": 1},                                       years_range(1918, 4, 34),       {}),
+        ("medium_tank",                "TANKS",    4,    2400, {"light_tank": 1},                                     years_range(1925, 5, 4),        {}),
+        ("heavy_tank",                 "TANKS",    4,    2400, {"medium_tank": 1},                                    years_range(1929, 4, 4),        {}),
+        ("super_heavy_tank",           "TANKS",    5,    2400, {"heavy_tank": 4},                                     years_range(1945, 4, 5),        {}),
+        ("landkreuzer_p1000_ratte",    "TANKS",    1,    3000, {"ww2_railroad_gun": 1},                               years_range(1944, 6, 1),        {}),
+        ("landkreuzer_p1500_monster",  "TANKS",    1,    3600, {"landkreuzer_p1000_ratte": 1},                        years_range(1956, 8, 1),        {}),
+        ("electromagnetic_launcher",   "TANKS",    1,    3000, {},                                                    years_range(1980, 1, 1),        {}),
+        ("railgun",                    "TANKS",    1,    3600, {"electromagnetic_launcher": 1},                       years_range(2030, 1, 1),        {}),
+        ("main_battle_tank",           "TANKS",    22,   2400, {"OR": [{"medium_tank": 4}, {"heavy_tank": 4}]},       years_range(1945, 5, 22),       {}),
+        ("ww1_railroad_gun",           "TANKS",    1,    2400, {"ww1_tank": 1},                                       years_range(1918, 1, 1),        {}),
+        ("ww2_railroad_gun",           "TANKS",    1,    2400, {"AND": [{"heavy_tank": 1}, {"ww1_railroad_gun": 1}]}, years_range(1932, 1, 1),        {}),
     ],
     [
-        ("carrack", {"category": "NAVY", "max_lvl": 1, "cost": 600, "req": {}, "years": [1800]}),
-        ("ironclad", {"category": "NAVY", "max_lvl": 1, "cost": 2400, "req": {"carrack": 1}, "years": [1860]}),
-        ("pre-dreadnought", {"category": "NAVY", "max_lvl": 1, "cost": 2400, "req": {"ironclad": 1}, "years": [1880]}),
-        ("dreadnought", {"category": "NAVY", "max_lvl": 1, "cost": 2400, "req": {"pre-dreadnought": 1}, "years": years_range(1900, 1, 1)}),
-        ("battleship", {"category": "NAVY", "max_lvl": 1, "cost": 2400, "req": {"dreadnought": 1}, "years": years_range(1920, 1, 1)}),
-        ("destroyer", {"category": "NAVY", "max_lvl": 36, "cost": 2400, "req": {"dreadnought": 1}, "years": years_range(1910, 4, 36)}),
-        ("aircraft_carrier", {"category": "NAVY", "max_lvl": 25, "cost": 2400, "req": {"battleship": 1}, "years": years_range(1930, 5, 25)}),
-        ("submarine", {"category": "NAVY", "max_lvl": 36, "cost": 2400, "req": {"dreadnought": 1}, "years": years_range(1910, 4, 36)}),
+# ID                          , CAT       , LVLS, COST, REQ                                                  , YRS                           , OPTIONS
+        ("carrack",                    "NAVY",     1,    600,  {},                                                    [1800],                         {}),
+        ("ironclad",                   "NAVY",     1,    2400, {"carrack": 1},                                        [1860],                         {}),
+        ("pre-dreadnought",            "NAVY",     1,    2400, {"ironclad": 1},                                       [1880],                         {}),
+        ("dreadnought",                "NAVY",     1,    2400, {"pre-dreadnought": 1},                                years_range(1900, 1, 1),        {}),
+        ("battleship",                 "NAVY",     1,    2400, {"dreadnought": 1},                                    years_range(1920, 1, 1),        {}),
+        ("destroyer",                  "NAVY",     36,   2400, {"dreadnought": 1},                                    years_range(1910, 4, 36),       {}),
+        ("aircraft_carrier",           "NAVY",     25,   2400, {"battleship": 1},                                     years_range(1930, 5, 25),       {}),
+        ("submarine",                  "NAVY",     36,   2400, {"dreadnought": 1},                                    years_range(1910, 4, 36),       {}),
     ],
     [
-        ("basic_factory", {"category": "INDUSTRY", "max_lvl": 1, "cost": 1200, "req": {}, "years": years_range(1800, 1, 1)}),
-        ("waltham_system", {"category": "INDUSTRY", "display_name": "Waltham System", "max_lvl": 1, "cost": 1200, "req": {"basic_factory": 1}, "years": [1815], "building_output_bonuses": [{"building_families": ["Basic Factory"], "flat_outputs": {"materials": 100}}]}),
-        ("metal_shaper", {"category": "INDUSTRY", "display_name": "Metal Shaper", "max_lvl": 1, "cost": 1200, "req": {"waltham_system": 1}, "years": [1835]}),
-        ("steam_hammer", {"category": "INDUSTRY", "display_name": "Steam Hammer", "max_lvl": 1, "cost": 1200, "req": {"metal_shaper": 1}, "years": [1840]}),
-        ("bessemer_process", {"category": "INDUSTRY", "display_name": "Bessemer Process", "max_lvl": 1, "cost": 1200, "req": {"steam_hammer": 1}, "years": [1855], "building_output_bonuses": [{"building_families": ["Basic Factory"], "flat_outputs": {"materials": 200}}]}),
-        ("electricity", {"category": "INDUSTRY", "display_name": "Electricity", "max_lvl": 1, "cost": 1200, "req": {"bessemer_process": 1}, "years": [1870]}),
-        ("lightbulb", {"category": "INDUSTRY", "display_name": "Lightbulb", "max_lvl": 1, "cost": 1200, "req": {"electricity": 1}, "years": [1880]}),
-        ("assembly_line", {"category": "INDUSTRY", "display_name": "Assembly Line", "max_lvl": 1, "cost": 1200, "req": {"factory": 1}, "years": [1905], "building_output_bonuses": [{"building_families": ["Basic Factory", "Factory"], "outputs": {"materials": 0.5}}]}),
-        ("conveyor_belt", {"category": "INDUSTRY", "display_name": "Conveyor Belt", "max_lvl": 1, "cost": 1200, "req": {"factory": 2}, "years": [1915], "building_output_bonuses": [{"building_families": ["Basic Factory", "Factory"], "outputs": {"materials": 0.5}}]}),
-        ("machine_tools", {"category": "INDUSTRY", "display_name": "Machine Tools", "max_lvl": 1, "cost": 1200, "req": {"factory": 4}, "years": [1935]}),
-        ("just_in_time_manufacturing", {"category": "INDUSTRY", "display_name": "Just In Time Manufacturing", "max_lvl": 1, "cost": 1200, "req": {"factory": 5}, "years": [1945], "building_output_bonuses": [{"building_families": ["Basic Factory", "Factory"], "outputs": {"materials": 0.2}}]}),
-        ("industrial_robot", {"category": "INDUSTRY", "display_name": "Industrial Robot", "max_lvl": 1, "cost": 1200, "req": {"factory": 6}, "years": [1955]}),
-        ("stanford_arm", {"category": "INDUSTRY", "display_name": "Stanford Arm", "max_lvl": 1, "cost": 1200, "req": {"factory": 7}, "years": [1965]}),
-        ("asea_irb_6", {"category": "INDUSTRY", "display_name": "ASEA IRB 6", "max_lvl": 1, "cost": 1200, "req": {"factory": 8}, "years": [1975]}),
-        ("computer_numerical_control", {"category": "INDUSTRY", "display_name": "Computer Numerical Control", "max_lvl": 1, "cost": 1200, "req": {"factory": 9}, "years": [1985]}),
-        ("3d_printing", {"category": "INDUSTRY", "display_name": "3D Printing", "max_lvl": 1, "cost": 1200, "req": {"factory": 10}, "years": [1995]}),
-        ("internet_of_things", {"category": "INDUSTRY", "display_name": "Internet of Things", "max_lvl": 1, "cost": 1200, "req": {"factory": 11}, "years": [2005]}),
-        ("industry_4_0", {"category": "INDUSTRY", "display_name": "Industry 4.0", "max_lvl": 1, "cost": 1200, "req": {"factory": 12}, "years": [2015]}),
-        ("industry_5_0", {"category": "INDUSTRY", "display_name": "Industry 5.0", "max_lvl": 1, "cost": 1200, "req": {"factory": 13}, "years": [2025]}),
-        ("factory", {"category": "INDUSTRY", "max_lvl": 25, "cost": 1200, "req": {"lightbulb": 1}, "level_reqs": {"2": {"assembly_line": 1}, "3": {"conveyor_belt": 1}, "5": {"machine_tools": 1}, "6": {"just_in_time_manufacturing": 1}, "7": {"industrial_robot": 1}, "8": {"stanford_arm": 1}, "9": {"asea_irb_6": 1}, "10": {"computer_numerical_control": 1}, "11": {"3d_printing": 1}, "12": {"internet_of_things": 1}, "13": {"industry_4_0": 1}, "14": {"industry_5_0": 1}}, "years": years_range(1900, 10, 25)}),
-        ("bergius_process", {"category": "INDUSTRY", "max_lvl": 1, "cost": 1200, "req": {}, "years": years_range(1910, 1, 1)}),
-        ("fuel_refining", {"category": "INDUSTRY", "max_lvl": 50, "cost": 1200, "req": {"bergius_process": 1}, "years": years_range(1912, 2, 50)}),
-        ("basic_recruitment", {"category": "INDUSTRY", "max_lvl": 1, "cost": 1200, "req": {}, "years": years_range(1910, 1, 1)}),
-        ("recruitment_buildings", {"category": "INDUSTRY", "max_lvl": 50, "cost": 1200, "req": {"basic_recruitment": 1}, "years": years_range(1912, 2, 50)}),
-        ("general_recruitment", {"category": "INDUSTRY", "max_lvl": 50, "cost": 900, "req": {"recruitment_buildings": "MATCH_LEVEL"}, "years": years_range(1913, 2, 50)}),
-        ("resource_refining", {"category": "INDUSTRY", "max_lvl": 100, "cost": 900, "req": {}, "years": years_range(1911, 1, 100)}),
+# ID                          , CAT       , LVLS, COST, REQ                                                  , YRS                           , OPTIONS
+        ("basic_factory",              "INDUSTRY", 1,    1200, {},                                                    years_range(1800, 1, 1),        {}),
+        ("waltham_system",             "INDUSTRY", 1,    1200, {"basic_factory": 1},                                  [1815],                         {"NAME": "Waltham System", "BONUS": [{"building_families": ["Basic Factory"], "flat_outputs": {"materials": 100}}]}),
+        ("metal_shaper",               "INDUSTRY", 1,    1200, {"waltham_system": 1},                                 [1835],                         {"NAME": "Metal Shaper"}),
+        ("steam_hammer",               "INDUSTRY", 1,    1200, {"metal_shaper": 1},                                   [1840],                         {"NAME": "Steam Hammer"}),
+        ("bessemer_process",           "INDUSTRY", 1,    1200, {"steam_hammer": 1},                                   [1855],                         {"NAME": "Bessemer Process", "BONUS": [{"building_families": ["Basic Factory"], "flat_outputs": {"materials": 200}}]}),
+        ("electricity",                "INDUSTRY", 1,    1200, {"bessemer_process": 1},                               [1870],                         {"NAME": "Electricity"}),
+        ("lightbulb",                  "INDUSTRY", 1,    1200, {"electricity": 1},                                    [1880],                         {"NAME": "Lightbulb"}),
+        ("assembly_line",              "INDUSTRY", 1,    1200, {"factory": 1},                                        [1905],                         {"NAME": "Assembly Line", "BONUS": [{"building_families": ["Basic Factory", "Factory"], "outputs": {"materials": 0.5}}]}),
+        ("conveyor_belt",              "INDUSTRY", 1,    1200, {"factory": 2},                                        [1915],                         {"NAME": "Conveyor Belt", "BONUS": [{"building_families": ["Basic Factory", "Factory"], "outputs": {"materials": 0.5}}]}),
+        ("machine_tools",              "INDUSTRY", 1,    1200, {"factory": 4},                                        [1935],                         {"NAME": "Machine Tools"}),
+        ("just_in_time_manufacturing", "INDUSTRY", 1,    1200, {"factory": 5},                                        [1945],                         {"NAME": "Just In Time Manufacturing", "BONUS": [{"building_families": ["Basic Factory", "Factory"], "outputs": {"materials": 0.2}}]}),
+        ("industrial_robot",           "INDUSTRY", 1,    1200, {"factory": 6},                                        [1955],                         {"NAME": "Industrial Robot"}),
+        ("stanford_arm",               "INDUSTRY", 1,    1200, {"factory": 7},                                        [1965],                         {"NAME": "Stanford Arm"}),
+        ("asea_irb_6",                 "INDUSTRY", 1,    1200, {"factory": 8},                                        [1975],                         {"NAME": "ASEA IRB 6"}),
+        ("computer_numerical_control", "INDUSTRY", 1,    1200, {"factory": 9},                                        [1985],                         {"NAME": "Computer Numerical Control"}),
+        ("3d_printing",                "INDUSTRY", 1,    1200, {"factory": 10},                                       [1995],                         {"NAME": "3D Printing"}),
+        ("internet_of_things",         "INDUSTRY", 1,    1200, {"factory": 11},                                       [2005],                         {"NAME": "Internet of Things"}),
+        ("industry_4_0",               "INDUSTRY", 1,    1200, {"factory": 12},                                       [2015],                         {"NAME": "Industry 4.0"}),
+        ("industry_5_0",               "INDUSTRY", 1,    1200, {"factory": 13},                                       [2025],                         {"NAME": "Industry 5.0"}),
+        ("factory",                    "INDUSTRY", 25,   1200, {"lightbulb": 1},                                      years_range(1900, 10, 25),      {"GATES": {"2": {"assembly_line": 1}, "3": {"conveyor_belt": 1}, "5": {"machine_tools": 1}, "6": {"just_in_time_manufacturing": 1}, "7": {"industrial_robot": 1}, "8": {"stanford_arm": 1}, "9": {"asea_irb_6": 1}, "10": {"computer_numerical_control": 1}, "11": {"3d_printing": 1}, "12": {"internet_of_things": 1}, "13": {"industry_4_0": 1}, "14": {"industry_5_0": 1}}}),
+        ("bergius_process",            "INDUSTRY", 1,    1200, {},                                                    years_range(1910, 1, 1),        {}),
+        ("fuel_refining",              "INDUSTRY", 50,   1200, {"bergius_process": 1},                                years_range(1912, 2, 50),       {}),
+        ("basic_recruitment",          "INDUSTRY", 1,    1200, {},                                                    years_range(1910, 1, 1),        {}),
+        ("recruitment_buildings",      "INDUSTRY", 50,   1200, {"basic_recruitment": 1},                              years_range(1912, 2, 50),       {}),
+        ("general_recruitment",        "INDUSTRY", 50,   900,  {"recruitment_buildings": "MATCH_LEVEL"},              years_range(1913, 2, 50),       {}),
+        ("resource_refining",          "INDUSTRY", 100,  900,  {},                                                    years_range(1911, 1, 100),      {}),
     ],
     [
-        ('biplane', {'category': 'AIR', 'display_name': 'Biplane Fighter', 'max_lvl': 5, 'cost': 1200, 'req': {}, 'years': [1910, 1914, 1918, 1922, 1926]}),
-        ('biplane_bomber', {'category': 'AIR', 'display_name': 'Biplane Bomber', 'max_lvl': 3, 'cost': 1800, 'req': {'biplane': 1}, 'years': [1915, 1920, 1925]}),
-        ('zeppelin', {'category': 'AIR', 'display_name': 'Zeppelin', 'max_lvl': 1, 'cost': 1800, 'req': {}, 'years': [1910]}),
-        ('piston_fighter', {'category': 'AIR', 'display_name': 'Monoplane Fighter', 'max_lvl': 5, 'cost': 1200, 'req': {'biplane': 5}, 'years': [1930, 1934, 1938, 1942, 1946]}),
-        ('piston_bomber', {'category': 'AIR', 'display_name': 'Monoplane Bomber', 'max_lvl': 5, 'cost': 1800, 'req': {'biplane_bomber': 3}, 'years': [1930, 1935, 1940, 1945, 1950]}),
-        ('monoplane_transport', {'category': 'AIR', 'display_name': 'Monoplane Transport', 'max_lvl': 3, 'cost': 1800, 'req': {'biplane_bomber': 3}, 'years': [1930, 1935, 1940]}),
-        ('v1_flying_bomb', {'category': 'AIR', 'display_name': 'V1 Flying Bomb', 'max_lvl': 1, 'cost': 900, 'req': {}, 'years': [1940]}),
-        ('v2_rocket', {'category': 'AIR', 'display_name': 'V2 Rocket', 'max_lvl': 1, 'cost': 1200, 'req': {'v1_flying_bomb': 1}, 'years': [1945]}),
-        ('jet_engine', {'category': 'AIR', 'display_name': 'Jet Engine', 'max_lvl': 1, 'cost': 2400, 'req': {}, 'years': [1945]}),
-        ('jet_fighter', {'category': 'AIR', 'display_name': 'Jet Fighter', 'max_lvl': 26, 'cost': 1800, 'req': {'piston_fighter': 5, 'jet_engine': 1}, 'years': years_range(1950, 4, 26)}),
-        ('jet_bomber', {'category': 'AIR', 'display_name': 'Jet Bomber', 'max_lvl': 20, 'cost': 2400, 'req': {'piston_bomber': 5, 'jet_fighter': 1}, 'years': years_range(1955, 5, 20)}),
-        ('jet_transport', {'category': 'AIR', 'display_name': 'Jet Transport', 'max_lvl': 20, 'cost': 2400, 'req': {'piston_bomber': 5}, 'years': years_range(1955, 5, 20)}),
+# ID                          , CAT       , LVLS, COST, REQ                                                  , YRS                           , OPTIONS
+        ('biplane',                    'AIR',      5,    1200, {},                                                    [1910, 1914, 1918, 1922, 1926], {"NAME": 'Biplane Fighter'}),
+        ('biplane_bomber',             'AIR',      3,    1800, {'biplane': 1},                                        [1915, 1920, 1925],             {"NAME": 'Biplane Bomber'}),
+        ('zeppelin',                   'AIR',      1,    1800, {},                                                    [1910],                         {"NAME": 'Zeppelin'}),
+        ('piston_fighter',             'AIR',      5,    1200, {'biplane': 5},                                        [1930, 1934, 1938, 1942, 1946], {"NAME": 'Monoplane Fighter'}),
+        ('piston_bomber',              'AIR',      5,    1800, {'biplane_bomber': 3},                                 [1930, 1935, 1940, 1945, 1950], {"NAME": 'Monoplane Bomber'}),
+        ('monoplane_transport',        'AIR',      3,    1800, {'biplane_bomber': 3},                                 [1930, 1935, 1940],             {"NAME": 'Monoplane Transport'}),
+        ('v1_flying_bomb',             'AIR',      1,    900,  {},                                                    [1940],                         {"NAME": 'V1 Flying Bomb'}),
+        ('v2_rocket',                  'AIR',      1,    1200, {'v1_flying_bomb': 1},                                 [1945],                         {"NAME": 'V2 Rocket'}),
+        ('jet_engine',                 'AIR',      1,    2400, {},                                                    [1945],                         {"NAME": 'Jet Engine'}),
+        ('jet_fighter',                'AIR',      26,   1800, {'piston_fighter': 5, 'jet_engine': 1},                years_range(1950, 4, 26),       {"NAME": 'Jet Fighter'}),
+        ('jet_bomber',                 'AIR',      20,   2400, {'piston_bomber': 5, 'jet_fighter': 1},                years_range(1955, 5, 20),       {"NAME": 'Jet Bomber'}),
+        ('jet_transport',              'AIR',      20,   2400, {'piston_bomber': 5},                                  years_range(1955, 5, 20),       {"NAME": 'Jet Transport'}),
     ],
 ]
+
+
+def research_recipe(row):
+    """Translate one compact research row without changing saved field names or order."""
+    key, *values, options = row
+    entry = table_values(RESEARCH_RECIPE_COLUMNS, values)
+    entry.update({RESEARCH_OPTION_COLUMNS.get(field, field): value for field, value in options.items()})
+    if entry["max_lvl"] is None and entry["years"] is None:
+        del entry["max_lvl"], entry["years"]
+        return key, extend_infantry_research(key, entry)
+    fields = ("category", "display_name", "max_lvl", "cost", "req", "level_reqs", "years")
+    ordered = {field: entry[field] for field in fields if field in entry}
+    ordered.update({field: value for field, value in entry.items() if field not in ordered})
+    return key, ordered
+
+
+RESEARCH_SECTIONS = [[research_recipe(row) for row in block] for block in RESEARCH_RECIPES]
