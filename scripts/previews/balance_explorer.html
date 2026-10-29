@@ -95,7 +95,8 @@ input[type="search"] { width: 180px; }
 .weights h2 { font-size: 13px; margin: 0; color: var(--ink); }
 .weight { display: flex; align-items: center; gap: 8px; color: var(--ink-2); font-size: 13px; }
 .weight output { font-variant-numeric: tabular-nums; color: var(--ink); font-weight: 600; min-width: 3.2em; }
-.weight input { width: 120px; accent-color: var(--accent); }
+.weight input { accent-color: var(--accent); }
+.weight input[type="range"] { width: 120px; }
 .ghost {
   font: inherit; font-size: 12px; color: var(--ink-2); background: none;
   border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; cursor: pointer;
@@ -164,6 +165,13 @@ tbody tr:hover { background: var(--wash); }
     <button class="ghost" id="w-reset" type="button">Reset to 1 : 1 : 1</button>
   </div>
 
+  <div class="card weights" role="group" aria-label="Display">
+    <h2>Display</h2>
+    <div class="weight"><label for="d-marker">Markers</label><select id="d-marker"><option value="icons">Game icons</option><option value="shapes">Simple shapes</option></select></div>
+    <div class="weight"><label for="d-size">Size</label><input id="d-size" type="range" min="6" step="1"><output for="d-size"></output></div>
+    <label class="weight"><input type="checkbox" id="d-lines" checked>Upgrade lines</label>
+  </div>
+
   <div class="tabs" role="tablist">
     <button role="tab" id="tab-units" aria-selected="true" aria-controls="panel-units">Units</button>
     <button role="tab" id="tab-buildings" aria-selected="false" aria-controls="panel-buildings">Buildings</button>
@@ -217,6 +225,7 @@ tbody tr:hover { background: var(--wash); }
       <li>Building output is the base value per turn, before research bonuses and territory penalties.</li>
       <li><b>Output gain</b> and <b>payback</b> compare a building with the level it upgrades from (its <code>req</code>).</li>
       <li>A log axis cannot show zero or missing values. The caption says how many points are hidden.</li>
+      <li><b>Upgrade lines</b> join each unit to the next tier of its family, and each building to the level that upgrades it. The arrow points toward the upgrade.</li>
       <li>Icons use the game art. Red parts take the group color, as they take the owner color on the map.</li>
     </ul>
   </div>
@@ -227,6 +236,8 @@ const DATA = /*BALANCE_DATA*/null;
 
 const RESOURCES = ["materials", "manpower", "fuel"];
 const weights = { materials: 1, manpower: 1, fuel: 1 };
+// Marker style, base marker size in pixels, and whether upgrade lines show.
+const display = { marker: "icons", size: 20, lines: true };
 const SVG_NS = "http://www.w3.org/2000/svg";
 
 const UNIT_GROUPS = [
@@ -348,10 +359,13 @@ function swatch(group, size = 12) {
 }
 
 // ---------- icons ----------
-// Page size of a unit or building icon on the chart, in pixels.
-const ICON_PX = 20;
 // Icons stay sharp up to the size balance_explorer.py rendered them at.
 const ICON_MAX_PX = DATA.icon_size;
+// Upgrade arrowhead size, and the color slots that need an arrowhead marker.
+const ARROW_PX = 8;
+const ARROW_COLORS = ["s1", "s2", "s3", "s4"];
+// A simple shape's half-size as a fraction of the marker size, so shapes look as big as icons.
+const SHAPE_SCALE = 0.3;
 // Each icon is defined once as an SVG symbol so hundreds of points can share it.
 function initIconDefs() {
   const holder = svgEl("svg", { width: 0, height: 0, "aria-hidden": "true", style: "position:absolute" });
@@ -423,7 +437,7 @@ function createScatter(wrap, tip) {
   const resetBtn = htmlEl("button", { type: "button", class: "ghost zoom-reset", hidden: "" }, "Reset zoom");
   wrap.appendChild(resetBtn);
   const clipId = wrap.id + "-clip";
-  const chart = { iconPx: ICON_PX, spec: null, view: null, viewKey: null, auto: null, geom: null, visible: [], frame: 0, drag: null };
+  const chart = { iconPx: display.size, spec: null, view: null, viewKey: null, auto: null, geom: null, visible: [], frame: 0, drag: null };
 
   const tx = (v, log) => log ? Math.log10(v) : v;
   const currentDomain = () => chart.view || chart.auto;
@@ -451,10 +465,10 @@ function createScatter(wrap, tip) {
       y: autoDomain(pts.map(p => p.y), spec.logY, spec.yPlain),
     };
     const dom = currentDomain();
-    // Icons grow as the view zooms in, up to the size they were rendered at.
+    // Markers grow as the view zooms in, up to the size icons were rendered at.
     const zoom = Math.min((chart.auto.x[1] - chart.auto.x[0]) / (dom.x[1] - dom.x[0]),
                           (chart.auto.y[1] - chart.auto.y[0]) / (dom.y[1] - dom.y[0]));
-    chart.iconPx = Math.round(ICON_PX * Math.min(ICON_MAX_PX / ICON_PX, Math.max(1, Math.sqrt(zoom))));
+    chart.iconPx = Math.round(Math.min(Math.max(display.size, ICON_MAX_PX), display.size * Math.max(1, Math.sqrt(zoom))));
     const px = v => m.left + (tx(v, spec.logX) - dom.x[0]) / (dom.x[1] - dom.x[0]) * pw;
     const py = v => m.top + ph - (tx(v, spec.logY) - dom.y[0]) / (dom.y[1] - dom.y[0]) * ph;
 
@@ -462,6 +476,14 @@ function createScatter(wrap, tip) {
     const clip = svgEl("clipPath", { id: clipId });
     clip.appendChild(svgEl("rect", { x: m.left, y: m.top, width: pw, height: ph }));
     defs.appendChild(clip);
+    for (const slot of ARROW_COLORS) {
+      const marker = svgEl("marker", {
+        id: `${clipId}-arrow-${slot}`, viewBox: "0 0 10 10", refX: 5, refY: 5,
+        markerWidth: ARROW_PX, markerHeight: ARROW_PX, markerUnits: "userSpaceOnUse", orient: "auto",
+      });
+      marker.appendChild(svgEl("path", { d: "M0,0L10,5L0,10Z", fill: `var(--${slot})` }));
+      defs.appendChild(marker);
+    }
     svg.appendChild(defs);
 
     const grid = svgEl("g");
@@ -491,23 +513,38 @@ function createScatter(wrap, tip) {
     }
 
     const plot = svgEl("g", { "clip-path": `url(#${clipId})` });
-    for (const line of spec.lines || []) {
-      if (line.points.length < 2) continue;
-      const d = line.points.map((p, i) => `${i ? "L" : "M"}${p.sx.toFixed(1)},${p.sy.toFixed(1)}`).join("");
-      plot.appendChild(svgEl("path", { d, fill: "none", stroke: `var(${line.group.color})`, "stroke-width": 2, "stroke-linejoin": "round", opacity: line.dim ? 0.15 : 0.6 }));
+    // Dimmed lines draw first and the highlighted family last.
+    const rank = line => line.dim ? 0 : line.emphasis ? 2 : 1;
+    // An arrow only shows where the gap between two markers can hold it.
+    const markerPx = display.marker === "icons" ? chart.iconPx : chart.iconPx * SHAPE_SCALE * 2;
+    const minArrowGap = markerPx + ARROW_PX * 2;
+    for (const line of [...(spec.lines || [])].sort((a, b) => rank(a) - rank(b))) {
+      const attrs = {
+        fill: "none", stroke: `var(${line.group.color})`, "stroke-width": line.emphasis ? 2 : 1.5,
+        opacity: line.dim ? 0.1 : line.emphasis ? 0.9 : 0.5,
+      };
+      for (let i = 1; i < line.points.length; i++) {
+        const a = line.points[i - 1], b = line.points[i];
+        if (!a.inView && !b.inView) continue;
+        const mx = (a.sx + b.sx) / 2, my = (a.sy + b.sy) / 2;
+        const arrow = !line.dim && Math.hypot(b.sx - a.sx, b.sy - a.sy) >= minArrowGap;
+        // The middle vertex carries the arrow, so it points along the segment.
+        const d = `M${a.sx.toFixed(1)},${a.sy.toFixed(1)}L${mx.toFixed(1)},${my.toFixed(1)}L${b.sx.toFixed(1)},${b.sy.toFixed(1)}`;
+        plot.appendChild(svgEl("path", arrow ? { ...attrs, d, "marker-mid": `url(#${clipId}-arrow-${line.group.color.slice(2)})` } : { ...attrs, d }));
+      }
     }
     // Dimmed points draw first so focused points stay on top.
     const ordered = pts.filter(p => p.inView).sort((a, b) => (b.dim ? 1 : 0) - (a.dim ? 1 : 0));
     for (const p of ordered) {
       const opacity = p.dim ? 0.12 : 1;
-      if (p.item.icon !== null && p.item.icon !== undefined) {
+      if (display.marker === "icons" && p.item.icon !== null && p.item.icon !== undefined) {
         plot.appendChild(svgEl("use", {
           href: "#icon-" + p.item.icon, x: p.sx - chart.iconPx / 2, y: p.sy - chart.iconPx / 2,
           width: chart.iconPx, height: chart.iconPx, opacity,
         }));
       } else {
         plot.appendChild(svgEl("path", {
-          d: shapePath(p.group.shape, p.sx, p.sy, 4.5), fill: `var(${p.group.color})`,
+          d: shapePath(p.group.shape, p.sx, p.sy, chart.iconPx * SHAPE_SCALE), fill: `var(${p.group.color})`,
           stroke: "var(--surface)", "stroke-width": 1.5, opacity,
         }));
       }
@@ -658,7 +695,7 @@ function buildLegend(container, groups, counts, active, onChange) {
   container.replaceChildren();
   for (const g of groups) {
     const btn = htmlEl("button", { type: "button", "aria-pressed": String(active.has(g.key)) });
-    btn.append(dot(g), document.createTextNode(g.label || g.key), htmlEl("span", { class: "count" }, String(counts[g.key] || 0)));
+    btn.append(display.marker === "shapes" ? swatch(g) : dot(g), document.createTextNode(g.label || g.key), htmlEl("span", { class: "count" }, String(counts[g.key] || 0)));
     btn.addEventListener("click", () => {
       if (active.has(g.key)) active.delete(g.key); else active.add(g.key);
       btn.setAttribute("aria-pressed", String(active.has(g.key)));
@@ -725,12 +762,22 @@ const unitState = {
   sort: { key: "power_per_cost", dir: -1 },
 };
 const families = [...new Set(DATA.units.map(u => u.family))];
+// Each family is one upgrade chain in research order.
+const unitUpgrades = {};
+for (const family of families) {
+  const chain = DATA.units.filter(u => u.family === family).sort((a, b) => a.tier_order - b.tier_order);
+  chain.forEach((u, i) => { unitUpgrades[u.name] = { prev: chain[i - 1]?.name, next: chain[i + 1]?.name }; });
+}
+function upgradeLines(prev, next) {
+  return [...(prev ? [`Upgrades from ${prev}`] : []), ...(next ? [`Upgrades to ${next}`] : [])];
+}
 
 function unitDescribe(u) {
   return [
     `${u.family} · ${u.group}${u.tier_label && u.tier_label !== u.name ? " · " + u.tier_label : ""}`,
     `Attack ${fmt(u.attack)} · Health ${fmt(u.health)} · Defense ${fmt(u.defense)}`,
     `Cost ${fmt(u.cost_materials)} mat · ${fmt(u.cost_manpower)} man · ${fmt(u.cost_fuel)} fuel · ${fmt(u.production_time)} turns`,
+    ...upgradeLines(unitUpgrades[u.name].prev, unitUpgrades[u.name].next),
     ...(u.icon_fallback ? ["No map icon in game. Showing its family art."] : []),
   ];
 }
@@ -763,10 +810,18 @@ function renderUnits() {
   const { points, hidden } = plotPoints(items, mx, my, unitState.logX, unitState.logY);
   const fam = unitState.family;
   for (const p of points) { p.group = unitGroupByKey[p.item.group]; p.dim = !!fam && p.item.family !== fam; }
+  // Without upgrade lines, only a highlighted family keeps its line.
+  const pointsByFamily = new Map();
+  for (const p of points) {
+    if (!pointsByFamily.has(p.item.family)) pointsByFamily.set(p.item.family, []);
+    pointsByFamily.get(p.item.family).push(p);
+  }
   const lines = [];
-  if (fam) {
-    const famPts = points.filter(p => p.item.family === fam).sort((a, b) => a.item.tier_order - b.item.tier_order);
-    if (famPts.length) lines.push({ points: famPts, group: famPts[0].group, label: fam });
+  for (const [family, famPts] of pointsByFamily) {
+    const focus = family === fam;
+    if (!display.lines && !focus) continue;
+    famPts.sort((a, b) => a.item.tier_order - b.item.tier_order);
+    lines.push({ points: famPts, group: famPts[0].group, label: focus ? family : null, dim: !!fam && !focus, emphasis: focus });
   }
   unitChart.update({
     points, lines, logX: unitState.logX, logY: unitState.logY, xLabel: mx.label, yLabel: my.label,
@@ -798,7 +853,7 @@ function initUnits() {
   }
   const counts = {};
   for (const u of DATA.units) counts[u.group] = (counts[u.group] || 0) + 1;
-  buildLegend(document.getElementById("u-legend"), UNIT_GROUPS, counts, unitState.groups, renderUnits);
+  legendBuilders.push(() => buildLegend(document.getElementById("u-legend"), UNIT_GROUPS, counts, unitState.groups, renderUnits));
   const bind = (id, evt, fn) => document.getElementById(id).addEventListener(evt, e => { fn(e.target); renderUnits(); });
   bind("u-x", "change", t => unitState.x = t.value);
   bind("u-y", "change", t => unitState.y = t.value);
@@ -814,12 +869,14 @@ const buildingState = {
   x: "level", y: "output", logX: false, logY: false,
   groups: new Set(BUILDING_GROUPS.map(g => g.key)), sort: { key: "payback", dir: 1 },
 };
+const nextBuilding = Object.fromEntries(DATA.buildings.filter(b => b.req).map(b => [b.req, b.name]));
 function buildingDescribe(b) {
   const out = RESOURCES.filter(r => b["prod_" + r]).map(r => `${fmt(b["prod_" + r])} ${r}`).join(" · ") || "no resource output";
   return [
-    `${buildingGroupByKey[b.group].label} · level ${b.level}${b.req ? " · upgrades " + b.req : ""}`,
+    `${buildingGroupByKey[b.group].label} · level ${b.level}`,
     `Output ${out}`,
     `Cost ${fmt(b.cost_materials)} mat · ${fmt(b.cost_manpower)} man · ${fmt(b.cost_fuel)} fuel · ${fmt(b.time)} turns`,
+    ...upgradeLines(b.req, nextBuilding[b.name]),
   ];
 }
 const BUILDING_COLUMNS = [
@@ -843,7 +900,7 @@ function renderBuildings() {
   const { points, hidden } = plotPoints(items, mx, my, buildingState.logX, buildingState.logY);
   for (const p of points) p.group = buildingGroupByKey[p.item.group];
   // Each building group is one upgrade chain, so connect it in level order.
-  const lines = BUILDING_GROUPS.map(g => ({
+  const lines = !display.lines ? [] : BUILDING_GROUPS.map(g => ({
     group: g, label: g.label,
     points: points.filter(p => p.item.group === g.key).sort((a, b) => a.item.level - b.item.level),
   }));
@@ -864,7 +921,7 @@ function initBuildings() {
   fillSelect(document.getElementById("b-y"), BUILDING_METRICS, buildingState.y);
   const counts = {};
   for (const b of DATA.buildings) counts[b.group] = (counts[b.group] || 0) + 1;
-  buildLegend(document.getElementById("b-legend"), BUILDING_GROUPS, counts, buildingState.groups, renderBuildings);
+  legendBuilders.push(() => buildLegend(document.getElementById("b-legend"), BUILDING_GROUPS, counts, buildingState.groups, renderBuildings));
   const bind = (id, evt, fn) => document.getElementById(id).addEventListener(evt, e => { fn(e.target); renderBuildings(); });
   bind("b-x", "change", t => buildingState.x = t.value);
   bind("b-y", "change", t => buildingState.y = t.value);
@@ -888,6 +945,27 @@ function initWeights() {
     for (const r of RESOURCES) { const input = document.getElementById("w-" + r); input.value = 1; input.dispatchEvent(new Event("input")); }
   });
 }
+// Legends show the same marker the chart draws, so they rebuild when it changes.
+const legendBuilders = [];
+function initDisplay() {
+  const marker = document.getElementById("d-marker");
+  const size = document.getElementById("d-size");
+  const out = size.nextElementSibling;
+  size.max = ICON_MAX_PX;
+  size.value = display.size;
+  out.textContent = display.size + " px";
+  marker.addEventListener("change", () => {
+    display.marker = marker.value;
+    legendBuilders.forEach(build => build());
+    renderActive();
+  });
+  size.addEventListener("input", () => {
+    display.size = +size.value;
+    out.textContent = size.value + " px";
+    renderActive();
+  });
+  document.getElementById("d-lines").addEventListener("change", e => { display.lines = e.target.checked; renderActive(); });
+}
 function initTabs() {
   for (const name of ["units", "buildings"]) {
     document.getElementById("tab-" + name).addEventListener("click", () => {
@@ -907,8 +985,10 @@ document.getElementById("lede").textContent =
 initIconDefs();
 initWeights();
 initTabs();
+initDisplay();
 initUnits();
 initBuildings();
+legendBuilders.forEach(build => build());
 renderActive();
 let resizeTimer;
 window.addEventListener("resize", () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(renderActive, 120); });
