@@ -244,16 +244,16 @@ EQUIPMENT_STAGES = {
     ],
     "militia": [
         #YR    NAME                          HP    ATK  DEF SPD MAT  MAN   FUEL TIME BOMB  UPGRADES
-        (1800, "Local Militia",              200,  12,  0,  1,  100, 1000, 0,   1,   None, (4, 10, {'health': 20, 'attack': 2, 'cost_materials': 5})),
-        (1840, "Organized Militia",          280,  20,  0,  1,  120, 1000, 0,   1,   None, (6, 10, {'health': 20, 'attack': 4, 'cost_materials': 10})),
-        (1900, "Modern Militia",             440,  44,  0,  1,  270, 1000, 0,   1,   None, (3, 5, {'health': 40, 'attack': 4, 'cost_materials': 10})),
-        (1915, "Rifle Militia",              600,  60,  0,  1,  300, 1000, 0,   1,   None, (4, 5, {'health': 80, 'attack': 8})),
-        (1935, "Support-Weapon Militia",     1000, 100, 0,  1,  300, 1000, 0,   1,   None, (4, 5, {'health': 80, 'attack': 8})),
-        (1955, "Self-Loading Rifle Militia", 1400, 140, 0,  1,  300, 1000, 0,   1,   None, (4, 5, {'health': 80, 'attack': 8})),
-        (1975, "Assault-Rifle Militia",      1800, 180, 0,  1,  300, 1000, 0,   1,   None, (4, 5, {'health': 80, 'attack': 8})),
-        (1995, "Radio-Equipped Militia",     2200, 220, 0,  1,  300, 1000, 0,   1,   None, (4, 5, {'health': 80, 'attack': 8})),
-        (2015, "Optics-Equipped Militia",    2600, 260, 0,  1,  300, 1000, 0,   1,   None, (4, 5, {'health': 80, 'attack': 8})),
-        (2035, "Drone-Supported Militia",    3000, 300, 0,  1,  300, 1000, 0,   1,   None, (50, 2, {'health': 40, 'attack': 4, 'cost_materials': 5})),
+        (1800, "Local Militia",              200,  20,  0,  1,  100, 1000, 0,   1,   None, (10, 5, {'health': 10, 'attack': 1, 'cost_materials': 5})),
+        (1850, "Organized Militia",          300,  30,  0,  1,  150, 1000, 0,   1,   None, (10, 5, {'health': 20, 'attack': 2, 'cost_materials': 5})),
+        (1900, "Modern Militia",             500,  50,  0,  1,  200, 1000, 0,   1,   None, (5, 4, {'health': 30, 'attack': 4, 'cost_materials': 10})),
+        (1920, "Rifle Militia",              750,  70,  0,  1,  250, 1000, 0,   1,   None, (5, 4, {'health': 30, 'attack': 6, 'cost_materials': 10})),
+        (1940, "Support-Weapon Militia",     900,  100, 0,  1,  300, 1000, 0,   1,   None, (5, 4, {'health': 40, 'attack': 8, 'cost_materials': 10})),
+        (1960, "Self-Loading Rifle Militia", 1100, 140, 0,  1,  350, 1000, 0,   1,   None, (5, 4, {'health': 50, 'attack': 8, 'cost_materials': 10})),
+        (1980, "Assault-Rifle Militia",      1350, 180, 0,  1,  400, 1000, 0,   1,   None, (5, 4, {'health': 50, 'attack': 8, 'cost_materials': 10})),
+        (2000, "Radio-Equipped Militia",     1600, 220, 0,  1,  450, 1000, 0,   1,   None, (5, 4, {'health': 50, 'attack': 8, 'cost_materials': 10})),
+        (2020, "Optics-Equipped Militia",    1850, 260, 0,  1,  500, 1000, 0,   1,   None, (5, 4, {'health': 50, 'attack': 8, 'cost_materials': 20})),
+        (2040, "Drone-Supported Militia",    2100, 300, 0,  1,  600, 1000, 0,   1,   None, (25, 4, {'health': 50, 'attack': 10, 'cost_materials': 20})),
     ],
     "artillery": [
         #YR    NAME                                HP    ATK   DEF SPD MAT   MAN  FUEL TIME BOMB  UPGRADES
