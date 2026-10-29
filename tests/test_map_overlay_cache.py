@@ -169,6 +169,42 @@ class FilenameDrivenUnitArtTests(unittest.TestCase):
             symbol_loader.STYLE_SYMBOLS[source_style][name_key], country
         )["filename"]
 
+    def test_classic_equipment_uses_era_files_instead_of_legacy_art_aliases(self):
+        for family, year, expected in (
+            ("Infantry", 1800, "Infantry 1800-1899"),
+            ("Infantry", 1899, "Infantry 1800-1899"),
+            ("Infantry", 1900, "Infantry 1900-1999"),
+            ("Infantry", 1999, "Infantry 1900-1999"),
+            ("Infantry", 2000, "Infantry 2000+"),
+            ("Militia", 1800, "Militia 1800-1899"),
+            ("Militia", 1899, "Militia 1800-1899"),
+            ("Militia", 1900, "Militia 1900+"),
+            ("Militia", 2100, "Militia 1900+"),
+        ):
+            with self.subTest(family=family, year=year):
+                library = {"Fixture": {"metadata": {
+                    "settings_family": family, "family": family,
+                    "tier_order": year, "tier_kind": "stage",
+                    "research": {"tech": "fixture", "year": year}, "requirements": [],
+                    "recruitment": {"industry": "none", "coastal": False},
+                    "art_name": "Old Placeholder"}}}
+                with mock.patch.object(queries, "get_unit_library", return_value=library):
+                    self.assertEqual(
+                        symbol_loader._resolve_name_uncached("Fixture", "classic"),
+                        ("classic", expected))
+
+    def test_actual_equipment_stages_resolve_to_loaded_classic_assets(self):
+        for name, stats in queries.get_unit_library().items():
+            metadata = stats["metadata"]
+            family = metadata.get("settings_family")
+            if family not in ("Infantry", "Militia"):
+                continue
+            with self.subTest(unit=name):
+                resolved = symbol_loader.resolve(name, "classic")
+                self.assertIsNotNone(resolved)
+                self.assertIn(resolved[1], symbol_loader.SYMBOLS)
+                self.assertTrue(resolved[1].startswith(family + " "))
+
     def test_the_latest_culture_infantry_file_carries_forward_until_overridden(self):
         self.assertEqual(self._filename("Infantry Type 1914", "United Kingdom"),
                          "british/infantry_1914.png")

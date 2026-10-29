@@ -643,6 +643,22 @@ def _resolve_against(name, table, country):
     return base_name
 
 
+def _resolve_classic_era(name):
+    """Select classic era artwork from the unit's equipment year."""
+    family, year = _unit_art_request(name)
+    if year is None or year < 1000:
+        return None
+    resolved = None
+    for key in SYMBOLS:
+        match = re.fullmatch(r"(.+?) (\d{4})(?:-(\d{4})|(\+))", key)
+        if match and _normalize_family(match.group(1)) == family:
+            start = int(match.group(2))
+            end = int(match.group(3)) if match.group(3) else float("inf")
+            if start <= year <= end:
+                resolved = key
+    return resolved
+
+
 def _unit_art_request(name):
     """Returns ``(normalized_family, level)`` for a game unit name.
 
@@ -745,6 +761,7 @@ def _resolve_name_uncached(name, style=None, country=None):
     if style is None:
         style = c.UNIT_ART_STYLE
 
+    unit_name = name
     stats = queries.get_unit_library().get(name, {})
     name = stats.get("metadata", {}).get("art_name", name)
 
@@ -762,7 +779,9 @@ def _resolve_name_uncached(name, style=None, country=None):
     # No style requested, the style has nothing for this name, or nothing in
     # it applies to this country -- classic is both the default and the
     # universal fallback (and has no country variants of its own).
-    resolved = _resolve_against(name, SYMBOLS, country)
+    resolved = _resolve_classic_era(unit_name)
+    if resolved is None:
+        resolved = _resolve_against(name, SYMBOLS, country)
     if resolved is None:
         return None
     return ("classic", resolved)
