@@ -79,14 +79,25 @@ def _icon(sheet, name, group):
     return None if surface is None else sheet.add(surface)
 
 
-def _unit_rows(unit_library, sheet):
+def _research_year(tech_tree, tech, level):
+    """The year the research tree gives for one tech level, or None."""
+    years = tech_tree.get(tech, {}).get("years", [])
+    return years[level - 1] if 1 <= level <= len(years) else None
+
+
+def _unit_rows(unit_library, tech_tree, sheet):
     rows = []
     for name, stats in unit_library.items():
         meta = stats["metadata"]
         research = meta.get("research", {})
+        # Infantry families store their year. Other units store a tech level,
+        # which the research tree dates.
+        year = research.get("year")
+        if year is None:
+            year = _research_year(tech_tree, research["tech"], research["level"])
         row = {field: stats.get(field) for field in UNIT_FIELDS}
         row.update(name=name, family=meta["family"], group=meta["production_group"],
-                   year=research.get("year"), level=research.get("level"),
+                   year=year, level=research.get("level"),
                    tier_order=meta.get("tier_order", 0), tier_label=meta.get("tier_label"))
         row["icon"] = _icon(sheet, name, row["group"])
         row["icon_fallback"] = False
@@ -99,13 +110,16 @@ def _unit_rows(unit_library, sheet):
     return rows
 
 
-def _building_rows(building_library, sheet):
+def _building_rows(building_library, tech_tree, sheet):
     rows = []
     for name, stats in building_library.items():
         row = {field: stats.get(field) for field in BUILDING_FIELDS}
         # Some base buildings store the string "null" as their requirement.
         req = stats.get("req")
+        # Buildings without a research requirement, such as forts, have no year.
+        tech, level = queries.get_building_required_tech(name)
         row.update(name=name, req=req if req in building_library else None,
+                   year=_research_year(tech_tree, tech, level) if tech else None,
                    icon=_icon(sheet, name, row["group"]))
         rows.append(row)
     by_name = {row["name"]: row for row in rows}
@@ -130,9 +144,10 @@ def build_page(style):
     c.apply_runtime_settings({"unit_art_style": style})
     symbol_loader.load_symbols()
     sheet = IconSheet()
+    tech_tree = queries.get_tech_tree()
     data = {
-        "units": _unit_rows(queries.get_unit_library(), sheet),
-        "buildings": _building_rows(queries.get_building_library(), sheet),
+        "units": _unit_rows(queries.get_unit_library(), tech_tree, sheet),
+        "buildings": _building_rows(queries.get_building_library(), tech_tree, sheet),
         "icons": sheet.icons,
         "icon_size": max(ICON_FIT),
         "style": style,
@@ -146,6 +161,10 @@ def build_page(style):
               f"the page shows their family art. First: {fallback[0]}")
     if missing:
         print(f"{len(missing)} entries have no icon at all. First: {missing[0]}")
+    undated = [row["name"] for row in data["units"] if row["year"] is None]
+    if undated:
+        print(f"{len(undated)} units need a tech level past the end of its research track: "
+              f"{', '.join(undated)}")
     # "</" would end the inline script early if a name ever contained it.
     payload = json.dumps(data, separators=(",", ":")).replace("</", "<\\/")
     template = TEMPLATE_PATH.read_text(encoding="utf-8")

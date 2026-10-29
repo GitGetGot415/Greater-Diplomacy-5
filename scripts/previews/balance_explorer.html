@@ -221,7 +221,7 @@ tbody tr:hover { background: var(--wash); }
     <ul class="notes">
       <li><b>Total cost</b> = materials × weight + manpower × weight + fuel × weight. Each weight goes from 1 to 10.</li>
       <li><b>Combat power</b> = √(attack × health). It grows with both stats and stays on the same scale as them.</li>
-      <li>Some unit families unlock by research year and others by research level. The <b>Tier</b> column shows whichever one the unit uses.</li>
+      <li><b>Research year</b> is the year the research tree gives for the tech level that unlocks a unit or building. Infantry families store this year directly. Other units unlock by level, and the year comes from that tech's year list. Forts need no research, so they have no year.</li>
       <li>Building output is the base value per turn, before research bonuses and territory penalties.</li>
       <li><b>Output gain</b> and <b>payback</b> compare a building with the level it upgrades from (its <code>req</code>).</li>
       <li>A log axis cannot show zero or missing values. The caption says how many points are hidden.</li>
@@ -283,6 +283,7 @@ const UNIT_METRICS = [
 const BUILDING_METRICS = [
   { key: "output", label: "Output per turn (weighted)", get: weightedOutput },
   { key: "level", label: "Level in upgrade chain", get: b => b.level },
+  { key: "year", label: "Research year", plain: true, get: b => b.year },
   { key: "cost", label: "Total cost (weighted)", get: weightedCost },
   { key: "gain", label: "Output gain over previous level", get: b => buildingGain(b) },
   { key: "payback", label: "Payback (turns of output gain)", get: b => buildingPayback(b) },
@@ -788,7 +789,8 @@ function filteredUnits() {
 const UNIT_COLUMNS = [
   { key: "name", label: "Unit", text: true, get: u => u.name, swatch: u => unitGroupByKey[u.group] },
   { key: "family", label: "Family", text: true, get: u => u.family },
-  { key: "tier", label: "Tier", plain: true, get: u => u.year ?? u.level },
+  { key: "year", label: "Year", plain: true, get: u => u.year },
+  { key: "level", label: "Level", get: u => u.level },
   { key: "attack", label: "Attack", get: u => u.attack },
   { key: "health", label: "Health", get: u => u.health },
   { key: "defense", label: "Defense", get: u => u.defense },
@@ -882,6 +884,7 @@ function buildingDescribe(b) {
 const BUILDING_COLUMNS = [
   { key: "name", label: "Building", text: true, get: b => b.name, swatch: b => buildingGroupByKey[b.group] },
   { key: "level", label: "Level", get: b => b.level },
+  { key: "year", label: "Year", plain: true, get: b => b.year },
   { key: "time", label: "Turns", get: b => b.time },
   { key: "cost_materials", label: "Materials", get: b => b.cost_materials },
   { key: "cost_manpower", label: "Manpower", get: b => b.cost_manpower },

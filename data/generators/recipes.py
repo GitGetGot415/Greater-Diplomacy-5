@@ -226,10 +226,10 @@ EQUIPMENT_STAGES = {
         (1955, "Battle-Rifle Infantry",       2600, 500,  0,  1,  900,  1000, 55,  2,   None, (5, 3, {'health': 200, 'attack': 40, 'cost_materials': 30})),
         (1970, "Assault-Rifle Infantry",      3600, 700,  0,  1,  1050,  1000, 70,  2,   None, (5, 3, {'health': 200, 'attack': 40, 'cost_materials': 30})),
         (1985, "Night-Equipped Infantry",     4600, 900,  0,  1,  1200,  1000, 85,  2,   None, (5, 3, {'health': 200, 'attack': 40, 'cost_materials': 30})),
-        (2000, "Optics-Equipped Infantry",    5600, 1000, 0,  1,  1350,  1000, 100, 2,   None, (5, 3, {'health': 200, 'attack': 50, 'cost_materials': 30})),
-        (2015, "Networked Infantry",          6600, 1250, 0,  1,  1500, 1000, 115, 2,   None, (5, 3, {'health': 200, 'attack': 50, 'cost_materials': 40})),
-        (2030, "Drone-Integrated Infantry",   7600, 1500, 0,  1,  1700, 1000, 130, 2,   None, (5, 2, {'health': 200, 'attack': 50, 'cost_materials': 40})),
-        (2040, "Sensor-Integrated Infantry",  8600, 1750, 0,  1,  1900, 1000, 140, 2,   None, (50, 2, {'health': 200, 'attack': 50, 'cost_materials': 50})),
+        (2000, "Optics-Equipped Infantry",    5600, 1100, 0,  1,  1350,  1000, 100, 2,   None, (5, 3, {'health': 200, 'attack': 50, 'cost_materials': 30})),
+        (2015, "Networked Infantry",          6600, 1350, 0,  1,  1500, 1000, 115, 2,   None, (5, 3, {'health': 200, 'attack': 50, 'cost_materials': 40})),
+        (2030, "Drone-Integrated Infantry",   7600, 1600, 0,  1,  1700, 1000, 130, 2,   None, (5, 2, {'health': 200, 'attack': 50, 'cost_materials': 40})),
+        (2040, "Sensor-Integrated Infantry",  8600, 1850, 0,  1,  1900, 1000, 140, 2,   None, (50, 2, {'health': 200, 'attack': 50, 'cost_materials': 50})),
     ],
     "cavalry": [
         #YR    NAME                       HP    ATK  DEF SPD MAT   MAN   FUEL TIME BOMB
