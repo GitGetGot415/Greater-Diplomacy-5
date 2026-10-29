@@ -621,8 +621,6 @@ IAC = {"industrial_air_compressor": 1}
 GR = {"recruitment_buildings": "MATCH_LEVEL"}
 
 TRUCK_RESEARCH_YEAR = 1930
-TRUCK_CAVALRY_REQUIREMENT = sum(stage[0] <= TRUCK_RESEARCH_YEAR
-                               for stage in expanded_equipment_stages("cavalry"))
 
 # None for both LVLS and YRS derives equipment research from EQUIPMENT_STAGES.
 # Other rows retain their yr expressions and prerequisite dictionaries.
@@ -634,7 +632,7 @@ RESEARCH_RECIPES = [
         ("cavalry",                    "INFANTRY", None, 1200, {},                                            None,   {}),
         ("militia",                    "INFANTRY", None, 600,  {},                                            None,   {}),
         ("artillery",                  "INFANTRY", None, 900,  {},                                            None,   {}),
-        ("trucks",                     "INFANTRY", 1,    1800, {"cavalry": TRUCK_CAVALRY_REQUIREMENT},                [TRUCK_RESEARCH_YEAR], {}),
+        ("trucks",                     "INFANTRY", 1,    1800, {},                                            [TRUCK_RESEARCH_YEAR], {}),
         ("armored_personnel_carriers", "INFANTRY", 1,    1800, {"trucks": 1},                                 [1940], {}),
         ("infantry_fighting_vehicle",  "INFANTRY", 1,    1800, {"armored_personnel_carriers": 1},             [1950], {}),
     ],

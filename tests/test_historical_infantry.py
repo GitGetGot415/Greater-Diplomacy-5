@@ -85,13 +85,6 @@ class HistoricalInfantryTests(unittest.TestCase):
                 self.assertEqual(queries.get_upgrade_target(name, research, self.library, self.tree), expected)
                 self.assertIsNone(queries.get_upgrade_target(name, {tech: 0}, self.library, self.tree))
 
-    def test_trucks_require_cavalry_available_at_their_introduction(self):
-        requirement = self.tree["trucks"]["req"]["cavalry"]
-        truck_year = self.tree["trucks"]["years"][0]
-        self.assertEqual(requirement, sum(year <= truck_year for year in self.tree["cavalry"]["years"]))
-        self.assertFalse(queries.check_tech_requirements({"cavalry": requirement - 1}, self.tree["trucks"]["req"]))
-        self.assertTrue(queries.check_tech_requirements({"cavalry": requirement}, self.tree["trucks"]["req"]))
-
     def test_original_roman_identifiers_keep_their_metadata_free_compatibility(self):
         aliases = migrations.equipment_stage_aliases()
         for family in ("Militia", "Cavalry", "Artillery", "Heavy Artillery"):
