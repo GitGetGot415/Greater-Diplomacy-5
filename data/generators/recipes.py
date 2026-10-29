@@ -74,6 +74,7 @@ def year_suffixes(start, count, step=1):
 
 
 def rs(count):
+    """Roman Suffixes"""
     return [c.ROMAN_NUMERALS[i] for i in range(1, count + 1)]
 
 
@@ -213,67 +214,67 @@ EQUIPMENT_COLUMNS = {
 # BOMB=None omits bombardment. ART refers to existing artwork.
 EQUIPMENT_STAGES = {
     "infantry_type": [
-        #  YR  NAME                                  HP   ATK  DEF  SPD   MAT   MAN  FUEL  TIME  BOMB  ART
-        (1800, "Flintlock Infantry",                600,   50,   0,   1,  200, 1000,   10,    2, None, "Infantry Type 1910"),
-        (1830, "Percussion Infantry",               640,   60,   0,   1,  240, 1000,   10,    2, None, "Infantry Type 1910"),
-        (1850, "Rifle-Musket Infantry",             700,   70,   0,   1,  300, 1000,   10,    2, None, "Infantry Type 1910"),
-        (1865, "Breech-Loading Infantry",           760,   75,   0,   1,  350, 1000,   10,    2, None, "Infantry Type 1910"),
-        (1875, "Metallic-Cartridge Infantry",       820,   80,   0,   1,  390, 1000,   10,    2, None, "Infantry Type 1910"),
-        (1885, "Magazine-Rifle Infantry",           870,   85,   0,   1,  430, 1000,   10,    2, None, "Infantry Type 1910"),
-        (1895, "Smokeless-Rifle Infantry",          920,   90,   0,   1,  470, 1000,   10,    2, None, "Infantry Type 1910"),
-        (1905, "Supported Rifle Infantry",          970,   95,   0,   1,  490, 1000,   10,    2, None, "Infantry Type 1910"),
-        (1915, "Trench Infantry",                  1250,  150,   0,   1,  525, 1000,   15,    2, None, "Infantry Type 1915"),
-        (1925, "Squad-Automatic Infantry",         1750,  250,   0,   1,  575, 1000,   25,    2, None, "Infantry Type 1925"),
-        (1940, "Semi-Automatic Infantry",          2500,  400,   0,   1,  650, 1000,   40,    2, None, "Infantry Type 1940"),
-        (1955, "Battle-Rifle Infantry",            3250,  550,   0,   1,  725, 1000,   55,    2, None, "Infantry Type 1955"),
-        (1970, "Assault-Rifle Infantry",           4000,  700,   0,   1,  800, 1000,   70,    2, None, "Infantry Type 1970"),
-        (1985, "Night-Equipped Infantry",          4750,  850,   0,   1,  875, 1000,   85,    2, None, "Infantry Type 1985"),
-        (2000, "Optics-Equipped Infantry",         5500, 1000,   0,   1,  950, 1000,  100,    2, None, "Infantry Type 2000"),
-        (2015, "Networked Infantry",               6250, 1150,   0,   1, 1025, 1000,  115,    2, None, "Infantry Type 2015"),
-        (2030, "Drone-Integrated Infantry",        7000, 1300,   0,   1, 1100, 1000,  130,    2, None, "Infantry Type 2030"),
-        (2040, "Sensor-Integrated Infantry",       7500, 1400,   0,   1, 1150, 1000,  140,    2, None, "Infantry Type 2040"),
+        #YR    NAME                                HP    ATK   DEF  SPD  MAT   MAN   FUEL  TIME  BOMB  ART
+        (1800, "Flintlock Infantry",               600,  50,   0,   1,   200,  1000, 10,   2,    None, "Infantry Type 1910"),
+        (1830, "Percussion Infantry",              640,  60,   0,   1,   240,  1000, 10,   2,    None, "Infantry Type 1910"),
+        (1850, "Rifle-Musket Infantry",            700,  70,   0,   1,   300,  1000, 10,   2,    None, "Infantry Type 1910"),
+        (1865, "Breech-Loading Infantry",          760,  75,   0,   1,   350,  1000, 10,   2,    None, "Infantry Type 1910"),
+        (1875, "Metallic-Cartridge Infantry",      820,  80,   0,   1,   390,  1000, 10,   2,    None, "Infantry Type 1910"),
+        (1885, "Magazine-Rifle Infantry",          870,  85,   0,   1,   430,  1000, 10,   2,    None, "Infantry Type 1910"),
+        (1895, "Smokeless-Rifle Infantry",         920,  90,   0,   1,   470,  1000, 10,   2,    None, "Infantry Type 1910"),
+        (1905, "Supported Rifle Infantry",         970,  95,   0,   1,   490,  1000, 10,   2,    None, "Infantry Type 1910"),
+        (1915, "Trench Infantry",                  1250, 150,  0,   1,   525,  1000, 15,   2,    None, "Infantry Type 1915"),
+        (1925, "Squad-Automatic Infantry",         1750, 250,  0,   1,   575,  1000, 25,   2,    None, "Infantry Type 1925"),
+        (1940, "Semi-Automatic Infantry",          2500, 400,  0,   1,   650,  1000, 40,   2,    None, "Infantry Type 1940"),
+        (1955, "Battle-Rifle Infantry",            3250, 550,  0,   1,   725,  1000, 55,   2,    None, "Infantry Type 1955"),
+        (1970, "Assault-Rifle Infantry",           4000, 700,  0,   1,   800,  1000, 70,   2,    None, "Infantry Type 1970"),
+        (1985, "Night-Equipped Infantry",          4750, 850,  0,   1,   875,  1000, 85,   2,    None, "Infantry Type 1985"),
+        (2000, "Optics-Equipped Infantry",         5500, 1000, 0,   1,   950,  1000, 100,  2,    None, "Infantry Type 2000"),
+        (2015, "Networked Infantry",               6250, 1150, 0,   1,   1025, 1000, 115,  2,    None, "Infantry Type 2015"),
+        (2030, "Drone-Integrated Infantry",        7000, 1300, 0,   1,   1100, 1000, 130,  2,    None, "Infantry Type 2030"),
+        (2040, "Sensor-Integrated Infantry",       7500, 1400, 0,   1,   1150, 1000, 140,  2,    None, "Infantry Type 2040"),
     ],
     "cavalry": [
-        #  YR  NAME                                  HP   ATK  DEF  SPD   MAT   MAN  FUEL  TIME  BOMB  ART
-        (1800, "Early Cavalry",                     350,  120,   0,   2,  450, 2000,    0,    3, None, "Cavalry I"),
-        (1850, "Improved Cavalry",                  400,  180,   0,   2,  600, 2000,    0,    3, None, "Cavalry I"),
-        (1870, "Breech-Loading Carbines",           470,  220,   0,   2,  750, 2000,    0,    3, None, "Cavalry I"),
-        (1890, "Magazine Carbines",                 550,  260,   0,   2,  900, 2000,    0,    3, None, "Cavalry I"),
-        (1910, "Supported Cavalry",                 600,  300,   0,   2, 1000, 2000,    0,    3, None, "Cavalry I"),
-        (1918, "Mounted Rifle Cavalry",             800,  300,   0,   2, 1000, 2000,    0,    3, None, "Cavalry III"),
-        (1930, "Modern Cavalry",                   1000,  300,   0,   2, 1000, 2000,    0,    3, None, "Cavalry V"),
+        #YR    NAME                                HP    ATK   DEF  SPD  MAT   MAN   FUEL  TIME  BOMB  ART
+        (1800, "Early Cavalry",                    350,  120,  0,   2,   450,  2000, 0,    3,    None, "Cavalry I"),
+        (1850, "Improved Cavalry",                 400,  180,  0,   2,   600,  2000, 0,    3,    None, "Cavalry I"),
+        (1870, "Breech-Loading Carbines",          470,  220,  0,   2,   750,  2000, 0,    3,    None, "Cavalry I"),
+        (1890, "Magazine Carbines",                550,  260,  0,   2,   900,  2000, 0,    3,    None, "Cavalry I"),
+        (1910, "Supported Cavalry",                600,  300,  0,   2,   1000, 2000, 0,    3,    None, "Cavalry I"),
+        (1918, "Mounted Rifle Cavalry",            800,  300,  0,   2,   1000, 2000, 0,    3,    None, "Cavalry III"),
+        (1930, "Modern Cavalry",                   1000, 300,  0,   2,   1000, 2000, 0,    3,    None, "Cavalry V"),
     ],
     "militia": [
-        #  YR  NAME                                  HP   ATK  DEF  SPD   MAT   MAN  FUEL  TIME  BOMB  ART
-        (1800, "Local Militia",                     200,   12,   0,   1,  100, 1000,    0,    1, None, "Militia I"),
-        (1840, "Organized Militia",                 280,   20,   0,   1,  150, 1000,    0,    1, None, "Militia I"),
-        (1870, "Reserve Infantry",                  360,   32,   0,   1,  210, 1000,    0,    1, None, "Militia I"),
-        (1900, "Modern Militia",                    440,   44,   0,   1,  270, 1000,    0,    1, None, "Militia I"),
-        (1915, "Rifle Militia",                     600,   60,   0,   1,  300, 1000,    0,    1, None, "Militia II"),
-        (1935, "Support-Weapon Militia",           1000,  100,   0,   1,  300, 1000,    0,    1, None, "Militia VI"),
-        (1955, "Self-Loading Rifle Militia",       1400,  140,   0,   1,  300, 1000,    0,    1, None, "Militia X"),
-        (1975, "Assault-Rifle Militia",            1800,  180,   0,   1,  300, 1000,    0,    1, None, "Militia XIV"),
-        (1995, "Radio-Equipped Militia",           2200,  220,   0,   1,  300, 1000,    0,    1, None, "Militia XVIII"),
-        (2015, "Optics-Equipped Militia",          2600,  260,   0,   1,  300, 1000,    0,    1, None, "Militia XXII"),
-        (2035, "Drone-Supported Militia",          3000,  300,   0,   1,  300, 1000,    0,    1, None, "Militia XXVI"),
+        #YR    NAME                                HP    ATK   DEF  SPD  MAT   MAN   FUEL  TIME  BOMB  ART
+        (1800, "Local Militia",                    200,  12,   0,   1,   100,  1000, 0,    1,    None, "Militia I"),
+        (1840, "Organized Militia",                280,  20,   0,   1,   150,  1000, 0,    1,    None, "Militia I"),
+        (1870, "Reserve Infantry",                 360,  32,   0,   1,   210,  1000, 0,    1,    None, "Militia I"),
+        (1900, "Modern Militia",                   440,  44,   0,   1,   270,  1000, 0,    1,    None, "Militia I"),
+        (1915, "Rifle Militia",                    600,  60,   0,   1,   300,  1000, 0,    1,    None, "Militia II"),
+        (1935, "Support-Weapon Militia",           1000, 100,  0,   1,   300,  1000, 0,    1,    None, "Militia VI"),
+        (1955, "Self-Loading Rifle Militia",       1400, 140,  0,   1,   300,  1000, 0,    1,    None, "Militia X"),
+        (1975, "Assault-Rifle Militia",            1800, 180,  0,   1,   300,  1000, 0,    1,    None, "Militia XIV"),
+        (1995, "Radio-Equipped Militia",           2200, 220,  0,   1,   300,  1000, 0,    1,    None, "Militia XVIII"),
+        (2015, "Optics-Equipped Militia",          2600, 260,  0,   1,   300,  1000, 0,    1,    None, "Militia XXII"),
+        (2035, "Drone-Supported Militia",          3000, 300,  0,   1,   300,  1000, 0,    1,    None, "Militia XXVI"),
     ],
     "artillery": [
-        #  YR  NAME                                  HP   ATK  DEF  SPD   MAT   MAN  FUEL  TIME  BOMB  ART
-        (1800, "Smoothbore Artillery",               60,   50,   0,   1,  450,  500,    0,    2,   50, "Artillery I"),
-        (1830, "Improved Field Artillery",           65,   60,   0,   1,  650,  500,    0,    2,   60, "Artillery I"),
-        (1850, "Rifled Artillery",                   75,   70,   0,   1,  850,  500,    0,    2,   70, "Artillery I"),
-        (1870, "Breech-Loading Artillery",           80,   80,   0,   1, 1050,  500,    0,    2,   80, "Artillery I"),
-        (1890, "Quick-Firing Artillery",             90,   90,   0,   1, 1250,  500,    0,    2,   90, "Artillery I"),
-        (1900, "Recoil-System Artillery",            95,  110,   0,   1, 1400,  500,    0,    2,  110, "Artillery I"),
-        (1915, "Indirect-Fire Artillery",           150,  180,   0,   1, 1600,  500,    0,    2,  180, "Artillery II"),
-        (1930, "Modern Field Artillery",            300,  360,   0,   1, 1900,  500,    0,    2,  360, "Artillery V"),
-        (1940, "Radio-Coordinated Artillery",       400,  480,   0,   1, 2100,  500,    0,    2,  480, "Artillery VII"),
-        (1955, "Advanced-Ammunition Artillery",     550,  660,   0,   1, 2400,  500,    0,    2,  660, "Artillery X"),
-        (1975, "Computer-Assisted Artillery",       750,  900,   0,   1, 2800,  500,    0,    2,  900, "Artillery XIV"),
-        (1995, "Digital Fire-Control Artillery",    950, 1140,   0,   1, 3200,  500,    0,    2, 1140, "Artillery XVIII"),
-        (2010, "Precision-Guided Artillery",       1100, 1320,   0,   1, 3500,  500,    0,    2, 1320, "Artillery XXI"),
-        (2025, "Sensor-Linked Artillery",          1250, 1500,   0,   1, 3800,  500,    0,    2, 1500, "Artillery XXIV"),
-        (2040, "Automated Fire-Control Artillery", 1400, 1680,   0,   1, 4100,  500,    0,    2, 1680, "Artillery XXVII"),
+        #YR    NAME                                HP    ATK   DEF  SPD  MAT   MAN   FUEL  TIME  BOMB  ART
+        (1800, "Smoothbore Artillery",             60,   50,   0,   1,   450,  500,  0,    2,    50,   "Artillery I"),
+        (1830, "Improved Field Artillery",         65,   60,   0,   1,   650,  500,  0,    2,    60,   "Artillery I"),
+        (1850, "Rifled Artillery",                 75,   70,   0,   1,   850,  500,  0,    2,    70,   "Artillery I"),
+        (1870, "Breech-Loading Artillery",         80,   80,   0,   1,   1050, 500,  0,    2,    80,   "Artillery I"),
+        (1890, "Quick-Firing Artillery",           90,   90,   0,   1,   1250, 500,  0,    2,    90,   "Artillery I"),
+        (1900, "Recoil-System Artillery",          95,   110,  0,   1,   1400, 500,  0,    2,    110,  "Artillery I"),
+        (1915, "Indirect-Fire Artillery",          150,  180,  0,   1,   1600, 500,  0,    2,    180,  "Artillery II"),
+        (1930, "Modern Field Artillery",           300,  360,  0,   1,   1900, 500,  0,    2,    360,  "Artillery V"),
+        (1940, "Radio-Coordinated Artillery",      400,  480,  0,   1,   2100, 500,  0,    2,    480,  "Artillery VII"),
+        (1955, "Advanced-Ammunition Artillery",    550,  660,  0,   1,   2400, 500,  0,    2,    660,  "Artillery X"),
+        (1975, "Computer-Assisted Artillery",      750,  900,  0,   1,   2800, 500,  0,    2,    900,  "Artillery XIV"),
+        (1995, "Digital Fire-Control Artillery",   950,  1140, 0,   1,   3200, 500,  0,    2,    1140, "Artillery XVIII"),
+        (2010, "Precision-Guided Artillery",       1100, 1320, 0,   1,   3500, 500,  0,    2,    1320, "Artillery XXI"),
+        (2025, "Sensor-Linked Artillery",          1250, 1500, 0,   1,   3800, 500,  0,    2,    1500, "Artillery XXIV"),
+        (2040, "Automated Fire-Control Artillery", 1400, 1680, 0,   1,   4100, 500,  0,    2,    1680, "Artillery XXVII"),
     ],
 }
 
@@ -373,47 +374,47 @@ AIR_RECIPE_COLUMNS = {
 }
 
 LAND_UNIT_RECIPES = [
-    #NAME                          TIERS               HP              ATK             DEF           SPD                                           MAT               MAN          FUEL          TIME      BOMB   OPTIONS
-    ("WW1 Tank",                   single(),           3000,           1500,           100,          1,                                            6000,             1000,        300,          6,        None,  {}),
-    ("WW1 Armored Car",            single(),           1000,           300,            50,           2,                                            3000,             1000,        100,          4,        None,  {}),
-    ("Armored Car",                rs(34), lin(1000, 100), lin(400, 100),  lin(60, 10),  piecewise([(0, 2, 0), (1, 3, 0), (4, 4, 0)]), lin(3000, 200),   const(1000), lin(100, 5),  const(4), None,  {}),
-    ("Light Tank",                 rs(34), lin(1800, 200), lin(1200, 150), lin(80, 10),  piecewise([(0, 2, 0), (3, 3, 0)]),            lin(5000, 500),   const(1000), lin(150, 5),  const(5), None,  {}),
-    ("Medium Tank",                rs(4),  lin(2500, 500), lin(2400, 600), lin(150, 25), const(2),                                     lin(9000, 1000),  const(1000), lin(200, 10), const(6), None,  {}),
-    ("Heavy Tank",                 rs(4),  lin(3000, 500), lin(3000, 500), lin(350, 50), const(1),                                     lin(12000, 1000), const(1000), lin(200, 10), const(6), None,  {}),
-    ("Super Heavy Tank",           rs(5),  const(5000),    const(5000),    lin(550, 50), const(1),                                     lin(16000, 2000), const(1000), lin(240, 20), const(6), None,  {}),
-    ("Landkreuzer P.1000 Ratte",   single(),           10000,          6000,           400,          1,                                            50000,            2000,        1000,         10,       1000,  {"division_suffix": "1000"}),
-    ("Landkreuzer P.1500 Monster", single(),           15000,          8000,           500,          1,                                            60000,            2000,        1200,         12,       1200,  {"division_suffix": "1500"}),
-    ("Railgun",                    single(),           10000,          10000,          500,          1,                                            80000,            2000,        3000,         10,       10000, {}),
-    ("Main Battle Tank",           rs(22), lin(5000, 500), lin(5000, 500), lin(250, 25), const(2),                                     lin(16000, 1000), const(1000), lin(240, 10), const(6), None,  {}),
-    ("WW1 Railroad Gun",           single(),           1200,           500,            0,            1,                                            5000,             1000,        0,            6,        500,   {}),
-    ("WW2 Railroad Gun",           single(),           2000,           800,            0,            1,                                            8000,             1000,        0,            6,        800,   {}),
+    #NAME                          TIERS     HP              ATK             DEF           SPD                                           MAT               MAN          FUEL          TIME       BOMB           OPTIONS
+    ("WW1 Tank",                   single(), 3000,           1500,           100,          1,                                            6000,             1000,        300,          6,         None,          {}),
+    ("WW1 Armored Car",            single(), 1000,           300,            50,           2,                                            3000,             1000,        100,          4,         None,          {}),
+    ("Armored Car",                rs(34),   lin(1000, 100), lin(400, 100),  lin(60, 10),  piecewise([(0, 2, 0), (1, 3, 0), (4, 4, 0)]), lin(3000, 200),   const(1000), lin(100, 5),  const(4),  None,          {}),
+    ("Light Tank",                 rs(34),   lin(1800, 200), lin(1200, 150), lin(80, 10),  piecewise([(0, 2, 0), (3, 3, 0)]),            lin(5000, 500),   const(1000), lin(150, 5),  const(5),  None,          {}),
+    ("Medium Tank",                rs(4),    lin(2500, 500), lin(2400, 600), lin(150, 25), const(2),                                     lin(9000, 1000),  const(1000), lin(200, 10), const(6),  None,          {}),
+    ("Heavy Tank",                 rs(4),    lin(3000, 500), lin(3000, 500), lin(350, 50), const(1),                                     lin(12000, 1000), const(1000), lin(200, 10), const(6),  None,          {}),
+    ("Super Heavy Tank",           rs(5),    const(5000),    const(5000),    lin(550, 50), const(1),                                     lin(16000, 2000), const(1000), lin(240, 20), const(6),  None,          {}),
+    ("Landkreuzer P.1000 Ratte",   single(), 10000,          6000,           400,          1,                                            50000,            2000,        1000,         10,        1000,          {"division_suffix": "1000"}),
+    ("Landkreuzer P.1500 Monster", single(), 15000,          8000,           500,          1,                                            60000,            2000,        1200,         12,        1200,          {"division_suffix": "1500"}),
+    ("Railgun",                    single(), 10000,          10000,          500,          1,                                            80000,            2000,        3000,         10,        10000,         {}),
+    ("Main Battle Tank",           rs(22),   lin(5000, 500), lin(5000, 500), lin(250, 25), const(2),                                     lin(16000, 1000), const(1000), lin(240, 10), const(6),  None,          {}),
+    ("WW1 Railroad Gun",           single(), 1200,           500,            0,            1,                                            5000,             1000,        0,            6,         500,           {}),
+    ("WW2 Railroad Gun",           single(), 2000,           800,            0,            1,                                            8000,             1000,        0,            6,         800,           {}),
 ]
 
 NAVAL_UNIT_RECIPES = [
-    #NAME                TIERS               HP              ATK             DEF           SPD       MAT               MAN          FUEL          TIME       BOMB           OPTIONS
-    ("Carrack",          single(),           1000,           400,            0,            1,        2000,             500,         0,            4,         None,          {}),
-    ("Ironclad",         single(),           2000,           800,            200,          1,        8000,             1000,        100,          6,         None,          {}),
-    ("Pre-Dreadnought",  single(),           3000,           1200,           300,          1,        12000,            2000,        250,          8,         None,          {}),
-    ("Dreadnought",      single(),           4000,           2400,           400,          1,        20000,            2000,        300,          10,        300,           {}),
-    ("Battleship",       single(),           6000,           4000,           600,          1,        20000,            2000,        400,          10,        500,           {}),
-    ("Destroyer",        rs(36), lin(2400, 400), lin(1200, 300), lin(200, 20), const(1), lin(10000, 500),  const(1000), lin(250, 5),  const(8),  None,          {}),
-    ("Submarine",        rs(36), lin(1200, 200), lin(600, 100),  const(0),     const(1), lin(8000, 400),   const(1000), lin(150, 5),  const(6),  None,          {}),
-    ("Aircraft Carrier", rs(25), lin(800, 200),  lin(600, 120),  lin(200, 20), const(1), lin(20000, 1000), const(2000), lin(500, 25), const(10), lin(600, 120), {}),
+    #NAME                          TIERS     HP              ATK             DEF           SPD                                           MAT               MAN          FUEL          TIME       BOMB           OPTIONS
+    ("Carrack",                    single(), 1000,           400,            0,            1,                                            2000,             500,         0,            4,         None,          {}),
+    ("Ironclad",                   single(), 2000,           800,            200,          1,                                            8000,             1000,        100,          6,         None,          {}),
+    ("Pre-Dreadnought",            single(), 3000,           1200,           300,          1,                                            12000,            2000,        250,          8,         None,          {}),
+    ("Dreadnought",                single(), 4000,           2400,           400,          1,                                            20000,            2000,        300,          10,        300,           {}),
+    ("Battleship",                 single(), 6000,           4000,           600,          1,                                            20000,            2000,        400,          10,        500,           {}),
+    ("Destroyer",                  rs(36),   lin(2400, 400), lin(1200, 300), lin(200, 20), const(1),                                     lin(10000, 500),  const(1000), lin(250, 5),  const(8),  None,          {}),
+    ("Submarine",                  rs(36),   lin(1200, 200), lin(600, 100),  const(0),     const(1),                                     lin(8000, 400),   const(1000), lin(150, 5),  const(6),  None,          {}),
+    ("Aircraft Carrier",           rs(25),   lin(800, 200),  lin(600, 120),  lin(200, 20), const(1),                                     lin(20000, 1000), const(2000), lin(500, 25), const(10), lin(600, 120), {}),
 ]
 
 AIR_UNIT_RECIPES = [
-    #NAME                   TIERS               HP              ATK             DEF           SPD  MAT               MAN   FUEL          TIME  ROLE         RNG           AAMULT  CONSUME  IMMUNE  FORT  CARGO  OPTIONS
-    ('Biplane Fighter',     rs(5),  lin(2000, 100), lin(120, 20),   0,            1,   1000,             500,  60,           2,    'fighter',   lin(60, 5),   10,     None,    None,   None, None,  {}),
-    ('Biplane Bomber',      rs(5),  lin(3000, 500), lin(600, 100),  0,            1,   2000,             500,  80,           3,    'bomber',    lin(80, 10),  None,   None,    None,   True, None,  {}),
-    ('Zeppelin',            single(),           3000,           300,            0,            1,   2000,             500,  60,           4,    'bomber',    120,          None,   None,    None,   True, None,  {}),
-    ('Monoplane Fighter',   rs(5),  lin(3000, 200), lin(250, 50),   lin(50, 10),  1,   3000,             500,  100,          3,    'fighter',   lin(100, 5),  8,      None,    None,   None, None,  {}),
-    ('Monoplane Bomber',    rs(5),  lin(5000, 200), lin(1000, 100), lin(120, 20), 1,   lin(4000, 400),   500,  120,          4,    'bomber',    lin(120, 20), None,   None,    None,   True, None,  {}),
-    ('Monoplane Transport', rs(3),  1000,           0,              0,            1,   lin(9000, 500),   1000, 200,          4,    'transport', lin(60, 10),  None,   None,    None,   None, 1,     {}),
-    ('V1 Flying Bomb',      single(),           1000,           800,            0,            1,   2000,             0,    60,           2,    'strike',    200,          None,   True,    None,   True, None,  {}),
-    ('V2 Rocket',           single(),           2000,           1200,           0,            1,   4000,             0,    80,           4,    'strike',    300,          None,   True,    True,   True, None,  {}),
-    ('Jet Fighter',         rs(26), lin(4000, 200), lin(1000, 100), lin(100, 20), 1,   lin(5000, 200),   500,  lin(160, 10), 4,    'fighter',   lin(200, 5),  4,      None,    None,   None, None,  {}),
-    ('Jet Bomber',          rs(20), lin(6000, 200), lin(1600, 200), lin(200, 20), 1,   lin(6000, 500),   500,  lin(160, 20), 6,    'bomber',    lin(300, 10), None,   None,    None,   True, None,  {}),
-    ('Jet Transport',       rs(20), lin(2000, 200), 0,              0,            1,   lin(25000, 1000), 1000, 500,          6,    'transport', lin(100, 20), None,   None,    None,   None, 2,     {}),
+    #NAME                   TIERS     HP              ATK             DEF           SPD  MAT               MAN   FUEL          TIME  ROLE         RNG           AAMULT  CONSUME  IMMUNE  FORT  CARGO  OPTIONS
+    ('Biplane Fighter',     rs(5),    lin(2000, 100), lin(120, 20),   0,            1,   1000,             500,  60,           2,    'fighter',   lin(60, 5),   10,     None,    None,   None, None,  {}),
+    ('Biplane Bomber',      rs(5),    lin(3000, 500), lin(600, 100),  0,            1,   2000,             500,  80,           3,    'bomber',    lin(80, 10),  None,   None,    None,   True, None,  {}),
+    ('Zeppelin',            single(), 3000,           300,            0,            1,   2000,             500,  60,           4,    'bomber',    120,          None,   None,    None,   True, None,  {}),
+    ('Monoplane Fighter',   rs(5),    lin(3000, 200), lin(250, 50),   lin(50, 10),  1,   3000,             500,  100,          3,    'fighter',   lin(100, 5),  8,      None,    None,   None, None,  {}),
+    ('Monoplane Bomber',    rs(5),    lin(5000, 200), lin(1000, 100), lin(120, 20), 1,   lin(4000, 400),   500,  120,          4,    'bomber',    lin(120, 20), None,   None,    None,   True, None,  {}),
+    ('Monoplane Transport', rs(3),    1000,           0,              0,            1,   lin(9000, 500),   1000, 200,          4,    'transport', lin(60, 10),  None,   None,    None,   None, 1,     {}),
+    ('V1 Flying Bomb',      single(), 1000,           800,            0,            1,   2000,             0,    60,           2,    'strike',    200,          None,   True,    None,   True, None,  {}),
+    ('V2 Rocket',           single(), 2000,           1200,           0,            1,   4000,             0,    80,           4,    'strike',    300,          None,   True,    True,   True, None,  {}),
+    ('Jet Fighter',         rs(26),   lin(4000, 200), lin(1000, 100), lin(100, 20), 1,   lin(5000, 200),   500,  lin(160, 10), 4,    'fighter',   lin(200, 5),  4,      None,    None,   None, None,  {}),
+    ('Jet Bomber',          rs(20),   lin(6000, 200), lin(1600, 200), lin(200, 20), 1,   lin(6000, 500),   500,  lin(160, 20), 6,    'bomber',    lin(300, 10), None,   None,    None,   True, None,  {}),
+    ('Jet Transport',       rs(20),   lin(2000, 200), 0,              0,            1,   lin(25000, 1000), 1000, 500,          6,    'transport', lin(100, 20), None,   None,    None,   None, 2,     {}),
 ]
 
 
@@ -510,9 +511,9 @@ BUILDING_RECIPE_COLUMNS = {
 # Basic Factory costs remain dynamic in queries.get_building_cost; its stored costs stay zero.
 BUILDING_BASE_RECIPES = [
     #NAME                        REQ     TIME  GROUP            MAT   MAN  FUEL  OUTMAT  OUTMAN  OUTFUEL
-    ("Basic Factory",            "null", 20, "industry",      0,    0, 0, 200, 0,  0),
-    ("Basic Recruitment Center", None,   6,  "recruitment",   2500, 0, 0, 0,   50, 0),
-    ("Fort Lvl 1",               None,   1,  "fortification", 5000, 0, 0, 0,   0,  0),
+    ("Basic Factory",            "null", 20,   "industry",      0,    0,   0,    200,    0,      0),
+    ("Basic Recruitment Center", None,   6,    "recruitment",   2500, 0,   0,    0,      50,     0),
+    ("Fort Lvl 1",               None,   1,    "fortification", 5000, 0,   0,    0,      0,      0),
 ]
 
 # Growth functions receive the numbered building level, starting at 1.
@@ -560,7 +561,7 @@ RESEARCH_OPTION_COLUMNS = {"NAME": "display_name", "GATES": "level_reqs", "BONUS
 # Other rows retain their years_range expressions and prerequisite dictionaries.
 RESEARCH_RECIPES = [
     [
-        # ID                            CAT         LVLS  COST  REQ                                                    YRS                             OPTIONS
+        #ID                            CAT         LVLS  COST  REQ                                                    YRS                             OPTIONS
         ("infantry_type",              "INFANTRY", None, 900,  {},                                                    None,                           {}),
         ("cavalry",                    "INFANTRY", None, 1200, {},                                                    None,                           {}),
         ("militia",                    "INFANTRY", None, 600,  {},                                                    None,                           {}),
@@ -570,13 +571,13 @@ RESEARCH_RECIPES = [
         ("infantry_fighting_vehicle",  "INFANTRY", 1,    1800, {"armored_personnel_carriers": 1},                     years_range(1950, 1, 1),        {}),
     ],
     [
-        # ID                            CAT         LVLS  COST  REQ                                                    YRS                             OPTIONS
+        #ID                            CAT         LVLS  COST  REQ                                                    YRS                             OPTIONS
         ("civilian_car",               "TANKS",    1,    2400, {},                                                    years_range(1910, 1, 1),        {}),
         ("ww1_armored_car",            "TANKS",    1,    2400, {"civilian_car": 1},                                   years_range(1912, 1, 1),        {}),
         ("armored_car",                "TANKS",    34,   2400, {"ww1_armored_car": 1},                                years_range(1916, 4, 34),       {}),
     ],
     [
-        # ID                            CAT         LVLS  COST  REQ                                                    YRS                             OPTIONS
+        #ID                            CAT         LVLS  COST  REQ                                                    YRS                             OPTIONS
         ("ww1_tank",                   "TANKS",    1,    2400, {"ww1_armored_car": 1},                                years_range(1914, 1, 1),        {}),
         ("light_tank",                 "TANKS",    34,   2400, {"ww1_tank": 1},                                       years_range(1918, 4, 34),       {}),
         ("medium_tank",                "TANKS",    4,    2400, {"light_tank": 1},                                     years_range(1925, 5, 4),        {}),
@@ -591,7 +592,7 @@ RESEARCH_RECIPES = [
         ("ww2_railroad_gun",           "TANKS",    1,    2400, {"AND": [{"heavy_tank": 1}, {"ww1_railroad_gun": 1}]}, years_range(1932, 1, 1),        {}),
     ],
     [
-        # ID                            CAT         LVLS  COST  REQ                                                    YRS                             OPTIONS
+        #ID                            CAT         LVLS  COST  REQ                                                    YRS                             OPTIONS
         ("carrack",                    "NAVY",     1,    600,  {},                                                    [1800],                         {}),
         ("ironclad",                   "NAVY",     1,    2400, {"carrack": 1},                                        [1860],                         {}),
         ("pre-dreadnought",            "NAVY",     1,    2400, {"ironclad": 1},                                       [1880],                         {}),
@@ -602,7 +603,7 @@ RESEARCH_RECIPES = [
         ("submarine",                  "NAVY",     36,   2400, {"dreadnought": 1},                                    years_range(1910, 4, 36),       {}),
     ],
     [
-        # ID                            CAT         LVLS  COST  REQ                                                    YRS                             OPTIONS
+        #ID                            CAT         LVLS  COST  REQ                                                    YRS                             OPTIONS
         ("basic_factory",              "INDUSTRY", 1,    1200, {},                                                    years_range(1800, 1, 1),        {}),
         ("waltham_system",             "INDUSTRY", 1,    1200, {"basic_factory": 1},                                  [1815],                         {"NAME": "Waltham System", "BONUS": [{"building_families": ["Basic Factory"], "flat_outputs": {"materials": 100}}]}),
         ("metal_shaper",               "INDUSTRY", 1,    1200, {"waltham_system": 1},                                 [1835],                         {"NAME": "Metal Shaper"}),
@@ -631,7 +632,7 @@ RESEARCH_RECIPES = [
         ("resource_refining",          "INDUSTRY", 100,  900,  {},                                                    years_range(1911, 1, 100),      {}),
     ],
     [
-        # ID                            CAT         LVLS  COST  REQ                                                    YRS                             OPTIONS
+        #ID                            CAT         LVLS  COST  REQ                                                    YRS                             OPTIONS
         ('biplane',                    'AIR',      5,    1200, {},                                                    [1910, 1914, 1918, 1922, 1926], {"NAME": 'Biplane Fighter'}),
         ('biplane_bomber',             'AIR',      3,    1800, {'biplane': 1},                                        [1915, 1920, 1925],             {"NAME": 'Biplane Bomber'}),
         ('zeppelin',                   'AIR',      1,    1800, {},                                                    [1910],                         {"NAME": 'Zeppelin'}),
