@@ -1,8 +1,8 @@
 import pygame
 import data.constants as c
-from ui_elements import Button, make_back_button
+from ui.widgets.ui_elements import Button, make_back_button
 from ui.rendering.font_manager import fonts
-from gameState import GameState
+from ui.navigation.game_state import GameState
 from map_logic.ai.automation_logic import (
     automate_player_construction, clear_player_construction,
     automate_player_movement, clear_player_movement,

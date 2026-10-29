@@ -6,7 +6,7 @@ import main as game_main
 import pygame
 import data.constants as c
 from data import queries
-from ui_elements import Button, Slider
+from ui.widgets.ui_elements import Button, Slider
 from screens.menus.music_player import Music_Player
 
 

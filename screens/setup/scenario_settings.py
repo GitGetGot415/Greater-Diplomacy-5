@@ -1,6 +1,6 @@
 import pygame
-from gameState import GameState
-from ui_elements import Button, Slider, parse_pos, make_back_button, make_info_button
+from ui.navigation.game_state import GameState
+from ui.widgets.ui_elements import Button, Slider, parse_pos, make_back_button, make_info_button
 import data.constants as c
 from data import queries
 from ui import dialogs as confirm_dialog

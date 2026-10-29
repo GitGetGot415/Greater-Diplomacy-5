@@ -5,7 +5,7 @@ import data.constants as c
 from ui.camera import camera_handler
 from screens.setup import player_setup
 from data import queries
-from ui_elements import process_text_input
+from ui.widgets.ui_elements import process_text_input
 from map_logic.diplomacy import diplomacy_logic
 from screens.game import battle_screen
 from ui.bars import flag_renderer, ui_bars

@@ -6,7 +6,7 @@ os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 import numpy as np
 import pygame
 
-import ui_elements
+from ui.widgets import ui_elements
 
 
 class PygameSfxPitchTests(unittest.TestCase):

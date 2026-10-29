@@ -35,7 +35,6 @@ SKIP_DIRS = {
 SKIP_MODULES = {
     "soloud",               # vendored, loads a native library
     "main",                 # constructs the app; covered by test_controller_construction
-    "temp_multiplayer_io",  # empty placeholder, staged by no build script
 }
 
 

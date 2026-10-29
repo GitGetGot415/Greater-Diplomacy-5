@@ -12,7 +12,7 @@ import data.constants as c
 from data import queries
 from map_logic.ai import ai_construction
 from map_logic.system32 import combat_processor
-import ui_elements
+from ui.widgets import ui_elements
 
 
 def unit(owner, attack=0, defense=0, health=100000):

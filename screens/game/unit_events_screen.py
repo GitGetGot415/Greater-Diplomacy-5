@@ -5,7 +5,7 @@ from map_logic.system32 import unit_events
 from ui.rendering.font_manager import fonts
 from ui.widgets import flag_icons, text_utils
 from ui.widgets.table_screen import TableColumn, TableScreen
-from ui_elements import Button
+from ui.widgets.ui_elements import Button
 
 from ui import dialogs as confirm_dialog
 

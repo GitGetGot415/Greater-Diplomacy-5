@@ -3,8 +3,8 @@ tkinter tool windows -- see screens/editors/__init__.py."""
 import pygame
 import data.constants as c
 from data import queries
-from gameState import MapOverlayScreen, NationListOverlayScreen
-from ui_elements import Button, TextField, make_back_button
+from ui.navigation.game_state import MapOverlayScreen, NationListOverlayScreen
+from ui.widgets.ui_elements import Button, TextField, make_back_button
 from ui import dialogs as confirm_dialog
 from ui.navigation.screen_runner import _run_pygame_sub_screen
 

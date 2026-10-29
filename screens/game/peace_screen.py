@@ -19,7 +19,7 @@ import pygame
 
 import data.constants as c
 from data import queries
-from gameState import MapOverlayScreen
+from ui.navigation.game_state import MapOverlayScreen
 from map_logic.diplomacy import deal as deal_mod
 from map_logic.diplomacy import diplomacy_messages, ratification
 from ui.rendering import refresh_map
@@ -27,7 +27,7 @@ from ui.rendering.font_manager import fonts
 from ui.widgets import text_utils
 from ui.bars import ui_bars
 from ui.navigation.screen_runner import _run_pygame_sub_screen
-from ui_elements import make_back_button
+from ui.widgets.ui_elements import make_back_button
 
 from ui.rendering import overlay_renderer
 

@@ -10,11 +10,11 @@ here, where the text has the whole screen and scrolls.
 import pygame
 
 import data.constants as c
-from gameState import GameState
+from ui.navigation.game_state import GameState
 from ui.rendering.font_manager import fonts
 from ui.widgets import text_utils
 from ui.bars import ui_bars
-from ui_elements import make_back_button
+from ui.widgets.ui_elements import make_back_button
 
 
 class TextDetailScreen(GameState):

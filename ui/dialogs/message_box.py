@@ -7,7 +7,7 @@ from ui.dialogs.base import _BaseModal, _back_key, _lighten, _run_blocking
 from ui.bars import ui_bars
 import data.constants as c
 from ui.rendering.font_manager import fonts
-import ui_elements
+from ui.widgets import ui_elements
 from ui.widgets.text_utils import render_inline_text, wrap_text
 
 _KIND_ACCENTS = {

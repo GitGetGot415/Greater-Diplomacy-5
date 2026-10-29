@@ -1,9 +1,9 @@
 import pygame
-from gameState import GameState, resolve_keybind
+from ui.navigation.game_state import GameState, resolve_keybind
 import data.constants as c
 from ui.bars import ui_bars
 from ui.widgets.flag_icons import draw_flag_centered
-from ui_elements import Button, process_text_input, make_back_button, draw_text_box
+from ui.widgets.ui_elements import Button, process_text_input, make_back_button, draw_text_box
 from ui.rendering.font_manager import fonts
 from map_logic.diplomacy import faction_actions, faction_leadership
 from data import queries

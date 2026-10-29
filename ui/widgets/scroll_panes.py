@@ -16,7 +16,7 @@ They had also drifted in two ways worth naming, since this mixin settles both:
 
 Kept dependency-free apart from pygame and data.constants so it stays a leaf in
 the import graph -- it is a mixin rather than a GameState subclass precisely so
-it doesn't have to import gameState and can be combined with anything.
+it doesn't have to import game_state and can be combined with anything.
 """
 
 import pygame

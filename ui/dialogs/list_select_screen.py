@@ -1,12 +1,12 @@
 import pygame
 import data.constants as c
-import ui_elements
+from ui.widgets import ui_elements
 from ui.widgets import text_utils
 from ui.navigation.modal_screen import ModalScreen
-from ui_elements import Button
+from ui.widgets.ui_elements import Button
 from ui.rendering.font_manager import fonts
 
-from ui_elements import process_text_input
+from ui.widgets.ui_elements import process_text_input
 
 
 class ListSelectScreen(ModalScreen):

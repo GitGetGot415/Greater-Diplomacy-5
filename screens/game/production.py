@@ -1,8 +1,8 @@
 import pygame
 import data.constants as c
-from gameState import GameState
+from ui.navigation.game_state import GameState
 from ui.bars import ui_bars
-from ui_elements import (
+from ui.widgets.ui_elements import (
     Button,
     draw_resource_string,
     draw_combat_stats,

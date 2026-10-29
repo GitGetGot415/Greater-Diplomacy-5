@@ -19,7 +19,7 @@ import data.constants as c
 from ui.bars import ui_bars
 from ui.navigation.modal_screen import ModalScreen
 from ui.widgets import text_utils
-from ui_elements import Button, TextField
+from ui.widgets.ui_elements import Button, TextField
 from ui.rendering.font_manager import fonts
 
 from ui.navigation import screen_runner

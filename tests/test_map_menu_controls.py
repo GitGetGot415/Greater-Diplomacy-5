@@ -74,7 +74,7 @@ class MapMenuControlTests(unittest.TestCase):
 
     def test_closing_province_cancels_a_pending_diplomacy_click(self):
         """Back can run before queued mouse events in the same frame."""
-        from gameState import dispatch_global_keys
+        from ui.navigation.game_state import dispatch_global_keys
 
         game = self.map
         saved = {attr: getattr(game, attr) for attr in (

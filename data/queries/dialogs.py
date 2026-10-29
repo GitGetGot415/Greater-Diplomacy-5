@@ -264,5 +264,5 @@ def copy_to_clipboard(text):
 
 def play_click_sound():
     """Plays the UI click sound. Thin alias kept for non-UI callers."""
-    import ui_elements
+    from ui.widgets import ui_elements
     ui_elements.play_ui_sound("click")

@@ -1,8 +1,8 @@
 import pygame
 from math import sqrt
 import data.constants as c
-from gameState import GameState, resolve_keybind
-from ui_elements import Button, process_text_input, draw_text_box
+from ui.navigation.game_state import GameState, resolve_keybind
+from ui.widgets.ui_elements import Button, process_text_input, draw_text_box
 from ui.rendering.font_manager import fonts
 from data import queries
 from map_logic.actions import unit_actions

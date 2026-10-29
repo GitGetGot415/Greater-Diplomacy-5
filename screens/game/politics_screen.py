@@ -15,10 +15,10 @@ single unit.
 """
 import pygame
 import data.constants as c
-from ui_elements import Button, make_back_button
+from ui.widgets.ui_elements import Button, make_back_button
 from ui.bars import ui_bars
 from ui.rendering.font_manager import fonts
-from gameState import GameState
+from ui.navigation.game_state import GameState
 from map_logic import politics
 
 #: Direction, button face, and the word under it.

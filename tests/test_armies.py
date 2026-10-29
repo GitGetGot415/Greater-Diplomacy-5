@@ -375,8 +375,8 @@ class ArmyControlTests(unittest.TestCase):
             with self.subTest(key=key, modifiers=modifiers):
                 map_stub = self._name_editor_map()
                 paste = pygame.event.Event(pygame.KEYDOWN, key=key, mod=modifiers, unicode="")
-                with patch("ui_elements._clipboard_text", return_value=" Northern\nCommand"), \
-                     patch("ui_elements.pygame.key.get_mods", return_value=0):
+                with patch("ui.widgets.ui_elements._clipboard_text", return_value=" Northern\nCommand"), \
+                     patch("ui.widgets.ui_elements.pygame.key.get_mods", return_value=0):
                     self.assertTrue(army_panel.handle_event(map_stub, paste))
                 self.assertEqual(map_stub.army_editor_state["name"], "Army 1 NorthernCommand")
                 self.assertEqual(map_stub.nation_data["A"]["armies"][0]["name"], "Army 1")
@@ -385,8 +385,8 @@ class ArmyControlTests(unittest.TestCase):
         map_stub = self._name_editor_map()
         paste = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_v,
                                    mod=pygame.KMOD_CTRL, unicode="")
-        with patch("ui_elements._clipboard_text", return_value="x" * 100), \
-             patch("ui_elements.pygame.key.get_mods", return_value=0):
+        with patch("ui.widgets.ui_elements._clipboard_text", return_value="x" * 100), \
+             patch("ui.widgets.ui_elements.pygame.key.get_mods", return_value=0):
             army_panel.handle_event(map_stub, paste)
         self.assertEqual(map_stub.army_editor_state["name"], "Army 1" + "x" * (80 - len("Army 1")))
 

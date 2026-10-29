@@ -116,9 +116,9 @@ files_to_skip_but_list = [
     "data\editors/**/*.py",
     "soloud.py",
     "compilation_scripts\setup.py",
-    "gameState.py",
+    "ui/navigation/game_state.py",
     "main.py",
-    "ui_elements.py",
+    "ui/widgets/ui_elements.py",
     "data\constants.py",
     #"data\queries\**",
     "context\context_generator.py",
@@ -161,7 +161,6 @@ files_to_silently_ignore = [
     "**/__init__.py",
     "venv/**",
     "compilation_scripts/**",
-    "temp_multiplayer_io.py",
     "tests/**"
 ]
 

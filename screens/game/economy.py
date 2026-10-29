@@ -1,8 +1,8 @@
 import pygame
-from gameState import GameState
+from ui.navigation.game_state import GameState
 import data.constants as c
 from ui.bars import ui_bars
-from ui_elements import Button, Slider, make_back_button
+from ui.widgets.ui_elements import Button, Slider, make_back_button
 from ui.rendering.font_manager import fonts
 from data import queries
 from ui.widgets.table_screen import TableScreen, TableColumn

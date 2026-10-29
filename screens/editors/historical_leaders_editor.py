@@ -18,7 +18,7 @@ take effect the next time a historical scenario is opened.
 import copy
 import json
 import pygame
-from gameState import GameState
+from ui.navigation.game_state import GameState
 import data.constants as c
 from data import queries
 from data.io.country_io import DEFAULT_NATION_COLOR
@@ -26,7 +26,7 @@ from ui import dialogs as confirm_dialog
 from ui.bars import ui_bars
 from ui.widgets.scroll_panes import ScrollPanes
 from ui.widgets.table_screen import truncate
-from ui_elements import Button, TextField, make_back_button
+from ui.widgets.ui_elements import Button, TextField, make_back_button
 from ui.rendering.font_manager import fonts
 
 from ui.navigation import screen_runner

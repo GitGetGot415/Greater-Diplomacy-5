@@ -1,8 +1,8 @@
 import os
-from gameState import GameState
+from ui.navigation.game_state import GameState
 import data.constants as c
 from ui.bars import ui_bars
-from ui_elements import Button, Slider, make_back_button
+from ui.widgets.ui_elements import Button, Slider, make_back_button
 from data import queries
 
 from screens.setup.scenario_settings import Scenario_Settings

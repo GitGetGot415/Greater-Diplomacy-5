@@ -12,7 +12,7 @@ which meant every other screen would have had to import a private name out of an
 unrelated 1200-line editor to reuse it. That module keeps the old name as an
 alias, so nothing that referred to it breaks.
 
-Import-graph note: this deliberately imports only gameState, ui_bars, ui_elements
+Import-graph note: this deliberately imports only game_state, ui_bars, ui_elements
 and the font manager at module scope. data.queries and ui.dialogs are
 pulled in inside the methods that need them, since both would otherwise close a
 cycle back through screens.game.map.
@@ -21,12 +21,12 @@ cycle back through screens.game.map.
 import pygame
 
 import data.constants as c
-from gameState import GameState
+from ui.navigation.game_state import GameState
 from ui.rendering.font_manager import fonts
 from ui.widgets import text_utils
 from ui.bars import ui_bars
 from ui.widgets.scroll_panes import ScrollPanes
-from ui_elements import Button
+from ui.widgets.ui_elements import Button
 
 from data import queries
 from ui import dialogs as confirm_dialog

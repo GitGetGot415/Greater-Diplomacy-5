@@ -4,10 +4,10 @@ import pygame
 
 import data.constants as c
 from data import queries
-from gameState import MapOverlayScreen
+from ui.navigation.game_state import MapOverlayScreen
 from ui.rendering import overlay_renderer
 from ui.rendering.font_manager import fonts
-from ui_elements import Button
+from ui.widgets.ui_elements import Button
 
 
 class DefenseAreaScreen(MapOverlayScreen):

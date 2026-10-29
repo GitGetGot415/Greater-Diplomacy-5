@@ -14,7 +14,7 @@ import pygame
 import data.constants as c
 from ui.widgets import text_utils
 from ui.navigation.modal_screen import ModalScreen
-from ui_elements import Button
+from ui.widgets.ui_elements import Button
 from ui.rendering.font_manager import fonts
 
 from data import queries
@@ -280,7 +280,7 @@ class CharacterSelectScreen(ModalScreen):
 
     def _draw_delete_confirm(self, surface):
         """Dims the panel and asks for Enter/Escape -- same shape as
-        gameState.FolderListState.draw_delete_confirm, hand-rolled here since
+        game_state.FolderListState.draw_delete_confirm, hand-rolled here since
         this screen isn't (and doesn't otherwise need to be) a FolderListState."""
 
         ui_bars.draw_fullscreen_overlay(surface, 180)

@@ -1,9 +1,9 @@
 import pygame
-from gameState import GameState
+from ui.navigation.game_state import GameState
 import data.constants as c
 from ui.bars import ui_bars
 from ui.widgets import text_utils
-from ui_elements import Button, process_text_input
+from ui.widgets.ui_elements import Button, process_text_input
 from ui.rendering.font_manager import fonts
 from map_logic.diplomacy import diplomacy_logic, diplomacy_messages, volunteers
 from data import queries

@@ -17,7 +17,7 @@ import sys
 
 import pygame
 import data.constants as c
-from gameState import (dispatch_global_keys, synthesize_keybind_mouse_events,
+from ui.navigation.game_state import (dispatch_global_keys, synthesize_keybind_mouse_events,
                        keyboard_input_is_captured)
 from ui.navigation import modal_stack
 from ui.bars import ui_bars

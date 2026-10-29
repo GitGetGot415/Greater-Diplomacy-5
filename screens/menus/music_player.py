@@ -1,11 +1,11 @@
 import pygame
 import os
 from data import queries
-import ui_elements 
-from gameState import GameState, ScreenLayer
+from ui.widgets import ui_elements 
+from ui.navigation.game_state import GameState, ScreenLayer
 from ui.bars import ui_bars
 from ui.widgets.scroll_panes import ScrollPanes
-from ui_elements import Button, Slider, make_back_button, make_info_button
+from ui.widgets.ui_elements import Button, Slider, make_back_button, make_info_button
 from ui.rendering.font_manager import fonts
 import data.constants as c
 from beepbox_audio import source_seconds_from_timeline, timeline_seconds_from_source

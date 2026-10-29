@@ -24,13 +24,13 @@ from data.map import load_map, save_map
 from data.platform import run_background
 
 # Core Game State & Global UI Elements
-from gameState import GameState
+from ui.navigation.game_state import GameState
 from map_logic.system32 import turn_manager, unit_events
 from screens.game import map_input as event_handler
 
 # Game Logic & Rendering Submodules
-import ui_elements
-from ui_elements import Button, Slider
+from ui.widgets import ui_elements
+from ui.widgets.ui_elements import Button, Slider
 from ui.panels import diplomatic_popups, army_panel
 from screens.game import spectator_controls as spectator_menus
 from screens.editors import menus as editor_menus

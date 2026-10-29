@@ -1,8 +1,8 @@
 import pygame
 import data.constants as c
 from data import queries
-from gameState import MapOverlayScreen
-from ui_elements import make_back_button, Button
+from ui.navigation.game_state import MapOverlayScreen
+from ui.widgets.ui_elements import make_back_button, Button
 from ui.rendering.font_manager import fonts
 from ui.rendering import overlay_renderer
 from ui.bars import ui_bars

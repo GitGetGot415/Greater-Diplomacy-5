@@ -1,4 +1,4 @@
-from ui_elements import Button
+from ui.widgets.ui_elements import Button
 
 from map_logic.diplomacy import deal as deal_mod
 from screens.game.peace_screen import draw_projected_deal_map

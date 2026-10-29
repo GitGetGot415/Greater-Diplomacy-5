@@ -1,11 +1,11 @@
 import pygame
 import os
 import shutil
-from gameState import GameState, ScreenLayer
+from ui.navigation.game_state import GameState, ScreenLayer
 from ui.bars import ui_bars
 from ui.widgets import text_utils
 from ui.widgets.scroll_panes import ScrollPanes
-from ui_elements import Button, make_back_button
+from ui.widgets.ui_elements import Button, make_back_button
 from ui.rendering.font_manager import fonts
 from data.platform import IS_WEB, download_file, downloads_dir
 import data.constants as c

@@ -80,7 +80,7 @@ class BuildManifestTests(unittest.TestCase):
             self.assertIn(package, manifest.NATIVE_PACKAGES)
         self.assertEqual(set(manifest.DESKTOP_SOURCE_FILES) - set(manifest.WEB_SOURCE_FILES), {"soloud.py"})
         self.assertIn("libdragoman.so", manifest.WEB_SOURCE_FILES)
-        self.assertTrue({"gameState", "ui_elements", "soloud"} <= set(manifest.MAC_INCLUDES))
+        self.assertIn("soloud", manifest.MAC_INCLUDES)
 
     def test_dev_only_packages_really_are_unimported(self):
         importers = []

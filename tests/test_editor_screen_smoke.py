@@ -99,7 +99,7 @@ class EditorScreenSmokeTests(unittest.TestCase):
     def test_conversion_sliders_snap_save_cancel_and_reset(self):
         from screens.editors.turn_editor import TurnEditorScreen
         from data import constants as c, queries
-        from ui_elements import Slider, TextField
+        from ui.widgets.ui_elements import Slider, TextField
         settings = {}
         screen = TurnEditorScreen(settings=settings, persist=False)
         screen.select_tab("conversion")

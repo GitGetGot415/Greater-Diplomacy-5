@@ -38,7 +38,7 @@ from ui.widgets import flag_icons
 from ui.panels import sidebar_info
 from ui.bars import ui_bars, view_mode_buttons
 from ui.navigation.modal_screen import ModalScreen
-from ui_elements import (draw_wrapped_icon_row, get_combat_stat_entries,
+from ui.widgets.ui_elements import (draw_wrapped_icon_row, get_combat_stat_entries,
                           get_bombardment_stat_entries)
 from ui.widgets.text_utils import fit_text
 

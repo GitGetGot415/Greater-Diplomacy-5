@@ -1,7 +1,7 @@
 import pygame
-import ui_elements
-from ui_elements import Button, Slider, make_info_button
-from gameState import GameState
+from ui.widgets import ui_elements
+from ui.widgets.ui_elements import Button, Slider, make_info_button
+from ui.navigation.game_state import GameState
 import data.constants as c
 from data import queries
 from ui.rendering.font_manager import fonts

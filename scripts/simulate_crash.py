@@ -2,7 +2,7 @@
 
 Right-click and "Run Python File in Terminal" (same as run_tests.py), or:
 
-    python simulate_crash.py
+    python scripts/simulate_crash.py
 
 Fakes an unhandled exception and feeds it to main._write_crash_log() -- the
 same function main.py's top-level except block calls on a real crash -- so
@@ -14,6 +14,10 @@ non-blocking, mocked version that runs there instead).
 """
 
 import os
+import sys
+
+# This file lives in scripts/, so put the project root on the path before importing main.
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import main
 

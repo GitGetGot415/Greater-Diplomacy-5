@@ -3,7 +3,7 @@ import data.constants as c
 from ui.rendering.font_manager import fonts
 from ui.navigation import modal_stack
 from ui.dialogs.base import _BaseModal, _back_key, _run_blocking
-from ui_elements import process_text_input
+from ui.widgets.ui_elements import process_text_input
 
 
 class _TextInputModal(_BaseModal):

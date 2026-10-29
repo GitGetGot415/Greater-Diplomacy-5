@@ -231,7 +231,7 @@ class SubjectTests(unittest.TestCase):
                     if exit_method == "Exit":
                         next(button for button in self.screen.elements if getattr(button, "text", "") == "Exit").callback()
                     else:
-                        from gameState import dispatch_global_keys
+                        from ui.navigation.game_state import dispatch_global_keys
                         with patch.object(queries, "get_keybind", return_value=pygame.K_F8):
                             dispatch_global_keys(self.screen, pygame.event.Event(pygame.KEYDOWN, key=pygame.K_F8))
                     ask.assert_called_once()

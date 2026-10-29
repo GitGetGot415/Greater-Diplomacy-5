@@ -6,10 +6,10 @@ import pygame
 
 import data.constants as c
 from data import queries
-from gameState import GameState
+from ui.navigation.game_state import GameState
 from ui.rendering.font_manager import fonts
 from ui.bars import ui_bars
-from ui_elements import Button, make_back_button
+from ui.widgets.ui_elements import Button, make_back_button
 
 
 CARD_MARGIN_X = 32

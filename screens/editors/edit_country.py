@@ -2,9 +2,9 @@
 import pygame
 import os
 import unicodedata
-from gameState import GameState, resolve_keybind
-from ui_elements import process_text_input, draw_text_box, Button
-import ui_elements
+from ui.navigation.game_state import GameState, resolve_keybind
+from ui.widgets.ui_elements import process_text_input, draw_text_box, Button
+from ui.widgets import ui_elements
 from ui.rendering.font_manager import fonts
 import data.constants as c
 from data import queries

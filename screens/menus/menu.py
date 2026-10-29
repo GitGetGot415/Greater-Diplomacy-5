@@ -6,9 +6,9 @@ import threading
 import urllib.request
 import urllib.error
 import ssl
-import ui_elements
-from gameState import GameState
-from ui_elements import Button
+from ui.widgets import ui_elements
+from ui.navigation.game_state import GameState
+from ui.widgets.ui_elements import Button
 import data.constants as c
 from data import queries
 from data.platform import IS_WEB

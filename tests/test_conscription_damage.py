@@ -22,7 +22,7 @@ from tests.stub_map_screen import StubMapScreen as EconomyMap
 from tests.test_map_save_format import sample_map_screen
 from tests.test_multiparty_combat import StubMapScreen as CombatMap
 from ui.panels.sidebar_info import unit_roster_row
-from ui_elements import Slider
+from ui.widgets.ui_elements import Slider
 
 
 def fixture_unit(owner):

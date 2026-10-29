@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import pygame
 
-from gameState import GameState
+from ui.navigation.game_state import GameState
 from ui.widgets.scroll_panes import ScrollPanes
 
 _REAL_GET_POS = pygame.mouse.get_pos

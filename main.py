@@ -126,10 +126,10 @@ def _import_project_modules():
         os.add_dll_directory(os.path.dirname(os.path.abspath(__file__)))
 
     from screens.game.messages import Messages_Screen
-    from gameState import (dispatch_global_keys, synthesize_keybind_mouse_events,
+    from ui.navigation.game_state import (dispatch_global_keys, synthesize_keybind_mouse_events,
                            keyboard_input_is_captured)
     from ui.rendering.font_manager import fonts
-    import ui_elements
+    from ui.widgets import ui_elements
     import data.constants as c
     from data import queries
     from screens.menus.load_game import Load_Game

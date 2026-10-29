@@ -17,7 +17,7 @@ class HeadlessAudioTests(unittest.TestCase):
     def test_application_harness_boots_without_native_output_or_startup_music(self):
         from tests import app_harness
         import data.constants as c
-        import ui_elements
+        from ui.widgets import ui_elements
 
         controller, _surface = app_harness.boot()
         self.assertEqual(os.environ["SDL_AUDIODRIVER"], "dummy")

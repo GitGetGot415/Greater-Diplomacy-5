@@ -11,7 +11,7 @@ does, using the picker every other converted tool already uses.
 """
 import re
 import pygame
-from gameState import GameState
+from ui.navigation.game_state import GameState
 import data.constants as c
 from data import queries
 from map_logic.system32.time_handler import TimeHandler
@@ -20,7 +20,7 @@ from ui import dialogs as confirm_dialog
 from ui.bars import ui_bars
 from ui.navigation.modal_screen import ModalScreen
 from ui.widgets.table_screen import truncate
-from ui_elements import Button, TextField, make_back_button
+from ui.widgets.ui_elements import Button, TextField, make_back_button
 
 from ui.navigation import screen_runner
 

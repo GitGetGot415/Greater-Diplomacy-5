@@ -13,6 +13,10 @@ The sandbox suite moves into `tests/` and also runs during normal test discovery
 | Previous path | Current path |
 | --- | --- |
 | `data/queries.py` | `data/queries/` (one module for each topic) |
+| `gameState.py` | `ui/navigation/game_state.py` |
+| `ui_elements.py` | `ui/widgets/ui_elements.py` |
+| `simulate_crash.py` | `scripts/simulate_crash.py` |
+| `temp_multiplayer_io.py` | Deleted. The file was empty and nothing imported it. |
 | `map_logic/turn_processing/` | `map_logic/system32/` |
 | `docs/SANDBOX_SECURITY.md` | `documentation/other/sandbox_security.md` |
 | `data/editors/country_editor.py` | `scripts/editors/country_editor.py` |

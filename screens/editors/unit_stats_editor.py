@@ -10,7 +10,7 @@ from ui.rendering.font_manager import fonts
 from ui import dialogs as confirm_dialog
 from ui.bars import ui_bars
 from ui.navigation.modal_screen import ModalScreen
-from ui_elements import Button, TextField, make_back_button
+from ui.widgets.ui_elements import Button, TextField, make_back_button
 
 from ui.navigation import screen_runner
 

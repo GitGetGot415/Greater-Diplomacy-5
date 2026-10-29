@@ -1,9 +1,9 @@
 import pygame
-from gameState import GameState
+from ui.navigation.game_state import GameState
 import data.constants as c
 from ui.bars import ui_bars
 from ui.widgets import text_utils
-from ui_elements import Button, make_back_button
+from ui.widgets.ui_elements import Button, make_back_button
 from ui.rendering.font_manager import fonts
 
 def truncate(text, max_chars):

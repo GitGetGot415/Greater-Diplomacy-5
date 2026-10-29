@@ -136,7 +136,7 @@ class DialogTests(unittest.TestCase):
         confirm_dialog.ask_string("T", "Name?", self.answers.append)
         modal = modal_stack.active()
         paste = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_v, unicode="", mod=pygame.KMOD_CTRL)
-        with mock.patch("ui_elements._clipboard_text", return_value="Pasted name"):
+        with mock.patch("ui.widgets.ui_elements._clipboard_text", return_value="Pasted name"):
             modal.handle_events([paste, key(pygame.K_RETURN)])
         self.settle()
         self.assertEqual(self.answers, ["Pasted name"])
@@ -145,13 +145,13 @@ class DialogTests(unittest.TestCase):
         confirm_dialog.ask_string("T", "Name?", self.answers.append)
         modal = modal_stack.active()
         paste = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_v, unicode="", mod=pygame.KMOD_GUI)
-        with mock.patch("ui_elements._clipboard_text", return_value="Pasted on Mac"):
+        with mock.patch("ui.widgets.ui_elements._clipboard_text", return_value="Pasted on Mac"):
             modal.handle_events([paste, key(pygame.K_RETURN)])
         self.settle()
         self.assertEqual(self.answers, ["Pasted on Mac"])
 
     def test_clipboard_falls_back_to_macos_pbpaste(self):
-        import ui_elements
+        from ui.widgets import ui_elements
 
         pbpaste = mock.Mock(returncode=0, stdout=b"From the Mac clipboard\x00")
         with mock.patch.object(ui_elements.sys, "platform", "darwin"), \
@@ -434,7 +434,7 @@ class ScreenRunnerTests(unittest.TestCase):
             modal_stack.pop()
 
     def make_screen(self):
-        from gameState import GameState
+        from ui.navigation.game_state import GameState
 
         class Trivial(GameState):
             def draw(self, surface):

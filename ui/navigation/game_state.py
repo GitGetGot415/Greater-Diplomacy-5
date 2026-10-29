@@ -8,7 +8,7 @@ from ui.bars import ui_bars
 
 from ui.information import feedback_text
 from map_logic.diplomacy import diplomacy_logic
-from ui_elements import process_text_input, draw_text_box, make_back_button
+from ui.widgets.ui_elements import process_text_input, draw_text_box, make_back_button
 from ui.rendering.font_manager import fonts
 
 

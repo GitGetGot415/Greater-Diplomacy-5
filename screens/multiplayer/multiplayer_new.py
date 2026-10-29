@@ -3,8 +3,8 @@ import re
 
 import os
 import pygame
-from gameState import GameState
-from ui_elements import Button, make_back_button
+from ui.navigation.game_state import GameState
+from ui.widgets.ui_elements import Button, make_back_button
 import data.constants as c
 from data import queries
 

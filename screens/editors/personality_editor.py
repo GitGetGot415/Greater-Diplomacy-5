@@ -14,8 +14,8 @@ inside nation_data.
 import pygame
 import data.constants as c
 from data import queries
-from gameState import MapOverlayScreen, NationListOverlayScreen
-from ui_elements import Button, Slider, make_back_button
+from ui.navigation.game_state import MapOverlayScreen, NationListOverlayScreen
+from ui.widgets.ui_elements import Button, Slider, make_back_button
 from ui.navigation.screen_runner import _run_pygame_sub_screen
 from ui.rendering.font_manager import fonts
 from map_logic.ai import ai_personality

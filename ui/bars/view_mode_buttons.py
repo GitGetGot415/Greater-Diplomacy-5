@@ -5,8 +5,8 @@ the map first. Kept in one place so the row's geometry/icons can't drift
 between the map's own copy and everyone else's.
 """
 import data.constants as c
-import ui_elements
-from ui_elements import Button
+from ui.widgets import ui_elements
+from ui.widgets.ui_elements import Button
 
 START_X = 10
 STEP_X = 50

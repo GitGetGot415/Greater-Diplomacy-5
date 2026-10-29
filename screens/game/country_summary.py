@@ -4,12 +4,12 @@ import pygame
 
 import data.constants as c
 from data import queries
-from gameState import GameState
+from ui.navigation.game_state import GameState
 from ui.rendering.font_manager import fonts
 from ui.widgets import flag_icons
 from ui.bars import ui_bars
 from ui.widgets.text_utils import fit_text, render_inline_text, wrap_text
-from ui_elements import make_back_button
+from ui.widgets.ui_elements import make_back_button
 
 from ui.navigation import screen_runner
 

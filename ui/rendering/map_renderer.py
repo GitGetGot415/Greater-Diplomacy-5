@@ -6,7 +6,7 @@ from data import queries
 from map_logic.diplomacy import faction_leadership
 from map_logic import politics
 import data.constants as c
-import ui_elements
+from ui.widgets import ui_elements
 from ui.rendering.font_manager import fonts
 from ui.bars import flag_renderer
 from ui.information import tooltip, ui_info_popup as unit_info_popup

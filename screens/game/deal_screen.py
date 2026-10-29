@@ -27,7 +27,7 @@ import pygame
 
 import data.constants as c
 from data import queries
-from gameState import MapOverlayScreen
+from ui.navigation.game_state import MapOverlayScreen
 from map_logic.ai import ai_opinion, ai_world
 from map_logic.diplomacy import deal as deal_mod
 from map_logic.diplomacy import diplomacy_messages, peace_scope, reach, war_score
@@ -37,7 +37,7 @@ from screens.game.diplomacy_screen_widgets import build_choice_button
 from ui.widgets import text_utils
 from ui.bars import ui_bars
 from ui.navigation.screen_runner import _run_pygame_sub_screen
-from ui_elements import Button, draw_text_box, process_text_input
+from ui.widgets.ui_elements import Button, draw_text_box, process_text_input
 
 from map_logic.ai.ai_diplomacy import scripted_event_response_preview
 

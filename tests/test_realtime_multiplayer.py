@@ -60,7 +60,7 @@ from screens.multiplayer.realtime_multiplayer import (
     Realtime_Remote_Lobby,
 )
 from screens.game.map import Map
-from ui_elements import Button
+from ui.widgets.ui_elements import Button
 
 
 class Clock:

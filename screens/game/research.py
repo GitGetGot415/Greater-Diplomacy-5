@@ -1,10 +1,10 @@
 import math
 
 import pygame
-from gameState import GameState, ScreenLayer
+from ui.navigation.game_state import GameState, ScreenLayer
 import data.constants as c
-import ui_elements
-from ui_elements import Button, draw_resource_string, draw_combat_stats, draw_bombardment_stats
+from ui.widgets import ui_elements
+from ui.widgets.ui_elements import Button, draw_resource_string, draw_combat_stats, draw_bombardment_stats
 from ui.rendering.font_manager import fonts
 from ui.rendering import symbol_loader
 from data import queries

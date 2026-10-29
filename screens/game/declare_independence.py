@@ -1,9 +1,9 @@
 import pygame
 import copy
-from gameState import MapOverlayScreen
+from ui.navigation.game_state import MapOverlayScreen
 import data.constants as c
 from ui.widgets import text_utils
-from ui_elements import Button, process_text_input, make_back_button, draw_text_box
+from ui.widgets.ui_elements import Button, process_text_input, make_back_button, draw_text_box
 from ui.rendering.font_manager import fonts
 from data import queries
 from map_logic.system32 import turn_manager

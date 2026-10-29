@@ -8,7 +8,7 @@ import re
 import pygame
 import data.constants as c
 from ui.navigation.modal_screen import ModalScreen
-from ui_elements import Button, TextField, Slider
+from ui.widgets.ui_elements import Button, TextField, Slider
 from ui.rendering.font_manager import fonts
 
 _HEX_RE = re.compile(r"^[0-9A-Fa-f]{6}$")

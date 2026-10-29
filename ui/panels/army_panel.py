@@ -7,7 +7,7 @@ from data import queries
 from ui.rendering import symbol_loader
 from ui.rendering.font_manager import fonts
 from ui.panels import map_top_right_layout
-from ui_elements import process_text_input
+from ui.widgets.ui_elements import process_text_input
 
 from screens.game.defense_area_screen import DefenseAreaScreen
 from ui.navigation import screen_runner

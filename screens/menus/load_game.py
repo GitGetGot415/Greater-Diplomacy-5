@@ -4,8 +4,8 @@ import pygame
 from ui import dialogs as confirm_dialog
 from data import queries
 from data.map import history_io
-from gameState import FolderListState
-from ui_elements import Button, make_back_button
+from ui.navigation.game_state import FolderListState
+from ui.widgets.ui_elements import Button, make_back_button
 import data.constants as c
 
 from data.map.load_map import newer_version_message

@@ -10,7 +10,7 @@ import pygame
 import data.constants as c
 from ui.bars import ui_bars
 from ui.navigation.modal_screen import ModalScreen
-from ui_elements import Button
+from ui.widgets.ui_elements import Button
 from ui.widgets import text_utils
 from ui.rendering.font_manager import fonts
 

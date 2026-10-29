@@ -53,9 +53,9 @@ from data.multiplayer.realtime.relay import (
     destroy_temporary_relay,
 )
 from data.platform import IS_WEB
-from gameState import GameState
+from ui.navigation.game_state import GameState
 from ui import dialogs as confirm_dialog
-from ui_elements import Button, UI_ICONS, make_back_button
+from ui.widgets.ui_elements import Button, UI_ICONS, make_back_button
 from ui.widgets.flag_icons import flag_surface
 
 from data.map.load_map import load_backend_state

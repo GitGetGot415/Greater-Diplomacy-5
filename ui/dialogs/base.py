@@ -4,7 +4,7 @@ dialog in this package -- see ui/dialogs/__init__.py for the overview.
 import pygame
 import data.constants as c
 from data import queries
-from gameState import synthesize_keybind_mouse_events
+from ui.navigation.game_state import synthesize_keybind_mouse_events
 from ui.rendering.font_manager import fonts
 from ui.navigation import modal_stack
 from ui.widgets import text_utils

@@ -3,7 +3,7 @@ import data.constants as c
 from ui.rendering.font_manager import fonts
 from data import queries
 from ui.bars import ui_bars
-from ui_elements import draw_combat_stats, draw_bombardment_stats
+from ui.widgets.ui_elements import draw_combat_stats, draw_bombardment_stats
 from ui.widgets import flag_icons
 from map_logic.system32 import combat_rules
 
