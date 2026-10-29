@@ -56,8 +56,31 @@ def get_tech_display_name(tech_key, *, context=None):
     return queries.get_tech_tree(context).get(tech_key, {}).get("display_name", tech_key.replace("_", " ").title())
 
 
-def get_tech_unlocks(tech_key, level, *, context=None):
-    """Returns a list of strings detailing what this tech unlocks."""
+def get_unit_unlock_index(context=None):
+    """Map (tech, level) to the unit names and air traits that level unlocks.
+
+    One pass over the unit library. A caller that lists many techs, such as the
+    research screen, builds this once and passes it to get_tech_unlocks instead
+    of making that function scan every unit for every tech.
+    """
+    library = queries.get_unit_library(context)
+    index = {}
+    for name, stats in library.items():
+        requirement = get_unit_research_requirement(name, library, context=context)
+        if requirement[0] in c.DATED_UNIT_RESEARCH_TRACKS:
+            index.setdefault(requirement, []).append(name)
+        if stats.get("air_role"):
+            index.setdefault(requirement, []).extend(get_air_unit_traits(name, context=context))
+    return index
+
+
+def get_tech_unlocks(tech_key, level, *, context=None, unit_unlocks=None):
+    """Returns a list of strings detailing what this tech unlocks.
+
+    `unit_unlocks` is an optional get_unit_unlock_index result for the same context.
+    """
+    if unit_unlocks is None:
+        unit_unlocks = get_unit_unlock_index(context)
     unlocks = []
     for target_key, target_level in get_tech_level_gate_unlocks(tech_key, level, context=context):
         name = get_tech_display_name(target_key, context=context)
@@ -104,12 +127,7 @@ def get_tech_unlocks(tech_key, level, *, context=None):
     if tech_key == "submarine":
         unlocks.append("Invisible to neutral/enemy nations unless engaged in active combat")
 
-    for name, stats in queries.get_unit_library(context).items():
-        if (tech_key in c.DATED_UNIT_RESEARCH_TRACKS
-                and get_unit_research_requirement(name, context=context) == (tech_key, level)):
-            unlocks.append(name)
-        if stats.get("air_role") and get_unit_research_requirement(name, context=context) == (tech_key, level):
-            unlocks.extend(get_air_unit_traits(name, context=context))
+    unlocks.extend(unit_unlocks.get((tech_key, level), ()))
 
     return unlocks
 

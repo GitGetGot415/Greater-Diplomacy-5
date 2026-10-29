@@ -191,6 +191,21 @@ class ResearchInputTests(unittest.TestCase):
     def test_click_in_resized_button_opens_the_correct_level(self):
         self.click_second_level()
 
+    def test_rebuild_scans_units_once_for_all_nodes(self):
+        from data import queries
+        with patch.object(queries, "get_unit_unlock_index", wraps=queries.get_unit_unlock_index) as build:
+            self.screen.refresh_ui()
+        self.assertEqual(build.call_count, 1)
+
+    def test_prepared_unit_index_matches_the_default_lookup(self):
+        from data import queries
+        index = queries.get_unit_unlock_index(self.map)
+        for key, data in queries.get_tech_tree(self.map).items():
+            for level in range(1, data["max_lvl"] + 1):
+                self.assertEqual(
+                    queries.get_tech_unlocks(key, level, context=self.map, unit_unlocks=index),
+                    queries.get_tech_unlocks(key, level, context=self.map))
+
     def test_frames_reuse_prepared_settings_and_scrolling_keeps_input_working(self):
         import pygame
         with patch.object(research_display, "node_settings", side_effect=AssertionError("frame settings")):

@@ -669,6 +669,7 @@ class Research_Screen(GameState):
         return research_display.node_settings(tech_key, self.current_category, level)["button_size"]
 
     def draw_tech_nodes(self, res_levels, queue):
+        unit_unlocks = queries.get_unit_unlock_index(self.map_screen)
         for node in self.nodes.get(self.current_category, []):
             tech_key = node["key"]
             lvl = node["lvl"]
@@ -676,7 +677,7 @@ class Research_Screen(GameState):
             base_y = node["base_y"]
             
             display_name = self.get_display_name(tech_key, lvl)
-            unlocks = queries.get_tech_unlocks(tech_key, lvl, context=self.map_screen)
+            unlocks = queries.get_tech_unlocks(tech_key, lvl, context=self.map_screen, unit_unlocks=unit_unlocks)
             is_large = (self.building_library.get(tech_key, {}).get("group") in c.LARGE_ICON_BUILDING_GROUPS or
                         any(self.building_library.get(u, {}).get("group") in c.LARGE_ICON_BUILDING_GROUPS for u in unlocks))
             presentation = research_display.node_settings(

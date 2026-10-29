@@ -331,6 +331,7 @@ from data.queries.tech import (
     get_building_required_tech,
     get_tech_display_name,
     get_tech_unlocks,
+    get_unit_unlock_index,
     get_upgrade_target,
     get_best_preferred_unit,
     _best_unit_for_role,
