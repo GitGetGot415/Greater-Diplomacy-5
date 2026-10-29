@@ -85,6 +85,14 @@ Research labels and image requests come from level_names and level_icons in the 
 Read equipment dates, statistics, prices, and research costs from data/json/unit_data.json and data/json/research_template.json.
 Edit data/generators/recipes.py to regenerate this content.
 EQUIPMENT_STAGES defines base statistics and existing artwork references.
+
+Each row starts with the year and name. The remaining columns follow EQUIPMENT_COLUMNS.
+HP is health. ATK is attack. DEF is defense. SPD is speed.
+
+MAT, MAN, and FUEL give material, manpower, and fuel costs. TIME gives production time in turns.
+BOMB gives bombardment attack. Use None for BOMB when the unit has no bombardment statistic.
+ART names existing artwork. EQUIPMENT_COLUMNS converts these columns to the full JSON field names.
+
 INFANTRY_VARIANT_RULES generates vehicle infantry statistics from regular infantry at the same stage.
 HEAVY_ARTILLERY_RULES generates heavy artillery statistics from regular artillery at the same stage.
 Derived artwork references keep the base image tier and replace its family name.
@@ -98,7 +106,7 @@ Infantry fighting vehicles use three times the infantry material cost and 1.5 ti
 Their defense is 30 percent of base infantry attack, before the attack increase.
 The multipliers apply only to material cost. Fuel cost is the same for all three vehicle variants.
 
-The base infantry profile defines cost_fuel for vehicle generation. Generated regular infantry has zero fuel cost.
+The base infantry row defines FUEL for vehicle generation. Generated regular infantry has zero fuel cost.
 Recruitment, refunds, upkeep, repairs, AI, and multiplayer use the generated unit library.
 
 Heavy artillery doubles material cost, direct attack, and bombardment attack. Production takes three additional turns.

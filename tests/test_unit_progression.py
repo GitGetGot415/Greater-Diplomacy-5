@@ -33,12 +33,12 @@ class UnitProgressionTests(unittest.TestCase):
         second = {"health": 90, "attack": 31, "defense": 8, "speed": 1,
                   "cost_materials": 23, "cost_manpower": 19, "cost_fuel": 0,
                   "production_time": 4, "art_name": "Fixture Existing Art B"}
-        stages = [(1800, "Fixture First Stage", {"Infantry Type": first}),
-                  (1810, "Fixture Second Stage", {"Infantry Type": second})]
+        stages = [(1800, "Fixture First Stage", 120, 17, 3, 2, 41, 11, 5, 6, None, "Fixture Existing Art A"),
+                  (1810, "Fixture Second Stage", 90, 31, 8, 1, 23, 19, 0, 4, None, "Fixture Existing Art B")]
         with patch.dict(recipes.EQUIPMENT_STAGES, {"infantry_type": stages}):
             entries = recipes.equipment_family("Infantry Type", "infantry_type").entries()
-        for (year, label, profiles), (name, entry) in zip(stages, entries):
-            profile = profiles["Infantry Type"]
+        for stage, profile, (name, entry) in zip(stages, (first, second), entries):
+            year, label = stage[:2]
             with self.subTest(stage=label):
                 self.assertEqual(name, label)
                 self.assertEqual({field: entry[field] for field in recipes.UNIT_STAT_KEYS},
@@ -53,10 +53,10 @@ class UnitProgressionTests(unittest.TestCase):
         expected = {"Motorized Infantry Type": (61.5, 80, 9),
                     "Mechanized Infantry Type": (82, 80, 16),
                     "Infantry Fighting Vehicle Type": (123, 120, 24)}
-        profiles = {"Infantry Type": base}
-        stages = [(recipes.INFANTRY_VARIANT_FIRST_YEAR - 1, "Fixture Earlier Infantry", profiles),
-                  (recipes.INFANTRY_VARIANT_FIRST_YEAR, "Fixture Infantry", profiles)]
-        original = dict(base)
+        values = (113, 80, 9, 1, 41, 13, 7, 5, None, "Infantry Type 1910")
+        stages = [(recipes.INFANTRY_VARIANT_FIRST_YEAR - 1, "Fixture Earlier Infantry", *values),
+                  (recipes.INFANTRY_VARIANT_FIRST_YEAR, "Fixture Infantry", *values)]
+        original = list(stages)
         with patch.dict(recipes.EQUIPMENT_STAGES, {"infantry_type": stages}):
             foot = recipes.equipment_family("Infantry Type", "infantry_type").entries()[0][1]
             self.assertEqual(foot["cost_fuel"], 0)
@@ -72,23 +72,24 @@ class UnitProgressionTests(unittest.TestCase):
                     for field in ("health", "cost_manpower", "cost_fuel", "production_time"):
                         self.assertEqual(entry[field], base[field])
                     self.assertEqual(entry["metadata"]["art_name"], f"{family} 1910")
-            self.assertEqual(base, original)
+            self.assertEqual(stages, original)
 
     def test_generated_vehicle_profiles_match_each_stages_base_and_shared_rules(self):
         checked = set()
-        for year, _, profiles in recipes.EQUIPMENT_STAGES["infantry_type"]:
+        for stage in recipes.EQUIPMENT_STAGES["infantry_type"]:
+            year = stage[0]
             if year < recipes.INFANTRY_VARIANT_FIRST_YEAR:
                 continue
-            base = profiles["Infantry Type"]
+            columns = dict(zip(recipes.EQUIPMENT_COLUMNS, stage[2:], strict=True))
             for family in recipes.INFANTRY_VARIANT_RULES:
-                expected = recipes.equipment_profile(family, profiles)
+                expected = recipes.equipment_profile(family, stage)
                 name = queries.get_unit_for_family_tier(self.library, family, year)
                 with self.subTest(unit=name):
                     self.assertIsNotNone(name)
                     checked.add(name)
                     for field in recipes.UNIT_STAT_KEYS:
                         self.assertEqual(self.library[name][field], expected[field])
-                    self.assertEqual(self.library[name]["cost_fuel"], base["cost_fuel"])
+                    self.assertEqual(self.library[name]["cost_fuel"], columns["FUEL"])
         self.assertTrue(checked)
         self.assertEqual(checked, {name for name, stats in self.library.items()
                                   if stats["metadata"]["family"] in recipes.INFANTRY_VARIANT_RULES})
@@ -97,8 +98,7 @@ class UnitProgressionTests(unittest.TestCase):
         base = {"health": 123, "attack": 13, "bombard_attack": 17, "defense": 4, "speed": 3,
                 "cost_materials": 41, "cost_manpower": 19, "cost_fuel": 7,
                 "production_time": 4, "art_name": "Artillery Fixture Art"}
-        original = dict(base)
-        stages = [(1800, "Fixture Artillery", {"Artillery": base})]
+        stages = [(1800, "Fixture Artillery", 123, 13, 4, 3, 41, 19, 7, 4, 17, "Artillery Fixture Art")]
         with patch.dict(recipes.EQUIPMENT_STAGES, {"artillery": stages}):
             name, heavy = recipes.equipment_family("Heavy Artillery", "artillery").entries()[0]
         self.assertEqual(name, "Heavy Fixture Artillery")
@@ -107,7 +107,6 @@ class UnitProgressionTests(unittest.TestCase):
         for field in ("health", "defense", "speed", "cost_manpower", "cost_fuel"):
             self.assertEqual(heavy[field], base[field])
         self.assertEqual(heavy["metadata"]["art_name"], "Heavy Artillery Fixture Art")
-        self.assertEqual(base, original)
 
     def test_ongoing_unit_tracks_match_their_content_dates_within_the_timeline(self):
         tracks = ('infantry_type', 'militia', 'artillery', 'armored_car', 'light_tank',
