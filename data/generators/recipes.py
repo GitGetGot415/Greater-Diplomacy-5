@@ -83,7 +83,7 @@ def single():
     return [None]
 
 
-def years_range(start, step, count):
+def yr(start, step, count):
     return [start + i * step for i in range(count)]
 
 
@@ -542,7 +542,7 @@ BUILDING_CHAINS = [building_chain(row) for row in BUILDING_GROWTH_RECIPES]
 # ===========================================================================
 # RESEARCH_TEMPLATE.JSON
 # ===========================================================================
-# Equipment research uses the named stages. Other tracks can use years_range for regular intervals.
+# Equipment research uses the named stages. Other tracks can use yr for regular intervals.
 # Prerequisites, categories, and costs are literal tuning values.
 
 def extend_infantry_research(tech, entry):
@@ -560,94 +560,97 @@ def extend_infantry_research(tech, entry):
 RESEARCH_RECIPE_COLUMNS = {"CAT": "category", "LVLS": "max_lvl", "COST": "cost", "REQ": "req", "YRS": "years"}
 RESEARCH_OPTION_COLUMNS = {"NAME": "display_name", "GATES": "level_reqs", "BONUS": "building_output_bonuses"}
 
+MBT_REQ = {"OR": [{"medium_tank": 4}, {"heavy_tank": 4}]}
+WW2_RAIL_REQ = {"AND": [{"heavy_tank": 1}, {"ww1_railroad_gun": 1}]}
+
 # None for both LVLS and YRS derives equipment research from EQUIPMENT_STAGES.
-# Other rows retain their years_range expressions and prerequisite dictionaries.
+# Other rows retain their yr expressions and prerequisite dictionaries.
 RESEARCH_RECIPES = [
     [
-        #ID                            CAT         LVLS  COST  REQ                                                    YRS                             OPTIONS
-        ("infantry_type",              "INFANTRY", None, 900,  {},                                                    None,                           {}),
-        ("cavalry",                    "INFANTRY", None, 1200, {},                                                    None,                           {}),
-        ("militia",                    "INFANTRY", None, 600,  {},                                                    None,                           {}),
-        ("artillery",                  "INFANTRY", None, 900,  {},                                                    None,                           {}),
-        ("trucks",                     "INFANTRY", 1,    1800, {"cavalry": len(EQUIPMENT_STAGES["cavalry"])},         years_range(1930, 1, 1),        {}),
-        ("armored_personnel_carriers", "INFANTRY", 1,    1800, {"trucks": 1},                                         years_range(1940, 1, 1),        {}),
-        ("infantry_fighting_vehicle",  "INFANTRY", 1,    1800, {"armored_personnel_carriers": 1},                     years_range(1950, 1, 1),        {}),
+        #ID                            CAT         LVLS  COST  REQ                                            YRS                             OPTIONS
+        ("infantry_type",              "INFANTRY", None, 900,  {},                                            None,                           {}),
+        ("cavalry",                    "INFANTRY", None, 1200, {},                                            None,                           {}),
+        ("militia",                    "INFANTRY", None, 600,  {},                                            None,                           {}),
+        ("artillery",                  "INFANTRY", None, 900,  {},                                            None,                           {}),
+        ("trucks",                     "INFANTRY", 1,    1800, {"cavalry": len(EQUIPMENT_STAGES["cavalry"])}, yr(1930, 1, 1),                 {}),
+        ("armored_personnel_carriers", "INFANTRY", 1,    1800, {"trucks": 1},                                 yr(1940, 1, 1),                 {}),
+        ("infantry_fighting_vehicle",  "INFANTRY", 1,    1800, {"armored_personnel_carriers": 1},             yr(1950, 1, 1),                 {}),
     ],
     [
-        #ID                            CAT         LVLS  COST  REQ                                                    YRS                             OPTIONS
-        ("civilian_car",               "TANKS",    1,    2400, {},                                                    years_range(1910, 1, 1),        {}),
-        ("ww1_armored_car",            "TANKS",    1,    2400, {"civilian_car": 1},                                   years_range(1912, 1, 1),        {}),
-        ("armored_car",                "TANKS",    34,   2400, {"ww1_armored_car": 1},                                years_range(1916, 4, 34),       {}),
+        #ID                            CAT         LVLS  COST  REQ                                            YRS                             OPTIONS
+        ("civilian_car",               "TANKS",    1,    2400, {},                                            yr(1910, 1, 1),                 {}),
+        ("ww1_armored_car",            "TANKS",    1,    2400, {"civilian_car": 1},                           yr(1912, 1, 1),                 {}),
+        ("armored_car",                "TANKS",    34,   2400, {"ww1_armored_car": 1},                        yr(1916, 4, 34),                {}),
     ],
     [
-        #ID                            CAT         LVLS  COST  REQ                                                    YRS                             OPTIONS
-        ("ww1_tank",                   "TANKS",    1,    2400, {"ww1_armored_car": 1},                                years_range(1914, 1, 1),        {}),
-        ("light_tank",                 "TANKS",    34,   2400, {"ww1_tank": 1},                                       years_range(1918, 4, 34),       {}),
-        ("medium_tank",                "TANKS",    4,    2400, {"light_tank": 1},                                     years_range(1925, 5, 4),        {}),
-        ("heavy_tank",                 "TANKS",    4,    2400, {"medium_tank": 1},                                    years_range(1929, 4, 4),        {}),
-        ("super_heavy_tank",           "TANKS",    5,    2400, {"heavy_tank": 4},                                     years_range(1945, 4, 5),        {}),
-        ("landkreuzer_p1000_ratte",    "TANKS",    1,    3000, {"ww2_railroad_gun": 1},                               years_range(1944, 6, 1),        {}),
-        ("landkreuzer_p1500_monster",  "TANKS",    1,    3600, {"landkreuzer_p1000_ratte": 1},                        years_range(1956, 8, 1),        {}),
-        ("electromagnetic_launcher",   "TANKS",    1,    3000, {},                                                    years_range(1980, 1, 1),        {}),
-        ("railgun",                    "TANKS",    1,    3600, {"electromagnetic_launcher": 1},                       years_range(2030, 1, 1),        {}),
-        ("main_battle_tank",           "TANKS",    22,   2400, {"OR": [{"medium_tank": 4}, {"heavy_tank": 4}]},       years_range(1945, 5, 22),       {}),
-        ("ww1_railroad_gun",           "TANKS",    1,    2400, {"ww1_tank": 1},                                       years_range(1918, 1, 1),        {}),
-        ("ww2_railroad_gun",           "TANKS",    1,    2400, {"AND": [{"heavy_tank": 1}, {"ww1_railroad_gun": 1}]}, years_range(1932, 1, 1),        {}),
+        #ID                            CAT         LVLS  COST  REQ                                            YRS                             OPTIONS
+        ("ww1_tank",                   "TANKS",    1,    2400, {"ww1_armored_car": 1},                        yr(1914, 1, 1),                 {}),
+        ("light_tank",                 "TANKS",    34,   2400, {"ww1_tank": 1},                               yr(1918, 4, 34),                {}),
+        ("medium_tank",                "TANKS",    4,    2400, {"light_tank": 1},                             yr(1925, 5, 4),                 {}),
+        ("heavy_tank",                 "TANKS",    4,    2400, {"medium_tank": 1},                            yr(1929, 4, 4),                 {}),
+        ("super_heavy_tank",           "TANKS",    5,    2400, {"heavy_tank": 4},                             yr(1945, 4, 5),                 {}),
+        ("landkreuzer_p1000_ratte",    "TANKS",    1,    3000, {"ww2_railroad_gun": 1},                       yr(1944, 6, 1),                 {}),
+        ("landkreuzer_p1500_monster",  "TANKS",    1,    3600, {"landkreuzer_p1000_ratte": 1},                yr(1956, 8, 1),                 {}),
+        ("electromagnetic_launcher",   "TANKS",    1,    3000, {},                                            yr(1980, 1, 1),                 {}),
+        ("railgun",                    "TANKS",    1,    3600, {"electromagnetic_launcher": 1},               yr(2030, 1, 1),                 {}),
+        ("main_battle_tank",           "TANKS",    22,   2400, MBT_REQ,                                       yr(1945, 5, 22),                {}),
+        ("ww1_railroad_gun",           "TANKS",    1,    2400, {"ww1_tank": 1},                               yr(1918, 1, 1),                 {}),
+        ("ww2_railroad_gun",           "TANKS",    1,    2400, WW2_RAIL_REQ,                                  yr(1932, 1, 1),                 {}),
     ],
     [
-        #ID                            CAT         LVLS  COST  REQ                                                    YRS                             OPTIONS
-        ("carrack",                    "NAVY",     1,    600,  {},                                                    [1800],                         {}),
-        ("ironclad",                   "NAVY",     1,    2400, {"carrack": 1},                                        [1860],                         {}),
-        ("pre-dreadnought",            "NAVY",     1,    2400, {"ironclad": 1},                                       [1880],                         {}),
-        ("dreadnought",                "NAVY",     1,    2400, {"pre-dreadnought": 1},                                years_range(1900, 1, 1),        {}),
-        ("battleship",                 "NAVY",     1,    2400, {"dreadnought": 1},                                    years_range(1920, 1, 1),        {}),
-        ("destroyer",                  "NAVY",     36,   2400, {"dreadnought": 1},                                    years_range(1910, 4, 36),       {}),
-        ("aircraft_carrier",           "NAVY",     25,   2400, {"battleship": 1},                                     years_range(1930, 5, 25),       {}),
-        ("submarine",                  "NAVY",     36,   2400, {"dreadnought": 1},                                    years_range(1910, 4, 36),       {}),
+        #ID                            CAT         LVLS  COST  REQ                                            YRS                             OPTIONS
+        ("carrack",                    "NAVY",     1,    600,  {},                                            [1800],                         {}),
+        ("ironclad",                   "NAVY",     1,    2400, {"carrack": 1},                                [1860],                         {}),
+        ("pre-dreadnought",            "NAVY",     1,    2400, {"ironclad": 1},                               [1880],                         {}),
+        ("dreadnought",                "NAVY",     1,    2400, {"pre-dreadnought": 1},                        yr(1900, 1, 1),                 {}),
+        ("battleship",                 "NAVY",     1,    2400, {"dreadnought": 1},                            yr(1920, 1, 1),                 {}),
+        ("destroyer",                  "NAVY",     36,   2400, {"dreadnought": 1},                            yr(1910, 4, 36),                {}),
+        ("aircraft_carrier",           "NAVY",     25,   2400, {"battleship": 1},                             yr(1930, 5, 25),                {}),
+        ("submarine",                  "NAVY",     36,   2400, {"dreadnought": 1},                            yr(1910, 4, 36),                {}),
     ],
     [
-        #ID                            CAT         LVLS  COST  REQ                                                    YRS                             OPTIONS
-        ("basic_factory",              "INDUSTRY", 1,    1200, {},                                                    years_range(1800, 1, 1),        {}),
-        ("waltham_system",             "INDUSTRY", 1,    1200, {"basic_factory": 1},                                  [1815],                         {"NAME": "Waltham System", "BONUS": [{"building_families": ["Basic Factory"], "flat_outputs": {"materials": 100}}]}),
-        ("metal_shaper",               "INDUSTRY", 1,    1200, {"waltham_system": 1},                                 [1835],                         {"NAME": "Metal Shaper"}),
-        ("steam_hammer",               "INDUSTRY", 1,    1200, {"metal_shaper": 1},                                   [1840],                         {"NAME": "Steam Hammer"}),
-        ("bessemer_process",           "INDUSTRY", 1,    1200, {"steam_hammer": 1},                                   [1855],                         {"NAME": "Bessemer Process", "BONUS": [{"building_families": ["Basic Factory"], "flat_outputs": {"materials": 200}}]}),
-        ("electricity",                "INDUSTRY", 1,    1200, {"bessemer_process": 1},                               [1870],                         {"NAME": "Electricity"}),
-        ("lightbulb",                  "INDUSTRY", 1,    1200, {"electricity": 1},                                    [1880],                         {"NAME": "Lightbulb"}),
-        ("assembly_line",              "INDUSTRY", 1,    1200, {"factory": 1},                                        [1905],                         {"NAME": "Assembly Line", "BONUS": [{"building_families": ["Basic Factory", "Factory"], "outputs": {"materials": 0.5}}]}),
-        ("conveyor_belt",              "INDUSTRY", 1,    1200, {"factory": 2},                                        [1915],                         {"NAME": "Conveyor Belt", "BONUS": [{"building_families": ["Basic Factory", "Factory"], "outputs": {"materials": 0.5}}]}),
-        ("machine_tools",              "INDUSTRY", 1,    1200, {"factory": 4},                                        [1935],                         {"NAME": "Machine Tools"}),
-        ("just_in_time_manufacturing", "INDUSTRY", 1,    1200, {"factory": 5},                                        [1945],                         {"NAME": "Just In Time Manufacturing", "BONUS": [{"building_families": ["Basic Factory", "Factory"], "outputs": {"materials": 0.2}}]}),
-        ("industrial_robot",           "INDUSTRY", 1,    1200, {"factory": 6},                                        [1955],                         {"NAME": "Industrial Robot"}),
-        ("stanford_arm",               "INDUSTRY", 1,    1200, {"factory": 7},                                        [1965],                         {"NAME": "Stanford Arm"}),
-        ("asea_irb_6",                 "INDUSTRY", 1,    1200, {"factory": 8},                                        [1975],                         {"NAME": "ASEA IRB 6"}),
-        ("computer_numerical_control", "INDUSTRY", 1,    1200, {"factory": 9},                                        [1985],                         {"NAME": "Computer Numerical Control"}),
-        ("3d_printing",                "INDUSTRY", 1,    1200, {"factory": 10},                                       [1995],                         {"NAME": "3D Printing"}),
-        ("internet_of_things",         "INDUSTRY", 1,    1200, {"factory": 11},                                       [2005],                         {"NAME": "Internet of Things"}),
-        ("industry_4_0",               "INDUSTRY", 1,    1200, {"factory": 12},                                       [2015],                         {"NAME": "Industry 4.0"}),
-        ("industry_5_0",               "INDUSTRY", 1,    1200, {"factory": 13},                                       [2025],                         {"NAME": "Industry 5.0"}),
-        ("factory",                    "INDUSTRY", 25,   1200, {"lightbulb": 1},                                      years_range(1900, 10, 25),      {"GATES": {"2": {"assembly_line": 1}, "3": {"conveyor_belt": 1}, "5": {"machine_tools": 1}, "6": {"just_in_time_manufacturing": 1}, "7": {"industrial_robot": 1}, "8": {"stanford_arm": 1}, "9": {"asea_irb_6": 1}, "10": {"computer_numerical_control": 1}, "11": {"3d_printing": 1}, "12": {"internet_of_things": 1}, "13": {"industry_4_0": 1}, "14": {"industry_5_0": 1}}}),
-        ("bergius_process",            "INDUSTRY", 1,    1200, {},                                                    years_range(1910, 1, 1),        {}),
-        ("fuel_refining",              "INDUSTRY", 50,   1200, {"bergius_process": 1},                                years_range(1912, 2, 50),       {}),
-        ("basic_recruitment",          "INDUSTRY", 1,    1200, {},                                                    years_range(1910, 1, 1),        {}),
-        ("recruitment_buildings",      "INDUSTRY", 50,   1200, {"basic_recruitment": 1},                              years_range(1912, 2, 50),       {}),
-        ("general_recruitment",        "INDUSTRY", 50,   900,  {"recruitment_buildings": "MATCH_LEVEL"},              years_range(1913, 2, 50),       {}),
-        ("resource_refining",          "INDUSTRY", 100,  900,  {},                                                    years_range(1911, 1, 100),      {}),
+        #ID                            CAT         LVLS  COST  REQ                                            YRS                             OPTIONS
+        ("basic_factory",              "INDUSTRY", 1,    1200, {},                                            yr(1800, 1, 1),                 {}),
+        ("waltham_system",             "INDUSTRY", 1,    1200, {"basic_factory": 1},                          [1815],                         {"NAME": "Waltham System", "BONUS": [{"building_families": ["Basic Factory"], "flat_outputs": {"materials": 100}}]}),
+        ("metal_shaper",               "INDUSTRY", 1,    1200, {"waltham_system": 1},                         [1835],                         {"NAME": "Metal Shaper"}),
+        ("steam_hammer",               "INDUSTRY", 1,    1200, {"metal_shaper": 1},                           [1840],                         {"NAME": "Steam Hammer"}),
+        ("bessemer_process",           "INDUSTRY", 1,    1200, {"steam_hammer": 1},                           [1855],                         {"NAME": "Bessemer Process", "BONUS": [{"building_families": ["Basic Factory"], "flat_outputs": {"materials": 200}}]}),
+        ("electricity",                "INDUSTRY", 1,    1200, {"bessemer_process": 1},                       [1870],                         {"NAME": "Electricity"}),
+        ("lightbulb",                  "INDUSTRY", 1,    1200, {"electricity": 1},                            [1880],                         {"NAME": "Lightbulb"}),
+        ("assembly_line",              "INDUSTRY", 1,    1200, {"factory": 1},                                [1905],                         {"NAME": "Assembly Line", "BONUS": [{"building_families": ["Basic Factory", "Factory"], "outputs": {"materials": 0.5}}]}),
+        ("conveyor_belt",              "INDUSTRY", 1,    1200, {"factory": 2},                                [1915],                         {"NAME": "Conveyor Belt", "BONUS": [{"building_families": ["Basic Factory", "Factory"], "outputs": {"materials": 0.5}}]}),
+        ("machine_tools",              "INDUSTRY", 1,    1200, {"factory": 4},                                [1935],                         {"NAME": "Machine Tools"}),
+        ("just_in_time_manufacturing", "INDUSTRY", 1,    1200, {"factory": 5},                                [1945],                         {"NAME": "Just In Time Manufacturing", "BONUS": [{"building_families": ["Basic Factory", "Factory"], "outputs": {"materials": 0.2}}]}),
+        ("industrial_robot",           "INDUSTRY", 1,    1200, {"factory": 6},                                [1955],                         {"NAME": "Industrial Robot"}),
+        ("stanford_arm",               "INDUSTRY", 1,    1200, {"factory": 7},                                [1965],                         {"NAME": "Stanford Arm"}),
+        ("asea_irb_6",                 "INDUSTRY", 1,    1200, {"factory": 8},                                [1975],                         {"NAME": "ASEA IRB 6"}),
+        ("computer_numerical_control", "INDUSTRY", 1,    1200, {"factory": 9},                                [1985],                         {"NAME": "Computer Numerical Control"}),
+        ("3d_printing",                "INDUSTRY", 1,    1200, {"factory": 10},                               [1995],                         {"NAME": "3D Printing"}),
+        ("internet_of_things",         "INDUSTRY", 1,    1200, {"factory": 11},                               [2005],                         {"NAME": "Internet of Things"}),
+        ("industry_4_0",               "INDUSTRY", 1,    1200, {"factory": 12},                               [2015],                         {"NAME": "Industry 4.0"}),
+        ("industry_5_0",               "INDUSTRY", 1,    1200, {"factory": 13},                               [2025],                         {"NAME": "Industry 5.0"}),
+        ("factory",                    "INDUSTRY", 25,   1200, {"lightbulb": 1},                              yr(1900, 10, 25),               {"GATES": {"2": {"assembly_line": 1}, "3": {"conveyor_belt": 1}, "5": {"machine_tools": 1}, "6": {"just_in_time_manufacturing": 1}, "7": {"industrial_robot": 1}, "8": {"stanford_arm": 1}, "9": {"asea_irb_6": 1}, "10": {"computer_numerical_control": 1}, "11": {"3d_printing": 1}, "12": {"internet_of_things": 1}, "13": {"industry_4_0": 1}, "14": {"industry_5_0": 1}}}),
+        ("bergius_process",            "INDUSTRY", 1,    1200, {},                                            yr(1910, 1, 1),                 {}),
+        ("fuel_refining",              "INDUSTRY", 50,   1200, {"bergius_process": 1},                        yr(1912, 2, 50),                {}),
+        ("basic_recruitment",          "INDUSTRY", 1,    1200, {},                                            yr(1910, 1, 1),                 {}),
+        ("recruitment_buildings",      "INDUSTRY", 50,   1200, {"basic_recruitment": 1},                      yr(1912, 2, 50),                {}),
+        ("general_recruitment",        "INDUSTRY", 50,   900,  {"recruitment_buildings": "MATCH_LEVEL"},      yr(1913, 2, 50),                {}),
+        ("resource_refining",          "INDUSTRY", 100,  900,  {},                                            yr(1911, 1, 100),               {}),
     ],
     [
-        #ID                            CAT         LVLS  COST  REQ                                                    YRS                             OPTIONS
-        ('biplane',                    'AIR',      5,    1200, {},                                                    [1910, 1914, 1918, 1922, 1926], {"NAME": 'Biplane Fighter'}),
-        ('biplane_bomber',             'AIR',      3,    1800, {'biplane': 1},                                        [1915, 1920, 1925],             {"NAME": 'Biplane Bomber'}),
-        ('zeppelin',                   'AIR',      1,    1800, {},                                                    [1910],                         {"NAME": 'Zeppelin'}),
-        ('piston_fighter',             'AIR',      5,    1200, {'biplane': 5},                                        [1930, 1934, 1938, 1942, 1946], {"NAME": 'Monoplane Fighter'}),
-        ('piston_bomber',              'AIR',      5,    1800, {'biplane_bomber': 3},                                 [1930, 1935, 1940, 1945, 1950], {"NAME": 'Monoplane Bomber'}),
-        ('monoplane_transport',        'AIR',      3,    1800, {'biplane_bomber': 3},                                 [1930, 1935, 1940],             {"NAME": 'Monoplane Transport'}),
-        ('v1_flying_bomb',             'AIR',      1,    900,  {},                                                    [1940],                         {"NAME": 'V1 Flying Bomb'}),
-        ('v2_rocket',                  'AIR',      1,    1200, {'v1_flying_bomb': 1},                                 [1945],                         {"NAME": 'V2 Rocket'}),
-        ('jet_engine',                 'AIR',      1,    2400, {},                                                    [1945],                         {"NAME": 'Jet Engine'}),
-        ('jet_fighter',                'AIR',      26,   1800, {'piston_fighter': 5, 'jet_engine': 1},                years_range(1950, 4, 26),       {"NAME": 'Jet Fighter'}),
-        ('jet_bomber',                 'AIR',      20,   2400, {'piston_bomber': 5, 'jet_fighter': 1},                years_range(1955, 5, 20),       {"NAME": 'Jet Bomber'}),
-        ('jet_transport',              'AIR',      20,   2400, {'piston_bomber': 5},                                  years_range(1955, 5, 20),       {"NAME": 'Jet Transport'}),
+        #ID                            CAT         LVLS  COST  REQ                                            YRS                             OPTIONS
+        ('biplane',                    'AIR',      5,    1200, {},                                            [1910, 1914, 1918, 1922, 1926], {"NAME": 'Biplane Fighter'}),
+        ('biplane_bomber',             'AIR',      3,    1800, {'biplane': 1},                                [1915, 1920, 1925],             {"NAME": 'Biplane Bomber'}),
+        ('zeppelin',                   'AIR',      1,    1800, {},                                            [1910],                         {"NAME": 'Zeppelin'}),
+        ('piston_fighter',             'AIR',      5,    1200, {'biplane': 5},                                [1930, 1934, 1938, 1942, 1946], {"NAME": 'Monoplane Fighter'}),
+        ('piston_bomber',              'AIR',      5,    1800, {'biplane_bomber': 3},                         [1930, 1935, 1940, 1945, 1950], {"NAME": 'Monoplane Bomber'}),
+        ('monoplane_transport',        'AIR',      3,    1800, {'biplane_bomber': 3},                         [1930, 1935, 1940],             {"NAME": 'Monoplane Transport'}),
+        ('v1_flying_bomb',             'AIR',      1,    900,  {},                                            [1940],                         {"NAME": 'V1 Flying Bomb'}),
+        ('v2_rocket',                  'AIR',      1,    1200, {'v1_flying_bomb': 1},                         [1945],                         {"NAME": 'V2 Rocket'}),
+        ('jet_engine',                 'AIR',      1,    2400, {},                                            [1945],                         {"NAME": 'Jet Engine'}),
+        ('jet_fighter',                'AIR',      26,   1800, {'piston_fighter': 5, 'jet_engine': 1},        yr(1950, 4, 26),                {"NAME": 'Jet Fighter'}),
+        ('jet_bomber',                 'AIR',      20,   2400, {'piston_bomber': 5, 'jet_fighter': 1},        yr(1955, 5, 20),                {"NAME": 'Jet Bomber'}),
+        ('jet_transport',              'AIR',      20,   2400, {'piston_bomber': 5},                          yr(1955, 5, 20),                {"NAME": 'Jet Transport'}),
     ],
 ]
 
