@@ -120,7 +120,7 @@ Review its source before use.
 3. Open the layout preview with `python scripts/previews/ui_layout_preview.py`.
 4. Show benchmark options with `python scripts/benchmarks/ojh_benchmark.py --help`.
 5. Download the browser dependency with `python scripts/dependencies/fetch_dragoman_wasm.py`.
-6. Open a standalone editor with `python scripts/editors/country_editor.py` or `unit_editor.py`.
+6. Open the standalone country editor with `python scripts/editors/country_editor.py`.
 7. Run sandbox tests with `python -m unittest tests.test_mod_loader_security`.
 
 The previous benchmark, dependency-download, preview, and sandbox-test commands remain available as launchers.
