@@ -121,6 +121,8 @@ class BuildManifestTests(unittest.TestCase):
             files = {
                 "data/json/settings_config.json": '{"private": true}',
                 "data/json/shuffle_disabled_tracks.json": '["local"]',
+                "data/json/research_display.json": '{"defaults": {"icon_scale": 3}}',
+                "data/research_display.py": "pass",
                 "data/runtime.py": "pass", "data/__pycache__/runtime.pyc": "private",
                 "scripts/editors/tool.py": "pass", "data/generators/tool.py": "pass",
                 "screens/game/runtime.py": "pass", "ui/rendering/widget.py": "pass",
@@ -149,8 +151,11 @@ class BuildManifestTests(unittest.TestCase):
                 self.assertFalse((destination / "scripts/editors/tool.py").exists())
                 for name, value in manifest.RUNTIME_JSON_DEFAULTS.items():
                     self.assertEqual(json.loads((destination / "data/json" / name).read_text()), value)
+                self.assertEqual(json.loads((destination / "data/json/research_display.json").read_text()),
+                                 {"defaults": {"icon_scale": 3}})
                 for name in ("data/runtime.py", "screens/game/runtime.py", "ui/rendering/widget.py",
-                             "data/multiplayer/realtime/relay_service.py", "map_logic/action.py"):
+                             "data/multiplayer/realtime/relay_service.py", "map_logic/action.py",
+                             "data/research_display.py"):
                     self.assertTrue((destination / name).is_file())
                 self.assertEqual(support.png_signature_mismatches(destination), [])
                 (destination / "assets/image.png").write_bytes(b"wrong format")

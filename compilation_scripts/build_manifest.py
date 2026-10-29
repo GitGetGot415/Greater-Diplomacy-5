@@ -31,6 +31,7 @@ HIDDEN_IMPORTS = (
     "map_logic.diplomacy.action_definitions", "map_logic.diplomacy.faction_records",
     "data.runtime_rules", "data.world_nations",
     "data.game_state", "data.session_state", "data.state_access",
+    "data.research_display",
 )
 RUNTIME_PACKAGES = (
     "screens", "screens.menus", "screens.setup", "screens.multiplayer",

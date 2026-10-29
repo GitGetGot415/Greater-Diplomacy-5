@@ -5,7 +5,7 @@ import json
 import numpy as np
 import data.constants as c
 
-from data import queries
+from data import queries, research_display
 from data.queries import get_base_item_name
 
 
@@ -22,7 +22,7 @@ COLORED_SYMBOLS = {}
 #: asks, or the set of country ids (the same strings keying
 #: data/json/countries_data.json, e.g. "Germany") for culture-scoped art.
 #: `filename` is the raw relative path, kept around so get_research_scale can
-#: key a *separate* per-style sizing file off it without re-deriving it from
+#: look up research sizing by filename without deriving it from
 #: the Surface. "classic" is never a key here -- it just means "use SYMBOLS",
 #: which stays a flat name -> Surface map since it has no country variants or
 #: per-style sizing.
@@ -37,11 +37,9 @@ STYLE_FILENAME_ART = {}
 
 #: Per-style research-screen sizing, keyed by style name -> {"icon_scales":
 #: {filename: float}, "button_scale": float, "button_scale_overrides":
-#: {name_key: {"width": float, "height": float}}}. Populated from <style
-#: folder>/research_scale.json -- kept in its own file rather than folded
-#: into unit_art.json so a style's culture metadata and its research-screen
-#: sizing can be edited/shared independently. See get_research_scale,
-#: get_research_button_scale and get_research_button_scale_overrides.
+#: {name_key: {"width": float, "height": float}}}.
+#: Bundled settings come from data/json/research_display.json.
+#: Optional style-folder research_scale.json files override these settings.
 STYLE_RESEARCH_DISPLAY = {}
 
 #: Per-style culture groups, keyed by style name -> {culture name: [country
@@ -360,28 +358,27 @@ def load_style_symbols(style):
 
 
 def _load_research_display(style, style_dir):
-    """Loads <style>/research_scale.json -- a separate, optional file so a
-    style's discovered art and its research-screen sizing hints can be
-    edited/shared independently of each other. Missing file or bad JSON just
-    leaves this style at the neutral 1.0 defaults everywhere."""
+    """Load central style settings and supported style-folder overrides."""
     path = os.path.join(style_dir, "research_scale.json")
-    icon_scales, button_scale, button_scale_overrides = {}, 1.0, {}
+    config = dict(research_display.get_config().get("styles", {}).get(style, {}))
 
+    # Keep existing custom styles compatible. Bundled values use the central file.
     if os.path.exists(path):
         try:
             with open(path, "r", encoding="utf-8") as f:
-                config = json.load(f)
+                overrides = json.load(f)
         except (json.JSONDecodeError, OSError) as e:
             print(f"Warning: could not read {path}: {e}")
-            config = {}
-        icon_scales = config.get("icon_scales", {})
-        button_scale = config.get("button_scale", 1.0)
-        button_scale_overrides = config.get("button_scale_overrides", {})
+            overrides = {}
+        for field in ("icon_scales", "button_scale_overrides"):
+            config[field] = {**config.get(field, {}), **overrides.get(field, {})}
+        if "button_scale" in overrides:
+            config["button_scale"] = overrides["button_scale"]
 
     STYLE_RESEARCH_DISPLAY[style] = {
-        "icon_scales": icon_scales,
-        "button_scale": button_scale,
-        "button_scale_overrides": button_scale_overrides,
+        "icon_scales": config.get("icon_scales", {}),
+        "button_scale": config.get("button_scale", 1.0),
+        "button_scale_overrides": config.get("button_scale_overrides", {}),
     }
 
 
@@ -443,18 +440,10 @@ def _pick_variant(variants, country):
 
 
 def get_research_scale(name, style=None, country=None):
-    """Per-icon multiplier authored in a style's <style>/research_scale.json
-    (its "icon_scales" map, keyed by the same relative filenames discovered
-    from the style folder) for how large this unit's art should render on the
-    research screen, layered on top of whatever zoom the caller already asked
-    for.
+    """Return the resolved image's research multiplier from the style's icon_scales.
 
-    Exists because a style's source art can be a completely different native
-    resolution than classic's hand-sized icons (hanskolmer's raw unit
-    photos/paintings vs. classic's small pre-scaled sprites), so the same
-    zoom that looks right for one blows the other well past the button that
-    contains it. 1.0 (no change) for classic, or any file research_scale.json
-    doesn't mention.
+    Styles can use different native image sizes. Apply this multiplier after node settings.
+    Keys are relative image filenames. Classic and unlisted images use 1.0.
     """
     resolved = _resolve_name(name, style, country)
     if resolved is None:
@@ -468,13 +457,9 @@ def get_research_scale(name, style=None, country=None):
 
 
 def get_research_button_scale(style=None):
-    """Per-style multiplier (<style>/research_scale.json's "button_scale"
-    field) for how big the research screen's tech node buttons should be
-    while this style is active. 1.0 (no change) for classic or a style with
-    no research_scale.json.
+    """Return the active style's button_scale. Unlisted styles use 1.0.
 
-    `style` defaults to the globally active c.UNIT_ART_STYLE, matching every
-    other lookup in this module.
+    An omitted style uses c.UNIT_ART_STYLE, as other symbol lookups do.
     """
     if style is None:
         style = c.UNIT_ART_STYLE
@@ -483,7 +468,7 @@ def get_research_button_scale(style=None):
 
 def get_research_button_scale_overrides(name, style=None, country=None):
     """(width_scale, height_scale) for this specific tech's research-screen
-    button, from <style>/research_scale.json's "button_scale_overrides" map
+    button, from the style's "button_scale_overrides" map
     -- layered on top of the style's overall get_research_button_scale, for
     a unit whose button needs to be wider/taller than the rest (e.g.
     hanskolmer's long artillery pieces).

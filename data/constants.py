@@ -1,4 +1,5 @@
 from data.platform import IS_WEB
+from data import research_display
 from map_logic.diplomacy.action_definitions import BILATERAL_ACTIONS, UNILATERAL_ACTIONS
 
 # Used for logical ownership assignment
@@ -665,7 +666,8 @@ CPU_LIMITER = 10
 
 START_YEAR = 1800
 END_YEAR = 2150
-RESEARCH_TIMELINE_SPACING = 70 # Width between years on the research timeline
+# Compatibility name. Research layout values belong to the presentation file.
+RESEARCH_TIMELINE_SPACING = research_display.get_config()["layout"]["pixels_per_year"]
 
 BASE_RESEARCH_POINTS_PER_DAY = 10
 RESEARCH_SLOTS = 3 # Number of techs a nation can research simultaneously
@@ -920,15 +922,8 @@ SIZES = {
     "tiny_square": (30, 30),
     "small_square": (40, 40),
     "medium_square": (50, 50),
-    "tech_square": (60, 60),
-    "tech_square_medium": (100, 60),
-    "tech_square_wide": (150, 60),
-    "tech_square_ultra_wide": (270, 60),
-    "tech_square_railroad_gun": (270, 110),
-    "tech_square_ww2_railroad_gun": (340, 120),
-    "tech_square_landkreuzer_p1000_ratte": (400, 130),
-    "tech_square_landkreuzer_p1500_monster": (600, 180),
-    "tech_square_railgun": (500, 220),
+    # Preserve named presets for callers outside the research screen.
+    **{name: tuple(size) for name, size in research_display.get_config()["button_sizes"].items()},
     "album_square": (200, 200),
     "left_ui_button": (120, 30),
     "new_game": (300, 50),

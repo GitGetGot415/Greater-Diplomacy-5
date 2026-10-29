@@ -7,7 +7,7 @@ from ui.widgets import ui_elements
 from ui.widgets.ui_elements import Button, draw_resource_string, draw_combat_stats, draw_bombardment_stats
 from ui.rendering.font_manager import fonts
 from ui.rendering import symbol_loader
-from data import queries
+from data import queries, research_display
 from ui.bars import ui_bars
 from map_logic import politics
 from ui.widgets.text_utils import wrap_text
@@ -36,7 +36,8 @@ TIMELINE_AXIS_Y = 180
 TIMELINE_TICK_HALF = 10
 TIMELINE_YEAR_LABEL_OFFSET_Y = -40
 TIMELINE_YEAR_PADDING = 5     # Extra years drawn either side of the viewport
-NODE_ROW_HALF_HEIGHT = 30     # Half a standard 60px node; the row's centre line
+RESEARCH_LAYOUT = research_display.get_config()["layout"]
+NODE_ROW_HALF_HEIGHT = RESEARCH_LAYOUT["row_center_offset"]
 
 # Horizontal scrollbar spanning the full width along the very bottom of the
 # screen, letting the whole START_YEAR..END_YEAR timeline be dragged at once.
@@ -71,7 +72,7 @@ MODAL_TITLE_X = 30
 MODAL_TITLE_Y = 30
 MODAL_ICON_X = 30
 MODAL_ICON_Y = 100
-MODAL_ICON_BOX = 120
+MODAL_ICON_BOX = RESEARCH_LAYOUT["modal_icon_box"]
 MODAL_TEXT_X = 200          # Left edge of every text column in the modal
 MODAL_COST_Y = 100
 MODAL_WARNING_Y = 130
@@ -101,11 +102,8 @@ SCROLL_WHEEL_STEP = 70
 SCROLL_LERP = 0.15
 
 # --- Node row heights (visual layout, deliberately hand-tuned) ---
-ROW_Y = [200, 270, 340, 410, 480, 550]
-ROW_DEFAULT_Y = 350
-
-# Categories whose nodes default to the wide button size.
-WIDE_RESEARCH_CATEGORIES = ["TANKS", "NAVY", "AIR"]
+ROW_Y = RESEARCH_LAYOUT["row_y"]
+ROW_DEFAULT_Y = RESEARCH_LAYOUT["default_row_y"]
 
 # Tech families whose display name is "<Class> Type <year>" rather than a
 # roman numeral tier, keyed off the year list in the tech tree.
@@ -154,19 +152,6 @@ LEVEL_SUFFIX_TECHS = {
     "factory": "Factory",
     "fuel_refining": "Fuel Refining",
 }
-
-# Node button sizes, matched against the lowercased display name in order.
-# First hit wins, so the more specific entries have to come first.
-NODE_SIZE_RULES = [
-    (("aircraft carrier", "battleship", "dreadnought", "submarine", "jet bomber", "jet transport"), "tech_square_ultra_wide"),
-    (("ww2 railroad gun",), "tech_square_ww2_railroad_gun"),
-    (("landkreuzer p.1000 ratte",), "tech_square_landkreuzer_p1000_ratte"),
-    (("landkreuzer p.1500 monster",), "tech_square_landkreuzer_p1500_monster"),
-    (("railroad gun",), "tech_square_railroad_gun"),
-    (("railgun",), "tech_square_railgun"),
-    (("light tank ix",), "tech_square_wide"),
-    (("civilian car", "armored car", "light tank i", "light tank v", "medium tank"), "tech_square_medium"),
-]
 
 DEFAULT_TECH_COST = 300
 
@@ -678,17 +663,9 @@ class Research_Screen(GameState):
             points = int(c.BASE_RESEARCH_POINTS_PER_DAY * days * multiplier)
             self.header_output_surface = font.render(f"RESEARCH OUTPUT: {points} pts/turn", True, (0, 255, 255))
 
-    def get_button_size(self, tech_key, display_name):
-        """Picks a node's button size from NODE_SIZE_RULES (first match wins)."""
-        name = display_name.lower()
-        for needles, size in NODE_SIZE_RULES:
-            if any(needle in name for needle in needles):
-                return size
-
-        if self.current_category in WIDE_RESEARCH_CATEGORIES:
-            return "tech_square_wide"
-
-        return "tech_square"
+    def get_button_size(self, tech_key, display_name, level=1):
+        """Keep the existing lookup interface. Labels no longer select node sizes."""
+        return research_display.node_settings(tech_key, self.current_category, level)["button_size"]
 
     def draw_tech_nodes(self, res_levels, queue):
         for node in self.nodes.get(self.current_category, []):
@@ -697,34 +674,27 @@ class Research_Screen(GameState):
             year = node["year"]
             base_y = node["base_y"]
             
-            # 1. Get the display name first
             display_name = self.get_display_name(tech_key, lvl)
-            
-            # 2. Use our new helper to get the size
-            btn_size = self.get_button_size(tech_key, display_name)
-            raw_btn_w, raw_btn_h = c.SIZES.get(btn_size, (80, 80))
+            unlocks = queries.get_tech_unlocks(tech_key, lvl, context=self.map_screen)
+            is_large = (self.building_library.get(tech_key, {}).get("group") in c.LARGE_ICON_BUILDING_GROUPS or
+                        any(self.building_library.get(u, {}).get("group") in c.LARGE_ICON_BUILDING_GROUPS for u in unlocks))
+            presentation = research_display.node_settings(
+                tech_key, self.current_category, lvl, large_icon=is_large)
+            raw_btn_w, raw_btn_h = research_display.button_dimensions(presentation["button_size"])
             icon_name = self.tech_tree[tech_key].get("level_icons", {}).get(
                 str(lvl), TECH_ICON_OVERRIDES.get(tech_key, display_name))
 
-            # A style's research_scale.json can ask for bigger/smaller node
-            # buttons overall ("button_scale") and/or stretch a specific
-            # tech's button wider/taller on top of that ("button_scale_
-            # overrides", e.g. Artillery's long guns) -- 1.0/no override, and
-            # this is a no-op, for classic and any style that doesn't set one.
+            # Style adjustments follow the central node settings. Icons scale independently.
             button_scale = symbol_loader.get_research_button_scale()
             width_scale, height_scale = symbol_loader.get_research_button_scale_overrides(icon_name, country=self.subject)
-            btn_w = int(raw_btn_w * button_scale * width_scale)
-            btn_h = int(raw_btn_h * button_scale * height_scale)
+            btn_w = max(1, int(raw_btn_w * button_scale * width_scale))
+            btn_h = max(1, int(raw_btn_h * button_scale * height_scale))
             x_offset = btn_w // 2
 
             base_x = self.year_to_x(year, include_scroll=False) - x_offset
-            # Row's vertical center line is base_y + 30 (matches draw_connections'
-            # anchor, based on the standard 60px-tall button). Center every node on
-            # that line instead of always dropping its top at base_y, so taller
-            # buttons (railroad guns, landkreuzers, ...) don't hang below the row.
+            # Keep tall nodes and connection anchors on the same row center.
             node_y = (base_y + NODE_ROW_HALF_HEIGHT) - (btn_h // 2)
             
-            # ... (Rest of your existing logic for status, color, and icon)
             cur_lvl = res_levels.get(tech_key, 0)
             is_researching = any(q["tech_name"] == tech_key for q in queue)
             
@@ -742,16 +712,8 @@ class Research_Screen(GameState):
                     
             btn_color = self.tech_button_color(tech_key, lvl, status)
 
-            unlocks = queries.get_tech_unlocks(tech_key, lvl, context=self.map_screen)
-            is_large = (self.building_library.get(tech_key, {}).get("group") in c.LARGE_ICON_BUILDING_GROUPS or 
-                        any(self.building_library.get(u, {}).get("group") in c.LARGE_ICON_BUILDING_GROUPS for u in unlocks))
-            
-            icon_scale = 4.0 if is_large else 2.0
-
-            # A style's research_scale.json can shrink/grow individual icons
-            # for the research screen to suit their own native resolution --
-            # 1.0, and this is a no-op, for classic and any variant that
-            # doesn't set one.
+            icon_scale = presentation["icon_scale"]
+            # Use the resolved image's style, including country variants and Classic fallbacks.
             icon_scale *= symbol_loader.get_research_scale(icon_name, country=self.subject)
 
             icon = symbol_loader.get_symbol(icon_name, icon_scale, country=self.subject)
@@ -766,7 +728,7 @@ class Research_Screen(GameState):
                 "target_year": year
             }
             
-            btn = Button(base_x + self.scroll_x, node_y, btn_size, btn_color, display_name,
+            btn = Button(base_x + self.scroll_x, node_y, (btn_w, btn_h), btn_color, display_name,
                          lambda n=node_info: self.open_modal(n), image=icon, show_text=False)
 
             # A gold percentage badge marks every not-yet-completed level for
@@ -778,12 +740,6 @@ class Research_Screen(GameState):
             if status != "COMPLETED" and faction_bonus:
                 btn.notification_text = f"+{int(faction_bonus * 100)}%"
                 btn.notification_color = (255, 0, 0)
-
-            if (raw_btn_w, raw_btn_h) != (btn_w, btn_h):
-                # Button() sizes itself from c.SIZES[btn_size] directly, so a
-                # style-driven size has to be applied after the fact.
-                btn.width, btn.height = btn_w, btn_h
-                btn.rect = pygame.Rect(base_x + self.scroll_x, node_y, btn_w, btn_h)
 
             btn.base_x = base_x
             btn.is_tech_node = True

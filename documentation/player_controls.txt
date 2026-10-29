@@ -106,6 +106,54 @@ Building yields include the selected country's completed output research.
 Production previews also include the selected province's territory penalty.
 See documentation/general_info.txt, BUILDING OUTPUT RESEARCH, for stacking, saved research, and data sources.
 
+RESEARCH DISPLAY SETTINGS
+-------------------------
+
+data/json/research_display.json contains research button sizes, icon scales, layout values, and bundled art-style adjustments.
+Restart the game after you edit this file. The game reads it once and caches the data.
+These settings apply to player, spectator, and map-editor research timelines.
+They do not change gameplay, permissions, saved games, or multiplayer commands.
+
+button_sizes defines named presets as [width, height] in pixels.
+defaults selects a button_size and an icon_scale.
+defaults.large_icon_scale applies to technologies that unlock buildings in constants.LARGE_ICON_BUILDING_GROUPS.
+An icon_scale multiplies the existing symbol zoom. It does not specify a pixel size.
+Button dimensions and icon scales are independent. Icons keep their proportions.
+
+The game applies settings in this order:
+1. Apply defaults. Select large_icon_scale when the unlocked building requires it.
+2. Apply the matching categories entry, such as NAVY.
+3. Apply the technologies entry for the technology key, such as railgun.
+4. Apply that technology's levels entry for the exact level, such as "2".
+5. Apply art-style multipliers.
+
+Each category, technology, or level entry can specify button_size, icon_scale, or both.
+button_size accepts a named preset or an explicit [width, height] pair.
+Technology entries use keys from the active research library. Display-name changes do not select different sizes.
+Level entries override only that level. Later levels use their own settings or the technology settings.
+Unlisted technologies and categories use defaults. Unlisted fields retain the preceding settings.
+
+For example, this technology entry sets an explicit button size and icon scale:
+"railgun": {"button_size": [420, 180], "icon_scale": 1.5}
+
+layout.row_y contains six row positions. layout.default_row_y positions technologies without an assigned row.
+layout.row_center_offset locates each row's center relative to its position.
+Button centers and connection anchors use the same offset.
+layout.pixels_per_year sets horizontal timeline spacing. layout.modal_icon_box sets the detail popup's icon box.
+Increase row or timeline spacing if larger buttons overlap. The game does not arrange rows automatically.
+
+styles contains the bundled alternate-art adjustments. Each key names an art style.
+button_scale multiplies all button dimensions while that style is active.
+button_scale_overrides applies additional width and height multipliers to a resolved symbol key or family.
+icon_scales applies additional icon multipliers by relative image filename, including culture subfolders.
+These image-specific adjustments follow the actual image's style and country variant.
+Classic fallback images keep their normal image-specific multipliers.
+
+Optional assets/<style>/research_scale.json files remain supported for custom styles.
+Their entries override matching central style entries. Unspecified entries retain the central values.
+Use the central file for bundled sizing changes.
+The map, production screens, and research category tabs do not use these node settings.
+
 RESEARCH EDITING
 ----------------
 
