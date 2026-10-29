@@ -638,7 +638,7 @@ RESEARCH_RECIPES = [
     ],
     [
         #ID                 CAT      LVLS COST  REQ                     YRS              OPTIONS
-        ("civilian_car",    "TANKS", 1,   2400, {},                     [1906],          {}),
+        ("civilian_car",    "TANKS", 1,   2400, {},                     [1908],          {}),
         ("ww1_armored_car", "TANKS", 1,   2400, {"civilian_car": 1},    [1912],          {}),
         ("armored_car",     "TANKS", 59,  2400, {"ww1_armored_car": 1}, yr(1916, 4, 59), {}),
     ],
@@ -705,7 +705,7 @@ RESEARCH_RECIPES = [
         #ID                     CAT    LVLS COST  REQ                                     YRS              OPTIONS
         ('biplane',             'AIR', 5,   1200, {},                                     yr(1910, 4, 5),  {"NAME": 'Biplane Fighter'}),
         ('biplane_bomber',      'AIR', 3,   1800, {'biplane': 1},                         yr(1915, 5, 3),  {"NAME": 'Biplane Bomber'}),
-        ('zeppelin',            'AIR', 1,   1800, {},                                     [1900],          {"NAME": 'Zeppelin'}),
+        ('zeppelin',            'AIR', 1,   1800, {},                                     [1910],          {"NAME": 'Zeppelin'}),
         ('piston_fighter',      'AIR', 5,   1200, {'biplane': 5},                         yr(1930, 4, 5),  {"NAME": 'Monoplane Fighter'}),
         ('piston_bomber',       'AIR', 5,   1800, {'biplane_bomber': 3},                  yr(1930, 5, 5),  {"NAME": 'Monoplane Bomber'}),
         ('monoplane_transport', 'AIR', 3,   1800, {'biplane_bomber': 3},                  yr(1930, 5, 3),  {"NAME": 'Monoplane Transport'}),
