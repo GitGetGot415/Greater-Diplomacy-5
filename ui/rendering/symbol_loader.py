@@ -2,6 +2,7 @@ import pygame
 import os
 import re
 import json
+from fnmatch import fnmatchcase
 import numpy as np
 import data.constants as c
 
@@ -108,6 +109,7 @@ def load_symbols():
                 img = pygame.image.load(os.path.join(c.BUILDINGS_DIR, file)).convert_alpha()
                 SYMBOLS[name] = img
 
+    _load_research_display("classic", c.CLASSIC_UNIT_ART_DIR)
     for style in c.UNIT_ART_STYLES:
         if style != "classic":
             load_style_symbols(style)
@@ -443,17 +445,24 @@ def get_research_scale(name, style=None, country=None):
     """Return the resolved image's research multiplier from the style's icon_scales.
 
     Styles can use different native image sizes. Apply this multiplier after node settings.
-    Keys are relative image filenames. Classic and unlisted images use 1.0.
+    Keys are relative image filenames or wildcard patterns. Unlisted images use 1.0.
     """
     resolved = _resolve_name(name, style, country)
     if resolved is None:
         return 1.0
     source_style, base_name = resolved
     if source_style == "classic":
-        return 1.0
-    variant = _pick_variant_entry(STYLE_SYMBOLS[source_style][base_name], country)
+        filename = base_name + ".png"
+    else:
+        variant = _pick_variant_entry(STYLE_SYMBOLS[source_style][base_name], country)
+        filename = variant["filename"]
     icon_scales = STYLE_RESEARCH_DISPLAY.get(source_style, {}).get("icon_scales", {})
-    return icon_scales.get(variant["filename"], 1.0)
+    if filename in icon_scales:
+        return icon_scales[filename]
+    for pattern, scale in icon_scales.items():
+        if fnmatchcase(filename, pattern):
+            return scale
+    return 1.0
 
 
 def get_research_button_scale(style=None):

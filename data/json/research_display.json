@@ -52,7 +52,10 @@
             "6": {"button_size": "tech_square_medium"},
             "7": {"button_size": "tech_square_medium"},
             "8": {"button_size": "tech_square_medium"}
-        }}
+        }},
+        "trucks": {"button_size": "tech_square_medium"},
+        "armored_personnel_carriers": {"button_size": "tech_square_medium"},
+        "infantry_fighting_vehicle": {"button_size": "tech_square_medium"}
     },
     "layout": {
         "row_y": [200, 270, 340, 410, 480, 550],
@@ -62,6 +65,14 @@
         "modal_icon_box": 120
     },
     "styles": {
+        "classic": {
+            "icon_scales": {
+                "Infantry*.png": 1.6,
+                "Cavalry*.png": 1.6,
+                "Militia*.png": 1.6,
+                "Infantry Fighting Vehicle.png": 1
+            }
+        },
         "hanskolmer": {
             "button_scale": 1,
             "button_scale_overrides": {

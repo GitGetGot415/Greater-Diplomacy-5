@@ -124,6 +124,28 @@ class StyleCompatibilityTests(unittest.TestCase):
                 "Example I", country="B"), (1, 1))
             self.assertEqual(self.symbols.get_research_button_scale(), 1.5)
 
+    def test_classic_patterns_apply_to_resolved_art_and_style_fallbacks(self):
+        from data import queries
+        import pygame
+        image = pygame.Surface((10, 10))
+        self.config["styles"]["classic"] = {"icon_scales": {
+            "Example*.png": 3, "Example I.png": 4}}
+        with tempfile.TemporaryDirectory() as directory:
+            self.symbols._load_research_display("classic", directory)
+            self.symbols._load_research_display("test", directory)
+        variants = [{"countries": frozenset({"A"}), "surface": image, "filename": "specific.png"}]
+        with patch.object(self.symbols, "STYLE_SYMBOLS", {"test": {"Example I": variants}}), \
+                patch.object(self.symbols, "STYLE_FILENAME_ART", {}), \
+                patch.object(self.symbols, "RESOLVED_NAMES", {}), \
+                patch.object(self.symbols, "SYMBOLS", {
+                    "Example I": image, "Example II": image, "Unlisted": image}), \
+                patch.object(queries, "get_unit_library", return_value={}):
+            self.assertEqual(self.symbols.get_research_scale("Example I", "classic"), 4)
+            self.assertEqual(self.symbols.get_research_scale("Example II", "classic"), 3)
+            self.assertEqual(self.symbols.get_research_scale("Unlisted", "classic"), 1)
+            self.assertEqual(self.symbols.get_research_scale("Example I", "test", "A"), 0.25)
+            self.assertEqual(self.symbols.get_research_scale("Example I", "test", "B"), 4)
+
 
 class ResearchInputTests(unittest.TestCase):
     @classmethod

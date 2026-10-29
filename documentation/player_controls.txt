@@ -142,12 +142,15 @@ Button centers and connection anchors use the same offset.
 layout.pixels_per_year sets horizontal timeline spacing. layout.modal_icon_box sets the detail popup's icon box.
 Increase row or timeline spacing if larger buttons overlap. The game does not arrange rows automatically.
 
-styles contains the bundled alternate-art adjustments. Each key names an art style.
+styles contains the bundled art adjustments, including Classic. Each key names an art style.
 button_scale multiplies all button dimensions while that style is active.
 button_scale_overrides applies additional width and height multipliers to a resolved symbol key or family.
 icon_scales applies additional icon multipliers by relative image filename, including culture subfolders.
+Filenames can contain wildcard patterns, such as Infantry*.png. An exact filename takes priority over patterns.
+If several patterns match, the first pattern takes priority.
+Classic filenames use the symbol name with .png. Classic Infantry*.png and Militia*.png rules double their research icons.
 These image-specific adjustments follow the actual image's style and country variant.
-Classic fallback images keep their normal image-specific multipliers.
+Classic fallback images use the Classic rules, including when another art style is selected.
 
 Optional assets/<style>/research_scale.json files remain supported for custom styles.
 Their entries override matching central style entries. Unspecified entries retain the central values.
