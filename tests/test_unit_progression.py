@@ -1,11 +1,12 @@
 """Check generated unit progression through shared gameplay interfaces."""
 
+import copy
 import json
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from data import constants as c, queries
+from data import constants as c, migrations, queries
 from data.generators import generate_data, recipes
 from map_logic.ai import ai_tech_eval, ai_unit_eval
 from tests.test_map_save_format import sample_map_screen
@@ -124,6 +125,107 @@ class UnitProgressionTests(unittest.TestCase):
         with patch.dict(recipes.EQUIPMENT_STAGES, {"infantry_type": stages}):
             with self.assertRaisesRegex(ValueError, "before the next stage"):
                 recipes.expanded_equipment_stages("infantry_type")
+
+    def test_other_equipment_upgrades_share_expansion_research_and_variant_rules(self):
+        families = {"militia": ("Militia",), "cavalry": ("Cavalry",),
+                    "artillery": ("Artillery", "Heavy Artillery")}
+        for tech, prefixes in families.items():
+            stages = [(1800, "Fixture Equipment", 123, 13, 4, 3, 41, 19, 7, 4, 17,
+                       (3, 2, {"health": 7, "attack": 3, "cost_materials": 5, "bombard_attack": 4})),
+                      (1810, "Next Equipment", 150, 29, 6, 2, 67, 23, 9, 5, 31, (1, 1, {}))]
+            with self.subTest(tech=tech), patch.dict(recipes.EQUIPMENT_STAGES, {tech: stages}):
+                expanded = recipes.expanded_equipment_stages(tech)
+                expected_names = ["Fixture Equipment I", "Fixture Equipment II",
+                                  "Fixture Equipment III", "Next Equipment I"]
+                self.assertEqual([row[:2] for row in expanded], list(zip([1800, 1802, 1804, 1810], expected_names)))
+                self.assertEqual([row[2] for row in expanded], [123, 130, 137, 150])
+                self.assertEqual([row[3] for row in expanded], [13, 16, 19, 29])
+                self.assertEqual([row[6] for row in expanded], [41, 46, 51, 67])
+                self.assertEqual([row[-1] for row in expanded], [17, 21, 25, 31])
+                research = recipes.extend_infantry_research(tech, {})
+                self.assertEqual(research["years"], [1800, 1802, 1804, 1810])
+                self.assertEqual(research["max_lvl"], len(expected_names))
+                self.assertEqual(research["level_names"],
+                                 {str(i): name for i, name in enumerate(expected_names, 1)})
+                for prefix in prefixes:
+                    entries = recipes.equipment_family(prefix, tech).entries()
+                    self.assertEqual([name for name, _ in entries],
+                                     [("Heavy " if prefix == "Heavy Artillery" else "") + name
+                                      for name in expected_names])
+                    for row, (_, entry) in zip(expanded, entries):
+                        profile = recipes.equipment_profile(prefix, row)
+                        for field, value in profile.items():
+                            self.assertEqual(entry[field], value)
+                        self.assertEqual(entry["metadata"]["research"], {"tech": tech, "year": row[0]})
+
+    def test_other_equipment_upgrade_years_cannot_overlap_next_stage(self):
+        stages = [(1800, "First", 100, 20, 0, 1, 40, 50, 0, 2, 10, (3, 5, {})),
+                  (1810, "Second", 100, 20, 0, 1, 40, 50, 0, 2, 10, (1, 1, {}))]
+        for tech in ("militia", "cavalry", "artillery"):
+            with self.subTest(tech=tech), patch.dict(recipes.EQUIPMENT_STAGES, {tech: stages}):
+                with self.assertRaisesRegex(ValueError, "before the next stage"):
+                    recipes.expanded_equipment_stages(tech)
+
+    def test_all_equipment_runtime_levels_match_their_base_rows_and_increases(self):
+        families = {"infantry_type": ("Infantry Type",), "militia": ("Militia",),
+                    "cavalry": ("Cavalry",), "artillery": ("Artillery", "Heavy Artillery")}
+        for tech, prefixes in families.items():
+            expected_years = []
+            expected_names = []
+            for year, name, *values in recipes.EQUIPMENT_STAGES[tech]:
+                levels, interval, increases = values.pop()
+                base = recipes.table_values(recipes.EQUIPMENT_COLUMNS, values)
+                for level in range(levels):
+                    upgrade_year = year + interval * level
+                    label = f"{name} {c.ROMAN_NUMERALS[level + 1]}"
+                    expected_years.append(upgrade_year)
+                    expected_names.append(label)
+                    profile = [base[field] + increases.get(field, 0) * level if base[field] is not None else None
+                               for field in recipes.EQUIPMENT_COLUMNS.values()]
+                    for prefix in prefixes:
+                        unit_name = ("Heavy " if prefix == "Heavy Artillery" else "") + label
+                        with self.subTest(unit=unit_name):
+                            entry = self.library[unit_name]
+                            expected = recipes.equipment_profile(prefix, (upgrade_year, label, *profile))
+                            for field, value in expected.items():
+                                self.assertEqual(entry[field], value)
+                            self.assertEqual(entry["metadata"]["research"], {"tech": tech, "year": upgrade_year})
+            self.assertEqual(self.tree[tech]["years"], expected_years)
+            self.assertEqual(self.tree[tech]["level_names"],
+                             {str(i): name for i, name in enumerate(expected_names, 1)})
+
+    def test_unnumbered_equipment_names_migrate_to_each_stages_first_level(self):
+        aliases = migrations.equipment_stage_aliases()
+        for tech in ("militia", "cavalry", "artillery"):
+            for row in recipes.EQUIPMENT_STAGES[tech]:
+                prefixes = ("", "Heavy ") if tech == "artillery" else ("",)
+                for prefix in prefixes:
+                    older = prefix + row[1]
+                    with self.subTest(unit=older):
+                        self.assertEqual(aliases[older], older + " I")
+                        self.assertIn(aliases[older], self.library)
+
+    def test_added_equipment_levels_preserve_saved_years_history_and_unfinished_points(self):
+        for tech in ("militia", "cavalry", "artillery"):
+            source_years = [row[0] for row in recipes.EQUIPMENT_STAGES[tech]]
+            for level, year in enumerate(source_years, 1):
+                country = {"research": {tech: level},
+                           "research_queue": [{"tech_name": tech, "points_remaining": 73}],
+                           "research_progress": {tech: 73}}
+                saved = {"research_years": {tech: source_years}, "default_research": {tech: level},
+                         "nation_data": {"A": country}}
+                history = {"1": {"nation_data": {"A": copy.deepcopy(country)}}}
+                with self.subTest(tech=tech, year=year):
+                    migrations.migrate_infantry_research(saved, self.tree, history)
+                    expected = sum(value <= year for value in self.tree[tech]["years"])
+                    self.assertEqual(country["research"], {tech: expected})
+                    self.assertEqual(saved["default_research"], {tech: expected})
+                    self.assertEqual(history["1"]["nation_data"]["A"], country)
+                    self.assertEqual(country["research_queue"], [{"tech_name": tech, "points_remaining": 73}])
+                    self.assertEqual(country["research_progress"], {tech: 73})
+                    restored = json.loads(json.dumps(saved))
+                    migrations.migrate_infantry_research(restored, self.tree)
+                    self.assertEqual(restored, saved)
 
     def test_heavy_artillery_is_generated_from_independent_base_attack_and_bombardment(self):
         base = {"health": 123, "attack": 13, "bombard_attack": 17, "defense": 4, "speed": 3,

@@ -329,7 +329,8 @@ class Research_Screen(GameState):
 
         self.tech_rows = {
             "infantry_type": y1,
-            "cavalry": y4, "trucks": y4, "armored_personnel_carriers": y4, "infantry_fighting_vehicle": y4,
+            "cavalry": y4,
+            "trucks": y5, "armored_personnel_carriers": y5, "infantry_fighting_vehicle": y5,
             "militia": y3,
             "artillery": y2,
             "ww1_armored_car": y1, "armored_car": y1, "civilian_car": y1,

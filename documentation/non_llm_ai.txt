@@ -91,11 +91,14 @@ MAT, MAN, and FUEL give material, manpower, and fuel costs. TIME gives productio
 BOMB gives bombardment attack. Use None for BOMB when the unit has no bombardment statistic.
 EQUIPMENT_COLUMNS converts these columns to the full JSON field names.
 
-Each regular infantry row ends with (levels, years between levels, stat increases).
+Each equipment row ends with (levels, years between levels, stat increases).
+This applies to regular infantry, militia, cavalry, and artillery.
 The level count includes level I. Level I uses the row's base statistics.
 Each later level adds the specified increases once per level.
 Use full JSON field names in the increases dictionary. Omitted statistics do not change.
+
 Each level has its own research year, name, and unit entry.
+Heavy artillery uses the matching artillery level and its shared variant rules.
 The last upgrade must precede the next stage and stay within the game timeline.
 Run data/generators/generate_data.py after edits to update the runtime libraries.
 

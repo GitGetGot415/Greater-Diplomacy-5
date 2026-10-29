@@ -207,7 +207,7 @@ EQUIPMENT_COLUMNS = {
 }
 
 # Row columns match EQUIPMENT_COLUMNS after the year and name.
-# Infantry adds (levels, years between levels, per-level stat increases).
+# Equipment rows add (levels, years between levels, per-level stat increases).
 # BOMB=None omits bombardment.
 EQUIPMENT_STAGES = {
     "infantry_type": [
@@ -232,46 +232,46 @@ EQUIPMENT_STAGES = {
         (2040, "Sensor-Integrated Infantry",  5000, 1850, 0,  1,  1900, 1000, 140, 2,   None, (50, 2, {'health': 100, 'attack': 50, 'cost_materials': 50})),
     ],
     "cavalry": [
-        #YR    NAME                       HP    ATK  DEF SPD MAT   MAN   FUEL TIME BOMB
-        (1800, "Early Cavalry",           350,  120, 0,  2,  450,  2000, 0,   3,   None),
-        (1850, "Improved Cavalry",        400,  180, 0,  2,  600,  2000, 0,   3,   None),
-        (1870, "Breech-Loading Carbines", 470,  220, 0,  2,  750,  2000, 0,   3,   None),
-        (1890, "Magazine Carbines",       550,  260, 0,  2,  900,  2000, 0,   3,   None),
-        (1910, "Supported Cavalry",       600,  300, 0,  2,  1000, 2000, 0,   3,   None),
-        (1918, "Mounted Rifle Cavalry",   800,  300, 0,  2,  1000, 2000, 0,   3,   None),
-        (1930, "Modern Cavalry",          1000, 300, 0,  2,  1000, 2000, 0,   3,   None),
+        #YR    NAME                       HP    ATK  DEF SPD MAT   MAN   FUEL TIME BOMB  UPGRADES
+        (1800, "Early Cavalry",           200,  300, 0,  2,  600,  2000, 0,   3,   None, (10, 5,{'health': 10, 'cost_materials': 10})),
+        (1850, "Improved Cavalry",        300,  300, 0,  2,  700,  2000, 0,   3,   None, (5, 4, {'health': 20, 'cost_materials': 10})),
+        (1870, "Breech-Loading Carbines", 500,  300, 0,  2,  750,  2000, 0,   3,   None, (5, 4, {'health': 20, 'cost_materials': 10})),
+        (1890, "Magazine Carbines",       600,  300, 0,  2,  800,  2000, 0,   3,   None, (5, 4, {'health': 20, 'cost_materials': 20})),
+        (1910, "Supported Cavalry",       700,  300, 0,  2,  900, 2000, 0,   3,   None, (2, 4, {'health': 50, 'cost_materials': 50})),
+        (1918, "Mounted Rifle Cavalry",   800,  300, 0,  2,  1000, 2000, 0,   3,   None, (3, 4, {'health': 50, 'cost_materials': 50})),
+        (1930, "Modern Cavalry",          1000, 300, 0,  2,  1200, 2000, 0,   3,   None, (5, 3, {'health': 100, 'cost_materials': 50})),
     ],
     "militia": [
-        #YR    NAME                          HP    ATK  DEF SPD MAT  MAN   FUEL TIME BOMB
-        (1800, "Local Militia",              200,  12,  0,  1,  100, 1000, 0,   1,   None),
-        (1840, "Organized Militia",          280,  20,  0,  1,  150, 1000, 0,   1,   None),
-        (1870, "Reserve Infantry",           360,  32,  0,  1,  210, 1000, 0,   1,   None),
-        (1900, "Modern Militia",             440,  44,  0,  1,  270, 1000, 0,   1,   None),
-        (1915, "Rifle Militia",              600,  60,  0,  1,  300, 1000, 0,   1,   None),
-        (1935, "Support-Weapon Militia",     1000, 100, 0,  1,  300, 1000, 0,   1,   None),
-        (1955, "Self-Loading Rifle Militia", 1400, 140, 0,  1,  300, 1000, 0,   1,   None),
-        (1975, "Assault-Rifle Militia",      1800, 180, 0,  1,  300, 1000, 0,   1,   None),
-        (1995, "Radio-Equipped Militia",     2200, 220, 0,  1,  300, 1000, 0,   1,   None),
-        (2015, "Optics-Equipped Militia",    2600, 260, 0,  1,  300, 1000, 0,   1,   None),
-        (2035, "Drone-Supported Militia",    3000, 300, 0,  1,  300, 1000, 0,   1,   None),
+        #YR    NAME                          HP    ATK  DEF SPD MAT  MAN   FUEL TIME BOMB  UPGRADES
+        (1800, "Local Militia",              200,  12,  0,  1,  100, 1000, 0,   1,   None, (4, 10, {'health': 20, 'attack': 2, 'cost_materials': 10})),
+        (1840, "Organized Militia",          280,  20,  0,  1,  150, 1000, 0,   1,   None, (3, 10, {'health': 20, 'attack': 3, 'cost_materials': 15})),
+        (1870, "Reserve Infantry",           360,  32,  0,  1,  210, 1000, 0,   1,   None, (3, 10, {'health': 20, 'attack': 3, 'cost_materials': 15})),
+        (1900, "Modern Militia",             440,  44,  0,  1,  270, 1000, 0,   1,   None, (3, 5, {'health': 40, 'attack': 4, 'cost_materials': 10})),
+        (1915, "Rifle Militia",              600,  60,  0,  1,  300, 1000, 0,   1,   None, (4, 5, {'health': 80, 'attack': 8})),
+        (1935, "Support-Weapon Militia",     1000, 100, 0,  1,  300, 1000, 0,   1,   None, (4, 5, {'health': 80, 'attack': 8})),
+        (1955, "Self-Loading Rifle Militia", 1400, 140, 0,  1,  300, 1000, 0,   1,   None, (4, 5, {'health': 80, 'attack': 8})),
+        (1975, "Assault-Rifle Militia",      1800, 180, 0,  1,  300, 1000, 0,   1,   None, (4, 5, {'health': 80, 'attack': 8})),
+        (1995, "Radio-Equipped Militia",     2200, 220, 0,  1,  300, 1000, 0,   1,   None, (4, 5, {'health': 80, 'attack': 8})),
+        (2015, "Optics-Equipped Militia",    2600, 260, 0,  1,  300, 1000, 0,   1,   None, (4, 5, {'health': 80, 'attack': 8})),
+        (2035, "Drone-Supported Militia",    3000, 300, 0,  1,  300, 1000, 0,   1,   None, (50, 2, {'health': 40, 'attack': 4, 'cost_materials': 5})),
     ],
     "artillery": [
-        #YR    NAME                                HP    ATK   DEF SPD MAT   MAN  FUEL TIME BOMB
-        (1800, "Smoothbore Artillery",             60,   50,   0,  1,  450,  500, 0,   2,   50),
-        (1830, "Improved Field Artillery",         65,   60,   0,  1,  650,  500, 0,   2,   60),
-        (1850, "Rifled Artillery",                 75,   70,   0,  1,  850,  500, 0,   2,   70),
-        (1870, "Breech-Loading Artillery",         80,   80,   0,  1,  1050, 500, 0,   2,   80),
-        (1890, "Quick-Firing Artillery",           90,   90,   0,  1,  1250, 500, 0,   2,   90),
-        (1900, "Recoil-System Artillery",          95,   110,  0,  1,  1400, 500, 0,   2,   110),
-        (1915, "Indirect-Fire Artillery",          150,  180,  0,  1,  1600, 500, 0,   2,   180),
-        (1930, "Modern Field Artillery",           300,  360,  0,  1,  1900, 500, 0,   2,   360),
-        (1940, "Radio-Coordinated Artillery",      400,  480,  0,  1,  2100, 500, 0,   2,   480),
-        (1955, "Advanced-Ammunition Artillery",    550,  660,  0,  1,  2400, 500, 0,   2,   660),
-        (1975, "Computer-Assisted Artillery",      750,  900,  0,  1,  2800, 500, 0,   2,   900),
-        (1995, "Digital Fire-Control Artillery",   950,  1140, 0,  1,  3200, 500, 0,   2,   1140),
-        (2010, "Precision-Guided Artillery",       1100, 1320, 0,  1,  3500, 500, 0,   2,   1320),
-        (2025, "Sensor-Linked Artillery",          1250, 1500, 0,  1,  3800, 500, 0,   2,   1500),
-        (2040, "Automated Fire-Control Artillery", 1400, 1680, 0,  1,  4100, 500, 0,   2,   1680),
+        #YR    NAME                                HP    ATK   DEF SPD MAT   MAN  FUEL TIME BOMB  UPGRADES
+        (1800, "Smoothbore Artillery",             60,   50,   0,  1,  450,  500, 0,   2,   50,   (3, 10, {'health': 1, 'attack': 3, 'bombard_attack': 3, 'cost_materials': 50})),
+        (1830, "Improved Field Artillery",         65,   60,   0,  1,  650,  500, 0,   2,   60,   (4, 5, {'health': 2, 'attack': 2, 'bombard_attack': 2, 'cost_materials': 40})),
+        (1850, "Rifled Artillery",                 75,   70,   0,  1,  850,  500, 0,   2,   70,   (4, 5, {'health': 1, 'attack': 2, 'bombard_attack': 2, 'cost_materials': 40})),
+        (1870, "Breech-Loading Artillery",         80,   80,   0,  1,  1050, 500, 0,   2,   80,   (4, 5, {'health': 2, 'attack': 2, 'bombard_attack': 2, 'cost_materials': 40})),
+        (1890, "Quick-Firing Artillery",           90,   90,   0,  1,  1250, 500, 0,   2,   90,   (2, 5, {'health': 2, 'attack': 8, 'bombard_attack': 8, 'cost_materials': 60})),
+        (1900, "Recoil-System Artillery",          95,   110,  0,  1,  1400, 500, 0,   2,   110,  (3, 5, {'health': 15, 'attack': 20, 'bombard_attack': 20, 'cost_materials': 50})),
+        (1915, "Indirect-Fire Artillery",          150,  180,  0,  1,  1600, 500, 0,   2,   180,  (3, 5, {'health': 40, 'attack': 50, 'bombard_attack': 50, 'cost_materials': 75})),
+        (1930, "Modern Field Artillery",           300,  360,  0,  1,  1900, 500, 0,   2,   360,  (2, 5, {'health': 40, 'attack': 50, 'bombard_attack': 50, 'cost_materials': 75})),
+        (1940, "Radio-Coordinated Artillery",      400,  480,  0,  1,  2100, 500, 0,   2,   480,  (3, 5, {'health': 40, 'attack': 50, 'bombard_attack': 50, 'cost_materials': 75})),
+        (1955, "Advanced-Ammunition Artillery",    550,  660,  0,  1,  2400, 500, 0,   2,   660,  (4, 5, {'health': 40, 'attack': 50, 'bombard_attack': 50, 'cost_materials': 80})),
+        (1975, "Computer-Assisted Artillery",      750,  900,  0,  1,  2800, 500, 0,   2,   900,  (4, 5, {'health': 40, 'attack': 50, 'bombard_attack': 50, 'cost_materials': 80})),
+        (1995, "Digital Fire-Control Artillery",   950,  1140, 0,  1,  3200, 500, 0,   2,   1140, (3, 5, {'health': 40, 'attack': 50, 'bombard_attack': 50, 'cost_materials': 75})),
+        (2010, "Precision-Guided Artillery",       1100, 1320, 0,  1,  3500, 500, 0,   2,   1320, (3, 5, {'health': 40, 'attack': 50, 'bombard_attack': 50, 'cost_materials': 75})),
+        (2025, "Sensor-Linked Artillery",          1250, 1500, 0,  1,  3800, 500, 0,   2,   1500, (3, 5, {'health': 40, 'attack': 50, 'bombard_attack': 50, 'cost_materials': 75})),
+        (2040, "Automated Fire-Control Artillery", 1400, 1680, 0,  1,  4100, 500, 0,   2,   1680, (35, 3, {'health': 40, 'attack': 50, 'bombard_attack': 50, 'cost_materials': 75})),
     ],
 }
 
@@ -321,10 +321,8 @@ def equipment_profile(prefix, stage):
 
 
 def expanded_equipment_stages(tech):
-    """Expand infantry upgrades into dated stages shared by research and units."""
+    """Expand equipment upgrades into dated stages shared by research and units."""
     stages = EQUIPMENT_STAGES[tech]
-    if tech != "infantry_type":
-        return stages
     result = []
     for index, row in enumerate(stages):
         year, name, *values = row
@@ -622,6 +620,10 @@ WW2_RAIL_REQ = {"AND": [{"heavy_tank": 1}, {"ww1_railroad_gun": 1}]}
 IAC = {"industrial_air_compressor": 1}
 GR = {"recruitment_buildings": "MATCH_LEVEL"}
 
+TRUCK_RESEARCH_YEAR = 1930
+TRUCK_CAVALRY_REQUIREMENT = sum(stage[0] <= TRUCK_RESEARCH_YEAR
+                               for stage in expanded_equipment_stages("cavalry"))
+
 # None for both LVLS and YRS derives equipment research from EQUIPMENT_STAGES.
 # Other rows retain their yr expressions and prerequisite dictionaries.
 
@@ -632,7 +634,7 @@ RESEARCH_RECIPES = [
         ("cavalry",                    "INFANTRY", None, 1200, {},                                            None,   {}),
         ("militia",                    "INFANTRY", None, 600,  {},                                            None,   {}),
         ("artillery",                  "INFANTRY", None, 900,  {},                                            None,   {}),
-        ("trucks",                     "INFANTRY", 1,    1800, {"cavalry": len(EQUIPMENT_STAGES["cavalry"])}, [1930], {}),
+        ("trucks",                     "INFANTRY", 1,    1800, {"cavalry": TRUCK_CAVALRY_REQUIREMENT},                [TRUCK_RESEARCH_YEAR], {}),
         ("armored_personnel_carriers", "INFANTRY", 1,    1800, {"trucks": 1},                                 [1940], {}),
         ("infantry_fighting_vehicle",  "INFANTRY", 1,    1800, {"armored_personnel_carriers": 1},             [1950], {}),
     ],
