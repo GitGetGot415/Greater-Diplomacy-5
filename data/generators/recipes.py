@@ -373,21 +373,24 @@ AIR_RECIPE_COLUMNS = {
     "CARGO": "air_transport_capacity",
 }
 
+CAR_SPEED = piecewise([(0, 2, 0), (1, 3, 0), (4, 4, 0)])
+LIGHT_TANK_SPEED = piecewise([(0, 2, 0), (3, 3, 0)])
+
 LAND_UNIT_RECIPES = [
-    #NAME                          TIERS     HP              ATK             DEF           SPD                                           MAT               MAN          FUEL          TIME       BOMB           OPTIONS
-    ("WW1 Tank",                   single(), 3000,           1500,           100,          1,                                            6000,             1000,        300,          6,         None,          {}),
-    ("WW1 Armored Car",            single(), 1000,           300,            50,           2,                                            3000,             1000,        100,          4,         None,          {}),
-    ("Armored Car",                rs(34),   lin(1000, 100), lin(400, 100),  lin(60, 10),  piecewise([(0, 2, 0), (1, 3, 0), (4, 4, 0)]), lin(3000, 200),   const(1000), lin(100, 5),  const(4),  None,          {}),
-    ("Light Tank",                 rs(34),   lin(1800, 200), lin(1200, 150), lin(80, 10),  piecewise([(0, 2, 0), (3, 3, 0)]),            lin(5000, 500),   const(1000), lin(150, 5),  const(5),  None,          {}),
-    ("Medium Tank",                rs(4),    lin(2500, 500), lin(2400, 600), lin(150, 25), const(2),                                     lin(9000, 1000),  const(1000), lin(200, 10), const(6),  None,          {}),
-    ("Heavy Tank",                 rs(4),    lin(3000, 500), lin(3000, 500), lin(350, 50), const(1),                                     lin(12000, 1000), const(1000), lin(200, 10), const(6),  None,          {}),
-    ("Super Heavy Tank",           rs(5),    const(5000),    const(5000),    lin(550, 50), const(1),                                     lin(16000, 2000), const(1000), lin(240, 20), const(6),  None,          {}),
-    ("Landkreuzer P.1000 Ratte",   single(), 10000,          6000,           400,          1,                                            50000,            2000,        1000,         10,        1000,          {"division_suffix": "1000"}),
-    ("Landkreuzer P.1500 Monster", single(), 15000,          8000,           500,          1,                                            60000,            2000,        1200,         12,        1200,          {"division_suffix": "1500"}),
-    ("Railgun",                    single(), 10000,          10000,          500,          1,                                            80000,            2000,        3000,         10,        10000,         {}),
-    ("Main Battle Tank",           rs(22),   lin(5000, 500), lin(5000, 500), lin(250, 25), const(2),                                     lin(16000, 1000), const(1000), lin(240, 10), const(6),  None,          {}),
-    ("WW1 Railroad Gun",           single(), 1200,           500,            0,            1,                                            5000,             1000,        0,            6,         500,           {}),
-    ("WW2 Railroad Gun",           single(), 2000,           800,            0,            1,                                            8000,             1000,        0,            6,         800,           {}),
+    #NAME                          TIERS     HP              ATK             DEF           SPD               MAT               MAN          FUEL          TIME      BOMB   OPTIONS
+    ("WW1 Tank",                   single(), 3000,           1500,           100,          1,                6000,             1000,        300,          6,        None,  {}),
+    ("WW1 Armored Car",            single(), 1000,           300,            50,           2,                3000,             1000,        100,          4,        None,  {}),
+    ("Armored Car",                rs(34),   lin(1000, 100), lin(400, 100),  lin(60, 10),  CAR_SPEED,        lin(3000, 200),   const(1000), lin(100, 5),  const(4), None,  {}),
+    ("Light Tank",                 rs(34),   lin(1800, 200), lin(1200, 150), lin(80, 10),  LIGHT_TANK_SPEED, lin(5000, 500),   const(1000), lin(150, 5),  const(5), None,  {}),
+    ("Medium Tank",                rs(4),    lin(2500, 500), lin(2400, 600), lin(150, 25), const(2),         lin(9000, 1000),  const(1000), lin(200, 10), const(6), None,  {}),
+    ("Heavy Tank",                 rs(4),    lin(3000, 500), lin(3000, 500), lin(350, 50), const(1),         lin(12000, 1000), const(1000), lin(200, 10), const(6), None,  {}),
+    ("Super Heavy Tank",           rs(5),    const(5000),    const(5000),    lin(550, 50), const(1),         lin(16000, 2000), const(1000), lin(240, 20), const(6), None,  {}),
+    ("Landkreuzer P.1000 Ratte",   single(), 10000,          6000,           400,          1,                50000,            2000,        1000,         10,       1000,  {"division_suffix": "1000"}),
+    ("Landkreuzer P.1500 Monster", single(), 15000,          8000,           500,          1,                60000,            2000,        1200,         12,       1200,  {"division_suffix": "1500"}),
+    ("Railgun",                    single(), 10000,          10000,          500,          1,                80000,            2000,        3000,         10,       10000, {}),
+    ("Main Battle Tank",           rs(22),   lin(5000, 500), lin(5000, 500), lin(250, 25), const(2),         lin(16000, 1000), const(1000), lin(240, 10), const(6), None,  {}),
+    ("WW1 Railroad Gun",           single(), 1200,           500,            0,            1,                5000,             1000,        0,            6,        500,   {}),
+    ("WW2 Railroad Gun",           single(), 2000,           800,            0,            1,                8000,             1000,        0,            6,        800,   {}),
 ]
 
 NAVAL_UNIT_RECIPES = [
