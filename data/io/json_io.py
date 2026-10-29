@@ -45,5 +45,5 @@ def load_json_or_empty(path):
     try:
         with open(path, "r", encoding="utf-8") as f:
             return json.load(f)
-    except Exception:
+    except (OSError, ValueError):
         return {}

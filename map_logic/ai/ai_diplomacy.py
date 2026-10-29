@@ -1676,7 +1676,7 @@ def process_scripted_events(map_screen, preview_request=None):
                                     if hasattr(map_screen, 'nation_colors'):
                                         map_screen.nation_colors[nation_name] = new_col
                                     map_screen.centers_need_update = True
-                            except Exception:
+                            except (ValueError, AttributeError):
                                 pass
                         continue
 

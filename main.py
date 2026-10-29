@@ -229,7 +229,7 @@ class Controller:
                     ui_elements.click_sound.load(c.SOUND_CLICK_PATH)
                     ui_elements.slider_sound = Wav()
                     ui_elements.slider_sound.load(c.SOUND_SLIDER_PATH)
-                except:
+                except Exception:
                     print("Warning: Sound files not found in assets folder")
 
             except Exception as e:
@@ -247,7 +247,7 @@ class Controller:
                     pygame.mixer.Sound(c.SOUND_CLICK_PATH),
                     pygame.mixer.Sound(c.SOUND_SLIDER_PATH),
                 )
-            except:
+            except Exception:
                 print("Warning: Sound files not found in assets folder")
 
         # Initialize fonts
@@ -260,13 +260,13 @@ class Controller:
         try:
             ui_elements.click_sound = Wav()
             ui_elements.click_sound.load(c.SOUND_CLICK_PATH)
-        except:
+        except Exception:
             print(f"Warning: {c.SOUND_CLICK_PATH} not found in assets folder")
 
         try:
             ui_elements.slider_sound = Wav()
             ui_elements.slider_sound.load(c.SOUND_SLIDER_PATH)
-        except:
+        except Exception:
             print(f"Warning: {c.SOUND_SLIDER_PATH} not found in assets folder")
 
         self.screen = pygame.display.set_mode((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
@@ -758,7 +758,7 @@ class Controller:
                 pygame.mixer.Sound(c.SOUND_CLICK_PATH),
                 pygame.mixer.Sound(c.SOUND_SLIDER_PATH),
             )
-        except:
+        except Exception:
             print("Warning: Sound files not found in assets folder")
 
     def build_playlist(self):

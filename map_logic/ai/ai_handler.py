@@ -161,7 +161,7 @@ def abort_ai_generation():
             url = get_ollama_url().replace("/api/chat", "/api/generate")
             # A tiny 0.1s timeout so the Pygame UI doesn't hang if Ollama's HTTP queue is saturated
             requests.post(url, json={"model": get_ollama_model(), "prompt": "", "keep_alive": 0}, timeout=(0.1, 0.1))
-        except:
+        except Exception:
             pass
 
 def _provider_error(message):
@@ -457,7 +457,7 @@ def call_ollama(system_prompt, user_prompt, turn_id=None):
                 # Try to parse it cleanly if it's a JSON error response
                 error_json = json.loads(error_body)
                 err_msg = error_json.get("error", error_body)
-            except:
+            except (ValueError, AttributeError):
                 err_msg = error_body
 
             return {"message": f"OLLAMA HTTP ERROR {response.status}: {err_msg}"}
@@ -493,5 +493,5 @@ def call_ollama(system_prompt, user_prompt, turn_id=None):
             ACTIVE_OLLAMA_CONNECTIONS.remove(conn)
         try:
             conn.close()
-        except:
+        except Exception:
             pass

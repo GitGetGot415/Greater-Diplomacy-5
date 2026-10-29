@@ -453,7 +453,7 @@ def load_tournament(file_path, key):
             payload = json.load(f)
     except OSError:
         return False, None, None, None, None, "Could not read tournament file"
-    except Exception:
+    except ValueError:
         return False, None, None, None, None, "Invalid file format"
 
     if not isinstance(payload, dict):

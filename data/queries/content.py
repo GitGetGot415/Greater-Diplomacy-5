@@ -203,7 +203,7 @@ def _load_cached_json(cache_key, *, reload=False):
             try:
                 with open(file_path, "r", encoding="utf-8") as f:
                     cache_obj["data"] = json.load(f)
-            except Exception as e:
+            except (OSError, ValueError) as e:
                 print(f"Error loading {file_path}: {e}")
                 cache_obj["data"] = {}
         else:
@@ -295,7 +295,7 @@ def get_keybind(action, default):
         return None
     try:
         return pygame.key.key_code(name)
-    except Exception:
+    except (ValueError, TypeError):
         return default
 
 

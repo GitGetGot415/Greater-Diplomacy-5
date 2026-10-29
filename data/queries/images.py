@@ -25,7 +25,7 @@ def _load_and_scale_local_image(file_path, size):
         try:
             img = pygame.image.load(file_path).convert_alpha()
             return pygame.transform.scale(img, size)
-        except:
+        except Exception:
             pass
     return None
 
@@ -124,7 +124,7 @@ def decode_b64_to_surf(b64_str, size, is_portrait=False, country_name=None):
                 scaled = pygame.image.fromstring(img_bytes, size, "RGBA")
             else:
                 scaled = pygame.image.fromstring(img_bytes, size, "RGB").convert_alpha()
-        except:
+        except Exception:
             scaled = pygame.Surface(size, pygame.SRCALPHA)
             scaled.fill((255, 255, 255, 255))
 

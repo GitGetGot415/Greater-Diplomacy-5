@@ -361,7 +361,7 @@ def open_doctrines_from_locator():
     try:
         with open(path, encoding="utf-8") as handle:
             data = json.load(handle)
-    except Exception:
+    except (OSError, ValueError):
         return ""
     if data.get("locator") != LOCATOR_FORMAT:
         return ""

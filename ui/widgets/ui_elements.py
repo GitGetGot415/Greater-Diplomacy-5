@@ -305,7 +305,7 @@ class Button:
         if self.image:
             if not labelled:
                 img_anchor = {"center": self.rect.center}
-            elif getattr(self, 'layout', 'horizontal') == 'vertical':
+            elif self.layout == 'vertical':
                 # Shifted down slightly to make room for the text above it
                 img_anchor = {"center": (self.rect.centerx, self.rect.centery + 10)}
             else:
@@ -314,7 +314,7 @@ class Button:
             surface.blit(self.image, img_rect)
 
         if labelled:
-            if getattr(self, 'layout', 'horizontal') == 'vertical':
+            if self.layout == 'vertical':
                 self.draw_label(surface, self.text, midtop=(self.rect.centerx, self.rect.y + 5))
             else:
                 self.draw_label(surface, self.text, midleft=(img_rect.right + 10, self.rect.centery))
@@ -334,8 +334,8 @@ class Button:
         if right_image_rect:
             surface.blit(right_image, right_image_rect)
 
-        badge_text = getattr(self, 'notification_text', None)
-        if not badge_text and getattr(self, 'notification_count', 0) > 0:
+        badge_text = self.notification_text
+        if not badge_text and self.notification_count > 0:
             badge_text = str(self.notification_count)
         if badge_text:
             draw_notification_badge(surface, self.rect, badge_text,
@@ -353,7 +353,7 @@ class Button:
             pygame.draw.line(surface, (r, g, b), (rect.x, rect.y + i), (rect.right - 1, rect.y + i))
 
     def handle_event(self, event):
-        if not self.visible or getattr(self, 'disabled', False): return
+        if not self.visible or self.disabled: return
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             if self.rect.collidepoint(event.pos) and (self.click_guard is None or self.click_guard()):

@@ -209,13 +209,13 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
         try:
             map_screen.political_map = pygame.image.load(
                 os.path.join(load_path, OPTIONAL_LAYER_FILES["political"])).convert()
-        except:
+        except Exception:
             map_screen.political_map = pygame.image.load(os.path.join(load_path, "id_map.png")).convert()
 
         try:
             map_screen.cores_map = pygame.image.load(
                 os.path.join(load_path, OPTIONAL_LAYER_FILES["cores"])).convert()
-        except:
+        except Exception:
             map_screen.cores_map = map_screen.id_map.copy()
 
     else:
