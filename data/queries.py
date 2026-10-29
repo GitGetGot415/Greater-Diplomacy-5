@@ -1879,11 +1879,17 @@ def get_best_naval_unit(player_research, unit_library, *, context=None):
 REQ_GROUP_KEYS = ("OR", "AND")
 
 def get_tech_level_gate_unlocks(tech_key, level, *, context=None):
-    """Return research levels whose added requirements name this technology level."""
-    return [(key, int(target)) for key, data in get_tech_tree(context).items()
-            for target, requirements in data.get("level_reqs", {}).items()
-            if any(dependency == tech_key and tech_requirement_level(required, int(target)) == level
-                   for dependency, required in walk_tech_requirements(requirements))]
+    """Return first research levels and added level gates that name this technology level."""
+    unlocks = []
+    for key, data in get_tech_tree(context).items():
+        gates = [(1, data.get("req", {}))]
+        gates.extend((int(target), reqs) for target, reqs in data.get("level_reqs", {}).items())
+        for target, requirements in gates:
+            if ((key, target) not in unlocks
+                    and any(dependency == tech_key and tech_requirement_level(required, target) == level
+                            for dependency, required in walk_tech_requirements(requirements))):
+                unlocks.append((key, target))
+    return unlocks
 
 
 def get_tech_requirements(tech_data, target_level=1):

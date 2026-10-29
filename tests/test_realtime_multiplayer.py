@@ -33,6 +33,7 @@ from data.multiplayer.realtime.session import (
     GameVersionError,
 )
 import data.constants as c
+from tests.research_fixtures import factory_research_cases
 import json
 from data import migrations
 from data.multiplayer.realtime.relay import (
@@ -754,21 +755,7 @@ class RealtimeSessionTests(unittest.TestCase):
     def test_factory_output_research_uses_server_prerequisites_and_costs(self):
         from data import queries
         tree = queries.get_tech_tree()
-        cases = (("waltham_system", {}, {"basic_factory": 1}),
-                 ("bessemer_process", {"basic_factory": 1}, {"waltham_system": 1}),
-                 ("conveyor_belt", {"factory": tree["conveyor_belt"]["req"]["factory"] - 1},
-                  dict(tree["conveyor_belt"]["req"])),
-                 ("just_in_time_manufacturing", {"factory": tree["just_in_time_manufacturing"]["req"]["factory"] - 1},
-                  dict(tree["just_in_time_manufacturing"]["req"])),
-                 ("assembly_line", {"bessemer_process": 1}, {"factory": 1}),
-                 ("factory", {}, {"bessemer_process": 1}),
-                 ("factory", {"factory": 1, "bessemer_process": 1},
-                  {"factory": 1, "bessemer_process": 1, "assembly_line": 1}),
-                 ("factory", {"factory": 3, "bessemer_process": 1, "assembly_line": 1},
-                  {"factory": 3, "bessemer_process": 1, "assembly_line": 1, "conveyor_belt": 1}),
-                 ("factory", {"factory": 8, "bessemer_process": 1, "assembly_line": 1, "conveyor_belt": 1},
-                  {"factory": 8, "bessemer_process": 1, "assembly_line": 1, "conveyor_belt": 1,
-                   "just_in_time_manufacturing": 1}))
+        cases = factory_research_cases(tree)
         for tech, locked, unlocked in cases:
             map_ref = SimpleNamespace(nation_data={"A": {"research": dict(locked), "research_queue": []}},
                                       map_data={}, id_to_province={})

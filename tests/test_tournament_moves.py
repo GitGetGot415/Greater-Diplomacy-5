@@ -19,6 +19,7 @@ os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import data.constants as c
+from tests.research_fixtures import factory_research_cases
 from data import queries
 from data.multiplayer.tournament import files as multiplayer_io
 
@@ -131,21 +132,7 @@ class TournamentMoveTests(unittest.TestCase):
 
     def test_factory_output_research_intents_require_host_prerequisites_and_current_turn(self):
         tree = queries.get_tech_tree()
-        cases = (("waltham_system", {}, {"basic_factory": 1}),
-                 ("bessemer_process", {"basic_factory": 1}, {"waltham_system": 1}),
-                 ("conveyor_belt", {"factory": tree["conveyor_belt"]["req"]["factory"] - 1},
-                  dict(tree["conveyor_belt"]["req"])),
-                 ("just_in_time_manufacturing", {"factory": tree["just_in_time_manufacturing"]["req"]["factory"] - 1},
-                  dict(tree["just_in_time_manufacturing"]["req"])),
-                 ("assembly_line", {"bessemer_process": 1}, {"factory": 1}),
-                 ("factory", {}, {"bessemer_process": 1}),
-                 ("factory", {"factory": 1, "bessemer_process": 1},
-                  {"factory": 1, "bessemer_process": 1, "assembly_line": 1}),
-                 ("factory", {"factory": 3, "bessemer_process": 1, "assembly_line": 1},
-                  {"factory": 3, "bessemer_process": 1, "assembly_line": 1, "conveyor_belt": 1}),
-                 ("factory", {"factory": 8, "bessemer_process": 1, "assembly_line": 1, "conveyor_belt": 1},
-                  {"factory": 8, "bessemer_process": 1, "assembly_line": 1, "conveyor_belt": 1,
-                   "just_in_time_manufacturing": 1}))
+        cases = factory_research_cases(tree)
         for tech, locked, unlocked in cases:
             for mode in ("valid", "locked", "malformed", "stale", "wrong_key"):
                 with self.subTest(tech=tech, mode=mode), tempfile.TemporaryDirectory() as directory:
