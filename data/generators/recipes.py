@@ -376,26 +376,15 @@ LAND_UNIT_RECIPES = [
     #NAME,                         TIERS,              HP,                ATK,               DEF,             SPD,                                          MAT,                 MAN,         FUEL,            TIME,     BOMB,  OPTIONS
     ("WW1 Tank",                   single(),           3000,              1500,              100,             1,                                            6000,                1000,        300,             6,        None,  {}),
     ("WW1 Armored Car",            single(),           1000,              300,               50,              2,                                            3000,                1000,        100,             4,        None,  {}),
-    # speed steps: I=2, II-IV=3, V+=4
     ("Armored Car",                roman_suffixes(34), linear(1000, 100), linear(400, 100),  linear(60, 10),  piecewise([(0, 2, 0), (1, 3, 0), (4, 4, 0)]), linear(3000, 200),   const(1000), linear(100, 5),  const(4), None,  {}),
-    # speed steps: I-III=2, IV+=3
     ("Light Tank",                 roman_suffixes(34), linear(1800, 200), linear(1200, 150), linear(80, 10),  piecewise([(0, 2, 0), (3, 3, 0)]),            linear(5000, 500),   const(1000), linear(150, 5),  const(5), None,  {}),
     ("Medium Tank",                roman_suffixes(4),  linear(2500, 500), linear(2400, 600), linear(150, 25), const(2),                                     linear(9000, 1000),  const(1000), linear(200, 10), const(6), None,  {}),
     ("Heavy Tank",                 roman_suffixes(4),  linear(3000, 500), linear(3000, 500), linear(350, 50), const(1),                                     linear(12000, 1000), const(1000), linear(200, 10), const(6), None,  {}),
     ("Super Heavy Tank",           roman_suffixes(5),  const(5000),       const(5000),       linear(550, 50), const(1),                                     linear(16000, 2000), const(1000), linear(240, 20), const(6), None,  {}),
-    # Can bombard an adjacent tile (see c.BOMBARDMENT_UNITS); bombard_attack
-    # is tracked separately from melee "attack" so the two stay tunable independently.
     ("Landkreuzer P.1000 Ratte",   single(),           10000,             6000,              400,             1,                                            50000,               2000,        1000,            10,       1000,  {"division_suffix": "1000"}),
     ("Landkreuzer P.1500 Monster", single(),           15000,             8000,              500,             1,                                            60000,               2000,        1200,            12,       1200,  {"division_suffix": "1500"}),
-    # Simmilar stats to the Landkreuzer P.1500 Monster but reaches 3 tiles instead
-    # of 2 (see c.BOMBARDMENT_UNITS) - the endgame answer to its siege role.
     ("Railgun",                    single(),           10000,             10000,             500,             1,                                            80000,               2000,        3000,            10,       10000, {}),
     ("Main Battle Tank",           roman_suffixes(22), linear(5000, 500), linear(5000, 500), linear(250, 25), const(2),                                     linear(16000, 1000), const(1000), linear(240, 10), const(6), None,  {}),
-    # Siege pieces: reach 2 tiles instead of Artillery's 1 (see c.BOMBARDMENT_UNITS).
-    # Two standalone guns (not a leveled family) - stats equal the old 5-level
-    # Railroad Gun's level 1 and level 5 respectively.
-    # Bombardment damage, tracked separately from melee "attack" so the
-    # two can be tuned independently. Currently mirrors attack 1:1.
     ("WW1 Railroad Gun",           single(),           1200,              500,               0,               1,                                            5000,                1000,        0,               6,        500,   {}),
     ("WW2 Railroad Gun",           single(),           2000,              800,               0,               1,                                            8000,                1000,        0,               6,        800,   {}),
 ]
@@ -405,21 +394,15 @@ NAVAL_UNIT_RECIPES = [
     ("Carrack",          single(),           1000,              400,               0,               1,        2000,                500,         0,               4,         None,             {}),
     ("Ironclad",         single(),           2000,              800,               200,             1,        8000,                1000,        100,             6,         None,             {}),
     ("Pre-Dreadnought",  single(),           3000,              1200,              300,             1,        12000,               2000,        250,             8,         None,             {}),
-    # Can bombard an adjacent tile (see c.BOMBARDMENT_UNITS); bombard_attack
-    # is tracked separately from melee "attack" so the two stay tunable independently.
     ("Dreadnought",      single(),           4000,              2400,              400,             1,        20000,               2000,        300,             10,        300,              {}),
     ("Battleship",       single(),           6000,              4000,              600,             1,        20000,               2000,        400,             10,        500,              {}),
     ("Destroyer",        roman_suffixes(36), linear(2400, 400), linear(1200, 300), linear(200, 20), const(1), linear(10000, 500),  const(1000), linear(250, 5),  const(8),  None,             {}),
-    # attack climbs 300/level through IX, jumps to 4000 at X, then 200/level
-    # "attack": piecewise([(0, 1200, 300), (9, 4000, 200)]),
     ("Submarine",        roman_suffixes(36), linear(1200, 200), linear(600, 100),  const(0),        const(1), linear(8000, 400),   const(1000), linear(150, 5),  const(6),  None,             {}),
-    # Can bombard an adjacent tile (see c.BOMBARDMENT_UNITS); bombard_attack
-    # is tracked separately from melee "attack" so the two stay tunable independently.
     ("Aircraft Carrier", roman_suffixes(25), linear(800, 200),  linear(600, 120),  linear(200, 20), const(1), linear(20000, 1000), const(2000), linear(500, 25), const(10), linear(600, 120), {}),
 ]
 
 AIR_UNIT_RECIPES = [
-# NAME                        , TIERS             , HP               , ATK              , DEF            , SPD                                         , MAT                , MAN        , FUEL           , TIME     , ROLE            , RNG                        , AAMULT, CONSUME, IMMUNE, FORT, CARGO, OPTIONS
+    # NAME                        , TIERS             , HP               , ATK              , DEF            , SPD                                         , MAT                , MAN        , FUEL           , TIME     , ROLE            , RNG                        , AAMULT, CONSUME, IMMUNE, FORT, CARGO, OPTIONS
     ('Biplane Fighter',     roman_suffixes(5),  linear(2000, 100), linear(120, 20),   0,               1, 1000,                500,  60,              2, 'fighter',   linear(60, 5),   10,   None, None, None, None, {}),
     ('Biplane Bomber',      roman_suffixes(5),  linear(3000, 500), linear(600, 100),  0,               1, 2000,                500,  80,              3, 'bomber',    linear(80, 10),  None, None, None, True, None, {}),
     ('Zeppelin',            single(),           3000,              300,               0,               1, 2000,                500,  60,              4, 'bomber',    120,             None, None, None, True, None, {}),
@@ -447,16 +430,11 @@ def unit_family(row, *, naval_unit=False, air=False):
 UNIT_SECTIONS = [
     [
         equipment_family("Infantry Type", "infantry_type"),
-        # Vehicle variants share infantry research and retain their separate unlocks.
         equipment_family("Motorized Infantry Type", "infantry_type"),
         equipment_family("Mechanized Infantry Type", "infantry_type"),
         equipment_family("Infantry Fighting Vehicle Type", "infantry_type"),
         equipment_family("Cavalry", "cavalry"),
         equipment_family("Militia", "militia"),
-        # Fragile in a straight fight - its damage is meant to come from bombarding
-        # an adjacent tile (see c.BOMBARDMENT_UNITS) rather than from stacking up.
-        # Field and heavy artillery share the same equipment stages.
-        # Direct attack and bombardment use separate fields for independent tuning.
         equipment_family("Artillery", "artillery"),
         equipment_family("Heavy Artillery", "artillery"),
     ],
@@ -531,7 +509,7 @@ BUILDING_RECIPE_COLUMNS = {
 # Base requirements preserve the literal "null" string separately from None.
 # Basic Factory costs remain dynamic in queries.get_building_cost; its stored costs stay zero.
 BUILDING_BASE_RECIPES = [
-# NAME                      , REQ   , TIME, GROUP          , MAT , MAN, FUEL, OUTMAT, OUTMAN, OUTFUEL
+    # NAME                      , REQ   , TIME, GROUP          , MAT , MAN, FUEL, OUTMAT, OUTMAN, OUTFUEL
     ("Basic Factory",            "null", 20, "industry",      0,    0, 0, 200, 0,  0),
     ("Basic Recruitment Center", None,   6,  "recruitment",   2500, 0, 0, 0,   50, 0),
     ("Fort Lvl 1",               None,   1,  "fortification", 5000, 0, 0, 0,   0,  0),
@@ -539,7 +517,7 @@ BUILDING_BASE_RECIPES = [
 
 # Growth functions receive the numbered building level, starting at 1.
 BUILDING_GROWTH_RECIPES = [
-# NAME                      , PREFIX                    , COUNT           , TIME     , GROUP                 , MAT                        , MAN     , FUEL       , OUTMAT                 , OUTMAN           , OUTFUEL         , OPTIONS
+    # NAME                      , PREFIX                    , COUNT           , TIME     , GROUP                 , MAT                        , MAN     , FUEL       , OUTMAT                 , OUTMAN           , OUTFUEL         , OPTIONS
     ("Basic Factory",            "Factory Lvl",              25,               const(12), const("industry"),      const(30000),                const(0), const(1000), lambda n: 100 * n + 500, const(0),          lambda n: 10 * n, {}),
     ("Basic Recruitment Center", "Recruitment Building Lvl", 50,               const(6),  const("recruitment"),   const(5000),                 const(0), const(0),    const(0),                lambda n: 100 * n, const(0),         {}),
     ("Fort Lvl 1",               "Fort Lvl",                 c.FORT_MAX_LEVEL, const(1),  const("fortification"), lambda n: 4000 + (1000 * n), const(0), const(0),    const(0),                const(0),          const(0),         {"skip_generated_base": True}),
@@ -582,27 +560,23 @@ RESEARCH_OPTION_COLUMNS = {"NAME": "display_name", "GATES": "level_reqs", "BONUS
 # Other rows retain their years_range expressions and prerequisite dictionaries.
 RESEARCH_RECIPES = [
     [
-# ID                          , CAT       , LVLS, COST, REQ                                                  , YRS                           , OPTIONS
+        # ID                          , CAT       , LVLS, COST, REQ                                                  , YRS                           , OPTIONS
         ("infantry_type",              "INFANTRY", None, 900,  {},                                                    None,                           {}),
         ("cavalry",                    "INFANTRY", None, 1200, {},                                                    None,                           {}),
         ("militia",                    "INFANTRY", None, 600,  {},                                                    None,                           {}),
         ("artillery",                  "INFANTRY", None, 900,  {},                                                    None,                           {}),
-        # One-time unlocks rather than leveled techs: owning them lets a nation build
-        # Motorized/Mechanized Infantry up to whatever year its own infantry_type
-        # research has reached (see queries.get_infantry_family_year), instead of
-        # requiring a separate research track for each vehicle family.
         ("trucks",                     "INFANTRY", 1,    1800, {"cavalry": len(EQUIPMENT_STAGES["cavalry"])},         years_range(1930, 1, 1),        {}),
         ("armored_personnel_carriers", "INFANTRY", 1,    1800, {"trucks": 1},                                         years_range(1940, 1, 1),        {}),
         ("infantry_fighting_vehicle",  "INFANTRY", 1,    1800, {"armored_personnel_carriers": 1},                     years_range(1950, 1, 1),        {}),
     ],
     [
-# ID                          , CAT       , LVLS, COST, REQ                                                  , YRS                           , OPTIONS
+        # ID                          , CAT       , LVLS, COST, REQ                                                  , YRS                           , OPTIONS
         ("civilian_car",               "TANKS",    1,    2400, {},                                                    years_range(1910, 1, 1),        {}),
         ("ww1_armored_car",            "TANKS",    1,    2400, {"civilian_car": 1},                                   years_range(1912, 1, 1),        {}),
         ("armored_car",                "TANKS",    34,   2400, {"ww1_armored_car": 1},                                years_range(1916, 4, 34),       {}),
     ],
     [
-# ID                          , CAT       , LVLS, COST, REQ                                                  , YRS                           , OPTIONS
+        # ID                          , CAT       , LVLS, COST, REQ                                                  , YRS                           , OPTIONS
         ("ww1_tank",                   "TANKS",    1,    2400, {"ww1_armored_car": 1},                                years_range(1914, 1, 1),        {}),
         ("light_tank",                 "TANKS",    34,   2400, {"ww1_tank": 1},                                       years_range(1918, 4, 34),       {}),
         ("medium_tank",                "TANKS",    4,    2400, {"light_tank": 1},                                     years_range(1925, 5, 4),        {}),
@@ -617,7 +591,7 @@ RESEARCH_RECIPES = [
         ("ww2_railroad_gun",           "TANKS",    1,    2400, {"AND": [{"heavy_tank": 1}, {"ww1_railroad_gun": 1}]}, years_range(1932, 1, 1),        {}),
     ],
     [
-# ID                          , CAT       , LVLS, COST, REQ                                                  , YRS                           , OPTIONS
+        # ID                          , CAT       , LVLS, COST, REQ                                                  , YRS                           , OPTIONS
         ("carrack",                    "NAVY",     1,    600,  {},                                                    [1800],                         {}),
         ("ironclad",                   "NAVY",     1,    2400, {"carrack": 1},                                        [1860],                         {}),
         ("pre-dreadnought",            "NAVY",     1,    2400, {"ironclad": 1},                                       [1880],                         {}),
@@ -628,7 +602,7 @@ RESEARCH_RECIPES = [
         ("submarine",                  "NAVY",     36,   2400, {"dreadnought": 1},                                    years_range(1910, 4, 36),       {}),
     ],
     [
-# ID                          , CAT       , LVLS, COST, REQ                                                  , YRS                           , OPTIONS
+        # ID                          , CAT       , LVLS, COST, REQ                                                  , YRS                           , OPTIONS
         ("basic_factory",              "INDUSTRY", 1,    1200, {},                                                    years_range(1800, 1, 1),        {}),
         ("waltham_system",             "INDUSTRY", 1,    1200, {"basic_factory": 1},                                  [1815],                         {"NAME": "Waltham System", "BONUS": [{"building_families": ["Basic Factory"], "flat_outputs": {"materials": 100}}]}),
         ("metal_shaper",               "INDUSTRY", 1,    1200, {"waltham_system": 1},                                 [1835],                         {"NAME": "Metal Shaper"}),
@@ -657,7 +631,7 @@ RESEARCH_RECIPES = [
         ("resource_refining",          "INDUSTRY", 100,  900,  {},                                                    years_range(1911, 1, 100),      {}),
     ],
     [
-# ID                          , CAT       , LVLS, COST, REQ                                                  , YRS                           , OPTIONS
+        # ID                          , CAT       , LVLS, COST, REQ                                                  , YRS                           , OPTIONS
         ('biplane',                    'AIR',      5,    1200, {},                                                    [1910, 1914, 1918, 1922, 1926], {"NAME": 'Biplane Fighter'}),
         ('biplane_bomber',             'AIR',      3,    1800, {'biplane': 1},                                        [1915, 1920, 1925],             {"NAME": 'Biplane Bomber'}),
         ('zeppelin',                   'AIR',      1,    1800, {},                                                    [1910],                         {"NAME": 'Zeppelin'}),
