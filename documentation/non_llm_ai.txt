@@ -78,7 +78,6 @@ Field artillery and heavy artillery use the same research track.
 Vehicle infantry uses the regular infantry stages and separate vehicle unlocks.
 Each stage uses its base statistics and existing images. Equipment names do not add combat abilities.
 The final stage remains available after its research year.
-metadata.art_name selects existing images for each stage.
 Research labels and image requests come from level_names and level_icons in the active research library.
 
 Read equipment dates, statistics, prices, and research costs from data/json/unit_data.json and data/json/research_template.json.

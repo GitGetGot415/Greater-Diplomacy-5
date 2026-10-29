@@ -10,7 +10,7 @@ every line, tweak the numbers here and run generate_data.py to rewrite the
 actual JSON files. The game itself only ever reads the JSON files in
 data/json/ - nothing about how it loads/uses that data changes.
 
-EQUIPMENT_STAGES stores base statistics and artwork references for each equipment stage.
+EQUIPMENT_STAGES stores base statistics for each equipment stage.
 Vehicle infantry statistics are generated from regular infantry through INFANTRY_VARIANT_RULES.
 Heavy artillery statistics are generated through HEAVY_ARTILLERY_RULES.
 Edit that table, then run the generator.
@@ -110,13 +110,12 @@ OPTIONAL_UNIT_STAT_KEYS = ["bombard_attack", "production_group", "air_role",
 
 
 class UnitFamily:
-    def __init__(self, prefix, suffixes, stats, naval_unit=False, research_key=None, recruitment=None, division_suffix="", research_years=None, art_name=None):
+    def __init__(self, prefix, suffixes, stats, naval_unit=False, research_key=None, recruitment=None, division_suffix="", research_years=None):
         self.prefix = prefix
         self.division_suffix = division_suffix
         self.suffixes = suffixes
         self.stats = stats
         self.research_years = research_years
-        self.art_name = art_name
         self.naval_unit = naval_unit
         key = re.sub(r'[^a-z0-9 ]', '', prefix.lower()).replace(' ', '_')
         self.research_key = research_key or c.UNIT_TECH_KEY_OVERRIDES.get(key, key)
@@ -175,8 +174,6 @@ class UnitFamily:
                                  "ai_tank": self.ai_tank and (self.prefix != "Cavalry" or suffix is None),
                                  "ai_force_category": (None if self.prefix == "Cavalry" and suffix is not None
                                                        else self.ai_force_category)}
-            if self.art_name:
-                entry["metadata"]["art_name"] = self.art_name(i) if callable(self.art_name) else self.art_name
             out.append((name, entry))
         return out
 
@@ -192,11 +189,9 @@ INFANTRY_VARIANT_RULES = {
 # Preserve the first existing vehicle stage independently of artwork selection.
 INFANTRY_VARIANT_FIRST_YEAR = 1905
 HEAVY_ARTILLERY_RULES = {"material_multiplier": 2, "attack_multiplier": 2, "bombard_multiplier": 2, "extra_production_time": 3}
-EQUIPMENT_VARIANT_BASES = {family: "Infantry Type" for family in INFANTRY_VARIANT_RULES}
-EQUIPMENT_VARIANT_BASES["Heavy Artillery"] = "Artillery"
 
-# Each row defines its year, name, base statistics, and existing artwork reference.
-# Variant statistics and artwork are generated. Infantry's cost_fuel applies only to vehicles.
+# Each row defines its year, name, and base statistics.
+# Variant statistics are generated. Infantry's cost_fuel applies only to vehicles.
 EQUIPMENT_COLUMNS = {
     "HP": "health",
     "ATK": "attack",
@@ -207,74 +202,73 @@ EQUIPMENT_COLUMNS = {
     "FUEL": "cost_fuel",
     "TIME": "production_time",
     "BOMB": "bombard_attack",
-    "ART": "art_name",
 }
 
 # Row columns match EQUIPMENT_COLUMNS after the year and name.
-# BOMB=None omits bombardment. ART refers to existing artwork.
+# BOMB=None omits bombardment.
 EQUIPMENT_STAGES = {
     "infantry_type": [
-        #YR    NAME                           HP    ATK   DEF SPD MAT   MAN   FUEL TIME BOMB  ART
-        (1800, "Flintlock Infantry",          600,  50,   0,  1,  200,  1000, 10,  2,   None, "Infantry Type 1910"),
-        (1830, "Percussion Infantry",         640,  60,   0,  1,  240,  1000, 10,  2,   None, "Infantry Type 1910"),
-        (1850, "Rifle-Musket Infantry",       700,  70,   0,  1,  300,  1000, 10,  2,   None, "Infantry Type 1910"),
-        (1865, "Breech-Loading Infantry",     760,  75,   0,  1,  350,  1000, 10,  2,   None, "Infantry Type 1910"),
-        (1875, "Metallic-Cartridge Infantry", 820,  80,   0,  1,  390,  1000, 10,  2,   None, "Infantry Type 1910"),
-        (1885, "Magazine-Rifle Infantry",     870,  85,   0,  1,  430,  1000, 10,  2,   None, "Infantry Type 1910"),
-        (1895, "Smokeless-Rifle Infantry",    920,  90,   0,  1,  470,  1000, 10,  2,   None, "Infantry Type 1910"),
-        (1905, "Supported Rifle Infantry",    970,  95,   0,  1,  490,  1000, 10,  2,   None, "Infantry Type 1910"),
-        (1915, "Trench Infantry",             1250, 150,  0,  1,  525,  1000, 15,  2,   None, "Infantry Type 1915"),
-        (1925, "Squad-Automatic Infantry",    1750, 250,  0,  1,  575,  1000, 25,  2,   None, "Infantry Type 1925"),
-        (1940, "Semi-Automatic Infantry",     2500, 400,  0,  1,  650,  1000, 40,  2,   None, "Infantry Type 1940"),
-        (1955, "Battle-Rifle Infantry",       3250, 550,  0,  1,  725,  1000, 55,  2,   None, "Infantry Type 1955"),
-        (1970, "Assault-Rifle Infantry",      4000, 700,  0,  1,  800,  1000, 70,  2,   None, "Infantry Type 1970"),
-        (1985, "Night-Equipped Infantry",     4750, 850,  0,  1,  875,  1000, 85,  2,   None, "Infantry Type 1985"),
-        (2000, "Optics-Equipped Infantry",    5500, 1000, 0,  1,  950,  1000, 100, 2,   None, "Infantry Type 2000"),
-        (2015, "Networked Infantry",          6250, 1150, 0,  1,  1025, 1000, 115, 2,   None, "Infantry Type 2015"),
-        (2030, "Drone-Integrated Infantry",   7000, 1300, 0,  1,  1100, 1000, 130, 2,   None, "Infantry Type 2030"),
-        (2040, "Sensor-Integrated Infantry",  7500, 1400, 0,  1,  1150, 1000, 140, 2,   None, "Infantry Type 2040"),
+        #YR    NAME                           HP    ATK   DEF SPD MAT   MAN   FUEL TIME BOMB
+        (1800, "Flintlock Infantry",          600,  50,   0,  1,  200,  1000, 10,  2,   None),
+        (1830, "Percussion Infantry",         640,  60,   0,  1,  240,  1000, 10,  2,   None),
+        (1850, "Rifle-Musket Infantry",       700,  70,   0,  1,  300,  1000, 10,  2,   None),
+        (1865, "Breech-Loading Infantry",     760,  75,   0,  1,  350,  1000, 10,  2,   None),
+        (1875, "Metallic-Cartridge Infantry", 820,  80,   0,  1,  390,  1000, 10,  2,   None),
+        (1885, "Magazine-Rifle Infantry",     870,  85,   0,  1,  430,  1000, 10,  2,   None),
+        (1895, "Smokeless-Rifle Infantry",    920,  90,   0,  1,  470,  1000, 10,  2,   None),
+        (1905, "Supported Rifle Infantry",    970,  95,   0,  1,  490,  1000, 10,  2,   None),
+        (1915, "Trench Infantry",             1250, 150,  0,  1,  525,  1000, 15,  2,   None),
+        (1925, "Squad-Automatic Infantry",    1750, 250,  0,  1,  575,  1000, 25,  2,   None),
+        (1940, "Semi-Automatic Infantry",     2500, 400,  0,  1,  650,  1000, 40,  2,   None),
+        (1955, "Battle-Rifle Infantry",       3250, 550,  0,  1,  725,  1000, 55,  2,   None),
+        (1970, "Assault-Rifle Infantry",      4000, 700,  0,  1,  800,  1000, 70,  2,   None),
+        (1985, "Night-Equipped Infantry",     4750, 850,  0,  1,  875,  1000, 85,  2,   None),
+        (2000, "Optics-Equipped Infantry",    5500, 1000, 0,  1,  950,  1000, 100, 2,   None),
+        (2015, "Networked Infantry",          6250, 1150, 0,  1,  1025, 1000, 115, 2,   None),
+        (2030, "Drone-Integrated Infantry",   7000, 1300, 0,  1,  1100, 1000, 130, 2,   None),
+        (2040, "Sensor-Integrated Infantry",  7500, 1400, 0,  1,  1150, 1000, 140, 2,   None),
     ],
     "cavalry": [
-        #YR    NAME                       HP    ATK  DEF SPD MAT   MAN   FUEL TIME BOMB  ART
-        (1800, "Early Cavalry",           350,  120, 0,  2,  450,  2000, 0,   3,   None, "Cavalry I"),
-        (1850, "Improved Cavalry",        400,  180, 0,  2,  600,  2000, 0,   3,   None, "Cavalry I"),
-        (1870, "Breech-Loading Carbines", 470,  220, 0,  2,  750,  2000, 0,   3,   None, "Cavalry I"),
-        (1890, "Magazine Carbines",       550,  260, 0,  2,  900,  2000, 0,   3,   None, "Cavalry I"),
-        (1910, "Supported Cavalry",       600,  300, 0,  2,  1000, 2000, 0,   3,   None, "Cavalry I"),
-        (1918, "Mounted Rifle Cavalry",   800,  300, 0,  2,  1000, 2000, 0,   3,   None, "Cavalry III"),
-        (1930, "Modern Cavalry",          1000, 300, 0,  2,  1000, 2000, 0,   3,   None, "Cavalry V"),
+        #YR    NAME                       HP    ATK  DEF SPD MAT   MAN   FUEL TIME BOMB
+        (1800, "Early Cavalry",           350,  120, 0,  2,  450,  2000, 0,   3,   None),
+        (1850, "Improved Cavalry",        400,  180, 0,  2,  600,  2000, 0,   3,   None),
+        (1870, "Breech-Loading Carbines", 470,  220, 0,  2,  750,  2000, 0,   3,   None),
+        (1890, "Magazine Carbines",       550,  260, 0,  2,  900,  2000, 0,   3,   None),
+        (1910, "Supported Cavalry",       600,  300, 0,  2,  1000, 2000, 0,   3,   None),
+        (1918, "Mounted Rifle Cavalry",   800,  300, 0,  2,  1000, 2000, 0,   3,   None),
+        (1930, "Modern Cavalry",          1000, 300, 0,  2,  1000, 2000, 0,   3,   None),
     ],
     "militia": [
-        #YR    NAME                          HP    ATK  DEF SPD MAT  MAN   FUEL TIME BOMB  ART
-        (1800, "Local Militia",              200,  12,  0,  1,  100, 1000, 0,   1,   None, "Militia I"),
-        (1840, "Organized Militia",          280,  20,  0,  1,  150, 1000, 0,   1,   None, "Militia I"),
-        (1870, "Reserve Infantry",           360,  32,  0,  1,  210, 1000, 0,   1,   None, "Militia I"),
-        (1900, "Modern Militia",             440,  44,  0,  1,  270, 1000, 0,   1,   None, "Militia I"),
-        (1915, "Rifle Militia",              600,  60,  0,  1,  300, 1000, 0,   1,   None, "Militia II"),
-        (1935, "Support-Weapon Militia",     1000, 100, 0,  1,  300, 1000, 0,   1,   None, "Militia VI"),
-        (1955, "Self-Loading Rifle Militia", 1400, 140, 0,  1,  300, 1000, 0,   1,   None, "Militia X"),
-        (1975, "Assault-Rifle Militia",      1800, 180, 0,  1,  300, 1000, 0,   1,   None, "Militia XIV"),
-        (1995, "Radio-Equipped Militia",     2200, 220, 0,  1,  300, 1000, 0,   1,   None, "Militia XVIII"),
-        (2015, "Optics-Equipped Militia",    2600, 260, 0,  1,  300, 1000, 0,   1,   None, "Militia XXII"),
-        (2035, "Drone-Supported Militia",    3000, 300, 0,  1,  300, 1000, 0,   1,   None, "Militia XXVI"),
+        #YR    NAME                          HP    ATK  DEF SPD MAT  MAN   FUEL TIME BOMB
+        (1800, "Local Militia",              200,  12,  0,  1,  100, 1000, 0,   1,   None),
+        (1840, "Organized Militia",          280,  20,  0,  1,  150, 1000, 0,   1,   None),
+        (1870, "Reserve Infantry",           360,  32,  0,  1,  210, 1000, 0,   1,   None),
+        (1900, "Modern Militia",             440,  44,  0,  1,  270, 1000, 0,   1,   None),
+        (1915, "Rifle Militia",              600,  60,  0,  1,  300, 1000, 0,   1,   None),
+        (1935, "Support-Weapon Militia",     1000, 100, 0,  1,  300, 1000, 0,   1,   None),
+        (1955, "Self-Loading Rifle Militia", 1400, 140, 0,  1,  300, 1000, 0,   1,   None),
+        (1975, "Assault-Rifle Militia",      1800, 180, 0,  1,  300, 1000, 0,   1,   None),
+        (1995, "Radio-Equipped Militia",     2200, 220, 0,  1,  300, 1000, 0,   1,   None),
+        (2015, "Optics-Equipped Militia",    2600, 260, 0,  1,  300, 1000, 0,   1,   None),
+        (2035, "Drone-Supported Militia",    3000, 300, 0,  1,  300, 1000, 0,   1,   None),
     ],
     "artillery": [
-        #YR    NAME                                HP    ATK   DEF SPD MAT   MAN  FUEL TIME BOMB  ART
-        (1800, "Smoothbore Artillery",             60,   50,   0,  1,  450,  500, 0,   2,   50,   "Artillery I"),
-        (1830, "Improved Field Artillery",         65,   60,   0,  1,  650,  500, 0,   2,   60,   "Artillery I"),
-        (1850, "Rifled Artillery",                 75,   70,   0,  1,  850,  500, 0,   2,   70,   "Artillery I"),
-        (1870, "Breech-Loading Artillery",         80,   80,   0,  1,  1050, 500, 0,   2,   80,   "Artillery I"),
-        (1890, "Quick-Firing Artillery",           90,   90,   0,  1,  1250, 500, 0,   2,   90,   "Artillery I"),
-        (1900, "Recoil-System Artillery",          95,   110,  0,  1,  1400, 500, 0,   2,   110,  "Artillery I"),
-        (1915, "Indirect-Fire Artillery",          150,  180,  0,  1,  1600, 500, 0,   2,   180,  "Artillery II"),
-        (1930, "Modern Field Artillery",           300,  360,  0,  1,  1900, 500, 0,   2,   360,  "Artillery V"),
-        (1940, "Radio-Coordinated Artillery",      400,  480,  0,  1,  2100, 500, 0,   2,   480,  "Artillery VII"),
-        (1955, "Advanced-Ammunition Artillery",    550,  660,  0,  1,  2400, 500, 0,   2,   660,  "Artillery X"),
-        (1975, "Computer-Assisted Artillery",      750,  900,  0,  1,  2800, 500, 0,   2,   900,  "Artillery XIV"),
-        (1995, "Digital Fire-Control Artillery",   950,  1140, 0,  1,  3200, 500, 0,   2,   1140, "Artillery XVIII"),
-        (2010, "Precision-Guided Artillery",       1100, 1320, 0,  1,  3500, 500, 0,   2,   1320, "Artillery XXI"),
-        (2025, "Sensor-Linked Artillery",          1250, 1500, 0,  1,  3800, 500, 0,   2,   1500, "Artillery XXIV"),
-        (2040, "Automated Fire-Control Artillery", 1400, 1680, 0,  1,  4100, 500, 0,   2,   1680, "Artillery XXVII"),
+        #YR    NAME                                HP    ATK   DEF SPD MAT   MAN  FUEL TIME BOMB
+        (1800, "Smoothbore Artillery",             60,   50,   0,  1,  450,  500, 0,   2,   50),
+        (1830, "Improved Field Artillery",         65,   60,   0,  1,  650,  500, 0,   2,   60),
+        (1850, "Rifled Artillery",                 75,   70,   0,  1,  850,  500, 0,   2,   70),
+        (1870, "Breech-Loading Artillery",         80,   80,   0,  1,  1050, 500, 0,   2,   80),
+        (1890, "Quick-Firing Artillery",           90,   90,   0,  1,  1250, 500, 0,   2,   90),
+        (1900, "Recoil-System Artillery",          95,   110,  0,  1,  1400, 500, 0,   2,   110),
+        (1915, "Indirect-Fire Artillery",          150,  180,  0,  1,  1600, 500, 0,   2,   180),
+        (1930, "Modern Field Artillery",           300,  360,  0,  1,  1900, 500, 0,   2,   360),
+        (1940, "Radio-Coordinated Artillery",      400,  480,  0,  1,  2100, 500, 0,   2,   480),
+        (1955, "Advanced-Ammunition Artillery",    550,  660,  0,  1,  2400, 500, 0,   2,   660),
+        (1975, "Computer-Assisted Artillery",      750,  900,  0,  1,  2800, 500, 0,   2,   900),
+        (1995, "Digital Fire-Control Artillery",   950,  1140, 0,  1,  3200, 500, 0,   2,   1140),
+        (2010, "Precision-Guided Artillery",       1100, 1320, 0,  1,  3500, 500, 0,   2,   1320),
+        (2025, "Sensor-Linked Artillery",          1250, 1500, 0,  1,  3800, 500, 0,   2,   1500),
+        (2040, "Automated Fire-Control Artillery", 1400, 1680, 0,  1,  4100, 500, 0,   2,   1680),
     ],
 }
 
@@ -300,12 +294,11 @@ class EquipmentFamily(UnitFamily):
 
 
 def equipment_profile(prefix, stage):
-    """Derive variant statistics and artwork from their base family profiles."""
-    base_family = EQUIPMENT_VARIANT_BASES.get(prefix, prefix)
+    """Derive variant statistics from their base family profiles."""
     base = table_values(EQUIPMENT_COLUMNS, stage[2:])
     if base["bombard_attack"] is None:
         del base["bombard_attack"]
-    profile = dict(base, art_name=base["art_name"].replace(base_family, prefix, 1))
+    profile = dict(base)
     if prefix in INFANTRY_VARIANT_RULES:
         rule = INFANTRY_VARIANT_RULES[prefix]
         profile.update(speed=rule["speed"],
@@ -336,7 +329,6 @@ def equipment_family(prefix, tech):
     return EquipmentFamily(prefix, [str(year) for year, _, _ in stages], stats,
                            research_key=research_key,
                            research_years=[year for year, _, _ in stages],
-                           art_name=lambda i: stages[i][2]["art_name"],
                            stage_names=[label for _, label, _ in stages])
 
 

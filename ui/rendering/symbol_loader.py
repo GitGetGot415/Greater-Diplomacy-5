@@ -756,8 +756,6 @@ def _resolve_name_uncached(name, style=None, country=None):
         style = c.UNIT_ART_STYLE
 
     unit_name = name
-    stats = queries.get_unit_library().get(name, {})
-    name = stats.get("metadata", {}).get("art_name", name)
 
     if style != "classic":
         resolved = _resolve_filename_unit(name, style, country)

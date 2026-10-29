@@ -7,7 +7,6 @@ CLASSIC UNIT ART
 Classic unit images use each equipment stage's year, not the current game year.
 Files in assets/classic can specify a year range, such as Infantry 1800-1899.png.
 A plus sign sets an open end, such as Militia 1900+.png.
-Matching era images take priority over metadata.art_name in the Classic style.
 Alternate styles keep their own images. Missing images use the Classic fallback.
 Restart the game after adding image files.
 
