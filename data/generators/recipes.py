@@ -205,28 +205,29 @@ EQUIPMENT_COLUMNS = {
 }
 
 # Row columns match EQUIPMENT_COLUMNS after the year and name.
+# Infantry adds (levels, years between levels, per-level stat increases).
 # BOMB=None omits bombardment.
 EQUIPMENT_STAGES = {
     "infantry_type": [
-        #YR    NAME                           HP    ATK   DEF SPD MAT   MAN   FUEL TIME BOMB
-        (1800, "Flintlock Infantry",          600,  50,   0,  1,  200,  1000, 10,  2,   None),
-        (1830, "Percussion Infantry",         640,  60,   0,  1,  240,  1000, 10,  2,   None),
-        (1850, "Rifle-Musket Infantry",       700,  70,   0,  1,  300,  1000, 10,  2,   None),
-        (1865, "Breech-Loading Infantry",     760,  75,   0,  1,  350,  1000, 10,  2,   None),
-        (1875, "Metallic-Cartridge Infantry", 820,  80,   0,  1,  390,  1000, 10,  2,   None),
-        (1885, "Magazine-Rifle Infantry",     870,  85,   0,  1,  430,  1000, 10,  2,   None),
-        (1895, "Smokeless-Rifle Infantry",    920,  90,   0,  1,  470,  1000, 10,  2,   None),
-        (1905, "Supported Rifle Infantry",    970,  95,   0,  1,  490,  1000, 10,  2,   None),
-        (1915, "Trench Infantry",             1250, 150,  0,  1,  525,  1000, 15,  2,   None),
-        (1925, "Squad-Automatic Infantry",    1750, 250,  0,  1,  575,  1000, 25,  2,   None),
-        (1940, "Semi-Automatic Infantry",     2500, 400,  0,  1,  650,  1000, 40,  2,   None),
-        (1955, "Battle-Rifle Infantry",       3250, 550,  0,  1,  725,  1000, 55,  2,   None),
-        (1970, "Assault-Rifle Infantry",      4000, 700,  0,  1,  800,  1000, 70,  2,   None),
-        (1985, "Night-Equipped Infantry",     4750, 850,  0,  1,  875,  1000, 85,  2,   None),
-        (2000, "Optics-Equipped Infantry",    5500, 1000, 0,  1,  950,  1000, 100, 2,   None),
-        (2015, "Networked Infantry",          6250, 1150, 0,  1,  1025, 1000, 115, 2,   None),
-        (2030, "Drone-Integrated Infantry",   7000, 1300, 0,  1,  1100, 1000, 130, 2,   None),
-        (2040, "Sensor-Integrated Infantry",  7500, 1400, 0,  1,  1150, 1000, 140, 2,   None),
+        #YR    NAME                           HP    ATK   DEF SPD MAT   MAN   FUEL TIME BOMB  UPGRADES
+        (1800, "Flintlock Infantry",          600,  50,   0,  1,  200,  1000, 10,  2,   None, (5, 5, {'health': 10, 'attack': 2, 'cost_materials': 10})),
+        (1825, "Percussion Infantry",         640,  60,   0,  1,  240,  1000, 10,  2,   None, (5, 5, {'health': 10, 'attack': 2, 'cost_materials': 10})),
+        (1850, "Rifle-Musket Infantry",       700,  70,   0,  1,  300,  1000, 10,  2,   None, (3, 5, {'health': 10, 'attack': 2, 'cost_materials': 10})),
+        (1865, "Breech-Loading Infantry",     760,  75,   0,  1,  350,  1000, 10,  2,   None, (3, 4, {'health': 20, 'attack': 2, 'cost_materials': 13})),
+        (1875, "Metallic-Cartridge Infantry", 820,  80,   0,  1,  390,  1000, 10,  2,   None, (3, 4, {'health': 17, 'attack': 2, 'cost_materials': 13})),
+        (1885, "Magazine-Rifle Infantry",     870,  85,   0,  1,  430,  1000, 10,  2,   None, (3, 4, {'health': 17, 'attack': 2, 'cost_materials': 13})),
+        (1895, "Smokeless-Rifle Infantry",    920,  90,   0,  1,  470,  1000, 10,  2,   None, (3, 4, {'health': 17, 'attack': 2, 'cost_materials': 7})),
+        (1905, "Supported Rifle Infantry",    970,  95,   0,  1,  490,  1000, 10,  2,   None, (3, 4, {'health': 93, 'attack': 18, 'cost_materials': 12})),
+        (1915, "Trench Infantry",             1250, 150,  0,  1,  525,  1000, 15,  2,   None, (3, 4, {'health': 167, 'attack': 33, 'cost_materials': 17})),
+        (1925, "Squad-Automatic Infantry",    1750, 250,  0,  1,  575,  1000, 25,  2,   None, (3, 7, {'health': 250, 'attack': 50, 'cost_materials': 25})),
+        (1940, "Semi-Automatic Infantry",     2500, 400,  0,  1,  650,  1000, 40,  2,   None, (3, 7, {'health': 250, 'attack': 50, 'cost_materials': 25})),
+        (1955, "Battle-Rifle Infantry",       3250, 550,  0,  1,  725,  1000, 55,  2,   None, (3, 7, {'health': 250, 'attack': 50, 'cost_materials': 25})),
+        (1970, "Assault-Rifle Infantry",      4000, 700,  0,  1,  800,  1000, 70,  2,   None, (3, 7, {'health': 250, 'attack': 50, 'cost_materials': 25})),
+        (1985, "Night-Equipped Infantry",     4750, 850,  0,  1,  875,  1000, 85,  2,   None, (3, 7, {'health': 250, 'attack': 50, 'cost_materials': 25})),
+        (2000, "Optics-Equipped Infantry",    5500, 1000, 0,  1,  950,  1000, 100, 2,   None, (3, 7, {'health': 250, 'attack': 50, 'cost_materials': 25})),
+        (2015, "Networked Infantry",          6250, 1150, 0,  1,  1025, 1000, 115, 2,   None, (3, 7, {'health': 250, 'attack': 50, 'cost_materials': 25})),
+        (2030, "Drone-Integrated Infantry",   7000, 1300, 0,  1,  1100, 1000, 130, 2,   None, (3, 4, {'health': 167, 'attack': 33, 'cost_materials': 17})),
+        (2040, "Sensor-Integrated Infantry",  7500, 1400, 0,  1,  1150, 1000, 140, 2,   None, (3, 5, {'health': 100, 'attack': 20, 'cost_materials': 10})),
     ],
     "cavalry": [
         #YR    NAME                       HP    ATK  DEF SPD MAT   MAN   FUEL TIME BOMB
@@ -317,10 +318,44 @@ def equipment_profile(prefix, stage):
     return profile
 
 
+def expanded_equipment_stages(tech):
+    """Expand infantry upgrades into dated stages shared by research and units."""
+    stages = EQUIPMENT_STAGES[tech]
+    if tech != "infantry_type":
+        return stages
+    result = []
+    for index, row in enumerate(stages):
+        year, name, *values = row
+        if len(values) == len(EQUIPMENT_COLUMNS):
+            result.append(row)
+            continue
+        levels, interval, increases = values.pop()
+        if type(levels) is not int or not 1 <= levels <= len(c.ROMAN_NUMERALS):
+            raise ValueError(f"{name}: invalid upgrade level count.")
+        if type(interval) is not int or interval <= 0:
+            raise ValueError(f"{name}: upgrade interval must be a positive integer.")
+        if not isinstance(increases, dict) or any(key not in EQUIPMENT_COLUMNS.values() for key in increases):
+            raise ValueError(f"{name}: invalid upgrade statistics.")
+        next_year = stages[index + 1][0] if index + 1 < len(stages) else c.END_YEAR + 1
+        if year + (levels - 1) * interval >= next_year:
+            raise ValueError(f"{name}: upgrades must end before the next stage and within the timeline.")
+        base = table_values(EQUIPMENT_COLUMNS, values)
+        for field, delta in increases.items():
+            if base[field] is None or isinstance(delta, bool) or not isinstance(delta, (int, float)):
+                raise ValueError(f"{name}: invalid increase for {field}.")
+        for level in range(levels):
+            stats = [base[field] + increases.get(field, 0) * level if base[field] is not None else None
+                     for field in EQUIPMENT_COLUMNS.values()]
+            result.append((year + interval * level, f"{name} {c.ROMAN_NUMERALS[level + 1]}", *stats))
+    if any(first[0] >= second[0] for first, second in zip(result, result[1:])):
+        raise ValueError(f"{tech}: equipment years must increase.")
+    return result
+
+
 def equipment_family(prefix, tech):
     """Generate one family from base stages and shared variant rules."""
     stages = [(stage[0], stage[1], equipment_profile(prefix, stage))
-              for stage in EQUIPMENT_STAGES[tech]
+              for stage in expanded_equipment_stages(tech)
               if prefix not in INFANTRY_VARIANT_RULES or stage[0] >= INFANTRY_VARIANT_FIRST_YEAR]
     key = prefix.lower().replace(" ", "_")
     research_key = c.UNIT_TECH_KEY_OVERRIDES.get(key, tech)
@@ -539,7 +574,7 @@ BUILDING_CHAINS = [building_chain(row) for row in BUILDING_GROWTH_RECIPES]
 
 def extend_infantry_research(tech, entry):
     """Use the same equipment stages for research and generated units."""
-    stages = EQUIPMENT_STAGES[tech]
+    stages = expanded_equipment_stages(tech)
     names = {str(i + 1): stage[1] for i, stage in enumerate(stages)}
     entry["years"] = [stage[0] for stage in stages]
     entry["max_lvl"] = len(entry["years"])

@@ -792,6 +792,11 @@ def equipment_stage_aliases():
     library = queries.get_unit_library()
     families = dict(queries.get_unit_research_index(library))
     aliases = {}
+    for name, stats in library.items():
+        if (stats.get("metadata", {}).get("family") in
+                {"Infantry Type", "Motorized Infantry Type", "Mechanized Infantry Type", "Infantry Fighting Vehicle Type"}
+                and name.endswith(" I")):
+            aliases[name[:-2]] = name
     sources = {
         "Infantry Type": ([1800, 1830, 1850, 1865, 1875, 1885, 1895, 1905], "infantry_type"),
         "Motorized Infantry Type": ([], "infantry_type"),

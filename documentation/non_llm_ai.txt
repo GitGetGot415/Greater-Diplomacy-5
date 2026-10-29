@@ -84,12 +84,20 @@ Read equipment dates, statistics, prices, and research costs from data/json/unit
 Edit data/generators/recipes.py to regenerate this content.
 EQUIPMENT_STAGES defines base statistics and existing artwork references.
 
-Each row starts with the year and name. The remaining columns follow EQUIPMENT_COLUMNS.
+Each row starts with the year and name. The statistics follow EQUIPMENT_COLUMNS.
 HP is health. ATK is attack. DEF is defense. SPD is speed.
 
 MAT, MAN, and FUEL give material, manpower, and fuel costs. TIME gives production time in turns.
 BOMB gives bombardment attack. Use None for BOMB when the unit has no bombardment statistic.
-ART names existing artwork. EQUIPMENT_COLUMNS converts these columns to the full JSON field names.
+EQUIPMENT_COLUMNS converts these columns to the full JSON field names.
+
+Each regular infantry row ends with (levels, years between levels, stat increases).
+The level count includes level I. Level I uses the row's base statistics.
+Each later level adds the specified increases once per level.
+Use full JSON field names in the increases dictionary. Omitted statistics do not change.
+Each level has its own research year, name, and unit entry.
+The last upgrade must precede the next stage and stay within the game timeline.
+Run data/generators/generate_data.py after edits to update the runtime libraries.
 
 INFANTRY_VARIANT_RULES generates vehicle infantry statistics from regular infantry at the same stage.
 HEAVY_ARTILLERY_RULES generates heavy artillery statistics from regular artillery at the same stage.

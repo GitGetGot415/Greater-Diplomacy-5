@@ -74,7 +74,7 @@ class UnitProgressionTests(unittest.TestCase):
 
     def test_generated_vehicle_profiles_match_each_stages_base_and_shared_rules(self):
         checked = set()
-        for stage in recipes.EQUIPMENT_STAGES["infantry_type"]:
+        for stage in recipes.expanded_equipment_stages("infantry_type"):
             year = stage[0]
             if year < recipes.INFANTRY_VARIANT_FIRST_YEAR:
                 continue
@@ -91,6 +91,29 @@ class UnitProgressionTests(unittest.TestCase):
         self.assertTrue(checked)
         self.assertEqual(checked, {name for name, stats in self.library.items()
                                   if stats["metadata"]["family"] in recipes.INFANTRY_VARIANT_RULES})
+
+    def test_infantry_upgrade_row_generates_units_and_research(self):
+        stages = [(1905, "Fixture Infantry", 100, 20, 3, 1, 40, 50, 6, 2, None,
+                   (3, 2, {"health": 7, "attack": 4, "cost_materials": 3})),
+                  (1912, "Next Infantry", 150, 40, 3, 1, 60, 50, 6, 2, None,
+                   (1, 1, {}))]
+        with patch.dict(recipes.EQUIPMENT_STAGES, {"infantry_type": stages}):
+            entries = recipes.equipment_family("Infantry Type", "infantry_type").entries()
+            research = recipes.extend_infantry_research("infantry_type", {})
+            vehicles = recipes.equipment_family("Motorized Infantry Type", "infantry_type").entries()
+        self.assertEqual([name for name, _ in entries],
+                         ["Fixture Infantry I", "Fixture Infantry II", "Fixture Infantry III", "Next Infantry I"])
+        self.assertEqual(research["years"], [1905, 1907, 1909, 1912])
+        self.assertEqual([(entry["health"], entry["attack"], entry["cost_materials"]) for _, entry in entries],
+                         [(100, 20, 40), (107, 24, 43), (114, 28, 46), (150, 40, 60)])
+        self.assertEqual([entry["attack"] for _, entry in vehicles], [20, 24, 28, 40])
+
+    def test_infantry_upgrade_years_cannot_overlap_next_stage(self):
+        stages = [(1800, "First", 100, 20, 0, 1, 40, 50, 0, 2, None, (3, 5, {})),
+                  (1810, "Second", 100, 20, 0, 1, 40, 50, 0, 2, None, (1, 1, {}))]
+        with patch.dict(recipes.EQUIPMENT_STAGES, {"infantry_type": stages}):
+            with self.assertRaisesRegex(ValueError, "before the next stage"):
+                recipes.expanded_equipment_stages("infantry_type")
 
     def test_heavy_artillery_is_generated_from_independent_base_attack_and_bombardment(self):
         base = {"health": 123, "attack": 13, "bombard_attack": 17, "defense": 4, "speed": 3,

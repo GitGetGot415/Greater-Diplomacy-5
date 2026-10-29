@@ -75,6 +75,7 @@ The v47 step contains every conversion that v46 and earlier applied on load or a
 - Older ACCEPT_ and REJECT_ entries move from pending_diplomacy to diplo_responses.
 - Completed real-time saves without offline_view open as spectator replays.
 - Older infantry, vehicle infantry, cavalry, militia, and artillery identifiers become named equipment stages.
+- Unnumbered named infantry stages become level I, including their vehicle variants.
 - Units select the latest stage at or before their older equipment year.
 - Transport names, aircraft cargo, production queues, upgrade targets, custom production lists, and scripted spawns use the same conversion.
 - Map overlays, every history snapshot, and tournament move intents receive these conversions.
