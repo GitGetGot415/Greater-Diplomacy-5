@@ -245,8 +245,7 @@ EQUIPMENT_STAGES = {
     "militia": [
         #YR    NAME                          HP    ATK  DEF SPD MAT  MAN   FUEL TIME BOMB  UPGRADES
         (1800, "Local Militia",              200,  12,  0,  1,  100, 1000, 0,   1,   None, (4, 10, {'health': 20, 'attack': 2, 'cost_materials': 5})),
-        (1840, "Organized Militia",          280,  20,  0,  1,  120, 1000, 0,   1,   None, (3, 10, {'health': 20, 'attack': 4, 'cost_materials': 10})),
-        (1870, "Reserve Infantry",           360,  32,  0,  1,  150, 1000, 0,   1,   None, (3, 10, {'health': 20, 'attack': 3, 'cost_materials': 10})),
+        (1840, "Organized Militia",          280,  20,  0,  1,  120, 1000, 0,   1,   None, (6, 10, {'health': 20, 'attack': 4, 'cost_materials': 10})),
         (1900, "Modern Militia",             440,  44,  0,  1,  270, 1000, 0,   1,   None, (3, 5, {'health': 40, 'attack': 4, 'cost_materials': 10})),
         (1915, "Rifle Militia",              600,  60,  0,  1,  300, 1000, 0,   1,   None, (4, 5, {'health': 80, 'attack': 8})),
         (1935, "Support-Weapon Militia",     1000, 100, 0,  1,  300, 1000, 0,   1,   None, (4, 5, {'health': 80, 'attack': 8})),

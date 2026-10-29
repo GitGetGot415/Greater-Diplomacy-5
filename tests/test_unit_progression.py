@@ -205,6 +205,20 @@ class UnitProgressionTests(unittest.TestCase):
                         self.assertEqual(aliases[older], older + " I")
                         self.assertIn(aliases[older], self.library)
 
+    def test_organized_militia_covers_the_period_before_modern_militia(self):
+        stages = recipes.EQUIPMENT_STAGES["militia"]
+        organized_index = next(i for i, stage in enumerate(stages) if stage[1] == "Organized Militia")
+        stage = stages[organized_index]
+        next_year = stages[organized_index + 1][0]
+        _, interval, _ = stage[-1]
+        organized_years = [stats["metadata"]["tier_order"] for name, stats in self.library.items()
+                           if name.startswith("Organized Militia ")]
+        self.assertEqual(organized_years, list(range(stage[0], next_year, interval)))
+        self.assertFalse(any(name.startswith("Reserve Infantry") for name in self.library))
+        for field in ("level_names", "level_icons"):
+            self.assertFalse(any(name.startswith("Reserve Infantry")
+                                 for name in self.tree["militia"][field].values()))
+
     def test_added_equipment_levels_preserve_saved_years_history_and_unfinished_points(self):
         for tech in ("militia", "cavalry", "artillery"):
             source_years = [row[0] for row in recipes.EQUIPMENT_STAGES[tech]]

@@ -62,7 +62,10 @@ These are not version steps. A changed library changes their result without a ne
 VERSION 47
 ----------
 
-The v47 step contains every conversion that v46 and earlier applied on load or at first use.
+The v47 step converts released v46 data to the v47 format.
+It also retains support for older save formats accepted by v46.
+Its rules describe differences from released data, not changes made only during v47 development.
+
 - Country records lose the obsolete allied_with field. Factions and subjects do not change.
 - deployment_queue entries move into unit_queue and building_queue.
 - Research projects without points_remaining receive points from their day countdown.
@@ -225,6 +228,11 @@ ADDING A VERSION STEP
 
 Add a step when a saved field changes meaning, moves, or changes shape.
 An additive field with a default that keeps old behavior needs no step.
+
+Describe the source release, the target release, and the required data conversions.
+Include only identifiers and formats that existed in supported released data.
+Do not add migration rules for content introduced and changed only during development of the target release.
+Keep existing support for earlier releases where required.
 
 1. Use the next release version, one above GAME_VERSION. Do not change GAME_VERSION or version.txt.
 2. Write the step in data/migrations.py, in a section named for that version.

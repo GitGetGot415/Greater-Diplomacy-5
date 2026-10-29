@@ -591,8 +591,9 @@ def legacy_player_country(map_ref, country_id, nation_update):
 
 # VERSION 47
 # ==========
-# v47 added version steps. This step collects every conversion that v46 and
-# earlier applied on each load, or when gameplay first read an old entry.
+# Convert released v46 data to v47. Retain support for older save formats.
+# Include only identifiers and formats that existed in supported released data.
+# Changes made only during v47 development do not require v47 migration rules.
 
 
 LEGACY_RESEARCH_DEFAULT_DAYS = 30
