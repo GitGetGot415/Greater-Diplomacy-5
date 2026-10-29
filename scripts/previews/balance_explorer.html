@@ -1,0 +1,746 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Balance Explorer</title>
+<!-- Template for scripts/previews/balance_explorer.py. The script replaces the
+     BALANCE_DATA marker with the current unit and building libraries. -->
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7;
+  --surface: #fcfcfb;
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --muted: #898781;
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --border: rgba(11,11,11,0.10);
+  --wash: rgba(11,11,11,0.05);
+  --accent: #2a78d6;
+  /* Four slots chosen because they pass the all-pairs color-vision checks
+     for a scatter. Each group also has its own marker shape. */
+  --s1: #2a78d6;
+  --s2: #008300;
+  --s3: #e87ba4;
+  --s4: #eda100;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0d0d0d;
+    --surface: #1a1a19;
+    --ink: #f0efec;
+    --ink-2: #c3c2b7;
+    --muted: #898781;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --border: rgba(255,255,255,0.10);
+    --wash: rgba(255,255,255,0.06);
+    --accent: #3987e5;
+    --s1: #3987e5;
+    --s2: #008300;
+    --s3: #d55181;
+    --s4: #c98500;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d;
+  --surface: #1a1a19;
+  --ink: #f0efec;
+  --ink-2: #c3c2b7;
+  --muted: #898781;
+  --grid: #2c2c2a;
+  --axis: #383835;
+  --border: rgba(255,255,255,0.10);
+  --wash: rgba(255,255,255,0.06);
+  --accent: #3987e5;
+  --s1: #3987e5;
+  --s2: #008300;
+  --s3: #d55181;
+  --s4: #c98500;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+main { max-width: 1240px; margin: 0 auto; padding: 24px 16px 48px; }
+h1 { font-size: 22px; margin: 0 0 4px; }
+.lede { color: var(--ink-2); margin: 0 0 20px; max-width: 75ch; }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+.tabs button {
+  background: none; border: 0; border-bottom: 2px solid transparent;
+  color: var(--ink-2); font: inherit; font-weight: 600; padding: 8px 12px; cursor: pointer;
+}
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  padding: 16px; margin-bottom: 16px;
+}
+.row { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: end; }
+.row + .row { margin-top: 12px; }
+label.field { display: flex; flex-direction: column; gap: 4px; color: var(--ink-2); font-size: 12px; }
+select, input[type="search"] {
+  font: inherit; color: var(--ink); background: var(--page);
+  border: 1px solid var(--border); border-radius: 6px; padding: 5px 8px; min-width: 0;
+}
+input[type="search"] { width: 180px; }
+.check { display: flex; gap: 6px; align-items: center; color: var(--ink-2); font-size: 13px; padding-bottom: 6px; }
+.weights { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; }
+.weights h2 { font-size: 13px; margin: 0; color: var(--ink); }
+.weight { display: flex; align-items: center; gap: 8px; color: var(--ink-2); font-size: 13px; }
+.weight output { font-variant-numeric: tabular-nums; color: var(--ink); font-weight: 600; min-width: 3.2em; }
+.weight input { width: 120px; accent-color: var(--accent); }
+.ghost {
+  font: inherit; font-size: 12px; color: var(--ink-2); background: none;
+  border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; cursor: pointer;
+}
+.ghost:hover { background: var(--wash); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px; }
+.legend button {
+  display: flex; align-items: center; gap: 6px; font: inherit; font-size: 13px;
+  color: var(--ink); background: none; border: 1px solid var(--border);
+  border-radius: 999px; padding: 3px 10px 3px 8px; cursor: pointer;
+}
+.legend button:hover { background: var(--wash); }
+.legend button[aria-pressed="false"] { color: var(--muted); }
+.legend button[aria-pressed="false"] svg { opacity: 0.3; }
+.legend .count { color: var(--muted); font-variant-numeric: tabular-nums; }
+.chart-wrap { position: relative; }
+.chart-wrap svg { display: block; width: 100%; height: auto; touch-action: none; }
+.caption { color: var(--muted); font-size: 12px; margin-top: 6px; }
+.tick text { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.axis-title { fill: var(--ink-2); font-size: 12px; font-weight: 600; }
+.direct-label { fill: var(--ink); font-size: 12px; font-weight: 600; paint-order: stroke; stroke: var(--surface); stroke-width: 3px; }
+.tooltip {
+  position: absolute; pointer-events: none; z-index: 2; min-width: 180px; max-width: 280px;
+  background: var(--surface); color: var(--ink); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 10px; box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  font-size: 12px; display: none;
+}
+.tooltip .vals { display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; margin-bottom: 6px; }
+.tooltip .vals strong { font-size: 14px; font-variant-numeric: tabular-nums; text-align: right; }
+.tooltip .vals span { color: var(--ink-2); }
+.tooltip .name { font-weight: 600; }
+.tooltip .meta { color: var(--ink-2); }
+.table-wrap { overflow: auto; max-height: 560px; border: 1px solid var(--border); border-radius: 8px; }
+table { border-collapse: collapse; width: 100%; font-size: 12px; }
+th, td { padding: 5px 10px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--grid); }
+th:first-child, td:first-child, th.text, td.text { text-align: left; }
+td { font-variant-numeric: tabular-nums; }
+thead th {
+  position: sticky; top: 0; background: var(--surface); color: var(--ink-2);
+  font-weight: 600; cursor: pointer; user-select: none;
+}
+thead th:hover { color: var(--ink); }
+thead th[aria-sort="ascending"]::after { content: " \25B2"; font-size: 9px; }
+thead th[aria-sort="descending"]::after { content: " \25BC"; font-size: 9px; }
+tbody tr:hover { background: var(--wash); }
+.swatch { display: inline-block; vertical-align: -1px; margin-right: 6px; }
+.notes { color: var(--ink-2); font-size: 12px; margin: 0; padding-left: 18px; }
+.notes li + li { margin-top: 4px; }
+[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Balance Explorer</h1>
+  <p class="lede" id="lede"></p>
+
+  <div class="card weights" role="group" aria-label="Cost weights">
+    <h2>Cost weights</h2>
+    <div class="weight"><label for="w-materials">Materials</label><input id="w-materials" type="range" min="1" max="10" step="1" value="1"><output for="w-materials"></output></div>
+    <div class="weight"><label for="w-manpower">Manpower</label><input id="w-manpower" type="range" min="1" max="10" step="1" value="1"><output for="w-manpower"></output></div>
+    <div class="weight"><label for="w-fuel">Fuel</label><input id="w-fuel" type="range" min="1" max="10" step="1" value="1"><output for="w-fuel"></output></div>
+    <button class="ghost" id="w-reset" type="button">Reset to 1 : 1 : 1</button>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button role="tab" id="tab-units" aria-selected="true" aria-controls="panel-units">Units</button>
+    <button role="tab" id="tab-buildings" aria-selected="false" aria-controls="panel-buildings">Buildings</button>
+  </div>
+
+  <section id="panel-units" role="tabpanel" aria-labelledby="tab-units">
+    <div class="card">
+      <div class="row">
+        <label class="field">Y axis<select id="u-y"></select></label>
+        <label class="field">X axis<select id="u-x"></select></label>
+        <label class="check"><input type="checkbox" id="u-logy" checked>Log Y</label>
+        <label class="check"><input type="checkbox" id="u-logx" checked>Log X</label>
+        <label class="field">Highlight family<select id="u-family"></select></label>
+        <label class="field">Find unit<input type="search" id="u-search" placeholder="Name contains..."></label>
+      </div>
+      <div class="row"><div class="legend" id="u-legend"></div></div>
+    </div>
+    <div class="card">
+      <div class="chart-wrap" id="u-chart"><div class="tooltip" id="u-tip"></div></div>
+      <div class="caption" id="u-caption"></div>
+    </div>
+    <div class="card">
+      <div class="table-wrap"><table id="u-table"><thead></thead><tbody></tbody></table></div>
+    </div>
+  </section>
+
+  <section id="panel-buildings" role="tabpanel" aria-labelledby="tab-buildings" hidden>
+    <div class="card">
+      <div class="row">
+        <label class="field">Y axis<select id="b-y"></select></label>
+        <label class="field">X axis<select id="b-x"></select></label>
+        <label class="check"><input type="checkbox" id="b-logy">Log Y</label>
+        <label class="check"><input type="checkbox" id="b-logx">Log X</label>
+      </div>
+      <div class="row"><div class="legend" id="b-legend"></div></div>
+    </div>
+    <div class="card">
+      <div class="chart-wrap" id="b-chart"><div class="tooltip" id="b-tip"></div></div>
+      <div class="caption" id="b-caption"></div>
+    </div>
+    <div class="card">
+      <div class="table-wrap"><table id="b-table"><thead></thead><tbody></tbody></table></div>
+    </div>
+  </section>
+
+  <div class="card">
+    <ul class="notes">
+      <li><b>Total cost</b> = materials × weight + manpower × weight + fuel × weight. Each weight goes from 1 to 10.</li>
+      <li><b>Combat power</b> = √(attack × health). It grows with both stats and stays on the same scale as them.</li>
+      <li>Some unit families unlock by research year and others by research level. The <b>Tier</b> column shows whichever one the unit uses.</li>
+      <li>Building output is the base value per turn, before research bonuses and territory penalties.</li>
+      <li><b>Output gain</b> and <b>payback</b> compare a building with the level it upgrades from (its <code>req</code>).</li>
+      <li>A log axis cannot show zero or missing values. The caption says how many points are hidden.</li>
+    </ul>
+  </div>
+</main>
+
+<script>
+const DATA = /*BALANCE_DATA*/null;
+
+const RESOURCES = ["materials", "manpower", "fuel"];
+const weights = { materials: 1, manpower: 1, fuel: 1 };
+const SVG_NS = "http://www.w3.org/2000/svg";
+
+const UNIT_GROUPS = [
+  { key: "Infantry", color: "--s1", shape: "circle" },
+  { key: "Tanks", color: "--s2", shape: "square" },
+  { key: "Navy", color: "--s3", shape: "triangle" },
+  { key: "Air", color: "--s4", shape: "diamond" },
+];
+const BUILDING_GROUPS = [
+  { key: "industry", label: "Industry", color: "--s1", shape: "circle" },
+  { key: "recruitment", label: "Recruitment", color: "--s2", shape: "square" },
+  { key: "fortification", label: "Fortification", color: "--s3", shape: "triangle" },
+];
+
+function weightedCost(item) {
+  return RESOURCES.reduce((sum, r) => sum + (item["cost_" + r] || 0) * weights[r], 0);
+}
+function weightedOutput(item) {
+  return RESOURCES.reduce((sum, r) => sum + (item["prod_" + r] || 0) * weights[r], 0);
+}
+function perThousand(value, cost) { return cost > 0 ? value / cost * 1000 : null; }
+function power(u) { return Math.sqrt(u.attack * u.health); }
+
+const UNIT_METRICS = [
+  { key: "power", label: "Combat power", get: power },
+  { key: "cost", label: "Total cost (weighted)", get: weightedCost },
+  { key: "power_per_cost", label: "Combat power per 1,000 cost", get: u => perThousand(power(u), weightedCost(u)) },
+  { key: "attack", label: "Attack", get: u => u.attack },
+  { key: "health", label: "Health", get: u => u.health },
+  { key: "defense", label: "Defense", get: u => u.defense },
+  { key: "speed", label: "Speed", get: u => u.speed },
+  { key: "attack_per_cost", label: "Attack per 1,000 cost", get: u => perThousand(u.attack, weightedCost(u)) },
+  { key: "health_per_cost", label: "Health per 1,000 cost", get: u => perThousand(u.health, weightedCost(u)) },
+  { key: "bombard_attack", label: "Bombard attack", get: u => u.bombard_attack },
+  { key: "air_range_px", label: "Air range (px)", get: u => u.air_range_px },
+  { key: "cost_materials", label: "Materials cost", get: u => u.cost_materials },
+  { key: "cost_manpower", label: "Manpower cost", get: u => u.cost_manpower },
+  { key: "cost_fuel", label: "Fuel cost", get: u => u.cost_fuel },
+  { key: "production_time", label: "Production time (turns)", get: u => u.production_time },
+  { key: "year", label: "Research year", plain: true, get: u => u.year },
+  { key: "level", label: "Research level", get: u => u.level },
+];
+const BUILDING_METRICS = [
+  { key: "output", label: "Output per turn (weighted)", get: weightedOutput },
+  { key: "level", label: "Level in upgrade chain", get: b => b.level },
+  { key: "cost", label: "Total cost (weighted)", get: weightedCost },
+  { key: "gain", label: "Output gain over previous level", get: b => buildingGain(b) },
+  { key: "payback", label: "Payback (turns of output gain)", get: b => buildingPayback(b) },
+  { key: "time", label: "Build time (turns)", get: b => b.time },
+  { key: "cost_materials", label: "Materials cost", get: b => b.cost_materials },
+  { key: "cost_manpower", label: "Manpower cost", get: b => b.cost_manpower },
+  { key: "cost_fuel", label: "Fuel cost", get: b => b.cost_fuel },
+  { key: "prod_materials", label: "Materials output", get: b => b.prod_materials },
+  { key: "prod_manpower", label: "Manpower output", get: b => b.prod_manpower },
+  { key: "prod_fuel", label: "Fuel output", get: b => b.prod_fuel },
+];
+const metricByKey = list => Object.fromEntries(list.map(m => [m.key, m]));
+const UNIT_METRIC = metricByKey(UNIT_METRICS);
+const BUILDING_METRIC = metricByKey(BUILDING_METRICS);
+
+const buildingsByName = Object.fromEntries(DATA.buildings.map(b => [b.name, b]));
+function buildingGain(b) {
+  const prev = b.req ? buildingsByName[b.req] : null;
+  return weightedOutput(b) - (prev ? weightedOutput(prev) : 0);
+}
+function buildingPayback(b) {
+  const gain = buildingGain(b);
+  return gain > 0 ? weightedCost(b) / gain : null;
+}
+
+// ---------- formatting ----------
+const fullFmt = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 });
+function fmt(v) {
+  if (v === null || v === undefined || Number.isNaN(v)) return "—";
+  return fullFmt.format(Math.abs(v) < 10 ? Math.round(v * 100) / 100 : v);
+}
+function fmtTick(v, plain) {
+  if (plain) return String(v);
+  const a = Math.abs(v);
+  if (a >= 1e6) return +(v / 1e6).toFixed(1) + "M";
+  if (a >= 1e3) return +(v / 1e3).toFixed(1) + "k";
+  if (a > 0 && a < 1) return +v.toPrecision(2) + "";
+  return +v.toFixed(1) + "";
+}
+
+// ---------- DOM helpers ----------
+function svgEl(tag, attrs, text) {
+  const node = document.createElementNS(SVG_NS, tag);
+  for (const [k, v] of Object.entries(attrs || {})) node.setAttribute(k, v);
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+function htmlEl(tag, attrs, text) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) node.setAttribute(k, v);
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+function cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+function shapePath(shape, x, y, s) {
+  // s is the half-size. Shapes keep about the same visual area.
+  switch (shape) {
+    case "square": { const h = s * 0.88; return `M${x - h},${y - h}h${2 * h}v${2 * h}h${-2 * h}Z`; }
+    case "triangle": { const h = s * 1.2; return `M${x},${y - h}L${x + h},${y + h * 0.8}L${x - h},${y + h * 0.8}Z`; }
+    case "diamond": { const h = s * 1.2; return `M${x},${y - h}L${x + h},${y}L${x},${y + h}L${x - h},${y}Z`; }
+    default: return `M${x - s},${y}a${s},${s} 0 1,0 ${2 * s},0a${s},${s} 0 1,0 ${-2 * s},0`;
+  }
+}
+function swatch(group, size = 12) {
+  const svg = svgEl("svg", { width: size, height: size, viewBox: `0 0 ${size} ${size}`, class: "swatch", "aria-hidden": "true" });
+  svg.appendChild(svgEl("path", { d: shapePath(group.shape, size / 2, size / 2, size * 0.36), fill: `var(${group.color})` }));
+  return svg;
+}
+
+// ---------- scales ----------
+// Amounts start at zero. Plain values such as years start near the data.
+function linearScale(values, plain) {
+  let lo = plain ? Math.min(...values) : Math.min(0, ...values), hi = Math.max(...values);
+  if (lo === hi) hi = lo + 1;
+  const raw = (hi - lo) / 6;
+  const mag = 10 ** Math.floor(Math.log10(raw));
+  const r = raw / mag;
+  const step = (r >= 7.5 ? 10 : r >= 3.5 ? 5 : r >= 1.5 ? 2 : 1) * mag;
+  lo = Math.floor(lo / step) * step;
+  hi = Math.ceil(hi / step) * step;
+  const ticks = [];
+  for (let v = lo; v <= hi + step / 2; v += step) ticks.push(+v.toPrecision(12));
+  return { lo, hi, ticks, t: v => (v - lo) / (hi - lo) };
+}
+function logScale(values) {
+  const minV = Math.min(...values), maxV = Math.max(...values);
+  let a = Math.floor(Math.log10(minV)), b = Math.ceil(Math.log10(maxV));
+  if (a === b) b = a + 1;
+  const decades = b - a;
+  const mults = decades <= 2 ? [1, 2, 5] : decades <= 4 ? [1, 3] : [1];
+  const all = [];
+  for (let e = a; e <= b; e++) for (const m of mults) all.push(m * 10 ** e);
+  // Trim the domain to the closest ticks around the data.
+  const lo = Math.max(...all.filter(v => v <= minV * 1.0000001));
+  const hi = Math.min(...all.filter(v => v >= maxV * 0.9999999));
+  const ticks = all.filter(v => v >= lo && v <= hi).map(v => +v.toPrecision(12));
+  const llo = Math.log10(lo), lhi = Math.log10(hi === lo ? lo * 10 : hi);
+  return { lo, hi, ticks, t: v => (Math.log10(v) - llo) / (lhi - llo) };
+}
+
+// ---------- scatter chart ----------
+// points: [{x, y, group, item, dim}], lines: [{points, group, label}]
+function renderScatter(wrap, tip, spec) {
+  wrap.querySelectorAll("svg").forEach(n => n.remove());
+  const width = Math.max(320, wrap.clientWidth);
+  const height = Math.round(Math.min(560, Math.max(320, width * 0.55)));
+  const m = { top: 16, right: 24, bottom: 48, left: 64 };
+  const pw = width - m.left - m.right, ph = height - m.top - m.bottom;
+  const svg = svgEl("svg", { viewBox: `0 0 ${width} ${height}`, role: "img", "aria-label": `${spec.yLabel} against ${spec.xLabel}` });
+
+  const pts = spec.points;
+  if (!pts.length) {
+    svg.appendChild(svgEl("text", { x: width / 2, y: height / 2, "text-anchor": "middle", class: "axis-title" }, "No points match the filters."));
+    wrap.prepend(svg);
+    return;
+  }
+  const xs = (spec.logX ? logScale : linearScale)(pts.map(p => p.x), spec.xPlain);
+  const ys = (spec.logY ? logScale : linearScale)(pts.map(p => p.y), spec.yPlain);
+  const px = v => m.left + xs.t(v) * pw;
+  const py = v => m.top + ph - ys.t(v) * ph;
+
+  const grid = svgEl("g");
+  for (const v of ys.ticks) {
+    const y = py(v);
+    grid.appendChild(svgEl("line", { x1: m.left, x2: m.left + pw, y1: y, y2: y, stroke: "var(--grid)", "stroke-width": 1 }));
+    const g = svgEl("g", { class: "tick" });
+    g.appendChild(svgEl("text", { x: m.left - 8, y: y + 4, "text-anchor": "end" }, fmtTick(v, spec.yPlain)));
+    grid.appendChild(g);
+  }
+  for (const v of xs.ticks) {
+    const x = px(v);
+    grid.appendChild(svgEl("line", { x1: x, x2: x, y1: m.top, y2: m.top + ph, stroke: "var(--grid)", "stroke-width": 1 }));
+    const g = svgEl("g", { class: "tick" });
+    g.appendChild(svgEl("text", { x, y: m.top + ph + 18, "text-anchor": "middle" }, fmtTick(v, spec.xPlain)));
+    grid.appendChild(g);
+  }
+  grid.appendChild(svgEl("line", { x1: m.left, x2: m.left + pw, y1: m.top + ph, y2: m.top + ph, stroke: "var(--axis)", "stroke-width": 1 }));
+  svg.appendChild(grid);
+  svg.appendChild(svgEl("text", { x: m.left + pw / 2, y: height - 8, "text-anchor": "middle", class: "axis-title" }, spec.xLabel + (spec.logX ? " (log)" : "")));
+  svg.appendChild(svgEl("text", { x: 14, y: m.top + ph / 2, "text-anchor": "middle", class: "axis-title", transform: `rotate(-90 14 ${m.top + ph / 2})` }, spec.yLabel + (spec.logY ? " (log)" : "")));
+
+  for (const p of pts) { p.sx = px(p.x); p.sy = py(p.y); }
+
+  const lineLayer = svgEl("g");
+  for (const line of spec.lines || []) {
+    if (line.points.length < 2) continue;
+    const d = line.points.map((p, i) => `${i ? "L" : "M"}${p.sx.toFixed(1)},${p.sy.toFixed(1)}`).join("");
+    lineLayer.appendChild(svgEl("path", { d, fill: "none", stroke: `var(${line.group.color})`, "stroke-width": 2, "stroke-linejoin": "round", opacity: line.dim ? 0.15 : 0.8 }));
+  }
+  svg.appendChild(lineLayer);
+
+  // Dimmed points draw first so focused points stay on top.
+  const markLayer = svgEl("g");
+  const ordered = [...pts].sort((a, b) => (b.dim ? 1 : 0) - (a.dim ? 1 : 0));
+  for (const p of ordered) {
+    markLayer.appendChild(svgEl("path", {
+      d: shapePath(p.group.shape, p.sx, p.sy, 4.5), fill: `var(${p.group.color})`,
+      stroke: "var(--surface)", "stroke-width": 1.5, opacity: p.dim ? 0.12 : 0.9,
+    }));
+  }
+  svg.appendChild(markLayer);
+
+  const labelLayer = svgEl("g");
+  for (const line of spec.lines || []) {
+    if (!line.label || line.dim || !line.points.length) continue;
+    const last = line.points[line.points.length - 1];
+    const right = last.sx > m.left + pw * 0.75;
+    labelLayer.appendChild(svgEl("text", {
+      x: last.sx + (right ? -10 : 10), y: last.sy - 8, "text-anchor": right ? "end" : "start", class: "direct-label",
+    }, line.label));
+  }
+  svg.appendChild(labelLayer);
+
+  const hover = svgEl("circle", { r: 9, fill: "none", stroke: "var(--ink)", "stroke-width": 2, visibility: "hidden" });
+  svg.appendChild(hover);
+
+  const hitRadius = 24;
+  function nearest(evt) {
+    const rect = svg.getBoundingClientRect();
+    const sx = (evt.clientX - rect.left) * width / rect.width;
+    const sy = (evt.clientY - rect.top) * height / rect.height;
+    let best = null, bestD = hitRadius * width / rect.width;
+    for (const p of pts) {
+      if (p.dim && spec.focusOnly) continue;
+      const d = Math.hypot(p.sx - sx, p.sy - sy);
+      if (d < bestD) { best = p; bestD = d; }
+    }
+    return best;
+  }
+  svg.addEventListener("pointermove", evt => {
+    const p = nearest(evt);
+    if (!p) { hover.setAttribute("visibility", "hidden"); tip.style.display = "none"; svg.style.cursor = ""; return; }
+    hover.setAttribute("cx", p.sx); hover.setAttribute("cy", p.sy); hover.setAttribute("visibility", "visible");
+    svg.style.cursor = spec.onClick ? "pointer" : "";
+    fillTooltip(tip, spec, p);
+    const rect = svg.getBoundingClientRect();
+    const scale = rect.width / width;
+    tip.style.display = "block";
+    let left = p.sx * scale + 14, top = p.sy * scale + 14;
+    if (left + tip.offsetWidth > wrap.clientWidth) left = p.sx * scale - tip.offsetWidth - 14;
+    if (top + tip.offsetHeight > wrap.clientHeight) top = p.sy * scale - tip.offsetHeight - 14;
+    tip.style.left = Math.max(0, left) + "px";
+    tip.style.top = Math.max(0, top) + "px";
+  });
+  svg.addEventListener("pointerleave", () => { hover.setAttribute("visibility", "hidden"); tip.style.display = "none"; });
+  if (spec.onClick) svg.addEventListener("click", evt => { const p = nearest(evt); spec.onClick(p ? p.item : null); });
+  wrap.prepend(svg);
+}
+
+function fillTooltip(tip, spec, p) {
+  tip.replaceChildren();
+  const vals = htmlEl("div", { class: "vals" });
+  vals.append(htmlEl("strong", {}, spec.yPlain ? String(p.y) : fmt(p.y)), htmlEl("span", {}, spec.yLabel));
+  vals.append(htmlEl("strong", {}, spec.xPlain ? String(p.x) : fmt(p.x)), htmlEl("span", {}, spec.xLabel));
+  tip.append(vals, htmlEl("div", { class: "name" }, p.item.name));
+  for (const line of spec.describe(p.item)) tip.append(htmlEl("div", { class: "meta" }, line));
+}
+
+// ---------- shared filter / table helpers ----------
+function fillSelect(select, metrics, value) {
+  for (const mt of metrics) select.appendChild(htmlEl("option", { value: mt.key }, mt.label));
+  select.value = value;
+}
+function buildLegend(container, groups, counts, active, onChange) {
+  container.replaceChildren();
+  for (const g of groups) {
+    const btn = htmlEl("button", { type: "button", "aria-pressed": String(active.has(g.key)) });
+    btn.append(swatch(g), document.createTextNode(g.label || g.key), htmlEl("span", { class: "count" }, String(counts[g.key] || 0)));
+    btn.addEventListener("click", () => {
+      if (active.has(g.key)) active.delete(g.key); else active.add(g.key);
+      btn.setAttribute("aria-pressed", String(active.has(g.key)));
+      onChange();
+    });
+    container.appendChild(btn);
+  }
+}
+function renderTable(table, columns, rows, sort, onSort) {
+  const thead = table.tHead, tbody = table.tBodies[0];
+  thead.replaceChildren();
+  const tr = htmlEl("tr");
+  for (const col of columns) {
+    const th = htmlEl("th", { scope: "col", class: col.text ? "text" : "" }, col.label);
+    if (sort.key === col.key) th.setAttribute("aria-sort", sort.dir > 0 ? "ascending" : "descending");
+    th.addEventListener("click", () => onSort(col.key));
+    tr.appendChild(th);
+  }
+  thead.appendChild(tr);
+  const col = columns.find(c => c.key === sort.key) || columns[0];
+  const sorted = [...rows].sort((a, b) => {
+    const va = col.get(a), vb = col.get(b);
+    if (va === null || va === undefined) return 1;
+    if (vb === null || vb === undefined) return -1;
+    return (typeof va === "string" ? va.localeCompare(vb) : va - vb) * sort.dir;
+  });
+  const frag = document.createDocumentFragment();
+  for (const row of sorted) {
+    const r = htmlEl("tr");
+    for (const c of columns) {
+      const v = c.get(row);
+      const td = htmlEl("td", { class: c.text ? "text" : "" });
+      if (c.swatch) td.appendChild(swatch(c.swatch(row), 10));
+      td.appendChild(document.createTextNode(c.text ? (v ?? "—") : c.plain && v !== null && v !== undefined ? String(v) : fmt(v)));
+      r.appendChild(td);
+    }
+    frag.appendChild(r);
+  }
+  tbody.replaceChildren(frag);
+}
+function toggleSort(sort, key, textKeys) {
+  if (sort.key === key) sort.dir = -sort.dir;
+  else { sort.key = key; sort.dir = textKeys.includes(key) ? 1 : -1; }
+}
+function plotPoints(items, metricX, metricY, logX, logY) {
+  const points = [];
+  let hidden = 0;
+  for (const item of items) {
+    const x = metricX.get(item), y = metricY.get(item);
+    const bad = v => v === null || v === undefined || Number.isNaN(v);
+    if (bad(x) || bad(y) || (logX && x <= 0) || (logY && y <= 0)) { hidden++; continue; }
+    points.push({ x, y, item });
+  }
+  return { points, hidden };
+}
+
+// ---------- units ----------
+const unitGroupByKey = Object.fromEntries(UNIT_GROUPS.map(g => [g.key, g]));
+const unitState = {
+  x: "cost", y: "power", logX: true, logY: true,
+  groups: new Set(UNIT_GROUPS.map(g => g.key)), family: "", search: "",
+  sort: { key: "power_per_cost", dir: -1 },
+};
+const families = [...new Set(DATA.units.map(u => u.family))];
+
+function unitDescribe(u) {
+  return [
+    `${u.family} · ${u.group}${u.tier_label && u.tier_label !== u.name ? " · " + u.tier_label : ""}`,
+    `Attack ${fmt(u.attack)} · Health ${fmt(u.health)} · Defense ${fmt(u.defense)}`,
+    `Cost ${fmt(u.cost_materials)} mat · ${fmt(u.cost_manpower)} man · ${fmt(u.cost_fuel)} fuel · ${fmt(u.production_time)} turns`,
+  ];
+}
+function filteredUnits() {
+  const q = unitState.search.trim().toLowerCase();
+  return DATA.units.filter(u => unitState.groups.has(u.group) && (!q || u.name.toLowerCase().includes(q)));
+}
+const UNIT_COLUMNS = [
+  { key: "name", label: "Unit", text: true, get: u => u.name, swatch: u => unitGroupByKey[u.group] },
+  { key: "family", label: "Family", text: true, get: u => u.family },
+  { key: "tier", label: "Tier", plain: true, get: u => u.year ?? u.level },
+  { key: "attack", label: "Attack", get: u => u.attack },
+  { key: "health", label: "Health", get: u => u.health },
+  { key: "defense", label: "Defense", get: u => u.defense },
+  { key: "speed", label: "Speed", get: u => u.speed },
+  { key: "cost_materials", label: "Materials", get: u => u.cost_materials },
+  { key: "cost_manpower", label: "Manpower", get: u => u.cost_manpower },
+  { key: "cost_fuel", label: "Fuel", get: u => u.cost_fuel },
+  { key: "cost", label: "Total cost", get: weightedCost },
+  { key: "production_time", label: "Turns", get: u => u.production_time },
+  { key: "power", label: "Power", get: power },
+  { key: "power_per_cost", label: "Power / 1k cost", get: UNIT_METRIC.power_per_cost.get },
+  { key: "attack_per_cost", label: "Attack / 1k cost", get: UNIT_METRIC.attack_per_cost.get },
+  { key: "health_per_cost", label: "Health / 1k cost", get: UNIT_METRIC.health_per_cost.get },
+];
+
+function renderUnits() {
+  const items = filteredUnits();
+  const mx = UNIT_METRIC[unitState.x], my = UNIT_METRIC[unitState.y];
+  const { points, hidden } = plotPoints(items, mx, my, unitState.logX, unitState.logY);
+  const fam = unitState.family;
+  for (const p of points) { p.group = unitGroupByKey[p.item.group]; p.dim = !!fam && p.item.family !== fam; }
+  const lines = [];
+  if (fam) {
+    const famPts = points.filter(p => p.item.family === fam).sort((a, b) => a.item.tier_order - b.item.tier_order);
+    if (famPts.length) lines.push({ points: famPts, group: famPts[0].group, label: fam });
+  }
+  renderScatter(document.getElementById("u-chart"), document.getElementById("u-tip"), {
+    points, lines, logX: unitState.logX, logY: unitState.logY, xLabel: mx.label, yLabel: my.label,
+    xPlain: mx.plain, yPlain: my.plain, describe: unitDescribe, focusOnly: !!fam,
+    onClick: u => { unitState.family = u && u.family !== unitState.family ? u.family : ""; document.getElementById("u-family").value = unitState.family; renderUnits(); },
+  });
+  const famNote = fam ? ` Highlighting ${fam}; click empty space to clear.` : " Click a point to highlight its family.";
+  document.getElementById("u-caption").textContent =
+    `Showing ${points.length} of ${DATA.units.length} units.` + (hidden ? ` ${hidden} hidden (no value${unitState.logX || unitState.logY ? " or zero on a log axis" : ""}).` : "") + famNote;
+  const tableRows = fam ? items.filter(u => u.family === fam) : items;
+  renderTable(document.getElementById("u-table"), UNIT_COLUMNS, tableRows, unitState.sort, key => {
+    toggleSort(unitState.sort, key, ["name", "family"]); renderUnits();
+  });
+}
+
+function initUnits() {
+  fillSelect(document.getElementById("u-x"), UNIT_METRICS, unitState.x);
+  fillSelect(document.getElementById("u-y"), UNIT_METRICS, unitState.y);
+  const famSel = document.getElementById("u-family");
+  famSel.appendChild(htmlEl("option", { value: "" }, "None"));
+  for (const g of UNIT_GROUPS) {
+    const og = htmlEl("optgroup", { label: g.key });
+    for (const f of families.filter(f => DATA.units.find(u => u.family === f).group === g.key).sort()) {
+      og.appendChild(htmlEl("option", { value: f }, f));
+    }
+    famSel.appendChild(og);
+  }
+  const counts = {};
+  for (const u of DATA.units) counts[u.group] = (counts[u.group] || 0) + 1;
+  buildLegend(document.getElementById("u-legend"), UNIT_GROUPS, counts, unitState.groups, renderUnits);
+  const bind = (id, evt, fn) => document.getElementById(id).addEventListener(evt, e => { fn(e.target); renderUnits(); });
+  bind("u-x", "change", t => unitState.x = t.value);
+  bind("u-y", "change", t => unitState.y = t.value);
+  bind("u-logx", "change", t => unitState.logX = t.checked);
+  bind("u-logy", "change", t => unitState.logY = t.checked);
+  bind("u-family", "change", t => unitState.family = t.value);
+  bind("u-search", "input", t => unitState.search = t.value);
+}
+
+// ---------- buildings ----------
+const buildingGroupByKey = Object.fromEntries(BUILDING_GROUPS.map(g => [g.key, g]));
+const buildingState = {
+  x: "level", y: "output", logX: false, logY: false,
+  groups: new Set(BUILDING_GROUPS.map(g => g.key)), sort: { key: "payback", dir: 1 },
+};
+function buildingDescribe(b) {
+  const out = RESOURCES.filter(r => b["prod_" + r]).map(r => `${fmt(b["prod_" + r])} ${r}`).join(" · ") || "no resource output";
+  return [
+    `${buildingGroupByKey[b.group].label} · level ${b.level}${b.req ? " · upgrades " + b.req : ""}`,
+    `Output ${out}`,
+    `Cost ${fmt(b.cost_materials)} mat · ${fmt(b.cost_manpower)} man · ${fmt(b.cost_fuel)} fuel · ${fmt(b.time)} turns`,
+  ];
+}
+const BUILDING_COLUMNS = [
+  { key: "name", label: "Building", text: true, get: b => b.name, swatch: b => buildingGroupByKey[b.group] },
+  { key: "level", label: "Level", get: b => b.level },
+  { key: "time", label: "Turns", get: b => b.time },
+  { key: "cost_materials", label: "Materials", get: b => b.cost_materials },
+  { key: "cost_manpower", label: "Manpower", get: b => b.cost_manpower },
+  { key: "cost_fuel", label: "Fuel", get: b => b.cost_fuel },
+  { key: "cost", label: "Total cost", get: weightedCost },
+  { key: "prod_materials", label: "Mat / turn", get: b => b.prod_materials },
+  { key: "prod_manpower", label: "Man / turn", get: b => b.prod_manpower },
+  { key: "prod_fuel", label: "Fuel / turn", get: b => b.prod_fuel },
+  { key: "output", label: "Output / turn", get: weightedOutput },
+  { key: "gain", label: "Gain / turn", get: buildingGain },
+  { key: "payback", label: "Payback turns", get: buildingPayback },
+];
+function renderBuildings() {
+  const items = DATA.buildings.filter(b => buildingState.groups.has(b.group));
+  const mx = BUILDING_METRIC[buildingState.x], my = BUILDING_METRIC[buildingState.y];
+  const { points, hidden } = plotPoints(items, mx, my, buildingState.logX, buildingState.logY);
+  for (const p of points) p.group = buildingGroupByKey[p.item.group];
+  // Each building group is one upgrade chain, so connect it in level order.
+  const lines = BUILDING_GROUPS.map(g => ({
+    group: g, label: g.label,
+    points: points.filter(p => p.item.group === g.key).sort((a, b) => a.item.level - b.item.level),
+  }));
+  renderScatter(document.getElementById("b-chart"), document.getElementById("b-tip"), {
+    points, lines, logX: buildingState.logX, logY: buildingState.logY, xLabel: mx.label, yLabel: my.label,
+    describe: buildingDescribe,
+  });
+  document.getElementById("b-caption").textContent =
+    `Showing ${points.length} of ${DATA.buildings.length} buildings.` + (hidden ? ` ${hidden} hidden (no value${buildingState.logX || buildingState.logY ? " or zero on a log axis" : ""}).` : "");
+  renderTable(document.getElementById("b-table"), BUILDING_COLUMNS, items, buildingState.sort, key => {
+    toggleSort(buildingState.sort, key, ["name"]); renderBuildings();
+  });
+}
+function initBuildings() {
+  fillSelect(document.getElementById("b-x"), BUILDING_METRICS, buildingState.x);
+  fillSelect(document.getElementById("b-y"), BUILDING_METRICS, buildingState.y);
+  const counts = {};
+  for (const b of DATA.buildings) counts[b.group] = (counts[b.group] || 0) + 1;
+  buildLegend(document.getElementById("b-legend"), BUILDING_GROUPS, counts, buildingState.groups, renderBuildings);
+  const bind = (id, evt, fn) => document.getElementById(id).addEventListener(evt, e => { fn(e.target); renderBuildings(); });
+  bind("b-x", "change", t => buildingState.x = t.value);
+  bind("b-y", "change", t => buildingState.y = t.value);
+  bind("b-logx", "change", t => buildingState.logX = t.checked);
+  bind("b-logy", "change", t => buildingState.logY = t.checked);
+}
+
+// ---------- page ----------
+let activeTab = "units";
+function renderActive() { if (activeTab === "units") renderUnits(); else renderBuildings(); }
+
+function initWeights() {
+  for (const r of RESOURCES) {
+    const input = document.getElementById("w-" + r);
+    const out = input.nextElementSibling;
+    const sync = () => { weights[r] = +input.value; out.textContent = "×" + input.value; };
+    sync();
+    input.addEventListener("input", () => { sync(); renderActive(); });
+  }
+  document.getElementById("w-reset").addEventListener("click", () => {
+    for (const r of RESOURCES) { const input = document.getElementById("w-" + r); input.value = 1; input.dispatchEvent(new Event("input")); }
+  });
+}
+function initTabs() {
+  for (const name of ["units", "buildings"]) {
+    document.getElementById("tab-" + name).addEventListener("click", () => {
+      activeTab = name;
+      for (const other of ["units", "buildings"]) {
+        document.getElementById("tab-" + other).setAttribute("aria-selected", String(other === name));
+        document.getElementById("panel-" + other).hidden = other !== name;
+      }
+      renderActive();
+    });
+  }
+}
+
+document.getElementById("lede").textContent =
+  `${DATA.units.length} units and ${DATA.buildings.length} buildings from the current game data (generated ${DATA.generated}). ` +
+  "Pick any two stats to compare, hover a point for its details, and change the cost weights to value manpower or fuel above materials.";
+initWeights();
+initTabs();
+initUnits();
+initBuildings();
+renderActive();
+let resizeTimer;
+window.addEventListener("resize", () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(renderActive, 120); });
+</script>
+</body>
+</html>
