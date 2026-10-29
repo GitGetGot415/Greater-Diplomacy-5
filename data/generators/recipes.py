@@ -407,15 +407,15 @@ LAND_UNIT_RECIPES = [
     #NAME                          TIERS     HP              ATK             DEF           SPD      MAT               MAN   FUEL          TIME BOMB   OPTIONS
     ("WW1 Tank",                   single(), 3000,           1500,           100,          1,       6000,             1000, 300,          6,   None,  {}),
     ("WW1 Armored Car",            single(), 1000,           300,            50,           2,       3000,             1000, 100,          4,   None,  {}),
-    ("Armored Car",                rs(34),   lin(1000, 100), lin(400, 100),  lin(60, 10),  CAR_SPD, lin(3000, 200),   1000, lin(100, 5),  4,   None,  {}),
-    ("Light Tank",                 rs(34),   lin(1800, 200), lin(1200, 150), lin(80, 10),  LT_SPD,  lin(5000, 500),   1000, lin(150, 5),  5,   None,  {}),
+    ("Armored Car",                rs(59),   lin(1000, 100), lin(400, 100),  lin(60, 10),  CAR_SPD, lin(3000, 200),   1000, lin(100, 5),  4,   None,  {}),
+    ("Light Tank",                 rs(59),   lin(1800, 200), lin(1200, 150), lin(80, 10),  LT_SPD,  lin(5000, 500),   1000, lin(150, 5),  5,   None,  {}),
     ("Medium Tank",                rs(4),    lin(2500, 500), lin(2400, 600), lin(150, 25), 2,       lin(9000, 1000),  1000, lin(200, 10), 6,   None,  {}),
     ("Heavy Tank",                 rs(4),    lin(3000, 500), lin(3000, 500), lin(350, 50), 1,       lin(12000, 1000), 1000, lin(200, 10), 6,   None,  {}),
     ("Super Heavy Tank",           rs(5),    5000,           5000,           lin(550, 50), 1,       lin(16000, 2000), 1000, lin(240, 20), 6,   None,  {}),
     ("Landkreuzer P.1000 Ratte",   single(), 10000,          6000,           400,          1,       50000,            2000, 1000,         10,  1000,  {"division_suffix": "1000"}),
     ("Landkreuzer P.1500 Monster", single(), 15000,          8000,           500,          1,       60000,            2000, 1200,         12,  1200,  {"division_suffix": "1500"}),
     ("Railgun",                    single(), 10000,          10000,          500,          1,       80000,            2000, 3000,         10,  10000, {}),
-    ("Main Battle Tank",           rs(22),   lin(5000, 500), lin(5000, 500), lin(250, 25), 2,       lin(16000, 1000), 1000, lin(240, 10), 6,   None,  {}),
+    ("Main Battle Tank",           rs(42),   lin(5000, 500), lin(5000, 500), lin(250, 25), 2,       lin(16000, 1000), 1000, lin(240, 10), 6,   None,  {}),
     ("WW1 Railroad Gun",           single(), 1200,           500,            0,            1,       5000,             1000, 0,            6,   500,   {}),
     ("WW2 Railroad Gun",           single(), 2000,           800,            0,            1,       8000,             1000, 0,            6,   800,   {}),
 ]
@@ -427,9 +427,9 @@ NAVAL_UNIT_RECIPES = [
     ("Pre-Dreadnought",  single(), 3000,           1200,           300,          1,  12000,            2000, 250,          8,   None,          {}),
     ("Dreadnought",      single(), 4000,           2400,           400,          1,  20000,            2000, 300,          10,  300,           {}),
     ("Battleship",       single(), 6000,           4000,           600,          1,  20000,            2000, 400,          10,  500,           {}),
-    ("Destroyer",        rs(36),   lin(2400, 400), lin(1200, 300), lin(200, 20), 1,  lin(10000, 500),  1000, lin(250, 5),  8,   None,          {}),
-    ("Submarine",        rs(36),   lin(1200, 200), lin(600, 100),  0,            1,  lin(8000, 400),   1000, lin(150, 5),  6,   None,          {}),
-    ("Aircraft Carrier", rs(25),   lin(800, 200),  lin(600, 120),  lin(200, 20), 1,  lin(20000, 1000), 2000, lin(500, 25), 10,  lin(600, 120), {}),
+    ("Destroyer",        rs(61),   lin(2400, 400), lin(1200, 300), lin(200, 20), 1,  lin(10000, 500),  1000, lin(250, 5),  8,   None,          {}),
+    ("Submarine",        rs(61),   lin(1200, 200), lin(600, 100),  0,            1,  lin(8000, 400),   1000, lin(150, 5),  6,   None,          {}),
+    ("Aircraft Carrier", rs(45),   lin(800, 200),  lin(600, 120),  lin(200, 20), 1,  lin(20000, 1000), 2000, lin(500, 25), 10,  lin(600, 120), {}),
 ]
 
 AIR_UNIT_RECIPES = [
@@ -442,9 +442,9 @@ AIR_UNIT_RECIPES = [
     ('Monoplane Transport', rs(3),    1000,           0,              0,            1,  lin(9000, 500),   1000, 200,          4,   'transport', lin(60, 10),  None,  None,   None,  None, 1,    {}),
     ('V1 Flying Bomb',      single(), 1000,           800,            0,            1,  2000,             0,    60,           2,   'strike',    200,          None,  True,   None,  True, None, {}),
     ('V2 Rocket',           single(), 2000,           1200,           0,            1,  4000,             0,    80,           4,   'strike',    300,          None,  True,   True,  True, None, {}),
-    ('Jet Fighter',         rs(26),   lin(4000, 200), lin(1000, 100), lin(100, 20), 1,  lin(5000, 200),   500,  lin(160, 10), 4,   'fighter',   lin(200, 5),  4,     None,   None,  None, None, {}),
-    ('Jet Bomber',          rs(20),   lin(6000, 200), lin(1600, 200), lin(200, 20), 1,  lin(6000, 500),   500,  lin(160, 20), 6,   'bomber',    lin(300, 10), None,  None,   None,  True, None, {}),
-    ('Jet Transport',       rs(20),   lin(2000, 200), 0,              0,            1,  lin(25000, 1000), 1000, 500,          6,   'transport', lin(100, 20), None,  None,   None,  None, 2,    {}),
+    ('Jet Fighter',         rs(51),   lin(4000, 200), lin(1000, 100), lin(100, 20), 1,  lin(5000, 200),   500,  lin(160, 10), 4,   'fighter',   lin(200, 5),  4,     None,   None,  None, None, {}),
+    ('Jet Bomber',          rs(40),   lin(6000, 200), lin(1600, 200), lin(200, 20), 1,  lin(6000, 500),   500,  lin(160, 20), 6,   'bomber',    lin(300, 10), None,  None,   None,  True, None, {}),
+    ('Jet Transport',       rs(40),   lin(2000, 200), 0,              0,            1,  lin(25000, 1000), 1000, 500,          6,   'transport', lin(100, 20), None,  None,   None,  None, 2,    {}),
 ]
 
 
@@ -642,12 +642,12 @@ RESEARCH_RECIPES = [
         #ID                 CAT      LVLS COST  REQ                     YRS              OPTIONS
         ("civilian_car",    "TANKS", 1,   2400, {},                     [1910],          {}),
         ("ww1_armored_car", "TANKS", 1,   2400, {"civilian_car": 1},    [1912],          {}),
-        ("armored_car",     "TANKS", 34,  2400, {"ww1_armored_car": 1}, yr(1916, 4, 34), {}),
+        ("armored_car",     "TANKS", 59,  2400, {"ww1_armored_car": 1}, yr(1916, 4, 59), {}),
     ],
     [
         #ID                           CAT      LVLS COST  REQ                              YRS              OPTIONS
         ("ww1_tank",                  "TANKS", 1,   2400, {"ww1_armored_car": 1},          [1914],          {}),
-        ("light_tank",                "TANKS", 34,  2400, {"ww1_tank": 1},                 yr(1918, 4, 34), {}),
+        ("light_tank",                "TANKS", 59,  2400, {"ww1_tank": 1},                 yr(1918, 4, 59), {}),
         ("medium_tank",               "TANKS", 4,   2400, {"light_tank": 1},               yr(1925, 5, 4),  {}),
         ("heavy_tank",                "TANKS", 4,   2400, {"medium_tank": 1},              yr(1929, 4, 4),  {}),
         ("super_heavy_tank",          "TANKS", 5,   2400, {"heavy_tank": 4},               yr(1945, 4, 5),  {}),
@@ -655,7 +655,7 @@ RESEARCH_RECIPES = [
         ("landkreuzer_p1500_monster", "TANKS", 1,   3600, {"landkreuzer_p1000_ratte": 1},  [1956],          {}),
         ("electromagnetic_launcher",  "TANKS", 1,   3000, {},                              [1980],          {}),
         ("railgun",                   "TANKS", 1,   3600, {"electromagnetic_launcher": 1}, [2030],          {}),
-        ("main_battle_tank",          "TANKS", 22,  2400, MBT_REQ,                         yr(1945, 5, 22), {}),
+        ("main_battle_tank",          "TANKS", 42,  2400, MBT_REQ,                         yr(1945, 5, 42), {}),
         ("ww1_railroad_gun",          "TANKS", 1,   2400, {"ww1_tank": 1},                 [1918],          {}),
         ("ww2_railroad_gun",          "TANKS", 1,   2400, WW2_RAIL_REQ,                    [1932],          {}),
     ],
@@ -666,9 +666,9 @@ RESEARCH_RECIPES = [
         ("pre-dreadnought",  "NAVY", 1,   2400, {"ironclad": 1},        [1880],          {}),
         ("dreadnought",      "NAVY", 1,   2400, {"pre-dreadnought": 1}, [1900],          {}),
         ("battleship",       "NAVY", 1,   2400, {"dreadnought": 1},     [1920],          {}),
-        ("destroyer",        "NAVY", 36,  2400, {"dreadnought": 1},     yr(1910, 4, 36), {}),
-        ("aircraft_carrier", "NAVY", 25,  2400, {"battleship": 1},      yr(1930, 5, 25), {}),
-        ("submarine",        "NAVY", 36,  2400, {"dreadnought": 1},     yr(1910, 4, 36), {}),
+        ("destroyer",        "NAVY", 61,  2400, {"dreadnought": 1},     yr(1910, 4, 61), {}),
+        ("aircraft_carrier", "NAVY", 45,  2400, {"battleship": 1},      yr(1930, 5, 45), {}),
+        ("submarine",        "NAVY", 61,  2400, {"dreadnought": 1},     yr(1910, 4, 61), {}),
     ],
     [
         #ID                            CAT         LVLS COST  REQ                        YRS               OPTIONS
@@ -714,9 +714,9 @@ RESEARCH_RECIPES = [
         ('v1_flying_bomb',      'AIR', 1,   900,  {},                                     [1940],          {"NAME": 'V1 Flying Bomb'}),
         ('v2_rocket',           'AIR', 1,   1200, {'v1_flying_bomb': 1},                  [1945],          {"NAME": 'V2 Rocket'}),
         ('jet_engine',          'AIR', 1,   2400, {},                                     [1945],          {"NAME": 'Jet Engine'}),
-        ('jet_fighter',         'AIR', 26,  1800, {'piston_fighter': 5, 'jet_engine': 1}, yr(1950, 4, 26), {"NAME": 'Jet Fighter'}),
-        ('jet_bomber',          'AIR', 20,  2400, {'piston_bomber': 5, 'jet_fighter': 1}, yr(1955, 5, 20), {"NAME": 'Jet Bomber'}),
-        ('jet_transport',       'AIR', 20,  2400, {'piston_bomber': 5},                   yr(1955, 5, 20), {"NAME": 'Jet Transport'}),
+        ('jet_fighter',         'AIR', 51,  1800, {'piston_fighter': 5, 'jet_engine': 1}, yr(1950, 4, 51), {"NAME": 'Jet Fighter'}),
+        ('jet_bomber',          'AIR', 40,  2400, {'piston_bomber': 5, 'jet_fighter': 1}, yr(1955, 5, 40), {"NAME": 'Jet Bomber'}),
+        ('jet_transport',       'AIR', 40,  2400, {'piston_bomber': 5},                   yr(1955, 5, 40), {"NAME": 'Jet Transport'}),
     ],
 ]
 

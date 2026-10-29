@@ -125,6 +125,10 @@ Example: An object spawns every five seconds.
 If the screen is at its object cap, skip that spawn.
 Do not queue skipped spawns for later.
 
+Example 2: You are asked to extend research of a certain unit until the end of the timeline.
+Do not create an entire system where if you enter in something like None it automates it for you.
+Simply edit the number of levels the unit has and call that done.
+
 ### One Source of Truth
 
 - Match identifiers, data keys, constants, and documentation to player-facing names for the same thing.
