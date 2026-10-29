@@ -27,82 +27,32 @@
         }
     },
     "technologies": {
-        "aircraft_carrier": {
-            "button_size": "tech_square_ultra_wide"
-        },
-        "battleship": {
-            "button_size": "tech_square_ultra_wide"
-        },
-        "dreadnought": {
-            "button_size": "tech_square_ultra_wide"
-        },
-        "pre-dreadnought": {
-            "button_size": "tech_square_ultra_wide"
-        },
-        "submarine": {
-            "button_size": "tech_square_ultra_wide"
-        },
-        "jet_bomber": {
-            "button_size": "tech_square_ultra_wide"
-        },
-        "jet_transport": {
-            "button_size": "tech_square_ultra_wide"
-        },
-        "ww2_railroad_gun": {
-            "button_size": "tech_square_ww2_railroad_gun"
-        },
-        "landkreuzer_p1000_ratte": {
-            "button_size": "tech_square_landkreuzer_p1000_ratte"
-        },
-        "landkreuzer_p1500_monster": {
-            "button_size": "tech_square_landkreuzer_p1500_monster"
-        },
-        "ww1_railroad_gun": {
-            "button_size": "tech_square_railroad_gun"
-        },
-        "railgun": {
-            "button_size": "tech_square_railgun"
-        },
-        "civilian_car": {
-            "button_size": "tech_square_medium"
-        },
-        "ww1_armored_car": {
-            "button_size": "tech_square_medium"
-        },
-        "armored_car": {
-            "button_size": "tech_square_medium"
-        },
-        "medium_tank": {
-            "button_size": "tech_square_medium"
-        },
-        "light_tank": {
-            "levels": {
-                "1": {
-                    "button_size": "tech_square_medium"
-                },
-                "2": {
-                    "button_size": "tech_square_medium"
-                },
-                "3": {
-                    "button_size": "tech_square_medium"
-                },
-                "4": {
-                    "button_size": "tech_square_medium"
-                },
-                "5": {
-                    "button_size": "tech_square_medium"
-                },
-                "6": {
-                    "button_size": "tech_square_medium"
-                },
-                "7": {
-                    "button_size": "tech_square_medium"
-                },
-                "8": {
-                    "button_size": "tech_square_medium"
-                }
-            }
-        }
+        "aircraft_carrier": {"button_size": "tech_square_ultra_wide"},
+        "battleship": {"button_size": "tech_square_ultra_wide"},
+        "dreadnought": {"button_size": "tech_square_ultra_wide"},
+        "pre-dreadnought": {"button_size": "tech_square_ultra_wide"},
+        "submarine": {"button_size": "tech_square_ultra_wide"},
+        "jet_bomber": {"button_size": "tech_square_ultra_wide"},
+        "jet_transport": {"button_size": "tech_square_ultra_wide"},
+        "ww2_railroad_gun": {"button_size": "tech_square_ww2_railroad_gun"},
+        "landkreuzer_p1000_ratte": {"button_size": "tech_square_landkreuzer_p1000_ratte"},
+        "landkreuzer_p1500_monster": {"button_size": "tech_square_landkreuzer_p1500_monster"},
+        "ww1_railroad_gun": {"button_size": "tech_square_railroad_gun"},
+        "railgun": {"button_size": "tech_square_railgun"},
+        "civilian_car": {"button_size": "tech_square_medium"},
+        "ww1_armored_car": {"button_size": "tech_square_medium"},
+        "armored_car": {"button_size": "tech_square_medium"},
+        "medium_tank": {"button_size": "tech_square_medium"},
+        "light_tank": {"levels": {
+            "1": {"button_size": "tech_square_medium"},
+            "2": {"button_size": "tech_square_medium"},
+            "3": {"button_size": "tech_square_medium"},
+            "4": {"button_size": "tech_square_medium"},
+            "5": {"button_size": "tech_square_medium"},
+            "6": {"button_size": "tech_square_medium"},
+            "7": {"button_size": "tech_square_medium"},
+            "8": {"button_size": "tech_square_medium"}
+        }}
     },
     "layout": {
         "row_y": [200, 270, 340, 410, 480, 550],
