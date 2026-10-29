@@ -15,7 +15,7 @@ accepted:
   In the manifest format, `sandbox` may be:
     auto -- follow the user's per-mod toggle in enabled_mods.json (default)
     on   -- force sandboxed, regardless of the user's toggle
-    off  -- force unsandboxed, regardless of the user's toggle (logged)
+    off  -- request unsandboxed; the user's sandbox toggle still takes priority
 
 The rest of the file is the replacement module's source -- normally started
 as a copy of the real file, so IDE syntax highlighting, linting and accurate
@@ -29,14 +29,11 @@ main.py): Python only executes a module's top-level code once per process
 and caches the result in sys.modules, so installing the finder any later
 would miss every module already imported by that point.
 
-Every mod is also either sandboxed or unsandboxed. See docs/SANDBOX_SECURITY.md
-for the full sandbox model -- short version: a sandboxed mod's code (and any code
-called transitively from it) cannot touch the filesystem, spawn processes,
-or open sockets, enforced via PEP 578 audit hooks with a full call-stack
-walk. The sandbox marker is held privately inside this module via closures,
-NOT in the mod's own __dict__, so a sandboxed mod cannot delete its own
-marker to escape. The previous "best-effort, frame-1-only" design was
-trivially bypassable in one line -- see docs/SANDBOX_SECURITY.md and issue #50.
+Every mod is either sandboxed or unsandboxed.
+The audit hook checks selected operations against registered module globals on the active Python call stack.
+It also checks functions defined in a sandboxed mod when timers or threads call them.
+See documentation/other/sandbox_security.md for settings, import exceptions, and limitations.
+The sandbox does not make untrusted code safe.
 
 A short list of project files are reserved and cannot be mod targets:
 mod_loader itself (would let a mod rewrite the sandbox rules), main (boot),
@@ -380,57 +377,15 @@ def describe_mod(filename):
 
 # --- Sandboxing -------------------------------------------------------
 #
-# A sandboxed mod's code -- and anything called transitively from it --
-# cannot touch the filesystem, spawn processes, or open sockets.
+# The audit hook checks selected operations against all active Python frames.
+# Registration uses each mod's module dictionary identity, not a removable sentinel.
+# Captured event tables resist reassignment of their module attributes.
+# Synchronous calls through game functions still retain the mod's frame.
 #
-# HOW IT WORKS
-#
-# PEP 578 (sys.addaudithook) intercepts these operations at the C level no
-# matter what name or module was used to reach them, and once installed an
-# audit hook cannot be removed from Python. The hook below walks the FULL
-# Python call stack (sys._getframe(1) and every f_back from there) and blocks
-# if ANY frame on the stack belongs to a sandboxed mod.
-#
-# Sandbox membership is keyed by id(frame.f_globals), not by a string the
-# mod can delete. Concretely: when _ModSourceLoader.exec_module is about to
-# run a sandboxed mod's source, it calls back into mod_loader to register
-# id(module.__dict__) into a private set captured by the audit hook's
-# closure. The set itself is not reachable from any mod's code (it's a
-# closure variable, not a module attribute), so a sandboxed mod cannot:
-#
-#   - delete its own marker to disarm the sandbox (there is no marker in
-#     module.__dict__ anymore -- the old _SANDBOX_MARKER design is gone);
-#   - mutate mod_loader._SANDBOX_BLOCKED_EVENTS to defang the hook (the
-#     hook reads a frozenset captured at install time, not the module
-#     attribute);
-#   - hop through a game function that does file I/O (the mod's frame is
-#     still on the stack underneath the game function's, so the walk finds
-#     it);
-#   - exec() fresh code with a freshly-minted globals dict and call it
-#     from the mod's own top-level code (same -- f_back is the mod frame).
-#
-# WHAT IT DOES NOT CLOSE
-#
-#   1. A mod that schedules a callback (threading.Timer, signal handler,
-#      atexit, an asyncio task) where the mod's own frame is NOT on the
-#      call stack at fire time. Strict stack-walking finds sandboxed
-#      frames by walking back; if there's nothing to walk back to, the
-#      sandbox can't see it. This is documented in docs/SANDBOX_SECURITY.md.
-#   2. CPython-internal escapes (ctypes, suspicious C extensions, crafting
-#      a code object whose globals happen to alias a non-sandboxed
-#      module's). The threat model is "careless or lazily malicious mod",
-#      not "CPython red team".
-#   3. On the web (pygbag/WASM) build, the sandbox is advisory only.
-#      platform.window is reachable from any Python code via `import
-#      platform` (stdlib, patched by pygbag) and gives the mod the full
-#      browser: fetch, XMLHttpRequest, localStorage, eval. None of those
-#      are CPython audit events. install() emits a clear warning when a
-#      sandboxed mod is enabled on web. See docs/SANDBOX_SECURITY.md
-#      and issue #51 for the long-term answer.
-#
-# Treat every enabled mod, sandboxed or not, as code you trust enough to
-# run on your machine. The sandbox narrows the blast radius of bugs and
-# lazy maliciousness; it does not turn an untrusted mod into a safe one.
+# A callback defined in a registered mod retains its registered globals.
+# Deferred work with unregistered globals can run without a mod frame.
+# Scheduling origins are not recorded. Browser calls can also bypass audit events.
+# See documentation/other/sandbox_security.md for the full rules and limitations.
 
 _SANDBOX_BLOCKED_EVENTS = frozenset({
     "open", "os.remove", "os.rmdir", "os.removedirs", "os.rename", "os.replace",
@@ -473,9 +428,10 @@ _register_sandboxed_module = None
 
 
 def _install_sandbox_audit_hook():
-    """Install the PEP 578 audit hook. Captures the blocked-event tables
-    and the per-process sandboxed-module set in closures so a mod that
-    somehow reaches mod_loader's globals can't mutate them."""
+    """Install the PEP 578 audit hook with registration data and event tables in a closure.
+
+    Reassigning module attributes does not replace these captured values.
+    """
     global _audit_hook_installed, _register_sandboxed_module
     if _audit_hook_installed:
         return
@@ -553,9 +509,9 @@ def _install_sandbox_audit_hook():
         #   - the "exec(open, fresh_globals)" bypass (same -- the mod's
         #     frame is f_back of the exec'd frame).
         #
-        # It does NOT close a mod scheduling a callback from a thread or
-        # timer where the mod's frame is not on the stack at fire time.
-        # See docs/SANDBOX_SECURITY.md.
+        # Mod-defined callbacks retain their registered globals, including on timers.
+        # Deferred code with unregistered globals can lack a sandboxed frame.
+        # See documentation/other/sandbox_security.md.
         while frame is not None:
             if id(frame.f_globals) in sandboxed_dict_ids:
                 raise PermissionError(
@@ -753,17 +709,11 @@ async def restore_mods_dir_from_indexeddb():
 
 
 def _effective_sandbox_setting(filename, declared_sandbox):
-    """Combine the user's per-mod toggle (enabled_mods.json) with the mod's
-    manifest-declared sandbox preference.
+    """Combine the manifest preference with the user's per-mod toggle.
 
-      declared_sandbox == "auto" -> follow the user's toggle (default)
-      declared_sandbox == "on"   -> force sandboxed, regardless of toggle
-      declared_sandbox == "off"  -> force unsandboxed, regardless of toggle
-
-    A mod that declares sandbox=off while the user has it sandboxed in
-    enabled_mods.json is honored as sandboxed (user wins) with a logged
-    warning. This makes sandbox=off a "this mod needs file access to work"
-    hint, not a "bypass the user's safety preference" lever.
+    auto follows the user's toggle. on always enables the sandbox.
+    off permits unsandboxed execution only when the user also selects it.
+    A conflicting off preference logs a warning and keeps the sandbox enabled.
     """
     if declared_sandbox == "on":
         return True

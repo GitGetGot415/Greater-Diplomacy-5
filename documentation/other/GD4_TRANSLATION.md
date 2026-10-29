@@ -26,7 +26,7 @@ Custom-map records convert only when they match the standard GD4 ordering.
 ## Map conversion
 
 Each import starts from GD5's bundled `GD4` base map.
-`map_logic/gd4_translation.py` owns the country-code and province mapping tables.
+`map_logic/imports/gd4_translation.py` owns the country-code and province mapping tables.
 They map 547 Earth province indices.
 GD5 does not represent GD4's 17 moon records.
 The normal loader rebuilds the political overlay when the new save opens.
@@ -91,7 +91,7 @@ If an older save has no valid selected country, it becomes a Spectator save.
 
 Troops convert to `Infantry Type <imported year>`.
 The troop-to-unit conversion factor determines complete units and the health fraction of any remaining unit.
-See the conversion logic in `map_logic/gd4_translation.py` for that factor.
+See the conversion logic in `map_logic/imports/gd4_translation.py` for that factor.
 If the exact infantry year is unavailable, the importer uses the nearest supported year.
 
 ## Data that does not convert

@@ -133,7 +133,7 @@ tests/test_prompt_sharing.py protects this order.
 Leave neutral relation scores out of the country-specific section.
 State that an unlisted country is neutral.
 
-See HISTORICAL MEASUREMENTS for earlier prompt-sharing and turn-time results.
+See documentation/other/llm_benchmark_notes.txt for historical performance measurements.
 
 TURN BUDGET AND CANCELLATION
 ---------------------------
@@ -203,20 +203,3 @@ Do not duplicate immersion rules to estimate its size.
 At ABSOLUTE, check provider availability if turns are slow.
 An unavailable Ollama server can make each request wait for its timeout.
 A positive ai_turn_budget_seconds limits that waiting across the turn.
-
-HISTORICAL MEASUREMENTS
------------------------
-
-Prompt sharing
-
-Earlier measurements on the 1941 map found 84% shared text across phases, compared with 0% in the previous order.
-With 12 majors and llama3 through Ollama, measured processing time fell from 179 seconds to 28 seconds.
-These are past measurements, not performance guarantees.
-
-Turn budgets and fairness
-
-Earlier 1941-map measurements used MAJOR, llama3, and one thread.
-Without a time limit, all 10 directed countries and 44 model-eligible proposals were served.
-About 60 calls took 8 to 10 minutes per turn.
-Shorter budgets served fewer countries, with llm_last_turn rotating priority across turns.
-These measurements depend on the provider, machine, and scenario.

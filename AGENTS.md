@@ -52,19 +52,19 @@ AI means artificial intelligence. UI means user interface.
 | `data/game_state.py`, `data/session_state.py` | World data, participants, control permissions, and processing progress. |
 | `data/runtime_rules.py`, `data/world_nations.py` | World-specific active libraries, derived indexes, and explicit country-mapping context. |
 | `data/state_access.py` | Explicit state access, map compatibility properties, and backend execution context. |
-| `map_logic/production_actions.py` | Shared production validation, queue construction, charging, cancellation, and refunds. |
-| `map_logic/unit_actions.py` | Shared unit-order preparation, execution, replacement, payment, and cancellation. |
-| `map_logic/player_actions.py` | Shared multiplayer intent validation and application, plus the validated older projection adapter. |
+| `map_logic/actions/production_actions.py` | Shared production validation, queue construction, charging, cancellation, and refunds. |
+| `map_logic/actions/unit_actions.py` | Shared unit-order preparation, execution, replacement, payment, and cancellation. |
+| `map_logic/actions/player_actions.py` | Shared multiplayer intent validation and application, plus the validated older projection adapter. |
 | `map_logic/diplomacy/action_definitions.py`, `map_logic/diplomacy/faction_records.py` | Diplomatic categories and availability; authoritative faction mutations and compatibility projections. |
 | `map_logic/diplomacy/diplomacy_lifecycle.py` | Request identity, channel writes, timing transitions, and response references. |
 | `data/json/` | Data libraries and AI response text used without an LLM. |
 | `data/map/save_map.py`, `data/map/load_map.py` | Saves, loads, defaults, and migration calls. |
-| `data/io/multiplayer_io.py` | Tournament files, player move export, host import, authentication, and filtering. |
-| `data/io/realtime_multiplayer.py` | Real-time protocol, server commands, snapshots, and filtered client state. |
+| `data/multiplayer/tournament/files.py` | Tournament files, player move export, host import, authentication, and filtering. |
+| `data/multiplayer/realtime/session.py` | Real-time protocol, server commands, snapshots, and filtered client state. |
 | `map_logic/system32/` | Turns, movement, economy, research, and combat. |
 | `map_logic/diplomacy/` | Shared diplomacy rules, messages, effects, and state changes. |
 | `map_logic/ai/` | Rule-based AI, legal candidates, valuation, LLM selection, and fallbacks. |
-| `map_logic/gd4_translation.py`, `map_logic/gdhex_translation.py` | Save imports from other games into GD5. |
+| `map_logic/imports/gd4_translation.py`, `map_logic/imports/gdhex_translation.py` | Save imports from other games into GD5. |
 | `screens/` | Complete menu, game, and editor screens. Each screen builds its own buttons. |
 | `ui/` | Shared widgets, panels, dialogs, bars, popups, and UI support. |
 | `compilation_scripts/build_manifest.py`, `compilation_scripts/build_support.py` | Shared packaging inventory, platform policy, filtering, staging, and resets. |
@@ -85,10 +85,10 @@ Give a reason when a system does not apply.
 | UI | Derive labels, previews, enabled controls, tooltips, popups, and numbers from execution rules. | `screens/`, `ui/` |
 | AI | Generate, value, select, perform, and answer actions without an LLM. Limit LLM choices to legal candidates. | `map_logic/ai/`, `data/json/ai_responses.json` |
 | Save/load | Write new state, use safe defaults, migrate old saves, and check a save/load round trip. | `data/queries.py`, `data/map/save_map.py`, `data/map/load_map.py` |
-| Tournament multiplayer | Authenticate and validate partial moves. Reject stale or duplicate input. Preserve shared changes and hidden information. | `data/io/multiplayer_io.py`, `tests/test_tournament_moves.py` |
-| Real-time multiplayer | Let only the server apply commands. Validate permissions, filter snapshots, and protect private state. | `data/io/realtime_multiplayer.py`, real-time UI, `tests/test_realtime_multiplayer.py`, `tests/test_realtime_fog.py` |
-| Other modes | Enforce permissions for single-player, hotseat, spectators, tactical players, AI, editors, tournament players/hosts, and real-time clients/hosts. | `screens/menu_screens/map.py`, affected screens, `data/queries.py` |
-| Content tools | Check scenario settings, map editing, scripted actions and conditions, and base data. | `screens/editor_screens/`, scenario screens, map and scenario JSON |
+| Tournament multiplayer | Authenticate and validate partial moves. Reject stale or duplicate input. Preserve shared changes and hidden information. | `data/multiplayer/tournament/files.py`, `tests/test_tournament_moves.py` |
+| Real-time multiplayer | Let only the server apply commands. Validate permissions, filter snapshots, and protect private state. | `data/multiplayer/realtime/session.py`, real-time UI, `tests/test_realtime_multiplayer.py`, `tests/test_realtime_fog.py` |
+| Other modes | Enforce permissions for single-player, hotseat, spectators, tactical players, AI, editors, tournament players/hosts, and real-time clients/hosts. | `screens/game/map.py`, affected screens, `data/queries.py` |
+| Content tools | Check scenario settings, map editing, scripted actions and conditions, and base data. | `screens/editors/`, scenario screens, map and scenario JSON |
 | Builds | Include new modules, packages, data, dependencies, and dynamically imported screens. | Build files listed below |
 | Documentation/tests | Add regression coverage for the rule and failure. Update affected guides. | `tests/`, `documentation/`, `README.md` |
 
@@ -371,7 +371,7 @@ Use verification appropriate to each change.
 
 ### Tutorial and Maintenance
 
-The fresh-game map tutorial is in `ui/confirm_dialog/message_box.py`.
+The fresh-game map tutorial is in `ui/dialogs/message_box.py`.
 Treat it as player documentation.
 Update it when map navigation, unit selection, orders, or covered bottom-left controls change.
 Add or update tests for changed tutorial behavior.

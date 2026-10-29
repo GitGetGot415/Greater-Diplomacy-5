@@ -73,12 +73,12 @@ print("DESCRIBE=%s" % (mod_loader.describe_mod("probe.py"),))
 '''
 
 
-def run_case(loader, mod_source, state='{"probe.py": {"enabled": true, "sandboxed": true}}'):
+def run_case(loader, mod_source, state='{"probe.py": {"enabled": true, "sandboxed": true}}', *, runner=RUNNER):
     """(touched_disk, stdout) for one mod in a fresh interpreter."""
     workdir = tempfile.mkdtemp(prefix="gd5sbx-")
     try:
         build(workdir, loader, mod_source, state)
-        proc = subprocess.run([sys.executable, "-c", RUNNER], cwd=workdir,
+        proc = subprocess.run([sys.executable, "-c", runner], cwd=workdir,
                               capture_output=True, text=True, timeout=60)
         out = proc.stdout + proc.stderr
         return os.path.exists(os.path.join(workdir, "TOUCHED")), out
@@ -146,6 +146,35 @@ def _exec(loader):
         VALUE = "modded"
     ''')
     return not touched, out
+
+
+@case("scheduled mod callback", "a timer callback retains its mod's sandbox setting after import")
+def _scheduled_callback(loader):
+    source = '''
+        # mod: target=data/queries.py sandbox=auto
+        import threading
+
+        def write_from_timer():
+            print("CALLBACK_RAN")
+            try:
+                open("TOUCHED", "w").close()
+            except PermissionError:
+                print("CALLBACK_BLOCKED")
+
+        timer = threading.Timer(0, write_from_timer)
+        VALUE = "modded"
+    '''
+    # Start after import returns. The callback has no top-level mod frame
+    # below it, but its own frame still uses the registered module globals.
+    runner = RUNNER + '\ndata.queries.timer.start()\ndata.queries.timer.join()\n'
+    touched, blocked_out = run_case(loader, source, runner=runner)
+    sandboxed_ok = (not touched and "VALUE=modded" in blocked_out
+                    and "CALLBACK_RAN" in blocked_out and "CALLBACK_BLOCKED" in blocked_out)
+    touched, allowed_out = run_case(
+        loader, source, state='{"probe.py": {"enabled": true, "sandboxed": false}}', runner=runner)
+    unsandboxed_ok = (touched and "VALUE=modded" in allowed_out
+                      and "CALLBACK_RAN" in allowed_out and "CALLBACK_BLOCKED" not in allowed_out)
+    return sandboxed_ok and unsandboxed_ok, blocked_out + allowed_out
 
 
 @case("defang the blocked-event table", "reassigning mod_loader._SANDBOX_BLOCKED_EVENTS has no effect")

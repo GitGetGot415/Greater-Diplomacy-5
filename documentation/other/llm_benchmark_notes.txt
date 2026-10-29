@@ -1,0 +1,23 @@
+HISTORICAL MODEL PERFORMANCE
+============================
+
+These notes retain earlier large language model (LLM) measurements.
+They are historical observations, not current performance guarantees.
+Results depend on the provider, machine, and scenario.
+These notes do not specify hardware, a measurement date, or a repeatable benchmark command.
+See documentation/llm_ai.txt for current prompt, budget, and fairness rules.
+
+PROMPT SHARING
+--------------
+
+Earlier measurements used the 1941 map, 12 major countries, and llama3 through Ollama.
+Shared text across phases increased from 0% to 84% after the request order changed.
+Measured processing time fell from 179 seconds to 28 seconds.
+
+TURN BUDGETS AND FAIRNESS
+-------------------------
+
+Earlier 1941-map measurements used MAJOR immersion, llama3, and one thread.
+Without a time limit, all 10 directed countries and 44 model-eligible proposals were served.
+About 60 calls took 8 to 10 minutes per turn.
+Shorter budgets served fewer countries, with llm_last_turn rotating priority across turns.

@@ -7,7 +7,9 @@ documentation/source_layout_changes.md: previous and current source paths.
 documentation/non_llm_ai.txt: rule-based AI and shared combat rules.
 documentation/player_controls.txt: player and editor controls, mode permissions, reports, map display, and army groups.
 documentation/ai_movement.txt: AI unit orders, movement caches, aircraft missions, attack checks, rotation, and movement tuning.
-documentation/llm_ai.txt: model settings, legal choices, prompts, summits, budgets, cancellation, fairness, and historical measurements.
+documentation/llm_ai.txt: model settings, legal choices, prompts, summits, budgets, cancellation, and fairness.
+
+documentation/other/llm_benchmark_notes.txt: historical model performance measurements.
 documentation/diplo_stuff.txt: diplomacy controls, rules, and message timing.
 documentation/air_stuff.txt: aircraft controls and rules.
 documentation/data_migrations.txt: compatibility with older GD5 data.
@@ -269,19 +271,12 @@ Its keys are level numbers stored as strings. Each value uses the same requireme
 Example: "level_reqs": {"2": {"intermediate_tech": 1}} requires intermediate_tech for level 2 and all later levels.
 
 Base req requirements still apply. Intermediate technologies can require an earlier level of the same track.
-Factory-production milestones use this chain.
-Mechanical Reaper connects Waltham System to Metal Shaper on industry row y1.
-Industrial Air Compressor and Diesel Engine connect Lightbulb to the first factory level.
-Continuous Assembly Line connects factory levels 3 and 4.
-These technologies appear on industry row y1.
- Fuel, recruitment, and resource-refining tracks keep their separate prerequisites.
-Current milestone names, dates, and factory level gates are in research_template.json and data/generators/recipes.py.
+Read current technology names, dates, prerequisites, and level gates in data/json/research_template.json and data/generators/recipes.py.
 Research selection, AI selection, timeline connections, and editor changes use queries.get_tech_requirements.
 Research details identify the levels that require an intermediate technology.
 Scenario settings that disable technology also remove its requirements from level_reqs.
 
 Older libraries without level_reqs keep their existing requirements.
-Use research_template.json for current factory requirements and research years.
 
 UNIT IDENTITY METADATA
 ======================
@@ -365,70 +360,4 @@ Images keep their original proportions. Images stay with the preceding word when
 PROJECT FILES
 =============
 
-AGENTS.md: repository rules for AI-assisted changes and maintenance preferences.
-assets/: images and audio.
-base_maps/: base maps used by the game.
-context/: development notes and source export tools. The export script combines source files into a text file.
-data/: world state, content, settings, storage, and multiplayer protocols.
-    See STATE AND ACTION OWNERS for module responsibilities.
-    json/unit_data.json, json/building_data.json, and json/research_template.json own current unit, building, and research settings.
-    generators/recipes.py defines data generation. Read current tuning from these sources instead of documentation.
-    map/: regular saves, loads, history, and derived-layer files.
-    io/: settings, country content, and shared JSON file helpers.
-    multiplayer/tournament/: tournament archives and player move files.
-    multiplayer/realtime/: authoritative sessions, network transports, and relays.
-documentation/: project guides and design notes. See GUIDE INDEX.
-dist/: generated distribution packages. Do not edit these as source.
-
-map_logic/: game rules and processing.
-    actions/: shared player intents, production actions, and unit orders.
-    ai/: computer-controlled countries. Module lists are in the AI guides.
-    diplomacy/: shared diplomatic actions and compatibility exports. See documentation/diplo_stuff.txt.
-    imports/: map and save conversion from other games.
-    random_map/: random map and scenario generation.
-    territory/: ownership, cores, claims, and country retirement.
-    system32/: turn preparation, coordination, movement, combat, economy, research, and reports.
-
-map_tools/: map creation and validation.
-    validation/check_flags.py and check_adjectives.py check data/json/countries_data.json.
-    interactive_map_tester.py is the interactive pygame map tester. Its earlier name was tester.py.
-    automatic_map_painter.py and reset_map_data.py are separate map-authoring tools.
-    Previous benchmark, dependency-download, and preview commands remain available as launchers.
-
-scripts/: offline development tools. Builds do not include this folder.
-    data/: country-content maintenance.
-    editors/: standalone desktop content editors.
-    dependencies/: dependency download tools.
-    benchmarks/: Objective Judge Horizon entry points.
-    previews/: interactive UI development previews.
-    test_mod_loader_security.py launches the sandbox tests from their previous command path.
-
-tests/: functional and regression tests, plus shared fixtures and application support.
-    Test files retain their existing module names for focused test commands.
-    test_mod_loader_security.py also runs during normal test discovery.
-
-saves/: saved games.
-scenarios/: scenario data.
-
-screens/: complete screens. Each screen builds its own buttons.
-    menus/: main navigation, settings, media, assets, mods, and translation screens.
-    setup/: new-game configuration, scenario settings, and initial player selection.
-    multiplayer/: tournament and real-time setup, joining, hosting, and lobby screens.
-    game/: the map screen, map input, spectator controls, and in-game feature screens.
-    editors/: country, economy, date, research, brushes, diplomacy, events, leaders, and turn settings.
-    See documentation/player_controls.txt for controls and permissions.
-
-ui/: shared presentation and navigation support. Complete feature screens belong in screens/.
-    Map buttons belong in screens/game/map.py.
-    Country-edit buttons belong in screens/editors/edit_country.py.
-    Settings buttons belong in screens/menus/settings.py.
-    rendering/: cached map layers, overlays, labels, fonts, and symbols. See DISPLAY SUPPORT.
-    camera/: map camera movement. Camera tilt also uses rendering/map_utils.py.
-    dialogs/: confirmation, text input, notifications, and reusable pickers.
-    navigation/: screen runners, modal screens, and the modal stack.
-    panels/: map panels, progress drawing, status displays, and shared panel layout.
-    widgets/: text, flags, tables, and scrolling support.
-    bars/: the map HUD and view controls.
-    information/: hover feedback, tooltips, and unit information popups.
-
-See documentation/code_layout.md for task-to-code references.
+See documentation/code_layout.md for directory responsibilities, task-to-code references, and development commands.

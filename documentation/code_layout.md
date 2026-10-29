@@ -1,5 +1,6 @@
 # Code layout
 
+AI means artificial intelligence. UI means user interface.
 Use this guide to find the owner of a change.
 Read `general_info.txt` for state ownership, storage, and build policy.
 Read `source_layout_changes.md` for previous and current source paths.
@@ -8,7 +9,9 @@ Read `source_layout_changes.md` for previous and current source paths.
 
 | Directory | Responsibility |
 | --- | --- |
+| `assets/` | Images and audio. |
 | `base_maps/` | Shipped map bundles. Their content paths stay unchanged. |
+| `context/` | Development notes and source export tools. |
 | `data/` | State containers, shared queries, constants, content, compatibility, and external data boundaries. |
 | `data/json/` | Runtime unit, building, research, country, leader, and AI response content. |
 | `data/generators/` | Content recipes and generation. Keep tuning sources beside their generated content. |
@@ -27,7 +30,7 @@ Read `source_layout_changes.md` for previous and current source paths.
 | `screens/setup/` | New-game configuration, scenario settings, and initial player selection. |
 | `screens/multiplayer/` | Tournament and real-time setup, joining, hosting, and lobby screens. |
 | `screens/game/` | The map screen, map input, spectator controls, and in-game feature screens. |
-| `screens/editors/` | Editors that operate within the game. |
+| `screens/editors/` | In-game country, economy, date, research, brush, diplomacy, event, leader, and turn-setting editors. |
 | `ui/rendering/` | Cached map surfaces, overlays, labels, fonts, and symbols. |
 | `ui/camera/` | Map camera interaction and viewing transforms. |
 | `ui/dialogs/` | Shared dialogs, notifications, and reusable pickers. |
@@ -38,8 +41,25 @@ Read `source_layout_changes.md` for previous and current source paths.
 | `ui/information/` | Hover feedback, tooltips, and unit information popups. |
 | `map_tools/` | Offline map creation, repair, and validation. |
 | `scripts/` | Offline content editors, maintenance, dependency downloads, benchmarks, and previews. |
+| `scripts/data/` | Country-content maintenance. |
+| `scripts/editors/` | Standalone desktop content editors. |
+| `scripts/dependencies/` | Dependency download tools. |
+| `scripts/benchmarks/` | Objective Judge Horizon entry points. |
+| `scripts/previews/` | Interactive UI development previews. |
 | `tests/` | Functional tests, regression tests, and shared test support. |
 | `documentation/` | Maintained guides and design notes. |
+| `saves/` | Saved games. |
+| `scenarios/` | Scenario data. |
+| `dist/` | Generated distribution packages. Do not edit these as source. |
+
+`AGENTS.md` defines repository rules for AI changes.
+`context/context_generator.py` combines source files into a text file.
+`map_tools/validation/check_flags.py` and `check_adjectives.py` check `data/json/countries_data.json`.
+`map_tools/interactive_map_tester.py` provides an interactive pygame map tester. Its earlier name was `tester.py`.
+`map_tools/automatic_map_painter.py` and `reset_map_data.py` are separate map-authoring tools.
+
+Complete feature screens belong in `screens/`. Each screen builds its own buttons.
+Read `player_controls.txt` for controls and permissions.
 
 The folders identify owners. Some existing rules still call presentation helpers.
 Turn coordination still connects AI, resolution, and presentation refreshes.
@@ -63,6 +83,7 @@ Keep this name unless the user explicitly requests a different name.
 | Change map buttons or map input | `screens/game/map.py` and `map_input.py` |
 | Change initial country or tactical-unit selection | `screens/setup/player_setup.py` |
 | Change country-edit controls | `screens/editors/edit_country.py` |
+| Change application settings buttons | `screens/menus/settings.py` |
 | Change map drawing or display caches | `ui/rendering/` |
 | Change map panels or progress drawing | `ui/panels/` |
 | Change tournament file exchange | `data/multiplayer/tournament/files.py` |
@@ -70,6 +91,9 @@ Keep this name unless the user explicitly requests a different name.
 | Change real-time transport or relay provisioning | `data/multiplayer/realtime/networking.py` and `relay.py` |
 | Change the fresh-game tutorial | `ui/dialogs/message_box.py` |
 | Check source packaging and dynamic imports | `compilation_scripts/build_manifest.py` and `tests/test_build_manifest.py` |
+
+Read `general_info.txt`, DISPLAY SUPPORT, for shared image caches.
+Camera tilt also uses `ui/rendering/map_utils.py`.
 
 `data/queries.py` remains one module at its existing path.
 Its shared rule helpers, caches, and save-dictionary builder remain there.
