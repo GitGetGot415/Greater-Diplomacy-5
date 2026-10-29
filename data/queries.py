@@ -864,7 +864,7 @@ def get_time_appropriate_research(start_year, *, context=None):
 
     tech_timeline = {tech: data.get("years", [1850]) for tech, data in struct.items()}
     
-    if start_year == 1910:
+    if start_year == c.DEFAULT_EQUIPMENT_YEAR:
         baseline_tech = {
             tech: (sum(year <= start_year for year in tech_timeline.get(tech, []))
                    if struct.get(tech, {}).get("category") == "INFANTRY" else level)
@@ -1784,6 +1784,15 @@ def get_unit_for_family_tier(unit_library, family, tier, *, context=None):
     return None
 
 
+def get_unit_for_family_year(unit_library, family, year, *, context=None):
+    """Find the latest equipment stage available at or before a year."""
+    candidates = [(get_unit_tier(name, unit_library, context=context), name)
+                  for name in unit_library
+                  if get_base_unit_name(name, unit_library, context=context) == family
+                  and get_unit_tier(name, unit_library, context=context) <= year]
+    return max(candidates)[1] if candidates else None
+
+
 def get_highest_infantry(nation_data_block, tech_tree, unit_library, allow_fuel_units=True, *, context=None):
     """Preserve vehicle preference and the starting infantry fallback."""
     research = nation_data_block.get("research", {})
@@ -1807,7 +1816,7 @@ def get_highest_infantry(nation_data_block, tech_tree, unit_library, allow_fuel_
 
 
 def get_upgrade_target(unit_type, player_research, unit_library, tech_tree, *, context=None):
-    """Return the exact researched tier within the existing numbered family."""
+    """Return the researched equipment stage or tier within the current family."""
     current = get_unit_metadata(unit_type, unit_library, context=context)
     if current["tier_order"] <= 0:
         return None
@@ -4600,6 +4609,33 @@ CONDENSED_UNIT_NAME_WORDS = {
     "Mechanized": "Mech",
     "Motorized": "Mot",
     "Infantry": "Inf",
+    "Militia": "Mil",
+    "Breech-Loading": "Breech",
+    "Metallic-Cartridge": "Cartridge",
+    "Magazine-Rifle": "Mag-Rifle",
+    "Smokeless-Rifle": "Smokeless",
+    "Supported": "Supp",
+    "Squad-Automatic": "Squad-Auto",
+    "Semi-Automatic": "Semi-Auto",
+    "Battle-Rifle": "Battle",
+    "Assault-Rifle": "Assault",
+    "Night-Equipped": "Night",
+    "Optics-Equipped": "Optics",
+    "Drone-Integrated": "Drone",
+    "Sensor-Integrated": "Sensor",
+    "Support-Weapon": "Support",
+    "Self-Loading": "Self-Load",
+    "Radio-Equipped": "Radio",
+    "Drone-Supported": "Drone",
+    "Indirect-Fire": "Indirect",
+    "Radio-Coordinated": "Radio",
+    "Advanced-Ammunition": "Adv Ammo",
+    "Computer-Assisted": "Computer",
+    "Fire-Control": "FC",
+    "Precision-Guided": "Guided",
+    "Sensor-Linked": "Sensor",
+    "Automated": "Auto",
+    "Mounted": "Mtd",
     "Armored": "Armd",
     "Artillery": "Arty",
     "Cavalry": "Cav",

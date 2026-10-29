@@ -88,10 +88,10 @@ HEX_COUNTRY_IDENTITIES = {
     "20": "Hungary",
 }
 UNIT_TYPES = {
-    "i": "Infantry Type {year}",
-    "c": "Cavalry I",
-    "mi": "Motorized Infantry Type {year}",
-    "mei": "Mechanized Infantry Type {year}",
+    "i": "Infantry Type",
+    "c": "Cavalry",
+    "mi": "Motorized Infantry Type",
+    "mei": "Mechanized Infantry Type",
     "ac": "Armored Car I",
     "mbt": "Main Battle Tank I",
     "des": "Destroyer I",
@@ -273,16 +273,9 @@ def _unit_type(code, year, unit_library):
     template = UNIT_TYPES.get(str(code).strip().lower())
     if not template:
         return None
-    name = template.format(year=year)
-    if name in unit_library:
-        return name
-    if "{year}" not in template:
-        return None
-    prefix = template.split(" {year}", 1)[0] + " "
-    choices = [item for item in unit_library if item.startswith(prefix)]
-    if not choices:
-        return None
-    return min(choices, key=lambda item: abs(int(item.rsplit(" ", 1)[1]) - year))
+    if template in unit_library:
+        return template
+    return queries.get_unit_for_family_year(unit_library, template, year)
 
 
 def _build_units(source_units, year, unit_library, known_countries, skipped, fallback_names):

@@ -97,34 +97,20 @@ def _family_display_name(base):
 
 
 def _family_kind(base, first_name):
-    """Whether a family's tiers are suffixed with a roman numeral ('Light
-    Tank I'), a calendar year ('Infantry Type 1910'), or nothing at all (a
-    single-tier family like 'Railgun') -- drives how "years"/"numbers"
-    display mode reads a tier's level in _level_label.
-    The gallery checks for mixed suffix kinds before it uses this result."""
+    """Read the tier kind used by the gallery's year and number display modes.
+
+    Named equipment stages use metadata dates. Other families can use numbered tiers.
+    The gallery checks for mixed kinds before it uses this result.
+    """
     return queries.get_unit_metadata(first_name).get("tier_kind", "other")
 
 
 def _level_label(mode, base, kind, years_list, idx_by_name, first, last, default_label):
-    """The text shown above a cell's icon, per the level-display mode the
-    player picked on the Unit Art screen (Unit_Art.set_level_display):
+    """Select the label above a gallery cell.
 
-    - "default": whatever the art boundaries already produced (default_label
-      -- unchanged).
-    - "numbers": the cell's 1-based position among the family's own tiers,
-      e.g. Light Tank's 10th tier ('Light Tank X') reads '10' and Infantry's
-      1st ('Infantry Type 1910') reads '1' -- the same rule whether the tier
-      happens to be roman-numeral- or year-suffixed, since both are already
-      in tier order in `idx_by_name`.
-    - "years": the calendar years this tier is the current one -- from its
-      own research year (data/json/research_template.json) up to just
-      before the next tier's research year, open-ended ('1918+') for a
-      family's final tier. A "year"-kind family already shows this under
-      "default" (its own name suffix IS the year), so this mode leaves those
-      untouched. Falls back to default_label wherever there's no usable data
-      -- an unrecognised suffix shape, or a family with no matching entry in
-      the tech tree (e.g. Heavy Artillery, which has no research years of
-      its own).
+    Default mode uses equipment names. Number mode uses positions within the family.
+    Year mode shows the interval until the next equipment stage or numbered tier.
+    The final interval has no end date. Content without usable dates keeps its default label.
     """
     if mode == "default" or kind == "other":
         return default_label
@@ -138,6 +124,12 @@ def _level_label(mode, base, kind, years_list, idx_by_name, first, last, default
         return default_label  # the name's own suffix already is the year
     if not years_list:
         return default_label  # no research_template.json entry for this family
+
+    if kind == "stage":
+        start_year = queries.get_unit_tier(first)
+        last_year = queries.get_unit_tier(last)
+        next_year = next((year for year in years_list if year > last_year), None)
+        return f"{start_year}-{next_year - 1}" if next_year is not None else f"{start_year}+"
 
     lvl1 = 1 if kind == "single" else queries.get_unit_research_requirement(first)[1]
     lvl2 = 1 if kind == "single" else queries.get_unit_research_requirement(last)[1]
@@ -205,8 +197,12 @@ def build_gallery_rows(style, country=None, level_display="default", show_all_ar
         if len({queries.get_unit_metadata(name).get("tier_kind", "other") for name in names}) > 1:
             kind = "mixed"
         years_list = None
-        if level_display == "years" and kind in ("single", "roman", "mixed"):
+        if level_display == "years" and kind in ("single", "roman", "mixed", "stage"):
             tech_key = queries.get_unit_tech_key(base)
+            if kind == "stage":
+                tech_key = queries.get_unit_metadata(names[0])["research"]["tech"]
+                if tech_key in c.VEHICLE_INFANTRY_GATES:
+                    tech_key = "infantry_type"
             years_list = queries.get_tech_tree().get(tech_key, {}).get("years")
         idx_by_name = {name: i + 1 for i, name in enumerate(names)} if level_display == "numbers" else None
 
@@ -220,7 +216,10 @@ def build_gallery_rows(style, country=None, level_display="default", show_all_ar
             full_label = _merge_label(first, last)
             # The family name is already shown once on the row, on the left --
             # a cell only needs the part that actually varies (a tier, an era).
-            default_sublabel = full_label[len(prefix):] if full_label.startswith(prefix) else ""
+            if kind == "stage":
+                default_sublabel = full_label
+            else:
+                default_sublabel = full_label[len(prefix):] if full_label.startswith(prefix) else ""
             sublabel = _level_label(level_display, base, kind, years_list, idx_by_name,
                                     first, last, default_sublabel)
             cells.append({"label": sublabel, "resolve_name": first})

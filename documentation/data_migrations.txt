@@ -74,6 +74,11 @@ The v47 step contains every conversion that v46 and earlier applied on load or a
 - Release requests without release_type use Integrated.
 - Older ACCEPT_ and REJECT_ entries move from pending_diplomacy to diplo_responses.
 - Completed real-time saves without offline_view open as spectator replays.
+- Older infantry, vehicle infantry, cavalry, militia, and artillery identifiers become named equipment stages.
+- Units select the latest stage at or before their older equipment year.
+- Transport names, aircraft cargo, production queues, upgrade targets, custom production lists, and scripted spawns use the same conversion.
+- Map overlays, every history snapshot, and tournament move intents receive these conversions.
+- Duplicate custom production entries combine when their older units become the same stage.
 
 LOAD ORDER
 ----------
@@ -99,11 +104,14 @@ LING becomes OPENROUTER. ling_api_key and ling_model become openrouter_api_key a
 Writers use current names. Positional settings slots do not change.
 
 Library loading converts AEROSPACE to AIR and Aerospace to Air.
-Research and unit IDs stay unchanged in saves and multiplayer files.
+Research IDs stay unchanged in saves and multiplayer files.
+Equipment unit IDs use stage names. Older IDs convert through the v47 step.
 
 Equipment research saves include research_years for infantry, cavalry, militia, and artillery.
 data/queries.py copies these public year lists from the active research library when it builds a save.
 History, default research, paused projects, and active project points retain their meaning.
+Completed equipment years map to the latest available stage at or before that year.
+Unfinished points apply to the next stage. Projects are removed when the converted track is already complete.
 Older files without research_years use the original research dates in data/migrations.py.
 An older unfinished first project receives its earlier equipment stages before that project continues.
 An unresearched track without a pending project stays unresearched.

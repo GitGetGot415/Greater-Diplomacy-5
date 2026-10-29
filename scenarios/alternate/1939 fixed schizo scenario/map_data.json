@@ -379,7 +379,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -526,7 +526,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -639,7 +639,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -853,7 +853,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -1597,7 +1597,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -1650,7 +1650,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -1862,7 +1862,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -2295,7 +2295,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -2439,7 +2439,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "United States of America",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -2651,7 +2651,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -2768,7 +2768,7 @@
         "owner": "Finland",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Finland",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -2980,7 +2980,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -3227,7 +3227,7 @@
         "owner": "Finland",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Finland",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -3279,7 +3279,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -4080,7 +4080,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -4132,7 +4132,7 @@
         "owner": "Finland",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Finland",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -4315,7 +4315,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -4732,7 +4732,7 @@
         "owner": "Dominion of Canada",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Dominion of Canada",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -4849,7 +4849,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -5232,7 +5232,7 @@
         "owner": "Sweden",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Sweden",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -5452,7 +5452,7 @@
         "owner": "Norway",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Norway",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -5571,7 +5571,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -5973,7 +5973,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -5990,7 +5990,7 @@
                 "unit_id": "46949fd096ab46a98f0ceea8d40883e2"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Soviet Union",
                 "health": 350.0,
                 "max_health": 350,
@@ -6076,7 +6076,7 @@
         "owner": "Norway",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Norway",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -6422,7 +6422,7 @@
         "owner": "Estonia",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Estonia",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -6526,7 +6526,7 @@
                 "unit_id": "3a8fea03dc974a1caf00e3c1e30a0f1a"
             },
             {
-                "type": "Motorized Infantry Type 1939",
+                "type": "Motorized Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -6543,7 +6543,7 @@
                 "unit_id": "3c83b73a7d4c48b4ad12f2711f63d233"
             },
             {
-                "type": "Motorized Infantry Type 1939",
+                "type": "Motorized Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -6560,7 +6560,7 @@
                 "unit_id": "b2844eddea0942bf96991ccf2768772d"
             },
             {
-                "type": "Motorized Infantry Type 1939",
+                "type": "Motorized Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -7102,7 +7102,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "United Kingdom",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -7186,7 +7186,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -7777,7 +7777,7 @@
         "owner": "Sweden",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Sweden",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -8217,7 +8217,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -8234,7 +8234,7 @@
                 "unit_id": "bbfcd97cf4be41ddaa90addf26c10044"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Soviet Union",
                 "health": 350.0,
                 "max_health": 350,
@@ -8586,7 +8586,7 @@
         "owner": "Latvia",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Latvia",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -8708,7 +8708,7 @@
         "owner": "Lithuania",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Lithuania",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -8795,7 +8795,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "United Kingdom",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -8949,7 +8949,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "United Kingdom",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -9101,7 +9101,7 @@
         "owner": "Dominion of Canada",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Dominion of Canada",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -9483,7 +9483,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -9500,7 +9500,7 @@
                 "unit_id": "2f16f0d4f06b4bcd842b366cfcb02b1e"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Soviet Union",
                 "health": 350.0,
                 "max_health": 350,
@@ -9518,7 +9518,7 @@
                 "unit_id": "5d400d5bfb594962ab555edf02f58256"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Soviet Union",
                 "health": 350.0,
                 "max_health": 350,
@@ -9767,7 +9767,7 @@
         "owner": "Poland",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Poland",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -9944,7 +9944,7 @@
         "owner": "Sweden",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Sweden",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -10028,7 +10028,7 @@
         "owner": "Lithuania",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Lithuania",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -10131,7 +10131,7 @@
         "owner": "Denmark",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Denmark",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -10218,7 +10218,7 @@
         "owner": "Dominion of Canada",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Dominion of Canada",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -10272,7 +10272,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -10427,7 +10427,7 @@
         "owner": "Ireland",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Ireland",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -10651,7 +10651,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "United Kingdom",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -10776,7 +10776,7 @@
         "owner": "German Reich",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "German Reich",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -10793,7 +10793,7 @@
                 "unit_id": "9acfa3f2abdc413bbdb29e581e6e8ed9"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "German Reich",
                 "health": 350.0,
                 "max_health": 350,
@@ -11041,7 +11041,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -11156,7 +11156,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -11173,7 +11173,7 @@
                 "unit_id": "16ae85abb8d547c1ae725fcd45fc8e2b"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Soviet Union",
                 "health": 350.0,
                 "max_health": 350,
@@ -11446,7 +11446,7 @@
         "owner": "German Reich",
         "units": [
             {
-                "type": "Motorized Infantry Type 1939",
+                "type": "Motorized Squad-Automatic Infantry",
                 "owner": "German Reich",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -11463,7 +11463,7 @@
                 "unit_id": "da62700e4e7045cf985c4997e442464e"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "German Reich",
                 "health": 350.0,
                 "max_health": 350,
@@ -11514,7 +11514,7 @@
         "owner": "German Reich",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "German Reich",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -11531,7 +11531,7 @@
                 "unit_id": "b0d3c965058a4dd899a6f81764a08eb0"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "German Reich",
                 "health": 350.0,
                 "max_health": 350,
@@ -11685,7 +11685,7 @@
         "owner": "Poland",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Poland",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -11702,7 +11702,7 @@
                 "unit_id": "f55d550bf9e6456384ccc3b2938ee4ed"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Poland",
                 "health": 350.0,
                 "max_health": 350,
@@ -11787,7 +11787,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "United States of America",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -11940,7 +11940,7 @@
         "owner": "German Reich",
         "units": [
             {
-                "type": "Motorized Infantry Type 1939",
+                "type": "Motorized Squad-Automatic Infantry",
                 "owner": "German Reich",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -11957,7 +11957,7 @@
                 "unit_id": "964439d2e40f45c4a4b9677b7169c713"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "German Reich",
                 "health": 350.0,
                 "max_health": 350,
@@ -12008,7 +12008,7 @@
         "owner": "Poland",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Poland",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -12197,7 +12197,7 @@
         "owner": "German Reich",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "German Reich",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -12305,7 +12305,7 @@
         "owner": "German Reich",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "German Reich",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -12322,7 +12322,7 @@
                 "unit_id": "d52b0b217abd4513a29ae7c688352437"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "German Reich",
                 "health": 350.0,
                 "max_health": 350,
@@ -12374,7 +12374,7 @@
         "owner": "Netherlands",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Netherlands",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -12717,7 +12717,7 @@
         "owner": "Poland",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Poland",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -12734,7 +12734,7 @@
                 "unit_id": "7e934f08089147169ee74a169786b2eb"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Poland",
                 "health": 350.0,
                 "max_health": 350,
@@ -12889,7 +12889,7 @@
         "owner": "Poland",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Poland",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -12940,7 +12940,7 @@
         "owner": "Poland",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Poland",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -12957,7 +12957,7 @@
                 "unit_id": "f29efe5e190c41e7b64fce9d19711d45"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Poland",
                 "health": 350.0,
                 "max_health": 350,
@@ -13010,7 +13010,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "United Kingdom",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -13132,7 +13132,7 @@
         "owner": "Dominion of Canada",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Dominion of Canada",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -13219,7 +13219,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -13236,7 +13236,7 @@
                 "unit_id": "681b99fabb9143f19c10fe9b902a4e01"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Soviet Union",
                 "health": 350.0,
                 "max_health": 350,
@@ -13322,7 +13322,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -13543,7 +13543,7 @@
         "owner": "Poland",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Poland",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -13743,7 +13743,7 @@
                 "unit_id": "67fda83a6de24f01ae8211f715845cdd"
             },
             {
-                "type": "Motorized Infantry Type 1939",
+                "type": "Motorized Squad-Automatic Infantry",
                 "owner": "Poland",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -13760,7 +13760,7 @@
                 "unit_id": "81cd9e50126a424a8ecc422a7d9df06c"
             },
             {
-                "type": "Motorized Infantry Type 1939",
+                "type": "Motorized Squad-Automatic Infantry",
                 "owner": "Poland",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -13873,7 +13873,7 @@
         "owner": "German Reich",
         "units": [
             {
-                "type": "Motorized Infantry Type 1939",
+                "type": "Motorized Squad-Automatic Infantry",
                 "owner": "German Reich",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -13890,7 +13890,7 @@
                 "unit_id": "07224e119aeb4faaac2e9ded40e19028"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "German Reich",
                 "health": 350.0,
                 "max_health": 350,
@@ -14074,7 +14074,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -14091,7 +14091,7 @@
                 "unit_id": "d590a8e92a2942599752df3a12e17418"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Soviet Union",
                 "health": 350.0,
                 "max_health": 350,
@@ -14243,7 +14243,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -14325,7 +14325,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "United Kingdom",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -14378,7 +14378,7 @@
         "owner": "German Reich",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "German Reich",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -15053,7 +15053,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "United Kingdom",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -15157,7 +15157,7 @@
                 "unit_id": "be3b95aa41ad48319d1056669eb274fa"
             },
             {
-                "type": "Motorized Infantry Type 1939",
+                "type": "Motorized Squad-Automatic Infantry",
                 "owner": "German Reich",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -15174,7 +15174,7 @@
                 "unit_id": "a68eb899d7314aa4b5c8ba17665a3f9e"
             },
             {
-                "type": "Motorized Infantry Type 1939",
+                "type": "Motorized Squad-Automatic Infantry",
                 "owner": "German Reich",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -15191,7 +15191,7 @@
                 "unit_id": "8cdbd185a6084f4bae4885944d06912b"
             },
             {
-                "type": "Motorized Infantry Type 1939",
+                "type": "Motorized Squad-Automatic Infantry",
                 "owner": "German Reich",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -15345,7 +15345,7 @@
         "owner": "Poland",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Poland",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -15362,7 +15362,7 @@
                 "unit_id": "609c30c3fc534f459d68d151aae5eeef"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Poland",
                 "health": 350.0,
                 "max_health": 350,
@@ -15804,7 +15804,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "United States of America",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -15956,7 +15956,7 @@
         "owner": "Belgium",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Belgium",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -16276,7 +16276,7 @@
         "owner": "German Reich",
         "units": [
             {
-                "type": "Motorized Infantry Type 1939",
+                "type": "Motorized Squad-Automatic Infantry",
                 "owner": "German Reich",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -16293,7 +16293,7 @@
                 "unit_id": "116d9e2e702142a788e97225fd564cbd"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "German Reich",
                 "health": 350.0,
                 "max_health": 350,
@@ -16344,7 +16344,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -16361,7 +16361,7 @@
                 "unit_id": "b5a46177549f4640b5c6fedf3ac4cb23"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Soviet Union",
                 "health": 350.0,
                 "max_health": 350,
@@ -16449,7 +16449,7 @@
         "owner": "Netherlands",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Netherlands",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -16499,7 +16499,7 @@
         "owner": "Poland",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Poland",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -16613,7 +16613,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "United States of America",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -16666,7 +16666,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "United States of America",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -16932,7 +16932,7 @@
                 "unit_id": "1bb52c50784748d5b941e8d1dc61d8c7"
             },
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -16949,7 +16949,7 @@
                 "unit_id": "bf38db6e7da748bb95abcaa7186b1344"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "France",
                 "health": 350.0,
                 "max_health": 350,
@@ -17036,7 +17036,7 @@
         "owner": "Poland",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Poland",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -17053,7 +17053,7 @@
                 "unit_id": "a86851798af142789168ed9cdd120aaf"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Poland",
                 "health": 350.0,
                 "max_health": 350,
@@ -17516,7 +17516,7 @@
         "owner": "German Reich",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "German Reich",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -17845,7 +17845,7 @@
         "owner": "Manchukuo",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Manchukuo",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -17930,7 +17930,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -17947,7 +17947,7 @@
                 "unit_id": "818a54e6037445f7a8a634ab26b1570d"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "France",
                 "health": 350.0,
                 "max_health": 350,
@@ -17999,7 +17999,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -18016,7 +18016,7 @@
                 "unit_id": "d14903dba81f4f2ebc484765b73ebfb4"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Soviet Union",
                 "health": 350.0,
                 "max_health": 350,
@@ -18270,7 +18270,7 @@
         "owner": "German Reich",
         "units": [
             {
-                "type": "Motorized Infantry Type 1939",
+                "type": "Motorized Squad-Automatic Infantry",
                 "owner": "German Reich",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -18287,7 +18287,7 @@
                 "unit_id": "bab7349eae604d3fa7d038804c94ce7b"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "German Reich",
                 "health": 350.0,
                 "max_health": 350,
@@ -18340,7 +18340,7 @@
         "owner": "Poland",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Poland",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -18357,7 +18357,7 @@
                 "unit_id": "c1ed4c834240413884a58c4bcab88fdb"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Poland",
                 "health": 350.0,
                 "max_health": 350,
@@ -18532,7 +18532,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -18824,7 +18824,7 @@
         "owner": "German Reich",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "German Reich",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -19065,7 +19065,7 @@
                 "unit_id": "c80e07c0773e4b7ebf389f512ee0ad07"
             },
             {
-                "type": "Motorized Infantry Type 1939",
+                "type": "Motorized Squad-Automatic Infantry",
                 "owner": "Poland",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -19115,7 +19115,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -19132,7 +19132,7 @@
                 "unit_id": "f65f82427e4944469d809ee1d6a76655"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Soviet Union",
                 "health": 350.0,
                 "max_health": 350,
@@ -19183,7 +19183,7 @@
         "owner": "Japanese Empire",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Japanese Empire",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -19507,7 +19507,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -19524,7 +19524,7 @@
                 "unit_id": "e3bf1035df954dd5b481553d676f8b3f"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "France",
                 "health": 350.0,
                 "max_health": 350,
@@ -19645,7 +19645,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -19982,7 +19982,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -20147,7 +20147,7 @@
                 "unit_id": "d37cdd64afb54f219eb88b7105d74541"
             },
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -20164,7 +20164,7 @@
                 "unit_id": "e11feea6d1104da391959c25194aceb4"
             },
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -20181,7 +20181,7 @@
                 "unit_id": "0c70166b11954fa99146aaed209de3ae"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "France",
                 "health": 350.0,
                 "max_health": 350,
@@ -20235,7 +20235,7 @@
         "owner": "Protectorate of Bohemia and Moravia",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Protectorate of Bohemia and Moravia",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -20425,7 +20425,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -20512,7 +20512,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -20529,7 +20529,7 @@
                 "unit_id": "d592c6dbf591406988faed546bac7842"
             },
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -20546,7 +20546,7 @@
                 "unit_id": "74899569611046f78f68562d52ca3b4b"
             },
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -20563,7 +20563,7 @@
                 "unit_id": "40f2c9024c10439cb53377fa15c4274f"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "France",
                 "health": 350.0,
                 "max_health": 350,
@@ -20581,7 +20581,7 @@
                 "unit_id": "9f380c5ecabe4165994d1408c374df02"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "France",
                 "health": 350.0,
                 "max_health": 350,
@@ -20635,7 +20635,7 @@
         "owner": "Poland",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Poland",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -20822,7 +20822,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -20876,7 +20876,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -20893,7 +20893,7 @@
                 "unit_id": "514226af9f704756b73780f8dc39d412"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "France",
                 "health": 350.0,
                 "max_health": 350,
@@ -21116,7 +21116,7 @@
         "owner": "German Reich",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "German Reich",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -21237,7 +21237,7 @@
         "owner": "Poland",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Poland",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -21254,7 +21254,7 @@
                 "unit_id": "ec97f9912674458b8db7ea098495c676"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Poland",
                 "health": 350.0,
                 "max_health": 350,
@@ -21377,7 +21377,7 @@
         "owner": "Manchukuo",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Manchukuo",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -21500,7 +21500,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -21517,7 +21517,7 @@
                 "unit_id": "0f1c447762714b86befcfec51d3dcdc9"
             },
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -21534,7 +21534,7 @@
                 "unit_id": "561952bc057748f4b7b16be00a0411a0"
             },
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -21551,7 +21551,7 @@
                 "unit_id": "c0054610479344c28ecfc98a14498814"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "France",
                 "health": 350.0,
                 "max_health": 350,
@@ -21569,7 +21569,7 @@
                 "unit_id": "8878b3a6bcc44644a23a164fa6a51d08"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "France",
                 "health": 350.0,
                 "max_health": 350,
@@ -21722,7 +21722,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -21739,7 +21739,7 @@
                 "unit_id": "5cdc23f33a6b4c479021c40763971af6"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Soviet Union",
                 "health": 350.0,
                 "max_health": 350,
@@ -21825,7 +21825,7 @@
         "owner": "Slovakia",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Slovakia",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -22581,7 +22581,7 @@
                 "unit_id": "006ad2b012b248a58294b103626349f0"
             },
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -22732,7 +22732,7 @@
         "owner": "Manchukuo",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Manchukuo",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -22784,7 +22784,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -22923,7 +22923,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -22940,7 +22940,7 @@
                 "unit_id": "f59278440bbb46dd912d7cb0cec0372f"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Soviet Union",
                 "health": 350.0,
                 "max_health": 350,
@@ -23128,7 +23128,7 @@
         "owner": "Romania",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Romania",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -23283,7 +23283,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -23400,7 +23400,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "United States of America",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -23450,7 +23450,7 @@
         "owner": "Dominion of Canada",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Dominion of Canada",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -23632,7 +23632,7 @@
         "owner": "German Reich",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "German Reich",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -23683,7 +23683,7 @@
         "owner": "German Reich",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "German Reich",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -23772,7 +23772,7 @@
         "owner": "Dominion of Canada",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Dominion of Canada",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -23955,7 +23955,7 @@
         "owner": "Hungary",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Hungary",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -24007,7 +24007,7 @@
         "owner": "Tannu Tuva",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Tannu Tuva",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -24230,7 +24230,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -24483,7 +24483,7 @@
         "owner": "Manchukuo",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Manchukuo",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -24604,7 +24604,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -24621,7 +24621,7 @@
                 "unit_id": "ad606e701b334d68bcbbab781e6631d1"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "France",
                 "health": 350.0,
                 "max_health": 350,
@@ -24774,7 +24774,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -25189,7 +25189,7 @@
         "owner": "Switzerland",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Switzerland",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -25437,7 +25437,7 @@
         "owner": "German Reich",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "German Reich",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -25551,7 +25551,7 @@
         "owner": "Hungary",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Hungary",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -25640,7 +25640,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -25695,7 +25695,7 @@
         "owner": "Manchukuo",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Manchukuo",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -25872,7 +25872,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -25926,7 +25926,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -26294,7 +26294,7 @@
         "owner": "German Reich",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "German Reich",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -26609,7 +26609,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "United States of America",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -26661,7 +26661,7 @@
         "owner": "Switzerland",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Switzerland",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -27329,7 +27329,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Italy",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -27416,7 +27416,7 @@
         "owner": "Romania",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Romania",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -27555,7 +27555,7 @@
         "owner": "Mongolia",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Mongolia",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -27706,7 +27706,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -28021,7 +28021,7 @@
         "owner": "Romania",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Romania",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -28212,7 +28212,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -28229,7 +28229,7 @@
                 "unit_id": "23725d6d703a4188b95f2fac3114d28a"
             },
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -28246,7 +28246,7 @@
                 "unit_id": "ade35d0559904139b8b663886ad0fe15"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "France",
                 "health": 350.0,
                 "max_health": 350,
@@ -28659,7 +28659,7 @@
         "owner": "Dominion of Canada",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Dominion of Canada",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -28747,7 +28747,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Italy",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -28798,7 +28798,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Italy",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -29036,7 +29036,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Italy",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -29053,7 +29053,7 @@
                 "unit_id": "a4a8c9eb8dbf4030bd67634d7251d4b8"
             },
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Italy",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -29406,7 +29406,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "United States of America",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -29610,7 +29610,7 @@
                 "unit_id": "62052006913c4b7aad63bd85fb4f9dc6"
             },
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -29797,7 +29797,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "United States of America",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -30235,7 +30235,7 @@
         "owner": "Spain",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Spain",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -30287,7 +30287,7 @@
         "owner": "Bulgaria",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Bulgaria",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -30557,7 +30557,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -30706,7 +30706,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -30761,7 +30761,7 @@
         "owner": "Yugoslavia",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Yugoslavia",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -30815,7 +30815,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -31071,7 +31071,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -31088,7 +31088,7 @@
                 "unit_id": "01f46c287687473aafaaeec1c358addf"
             },
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -31105,7 +31105,7 @@
                 "unit_id": "60413859db3945f89962f2fe76f6e612"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "France",
                 "health": 350.0,
                 "max_health": 350,
@@ -31196,7 +31196,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -31527,7 +31527,7 @@
         "owner": "Portugal",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Portugal",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -31656,7 +31656,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -31776,7 +31776,7 @@
         "owner": "Mengjiang",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Mengjiang",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -31829,7 +31829,7 @@
         "owner": "Japanese Empire",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Japanese Empire",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -32050,7 +32050,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -32197,7 +32197,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -32282,7 +32282,7 @@
         "owner": "Bulgaria",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Bulgaria",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -32671,7 +32671,7 @@
         "owner": "Turkey",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Turkey",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -32821,7 +32821,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Italy",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -32941,7 +32941,7 @@
         "owner": "Yugoslavia",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Yugoslavia",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -33366,7 +33366,7 @@
         "owner": "Spain",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Spain",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -33418,7 +33418,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -33538,7 +33538,7 @@
         "owner": "Turkey",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Turkey",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -33624,7 +33624,7 @@
         "owner": "Turkey",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Turkey",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -34005,7 +34005,7 @@
         "owner": "Mengjiang",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Mengjiang",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -34261,7 +34261,7 @@
         "owner": "Mongolia",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Mongolia",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -34702,7 +34702,7 @@
         "owner": "Japanese Empire",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Japanese Empire",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -34857,7 +34857,7 @@
         "owner": "Turkey",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Turkey",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -34874,7 +34874,7 @@
                 "unit_id": "a99cf9a6e0c44b789077deb705749dc7"
             },
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Turkey",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -35027,7 +35027,7 @@
         "owner": "Spain",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Spain",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -35274,7 +35274,7 @@
         "owner": "Turkey",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Turkey",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -35428,7 +35428,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -35484,7 +35484,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -35793,7 +35793,7 @@
         "owner": "Greece",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Greece",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -35880,7 +35880,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -36597,7 +36597,7 @@
         "owner": "Portugal",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Portugal",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -36715,7 +36715,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -36836,7 +36836,7 @@
         "owner": "Albania",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Albania",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -37121,7 +37121,7 @@
         "owner": "Japanese Empire",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Japanese Empire",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -37171,7 +37171,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "United States of America",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -37359,7 +37359,7 @@
         "owner": "Mongolia",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Mongolia",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -37477,7 +37477,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -37530,7 +37530,7 @@
         "owner": "Mengjiang",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Mengjiang",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -37781,7 +37781,7 @@
         "owner": "Turkey",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Turkey",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -38102,7 +38102,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Italy",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -38360,7 +38360,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -38411,7 +38411,7 @@
         "owner": "Manchukuo",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Manchukuo",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -38465,7 +38465,7 @@
         "owner": "Japanese Empire",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Japanese Empire",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -38688,7 +38688,7 @@
         "owner": "Iran",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Iran",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -38936,7 +38936,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "United States of America",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -39086,7 +39086,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Italy",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -39234,7 +39234,7 @@
         "owner": "Manchukuo",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Manchukuo",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -39926,7 +39926,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -40101,7 +40101,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -40185,7 +40185,7 @@
         "owner": "Spain",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Spain",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -40237,7 +40237,7 @@
         "owner": "Turkey",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Turkey",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -40289,7 +40289,7 @@
         "owner": "Turkey",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Turkey",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -40340,7 +40340,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -40496,7 +40496,7 @@
         "owner": "Shanxi",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Shanxi",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -40513,7 +40513,7 @@
                 "unit_id": "dfdce2511dd14bdf9a00601baee6203a"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Shanxi",
                 "health": 350.0,
                 "max_health": 350,
@@ -40601,7 +40601,7 @@
         "owner": "Iran",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Iran",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -40915,7 +40915,7 @@
         "owner": "Japanese Empire",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Japanese Empire",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -40932,7 +40932,7 @@
                 "unit_id": "bf54d31498f44a60b6882bd268f025a4"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Japanese Empire",
                 "health": 350.0,
                 "max_health": 350,
@@ -41018,7 +41018,7 @@
         "owner": "Japanese Empire",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Japanese Empire",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -41069,7 +41069,7 @@
         "owner": "Spain",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Spain",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -41986,7 +41986,7 @@
         "owner": "Greece",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Greece",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -42036,7 +42036,7 @@
         "owner": "Iran",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Iran",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -42119,7 +42119,7 @@
         "owner": "Mexico",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Mexico",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -42238,7 +42238,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -42290,7 +42290,7 @@
         "owner": "Japanese Empire",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Japanese Empire",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -42307,7 +42307,7 @@
                 "unit_id": "186bfadf2dca4c99ab799ab5044046d1"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Japanese Empire",
                 "health": 350.0,
                 "max_health": 350,
@@ -42493,7 +42493,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -42546,7 +42546,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -42729,7 +42729,7 @@
         "owner": "Japanese Empire",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Japanese Empire",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -42887,7 +42887,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -42939,7 +42939,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -43052,7 +43052,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "United Kingdom",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -43137,7 +43137,7 @@
         "owner": "Shanxi",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Shanxi",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -43154,7 +43154,7 @@
                 "unit_id": "471ab71876424642a93e3291dfbde75c"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Shanxi",
                 "health": 350.0,
                 "max_health": 350,
@@ -43380,7 +43380,7 @@
         "owner": "Xinjiang",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Xinjiang",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -43433,7 +43433,7 @@
         "owner": "Japanese Empire",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Japanese Empire",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -43450,7 +43450,7 @@
                 "unit_id": "9578cd9c3c0a42b99b1364823c171c43"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Japanese Empire",
                 "health": 350.0,
                 "max_health": 350,
@@ -43570,7 +43570,7 @@
         "owner": "Iran",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Iran",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -43721,7 +43721,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Nationalist China",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -43738,7 +43738,7 @@
                 "unit_id": "5811e35a6b1a4cc1b88d31f31eea9e55"
             },
             {
-                "type": "Militia VI",
+                "type": "Support-Weapon Militia",
                 "owner": "Nationalist China",
                 "health": 1000.0,
                 "max_health": 1000,
@@ -43755,7 +43755,7 @@
                 "unit_id": "6bc774d268924c4c971f0a2c0777f230"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Nationalist China",
                 "health": 350.0,
                 "max_health": 350,
@@ -44368,7 +44368,7 @@
         "owner": "Mexico",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Mexico",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -44656,7 +44656,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "United States of America",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -45002,7 +45002,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Nationalist China",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -45019,7 +45019,7 @@
                 "unit_id": "5d9a41b8ada84341b2ea6f18edf619f3"
             },
             {
-                "type": "Militia VI",
+                "type": "Support-Weapon Militia",
                 "owner": "Nationalist China",
                 "health": 1000.0,
                 "max_health": 1000,
@@ -45036,7 +45036,7 @@
                 "unit_id": "dbb79ab6fb7d4d71831caebfea9cfc7f"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Nationalist China",
                 "health": 350.0,
                 "max_health": 350,
@@ -45140,7 +45140,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Italy",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -45425,7 +45425,7 @@
         "owner": "Communist China",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Communist China",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -45711,7 +45711,7 @@
         "owner": "Japanese Empire",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Japanese Empire",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -45745,7 +45745,7 @@
                 "unit_id": "e7713084b14c4d82b1aefb6bce54cc2d"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Japanese Empire",
                 "health": 350.0,
                 "max_health": 350,
@@ -45763,7 +45763,7 @@
                 "unit_id": "ebcc5b96e20a4ab0a13ca1893fce3bc9"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Japanese Empire",
                 "health": 350.0,
                 "max_health": 350,
@@ -45849,7 +45849,7 @@
         "owner": "Japanese Empire",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Japanese Empire",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -46671,7 +46671,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Nationalist China",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -46688,7 +46688,7 @@
                 "unit_id": "5abc10822bbb4daf98defdc4d1e80558"
             },
             {
-                "type": "Militia VI",
+                "type": "Support-Weapon Militia",
                 "owner": "Nationalist China",
                 "health": 1000.0,
                 "max_health": 1000,
@@ -46705,7 +46705,7 @@
                 "unit_id": "1815537ab3da45b2959ee9265ebc6db1"
             },
             {
-                "type": "Militia VI",
+                "type": "Support-Weapon Militia",
                 "owner": "Nationalist China",
                 "health": 1000.0,
                 "max_health": 1000,
@@ -46722,7 +46722,7 @@
                 "unit_id": "6d7948e72df74d279142e7e1ca84831d"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Nationalist China",
                 "health": 350.0,
                 "max_health": 350,
@@ -46740,7 +46740,7 @@
                 "unit_id": "4ebfc11f75624fb9acf6d315851d1d00"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Nationalist China",
                 "health": 350.0,
                 "max_health": 350,
@@ -46927,7 +46927,7 @@
         "owner": "Japanese Empire",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Japanese Empire",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -47870,7 +47870,7 @@
         "owner": "Japanese Empire",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Japanese Empire",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -47887,7 +47887,7 @@
                 "unit_id": "43b8e93fe7344735a6eeb0d8fec1462b"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Japanese Empire",
                 "health": 350.0,
                 "max_health": 350,
@@ -47905,7 +47905,7 @@
                 "unit_id": "8bddddc38d9448e281f8a4f9ce4ee56f"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Japanese Empire",
                 "health": 350.0,
                 "max_health": 350,
@@ -47956,7 +47956,7 @@
         "owner": "Japanese Empire",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Japanese Empire",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -48269,7 +48269,7 @@
         "owner": "Communist China",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Communist China",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -48391,7 +48391,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -48510,7 +48510,7 @@
         "owner": "Xibei San Ma",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Xibei San Ma",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -48628,7 +48628,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Nationalist China",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -48645,7 +48645,7 @@
                 "unit_id": "194c1602d9ee41a490660d394a80b7cc"
             },
             {
-                "type": "Militia VI",
+                "type": "Support-Weapon Militia",
                 "owner": "Nationalist China",
                 "health": 1000.0,
                 "max_health": 1000,
@@ -48662,7 +48662,7 @@
                 "unit_id": "47b6ce781ca4494bb3fd32254be08541"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Nationalist China",
                 "health": 350.0,
                 "max_health": 350,
@@ -48815,7 +48815,7 @@
         "owner": "British Raj",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "British Raj",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -49006,7 +49006,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -49199,7 +49199,7 @@
         "owner": "Japanese Empire",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Japanese Empire",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -49233,7 +49233,7 @@
                 "unit_id": "7d1d0e08e2e647b3ad2c716b30ce8ab1"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Japanese Empire",
                 "health": 350.0,
                 "max_health": 350,
@@ -49251,7 +49251,7 @@
                 "unit_id": "d1aeccf2d77d46f9b5257f90d934aacc"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Japanese Empire",
                 "health": 350.0,
                 "max_health": 350,
@@ -49304,7 +49304,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Nationalist China",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -49321,7 +49321,7 @@
                 "unit_id": "1aec0fb4eb0f420bbce8445706d3a364"
             },
             {
-                "type": "Militia VI",
+                "type": "Support-Weapon Militia",
                 "owner": "Nationalist China",
                 "health": 1000.0,
                 "max_health": 1000,
@@ -49338,7 +49338,7 @@
                 "unit_id": "1e05c2588c194c7abaef38006236196b"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Nationalist China",
                 "health": 350.0,
                 "max_health": 350,
@@ -49593,7 +49593,7 @@
         "owner": "Mexico",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Mexico",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -49950,7 +49950,7 @@
         "owner": "Japanese Empire",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Japanese Empire",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -49967,7 +49967,7 @@
                 "unit_id": "94c7b14d24fb47ad91630d77098b4abb"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Japanese Empire",
                 "health": 350.0,
                 "max_health": 350,
@@ -49985,7 +49985,7 @@
                 "unit_id": "b6bf9575f7844f48bf05ca9a7b757858"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Japanese Empire",
                 "health": 350.0,
                 "max_health": 350,
@@ -50037,7 +50037,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Italy",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -50343,7 +50343,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Italy",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -50392,7 +50392,7 @@
         "owner": "Japanese Empire",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Japanese Empire",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -50474,7 +50474,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -50525,7 +50525,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Militia VI",
+                "type": "Support-Weapon Militia",
                 "owner": "Nationalist China",
                 "health": 1000.0,
                 "max_health": 1000,
@@ -50542,7 +50542,7 @@
                 "unit_id": "dfc7b8fb06b64c83b975c9fba0bd25d4"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Nationalist China",
                 "health": 350.0,
                 "max_health": 350,
@@ -50560,7 +50560,7 @@
                 "unit_id": "0b33a551ef1a47ea9ca3f5fadce10c35"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Nationalist China",
                 "health": 350.0,
                 "max_health": 350,
@@ -50776,7 +50776,7 @@
         "owner": "Iran",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Iran",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -50895,7 +50895,7 @@
         "owner": "Iraq",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Iraq",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -51008,7 +51008,7 @@
         "owner": "Iraq",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Iraq",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -51097,7 +51097,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Nationalist China",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -51114,7 +51114,7 @@
                 "unit_id": "837a7f6804e1455abb8a30bb3d28249f"
             },
             {
-                "type": "Militia VI",
+                "type": "Support-Weapon Militia",
                 "owner": "Nationalist China",
                 "health": 1000.0,
                 "max_health": 1000,
@@ -51131,7 +51131,7 @@
                 "unit_id": "fcb7b1c7ac4e407691e6e918b2d92e3d"
             },
             {
-                "type": "Militia VI",
+                "type": "Support-Weapon Militia",
                 "owner": "Nationalist China",
                 "health": 1000.0,
                 "max_health": 1000,
@@ -51148,7 +51148,7 @@
                 "unit_id": "7a62155591c24890883e198459e12c46"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Nationalist China",
                 "health": 350.0,
                 "max_health": 350,
@@ -51769,7 +51769,7 @@
         "owner": "Egypt",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Egypt",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -51892,7 +51892,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Militia VI",
+                "type": "Support-Weapon Militia",
                 "owner": "Nationalist China",
                 "health": 1000.0,
                 "max_health": 1000,
@@ -51909,7 +51909,7 @@
                 "unit_id": "fb427dda1667407a8e50881a81cb9fe2"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Nationalist China",
                 "health": 350.0,
                 "max_health": 350,
@@ -51927,7 +51927,7 @@
                 "unit_id": "fa01049800834081a24f9a6e7a4ce14b"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Nationalist China",
                 "health": 350.0,
                 "max_health": 350,
@@ -52071,7 +52071,7 @@
         "owner": "Egypt",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Egypt",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -52375,7 +52375,7 @@
         "owner": "Japanese Empire",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Japanese Empire",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -52392,7 +52392,7 @@
                 "unit_id": "6cb0942d97994fb889aa9f7fde0eb758"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Japanese Empire",
                 "health": 350.0,
                 "max_health": 350,
@@ -52410,7 +52410,7 @@
                 "unit_id": "f09cb913be8b483e9273c8567f7fcb6b"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Japanese Empire",
                 "health": 350.0,
                 "max_health": 350,
@@ -52496,7 +52496,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "United States of America",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -52784,7 +52784,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "United Kingdom",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -52964,7 +52964,7 @@
         "owner": "Japanese Empire",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Japanese Empire",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -52998,7 +52998,7 @@
                 "unit_id": "48f10375e54b4af28efefd11c5d43dae"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Japanese Empire",
                 "health": 350.0,
                 "max_health": 350,
@@ -53086,7 +53086,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "United Kingdom",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -53267,7 +53267,7 @@
         "owner": "Iran",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Iran",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -53357,7 +53357,7 @@
         "owner": "Tibet",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Tibet",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -53736,7 +53736,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Nationalist China",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -53753,7 +53753,7 @@
                 "unit_id": "fe99d2df4fbf4a67b0b9ee14d1f91e06"
             },
             {
-                "type": "Militia VI",
+                "type": "Support-Weapon Militia",
                 "owner": "Nationalist China",
                 "health": 1000.0,
                 "max_health": 1000,
@@ -53770,7 +53770,7 @@
                 "unit_id": "9491c6c80db4455eb3347ad469e3bb36"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Nationalist China",
                 "health": 350.0,
                 "max_health": 350,
@@ -53895,7 +53895,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Nationalist China",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -53912,7 +53912,7 @@
                 "unit_id": "755ccce34411485cb6c3be4e332a3b5e"
             },
             {
-                "type": "Militia VI",
+                "type": "Support-Weapon Militia",
                 "owner": "Nationalist China",
                 "health": 1000.0,
                 "max_health": 1000,
@@ -53929,7 +53929,7 @@
                 "unit_id": "d8475d6ce7c94e1991a2e8fa2d3581a9"
             },
             {
-                "type": "Militia VI",
+                "type": "Support-Weapon Militia",
                 "owner": "Nationalist China",
                 "health": 1000.0,
                 "max_health": 1000,
@@ -54081,7 +54081,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Nationalist China",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -54098,7 +54098,7 @@
                 "unit_id": "2100b4cfbab7453ebcab3441f96deb61"
             },
             {
-                "type": "Militia VI",
+                "type": "Support-Weapon Militia",
                 "owner": "Nationalist China",
                 "health": 1000.0,
                 "max_health": 1000,
@@ -54115,7 +54115,7 @@
                 "unit_id": "e35d59b2334d4a4fa726f01283c25680"
             },
             {
-                "type": "Militia VI",
+                "type": "Support-Weapon Militia",
                 "owner": "Nationalist China",
                 "health": 1000.0,
                 "max_health": 1000,
@@ -54132,7 +54132,7 @@
                 "unit_id": "8ec32c32928440728c86b2e2e3c9a5bb"
             },
             {
-                "type": "Militia VI",
+                "type": "Support-Weapon Militia",
                 "owner": "Nationalist China",
                 "health": 1000.0,
                 "max_health": 1000,
@@ -54149,7 +54149,7 @@
                 "unit_id": "ae7e1aad2ecf467199404fd0fce1c146"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Nationalist China",
                 "health": 350.0,
                 "max_health": 350,
@@ -54271,7 +54271,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Militia VI",
+                "type": "Support-Weapon Militia",
                 "owner": "Nationalist China",
                 "health": 1000.0,
                 "max_health": 1000,
@@ -54288,7 +54288,7 @@
                 "unit_id": "5864ae86226d43a68f9f8094afc3e058"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Nationalist China",
                 "health": 350.0,
                 "max_health": 350,
@@ -54306,7 +54306,7 @@
                 "unit_id": "e7473be244874ac5ad67ebfd170fa49a"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Nationalist China",
                 "health": 350.0,
                 "max_health": 350,
@@ -54889,7 +54889,7 @@
         "owner": "Saudi Arabia",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Saudi Arabia",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -54976,7 +54976,7 @@
         "owner": "Mexico",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Mexico",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -55088,7 +55088,7 @@
         "owner": "British Raj",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "British Raj",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -55234,7 +55234,7 @@
         "owner": "Saudi Arabia",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Saudi Arabia",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -55645,7 +55645,7 @@
         "owner": "Bhutan",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Bhutan",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -55698,7 +55698,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Militia VI",
+                "type": "Support-Weapon Militia",
                 "owner": "Nationalist China",
                 "health": 1000.0,
                 "max_health": 1000,
@@ -55715,7 +55715,7 @@
                 "unit_id": "fbe5e463c8c149c1bf612e4003f016e3"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Nationalist China",
                 "health": 350.0,
                 "max_health": 350,
@@ -55859,7 +55859,7 @@
         "owner": "Iran",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Iran",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -55910,7 +55910,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Militia VI",
+                "type": "Support-Weapon Militia",
                 "owner": "Nationalist China",
                 "health": 1000.0,
                 "max_health": 1000,
@@ -55927,7 +55927,7 @@
                 "unit_id": "9c3653adf2954c799ef168e0d7c8e22d"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Nationalist China",
                 "health": 350.0,
                 "max_health": 350,
@@ -55945,7 +55945,7 @@
                 "unit_id": "15434ef278ab495e912b8677da52ce04"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Nationalist China",
                 "health": 350.0,
                 "max_health": 350,
@@ -56031,7 +56031,7 @@
         "owner": "Nepal",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Nepal",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -56789,7 +56789,7 @@
         "owner": "British Raj",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "British Raj",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -57036,7 +57036,7 @@
         "owner": "British Raj",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "British Raj",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -57218,7 +57218,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Nationalist China",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -57235,7 +57235,7 @@
                 "unit_id": "8eb8ff58759b46bfbe19a0616ae87fde"
             },
             {
-                "type": "Militia VI",
+                "type": "Support-Weapon Militia",
                 "owner": "Nationalist China",
                 "health": 1000.0,
                 "max_health": 1000,
@@ -57252,7 +57252,7 @@
                 "unit_id": "5c6af247248d4968b34ea188bbb74d4c"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Nationalist China",
                 "health": 350.0,
                 "max_health": 350,
@@ -57769,7 +57769,7 @@
         "owner": "Japanese Empire",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Japanese Empire",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -57884,7 +57884,7 @@
         "owner": "Egypt",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Egypt",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -58156,7 +58156,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Militia VI",
+                "type": "Support-Weapon Militia",
                 "owner": "Nationalist China",
                 "health": 1000.0,
                 "max_health": 1000,
@@ -58173,7 +58173,7 @@
                 "unit_id": "3e59c7b43fcb419e888d94205151954a"
             },
             {
-                "type": "Artillery VI",
+                "type": "Modern Field Artillery",
                 "owner": "Nationalist China",
                 "health": 350.0,
                 "max_health": 350,
@@ -58524,7 +58524,7 @@
         "owner": "Mexico",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Mexico",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -58672,7 +58672,7 @@
         "owner": "Guangxi Clique",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Guangxi Clique",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -58859,7 +58859,7 @@
         "owner": "Yunnan",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Yunnan",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -59013,7 +59013,7 @@
         "owner": "Guangxi Clique",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Guangxi Clique",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -59597,7 +59597,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "United Kingdom",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -60232,7 +60232,7 @@
         "owner": "British Raj",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "British Raj",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -60522,7 +60522,7 @@
         "owner": "Oman",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Oman",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -60902,7 +60902,7 @@
         "owner": "Cuba",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Cuba",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -61053,7 +61053,7 @@
         "owner": "Guangxi Clique",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Guangxi Clique",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -61141,7 +61141,7 @@
         "owner": "Mexico",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Mexico",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -61358,7 +61358,7 @@
         "owner": "British Raj",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "British Raj",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -61476,7 +61476,7 @@
         "owner": "Guangxi Clique",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Guangxi Clique",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -61691,7 +61691,7 @@
         "owner": "Guangxi Clique",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Guangxi Clique",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -61743,7 +61743,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -61864,7 +61864,7 @@
         "owner": "Guangxi Clique",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Guangxi Clique",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -62092,7 +62092,7 @@
         "owner": "British Raj",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "British Raj",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -62504,7 +62504,7 @@
         "owner": "French Indochina",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "French Indochina",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -62754,7 +62754,7 @@
         "owner": "Mexico",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Mexico",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -63164,7 +63164,7 @@
         "owner": "Japanese Empire",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Japanese Empire",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -63345,7 +63345,7 @@
         "owner": "Sudan",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Sudan",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -63972,7 +63972,7 @@
         "owner": "Philippines",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Philippines",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -64247,7 +64247,7 @@
         "owner": "British Raj",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "British Raj",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -64539,7 +64539,7 @@
         "owner": "Saudi Arabia",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Saudi Arabia",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -65068,7 +65068,7 @@
         "owner": "British Raj",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "British Raj",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -65816,7 +65816,7 @@
         "owner": "Italian East Africa",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Italian East Africa",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -66323,7 +66323,7 @@
         "owner": "Yemen",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Yemen",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -66475,7 +66475,7 @@
         "owner": "Thailand",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Thailand",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -67078,7 +67078,7 @@
         "owner": "Thailand",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Thailand",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -67456,7 +67456,7 @@
         "owner": "Italian East Africa",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Italian East Africa",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -68322,7 +68322,7 @@
         "owner": "Venezuela",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Venezuela",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -69085,7 +69085,7 @@
         "owner": "British Raj",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "British Raj",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -69437,7 +69437,7 @@
         "owner": "Colombia",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Colombia",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -69778,7 +69778,7 @@
         "owner": "Italian East Africa",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Italian East Africa",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -70221,7 +70221,7 @@
         "owner": "Italian East Africa",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Italian East Africa",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -70635,7 +70635,7 @@
         "owner": "French Indochina",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "French Indochina",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -71071,7 +71071,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "United Kingdom",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -71939,7 +71939,7 @@
         "owner": "Italian East Africa",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Italian East Africa",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -72827,7 +72827,7 @@
         "owner": "Philippines",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Philippines",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -73365,7 +73365,7 @@
         "owner": "Ecuador",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Ecuador",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -73480,7 +73480,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "United Kingdom",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -73662,7 +73662,7 @@
         "owner": "Liberia",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Liberia",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -73749,7 +73749,7 @@
         "owner": "Italian East Africa",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Italian East Africa",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -73964,7 +73964,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -74014,7 +74014,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "United Kingdom",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -75784,7 +75784,7 @@
         "owner": "Italian East Africa",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Italian East Africa",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -77304,7 +77304,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -77941,7 +77941,7 @@
         "owner": "Dutch East Indies",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Dutch East Indies",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -78580,7 +78580,7 @@
         "owner": "Dutch East Indies",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Dutch East Indies",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -79023,7 +79023,7 @@
         "owner": "Australia",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Australia",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -79107,7 +79107,7 @@
         "owner": "Dutch East Indies",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Dutch East Indies",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -79595,7 +79595,7 @@
         "owner": "Peru",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Peru",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -79771,7 +79771,7 @@
         "owner": "Brazil",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Brazil",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -79923,7 +79923,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "United Kingdom",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -80811,7 +80811,7 @@
         "owner": "Belgian Congo",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Belgian Congo",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -81905,7 +81905,7 @@
         "owner": "Dutch East Indies",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Dutch East Indies",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -82209,7 +82209,7 @@
         "owner": "Brazil",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Brazil",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -82933,7 +82933,7 @@
         "owner": "Bolivia",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Bolivia",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -83467,7 +83467,7 @@
         "owner": "Brazil",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Brazil",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -83585,7 +83585,7 @@
         "owner": "Paraguay",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Paraguay",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -83957,7 +83957,7 @@
         "owner": "Brazil",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Brazil",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -84197,7 +84197,7 @@
         "owner": "Portugal",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Portugal",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -85193,7 +85193,7 @@
         "owner": "French Madagascar",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "French Madagascar",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -85482,7 +85482,7 @@
         "owner": "Portugal",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Portugal",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -86789,7 +86789,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "United Kingdom",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -87473,7 +87473,7 @@
         "owner": "Uruguay",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Uruguay",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -87985,7 +87985,7 @@
         "owner": "Union of South Africa",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Union of South Africa",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -88420,7 +88420,7 @@
         "owner": "Chile",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Chile",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -88471,7 +88471,7 @@
         "owner": "Argentina",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Argentina",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -89363,7 +89363,7 @@
         "owner": "Union of South Africa",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Union of South Africa",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -89476,7 +89476,7 @@
         "owner": "Australia",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Australia",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -89949,7 +89949,7 @@
         "owner": "Australia",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Australia",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -90655,7 +90655,7 @@
         "owner": "Union of South Africa",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Union of South Africa",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -91040,7 +91040,7 @@
         "owner": "New Zealand",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "New Zealand",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -91348,7 +91348,7 @@
         "owner": "Australia",
         "units": [
             {
-                "type": "Infantry Type 1939",
+                "type": "Squad-Automatic Infantry",
                 "owner": "Australia",
                 "health": 2450.0,
                 "max_health": 2450,

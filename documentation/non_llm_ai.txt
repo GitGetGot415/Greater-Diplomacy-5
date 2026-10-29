@@ -73,22 +73,27 @@ HISTORICAL INFANTRY EQUIPMENT
 ----------------------------
 
 The Infantry category includes regular infantry, militia, cavalry, and artillery.
-These research tracks include equipment stages before the original 1910 units.
+These research tracks use named equipment stages across the full timeline.
 Field artillery and heavy artillery use the same research track.
-Earlier units use existing images through metadata.art_name.
+Vehicle infantry uses the regular infantry stages and separate vehicle unlocks.
+Each stage uses existing statistics and images. Equipment names do not add combat abilities.
+Later stages select statistics from the older unit at or before the stage year.
+The final cavalry stage uses the last existing cavalry statistics. Cavalry research stops in 1930.
+The final stage remains available after its research year.
+metadata.art_name selects existing images for each stage.
 Research labels and image requests come from level_names and level_icons in the active research library.
 
 Read equipment dates, statistics, prices, and research costs from data/json/unit_data.json and data/json/research_template.json.
 Edit data/generators/recipes.py to regenerate this content.
 Unit identifiers do not determine research levels.
 Explicit research metadata connects each unit to its equipment year.
-Older Roman-numeral unit identifiers remain valid.
+The v47 migration converts older annual and Roman-numeral equipment identifiers to named stages.
 Upgrades stay within the same family and use the country's completed research.
 
 Time-appropriate starting research supplies equipment for the selected date.
 The first timeline year includes the factory research needed for army recruitment.
-The special 1910 starting package includes the original infantry, militia, cavalry, and artillery equipment.
-Vehicle infantry retains its separate vehicle unlocks.
+The special 1910 starting package selects the latest stage available by that year for each equipment track.
+Militia retains its existing recruitment rules. New stage names do not add training or coordination statistics.
 See documentation/data_migrations.txt for saved research compatibility.
 
 AIRCRAFT VALUATION

@@ -340,7 +340,7 @@ LEGACY_INFANTRY_RESEARCH_YEARS = {
 
 
 def migrate_infantry_research(saved, tech_tree, history=None):
-    """Preserve equipment years when earlier research stages are inserted."""
+    """Map completed equipment years to the active stages. Keep unfinished points."""
     sources = saved.get("research_years", LEGACY_INFANTRY_RESEARCH_YEARS)
     if not isinstance(sources, dict):
         raise ValueError("Saved research_years must contain technology year lists.")
@@ -381,6 +381,17 @@ def migrate_infantry_research(saved, tech_tree, history=None):
             if isinstance(country.get("current_research"), str):
                 pending.add(country["current_research"])
             convert(country.get("research"), pending)
+            # A shorter stage list can finish a track while older work is still queued.
+            completed = {key for key, years in targets.items()
+                         if sources.get(key) != years
+                         and country.get("research", {}).get(key, 0) >= len(years)}
+            if "research_queue" in country:
+                country["research_queue"][:] = [project for project in country["research_queue"]
+                                                if project.get("tech_name") not in completed]
+            for key in completed:
+                country.get("research_progress", {}).pop(key, None)
+            if isinstance(country.get("current_research"), str) and country["current_research"] in completed:
+                country["current_research"] = None
 
     convert(saved.get("default_research"))
     convert_countries(saved.get("nation_data"))
@@ -743,6 +754,9 @@ def _v47_save(save_meta, map_data, history):
     realtime_match = save_meta.get("realtime_match")
     if isinstance(realtime_match, dict) and realtime_match.get("format") == "gd5-realtime-v1":
         realtime_match.setdefault("offline_view", "spectator")
+    aliases = equipment_stage_aliases()
+    for records in (save_meta, map_data, history):
+        _v47_equipment_records(records, aliases)
 
 
 #: Every v46 move file contains these sections. An older move file can omit them.
@@ -768,6 +782,67 @@ def _v47_move(player_data):
             # A move has no terrain, so a Truck aircraft unpacks as on land.
             # Host validation then checks every unit against host state.
             _v47_province(province, None)
+    _v47_equipment_records(player_data, equipment_stage_aliases())
+
+
+def equipment_stage_aliases():
+    """Map supported older equipment identifiers to current named stages."""
+    from data import queries
+
+    library = queries.get_unit_library()
+    families = dict(queries.get_unit_research_index(library))
+    aliases = {}
+    sources = {
+        "Infantry Type": ([1800, 1830, 1850, 1865, 1875, 1885, 1895, 1905], "infantry_type"),
+        "Motorized Infantry Type": ([], "infantry_type"),
+        "Mechanized Infantry Type": ([], "infantry_type"),
+        "Infantry Fighting Vehicle Type": ([], "infantry_type"),
+        "Cavalry": ([1800, 1850, 1870, 1890], "cavalry"),
+        "Militia": ([1800, 1840, 1870, 1900], "militia"),
+        "Artillery": ([1800, 1830, 1850, 1870, 1890, 1900], "artillery"),
+        "Heavy Artillery": ([1800, 1830, 1850, 1870, 1890, 1900], "artillery"),
+    }
+    for family, (early, tech) in sources.items():
+        old = [(f"{family} {year}", year) for year in early]
+        for i, year in enumerate(LEGACY_INFANTRY_RESEARCH_YEARS[tech], 1):
+            suffix = str(year) if tech == "infantry_type" else c.ROMAN_NUMERALS[i]
+            old.append((f"{family} {suffix}", year))
+        for name, year in old:
+            if name in library:
+                continue
+            target = next((unit for unit, tier, _ in families.get(family, ()) if tier <= year), None)
+            if target:
+                aliases[name] = target
+    return aliases
+
+
+def _v47_equipment_records(records, aliases):
+    """Convert typed references, including cargo, orders, scripts, and saved history."""
+    def converted(name):
+        if not isinstance(name, str):
+            return name
+        for carrier in ("Truck", "Convoy"):
+            prefix = carrier + " ("
+            if name.startswith(prefix) and name.endswith(")"):
+                return prefix + converted(name[len(prefix):-1]) + ")"
+        return aliases.get(name, name)
+
+    if isinstance(records, list):
+        for item in records:
+            _v47_equipment_records(item, aliases)
+    elif isinstance(records, dict):
+        for field, value in records.items():
+            if field in ("type", "unit_type", "original_type", "target_type"):
+                records[field] = converted(value)
+            elif field == "custom_production_units" and isinstance(value, list):
+                choices = []
+                for name in value:
+                    name = converted(name)
+                    if name not in choices:
+                        choices.append(name)
+                records[field] = choices
+            else:
+                _v47_equipment_records(value, aliases)
 
 
 SAVE_STEPS = ((47, _v47_save),)

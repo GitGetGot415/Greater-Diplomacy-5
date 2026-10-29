@@ -685,6 +685,9 @@ RANDOM_SCENARIO_MAX_ISLAND_FILTER = 50
 RANDOM_SCENARIO_SINGLE_TILE_START = False
 RANDOM_SCENARIO_DEFAULT_RESOURCE_CHANCE = 0.15
 
+# Equipment year used by the starting package and older default unit choices.
+DEFAULT_EQUIPMENT_YEAR = 1910
+
 # Unlocked tech exception for starting exactly in 1910
 # Infantry entries use equipment dates. Other entries specify starting levels.
 DEFAULT_1910_TECH = {

@@ -10,8 +10,8 @@ every line, tweak the numbers here and run generate_data.py to rewrite the
 actual JSON files. The game itself only ever reads the JSON files in
 data/json/ - nothing about how it loads/uses that data changes.
 
-To change a family (e.g. make Infantry Type gain more health per year),
-edit its `linear(base, delta)` call below and re-run the generator.
+Equipment stages select existing statistics and artwork by equipment year.
+Edit their stage tables or source statistics below, then run the generator.
 To add a new unit/building level, bump a `count`/range end and re-run.
 """
 import sys
@@ -168,13 +168,13 @@ class UnitFamily:
                                  "ai_force_category": (None if self.prefix == "Cavalry" and suffix is not None
                                                        else self.ai_force_category)}
             if self.art_name:
-                entry["metadata"]["art_name"] = self.art_name
+                entry["metadata"]["art_name"] = self.art_name(i) if callable(self.art_name) else self.art_name
             out.append((name, entry))
         return out
 
 
 # Each stage defines year, research label, health, attack, and material cost.
-# Earlier equipment uses explicit values. The existing progression starts unchanged at 1910.
+# Earlier equipment uses explicit values. Later stages sample the existing statistics.
 EARLY_INFANTRY_STAGES = {
     "infantry_type": [
         (1800, "Flintlock Infantry", 600, 50, 200),
@@ -209,6 +209,75 @@ EARLY_INFANTRY_STAGES = {
 }
 
 
+EQUIPMENT_STAGES = {
+    "infantry_type": [
+        (1915, "Trench Infantry"),
+        (1925, "Squad-Automatic Infantry"),
+        (1940, "Semi-Automatic Infantry"),
+        (1955, "Battle-Rifle Infantry"),
+        (1970, "Assault-Rifle Infantry"),
+        (1985, "Night-Equipped Infantry"),
+        (2000, "Optics-Equipped Infantry"),
+        (2015, "Networked Infantry"),
+        (2030, "Drone-Integrated Infantry"),
+        (2040, "Sensor-Integrated Infantry"),
+    ],
+    "cavalry": [(1910, "Supported Cavalry"), (1918, "Mounted Rifle Cavalry"), (1930, "Modern Cavalry")],
+    "militia": [
+        (1915, "Rifle Militia"), (1935, "Support-Weapon Militia"),
+        (1955, "Self-Loading Rifle Militia"), (1975, "Assault-Rifle Militia"),
+        (1995, "Radio-Equipped Militia"), (2015, "Optics-Equipped Militia"),
+        (2035, "Drone-Supported Militia"),
+    ],
+    "artillery": [
+        (1915, "Indirect-Fire Artillery"), (1930, "Modern Field Artillery"),
+        (1940, "Radio-Coordinated Artillery"), (1955, "Advanced-Ammunition Artillery"),
+        (1975, "Computer-Assisted Artillery"), (1995, "Digital Fire-Control Artillery"),
+        (2010, "Precision-Guided Artillery"), (2025, "Sensor-Linked Artillery"),
+        (2040, "Automated Fire-Control Artillery"),
+    ],
+}
+
+
+class EquipmentFamily(UnitFamily):
+    """Give equipment stages names while retaining their shared family metadata."""
+
+    def __init__(self, *args, stage_names, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.stage_names = stage_names
+
+    def entries(self):
+        entries = super().entries()
+        prefix = {"Motorized Infantry Type": "Motorized ", "Mechanized Infantry Type": "Mechanized ",
+                  "Infantry Fighting Vehicle Type": "IFV ", "Heavy Artillery": "Heavy "}.get(self.prefix, "")
+        result = []
+        for (_, entry), label in zip(entries, self.stage_names):
+            name = prefix + label
+            entry["metadata"]["tier_label"] = label
+            entry["metadata"]["tier_kind"] = "stage"
+            result.append((name, entry))
+        return result
+
+
+def equipment_family(prefix, tech, stats, *, step=1, last_source_year=2050):
+    """Select existing statistics and images at each stage's equipment year."""
+    stages = EQUIPMENT_STAGES[tech]
+    if tech == "infantry_type" and prefix != "Infantry Type":
+        # Vehicles share the 1905 stage. Its first existing vehicle source is 1910.
+        stages = [(1905, EARLY_INFANTRY_STAGES[tech][-1][1])] + stages
+    indices = [(min(last_source_year, max(1910, year)) - 1910) // step for year, _ in stages]
+    sampled = {key: (lambda i, gen=gen: gen(indices[i])) if callable(gen) else gen
+               for key, gen in stats.items()}
+    def art_name(i):
+        suffix = str(1910 + indices[i]) if tech == "infantry_type" else c.ROMAN_NUMERALS[indices[i] + 1]
+        return f"{prefix} {suffix}"
+    key = prefix.lower().replace(" ", "_")
+    return EquipmentFamily(prefix, [str(year) for year, _ in stages], sampled,
+                           research_key=c.UNIT_TECH_KEY_OVERRIDES.get(key, tech),
+                           research_years=[year for year, _ in stages], art_name=art_name,
+                           stage_names=[label for _, label in stages])
+
+
 def early_infantry_family(prefix, tech, *, manpower, speed=1, production_time=2, damage_factor=1, material_factor=1):
     """Generate earlier equipment in an existing family with existing image assets."""
     stages = EARLY_INFANTRY_STAGES[tech]
@@ -220,8 +289,9 @@ def early_infantry_family(prefix, tech, *, manpower, speed=1, production_time=2,
     }
     if tech == "artillery":
         stats["bombard_attack"] = stats["attack"]
-    return UnitFamily(prefix, [str(stage[0]) for stage in stages], stats, research_key=tech,
+    return EquipmentFamily(prefix, [str(stage[0]) for stage in stages], stats, research_key=tech,
                       research_years=[stage[0] for stage in stages],
+                      stage_names=[stage[1] for stage in stages],
                       art_name=f"{prefix} {'1910' if tech == 'infantry_type' else 'I'}")
 
 
@@ -230,17 +300,17 @@ def early_infantry_family(prefix, tech, *, manpower, speed=1, production_time=2,
 UNIT_SECTIONS = [
     [
         early_infantry_family("Infantry Type", "infantry_type", manpower=1000),
-        UnitFamily("Infantry Type", year_suffixes(1910, 141), {
+        equipment_family("Infantry Type", "infantry_type", {
             "health": linear(1000, 50), "attack": linear(100, 10), "defense": const(0),
             "speed": const(1), "cost_materials": linear(500, 5), "cost_manpower": const(1000),
             "cost_fuel": const(0), "production_time": const(2),
         }),
-        UnitFamily("Motorized Infantry Type", year_suffixes(1910, 141), {
+        equipment_family("Motorized Infantry Type", "infantry_type", {
             "health": linear(1000, 50), "attack": linear(100, 10), "defense": const(0),
             "speed": const(2), "cost_materials": linear(800, 8), "cost_manpower": const(1000),
             "cost_fuel": linear(10, 1), "production_time": const(2),
         }),
-        UnitFamily("Mechanized Infantry Type", year_suffixes(1910, 141), {
+        equipment_family("Mechanized Infantry Type", "infantry_type", {
             "health": linear(1000, 50), "attack": linear(100, 10),
             "defense": linear(0, 4),
             "speed": const(2), "cost_materials": linear(2000, 20), "cost_manpower": const(1000),
@@ -249,30 +319,30 @@ UNIT_SECTIONS = [
         # Identical to Mechanized Infantry Type in every stat except 1.5x attack
         # and double cost_materials - the premium tier Armored Personnel Carriers
         # open the door to once Infantry Fighting Vehicles are researched.
-        UnitFamily("Infantry Fighting Vehicle Type", year_suffixes(1910, 141), {
+        equipment_family("Infantry Fighting Vehicle Type", "infantry_type", {
             "health": linear(1000, 50), "attack": linear(150, 15),
             "defense": linear(0, 4),
             "speed": const(2), "cost_materials": linear(3000, 30), "cost_manpower": const(1000),
             "cost_fuel": linear(10, 1), "production_time": const(3),
         }),
         early_infantry_family("Cavalry", "cavalry", manpower=2000, speed=2, production_time=3),
-        UnitFamily("Cavalry", roman_suffixes(5), {
+        equipment_family("Cavalry", "cavalry", {
             "health": linear(600, 100), "attack": const(300), "defense": const(0),
             "speed": const(2), "cost_materials": const(1000), "cost_manpower": const(2000),
             "cost_fuel": const(0), "production_time": const(3),
-        }, research_years=years_range(1910, 4, 5)),
+        }, step=4, last_source_year=1926),
         early_infantry_family("Militia", "militia", manpower=1000, production_time=1),
-        UnitFamily("Militia", roman_suffixes(29), {
+        equipment_family("Militia", "militia", {
             "health": linear(500, 100), "attack": linear(50, 10), "defense": const(0),
             "speed": const(1), "cost_materials": const(300), "cost_manpower": const(1000),
             "cost_fuel": const(0), "production_time": const(1),
-        }, research_years=years_range(1910, 5, 29)),
+        }, step=5),
         # Fragile in a straight fight - its damage is meant to come from bombarding
         # an adjacent tile (see c.BOMBARDMENT_UNITS) rather than from stacking up.
-        # Artillery uses Roman numeral tiers. Each tier matches its research level.
+        # Field and heavy artillery share the same equipment stages.
         # Keep bombardment damage separate from direct attack damage.
         early_infantry_family("Artillery", "artillery", manpower=500),
-        UnitFamily("Artillery", roman_suffixes(29), {
+        equipment_family("Artillery", "artillery", {
             "health": linear(100, 50), "attack": linear(120, 60),
             # Bombardment damage, tracked separately from melee "attack" so the
             # two can be tuned independently. Currently mirrors attack 1:1.
@@ -280,20 +350,20 @@ UNIT_SECTIONS = [
             "defense": const(0),
             "speed": const(1), "cost_materials": linear(1500, 100), "cost_manpower": const(500),
             "cost_fuel": const(0), "production_time": const(2),
-        }, research_years=years_range(1910, 5, 29)),
+        }, step=5),
         # Same tech track as Artillery (see c.UNIT_TECH_KEY_OVERRIDES -- no
         # separate research of its own) and identical in every stat except
         # double cost_materials and much heavier damage, mirrored 1:1 between
         # melee and bombardment like Artillery itself.
         early_infantry_family("Heavy Artillery", "artillery", manpower=500, production_time=5,
                               damage_factor=2, material_factor=2),
-        UnitFamily("Heavy Artillery", roman_suffixes(29), {
+        equipment_family("Heavy Artillery", "artillery", {
             "health": linear(100, 50), "attack": linear(240, 120),
             "bombard_attack": linear(240, 120),
             "defense": const(0),
             "speed": const(1), "cost_materials": linear(3000, 200), "cost_manpower": const(500),
             "cost_fuel": const(0), "production_time": const(5),
-        }, research_years=years_range(1910, 5, 29)),
+        }, step=5),
     ],
     [
         UnitFamily("WW1 Tank", single(), {
@@ -560,17 +630,13 @@ BUILDING_CHAINS = [
 # techs total, so no abstraction is needed there).
 
 def extend_infantry_research(tech, entry):
-    """Prepend historical stages while retaining existing unit names and research dates."""
-    stages = EARLY_INFANTRY_STAGES[tech]
+    """Use the same equipment stages for research and generated units."""
+    stages = EARLY_INFANTRY_STAGES[tech] + EQUIPMENT_STAGES[tech]
     names = {str(i + 1): stage[1] for i, stage in enumerate(stages)}
-    family = "Infantry Type" if tech == "infantry_type" else tech.title()
-    if tech != "infantry_type":
-        names.update({str(len(stages) + i + 1): f"{family} {c.ROMAN_NUMERALS[i + 1]}"
-                      for i in range(entry["max_lvl"])})
-    entry["years"] = [stage[0] for stage in stages] + entry["years"]
+    entry["years"] = [stage[0] for stage in stages]
     entry["max_lvl"] = len(entry["years"])
     entry["level_names"] = names
-    entry["level_icons"] = {str(i + 1): f"{family} {stage[0]}" for i, stage in enumerate(stages)}
+    entry["level_icons"] = names.copy()
     return entry
 
 
@@ -578,23 +644,19 @@ def extend_infantry_research(tech, entry):
 RESEARCH_SECTIONS = [
     [
         ("infantry_type", extend_infantry_research("infantry_type", {
-            "category": "INFANTRY", "max_lvl": 141, "cost": 900, "req": {},
-            "years": years_range(1910, 1, 141)})),
+            "category": "INFANTRY", "cost": 900, "req": {}})),
         ("cavalry", extend_infantry_research("cavalry", {
-            "category": "INFANTRY", "max_lvl": 5, "cost": 1200, "req": {},
-            "years": years_range(1910, 4, 5)})),
+            "category": "INFANTRY", "cost": 1200, "req": {}})),
         ("militia", extend_infantry_research("militia", {
-            "category": "INFANTRY", "max_lvl": 29, "cost": 600, "req": {},
-            "years": years_range(1910, 5, 29)})),
+            "category": "INFANTRY", "cost": 600, "req": {}})),
         ("artillery", extend_infantry_research("artillery", {
-            "category": "INFANTRY", "max_lvl": 29, "cost": 900, "req": {},
-            "years": years_range(1910, 5, 29)})),
+            "category": "INFANTRY", "cost": 900, "req": {}})),
         # One-time unlocks rather than leveled techs: owning them lets a nation build
         # Motorized/Mechanized Infantry up to whatever year its own infantry_type
         # research has reached (see queries.get_infantry_family_year), instead of
         # requiring a separate research track for each vehicle family.
         ("trucks", {"category": "INFANTRY", "max_lvl": 1, "cost": 1800,
-                     "req": {"cavalry": len(EARLY_INFANTRY_STAGES["cavalry"]) + 5},
+                     "req": {"cavalry": len(EARLY_INFANTRY_STAGES["cavalry"]) + len(EQUIPMENT_STAGES["cavalry"])},
                      "years": years_range(1930, 1, 1)}),
         ("armored_personnel_carriers", {"category": "INFANTRY", "max_lvl": 1, "cost": 1800,
                                          "req": {"trucks": 1},

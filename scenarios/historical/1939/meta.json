@@ -487,7 +487,7 @@
                         {
                             "type": "Join Faction",
                             "target": "United Kingdom",
-                            "unit_type": "Infantry Type 1910",
+                            "unit_type": "Supported Rifle Infantry",
                             "message": "arsenal of democracy incoming",
                             "ai_generate": false,
                             "send_up_to": false
@@ -590,7 +590,7 @@
                         {
                             "type": "Declare War",
                             "target": "Poland",
-                            "unit_type": "Infantry Type 1910",
+                            "unit_type": "Supported Rifle Infantry",
                             "message": "guten tag polen",
                             "ai_generate": false,
                             "send_up_to": false
@@ -1093,7 +1093,7 @@
                         {
                             "type": "Declare War",
                             "target": "Albania",
-                            "unit_type": "Infantry Type 1910",
+                            "unit_type": "Supported Rifle Infantry",
                             "message": "not much you can really do about this, might as well accept it",
                             "ai_generate": false,
                             "send_up_to": false
@@ -2356,7 +2356,7 @@
                         {
                             "type": "Reject Proposal",
                             "target": "Poland",
-                            "unit_type": "Infantry Type 1910",
+                            "unit_type": "Supported Rifle Infantry",
                             "message": "ok look i know historically we would accept however if we did that then we would get into a war with the soviet union and we both know that's not historical, honestly france and i not helping you out at all is more historically accurate if you think about it",
                             "ai_generate": false,
                             "send_up_to": false
@@ -2379,7 +2379,7 @@
                         {
                             "type": "Accept Proposal",
                             "target": "United States of America",
-                            "unit_type": "Infantry Type 1910",
+                            "unit_type": "Supported Rifle Infantry",
                             "message": "we are so back",
                             "ai_generate": false,
                             "send_up_to": false
@@ -4161,7 +4161,7 @@
                         {
                             "type": "Join Faction",
                             "target": "United Kingdom",
-                            "unit_type": "Infantry Type 1910",
+                            "unit_type": "Supported Rifle Infantry",
                             "message": "help!!!",
                             "ai_generate": false,
                             "send_up_to": false

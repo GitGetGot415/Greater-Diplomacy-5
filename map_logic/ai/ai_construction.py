@@ -412,14 +412,14 @@ def _panic_militia_and_tally_forces(map_screen, ai_name, data, my_provs, unit_li
                     if not is_naval and turns <= 1:
                         safe_to_panic = False # Let the ground unit finish!
 
-                militia_name = queries.get_best_preferred_unit(data.get("research", {}), unit_library, ["Militia"], context=map_screen) or "Militia I"
+                militia_name = queries.get_best_preferred_unit(data.get("research", {}), unit_library, ["Militia"], context=map_screen)
                 militia_stats = unit_library.get(militia_name, {})
                 militia_time = militia_stats.get("production_time", 1)
 
                 if not restrictions.can_raise_units(ai_name, world_state.nation_data):
                     safe_to_panic = False  # demilitarized by treaty; not even in a panic
 
-                if safe_to_panic and militia_time == 1 and (not queue or queries.get_base_unit_name(queue[0].get("unit_type", ""), context=map_screen) != "Militia"):
+                if militia_name and safe_to_panic and militia_time == 1 and (not queue or queries.get_base_unit_name(queue[0].get("unit_type", ""), context=map_screen) != "Militia"):
                     # Cancel existing queue
                     while queue:
                         production_actions.cancel_production(

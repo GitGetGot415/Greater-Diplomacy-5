@@ -169,7 +169,8 @@ def process_queues(map_screen):
                         if hasattr(map_screen, 'nation_colors'):
                             map_screen.nation_colors[reb_id] = tuple(reb_color)
                         
-                        militia_name = queries.get_best_preferred_unit(reb_data["research"], unit_library, ["Militia"], context=map_screen) or "Militia I"
+                        militia_name = (queries.get_best_preferred_unit(reb_data["research"], unit_library, ["Militia"], context=map_screen)
+                                        or queries.get_unit_for_family_year(unit_library, "Militia", c.DEFAULT_EQUIPMENT_YEAR, context=map_screen))
                         
                         # Transfer ownership
                         edit_province_ownership.conquer_province(map_screen, target_prov, reb_id)
@@ -177,6 +178,8 @@ def process_queues(map_screen):
                         
                         # Spawn militia
                         for _ in range(militia_count):
+                            if militia_name is None:
+                                break
                             u_dict = queries.create_unit_dict(militia_name, reb_id, unit_library)
                             u_dict["custom_name"] = queries.generate_unit_custom_name(u_dict, active_unit_counters, context=map_screen)
                             target_prov.setdefault("units", []).append(u_dict)

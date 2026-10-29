@@ -349,12 +349,9 @@ def _build_units(troops, owner, year, unit_library):
     troops = _positive_int(troops)
     if not troops or owner == "Unclaimed":
         return []
-    unit_type = f"Infantry Type {year}"
-    if unit_type not in unit_library:
-        choices = sorted(name for name in unit_library if name.startswith("Infantry Type "))
-        if not choices:
-            raise GD4TranslationError("GD5 has no infantry unit type available")
-        unit_type = min(choices, key=lambda name: abs(int(name.rsplit(" ", 1)[1]) - year))
+    unit_type = queries.get_unit_for_family_year(unit_library, "Infantry Type", year)
+    if unit_type is None:
+        raise GD4TranslationError("GD5 has no infantry equipment available for this year")
     full, remainder = divmod(troops, 100_000)
     units = [queries.create_unit_dict(unit_type, owner, unit_library) for _ in range(full)]
     if remainder:

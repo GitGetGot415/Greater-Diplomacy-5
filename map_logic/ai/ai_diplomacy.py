@@ -1727,7 +1727,8 @@ def process_scripted_events(map_screen, preview_request=None):
 
                     if a_type == "Spawn Unit":
                         target_list = [t.strip() for t in str(raw_targets).split(",") if t.strip()]
-                        unit_type = act.get("unit_type", "Infantry Type 1910")
+                        unit_type = act.get("unit_type") or queries.get_unit_for_family_year(
+                            queries.get_unit_library(map_screen), "Infantry Type", c.DEFAULT_EQUIPMENT_YEAR, context=map_screen)
                         tiles = [t.strip() for t in str(act.get("message", "")).split(",") if t.strip()]
                         must_control = act.get("ai_generate", False)
                         for a_target in target_list:

@@ -76,7 +76,8 @@ class GDHEXTranslationTests(unittest.TestCase):
         self.assertEqual(provinces[4]["buildings"], ["Basic Factory"])
 
         infantry = provinces[1]["units"][0]
-        self.assertEqual(infantry["type"], "Infantry Type 1939")
+        self.assertEqual(infantry["type"], gdhex.queries.get_unit_for_family_year(
+            gdhex.queries.get_unit_library(), "Infantry Type", payload["date"]["year"]))
         self.assertEqual(infantry["health"], infantry["max_health"] * 0.5)
         navy = provinces[2]["units"]
         self.assertEqual([unit["type"] for unit in navy], ["Destroyer I", "Dreadnought"])

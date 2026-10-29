@@ -605,7 +605,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -826,7 +826,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -1111,7 +1111,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -2251,7 +2251,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -2400,7 +2400,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "United States of America",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -2554,7 +2554,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -2936,7 +2936,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -4515,7 +4515,7 @@
         "owner": "Magowan's Infinite Mirror Maze",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Magowan's Infinite Mirror Maze",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -4735,7 +4735,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -4991,7 +4991,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -5134,7 +5134,7 @@
         "owner": "Sweden",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Sweden",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -5355,7 +5355,7 @@
         "owner": "Norway",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Norway",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -5576,7 +5576,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -5937,7 +5937,7 @@
         "owner": "Norway",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Norway",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -6480,7 +6480,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -6754,7 +6754,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -6899,7 +6899,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "United Kingdom",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -7020,7 +7020,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -7280,7 +7280,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -7398,7 +7398,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -7657,7 +7657,7 @@
         "owner": "Sweden",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Sweden",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -7707,7 +7707,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -7878,7 +7878,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -8537,7 +8537,7 @@
         "owner": "Dominion of Canada",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Dominion of Canada",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -8597,7 +8597,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -8615,7 +8615,7 @@
                 "unit_id": "7c23b5ceca4c4b7394fe064888845f1c"
             },
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -8702,7 +8702,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "United Kingdom",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -8772,7 +8772,7 @@
         "owner": "Denmark",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Denmark",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -8823,7 +8823,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "United Kingdom",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -8914,7 +8914,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "United Kingdom",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -9065,7 +9065,7 @@
         "owner": "Dominion of Canada",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Dominion of Canada",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -9122,7 +9122,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -9140,7 +9140,7 @@
                 "unit_id": "23eb5f88e4a04603934c801eaf8156d9"
             },
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -9389,7 +9389,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -9575,7 +9575,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -9763,7 +9763,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Artillery I",
+                "type": "Recoil-System Artillery",
                 "owner": "Russia",
                 "health": 100.0,
                 "max_health": 100,
@@ -9781,7 +9781,7 @@
                 "unit_id": "beaf4a2696b2458287952eaa6c447d2c"
             },
             {
-                "type": "Artillery I",
+                "type": "Recoil-System Artillery",
                 "owner": "Russia",
                 "health": 100.0,
                 "max_health": 100,
@@ -9960,7 +9960,7 @@
         "owner": "Sweden",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Sweden",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -10048,7 +10048,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -10066,7 +10066,7 @@
                 "unit_id": "4b09f12132d44006abe058c299a78b1e"
             },
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -10154,7 +10154,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -10245,7 +10245,7 @@
         "owner": "Dominion of Canada",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Dominion of Canada",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -10305,7 +10305,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -10357,7 +10357,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -10707,7 +10707,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "United Kingdom",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -10830,7 +10830,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -10848,7 +10848,7 @@
                 "unit_id": "a8e909b431974e68b53914823e9374f4"
             },
             {
-                "type": "Artillery I",
+                "type": "Recoil-System Artillery",
                 "owner": "German Empire",
                 "health": 100.0,
                 "max_health": 100,
@@ -10866,7 +10866,7 @@
                 "unit_id": "2b7636d346544b29ab883b183267410d"
             },
             {
-                "type": "Artillery I",
+                "type": "Recoil-System Artillery",
                 "owner": "German Empire",
                 "health": 100.0,
                 "max_health": 100,
@@ -11219,7 +11219,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -11271,7 +11271,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "United Kingdom",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -11395,7 +11395,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "United Kingdom",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -11501,7 +11501,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -11627,7 +11627,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -11779,7 +11779,7 @@
         "owner": "Nowa Polska",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Nowa Polska",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -11866,7 +11866,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "United States of America",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -12057,7 +12057,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -12135,7 +12135,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -12253,7 +12253,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "United Kingdom",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -12306,7 +12306,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -12381,7 +12381,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -12455,7 +12455,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -12510,7 +12510,7 @@
         "owner": "Netherlands",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Netherlands",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -12858,7 +12858,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -12946,7 +12946,7 @@
         "owner": "Netherlands",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Netherlands",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -13036,7 +13036,7 @@
         "owner": "Nowa Polska",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Nowa Polska",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -13122,7 +13122,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "United Kingdom",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -13213,7 +13213,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -13266,7 +13266,7 @@
         "owner": "Dominion of Canada",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Dominion of Canada",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -13423,7 +13423,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -13648,7 +13648,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -13935,7 +13935,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Artillery I",
+                "type": "Recoil-System Artillery",
                 "owner": "German Empire",
                 "health": 100.0,
                 "max_health": 100,
@@ -13953,7 +13953,7 @@
                 "unit_id": "e758672e9bef4b7f8aa4ab8b1e73cedf"
             },
             {
-                "type": "Artillery I",
+                "type": "Recoil-System Artillery",
                 "owner": "German Empire",
                 "health": 100.0,
                 "max_health": 100,
@@ -14079,7 +14079,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -14293,7 +14293,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -14376,7 +14376,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "United Kingdom",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -14450,7 +14450,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -14508,7 +14508,7 @@
         "owner": "Nowa Polska",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Nowa Polska",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -14864,7 +14864,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -15151,7 +15151,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "United Kingdom",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -15206,7 +15206,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -15224,7 +15224,7 @@
                 "unit_id": "9f5a2e5d1d884e6287a6fbb676ae3c5c"
             },
             {
-                "type": "Artillery I",
+                "type": "Recoil-System Artillery",
                 "owner": "German Empire",
                 "health": 100.0,
                 "max_health": 100,
@@ -15242,7 +15242,7 @@
                 "unit_id": "91c3b0aa98214940b74a4615be874359"
             },
             {
-                "type": "Artillery I",
+                "type": "Recoil-System Artillery",
                 "owner": "German Empire",
                 "health": 100.0,
                 "max_health": 100,
@@ -15399,7 +15399,7 @@
         "owner": "Nowa Polska",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Nowa Polska",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -15849,7 +15849,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "United States of America",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -16005,7 +16005,7 @@
         "owner": "Belgium",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Belgium",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -16186,7 +16186,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -16310,7 +16310,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -16401,7 +16401,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -16557,7 +16557,7 @@
         "owner": "Nowa Polska",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Nowa Polska",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -16679,7 +16679,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "United States of America",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -16734,7 +16734,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "United States of America",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -16988,7 +16988,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "France",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -17039,7 +17039,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Artillery I",
+                "type": "Recoil-System Artillery",
                 "owner": "Russia",
                 "health": 100.0,
                 "max_health": 100,
@@ -17057,7 +17057,7 @@
                 "unit_id": "7db7b772f2c246e68090b0ffb76e9c8d"
             },
             {
-                "type": "Artillery I",
+                "type": "Recoil-System Artillery",
                 "owner": "Russia",
                 "health": 100.0,
                 "max_health": 100,
@@ -17284,7 +17284,7 @@
         "owner": "Nowa Polska",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Nowa Polska",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -17406,7 +17406,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -17570,7 +17570,7 @@
         "owner": "Belgium",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Belgium",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -17626,7 +17626,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -17854,7 +17854,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Artillery I",
+                "type": "Recoil-System Artillery",
                 "owner": "German Empire",
                 "health": 100.0,
                 "max_health": 100,
@@ -17872,7 +17872,7 @@
                 "unit_id": "0205485445d74bb490031d0404cf4e87"
             },
             {
-                "type": "Artillery I",
+                "type": "Recoil-System Artillery",
                 "owner": "German Empire",
                 "health": 100.0,
                 "max_health": 100,
@@ -17928,7 +17928,7 @@
         "owner": "Nowa Polska",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Nowa Polska",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -18019,7 +18019,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -18124,7 +18124,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "France",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -18276,7 +18276,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -18398,7 +18398,7 @@
         "owner": "Austria-Hungary",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Austria-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -18457,7 +18457,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -18518,7 +18518,7 @@
         "owner": "Nowa Polska",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Nowa Polska",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -18627,7 +18627,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -18645,7 +18645,7 @@
                 "unit_id": "c3dc3b1feb784e3c81e7115b339f4473"
             },
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -18766,7 +18766,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -18824,7 +18824,7 @@
         "owner": "Austria-Hungary",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Austria-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -18978,7 +18978,7 @@
         "owner": "Austria-Hungary",
         "units": [
             {
-                "type": "Artillery I",
+                "type": "Recoil-System Artillery",
                 "owner": "Austria-Hungary",
                 "health": 100.0,
                 "max_health": 100,
@@ -19032,7 +19032,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -19050,7 +19050,7 @@
                 "unit_id": "1c7cf59ad6d6442eb0bd7483db963d81"
             },
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -19104,7 +19104,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -19196,7 +19196,7 @@
         "owner": "Luxembourg",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Luxembourg",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -19357,7 +19357,7 @@
         "owner": "Austria-Hungary",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Austria-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -19410,7 +19410,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -19428,7 +19428,7 @@
                 "unit_id": "bc8111c0f48441b3b42373aec9516e4f"
             },
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -19478,7 +19478,7 @@
         "owner": "Japan",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Japan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -19806,7 +19806,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "France",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -19824,7 +19824,7 @@
                 "unit_id": "fea1cb26218448e698788c979ed00678"
             },
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "France",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -19950,7 +19950,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -20295,7 +20295,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -20448,7 +20448,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Artillery I",
+                "type": "Recoil-System Artillery",
                 "owner": "France",
                 "health": 100.0,
                 "max_health": 100,
@@ -20466,7 +20466,7 @@
                 "unit_id": "6d3c01c8fa8f4c618dfb555829ba594a"
             },
             {
-                "type": "Artillery I",
+                "type": "Recoil-System Artillery",
                 "owner": "France",
                 "health": 100.0,
                 "max_health": 100,
@@ -20520,7 +20520,7 @@
         "owner": "Austria-Hungary",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Austria-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -20676,7 +20676,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -20729,7 +20729,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -20819,7 +20819,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -20837,7 +20837,7 @@
                 "unit_id": "a74dafc436c44105b14b9067d6277ff3"
             },
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -20855,7 +20855,7 @@
                 "unit_id": "d67bf3d14fb84a4b991a9f29febd1a88"
             },
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -20914,7 +20914,7 @@
         "owner": "Austria-Hungary",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Austria-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -21113,7 +21113,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -21167,7 +21167,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "France",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -21185,7 +21185,7 @@
                 "unit_id": "2bee682e1868411d8c22f8316a03e554"
             },
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "France",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -21347,7 +21347,7 @@
         "owner": "Australia-Hungary",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Australia-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -21506,7 +21506,7 @@
         "owner": "Australia-Hungary",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Australia-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -21561,7 +21561,7 @@
         "owner": "Austria-Hungary",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Austria-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -21788,7 +21788,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -21806,7 +21806,7 @@
                 "unit_id": "e182dfc07bb64464b80090c4ede3db3b"
             },
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -21824,7 +21824,7 @@
                 "unit_id": "835f10535b1f42dca3302cbf034400bd"
             },
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -21951,7 +21951,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Artillery I",
+                "type": "Recoil-System Artillery",
                 "owner": "German Empire",
                 "health": 100.0,
                 "max_health": 100,
@@ -21969,7 +21969,7 @@
                 "unit_id": "ef12e590d4274b1c9c6f0c595be1dd7e"
             },
             {
-                "type": "Artillery I",
+                "type": "Recoil-System Artillery",
                 "owner": "German Empire",
                 "health": 100.0,
                 "max_health": 100,
@@ -22023,7 +22023,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -22041,7 +22041,7 @@
                 "unit_id": "a0c0556181254113b59d8f3ddb5c7422"
             },
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -22127,7 +22127,7 @@
         "owner": "Australia-Hungary",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Australia-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -22218,7 +22218,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -22724,7 +22724,7 @@
         "owner": "Austria-Hungary",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Austria-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -22919,7 +22919,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "France",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -22937,7 +22937,7 @@
                 "unit_id": "9d4218a738e8492e82e23e74d5558be1"
             },
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "France",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -23094,7 +23094,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -23321,7 +23321,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -23377,7 +23377,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -23432,7 +23432,7 @@
         "owner": "Australia-Hungary",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Australia-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -23488,7 +23488,7 @@
         "owner": "Romania",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Romania",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -23539,7 +23539,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -23625,7 +23625,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -23819,7 +23819,7 @@
         "owner": "Dominion of Canada",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Dominion of Canada",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -23906,7 +23906,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -24025,7 +24025,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -24148,7 +24148,7 @@
         "owner": "Dominion of Canada",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Dominion of Canada",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -24333,7 +24333,7 @@
         "owner": "Australia-Hungary",
         "units": [
             {
-                "type": "Artillery I",
+                "type": "Recoil-System Artillery",
                 "owner": "Australia-Hungary",
                 "health": 100.0,
                 "max_health": 100,
@@ -24387,7 +24387,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -24633,7 +24633,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -24689,7 +24689,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Artillery I",
+                "type": "Recoil-System Artillery",
                 "owner": "France",
                 "health": 100.0,
                 "max_health": 100,
@@ -24707,7 +24707,7 @@
                 "unit_id": "ffdad040d69b4a359e297b6f87a688cc"
             },
             {
-                "type": "Artillery I",
+                "type": "Recoil-System Artillery",
                 "owner": "France",
                 "health": 100.0,
                 "max_health": 100,
@@ -24934,7 +24934,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -25058,7 +25058,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "France",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -25076,7 +25076,7 @@
                 "unit_id": "54cde6c87e3641baaf5a2dc882703b90"
             },
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "France",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -25131,7 +25131,7 @@
         "owner": "Austria-Hungary",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Austria-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -25185,7 +25185,7 @@
         "owner": "Austria-Hungary",
         "units": [
             {
-                "type": "Artillery I",
+                "type": "Recoil-System Artillery",
                 "owner": "Austria-Hungary",
                 "health": 100.0,
                 "max_health": 100,
@@ -25516,7 +25516,7 @@
         "owner": "Australia-Hungary",
         "units": [
             {
-                "type": "Artillery I",
+                "type": "Recoil-System Artillery",
                 "owner": "Australia-Hungary",
                 "health": 100.0,
                 "max_health": 100,
@@ -25570,7 +25570,7 @@
         "owner": "Australia-Hungary",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Australia-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -25749,7 +25749,7 @@
         "owner": "Switzerland",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Switzerland",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -25870,7 +25870,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -25998,7 +25998,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "United States of America",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -26052,7 +26052,7 @@
         "owner": "Austria-Hungary",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Austria-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -26242,7 +26242,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -26401,7 +26401,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -26459,7 +26459,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -26511,7 +26511,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "France",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -26566,7 +26566,7 @@
         "owner": "Australia-Hungary",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Australia-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -26720,7 +26720,7 @@
         "owner": "Austria-Hungary",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Austria-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -26914,7 +26914,7 @@
         "owner": "Austria-Hungary",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Austria-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -26970,7 +26970,7 @@
         "owner": "Australia-Hungary",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Australia-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -27263,7 +27263,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "United States of America",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -27318,7 +27318,7 @@
         "owner": "Switzerland",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Switzerland",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -27547,7 +27547,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -28043,7 +28043,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Italy",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -28132,7 +28132,7 @@
         "owner": "Australia-Hungary",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Australia-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -28182,7 +28182,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -28256,7 +28256,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -28310,7 +28310,7 @@
         "owner": "Mongolia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Mongolia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -28328,7 +28328,7 @@
                 "unit_id": "8ed807645bc647bfbba87cdc9337c7e9"
             },
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Mongolia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -28452,7 +28452,7 @@
         "owner": "Austria-Hungary",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Austria-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -28507,7 +28507,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -28763,7 +28763,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Artillery I",
+                "type": "Recoil-System Artillery",
                 "owner": "France",
                 "health": 100.0,
                 "max_health": 100,
@@ -28781,7 +28781,7 @@
                 "unit_id": "6091a943ee574ea2b370f5141d717a7a"
             },
             {
-                "type": "Artillery I",
+                "type": "Recoil-System Artillery",
                 "owner": "France",
                 "health": 100.0,
                 "max_health": 100,
@@ -28835,7 +28835,7 @@
         "owner": "Romania",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Romania",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -28889,7 +28889,7 @@
         "owner": "Romania",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Romania",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -29048,7 +29048,7 @@
         "owner": "Australia-Hungary",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Australia-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -29103,7 +29103,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "France",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -29158,7 +29158,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -29243,7 +29243,7 @@
         "owner": "Mongolia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Mongolia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -29367,7 +29367,7 @@
         "owner": "Serbia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Serbia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -29385,7 +29385,7 @@
                 "unit_id": "e9a0346c563a490c88e1e174c8b0815c"
             },
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Serbia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -29500,7 +29500,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -29585,7 +29585,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Italy",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -29639,7 +29639,7 @@
         "owner": "Dominion of Canada",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Dominion of Canada",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -29734,7 +29734,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Italy",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -29791,7 +29791,7 @@
         "owner": "Austria-Hungary",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Austria-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -29938,7 +29938,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Italy",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -29956,7 +29956,7 @@
                 "unit_id": "5b2a227e1cad4785b8f0d4a9bd200964"
             },
             {
-                "type": "Artillery I",
+                "type": "Recoil-System Artillery",
                 "owner": "Italy",
                 "health": 100.0,
                 "max_health": 100,
@@ -30075,7 +30075,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Italy",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -30093,7 +30093,7 @@
                 "unit_id": "6e6de0eeb18a4a1faee6f9f3f436a76a"
             },
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Italy",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -30111,7 +30111,7 @@
                 "unit_id": "b9f1c303586843c6b60e12b2fb6c3e20"
             },
             {
-                "type": "Artillery I",
+                "type": "Recoil-System Artillery",
                 "owner": "Italy",
                 "health": 100.0,
                 "max_health": 100,
@@ -30372,7 +30372,7 @@
         "owner": "Bulgaria",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Bulgaria",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -30497,7 +30497,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "United States of America",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -30584,7 +30584,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Artillery I",
+                "type": "Recoil-System Artillery",
                 "owner": "Russia",
                 "health": 100.0,
                 "max_health": 100,
@@ -30739,7 +30739,7 @@
         "owner": "Austria-Hungary",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Austria-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -30897,7 +30897,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "United States of America",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -31123,7 +31123,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Italy",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -31176,7 +31176,7 @@
         "owner": "Austria-Hungary",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Austria-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -31264,7 +31264,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -31383,7 +31383,7 @@
         "owner": "Spain",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Spain",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -31571,7 +31571,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Italy",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -31826,7 +31826,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "France",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -31882,7 +31882,7 @@
         "owner": "Serbia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Serbia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -31900,7 +31900,7 @@
                 "unit_id": "c9af008ebfc8414c95330467475e4bd4"
             },
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Serbia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -31954,7 +31954,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -32180,7 +32180,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -32233,7 +32233,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "France",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -32288,7 +32288,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Artillery I",
+                "type": "Recoil-System Artillery",
                 "owner": "Russia",
                 "health": 100.0,
                 "max_health": 100,
@@ -32345,7 +32345,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -32363,7 +32363,7 @@
                 "unit_id": "26875ee31ac14517b48aaa7e3e46f4ac"
             },
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -32701,7 +32701,7 @@
         "owner": "Portugal",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Portugal",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -32873,7 +32873,7 @@
         "owner": "Austria-Hungary",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Austria-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -33196,7 +33196,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -33348,7 +33348,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "France",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -33535,7 +33535,7 @@
         "owner": "Bulgaria",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Bulgaria",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -33758,7 +33758,7 @@
         "owner": "Mongolia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Mongolia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -33846,7 +33846,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Ottoman Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -34005,7 +34005,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Italy",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -34023,7 +34023,7 @@
                 "unit_id": "c90c3c25a7774b09a556d9ad4a1565ce"
             },
             {
-                "type": "Artillery I",
+                "type": "Recoil-System Artillery",
                 "owner": "Italy",
                 "health": 100.0,
                 "max_health": 100,
@@ -34077,7 +34077,7 @@
         "owner": "Montenegro",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Montenegro",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -34131,7 +34131,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Italy",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -34188,7 +34188,7 @@
         "owner": "Australia-Hungary",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Australia-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -34262,7 +34262,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -34345,7 +34345,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -34634,7 +34634,7 @@
         "owner": "Spain",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Spain",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -34687,7 +34687,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "France",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -34831,7 +34831,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Ottoman Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -34884,7 +34884,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Ottoman Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -34939,7 +34939,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -35222,7 +35222,7 @@
         "owner": "Japan",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Japan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -35345,7 +35345,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -35363,7 +35363,7 @@
                 "unit_id": "b63cc87d2cd748239094435b7d5f5dcd"
             },
             {
-                "type": "Artillery I",
+                "type": "Recoil-System Artillery",
                 "owner": "Nationalist China",
                 "health": 100.0,
                 "max_health": 100,
@@ -35581,7 +35581,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -35635,7 +35635,7 @@
         "owner": "Mongolia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Mongolia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -35977,7 +35977,7 @@
         "owner": "Mongolia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Mongolia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -36065,7 +36065,7 @@
         "owner": "Australia-Hungary",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Australia-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -36150,7 +36150,7 @@
         "owner": "Japan",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Japan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -36275,7 +36275,7 @@
         "owner": "Serbia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Serbia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -36332,7 +36332,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Ottoman Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -36350,7 +36350,7 @@
                 "unit_id": "18cc36ae301846ac82dc7ffdb15ce19a"
             },
             {
-                "type": "Artillery I",
+                "type": "Recoil-System Artillery",
                 "owner": "Ottoman Empire",
                 "health": 100.0,
                 "max_health": 100,
@@ -36368,7 +36368,7 @@
                 "unit_id": "11fe3b8ecf754cdeb6621fe99813e742"
             },
             {
-                "type": "Artillery I",
+                "type": "Recoil-System Artillery",
                 "owner": "Ottoman Empire",
                 "health": 100.0,
                 "max_health": 100,
@@ -36424,7 +36424,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Ottoman Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -36477,7 +36477,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Artillery I",
+                "type": "Recoil-System Artillery",
                 "owner": "Ottoman Empire",
                 "health": 100.0,
                 "max_health": 100,
@@ -36634,7 +36634,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Ottoman Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -36839,7 +36839,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -36892,7 +36892,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -37014,7 +37014,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -37072,7 +37072,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -37162,7 +37162,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -37249,7 +37249,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Italy",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -37356,7 +37356,7 @@
         "owner": "Japan",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Japan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -37374,7 +37374,7 @@
                 "unit_id": "1f984435151149c281c92c9f9cd2eb52"
             },
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Japan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -37460,7 +37460,7 @@
         "owner": "Bulgaria",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Bulgaria",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -37551,7 +37551,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -37711,7 +37711,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Ottoman Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -38036,7 +38036,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "United States of America",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -38191,7 +38191,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -38276,7 +38276,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -38332,7 +38332,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Ottoman Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -38424,7 +38424,7 @@
         "owner": "Portugal",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Portugal",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -38544,7 +38544,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -38668,7 +38668,7 @@
         "owner": "Albania",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Albania",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -38928,7 +38928,7 @@
         "owner": "Japan",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Japan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -38946,7 +38946,7 @@
                 "unit_id": "ebcaf91bf65d48eea19e8d0a9bafe579"
             },
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Japan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -38997,7 +38997,7 @@
         "owner": "Japan",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Japan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -39015,7 +39015,7 @@
                 "unit_id": "0acf1bd0ff0849179fcbf5f8bc871799"
             },
             {
-                "type": "Artillery I",
+                "type": "Recoil-System Artillery",
                 "owner": "Japan",
                 "health": 100.0,
                 "max_health": 100,
@@ -39068,7 +39068,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "United States of America",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -39193,7 +39193,7 @@
         "owner": "Greece",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Greece",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -39285,7 +39285,7 @@
         "owner": "Mongolia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Mongolia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -39303,7 +39303,7 @@
                 "unit_id": "4b9b5b8900384e9a9867a079560b47ac"
             },
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Mongolia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -39361,7 +39361,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "United States of America",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -39722,7 +39722,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Ottoman Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -40052,7 +40052,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Italy",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -40143,7 +40143,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -40337,7 +40337,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -40392,7 +40392,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -40676,7 +40676,7 @@
         "owner": "Iran",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Iran",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -40730,7 +40730,7 @@
         "owner": "Japan",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Japan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -40748,7 +40748,7 @@
                 "unit_id": "4f7c5fa5da3444a58a682c70310efd4b"
             },
             {
-                "type": "Artillery I",
+                "type": "Recoil-System Artillery",
                 "owner": "Japan",
                 "health": 100.0,
                 "max_health": 100,
@@ -40800,7 +40800,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "United States of America",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -40883,7 +40883,7 @@
         "owner": "Japan",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Japan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -40901,7 +40901,7 @@
                 "unit_id": "626f6a4e078c4d82a55fdc23173096e7"
             },
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Japan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -40951,7 +40951,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "United States of America",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -41039,7 +41039,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "United States of America",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -41196,7 +41196,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Italy",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -41480,7 +41480,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Ottoman Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -41676,7 +41676,7 @@
         "owner": "Japan",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Japan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -41730,7 +41730,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -41748,7 +41748,7 @@
                 "unit_id": "cd42280cf16f4f3687a5ca5631f79609"
             },
             {
-                "type": "Artillery I",
+                "type": "Recoil-System Artillery",
                 "owner": "Nationalist China",
                 "health": 100.0,
                 "max_health": 100,
@@ -42008,7 +42008,7 @@
         "owner": "Japan",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Japan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -42097,7 +42097,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Artillery I",
+                "type": "Recoil-System Artillery",
                 "owner": "Ottoman Empire",
                 "health": 100.0,
                 "max_health": 100,
@@ -42316,7 +42316,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -42404,7 +42404,7 @@
         "owner": "Spain",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Spain",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -42458,7 +42458,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Ottoman Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -42531,7 +42531,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Ottoman Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -42791,7 +42791,7 @@
         "owner": "Iran",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Iran",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -42846,7 +42846,7 @@
         "owner": "Japan",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Japan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -43080,7 +43080,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -43098,7 +43098,7 @@
                 "unit_id": "77dc62c564944c11b7ba9ccd705ad6ae"
             },
             {
-                "type": "Artillery I",
+                "type": "Recoil-System Artillery",
                 "owner": "Nationalist China",
                 "health": 100.0,
                 "max_health": 100,
@@ -43153,7 +43153,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -43207,7 +43207,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -43225,7 +43225,7 @@
                 "unit_id": "07007316a2494f1dbe1b75c68efce574"
             },
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -43280,7 +43280,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -43367,7 +43367,7 @@
         "owner": "Spain",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Spain",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -43552,7 +43552,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -43804,7 +43804,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Ottoman Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -43892,7 +43892,7 @@
         "owner": "Mexico",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Mexico",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -44338,7 +44338,7 @@
         "owner": "Greece",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Greece",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -44391,7 +44391,7 @@
         "owner": "Iran",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Iran",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -44475,7 +44475,7 @@
         "owner": "Sinaloa",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Sinaloa",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -44493,7 +44493,7 @@
                 "unit_id": "00181cd769764284a8a3cdfa56294003"
             },
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Sinaloa",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -44618,7 +44618,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -44671,7 +44671,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -44759,7 +44759,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Ottoman Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -44814,7 +44814,7 @@
         "owner": "Japan",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Japan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -44951,7 +44951,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -45135,7 +45135,7 @@
         "owner": "Japan",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Japan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -45188,7 +45188,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "United Kingdom",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -45337,7 +45337,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Ottoman Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -45390,7 +45390,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -45505,7 +45505,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "United Kingdom",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -45948,7 +45948,7 @@
         "owner": "Iran",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Iran",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -46420,7 +46420,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -46472,7 +46472,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "United Kingdom",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -46664,7 +46664,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "France",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -46893,7 +46893,7 @@
         "owner": "Japan",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Japan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -47082,7 +47082,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "United States of America",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -47505,7 +47505,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Italy",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -47846,7 +47846,7 @@
         "owner": "Japan",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Japan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -48418,7 +48418,7 @@
         "owner": "Japan",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Japan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -48520,7 +48520,7 @@
         "owner": "Japan",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Japan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -49024,7 +49024,7 @@
         "owner": "British Raj",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "British Raj",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -49691,7 +49691,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -49745,7 +49745,7 @@
         "owner": "Japan",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Japan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -50239,7 +50239,7 @@
         "owner": "Japan",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Japan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -50489,7 +50489,7 @@
         "owner": "Chihuahua",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Chihuahua",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -50507,7 +50507,7 @@
                 "unit_id": "94da76ab0fc149e7bc26217db34e0476"
             },
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Chihuahua",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -50565,7 +50565,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Ottoman Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -50721,7 +50721,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "France",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -50774,7 +50774,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Ottoman Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -51092,7 +51092,7 @@
         "owner": "British Raj",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "British Raj",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -51218,7 +51218,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "United States of America",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -51306,7 +51306,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "France",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -51779,7 +51779,7 @@
         "owner": "Sinaloa",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Sinaloa",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -51797,7 +51797,7 @@
                 "unit_id": "2ad1186ebd7a4fa5ac2ef35141c50c19"
             },
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Sinaloa",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -51815,7 +51815,7 @@
                 "unit_id": "ac8551e705a8447680e104d33fc201c6"
             },
             {
-                "type": "Artillery I",
+                "type": "Recoil-System Artillery",
                 "owner": "Sinaloa",
                 "health": 100.0,
                 "max_health": 100,
@@ -52136,7 +52136,7 @@
         "owner": "Japan",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Japan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -52276,7 +52276,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Italy",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -52588,7 +52588,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Italy",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -52671,7 +52671,7 @@
         "owner": "Japan",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Japan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -52742,7 +52742,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "France",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -52946,7 +52946,7 @@
         "owner": "Sinaloa",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Sinaloa",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -52964,7 +52964,7 @@
                 "unit_id": "920834b375d94689bc08abd08fcebb0e"
             },
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Sinaloa",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -53056,7 +53056,7 @@
         "owner": "Iran",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Iran",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -53074,7 +53074,7 @@
                 "unit_id": "9383e146655a4c238918969173ffa06d"
             },
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Iran",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -53220,7 +53220,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Ottoman Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -53336,7 +53336,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Ottoman Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -53460,7 +53460,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Ottoman Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -53789,7 +53789,7 @@
         "owner": "Tibet",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Tibet",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -53907,7 +53907,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Italy",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -54064,7 +54064,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -54117,7 +54117,7 @@
         "owner": "British-Japanese Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "British-Japanese Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -54173,7 +54173,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Ottoman Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -54388,7 +54388,7 @@
         "owner": "British-Japanese Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "British-Japanese Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -54643,7 +54643,7 @@
         "owner": "Tibet",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Tibet",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -54731,7 +54731,7 @@
         "owner": "Mexico",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Mexico",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -54786,7 +54786,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "United States of America",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -54861,7 +54861,7 @@
         "owner": "British-Japanese Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "British-Japanese Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -54914,7 +54914,7 @@
         "owner": "British Raj",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "British Raj",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -55138,7 +55138,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "United Kingdom",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -55523,7 +55523,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -55576,7 +55576,7 @@
         "owner": "Iran",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Iran",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -55702,7 +55702,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -55890,7 +55890,7 @@
         "owner": "British-Japanese Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "British-Japanese Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -56216,7 +56216,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Ottoman Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -56289,7 +56289,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "United Kingdom",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -56378,7 +56378,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -56429,7 +56429,7 @@
         "owner": "Sinaloa",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Sinaloa",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -56447,7 +56447,7 @@
                 "unit_id": "e5c1d8602c7b488295c4d84a35c4f6d4"
             },
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Sinaloa",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -56465,7 +56465,7 @@
                 "unit_id": "cf221ae06b594188bedcc27aeacca6b9"
             },
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Sinaloa",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -56558,7 +56558,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -56678,7 +56678,7 @@
         "owner": "Emirate of Jabal Shammar",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Emirate of Jabal Shammar",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -56835,7 +56835,7 @@
         "owner": "Mexico",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Mexico",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -57096,7 +57096,7 @@
         "owner": "British Raj",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "British Raj",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -57292,7 +57292,7 @@
         "owner": "Mexico",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Mexico",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -57410,7 +57410,7 @@
         "owner": "British Raj",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "British Raj",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -57561,7 +57561,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Ottoman Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -57978,7 +57978,7 @@
         "owner": "Bhutan",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Bhutan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -58177,7 +58177,7 @@
         "owner": "Iran",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Iran",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -58299,7 +58299,7 @@
         "owner": "Nepal",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Nepal",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -58794,7 +58794,7 @@
         "owner": "Sinaloa",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Sinaloa",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -58812,7 +58812,7 @@
                 "unit_id": "308e5cd9c41548208ed89a27c2eeb794"
             },
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Sinaloa",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -58830,7 +58830,7 @@
                 "unit_id": "c9703b9656224238aa1ec51d4804f93c"
             },
             {
-                "type": "Artillery I",
+                "type": "Recoil-System Artillery",
                 "owner": "Sinaloa",
                 "health": 100.0,
                 "max_health": 100,
@@ -58848,7 +58848,7 @@
                 "unit_id": "a20b32ae4c2143188ea4ba1cc8c6e15d"
             },
             {
-                "type": "Artillery I",
+                "type": "Recoil-System Artillery",
                 "owner": "Sinaloa",
                 "health": 100.0,
                 "max_health": 100,
@@ -58866,7 +58866,7 @@
                 "unit_id": "dbf38784039b44ab8775b4add38012f8"
             },
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Sinaloa",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -58989,7 +58989,7 @@
         "owner": "British Raj",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "British Raj",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -59079,7 +59079,7 @@
         "owner": "British Raj",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "British Raj",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -59136,7 +59136,7 @@
         "owner": "British Raj",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "British Raj",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -59222,7 +59222,7 @@
         "owner": "British Raj",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "British Raj",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -59277,7 +59277,7 @@
         "owner": "Mexico",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Mexico",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -59366,7 +59366,7 @@
         "owner": "British-Japanese Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "British-Japanese Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -59523,7 +59523,7 @@
         "owner": "British Raj",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "British Raj",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -59611,7 +59611,7 @@
         "owner": "Saudi Arabia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Saudi Arabia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -59736,7 +59736,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -60146,7 +60146,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -60300,7 +60300,7 @@
         "owner": "Japan",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Japan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -61222,7 +61222,7 @@
         "owner": "Mexico",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Mexico",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -61240,7 +61240,7 @@
                 "unit_id": "255461a886554ca0a7b5ec1eb226b6fd"
             },
             {
-                "type": "Artillery I",
+                "type": "Recoil-System Artillery",
                 "owner": "Mexico",
                 "health": 100.0,
                 "max_health": 100,
@@ -61258,7 +61258,7 @@
                 "unit_id": "ec75ab3104244179b6c8d66bdeb7706b"
             },
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Mexico",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -61491,7 +61491,7 @@
         "owner": "Mexico",
         "units": [
             {
-                "type": "Artillery I",
+                "type": "Recoil-System Artillery",
                 "owner": "Mexico",
                 "health": 100.0,
                 "max_health": 100,
@@ -61580,7 +61580,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -61774,7 +61774,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -62158,7 +62158,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -62213,7 +62213,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "United Kingdom",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -62300,7 +62300,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "United Kingdom",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -62440,7 +62440,7 @@
         "owner": "Mexico",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Mexico",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -62596,7 +62596,7 @@
         "owner": "British Raj",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "British Raj",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -62961,7 +62961,7 @@
         "owner": "British Raj",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "British Raj",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -63049,7 +63049,7 @@
         "owner": "Zapatistas",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Zapatistas",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -63067,7 +63067,7 @@
                 "unit_id": "8d264bc12c574c5088e18210527326b5"
             },
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Zapatistas",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -63085,7 +63085,7 @@
                 "unit_id": "196d060f1e854fbe9b928fdd86093ca9"
             },
             {
-                "type": "Militia I",
+                "type": "Modern Militia",
                 "owner": "Zapatistas",
                 "health": 500.0,
                 "max_health": 500,
@@ -63103,7 +63103,7 @@
                 "unit_id": "8c937d0d176f4b15bf9699f5c378aa3e"
             },
             {
-                "type": "Militia I",
+                "type": "Modern Militia",
                 "owner": "Zapatistas",
                 "health": 500.0,
                 "max_health": 500,
@@ -63121,7 +63121,7 @@
                 "unit_id": "9b954e7735344a6b9a531c6f7e6925f3"
             },
             {
-                "type": "Militia I",
+                "type": "Modern Militia",
                 "owner": "Zapatistas",
                 "health": 500.0,
                 "max_health": 500,
@@ -63139,7 +63139,7 @@
                 "unit_id": "4b046548d5624462b1773ec5d3d9d9dd"
             },
             {
-                "type": "Militia I",
+                "type": "Modern Militia",
                 "owner": "Zapatistas",
                 "health": 500.0,
                 "max_health": 500,
@@ -63157,7 +63157,7 @@
                 "unit_id": "34a43b96df934d2db87ffea5c3261702"
             },
             {
-                "type": "Militia I",
+                "type": "Modern Militia",
                 "owner": "Zapatistas",
                 "health": 500.0,
                 "max_health": 500,
@@ -63175,7 +63175,7 @@
                 "unit_id": "d0f5cfc8d3ec43258d453bc397ad5fe6"
             },
             {
-                "type": "Militia I",
+                "type": "Modern Militia",
                 "owner": "Zapatistas",
                 "health": 500.0,
                 "max_health": 500,
@@ -63301,7 +63301,7 @@
         "owner": "Mexico",
         "units": [
             {
-                "type": "Artillery I",
+                "type": "Recoil-System Artillery",
                 "owner": "Mexico",
                 "health": 100.0,
                 "max_health": 100,
@@ -63426,7 +63426,7 @@
         "owner": "Oman",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Oman",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -63810,7 +63810,7 @@
         "owner": "Cuba",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Cuba",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -63964,7 +63964,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -64017,7 +64017,7 @@
         "owner": "Portugal",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Portugal",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -64109,7 +64109,7 @@
         "owner": "Emirate of Nedj and Hasa",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Emirate of Nedj and Hasa",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -64304,7 +64304,7 @@
         "owner": "British Raj",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "British Raj",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -64322,7 +64322,7 @@
                 "unit_id": "826737b7168a4d9f8f4576627828436b"
             },
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "British Raj",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -64643,7 +64643,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -64697,7 +64697,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "France",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -64788,7 +64788,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -64839,7 +64839,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "France",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -65071,7 +65071,7 @@
         "owner": "British Raj",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "British Raj",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -65497,7 +65497,7 @@
         "owner": "French Indochina",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "French Indochina",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -65515,7 +65515,7 @@
                 "unit_id": "22280e12eba1445a925e0b92ea19415f"
             },
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "French Indochina",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -65670,7 +65670,7 @@
         "owner": "British Raj",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "British Raj",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -65796,7 +65796,7 @@
         "owner": "Mexico",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Mexico",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -66381,7 +66381,7 @@
         "owner": "British-Japanese Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "British-Japanese Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -66632,7 +66632,7 @@
         "owner": "British Raj",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "British Raj",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -68119,7 +68119,7 @@
         "owner": "British Raj",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "British Raj",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -68579,7 +68579,7 @@
         "owner": "Nicaragua",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "United States of America",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -68838,7 +68838,7 @@
         "owner": "Portugal",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Portugal",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -68925,7 +68925,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Italy",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -69436,7 +69436,7 @@
         "owner": "Aunt Fanny's Hot Pretzels",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Aunt Fanny's Hot Pretzels",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -69596,7 +69596,7 @@
         "owner": "Thailand",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Thailand",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -69746,7 +69746,7 @@
         "owner": "Darfur",
         "units": [
             {
-                "type": "Militia I",
+                "type": "Modern Militia",
                 "owner": "Darfur",
                 "health": 500.0,
                 "max_health": 500,
@@ -70227,7 +70227,7 @@
         "owner": "Thailand",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Thailand",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -70607,7 +70607,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Italy",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -71288,7 +71288,7 @@
         "owner": "Darfur",
         "units": [
             {
-                "type": "Militia I",
+                "type": "Modern Militia",
                 "owner": "Darfur",
                 "health": 500.0,
                 "max_health": 500,
@@ -71505,7 +71505,7 @@
         "owner": "Venezuela",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Venezuela",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -72155,7 +72155,7 @@
         "owner": "British Raj",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "British Raj",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -72304,7 +72304,7 @@
         "owner": "British Raj",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "British Raj",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -72662,7 +72662,7 @@
         "owner": "Colombia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Colombia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -73007,7 +73007,7 @@
         "owner": "Ethiopia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Ethiopia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -73458,7 +73458,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Italy",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -73892,7 +73892,7 @@
         "owner": "French Indochina",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "French Indochina",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -74338,7 +74338,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "United Kingdom",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -75212,7 +75212,7 @@
         "owner": "Ethiopia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Ethiopia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -76642,7 +76642,7 @@
         "owner": "Adventure Cat Sailing Charters",
         "units": [
             {
-                "type": "Militia I",
+                "type": "Modern Militia",
                 "owner": "Adventure Cat Sailing Charters",
                 "health": 500.0,
                 "max_health": 500,
@@ -76660,7 +76660,7 @@
                 "unit_id": "4b28d825eb4446c3a7ee4b88db5dc623"
             },
             {
-                "type": "Militia I",
+                "type": "Modern Militia",
                 "owner": "Adventure Cat Sailing Charters",
                 "health": 500.0,
                 "max_health": 500,
@@ -76678,7 +76678,7 @@
                 "unit_id": "b548eb943e2442e39f8e969a6f152e50"
             },
             {
-                "type": "Militia I",
+                "type": "Modern Militia",
                 "owner": "Adventure Cat Sailing Charters",
                 "health": 500.0,
                 "max_health": 500,
@@ -76696,7 +76696,7 @@
                 "unit_id": "ec39f9a0ed1848f7a61425048aa02213"
             },
             {
-                "type": "Militia I",
+                "type": "Modern Militia",
                 "owner": "Adventure Cat Sailing Charters",
                 "health": 500.0,
                 "max_health": 500,
@@ -76714,7 +76714,7 @@
                 "unit_id": "e54651619020446a8deb54ed3af4aecd"
             },
             {
-                "type": "Militia I",
+                "type": "Modern Militia",
                 "owner": "Adventure Cat Sailing Charters",
                 "health": 500.0,
                 "max_health": 500,
@@ -77017,7 +77017,7 @@
         "owner": "Liberia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Liberia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -77107,7 +77107,7 @@
         "owner": "Ethiopia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Ethiopia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -77228,7 +77228,7 @@
         "owner": "Ecuador",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Ecuador",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -77344,7 +77344,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "France",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -77807,7 +77807,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "United Kingdom",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -77979,7 +77979,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Italy",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -78063,7 +78063,7 @@
         "owner": "Ecuador",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Ecuador",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -78081,7 +78081,7 @@
                 "unit_id": "8c2f104588794ef1bdaa822d48c5b418"
             },
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Ecuador",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -78940,7 +78940,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -79313,7 +79313,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Italy",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -80801,7 +80801,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "United Kingdom",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -80904,7 +80904,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "France",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -80972,7 +80972,7 @@
         "owner": "Dutch East Indies",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Dutch East Indies",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -81319,7 +81319,7 @@
         "owner": "Dutch East Indies",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Dutch East Indies",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -82305,7 +82305,7 @@
         "owner": "Dutch East Indies",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Dutch East Indies",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -82691,7 +82691,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -82709,7 +82709,7 @@
                 "unit_id": "9d969e45c2864764b803c0337c4355a8"
             },
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -83265,7 +83265,7 @@
         "owner": "Peru",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Peru",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -83445,7 +83445,7 @@
         "owner": "Brazil",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Brazil",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -83600,7 +83600,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -84516,7 +84516,7 @@
         "owner": "Belgian Congo",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Belgian Congo",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -84638,7 +84638,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -84722,7 +84722,7 @@
         "owner": "Australia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Australia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -85427,7 +85427,7 @@
         "owner": "Bolivia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Bolivia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -85644,7 +85644,7 @@
         "owner": "Dutch East Indies",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Dutch East Indies",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -85988,7 +85988,7 @@
         "owner": "Brazil",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Brazil",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -87241,7 +87241,7 @@
         "owner": "Brazil",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Brazil",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -87721,7 +87721,7 @@
         "owner": "Brazil",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Brazil",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -87963,7 +87963,7 @@
         "owner": "Portugal",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Portugal",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -88850,7 +88850,7 @@
         "owner": "Paraguay",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Paraguay",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -88998,7 +88998,7 @@
         "owner": "French Madagascar",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "French Madagascar",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -89295,7 +89295,7 @@
         "owner": "Portugal",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Portugal",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -90221,7 +90221,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "United Kingdom",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -91309,7 +91309,7 @@
         "owner": "Uruguay",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Uruguay",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -92243,7 +92243,7 @@
         "owner": "Chile",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Chile",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -92297,7 +92297,7 @@
         "owner": "Argentina",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Argentina",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -92966,7 +92966,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -93221,7 +93221,7 @@
         "owner": "Union of South Africa",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Union of South Africa",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -93338,7 +93338,7 @@
         "owner": "Australia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Australia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -93834,7 +93834,7 @@
         "owner": "Australia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Australia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -94551,7 +94551,7 @@
         "owner": "Union of South Africa",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Union of South Africa",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -94959,7 +94959,7 @@
         "owner": "New Zealand",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "New Zealand",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -95268,7 +95268,7 @@
         "owner": "Australia",
         "units": [
             {
-                "type": "Infantry Type 1914",
+                "type": "Supported Rifle Infantry",
                 "owner": "Australia",
                 "health": 1200.0,
                 "max_health": 1200,

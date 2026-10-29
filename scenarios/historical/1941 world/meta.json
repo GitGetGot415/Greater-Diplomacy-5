@@ -423,7 +423,7 @@
                         {
                             "type": "Join Faction",
                             "target": "German Reich",
-                            "unit_type": "Infantry Type 1910",
+                            "unit_type": "Supported Rifle Infantry",
                             "message": "heeeelp ;-;",
                             "ai_generate": false
                         }
@@ -522,7 +522,7 @@
                         {
                             "type": "Join Faction",
                             "target": "United Kingdom",
-                            "unit_type": "Infantry Type 1910",
+                            "unit_type": "Supported Rifle Infantry",
                             "message": "arsenal of democracy incoming",
                             "ai_generate": false
                         }
@@ -551,7 +551,7 @@
                         {
                             "type": "Declare War",
                             "target": "Japan",
-                            "unit_type": "Infantry Type 1910",
+                            "unit_type": "Supported Rifle Infantry",
                             "message": "this was inevitable",
                             "ai_generate": false
                         }
@@ -696,7 +696,7 @@
                         {
                             "type": "Accept Proposal",
                             "target": "Vichy France",
-                            "unit_type": "Infantry Type 1910",
+                            "unit_type": "Supported Rifle Infantry",
                             "message": "oh hell yeah",
                             "ai_generate": false
                         }
@@ -2586,7 +2586,7 @@
                         {
                             "type": "Accept Proposal",
                             "target": "Brazil",
-                            "unit_type": "Infantry Type 1910",
+                            "unit_type": "Supported Rifle Infantry",
                             "message": "sure why not",
                             "ai_generate": false
                         }
@@ -2608,7 +2608,7 @@
                         {
                             "type": "Accept Proposal",
                             "target": "United States of America",
-                            "unit_type": "Infantry Type 1910",
+                            "unit_type": "Supported Rifle Infantry",
                             "message": "we are so back",
                             "ai_generate": false
                         }
@@ -2630,7 +2630,7 @@
                         {
                             "type": "Accept Proposal",
                             "target": "Mexico",
-                            "unit_type": "Infantry Type 1910",
+                            "unit_type": "Supported Rifle Infantry",
                             "message": "sure why not",
                             "ai_generate": false
                         }
@@ -2751,28 +2751,28 @@
                         {
                             "type": "Declare War",
                             "target": "Philippines",
-                            "unit_type": "Infantry Type 1910",
+                            "unit_type": "Supported Rifle Infantry",
                             "message": "southern strike doctrine",
                             "ai_generate": false
                         },
                         {
                             "type": "Declare War",
                             "target": "British Malaya",
-                            "unit_type": "Infantry Type 1910",
+                            "unit_type": "Supported Rifle Infantry",
                             "message": "southern strike doctrine",
                             "ai_generate": false
                         },
                         {
                             "type": "Declare War",
                             "target": "Dutch East Indies",
-                            "unit_type": "Infantry Type 1910",
+                            "unit_type": "Supported Rifle Infantry",
                             "message": "southern strike doctrine",
                             "ai_generate": false
                         },
                         {
                             "type": "Invite to Faction",
                             "target": "Thailand",
-                            "unit_type": "Infantry Type 1910",
+                            "unit_type": "Supported Rifle Infantry",
                             "message": "join us or we invade you",
                             "ai_generate": false
                         }
@@ -2801,7 +2801,7 @@
                         {
                             "type": "Declare War",
                             "target": "Thailand",
-                            "unit_type": "Infantry Type 1910",
+                            "unit_type": "Supported Rifle Infantry",
                             "message": "well we warned you",
                             "ai_generate": false
                         }
@@ -2897,7 +2897,7 @@
                         {
                             "type": "Join Faction",
                             "target": "United Kingdom",
-                            "unit_type": "Infantry Type 1910",
+                            "unit_type": "Supported Rifle Infantry",
                             "message": "is it alright if we join",
                             "ai_generate": false
                         }
@@ -3255,7 +3255,7 @@
                         {
                             "type": "Reject Proposal",
                             "target": "United States of America",
-                            "unit_type": "Infantry Type 1910",
+                            "unit_type": "Supported Rifle Infantry",
                             "message": "you're not chinese what are you doing",
                             "ai_generate": false
                         }
@@ -5254,7 +5254,7 @@
                         {
                             "type": "Join Faction",
                             "target": "United Kingdom",
-                            "unit_type": "Infantry Type 1910",
+                            "unit_type": "Supported Rifle Infantry",
                             "message": "is it alright if we join",
                             "ai_generate": false
                         }
@@ -5494,7 +5494,7 @@
                         {
                             "type": "Accept Proposal",
                             "target": "Japan",
-                            "unit_type": "Infantry Type 1910",
+                            "unit_type": "Supported Rifle Infantry",
                             "message": "ok",
                             "ai_generate": false
                         }
@@ -11503,7 +11503,7 @@
                         {
                             "type": "Declare War",
                             "target": "Vichy France",
-                            "unit_type": "Infantry Type 1910",
+                            "unit_type": "Supported Rifle Infantry",
                             "message": "vive la france libre!!!",
                             "ai_generate": false
                         }
@@ -14326,7 +14326,7 @@
                         {
                             "type": "Reject Proposal",
                             "target": "Vichy France",
-                            "unit_type": "Infantry Type 1910",
+                            "unit_type": "Supported Rifle Infantry",
                             "message": "go home petain you're drunk",
                             "ai_generate": false
                         }

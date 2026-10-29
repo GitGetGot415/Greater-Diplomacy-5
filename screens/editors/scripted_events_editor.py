@@ -478,7 +478,8 @@ class _ActRow:
         data = data or {}
         self.type = data.get("type", "Declare War")
         self.target = data.get("target", "None")
-        self.unit_type = data.get("unit_type", "Infantry Type 1910")
+        self.unit_type = data.get("unit_type") or queries.get_unit_for_family_year(
+            queries.get_unit_library(), "Infantry Type", c.DEFAULT_EQUIPMENT_YEAR)
         self.ai_generate = bool(data.get("ai_generate", False))
         self.send_up_to = bool(data.get("send_up_to", False))
         self.field = TextField(0, 0, 220, 28, str(data.get("message", "")))

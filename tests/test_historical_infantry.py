@@ -26,13 +26,15 @@ class HistoricalInfantryTests(unittest.TestCase):
     def setUp(self):
         self.tree = queries.get_tech_tree()
         self.library = queries.get_unit_library()
-        self.early = {name: stats for name, stats in self.library.items()
+        self.equipment = {name: stats for name, stats in self.library.items()
+                          if stats["metadata"]["research"]["tech"] in c.DATED_UNIT_RESEARCH_TRACKS}
+        self.early = {name: stats for name, stats in self.equipment.items()
                       if stats["metadata"]["research"].get("year", 1910) < 1910}
         self.context = BackendState()
         self.context.session.player_country = "A"
         self.country = {"research": {}, "research_queue": [], "at_war_with": []}
         for resource in c.ECON_RESOURCE_KEYS:
-            self.country[resource] = 1 + sum(stats[f"cost_{resource}"] for stats in self.early.values())
+            self.country[resource] = 1 + sum(stats[f"cost_{resource}"] for stats in self.equipment.values())
         self.context.world.nation_data["A"] = self.country
         self.province = {"id": 1, "json_key": "home", "owner": "A", "cores": ["A"],
                          "is_coastal": True, "buildings": ["Basic Factory"],
@@ -42,7 +44,7 @@ class HistoricalInfantryTests(unittest.TestCase):
 
     def test_early_equipment_unlocks_agree_for_players_and_ai(self):
         self.assertTrue(self.early)
-        for name in self.early:
+        for name in self.equipment:
             tech, level = queries.get_unit_research_requirement(name, self.library)
             with self.subTest(unit=name):
                 before, after = {tech: level - 1}, {tech: level}
@@ -66,40 +68,39 @@ class HistoricalInfantryTests(unittest.TestCase):
         for gate in c.VEHICLE_INFANTRY_GATES:
             self.assertIsNone(queries.get_infantry_family_year(gate, research, self.tree))
 
-    def test_1910_start_and_early_upgrades_reach_original_units(self):
+    def test_1910_start_and_early_upgrades_reach_the_available_stage(self):
         research = queries.get_time_appropriate_research(1910)
         for name, stats in self.early.items():
             metadata = stats["metadata"]
             tech = metadata["research"]["tech"]
             family = metadata["family"]
-            original = next(unit for unit, data in self.library.items()
-                            if data["metadata"]["family"] == family
-                            and data["metadata"]["research"].get("year") == 1910)
+            original = queries.get_unit_for_family_year(self.library, family, 1910)
             with self.subTest(unit=name):
                 self.assertTrue(queries.is_unit_unlocked(original, research, self.library))
-                self.assertEqual(queries.get_upgrade_target(name, research, self.library, self.tree), original)
+                expected = original if original != name else None
+                self.assertEqual(queries.get_upgrade_target(name, research, self.library, self.tree), expected)
                 self.assertIsNone(queries.get_upgrade_target(name, {tech: 0}, self.library, self.tree))
 
-    def test_trucks_still_require_the_original_final_cavalry_year(self):
+    def test_trucks_require_the_final_cavalry_stage_in_1930(self):
         requirement = self.tree["trucks"]["req"]["cavalry"]
-        self.assertEqual(self.tree["cavalry"]["years"][requirement - 1],
-                         migrations.LEGACY_INFANTRY_RESEARCH_YEARS["cavalry"][-1])
+        self.assertEqual(requirement, self.tree["cavalry"]["max_lvl"])
+        self.assertEqual(self.tree["cavalry"]["years"][requirement - 1], 1930)
         self.assertFalse(queries.check_tech_requirements({"cavalry": requirement - 1}, self.tree["trucks"]["req"]))
         self.assertTrue(queries.check_tech_requirements({"cavalry": requirement}, self.tree["trucks"]["req"]))
 
     def test_original_roman_identifiers_keep_their_metadata_free_compatibility(self):
+        aliases = migrations.equipment_stage_aliases()
         for family in ("Militia", "Cavalry", "Artillery", "Heavy Artillery"):
             name = f"{family} I"
             with self.subTest(unit=name):
-                current = queries.get_unit_metadata(name, self.library)
-                older = migrations.legacy_unit_metadata(name, self.library[name])
-                self.assertEqual(older["research"], current["research"])
-                self.assertEqual(older["tier_order"], current["tier_order"])
+                older = migrations.legacy_unit_metadata(name, {})
+                target = queries.get_unit_for_family_year(self.library, family, older["tier_order"])
+                self.assertEqual(aliases[name], target)
 
     def test_research_completion_uses_each_historical_stage(self):
         self.context.session.player_country = "Spectator"
         self.context.world.time_manager = SimpleNamespace(year=1910, month_index=0, day=1)
-        for name in self.early:
+        for name in self.equipment:
             tech, level = queries.get_unit_research_requirement(name, self.library)
             self.country["research"] = {tech: level - 1}
             self.country["research_queue"] = [queries.build_research_project(tech, 0)]
@@ -109,7 +110,7 @@ class HistoricalInfantryTests(unittest.TestCase):
                 self.assertTrue(queries.is_unit_unlocked(name, self.country["research"], self.library))
 
     def test_paid_local_recruitment_reads_historical_unit_data(self):
-        for name, stats in self.early.items():
+        for name, stats in self.equipment.items():
             tech, level = queries.get_unit_research_requirement(name, self.library)
             self.country["research"] = {tech: level}
             before = copy.deepcopy(self.country)
@@ -122,7 +123,7 @@ class HistoricalInfantryTests(unittest.TestCase):
 
     def test_both_multiplayer_production_paths_use_host_research_and_costs(self):
         driver = MapRealtimeDriver(self.context)
-        for name in self.early:
+        for name in self.equipment:
             tech, level = queries.get_unit_research_requirement(name, self.library)
             self.country["research"] = {tech: level}
             intent = {"unit_type": name}
@@ -161,6 +162,72 @@ class HistoricalInfantryTests(unittest.TestCase):
                     edited = queries.edited_research_levels({}, tech, level, True, self.tree)
                     self.assertEqual(edited[tech], level)
 
+    def test_every_vehicle_stage_uses_its_gate_and_shared_infantry_generation(self):
+        final = {key: entry["max_lvl"] for key, entry in self.tree.items()}
+        vehicles = {name: stats for name, stats in self.library.items()
+                    if stats["metadata"]["research"]["tech"] in c.VEHICLE_INFANTRY_GATES}
+        self.assertTrue(vehicles)
+        for name, stats in vehicles.items():
+            metadata = stats["metadata"]
+            gate = c.VEHICLE_INFANTRY_GATES[metadata["research"]["tech"]]
+            level = self.tree["infantry_type"]["years"].index(metadata["tier_order"]) + 1
+            research = dict(final, infantry_type=level)
+            with self.subTest(unit=name):
+                self.assertTrue(queries.is_unit_unlocked(name, research, self.library))
+                self.assertFalse(queries.is_unit_unlocked(name, dict(research, **{gate: 0}), self.library))
+                self.assertFalse(queries.is_unit_unlocked(name, dict(research, infantry_type=level - 1), self.library))
+                self.assertIn(name, ai_tech_eval.units_unlocked_by(
+                    "infantry_type", dict(research, infantry_type=level - 1), self.library))
+                self.assertEqual(queries.get_unit_for_family_tier(
+                    self.library, metadata["family"], metadata["tier_order"]), name)
+
+    def test_old_equipment_references_convert_in_all_save_parts_and_repeat_safely(self):
+        aliases = migrations.equipment_stage_aliases()
+        self.assertTrue(aliases)
+        for older, current in aliases.items():
+            with self.subTest(older=older):
+                unit = {"type": older, "owner": "A", "unit_id": "keep-id", "health": 25, "max_health": 100,
+                        "order": {"type": "UPGRADE", "target_type": older}, "unknown": [7]}
+                province = {"units": [unit, {"type": f"Convoy ({older})", "original_type": older},
+                                       {"type": "Jet Transport I", "air_cargo": [copy.deepcopy(unit)]}],
+                            "unit_queue": [{"unit_type": older, "turns_remaining": 3, "paid_materials": 17}]}
+                saved = {"version": "v46", "nation_data": {"A": {
+                    "custom_production_units": [older, older],
+                    "scripted_events": [{"actions": [{"type": "Spawn Unit", "unit_type": older}]}]}},
+                    "provinces": {"P": copy.deepcopy(province)}, "unknown": {"keep": "unchanged"}}
+                raw = {"P": province}
+                history = {"1": {"provinces": {"P": copy.deepcopy(province)}}}
+                migrations.upgrade_save(saved, raw, history)
+                self.assertEqual(saved["nation_data"]["A"]["custom_production_units"], [current])
+                self.assertEqual(saved["nation_data"]["A"]["scripted_events"][0]["actions"][0]["unit_type"], current)
+                for converted in (raw["P"], saved["provinces"]["P"], history["1"]["provinces"]["P"]):
+                    self.assertEqual(converted["units"][0]["type"], current)
+                    self.assertEqual(converted["units"][0]["order"]["target_type"], current)
+                    self.assertEqual(converted["units"][1]["type"], f"Convoy ({current})")
+                    self.assertEqual(converted["units"][1]["original_type"], current)
+                    self.assertEqual(converted["units"][2]["air_cargo"][0]["type"], current)
+                    self.assertEqual(converted["unit_queue"], [{"unit_type": current, "turns_remaining": 3, "paid_materials": 17}])
+                self.assertTrue(queries.apply_library_stats(unit, self.library))
+                self.assertEqual(unit["health"], self.library[current]["health"] / 4)
+                self.assertEqual((unit["unit_id"], unit["unknown"]), ("keep-id", [7]))
+                once = copy.deepcopy((saved, raw, history))
+                migrations.upgrade_save(saved, raw, history)
+                self.assertEqual((saved, raw, history), once)
+
+    def test_tournament_conversion_preserves_intents_and_projection_agreement(self):
+        older, current = next(iter(migrations.equipment_stage_aliases().items()))
+        move = {"nation_data": {"custom_production_units": [older]},
+                "provinces": {"P": {"unit_queue": [{"unit_type": older}]}},
+                "aircraft_orders": [], "release_subjects": [],
+                "player_intents": [{"type": "province_queue", "province_id": 1,
+                                    "queue": "unit_queue", "items": [{"unit_type": older}]}]}
+        migrations.upgrade_move(move)
+        self.assertEqual(move["provinces"]["P"]["unit_queue"][0]["unit_type"], current)
+        self.assertEqual(move["player_intents"][0]["items"][0]["unit_type"], current)
+        once = copy.deepcopy(move)
+        migrations.upgrade_move(move)
+        self.assertEqual(move, once)
+
     def test_current_save_round_trip_preserves_early_research_units_and_progress(self):
         game = sample_map_screen()
         research = queries.get_time_appropriate_research(c.START_YEAR)
@@ -189,7 +256,9 @@ class HistoricalInfantryTests(unittest.TestCase):
     def test_disk_load_migrates_legacy_history_then_preserves_a_new_save(self):
         game = sample_map_screen()
         province = next(iter(game.map_data.values()))
-        province["units"] = []
+        province["units"] = [{"type": "Infantry Type 1911", "owner": game.player_country,
+                              "unit_id": "legacy-unit", "health": 25, "max_health": 100,
+                              "order": {"type": "MOVE", "path": []}}]
         province["unit_queue"] = []
         province["buildings"] = ["Basic Factory"]
         province["resources"] = {}
@@ -207,16 +276,22 @@ class HistoricalInfantryTests(unittest.TestCase):
             (root / "meta.json").write_text(json.dumps(saved))
             history_io.write(directory, history)
             loaded = load_map.load_backend_state(directory, history_turn=1, skip_initial_income=True)
-            expected = self.tree["infantry_type"]["years"].index(1910) + 1
+            expected = sum(year <= 1910 for year in self.tree["infantry_type"]["years"])
             self.assertEqual(loaded.nation_data[game.player_country]["research"]["infantry_type"], expected)
             self.assertEqual(loaded.default_research["infantry_type"], expected)
             self.assertEqual(loaded.history["1"]["nation_data"][game.player_country]["research"]["infantry_type"], expected)
+            loaded_unit = next(iter(loaded.map_data.values()))["units"][0]
+            unit_type = migrations.equipment_stage_aliases()["Infantry Type 1911"]
+            self.assertEqual(loaded_unit["type"], unit_type)
+            self.assertEqual(loaded_unit["unit_id"], "legacy-unit")
+            self.assertEqual(loaded_unit["health"], self.library[unit_type]["health"] / 4)
             current = queries.build_save_dict(loaded)
             (root / "meta.json").write_text(json.dumps(current))
             history_io.write(directory, loaded.history)
             restored = load_map.load_backend_state(directory, skip_initial_income=True)
             self.assertEqual(restored.nation_data[game.player_country]["research"],
                              loaded.nation_data[game.player_country]["research"])
+            self.assertEqual(next(iter(restored.map_data.values()))["units"], [loaded_unit])
 
 
 class HistoricalResearchMigrationTests(unittest.TestCase):
@@ -256,3 +331,28 @@ class HistoricalResearchMigrationTests(unittest.TestCase):
             with self.subTest(source=source), self.assertRaises(ValueError):
                 migrations.migrate_infantry_research({"research_years": {"infantry_type": source},
                     "nation_data": {"A": {"research": {"infantry_type": 1}}}}, self.tree)
+
+    def test_condensed_stages_keep_completed_years_and_unfinished_points(self):
+        tree = {"infantry_type": {"years": [1800, 1905, 1915, 1925]}}
+        saved = {"research_years": {"infantry_type": [1800, 1905, 1910, 1911, 1912, 1913]},
+                 "nation_data": {"A": {"research": {"infantry_type": 5},
+                    "research_queue": [{"tech_name": "infantry_type", "points_remaining": 73}],
+                    "research_progress": {"infantry_type": 73}}}}
+        migrations.migrate_infantry_research(saved, tree)
+        self.assertEqual(saved["nation_data"]["A"]["research"]["infantry_type"], 2)
+        self.assertEqual(saved["nation_data"]["A"]["research_queue"][0]["points_remaining"], 73)
+        self.assertEqual(saved["nation_data"]["A"]["research_progress"], {"infantry_type": 73})
+
+    def test_finished_condensed_tracks_drop_pending_projects_at_the_new_cap(self):
+        tree = {"infantry_type": {"years": [1800, 1905]}}
+        saved = {"research_years": {"infantry_type": [1800, 1905, 1910]},
+                 "nation_data": {"A": {"research": {"infantry_type": 2},
+                    "research_queue": [{"tech_name": "infantry_type", "points_remaining": 73},
+                                       {"tech_name": "unrelated", "points_remaining": 50}],
+                    "research_progress": {"infantry_type": 73}, "current_research": "infantry_type"}}}
+        migrations.migrate_infantry_research(saved, tree)
+        country = saved["nation_data"]["A"]
+        self.assertEqual(country["research"], {"infantry_type": 2})
+        self.assertEqual(country["research_queue"], [{"tech_name": "unrelated", "points_remaining": 50}])
+        self.assertEqual(country["research_progress"], {})
+        self.assertIsNone(country["current_research"])

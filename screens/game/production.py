@@ -127,10 +127,8 @@ class Production_Screen(GameState):
         # game state, so it isn't persisted - see start_with_province.
         self.infantry_mode = "normal"
 
-        # Same idea, but one per "Infantry Type <year>" entry in the Custom
-        # section - each custom infantry row gets its own independent Mot/Mec
-        # toggle. Keyed by the plain "Infantry Type <year>" name stored in
-        # custom_production_units.
+        # Each custom infantry stage has its own vehicle toggle.
+        # custom_production_units stores the regular infantry stage name.
         self.custom_infantry_modes = {}
 
         # Mirrors infantry_mode/custom_infantry_modes above, but for the single
@@ -527,9 +525,7 @@ class Production_Screen(GameState):
             render_unit_button(unit_name, "green", x_offset=INFANTRY_MODE_BLOCK_WIDTH)
 
         def render_custom_infantry_row(base_name, btn_color):
-            """Same Mot/Mec/IFV toggle as render_infantry_row, but for one specific
-            "Infantry Type <year>" entry in the Custom section - each such entry
-            gets its own independent toggle (see self.custom_infantry_modes)."""
+            """Give each custom infantry stage its own vehicle toggle."""
             mode, prefix = resolve_variant(self.custom_infantry_modes.get(base_name, "normal"), INFANTRY_VARIANTS)
             self.custom_infantry_modes[base_name] = mode
             unit_name = (queries.get_unit_for_family_tier(self.unit_library, prefix, queries.get_unit_tier(base_name, context=self.map_screen), context=self.map_screen)
@@ -545,9 +541,8 @@ class Production_Screen(GameState):
             render_mode_toggles(mode, set_mode, INFANTRY_VARIANTS)
             render_unit_button(unit_name, btn_color, x_offset=INFANTRY_MODE_BLOCK_WIDTH)
 
-        def highest_unlocked_roman_tier(group_name):
-            """Highest tier of a roman-numeral-leveled family (Artillery, Cavalry,
-            Militia, Tanks, Navies, ...) the player's research covers, or None."""
+        def highest_unlocked_tier(group_name):
+            """Return the latest unlocked equipment stage or numbered tier in a family."""
             highest_lvl, highest_unlocked = -1, None
             for name in self.unit_library:
                 if queries.get_base_unit_name(name, context=self.map_screen) == group_name:
@@ -563,7 +558,7 @@ class Production_Screen(GameState):
             production button switches to Heavy Artillery, which shares
             Artillery's own research level exactly (see
             c.UNIT_TECH_KEY_OVERRIDES) instead of getting a row of its own."""
-            highest_unlocked = highest_unlocked_roman_tier("Artillery")
+            highest_unlocked = highest_unlocked_tier("Artillery")
             if highest_unlocked is None:
                 return
 
@@ -621,8 +616,7 @@ class Production_Screen(GameState):
                     if year is not None:
                         highest_unlocked = queries.get_unit_for_family_tier(self.unit_library, group_name, year, context=self.map_screen)
                 else:
-                    # Let the Roman Numeral block perfectly handle Cavalry, Tanks, Navies, and Militia
-                    highest_unlocked = highest_unlocked_roman_tier(group_name)
+                    highest_unlocked = highest_unlocked_tier(group_name)
 
                 if highest_unlocked:
                     unlocked_units.append(highest_unlocked)
