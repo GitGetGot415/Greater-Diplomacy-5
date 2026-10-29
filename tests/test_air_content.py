@@ -94,6 +94,19 @@ class AirCategoryMigrationTests(unittest.TestCase):
 
 
 class AirRulesTests(unittest.TestCase):
+    def test_heavier_than_air_flight_gates_biplane_research(self):
+        from data.generators.generate_data import build_research_template_text
+
+        tree = queries.get_tech_tree()
+        flight = tree["heavier_than_air_flight"]
+        self.assertEqual(flight["category"], "AIR")
+        self.assertEqual(flight["display_name"], "Heavier Than Air Flight")
+        self.assertEqual(flight["years"], [1906])
+        self.assertEqual(flight, json.loads(build_research_template_text())["heavier_than_air_flight"])
+        requirements = queries.get_tech_requirements(tree["biplane"], 1)
+        self.assertFalse(queries.check_tech_requirements({}, requirements, 1))
+        self.assertTrue(queries.check_tech_requirements({"heavier_than_air_flight": 1}, requirements, 1))
+
     def test_jet_transport_content_matches_its_generated_recipes(self):
         from data.generators.generate_data import build_research_template_text, build_unit_data_text
 
@@ -248,7 +261,7 @@ class AirRulesTests(unittest.TestCase):
     def test_air_research_notes_follow_the_unit_capabilities(self):
         for key, (_, _, name) in AIR_CONTENT.items():
             with self.subTest(unit=name):
-                if key == "jet_engine":
+                if name not in queries.get_unit_library():
                     self.assertEqual(queries.get_air_unit_traits(name), [])
                     continue
                 with mock.patch.object(queries, "air_order_radius", wraps=queries.air_order_radius) as radius:
@@ -297,7 +310,7 @@ class AirRulesTests(unittest.TestCase):
         library = queries.get_unit_library()
         for key, (_, _, name) in AIR_CONTENT.items():
             with self.subTest(tech=key):
-                if key == "jet_engine":
+                if name not in library:
                     self.assertNotIn(name, library)
                     self.assertEqual(ai_tech_eval.units_unlocked_by(key, {}, library), ())
                     continue
@@ -354,7 +367,7 @@ class AirRulesTests(unittest.TestCase):
 
     def test_icons_are_real_png_files(self):
         for key, (_, _, name) in AIR_CONTENT.items():
-            folder = "images" if key == "jet_engine" else "classic"
+            folder = "images" if name not in queries.get_unit_library() else "classic"
             path = Path(c.ASSETS_ROOT_DIR) / folder / f"{queries.get_base_unit_name(name)}.png"
             with self.subTest(icon=path):
                 self.assertEqual(path.read_bytes()[:8], b"\x89PNG\r\n\x1a\n")
@@ -580,7 +593,7 @@ class AirScreenTests(unittest.TestCase):
                 recruitment_rows += 1
                 self.assertTrue(self.production.other_start_y <= y < self.production.other_end_y)
         expected = [name for key, (_, _, name) in AIR_CONTENT.items()
-                    if key != "jet_engine" and not queries.is_unit_obsolete(
+                    if name in queries.get_unit_library() and not queries.is_unit_obsolete(
                         queries.get_base_unit_name(name), self.map.nation_data[self.country]["research"])]
         self.assertEqual(air_rows, len(expected))
         self.assertEqual(recruitment_rows, 1)

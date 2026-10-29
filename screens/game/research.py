@@ -344,7 +344,7 @@ class Research_Screen(GameState):
             "battleship": y2,
             "aircraft_carrier": y2,
             "submarine": y3,
-            "biplane": y1, "biplane_bomber": y2, "zeppelin": y2, "piston_fighter": y1, "piston_bomber": y3,
+            "heavier_than_air_flight": y1, "biplane": y1, "biplane_bomber": y2, "zeppelin": y2, "piston_fighter": y1, "piston_bomber": y3,
             "v1_flying_bomb": y4, "v2_rocket": y4,
             "monoplane_transport": y2,
             "jet_engine": y2, "jet_fighter": y1, "jet_bomber": y2, "jet_transport": y3,

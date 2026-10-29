@@ -239,7 +239,7 @@ EQUIPMENT_STAGES = {
         (1890, "Magazine Carbines",       600,  300, 0,  2,  800,  2000, 0,   3,   None, (5, 4, {'health': 20, 'cost_materials': 20})),
         (1910, "Supported Cavalry",       700,  300, 0,  2,  900,  2000, 0,   3,   None, (2, 4, {'health': 50, 'cost_materials': 50})),
         (1918, "Mounted Rifle Cavalry",   800,  300, 0,  2,  1000, 2000, 0,   3,   None, (3, 4, {'health': 50, 'cost_materials': 50})),
-        (1930, "Modern Cavalry",          1000, 300, 0,  2,  1200, 2000, 0,   3,   None, (5, 3, {'health': 100, 'cost_materials': 50})),
+        (1930, "Modern Cavalry",          1000, 300, 0,  2,  1200, 2000, 0,   3,   None, (5, 4, {'health': 50, 'cost_materials': 50})),
         # hey maybe get rid of cavalry after 1930???
     ],
     "militia": [
@@ -702,19 +702,20 @@ RESEARCH_RECIPES = [
         ("resource_refining",          "INDUSTRY", 100, 900,  {},                        yr(1911, 1, 100), {}),
     ],
     [
-        #ID                     CAT    LVLS COST  REQ                                     YRS              OPTIONS
-        ('biplane',             'AIR', 5,   1200, {},                                     yr(1910, 4, 5),  {"NAME": 'Biplane Fighter'}),
-        ('biplane_bomber',      'AIR', 3,   1800, {'biplane': 1},                         yr(1915, 5, 3),  {"NAME": 'Biplane Bomber'}),
-        ('zeppelin',            'AIR', 1,   1800, {},                                     [1910],          {"NAME": 'Zeppelin'}),
-        ('piston_fighter',      'AIR', 5,   1200, {'biplane': 5},                         yr(1930, 4, 5),  {"NAME": 'Monoplane Fighter'}),
-        ('piston_bomber',       'AIR', 5,   1800, {'biplane_bomber': 3},                  yr(1930, 5, 5),  {"NAME": 'Monoplane Bomber'}),
-        ('monoplane_transport', 'AIR', 3,   1800, {'biplane_bomber': 3},                  yr(1930, 5, 3),  {"NAME": 'Monoplane Transport'}),
-        ('v1_flying_bomb',      'AIR', 1,   900,  {},                                     [1940],          {"NAME": 'V1 Flying Bomb'}),
-        ('v2_rocket',           'AIR', 1,   1200, {'v1_flying_bomb': 1},                  [1945],          {"NAME": 'V2 Rocket'}),
-        ('jet_engine',          'AIR', 1,   2400, {},                                     [1945],          {"NAME": 'Jet Engine'}),
-        ('jet_fighter',         'AIR', 51,  1800, {'piston_fighter': 5, 'jet_engine': 1}, yr(1950, 4, 51), {"NAME": 'Jet Fighter'}),
-        ('jet_bomber',          'AIR', 40,  2400, {'piston_bomber': 5, 'jet_fighter': 1}, yr(1955, 5, 40), {"NAME": 'Jet Bomber'}),
-        ('jet_transport',       'AIR', 40,  2400, {'piston_bomber': 5},                   yr(1955, 5, 40), {"NAME": 'Jet Transport'}),
+        #ID                         CAT    LVLS COST  REQ                                     YRS              OPTIONS
+        ('heavier_than_air_flight', 'AIR', 1,   900,  {},                                     [1906],          {"NAME": 'Heavier Than Air Flight'}),
+        ('biplane',                 'AIR', 5,   1200, {'heavier_than_air_flight': 1},         yr(1910, 4, 5),  {"NAME": 'Biplane Fighter'}),
+        ('biplane_bomber',          'AIR', 3,   1800, {'biplane': 1},                         yr(1915, 5, 3),  {"NAME": 'Biplane Bomber'}),
+        ('zeppelin',                'AIR', 1,   1800, {},                                     [1910],          {"NAME": 'Zeppelin'}),
+        ('piston_fighter',          'AIR', 5,   1200, {'biplane': 5},                         yr(1930, 4, 5),  {"NAME": 'Monoplane Fighter'}),
+        ('piston_bomber',           'AIR', 5,   1800, {'biplane_bomber': 3},                  yr(1930, 5, 5),  {"NAME": 'Monoplane Bomber'}),
+        ('monoplane_transport',     'AIR', 3,   1800, {'biplane_bomber': 3},                  yr(1930, 5, 3),  {"NAME": 'Monoplane Transport'}),
+        ('v1_flying_bomb',          'AIR', 1,   900,  {},                                     [1940],          {"NAME": 'V1 Flying Bomb'}),
+        ('v2_rocket',               'AIR', 1,   1200, {'v1_flying_bomb': 1},                  [1945],          {"NAME": 'V2 Rocket'}),
+        ('jet_engine',              'AIR', 1,   2400, {},                                     [1945],          {"NAME": 'Jet Engine'}),
+        ('jet_fighter',             'AIR', 51,  1800, {'piston_fighter': 5, 'jet_engine': 1}, yr(1950, 4, 51), {"NAME": 'Jet Fighter'}),
+        ('jet_bomber',              'AIR', 40,  2400, {'piston_bomber': 5, 'jet_fighter': 1}, yr(1955, 5, 40), {"NAME": 'Jet Bomber'}),
+        ('jet_transport',           'AIR', 40,  2400, {'piston_bomber': 5},                   yr(1955, 5, 40), {"NAME": 'Jet Transport'}),
     ],
 ]
 
