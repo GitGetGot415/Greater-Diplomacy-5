@@ -377,32 +377,32 @@ CAR_SPEED = piecewise([(0, 2, 0), (1, 3, 0), (4, 4, 0)])
 LIGHT_TANK_SPEED = piecewise([(0, 2, 0), (3, 3, 0)])
 
 LAND_UNIT_RECIPES = [
-    #NAME                          TIERS     HP              ATK             DEF           SPD               MAT               MAN   FUEL          TIME  BOMB   OPTIONS
-    ("WW1 Tank",                   single(), 3000,           1500,           100,          1,                6000,             1000, 300,          6,    None,  {}),
-    ("WW1 Armored Car",            single(), 1000,           300,            50,           2,                3000,             1000, 100,          4,    None,  {}),
-    ("Armored Car",                rs(34),   lin(1000, 100), lin(400, 100),  lin(60, 10),  CAR_SPEED,        lin(3000, 200),   1000, lin(100, 5),  4,    None,  {}),
-    ("Light Tank",                 rs(34),   lin(1800, 200), lin(1200, 150), lin(80, 10),  LIGHT_TANK_SPEED, lin(5000, 500),   1000, lin(150, 5),  5,    None,  {}),
-    ("Medium Tank",                rs(4),    lin(2500, 500), lin(2400, 600), lin(150, 25), 2,                lin(9000, 1000),  1000, lin(200, 10), 6,    None,  {}),
-    ("Heavy Tank",                 rs(4),    lin(3000, 500), lin(3000, 500), lin(350, 50), 1,                lin(12000, 1000), 1000, lin(200, 10), 6,    None,  {}),
-    ("Super Heavy Tank",           rs(5),    5000,           5000,           lin(550, 50), 1,                lin(16000, 2000), 1000, lin(240, 20), 6,    None,  {}),
-    ("Landkreuzer P.1000 Ratte",   single(), 10000,          6000,           400,          1,                50000,            2000, 1000,         10,   1000,  {"division_suffix": "1000"}),
-    ("Landkreuzer P.1500 Monster", single(), 15000,          8000,           500,          1,                60000,            2000, 1200,         12,   1200,  {"division_suffix": "1500"}),
-    ("Railgun",                    single(), 10000,          10000,          500,          1,                80000,            2000, 3000,         10,   10000, {}),
-    ("Main Battle Tank",           rs(22),   lin(5000, 500), lin(5000, 500), lin(250, 25), 2,                lin(16000, 1000), 1000, lin(240, 10), 6,    None,  {}),
-    ("WW1 Railroad Gun",           single(), 1200,           500,            0,            1,                5000,             1000, 0,            6,    500,   {}),
-    ("WW2 Railroad Gun",           single(), 2000,           800,            0,            1,                8000,             1000, 0,            6,    800,   {}),
+    #NAME                          TIERS     HP              ATK             DEF           SPD               MAT               MAN   FUEL          TIME  BOMB           OPTIONS
+    ("WW1 Tank",                   single(), 3000,           1500,           100,          1,                6000,             1000, 300,          6,    None,          {}),
+    ("WW1 Armored Car",            single(), 1000,           300,            50,           2,                3000,             1000, 100,          4,    None,          {}),
+    ("Armored Car",                rs(34),   lin(1000, 100), lin(400, 100),  lin(60, 10),  CAR_SPEED,        lin(3000, 200),   1000, lin(100, 5),  4,    None,          {}),
+    ("Light Tank",                 rs(34),   lin(1800, 200), lin(1200, 150), lin(80, 10),  LIGHT_TANK_SPEED, lin(5000, 500),   1000, lin(150, 5),  5,    None,          {}),
+    ("Medium Tank",                rs(4),    lin(2500, 500), lin(2400, 600), lin(150, 25), 2,                lin(9000, 1000),  1000, lin(200, 10), 6,    None,          {}),
+    ("Heavy Tank",                 rs(4),    lin(3000, 500), lin(3000, 500), lin(350, 50), 1,                lin(12000, 1000), 1000, lin(200, 10), 6,    None,          {}),
+    ("Super Heavy Tank",           rs(5),    5000,           5000,           lin(550, 50), 1,                lin(16000, 2000), 1000, lin(240, 20), 6,    None,          {}),
+    ("Landkreuzer P.1000 Ratte",   single(), 10000,          6000,           400,          1,                50000,            2000, 1000,         10,   1000,          {"division_suffix": "1000"}),
+    ("Landkreuzer P.1500 Monster", single(), 15000,          8000,           500,          1,                60000,            2000, 1200,         12,   1200,          {"division_suffix": "1500"}),
+    ("Railgun",                    single(), 10000,          10000,          500,          1,                80000,            2000, 3000,         10,   10000,         {}),
+    ("Main Battle Tank",           rs(22),   lin(5000, 500), lin(5000, 500), lin(250, 25), 2,                lin(16000, 1000), 1000, lin(240, 10), 6,    None,          {}),
+    ("WW1 Railroad Gun",           single(), 1200,           500,            0,            1,                5000,             1000, 0,            6,    500,           {}),
+    ("WW2 Railroad Gun",           single(), 2000,           800,            0,            1,                8000,             1000, 0,            6,    800,           {}),
 ]
 
 NAVAL_UNIT_RECIPES = [
-    #NAME                TIERS     HP              ATK             DEF           SPD  MAT               MAN   FUEL          TIME  BOMB           OPTIONS
-    ("Carrack",          single(), 1000,           400,            0,            1,   2000,             500,  0,            4,    None,          {}),
-    ("Ironclad",         single(), 2000,           800,            200,          1,   8000,             1000, 100,          6,    None,          {}),
-    ("Pre-Dreadnought",  single(), 3000,           1200,           300,          1,   12000,            2000, 250,          8,    None,          {}),
-    ("Dreadnought",      single(), 4000,           2400,           400,          1,   20000,            2000, 300,          10,   300,           {}),
-    ("Battleship",       single(), 6000,           4000,           600,          1,   20000,            2000, 400,          10,   500,           {}),
-    ("Destroyer",        rs(36),   lin(2400, 400), lin(1200, 300), lin(200, 20), 1,   lin(10000, 500),  1000, lin(250, 5),  8,    None,          {}),
-    ("Submarine",        rs(36),   lin(1200, 200), lin(600, 100),  0,            1,   lin(8000, 400),   1000, lin(150, 5),  6,    None,          {}),
-    ("Aircraft Carrier", rs(25),   lin(800, 200),  lin(600, 120),  lin(200, 20), 1,   lin(20000, 1000), 2000, lin(500, 25), 10,   lin(600, 120), {}),
+    #NAME                          TIERS     HP              ATK             DEF           SPD               MAT               MAN   FUEL          TIME  BOMB           OPTIONS
+    ("Carrack",                    single(), 1000,           400,            0,            1,                2000,             500,  0,            4,    None,          {}),
+    ("Ironclad",                   single(), 2000,           800,            200,          1,                8000,             1000, 100,          6,    None,          {}),
+    ("Pre-Dreadnought",            single(), 3000,           1200,           300,          1,                12000,            2000, 250,          8,    None,          {}),
+    ("Dreadnought",                single(), 4000,           2400,           400,          1,                20000,            2000, 300,          10,   300,           {}),
+    ("Battleship",                 single(), 6000,           4000,           600,          1,                20000,            2000, 400,          10,   500,           {}),
+    ("Destroyer",                  rs(36),   lin(2400, 400), lin(1200, 300), lin(200, 20), 1,                lin(10000, 500),  1000, lin(250, 5),  8,    None,          {}),
+    ("Submarine",                  rs(36),   lin(1200, 200), lin(600, 100),  0,            1,                lin(8000, 400),   1000, lin(150, 5),  6,    None,          {}),
+    ("Aircraft Carrier",           rs(25),   lin(800, 200),  lin(600, 120),  lin(200, 20), 1,                lin(20000, 1000), 2000, lin(500, 25), 10,   lin(600, 120), {}),
 ]
 
 AIR_UNIT_RECIPES = [
@@ -611,18 +611,18 @@ RESEARCH_RECIPES = [
     [
         #ID                            CAT         LVLS  COST  REQ                                            YRS                             OPTIONS
         ("basic_factory",              "INDUSTRY", 1,    1200, {},                                            yr(1800, 1, 1),                 {}),
-        ("waltham_system",             "INDUSTRY", 1,    1200, {"basic_factory": 1},                          [1815],                         {"NAME": "Waltham System", "BONUS": [{"building_families": ["Basic Factory"], "flat_outputs": {"materials": 50}}]}),
-        ("mechanical_reaper",          "INDUSTRY", 1,    1200, {"waltham_system": 1},                         [1830],                         {"NAME": "Mechanical Reaper", "BONUS": [{"building_families": ["Basic Factory"], "flat_outputs": {"manpower": 50}}]}),
-        ("metal_shaper",               "INDUSTRY", 1,    1200, {"mechanical_reaper": 1},                      [1835],                         {"NAME": "Metal Shaper", "BONUS": [{"building_families": ["Basic Factory"], "flat_outputs": {"materials": 50}}]}),
+        ("waltham_system",             "INDUSTRY", 1,    1200, {"basic_factory": 1},                          [1815],                         {"NAME": "Waltham System", "BONUS": [{"building_families": ["Basic Factory"], "flat_outputs": {"materials": 20}}]}),
+        ("mechanical_reaper",          "INDUSTRY", 1,    1200, {"waltham_system": 1},                         [1830],                         {"NAME": "Mechanical Reaper", "BONUS": [{"building_families": ["Basic Factory"], "flat_outputs": {"materials": 30}}]}),
+        ("metal_shaper",               "INDUSTRY", 1,    1200, {"mechanical_reaper": 1},                      [1835],                         {"NAME": "Metal Shaper", "BONUS": [{"building_families": ["Basic Factory"], "flat_outputs": {"materials": 40}}]}),
         ("steam_hammer",               "INDUSTRY", 1,    1200, {"metal_shaper": 1},                           [1840],                         {"NAME": "Steam Hammer", "BONUS": [{"building_families": ["Basic Factory"], "flat_outputs": {"materials": 50}}]}),
-        ("bessemer_process",           "INDUSTRY", 1,    1200, {"steam_hammer": 1},                           [1855],                         {"NAME": "Bessemer Process", "BONUS": [{"building_families": ["Basic Factory"], "flat_outputs": {"materials": 50}}]}),
+        ("bessemer_process",           "INDUSTRY", 1,    1200, {"steam_hammer": 1},                           [1855],                         {"NAME": "Bessemer Process", "BONUS": [{"building_families": ["Basic Factory"], "flat_outputs": {"materials": 60}}]}),
         ("electricity",                "INDUSTRY", 1,    1200, {"bessemer_process": 1},                       [1870],                         {"NAME": "Electricity", "BONUS": [{"building_families": ["Basic Factory"], "flat_outputs": {"materials": 50}}]}),
-        ("lightbulb",                  "INDUSTRY", 1,    1200, {"electricity": 1},                            [1880],                         {"NAME": "Lightbulb", "BONUS": [{"building_families": ["Basic Factory"], "flat_outputs": {"materials": 50}}]}),
-        ("industrial_air_compressor", "INDUSTRY", 1, 1200, {"lightbulb": 1}, [1890], {"NAME": "Industrial Air Compressor", "BONUS": [{"building_families": ["Basic Factory"], "flat_outputs": {"materials": 50}}]}),
-        ("diesel_engine", "INDUSTRY", 1, 1200, {"industrial_air_compressor": 1}, [1895], {"NAME": "Diesel Engine", "BONUS": [{"building_families": ["Basic Factory"], "flat_outputs": {"materials": 50}}]}),
+        ("lightbulb",                  "INDUSTRY", 1,    1200, {"electricity": 1},                            [1880],                         {"NAME": "Lightbulb", "BONUS": [{"building_families": ["Basic Factory"], "flat_outputs": {"materials": 40}}]}),
+        ("industrial_air_compressor",  "INDUSTRY", 1,    1200, {"lightbulb": 1},                              [1890],                         {"NAME": "Industrial Air Compressor", "BONUS": [{"building_families": ["Basic Factory"], "flat_outputs": {"materials": 50}}]}),
+        ("diesel_engine",              "INDUSTRY", 1,    1200, {"industrial_air_compressor": 1},              [1895],                         {"NAME": "Diesel Engine", "BONUS": [{"building_families": ["Basic Factory"], "flat_outputs": {"materials": 60}}]}),
         ("assembly_line",              "INDUSTRY", 1,    1200, {"factory": 1},                                [1905],                         {"NAME": "Assembly Line", "BONUS": [{"building_families": ["Basic Factory", "Factory"], "outputs": {"materials": 0.2}}]}),
         ("conveyor_belt",              "INDUSTRY", 1,    1200, {"factory": 2},                                [1915],                         {"NAME": "Conveyor Belt", "BONUS": [{"building_families": ["Basic Factory", "Factory"], "outputs": {"materials": 0.2}}]}),
-        ("continuous_assembly_line", "INDUSTRY", 1, 1200, {"factory": 3}, [1925], {"NAME": "Continuous Assembly Line", "BONUS": [{"building_families": ["Basic Factory", "Factory"], "outputs": {"materials": 0.2}}]}),
+        ("continuous_assembly_line",   "INDUSTRY", 1,    1200, {"factory": 3},                                [1925],                         {"NAME": "Continuous Assembly Line", "BONUS": [{"building_families": ["Basic Factory", "Factory"], "outputs": {"materials": 0.2}}]}),
         ("machine_tools",              "INDUSTRY", 1,    1200, {"factory": 4},                                [1935],                         {"NAME": "Machine Tools", "BONUS": [{"building_families": ["Basic Factory", "Factory"], "outputs": {"materials": 0.2}}]}),
         ("just_in_time_manufacturing", "INDUSTRY", 1,    1200, {"factory": 5},                                [1945],                         {"NAME": "Just In Time Manufacturing", "BONUS": [{"building_families": ["Basic Factory", "Factory"], "outputs": {"materials": 0.2}}]}),
         ("industrial_robot",           "INDUSTRY", 1,    1200, {"factory": 6},                                [1955],                         {"NAME": "Industrial Robot"}),
@@ -633,7 +633,7 @@ RESEARCH_RECIPES = [
         ("internet_of_things",         "INDUSTRY", 1,    1200, {"factory": 11},                               [2005],                         {"NAME": "Internet of Things"}),
         ("industry_4_0",               "INDUSTRY", 1,    1200, {"factory": 12},                               [2015],                         {"NAME": "Industry 4.0"}),
         ("industry_5_0",               "INDUSTRY", 1,    1200, {"factory": 13},                               [2025],                         {"NAME": "Industry 5.0"}),
-        ("factory",                    "INDUSTRY", 25,   1200, {"diesel_engine": 1},                              yr(1900, 10, 25),               {"GATES": {"2": {"assembly_line": 1}, "3": {"conveyor_belt": 1}, "4": {"continuous_assembly_line": 1}, "5": {"machine_tools": 1}, "6": {"just_in_time_manufacturing": 1}, "7": {"industrial_robot": 1}, "8": {"stanford_arm": 1}, "9": {"asea_irb_6": 1}, "10": {"computer_numerical_control": 1}, "11": {"3d_printing": 1}, "12": {"internet_of_things": 1}, "13": {"industry_4_0": 1}, "14": {"industry_5_0": 1}}}),
+        ("factory",                    "INDUSTRY", 25,   1200, {"diesel_engine": 1},                          yr(1900, 10, 25),               {"GATES": {"2": {"assembly_line": 1}, "3": {"conveyor_belt": 1}, "4": {"continuous_assembly_line": 1}, "5": {"machine_tools": 1}, "6": {"just_in_time_manufacturing": 1}, "7": {"industrial_robot": 1}, "8": {"stanford_arm": 1}, "9": {"asea_irb_6": 1}, "10": {"computer_numerical_control": 1}, "11": {"3d_printing": 1}, "12": {"internet_of_things": 1}, "13": {"industry_4_0": 1}, "14": {"industry_5_0": 1}}}),
         ("bergius_process",            "INDUSTRY", 1,    1200, {},                                            yr(1910, 1, 1),                 {}),
         ("fuel_refining",              "INDUSTRY", 50,   1200, {"bergius_process": 1},                        yr(1912, 2, 50),                {}),
         ("basic_recruitment",          "INDUSTRY", 1,    1200, {},                                            yr(1910, 1, 1),                 {}),
