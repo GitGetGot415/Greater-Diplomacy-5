@@ -7,11 +7,15 @@ from data import queries
 NEW_INDUSTRY_MILESTONES = (
     ("metal_shaper", "Metal Shaper", 1835),
     ("steam_hammer", "Steam Hammer", 1840),
+    ("electricity", "Electricity", 1870),
+    ("lightbulb", "Lightbulb", 1880),
     ("machine_tools", "Machine Tools", 1935),
     ("industrial_robot", "Industrial Robot", 1955),
     ("stanford_arm", "Stanford Arm", 1965),
     ("asea_irb_6", "ASEA IRB 6", 1975),
+    ("computer_numerical_control", "Computer Numerical Control", 1985),
     ("3d_printing", "3D Printing", 1995),
+    ("internet_of_things", "Internet of Things", 2005),
     ("industry_4_0", "Industry 4.0", 2015),
     ("industry_5_0", "Industry 5.0", 2025),
 )

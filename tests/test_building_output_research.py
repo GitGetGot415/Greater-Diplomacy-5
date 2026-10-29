@@ -263,7 +263,11 @@ class FactoryResearchContentTests(unittest.TestCase):
             self.assertGreater(bonus["flat_outputs"]["materials"], 0)
         self.assertEqual(tree["bessemer_process"]["req"], {"steam_hammer": 1})
         self.assertEqual(tree["assembly_line"]["req"], {"factory": 1})
-        self.assertEqual(tree["factory"]["req"], {"bessemer_process": 1})
+        self.assertEqual(tree["electricity"]["req"], {"bessemer_process": 1})
+        self.assertEqual(tree["lightbulb"]["req"], {"electricity": 1})
+        self.assertEqual(tree["factory"]["req"], {"lightbulb": 1})
+        self.assertEqual(tree["factory"]["level_reqs"]["10"], {"computer_numerical_control": 1})
+        self.assertEqual(tree["factory"]["level_reqs"]["12"], {"internet_of_things": 1})
         for target, requirements in tree["factory"]["level_reqs"].items():
             for gate in requirements:
                 self.assertEqual(tree[gate]["req"], {"factory": int(target) - 1})
@@ -275,7 +279,9 @@ class FactoryResearchContentTests(unittest.TestCase):
                                            ("assembly_line", "factory", 1),
                                            ("conveyor_belt", "factory", tree["conveyor_belt"]["req"]["factory"]),
                                            ("just_in_time_manufacturing", "factory", tree["just_in_time_manufacturing"]["req"]["factory"]),
-                                           ("factory", "bessemer_process", 1)):
+                                           ("electricity", "bessemer_process", 1),
+                                           ("lightbulb", "electricity", 1),
+                                           ("factory", "lightbulb", 1)):
             with self.subTest(tech=tech):
                 with self.assertRaises(ValueError):
                     queries.canonical_research_selection({"research": {}}, [tech], tree)
@@ -287,7 +293,7 @@ class FactoryResearchContentTests(unittest.TestCase):
         for tech in ("basic_factory", "bessemer_process", "assembly_line"):
             self.assertEqual(levels[tech], 1)
         self.assertEqual(levels["factory"], 2)
-        country = {"research": {"factory": 1, "bessemer_process": 1}}
+        country = {"research": {"factory": 1, "lightbulb": 1}}
         with self.assertRaises(ValueError):
             queries.canonical_research_selection(country, ["factory"], tree)
         country["research"]["assembly_line"] = 1
