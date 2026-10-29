@@ -13,6 +13,7 @@ needs to touch any other code.
 import sys
 import os
 import argparse
+import re
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 import data.constants as c
@@ -75,7 +76,15 @@ def render_unit_file(sections):
             current = widths.setdefault(layout, [0] * len(columns))
             for index, column in enumerate(columns):
                 current[index] = max(current[index], len(column))
+        previous_group = None
         for name, entry in block:
+            metadata = entry["metadata"]
+            group = (metadata["family"],
+                     re.sub(r'\s+[IVXLCDM]+$', '', metadata["tier_label"])
+                     if metadata["tier_kind"] == "stage" else None)
+            if previous_group is not None and group != previous_group:
+                lines.append("")
+            previous_group = group
             written += 1
             columns = [f'{dump_compact(key)}: {dump_compact(value)},' for key, value in entry.items()]
             padding = widths[tuple(entry)]
@@ -88,7 +97,7 @@ def render_unit_file(sections):
             name_column = (dump_compact(name) + ":").ljust(name_width)
             lines.append(f'    {name_column} {{{fields}}}{comma}')
         if block_index < len(sections) - 1:
-            lines.append("")
+            lines.extend(("", ""))
     lines.append("}")
     return "\r\n".join(lines) + "\r\n"
 

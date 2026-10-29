@@ -213,7 +213,7 @@ EQUIPMENT_STAGES = {
     "infantry_type": [
         #YR    NAME                           HP    ATK   DEF SPD MAT   MAN   FUEL TIME BOMB  UPGRADES
         (1800, "Flintlock Infantry",          600,  50,   0,  1,  200,  1000, 10,  2,   None, (5, 5, {'health': 10, 'attack': 2, 'cost_materials': 10})),
-        (1825, "Percussion Infantry",         640,  60,   0,  1,  240,  1000, 10,  2,   None, (5, 5, {'health': 10, 'attack': 2, 'cost_materials': 10})),
+        (1825, "Percussion Infantry",         640,  60,   0,  1,  250,  1000, 10,  2,   None, (5, 5, {'health': 10, 'attack': 2, 'cost_materials': 10})),
         (1850, "Rifle-Musket Infantry",       700,  70,   0,  1,  300,  1000, 10,  2,   None, (3, 5, {'health': 10, 'attack': 2, 'cost_materials': 10})),
         (1865, "Breech-Loading Infantry",     760,  75,   0,  1,  350,  1000, 10,  2,   None, (3, 4, {'health': 20, 'attack': 2, 'cost_materials': 13})),
         (1875, "Metallic-Cartridge Infantry", 820,  80,   0,  1,  390,  1000, 10,  2,   None, (3, 4, {'health': 17, 'attack': 2, 'cost_materials': 13})),
