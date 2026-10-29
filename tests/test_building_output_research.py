@@ -265,7 +265,7 @@ class FactoryResearchContentTests(unittest.TestCase):
         self.assertEqual(tree["assembly_line"]["req"], {"factory": 1})
         self.assertEqual(tree["electricity"]["req"], {"bessemer_process": 1})
         self.assertEqual(tree["lightbulb"]["req"], {"electricity": 1})
-        self.assertEqual(tree["factory"]["req"], {"lightbulb": 1})
+        self.assertEqual(tree["factory"]["req"], {"diesel_engine": 1})
         self.assertEqual(tree["factory"]["level_reqs"]["10"], {"computer_numerical_control": 1})
         self.assertEqual(tree["factory"]["level_reqs"]["12"], {"internet_of_things": 1})
         for target, requirements in tree["factory"]["level_reqs"].items():
@@ -281,7 +281,10 @@ class FactoryResearchContentTests(unittest.TestCase):
                                            ("just_in_time_manufacturing", "factory", tree["just_in_time_manufacturing"]["req"]["factory"]),
                                            ("electricity", "bessemer_process", 1),
                                            ("lightbulb", "electricity", 1),
-                                           ("factory", "lightbulb", 1)):
+                                           ("industrial_air_compressor", "lightbulb", 1),
+                                           ("diesel_engine", "industrial_air_compressor", 1),
+                                           ("continuous_assembly_line", "factory", 3),
+                                           ("factory", "diesel_engine", 1)):
             with self.subTest(tech=tech):
                 with self.assertRaises(ValueError):
                     queries.canonical_research_selection({"research": {}}, [tech], tree)
@@ -293,7 +296,7 @@ class FactoryResearchContentTests(unittest.TestCase):
         for tech in ("basic_factory", "bessemer_process", "assembly_line"):
             self.assertEqual(levels[tech], 1)
         self.assertEqual(levels["factory"], 2)
-        country = {"research": {"factory": 1, "lightbulb": 1}}
+        country = {"research": queries.edited_research_levels({}, "factory", 1, True, tree)}
         with self.assertRaises(ValueError):
             queries.canonical_research_selection(country, ["factory"], tree)
         country["research"]["assembly_line"] = 1

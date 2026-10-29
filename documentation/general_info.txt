@@ -269,7 +269,11 @@ Its keys are level numbers stored as strings. Each value uses the same requireme
 Example: "level_reqs": {"2": {"intermediate_tech": 1}} requires intermediate_tech for level 2 and all later levels.
 
 Base req requirements still apply. Intermediate technologies can require an earlier level of the same track.
-Factory-production milestones use this chain. Fuel, recruitment, and resource-refining tracks keep their separate prerequisites.
+Factory-production milestones use this chain.
+Industrial Air Compressor and Diesel Engine connect Lightbulb to the first factory level.
+Continuous Assembly Line connects factory levels 3 and 4.
+These technologies appear on industry row y1.
+ Fuel, recruitment, and resource-refining tracks keep their separate prerequisites.
 Current milestone names, dates, and factory level gates are in research_template.json and data/generators/recipes.py.
 Research selection, AI selection, timeline connections, and editor changes use queries.get_tech_requirements.
 Research details identify the levels that require an intermediate technology.
