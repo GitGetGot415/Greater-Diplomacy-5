@@ -240,12 +240,13 @@ EQUIPMENT_STAGES = {
         (1910, "Supported Cavalry",       700,  300, 0,  2,  900, 2000, 0,   3,   None, (2, 4, {'health': 50, 'cost_materials': 50})),
         (1918, "Mounted Rifle Cavalry",   800,  300, 0,  2,  1000, 2000, 0,   3,   None, (3, 4, {'health': 50, 'cost_materials': 50})),
         (1930, "Modern Cavalry",          1000, 300, 0,  2,  1200, 2000, 0,   3,   None, (5, 3, {'health': 100, 'cost_materials': 50})),
+        # hey maybe get rid of cavalry after 1930???
     ],
     "militia": [
         #YR    NAME                          HP    ATK  DEF SPD MAT  MAN   FUEL TIME BOMB  UPGRADES
-        (1800, "Local Militia",              200,  12,  0,  1,  100, 1000, 0,   1,   None, (4, 10, {'health': 20, 'attack': 2, 'cost_materials': 10})),
-        (1840, "Organized Militia",          280,  20,  0,  1,  150, 1000, 0,   1,   None, (3, 10, {'health': 20, 'attack': 3, 'cost_materials': 15})),
-        (1870, "Reserve Infantry",           360,  32,  0,  1,  210, 1000, 0,   1,   None, (3, 10, {'health': 20, 'attack': 3, 'cost_materials': 15})),
+        (1800, "Local Militia",              200,  12,  0,  1,  100, 1000, 0,   1,   None, (4, 10, {'health': 20, 'attack': 2, 'cost_materials': 5})),
+        (1840, "Organized Militia",          280,  20,  0,  1,  120, 1000, 0,   1,   None, (3, 10, {'health': 20, 'attack': 4, 'cost_materials': 10})),
+        (1870, "Reserve Infantry",           360,  32,  0,  1,  150, 1000, 0,   1,   None, (3, 10, {'health': 20, 'attack': 3, 'cost_materials': 10})),
         (1900, "Modern Militia",             440,  44,  0,  1,  270, 1000, 0,   1,   None, (3, 5, {'health': 40, 'attack': 4, 'cost_materials': 10})),
         (1915, "Rifle Militia",              600,  60,  0,  1,  300, 1000, 0,   1,   None, (4, 5, {'health': 80, 'attack': 8})),
         (1935, "Support-Weapon Militia",     1000, 100, 0,  1,  300, 1000, 0,   1,   None, (4, 5, {'health': 80, 'attack': 8})),
