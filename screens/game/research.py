@@ -365,7 +365,7 @@ class Research_Screen(GameState):
             "workshop": y1, "basic_factory": y1, "waltham_system": y1, "bessemer_process": y1,
             "electricity": y1, "lightbulb": y1,
             "industrial_air_compressor": y1, "diesel_engine": y1, "continuous_assembly_line": y1,
-            "metal_shaper": y1, "steam_hammer": y1, "machine_tools": y1,
+            "mechanical_reaper": y1, "metal_shaper": y1, "steam_hammer": y1, "machine_tools": y1,
             "industrial_robot": y1, "stanford_arm": y1, "asea_irb_6": y1,
             "computer_numerical_control": y1, "3d_printing": y1, "internet_of_things": y1,
             "industry_4_0": y1, "industry_5_0": y1,

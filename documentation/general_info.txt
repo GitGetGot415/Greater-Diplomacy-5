@@ -270,6 +270,7 @@ Example: "level_reqs": {"2": {"intermediate_tech": 1}} requires intermediate_tec
 
 Base req requirements still apply. Intermediate technologies can require an earlier level of the same track.
 Factory-production milestones use this chain.
+Mechanical Reaper connects Waltham System to Metal Shaper on industry row y1.
 Industrial Air Compressor and Diesel Engine connect Lightbulb to the first factory level.
 Continuous Assembly Line connects factory levels 3 and 4.
 These technologies appear on industry row y1.

@@ -35,7 +35,8 @@
     
     "basic_factory": { "category": "INDUSTRY", "max_lvl": 1, "cost": 1200, "req": {}, "years": [1800] },
     "waltham_system": { "category": "INDUSTRY", "display_name": "Waltham System", "max_lvl": 1, "cost": 1200, "req": {"basic_factory": 1}, "years": [1815], "building_output_bonuses": [{"building_families": ["Basic Factory"], "flat_outputs": {"materials": 50}}] },
-    "metal_shaper": { "category": "INDUSTRY", "display_name": "Metal Shaper", "max_lvl": 1, "cost": 1200, "req": {"waltham_system": 1}, "years": [1835], "building_output_bonuses": [{"building_families": ["Basic Factory"], "flat_outputs": {"materials": 50}}] },
+    "mechanical_reaper": { "category": "INDUSTRY", "display_name": "Mechanical Reaper", "max_lvl": 1, "cost": 1200, "req": {"waltham_system": 1}, "years": [1830], "building_output_bonuses": [{"building_families": ["Basic Factory"], "flat_outputs": {"manpower": 50}}] },
+    "metal_shaper": { "category": "INDUSTRY", "display_name": "Metal Shaper", "max_lvl": 1, "cost": 1200, "req": {"mechanical_reaper": 1}, "years": [1835], "building_output_bonuses": [{"building_families": ["Basic Factory"], "flat_outputs": {"manpower": 50}}] },
     "steam_hammer": { "category": "INDUSTRY", "display_name": "Steam Hammer", "max_lvl": 1, "cost": 1200, "req": {"metal_shaper": 1}, "years": [1840], "building_output_bonuses": [{"building_families": ["Basic Factory"], "flat_outputs": {"materials": 50}}] },
     "bessemer_process": { "category": "INDUSTRY", "display_name": "Bessemer Process", "max_lvl": 1, "cost": 1200, "req": {"steam_hammer": 1}, "years": [1855], "building_output_bonuses": [{"building_families": ["Basic Factory"], "flat_outputs": {"materials": 50}}] },
     "electricity": { "category": "INDUSTRY", "display_name": "Electricity", "max_lvl": 1, "cost": 1200, "req": {"bessemer_process": 1}, "years": [1870], "building_output_bonuses": [{"building_families": ["Basic Factory"], "flat_outputs": {"materials": 50}}] },

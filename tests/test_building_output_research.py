@@ -275,6 +275,8 @@ class FactoryResearchContentTests(unittest.TestCase):
     def test_research_selections_require_completed_links_and_editor_grants_them(self):
         tree = queries.get_tech_tree()
         for tech, predecessor, required in (("waltham_system", "basic_factory", 1),
+                                           ("mechanical_reaper", "waltham_system", 1),
+                                           ("metal_shaper", "mechanical_reaper", 1),
                                            ("bessemer_process", "steam_hammer", 1),
                                            ("assembly_line", "factory", 1),
                                            ("conveyor_belt", "factory", tree["conveyor_belt"]["req"]["factory"]),

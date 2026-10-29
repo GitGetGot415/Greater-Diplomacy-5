@@ -5,6 +5,7 @@ from data import queries
 
 # These names and dates are explicit content requirements.
 NEW_INDUSTRY_MILESTONES = (
+    ("mechanical_reaper", "Mechanical Reaper", 1830),
     ("metal_shaper", "Metal Shaper", 1835),
     ("steam_hammer", "Steam Hammer", 1840),
     ("electricity", "Electricity", 1870),
