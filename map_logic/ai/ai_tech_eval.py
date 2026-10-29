@@ -19,7 +19,7 @@ Which means the answer moves with the situation: the same tech is worth more to
 a nation whose fronts are collapsing than to one at peace, and armour research
 is worth more when the enemy is armoured.
 
-`get_tech_unlocks` in queries.py cannot be used for this -- it returns display
+`get_tech_unlocks` in data/queries/tech.py cannot be used for this -- it returns display
 strings like "+100 Base Fuel/Turn" for the research screen.
 """
 

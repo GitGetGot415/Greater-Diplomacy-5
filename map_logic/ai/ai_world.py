@@ -14,8 +14,8 @@ tests/test_ai_world.py asserts that pairwise. War targeting also uses a bounded
 sea-neighbor index when no land front exists.
 
 Why the cached versions live here rather than as `world=` arguments on
-data/queries.py: mod_loader replaces whole files by path, so a mod shipping its
-own copy of queries.py would break the moment core code passed it an argument
+data/queries/: mod_loader replaces whole files by path, so a mod shipping its
+own copy of a queries module would break the moment core code passed it an argument
 its version had never heard of. The UI keeps calling queries.* exactly as
 before; only the AI knows AIWorld exists.
 

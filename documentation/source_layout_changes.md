@@ -12,6 +12,7 @@ The sandbox suite moves into `tests/` and also runs during normal test discovery
 
 | Previous path | Current path |
 | --- | --- |
+| `data/queries.py` | `data/queries/` (one module for each topic) |
 | `map_logic/turn_processing/` | `map_logic/system32/` |
 | `docs/SANDBOX_SECURITY.md` | `documentation/other/sandbox_security.md` |
 | `data/editors/country_editor.py` | `scripts/editors/country_editor.py` |

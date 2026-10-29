@@ -101,7 +101,7 @@ The main Scenario Settings reset keeps these separate editor settings, as it doe
 
 Scenario settings store changed fields in unit_range_overrides, keyed by unit family.
 Supported fields are bombard_range, air_range_start, and air_range_per_level.
-data/queries.py validates and applies these fields when the map loads.
+data/queries/unit_info.py validates and applies these fields when the map loads.
 Missing or invalid fields use library defaults. Existing saves retain their own scenario settings.
 Current defaults come from data/json/unit_data.json and the shared bombardment rules.
 See data/generators/recipes.py and data/constants.py for source tuning.
@@ -127,7 +127,7 @@ The truck and ship directions use the same duration.
 See documentation/air_stuff.txt for recovery timing and restrictions.
 
 Scenario settings store nondefault values in conversion_turn_overrides, keyed by the editor's action names.
-data/queries.py owns the defaults, limits, and conversion-order helpers.
+data/queries/economy.py owns the defaults, limits, and conversion-order helpers.
 Older saves without these overrides use the constants in data/constants.py.
 Saved games and multiplayer snapshots retain the scenario settings.
 Only scenario setup changes these settings. Player move files cannot change the host's durations.
@@ -156,7 +156,7 @@ Real-time commands and state filtering do not change. Real-time host saves use t
 STATE AND ACTION OWNERS
 =======================
 
-data/constants.py owns shared constants. data/queries.py owns shared state queries and rule helpers.
+data/constants.py owns shared constants. The data/queries/ package owns shared state queries and rule helpers.
 
 data/game_state.py defines WorldState.
 It owns countries, provinces, time, geometry references, scenario settings, script variables, history, faction records, and runtime rules.
@@ -208,10 +208,10 @@ map_logic/diplomacy/action_definitions.py owns diplomatic categories, availabili
 Public action lists in data/constants.py derive from these definitions.
 See documentation/diplo_stuff.txt for lifecycle and faction ownership.
 
-data/queries.py previews research selections with authoritative progress and prerequisites.
+data/queries/tech.py previews research selections with authoritative progress and prerequisites.
 map_logic/system32/research_processor.py applies those selections.
 AI research retains its existing selection order and restart policy.
-Country appearance fields use one shared mutation helper in data/queries.py.
+Country appearance fields use one shared mutation helper in data/queries/files.py.
 Adapters retain their existing mode permissions and input limits.
 Movement, armies, transport, subjects, and faction effects retain their existing domain owners.
 
@@ -245,7 +245,7 @@ Unselected outputs, province yields, and natural resources retain their existing
 
 Territory penalties apply after research bonuses. Round down each building's output after the territory penalty.
 
-data/queries.py owns output modifiers, building yields, province building yields, and bonus descriptions.
+data/queries/economy.py owns output modifiers, building yields, province building yields, and bonus descriptions.
 Turn income, economy reports, production previews, research details, and AI research valuation use these helpers.
 Production previews include the selected province's territory penalty. Research details show output before that penalty.
 Presentation caches update when their screens refresh. Frame drawing reads the cached yields.
@@ -297,7 +297,7 @@ Existing completed research stays intact. Missing research levels count as unres
 When you add unit tiers, update their research recipes and regenerate both runtime files.
 Keep existing unit identifiers and research level meanings. Older saves retain their completed research and can use additional levels.
 
-data/queries.py reads metadata from the active library.
+data/queries/unit_info.py reads metadata from the active library.
 Divisions do not duplicate this library metadata.
 Indexes detect library changes, metadata edits, research-year edits, and obsolescence changes.
 Library reloads also invalidate art-name caches.

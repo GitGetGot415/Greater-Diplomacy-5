@@ -8,7 +8,7 @@ and a save that skips a turn should not silently expire a clause early.
 
     nation_data[n]["restrictions"] = {"demilitarized": turns_left}
 
-Deliberately not in data/queries.py: a mod may ship its own copy of that file
+Deliberately not in data/queries/: a mod may ship its own copy of one of those files
 and shadow it wholesale, which would take a brand new function with it. See the
 note in map_logic/ai/ai_world.py.
 """

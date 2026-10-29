@@ -5,11 +5,11 @@ declares which project-relative file it replaces. Two header formats are
 accepted:
 
   * Legacy (deprecated, still works, logs a one-line warning at install):
-        #data/queries.py
+        #data/queries/economy.py
         ...replacement source...
 
   * Current manifest format (preferred):
-        # mod: target=data/queries.py sandbox=auto
+        # mod: target=data/queries/economy.py sandbox=auto
         ...replacement source...
 
   In the manifest format, `sandbox` may be:
@@ -258,7 +258,7 @@ def _is_reserved_target(rel_path):
 
 def _parse_first_line(first_line):
     """Parse a mod file's first line. Returns a dict with keys:
-      target           -- the project-relative path string (e.g. "data/queries.py"),
+      target           -- the project-relative path string (e.g. "data/queries/economy.py"),
                          or None if the line is malformed.
       declared_sandbox -- "auto" (default), "on", or "off".
       legacy_format    -- True if the line was the bare "#path" form, False

@@ -31,7 +31,7 @@ map_logic/ai/ai_movement.py
 map_logic/system32/combat_rules.py
     Shared combat capacity and damage rules support movement estimates.
 
-data/queries.py
+data/queries/ (movement.py, movement_access.py, air.py, tech.py, unit_info.py)
     Shared movement and aircraft helpers define legal orders and paths.
     Unit upgrade targets use active library metadata.
     canonical_unit_order remains a compatibility adapter to map_logic/actions/unit_actions.py.

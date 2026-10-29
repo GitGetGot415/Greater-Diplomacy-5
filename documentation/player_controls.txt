@@ -315,7 +315,7 @@ It gives no automatic orders.
 Right-click assignment applies only to saved army groups.
 Unassigned units keep their normal map display, without army symbols or color bands.
 
-data/queries.py derives Unassigned from current units and saved army membership.
+data/queries/armies.py derives Unassigned from current units and saved army membership.
 ui/panels/army_panel.py caches this entry when map state changes.
 Frame rendering reads the cached entry.
 Saves and multiplayer rosters contain only saved army groups.

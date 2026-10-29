@@ -1,7 +1,7 @@
 """Parity between AIWorld's cached answers and the queries they stand in for.
 
 AIWorld exists to make the strategy AI affordable, not to make it different.
-Every method here has a counterpart in data/queries.py that the UI still calls,
+Every method here has a counterpart in data/queries/ that the UI still calls,
 and the two must agree exactly -- a cache that quietly rounds differently would
 show up as the AI and the tooltip disagreeing about who is winning.
 

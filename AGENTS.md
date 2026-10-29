@@ -47,7 +47,7 @@ AI means artificial intelligence. UI means user interface.
 | Area | Responsibility |
 | --- | --- |
 | `data/constants.py` | Constants and tuning values shared across modules. |
-| `data/queries.py` | Shared state queries, rule helpers, caches, and the save-dictionary builder. |
+| `data/queries/` | Shared state queries, rule helpers, caches, and the save-dictionary builder. One module per topic. |
 | `data/migrations.py` | Older GD5 identifiers, saved-data conversions, and load repairs. |
 | `data/game_state.py`, `data/session_state.py` | World data, participants, control permissions, and processing progress. |
 | `data/runtime_rules.py`, `data/world_nations.py` | World-specific active libraries, derived indexes, and explicit country-mapping context. |
@@ -80,14 +80,14 @@ Give a reason when a system does not apply.
 
 | System | Check | Likely locations |
 | --- | --- | --- |
-| Core rules | Share legality, cost, effect, timing, and calculation logic across callers. | `data/queries.py`, `map_logic/` |
+| Core rules | Share legality, cost, effect, timing, and calculation logic across callers. | `data/queries/`, `map_logic/` |
 | Turn processing | Check order resolution, turn changes, removed countries, wars, and factions. | `map_logic/system32/`, `map_logic/diplomacy/` |
 | UI | Derive labels, previews, enabled controls, tooltips, popups, and numbers from execution rules. | `screens/`, `ui/` |
 | AI | Generate, value, select, perform, and answer actions without an LLM. Limit LLM choices to legal candidates. | `map_logic/ai/`, `data/json/ai_responses.json` |
-| Save/load | Write new state, use safe defaults, migrate old saves, and check a save/load round trip. | `data/queries.py`, `data/map/save_map.py`, `data/map/load_map.py` |
+| Save/load | Write new state, use safe defaults, migrate old saves, and check a save/load round trip. | `data/queries/saves.py`, `data/map/save_map.py`, `data/map/load_map.py` |
 | Tournament multiplayer | Authenticate and validate partial moves. Reject stale or duplicate input. Preserve shared changes and hidden information. | `data/multiplayer/tournament/files.py`, `tests/test_tournament_moves.py` |
 | Real-time multiplayer | Let only the server apply commands. Validate permissions, filter snapshots, and protect private state. | `data/multiplayer/realtime/session.py`, real-time UI, `tests/test_realtime_multiplayer.py`, `tests/test_realtime_fog.py` |
-| Other modes | Enforce permissions for single-player, hotseat, spectators, tactical players, AI, editors, tournament players/hosts, and real-time clients/hosts. | `screens/game/map.py`, affected screens, `data/queries.py` |
+| Other modes | Enforce permissions for single-player, hotseat, spectators, tactical players, AI, editors, tournament players/hosts, and real-time clients/hosts. | `screens/game/map.py`, affected screens, `data/queries/` |
 | Content tools | Check scenario settings, map editing, scripted actions and conditions, and base data. | `screens/editors/`, scenario screens, map and scenario JSON |
 | Builds | Include new modules, packages, data, dependencies, and dynamically imported screens. | Build files listed below |
 | Documentation/tests | Add regression coverage for the rule and failure. Update affected guides. | `tests/`, `documentation/`, `README.md` |
@@ -138,7 +138,7 @@ Do not queue skipped spawns for later.
 - Remove unused functions and organize imports when those changes are in scope.
 - Use shared legality, cost, effect, timing, and valuation helpers across execution, UI, AI, scripts, editors, and multiplayer.
   Do not copy damage, price, eligibility, acceptance, capacity, or timing formulas into callers.
-- Put reusable questions about current state in `data/queries.py`.
+- Put reusable questions about current state in the matching module of `data/queries/`.
   Put constants in `data/constants.py` only when modules share them.
 - Group a screen's layout values near the top of that screen file.
   Use one anchor or gap value to move a UI group.

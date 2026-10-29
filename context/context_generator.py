@@ -120,7 +120,7 @@ files_to_skip_but_list = [
     "main.py",
     "ui_elements.py",
     "data\constants.py",
-    #"data\queries.py",
+    #"data\queries\**",
     "context\context_generator.py",
     "map_tools\**",
     #"data\**",
@@ -140,7 +140,7 @@ files_to_skip_but_list = [
 
 # FULL:
 # constants.py
-# queries.py
+# queries\**
 # ui\**
 # screens\**
 # ai

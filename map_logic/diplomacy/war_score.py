@@ -23,7 +23,7 @@ for anything it had done, and at 0.15 it could tip a stalemate on the calendar
 alone. The whole mechanic is gone; its weight went to occupation, which is the
 thing it was standing in for.
 
-Deliberately not in data/queries.py: a mod can ship its own copy of that file
+Deliberately not in data/queries/: a mod can ship its own copy of one of those files
 and shadow it wholesale, which would take a brand new function down with it.
 See the note at the top of map_logic/ai/ai_world.py.
 """

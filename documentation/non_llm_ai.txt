@@ -48,7 +48,7 @@ ai_movement.py
 RESEARCH INDEXES
 ----------------
 
-data/queries.py indexes unit research requirements and family tiers.
+data/queries/unit_info.py indexes unit research requirements and family tiers.
 Production and AI use the same unlock checks.
 The active unit library supplies explicit family, tier, research, and recruitment metadata.
 New research levels reuse the index without parsing unit identifiers again.

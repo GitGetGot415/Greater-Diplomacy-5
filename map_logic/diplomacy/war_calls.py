@@ -25,8 +25,8 @@ could call its own master to arms in them. It had picked the wrong one of the
 pair: what it meant was "let us join you", and the fix is to send that instead
 of the reverse of it.
 
-Deliberately its own module rather than an addition to data/queries.py -- a mod
-may ship its own copy of that file and shadow it wholesale, taking a new
+Deliberately its own module rather than an addition to data/queries/ -- a mod
+may ship its own copy of one of those files and shadow it wholesale, taking a new
 function down with it. Same reasoning as map_logic/diplomacy/restrictions.py.
 """
 

@@ -1187,7 +1187,7 @@ DEFAULT_UNIT_SPD = 1
 DEFAULT_UNIT_MORALE = 100.0
 
 #: The roman numeral alphabet, largest first. Both directions of the conversion
-#: read it, so they cannot disagree about which symbols exist: queries.py's
+#: read it, so they cannot disagree about which symbols exist: data/queries/unit_info.py's
 #: roman_to_int used to know only I/V/X while _gen_roman could emit L and C, so
 #: a tier numeral past XLIX parsed as a smaller number (or as zero) and the tier
 #: suffix silently failed to strip off a unit's name.
@@ -1216,12 +1216,12 @@ ROMAN_NUMERALS = {i: _gen_roman(i) for i in range(1, 101)}
 # CALCULATIONS & Weights
 # ==========================================
 
-# Used in queries.py to estimate a nation's total economic power
+# Used in data/queries/strength.py to estimate a nation's total economic power
 ECONOMY_WEIGHT_MANPOWER = 1
 ECONOMY_WEIGHT_MATERIALS = 10
 ECONOMY_WEIGHT_FUEL = 20
 
-# Used in queries.py to calculate military strength (Attack + Defense + (Health / DIVISOR))
+# Used in data/queries/strength.py to calculate military strength (Attack + Defense + (Health / DIVISOR))
 MILITARY_STRENGTH_HEALTH_DIVISOR = 10.0
 
 # ==========================================

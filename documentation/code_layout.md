@@ -16,6 +16,7 @@ Read `source_layout_changes.md` for previous and current source paths.
 | `data/json/` | Runtime unit, building, research, country, leader, and AI response content. |
 | `data/generators/` | Content recipes and generation. Keep tuning sources beside their generated content. |
 | `data/map/` | Regular saves, loads, history, and derived-layer file handling. |
+| `data/queries/` | Shared state queries and rule helpers. Each module covers one topic. |
 | `data/io/` | Settings, country content, and shared JSON file helpers. |
 | `data/multiplayer/tournament/` | Tournament archives, authentication, partial moves, and host validation. |
 | `data/multiplayer/realtime/` | Authoritative sessions, clients, servers, snapshots, transports, and relay infrastructure. |
@@ -72,7 +73,7 @@ Keep this name unless the user explicitly requests a different name.
 
 | Task | Start here |
 | --- | --- |
-| Ask a shared question about current state | `data/queries.py` |
+| Ask a shared question about current state | `data/queries/` |
 | Change unit, building, or research tuning | `data/json/`, `data/generators/recipes.py`, and shared constants |
 | Change world or participant state ownership | `data/game_state.py` and `data/session_state.py` |
 | Change production validation, payment, or refunds | `map_logic/actions/production_actions.py` |
@@ -95,9 +96,13 @@ Keep this name unless the user explicitly requests a different name.
 Read `general_info.txt`, DISPLAY SUPPORT, for shared image caches.
 Camera tilt also uses `ui/rendering/map_utils.py`.
 
-`data/queries.py` remains one module at its existing path.
-Its shared rule helpers, caches, and save-dictionary builder remain there.
-The source reorganization changes its import references only.
+`data/queries/` is a package that replaces the former single module `data/queries.py`.
+The package `__init__.py` re-exports every name, so callers still write `queries.name(...)`.
+Each module imports only from modules that come before it in the layer list in `data/queries/__init__.py`.
+A test can replace a query with `mock.patch.object(queries, "name", ...)`.
+Other queries must still see that replacement.
+They therefore read replaced names as `queries.name` and do not import them.
+Read the `data/queries/__init__.py` docstring before you add a query that tests replace.
 
 Read [AGENTS.md, Imports](../AGENTS.md#imports) for the import policy.
 Game startup installs mods before importing game modules.

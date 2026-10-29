@@ -40,7 +40,7 @@ RUNTIME_PACKAGES = (
     "map_logic.system32",
     "ui", "ui.bars", "ui.camera", "ui.dialogs", "ui.information",
     "ui.navigation", "ui.panels", "ui.rendering", "ui.widgets",
-    "data", "data.io", "data.map", "data.multiplayer",
+    "data", "data.io", "data.map", "data.queries", "data.multiplayer",
     "data.multiplayer.tournament", "data.multiplayer.realtime",
 )
 NATIVE_PACKAGES = ("dragoman", "cryptography", "quickjs", "py_mini_racer")

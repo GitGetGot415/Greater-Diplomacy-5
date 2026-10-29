@@ -17,7 +17,7 @@ Keep current gameplay rules and validation in their shared rule modules.
 Keep saved-file access, compression formats, and storage synchronization in their input and output modules.
 
 Load repairs are not migrations. They fix invalid current data on every load.
-data/queries.py owns unit identities, unit statistics, province overlays, air order repair, and spawned-territory repair.
+The armies.py, units.py, saves.py, and air.py modules in data/queries/ own unit identities, unit statistics, province overlays, air order repair, and spawned-territory repair.
 map_logic/diplomacy/diplomacy_lifecycle.py owns request, response, and treaty identities.
 map_logic/diplomacy/faction_records.py owns faction record validation.
 map_logic/diplomacy/deal.py reads old peace text, old trade fields, and AI prose as deals.
@@ -108,7 +108,7 @@ Research IDs stay unchanged in saves and multiplayer files.
 Equipment unit IDs use stage names. Older IDs convert through the v47 step.
 
 Equipment research saves include research_years for infantry, cavalry, militia, and artillery.
-data/queries.py copies these public year lists from the active research library when it builds a save.
+data/queries/saves.py copies these public year lists from the active research library when it builds a save.
 History, default research, paused projects, and active project points retain their meaning.
 Completed equipment years map to the latest available stage at or before that year.
 Unfinished points apply to the next stage. Projects are removed when the converted track is already complete.
