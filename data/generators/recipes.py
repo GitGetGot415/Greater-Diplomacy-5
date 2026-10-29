@@ -377,32 +377,32 @@ CAR_SPEED = piecewise([(0, 2, 0), (1, 3, 0), (4, 4, 0)])
 LIGHT_TANK_SPEED = piecewise([(0, 2, 0), (3, 3, 0)])
 
 LAND_UNIT_RECIPES = [
-    #NAME                          TIERS     HP              ATK             DEF           SPD               MAT               MAN          FUEL          TIME      BOMB   OPTIONS
-    ("WW1 Tank",                   single(), 3000,           1500,           100,          1,                6000,             1000,        300,          6,        None,  {}),
-    ("WW1 Armored Car",            single(), 1000,           300,            50,           2,                3000,             1000,        100,          4,        None,  {}),
-    ("Armored Car",                rs(34),   lin(1000, 100), lin(400, 100),  lin(60, 10),  CAR_SPEED,        lin(3000, 200),   const(1000), lin(100, 5),  const(4), None,  {}),
-    ("Light Tank",                 rs(34),   lin(1800, 200), lin(1200, 150), lin(80, 10),  LIGHT_TANK_SPEED, lin(5000, 500),   const(1000), lin(150, 5),  const(5), None,  {}),
-    ("Medium Tank",                rs(4),    lin(2500, 500), lin(2400, 600), lin(150, 25), const(2),         lin(9000, 1000),  const(1000), lin(200, 10), const(6), None,  {}),
-    ("Heavy Tank",                 rs(4),    lin(3000, 500), lin(3000, 500), lin(350, 50), const(1),         lin(12000, 1000), const(1000), lin(200, 10), const(6), None,  {}),
-    ("Super Heavy Tank",           rs(5),    const(5000),    const(5000),    lin(550, 50), const(1),         lin(16000, 2000), const(1000), lin(240, 20), const(6), None,  {}),
-    ("Landkreuzer P.1000 Ratte",   single(), 10000,          6000,           400,          1,                50000,            2000,        1000,         10,       1000,  {"division_suffix": "1000"}),
-    ("Landkreuzer P.1500 Monster", single(), 15000,          8000,           500,          1,                60000,            2000,        1200,         12,       1200,  {"division_suffix": "1500"}),
-    ("Railgun",                    single(), 10000,          10000,          500,          1,                80000,            2000,        3000,         10,       10000, {}),
-    ("Main Battle Tank",           rs(22),   lin(5000, 500), lin(5000, 500), lin(250, 25), const(2),         lin(16000, 1000), const(1000), lin(240, 10), const(6), None,  {}),
-    ("WW1 Railroad Gun",           single(), 1200,           500,            0,            1,                5000,             1000,        0,            6,        500,   {}),
-    ("WW2 Railroad Gun",           single(), 2000,           800,            0,            1,                8000,             1000,        0,            6,        800,   {}),
+    #NAME                          TIERS     HP              ATK             DEF           SPD               MAT               MAN   FUEL          TIME  BOMB   OPTIONS
+    ("WW1 Tank",                   single(), 3000,           1500,           100,          1,                6000,             1000, 300,          6,    None,  {}),
+    ("WW1 Armored Car",            single(), 1000,           300,            50,           2,                3000,             1000, 100,          4,    None,  {}),
+    ("Armored Car",                rs(34),   lin(1000, 100), lin(400, 100),  lin(60, 10),  CAR_SPEED,        lin(3000, 200),   1000, lin(100, 5),  4,    None,  {}),
+    ("Light Tank",                 rs(34),   lin(1800, 200), lin(1200, 150), lin(80, 10),  LIGHT_TANK_SPEED, lin(5000, 500),   1000, lin(150, 5),  5,    None,  {}),
+    ("Medium Tank",                rs(4),    lin(2500, 500), lin(2400, 600), lin(150, 25), 2,                lin(9000, 1000),  1000, lin(200, 10), 6,    None,  {}),
+    ("Heavy Tank",                 rs(4),    lin(3000, 500), lin(3000, 500), lin(350, 50), 1,                lin(12000, 1000), 1000, lin(200, 10), 6,    None,  {}),
+    ("Super Heavy Tank",           rs(5),    5000,           5000,           lin(550, 50), 1,                lin(16000, 2000), 1000, lin(240, 20), 6,    None,  {}),
+    ("Landkreuzer P.1000 Ratte",   single(), 10000,          6000,           400,          1,                50000,            2000, 1000,         10,   1000,  {"division_suffix": "1000"}),
+    ("Landkreuzer P.1500 Monster", single(), 15000,          8000,           500,          1,                60000,            2000, 1200,         12,   1200,  {"division_suffix": "1500"}),
+    ("Railgun",                    single(), 10000,          10000,          500,          1,                80000,            2000, 3000,         10,   10000, {}),
+    ("Main Battle Tank",           rs(22),   lin(5000, 500), lin(5000, 500), lin(250, 25), 2,                lin(16000, 1000), 1000, lin(240, 10), 6,    None,  {}),
+    ("WW1 Railroad Gun",           single(), 1200,           500,            0,            1,                5000,             1000, 0,            6,    500,   {}),
+    ("WW2 Railroad Gun",           single(), 2000,           800,            0,            1,                8000,             1000, 0,            6,    800,   {}),
 ]
 
 NAVAL_UNIT_RECIPES = [
-    #NAME                          TIERS     HP              ATK             DEF           SPD                                           MAT               MAN          FUEL          TIME       BOMB           OPTIONS
-    ("Carrack",                    single(), 1000,           400,            0,            1,                                            2000,             500,         0,            4,         None,          {}),
-    ("Ironclad",                   single(), 2000,           800,            200,          1,                                            8000,             1000,        100,          6,         None,          {}),
-    ("Pre-Dreadnought",            single(), 3000,           1200,           300,          1,                                            12000,            2000,        250,          8,         None,          {}),
-    ("Dreadnought",                single(), 4000,           2400,           400,          1,                                            20000,            2000,        300,          10,        300,           {}),
-    ("Battleship",                 single(), 6000,           4000,           600,          1,                                            20000,            2000,        400,          10,        500,           {}),
-    ("Destroyer",                  rs(36),   lin(2400, 400), lin(1200, 300), lin(200, 20), const(1),                                     lin(10000, 500),  const(1000), lin(250, 5),  const(8),  None,          {}),
-    ("Submarine",                  rs(36),   lin(1200, 200), lin(600, 100),  const(0),     const(1),                                     lin(8000, 400),   const(1000), lin(150, 5),  const(6),  None,          {}),
-    ("Aircraft Carrier",           rs(25),   lin(800, 200),  lin(600, 120),  lin(200, 20), const(1),                                     lin(20000, 1000), const(2000), lin(500, 25), const(10), lin(600, 120), {}),
+    #NAME                TIERS     HP              ATK             DEF           SPD  MAT               MAN   FUEL          TIME  BOMB           OPTIONS
+    ("Carrack",          single(), 1000,           400,            0,            1,   2000,             500,  0,            4,    None,          {}),
+    ("Ironclad",         single(), 2000,           800,            200,          1,   8000,             1000, 100,          6,    None,          {}),
+    ("Pre-Dreadnought",  single(), 3000,           1200,           300,          1,   12000,            2000, 250,          8,    None,          {}),
+    ("Dreadnought",      single(), 4000,           2400,           400,          1,   20000,            2000, 300,          10,   300,           {}),
+    ("Battleship",       single(), 6000,           4000,           600,          1,   20000,            2000, 400,          10,   500,           {}),
+    ("Destroyer",        rs(36),   lin(2400, 400), lin(1200, 300), lin(200, 20), 1,   lin(10000, 500),  1000, lin(250, 5),  8,    None,          {}),
+    ("Submarine",        rs(36),   lin(1200, 200), lin(600, 100),  0,            1,   lin(8000, 400),   1000, lin(150, 5),  6,    None,          {}),
+    ("Aircraft Carrier", rs(25),   lin(800, 200),  lin(600, 120),  lin(200, 20), 1,   lin(20000, 1000), 2000, lin(500, 25), 10,   lin(600, 120), {}),
 ]
 
 AIR_UNIT_RECIPES = [
@@ -521,10 +521,10 @@ BUILDING_BASE_RECIPES = [
 
 # Growth functions receive the numbered building level, starting at 1.
 BUILDING_GROWTH_RECIPES = [
-    #NAME                        PREFIX                      COUNT             TIME       GROUP                   MAT                          MAN       FUEL         OUTMAT                   OUTMAN             OUTFUEL           OPTIONS
-    ("Basic Factory",            "Factory Lvl",              25,               const(12), const("industry"),      const(30000),                const(0), const(1000), lambda n: 100 * n + 500, const(0),          lambda n: 10 * n, {}),
-    ("Basic Recruitment Center", "Recruitment Building Lvl", 50,               const(6),  const("recruitment"),   const(5000),                 const(0), const(0),    const(0),                lambda n: 100 * n, const(0),         {}),
-    ("Fort Lvl 1",               "Fort Lvl",                 c.FORT_MAX_LEVEL, const(1),  const("fortification"), lambda n: 4000 + (1000 * n), const(0), const(0),    const(0),                const(0),          const(0),         {"skip_generated_base": True}),
+    #NAME                        PREFIX                      COUNT             TIME  GROUP            MAT                          MAN  FUEL  OUTMAT                   OUTMAN             OUTFUEL           OPTIONS
+    ("Basic Factory",            "Factory Lvl",              25,               12,   "industry",      30000,                       0,   1000, lambda n: 100 * n + 500, 0,                 lambda n: 10 * n, {}),
+    ("Basic Recruitment Center", "Recruitment Building Lvl", 50,               6,    "recruitment",   5000,                        0,   0,    0,                       lambda n: 100 * n, 0,                {}),
+    ("Fort Lvl 1",               "Fort Lvl",                 c.FORT_MAX_LEVEL, 1,    "fortification", lambda n: 4000 + (1000 * n), 0,   0,    0,                       0,                 0,                {"skip_generated_base": True}),
 ]
 
 
