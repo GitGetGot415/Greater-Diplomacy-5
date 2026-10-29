@@ -188,6 +188,7 @@ tbody tr:hover { background: var(--wash); }
         <label class="field">Find unit<input type="search" id="u-search" placeholder="Name contains..."></label>
       </div>
       <div class="row"><div class="legend" id="u-legend"></div></div>
+      <div class="row" id="u-first-tier" role="group" aria-label="Show only the units numbered I or without a number"></div>
     </div>
     <div class="card">
       <div class="chart-wrap" id="u-chart"><div class="tooltip" id="u-tip"></div></div>
@@ -760,6 +761,8 @@ let unitChart, buildingChart;
 const unitState = {
   x: "cost", y: "power", logX: true, logY: true,
   groups: new Set(UNIT_GROUPS.map(g => g.key)), family: "", search: "",
+  // Groups that show only the units numbered I or without a number, such as Brass Infantry I without II and III.
+  firstTierOnly: new Set(),
   sort: { key: "power_per_cost", dir: -1 },
 };
 const families = [...new Set(DATA.units.map(u => u.family))];
@@ -769,6 +772,8 @@ for (const family of families) {
   const chain = DATA.units.filter(u => u.family === family).sort((a, b) => a.tier_order - b.tier_order);
   chain.forEach((u, i) => { unitUpgrades[u.name] = { prev: chain[i - 1]?.name, next: chain[i + 1]?.name }; });
 }
+// A unit is "later tier" when its name ends in a numeral other than I. Unnumbered units are never later tier.
+const isLaterTier = u => /(?<= )(?!I$)[IVX]+$/.test(u.name);
 function upgradeLines(prev, next) {
   return [...(prev ? [`Upgrades from ${prev}`] : []), ...(next ? [`Upgrades to ${next}`] : [])];
 }
@@ -784,7 +789,8 @@ function unitDescribe(u) {
 }
 function filteredUnits() {
   const q = unitState.search.trim().toLowerCase();
-  return DATA.units.filter(u => unitState.groups.has(u.group) && (!q || u.name.toLowerCase().includes(q)));
+  return DATA.units.filter(u => unitState.groups.has(u.group) && (!q || u.name.toLowerCase().includes(q))
+    && !(unitState.firstTierOnly.has(u.group) && isLaterTier(u)));
 }
 const UNIT_COLUMNS = [
   { key: "name", label: "Unit", text: true, get: u => u.name, swatch: u => unitGroupByKey[u.group] },
@@ -856,6 +862,18 @@ function initUnits() {
   const counts = {};
   for (const u of DATA.units) counts[u.group] = (counts[u.group] || 0) + 1;
   legendBuilders.push(() => buildLegend(document.getElementById("u-legend"), UNIT_GROUPS, counts, unitState.groups, renderUnits));
+  const firstTier = document.getElementById("u-first-tier");
+  firstTier.appendChild(htmlEl("span", {}, "Only I or unnumbered:"));
+  for (const g of UNIT_GROUPS) {
+    const box = htmlEl("input", { type: "checkbox" });
+    box.addEventListener("change", () => {
+      if (box.checked) unitState.firstTierOnly.add(g.key); else unitState.firstTierOnly.delete(g.key);
+      renderUnits();
+    });
+    const label = htmlEl("label", { class: "check" });
+    label.append(box, document.createTextNode(g.key));
+    firstTier.appendChild(label);
+  }
   const bind = (id, evt, fn) => document.getElementById(id).addEventListener(evt, e => { fn(e.target); renderUnits(); });
   bind("u-x", "change", t => unitState.x = t.value);
   bind("u-y", "change", t => unitState.y = t.value);
