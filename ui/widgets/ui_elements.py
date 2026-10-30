@@ -42,6 +42,9 @@ _BUTTON_HIGHLIGHT = 30
 _BUTTON_SHADOW = 50
 _BUTTON_BORDER_WIDTH = 2
 _BUTTON_SELECTED_BORDER_WIDTH = 3
+_SLIDER_LOCKED_COLOR = (60, 40, 40)
+_SLIDER_PROGRESS_COLOR = (255, 150, 50)
+_SLIDER_OUTLINE_COLOR = (20, 20, 20)
 
 
 @lru_cache(maxsize=128)
@@ -454,6 +457,52 @@ def make_info_button(x, y, on_click, y_offset=0):
     return Button(x, y + y_offset, "scenario_setting_info", "light_blue", "?", on_click)
 
 
+def draw_slider(surface, rect, handle_rect, *, dragging=False, allowed_ratio=1.0,
+                progress_ratio=None):
+    """Draw a recessed track and a handle with the cached button shading."""
+    if rect.width <= 0 or rect.height <= 0:
+        return
+    border = _BUTTON_BORDER_WIDTH
+    background = _button_background(rect.size, tuple(c.COLOR_SLIDER_TRACK), True, border)
+    surface.blit(background, rect)
+
+    # Clip full-track backgrounds so movement reuses the same cached shading.
+    if allowed_ratio < 1.0:
+        start = int(rect.width * max(0.0, allowed_ratio))
+        locked = _button_background(rect.size, _SLIDER_LOCKED_COLOR, True, border)
+        surface.blit(locked, (rect.x + start, rect.y),
+                     (start, 0, rect.width - start, rect.height))
+        pygame.draw.line(surface, _SLIDER_OUTLINE_COLOR,
+                         (rect.x + start, rect.top), (rect.x + start, rect.bottom - 1), border)
+    if progress_ratio is not None:
+        width = int(rect.width * max(0.0, min(1.0, progress_ratio)))
+        progress = _button_background(rect.size, _SLIDER_PROGRESS_COLOR, False, border)
+        surface.blit(progress, rect, (0, 0, width, rect.height))
+    pygame.draw.rect(surface, _SLIDER_OUTLINE_COLOR, rect, border)
+
+    hovered = handle_rect.collidepoint(pygame.mouse.get_pos())
+    color = tuple(c.COLOR_SLIDER_HANDLE)
+    if dragging:
+        color = tuple(max(0, channel - 40) for channel in color)
+    elif hovered:
+        color = tuple(min(255, channel + _BUTTON_HIGHLIGHT) for channel in color)
+    handle = _button_background(handle_rect.size, color, dragging, border)
+    surface.blit(handle, handle_rect)
+    pygame.draw.rect(surface, (255, 255, 255) if hovered or dragging else _SLIDER_OUTLINE_COLOR,
+                     handle_rect, border)
+
+    # Narrow music handles have one grip. Standard handles have three grips.
+    pixel = _BUTTON_PIXEL_SIZE
+    grip_count = max(0, (handle_rect.width - 2 * (border + pixel) + pixel) // (2 * pixel))
+    grip_x = handle_rect.centerx - grip_count * pixel
+    grip_height = max(0, min(10, handle_rect.height - 2 * (border + pixel)))
+    grip_y = handle_rect.centery - grip_height // 2
+    for index in range(grip_count):
+        x = grip_x + index * 2 * pixel
+        surface.fill(_SLIDER_OUTLINE_COLOR, (x, grip_y, pixel, grip_height))
+        surface.fill(color, (x + pixel, grip_y + pixel, pixel, grip_height))
+
+
 class Slider:
     def __init__(self, x, y, width, text, initial_val, callback, visual_max=1.0, allowed_max=1.0):
         self.rect = pygame.Rect(x, y, width, 20)
@@ -486,17 +535,9 @@ class Slider:
     def draw(self, surface):
         if not self.visible: return
         
-        pygame.draw.rect(surface, c.COLOR_SLIDER_TRACK, self.rect)
-        
-        # Draw restricted track if applicable
-        if self.allowed_max < self.visual_max and self.visual_max > 0:
-            allowed_ratio = self.allowed_max / self.visual_max
-            restricted_x = self.rect.x + int(self.rect.width * allowed_ratio)
-            restricted_w = self.rect.width - int(self.rect.width * allowed_ratio)
-            restricted_rect = pygame.Rect(restricted_x, self.rect.y, restricted_w, self.rect.height)
-            pygame.draw.rect(surface, (60, 40, 40), restricted_rect) # A dark reddish-grey for locked part
-            
-        pygame.draw.rect(surface, c.COLOR_SLIDER_HANDLE, self.handle_rect)
+        allowed_ratio = self.allowed_max / self.visual_max if self.visual_max > 0 else 1.0
+        draw_slider(surface, self.rect, self.handle_rect, dragging=self.dragging,
+                    allowed_ratio=allowed_ratio)
         
         slider_font = fonts.get("normal")
         

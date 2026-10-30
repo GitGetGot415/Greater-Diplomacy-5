@@ -28,6 +28,16 @@ ui/widgets/ui_elements.py caches backgrounds by size, color, pressed state, and 
 The cache retains at most 128 backgrounds. Moving a button reuses its background.
 This display change applies in all modes. It adds no saved fields or multiplayer commands.
 
+SLIDER DISPLAY
+--------------
+
+Shared sliders and the music progress control use the cached button shade bands and square borders.
+Tracks have recessed bevels. Handles have raised bevels and grip marks.
+The handle outline becomes white under the pointer or during dragging. Dragging reverses the handle bevel.
+
+Restricted track sections keep their dark red tint. Music progress keeps its orange fill.
+Dragging, value limits, labels, and permissions remain the same in all modes.
+
 COUNTRY SUMMARY
 ---------------
 

@@ -123,22 +123,11 @@ class MusicScrubber:
         text_rect = text_surf.get_rect(topleft=(self.rect.x, self.rect.y - 20))
         surface.blit(text_surf, text_rect)
         
-        # Draw track background
-        pygame.draw.rect(surface, (50, 50, 60), self.rect, border_radius=5)
-        
-        # Draw filled progress
         fill_width = int(self.value * self.rect.width)
-        if fill_width > 0:
-            fill_rect = pygame.Rect(self.rect.x, self.rect.y, fill_width, self.rect.height)
-            pygame.draw.rect(surface, (255, 150, 50), fill_rect, border_radius=5)
-            
-        # Draw draggable handle
         handle_x = self.rect.x + fill_width
         handle_rect = pygame.Rect(handle_x - 5, self.rect.y - 5, 10, self.rect.height + 10)
-        pygame.draw.rect(surface, (200, 200, 200), handle_rect, border_radius=3)
-        
-        # Draw outline
-        pygame.draw.rect(surface, (100, 100, 100), self.rect, 2, border_radius=5)
+        ui_elements.draw_slider(surface, self.rect, handle_rect,
+                                dragging=self.is_dragging, progress_ratio=self.value)
 
 
 class Music_Player(ScrollPanes, GameState):
