@@ -18,6 +18,7 @@ from map_logic.system32 import combat_processor, combat_rules, unit_events, turn
 from map_logic.system32.time_handler import TimeHandler
 from tests import app_harness
 from tests import test_tournament_moves as tournament_tests
+from tests.stub_map_screen import map_double
 
 
 def fixture():
@@ -27,7 +28,7 @@ def fixture():
         for pid, owner in ((1, "A"), (2, "B"))}
     nations = {owner: {"name": owner, "is_playable": True, "research": {},
         "at_war_with": [enemy]} for owner, enemy in (("A", "B"), ("B", "A"))}
-    return SimpleNamespace(map_data={str(pid): province for pid, province in provinces.items()},
+    return map_double(map_data={str(pid): province for pid, province in provinces.items()},
         id_to_province=provinces, nation_data=nations, scenario_settings={"fog_of_war": False},
         player_country="A", tactical_mode=False, player_unit=None, is_editor=False,
         time_manager=SimpleNamespace(total_turns=1, day=1, month_index=0, year=1939),

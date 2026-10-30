@@ -3,6 +3,7 @@ tkinter tool windows -- see screens/editors/__init__.py."""
 import pygame
 import data.constants as c
 from data import queries
+from ui.dialogs import pickers
 from ui.navigation.game_state import MapOverlayScreen
 from ui.widgets.ui_elements import Button, TextField, make_back_button
 from ui import dialogs
@@ -124,7 +125,7 @@ class Resource_Brush_Screen(MapOverlayScreen):
         def on_pick(val):
             self.selected_resource = val
             self.refresh_ui()
-        queries.open_listbox_selector(self.map_screen, "Select Resource Type", "Choose a resource type:",
+        pickers.open_listbox_selector(self.map_screen, "Select Resource Type", "Choose a resource type:",
                                       self.RESOURCE_TYPES, on_pick)
         self.refresh_ui()
 
@@ -237,14 +238,14 @@ class Clear_Map_Screen(MapOverlayScreen):
         def on_pick(val):
             self.selected_option = val
             self.refresh_ui()
-        queries.open_listbox_selector(self.map_screen, "Select What to Clear", "Choose an option:", self.OPTIONS, on_pick)
+        pickers.open_listbox_selector(self.map_screen, "Select What to Clear", "Choose an option:", self.OPTIONS, on_pick)
         self.refresh_ui()
 
     def pick_country(self):
         def on_pick(val):
             self.selected_country = val
             self.refresh_ui()
-        queries.open_listbox_selector(self.map_screen, "Select Country", "Choose a country:",
+        pickers.open_listbox_selector(self.map_screen, "Select Country", "Choose a country:",
                                       queries.country_picker_items(
                                           self.available_countries,
                                           self.map_screen.nation_data), on_pick)
@@ -254,7 +255,7 @@ class Clear_Map_Screen(MapOverlayScreen):
         def on_pick(val):
             self.selected_unit_type = val
             self.refresh_ui()
-        queries.open_listbox_selector(self.map_screen, "Select Unit Type", "Choose a unit type:",
+        pickers.open_listbox_selector(self.map_screen, "Select Unit Type", "Choose a unit type:",
                                       queries.unit_picker_items(self.available_unit_types, context=self.map_screen), on_pick)
         self.refresh_ui()
 
@@ -262,7 +263,7 @@ class Clear_Map_Screen(MapOverlayScreen):
         def on_pick(val):
             self.selected_resource_type = val
             self.refresh_ui()
-        queries.open_listbox_selector(self.map_screen, "Select Resource", "Choose a resource:",
+        pickers.open_listbox_selector(self.map_screen, "Select Resource", "Choose a resource:",
                                       self.RESOURCE_TYPES, on_pick)
         self.refresh_ui()
 

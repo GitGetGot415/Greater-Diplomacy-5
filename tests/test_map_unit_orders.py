@@ -159,6 +159,8 @@ class OrdersSelectionRowsTests(unittest.TestCase):
         other_selected_unit = {"owner": "A", "type": "Infantry"}
 
         class MapStub:
+            unit_view_buttons = {}
+            invalidate_map_presentation_cache = lambda self: None
             def __init__(self):
                 self.selected_ids = {id(other_selected_unit)}
                 self.tactical_mode = False
@@ -241,6 +243,8 @@ class OrdersSelectionRowsTests(unittest.TestCase):
         origin["units"] = [first, second]
 
         class MapStub:
+            unit_view_buttons = {}
+            invalidate_map_presentation_cache = lambda self: None
             player_country = "A"
             tactical_mode = False
 
@@ -294,6 +298,8 @@ class OrdersSelectionRowsTests(unittest.TestCase):
         second["units"] = [unit_b]
 
         class MapStub:
+            unit_view_buttons = {}
+            invalidate_map_presentation_cache = lambda self: None
             player_country = "A"
             tactical_mode = False
             map_data = {1: first, 2: second}
@@ -345,6 +351,7 @@ class OrdersSelectionRowsTests(unittest.TestCase):
             "player_country": "A",
             "tactical_mode": False,
             "show_feedback": lambda self, _message: None,
+            "invalidate_map_presentation_cache": lambda self: None,
         })())
         screen = bare_orders_screen()
         screen.map_screen = map_stub
@@ -534,6 +541,7 @@ class MapOrderGestureTests(unittest.TestCase):
             "unit_selection_drag": None,
             "unit_stack_hitboxes": [],
             "id_to_province": {1: origin, 2: destination},
+            "invalidate_map_presentation_cache": lambda self: None,
             "show_feedback": lambda self, _message: None,
         })())
 

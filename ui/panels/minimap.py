@@ -32,7 +32,7 @@ def _map_image(map_screen, size, ocean_color):
     key = (id(source), source.get_size(), id(fog),
            fog.get_size() if fog is not None else None,
            tuple(size), tuple(ocean_color))
-    cached = getattr(map_screen, "_minimap_image_cache", None)
+    cached = map_screen._minimap_image_cache
     if not cached or cached[0] != key:
         # Composite the chroma-key source *before* smoothing. Smoothscale
         # turns #ff00ff into near-pink edge/interior pixels (#fd00fd, etc.),
@@ -57,7 +57,7 @@ def draw_minimap(map_screen, surface, screen_width, screen_height):
 
     # Match the main renderer: chroma-key water in political layers reveals
     # the normal dynamic ocean color rather than a pink/black backing surface.
-    ocean_color = getattr(map_screen, "bg_color", c.OCEAN_DARK_BLUE)
+    ocean_color = map_screen.bg_color
     pygame.draw.rect(surface, ocean_color, rect)
     # Show the same political/terrain layer as the main map.  The fallback is
     # retained for lightweight tools that do not construct an active surface.

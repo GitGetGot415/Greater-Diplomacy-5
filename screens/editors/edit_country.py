@@ -8,6 +8,7 @@ from ui.widgets import ui_elements
 from ui.rendering.font_manager import fonts
 import data.constants as c
 from data import queries
+from ui.dialogs import pickers
 from data.platform import downloads_dir
 from data.io.country_io import DEFAULT_NATION_COLOR
 from ui.rendering import country_names
@@ -218,7 +219,7 @@ class Edit_Country_Screen(GameState):
         """Opens a native color picker to select the country's map color."""
         def on_confirm(color):
             self.new_map_color = list(color)
-        queries.open_color_picker(self, "Choose Map Color", tuple(self.new_map_color), on_confirm)
+        pickers.open_color_picker(self, "Choose Map Color", tuple(self.new_map_color), on_confirm)
 
     def pick_custom_brush_color(self):
         """Opens a native color picker to select a custom drawing color."""
@@ -226,7 +227,7 @@ class Edit_Country_Screen(GameState):
             # Re-append the full opacity alpha channel (255) to the returned RGB tuple
             self.active_color = tuple(color) + (255,)
         # Slice to [:3] so we only pass RGB to the picker, dropping the Alpha
-        queries.open_color_picker(self, "Choose Brush Color", tuple(self.active_color)[:3], on_confirm)
+        pickers.open_color_picker(self, "Choose Brush Color", tuple(self.active_color)[:3], on_confirm)
 
     def _export_image(self, surf, suffix, fallback_name):
         """Writes one of the country's images out to Downloads.
@@ -259,7 +260,7 @@ class Edit_Country_Screen(GameState):
                 except Exception as e:
                     self.map_screen.show_feedback("Failed to import flag.")
 
-        queries.open_file_browser(self, "Select Flag Image", c.FLAGS_DIR,
+        pickers.open_file_browser(self, "Select Flag Image", c.FLAGS_DIR,
                                   extensions=[".png", ".jpg", ".jpeg", ".bmp"], on_result=on_picked)
 
     def import_portrait(self):
@@ -273,7 +274,7 @@ class Edit_Country_Screen(GameState):
                 except Exception as e:
                     self.map_screen.show_feedback("Failed to import portrait.")
 
-        queries.open_file_browser(self, "Select Portrait Image", c.PORTRAITS_DIR,
+        pickers.open_file_browser(self, "Select Portrait Image", c.PORTRAITS_DIR,
                                   extensions=[".png", ".jpg", ".jpeg", ".bmp"], on_result=on_picked)
 
     def refresh_ui(self):
@@ -347,7 +348,7 @@ class Edit_Country_Screen(GameState):
             self.save_state()
             self.map_screen.show_feedback("Appearance copied from " + queries.get_country_display_name(
                 chosen_country, self.map_screen.nation_data) + "!")
-        queries.open_listbox_selector(
+        pickers.open_listbox_selector(
             self, "Switch Appearance Profile", "Select Target Country look:",
             queries.country_picker_items(items, self.map_screen.nation_data), cb)
 
@@ -366,7 +367,7 @@ class Edit_Country_Screen(GameState):
     def save_and_exit(self):
         if not self.can_edit:
             return
-        if (getattr(self.map_screen, "realtime_multiplayer", False)
+        if (self.map_screen.realtime_multiplayer
                 and self.editing_country != self.map_screen.player_country):
             controller = self.map_screen.nation_data.get(self.map_screen.player_country, {})
             subject = self.map_screen.nation_data.get(self.editing_country, {})
@@ -403,14 +404,9 @@ class Edit_Country_Screen(GameState):
         # An integrated puppet is deliberately edited through its controller's
         # Subjects screen, so record this narrow appearance-only update for the
         # host to validate and apply alongside the controller's move.
-        if (getattr(self.map_screen, "multiplayer_mode", False)
+        if (self.map_screen.multiplayer_mode
                 and self.editing_country != self.map_screen.player_country):
-            pending = getattr(self.map_screen,
-                              "multiplayer_pending_appearance_updates", None)
-            if pending is None:
-                pending = {}
-                self.map_screen.multiplayer_pending_appearance_updates = pending
-            pending[self.editing_country] = {
+            self.map_screen.multiplayer_pending_appearance_updates[self.editing_country] = {
                 key: p_data.get(key)
                 for key in ("name", "adjective", "leader_name", "leader_title",
                             "flag_data", "portrait_data", "color")
@@ -419,13 +415,9 @@ class Edit_Country_Screen(GameState):
         # Real-time clients have a separate authoritative map.  A controller
         # may customise an integrated subject, but that change must travel as
         # a narrow server-validated draft instead of remaining a local edit.
-        if (getattr(self.map_screen, "realtime_multiplayer", False)
+        if (self.map_screen.realtime_multiplayer
                 and self.editing_country != self.map_screen.player_country):
-            pending = getattr(self.map_screen, "realtime_pending_appearance_updates", None)
-            if pending is None:
-                pending = {}
-                self.map_screen.realtime_pending_appearance_updates = pending
-            pending[self.editing_country] = {
+            self.map_screen.realtime_pending_appearance_updates[self.editing_country] = {
                 key: p_data.get(key)
                 for key in ("name", "adjective", "leader_name", "leader_title",
                             "flag_data", "portrait_data", "color")

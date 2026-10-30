@@ -3,6 +3,8 @@ import json
 import pygame
 from ui import dialogs
 from data import queries
+from ui.dialogs import pickers
+from ui.dialogs import file_exchange
 from data.map import history_io
 from ui.navigation.game_state import FolderListState
 from ui.widgets.ui_elements import Button, make_back_button
@@ -39,7 +41,7 @@ class Load_Game(FolderListState):
         self.elements = [
             make_back_button(self.exit_screen),
             Button(160, 20, "medium", "green", "Import .zip",
-                   lambda: queries.import_zip_to_dir(self, self.managed_dir, self.refresh_ui))
+                   lambda: file_exchange.import_zip_to_dir(self, self.managed_dir, self.refresh_ui))
         ]
 
         folders = self.list_folders()
@@ -73,7 +75,7 @@ class Load_Game(FolderListState):
         self.draw_list_scrollbar(surface, c.SCREEN_WIDTH - 40, self.ROW_TOP, c.SCREEN_HEIGHT - 200)
 
     def export_save_zip(self, folder_name):
-        queries.export_dir_as_zip(os.path.join(self.managed_dir, folder_name), f"{folder_name}.zip")
+        file_exchange.export_dir_as_zip(os.path.join(self.managed_dir, folder_name), f"{folder_name}.zip")
 
     def open_history_menu(self, folder_name):
         save_dir = os.path.join(self.managed_dir, folder_name)
@@ -98,7 +100,7 @@ class Load_Game(FolderListState):
         def on_select(label):
             self.load_specific_save(folder_name, history_turn=turn_by_label[label])
 
-        queries.open_listbox_selector(self, f"History: {folder_name}", "Select a past turn to load:",
+        pickers.open_listbox_selector(self, f"History: {folder_name}", "Select a past turn to load:",
                                       items, on_select)
 
     def load_specific_save(self, folder_name, history_turn=None):

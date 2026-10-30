@@ -137,9 +137,9 @@ class _UnitRenderIndex:
 
 def _unit_render_index(map_screen):
     """Return the unit index for the current presentation revision."""
-    revision = getattr(map_screen, "_presentation_cache_revision", None)
+    revision = map_screen._presentation_cache_revision
     # Compatibility for render tools and test doubles predating view filters.
-    view_filter = getattr(map_screen, "unit_view_filter", queries.DEFAULT_UNIT_VIEW_FILTER)
+    view_filter = map_screen.unit_view_filter
     player_country = map_screen.player_country
     viewing_ai_moves = map_screen.viewing_ai_moves
     # A real Map owns explicit invalidation boundaries.  Small test/editor
@@ -148,7 +148,7 @@ def _unit_render_index(map_screen):
     if revision is None:
         return _UnitRenderIndex(map_screen.map_data, view_filter, player_country, viewing_ai_moves)
 
-    cached = getattr(map_screen, "_unit_render_index_cache", None)
+    cached = map_screen._unit_render_index_cache
     cache_key = (revision, view_filter, player_country, viewing_ai_moves)
     if cached is not None and cached[0] == cache_key:
         return cached[1]
@@ -400,17 +400,17 @@ def _combat_friendly_nations(map_screen):
 
 def _combat_is_visible(map_screen, province_ids, *, own_unit=False):
     """One fog gate shared by predicted and persistent combat bubbles."""
-    visible = getattr(map_screen, "visible_provinces", None)
+    visible = map_screen.visible_provinces
     if visible is None:
         return True
-    partial = getattr(map_screen, "partial_visible_provinces", set()) or set()
+    partial = map_screen.partial_visible_provinces or set()
     return own_unit or any(province_id in visible or province_id in partial
                            for province_id in province_ids)
 
 
 def _combat_information_available(map_screen, province_id):
     """Whether the viewer has full unit information for this battle tile."""
-    visible = getattr(map_screen, "visible_provinces", None)
+    visible = map_screen.visible_provinces
     return visible is None or province_id in visible
 
 
@@ -420,7 +420,7 @@ def strategic_detail_markers_are_visible(map_screen):
     # detailed presentation.  A live strategic map instead replaces combat
     # and movement detail with formation markers once it reaches army-group
     # zoom.
-    return (getattr(map_screen, "camera", None) is None
+    return (map_screen.camera is None
             or not uses_compact_army_icons(map_screen))
 
 
@@ -431,12 +431,12 @@ def combat_bubbles_are_visible(map_screen):
 
 def _combat_records_for_unit_view(map_screen, records):
     """Project cached full-battle forecasts onto identifiable filtered units."""
-    if getattr(map_screen, "unit_view_filter", queries.DEFAULT_UNIT_VIEW_FILTER) == "ALL":
+    if map_screen.unit_view_filter == "ALL":
         return records
     index = _unit_render_index(map_screen)
     # Optional only for older render tools/test doubles. Live maps own this
     # presentation cache and invalidate its unit index at state boundaries.
-    cached = getattr(map_screen, "_combat_unit_view_cache", None)
+    cached = map_screen._combat_unit_view_cache
     if cached is not None and cached[0] is records and cached[1] is index:
         return cached[2]
     filtered = [record for record in records
@@ -462,14 +462,14 @@ def combat_bubble_records(map_screen):
     # every local-order, fog, map-layer, snapshot and turn boundary.  Small
     # isolated render doubles intentionally have no revision and keep the
     # straightforward uncached behaviour those callers expect.
-    revision = getattr(map_screen, '_presentation_cache_revision', None)
+    revision = map_screen._presentation_cache_revision
     cache_key = None
     if revision is not None:
         cache_key = (revision, map_screen.player_country,
-                     id(getattr(map_screen, 'visible_provinces', None)),
-                     id(getattr(map_screen, 'partial_visible_provinces', None)),
+                     id(map_screen.visible_provinces),
+                     id(map_screen.partial_visible_provinces),
                      c.BATTLE_DISPLAY_MODE)
-        cached = getattr(map_screen, '_combat_bubble_records_cache', None)
+        cached = map_screen._combat_bubble_records_cache
         if cached is not None and cached[0] == cache_key:
             return _combat_records_for_unit_view(map_screen, cached[1])
 
@@ -589,7 +589,7 @@ def _combat_bubble_key(record):
 
 
 def _combat_bubble_is_hovered(map_screen, record):
-    hovered = getattr(map_screen, "hovered_combat_bubble", None)
+    hovered = map_screen.hovered_combat_bubble
     return hovered is not None and _combat_bubble_key(hovered) == _combat_bubble_key(record)
 
 
@@ -735,7 +735,7 @@ def draw_bombardment_arrow(surface, map_screen, start_province, target_id,
 
     # --- FOG OF WAR VISIBILITY CHECK ---
     if not force_visible and map_screen.visible_provinces is not None:
-        partial = getattr(map_screen, 'partial_visible_provinces', set()) or set()
+        partial = map_screen.partial_visible_provinces or set()
         allowed = map_screen.visible_provinces.union(partial)
         if start_province["id"] not in allowed and target_id not in allowed:
             return
@@ -865,9 +865,9 @@ def draw_midpoint_bounces(map_screen, surface):
     cam = map_screen.camera
 
     allowed = None
-    visible_provinces = getattr(map_screen, "visible_provinces", None)
+    visible_provinces = map_screen.visible_provinces
     if visible_provinces is not None:
-        partial = getattr(map_screen, "partial_visible_provinces", set()) or set()
+        partial = map_screen.partial_visible_provinces or set()
         allowed = visible_provinces.union(partial)
 
     offsets = [0, -map_screen.map_w, map_screen.map_w] if map_screen.loop_map else [0]
@@ -935,7 +935,7 @@ def draw_movement_path(surface, map_screen, start_province, path_ids, color=(255
     def is_segment_visible(n1, n2):
         if force_visible or map_screen.visible_provinces is None:
             return True
-        partial = getattr(map_screen, 'partial_visible_provinces', set()) or set()
+        partial = map_screen.partial_visible_provinces or set()
         allowed = map_screen.visible_provinces.union(partial)
         # If EITHER the start or end of this specific segment is visible, draw the segment!
         return n1["id"] in allowed or n2["id"] in allowed
@@ -1121,7 +1121,7 @@ def draw_overlay_content(map_screen, surface, draw_combat=True):
         if map_screen.visible_provinces is not None:
             if province["id"] in map_screen.visible_provinces:
                 is_vis = True
-            elif getattr(map_screen, 'partial_visible_provinces', None) is not None and province["id"] in map_screen.partial_visible_provinces:
+            elif map_screen.partial_visible_provinces is not None and province["id"] in map_screen.partial_visible_provinces:
                 is_vis = False
                 is_partial = True
             else:
@@ -1502,7 +1502,7 @@ def strategic_unit_fade_alphas(map_screen):
     The marker presentation owns its own short compression animation, so this
     compatibility helper intentionally returns no per-unit opacity overrides.
     """
-    states = getattr(map_screen, "strategic_unit_fade_states", None)
+    states = map_screen.strategic_unit_fade_states
     if states is None:
         states = {}
         map_screen.strategic_unit_fade_states = states
@@ -1827,7 +1827,7 @@ def compact_army_groups(map_screen, combat_unit_ids):
     }
     scaled_w, scaled_h, _display_scale = unit_box_size(map_screen)
     box_size = (scaled_w, scaled_h)
-    is_selected = getattr(map_screen, "is_unit_selected", lambda _unit: False)
+    is_selected = map_screen.is_unit_selected
     groups = []
     for army in armies:
         member_ids = army.get("unit_ids", [])
@@ -1869,7 +1869,7 @@ def compact_army_groups(map_screen, combat_unit_ids):
 
 def _province_is_fully_visible(map_screen, province):
     """Whether strategic markers may reveal this province's unit details."""
-    visible_provinces = getattr(map_screen, "visible_provinces", None)
+    visible_provinces = map_screen.visible_provinces
     return (visible_provinces is None
             or province.get("id") in visible_provinces)
 
@@ -1923,7 +1923,7 @@ def compact_area_unit_groups(map_screen, combat_unit_ids, organized_unit_object_
         return []
 
     player_country = map_screen.player_country
-    is_selected = getattr(map_screen, "is_unit_selected", lambda _unit: False)
+    is_selected = map_screen.is_unit_selected
     scaled_w, scaled_h, _display_scale = unit_box_size(map_screen)
     box_size = (scaled_w, scaled_h)
     groups = []
@@ -2001,7 +2001,7 @@ def _compact_group_presentation_id(group):
 
 def army_group_presentation(map_screen, desired_groups, combat_unit_ids):
     """Animate army markers into and out of the expanded unit presentation."""
-    states = getattr(map_screen, "army_group_transition_states", None)
+    states = map_screen.army_group_transition_states
     if states is None:
         states = {}
         map_screen.army_group_transition_states = states
@@ -2176,7 +2176,7 @@ def _publish_unit_stack_hitbox(map_screen, surface, rect, province, units, owner
     map_screen.unit_stack_hitboxes.append({"rect": pygame.Rect(rect),
                                             "province": province,
                                             "units": list(units)})
-    is_selected = getattr(map_screen, "is_unit_selected", lambda _unit: False)
+    is_selected = map_screen.is_unit_selected
     if any(is_selected(unit) for unit in units):
         pygame.draw.rect(surface, c.COLOR_GOLD_HIGHLIGHT, rect.inflate(4, 4),
                          max(2, int(2 * display_scale)), border_radius=3)
@@ -2242,8 +2242,7 @@ def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,
     alpha = min(alpha, getattr(map_screen, "_target_area_unit_box_alpha", 255))
     # Unknown stacks have no knowable domain. Keep their question marks in
     # All view only so toggling filters cannot reveal a fogged force's type.
-    if (is_partial and getattr(map_screen, "unit_view_filter",
-                               queries.DEFAULT_UNIT_VIEW_FILTER) != "ALL"):
+    if (is_partial and map_screen.unit_view_filter != "ALL"):
         return
     # Filtered up front: a lone hidden submarine must not even trip the "?"
     # partial-fog blip, or its position leaks through despite being otherwise
@@ -2252,7 +2251,7 @@ def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,
         units = province.get("units", [])
     # Callers supplying explicit units (including animation frames) share the
     # same cached membership; classification never runs for every frame.
-    if getattr(map_screen, "unit_view_filter", queries.DEFAULT_UNIT_VIEW_FILTER) != "ALL":
+    if map_screen.unit_view_filter != "ALL":
         allowed = _unit_render_index(map_screen).view_unit_object_ids
         units = [unit for unit in units if id(unit) in allowed]
     if not units_are_visible:
@@ -2302,7 +2301,7 @@ def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,
     # Selection is part of the map presentation, not merely a border color.
     # Split every stack into its selected and unselected members so a mixed
     # stack remains readable and the two groups can be clicked independently.
-    is_selected = getattr(map_screen, "is_unit_selected", lambda _unit: False)
+    is_selected = map_screen.is_unit_selected
     unit_index = _unit_render_index(map_screen)
     split_stacks = []
     for owner, army, stack_units in unit_stacks:

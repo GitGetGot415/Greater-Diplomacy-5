@@ -1,6 +1,7 @@
 import os
 import pygame
 from data import queries
+from ui.dialogs import file_exchange
 from ui.navigation.game_state import FolderListState
 from ui.widgets.ui_elements import Button, make_back_button
 from ui.rendering.font_manager import fonts
@@ -82,7 +83,7 @@ class Mods(FolderListState):
         self.elements = [
             make_back_button(self.exit_screen),
             Button(160, 20, "medium", "green", "Import Mod (.py)",
-                   lambda: queries.import_mod_file(self, self.refresh_ui)),
+                   lambda: file_exchange.import_mod_file(self, self.refresh_ui)),
         ]
         for el in self.elements:
             el.text_align = "left"

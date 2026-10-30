@@ -1,41 +1,18 @@
-from ui.navigation.game_state import GameState
+from screens.multiplayer.tournament_picker import TournamentPickerScreen
 from ui.widgets.ui_elements import Button, make_back_button
-import data.constants as c
-from data import queries
 
-from ui import dialogs
-class Multiplayer_Join(GameState):
-    back_state = "MULTIPLAYER_HUB"
 
+class Multiplayer_Join(TournamentPickerScreen):
     title = "Join Game"
-    title_y = 100
-    title_shadow = True
 
     def __init__(self):
         super().__init__()
-        self.bg_color = (10, 10, 40)
         self.elements = [
             Button("centered", "centered", "medium", "blue", "Load Tournament File", self.load_tour_file),
             make_back_button(self.exit_screen)
         ]
 
     def load_tour_file(self):
-
-        def after_file(file_path):
-            if not file_path:
-                return
-
-            def after_key(key):
-                if not key:
-                    return
-                self.selected_tournament_path = file_path
-                self.selected_tournament_key = key
-                self.go_to("MAP")
-
-            dialogs.ask_string(
-                "Player Key",
-                "Enter your Country Key, or enter 'Spectator' for the fog-limited Tournament Spectator view:",
-                after_key)
-
-        queries.open_file_browser(self, "Select Tournament File", c.TOURNAMENT_SAVES_DIR,
-                                  extensions=[".gd5tour"], on_result=after_file)
+        self.pick_tournament(
+            "Player Key",
+            "Enter your Country Key, or enter 'Spectator' for the fog-limited Tournament Spectator view:")

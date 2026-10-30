@@ -47,3 +47,22 @@ class SessionState:
     refresh_tasks_total: int = 0
     refresh_tasks_completed: int = 0
     turn_start_time: int = 0
+    # Tournament host and player state.
+    multiplayer_tournament_dir: object = None
+    multiplayer_master_key: str = ""
+    multiplayer_session_key: object = None
+    multiplayer_keys_dict: dict = field(default_factory=dict)
+    multiplayer_player_enc_cache: dict = field(default_factory=dict)
+    multiplayer_protected_countries: set = field(default_factory=set)
+    multiplayer_pending_key_regen: set = field(default_factory=set)
+    multiplayer_pending_faction_renames: list = field(default_factory=list)
+    multiplayer_pending_appearance_updates: dict = field(default_factory=dict)
+    submitted_moves: set = field(default_factory=set)
+    # Real-time client drafts that travel as server-validated commands.
+    realtime_pending_appearance_updates: dict = field(default_factory=dict)
+    realtime_volunteer_drafts: dict = field(default_factory=dict)
+    # Map editor undo and redo stacks.
+    editor_history: list = field(default_factory=list)
+    editor_redo_history: list = field(default_factory=list)
+    # Object IDs of units that moved during the current turn.
+    _units_with_move_order_this_turn: set = field(default_factory=set)

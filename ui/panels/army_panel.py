@@ -4,6 +4,7 @@ import pygame
 
 import data.constants as c
 from data import queries
+from ui.dialogs import pickers
 from ui.rendering import symbol_loader
 from ui.rendering.font_manager import fonts
 from ui.panels import map_top_right_layout
@@ -80,7 +81,7 @@ def _editor_rect():
 
 
 def _editor_state(map_screen):
-    state = getattr(map_screen, "army_editor_state", None)
+    state = map_screen.army_editor_state
     if not isinstance(state, dict):
         return None
     army = next((item for item in queries.get_armies(
@@ -269,7 +270,7 @@ def _open_custom_symbol_editor(map_screen, editor_state):
 
 
 def _custom_symbol_editor_state(map_screen):
-    state = getattr(map_screen, "army_custom_symbol_state", None)
+    state = map_screen.army_custom_symbol_state
     editor_state = _editor_state(map_screen)
     if (not isinstance(state, dict) or editor_state is None
             or state.get("army_id") != editor_state["army_id"]):
@@ -382,7 +383,7 @@ def _handle_editor_event(map_screen, event):
         elif event.key == pygame.K_a and event.mod & (pygame.KMOD_CTRL | pygame.KMOD_GUI):
             state["name"] = ""
         elif event.key == pygame.K_c and event.mod & (pygame.KMOD_CTRL | pygame.KMOD_GUI):
-            queries.copy_to_clipboard(state["name"])
+            pickers.copy_to_clipboard(state["name"])
         else:
             state["name"], _ = process_text_input(event, state["name"], max_length=80)
         return True
@@ -590,8 +591,8 @@ def _visible(map_screen, orders_screen=None):
         return False
     return (not map_screen.selection_mode
             and not map_screen.is_editor
-            and (getattr(map_screen, "army_panel_visible_in_orders", False)
-                 or not getattr(map_screen, "selected_province", None))
+            and (map_screen.army_panel_visible_in_orders
+                 or not map_screen.selected_province)
             and map_screen.player_country not in ("None", "Spectator")
             and not map_screen.tactical_mode)
 
@@ -632,7 +633,7 @@ def _layout(map_screen, show_create=False, orders_screen=None):
     tray = map_top_right_layout.army_tray_rect(map_screen, row_count)
     content_height = row_count * (map_top_right_layout.CARD_HEIGHT + 5)
     min_scroll = min(0, tray.height - map_top_right_layout.TRAY_HEADER_HEIGHT - content_height)
-    scroll_y = getattr(map_screen, "army_panel_scroll_y", 0)
+    scroll_y = map_screen.army_panel_scroll_y
     map_screen.army_panel_scroll_y = max(min_scroll, min(0, scroll_y))
     map_screen.army_panel_rect = tray
     map_screen.army_panel_min_scroll = min_scroll
@@ -663,7 +664,7 @@ def handle_event(map_screen, event, orders_screen=None):
     # card is instead an assignment action, so retain it through its matching
     # release even when the pointer is now over the map behind the tray.
     if (event.type == pygame.MOUSEBUTTONUP and event.button == 3
-            and getattr(map_screen, "_army_tray_right_click_active", False)):
+            and map_screen._army_tray_right_click_active):
         map_screen._army_tray_right_click_active = False
         return True
     if orders_screen is not None and getattr(orders_screen, "battle_screen", None) is not None:

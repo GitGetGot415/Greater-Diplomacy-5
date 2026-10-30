@@ -33,7 +33,7 @@ Read `general_info.txt` for state ownership, storage, and build policy.
 | `screens/editors/` | In-game country, economy, date, research, brush, diplomacy, event, leader, and turn-setting editors. |
 | `ui/rendering/` | Cached map surfaces, overlays, labels, fonts, and symbols. |
 | `ui/camera/` | Map camera interaction and viewing transforms. |
-| `ui/dialogs/` | Shared dialogs, notifications, and reusable pickers. |
+| `ui/dialogs/` | Shared dialogs, notifications, and reusable pickers. `pickers.py` opens pickers. `file_exchange.py` exports and imports player files. |
 | `ui/navigation/` | Screen runners, modal screens, and the modal stack. |
 | `ui/panels/` | Persistent map panels, progress drawing, status displays, and shared panel layout. |
 | `ui/widgets/` | Text, flags, tables, and scrolling support. |
@@ -97,12 +97,19 @@ Read `general_info.txt`, DISPLAY SUPPORT, for shared image caches.
 Camera tilt also uses `ui/rendering/map_utils.py`.
 
 `data/queries/` is a package that replaces the former single module `data/queries.py`.
-The package `__init__.py` re-exports every name, so callers still write `queries.name(...)`.
+The package `__init__.py` re-exports every public name, so callers still write `queries.name(...)`.
+A new public name needs no entry in `__init__.py`.
+Do not use a public name in two modules of this package. `tests/test_queries_package.py` checks this.
 Each module imports only from modules that come before it in the layer list in `data/queries/__init__.py`.
 A test can replace a query with `mock.patch.object(queries, "name", ...)`.
 Other queries must still see that replacement.
 They therefore read replaced names as `queries.name` and do not import them.
 Read the `data/queries/__init__.py` docstring before you add a query that tests replace.
+
+Modules in `data/` do not import `ui/` or `screens/`.
+Put code that opens a dialog or a screen in `ui/` or `screens/`.
+`data/multiplayer/tournament/files.py` is the one exception. It draws a progress bar and clears name caches.
+`tests/test_queries_package.py` checks this rule.
 
 Read [AGENTS.md, Imports](../AGENTS.md#imports) for the import policy.
 Game startup installs mods before importing game modules.

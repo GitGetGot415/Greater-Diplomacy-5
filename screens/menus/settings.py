@@ -4,6 +4,7 @@ from ui.widgets.ui_elements import Button, Slider, make_info_button
 from ui.navigation.game_state import GameState
 import data.constants as c
 from data import queries
+from ui.dialogs import pickers
 from ui.rendering.font_manager import fonts
 from ui.bars import ui_bars
 from ui import dialogs
@@ -521,10 +522,10 @@ class Settings(GameState):
 
         if key in self.DIR_FIELDS:
             _const, _default, title = self.DIR_FIELDS[key]
-            queries.ask_directory(self, title, current, on_chosen)
+            pickers.ask_directory(self, title, current, on_chosen)
         else:
             _const, _default_attr, title = self.COLOR_FIELDS[key]
-            queries.ask_color(self, title, current, on_chosen)
+            pickers.ask_color(self, title, current, on_chosen)
 
     def reset_setting(self, key, refresh=True):
         """Restores a path or color setting to its shipped default."""

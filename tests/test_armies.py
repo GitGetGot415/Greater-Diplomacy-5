@@ -18,7 +18,7 @@ from tests.stub_map_screen import bare_orders_screen, map_double
 
 class CountryMapCenterTests(unittest.TestCase):
     def test_country_name_transform_cache_reuses_settled_camera_pixels(self):
-        map_screen = SimpleNamespace(
+        map_screen = map_double(
             camera=SimpleNamespace(zoom=1.0, tilt_factor=1.0))
         source = pygame.Surface((40, 12), pygame.SRCALPHA)
         shadow = pygame.Surface((40, 12), pygame.SRCALPHA)
@@ -396,7 +396,7 @@ class ArmyControlTests(unittest.TestCase):
                 map_stub = self._name_editor_map()
                 copy = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_c,
                                           mod=modifiers, unicode="c")
-                with patch("ui.panels.army_panel.queries.copy_to_clipboard", return_value=True) as clipboard:
+                with patch("ui.panels.army_panel.pickers.copy_to_clipboard", return_value=True) as clipboard:
                     self.assertTrue(army_panel.handle_event(map_stub, copy))
                 clipboard.assert_called_once_with("Army 1")
                 self.assertEqual(map_stub.army_editor_state["name"], "Army 1")

@@ -63,6 +63,7 @@ from screens.multiplayer.realtime_multiplayer import (
 from screens.game.map import Map
 from ui.widgets.ui_elements import Button
 from tests.stub_map_screen import map_double
+from ui.dialogs import pickers
 
 
 class Clock:
@@ -262,7 +263,7 @@ class RelayTransportTests(unittest.TestCase):
         with mock.patch("data.queries.pygame.scrap.get_init", side_effect=RuntimeError("no SDL clipboard")), \
              mock.patch("data.queries.sys.platform", "darwin"), \
              mock.patch("data.queries.subprocess.run") as run:
-            self.assertTrue(queries.copy_to_clipboard("reconnect-code"))
+            self.assertTrue(pickers.copy_to_clipboard("reconnect-code"))
         run.assert_called_once()
         self.assertEqual(run.call_args.args[0], ["/usr/bin/pbcopy"])
         self.assertEqual(run.call_args.kwargs["input"], b"reconnect-code")

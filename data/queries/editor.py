@@ -62,9 +62,6 @@ def _apply_map_state(map_screen, state):
 
 def save_editor_state(map_screen):
     """Snapshots the current map data for the undo feature, clearing redo history."""
-    if not hasattr(map_screen, 'editor_history'):
-        map_screen.editor_history = []
-    
     # Any new physical edit destroys the active redo-timeline
     map_screen.editor_redo_history = []
         
@@ -76,12 +73,9 @@ def save_editor_state(map_screen):
 
 def restore_editor_state(map_screen):
     """Restores the last map state from the editor history (Undo)."""
-    if not getattr(map_screen, 'editor_history', []):
+    if not map_screen.editor_history:
         map_screen.show_feedback("Nothing to undo!")
         return
-        
-    if not hasattr(map_screen, 'editor_redo_history'):
-        map_screen.editor_redo_history = []
         
     # Save the current state to the redo stack before replacing it
     map_screen.editor_redo_history.append(_get_current_map_state(map_screen))
@@ -93,12 +87,9 @@ def restore_editor_state(map_screen):
 
 def redo_editor_state(map_screen):
     """Restores the next map state from the redo history (Redo)."""
-    if not getattr(map_screen, 'editor_redo_history', []):
+    if not map_screen.editor_redo_history:
         map_screen.show_feedback("Nothing to redo!")
         return
-        
-    if not hasattr(map_screen, 'editor_history'):
-        map_screen.editor_history = []
         
     # Save the current state to the undo stack before replacing it
     map_screen.editor_history.append(_get_current_map_state(map_screen))

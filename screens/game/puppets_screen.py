@@ -1,6 +1,7 @@
 import pygame
 import data.constants as c
 from data import queries
+from ui.dialogs import pickers
 from ui.navigation.game_state import MapOverlayScreen
 from ui.widgets.ui_elements import Button, Slider, make_back_button
 from ui.rendering.font_manager import fonts
@@ -396,7 +397,7 @@ def open_puppets_menu(map_screen):
                 _run_pygame_sub_screen(map_screen, Create_Puppet_Screen(map_screen, country_id))
 
         countries = sorted(queries.get_living_nations(map_screen.map_data))
-        queries.open_listbox_selector(map_screen, "Release Nations", "Choose a country to release nations for:",
+        pickers.open_listbox_selector(map_screen, "Release Nations", "Choose a country to release nations for:",
                                       queries.country_picker_items(countries, map_screen.nation_data), selected,
                                       close_on_select=False)
         return

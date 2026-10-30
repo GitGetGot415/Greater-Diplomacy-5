@@ -5,6 +5,7 @@ import unittest
 from unittest import mock
 
 from data import queries
+from ui.dialogs import pickers
 from data.multiplayer.realtime.session import MapRealtimeDriver, RealtimeError
 from map_logic.diplomacy import diplomacy_processor, faction_leadership, player_diplomacy_actions
 from tests.stub_map_screen import StubMapScreen
@@ -136,7 +137,7 @@ class FactionInvitationTests(unittest.TestCase):
 
     def test_spectator_cannot_invite_from_a_member_or_a_stale_picker(self):
         self.game.selected_province = self.game.home_of("Member")
-        with mock.patch.object(queries, "open_listbox_selector") as selector:
+        with mock.patch.object(pickers, "open_listbox_selector") as selector:
             spectator_controls.spec_invite_faction(self.game)
             selector.assert_not_called()
             self.game.selected_province = self.game.home_of("Leader")

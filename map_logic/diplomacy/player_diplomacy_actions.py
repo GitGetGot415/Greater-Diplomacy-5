@@ -3,6 +3,7 @@
 
 from data.state_access import world_for, session_for
 from data import queries
+from ui.dialogs import pickers
 from map_logic.diplomacy import diplomacy_logic, peace_scope, ratification
 from map_logic.diplomacy import volunteers
 from map_logic.diplomacy import guarantees
@@ -464,7 +465,7 @@ def handle_send_volunteers(map_screen):
             map_screen.nation_data, donor, host, volunteers.ACTION, message,
             parameters=details)
         if session_for(map_screen).realtime_multiplayer:
-            drafts = getattr(map_screen, "realtime_volunteer_drafts", None)
+            drafts = map_screen.realtime_volunteer_drafts
             if drafts is None:
                 drafts = {}
                 map_screen.realtime_volunteer_drafts = drafts
@@ -476,7 +477,7 @@ def handle_send_volunteers(map_screen):
             volunteers.cancel_offer(map_screen, donor, host)
         map_screen.show_feedback(msg)
 
-    queries.open_checkbox_list(
+    pickers.open_checkbox_list(
         map_screen, "Send Volunteers", f"Choose up to {capacity} land divisions for {host}.",
         rows, send, confirm_label="Send Volunteers", show_select_all=False,
         footnote="Volunteer divisions are unavailable while this offer and its travel are pending.")
@@ -529,7 +530,7 @@ def handle_withdraw_volunteer_offer(map_screen):
         info = pending.get(host, {})
         if isinstance(info, dict) and info.get("action") == volunteers.ACTION and info.get("turns", 0) == 0:
             pending.pop(host, None)
-        getattr(map_screen, "realtime_volunteer_drafts", {}).pop(host, None)
+        map_screen.realtime_volunteer_drafts.pop(host, None)
         map_screen.show_feedback("Volunteer offer withdrawn before submission.")
         return
     volunteers.cancel_offer(map_screen, donor, host)

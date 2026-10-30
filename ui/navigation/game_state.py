@@ -765,7 +765,7 @@ class MapOverlayScreen(GameState):
     def is_over_ui(self, pos=None):
         """True when the cursor sits on a panel or the top bar rather than the map."""
         pos = pos or pygame.mouse.get_pos()
-        rects = (self.panel_rect, getattr(self.map_screen, "top_bar_rect", None))
+        rects = (self.panel_rect, self.map_screen.top_bar_rect)
         return any(r and r.collidepoint(pos) for r in rects)
 
     def additional_events(self, event):

@@ -37,6 +37,18 @@ def _state_field(owner, name):
 class StateAccess:
     """Keep public map attributes as explicit references to canonical owners."""
 
+    # Rules read these on both map types. An instance value replaces each default.
+    realtime_server_map = None
+    realtime_match_metadata = None
+    presentation_enabled = True
+    visible_provinces = None
+    ai_world = None
+    random_settings = None
+    unit_event_filter_turn = None
+    _presentation_cache_revision = None
+    _bilateral_response_indicator_cache = None
+    _scripted_response_indicator_cache = None
+
     def __copy__(self):
         result = object.__new__(type(self))
         result.__dict__.update(self.__dict__)

@@ -80,7 +80,7 @@ def economies_for(map_screen):
     if supplied:
         return supplied
 
-    world = getattr(map_screen, "ai_world", None)
+    world = map_screen.ai_world
     if world is not None:
         return world.economies
 

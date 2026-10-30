@@ -3,6 +3,7 @@ import re
 import data.constants as c
 from data.map import load_map
 from data import queries
+from ui.dialogs import pickers
 
 from data.io import country_io
 from screens import editors as editor_screens
@@ -66,7 +67,7 @@ def editor_load_map(map_screen):
             map_screen.refresh_map_layers("political")
             map_screen.show_feedback("Map Loaded into Editor")
 
-    queries.open_file_browser(map_screen, "Select Map Folder to Edit", c.SCENARIOS_CUSTOM_DIR,
+    pickers.open_file_browser(map_screen, "Select Map Folder to Edit", c.SCENARIOS_CUSTOM_DIR,
                               mode="select_folder", on_result=on_picked)
 
 def _select_brush(map_screen, mode, attr, items, title, prompt, feedback_label="Brush"):
@@ -79,7 +80,7 @@ def _select_brush(map_screen, mode, attr, items, title, prompt, feedback_label="
         if mode == "UNIT":
             display = queries.get_unit_display_name(val, context=map_screen)
         map_screen.show_feedback(f"{feedback_label}: {display}")
-    queries.open_listbox_selector(map_screen, title, prompt, items, cb)
+    pickers.open_listbox_selector(map_screen, title, prompt, items, cb)
 
 def _paintable_nations(map_screen):
     """The nation list every nation-painting brush offers, sorted accent-insensitively."""
@@ -120,7 +121,7 @@ def spec_select_edit_country(map_screen):
     def cb(val):
         map_screen.editing_country = val
         map_screen.next_state, map_screen.done = "EDIT_COUNTRY", True
-    queries.open_listbox_selector(map_screen, "Select Nation to Edit", "Select Nation to Edit:", items, cb)
+    pickers.open_listbox_selector(map_screen, "Select Nation to Edit", "Select Nation to Edit:", items, cb)
 
 def spec_select_research_country(map_screen):
     """Choose View or Edit and a country for the spectator research tree."""

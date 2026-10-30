@@ -17,6 +17,7 @@ import data.constants as c
 from tests.stub_map_screen import fill_state_defaults, map_double, synchronous_progress
 from tests.research_fixtures import research_lock_cases
 from data import queries
+from ui.dialogs import pickers
 from data.multiplayer.tournament import files as tournament_files
 
 
@@ -428,7 +429,7 @@ class TournamentMoveTests(unittest.TestCase):
                 move_path = self.write_move(directory, "stats.gd5move", "Leader", move)
                 missing_path = os.path.join(directory, "missing.gd5move")
                 completed = mock.Mock()
-                with mock.patch.object(queries, "open_file_browser") as browser, \
+                with mock.patch.object(pickers, "open_file_browser") as browser, \
                         mock.patch.object(dialogs, "show_message") as message, \
                         mock.patch.object(dialogs, "ask_yes_no") as ask, \
                         mock.patch.object(tournament_files, "run_with_progress", synchronous_progress):
@@ -461,7 +462,7 @@ class TournamentMoveTests(unittest.TestCase):
                 host.show_feedback = mock.Mock()
                 path = self.write_move(directory, "stats.gd5move", "Leader", move)
                 completed = mock.Mock()
-                with mock.patch.object(queries, "open_file_browser") as browser, \
+                with mock.patch.object(pickers, "open_file_browser") as browser, \
                         mock.patch.object(dialogs, "show_message") as message, \
                         mock.patch.object(dialogs, "ask_yes_no") as ask, \
                         mock.patch.object(tournament_files, "run_with_progress", synchronous_progress):
@@ -487,7 +488,7 @@ class TournamentMoveTests(unittest.TestCase):
             host.__dict__.update(flags)
             host.show_feedback = mock.Mock()
             completed = mock.Mock()
-            with mock.patch.object(queries, "open_file_browser") as browser:
+            with mock.patch.object(pickers, "open_file_browser") as browser:
                 multiplayer_host_panel.load_multiplayer_moves(host, completed)
             browser.assert_not_called()
             completed.assert_called_once_with(False)
@@ -654,7 +655,7 @@ class TournamentMoveTests(unittest.TestCase):
                 host.refresh_all_maps = mock.Mock()
                 path = self.write_move(directory, "older.gd5move", "Leader", self.previous_release_move("Leader", host))
                 completed = mock.Mock()
-                with mock.patch.object(queries, "open_file_browser") as browser, \
+                with mock.patch.object(pickers, "open_file_browser") as browser, \
                         mock.patch.object(dialogs, "show_message") as message, \
                         mock.patch.object(dialogs, "ask_yes_no") as ask, \
                         mock.patch.object(tournament_files, "run_with_progress", synchronous_progress):

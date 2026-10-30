@@ -246,7 +246,7 @@ class Research_Screen(GameState):
         """
         if self.editor_country:
             return self.editor_country
-        chosen = getattr(self.map_screen, "viewing_research_country", "")
+        chosen = self.map_screen.viewing_research_country
         return chosen or self.map_screen.player_country
 
     @property
@@ -478,7 +478,7 @@ class Research_Screen(GameState):
         self.map_screen = map_ref
         self.editor_country = editor_country
         # Picker modes are display state. Old saves and direct callers default to View.
-        self.spectator_research_mode = getattr(map_ref, "viewing_research_mode", "VIEW")
+        self.spectator_research_mode = map_ref.viewing_research_mode
         self.done = False
         self.next_state = None
         self.research_edit_token = object()
@@ -517,9 +517,7 @@ class Research_Screen(GameState):
 
     def _mark_draft_changed(self):
         """Queue a single real-time sync after a research-queue edit."""
-        invalidate = getattr(self.map_screen, "invalidate_map_presentation_cache", None)
-        if invalidate:
-            invalidate()
+        self.map_screen.invalidate_map_presentation_cache()
 
     def refresh_ui(self):
         self.elements = []

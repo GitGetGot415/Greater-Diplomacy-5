@@ -17,7 +17,7 @@ def generate_new_world(map_screen):
     height = c.PROCEDURAL_MAP_HEIGHT
     num_provinces = c.PROCEDURAL_PROVINCE_COUNT
     
-    proc_type = getattr(map_screen, 'random_settings', {}).get("procedural_type", "Grid")
+    proc_type = (map_screen.random_settings or {}).get("procedural_type", "Grid")
 
     # 2. Route to the requested algorithm
     if proc_type == "Voronoi":

@@ -122,7 +122,7 @@ def get_country_summary(map_screen, country_id):
         if networked and country_id != viewer and country_id in shared_economies:
             economy = copy.deepcopy(shared_economies[country_id])
         elif not (session_state.realtime_multiplayer and country_id != viewer
-                  and not getattr(map_screen, "realtime_server_map", None)):
+                  and not map_screen.realtime_server_map):
             # Remote clients without server totals keep the economy private.
             # Economy queries can initialize missing siphon rates. Inspection must
             # not initialize or change any saved country state.

@@ -9,6 +9,7 @@ import zipfile
 from unittest import mock
 
 from data import queries
+from ui.dialogs import file_exchange
 from data.map import history_io, load_map, save_map
 import data.constants as c
 from tests.stub_map_screen import map_double, sample_map_screen
@@ -160,8 +161,8 @@ class MapSaveFormatTests(unittest.TestCase):
                 produce(archive_path)
                 return archive_path
 
-            with mock.patch.object(queries, "_export_to_downloads", export_without_ui):
-                queries.export_dir_as_zip(source_dir, "export.zip")
+            with mock.patch.object(file_exchange, "_export_to_downloads", export_without_ui):
+                file_exchange.export_dir_as_zip(source_dir, "export.zip")
 
             with zipfile.ZipFile(archive_path) as archive:
                 payload = archive.read("meta.json").decode("utf-8")

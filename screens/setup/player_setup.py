@@ -1,5 +1,6 @@
 import data.constants as c
 from data import queries
+from ui.dialogs import pickers
 
 # The map imports player_setup. Keep map-screen callbacks local to avoid that cycle.
 
@@ -53,7 +54,7 @@ def select_tactical_unit(map_screen, province, candidate_units=None):
         def on_select(label):
             _stage_tactical_selection(map_screen, unit_by_label[label], owner, province)
 
-        queries.open_listbox_selector(map_screen, "Select Tactical Unit", "Select Unit to Control:",
+        pickers.open_listbox_selector(map_screen, "Select Tactical Unit", "Select Unit to Control:",
                                       list(unit_by_label.keys()), on_select)
 
 def _stage_tactical_selection(map_screen, unit, owner, province):

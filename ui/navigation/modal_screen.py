@@ -29,6 +29,7 @@ from ui.widgets.scroll_panes import ScrollPanes
 from ui.widgets.ui_elements import Button
 
 from data import queries
+from ui.dialogs import pickers
 from ui import dialogs
 class ModalScreen(ScrollPanes, GameState):
     """A dimmed freeze-frame behind a bordered panel -- the shape every converted
@@ -97,7 +98,7 @@ class ModalScreen(ScrollPanes, GameState):
         if not options:
             dialogs.show_warning("Nothing to pick", f"There are no {title.lower()} to choose from.")
             return
-        queries.open_listbox_selector(self.map_screen, title, f"Select {title}:", options, on_pick)
+        pickers.open_listbox_selector(self.map_screen, title, f"Select {title}:", options, on_pick)
         self.refresh_ui()
 
     def toggle(self, x, y, width, checked, text, callback):

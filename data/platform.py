@@ -305,12 +305,17 @@ def _ensure_persist_js():
     _persist_js_defined = True
 
 
+CHARACTERS_DIR = "assets/characters"
+
+#: Portraits imported via the "+ Add New" tile live here, one level under
+#: CHARACTERS_DIR, so discover_character_images() picks them up for free.
+CUSTOM_SUBDIR = "Custom"
+
+
 def _persisted_roots():
     # Lazy import: data.constants imports IS_WEB from this module, so this
     # module can't import data.constants back at top level.
     import data.constants as c
-    # The character picker imports this platform module. Keep its storage path lookup local to avoid a startup cycle.
-    from ui.dialogs.character_select_screen import CHARACTERS_DIR, CUSTOM_SUBDIR
     custom_characters_dir = os.path.join(CHARACTERS_DIR, CUSTOM_SUBDIR)
     return (c.SAVES_DIR, c.TOURNAMENT_SAVES_DIR, c.MODS_DIR, custom_characters_dir)
 

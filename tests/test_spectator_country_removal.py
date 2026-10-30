@@ -9,6 +9,7 @@ import pygame
 
 import data.constants as c
 from data import queries
+from ui.dialogs import pickers
 from map_logic.diplomacy import puppet_actions, volunteers, faction_leadership
 from map_logic.system32 import turn_processor
 from map_logic.territory import ownership
@@ -202,7 +203,7 @@ class SpectatorRemovalControlTests(unittest.TestCase):
         self.enterContext(mock.patch.object(spectator_controls, "_refresh_country_removal"))
 
     def test_annex_picker_uses_selected_source_and_display_names(self):
-        with mock.patch.object(queries, "open_listbox_selector") as picker:
+        with mock.patch.object(pickers, "open_listbox_selector") as picker:
             spectator_controls.spec_annex_country(self.game)
         items = picker.call_args.args[3]
         self.assertIn(("Target Display", "Target"), items)
@@ -223,7 +224,7 @@ class SpectatorRemovalControlTests(unittest.TestCase):
         self.assertNotIn("Target", self.game.nation_data)
 
     def test_stale_selection_or_permission_cancels_annex_and_delete_callbacks(self):
-        for menu, tool, target in ((spectator_controls.spec_annex_country, queries, "open_listbox_selector"),
+        for menu, tool, target in ((spectator_controls.spec_annex_country, pickers, "open_listbox_selector"),
                                    (spectator_controls.spec_delete_country, dialogs, "ask_yes_no")):
             for change in ("selection", "permissions"):
                 self.game = game()

@@ -10,6 +10,7 @@ import pygame
 
 import data.constants as c
 from data import queries
+from ui.dialogs import pickers
 from map_logic.diplomacy import diplomacy_processor, puppet_actions
 from screens.game import puppets_screen
 from tests import app_harness
@@ -237,7 +238,7 @@ class PuppetReleaseControlTests(unittest.TestCase):
 
     def test_spectator_picker_keeps_the_viewer_and_queues_for_the_selected_country(self):
         self.map.player_country = "Spectator"
-        with mock.patch.object(queries, "open_listbox_selector") as picker, \
+        with mock.patch.object(pickers, "open_listbox_selector") as picker, \
                 mock.patch.object(puppets_screen, "_run_pygame_sub_screen") as launch:
             puppets_screen.open_puppets_menu(self.map)
             picker.assert_called_once()
@@ -291,7 +292,7 @@ class PuppetReleaseControlTests(unittest.TestCase):
     def test_generic_picker_still_closes_on_selection_by_default(self):
         with mock.patch.object(modal_stack, "_stack", []):
             selected = mock.Mock()
-            queries.open_listbox_selector(self.map, "Test", "Choose", [("Display", "ID")], selected)
+            pickers.open_listbox_selector(self.map, "Test", "Choose", [("Display", "ID")], selected)
             modal = modal_stack.active()
             modal.screen.select(modal.screen.items[0])
             modal.update()

@@ -11,6 +11,7 @@ from ui.navigation.game_state import GameState
 from ui.widgets.ui_elements import Button
 import data.constants as c
 from data import queries
+from ui.dialogs import pickers
 from data.platform import IS_WEB
 from ui.rendering.font_manager import fonts
 
@@ -363,7 +364,7 @@ class Menu(GameState):
             threading.Thread(target=self.check_version, daemon=True).start()
 
     def open_hildehrand_picker(self):
-        queries.open_character_picker(self, self.hildehrand_choice, self._set_hildehrand_choice)
+        pickers.open_character_picker(self, self.hildehrand_choice, self._set_hildehrand_choice)
 
     def confirm_exit(self):
 
@@ -458,7 +459,7 @@ class Menu(GameState):
                     webbrowser.open(item["url"])
 
                     # Play the UI click sound for auditory feedback
-                    queries.play_click_sound()
+                    pickers.play_click_sound()
 
     def update(self):
         # Drives the whole intro: title drops from above, the sign slides in

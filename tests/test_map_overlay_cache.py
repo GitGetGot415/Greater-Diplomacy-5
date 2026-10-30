@@ -31,11 +31,12 @@ import data.constants as c
 from data import queries
 from ui.rendering import overlay_renderer, symbol_loader
 from tests import app_harness
+from tests.stub_map_screen import map_double
 
 
 class CombatBubbleRecordCacheTests(unittest.TestCase):
     def test_records_are_reused_until_the_presentation_revision_changes(self):
-        map_screen = SimpleNamespace(
+        map_screen = map_double(
             _presentation_cache_revision=1,
             player_country="A",
             visible_provinces=None,
@@ -237,7 +238,7 @@ class CombatDisplayTests(unittest.TestCase):
             "center": (100, 100),
             "units": [self.mine, self.enemy],
         }
-        self.map = SimpleNamespace(
+        self.map = map_double(
             player_country="A",
             visible_provinces=None,
             partial_visible_provinces=set(),

@@ -8,6 +8,7 @@ import traceback
 import threading
 import re
 import json
+from types import MappingProxyType
 
 import pygame
 import os
@@ -19,6 +20,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 # Data & Constants
 import data.constants as c
 from data import queries
+from ui.dialogs import pickers
+from ui.dialogs import file_exchange
 from data.state_access import StateAccess
 from data.map import load_map, save_map
 from data.platform import run_background
@@ -315,13 +318,13 @@ def render_buttons(map_screen):
             cid = map_screen.player_country
             save_name = f"Turn_{turn}_{cid}.gd5move"
             export_path = os.path.join(c.TOURNAMENT_SAVES_DIR, save_name)
-            player_key = getattr(map_screen, 'multiplayer_player_key', '')
+            player_key = map_screen.multiplayer_player_key
 
             def export():
                 tournament_files.export_move_file(map_screen, export_path, player_key)
                 map_screen.show_feedback(f"Move exported to {export_path}")
 
-            queries.export_with_overwrite_confirmation(export_path, export)
+            file_exchange.export_with_overwrite_confirmation(export_path, export)
 
         map_screen.btn_next_turn = Button(EDITOR_BOT_BTN_START_X, c.BOTTOM_BAR_UI_CENTER_Y, "small", "purple", "Export Turn", m_export)
 
@@ -330,7 +333,7 @@ def render_buttons(map_screen):
             def on_picked(file_path):
                 if file_path:
                     cid = map_screen.player_country
-                    player_key = getattr(map_screen, 'multiplayer_player_key', '')
+                    player_key = map_screen.multiplayer_player_key
                     keys_dict = {cid: player_key}
 
                     summary = tournament_files.load_move_files(map_screen, [file_path], keys_dict)
@@ -346,7 +349,7 @@ def render_buttons(map_screen):
                     if hasattr(map_screen, 'sync_units_to_data'):
                         map_screen.sync_units_to_data()
 
-            queries.open_file_browser(map_screen, "Select Move File", c.TOURNAMENT_SAVES_DIR,
+            pickers.open_file_browser(map_screen, "Select Move File", c.TOURNAMENT_SAVES_DIR,
                                       extensions=[".gd5move"], on_result=on_picked)
 
         map_screen.btn_import_turn = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X, c.BOTTOM_BAR_UI_CENTER_Y, "small", "purple", "Import Turn", m_import)
@@ -658,7 +661,7 @@ def set_orders_or_battle(map_screen, set_btn, has_player_units):
 
 def layout_country_action_buttons(map_screen):
     """Place the fixed country-action stack inside its scroll viewport."""
-    buttons = getattr(map_screen, "country_action_buttons", ())
+    buttons = map_screen.country_action_buttons
     rect = map_screen.country_actions_scroll_rect
     if not buttons or rect is None:
         return
@@ -710,10 +713,10 @@ def bilateral_response_indicator(map_screen, target, action):
         fired = tuple(map_screen.nation_data[target].get("fired_scripted_events", []))
         variables = tuple((item["name"], item["type"], item["value"])
                           for item in map_screen.script_variables)
-        cache_stamp = (getattr(map_screen, "_presentation_cache_revision", None), turns,
+        cache_stamp = (map_screen._presentation_cache_revision, turns,
                        tuple(id(event) for event in events), fired, variables,
                        scripted_events_enabled)
-        cache = getattr(map_screen, "_scripted_response_indicator_cache", None)
+        cache = map_screen._scripted_response_indicator_cache
         if cache is None or cache.get("stamp") != cache_stamp:
             cache = {"stamp": cache_stamp, "responses": {}}
             map_screen._scripted_response_indicator_cache = cache
@@ -736,13 +739,13 @@ def bilateral_response_indicator(map_screen, target, action):
 
 def cached_bilateral_response_indicator(map_screen, target, action):
     """Reuse proposal availability and forecasts until input or world state changes."""
-    revision = getattr(map_screen, "_presentation_cache_revision", None)
+    revision = map_screen._presentation_cache_revision
     if revision is None or not hasattr(map_screen, "world"):
         return bilateral_response_indicator(map_screen, target, action)
     world = map_screen.world
     stamp = (revision, world.diplomacy_revision, world.runtime_rules.revision,
              world.time_manager.total_turns, map_screen.player_country, tuple(map_screen.active_players))
-    cache = getattr(map_screen, "_bilateral_response_indicator_cache", None)
+    cache = map_screen._bilateral_response_indicator_cache
     if cache is None or cache[0] != stamp:
         cache = (stamp, {})
         map_screen._bilateral_response_indicator_cache = cache
@@ -760,7 +763,7 @@ def set_bilateral_response_indicator(map_screen, button, target, action,
         return
     response = cached_bilateral_response_indicator(map_screen, target, action)
     if response:
-        button.right_image = getattr(map_screen, "ai_response_images", {}).get(
+        button.right_image = map_screen.ai_response_images.get(
             response)
 
 
@@ -922,9 +925,9 @@ def _update_turn_buttons(map_screen, is_sel, is_thinking):
     map_screen.btn_multi_turn.visible = not is_sel and not is_thinking and is_spec
 
     if is_spec:
-        map_screen.btn_spec_mp_manage.visible = getattr(map_screen, 'multiplayer_host_mode', False) and not is_sel and not is_thinking
-        map_screen.btn_spec_mp_export.visible = getattr(map_screen, 'multiplayer_host_mode', False) and not is_sel and not is_thinking
-        map_screen.btn_spec_mp_keys.visible = getattr(map_screen, 'multiplayer_host_mode', False) and not is_sel and not is_thinking
+        map_screen.btn_spec_mp_manage.visible = map_screen.multiplayer_host_mode and not is_sel and not is_thinking
+        map_screen.btn_spec_mp_export.visible = map_screen.multiplayer_host_mode and not is_sel and not is_thinking
+        map_screen.btn_spec_mp_keys.visible = map_screen.multiplayer_host_mode and not is_sel and not is_thinking
     map_screen.btn_declare_indep.visible = map_screen.tactical_mode and not is_sel and not is_thinking
 
 
@@ -1372,19 +1375,49 @@ class Map(StateAccess, GameState):
     realtime_player_id = None
     realtime_client = None
     realtime_server = None
-    realtime_server_map = None
     realtime_port_mapping = None
     realtime_temporary_relay = None
     realtime_relay_token = ""
     realtime_connection_error = ""
     realtime_submission_pending = False
-    realtime_match_metadata = None
     _realtime_snapshot_turn = None
     _realtime_snapshot_phase = None
     _realtime_draft_dirty = True
     _realtime_draft_fingerprint = None
     multiplayer_host_mode = False
     multiplayer_player_key = ""
+
+    # Screens and panels set these on first use. Reads before that get these values.
+    unit_view_filter = queries.DEFAULT_UNIT_VIEW_FILTER
+    _ignore_left_until_release = False
+    _ignore_right_until_release = False
+    _unit_roster_cache = None
+    partial_visible_provinces = None
+    extreme_hidden_provinces = frozenset()
+    compact_army_unit_object_ids = frozenset()
+    country_action_buttons = ()
+    ai_response_images = MappingProxyType({})
+    unit_view_buttons = MappingProxyType({})
+    deal_drafts = None
+    hovered_combat_bubble = None
+    strategic_unit_fade_states = None
+    army_custom_symbol_state = None
+    army_panel_scroll_y = 0
+    army_panel_visible_in_orders = False
+    _army_tray_right_click_active = False
+    sidebar_scroll_y = 0
+    sidebar_scroll_max = 0
+    diplomatic_scroll_y = 0
+    diplomatic_scroll_max = 0
+    viewing_research_country = ""
+    viewing_research_mode = "VIEW"
+    btn_realtime_details = None
+    exit_yes_rect = None
+    exit_no_rect = None
+    _viewport_scale_cache = None
+    _minimap_image_cache = None
+    _hover_glow_scale_cache = None
+    _badge_state_cache = None
 
     def refresh_ui(self):
         # GameState can refresh during construction before Map has a selection.
@@ -2148,7 +2181,7 @@ class Map(StateAccess, GameState):
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 btn_rect = pygame.Rect(c.SCREEN_WIDTH - 240, c.SCREEN_HEIGHT - 80, 220, 60)
                 if btn_rect.collidepoint(event.pos):
-                    if queries.copy_to_clipboard(self.thread_error):
+                    if pickers.copy_to_clipboard(self.thread_error):
                         self.error_copied = True
             return # Block all other map events!
 

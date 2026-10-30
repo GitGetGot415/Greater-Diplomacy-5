@@ -17,7 +17,7 @@ from map_logic.diplomacy import diplomacy_processor as dp, diplomacy_messages as
 from ui.rendering import refresh_map
 from map_logic.system32 import combat_rules
 from map_logic.territory import ownership
-from tests.stub_map_screen import StubMapScreen
+from tests.stub_map_screen import StubMapScreen, map_double
 from tests import test_ai_orders
 
 
@@ -244,7 +244,7 @@ class ResearchIndexTests(unittest.TestCase):
 
 class MapSurfaceCacheTests(unittest.TestCase):
     def setUp(self):
-        self.screen = SimpleNamespace(
+        self.screen = map_double(
             id_map=pygame.Surface((12, 6)), map_mode="POLITICAL", player_country="A",
             nation_colors={"A": (200, 30, 20), "B": (30, 200, 20)},
             nation_data={"A": {}, "B": {}}, selection_mode=False,

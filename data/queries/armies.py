@@ -620,7 +620,7 @@ def queue_army_defense_orders(map_screen, country_id, army_id, only_idle=False,
 def queue_idle_army_defense_orders(map_screen):
     """Prepare target-area returns for idle units after this turn resolves."""
     world_state = world_for(map_screen)
-    moved_or_ordered = getattr(map_screen, "_units_with_move_order_this_turn", set())
+    moved_or_ordered = map_screen._units_with_move_order_this_turn
     queued = 0
     for country_id, country in world_state.nation_data.items():
         if not isinstance(country, dict):

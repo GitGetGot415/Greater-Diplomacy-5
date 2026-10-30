@@ -221,9 +221,7 @@ class Orders_Screen(GameState):
 
     def _mark_draft_changed(self):
         """Publish one order-edit boundary to the hosting map cache/sync path."""
-        invalidate = getattr(self.map_screen, "invalidate_map_presentation_cache", None)
-        if invalidate:
-            invalidate()
+        self.map_screen.invalidate_map_presentation_cache()
 
     def _panel_title(self, player_units):
         """Name the selected army when its membership is unambiguous."""
@@ -659,7 +657,7 @@ class Orders_Screen(GameState):
         can_command = getattr(map_ref, "can_select_map_units", None)
         if can_command and not can_command():
             return True
-        return getattr(map_ref, "tactical_mode", False) and unit is not map_ref.player_unit
+        return map_ref.tactical_mode and unit is not map_ref.player_unit
 
     def _command_blocked(self, unit):
         """Like _command_blocked_silent, but also surfaces feedback to the player."""
@@ -1757,13 +1755,13 @@ class Orders_Screen(GameState):
 
     def additional_events(self, event):
         map_input.resolve_map_mouse_gesture_conflict(self.map_screen, event)
-        if getattr(self.map_screen, "_ignore_left_until_release", False):
+        if self.map_screen._ignore_left_until_release:
             if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
                 self.map_screen._ignore_left_until_release = False
                 return
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 return
-        if getattr(self.map_screen, "_ignore_right_until_release", False):
+        if self.map_screen._ignore_right_until_release:
             if event.type == pygame.MOUSEBUTTONUP and event.button == 3:
                 self.map_screen._ignore_right_until_release = False
                 return
@@ -1793,7 +1791,7 @@ class Orders_Screen(GameState):
         pan_buttons = map_input.mouse_buttons_for_map_panning(in_orders=True)
         # ``camera`` is optional only for lightweight Orders test doubles;
         # every playable map supplies it.
-        camera = getattr(self.map_screen, "camera", None)
+        camera = self.map_screen.camera
         if camera is not None and not (event.type == pygame.MOUSEWHEEL and on_ui):
             camera.handle_input(event, self.map_screen, on_ui, pan_buttons=pan_buttons)
             if (event.type == pygame.MOUSEBUTTONUP
@@ -1849,7 +1847,7 @@ class Orders_Screen(GameState):
                 and (map_input.mouse_button_has_action(event.button, "select_units")
                      or map_input.mouse_button_has_action(event.button, "box_select_units"))):
             clicked_stack = next((stack for stack in reversed(
-                getattr(self.map_screen, "unit_stack_hitboxes", []))
+                self.map_screen.unit_stack_hitboxes)
                 if stack["rect"].collidepoint(event.pos)), None)
             # Defer an empty-space click too, so a selection rectangle can
             # begin anywhere on the live map workspace.
@@ -1900,7 +1898,7 @@ class Orders_Screen(GameState):
                 return
             if (rect.width >= 4 or rect.height >= 4) and drag["box_select_units"]:
                 selected = []
-                for stack in getattr(self.map_screen, "unit_stack_hitboxes", []):
+                for stack in self.map_screen.unit_stack_hitboxes:
                     if rect.colliderect(stack["rect"]):
                         selected.extend(stack["units"])
                 self.map_screen.select_map_units(selected, additive=drag["additive"])
@@ -2324,7 +2322,7 @@ class Orders_Screen(GameState):
         # Orders owns the top-left command panel, so the map's large nation
         # flag is intentionally suppressed for this embedded draw only. The
         # independent flag guard leaves the country/date text behavior alone.
-        previous_hide_flag = getattr(self.map_screen, "hide_flag", False)
+        previous_hide_flag = self.map_screen.hide_flag
         self.map_screen.hide_flag = True
         try:
             self.map_screen.draw_clean_map_background(surface)
@@ -2432,10 +2430,10 @@ class Orders_Screen(GameState):
         """Track map state boundaries, including authoritative multiplayer snapshots."""
         map_ref = self.map_screen
         # Lightweight UI test maps can omit the map's cache revision and selection IDs.
-        state = (getattr(map_ref, "_presentation_cache_revision", None),
+        state = (map_ref._presentation_cache_revision,
                  map_ref.player_country, map_ref.time_manager.total_turns,
-                 map_ref.tactical_mode, frozenset(getattr(map_ref, "selected_unit_ids", ())))
-        if getattr(map_ref, "realtime_multiplayer", False):
+                 map_ref.tactical_mode, frozenset(map_ref.selected_unit_ids))
+        if map_ref.realtime_multiplayer:
             player = map_ref.realtime_session.players.get(map_ref.realtime_player_id)
             state += (map_ref.realtime_session.phase,
                       (player.submitted, player.eliminated) if player else None)

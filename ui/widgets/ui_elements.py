@@ -1,6 +1,7 @@
 import subprocess
 import sys
 from collections import OrderedDict
+from functools import lru_cache
 
 import numpy as np
 import pygame
@@ -33,6 +34,57 @@ _pygame_sfx_pitch_cache = {
 }
 
 UI_ICONS = {}
+
+_BUTTON_SHADE_COUNT = 5
+_BUTTON_PIXEL_SIZE = 2
+_BUTTON_HIGHLIGHT = 30
+_BUTTON_SHADOW = 50
+_BUTTON_BORDER_WIDTH = 2
+_BUTTON_SELECTED_BORDER_WIDTH = 3
+
+
+@lru_cache(maxsize=128)
+def _button_background(size, color, pressed, border_width):
+    """Cache stepped shading and bevels by size, color, and display state."""
+    background = pygame.Surface(size)
+    width, height = size
+    if width <= 0 or height <= 0:
+        return background
+
+    light = tuple(min(255, channel + _BUTTON_HIGHLIGHT) for channel in color)
+    dark = tuple(max(0, channel - _BUTTON_SHADOW) for channel in color)
+    shade_count = min(_BUTTON_SHADE_COUNT, max(1, height // _BUTTON_PIXEL_SIZE))
+    shades = [queries.lerp_color(light, dark, i / max(1, shade_count - 1))
+              for i in range(shade_count)]
+    boundaries = [0] + [
+        (i * height // shade_count // _BUTTON_PIXEL_SIZE) * _BUTTON_PIXEL_SIZE
+        for i in range(1, shade_count)
+    ] + [height]
+    for i, shade in enumerate(shades):
+        background.fill(shade, (0, boundaries[i], width,
+                                boundaries[i + 1] - boundaries[i]))
+
+    # Keep solid band centers. Small buttons use bands without dithering.
+    if height >= shade_count * _BUTTON_PIXEL_SIZE * 3:
+        for i, boundary in enumerate(boundaries[1:-1], start=1):
+            for y in (boundary - _BUTTON_PIXEL_SIZE, boundary):
+                for x in range(0, width, _BUTTON_PIXEL_SIZE):
+                    checker = (x // _BUTTON_PIXEL_SIZE + y // _BUTTON_PIXEL_SIZE) % 2
+                    shade = shades[i - 1 + checker]
+                    background.fill(shade, (x, y, min(_BUTTON_PIXEL_SIZE, width - x),
+                                            _BUTTON_PIXEL_SIZE))
+
+    # Place the bevel inside the existing selection or hover outline.
+    inner = background.get_rect().inflate(-2 * border_width, -2 * border_width)
+    bevel = min(_BUTTON_PIXEL_SIZE, inner.width // 2, inner.height // 2)
+    if bevel > 0:
+        top_left, bottom_right = (dark, light) if pressed else (light, dark)
+        background.fill(top_left, (inner.x, inner.y, inner.width, bevel))
+        background.fill(top_left, (inner.x, inner.y, bevel, inner.height))
+        background.fill(bottom_right, (inner.x, inner.bottom - bevel, inner.width, bevel))
+        background.fill(bottom_right, (inner.right - bevel, inner.y, bevel, inner.height))
+    return background
+
 
 def parse_pos(val, limit, size):
     if isinstance(val, str):
@@ -269,6 +321,7 @@ class Button:
 
         mouse_pos = pygame.mouse.get_pos()
         is_hovered = self.rect.collidepoint(mouse_pos)
+        is_depressed = not self.disabled and self.is_pressed and is_hovered
         
         current_color = self.color
         if self.disabled: current_color = c.UI_COLORS["grey"][0]
@@ -276,19 +329,19 @@ class Button:
         elif is_hovered: current_color = self.hover_color
         
         if getattr(self, 'shading', True):
-            self.draw_gradient_rect(surface, current_color, self.rect)
+            self.draw_gradient_rect(surface, current_color, self.rect, pressed=is_depressed)
         else:
             pygame.draw.rect(surface, current_color, self.rect)
         
         if self.is_selected:
             border_color = c.COLOR_GOLD_HIGHLIGHT
-            border_thickness = 3
+            border_thickness = _BUTTON_SELECTED_BORDER_WIDTH
         else:
             if self.disabled:
                 border_color = c.COLOR_DIM_BORDER
             else:
                 border_color = (255, 255, 255) if is_hovered else (20, 20, 20)
-            border_thickness = 2
+            border_thickness = _BUTTON_BORDER_WIDTH
             
         pygame.draw.rect(surface, border_color, self.rect, border_thickness)
 
@@ -341,16 +394,12 @@ class Button:
             draw_notification_badge(surface, self.rect, badge_text,
                                     getattr(self, "notification_color", None))
 
-    def draw_gradient_rect(self, surface, color, rect):
-        hi = 30
-        low = 50
-        c1 = (min(255, color[0] + hi), min(255, color[1] + hi), min(255, color[2] + hi))
-        c2 = (max(0, color[0] - low), max(0, color[1] - low), max(0, color[2] - low))
-        
-        for i in range(rect.height):
-            lerp = i / rect.height
-            r, g, b = queries.lerp_color(c1, c2, lerp)
-            pygame.draw.line(surface, (r, g, b), (rect.x, rect.y + i), (rect.right - 1, rect.y + i))
+    def draw_gradient_rect(self, surface, color, rect, pressed=False):
+        if rect.width <= 0 or rect.height <= 0:
+            return
+        border_width = _BUTTON_SELECTED_BORDER_WIDTH if self.is_selected else _BUTTON_BORDER_WIDTH
+        background = _button_background(rect.size, tuple(color[:3]), pressed, border_width)
+        surface.blit(background, rect)
 
     def handle_event(self, event):
         if not self.visible or self.disabled: return

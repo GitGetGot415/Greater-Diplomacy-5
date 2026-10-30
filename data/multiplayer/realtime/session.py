@@ -894,8 +894,8 @@ def apply_authoritative_snapshot(map_ref, snapshot: dict[str, Any]) -> None:
     # while replacing the authoritative diplomatic/game data, otherwise every
     # state broadcast makes an already handled offer look new again.
     local_message_state = {}
-    player_country = getattr(map_ref, "player_country", None)
-    current_player = getattr(map_ref, "nation_data", {}).get(player_country, {})
+    player_country = map_ref.player_country
+    current_player = map_ref.nation_data.get(player_country, {})
     for message in current_player.get("inbox", []) if isinstance(current_player, dict) else []:
         if not isinstance(message, dict):
             continue
@@ -945,10 +945,10 @@ def apply_authoritative_snapshot(map_ref, snapshot: dict[str, Any]) -> None:
     # These are local intent buffers.  The processed server snapshot has now
     # either applied or rejected them, so carrying them into the next turn
     # would replay an old subject edit or volunteer offer.
-    if getattr(map_ref, "realtime_multiplayer", False):
+    if map_ref.realtime_multiplayer:
         map_ref.realtime_pending_appearance_updates = {}
         map_ref.realtime_volunteer_drafts = {}
-    if getattr(map_ref, "presentation_enabled", True):
+    if map_ref.presentation_enabled:
         map_ref.refresh_all_maps()
 
 

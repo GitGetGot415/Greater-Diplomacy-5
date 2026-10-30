@@ -493,5 +493,5 @@ def for_screen(map_screen):
     one on the spot costs a sweep, which is still what the code did before the
     cache existed, and keeps every AI entry point callable on its own.
     """
-    world = getattr(map_screen, "ai_world", None)
+    world = map_screen.ai_world
     return world if world is not None else build(map_screen)

@@ -42,8 +42,8 @@ def draw_unit_info(map_screen, surface):
         body_rect = pygame.Rect(dip_rect.x, dip_rect.y + 40, dip_rect.width, dip_rect.bottom - (dip_rect.y + 40))
         map_screen.diplomatic_scroll_rect = body_rect
 
-        scroll_max = getattr(map_screen, 'diplomatic_scroll_max', 0)
-        scroll_offset = max(0, min(getattr(map_screen, 'diplomatic_scroll_y', 0), scroll_max))
+        scroll_max = map_screen.diplomatic_scroll_max
+        scroll_offset = max(0, min(map_screen.diplomatic_scroll_y, scroll_max))
 
         body_top = body_rect.y
         y_offset = body_top - scroll_offset

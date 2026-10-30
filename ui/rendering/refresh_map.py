@@ -115,7 +115,7 @@ def invalidate_map_surface_cache(map_screen, *attrs):
     action, including externally edited map assets.
     """
     # Optional for editor/test screens that have not rendered a layer yet.
-    cache = getattr(map_screen, "_map_surface_cache", None)
+    cache = map_screen._map_surface_cache
     if cache is not None:
         if attrs:
             for attr in attrs:
@@ -222,7 +222,7 @@ def _refresh_mode(map_screen, label, attr, mode, get_data):
     inputs = _map_surface_inputs(map_screen, get_data)
     # Screen-local, bounded to one surface per mode. Lightweight screen doubles
     # and callers outside Map.__init__ can initialize this cache on first use.
-    cache = getattr(map_screen, "_map_surface_cache", None)
+    cache = map_screen._map_surface_cache
     if cache is None:
         cache = map_screen._map_surface_cache = {}
     cached = cache.get(attr)
@@ -466,7 +466,7 @@ def refresh_fog_map(map_screen):
 
     inputs = tuple(inputs)
     # Optional for lightweight screen doubles; Map owns the live cache.
-    cached = getattr(map_screen, "_fog_surface_cache", None)
+    cached = map_screen._fog_surface_cache
     if cached is not None and cached[0] is map_screen.id_map and cached[1] == inputs:
         map_screen.fog_map = cached[2]
         return

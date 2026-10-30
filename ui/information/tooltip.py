@@ -47,7 +47,7 @@ def draw_tooltip(map_screen, surface):
 
     elif map_screen.secondary_mode == "UNITS":
         # Older standalone UI fixtures may not have a unit view filter.
-        view_filter = getattr(map_screen, "unit_view_filter", queries.DEFAULT_UNIT_VIEW_FILTER)
+        view_filter = map_screen.unit_view_filter
         units = prov.get("units", [])
         if view_filter != "ALL":
             # Reuse map membership cached at state/input changes. Do not
@@ -62,7 +62,7 @@ def draw_tooltip(map_screen, surface):
         if not is_visible:
             # Unknown stacks have no visible category, as on the map.
             if (view_filter == "ALL"
-                    and getattr(map_screen, 'partial_visible_provinces', None) is not None
+                    and map_screen.partial_visible_provinces is not None
                     and prov["id"] in map_screen.partial_visible_provinces and visible_units):
                 lines.append("- ? (Unknown Units)")
             else:

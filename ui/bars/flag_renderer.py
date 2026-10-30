@@ -11,7 +11,7 @@ FLAG_HOVER_BRIGHTNESS = 35
 def displayed_country(map_screen):
     """Use the selected land owner, or the player's country, for the flag."""
     country = map_screen.player_country
-    province = getattr(map_screen, "selected_province", None)
+    province = map_screen.selected_province
     if province and province.get("owner", "Unclaimed") not in c.UNPLAYABLE_NATIONS:
         country = province.get("owner")
     return country

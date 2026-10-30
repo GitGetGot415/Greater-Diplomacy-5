@@ -9,10 +9,11 @@ from unittest import mock
 import zipfile
 
 
-from data import constants as c, queries
+from data import constants as c
 from data.multiplayer.tournament import files as tournament_files
 from ui import dialogs
 from ui.panels import multiplayer_host_panel
+from ui.dialogs import file_exchange
 
 
 class ExportOverwriteTests(unittest.TestCase):
@@ -29,14 +30,14 @@ class ExportOverwriteTests(unittest.TestCase):
                 ("ask", mock.patch.object(dialogs, "ask_yes_no")),
                 ("success", mock.patch.object(dialogs, "show_success")),
                 ("error", mock.patch.object(dialogs, "show_error")),
-                ("download", mock.patch.object(queries, "download_file")),
-                ("downloads_dir", mock.patch.object(queries, "downloads_dir", return_value=str(self.downloads))),
-                ("web", mock.patch.object(queries, "IS_WEB", False))):
+                ("download", mock.patch.object(file_exchange, "download_file")),
+                ("downloads_dir", mock.patch.object(file_exchange, "downloads_dir", return_value=str(self.downloads))),
+                ("web", mock.patch.object(file_exchange, "IS_WEB", False))):
             setattr(self, name, patcher.start())
             self.addCleanup(patcher.stop)
 
     def export_move(self):
-        return queries.export_json_file(str(self.source), self.destination.name)
+        return file_exchange.export_json_file(str(self.source), self.destination.name)
 
     def test_new_download_exports_immediately(self):
         result = self.export_move()
@@ -85,7 +86,7 @@ class ExportOverwriteTests(unittest.TestCase):
         source_dir = self.root / "save"
         source_dir.mkdir()
         (source_dir / "fixture.txt").write_text("new archive content")
-        queries.export_dir_as_zip(str(source_dir), destination.name)
+        file_exchange.export_dir_as_zip(str(source_dir), destination.name)
         self.assertEqual(destination.read_bytes(), b"original archive")
         self.ask.call_args.kwargs["on_result"](True)
         with zipfile.ZipFile(destination) as archive:
@@ -104,12 +105,12 @@ class ExportOverwriteTests(unittest.TestCase):
     def test_web_confirmation_checks_virtual_file_before_producing_or_downloading(self):
         produce = mock.Mock()
         for answer in (False, True):
-            with self.subTest(answer=answer), mock.patch.object(queries, "IS_WEB", True), \
-                    mock.patch.object(queries.os.path, "exists", return_value=True) as exists:
+            with self.subTest(answer=answer), mock.patch.object(file_exchange, "IS_WEB", True), \
+                    mock.patch.object(file_exchange.os.path, "exists", return_value=True) as exists:
                 produce.reset_mock()
                 self.download.reset_mock()
                 self.success.reset_mock()
-                queries._export_to_downloads(self.destination.name, produce)
+                file_exchange._export_to_downloads(self.destination.name, produce)
                 exists.assert_called_once_with(self.destination.name)
                 produce.assert_not_called()
                 self.download.assert_not_called()

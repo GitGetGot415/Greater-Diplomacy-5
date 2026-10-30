@@ -11,6 +11,7 @@ from unittest import mock
 
 import data.constants as c
 from data import queries
+from ui.dialogs import pickers
 from data.multiplayer.realtime.session import MapRealtimeDriver, RealtimeError
 from map_logic.ai import ai_tech_eval, ai_unit_eval
 from map_logic.system32.research_processor import process_national_research
@@ -561,7 +562,7 @@ class AirScreenTests(unittest.TestCase):
             production.start_with_province(self.province, self.map)
             next(button for button in production.elements if getattr(button, "text", "") == family).callback()
             self.assertEqual(self.province["unit_queue"][-1]["unit_type"], name)
-            with mock.patch.object(queries, "open_checkbox_list") as picker:
+            with mock.patch.object(pickers, "open_checkbox_list") as picker:
                 production.open_custom_unit_manager()
             item = next(item for item in picker.call_args.args[3] if getattr(item, "key", None) == name)
             self.assertEqual(item.label, family)

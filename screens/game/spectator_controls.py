@@ -2,6 +2,7 @@ from collections import namedtuple
 
 import data.constants as c
 from data import queries
+from ui.dialogs import pickers
 
 from map_logic.diplomacy.puppet_actions import finalize_spectator_country_removal
 from ui import dialogs
@@ -48,7 +49,7 @@ def spec_annex_country(map_screen):
             _refresh_country_removal(map_screen)
             map_screen.show_feedback(f"{source_name} annexed {target_name}.")
 
-    queries.open_listbox_selector(
+    pickers.open_listbox_selector(
         map_screen, f"Annex for {source_name}", "Select a country to annex immediately:",
         queries.country_picker_items(candidates, map_screen.nation_data), selected)
 
@@ -180,7 +181,7 @@ def open_spectator_action_menu(map_screen, action_type):
                 tgt=queries.get_country_display_name(target_nation, map_screen.nation_data)))
         map_screen.refresh_diplomacy_maps()
 
-    queries.open_listbox_selector(
+    pickers.open_listbox_selector(
         map_screen,
         f"{action_type} for " + queries.get_country_display_name(source_nation, map_screen.nation_data),
         f"Select Target for {action_type}:",

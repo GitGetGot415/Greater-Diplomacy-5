@@ -6,7 +6,7 @@ _HOVER_GLOW_CACHE_LIMIT = 16
 
 def _scaled_hover_glow(map_screen, size):
     """Reuse the hover sticker while its province and camera scale are stable."""
-    cache = getattr(map_screen, '_hover_glow_scale_cache', None)
+    cache = map_screen._hover_glow_scale_cache
     if cache is None:
         cache = {}
         map_screen._hover_glow_scale_cache = cache

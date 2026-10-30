@@ -5,6 +5,7 @@ from ui.widgets.ui_elements import Button, make_back_button
 from ui.rendering.font_manager import fonts
 from map_logic.imports import odtl
 from data import queries
+from ui.dialogs import pickers
 import data.constants as c
 
 
@@ -235,7 +236,7 @@ class Translate(GameState):
             self.notes = []
             self.refresh_ui()
 
-        queries.ask_directory(self, "Select the Open Doctrines folder",
+        pickers.ask_directory(self, "Select the Open Doctrines folder",
                               odtl.game_root(), picked)
 
     def ask_for_upload(self):

@@ -21,6 +21,7 @@ from data.map import load_map
 from map_logic.diplomacy import faction_actions, puppet_actions, treaty_effects
 from map_logic.territory import ownership as own
 from map_logic.system32 import movement_processor
+from tests.stub_map_screen import fill_state_defaults
 
 
 def nation(**over):
@@ -46,6 +47,7 @@ class Screen:
         self.nation_data = nation_data
         self.map_data = map_data
         self.id_to_province = {p["id"]: p for p in map_data.values()}
+        fill_state_defaults(self)
 
 
 def province(pid, owner, cores=None):

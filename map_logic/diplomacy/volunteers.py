@@ -21,15 +21,6 @@ DEPLOYED = "DEPLOYED"
 RETURNING = "RETURNING"
 
 
-def combat_owner(unit):
-    """The country a unit fights and captures land for.
-
-    A volunteer's normal owner deliberately remains its donor: that is who can
-    select and command it.  Its host is the military side it temporarily joins.
-    """
-    return unit.get("volunteer_host") or unit.get("owner", "")
-
-
 def missions(nation_data, donor, writable=False):
     data = nation_data.get(donor, {})
     if writable:

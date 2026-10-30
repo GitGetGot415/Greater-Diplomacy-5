@@ -7,6 +7,7 @@ from ui.widgets.ui_elements import Button, process_text_input
 from ui.rendering.font_manager import fonts
 from map_logic.diplomacy import diplomacy_logic, diplomacy_messages, volunteers
 from data import queries
+from ui.dialogs import pickers
 
 from map_logic.diplomacy import player_diplomacy_actions, ratification
 from screens.game.peace_screen import open_view_peace_treaty_menu, open_view_trade_deal_menu
@@ -256,7 +257,7 @@ class Messages_Screen(GameState):
                 self.queue_forward(message, target)
 
         self.save_current_draft()
-        queries.open_listbox_selector(
+        pickers.open_listbox_selector(
             self, "Forward Message", "Select a country to receive this message:",
             labels, confirm)
         self.refresh_ui()

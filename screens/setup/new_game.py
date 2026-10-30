@@ -4,6 +4,8 @@ from ui.navigation.game_state import GameState
 from ui.widgets.ui_elements import Button, make_back_button
 import data.constants as c
 from data import queries
+from ui.dialogs import pickers
+from screens.setup import map_refresh
 from ui.panels import turn_progress
 from screens.setup.scenario_settings import Scenario_Settings
 from screens.editors.historical_leaders_editor import open_historical_leaders_editor
@@ -154,10 +156,10 @@ class New_Game(GameState):
             if options["include_custom"]:
                 dirs_to_check.append(c.SCENARIOS_CUSTOM_DIR)
 
-            queries.refresh_map_directories(self, dirs_to_check,
+            map_refresh.refresh_map_directories(self, dirs_to_check,
                                             success_message="Synced scenarios successfully.", options=options)
 
-        queries.open_checkbox_list(
+        pickers.open_checkbox_list(
             self, "Refresh Options", "Select what to forcefully reset:",
             [CheckboxItem(key, label, checked=True) for key, label in self.REFRESH_FIELDS],
             on_picked,

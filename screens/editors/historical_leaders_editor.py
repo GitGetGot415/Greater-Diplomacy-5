@@ -21,6 +21,8 @@ import pygame
 from ui.navigation.game_state import GameState
 import data.constants as c
 from data import queries
+from ui.dialogs import pickers
+from ui.dialogs import file_exchange
 from data.io.country_io import DEFAULT_NATION_COLOR
 from ui import dialogs
 from ui.bars import ui_bars
@@ -157,7 +159,7 @@ class Historical_Leaders_Editor(ScrollPanes, GameState):
             self._scroll_timeline = 0
             self.refresh_ui()
 
-        queries.open_listbox_selector(
+        pickers.open_listbox_selector(
             self, "Add Country", "Choose a country to track:",
             queries.country_picker_items(available, self.map_screen.nation_data), on_pick)
 
@@ -222,7 +224,7 @@ class Historical_Leaders_Editor(ScrollPanes, GameState):
             entry["color"] = list(rgb)
             self.refresh_ui()
 
-        queries.open_color_picker(self, f"{self.active_country} Color", current, on_pick)
+        pickers.open_color_picker(self, f"{self.active_country} Color", current, on_pick)
 
     def clear_color(self, entry):
         self.sync_entries()
@@ -249,7 +251,7 @@ class Historical_Leaders_Editor(ScrollPanes, GameState):
             entry[field] = queries.encode_surf_to_b64(scaled)
             self.refresh_ui()
 
-        queries.open_file_browser(self, f"{self.active_country} {label}", browse_dir,
+        pickers.open_file_browser(self, f"{self.active_country} {label}", browse_dir,
                                   extensions=[".png", ".jpg", ".jpeg", ".bmp"], on_result=on_picked)
 
     def pick_flag(self, entry):
@@ -331,7 +333,7 @@ class Historical_Leaders_Editor(ScrollPanes, GameState):
         exports the last saved state, not unsaved edits still sitting in the
         on-screen fields (same "Save is its own separate step" split the rest
         of this editor already uses)."""
-        queries.export_json_file(c.HISTORICAL_LEADERS_PATH, "historical_leaders.json")
+        file_exchange.export_json_file(c.HISTORICAL_LEADERS_PATH, "historical_leaders.json")
 
     @staticmethod
     def _is_valid_timeline(data):
@@ -370,7 +372,7 @@ class Historical_Leaders_Editor(ScrollPanes, GameState):
                 "This replaces your current historical leaders timeline, including any unsaved "
                 "edits, with the imported file. This can't be undone.", on_confirm)
 
-        queries.import_json_file(self, "Select historical_leaders.json", on_loaded)
+        file_exchange.import_json_file(self, "Select historical_leaders.json", on_loaded)
 
     def reset_timeline(self):
         def on_confirm(ok):

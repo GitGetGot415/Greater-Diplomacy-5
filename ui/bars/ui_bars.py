@@ -370,10 +370,10 @@ def draw_textured_rect(surface, rect, image, mode="tile"):
 def map_unit_view_bar_rect(map_screen):
     """Return the live unit-filter bar for drawing, layout and input."""
     # Older tools/test doubles do not construct the map's filter controls.
-    buttons = getattr(map_screen, "unit_view_buttons", {})
+    buttons = map_screen.unit_view_buttons
     if (not any(button.visible for button in buttons.values())
             or map_screen.secondary_mode != "UNITS"
-            or getattr(map_screen, "hide_raised_rect", False)):
+            or map_screen.hide_raised_rect):
         return None
     return map_screen.unit_view_bar_rect
 

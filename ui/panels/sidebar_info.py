@@ -55,7 +55,7 @@ def prepare_unit_roster(map_screen, province):
         profile = battle.profiles.get(id(unit), unit)
         rows[id(unit)] = unit_roster_row(profile, province, map_screen.nation_data, is_combat)
     # Standalone UI fixtures may not have Map's presentation cache yet.
-    cache = getattr(map_screen, "_unit_roster_cache", None)
+    cache = map_screen._unit_roster_cache
     if cache is None:
         cache = map_screen._unit_roster_cache = {}
     cache[province["id"]] = (is_combat, battle, rows)
@@ -91,7 +91,7 @@ def draw_unit_roster(map_screen, surface, province, units, is_visible, x, y, wid
     current_y += 25
 
     if not is_visible:
-        if getattr(map_screen, 'partial_visible_provinces', None) is not None and province["id"] in map_screen.partial_visible_provinces and units:
+        if map_screen.partial_visible_provinces is not None and province["id"] in map_screen.partial_visible_provinces and units:
             txt = map_screen.small_font.render("- ? (Unknown Units)", True, c.UI_TEXT_MUTED)
             surface.blit(txt, (text_x + 5, current_y))
             current_y += 25
@@ -334,8 +334,8 @@ def draw_sidebar_info(map_screen, surface):
     scroll_rect = pygame.Rect(info_rect.x, current_y, info_rect.width, info_rect.bottom - current_y)
     map_screen.sidebar_scroll_rect = scroll_rect
 
-    scroll_max = getattr(map_screen, 'sidebar_scroll_max', 0)
-    scroll_offset = max(0, min(getattr(map_screen, 'sidebar_scroll_y', 0), scroll_max))
+    scroll_max = map_screen.sidebar_scroll_max
+    scroll_offset = max(0, min(map_screen.sidebar_scroll_y, scroll_max))
 
     scroll_top = current_y
     current_y -= scroll_offset

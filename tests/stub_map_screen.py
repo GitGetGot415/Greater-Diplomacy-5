@@ -10,15 +10,38 @@ the AI's canned fallback answers in play instead of reaching for the network.
 import os
 import sys
 from dataclasses import fields
-from types import SimpleNamespace
+from types import FunctionType, SimpleNamespace
 
 # Import the game package from the repo root regardless of where tests run from
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 
+from data import queries
+import data.constants as c
 from data.game_state import WorldState
 from data.session_state import SessionState
-from data.state_access import WORLD_ATTRIBUTES
+from data.state_access import StateAccess, WORLD_ATTRIBUTES, _Forward
+
+
+# Presentation state of a live Map that shared draw and input helpers read.
+UI_STATE = {
+    "camera": None, "top_bar_rect": None, "bot_bar_rect": None, "raised_rect": None,
+    "ui_background_rect": None, "hide_raised_rect": False, "hide_flag": False,
+    "selected_province": None, "selected_unit_ids": (), "unit_stack_hitboxes": (),
+    "unit_view_filter": queries.DEFAULT_UNIT_VIEW_FILTER, "partial_visible_provinces": None,
+    "extreme_hidden_provinces": frozenset(), "bg_color": c.OCEAN_DARK_BLUE,
+    "show_player_ready_screen": False, "show_exit_confirmation": False,
+    "multiplayer_host_mode": False, "multiplayer_player_key": "",
+    "army_panel_visible_in_orders": False, "army_group_transition_states": None,
+    "army_editor_state": None, "btn_realtime_details": None, "army_panel_scroll_y": 0,
+    "strategic_unit_fade_states": None, "_minimap_image_cache": None, "unit_view_buttons": {},
+    "army_custom_symbol_state": None,
+    "_ignore_left_until_release": False, "_ignore_right_until_release": False,
+    "_unit_render_index_cache": None, "_combat_unit_view_cache": None,
+    "_combat_bubble_records_cache": None, "_unit_roster_cache": None, "_map_surface_cache": None,
+    "_fog_surface_cache": None, "_viewport_scale_cache": None, "_hover_glow_scale_cache": None,
+    "_badge_state_cache": None, "is_unit_selected": lambda _unit: False,
+}
 
 
 def fill_state_defaults(target):
@@ -33,6 +56,13 @@ def fill_state_defaults(target):
     for owner, name in names:
         if not hasattr(target, name):
             setattr(target, name, getattr(owner, name))
+    for name, value in vars(StateAccess).items():
+        if not name.startswith("__") and not isinstance(value, (_Forward, property, FunctionType)):
+            if not hasattr(target, name):
+                setattr(target, name, value)
+    for name, value in UI_STATE.items():
+        if not hasattr(target, name):
+            setattr(target, name, value)
     return target
 
 

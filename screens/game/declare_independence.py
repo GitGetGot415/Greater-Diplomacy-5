@@ -6,6 +6,7 @@ from ui.widgets import text_utils
 from ui.widgets.ui_elements import Button, process_text_input, make_back_button, draw_text_box
 from ui.rendering.font_manager import fonts
 from data import queries
+from ui.dialogs import pickers
 from map_logic.system32 import turn_manager
 
 from map_logic.territory import ownership
@@ -76,7 +77,7 @@ class Declare_Independence_Screen(MapOverlayScreen):
         def on_confirm(color):
             self.new_country_color = list(color)
             self.refresh_ui()
-        queries.open_color_picker(self, "Choose Country Color", tuple(self.new_country_color), on_confirm)
+        pickers.open_color_picker(self, "Choose Country Color", tuple(self.new_country_color), on_confirm)
 
     def confirm_independence(self):
         # Multiplayer identities are fixed: real-time sessions bind a player

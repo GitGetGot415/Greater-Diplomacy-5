@@ -84,7 +84,7 @@ def conquer_province(map_screen, province, new_owner, *, refresh_visuals=True, c
             province["building_queue"] = [q for q in province["building_queue"] if q.get("order_type") != "CORE"]
         
         # 2. Visual Update
-        if (refresh_visuals and getattr(map_screen, "presentation_enabled", True)
+        if (refresh_visuals and map_screen.presentation_enabled
                 and not session_state.viewing_ai_moves and not session_state.ai_is_thinking):
             nations_dict = country_io.get_nation_colors()
             new_color = list(nations_dict.get(new_owner, (255, 255, 255))) # Fallback to white if unclaimed
@@ -280,7 +280,7 @@ def refresh_core_tint(map_screen, province, cores=None):
     Pass cores=None to paint the blank tile the eraser leaves behind.
     """
     session_state = session_for(map_screen)
-    if (not getattr(map_screen, "presentation_enabled", True)
+    if (not map_screen.presentation_enabled
             or session_state.viewing_ai_moves or session_state.ai_is_thinking):
         return
     color = get_mixed_core_color(cores) if cores is not None else (255, 255, 255)

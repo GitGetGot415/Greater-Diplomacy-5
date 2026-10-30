@@ -14,6 +14,7 @@ import pygame
 from ui.navigation.game_state import GameState
 import data.constants as c
 from data import queries
+from ui.dialogs import pickers
 from map_logic.system32.time_handler import TimeHandler
 from map_logic.ai.scripted_events import (ACT_TYPES, CHAIN_OPS, COND_TYPES, EDIT_ACTIONS, NUMERIC_OPS,
                                           SELF_NUMERIC_CONDITION_TYPES, SELF_OR_TARGET_TYPES,
@@ -583,7 +584,7 @@ class _EventEditScreen(_ModalScreen):
                 row.field.text = f"{int(chosen[0])},{int(chosen[1])},{int(chosen[2])}"
             self.refresh_ui()
 
-        queries.ask_color(self.map_screen, "Choose color", initial, on_chosen)
+        pickers.ask_color(self.map_screen, "Choose color", initial, on_chosen)
 
     def pick_image(self, row):
         def on_picked(path):
@@ -596,7 +597,7 @@ class _EventEditScreen(_ModalScreen):
                     dialogs.show_error("Error", f"Could not load image: {e}")
             self.refresh_ui()
 
-        queries.open_file_browser(self.map_screen, "Select Image", c.ASSETS_DIR,
+        pickers.open_file_browser(self.map_screen, "Select Image", c.ASSETS_DIR,
                                   extensions=[".png", ".jpg", ".jpeg", ".bmp"], on_result=on_picked)
 
     # -- saving --------------------------------------------------------- #

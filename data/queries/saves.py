@@ -237,7 +237,7 @@ def build_save_dict(map_screen, *, include_provinces=True, compact_nations=False
     }
     if include_provinces:
         save_dict["provinces"] = {}
-    realtime_metadata = getattr(map_screen, "realtime_match_metadata", None)
+    realtime_metadata = map_screen.realtime_match_metadata
     if isinstance(realtime_metadata, dict):
         # Additive metadata keeps the normal save/load format compatible with
         # old single-player and tournament files.

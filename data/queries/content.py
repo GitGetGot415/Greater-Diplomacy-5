@@ -1,5 +1,7 @@
 """Cached game content and settings: JSON cache, libraries, scenario flags, settings, keybinds, music choices, and historical leader timelines."""
 
+import re
+from data.platform import CHARACTERS_DIR, CUSTOM_SUBDIR
 import data.constants as c
 import json
 import os
@@ -430,11 +432,61 @@ def get_starting_song():
     return data.get("track") if isinstance(data, dict) else None
 
 
+#: Fallback portrait -- the game's original default look.
+DEFAULT_PORTRAIT = "Hildehrand/F/2.png"
+
+#: Extensions accepted both when scanning assets/characters/ and when
+#: importing a new custom portrait. Broader than the curated set's plain
+#: .png so a photo dragged in from Downloads doesn't need converting first.
+IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg")
+
+_DIGIT_RE = re.compile(r"(\d+)")
+# Lower-cased for the comparison in is_custom_portrait() below: Windows'
+# filesystem is case-insensitive, so os.walk() can (and, on at least one
+# real machine, does) hand back the on-disk folder as "custom" even though
+# it was created by writing to a path spelled "Custom" -- a case-sensitive
+# prefix check against CUSTOM_SUBDIR would then silently fail to recognise
+# a real custom portrait as custom at all.
+_CUSTOM_PREFIX_LOWER = f"{CUSTOM_SUBDIR.lower()}/"
+
+
+def _natural_key(path):
+    """Sorts "Hildehrand/F/2.png" before "Hildehrand/F/10.png" -- plain string
+    sorting would put "10" before "2"."""
+    return [int(part) if part.isdigit() else part.lower() for part in _DIGIT_RE.split(path)]
+
+
+def is_custom_portrait(rel_path):
+    """True for anything imported via the "+ Add New" tile (assets/characters/Custom/...).
+
+    Compares case-insensitively -- see the _CUSTOM_PREFIX_LOWER comment above."""
+    return rel_path.replace(os.sep, "/").lower().startswith(_CUSTOM_PREFIX_LOWER)
+
+
+def discover_character_images():
+    """Every image under assets/characters/, recursively, as forward-slash
+    paths relative to CHARACTERS_DIR (e.g. "Hildehrand/F/2.png").
+
+    Custom (user-imported) portraits are sorted first among themselves, ahead
+    of the curated set, so a newly-added photo doesn't get lost several pages
+    into an alphabetical scan."""
+    results = []
+    if not os.path.isdir(CHARACTERS_DIR):
+        return results
+    for dirpath, _dirs, files in os.walk(CHARACTERS_DIR):
+        for name in files:
+            if name.lower().endswith(IMAGE_EXTENSIONS):
+                rel = os.path.relpath(os.path.join(dirpath, name), CHARACTERS_DIR)
+                results.append(rel.replace(os.sep, "/"))
+    custom = sorted((p for p in results if is_custom_portrait(p)), key=_natural_key)
+    curated = sorted((p for p in results if not is_custom_portrait(p)), key=_natural_key)
+    return custom + curated
+
+
 def get_hildehrand_choice():
     """Returns the remembered menu portrait, as a path relative to
     assets/characters/ (e.g. "Hildehrand/F/2.png"), defaulting to Hildehrand F/2
     if unset or if the remembered file no longer exists."""
-    from ui.dialogs.character_select_screen import DEFAULT_PORTRAIT, discover_character_images
     data = _load_cached_json("hildehrand_choice")
     variant = data.get("variant") if isinstance(data, dict) else None
     return variant if variant in discover_character_images() else DEFAULT_PORTRAIT

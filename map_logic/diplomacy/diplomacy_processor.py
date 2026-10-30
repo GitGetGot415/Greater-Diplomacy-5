@@ -1224,7 +1224,7 @@ def _process_pass1_immediate_actions(map_screen):
                 leadership_claimants.append(nation)
                 break
     leadership_winners = faction_leadership.strongest_claimants(
-        map_screen, leadership_claimants, getattr(map_screen, "ai_world", None))
+        map_screen, leadership_claimants, map_screen.ai_world)
 
     for country_name, data in list(world_state.nation_data.items()):
         if not isinstance(data, dict):
@@ -1610,7 +1610,7 @@ def process_diplomacy_turn(map_screen):
     # Ages every faction member's claim on the leadership. Before anything acts,
     # so the button a player sees, the number an AI decides on and the state a
     # claim executes against are one measurement rather than three.
-    faction_leadership.tick(map_screen, getattr(map_screen, "ai_world", None))
+    faction_leadership.tick(map_screen, map_screen.ai_world)
     # Settles promises that ran their course or were broken this turn. After the
     # modifier decay so a fresh betrayal grudge is not aged on the turn it lands.
     ai_commitments.tick(map_screen)

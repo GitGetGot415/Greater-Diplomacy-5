@@ -3,6 +3,7 @@ import data.constants as c
 from ui.rendering.font_manager import fonts
 from ui.widgets import text_utils
 from data import queries
+from ui.dialogs import pickers
 from map_logic.diplomacy import diplomacy_messages
 
 # ==========================================
@@ -213,10 +214,10 @@ def map_message_popups_visible(map_screen):
     let them intercept clicks until the player returns to the open map.
     """
     return not any((
-        getattr(map_screen, "selected_province", None),
+        map_screen.selected_province,
         map_screen.selection_mode,
-        getattr(map_screen, "show_player_ready_screen", False),
-        getattr(map_screen, "show_exit_confirmation", False),
+        map_screen.show_player_ready_screen,
+        map_screen.show_exit_confirmation,
         map_screen.is_saving,
         map_screen.thread_error,
     ))
@@ -237,7 +238,7 @@ def handle_events(map_screen, event):
         
         if res == "CLOSE":
             # Hybrid Audio execution for tactile feedback
-            queries.play_click_sound()
+            pickers.play_click_sound()
             map_screen.diplomatic_popups.pop(i)
             return True
             

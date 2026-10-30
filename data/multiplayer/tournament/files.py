@@ -41,10 +41,10 @@ def active_owners_of(map_ref):
     "no filter".
     """
     world_state = world_for(map_ref)
-    if not getattr(map_ref, "map_data", None):
+    if not map_ref.map_data:
         return set()
     return queries.get_politically_active_nations(
-        world_state.map_data, getattr(map_ref, "nation_data", {}))
+        world_state.map_data, map_ref.nation_data)
 
 
 def run_with_progress(jobs, worker, caption, on_result):
@@ -262,7 +262,7 @@ def write_host_keys(map_ref, keys_dict, output_dir=None):
     keys_path = os.path.join(output_dir, "Host_Keys.txt")
     
     active_owners = active_owners_of(map_ref)
-    nation_data = getattr(map_ref, 'nation_data', {})
+    nation_data = map_ref.nation_data
     
     with open(all_keys_path, 'w') as f:
         f.write("Every key for every possible country:\n\n")
@@ -300,15 +300,14 @@ def export_tournament(map_ref, file_path, master_key, keys_dict):
     os.makedirs(output_dir, exist_ok=True)
     
     # Process pending key regenerations if any
-    pending_regen = getattr(map_ref, 'multiplayer_pending_key_regen', set())
+    pending_regen = map_ref.multiplayer_pending_key_regen
     regenerated_keys = {}
     if pending_regen:
         for cid in list(pending_regen):
             new_key = secrets.token_hex(4)
             keys_dict[cid] = new_key
-            if hasattr(map_ref, 'multiplayer_keys_dict'):
-                map_ref.multiplayer_keys_dict[cid] = new_key
-            nation_data = getattr(map_ref, 'nation_data', {})
+            map_ref.multiplayer_keys_dict[cid] = new_key
+            nation_data = map_ref.nation_data
             name = queries.get_country_display_name(cid, nation_data)
             regenerated_keys[cid] = (name, new_key)
         map_ref.multiplayer_pending_key_regen.clear()
@@ -354,12 +353,12 @@ def export_tournament(map_ref, file_path, master_key, keys_dict):
     
     save_dict["_images"] = images
     
-    session_key = getattr(map_ref, 'multiplayer_session_key', None)
+    session_key = map_ref.multiplayer_session_key
     if not session_key:
         session_key = base64.urlsafe_b64encode(secrets.token_bytes(32)).decode('utf-8')
         map_ref.multiplayer_session_key = session_key
 
-    player_enc_cache = getattr(map_ref, 'multiplayer_player_enc_cache', {})
+    player_enc_cache = map_ref.multiplayer_player_enc_cache
     
     active_owners = active_owners_of(map_ref)
 
@@ -585,7 +584,7 @@ def export_move_file(map_ref, file_path, player_key):
                              for entry in save_dict.get("nation_data", {}).get(cid, {}).get("release_puppet_queue", [])],
     }
 
-    session_key = getattr(map_ref, "multiplayer_session_key", None)
+    session_key = map_ref.multiplayer_session_key
     if session_key:
         player_data["tournament_session"] = session_key
     if hasattr(map_ref, "time_manager"):
@@ -594,12 +593,11 @@ def export_move_file(map_ref, file_path, player_key):
     # A faction rename affects every member, while normal move data contains
     # only one nation record.  Preserve it as a separate host-validated command
     # rather than allowing the renamed leader to drift away from its members.
-    pending_renames = getattr(map_ref, "multiplayer_pending_faction_renames", ())
+    pending_renames = map_ref.multiplayer_pending_faction_renames
     if pending_renames:
         player_data["faction_renames"] = list(pending_renames)
 
-    pending_appearances = getattr(map_ref,
-                                  "multiplayer_pending_appearance_updates", {})
+    pending_appearances = map_ref.multiplayer_pending_appearance_updates
     if pending_appearances:
         player_data["appearance_updates"] = [
             {"country_id": target, "appearance": appearance}
@@ -681,13 +679,13 @@ def _move_context_error(map_ref, player_data):
     an in-progress tournament created by an earlier release.  Every newly
     exported move carries both values and is checked strictly.
     """
-    expected_session = getattr(map_ref, "multiplayer_session_key", None)
+    expected_session = map_ref.multiplayer_session_key
     move_session = player_data.get("tournament_session")
     if move_session is not None and move_session != expected_session:
         return "belongs to a different tournament"
 
     if "tournament_turn" in player_data:
-        time_manager = getattr(map_ref, "time_manager", None)
+        time_manager = map_ref.time_manager
         expected_turn = getattr(time_manager, "total_turns", None)
         if player_data["tournament_turn"] != expected_turn:
             return f"is for turn {player_data['tournament_turn']!r}; the host expects turn {expected_turn}"
@@ -920,7 +918,7 @@ def _validate_administrative_orders(map_ref, country_id, provinces):
     """
     world_state = world_for(map_ref)
     # Lightweight legacy hosts may not carry scenario settings.
-    settings = getattr(map_ref, "scenario_settings", {})
+    settings = map_ref.scenario_settings
     by_key = {p.get("json_key"): p for p in world_state.map_data.values()}
     warnings = []
     for key, updates in provinces.items():
@@ -1132,8 +1130,6 @@ def load_move_files(map_ref, move_file_paths, keys_dict, *, accept_stat_mismatch
                 continue
             service.apply_validated_drafts({cid: validated})
             processed_move_cids.add(cid)
-            if not hasattr(map_ref, "submitted_moves"):
-                map_ref.submitted_moves = set()
             map_ref.submitted_moves.add(cid)
             summary["loaded"] += 1
             summary["loaded_countries"].append(cid)
@@ -1211,8 +1207,6 @@ def load_move_files(map_ref, move_file_paths, keys_dict, *, accept_stat_mismatch
             replace_units=player_data.get("unit_snapshot") is True or bool(provs))
 
         # Also mark this country as having submitted a move
-        if not hasattr(map_ref, 'submitted_moves'):
-            map_ref.submitted_moves = set()
         map_ref.submitted_moves.add(cid)
         summary["loaded"] += 1
         summary["loaded_countries"].append(cid)

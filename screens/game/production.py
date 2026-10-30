@@ -14,6 +14,7 @@ from ui.widgets.ui_elements import (
 from screens.game import recruit_ui
 from ui.rendering.font_manager import fonts
 from data import queries
+from ui.dialogs import pickers
 from map_logic.actions import production_actions
 from map_logic.diplomacy import restrictions
 from ui.bars import resource_hud, view_mode_buttons
@@ -140,9 +141,7 @@ class Production_Screen(GameState):
 
     def _mark_draft_changed(self):
         """Invalidate presentation and queue one real-time draft sync per edit."""
-        invalidate = getattr(self.map_screen, "invalidate_map_presentation_cache", None)
-        if invalidate:
-            invalidate()
+        self.map_screen.invalidate_map_presentation_cache()
 
     def exit_screen(self):
         if c.MAP_NAVIGATION_MODE == "CLASSIC":
@@ -781,7 +780,7 @@ class Production_Screen(GameState):
             self._mark_draft_changed()
             self.refresh_ui()
 
-        queries.open_checkbox_list(
+        pickers.open_checkbox_list(
             self, "Manage Custom Production Units",
             "Select researched units to add to the Custom build category:",
             items, on_picked, confirm_label="Apply")

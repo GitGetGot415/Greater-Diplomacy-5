@@ -172,12 +172,8 @@ class Faction_Screen(GameState):
                 # leader's nation record.  Keep an explicit, host-validated
                 # command so every member is renamed when the host imports it.
                 if self.map_screen.multiplayer_mode:
-                    pending = getattr(self.map_screen,
-                                      "multiplayer_pending_faction_renames", None)
-                    if pending is None:
-                        pending = []
-                        self.map_screen.multiplayer_pending_faction_renames = pending
-                    pending.append({"old_name": old_name, "new_name": new_name})
+                    self.map_screen.multiplayer_pending_faction_renames.append(
+                        {"old_name": old_name, "new_name": new_name})
 
                 self.map_screen.show_feedback(f"Faction renamed to {new_name}")
                 country_names.clear_country_name_cache(self.map_screen)

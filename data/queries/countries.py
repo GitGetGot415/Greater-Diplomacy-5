@@ -140,7 +140,7 @@ def get_visible_provinces(map_screen):
 
 def is_province_visible(map_screen, prov_id):
     """Standardized check for fog of war visibility."""
-    if map_screen and getattr(map_screen, 'visible_provinces', None) is not None:
+    if map_screen and map_screen.visible_provinces is not None:
         return prov_id in map_screen.visible_provinces
     return True
 
@@ -374,8 +374,8 @@ def get_active_ai_nations(map_screen):
     # Cross-reference with nations that actually own territory
     living_nations = queries.get_living_nations(world_state.map_data)
     
-    submitted = getattr(map_screen, 'submitted_moves', set())
-    protected = getattr(map_screen, 'multiplayer_protected_countries', set())
+    submitted = map_screen.submitted_moves
+    protected = map_screen.multiplayer_protected_countries
 
     for name, data in world_state.nation_data.items():
         if (submitted and name in submitted) or (protected and name in protected):

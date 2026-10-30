@@ -11,6 +11,7 @@ import pygame
 
 import data.constants as c
 from data import queries
+from ui.dialogs import pickers
 from data.multiplayer.realtime.session import (
     DEFAULT_MAX_TURNS,
     DEFAULT_PORT,
@@ -781,7 +782,7 @@ class Realtime_Lobby(GameState):
         return "orange" if self.manual_advertised_address else "grey"
 
     def _show_copied_invite(self, title, invite, note):
-        copied = queries.copy_to_clipboard(invite)
+        copied = pickers.copy_to_clipboard(invite)
         clipboard_note = ("The invite code has been copied to your clipboard."
                           if copied else
                           "Clipboard copy was unavailable; select the code below manually.")
@@ -1060,7 +1061,7 @@ class Realtime_Join(GameState):
         super().update()
 
     def show_reconnect_code(self, token):
-        copied = queries.copy_to_clipboard(token)
+        copied = pickers.copy_to_clipboard(token)
         copy_note = "It has been copied to your clipboard." if copied else "Copy it from this dialog and keep it private."
         dialogs.show_info(
             "Your Reconnect Code",
@@ -1264,7 +1265,7 @@ class Realtime_Remote_Lobby(GameState):
         if not self.reconnect_token:
             dialogs.show_info("Reconnect Code", "No reconnect code is available for this connection.")
             return
-        copied = queries.copy_to_clipboard(self.reconnect_token)
+        copied = pickers.copy_to_clipboard(self.reconnect_token)
         copy_note = "Copied to your clipboard." if copied else "Clipboard copy was unavailable; copy the code below."
         dialogs.show_info(
             "Your Reconnect Code",

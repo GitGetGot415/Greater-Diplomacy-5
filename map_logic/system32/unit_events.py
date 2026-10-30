@@ -92,7 +92,7 @@ def event_filter_for(map_screen):
     """Clear the local filter when a new turn arrives."""
     world_state = world_for(map_screen)
     # Lightweight map fixtures can omit local display preferences.
-    if getattr(map_screen, "unit_event_filter_turn", None) != world_state.time_manager.total_turns:
+    if map_screen.unit_event_filter_turn != world_state.time_manager.total_turns:
         set_event_filter(map_screen, None)
     return map_screen.unit_event_filter
 

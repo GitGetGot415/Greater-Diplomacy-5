@@ -7,11 +7,12 @@ from unittest.mock import patch
 import pygame
 
 from ui.rendering import hover_renderer, map_renderer
+from tests.stub_map_screen import map_double
 
 
 class NonLoopingMapRendererTests(unittest.TestCase):
     def test_hover_glow_scale_reuses_unchanged_sticker(self):
-        map_screen = SimpleNamespace(
+        map_screen = map_double(
             hover_glow_surf=pygame.Surface((10, 10), pygame.SRCALPHA))
 
         with patch.object(hover_renderer.pygame.transform, "scale",
@@ -24,7 +25,7 @@ class NonLoopingMapRendererTests(unittest.TestCase):
 
     def test_viewport_scale_reuses_unchanged_source_region(self):
         source = pygame.Surface((20, 20))
-        map_screen = SimpleNamespace()
+        map_screen = map_double()
         rect = pygame.Rect(2, 3, 10, 8)
 
         with patch.object(map_renderer.pygame.transform, "scale",

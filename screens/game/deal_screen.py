@@ -263,7 +263,7 @@ class Deal_Screen(MapOverlayScreen):
         return (self.target_nation, self.kind)
 
     def _drafts(self):
-        drafts = getattr(self.map_screen, "deal_drafts", None)
+        drafts = self.map_screen.deal_drafts
         if drafts is None:
             drafts = {}
             self.map_screen.deal_drafts = drafts

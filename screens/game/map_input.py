@@ -37,8 +37,8 @@ def map_ui_bar_at_position(map_screen, position):
     """Return whether a screen position is covered by one of the map UI bars."""
     # Optional rects only support lightweight screens used at compatibility/test
     # boundaries; a live map publishes all four during construction.
-    top_bar = getattr(map_screen, "top_bar_rect", None)
-    bottom_bar = getattr(map_screen, "bot_bar_rect", None)
+    top_bar = map_screen.top_bar_rect
+    bottom_bar = map_screen.bot_bar_rect
     unit_view_bar = ui_bars.map_unit_view_bar_rect(map_screen)
     flag_rect = flag_renderer.flag_button_rect(map_screen)
     if ((top_bar and top_bar.collidepoint(position))
@@ -49,10 +49,10 @@ def map_ui_bar_at_position(map_screen, position):
 
     # Both flags exist on a live Map; Orders unit tests use smaller map doubles.
     if (map_screen.selection_mode
-            or getattr(map_screen, "hide_raised_rect", False)):
+            or map_screen.hide_raised_rect):
         return False
-    raised = getattr(map_screen, "raised_rect", None)
-    background = getattr(map_screen, "ui_background_rect", None)
+    raised = map_screen.raised_rect
+    background = map_screen.ui_background_rect
     return bool((raised and raised.collidepoint(position))
                 or (background and background.collidepoint(position)))
 
@@ -86,8 +86,7 @@ def _select_map_province(map_screen, position, navigate=True):
             or map_ui_bar_at_position(map_screen, position)):
         return False
     province = queries.get_clicked_province(position, map_screen)
-    if (province is None or province["id"] in getattr(
-            map_screen, "extreme_hidden_provinces", set())):
+    if (province is None or province["id"] in map_screen.extreme_hidden_provinces):
         return False
     # A Tournament Spectator owns no territory. Never let a click through a
     # fogged tile reveal its sidebar data; Lite still keeps its intended visual
@@ -145,7 +144,7 @@ def resolve_map_mouse_gesture_conflict(map_screen, event):
         map_screen.unit_selection_drag = None
         map_screen._ignore_left_until_release = True
     elif event.button == 1:
-        camera = getattr(map_screen, "camera", None)
+        camera = map_screen.camera
         if camera and getattr(camera, "_middle_drag_last_pos", None) is not None:
             camera.cancel_middle_drag()
             map_screen._ignore_left_until_release = True
@@ -156,14 +155,14 @@ def resolve_map_mouse_gesture_conflict(map_screen, event):
 
 def _handle_map_unit_selection(map_screen, event, on_ui):
     """Consume configurable unit selection and selected-unit order gestures."""
-    if getattr(map_screen, "_ignore_left_until_release", False):
+    if map_screen._ignore_left_until_release:
         if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
             map_screen._ignore_left_until_release = False
             return True
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             return True
 
-    if getattr(map_screen, "_ignore_right_until_release", False):
+    if map_screen._ignore_right_until_release:
         if event.type == pygame.MOUSEBUTTONUP and event.button == 3:
             map_screen._ignore_right_until_release = False
             return True
@@ -278,8 +277,8 @@ def handle_map_events(map_screen, event):
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             # Hit-tests the rects map_renderer published while drawing the
             # dialog, rather than re-deriving them here in a different frame.
-            yes_rect = getattr(map_screen, 'exit_yes_rect', None)
-            no_rect = getattr(map_screen, 'exit_no_rect', None)
+            yes_rect = map_screen.exit_yes_rect
+            no_rect = map_screen.exit_no_rect
             if yes_rect and yes_rect.collidepoint(mx, my):
                 map_screen.confirm_exit()
             elif no_rect and no_rect.collidepoint(mx, my):
@@ -430,7 +429,7 @@ def handle_map_events(map_screen, event):
             else queries.get_clicked_province((mx, my), map_screen))
 
         # Block interaction with extreme hidden tiles
-        if map_screen.hovered_province and hasattr(map_screen, 'extreme_hidden_provinces'):
+        if map_screen.hovered_province:
             if map_screen.hovered_province["id"] in map_screen.extreme_hidden_provinces:
                 map_screen.hovered_province = None
 

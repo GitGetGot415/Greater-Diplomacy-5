@@ -5,6 +5,8 @@ from ui.navigation.game_state import FolderListState
 from ui.widgets.ui_elements import Button, make_back_button
 import data.constants as c
 from data import queries
+from ui.dialogs import file_exchange
+from screens.setup import map_refresh
 from ui.panels import turn_progress
 class Select_Base_Map(FolderListState):
     back_state = "MENU"
@@ -91,7 +93,7 @@ class Select_Base_Map(FolderListState):
             self.elements.extend([
                 make_back_button(self.exit_screen),
                 Button(160, 20, "medium", "green", "Import .zip",
-                       lambda: queries.import_zip_to_dir(self, self.managed_dir, self.refresh_ui)),
+                       lambda: file_exchange.import_zip_to_dir(self, self.managed_dir, self.refresh_ui)),
                 Button("centered-160", c.SCREEN_HEIGHT - 100, "large", "purple", "New Map",
                        lambda: self.set_sub_state("BASE_MAPS")),
                 Button("centered+160", c.SCREEN_HEIGHT - 100, "large", "orange", "Edit Existing Map",
@@ -155,7 +157,7 @@ class Select_Base_Map(FolderListState):
         """Calls the unified data refresh query for base maps."""
         def on_confirm(confirm):
             if confirm:
-                queries.refresh_map_directories(self, [c.BASE_MAPS_DIR],
+                map_refresh.refresh_map_directories(self, [c.BASE_MAPS_DIR],
                                                 success_message="Synced base maps successfully.")
 
         dialogs.ask_yes_no(
@@ -165,7 +167,7 @@ class Select_Base_Map(FolderListState):
         )
 
     def export_scenario_zip(self, scenario_name):
-        queries.export_dir_as_zip(os.path.join(self.managed_dir, scenario_name),
+        file_exchange.export_dir_as_zip(os.path.join(self.managed_dir, scenario_name),
                                   f"{scenario_name}_scenario.zip")
 
     def start_editor_with_map(self, map_name, directory):

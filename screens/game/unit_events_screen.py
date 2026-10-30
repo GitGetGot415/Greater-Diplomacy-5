@@ -1,6 +1,7 @@
 """Show the current viewer's events from the last completed turn."""
 import data.constants as c
 from data import queries
+from ui.dialogs import pickers
 from map_logic.system32 import unit_events
 from ui.rendering.font_manager import fonts
 from ui.widgets import flag_icons, text_utils
@@ -81,7 +82,7 @@ class UnitEventsScreen(TableScreen):
 
     def choose_event_filter(self):
         items = [("No filter", None)] + [(label, event) for event, label in unit_events.EVENT_LABELS.items()]
-        queries.open_listbox_selector(self, "Filter unit events", "Select an event type or No filter.",
+        pickers.open_listbox_selector(self, "Filter unit events", "Select an event type or No filter.",
                                       items, self.set_event_filter, is_enabled=self.filter_choice_enabled)
 
     def filter_choice_enabled(self, item):

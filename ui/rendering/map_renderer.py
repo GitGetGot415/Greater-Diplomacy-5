@@ -25,7 +25,7 @@ _VIEWPORT_SCALE_CACHE_LIMIT = 16
 
 def _scaled_map_region(map_screen, source, source_rect, destination_size):
     """Return a cached scale of one immutable map/fog source rectangle."""
-    cache = getattr(map_screen, "_viewport_scale_cache", None)
+    cache = map_screen._viewport_scale_cache
     if cache is None:
         cache = {}
         map_screen._viewport_scale_cache = cache
@@ -47,7 +47,7 @@ def _scaled_map_region(map_screen, source, source_rect, destination_size):
 
 def clear_viewport_scale_cache(map_screen):
     """Invalidate derived map pixels after an explicit visual-layer change."""
-    cache = getattr(map_screen, "_viewport_scale_cache", None)
+    cache = map_screen._viewport_scale_cache
     if cache is not None:
         cache.clear()
 
@@ -208,7 +208,7 @@ def draw_map_screen(map_screen, surface):
         # The overlay rebuilds this transient set every frame.  Lightweight
         # screen doubles used by isolated render tests may not have drawn that
         # layer, in which case no unit is compacted.
-        compacted_units = getattr(map_screen, "compact_army_unit_object_ids", set())
+        compacted_units = map_screen.compact_army_unit_object_ids
         unit_index = overlay_renderer._unit_render_index(map_screen)
         for province in unit_index.occupied_provinces:
             for unit in unit_index.view_units_by_province[id(province)]:
@@ -410,9 +410,9 @@ def draw_badges(map_screen, surface):
         # These are derived game-state queries, so keep the answers alongside
         # the other planning presentation caches instead of asking them again
         # after every frame's map blits.
-        revision = getattr(map_screen, '_presentation_cache_revision', None)
+        revision = map_screen._presentation_cache_revision
         cache_key = (revision, map_screen.player_country)
-        cached = getattr(map_screen, '_badge_state_cache', None)
+        cached = map_screen._badge_state_cache
         if cached is not None and cached[0] == cache_key:
             (unread_msgs, free_research, incoming_claims,
              leadership_contested, political_drift) = cached[1]

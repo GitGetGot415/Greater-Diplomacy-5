@@ -34,6 +34,8 @@ def sample_editor():
         viewing_ai_moves=False, ai_is_thinking=False, centers_need_update=False,
         political_map=None, id_map=None, cores_map=None, map_mode="POLITICAL",
         refresh_all_maps=mock.Mock(), show_feedback=mock.Mock(),
+        presentation_enabled=True, editor_history=[], editor_redo_history=[],
+        _map_surface_cache=None,
     )
 
 

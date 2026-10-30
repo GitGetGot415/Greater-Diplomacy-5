@@ -965,13 +965,13 @@ def collect_map_commands(map_ref, country_id: str) -> list[dict[str, Any]]:
                                            "release_type": entry["release_type"]}
                                           for entry in country_data.get("release_puppet_queue", [])
                                           if isinstance(entry, dict)],
-                     "appearances": copy.deepcopy(getattr(map_ref, "realtime_pending_appearance_updates", {}))})
+                     "appearances": copy.deepcopy(map_ref.realtime_pending_appearance_updates)})
     commands.append({"type": "faction_rename", "name": country_data.get("faction", "")})
     pending_ratification = country_data.get("pending_ratification", {})
     commands.append({"type": "ratification_response",
                      "verdict": pending_ratification.get("verdict") if isinstance(pending_ratification, dict) else None,
                      "treaty_id": pending_ratification.get("treaty_id") if isinstance(pending_ratification, dict) else None})
-    volunteer_drafts = getattr(map_ref, "realtime_volunteer_drafts", {})
+    volunteer_drafts = map_ref.realtime_volunteer_drafts
     if isinstance(volunteer_drafts, dict):
         volunteer_choices.update(volunteer_drafts)
     for target, units in volunteer_choices.items():
