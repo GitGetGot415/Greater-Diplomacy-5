@@ -16,6 +16,7 @@ from ui import dialogs
 # ==========================================
 
 MUSIC_LEFT_PANE_W = 250
+MUSIC_SCROLLBAR_WIDTH = 20
 song_y = 32
 TRACK_SHUFFLE_TOGGLE_SIZE = (26, 26)
 TRACK_SHUFFLE_TOGGLE_GAP = 4
@@ -800,7 +801,7 @@ class Music_Player(ScrollPanes, GameState):
         pygame.draw.rect(surface, (35, 35, 45), left_pane)
 
         # --- DYNAMIC SCROLLBAR RENDERING ---
-        self.draw_pane_scrollbar(surface, "album", MUSIC_LEFT_PANE_W - 15, 120,
-                                 c.SCREEN_HEIGHT - 120, width=10)
-        self.draw_pane_scrollbar(surface, "track", c.SCREEN_WIDTH - 280, 200,
-                                 c.SCREEN_HEIGHT - 200, width=10)
+        self.draw_pane_scrollbar(surface, "album", MUSIC_LEFT_PANE_W - MUSIC_SCROLLBAR_WIDTH - 5, 120,
+                                 c.SCREEN_HEIGHT - 120, width=MUSIC_SCROLLBAR_WIDTH)
+        self.draw_pane_scrollbar(surface, "track", c.SCREEN_WIDTH - 275, 200,
+                                 c.SCREEN_HEIGHT - 200, width=MUSIC_SCROLLBAR_WIDTH)
