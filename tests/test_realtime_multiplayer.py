@@ -5,6 +5,7 @@ import time
 import unittest
 import tempfile
 import socket
+import ssl
 import struct
 import pygame
 from types import SimpleNamespace
@@ -965,6 +966,24 @@ class RealtimeSessionTests(unittest.TestCase):
                 read_message(left)
         finally:
             left.close(); right.close()
+
+    def test_every_match_tls_context_refuses_tls_1_0_and_1_1(self):
+        with tempfile.TemporaryDirectory() as directory:
+            certificate, key, fingerprint = create_match_certificate(directory)
+            relay_server = RealtimeServer(self.session, certificate, key)
+            relay_server.start_relay(SimpleNamespace(start=lambda serve: None, stop=lambda: None))
+            server = RealtimeServer(self.session, certificate, key)
+            port = server.start(0)
+            try:
+                client = RealtimeClient(decode_invite(encode_invite("127.0.0.1", port,
+                                                                    self.session.session_id, fingerprint)))
+                client.connect()
+                for context in (relay_server._tls_context, server._tls_context, client.socket.context):
+                    self.assertEqual(context.minimum_version, ssl.TLSVersion.TLSv1_2)
+                client.close()
+            finally:
+                server.stop()
+                relay_server.stop()
 
     def test_plain_tcp_probe_does_not_stop_tls_listener(self):
         with tempfile.TemporaryDirectory() as directory:

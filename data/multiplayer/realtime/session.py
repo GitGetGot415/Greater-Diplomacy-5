@@ -986,6 +986,17 @@ def materialize_map_bundle(bundle: dict[str, Any]) -> str:
     return destination
 
 
+def _tls_context(protocol: int) -> ssl.SSLContext:
+    """Create a match TLS context that refuses TLS 1.0 and 1.1.
+
+    Both ends are always this game, so the minimum is set explicitly instead
+    of trusting whichever Python or OpenSSL default a build happens to ship.
+    """
+    context = ssl.SSLContext(protocol)
+    context.minimum_version = ssl.TLSVersion.TLSv1_2
+    return context
+
+
 def create_match_certificate(directory: str | os.PathLike[str]) -> tuple[str, str, str]:
     """Create a short-lived self-signed TLS certificate and return its SHA-256 pin."""
     if IS_WEB:
@@ -1043,7 +1054,7 @@ class RealtimeServer:
     def start(self, port: int) -> int:
         if IS_WEB:
             raise RealtimeError("Real-time hosting is available on desktop builds only.")
-        context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        context = _tls_context(ssl.PROTOCOL_TLS_SERVER)
         context.load_cert_chain(self.certificate_path, self.key_path)
         listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -1068,7 +1079,7 @@ class RealtimeServer:
             raise RealtimeError("Real-time hosting is available on desktop builds only.")
         if self._listener or self._relay_transport:
             raise RealtimeError("The real-time server has already started.")
-        self._tls_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        self._tls_context = _tls_context(ssl.PROTOCOL_TLS_SERVER)
         self._tls_context.load_cert_chain(self.certificate_path, self.key_path)
         relay_transport.start(self._serve_connection)
         self._relay_transport = relay_transport
@@ -1372,7 +1383,7 @@ class RealtimeClient:
             raw = connect_relay_client(self.invite, self.timeout)
         else:
             raw = socket.create_connection((self.invite["host"], self.invite["port"]), self.timeout)
-        context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        context = _tls_context(ssl.PROTOCOL_TLS_CLIENT)
         context.check_hostname, context.verify_mode = False, ssl.CERT_NONE
         # Relay invites contain no direct host address; hostname validation is
         # disabled and the match certificate SHA-256 pin below is authoritative.
