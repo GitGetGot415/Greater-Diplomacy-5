@@ -118,8 +118,6 @@ FIXED_TECH_NAMES = {
     "ww1_tank": "WW1 Tank",
     "ww1_railroad_gun": "WW1 Railroad Gun",
     "ww2_railroad_gun": "WW2 Railroad Gun",
-    "dreadnought": "Dreadnought",
-    "battleship": "Battleship",
     "bergius_process": "Bergius Process",
     "basic_factory": "Basic Factory",
     "basic_recruitment": "Basic Recruitment Center",

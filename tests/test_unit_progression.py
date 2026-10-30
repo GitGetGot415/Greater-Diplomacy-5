@@ -358,7 +358,7 @@ class UnitProgressionTests(unittest.TestCase):
     def test_ongoing_unit_tracks_match_their_content_dates_within_the_timeline(self):
         tracks = ('infantry_type', 'militia', 'artillery', 'armored_car', 'light_tank',
                   'main_battle_tank', 'carrack', 'ironclad', 'pre-dreadnought',
-                  'destroyer', 'submarine', 'aircraft_carrier',
+                  'dreadnought', 'battleship', 'destroyer', 'submarine', 'aircraft_carrier',
                   'jet_fighter', 'jet_bomber', 'jet_transport')
         for key in tracks:
             with self.subTest(tech=key):
