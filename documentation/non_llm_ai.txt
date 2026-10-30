@@ -83,6 +83,8 @@ Research labels and image requests come from level_names and level_icons in the 
 Read equipment dates, statistics, prices, and research costs from data/json/unit_data.json and data/json/research_template.json.
 Edit data/generators/recipes.py to regenerate this content.
 EQUIPMENT_STAGES defines base statistics and existing artwork references.
+Other unit and building recipes use the same dated-row structure.
+See data/generators/TABLE_FORMATTING.md for shared recipe fields and research date ownership.
 
 Each row starts with the year and name. The statistics follow EQUIPMENT_COLUMNS.
 HP is health. ATK is attack. DEF is defense. SPD is speed.

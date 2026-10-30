@@ -284,6 +284,7 @@ CONDENSED_UNIT_NAME_WORDS = {
     "Carrier": "Carr",
     "Destroyer": "Dstr",
     "Submarine": "Sub",
+    "Pre-Dreadnought": "Pre-Dread",
     "Dreadnought": "Dread",
     "Railroad": "RR",
     "Landkreuzer": "LK",

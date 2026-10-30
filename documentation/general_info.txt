@@ -291,6 +291,19 @@ Additional metadata retains existing display labels, art selection, and AI quota
 
 Historical naval units use the same research, coastal production, combat, and transport rules as other ships.
 Their metadata connects each ship to its research track.
+
+Carracks, ironclads, and pre-dreadnoughts have numbered upgrades within their existing research tracks.
+Their unnumbered unit identifiers remain level one for existing saves and production queues.
+Research dates, level counts, statistics, and costs come from the unit and research libraries.
+data/generators/recipes.py defines the generation rules.
+
+Unit and building rows keep their first year, base statistics, level count, and upgrade interval together.
+Research reads the same dates and level counts.
+See data/generators/TABLE_FORMATTING.md for row formats, options, and generation steps.
+Run data/generators/generate_data.py after recipe edits.
+
+Completed research unlocks production and upgrades within the same ship family.
+AI and both multiplayer modes use the same metadata and production rules.
 Research prerequisites also apply when an editor grants or removes technology.
 Existing completed research stays intact. Missing research levels count as unresearched.
 

@@ -23,9 +23,110 @@ class UnitProgressionTests(unittest.TestCase):
 
     def test_generated_runtime_data_matches_recipes(self):
         for path, builder in ((c.UNIT_DATA_PATH, generate_data.build_unit_data_text),
+                              (c.BUILDING_DATA_PATH, generate_data.build_building_data_text),
                               (c.RESEARCH_TEMPLATE_PATH, generate_data.build_research_template_text)):
             with self.subTest(path=path):
                 self.assertEqual(json.loads(Path(path).read_text(encoding='utf-8')), json.loads(builder()))
+
+    def test_dated_unit_row_drives_stats_level_count_and_research(self):
+        row = (1900, "Fixture Ship", 123, 17, 4, 2, 41, 19, 7, 6, 11,
+               (3, 4, {"health": 9, "attack": 5, "cost_materials": 3, "bombard_attack": 2}),
+               {"unnumbered_first": True})
+        with patch.object(recipes, "NAVAL_UNIT_RECIPES", [row]):
+            entries = recipes.unit_family(row, naval_unit=True).entries()
+            tech, research = recipes.research_recipe((recipes.unit_years("Fixture Ship"),
+                                                     "fixture_ship", "NAVY", 23, {}, {}))
+        self.assertEqual(tech, "fixture_ship")
+        self.assertEqual(research["years"], [1900, 1904, 1908])
+        self.assertEqual(research["max_lvl"], 3)
+        self.assertEqual([name for name, _ in entries], ["Fixture Ship", "Fixture Ship II", "Fixture Ship III"])
+        self.assertEqual([(entry["health"], entry["attack"], entry["cost_materials"], entry["bombard_attack"])
+                          for _, entry in entries], [(123, 17, 41, 11), (132, 22, 44, 13), (141, 27, 47, 15)])
+        for level, (_, entry) in enumerate(entries, 1):
+            self.assertTrue(entry["naval_unit"])
+            self.assertEqual(entry["metadata"]["tier_order"], level)
+            self.assertEqual(entry["metadata"]["research"], {"tech": tech, "level": level})
+            for field, value in (("defense", 4), ("speed", 2), ("cost_manpower", 19),
+                                 ("cost_fuel", 7), ("production_time", 6)):
+                self.assertEqual(entry[field], value)
+
+    def test_air_row_keeps_optional_stats_and_research_for_every_unit_tier(self):
+        row = (1920, "Fixture Plane", 101, 13, 3, 1, 43, 17, 5, 2, None,
+               "bomber", 70, None, True, None, True, None,
+               (4, 3, {"health": 7, "air_range_px": 11}), {})
+        with patch.object(recipes, "AIR_UNIT_RECIPES", [row]):
+            entries = recipes.unit_family(row, air=True).entries()
+            _, research = recipes.research_recipe((recipes.unit_years("Fixture Plane"),
+                                                  "fixture_plane", "AIR", 31, {}, {}))
+        self.assertEqual(len(entries), 4)
+        self.assertEqual(research["years"], [1920, 1923, 1926, 1929])
+        self.assertEqual(research["max_lvl"], 4)
+        self.assertEqual([entry["air_range_px"] for _, entry in entries], [70, 81, 92, 103])
+        self.assertEqual([entry["health"] for _, entry in entries], [101, 108, 115, 122])
+        for _, entry in entries:
+            self.assertEqual(entry["production_group"], "Air")
+            self.assertEqual(entry["air_role"], "bomber")
+            self.assertTrue(entry["air_consumable"])
+            self.assertTrue(entry["air_damages_forts"])
+            self.assertNotIn("bombard_attack", entry)
+            self.assertNotIn("air_attack_multiplier", entry)
+            self.assertNotIn("air_interception_immune", entry)
+            self.assertNotIn("air_transport_capacity", entry)
+
+    def test_unit_row_keeps_piecewise_stats_in_the_same_row(self):
+        row = (1900, "Fixture Vehicle", 101, 13, 3, recipes.piecewise([(0, 2, 0), (2, 5, 0)]),
+               43, 17, 5, 2, None, (4, 3, {"attack": 7}), {})
+        entries = recipes.unit_family(row).entries()
+        self.assertEqual([entry["speed"] for _, entry in entries], [2, 2, 5, 5])
+        self.assertEqual([entry["attack"] for _, entry in entries], [13, 20, 27, 34])
+
+    def test_building_rows_share_dates_and_preserve_chained_requirements(self):
+        stages = [
+            (1800, "Fixture Workshop", 3, "industry", 11, 7, 5, 13, 2, 1,
+             (1, 1, {}), {"numbered": False, "req": "null"}),
+            (1820, "Fixture Factory", 4, "industry", 23, 11, 7, 31, 5, 3,
+             (3, 6, {"cost_materials": 9, "prod_materials": 7, "prod_fuel": 2}), {}),
+        ]
+        with patch.object(recipes, "BUILDING_RECIPES", [stages]):
+            entries = recipes.BuildingChain(stages).entries()
+            _, research = recipes.research_recipe((recipes.building_years("Fixture Factory"),
+                                                  "fixture_factory", "INDUSTRY", 37, {}, {}))
+        self.assertEqual([name for name, _ in entries],
+                         ["Fixture Workshop", "Fixture Factory 1", "Fixture Factory 2", "Fixture Factory 3"])
+        self.assertEqual([entry["req"] for _, entry in entries],
+                         ["null", "Fixture Workshop", "Fixture Factory 1", "Fixture Factory 2"])
+        self.assertEqual([entry["cost_materials"] for _, entry in entries], [11, 23, 32, 41])
+        self.assertEqual([entry["prod_materials"] for _, entry in entries], [13, 31, 38, 45])
+        self.assertEqual([entry["prod_fuel"] for _, entry in entries], [1, 3, 5, 7])
+        self.assertEqual(research["years"], [1820, 1826, 1832])
+        self.assertEqual(research["max_lvl"], 3)
+
+    def test_undated_building_row_emits_its_first_numbered_level_once(self):
+        row = (None, "Fixture Fort", 2, "fortification", 17, 0, 0, 0, 0, 0,
+               (3, 1, {"cost_materials": 7}), {})
+        entries = recipes.BuildingChain([row]).entries()
+        self.assertEqual([name for name, _ in entries], ["Fixture Fort 1", "Fixture Fort 2", "Fixture Fort 3"])
+        self.assertEqual([entry["req"] for _, entry in entries], [None, "Fixture Fort 1", "Fixture Fort 2"])
+        self.assertEqual([entry["cost_materials"] for _, entry in entries], [17, 24, 31])
+
+    def test_source_rows_and_runtime_research_share_dates_and_level_counts(self):
+        for rows in (recipes.LAND_UNIT_RECIPES, recipes.NAVAL_UNIT_RECIPES, recipes.AIR_UNIT_RECIPES):
+            for row in rows:
+                name = row[1]
+                family = next(family for block in recipes.UNIT_SECTIONS for family in block if family.prefix == name)
+                with self.subTest(unit=name):
+                    self.assertEqual(self.tree[family.research_key]["years"], recipes.unit_years(name))
+                    self.assertEqual(len(family.entries()), row[-2][0])
+                    self.assertEqual(self.tree[family.research_key]["max_lvl"], len(family.entries()))
+        for stages in recipes.BUILDING_RECIPES:
+            for row in stages:
+                if row[0] is None:
+                    continue
+                # Building-to-technology lookup is the same boundary used by runtime production.
+                name = row[1] if not row[-1].get("numbered", True) else row[1] + " 1"
+                tech, _ = queries.get_building_required_tech(name)
+                with self.subTest(building=name):
+                    self.assertEqual(self.tree[tech]["years"], recipes.building_years(row[1]))
 
     def test_equipment_profiles_generate_units_without_growth_formulas(self):
         first = {"health": 120, "attack": 17, "defense": 3, "speed": 2,
@@ -256,7 +357,8 @@ class UnitProgressionTests(unittest.TestCase):
 
     def test_ongoing_unit_tracks_match_their_content_dates_within_the_timeline(self):
         tracks = ('infantry_type', 'militia', 'artillery', 'armored_car', 'light_tank',
-                  'main_battle_tank', 'destroyer', 'submarine', 'aircraft_carrier',
+                  'main_battle_tank', 'carrack', 'ironclad', 'pre-dreadnought',
+                  'destroyer', 'submarine', 'aircraft_carrier',
                   'jet_fighter', 'jet_bomber', 'jet_transport')
         for key in tracks:
             with self.subTest(tech=key):
@@ -280,11 +382,8 @@ class UnitProgressionTests(unittest.TestCase):
         for family, tiers in queries.get_unit_research_index(self.library):
             if len(tiers) < 2:
                 continue
-            latest, _, requirement = tiers[0]
+            latest = tiers[0][0]
             previous = tiers[1][0]
-            # Some historical families retain library tiers beyond their research cap.
-            if not queries.unit_requirement_is_met(requirement, research):
-                continue
             with self.subTest(family=family):
                 self.assertTrue(queries.is_unit_unlocked(latest, research, self.library))
                 self.assertEqual(queries.get_upgrade_target(previous, research, self.library, self.tree), latest)

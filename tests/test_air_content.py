@@ -94,6 +94,32 @@ class AirCategoryMigrationTests(unittest.TestCase):
 
 
 class AirRulesTests(unittest.TestCase):
+    def test_every_biplane_bomber_tier_can_finish_normal_research(self):
+        tech = "biplane_bomber"
+        library, tree = queries.get_unit_library(), queries.get_tech_tree()
+        tiers = {queries.get_unit_research_requirement(name, library)[1]: name
+                 for name, stats in library.items() if stats["metadata"]["family"] == "Biplane Bomber"}
+        self.assertEqual(tree[tech]["max_lvl"], max(tiers))
+        research = queries.edited_research_levels({}, tech, 1, True, tree)
+        research[tech] = 0
+        country = {"research": research, "research_queue": []}
+        game = SimpleNamespace(nation_data={"A": country}, player_country="A", scenario_settings={},
+                               time_manager=SimpleNamespace(year=c.END_YEAR, day=1, month_index=0),
+                               show_feedback=mock.Mock())
+        for level, name in sorted(tiers.items()):
+            with self.subTest(unit=name):
+                self.assertFalse(queries.is_unit_unlocked(name, research, library))
+                selection = queries.canonical_research_selection(country, [tech], tree)
+                self.assertEqual(selection["projects"][0]["points_remaining"], tree[tech]["cost"])
+                country["research_queue"] = selection["projects"]
+                country["research_queue"][0]["points_remaining"] = 0
+                with mock.patch("map_logic.politics.research_multiplier", return_value=1):
+                    process_national_research(game)
+                self.assertEqual(country["research_queue"], [])
+                self.assertEqual(research[tech], level)
+                self.assertTrue(queries.is_unit_unlocked(name, research, library))
+                self.assertIn(name, ai_unit_eval.buildable_units(research, library))
+
     def test_heavier_than_air_flight_gates_biplane_research(self):
         from data.generators.generate_data import build_research_template_text
 

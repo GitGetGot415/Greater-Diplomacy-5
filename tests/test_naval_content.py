@@ -9,8 +9,9 @@ from data import constants as c, migrations, queries
 from data.multiplayer.tournament.files import _validate_production_projection
 from data.multiplayer.realtime.session import MapRealtimeDriver, RealtimeError
 from data.state_access import BackendState
-from map_logic.actions import production_actions
+from map_logic.actions import production_actions, unit_actions
 from map_logic.ai import ai_tech_eval, ai_unit_eval
+from map_logic.system32.movement_processor import process_upgrades
 from map_logic.system32.research_processor import process_national_research
 from tests.test_map_save_format import sample_map_screen
 
@@ -22,11 +23,13 @@ class NavalContentTests(unittest.TestCase):
     def setUp(self):
         self.library = queries.get_unit_library()
         self.tree = queries.get_tech_tree()
+        self.ships = {name: stats["metadata"]["research"]["tech"]
+                      for name, stats in self.library.items() if stats["metadata"]["family"] in SHIPS}
         self.context = BackendState()
         self.context.session.player_country = "A"
         self.country = {"research": {}, "research_queue": [], "at_war_with": []}
         for resource in c.ECON_RESOURCE_KEYS:
-            self.country[resource] = 1 + sum(self.library[name][f"cost_{resource}"] for name in SHIPS)
+            self.country[resource] = 1 + sum(self.library[name][f"cost_{resource}"] for name in self.ships)
         self.context.world.nation_data["A"] = self.country
         self.province = {"id": 1, "json_key": "home", "owner": "A", "cores": ["A"],
                          "is_coastal": True, "buildings": ["Basic Factory"],
@@ -36,8 +39,8 @@ class NavalContentTests(unittest.TestCase):
         self.driver = MapRealtimeDriver(self.context)
 
     def test_ship_metadata_unlocks_agree_for_players_ai_and_older_libraries(self):
-        navy = queries.get_grouped_units(self.library)["Navy"]
-        for name, tech in SHIPS.items():
+        navy = queries.get_grouped_units(self.library, by_family=False)["Navy"]
+        for name, tech in self.ships.items():
             with self.subTest(ship=name):
                 self.assertIn(name, navy)
                 metadata = queries.get_unit_metadata(name, self.library)
@@ -55,6 +58,35 @@ class NavalContentTests(unittest.TestCase):
                 self.assertTrue(queries.is_naval_unit(name))
                 for field in ("health", "attack", "defense", "speed"):
                     self.assertEqual(unit[field], self.library[name][field])
+
+    def test_each_ship_research_level_unlocks_the_matching_family_upgrade(self):
+        for family, tech in SHIPS.items():
+            levels = {queries.get_unit_research_requirement(name, self.library)[1]: name
+                      for name in self.ships if self.ships[name] == tech}
+            self.assertGreater(self.tree[tech]["max_lvl"], 1)
+            self.assertEqual(set(levels), set(range(1, self.tree[tech]["max_lvl"] + 1)))
+            for level, name in levels.items():
+                if level == 1:
+                    self.assertEqual(name, family)
+                    continue
+                research = queries.edited_research_levels({}, tech, level, True, self.tree)
+                with self.subTest(ship=name):
+                    self.assertEqual(queries.get_upgrade_target(family, research, self.library, self.tree), name)
+                    candidates = ai_unit_eval.buildable_units(research, self.library)
+                    self.assertIn(name, candidates)
+                    self.assertNotIn(levels[level - 1], candidates)
+                    self.country["research"] = research
+                    unit = queries.create_unit_dict(family, "A", self.library)
+                    unit["health"] *= 0.6
+                    self.province["units"] = [unit]
+                    unit_actions.apply_action(self.context, "A", self.province, unit,
+                                              {"type": "UPGRADE", "target_type": name})
+                    process_upgrades(self.context)
+                    self.assertEqual(unit["type"], name)
+                    self.assertAlmostEqual(unit["health"] / unit["max_health"], 0.6)
+                    self.assertEqual(unit["max_health"], self.library[name]["health"])
+                    for field in ("attack", "defense", "speed"):
+                        self.assertEqual(unit[field], self.library[name][field])
 
     def test_prerequisites_and_costs_agree_for_local_and_server_research(self):
         for tech in (*SHIPS.values(), "dreadnought", "destroyer", "submarine"):
@@ -123,7 +155,7 @@ class NavalContentTests(unittest.TestCase):
     def test_finishing_ship_research_unlocks_paid_coastal_production(self):
         self.context.session.player_country = "Spectator"
         self.context.world.time_manager = SimpleNamespace(year=c.END_YEAR, month_index=0, day=1)
-        for name, tech in SHIPS.items():
+        for name, tech in self.ships.items():
             self.country["research_queue"] = [queries.build_research_project(tech, 0)]
             process_national_research(self.context)
             stats = self.library[name]
@@ -135,7 +167,7 @@ class NavalContentTests(unittest.TestCase):
                 self.assertEqual(self.country[resource], before[resource] - stats[f"cost_{resource}"])
 
     def test_both_multiplayer_adapters_use_host_ship_costs_and_reject_invalid_production(self):
-        for name, tech in SHIPS.items():
+        for name, tech in self.ships.items():
             self.country["research"] = {tech: queries.get_unit_research_requirement(name)[1]}
             intent = {"unit_type": name}
             command = {"type": "province_queue", "province_id": 1, "queue": "unit_queue", "items": [intent]}
@@ -147,7 +179,7 @@ class NavalContentTests(unittest.TestCase):
                 with self.subTest(ship=name, invalid=invalid):
                     country_before, province_before = copy.deepcopy(self.country), copy.deepcopy(self.province)
                     if invalid == "missing research":
-                        self.country["research"] = {}
+                        self.country["research"] = {tech: queries.get_unit_research_requirement(name)[1] - 1}
                     elif invalid == "inland":
                         self.province["is_coastal"] = False
                     elif invalid == "foreign":
@@ -169,11 +201,13 @@ class NavalContentTests(unittest.TestCase):
     def test_restored_ships_research_and_paid_queues_survive_save_data_round_trip(self):
         game = sample_map_screen()
         research = queries.edited_research_levels({}, "dreadnought", 1, True, self.tree)
+        for tech in SHIPS.values():
+            research = queries.edited_research_levels(research, tech, self.tree[tech]["max_lvl"], True, self.tree)
         game.nation_data[game.player_country]["research"] = research
         province = next(iter(game.map_data.values()))
-        province["units"] = [queries.create_unit_dict(name, game.player_country, self.library) for name in SHIPS]
+        province["units"] = [queries.create_unit_dict(name, game.player_country, self.library) for name in self.ships]
         province["unit_queue"] = [production_actions.canonical_queue_entry(
-            "unit_queue", name=name, cost=self.library[name]) for name in SHIPS]
+            "unit_queue", name=name, cost=self.library[name]) for name in self.ships]
         saved = json.loads(json.dumps(queries.build_save_dict(game)))
         loaded = queries.map_data_with_saved_provinces(game.raw_json_data, saved["provinces"])
         self.assertEqual(saved["nation_data"][game.player_country]["research"], research)
@@ -192,10 +226,56 @@ class NavalContentTests(unittest.TestCase):
         for name, tech in SHIPS.items():
             self.assertNotIn(name, library)
             self.assertNotIn(tech, tree)
+            self.assertFalse(any(stats["metadata"]["family"] == name for stats in library.values()))
         self.assertTrue(queries.check_tech_requirements({}, tree["dreadnought"]["req"]))
 
 
 class NavalScreenTests(unittest.TestCase):
+    def test_new_ship_levels_can_be_researched_and_purchased_through_screen_callbacks(self):
+        from tests import app_harness
+
+        controller, _ = app_harness.boot()
+        game = app_harness.boot_map()
+        country_id = game.player_country
+        nations = copy.deepcopy(game.nation_data)
+        country = nations[country_id]
+        library, tree = queries.get_unit_library(game), queries.get_tech_tree(game)
+        ships = [name for name, stats in library.items() if stats["metadata"]["family"] in SHIPS]
+        for resource in c.ECON_RESOURCE_KEYS:
+            country[resource] = 1 + sum(library[name][f"cost_{resource}"] for name in ships)
+        province = copy.deepcopy(game.selected_province)
+        province.update(owner=country_id, cores=[country_id], is_coastal=True, buildings=["Basic Factory"],
+                        unit_queue=[], building_queue=[])
+        research, production = controller.states["RESEARCH"], controller.states["PRODUCTION"]
+        try:
+            with app_harness.patch_map(game, nation_data=nations, tactical_mode=False):
+                for family, tech in SHIPS.items():
+                    level = tree[tech]["max_lvl"]
+                    name = next(name for name in ships
+                                if library[name]["metadata"]["family"] == family
+                                and queries.get_unit_research_requirement(name, library)[1] == level)
+                    country["research"] = queries.edited_research_levels({}, tech, level - 1, True, tree)
+                    country["research_queue"] = []
+                    research.start_research(game)
+                    research.set_category("NAVY")
+                    node = next(button for button in research.elements
+                                if getattr(button, "is_tech_node", False)
+                                and button.text == research.get_display_name(tech, level))
+                    node.callback()
+                    self.assertEqual((research.active_modal["tech_key"], research.active_modal["level"]), (tech, level))
+                    self.assertIn(name, research.modal_entities)
+                    next(button for button in research.elements if getattr(button, "text", "") == "Start Research").callback()
+                    self.assertEqual(country["research_queue"], [queries.build_research_project(tech, tree[tech]["cost"])])
+                    country["research"] = queries.edited_research_levels(country["research"], tech, level, True, tree)
+                    country["research_queue"] = []
+                    production.start_with_province(province, game)
+                    next(button for button in production.elements
+                         if getattr(button, "text", "") == queries.get_condensed_unit_name(name)).callback()
+                    self.assertEqual(province["unit_queue"][-1]["unit_type"], name)
+        finally:
+            research.start_research(game)
+            production.start_with_province(game.selected_province, game)
+
     def test_research_nodes_and_production_callbacks_use_the_restored_ships(self):
         from tests import app_harness
 
@@ -217,12 +297,12 @@ class NavalScreenTests(unittest.TestCase):
                 research.start_research(game)
                 research.set_category("NAVY")
                 for name, tech in SHIPS.items():
-                    node = next(node for node in research.nodes["NAVY"] if node["key"] == tech)
-                    self.assertEqual(node["year"], queries.get_tech_tree(game)[tech]["years"][node["lvl"] - 1])
-                    self.assertEqual(research.get_display_name(tech, node["lvl"]), name)
+                    nodes = [node for node in research.nodes["NAVY"] if node["key"] == tech]
+                    self.assertEqual([node["year"] for node in nodes], queries.get_tech_tree(game)[tech]["years"])
                     country["research"] = queries.edited_research_levels({}, tech, 1, True)
                     production.start_with_province(province, game)
-                    button = next(button for button in production.elements if getattr(button, "text", "") == name)
+                    button = next(button for button in production.elements
+                                  if getattr(button, "text", "") == queries.get_condensed_unit_name(name))
                     before = copy.deepcopy(country)
                     button.callback()
                     self.assertEqual(province["unit_queue"][-1]["unit_type"], name)
