@@ -304,6 +304,7 @@ Use verification appropriate to each change.
 - Treat editable UI and tutorial text as content.
   Check exact wording only for protocol values, identifiers, or a specific user requirement.
 - Tests must not require real network services or an LLM unless marked as integration tests.
+- Before you change how tests or scripts are imported or run, search `.github/workflows/` for commands that use them.
 
 1. Add or update focused regression tests for the rule and actual failure.
    Keep useful tests. Rewrite them around the required behavior when necessary.

@@ -61,7 +61,7 @@ jobs:
       # a library that could convert a sixth of the game's maps healthy.
       - name: Translate every shipped base map, and back
         shell: bash
-        run: python tests/test_odtl.py
+        run: python -m tests.test_odtl
 
   web:
     name: Translate (web)
