@@ -43,7 +43,6 @@ from ui.widgets.ui_elements import (draw_wrapped_icon_row, get_combat_stat_entri
 from ui.widgets.text_utils import fit_text
 
 from ui.rendering import overlay_renderer
-from ui.navigation import screen_runner
 
 
 #: Panes, left to right. Lane list, then the selected lane's three columns.
@@ -411,9 +410,9 @@ class Battle_Screen(ModalScreen):
             # Deferred import: screens.game.map_input imports this module at load time
             # to open battles, so importing it back at module scope here would close
             # a cycle.
-            from screens.game import map_input as event_handler
+            from screens.game import map_input 
             self.view_mode_buttons = view_mode_buttons.build(
-                lambda mode: event_handler.navigate_view_mode(self.map_screen, mode, origin=self))
+                lambda mode: map_input.navigate_view_mode(self.map_screen, mode, origin=self))
             view_mode_buttons.sync_highlight(self.view_mode_buttons, self.map_screen.secondary_mode)
             self.elements.extend(self.view_mode_buttons)
 
@@ -790,17 +789,3 @@ class Battle_Screen(ModalScreen):
     def additional_events(self, event):
         self.route_pane_scroll(event)
 
-
-def open_battle_screen(map_screen, origin_screen=None):
-    """Opens the lane manager, embedded beside Orders when available."""
-    if origin_screen is not None:
-        open_panel = getattr(origin_screen, "open_battle_panel", None)
-        if open_panel:
-            open_panel()
-            return
-
-
-    province = map_screen.selected_province
-    if not province:
-        return
-    screen_runner._run_pygame_sub_screen(map_screen, Battle_Screen(map_screen, province, origin_screen=origin_screen))

@@ -14,13 +14,8 @@ held for FACTION_CHALLENGE_TURNS consecutive turns, with the count reset by the
 first turn it slips.
 """
 
-import os
-import sys
 import unittest
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import data.constants as c
 from data import queries
@@ -362,11 +357,10 @@ class SuccessionTests(Bloc):
 
     def orphan(self):
         """Take the leader off the map the way a conquest does."""
-        from map_logic.territory import ownership as edit_province_ownership
-
+        from map_logic.territory import ownership 
         for prov in list(self.game.map_data.values()):
             if prov.get("owner") == "Leader":
-                edit_province_ownership.conquer_province(self.game, prov, "Outsider")
+                ownership.conquer_province(self.game, prov, "Outsider")
 
     def test_the_chair_stays_with_the_exiled_leader(self):
         self.weigh("Rival", 5000)
@@ -407,11 +401,10 @@ class SuccessionTests(Bloc):
         self.assertEqual(self.leader(), "Loyal")
 
     def test_a_faction_with_no_territory_is_disbanded(self):
-        from map_logic.territory import ownership as edit_province_ownership
-
+        from map_logic.territory import ownership 
         for prov in list(self.game.map_data.values()):
             if prov.get("owner") in ("Leader", "Rival", "Loyal"):
-                edit_province_ownership.conquer_province(self.game, prov, "Outsider")
+                ownership.conquer_province(self.game, prov, "Outsider")
 
         for member in ("Leader", "Rival", "Loyal"):
             self.assertEqual(self.game.nation_data[member]["faction"], "")

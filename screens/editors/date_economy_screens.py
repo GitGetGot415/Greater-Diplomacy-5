@@ -5,7 +5,7 @@ import data.constants as c
 from data import queries
 from ui.navigation.game_state import MapOverlayScreen, NationListOverlayScreen
 from ui.widgets.ui_elements import Button, TextField, make_back_button
-from ui import dialogs as confirm_dialog
+from ui import dialogs
 from ui.navigation.screen_runner import _run_pygame_sub_screen
 
 # ==========================================
@@ -54,17 +54,17 @@ class Editor_Date_Screen(MapOverlayScreen):
             y = int(self.year_field.text)
             b_dpt = int(self.dpt_field.text)
         except ValueError:
-            confirm_dialog.show_error("Error", "Please enter valid integers.")
+            dialogs.show_error("Error", "Please enter valid integers.")
             return
 
         if not (1 <= d <= 30):
-            confirm_dialog.show_error("Error", "Day must be between 1 and 30.")
+            dialogs.show_error("Error", "Day must be between 1 and 30.")
             return
         if not (0 <= m <= 11):
-            confirm_dialog.show_error("Error", "Month must be between 1 and 12.")
+            dialogs.show_error("Error", "Month must be between 1 and 12.")
             return
         if b_dpt <= 0:
-            confirm_dialog.show_error("Error", "Days per turn must be positive.")
+            dialogs.show_error("Error", "Days per turn must be positive.")
             return
 
         tm = self.map_screen.time_manager
@@ -175,4 +175,4 @@ class Starting_Economy_List_Screen(NationListOverlayScreen):
             self.map_screen.show_feedback("Reset starting economy for all nations!")
             self.done = True
 
-        confirm_dialog.ask_yes_no("Confirm Reset", "Are you sure you want to reset every starting economy to 0?", on_confirm)
+        dialogs.ask_yes_no("Confirm Reset", "Are you sure you want to reset every starting economy to 0?", on_confirm)

@@ -26,13 +26,12 @@ from data.platform import run_background
 # Core Game State & Global UI Elements
 from ui.navigation.game_state import GameState
 from map_logic.system32 import turn_manager, unit_events
-from screens.game import map_input as event_handler
-
+from screens.game import map_input
 # Game Logic & Rendering Submodules
 from ui.widgets import ui_elements
 from ui.widgets.ui_elements import Button, Slider
 from ui.panels import diplomatic_popups, army_panel
-from screens.game import spectator_controls as spectator_menus
+from screens.game import spectator_controls
 from screens.editors import menus as editor_menus
 from ui.camera.camera_handler import MapCamera
 from ui.camera import camera_handler
@@ -46,7 +45,7 @@ from screens.setup import player_setup
 from screens.editors import scripted_events_editor
 
 from data.io import country_io
-from ui import dialogs as confirm_dialog
+from ui import dialogs
 from ui.panels.multiplayer_host_panel import (
     show_move_rejection,
     manage_players_panel,
@@ -57,14 +56,14 @@ from ui.bars import resource_hud
 from screens.game.politics_screen import Politics_Screen
 from ui.panels import realtime_status_panel, sidebar_info
 from map_logic.diplomacy.action_definitions import availability
-from map_logic.ai.ai_diplomacy import scripted_event_response_preview
+from map_logic.ai.scripted_events import scripted_event_response_preview
 from map_logic.ai.ai_evaluation import evaluate_verdict
 from map_logic.diplomacy import diplomacy_lifecycle
 from map_logic.system32 import economy_processor, turn_processor
 from map_logic.ai import ai_handler
 from map_logic.actions import unit_actions
 from ui.information import feedback_text
-from data.multiplayer.tournament import files as multiplayer_io
+from data.multiplayer.tournament import files as tournament_files
 from ui.navigation import screen_runner
 
 
@@ -187,10 +186,10 @@ def render_buttons(map_screen):
     # Production for Economy) instead of just flipping the map overlay.
     # In Classic navigation it only ever flips the overlay. See
     # screens.game.map_input.navigate_view_mode / data.constants.MAP_NAVIGATION_MODE.
-    map_screen.btn_view_resources = Button(VIEW_BTN_START_X, VIEW_BTN_ROW1_Y, "small_square", "red", "Resources", lambda: event_handler.navigate_view_mode(map_screen, "RESOURCES"), image=icons.get("resource"), show_text=False)
-    map_screen.btn_view_blank = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X, VIEW_BTN_ROW1_Y, "small_square", "red", "Blank", lambda: event_handler.navigate_view_mode(map_screen, "BLANK"), image=icons.get("blank"), show_text=False)
-    map_screen.btn_view_units = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 2, VIEW_BTN_ROW1_Y, "small_square", "red", "Units", lambda: event_handler.navigate_view_mode(map_screen, "UNITS"), image=icons.get("unit"), show_text=False)
-    map_screen.btn_view_economy = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 3, VIEW_BTN_ROW1_Y, "small_square", "red", "Economy", lambda: event_handler.navigate_view_mode(map_screen, "ECONOMY"), image=icons.get("industry"), show_text=False)
+    map_screen.btn_view_resources = Button(VIEW_BTN_START_X, VIEW_BTN_ROW1_Y, "small_square", "red", "Resources", lambda: map_input.navigate_view_mode(map_screen, "RESOURCES"), image=icons.get("resource"), show_text=False)
+    map_screen.btn_view_blank = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X, VIEW_BTN_ROW1_Y, "small_square", "red", "Blank", lambda: map_input.navigate_view_mode(map_screen, "BLANK"), image=icons.get("blank"), show_text=False)
+    map_screen.btn_view_units = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 2, VIEW_BTN_ROW1_Y, "small_square", "red", "Units", lambda: map_input.navigate_view_mode(map_screen, "UNITS"), image=icons.get("unit"), show_text=False)
+    map_screen.btn_view_economy = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 3, VIEW_BTN_ROW1_Y, "small_square", "red", "Economy", lambda: map_input.navigate_view_mode(map_screen, "ECONOMY"), image=icons.get("industry"), show_text=False)
     map_screen.btn_toggle_names = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 4, VIEW_BTN_ROW1_Y, "small_square", "blue", "Names", map_screen.toggle_country_names, image=icons.get("names"), show_text=False)
 
     map_screen.unit_view_bar_rect = pygame.Rect(
@@ -284,7 +283,7 @@ def render_buttons(map_screen):
                         map_screen.show_feedback("Turn submitted. Unsubmit to edit again.")
                 except RealtimeError as error:
                     map_screen.show_feedback(f"Submission rejected: {error}")
-            confirm_dialog.ask_yes_no("Submit Turn", "Lock these orders for this turn?", confirmed,
+            dialogs.ask_yes_no("Submit Turn", "Lock these orders for this turn?", confirmed,
                                       yes_label="Submit", no_label="Keep Editing")
 
         def rt_unsubmit():
@@ -302,7 +301,7 @@ def render_buttons(map_screen):
                     map_screen.show_feedback("Turn unlocked. You may edit orders again.")
                 except RealtimeError as error:
                     map_screen.show_feedback(f"Cannot unsubmit: {error}")
-            confirm_dialog.ask_yes_no("Unsubmit Turn", "Unlock your turn and allow further edits?", confirmed,
+            dialogs.ask_yes_no("Unsubmit Turn", "Unlock your turn and allow further edits?", confirmed,
                                       yes_label="Unsubmit", no_label="Stay Submitted")
 
         map_screen._realtime_submit = rt_submit
@@ -319,7 +318,7 @@ def render_buttons(map_screen):
             player_key = getattr(map_screen, 'multiplayer_player_key', '')
 
             def export():
-                multiplayer_io.export_move_file(map_screen, export_path, player_key)
+                tournament_files.export_move_file(map_screen, export_path, player_key)
                 map_screen.show_feedback(f"Move exported to {export_path}")
 
             queries.export_with_overwrite_confirmation(export_path, export)
@@ -334,7 +333,7 @@ def render_buttons(map_screen):
                     player_key = getattr(map_screen, 'multiplayer_player_key', '')
                     keys_dict = {cid: player_key}
 
-                    summary = multiplayer_io.load_move_files(map_screen, [file_path], keys_dict)
+                    summary = tournament_files.load_move_files(map_screen, [file_path], keys_dict)
                     if not summary["loaded"]:
                         for rejection in summary["rejections"]:
                             show_move_rejection(map_screen, rejection)
@@ -476,12 +475,12 @@ def render_buttons(map_screen):
     # instead of leaving it on whatever it last was. In Classic navigation they
     # jump straight there unconditionally instead. See
     # screens.game.map_input.go_to_orders_screen/go_to_production_screen.
-    map_screen.btn_go_orders = Button(PROVINCE_BTN_X, BTN_ORDERS_Y, "orders", "blue", "Give Orders", lambda: event_handler.go_to_orders_screen(map_screen), image=icons.get("paper"), show_text=False)
+    map_screen.btn_go_orders = Button(PROVINCE_BTN_X, BTN_ORDERS_Y, "orders", "blue", "Give Orders", lambda: map_input.go_to_orders_screen(map_screen), image=icons.get("paper"), show_text=False)
     # Retained as a compatibility object for old callers/layout code. It is
     # never exposed: a fighting tile enters Orders first, where the lane
     # manager can be opened after the player has access to all order controls.
-    map_screen.btn_go_battle = Button(PROVINCE_BTN_X, BTN_ORDERS_Y, "orders", "red", "Manage Battle", lambda: event_handler.go_to_battle_screen(map_screen), image=icons.get("battle"), show_text=False)
-    map_screen.btn_go_production = Button(PROVINCE_BTN_X, BTN_PRODUCTION_Y, "orders", "orange", "Production", lambda: event_handler.go_to_production_screen(map_screen), image=icons.get("industry"), show_text=False)
+    map_screen.btn_go_battle = Button(PROVINCE_BTN_X, BTN_ORDERS_Y, "orders", "red", "Manage Battle", lambda: map_input.go_to_battle_screen(map_screen), image=icons.get("battle"), show_text=False)
+    map_screen.btn_go_production = Button(PROVINCE_BTN_X, BTN_PRODUCTION_Y, "orders", "orange", "Production", lambda: map_input.go_to_production_screen(map_screen), image=icons.get("industry"), show_text=False)
 
     # Foreign Set. Rows overlap deliberately -- only one of the buttons sharing
     # a row is ever visible at a time (e.g. Request vs Cancel Mil. Access).
@@ -547,7 +546,7 @@ def render_buttons(map_screen):
     for attr, row, color, label, menu_fn in spectator_buttons:
         button = Button(ACTION_BTN_X, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * row,
                         "diplomatic", color, label,
-                        lambda f=menu_fn: getattr(spectator_menus, f)(map_screen))
+                        lambda f=menu_fn: getattr(spectator_controls, f)(map_screen))
         button.country_action_base_y = ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * row
         setattr(map_screen, attr, button)
         map_screen.country_action_buttons.append(button)
@@ -660,7 +659,7 @@ def set_orders_or_battle(map_screen, set_btn, has_player_units):
 def layout_country_action_buttons(map_screen):
     """Place the fixed country-action stack inside its scroll viewport."""
     buttons = getattr(map_screen, "country_action_buttons", ())
-    rect = getattr(map_screen, "country_actions_scroll_rect", None)
+    rect = map_screen.country_actions_scroll_rect
     if not buttons or rect is None:
         return
 
@@ -669,7 +668,7 @@ def layout_country_action_buttons(map_screen):
     map_screen.country_actions_scroll_max = max(
         0, content_bottom - rect.bottom)
     map_screen.country_actions_scroll_y = max(
-        0, min(getattr(map_screen, "country_actions_scroll_y", 0),
+        0, min(map_screen.country_actions_scroll_y,
                    map_screen.country_actions_scroll_max))
 
     for button in buttons:
@@ -765,49 +764,37 @@ def set_bilateral_response_indicator(map_screen, button, target, action,
             response)
 
 
-def update_button_states(map_screen):
-    """Dynamically updates button visibility, colors, and text every frame using explicit attributes."""
+def set_btn(btn, visible, enabled, text, color="green"):
+    """Shorthand for the per-frame visible/enabled/text/color updates below."""
+    if btn:
+        btn.apply_state(visible=visible, enabled=enabled, text=text, color=color)
 
-    for el in map_screen.elements:
-        el.visible = False
 
-    layout_country_action_buttons(map_screen)
+def _update_selection_mode_buttons(map_screen):
+    map_screen.btn_exit_to_menu.visible = True
 
-    is_sel = bool(map_screen.selected_province)
+    # Hide spectator and tactical buttons if awaiting confirmation
+    show_mode_buttons = not bool(map_screen.pending_selection)
+    map_screen.btn_spectator.visible = show_mode_buttons
+    map_screen.btn_tactical.visible = show_mode_buttons
 
-    if map_screen.selection_mode:
-        map_screen.btn_exit_to_menu.visible = True
+    is_multiplayer = map_screen.num_players > 1
 
-        # Hide spectator and tactical buttons if awaiting confirmation
-        show_mode_buttons = not bool(map_screen.pending_selection)
-        map_screen.btn_spectator.visible = show_mode_buttons
-        map_screen.btn_tactical.visible = show_mode_buttons
+    if is_multiplayer:
+        map_screen.btn_tactical.apply_state(enabled=False, text="Tactical mode disabled for multiplayer")
+    elif map_screen.tactical_mode:
+        map_screen.btn_tactical.apply_state(enabled=True, text="TACTICAL", color="orange")
+    else:
+        map_screen.btn_tactical.apply_state(enabled=True, text="STRATEGIC", color="green")
 
-        is_multiplayer = map_screen.num_players > 1
+    # --- BUGFIX: Disable Spectator Mode while in Tactical Mode ---
+    if map_screen.tactical_mode:
+        map_screen.btn_spectator.apply_state(enabled=False, text="Disabled in Tactical")
+    else:
+        map_screen.btn_spectator.apply_state(enabled=True, text="Spectator Mode", color="grey")
 
-        if is_multiplayer:
-            map_screen.btn_tactical.apply_state(enabled=False, text="Tactical mode disabled for multiplayer")
-        elif map_screen.tactical_mode:
-            map_screen.btn_tactical.apply_state(enabled=True, text="TACTICAL", color="orange")
-        else:
-            map_screen.btn_tactical.apply_state(enabled=True, text="STRATEGIC", color="green")
 
-        # --- BUGFIX: Disable Spectator Mode while in Tactical Mode ---
-        if map_screen.tactical_mode:
-            map_screen.btn_spectator.apply_state(enabled=False, text="Disabled in Tactical")
-        else:
-            map_screen.btn_spectator.apply_state(enabled=True, text="Spectator Mode", color="grey")
-
-        return
-
-    # Shorthand for the per-frame visible/enabled/text/color updates below
-    def set_btn(btn, visible, enabled, text, color="green"):
-        if btn:
-            btn.apply_state(visible=visible, enabled=enabled, text=text, color=color)
-
-    # ==================================================================== #
-    #                        VIEW TOGGLES SELECTION                        #
-    # ==================================================================== #
+def _update_view_toggles(map_screen):
     map_screen.btn_help.visible = True
     map_screen.btn_refresh_all.visible = True
     map_screen.btn_global_econ_overview.visible = map_screen.is_editor or map_screen.player_country == "Spectator"
@@ -828,6 +815,511 @@ def update_button_states(map_screen):
         btn.visible = True
         btn.is_selected = is_active
 
+
+def _update_unassigned_viewer_buttons(map_screen, is_sel, is_thinking):
+    """Leave map controls and an exit, but expose no country-owned actions."""
+    for button in (map_screen.btn_gp_settings, map_screen.btn_gp_music,
+                   map_screen.slider_camera_tilt):
+        button.visible = not is_sel
+    # Hotseat clears the viewer after the last player's orders. Keep
+    # resolution available without granting that viewer country actions.
+    local_turn_preview = (
+        map_screen.player_country == "n/a" and map_screen.viewing_ai_moves
+        and len(map_screen.active_players) > 1
+        and not map_screen.multiplayer_mode
+        and not map_screen.realtime_multiplayer)
+    set_btn(map_screen.btn_next_turn,
+            local_turn_preview and not is_sel and not is_thinking,
+            not is_thinking, "Resolve Turn", "red")
+    map_screen.btn_exit_to_menu.visible = not is_sel
+    map_screen.btn_close_info.visible = is_sel
+    map_screen.btn_realtime_details.visible = bool(
+        map_screen.realtime_multiplayer) and not is_sel
+
+
+def _update_editor_buttons(map_screen, is_sel):
+    ed_btns = [
+        map_screen.btn_gp_edit, map_screen.btn_gp_econ, map_screen.btn_gp_rd,
+        map_screen.btn_gp_msgs, map_screen.btn_gp_save, map_screen.btn_gp_claims,
+        map_screen.btn_ed_load, map_screen.btn_ed_nation, map_screen.btn_ed_brush, map_screen.btn_ed_paint, map_screen.btn_ed_core, map_screen.btn_ed_claim,
+        map_screen.btn_ed_autocore, map_screen.btn_ed_resource, map_screen.btn_ed_building,
+        map_screen.btn_ed_unit, map_screen.btn_ed_refresh, map_screen.btn_ed_clear,
+        map_screen.btn_ed_date, map_screen.btn_ed_edited, map_screen.btn_ed_diplo, map_screen.btn_ed_personality, map_screen.btn_ed_scripts,
+        map_screen.btn_gp_settings, map_screen.btn_gp_music, map_screen.btn_gp_politics,
+        map_screen.slider_camera_tilt
+    ]
+    for btn in ed_btns:
+        btn.visible = True
+
+    # Use the cleaner 'is_selected' gold border instead of overriding raw RGB values
+    for mode, btn in (("RESOURCE", map_screen.btn_ed_resource),
+                      ("NATION", map_screen.btn_ed_nation),
+                      ("BUILDING", map_screen.btn_ed_building),
+                      ("CORE", map_screen.btn_ed_core),
+                      ("CLAIM", map_screen.btn_ed_claim),
+                      ("UNIT", map_screen.btn_ed_unit)):
+        btn.is_selected = (map_screen.editor_mode == mode)
+
+    for tool, btn in (("BRUSH", map_screen.btn_ed_brush),
+                      ("PAINT", map_screen.btn_ed_paint)):
+        btn.disabled = map_screen.editor_mode not in ("NATION", "CORE")
+        btn.is_selected = (not btn.disabled and map_screen.editor_selection_tool == tool)
+
+    # A painted province may be selected, but the editor is not a player
+    # nation.  Do not let that selection fall through into the gameplay
+    # diplomacy controls, which require a nation_data player record.
+    map_screen.btn_exit_to_menu.visible = True
+    map_screen.btn_close_info.visible = is_sel
+    map_screen.btn_realtime_details.visible = False
+
+
+def _update_turn_buttons(map_screen, is_sel, is_thinking):
+    viewing_ai = map_screen.viewing_ai_moves
+
+    # Hide/disable the button if we are thinking
+    map_screen.btn_next_turn.visible = not is_sel and not is_thinking
+    for view_filter, button in map_screen.unit_view_buttons.items():
+        button.visible = (map_screen.btn_next_turn.visible
+                          and map_screen.secondary_mode == "UNITS"
+                          and not map_screen.hide_raised_rect)
+        button.is_selected = view_filter == map_screen.unit_view_filter
+    if map_screen.realtime_multiplayer:
+        session = map_screen.realtime_session
+        player = session.players.get(map_screen.realtime_player_id)
+        submission_pending = bool(map_screen.realtime_submission_pending)
+        locked = (session.phase != "TURN" or not player or player.submitted or player.eliminated)
+        connection_lost = bool(map_screen.realtime_connection_error)
+        map_screen.btn_next_turn.text = ("Submitting..." if submission_pending else
+                                         "Unsubmit Turn" if player and player.submitted else "Submit Turn")
+        map_screen.btn_next_turn.callback = (map_screen._realtime_unsubmit if player and player.submitted
+                                             else map_screen._realtime_submit)
+        map_screen.btn_next_turn.set_palette("blue" if submission_pending else
+                                             "orange" if player and player.submitted else "purple")
+        map_screen.btn_next_turn.apply_state(enabled=not (connection_lost or session.phase == "PROCESSING"
+                                                           or submission_pending or player and player.eliminated))
+    elif map_screen.multiplayer_mode:
+        map_screen.btn_next_turn.text = "Export Turn"
+    else:
+        map_screen.btn_next_turn.text = "Resolve Turn" if viewing_ai else "Next Turn"
+
+    map_screen.btn_next_turn.set_palette("red" if viewing_ai else "purple")
+
+    # Visibility and active color swapping for the skip toggle
+    if map_screen.realtime_multiplayer:
+        map_screen.btn_skip_ai.visible = False
+        map_screen.btn_import_turn.visible = False
+    elif map_screen.multiplayer_mode:
+        map_screen.btn_skip_ai.visible = False
+        map_screen.btn_import_turn.visible = not is_sel and not is_thinking
+    else:
+        map_screen.btn_import_turn.visible = False
+        map_screen.btn_skip_ai.visible = not is_sel and not is_thinking
+        skip_on = map_screen.skip_ai_view
+        map_screen.btn_skip_ai.text = "Skip AI: ON" if skip_on else "Skip AI: OFF"
+        map_screen.btn_skip_ai.set_palette("green" if skip_on else "red")
+
+    is_spec = map_screen.player_country == "Spectator"
+    map_screen.btn_multi_turn.visible = not is_sel and not is_thinking and is_spec
+
+    if is_spec:
+        map_screen.btn_spec_mp_manage.visible = getattr(map_screen, 'multiplayer_host_mode', False) and not is_sel and not is_thinking
+        map_screen.btn_spec_mp_export.visible = getattr(map_screen, 'multiplayer_host_mode', False) and not is_sel and not is_thinking
+        map_screen.btn_spec_mp_keys.visible = getattr(map_screen, 'multiplayer_host_mode', False) and not is_sel and not is_thinking
+    map_screen.btn_declare_indep.visible = map_screen.tactical_mode and not is_sel and not is_thinking
+
+
+def _update_gameplay_buttons(map_screen, is_sel, is_thinking):
+    viewing_ai = map_screen.viewing_ai_moves
+    gp_btns = [
+        map_screen.btn_gp_edit, map_screen.btn_gp_econ, map_screen.btn_gp_rd,
+        map_screen.btn_gp_msgs, map_screen.btn_gp_save, map_screen.btn_gp_settings,
+        map_screen.btn_gp_music, map_screen.btn_gp_faction, map_screen.btn_gp_claims,
+        map_screen.btn_gp_puppets, map_screen.btn_gp_automation, map_screen.btn_gp_politics,
+        map_screen.slider_camera_tilt
+    ]
+
+    always_visible_btns = [map_screen.btn_gp_settings, map_screen.btn_gp_music, map_screen.slider_camera_tilt]
+
+    for btn in gp_btns:
+        if btn in always_visible_btns:
+            btn.visible = not is_sel
+        elif viewing_ai or is_thinking:
+            btn.visible = False
+        else:
+            btn.visible = not is_sel
+
+    # GREY OUT THE FACTION BUTTON
+    my_faction = map_screen.nation_data.get(map_screen.player_country, {}).get("faction", "")
+    map_screen.btn_gp_faction.disabled = not bool(my_faction)
+
+    # DISABLE BUTTONS FOR BATTLE ROYALE
+    if queries.get_scenario_flag("battle_royale", c.DEFAULT_BATTLE_ROYALE, map_screen.scenario_settings):
+        map_screen.btn_gp_faction.disabled = True
+        map_screen.btn_gp_claims.disabled = True
+
+    # --- TACTICAL MODE LOCKDOWNS ---
+    if map_screen.tactical_mode:
+        for btn in (map_screen.btn_gp_faction, map_screen.btn_gp_puppets, map_screen.btn_gp_edit, map_screen.btn_gp_automation):
+            btn.apply_state(enabled=False)
+    else:
+        if bool(my_faction):
+            map_screen.btn_gp_faction.set_palette("pink")
+        map_screen.btn_gp_puppets.set_palette("pink")
+
+        # --- Update Automation Bubble ---
+        if map_screen.player_country in map_screen.nation_data and map_screen.player_country not in ["Spectator", "None", "Editor"]:
+            p_data = map_screen.nation_data.get(map_screen.player_country, {})
+            auto = p_data.get("automation", {})
+            active_count = sum(1 for val in auto.values() if val)
+            map_screen.btn_gp_automation.notification_count = active_count
+        else:
+            map_screen.btn_gp_automation.notification_count = 0
+        map_screen.btn_gp_edit.set_palette("pink")
+
+
+def _update_spectator_province_buttons(map_screen, owner):
+    if queries.is_playable(owner, map_screen.nation_data):
+        set_btn(map_screen.btn_force_war, True, True, "Force War", "red")
+        set_btn(map_screen.btn_force_peace, True, True, "Force Ceasefire", "green")
+        can_remove_country = queries.can_use_spectator_country_actions(map_screen)
+        set_btn(map_screen.btn_spec_annex, can_remove_country, can_remove_country, "Annex", "orange")
+        set_btn(map_screen.btn_spec_delete, can_remove_country, can_remove_country, "Delete", "red")
+
+        in_faction = map_screen.nation_data[owner].get("faction", "")
+        is_leader = queries.is_faction_leader(owner, map_screen.nation_data)
+
+        if not in_faction:
+            set_btn(map_screen.btn_spec_create_fac, True, True, "Create Faction", "blue")
+            set_btn(map_screen.btn_spec_join_fac, True, True, "Join Faction", "green")
+        else:
+            set_btn(map_screen.btn_spec_invite_fac, True, True, "Invite to Faction", "blue")
+            if is_leader:
+                set_btn(map_screen.btn_spec_disband_fac, True, True, "Disband Faction", "red")
+            else:
+                set_btn(map_screen.btn_spec_leave_fac, True, True, "Leave Faction", "orange")
+
+    # Allow Spectator to view production lines
+    is_land = not queries.is_water_province(map_screen.selected_province)
+    set_btn(map_screen.btn_go_production, True, is_land, "View Production", "orange")
+    set_orders_or_battle(map_screen, set_btn, False)
+
+
+def _foreign_action_buttons(map_screen):
+    """Return every country-to-country button. Each one is disabled together in tactical mode."""
+    return (map_screen.btn_declare_war, map_screen.btn_join_wars, map_screen.btn_call_to_arms,
+            map_screen.btn_volunteers, map_screen.btn_guarantee, map_screen.btn_military_attache,
+            map_screen.btn_revoke_foreign_military_attache, map_screen.btn_send_home_foreign_volunteers,
+            map_screen.btn_fac_invite, map_screen.btn_fac_join_req, map_screen.btn_fac_kick,
+            map_screen.btn_fac_create, map_screen.btn_req_mil_access, map_screen.btn_cancel_mil_access,
+            map_screen.btn_revoke_mil_access)
+
+
+def _update_war_button(map_screen, owner, pending_action, pending_turns, at_war, in_same_faction):
+    my_master = map_screen.nation_data.get(map_screen.player_country, {}).get("master", "")
+    t_master = map_screen.nation_data.get(owner, {}).get("master", "")
+
+    is_rebellion = (my_master == owner)
+    is_preemptive = (t_master == map_screen.player_country)
+
+    # War / Peace UI routing (Allows internal faction wars strictly for rebellions & preemptive attacks)
+    dw_enabled = not (not at_war and in_same_faction and not (is_rebellion or is_preemptive))
+    faction_peace_active = peace_scope.has_settleable_war(
+        map_screen.player_country, owner, map_screen.nation_data)
+    has_truce = queries.has_active_truce(map_screen.player_country, owner, map_screen.nation_data)
+
+    # Fetch the exact number of turns remaining ---
+    truce_turns = map_screen.nation_data.get(map_screen.player_country, {}).get("truces", {}).get(owner, 0)
+
+    if has_truce and not at_war and not faction_peace_active:
+        dw_enabled = False
+
+    if pending_action == "PEACE_TREATY" or pending_action == "CEASEFIRE":
+        if pending_turns > 0:
+            dw_text = "Peace Offer Pending"
+            dw_enabled = False
+        else:
+            dw_text = "Edit Peace Offer"
+    elif pending_action == "WAR_DECLARATION":
+        dw_text = "Edit War Declaration"
+    else:
+        if has_truce and not at_war and not faction_peace_active:
+            dw_text = f"Truce Active ({truce_turns})"
+        else:
+            if at_war or faction_peace_active:
+                if queries.get_scenario_flag("battle_royale", c.DEFAULT_BATTLE_ROYALE, map_screen.scenario_settings):
+                    dw_text = "Battle Royale (No Peace)"
+                    dw_enabled = False
+                else:
+                    dw_text = "Ceasefire / Peace"
+            elif my_master == owner:
+                dw_text = "Independence war"
+            elif t_master == map_screen.player_country:
+                dw_text = "Preemptive war"
+            else:
+                dw_text = "Declare War"
+
+    set_btn(map_screen.btn_declare_war, True, dw_enabled, dw_text, "red")
+
+
+def _update_volunteer_buttons(map_screen, owner, pending_action, pending_turns):
+    """Update both volunteer buttons and return this country's mission state."""
+    # A destroyed volunteer has no off-map record to clean up, so
+    # reconcile before deciding whether this is Send or Recall.
+    volunteers.reconcile_deployed_missions(
+        map_screen, map_screen.player_country)
+    volunteer_state = volunteers.mission_state(map_screen.nation_data, map_screen.player_country, owner)
+    if volunteer_state == volunteers.AWAITING:
+        if pending_action == volunteers.ACTION and pending_turns == 0:
+            set_btn(map_screen.btn_volunteers, True, True, "Undo Send Volunteers", "purple")
+            map_screen.btn_volunteers.callback = lambda: player_diplomacy_actions.handle_withdraw_volunteer_offer(map_screen)
+        else:
+            set_btn(map_screen.btn_volunteers, True, False, "Waiting for Answer", "grey")
+    elif volunteer_state in (volunteers.OUTBOUND, volunteers.DEPLOYED):
+        turns_left = map_screen.nation_data[map_screen.player_country]["volunteer_missions"][owner].get("turns_left")
+        if pending_action == volunteers.RECALL_ACTION and pending_turns == 0:
+            text = "Undo Recall Volunteers"
+        else:
+            text = "Recall Volunteers" if turns_left is None else f"Recall Volunteers ({turns_left}t)"
+        set_btn(map_screen.btn_volunteers, True, True, text, "purple")
+        map_screen.btn_volunteers.callback = lambda: player_diplomacy_actions.handle_recall_volunteers(map_screen)
+    elif volunteer_state == volunteers.RETURNING:
+        turns_left = map_screen.nation_data[map_screen.player_country]["volunteer_missions"][owner].get("turns_left", 0)
+        set_btn(map_screen.btn_volunteers, True, False, f"Volunteers Returning ({turns_left}t)", "grey")
+    else:
+        legal, _reason = volunteers.is_eligible(map_screen.player_country, owner, map_screen.nation_data)
+        enabled = legal and volunteers.remaining_capacity(map_screen, map_screen.player_country) > 0
+        set_btn(map_screen.btn_volunteers, True, enabled, "Send Volunteers", "purple")
+        map_screen.btn_volunteers.callback = lambda: player_diplomacy_actions.handle_send_volunteers(map_screen)
+
+    foreign_volunteer_state = volunteers.mission_state(
+        map_screen.nation_data, owner, map_screen.player_country)
+    pending_send_home = (pending_action == volunteers.SEND_HOME_ACTION
+                         and pending_turns == 0)
+    hosting_foreign_volunteers = foreign_volunteer_state in (
+        volunteers.OUTBOUND, volunteers.DEPLOYED)
+    set_btn(map_screen.btn_send_home_foreign_volunteers,
+            hosting_foreign_volunteers or pending_send_home,
+            hosting_foreign_volunteers or pending_send_home,
+            "Undo Send Home" if pending_send_home else "Send Their Volunteers Home",
+            "red")
+    return volunteer_state
+
+
+def _update_guarantee_button(map_screen, owner, pending_action, pending_turns):
+    guarantee_legal, _guarantee_reason = guarantees.is_eligible(
+        map_screen.player_country, owner, map_screen.nation_data)
+    already_guaranteed = owner in guarantees.guaranteed_targets(
+        map_screen.player_country, map_screen.nation_data)
+    pending_guarantee = (pending_action == guarantees.ACTION and pending_turns == 0)
+    pending_revoke = (pending_action == guarantees.REVOKE_ACTION and pending_turns == 0)
+    if pending_guarantee:
+        guarantee_text = "Undo Guarantee"
+    elif pending_revoke:
+        guarantee_text = "Undo Revoke Guarantee"
+    elif already_guaranteed:
+        guarantee_text = "Revoke Guarantee"
+    else:
+        guarantee_text = "Guarantee Independence"
+    set_btn(map_screen.btn_guarantee, True,
+            pending_guarantee or pending_revoke or already_guaranteed
+            or (guarantee_legal and not already_guaranteed),
+            guarantee_text, "blue")
+
+
+def _update_attache_buttons(map_screen, owner, pending_action, pending_turns):
+    """Update both attaché buttons and return whether an attaché request can be forecast."""
+    attache_legal, _attache_reason = military_attaches.is_eligible(
+        map_screen.player_country, owner, map_screen.nation_data)
+    attached = owner in military_attaches.hosts_for(
+        map_screen.player_country, map_screen.nation_data)
+    pending_attache = (pending_action == military_attaches.ACTION
+                       and pending_turns == 0)
+    pending_withdraw_attache = (pending_action == military_attaches.WITHDRAW_ACTION
+                                 and pending_turns == 0)
+    if pending_attache:
+        attache_text = "Undo Attaché Request"
+    elif pending_withdraw_attache:
+        attache_text = "Undo Attaché Withdrawal"
+    elif attached:
+        attache_text = "Withdraw Military Attaché"
+    else:
+        attache_text = "Send Military Attaché"
+    set_btn(map_screen.btn_military_attache, True,
+            pending_attache or pending_withdraw_attache or attached
+            or (attache_legal and not attached),
+            attache_text, "orange")
+
+    hosting_their_attache = map_screen.player_country in military_attaches.hosts_for(
+        owner, map_screen.nation_data)
+    pending_revoke_their_attache = (
+        pending_action == military_attaches.REVOKE_ACTION and pending_turns == 0)
+    set_btn(map_screen.btn_revoke_foreign_military_attache,
+            hosting_their_attache or pending_revoke_their_attache,
+            hosting_their_attache or pending_revoke_their_attache,
+            "Undo Revoke Their Attaché" if pending_revoke_their_attache
+            else "Revoke Their Attaché", "red")
+    return not attached and not pending_attache and not pending_withdraw_attache
+
+
+def _update_foreign_country_buttons(map_screen, owner):
+    at_war = queries.are_at_war(map_screen.player_country, owner, map_screen.nation_data)
+    in_same_faction = queries.are_in_same_faction(map_screen.player_country, owner, map_screen.nation_data)
+    pending_action, pending_turns = queries.get_diplomatic_status(map_screen.player_country, owner, map_screen.nation_data)
+
+    is_unilateral_pending = pending_action in c.UNILATERAL_ACTIONS
+    if is_unilateral_pending and pending_turns > 0:
+        pending_action = ""
+        pending_turns = 0
+
+    is_sending = (pending_turns == 0 and pending_action)
+    def get_status_text(base):
+        return f"UNDO {base}" if is_sending else "WAITING..."
+
+    my_faction = map_screen.nation_data[map_screen.player_country].get("faction", "")
+    target_faction = map_screen.nation_data[owner].get("faction", "")
+    i_am_leader = queries.is_faction_leader(map_screen.player_country, map_screen.nation_data)
+
+    _update_war_button(map_screen, owner, pending_action, pending_turns, at_war, in_same_faction)
+
+    target_wars = queries.get_enemies(owner, map_screen.nation_data)
+    player_wars = queries.get_enemies(map_screen.player_country, map_screen.nation_data)
+    can_join_wars = bool(in_same_faction and any(w for w in target_wars if w not in player_wars))
+    jw_text = get_status_text("JOIN WARS") if pending_action == "JOIN_WARS" else "Join Wars"
+    set_btn(map_screen.btn_join_wars, True, can_join_wars or pending_action == "JOIN_WARS", jw_text, "orange")
+
+    can_call_to_arms = bool(in_same_faction and any(w for w in player_wars if w not in target_wars))
+    ca_text = get_status_text("CALL TO ARMS") if pending_action == "CALL_TO_ARMS" else "Call to Arms"
+    set_btn(map_screen.btn_call_to_arms, True, can_call_to_arms or pending_action == "CALL_TO_ARMS", ca_text, "red")
+
+    volunteer_state = _update_volunteer_buttons(map_screen, owner, pending_action, pending_turns)
+    _update_guarantee_button(map_screen, owner, pending_action, pending_turns)
+    can_forecast_attache = _update_attache_buttons(map_screen, owner, pending_action, pending_turns)
+
+    factions_disabled = queries.get_scenario_flag("disable_factions", c.DEFAULT_DISABLE_FACTIONS, map_screen.scenario_settings)
+
+    # A puppet's alignment is its master's, both ways round: it may
+    # not be invited in, and may not ask to join. Greyed out here so
+    # the option never appears, rather than being refused later.
+    they_are_free = queries.can_choose_own_faction(owner, map_screen.nation_data)
+    i_am_free = queries.can_choose_own_faction(map_screen.player_country, map_screen.nation_data)
+
+    # Keep membership controls clickable so refusal feedback is reachable.
+    can_try_invite = bool(not factions_disabled and my_faction and not target_faction
+                          and not at_war and they_are_free)
+    inv_text = get_status_text("INVITE") if pending_action == "FACTION_INVITE" else "Invite to Faction"
+    set_btn(map_screen.btn_fac_invite, True, can_try_invite or pending_action == "FACTION_INVITE", inv_text, "green")
+
+    can_try_req_join = bool(not factions_disabled and not my_faction and target_faction
+                            and not at_war and i_am_free)
+    req_text = get_status_text("JOIN REQ") if pending_action == "JOIN_FACTION_REQ" else "Req. Join Faction"
+    set_btn(map_screen.btn_fac_join_req, True, can_try_req_join or pending_action == "JOIN_FACTION_REQ", req_text, "green")
+
+    can_kick = bool(not factions_disabled and in_same_faction and i_am_leader)
+    kick_text = get_status_text("KICK") if pending_action == "KICK_FACTION_MEMBER" else "Kick from Faction"
+    set_btn(map_screen.btn_fac_kick, True, can_kick or pending_action == "KICK_FACTION_MEMBER", kick_text, "red")
+
+    can_create_fac = bool(not factions_disabled and not my_faction and not target_faction and not at_war)
+    create_text = get_status_text("CREATE") if pending_action == "CREATE_FACTION" else "Create Faction"
+    set_btn(map_screen.btn_fac_create, True, can_create_fac or pending_action == "CREATE_FACTION", create_text, "blue")
+
+    has_access_to_them = queries.has_military_access(map_screen.player_country, owner, map_screen.nation_data)
+    they_have_access_to_me = queries.has_military_access(owner, map_screen.player_country, map_screen.nation_data)
+
+    can_req_access = not has_access_to_them and not at_war and not in_same_faction
+    req_acc_text = get_status_text("REQ ACCESS") if pending_action == "REQ_MILITARY_ACCESS" else "Request Mil. Access"
+
+    if has_access_to_them:
+        cancel_acc_text = get_status_text("CANCEL ACCESS") if pending_action == "CANCEL_MILITARY_ACCESS" else "Cancel Mil. Access"
+        set_btn(map_screen.btn_cancel_mil_access, True, True, cancel_acc_text, "orange")
+        set_btn(map_screen.btn_req_mil_access, False, False, "", "blue")
+    else:
+        set_btn(map_screen.btn_cancel_mil_access, False, False, "", "orange")
+        set_btn(map_screen.btn_req_mil_access, True, can_req_access or pending_action == "REQ_MILITARY_ACCESS", req_acc_text, "blue")
+
+    if they_have_access_to_me:
+        revoke_acc_text = get_status_text("REVOKE ACCESS") if pending_action == "REVOKE_MILITARY_ACCESS" else "Revoke Mil. Access"
+        set_btn(map_screen.btn_revoke_mil_access, True, True, revoke_acc_text, "red")
+    else:
+        set_btn(map_screen.btn_revoke_mil_access, False, False, "", "red")
+
+    # Forecast every offer this menu can send to the selected
+    # country. Indicators are hidden while a button is performing
+    # a different follow-up action (undo, recall, withdrawal,
+    # etc.), because those actions do not ask for a fresh reply.
+    predictions = (
+        (map_screen.btn_join_wars, "JOIN_WARS",
+         can_join_wars and pending_action != "JOIN_WARS"),
+        (map_screen.btn_call_to_arms, "CALL_TO_ARMS",
+         can_call_to_arms and pending_action != "CALL_TO_ARMS"),
+        (map_screen.btn_fac_invite, "FACTION_INVITE",
+         can_try_invite and pending_action != "FACTION_INVITE"),
+        (map_screen.btn_fac_join_req, "JOIN_FACTION_REQ",
+         can_try_req_join and pending_action != "JOIN_FACTION_REQ"),
+        (map_screen.btn_fac_create, "CREATE_FACTION",
+         can_create_fac and pending_action != "CREATE_FACTION"),
+        (map_screen.btn_req_mil_access, "REQ_MILITARY_ACCESS",
+         can_req_access and pending_action != "REQ_MILITARY_ACCESS"),
+        (map_screen.btn_volunteers, volunteers.ACTION,
+         volunteer_state not in (volunteers.AWAITING,
+                                 volunteers.OUTBOUND,
+                                 volunteers.DEPLOYED,
+                                 volunteers.RETURNING)),
+        (map_screen.btn_military_attache, military_attaches.ACTION, can_forecast_attache),
+    )
+    for button, action, applicable in predictions:
+        set_bilateral_response_indicator(map_screen, button, owner,
+                                         action, applicable)
+
+    # HIDE ALLIANCE/FACTION BUTTONS IN BATTLE ROYALE
+    if queries.get_scenario_flag("battle_royale", c.DEFAULT_BATTLE_ROYALE, map_screen.scenario_settings):
+        for button in _foreign_action_buttons(map_screen):
+            if button is not map_screen.btn_declare_war:
+                button.visible = False
+
+
+def _update_player_province_buttons(map_screen, owner):
+    has_player_units = queries.has_units_in_province(map_screen.player_country, map_screen.selected_province)
+    is_land = not queries.is_water_province(map_screen.selected_province)
+    is_tactical = map_screen.tactical_mode
+
+    if owner == map_screen.player_country:
+        set_orders_or_battle(map_screen, set_btn, has_player_units)
+
+        if is_tactical:
+            set_btn(map_screen.btn_go_production, True, False, "Tactical: Disabled", "grey")
+        else:
+            set_btn(map_screen.btn_go_production, True, is_land, "Production", "orange")
+
+    elif queries.is_playable(owner, map_screen.nation_data):
+        set_orders_or_battle(map_screen, set_btn, has_player_units)
+
+        if is_tactical:
+            # Disable all foreign interactions
+            for button in _foreign_action_buttons(map_screen):
+                set_btn(button, True, False, "Tactical: Disabled", "grey")
+            return
+        _update_foreign_country_buttons(map_screen, owner)
+
+    else:
+        set_orders_or_battle(map_screen, set_btn, has_player_units)
+
+
+def update_button_states(map_screen):
+    """Dynamically updates button visibility, colors, and text every frame using explicit attributes."""
+
+    for el in map_screen.elements:
+        el.visible = False
+
+    layout_country_action_buttons(map_screen)
+
+    is_sel = bool(map_screen.selected_province)
+
+    if map_screen.selection_mode:
+        _update_selection_mode_buttons(map_screen)
+        return
+
+    _update_view_toggles(map_screen)
+
     # A map can briefly be displayed after country selection has ended but
     # before a playable country has been assigned (for example, while a saved
     # or networked session is being handed off).  "None" is a sentinel, not a
@@ -845,164 +1337,15 @@ def update_button_states(map_screen):
     if (not map_screen.is_editor
             and map_screen.player_country != "Spectator"
             and not has_player_country):
-        for button in (map_screen.btn_gp_settings, map_screen.btn_gp_music,
-                       map_screen.slider_camera_tilt):
-            button.visible = not is_sel
-        # Hotseat clears the viewer after the last player's orders. Keep
-        # resolution available without granting that viewer country actions.
-        local_turn_preview = (
-            map_screen.player_country == "n/a" and map_screen.viewing_ai_moves
-            and len(map_screen.active_players) > 1
-            and not map_screen.multiplayer_mode
-            and not map_screen.realtime_multiplayer)
-        set_btn(map_screen.btn_next_turn,
-                local_turn_preview and not is_sel and not is_thinking,
-                not is_thinking, "Resolve Turn", "red")
-        map_screen.btn_exit_to_menu.visible = not is_sel
-        map_screen.btn_close_info.visible = is_sel
-        map_screen.btn_realtime_details.visible = bool(
-            map_screen.realtime_multiplayer) and not is_sel
+        _update_unassigned_viewer_buttons(map_screen, is_sel, is_thinking)
         return
 
-    # ==================================================================== #
-    #                        EDITOR & GAMEPLAY TOOLS                       #
-    # ==================================================================== #
     if map_screen.is_editor:
-        ed_btns = [
-            map_screen.btn_gp_edit, map_screen.btn_gp_econ, map_screen.btn_gp_rd,
-            map_screen.btn_gp_msgs, map_screen.btn_gp_save, map_screen.btn_gp_claims,
-            map_screen.btn_ed_load, map_screen.btn_ed_nation, map_screen.btn_ed_brush, map_screen.btn_ed_paint, map_screen.btn_ed_core, map_screen.btn_ed_claim,
-            map_screen.btn_ed_autocore, map_screen.btn_ed_resource, map_screen.btn_ed_building,
-            map_screen.btn_ed_unit, map_screen.btn_ed_refresh, map_screen.btn_ed_clear,
-            map_screen.btn_ed_date, map_screen.btn_ed_edited, map_screen.btn_ed_diplo, map_screen.btn_ed_personality, map_screen.btn_ed_scripts,
-            map_screen.btn_gp_settings, map_screen.btn_gp_music, map_screen.btn_gp_politics,
-            map_screen.slider_camera_tilt
-        ]
-        for btn in ed_btns:
-            btn.visible = True
-
-        # Use the cleaner 'is_selected' gold border instead of overriding raw RGB values
-        for mode, btn in (("RESOURCE", map_screen.btn_ed_resource),
-                          ("NATION", map_screen.btn_ed_nation),
-                          ("BUILDING", map_screen.btn_ed_building),
-                          ("CORE", map_screen.btn_ed_core),
-                          ("CLAIM", map_screen.btn_ed_claim),
-                          ("UNIT", map_screen.btn_ed_unit)):
-            btn.is_selected = (map_screen.editor_mode == mode)
-
-        for tool, btn in (("BRUSH", map_screen.btn_ed_brush),
-                          ("PAINT", map_screen.btn_ed_paint)):
-            btn.disabled = map_screen.editor_mode not in ("NATION", "CORE")
-            btn.is_selected = (not btn.disabled and map_screen.editor_selection_tool == tool)
-
-        # A painted province may be selected, but the editor is not a player
-        # nation.  Do not let that selection fall through into the gameplay
-        # diplomacy controls, which require a nation_data player record.
-        map_screen.btn_exit_to_menu.visible = True
-        map_screen.btn_close_info.visible = is_sel
-        map_screen.btn_realtime_details.visible = False
+        _update_editor_buttons(map_screen, is_sel)
         return
 
-    else:
-        viewing_ai = map_screen.viewing_ai_moves
-
-        # Hide/disable the button if we are thinking
-        map_screen.btn_next_turn.visible = not is_sel and not is_thinking
-        for view_filter, button in map_screen.unit_view_buttons.items():
-            button.visible = (map_screen.btn_next_turn.visible
-                              and map_screen.secondary_mode == "UNITS"
-                              and not map_screen.hide_raised_rect)
-            button.is_selected = view_filter == map_screen.unit_view_filter
-        if map_screen.realtime_multiplayer:
-            session = map_screen.realtime_session
-            player = session.players.get(map_screen.realtime_player_id)
-            submission_pending = bool(map_screen.realtime_submission_pending)
-            locked = (session.phase != "TURN" or not player or player.submitted or player.eliminated)
-            connection_lost = bool(map_screen.realtime_connection_error)
-            map_screen.btn_next_turn.text = ("Submitting..." if submission_pending else
-                                             "Unsubmit Turn" if player and player.submitted else "Submit Turn")
-            map_screen.btn_next_turn.callback = (map_screen._realtime_unsubmit if player and player.submitted
-                                                 else map_screen._realtime_submit)
-            map_screen.btn_next_turn.set_palette("blue" if submission_pending else
-                                                 "orange" if player and player.submitted else "purple")
-            map_screen.btn_next_turn.apply_state(enabled=not (connection_lost or session.phase == "PROCESSING"
-                                                               or submission_pending or player and player.eliminated))
-        elif map_screen.multiplayer_mode:
-            map_screen.btn_next_turn.text = "Export Turn"
-        else:
-            map_screen.btn_next_turn.text = "Resolve Turn" if viewing_ai else "Next Turn"
-
-        map_screen.btn_next_turn.set_palette("red" if viewing_ai else "purple")
-
-        # Visibility and active color swapping for the skip toggle
-        if map_screen.realtime_multiplayer:
-            map_screen.btn_skip_ai.visible = False
-            map_screen.btn_import_turn.visible = False
-        elif map_screen.multiplayer_mode:
-            map_screen.btn_skip_ai.visible = False
-            map_screen.btn_import_turn.visible = not is_sel and not is_thinking
-        else:
-            map_screen.btn_import_turn.visible = False
-            map_screen.btn_skip_ai.visible = not is_sel and not is_thinking
-            skip_on = map_screen.skip_ai_view
-            map_screen.btn_skip_ai.text = "Skip AI: ON" if skip_on else "Skip AI: OFF"
-            map_screen.btn_skip_ai.set_palette("green" if skip_on else "red")
-
-        is_spec = map_screen.player_country == "Spectator"
-        map_screen.btn_multi_turn.visible = not is_sel and not is_thinking and is_spec
-
-        if is_spec:
-            map_screen.btn_spec_mp_manage.visible = getattr(map_screen, 'multiplayer_host_mode', False) and not is_sel and not is_thinking
-            map_screen.btn_spec_mp_export.visible = getattr(map_screen, 'multiplayer_host_mode', False) and not is_sel and not is_thinking
-            map_screen.btn_spec_mp_keys.visible = getattr(map_screen, 'multiplayer_host_mode', False) and not is_sel and not is_thinking
-        map_screen.btn_declare_indep.visible = map_screen.tactical_mode and not is_sel and not is_thinking
-
-        gp_btns = [
-            map_screen.btn_gp_edit, map_screen.btn_gp_econ, map_screen.btn_gp_rd,
-            map_screen.btn_gp_msgs, map_screen.btn_gp_save, map_screen.btn_gp_settings,
-            map_screen.btn_gp_music, map_screen.btn_gp_faction, map_screen.btn_gp_claims,
-            map_screen.btn_gp_puppets, map_screen.btn_gp_automation, map_screen.btn_gp_politics,
-            map_screen.slider_camera_tilt
-        ]
-
-        always_visible_btns = [map_screen.btn_gp_settings, map_screen.btn_gp_music, map_screen.slider_camera_tilt]
-
-        for btn in gp_btns:
-            if btn in always_visible_btns:
-                btn.visible = not is_sel
-            elif viewing_ai or is_thinking:
-                btn.visible = False
-            else:
-                btn.visible = not is_sel
-
-        # GREY OUT THE FACTION BUTTON
-        my_faction = map_screen.nation_data.get(map_screen.player_country, {}).get("faction", "")
-        map_screen.btn_gp_faction.disabled = not bool(my_faction)
-
-        # DISABLE BUTTONS FOR BATTLE ROYALE
-        if queries.get_scenario_flag("battle_royale", c.DEFAULT_BATTLE_ROYALE, map_screen.scenario_settings):
-            map_screen.btn_gp_faction.disabled = True
-            map_screen.btn_gp_claims.disabled = True
-
-        # --- TACTICAL MODE LOCKDOWNS ---
-        if map_screen.tactical_mode:
-            for btn in (map_screen.btn_gp_faction, map_screen.btn_gp_puppets, map_screen.btn_gp_edit, map_screen.btn_gp_automation):
-                btn.apply_state(enabled=False)
-        else:
-            if bool(my_faction):
-                map_screen.btn_gp_faction.set_palette("pink")
-            map_screen.btn_gp_puppets.set_palette("pink")
-
-
-            # --- Update Automation Bubble ---
-            if map_screen.player_country in map_screen.nation_data and map_screen.player_country not in ["Spectator", "None", "Editor"]:
-                p_data = map_screen.nation_data.get(map_screen.player_country, {})
-                auto = p_data.get("automation", {})
-                active_count = sum(1 for val in auto.values() if val)
-                map_screen.btn_gp_automation.notification_count = active_count
-            else:
-                map_screen.btn_gp_automation.notification_count = 0
-            map_screen.btn_gp_edit.set_palette("pink")
+    _update_turn_buttons(map_screen, is_sel, is_thinking)
+    _update_gameplay_buttons(map_screen, is_sel, is_thinking)
 
     map_screen.btn_exit_to_menu.visible = not is_sel
     map_screen.btn_close_info.visible = is_sel
@@ -1014,335 +1357,12 @@ def update_button_states(map_screen):
         and selected_owner in map_screen.nation_data
         and selected_owner not in c.UNPLAYABLE_NATIONS)
 
-    # ======================================================================== #
-    #                        PROVINCE INTERACTION LOGIC                        #
-    # ======================================================================== #
-
     if is_sel:
         owner = map_screen.selected_province.get("owner", "Unclaimed")
-
-        # --- SPECTATOR ---
         if map_screen.player_country == "Spectator":
-            if queries.is_playable(owner, map_screen.nation_data):
-                set_btn(map_screen.btn_force_war, True, True, "Force War", "red")
-                set_btn(map_screen.btn_force_peace, True, True, "Force Ceasefire", "green")
-                can_remove_country = queries.can_use_spectator_country_actions(map_screen)
-                set_btn(map_screen.btn_spec_annex, can_remove_country, can_remove_country, "Annex", "orange")
-                set_btn(map_screen.btn_spec_delete, can_remove_country, can_remove_country, "Delete", "red")
-
-                in_faction = map_screen.nation_data[owner].get("faction", "")
-                is_leader = queries.is_faction_leader(owner, map_screen.nation_data)
-
-                if not in_faction:
-                    set_btn(map_screen.btn_spec_create_fac, True, True, "Create Faction", "blue")
-                    set_btn(map_screen.btn_spec_join_fac, True, True, "Join Faction", "green")
-                else:
-                    set_btn(map_screen.btn_spec_invite_fac, True, True, "Invite to Faction", "blue")
-                    if is_leader:
-                        set_btn(map_screen.btn_spec_disband_fac, True, True, "Disband Faction", "red")
-                    else:
-                        set_btn(map_screen.btn_spec_leave_fac, True, True, "Leave Faction", "orange")
-
-            # Allow Spectator to view production lines
-            is_land = not queries.is_water_province(map_screen.selected_province)
-            set_btn(map_screen.btn_go_production, True, is_land, "View Production", "orange")
-            set_orders_or_battle(map_screen, set_btn, False)
-
-        # --- PLAYER ---
+            _update_spectator_province_buttons(map_screen, owner)
         else:
-            has_player_units = queries.has_units_in_province(map_screen.player_country, map_screen.selected_province)
-            is_land = not queries.is_water_province(map_screen.selected_province)
-            is_tactical = map_screen.tactical_mode
-
-            if owner == map_screen.player_country:
-                set_orders_or_battle(map_screen, set_btn, has_player_units)
-
-                if is_tactical:
-                    set_btn(map_screen.btn_go_production, True, False, "Tactical: Disabled", "grey")
-                else:
-                    set_btn(map_screen.btn_go_production, True, is_land, "Production", "orange")
-
-            elif queries.is_playable(owner, map_screen.nation_data):
-                set_orders_or_battle(map_screen, set_btn, has_player_units)
-
-                if is_tactical:
-                    # Disable all foreign interactions
-                    set_btn(map_screen.btn_declare_war, True, False, "Tactical: Disabled", "grey")
-                    set_btn(map_screen.btn_join_wars, True, False, "Tactical: Disabled", "grey")
-                    set_btn(map_screen.btn_call_to_arms, True, False, "Tactical: Disabled", "grey")
-                    set_btn(map_screen.btn_volunteers, True, False, "Tactical: Disabled", "grey")
-                    set_btn(map_screen.btn_guarantee, True, False, "Tactical: Disabled", "grey")
-                    set_btn(map_screen.btn_military_attache, True, False, "Tactical: Disabled", "grey")
-                    set_btn(map_screen.btn_revoke_foreign_military_attache, True, False, "Tactical: Disabled", "grey")
-                    set_btn(map_screen.btn_send_home_foreign_volunteers, True, False, "Tactical: Disabled", "grey")
-                    set_btn(map_screen.btn_fac_invite, True, False, "Tactical: Disabled", "grey")
-                    set_btn(map_screen.btn_fac_join_req, True, False, "Tactical: Disabled", "grey")
-                    set_btn(map_screen.btn_fac_kick, True, False, "Tactical: Disabled", "grey")
-                    set_btn(map_screen.btn_fac_create, True, False, "Tactical: Disabled", "grey")
-                    set_btn(map_screen.btn_req_mil_access, True, False, "Tactical: Disabled", "grey")
-                    set_btn(map_screen.btn_cancel_mil_access, True, False, "Tactical: Disabled", "grey")
-                    set_btn(map_screen.btn_revoke_mil_access, True, False, "Tactical: Disabled", "grey")
-                    return
-
-                incoming_action, incoming_turns = queries.get_diplomatic_status(owner, map_screen.player_country, map_screen.nation_data)
-                at_war = queries.are_at_war(map_screen.player_country, owner, map_screen.nation_data)
-                in_same_faction = queries.are_in_same_faction(map_screen.player_country, owner, map_screen.nation_data)
-                pending_action, pending_turns = queries.get_diplomatic_status(map_screen.player_country, owner, map_screen.nation_data)
-
-                is_unilateral_pending = pending_action in c.UNILATERAL_ACTIONS
-                if is_unilateral_pending and pending_turns > 0:
-                    pending_action = ""
-                    pending_turns = 0
-
-                is_sending = (pending_turns == 0 and pending_action)
-                def get_status_text(base):
-                    return f"UNDO {base}" if is_sending else "WAITING..."
-
-                my_faction = map_screen.nation_data[map_screen.player_country].get("faction", "")
-                target_faction = map_screen.nation_data[owner].get("faction", "")
-                i_am_leader = queries.is_faction_leader(map_screen.player_country, map_screen.nation_data)
-                target_is_leader = queries.is_faction_leader(owner, map_screen.nation_data)
-
-                my_master = map_screen.nation_data.get(map_screen.player_country, {}).get("master", "")
-                t_master = map_screen.nation_data.get(owner, {}).get("master", "")
-
-                is_rebellion = (my_master == owner)
-                is_preemptive = (t_master == map_screen.player_country)
-
-                # War / Peace UI routing (Allows internal faction wars strictly for rebellions & preemptive attacks)
-                dw_enabled = not (not at_war and in_same_faction and not (is_rebellion or is_preemptive))
-                faction_peace_active = peace_scope.has_settleable_war(
-                    map_screen.player_country, owner, map_screen.nation_data)
-                has_truce = queries.has_active_truce(map_screen.player_country, owner, map_screen.nation_data)
-
-                # Fetch the exact number of turns remaining ---
-                truce_turns = map_screen.nation_data.get(map_screen.player_country, {}).get("truces", {}).get(owner, 0)
-
-                if has_truce and not at_war and not faction_peace_active:
-                    dw_enabled = False
-
-                if pending_action == "PEACE_TREATY" or pending_action == "CEASEFIRE":
-                    if pending_turns > 0:
-                        dw_text = "Peace Offer Pending"
-                        dw_enabled = False
-                    else:
-                        dw_text = "Edit Peace Offer"
-                elif pending_action == "WAR_DECLARATION":
-                    dw_text = "Edit War Declaration"
-                else:
-                    if has_truce and not at_war and not faction_peace_active:
-                        dw_text = f"Truce Active ({truce_turns})"
-                    else:
-                        if at_war or faction_peace_active:
-                            if queries.get_scenario_flag("battle_royale", c.DEFAULT_BATTLE_ROYALE, map_screen.scenario_settings):
-                                dw_text = "Battle Royale (No Peace)"
-                                dw_enabled = False
-                            else:
-                                dw_text = "Ceasefire / Peace"
-                        elif my_master == owner:
-                            dw_text = "Independence war"
-                        elif t_master == map_screen.player_country:
-                            dw_text = "Preemptive war"
-                        else:
-                            dw_text = "Declare War"
-
-                set_btn(map_screen.btn_declare_war, True, dw_enabled, dw_text, "red")
-
-                target_wars = queries.get_enemies(owner, map_screen.nation_data)
-                player_wars = queries.get_enemies(map_screen.player_country, map_screen.nation_data)
-                can_join_wars = bool(in_same_faction and any(w for w in target_wars if w not in player_wars))
-                jw_text = get_status_text("JOIN WARS") if pending_action == "JOIN_WARS" else "Join Wars"
-                set_btn(map_screen.btn_join_wars, True, can_join_wars or pending_action == "JOIN_WARS", jw_text, "orange")
-
-                can_call_to_arms = bool(in_same_faction and any(w for w in player_wars if w not in target_wars))
-                ca_text = get_status_text("CALL TO ARMS") if pending_action == "CALL_TO_ARMS" else "Call to Arms"
-                set_btn(map_screen.btn_call_to_arms, True, can_call_to_arms or pending_action == "CALL_TO_ARMS", ca_text, "red")
-
-                # A destroyed volunteer has no off-map record to clean up, so
-                # reconcile before deciding whether this is Send or Recall.
-                volunteers.reconcile_deployed_missions(
-                    map_screen, map_screen.player_country)
-                volunteer_state = volunteers.mission_state(map_screen.nation_data, map_screen.player_country, owner)
-                if volunteer_state == volunteers.AWAITING:
-                    if pending_action == volunteers.ACTION and pending_turns == 0:
-                        set_btn(map_screen.btn_volunteers, True, True, "Undo Send Volunteers", "purple")
-                        map_screen.btn_volunteers.callback = lambda: player_diplomacy_actions.handle_withdraw_volunteer_offer(map_screen)
-                    else:
-                        set_btn(map_screen.btn_volunteers, True, False, "Waiting for Answer", "grey")
-                elif volunteer_state in (volunteers.OUTBOUND, volunteers.DEPLOYED):
-                    turns_left = map_screen.nation_data[map_screen.player_country]["volunteer_missions"][owner].get("turns_left")
-                    if pending_action == volunteers.RECALL_ACTION and pending_turns == 0:
-                        text = "Undo Recall Volunteers"
-                    else:
-                        text = "Recall Volunteers" if turns_left is None else f"Recall Volunteers ({turns_left}t)"
-                    set_btn(map_screen.btn_volunteers, True, True, text, "purple")
-                    map_screen.btn_volunteers.callback = lambda: player_diplomacy_actions.handle_recall_volunteers(map_screen)
-                elif volunteer_state == volunteers.RETURNING:
-                    turns_left = map_screen.nation_data[map_screen.player_country]["volunteer_missions"][owner].get("turns_left", 0)
-                    set_btn(map_screen.btn_volunteers, True, False, f"Volunteers Returning ({turns_left}t)", "grey")
-                else:
-                    legal, _reason = volunteers.is_eligible(map_screen.player_country, owner, map_screen.nation_data)
-                    enabled = legal and volunteers.remaining_capacity(map_screen, map_screen.player_country) > 0
-                    set_btn(map_screen.btn_volunteers, True, enabled, "Send Volunteers", "purple")
-                    map_screen.btn_volunteers.callback = lambda: player_diplomacy_actions.handle_send_volunteers(map_screen)
-
-                foreign_volunteer_state = volunteers.mission_state(
-                    map_screen.nation_data, owner, map_screen.player_country)
-                pending_send_home = (pending_action == volunteers.SEND_HOME_ACTION
-                                     and pending_turns == 0)
-                hosting_foreign_volunteers = foreign_volunteer_state in (
-                    volunteers.OUTBOUND, volunteers.DEPLOYED)
-                set_btn(map_screen.btn_send_home_foreign_volunteers,
-                        hosting_foreign_volunteers or pending_send_home,
-                        hosting_foreign_volunteers or pending_send_home,
-                        "Undo Send Home" if pending_send_home else "Send Their Volunteers Home",
-                        "red")
-
-                guarantee_legal, _guarantee_reason = guarantees.is_eligible(
-                    map_screen.player_country, owner, map_screen.nation_data)
-                already_guaranteed = owner in guarantees.guaranteed_targets(
-                    map_screen.player_country, map_screen.nation_data)
-                pending_guarantee = (pending_action == guarantees.ACTION and pending_turns == 0)
-                pending_revoke = (pending_action == guarantees.REVOKE_ACTION and pending_turns == 0)
-                if pending_guarantee:
-                    guarantee_text = "Undo Guarantee"
-                elif pending_revoke:
-                    guarantee_text = "Undo Revoke Guarantee"
-                elif already_guaranteed:
-                    guarantee_text = "Revoke Guarantee"
-                else:
-                    guarantee_text = "Guarantee Independence"
-                set_btn(map_screen.btn_guarantee, True,
-                        pending_guarantee or pending_revoke or already_guaranteed
-                        or (guarantee_legal and not already_guaranteed),
-                        guarantee_text, "blue")
-
-                attache_legal, _attache_reason = military_attaches.is_eligible(
-                    map_screen.player_country, owner, map_screen.nation_data)
-                attached = owner in military_attaches.hosts_for(
-                    map_screen.player_country, map_screen.nation_data)
-                pending_attache = (pending_action == military_attaches.ACTION
-                                   and pending_turns == 0)
-                pending_withdraw_attache = (pending_action == military_attaches.WITHDRAW_ACTION
-                                             and pending_turns == 0)
-                if pending_attache:
-                    attache_text = "Undo Attaché Request"
-                elif pending_withdraw_attache:
-                    attache_text = "Undo Attaché Withdrawal"
-                elif attached:
-                    attache_text = "Withdraw Military Attaché"
-                else:
-                    attache_text = "Send Military Attaché"
-                set_btn(map_screen.btn_military_attache, True,
-                        pending_attache or pending_withdraw_attache or attached
-                        or (attache_legal and not attached),
-                        attache_text, "orange")
-
-                hosting_their_attache = map_screen.player_country in military_attaches.hosts_for(
-                    owner, map_screen.nation_data)
-                pending_revoke_their_attache = (
-                    pending_action == military_attaches.REVOKE_ACTION and pending_turns == 0)
-                set_btn(map_screen.btn_revoke_foreign_military_attache,
-                        hosting_their_attache or pending_revoke_their_attache,
-                        hosting_their_attache or pending_revoke_their_attache,
-                        "Undo Revoke Their Attaché" if pending_revoke_their_attache
-                        else "Revoke Their Attaché", "red")
-
-                factions_disabled = queries.get_scenario_flag("disable_factions", c.DEFAULT_DISABLE_FACTIONS, map_screen.scenario_settings)
-
-                # A puppet's alignment is its master's, both ways round: it may
-                # not be invited in, and may not ask to join. Greyed out here so
-                # the option never appears, rather than being refused later.
-                they_are_free = queries.can_choose_own_faction(owner, map_screen.nation_data)
-                i_am_free = queries.can_choose_own_faction(map_screen.player_country, map_screen.nation_data)
-
-                # Keep membership controls clickable so refusal feedback is reachable.
-                can_try_invite = bool(not factions_disabled and my_faction and not target_faction
-                                      and not at_war and they_are_free)
-                inv_text = get_status_text("INVITE") if pending_action == "FACTION_INVITE" else "Invite to Faction"
-                set_btn(map_screen.btn_fac_invite, True, can_try_invite or pending_action == "FACTION_INVITE", inv_text, "green")
-
-                can_try_req_join = bool(not factions_disabled and not my_faction and target_faction
-                                        and not at_war and i_am_free)
-                req_text = get_status_text("JOIN REQ") if pending_action == "JOIN_FACTION_REQ" else "Req. Join Faction"
-                set_btn(map_screen.btn_fac_join_req, True, can_try_req_join or pending_action == "JOIN_FACTION_REQ", req_text, "green")
-
-                can_kick = bool(not factions_disabled and in_same_faction and i_am_leader)
-                kick_text = get_status_text("KICK") if pending_action == "KICK_FACTION_MEMBER" else "Kick from Faction"
-                set_btn(map_screen.btn_fac_kick, True, can_kick or pending_action == "KICK_FACTION_MEMBER", kick_text, "red")
-
-                can_create_fac = bool(not factions_disabled and not my_faction and not target_faction and not at_war)
-                create_text = get_status_text("CREATE") if pending_action == "CREATE_FACTION" else "Create Faction"
-                set_btn(map_screen.btn_fac_create, True, can_create_fac or pending_action == "CREATE_FACTION", create_text, "blue")
-
-                has_access_to_them = queries.has_military_access(map_screen.player_country, owner, map_screen.nation_data)
-                they_have_access_to_me = queries.has_military_access(owner, map_screen.player_country, map_screen.nation_data)
-
-                can_req_access = not has_access_to_them and not at_war and not in_same_faction
-                req_acc_text = get_status_text("REQ ACCESS") if pending_action == "REQ_MILITARY_ACCESS" else "Request Mil. Access"
-
-                if has_access_to_them:
-                    cancel_acc_text = get_status_text("CANCEL ACCESS") if pending_action == "CANCEL_MILITARY_ACCESS" else "Cancel Mil. Access"
-                    set_btn(map_screen.btn_cancel_mil_access, True, True, cancel_acc_text, "orange")
-                    set_btn(map_screen.btn_req_mil_access, False, False, "", "blue")
-                else:
-                    set_btn(map_screen.btn_cancel_mil_access, False, False, "", "orange")
-                    set_btn(map_screen.btn_req_mil_access, True, can_req_access or pending_action == "REQ_MILITARY_ACCESS", req_acc_text, "blue")
-
-                if they_have_access_to_me:
-                    revoke_acc_text = get_status_text("REVOKE ACCESS") if pending_action == "REVOKE_MILITARY_ACCESS" else "Revoke Mil. Access"
-                    set_btn(map_screen.btn_revoke_mil_access, True, True, revoke_acc_text, "red")
-                else:
-                    set_btn(map_screen.btn_revoke_mil_access, False, False, "", "red")
-
-                # Forecast every offer this menu can send to the selected
-                # country. Indicators are hidden while a button is performing
-                # a different follow-up action (undo, recall, withdrawal,
-                # etc.), because those actions do not ask for a fresh reply.
-                predictions = (
-                    (map_screen.btn_join_wars, "JOIN_WARS",
-                     can_join_wars and pending_action != "JOIN_WARS"),
-                    (map_screen.btn_call_to_arms, "CALL_TO_ARMS",
-                     can_call_to_arms and pending_action != "CALL_TO_ARMS"),
-                    (map_screen.btn_fac_invite, "FACTION_INVITE",
-                     can_try_invite and pending_action != "FACTION_INVITE"),
-                    (map_screen.btn_fac_join_req, "JOIN_FACTION_REQ",
-                     can_try_req_join and pending_action != "JOIN_FACTION_REQ"),
-                    (map_screen.btn_fac_create, "CREATE_FACTION",
-                     can_create_fac and pending_action != "CREATE_FACTION"),
-                    (map_screen.btn_req_mil_access, "REQ_MILITARY_ACCESS",
-                     can_req_access and pending_action != "REQ_MILITARY_ACCESS"),
-                    (map_screen.btn_volunteers, volunteers.ACTION,
-                     volunteer_state not in (volunteers.AWAITING,
-                                             volunteers.OUTBOUND,
-                                             volunteers.DEPLOYED,
-                                             volunteers.RETURNING)),
-                    (map_screen.btn_military_attache, military_attaches.ACTION,
-                     not attached and not pending_attache and not pending_withdraw_attache),
-                )
-                for button, action, applicable in predictions:
-                    set_bilateral_response_indicator(map_screen, button, owner,
-                                                     action, applicable)
-
-                # HIDE ALLIANCE/FACTION BUTTONS IN BATTLE ROYALE
-                if queries.get_scenario_flag("battle_royale", c.DEFAULT_BATTLE_ROYALE, map_screen.scenario_settings):
-                    map_screen.btn_join_wars.visible = False
-                    map_screen.btn_call_to_arms.visible = False
-                    map_screen.btn_fac_invite.visible = False
-                    map_screen.btn_fac_join_req.visible = False
-                    map_screen.btn_fac_kick.visible = False
-                    map_screen.btn_fac_create.visible = False
-                    map_screen.btn_req_mil_access.visible = False
-                    map_screen.btn_cancel_mil_access.visible = False
-                    map_screen.btn_revoke_mil_access.visible = False
-                    map_screen.btn_volunteers.visible = False
-                    map_screen.btn_guarantee.visible = False
-                    map_screen.btn_military_attache.visible = False
-                    map_screen.btn_revoke_foreign_military_attache.visible = False
-                    map_screen.btn_send_home_foreign_volunteers.visible = False
-
-            else:
-                set_orders_or_battle(map_screen, set_btn, has_player_units)
+            _update_player_province_buttons(map_screen, owner)
 
 
 class Map(StateAccess, GameState):
@@ -1778,11 +1798,6 @@ class Map(StateAccess, GameState):
             self.total_ui_h, x_offset=c.ORDERS_PANEL_CAMERA_X_OFFSET)
         return True
 
-    def cycle_secondary_mode(self):
-        self.sec_idx = (self.sec_idx + 1) % len(self.secondary_modes)
-        self.secondary_mode = self.secondary_modes[self.sec_idx]
-        self.show_feedback(f"View Mode: {self.secondary_mode}")
-
     def trigger_multi_turn(self):
 
         def on_turns(turns):
@@ -1794,7 +1809,7 @@ class Map(StateAccess, GameState):
                 self.loading_status_text = f"Skipping {turns} Turns..."
                 run_background(self._run_multi_turn_thread, turns)
 
-        confirm_dialog.ask_integer("Process Multiple Turns", "How many turns to process at once?",
+        dialogs.ask_integer("Process Multiple Turns", "How many turns to process at once?",
                                    on_turns, minvalue=1, maxvalue=5000)
 
     async def _run_multi_turn_thread(self, turns):
@@ -2027,7 +2042,7 @@ class Map(StateAccess, GameState):
 
     def show_navigation_tutorial(self):
         """Open the map tutorial again from the persistent Help button."""
-        confirm_dialog.show_navigation_intro(self)
+        dialogs.show_navigation_intro(self)
 
     def auto_assign_cores(self):
 
@@ -2043,7 +2058,7 @@ class Map(StateAccess, GameState):
                 self.show_feedback("Auto-core cancelled.")
 
         # Ask for confirmation first before doing anything destructive
-        confirm_dialog.ask_yes_no(
+        dialogs.ask_yes_no(
             "Confirm Auto-Core",
             "Are you sure you want to auto-assign all cores?\nThis will overwrite existing core data for every province on the map based on current ownership.",
             on_confirm
@@ -2064,7 +2079,7 @@ class Map(StateAccess, GameState):
                     self.show_feedback("You left the match. The host and other players continue normally.")
                     self.change_state("MULTIPLAYER_MENU")
 
-                confirm_dialog.ask_yes_no(
+                dialogs.ask_yes_no(
                     "Leave Real-Time Match",
                     "Leave this match? This disconnects only you; the host and other players keep playing. "
                     "You can rejoin with your reconnect code while the match is active.",
@@ -2094,7 +2109,7 @@ class Map(StateAccess, GameState):
                     "Current turn is finishing safely; all guests have been disconnected."
                     if session.phase == "PROCESSING" else
                     "Real-time match ended by host. Save the final result before leaving.")
-            confirm_dialog.ask_yes_no("End Real-Time Match",
+            dialogs.ask_yes_no("End Real-Time Match",
                                       "Leaving stops the server for every player. End this match?",
                                       close_match, yes_label="End Match", no_label="Cancel")
             return
@@ -2145,12 +2160,12 @@ class Map(StateAccess, GameState):
             if any(isinstance(element, Button) and element.visible
                    and element.rect.collidepoint(event.pos) for element in self.elements):
                 return
-        event_handler.handle_map_events(self, event)
+        map_input.handle_map_events(self, event)
 
     def handle_events(self, events):
         """Route the live navigation guide before HUD buttons and map input."""
         for event in events:
-            event_handler.resolve_map_mouse_gesture_conflict(self, event)
+            map_input.resolve_map_mouse_gesture_conflict(self, event)
             popup = self.navigation_intro_popup
             if (popup is not None and diplomatic_popups.map_message_popups_visible(self)
                     and popup.handle_event(event)):
@@ -2454,7 +2469,7 @@ class Map(StateAccess, GameState):
         """
         if self.selection_mode or self.player_country == c.TOURNAMENT_SPECTATOR:
             return
-        event_handler.handle_view_mode_keybind(self, "UNITS", "ORDERS")
+        map_input.handle_view_mode_keybind(self, "UNITS", "ORDERS")
 
     def handle_economy_key(self):
         """W. Sets the view mode to Economy, same as clicking that button;
@@ -2464,7 +2479,7 @@ class Map(StateAccess, GameState):
         """
         if self.selection_mode or self.player_country == c.TOURNAMENT_SPECTATOR:
             return
-        event_handler.handle_view_mode_keybind(self, "ECONOMY", "ECONOMY")
+        map_input.handle_view_mode_keybind(self, "ECONOMY", "ECONOMY")
 
     def draw_background(self, surface):
         # Recomputed here (not just in update()) so callers that draw this
@@ -2649,14 +2664,6 @@ class Map(StateAccess, GameState):
             raise ValueError("Unknown editor selection tool.")
         self.editor_selection_tool = tool
         update_button_states(self)
-
-    def toggle_editor_brush_type(self):
-        if self.editor_mode == "NATION":
-            self.editor_mode = "BUILDING"
-            self.show_feedback("Editor: Building Placement")
-        else:
-            self.editor_mode = "NATION"
-            self.show_feedback("Editor: Nation Painting")
 
     def _apply_host_realtime_snapshot(self):
         """Refresh the host's visible map when the authoritative turn changes.

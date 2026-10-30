@@ -12,13 +12,8 @@ is deleted the moment the offer resolves -- so a player who accepted a trade had
 no way to see afterwards what they had agreed to.
 """
 
-import os
-import sys
 import unittest
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import pygame
 pygame.init()

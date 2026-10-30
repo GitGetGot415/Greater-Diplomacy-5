@@ -1,13 +1,8 @@
 """Expenses table views preserve per-unit upkeep and group by displayed type."""
 
-import os
-import sys
 import unittest
 from unittest.mock import patch
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import pygame
 

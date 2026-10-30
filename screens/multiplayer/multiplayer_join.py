@@ -3,9 +3,7 @@ from ui.widgets.ui_elements import Button, make_back_button
 import data.constants as c
 from data import queries
 
-from ui import dialogs as confirm_dialog
-
-
+from ui import dialogs
 class Multiplayer_Join(GameState):
     back_state = "MULTIPLAYER_HUB"
 
@@ -34,7 +32,7 @@ class Multiplayer_Join(GameState):
                 self.selected_tournament_key = key
                 self.go_to("MAP")
 
-            confirm_dialog.ask_string(
+            dialogs.ask_string(
                 "Player Key",
                 "Enter your Country Key, or enter 'Spectator' for the fog-limited Tournament Spectator view:",
                 after_key)

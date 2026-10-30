@@ -7,13 +7,8 @@ opposite of drift: that generalising the block quietly changed what the model
 is told, or blurred the three per-prompt hints that are meant to stay distinct.
 """
 
-import os
-import sys
 import unittest
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from map_logic.ai import ai_prompts
 

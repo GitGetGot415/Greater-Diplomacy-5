@@ -2,16 +2,11 @@
 
 import contextlib
 import io
-import os
 import random
-import sys
 import unittest
 from types import SimpleNamespace
 from unittest import mock
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import numpy as np
 import pygame
@@ -21,7 +16,7 @@ from map_logic.ai import ai_movement, ai_unit_eval, ai_tech_eval
 from map_logic.diplomacy import diplomacy_processor as dp, diplomacy_messages as messages
 from ui.rendering import refresh_map
 from map_logic.system32 import combat_rules
-from map_logic.territory import ownership as edit_province_ownership
+from map_logic.territory import ownership
 from tests.stub_map_screen import StubMapScreen
 from tests import test_ai_orders
 
@@ -44,7 +39,7 @@ class SparseDiplomacyTests(unittest.TestCase):
 
     def test_one_way_war_cancels_responses_in_both_directions_only_when_due(self):
         for sender, target in (("A", "B"), ("B", "A")):
-            for action in dp._WAR_CANCELS:
+            for action in dp.WAR_CANCELLED_ACTIONS:
                 with self.subTest(sender=sender, action=action):
                     game = StubMapScreen(["A", "B"])
                     entry = messages.set_pending(game.nation_data, sender, target,
@@ -340,8 +335,8 @@ class MapSurfaceCacheTests(unittest.TestCase):
         self.screen.ai_is_thinking = False
         self.refresh(refresh_map.refresh_cores_map)
         before = pygame.surfarray.array3d(self.screen.cores_map)
-        with mock.patch.object(edit_province_ownership, "get_mixed_core_color", return_value=(5, 6, 7)):
-            edit_province_ownership.refresh_core_tint(self.screen, self.screen.id_to_province[1], ["A"])
+        with mock.patch.object(ownership, "get_mixed_core_color", return_value=(5, 6, 7)):
+            ownership.refresh_core_tint(self.screen, self.screen.id_to_province[1], ["A"])
         self.refresh(refresh_map.refresh_cores_map)
         self.assertTrue(np.array_equal(before, pygame.surfarray.array3d(self.screen.cores_map)))
 

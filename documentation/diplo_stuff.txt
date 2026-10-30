@@ -175,6 +175,7 @@ The Global Diplomacy & Factions editor has a Diplomatic Agreements view.
 It can set guarantees, attach?s at countries at war, and one-way military access.
 These setup actions use the same rules and save fields as game actions.
 
+`map_logic/ai/scripted_events.py` owns scripted conditions, actions, and the editor choices for them.
 Scripted events can guarantee independence.
 They can request attach?s or military access and offer volunteer divisions.
 They can accept or reject attach? requests, access requests, and volunteer offers.

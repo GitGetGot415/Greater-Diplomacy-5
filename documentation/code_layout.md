@@ -3,7 +3,6 @@
 AI means artificial intelligence. UI means user interface.
 Use this guide to find the owner of a change.
 Read `general_info.txt` for state ownership, storage, and build policy.
-Read `source_layout_changes.md` for previous and current source paths.
 
 ## Directory responsibilities
 
@@ -47,6 +46,7 @@ Read `source_layout_changes.md` for previous and current source paths.
 | `scripts/dependencies/` | Dependency download tools. |
 | `scripts/benchmarks/` | Objective Judge Horizon entry points. |
 | `scripts/previews/` | Interactive UI development previews. |
+| `scripts/checks/` | Refactor and test checks: gameplay digests and tuning independence. |
 | `tests/` | Functional tests, regression tests, and shared test support. |
 | `documentation/` | Maintained guides and design notes. |
 | `saves/` | Saved games. |
@@ -122,6 +122,9 @@ Review its source before use.
 5. Download the browser dependency with `python scripts/dependencies/fetch_dragoman_wasm.py`.
 6. Open the standalone country editor with `python scripts/editors/country_editor.py`.
 7. Run sandbox tests with `python -m unittest tests.test_mod_loader_security`.
+8. Record gameplay digests with `python scripts/checks/turn_digest.py --output before.json`.
+9. Compare gameplay digests with `python scripts/checks/turn_digest.py --compare before.json`.
+10. Find tests that depend on tuning with `python scripts/checks/tuning_stress.py`.
 
 Runtime modules use their current import paths directly.
 Source-replacement mods must use the current target paths and imports.

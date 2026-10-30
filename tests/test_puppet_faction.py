@@ -12,13 +12,8 @@ shipped with keeps its cores when annexed, and one you created and re-annexed
 does not. That is the only thing the created/authored distinction now decides.
 """
 
-import os
-import sys
 import unittest
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import data.constants as c
 from data import queries

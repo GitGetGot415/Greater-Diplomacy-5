@@ -34,7 +34,7 @@ from data.multiplayer.realtime.session import (
     GameVersionError,
 )
 import data.constants as c
-from tests.research_fixtures import factory_research_cases
+from tests.research_fixtures import research_lock_cases
 import json
 from data import migrations
 from data.multiplayer.realtime.relay import (
@@ -519,7 +519,7 @@ class RealtimeExitTests(unittest.TestCase):
         button = Button(100, 100, "small", "blue", "Details", lambda: None)
         map_ref = SimpleNamespace(thread_error=None, elements=[button])
         event = pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=(110, 110))
-        with mock.patch("screens.game.map.event_handler.handle_map_events") as handle:
+        with mock.patch("screens.game.map.map_input.handle_map_events") as handle:
             Map.additional_events(map_ref, event)
         handle.assert_not_called()
 
@@ -759,7 +759,7 @@ class RealtimeSessionTests(unittest.TestCase):
     def test_factory_output_research_uses_server_prerequisites_and_costs(self):
         from data import queries
         tree = queries.get_tech_tree()
-        cases = factory_research_cases(tree)
+        cases = research_lock_cases(tree)
         for tech, locked, unlocked in cases:
             map_ref = map_double(nation_data={"A": {"research": dict(locked), "research_queue": []}},
                                       map_data={}, id_to_province={})

@@ -44,7 +44,7 @@ def _highlighted_flag(flag):
 
 def draw_flag(map_screen, surface):
     """Draw the cached flag and highlight its country summary control on hover."""
-    if map_screen.hide_top_info or getattr(map_screen, "hide_flag", False):
+    if map_screen.hide_top_info or map_screen.hide_flag:
         return
     country = displayed_country(map_screen)
     flag = flag_icons.flag_surface(country, map_screen.nation_data, FLAG_RECT.size)

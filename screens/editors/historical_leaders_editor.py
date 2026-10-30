@@ -22,7 +22,7 @@ from ui.navigation.game_state import GameState
 import data.constants as c
 from data import queries
 from data.io.country_io import DEFAULT_NATION_COLOR
-from ui import dialogs as confirm_dialog
+from ui import dialogs
 from ui.bars import ui_bars
 from ui.widgets.scroll_panes import ScrollPanes
 from ui.widgets.table_screen import truncate
@@ -146,7 +146,7 @@ class Historical_Leaders_Editor(ScrollPanes, GameState):
                               if stats.get("is_playable") and name not in c.UNPLAYABLE_NATIONS)
         available = [n for n in all_playable if n not in self.data]
         if not available:
-            confirm_dialog.show_info("Add Country", "Every playable country is already being tracked.")
+            dialogs.show_info("Add Country", "Every playable country is already being tracked.")
             return
 
         def on_pick(country):
@@ -172,7 +172,7 @@ class Historical_Leaders_Editor(ScrollPanes, GameState):
             self.refresh_ui()
 
         count = len(self.data.get(country, []))
-        confirm_dialog.ask_yes_no(
+        dialogs.ask_yes_no(
             "Remove Country",
             f"Stop tracking {queries.get_country_display_name(country, self.map_screen.nation_data)} and discard its {count} timeline entr{'y' if count == 1 else 'ies'}?\n"
             f"This isn't written to disk until you Save Timeline.",
@@ -244,7 +244,7 @@ class Historical_Leaders_Editor(ScrollPanes, GameState):
                 img = pygame.image.load(file_path).convert_alpha()
                 scaled = pygame.transform.scale(img, size)
             except Exception:
-                confirm_dialog.show_error(f"Import Failed", f"Could not load that image as a {label.lower()}.")
+                dialogs.show_error(f"Import Failed", f"Could not load that image as a {label.lower()}.")
                 return
             entry[field] = queries.encode_surf_to_b64(scaled)
             self.refresh_ui()
@@ -279,7 +279,7 @@ class Historical_Leaders_Editor(ScrollPanes, GameState):
                     month = int(e.get("month") or 0)
                     day = int(e.get("day") or 0)
                 except (TypeError, ValueError):
-                    confirm_dialog.show_error(
+                    dialogs.show_error(
                         "Invalid Date", f"{country} has a non-numeric date in its timeline -- fix it before saving.")
                     return
                 color = e.get("color")
@@ -320,7 +320,7 @@ class Historical_Leaders_Editor(ScrollPanes, GameState):
         if self.active_country not in self.data:
             self.active_country = self.roster[0] if self.roster else None
 
-        confirm_dialog.show_success(
+        dialogs.show_success(
             "Saved",
             "Historical timeline saved. Every historical scenario will now show these names, "
             "adjectives and leaders automatically, based on each scenario's own date.")
@@ -351,7 +351,7 @@ class Historical_Leaders_Editor(ScrollPanes, GameState):
     def import_timeline(self):
         def on_loaded(data):
             if not self._is_valid_timeline(data):
-                confirm_dialog.show_error(
+                dialogs.show_error(
                     "Import Error", "That file doesn't look like a historical leaders timeline.")
                 return
 
@@ -362,10 +362,10 @@ class Historical_Leaders_Editor(ScrollPanes, GameState):
                 self._load_from_disk()
                 self._scroll_roster = 0
                 self._scroll_timeline = 0
-                confirm_dialog.show_success("Import Success", "Historical leaders timeline imported.")
+                dialogs.show_success("Import Success", "Historical leaders timeline imported.")
                 self.refresh_ui()
 
-            confirm_dialog.ask_yes_no(
+            dialogs.ask_yes_no(
                 "Import Timeline?",
                 "This replaces your current historical leaders timeline, including any unsaved "
                 "edits, with the imported file. This can't be undone.", on_confirm)
@@ -380,16 +380,16 @@ class Historical_Leaders_Editor(ScrollPanes, GameState):
                 with open(c.HISTORICAL_LEADERS_DEFAULT_PATH, "r", encoding="utf-8") as f:
                     default_data = json.load(f)
             except Exception as e:
-                confirm_dialog.show_error("Reset Error", str(e))
+                dialogs.show_error("Reset Error", str(e))
                 return
             queries.save_historical_leader_timeline(default_data)
             self._load_from_disk()
             self._scroll_roster = 0
             self._scroll_timeline = 0
-            confirm_dialog.show_success("Reset", "Historical leaders timeline reset to the game's defaults.")
+            dialogs.show_success("Reset", "Historical leaders timeline reset to the game's defaults.")
             self.refresh_ui()
 
-        confirm_dialog.ask_yes_no(
+        dialogs.ask_yes_no(
             "Reset to Defaults?",
             "This overwrites historical_leaders.json with the game's built-in defaults, discarding "
             "every custom entry and any unsaved edits. This can't be undone.", on_confirm)

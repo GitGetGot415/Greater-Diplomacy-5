@@ -1,7 +1,6 @@
 """Air content uses the shared research, production and network rules."""
 import copy
 import json
-import os
 import tempfile
 import unittest
 from contextlib import ExitStack
@@ -9,8 +8,6 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 
 import data.constants as c
 from data import queries
@@ -18,6 +15,7 @@ from data.multiplayer.realtime.session import MapRealtimeDriver, RealtimeError
 from map_logic.ai import ai_tech_eval, ai_unit_eval
 from map_logic.system32.research_processor import process_national_research
 from tests import app_harness
+from tests.research_fixtures import research_lock_cases
 from tests.stub_map_screen import map_double, sample_map_screen
 from tests import test_tournament_moves as tournament_harness
 
@@ -120,18 +118,13 @@ class AirRulesTests(unittest.TestCase):
                 self.assertTrue(queries.is_unit_unlocked(name, research, library))
                 self.assertIn(name, ai_unit_eval.buildable_units(research, library))
 
-    def test_heavier_than_air_flight_gates_biplane_research(self):
-        from data.generators.generate_data import build_research_template_text
-
+    def test_aircraft_research_requirements_are_enforced_for_every_air_tech(self):
         tree = queries.get_tech_tree()
-        flight = tree["heavier_than_air_flight"]
-        self.assertEqual(flight["category"], "AIR")
-        self.assertEqual(flight["display_name"], "Heavier Than Air Flight")
-        self.assertEqual(flight["years"], [1906])
-        self.assertEqual(flight, json.loads(build_research_template_text())["heavier_than_air_flight"])
-        requirements = queries.get_tech_requirements(tree["biplane"], 1)
-        self.assertFalse(queries.check_tech_requirements({}, requirements, 1))
-        self.assertTrue(queries.check_tech_requirements({"heavier_than_air_flight": 1}, requirements, 1))
+        for tech, locked, unlocked in research_lock_cases(tree, "AIR"):
+            with self.subTest(tech=tech):
+                requirements = queries.get_tech_requirements(tree[tech], unlocked[tech] + 1)
+                self.assertFalse(queries.check_tech_requirements(locked, requirements, unlocked[tech] + 1))
+                self.assertTrue(queries.check_tech_requirements(unlocked, requirements, unlocked[tech] + 1))
 
     def test_jet_transport_content_matches_its_generated_recipes(self):
         from data.generators.generate_data import build_research_template_text, build_unit_data_text

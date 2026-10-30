@@ -18,16 +18,6 @@ def build_choice_button(x, y, size, label, enabled, selected, callback, font_pre
         btn.apply_state(enabled=False)
     return btn
 
-def build_choice_row(specs, current, on_select, size="medium", font_preset="button"):
-    """Builds a whole option row from (x, y, value, label[, enabled]) specs."""
-    return [
-        build_choice_button(spec[0], spec[1], size, spec[3],
-                            spec[4] if len(spec) > 4 else True,
-                            spec[2] == current, lambda v=spec[2]: on_select(v),
-                            font_preset=font_preset)
-        for spec in specs
-    ]
-
 def draw_projected_peace_map(surface, map_screen, peace_type, proposer, target):
     """DEPRECATED. Tints every province a treaty would move.
 

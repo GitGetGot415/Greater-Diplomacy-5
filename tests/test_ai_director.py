@@ -9,13 +9,8 @@ have done on its own, which is also what happens with no model at all.
 Nothing here touches the network. The guard in setUp makes that a hard failure.
 """
 
-import os
-import sys
 import unittest
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import data.constants as c
 from map_logic.ai import (ai_candidates as ac, ai_diplomacy, ai_director,

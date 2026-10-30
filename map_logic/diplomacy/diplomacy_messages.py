@@ -9,6 +9,7 @@ from map_logic.diplomacy import diplomacy_lifecycle as lifecycle
 
 from map_logic.diplomacy import deal as deal_mod
 from map_logic.ai import ai_prompts
+from map_logic.diplomacy.action_definitions import ACTION_DEFINITIONS
 
 
 # ==========================================
@@ -376,41 +377,6 @@ def forward_message(map_screen, sender, receiver, original_message, source_owner
 # OUTGOING ANNOUNCEMENTS
 # ==========================================
 
-#: What an outgoing action says when its sender wrote nothing of their own.
-#:
-#: A tuple means "look this key up in ai_prompts.AI_FALLBACK_RESPONSES, and use
-#: the second element only if it isn't there". Those five actions already read
-#: that table, but with no default at all, so a mod that trimmed an entry sent
-#: a message with `None` for content. The plain strings are actions that have
-#: never read the table and are left alone.
-DEFAULT_ANNOUNCEMENTS = {
-    "CALL_TO_ARMS": "We request your aid in our ongoing conflicts!",
-    "CANCEL_MILITARY_ACCESS": "We no longer require military access through your territory.",
-    "REVOKE_MILITARY_ACCESS": "Your military access through our territory has been revoked.",
-    "FACTION_INVITE": "We invite your nation to join our faction.",
-    "JOIN_FACTION_REQ": "We formally request to join your faction.",
-    "REQ_MILITARY_ACCESS": "We formally request military access to move our troops through your territory.",
-    "SEND_MILITARY_ATTACHE": "We request to send a military attaché to observe your war.",
-    "WITHDRAW_MILITARY_ATTACHE": "We are withdrawing our military attaché.",
-    "REVOKE_MILITARY_ATTACHE": "Your military attaché has been revoked.",
-    "CEASEFIRE": "We offer terms for a ceasefire.",
-    "CREATE_FACTION": "We propose establishing a new faction together.",
-    "TRADE": "We propose a trade agreement.",
-    "PEACE_TREATY": "We propose terms to end this war.",
-    "JOIN_WARS": ("REQUEST_JOIN_WARS", "We request permission to join your ongoing wars."),
-    "SEND_VOLUNTEERS": "We offer volunteer divisions for your war.",
-    "RECALL_VOLUNTEERS": "We are recalling our volunteer divisions.",
-    "SEND_HOME_VOLUNTEERS": "Your volunteer divisions are being sent home.",
-    "BREAK_ALLIANCE": ("BREAK_ALLIANCE", "We have broken our alliance."),
-    "DISBAND_FACTION": ("FACTION_DISBANDED", "It is a shame to see our alliance broken."),
-    "KICK_FACTION_MEMBER": ("KICKED_FROM_FACTION", "We will not forget being expelled from the alliance."),
-    "LEAVE_FACTION": ("FACTION_ABANDONED", "We will not forget your abandonment."),
-    "CLAIM_FACTION_LEADERSHIP": ("FACTION_LEADERSHIP_TAKEN",
-                                 "The pact needs a stronger hand at its head. "
-                                 "It will be ours."),
-}
-
-
 def announcement_for(action, custom_msg=""):
     """The line an outgoing action announces itself with.
 
@@ -422,7 +388,8 @@ def announcement_for(action, custom_msg=""):
     if custom_msg:
         return custom_msg
 
-    default = DEFAULT_ANNOUNCEMENTS.get(action)
+    definition = ACTION_DEFINITIONS.get(action)
+    default = definition.announcement if definition else None
     if default is None:
         # An action added to constants.py without an entry here still reaches
         # the other side's inbox rather than arriving blank.

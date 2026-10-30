@@ -8,13 +8,8 @@ disbanded in the game's history: peacetime militia accumulated forever and the
 obsolete-unit cull never ran once.
 """
 
-import os
-import sys
 import unittest
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import data.constants as c
 from tests.stub_map_screen import fill_state_defaults

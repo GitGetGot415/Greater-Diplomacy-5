@@ -1,6 +1,6 @@
 """Authoritative desktop real-time multiplayer primitives.
 
-Tournament multiplayer intentionally remains in :mod:`multiplayer_io`.  This
+Tournament multiplayer intentionally remains in :mod:`tournament_files`.  This
 module uses a small, versioned TLS protocol and has no file-format overlap with
 the tournament system.
 """

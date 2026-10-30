@@ -1,11 +1,7 @@
 """Military attachés share vision only while their host remains eligible."""
 
-import os
-import sys
 import unittest
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from data import queries
 from map_logic.ai import ai_evaluation

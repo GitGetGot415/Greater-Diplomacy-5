@@ -19,14 +19,9 @@ None of the three shows up as an error, a hang, or a failing assertion
 anywhere. They show up as the game quietly directing one nation and moving on.
 """
 
-import os
-import sys
 import time
 import unittest
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import data.constants as c
 from map_logic.ai import ai_diplomacy, ai_handler, ai_llm_runner, ai_settings
@@ -219,11 +214,10 @@ class SkipButtonReachableTests(Patcher):
     def drawn(self, screen):
         """Whether the loading screen offers a way out, this frame."""
         import pygame
-        from ui.panels import turn_progress as loading_screen
-
+        from ui.panels import turn_progress 
         screen.force_skip_btn_rect = None
         surface = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
-        loading_screen.draw_turn_loading_screen(screen, surface)
+        turn_progress.draw_turn_loading_screen(screen, surface)
         return getattr(screen, "force_skip_btn_rect", None) is not None
 
     def test_a_summit_can_be_skipped(self):

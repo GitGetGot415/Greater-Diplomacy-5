@@ -8,12 +8,10 @@ from ui.widgets.ui_elements import Button, make_back_button
 import data.constants as c
 from data import queries
 
-from data.multiplayer.tournament import files as multiplayer_io
+from data.multiplayer.tournament import files as tournament_files
 from screens.setup.scenario_settings import Scenario_Settings
 from screens.game.map import Map
-from ui import dialogs as confirm_dialog
-
-
+from ui import dialogs
 class Multiplayer_New(GameState):
     back_state = "MULTIPLAYER_HOST"
 
@@ -65,21 +63,21 @@ class Multiplayer_New(GameState):
 
                 tournament_dir = os.path.join(c.TOURNAMENT_SAVES_DIR, safe_tour_name)
                 if os.path.exists(tournament_dir):
-                    confirm_dialog.show_error("Error", f"Tournament with this name already exists in {c.TOURNAMENT_SAVES_DIR}")
+                    dialogs.show_error("Error", f"Tournament with this name already exists in {c.TOURNAMENT_SAVES_DIR}")
                     ask_tour_name()
                     return
 
                 ask_master_key(safe_tour_name, tournament_dir)
 
-            confirm_dialog.ask_string("Tournament Name", "Enter a name for this tournament:", on_name)
+            dialogs.ask_string("Tournament Name", "Enter a name for this tournament:", on_name)
 
         def ask_master_key(safe_tour_name, tournament_dir):
             def on_key(master_key):
                 if not master_key:
                     return
 
-                if multiplayer_io.is_reserved_tournament_key(master_key):
-                    confirm_dialog.show_error(
+                if tournament_files.is_reserved_tournament_key(master_key):
+                    dialogs.show_error(
                         "Reserved Key",
                         "'Spectator' is reserved for tournament spectator access. Choose a different Master Key.")
                     ask_master_key(safe_tour_name, tournament_dir)
@@ -102,13 +100,13 @@ class Multiplayer_New(GameState):
 
                 turn = temp_map.time_manager.total_turns if hasattr(temp_map, 'time_manager') else 0
                 export_path = os.path.join(tournament_dir, f"Turn_{turn}_Host.gd5tour")
-                keys_path, all_keys_path = multiplayer_io.export_tournament(temp_map, export_path, master_key, keys_dict)
+                keys_path, all_keys_path = tournament_files.export_tournament(temp_map, export_path, master_key, keys_dict)
 
-                confirm_dialog.show_success("Success", f"Tournament '{safe_tour_name}' created!\n\nFolder created:\n{tournament_dir}\n\nFiles saved in folder:\n- Turn_{turn}_Host.gd5tour\n- Host_Keys.txt\n- ALL_Host_Keys.txt\n\nSend the .gd5tour file and keys to your players.")
+                dialogs.show_success("Success", f"Tournament '{safe_tour_name}' created!\n\nFolder created:\n{tournament_dir}\n\nFiles saved in folder:\n- Turn_{turn}_Host.gd5tour\n- Host_Keys.txt\n- ALL_Host_Keys.txt\n\nSend the .gd5tour file and keys to your players.")
 
                 self.go_to("MULTIPLAYER_HOST")
 
-            confirm_dialog.ask_string("Host Key", "Enter a Master Key for this tournament:", on_key)
+            dialogs.ask_string("Host Key", "Enter a Master Key for this tournament:", on_key)
 
         ask_tour_name()
 

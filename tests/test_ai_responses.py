@@ -12,14 +12,9 @@ index AI_FALLBACK_RESPONSES directly, most of them with no second party to
 condition on, and every one of them must keep working untouched.
 """
 
-import os
 import random
-import sys
 import unittest
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from map_logic.ai import ai_prompts
 

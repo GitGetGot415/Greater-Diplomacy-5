@@ -1,13 +1,8 @@
 """Tests for bilateral-action response predictions in the map diplomacy menu."""
 
-import os
-import sys
 import unittest
 from types import SimpleNamespace
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from screens.game.map import bilateral_response_indicator
 

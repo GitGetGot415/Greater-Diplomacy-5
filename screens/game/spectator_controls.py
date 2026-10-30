@@ -4,7 +4,7 @@ import data.constants as c
 from data import queries
 
 from map_logic.diplomacy.puppet_actions import finalize_spectator_country_removal
-from ui import dialogs as confirm_dialog
+from ui import dialogs
 from map_logic.diplomacy import diplomacy_logic
 
 
@@ -66,7 +66,7 @@ def spec_delete_country(map_screen):
             _refresh_country_removal(map_screen)
             map_screen.show_feedback(f"Deleted {name}.")
 
-    confirm_dialog.ask_yes_no(
+    dialogs.ask_yes_no(
         "Delete Country", f"Delete {name}? Its territory will become unclaimed. "
         "All its cores and units will be removed. History will remain unchanged.",
         on_result=confirmed, yes_label="Delete", no_label="Cancel")

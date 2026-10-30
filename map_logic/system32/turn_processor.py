@@ -1,7 +1,7 @@
 from data.state_access import world_for, session_for
 import asyncio
 from map_logic.diplomacy import diplomacy_logic
-from map_logic.ai import (ai_movement, ai_research, ai_construction, ai_diplomacy,
+from map_logic.ai import (ai_movement, ai_research, ai_construction, ai_diplomacy, scripted_events,
                           ai_llm_runner, ai_world, automation_logic)
 from map_logic.system32 import (
     combat_processor,
@@ -112,7 +112,7 @@ async def prepare_turn(map_screen):
     # Moved here so AI can't immediately issue orders to units spawned by events this turn
     session_state.loading_status_text = "Running Scripted Events..."
     print("[SYSTEM] Running Scripted Events...")
-    ai_diplomacy.process_scripted_events(map_screen)
+    scripted_events.process_scripted_events(map_screen)
     await asyncio.sleep(0)
 
     # MOVED: Diplomacy is now processed AFTER AI movement generation.

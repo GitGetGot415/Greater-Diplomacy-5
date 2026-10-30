@@ -13,13 +13,8 @@ The rest of the split was mechanical: pull_puppets_into_faction takes a
 nation's subjects with it, so two decisions moved ten countries.
 """
 
-import os
-import sys
 import unittest
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import data.constants as c
 from map_logic.diplomacy import diplomacy_processor, faction_actions, faction_leadership

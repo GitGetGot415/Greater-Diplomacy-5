@@ -29,9 +29,7 @@ from ui.widgets.scroll_panes import ScrollPanes
 from ui.widgets.ui_elements import Button
 
 from data import queries
-from ui import dialogs as confirm_dialog
-
-
+from ui import dialogs
 class ModalScreen(ScrollPanes, GameState):
     """A dimmed freeze-frame behind a bordered panel -- the shape every converted
     tool window in ui/ uses. Subclasses fill in draw_body() and refresh_ui()."""
@@ -97,7 +95,7 @@ class ModalScreen(ScrollPanes, GameState):
 
         options = list(options)
         if not options:
-            confirm_dialog.show_warning("Nothing to pick", f"There are no {title.lower()} to choose from.")
+            dialogs.show_warning("Nothing to pick", f"There are no {title.lower()} to choose from.")
             return
         queries.open_listbox_selector(self.map_screen, title, f"Select {title}:", options, on_pick)
         self.refresh_ui()

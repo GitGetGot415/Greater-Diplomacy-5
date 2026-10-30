@@ -9,13 +9,8 @@ the seller had no access. Both halves are pinned here, because "the units did
 not change hands" is not much comfort if they are still standing there.
 """
 
-import os
-import sys
 import unittest
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from map_logic.diplomacy import deal, deal_effects
 from tests.stub_map_screen import StubMapScreen

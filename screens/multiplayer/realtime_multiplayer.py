@@ -54,7 +54,7 @@ from data.multiplayer.realtime.relay import (
 )
 from data.platform import IS_WEB
 from ui.navigation.game_state import GameState
-from ui import dialogs as confirm_dialog
+from ui import dialogs
 from ui.widgets.ui_elements import Button, UI_ICONS, make_back_button
 from ui.widgets.flag_icons import flag_surface
 
@@ -161,7 +161,7 @@ class Realtime_Host_Setup(GameState):
         ]
 
     def show_network_help(self):
-        confirm_dialog.show_info(
+        dialogs.show_info(
             "Real-Time Multiplayer Help",
             "LAN (same router): hosts advertise open lobbies automatically. Players choose Find LAN Matches "
             "and click the lobby; no address, port, or copied invite is needed. A LAN invite remains available "
@@ -189,13 +189,13 @@ class Realtime_Host_Setup(GameState):
             if value is not None:
                 setattr(self, attr, value.strip())
                 self.refresh_ui()
-        confirm_dialog.ask_string(title, prompt, saved, initial=getattr(self, attr), allow_empty=allow_empty)
+        dialogs.ask_string(title, prompt, saved, initial=getattr(self, attr), allow_empty=allow_empty)
 
     def _integer(self, title, attr, prompt, low, high):
         def saved(value):
             if value is not None:
                 setattr(self, attr, value); self.refresh_ui()
-        confirm_dialog.ask_integer(title, prompt, saved, low, high, getattr(self, attr))
+        dialogs.ask_integer(title, prompt, saved, low, high, getattr(self, attr))
 
     def edit_name(self): self._string("Host Display Name", "host_name", "Enter your display name:")
 
@@ -205,7 +205,7 @@ class Realtime_Host_Setup(GameState):
                 self.address = value.strip()
                 self._address_is_detected = False
                 self.refresh_ui()
-        confirm_dialog.ask_string("Advertised Address", "Enter LAN IP, public IP, or hostname to share:",
+        dialogs.ask_string("Advertised Address", "Enter LAN IP, public IP, or hostname to share:",
                                   saved, initial=self.address)
     def edit_password(self): self._string("Lobby Password", "password", "Optional password (blank removes it):", True)
     def edit_port(self): self._integer("Server Port", "port", "Forward this TCP port for WAN play:", MIN_SERVER_PORT, MAX_SERVER_PORT)
@@ -216,13 +216,9 @@ class Realtime_Host_Setup(GameState):
         # Country count is checked authoritatively when opening the lobby.
         self._integer("Player Capacity", "capacity", f"Maximum connected players ({MIN_PLAYER_CAPACITY} to {MAX_PLAYER_CAPACITY}):", MIN_PLAYER_CAPACITY, MAX_PLAYER_CAPACITY)
 
-    def edit_settings(self):
-        Scenario_Settings.configure_realtime_session(self.settings, "REALTIME_HOST_SETUP")
-        self.go_to("SCENARIO_SETTINGS")
-
     def open_lobby(self):
         if IS_WEB:
-            confirm_dialog.show_error("Desktop Only", "Real-time hosting is available in desktop builds only.")
+            dialogs.show_error("Desktop Only", "Real-time hosting is available in desktop builds only.")
             return
         server = advertiser = mapping = None
         try:
@@ -278,7 +274,7 @@ class Realtime_Host_Setup(GameState):
             if mapping: mapping.stop()
             if advertiser: advertiser.stop()
             if server: server.stop()
-            confirm_dialog.show_error("Could Not Open Lobby", str(exc))
+            dialogs.show_error("Could Not Open Lobby", str(exc))
 
     def finish_relay_provisioning(self, relay):
         """Attach the already-created server to the new relay room."""
@@ -329,7 +325,7 @@ class Realtime_Relay_Setup(GameState):
             if value is not None:
                 self.host_setup.relay_token = value.strip()
                 self.refresh_ui()
-        confirm_dialog.ask_string("DigitalOcean API Token",
+        dialogs.ask_string("DigitalOcean API Token",
                                   "Paste a custom token with Droplet create/read/delete and Firewall create/delete:",
                                   saved, initial=self.host_setup.relay_token)
 
@@ -338,7 +334,7 @@ class Realtime_Relay_Setup(GameState):
             if value is not None:
                 self.host_setup.relay_region = value.strip().lower()
                 self.refresh_ui()
-        confirm_dialog.ask_string("DigitalOcean Region", "Example: nyc3, sfo3, lon1:", saved,
+        dialogs.ask_string("DigitalOcean Region", "Example: nyc3, sfo3, lon1:", saved,
                                   initial=self.host_setup.relay_region)
 
     def edit_size(self):
@@ -346,7 +342,7 @@ class Realtime_Relay_Setup(GameState):
             if value is not None:
                 self.host_setup.relay_size = value.strip()
                 self.refresh_ui()
-        confirm_dialog.ask_string("Droplet Size", "Recommended: s-1vcpu-512mb-10gb:", saved,
+        dialogs.ask_string("Droplet Size", "Recommended: s-1vcpu-512mb-10gb:", saved,
                                   initial=self.host_setup.relay_size)
 
     def open_token_page(self):
@@ -355,11 +351,11 @@ class Realtime_Relay_Setup(GameState):
         try:
             webbrowser.open("https://cloud.digitalocean.com/account/api/tokens", new=2)
         except OSError:
-            confirm_dialog.show_info("DigitalOcean Token", "Open DigitalOcean, then go to API > Personal Access Tokens.")
+            dialogs.show_info("DigitalOcean Token", "Open DigitalOcean, then go to API > Personal Access Tokens.")
 
     def enable(self):
         if not self.host_setup.relay_token:
-            confirm_dialog.show_error("Token Required", "Paste a DigitalOcean read/write personal access token first.")
+            dialogs.show_error("Token Required", "Paste a DigitalOcean read/write personal access token first.")
             return
         self.host_setup.relay_enabled = True
         self.host_setup.refresh_ui()
@@ -409,10 +405,10 @@ class Realtime_Relay_Provision(GameState):
                 except (OSError, RealtimeError) as exc:
                     task.cancel_and_destroy()
                     self.host_setup.realtime_server.stop()
-                    confirm_dialog.show_error("Relay Could Not Start", str(exc))
+                    dialogs.show_error("Relay Could Not Start", str(exc))
                     self.go_to("REALTIME_HOST_SETUP")
             else:
-                confirm_dialog.show_error("Relay Could Not Be Created", task.error or "Unknown provisioning error.")
+                dialogs.show_error("Relay Could Not Be Created", task.error or "Unknown provisioning error.")
                 self.go_to("REALTIME_HOST_SETUP")
         super().update()
 
@@ -606,7 +602,7 @@ class Realtime_Lobby(GameState):
             self.session.select_country(self.session.host_id, country_id)
             self.refresh_ui()
         except RealtimeError as exc:
-            confirm_dialog.show_error("Country Unavailable", str(exc))
+            dialogs.show_error("Country Unavailable", str(exc))
 
     def toggle_ready(self):
         try:
@@ -614,7 +610,7 @@ class Realtime_Lobby(GameState):
             self.session.set_ready(player.player_id, not player.ready)
             self.refresh_ui()
         except RealtimeError as exc:
-            confirm_dialog.show_error("Cannot Ready", str(exc))
+            dialogs.show_error("Cannot Ready", str(exc))
 
     def edit_host_name(self):
         """Rename the host through the same authoritative lobby rule as guests."""
@@ -637,9 +633,9 @@ class Realtime_Lobby(GameState):
                     self.advertiser.set_host_name(accepted_name)
                 self.refresh_ui()
             except RealtimeError as exc:
-                confirm_dialog.show_error("Name Rejected", str(exc))
+                dialogs.show_error("Name Rejected", str(exc))
 
-        confirm_dialog.ask_string("Host Display Name", "Enter your display name:", saved,
+        dialogs.ask_string("Host Display Name", "Enter your display name:", saved,
                                   initial=player.name, allow_empty=False)
 
     def edit_scenario(self):
@@ -670,7 +666,7 @@ class Realtime_Lobby(GameState):
             self.refresh_ui()
             return True
         except (OSError, RealtimeError, FileNotFoundError) as exc:
-            confirm_dialog.show_error("Could Not Change Scenario", str(exc))
+            dialogs.show_error("Could Not Change Scenario", str(exc))
             return False
 
     def edit_capacity(self):
@@ -686,9 +682,9 @@ class Realtime_Lobby(GameState):
                 self.host_setup.capacity = value
                 self.refresh_ui()
             except RealtimeError as exc:
-                confirm_dialog.show_error("Capacity Rejected", str(exc))
+                dialogs.show_error("Capacity Rejected", str(exc))
 
-        confirm_dialog.ask_integer("Player Capacity", f"{MIN_PLAYER_CAPACITY} to {limit}:", saved, MIN_PLAYER_CAPACITY, limit,
+        dialogs.ask_integer("Player Capacity", f"{MIN_PLAYER_CAPACITY} to {limit}:", saved, MIN_PLAYER_CAPACITY, limit,
                                    self.session.config.max_players)
 
     def edit_turn_limit(self):
@@ -703,9 +699,9 @@ class Realtime_Lobby(GameState):
                 self.host_setup.max_turns = value
                 self.refresh_ui()
             except RealtimeError as exc:
-                confirm_dialog.show_error("Turn Limit Rejected", str(exc))
+                dialogs.show_error("Turn Limit Rejected", str(exc))
 
-        confirm_dialog.ask_integer("Maximum Turns", f"{MIN_MATCH_TURNS} to {MAX_MATCH_TURNS}:", saved,
+        dialogs.ask_integer("Maximum Turns", f"{MIN_MATCH_TURNS} to {MAX_MATCH_TURNS}:", saved,
                                    MIN_MATCH_TURNS, MAX_MATCH_TURNS,
                                    self.session.config.max_turns)
 
@@ -721,9 +717,9 @@ class Realtime_Lobby(GameState):
                 self.host_setup.turn_minutes = value
                 self.refresh_ui()
             except RealtimeError as exc:
-                confirm_dialog.show_error("Turn Time Rejected", str(exc))
+                dialogs.show_error("Turn Time Rejected", str(exc))
 
-        confirm_dialog.ask_integer("Turn Time", f"Minutes per turn ({MIN_TURN_MINUTES} to {MAX_TURN_MINUTES}):", saved,
+        dialogs.ask_integer("Turn Time", f"Minutes per turn ({MIN_TURN_MINUTES} to {MAX_TURN_MINUTES}):", saved,
                                    MIN_TURN_MINUTES, MAX_TURN_MINUTES,
                                    self.session.config.turn_minutes)
 
@@ -744,7 +740,7 @@ class Realtime_Lobby(GameState):
             self.host_setup.settings = copy.deepcopy(settings)
             self.refresh_ui()
         except RealtimeError as exc:
-            confirm_dialog.show_error("Scenario Rules Rejected", str(exc))
+            dialogs.show_error("Scenario Rules Rejected", str(exc))
 
     def request_kick(self, player_id, player_name):
         """Ask before removing a named guest from the authoritative lobby."""
@@ -757,9 +753,9 @@ class Realtime_Lobby(GameState):
                 self.server.kick_player(self.session.host_id, player_id)
                 self.refresh_ui()
             except RealtimeError as exc:
-                confirm_dialog.show_error("Cannot Kick Player", str(exc))
+                dialogs.show_error("Cannot Kick Player", str(exc))
 
-        confirm_dialog.ask_yes_no(
+        dialogs.ask_yes_no(
             "Kick Player",
             f"Remove {player_name} from this lobby? They can join again with an invite while the lobby remains open.",
             kicked, yes_label="Kick Player", no_label="Keep Player")
@@ -789,7 +785,7 @@ class Realtime_Lobby(GameState):
         clipboard_note = ("The invite code has been copied to your clipboard."
                           if copied else
                           "Clipboard copy was unavailable; select the code below manually.")
-        confirm_dialog.show_info(
+        dialogs.show_info(
             title, invite + "\n\n" + clipboard_note + "\n\n" + note)
 
     def show_lan_invite(self):
@@ -826,7 +822,7 @@ class Realtime_Lobby(GameState):
                 "This uses the public address or DNS hostname entered in host setup. Share any lobby password "
                 "separately; it still requires a working manual port forward.")
             return
-        confirm_dialog.show_info(
+        dialogs.show_info(
             "Internet Invite Unavailable",
             "The router has not provided a usable public mapping yet. Open Networking Status for the exact "
             "result. Do not send the LAN/shared invite to an internet player: it contains a private local address."
@@ -834,7 +830,7 @@ class Realtime_Lobby(GameState):
 
     def show_network_status(self):
         if self.temporary_relay:
-            confirm_dialog.show_info(
+            dialogs.show_info(
                 "Temporary Relay Status",
                 f"Relay is running at {self.temporary_relay.address}:443. No router forwarding is needed. "
                 "The host's certificate-pinned game connection remains end-to-end through the relay. "
@@ -842,7 +838,7 @@ class Realtime_Lobby(GameState):
                 "Droplet and stop its allocation charge.")
             return
         result = self.port_mapping.result() if self.port_mapping else None
-        confirm_dialog.show_info(
+        dialogs.show_info(
             "Real-Time Networking Status",
             host_network_diagnostics(self.local_address, self.session.config.port,
                                      bool(self.server and self.server.listening), result)
@@ -852,7 +848,7 @@ class Realtime_Lobby(GameState):
         try:
             self.session.start(self.session.host_id)
         except RealtimeError as exc:
-            confirm_dialog.show_error("Cannot Start", str(exc)); return
+            dialogs.show_error("Cannot Start", str(exc)); return
         if getattr(self, "advertiser", None):
             self.advertiser.stop()
         self.selected_realtime_session = self.session
@@ -867,7 +863,7 @@ class Realtime_Lobby(GameState):
         self.go_to("MAP")
 
     def request_end_lobby(self):
-        confirm_dialog.ask_yes_no(
+        dialogs.ask_yes_no(
             "End Real-Time Lobby",
             "End this lobby for every connected player? The server and any temporary relay will stop.",
             lambda confirmed: self.end_lobby() if confirmed else None,
@@ -974,7 +970,7 @@ class Realtime_Join(GameState):
     def _edit(self, attr, title, allow_empty=False):
         def saved(value):
             if value is not None: setattr(self, attr, value); self.refresh_ui()
-        confirm_dialog.ask_string(title, "Enter value:", saved, initial=getattr(self, attr), allow_empty=allow_empty)
+        dialogs.ask_string(title, "Enter value:", saved, initial=getattr(self, attr), allow_empty=allow_empty)
 
     def edit_invite(self):
         def saved(value):
@@ -989,23 +985,23 @@ class Realtime_Join(GameState):
                 # unrelated match meanwhile.
                 self.reconnect_token = ""
             self.refresh_ui()
-        confirm_dialog.ask_string("Real-Time Invite", "Enter value:", saved, initial=self.invite_text)
+        dialogs.ask_string("Real-Time Invite", "Enter value:", saved, initial=self.invite_text)
     def edit_name(self): self._edit("name", "Display Name")
     def edit_password(self): self._edit("password", "Lobby Password", True)
     def edit_reconnect_token(self): self._edit("reconnect_token", "Reconnect Token", True)
 
     def find_lan_matches(self):
         if IS_WEB:
-            confirm_dialog.show_error("Desktop Only", "Real-time multiplayer is available in desktop builds only.")
+            dialogs.show_error("Desktop Only", "Real-time multiplayer is available in desktop builds only.")
             return
         self.go_to("REALTIME_LAN_BROWSER")
 
     def connect(self, reconnect=False):
         if IS_WEB:
-            confirm_dialog.show_error("Desktop Only", "Real-time multiplayer is available in desktop builds only.")
+            dialogs.show_error("Desktop Only", "Real-time multiplayer is available in desktop builds only.")
             return
         if reconnect and not self.reconnect_token:
-            confirm_dialog.show_error("Reconnect Code Required", "Enter the reconnect code for this match first.")
+            dialogs.show_error("Reconnect Code Required", "Enter the reconnect code for this match first.")
             return
         try:
             invite = decode_invite(self.invite_text)
@@ -1017,14 +1013,14 @@ class Realtime_Join(GameState):
                 client.send("join", {"name": self.name, "password": self.password})
             self.client = client
         except TimeoutError:
-            confirm_dialog.show_error(
+            dialogs.show_error(
                 "Could Not Connect",
                 "The host did not answer in time. For a local match, use Find LAN Matches and make sure both "
                 "devices are on the same non-guest network. For an internet match, ask the host to check "
                 "Networking Status."
             )
         except (OSError, RealtimeError) as exc:
-            confirm_dialog.show_error("Could Not Connect", str(exc))
+            dialogs.show_error("Could Not Connect", str(exc))
 
     def reconnect(self):
         self.connect(reconnect=True)
@@ -1056,17 +1052,17 @@ class Realtime_Join(GameState):
                     # unsurprising connection.
                     self.client.close()
                     self.client = None
-                    confirm_dialog.show_error("Join Rejected", event.get("payload", {}).get("message", "Unknown error"))
+                    dialogs.show_error("Join Rejected", event.get("payload", {}).get("message", "Unknown error"))
                 elif event.get("type") == "disconnected":
                     self.client = None
-                    confirm_dialog.show_error("Connection Lost", event.get("payload", {}).get(
+                    dialogs.show_error("Connection Lost", event.get("payload", {}).get(
                         "message", "The host closed the connection."))
         super().update()
 
     def show_reconnect_code(self, token):
         copied = queries.copy_to_clipboard(token)
         copy_note = "It has been copied to your clipboard." if copied else "Copy it from this dialog and keep it private."
-        confirm_dialog.show_info(
+        dialogs.show_info(
             "Your Reconnect Code",
             f"{token}\n\nThis code restores your player identity if you disconnect. {copy_note} "
             "Anyone with it can rejoin as you for this match.")
@@ -1218,28 +1214,28 @@ class Realtime_Remote_Lobby(GameState):
                     # redraw the rows now their new map assets are available.
                     self.refresh_ui()
                 elif event.get("type") == "error":
-                    confirm_dialog.show_error("Server Rejected Request", payload.get("message", "Unknown error"))
+                    dialogs.show_error("Server Rejected Request", payload.get("message", "Unknown error"))
                 elif event.get("type") == "shutdown":
                     self.client.close()
                     self.client = None
-                    confirm_dialog.show_info("Match Ended by Host", payload.get(
+                    dialogs.show_info("Match Ended by Host", payload.get(
                         "message", "The host ended the real-time match and disconnected all players."))
                     self.go_to("REAL_TIME_MULTIPLAYER")
                 elif event.get("type") == "kicked":
                     self.client.close()
                     self.client = None
-                    confirm_dialog.show_info("Removed From Lobby", payload.get(
+                    dialogs.show_info("Removed From Lobby", payload.get(
                         "message", "The host removed you from the real-time lobby."))
                     self.go_to("REAL_TIME_MULTIPLAYER")
                 elif event.get("type") == "disconnected":
                     self.client = None
-                    confirm_dialog.show_error("Connection Lost", payload.get(
+                    dialogs.show_error("Connection Lost", payload.get(
                         "message", "The host closed the connection."))
                     self.go_to("REAL_TIME_MULTIPLAYER")
         super().update()
 
     def request_leave(self):
-        confirm_dialog.ask_yes_no(
+        dialogs.ask_yes_no(
             "Leave Real-Time Lobby",
             "Leave this lobby? You can rejoin with your reconnect code while the host keeps it open.",
             lambda confirmed: self.leave() if confirmed else None,
@@ -1247,7 +1243,7 @@ class Realtime_Remote_Lobby(GameState):
 
     def show_match_rules(self):
         if self.view:
-            confirm_dialog.show_info("Real-Time Match Rules", _lobby_rules_text(self.view.config))
+            dialogs.show_info("Real-Time Match Rules", _lobby_rules_text(self.view.config))
 
     def edit_name(self):
         """Request a server-validated lobby rename for this connected player."""
@@ -1261,16 +1257,16 @@ class Realtime_Remote_Lobby(GameState):
             if value is not None:
                 self.client.send("rename", {"name": value})
 
-        confirm_dialog.ask_string("Display Name", "Enter your display name:", saved,
+        dialogs.ask_string("Display Name", "Enter your display name:", saved,
                                   initial=player.name, allow_empty=False)
 
     def copy_reconnect_code(self):
         if not self.reconnect_token:
-            confirm_dialog.show_info("Reconnect Code", "No reconnect code is available for this connection.")
+            dialogs.show_info("Reconnect Code", "No reconnect code is available for this connection.")
             return
         copied = queries.copy_to_clipboard(self.reconnect_token)
         copy_note = "Copied to your clipboard." if copied else "Clipboard copy was unavailable; copy the code below."
-        confirm_dialog.show_info(
+        dialogs.show_info(
             "Your Reconnect Code",
             f"{self.reconnect_token}\n\n{copy_note} Keep it private: it can restore your identity in this match.")
 

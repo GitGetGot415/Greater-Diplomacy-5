@@ -12,8 +12,7 @@ from ui.bars import ui_bars
 from map_logic import politics
 from ui.widgets.text_utils import wrap_text
 from ui.dialogs.list_select_screen import ListSelectScreen
-from ui import dialogs as confirm_dialog
-
+from ui import dialogs
 from map_logic.system32.research_processor import select_research
 
 
@@ -102,8 +101,6 @@ SCROLL_WHEEL_STEP = 70
 SCROLL_LERP = 0.15
 
 # --- Node row heights (visual layout, deliberately hand-tuned) ---
-ROW_Y = RESEARCH_LAYOUT["row_y"]
-ROW_DEFAULT_Y = RESEARCH_LAYOUT["default_row_y"]
 
 # Tech families whose display name is "<Class> Type <year>" rather than a
 # roman numeral tier, keyed off the year list in the tech tree.
@@ -307,44 +304,6 @@ class Research_Screen(GameState):
             for i, y in enumerate(years):
                 self.tech_years[(tech_key, i + 1)] = y
 
-        # Stagger the Y positions to prevent branches overlapping (visual layout, not logic)
-        y1, y2, y3, y4, y5, y6 = ROW_Y
-
-        self.tech_rows = {
-            "infantry_type": y1,
-            "cavalry": y4,
-            "trucks": y5, "armored_personnel_carriers": y5, "infantry_fighting_vehicle": y5,
-            "militia": y3,
-            "artillery": y2,
-            "ww1_armored_car": y1, "armored_car": y1, "civilian_car": y1,
-            "ww1_tank": y2, "light_tank": y2,
-            "medium_tank": y3, "main_battle_tank": y3,
-            "heavy_tank": y4, "super_heavy_tank": y4, "landkreuzer_p1000_ratte": y6, "landkreuzer_p1500_monster": y6,
-            "electromagnetic_launcher": y6, "railgun": y6,
-            "ww1_railroad_gun": y5, "ww2_railroad_gun": y6,
-            "destroyer": y1,
-            "carrack": y2, "ironclad": y2, "pre-dreadnought": y2, "dreadnought": y3,
-            "battleship": y4,
-            "aircraft_carrier": y3,
-            "submarine": y2,
-            "heavier_than_air_flight": y1, "biplane": y1, "biplane_bomber": y2, "zeppelin": y2, "piston_fighter": y1, "piston_bomber": y3,
-            "v1_flying_bomb": y4, "v2_rocket": y4,
-            "monoplane_transport": y2,
-            "jet_engine": y2, "jet_fighter": y1, "jet_bomber": y2, "jet_transport": y3,
-            "workshop": y1, "basic_factory": y1, "waltham_system": y1, "bessemer_process": y1,
-            "electricity": y1, "lightbulb": y1,
-            "industrial_air_compressor": y1, "diesel_engine": y1, "continuous_assembly_line": y1,
-            "mechanical_reaper": y1, "metal_shaper": y1, "steam_hammer": y1, "machine_tools": y1,
-            "industrial_robot": y1, "stanford_arm": y1, "asea_irb_6": y1,
-            "computer_numerical_control": y1, "3d_printing": y1, "internet_of_things": y1,
-            "industry_4_0": y1, "industry_5_0": y1,
-            "assembly_line": y1, "conveyor_belt": y1, "just_in_time_manufacturing": y1, "factory": y1,
-            "bergius_process": y4, "fuel_refining": y4,
-            "basic_recruitment": y2, "recruitment_buildings": y2,
-            "general_recruitment": y3,
-            "resource_refining": y5
-        }
-
         self.nodes = {cat: [] for cat in self.categories if cat != "COMPLETED"}
 
         for tech_key, data in self.tech_tree.items():
@@ -353,7 +312,7 @@ class Research_Screen(GameState):
                 max_lvl = data["max_lvl"]
                 for lvl in range(1, max_lvl + 1):
                     year = self.tech_years.get((tech_key, lvl), 1900)
-                    row_y = self.tech_rows.get(tech_key, ROW_DEFAULT_Y)
+                    row_y = research_display.technology_row_y(tech_key)
                     self.nodes[cat].append({
                         "key": tech_key,
                         "lvl": lvl,
@@ -651,10 +610,6 @@ class Research_Screen(GameState):
             points = int(c.BASE_RESEARCH_POINTS_PER_DAY * days * multiplier)
             self.header_output_surface = font.render(f"RESEARCH OUTPUT: {points} pts/turn", True, (0, 255, 255))
 
-    def get_button_size(self, tech_key, display_name, level=1):
-        """Keep the existing lookup interface. Labels no longer select node sizes."""
-        return research_display.node_settings(tech_key, self.current_category, level)["button_size"]
-
     def draw_tech_nodes(self, res_levels, queue):
         unit_unlocks = queries.get_unit_unlock_index(self.map_screen)
         for node in self.nodes.get(self.current_category, []):
@@ -787,7 +742,7 @@ class Research_Screen(GameState):
                                "Cancel the entire edit to keep the original research and progress.\n"
                                "Continue with this change?")
                     self.research_confirmation_pending = True
-                    confirm_dialog.ask_yes_no("Discard Research Progress?", message, apply_edit)
+                    dialogs.ask_yes_no("Discard Research Progress?", message, apply_edit)
                 else:
                     apply_edit(True)
                 return
@@ -832,7 +787,7 @@ class Research_Screen(GameState):
             elif save is False:
                 self._close_research_screen()
 
-        confirm_dialog.ask_yes_no("Save Research Changes?",
+        dialogs.ask_yes_no("Save Research Changes?",
                                   "Save applies all research edits. Don't save discards all edits and exits. "
                                   "Go back keeps your draft open on the research screen.",
                                   finish_exit, yes_label="Save", no_label="Don't save", back_label="Go back")

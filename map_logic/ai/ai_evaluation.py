@@ -9,6 +9,7 @@ working.
 
 # ai_handler imports and re-exports these evaluation functions. Import the handler locally when a provider request runs.
 
+from map_logic.diplomacy.action_definitions import LITE_RESPONSE_KEYS
 import collections
 
 import data.constants as c
@@ -109,19 +110,6 @@ def _use_canned_reply(mode, immersion, is_ai_to_ai, has_custom_msg=True,
     # LITE (and any level an older build does not recognise): only a human's own
     # words are worth generating a reply to.
     return not (has_custom_msg and not is_ai_to_ai)
-
-
-#: What the AI says when the LLM is not consulted for this exchange. Actions
-#: not listed fall back to a plain accept/reject line.
-LITE_RESPONSE_KEYS = {
-    "WAR_DECLARATION": "BETRAYAL",
-    "LEAVE_FACTION": "FACTION_ABANDONED",
-    "DISBAND_FACTION": "FACTION_DISBANDED",
-    "JOIN_WARS": "ACCEPTED_HELP",
-    "BREAK_ALLIANCE": "ALLIANCE_BROKEN",
-    "KICK_FACTION_MEMBER": "KICKED_FROM_FACTION",
-    "CALL_TO_ARMS": "ANSWERED_CALL",
-}
 
 
 def canned_verdict_reply(nation_data, map_data, ai_nation, sender_nation, action_type,

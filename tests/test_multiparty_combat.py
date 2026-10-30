@@ -30,15 +30,10 @@ it turns up to its two heaviest fronts and the duel with D never forms.
 tests/test_combat_lanes.py is the spec for the lane rule itself.
 """
 
-import os
-import sys
 import unittest
 from copy import deepcopy
 from unittest.mock import patch
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from tests.combat_fixtures import damage_taken, StubBattleMap, unit
 

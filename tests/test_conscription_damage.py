@@ -2,13 +2,10 @@
 
 import json
 import math
-import os
 from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock, patch
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 
 import pygame
 

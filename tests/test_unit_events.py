@@ -12,7 +12,7 @@ from unittest.mock import patch
 import pygame
 import data.constants as c
 from data import queries
-from data.multiplayer.tournament import files as multiplayer_io
+from data.multiplayer.tournament import files as tournament_files
 from data.multiplayer.realtime.session import apply_authoritative_snapshot, collect_map_commands
 from map_logic.system32 import combat_processor, combat_rules, unit_events, turn_processor
 from map_logic.system32.time_handler import TimeHandler
@@ -447,7 +447,7 @@ class UnitEventPersistenceTests(unittest.TestCase):
             self.assertLessEqual(set(projected["unit_event_read_turns"]), {viewer})
             self.assertTrue(all(entry["detail_parts"] == [{"text": entry["details"], "owner": viewer}]
                                 for entry in projected["unit_event_log"]["events"]))
-        spectator = multiplayer_io.build_tournament_spectator_save(saved)
+        spectator = tournament_files.build_tournament_spectator_save(saved)
         self.assertEqual(spectator["unit_event_log"]["events"], [])
         self.assertEqual(spectator["unit_event_read_turns"], {})
         self.assertEqual(len(saved["unit_event_log"]["events"]), 2)

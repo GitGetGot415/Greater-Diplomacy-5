@@ -14,13 +14,8 @@ their government speaking. With the model switched off nothing reads it and
 nothing pretends to -- it still shows up in the recipient's inbox.
 """
 
-import os
-import sys
 import unittest
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from map_logic.ai import ai_prompts
 from map_logic.diplomacy import diplomacy_messages

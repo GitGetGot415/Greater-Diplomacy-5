@@ -20,14 +20,10 @@ is a function of its key. That is what these pin:
 
 import json
 import os
-import sys
 import unittest
 from types import SimpleNamespace
 from unittest import mock
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import pygame
 
@@ -266,9 +262,7 @@ class CombatDisplayTests(unittest.TestCase):
              mock.patch.object(queries, "get_combat_location_category",
                                return_value=queries.COMBAT_LOCATION_DEFENSE), \
              mock.patch.object(overlay_renderer, "combat_outlook_color",
-                               return_value=(255, 255, 0)), \
-             mock.patch.object(overlay_renderer, "estimated_combat_turns",
-                               return_value=1):
+                               return_value=(255, 255, 0)):
             return overlay_renderer.combat_bubble_records(self.map)
 
     def test_full_display_keeps_active_battle_units_visible(self):

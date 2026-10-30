@@ -19,13 +19,8 @@ France did not agree to any of it. Russia did, on France's behalf, because it
 could not reach Switzerland.
 """
 
-import os
-import sys
 import unittest
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import data.constants as c
 from map_logic.ai import ai_diplomacy

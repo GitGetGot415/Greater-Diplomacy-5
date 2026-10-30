@@ -23,13 +23,13 @@ def main():
 
     # 1. Run pyinstaller
     print("Running PyInstaller...")
-    # --hidden-import (one per module) below, not --collect-submodules: screens/menu_screens/map.py's
+    # --hidden-import (one per module) below, not --collect-submodules: screens/game/map.py's
     # sub_screen_opener() loads screens (automation_screen, declare_independence,
     # politics_screen) via
     # importlib.import_module(module_path) with module_path as a runtime string, so PyInstaller's
     # static analysis never sees the import and silently drops the module from the build -- it only
     # breaks in the compiled exe (ModuleNotFoundError), never when running from source.
-    # --collect-submodules screens.map_related_screens looks like the fix and does list both modules
+    # --collect-submodules screens.game looks like the fix and does list both modules
     # among the names it discovers, but verified empirically (PyInstaller 6.20, three separate clean
     # builds) that they still get silently dropped before the final archive -- something in how
     # collect-submodules-derived hidden imports get merged into the module graph loses exactly these

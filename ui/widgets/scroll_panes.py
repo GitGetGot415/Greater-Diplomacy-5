@@ -21,7 +21,6 @@ it doesn't have to import game_state and can be combined with anything.
 
 import pygame
 
-import data.constants as c
 
 from ui.bars import ui_bars
 
@@ -146,6 +145,3 @@ class ScrollPanes:
         """Scrollbar for one pane, wired to the same attributes as its rows."""
         return self.draw_list_scrollbar(surface, track_x, track_y, view_h, width=width,
                                         **self.scroll_attrs(name))
-
-    def pane_wheel_step(self):
-        return c.SCROLL_STEP

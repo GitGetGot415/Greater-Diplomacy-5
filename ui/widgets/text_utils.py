@@ -6,7 +6,7 @@ compared with `<` and some with `<=` (so identical text broke at different
 words), some preserved blank lines and some collapsed them, some hard-broke an
 over-wide single word and some let it overflow, and one ellipsised with two dots
 instead of three. Screens also reached across module boundaries for each other's
-private helpers -- `ui/dialogs/checkbox_list_screen.py` imported `confirm_dialog._wrap_text`.
+private helpers -- `ui/dialogs/checkbox_list_screen.py` imported `dialogs._wrap_text`.
 
 Kept deliberately dependency-free (pygame + data.constants only) so it stays a
 leaf in the import graph: callers pass an already-resolved font object, which is

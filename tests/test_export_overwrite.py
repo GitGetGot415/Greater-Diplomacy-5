@@ -8,12 +8,10 @@ import unittest
 from unittest import mock
 import zipfile
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 
 from data import constants as c, queries
-from data.multiplayer.tournament import files as multiplayer_io
-from ui import dialogs as confirm_dialog
+from data.multiplayer.tournament import files as tournament_files
+from ui import dialogs
 from ui.panels import multiplayer_host_panel
 
 
@@ -28,9 +26,9 @@ class ExportOverwriteTests(unittest.TestCase):
         self.downloads.mkdir()
         self.destination = self.downloads / "Turn_4_Player.gd5move"
         for name, patcher in (
-                ("ask", mock.patch.object(confirm_dialog, "ask_yes_no")),
-                ("success", mock.patch.object(confirm_dialog, "show_success")),
-                ("error", mock.patch.object(confirm_dialog, "show_error")),
+                ("ask", mock.patch.object(dialogs, "ask_yes_no")),
+                ("success", mock.patch.object(dialogs, "show_success")),
+                ("error", mock.patch.object(dialogs, "show_error")),
                 ("download", mock.patch.object(queries, "download_file")),
                 ("downloads_dir", mock.patch.object(queries, "downloads_dir", return_value=str(self.downloads))),
                 ("web", mock.patch.object(queries, "IS_WEB", False))):
@@ -130,7 +128,7 @@ class ExportOverwriteTests(unittest.TestCase):
             show_feedback=mock.Mock())
         destination = self.downloads / "Turn_4_Host.gd5tour"
         destination.write_bytes(b"original tournament")
-        with mock.patch.object(multiplayer_io, "export_tournament") as exporter:
+        with mock.patch.object(tournament_files, "export_tournament") as exporter:
             multiplayer_host_panel.export_next_turn(host)
             exporter.assert_not_called()
             self.ask.call_args.kwargs["on_result"](False)
@@ -156,7 +154,7 @@ class ExportOverwriteTests(unittest.TestCase):
             self.assertEqual(host.submitted_moves, {"Player"})
             destination.write_bytes(b"new tournament")
 
-        with mock.patch.object(multiplayer_io, "export_tournament", side_effect=export) as exporter:
+        with mock.patch.object(tournament_files, "export_tournament", side_effect=export) as exporter:
             multiplayer_host_panel.export_next_turn(host)
             self.ask.call_args.kwargs["on_result"](True)
             exporter.assert_called_once_with(host, str(destination), "host-key", host.multiplayer_keys_dict)
@@ -180,7 +178,7 @@ class ExportOverwriteTests(unittest.TestCase):
                 "player_country": player, "multiplayer_mode": True,
                 "realtime_multiplayer": False, "multiplayer_player_key": "player-key"}), \
                 mock.patch.object(c, "TOURNAMENT_SAVES_DIR", str(self.downloads)), \
-                mock.patch.object(multiplayer_io, "export_move_file") as exporter, \
+                mock.patch.object(tournament_files, "export_move_file") as exporter, \
                 mock.patch.object(game, "show_feedback") as feedback:
             render_buttons(game)
             game.btn_next_turn.callback()

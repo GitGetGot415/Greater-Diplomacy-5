@@ -2,7 +2,7 @@ from data.state_access import world_for, session_for
 import data.constants as c
 from data import queries
 from map_logic.system32 import combat_rules, unit_events
-from map_logic.territory import ownership as edit_province_ownership
+from map_logic.territory import ownership
 import random # Imported for the random tiebreaker
 from collections import namedtuple
 
@@ -519,7 +519,7 @@ def check_for_post_combat_captures(map_screen):
         # they automatically retain (or regain) ownership, regardless of HP.
         if turn_start_owner in unit_owners:
             if current_owner != turn_start_owner:
-                edit_province_ownership.conquer_province(map_screen, province, turn_start_owner)
+                ownership.conquer_province(map_screen, province, turn_start_owner)
             continue
 
         # Ensure capturer is legally allowed to take the tile
@@ -579,7 +579,7 @@ def check_for_post_combat_captures(map_screen):
             if capturer != current_owner:
                 # faction core transfer stuff
                 true_owner = queries.get_faction_core_transfer_target(capturer, province, world_state.nation_data)
-                edit_province_ownership.conquer_province(map_screen, province, true_owner)
+                ownership.conquer_province(map_screen, province, true_owner)
 
             # Scuttle ships if an enemy takes the tile they are on
             is_land = not queries.is_water_province(province)
@@ -593,4 +593,4 @@ def check_for_post_combat_captures(map_screen):
         else:
             # If no capturer (e.g., bounce tiebreaker triggered), revert any order-of-execution captures
             if current_owner != turn_start_owner:
-                edit_province_ownership.conquer_province(map_screen, province, turn_start_owner)
+                ownership.conquer_province(map_screen, province, turn_start_owner)

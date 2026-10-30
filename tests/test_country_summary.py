@@ -1,12 +1,9 @@
 """Country flag navigation, shared summary data, and inspection permissions."""
 
 import copy
-import os
 import unittest
 from unittest.mock import patch
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 
 import pygame
 
@@ -16,7 +13,7 @@ from map_logic import politics
 from map_logic.system32 import combat_rules
 from screens.game.country_summary import CountrySummaryScreen, open_country_summary
 from tests.stub_map_screen import StubMapScreen
-from screens.game import map_input as event_handler
+from screens.game import map_input
 from ui.navigation import modal_stack
 from ui.bars import flag_renderer
 
@@ -223,15 +220,15 @@ class CountrySummaryTests(unittest.TestCase):
         self.assertEqual(summary["economy"], {"available": False, "resources": []})
 
     def test_tournament_projection_keeps_shared_totals_before_removing_private_plans(self):
-        from data.multiplayer.tournament import files as multiplayer_io
+        from data.multiplayer.tournament import files as tournament_files
         game = world()
         game.nation_data["B"].update(master="A", puppet_type=c.PUPPET_TYPE_INTEGRATED)
         game.nation_data["A"]["puppets"] = ["B"]
         expected = queries.get_country_summary(game, "B")["economy"]
-        multiplayer_io.strip_sensitive_data_for_player(game, "A")
+        tournament_files.strip_sensitive_data_for_player(game, "A")
         with patch.object(queries, "get_economy_projections", side_effect=AssertionError("Stripped economy queried")):
             self.assertEqual(queries.get_country_summary(game, "B")["economy"], expected)
-        multiplayer_io.strip_sensitive_data_for_tournament_spectator(game)
+        tournament_files.strip_sensitive_data_for_tournament_spectator(game)
         self.assertEqual(game.country_economy_summaries, {})
         self.assertFalse(queries.get_country_summary(game, "B")["economy"]["available"])
 
@@ -273,11 +270,11 @@ class CountrySummaryTests(unittest.TestCase):
                 event = pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=flag_renderer.FLAG_RECT.center)
                 with patch("ui.panels.diplomatic_popups.handle_events", return_value=False), \
                         patch("screens.game.country_summary.open_country_summary") as open_summary, \
-                        patch.object(event_handler, "_select_map_province", side_effect=AssertionError("Click reached map")):
-                    event_handler.handle_map_events(game, event)
+                        patch.object(map_input, "_select_map_province", side_effect=AssertionError("Click reached map")):
+                    map_input.handle_map_events(game, event)
                 open_summary.assert_called_once_with(game, expected)
                 self.assertIs(game.selected_province, selected)
-                self.assertTrue(event_handler.map_ui_bar_at_position(game, event.pos))
+                self.assertTrue(map_input.map_ui_bar_at_position(game, event.pos))
 
     def test_view_remains_read_only_for_own_foreign_and_tactical_countries(self):
         for country, tactical in (("A", False), ("B", False), ("A", True)):

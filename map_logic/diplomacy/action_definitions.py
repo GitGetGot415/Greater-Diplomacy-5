@@ -17,9 +17,21 @@ class Availability:
 
 @dataclass(frozen=True)
 class ActionDefinition:
+    """Hold the facts about one diplomatic action.
+
+    announcement: what the action says when its sender wrote nothing of their own.
+        A tuple means "look this key up in ai_prompts.AI_FALLBACK_RESPONSES, and use
+        the second element only if it isn't there".
+    lite_response: the AI_FALLBACK_RESPONSES key the AI answers with when the LLM is
+        not consulted. Other actions use a plain accept or reject line.
+    cancelled_by_war: a simultaneous declaration of war makes this proposal moot.
+    """
     category: str
     phase: str
     legality: object
+    announcement: object = None
+    lite_response: str | None = None
+    cancelled_by_war: bool = False
 
 
 def _check_existing(context, sender, target, action_type, nation_data, sender_data, target_data):
@@ -46,9 +58,6 @@ def _check_faction_control(context, sender, target, action_type, nation_data, se
 def _check_war_declaration(context, sender, target, action_type, nation_data, sender_data, target_data):
     from data import queries
     import data.constants as c
-    from data.state_access import world_for
-    from map_logic.diplomacy import peace_scope, guarantees, military_attaches, war_calls
-    world_state = world_for(context)
     if sender == target:
         return (False, 'a country cannot declare war on itself')
     if queries.are_at_war(sender, target, nation_data):
@@ -69,11 +78,7 @@ def _check_war_declaration(context, sender, target, action_type, nation_data, se
     return True, ""
 
 def _check_ceasefire(context, sender, target, action_type, nation_data, sender_data, target_data):
-    from data import queries
-    import data.constants as c
-    from data.state_access import world_for
-    from map_logic.diplomacy import peace_scope, guarantees, military_attaches, war_calls
-    world_state = world_for(context)
+    from map_logic.diplomacy import peace_scope
     if not peace_scope.has_settleable_war(sender, target, nation_data):
         return (False, 'there is no war these countries may settle')
     return True, ""
@@ -82,7 +87,6 @@ def _check_faction_invite(context, sender, target, action_type, nation_data, sen
     from data import queries
     import data.constants as c
     from data.state_access import world_for
-    from map_logic.diplomacy import peace_scope, guarantees, military_attaches, war_calls
     world_state = world_for(context)
     if queries.get_scenario_flag("disable_factions", c.DEFAULT_DISABLE_FACTIONS, getattr(world_state, "scenario_settings", {})):
         return (False, 'factions are disabled')
@@ -99,7 +103,6 @@ def _check_join_faction_req(context, sender, target, action_type, nation_data, s
     from data import queries
     import data.constants as c
     from data.state_access import world_for
-    from map_logic.diplomacy import peace_scope, guarantees, military_attaches, war_calls
     world_state = world_for(context)
     if queries.get_scenario_flag("disable_factions", c.DEFAULT_DISABLE_FACTIONS, getattr(world_state, "scenario_settings", {})):
         return (False, 'factions are disabled')
@@ -118,7 +121,6 @@ def _check_create_faction(context, sender, target, action_type, nation_data, sen
     from data import queries
     import data.constants as c
     from data.state_access import world_for
-    from map_logic.diplomacy import peace_scope, guarantees, military_attaches, war_calls
     world_state = world_for(context)
     if queries.get_scenario_flag("disable_factions", c.DEFAULT_DISABLE_FACTIONS, getattr(world_state, "scenario_settings", {})):
         return (False, 'factions are disabled')
@@ -129,22 +131,14 @@ def _check_create_faction(context, sender, target, action_type, nation_data, sen
     return True, ""
 
 def _check_guarantee(context, sender, target, action_type, nation_data, sender_data, target_data):
-    from data import queries
-    import data.constants as c
-    from data.state_access import world_for
-    from map_logic.diplomacy import peace_scope, guarantees, military_attaches, war_calls
-    world_state = world_for(context)
+    from map_logic.diplomacy import guarantees
     legal, reason = guarantees.is_eligible(sender, target, nation_data)
     if not legal:
         return (False, reason)
     return True, ""
 
 def _check_send_military_attache(context, sender, target, action_type, nation_data, sender_data, target_data):
-    from data import queries
-    import data.constants as c
-    from data.state_access import world_for
-    from map_logic.diplomacy import peace_scope, guarantees, military_attaches, war_calls
-    world_state = world_for(context)
+    from map_logic.diplomacy import military_attaches
     legal, reason = military_attaches.is_eligible(sender, target, nation_data)
     if not legal:
         return (False, reason)
@@ -152,10 +146,6 @@ def _check_send_military_attache(context, sender, target, action_type, nation_da
 
 def _check_req_military_access(context, sender, target, action_type, nation_data, sender_data, target_data):
     from data import queries
-    import data.constants as c
-    from data.state_access import world_for
-    from map_logic.diplomacy import peace_scope, guarantees, military_attaches, war_calls
-    world_state = world_for(context)
     if sender == target:
         return (False, 'a country already has access to itself')
     if queries.are_at_war(sender, target, nation_data):
@@ -166,10 +156,7 @@ def _check_req_military_access(context, sender, target, action_type, nation_data
 
 def _check_join_wars(context, sender, target, action_type, nation_data, sender_data, target_data):
     from data import queries
-    import data.constants as c
-    from data.state_access import world_for
-    from map_logic.diplomacy import peace_scope, guarantees, military_attaches, war_calls
-    world_state = world_for(context)
+    from map_logic.diplomacy import war_calls
     if not queries.are_in_same_faction(sender, target, nation_data):
         return (False, 'the countries are not in the same faction')
     if not war_calls.is_honest(action_type, sender, target, nation_data):
@@ -178,10 +165,6 @@ def _check_join_wars(context, sender, target, action_type, nation_data, sender_d
 
 def _check_leave_faction(context, sender, target, action_type, nation_data, sender_data, target_data):
     from data import queries
-    import data.constants as c
-    from data.state_access import world_for
-    from map_logic.diplomacy import peace_scope, guarantees, military_attaches, war_calls
-    world_state = world_for(context)
     if not sender_data.get("faction"):
         return False, "the sender is outside a faction"
     if not queries.can_choose_own_faction(sender, nation_data):
@@ -189,40 +172,123 @@ def _check_leave_faction(context, sender, target, action_type, nation_data, send
     return True, ""
 
 ACTION_DEFINITIONS = {
-    'WAR_DECLARATION': ActionDefinition('unilateral', 'send', _check_war_declaration),
-    'BREAK_ALLIANCE': ActionDefinition('unilateral', 'send', _check_existing),
-    'KICK_FACTION_MEMBER': ActionDefinition('unilateral', 'send', _check_faction_control),
-    'LEAVE_FACTION': ActionDefinition('unilateral', 'send', _check_leave_faction),
-    'DISBAND_FACTION': ActionDefinition('unilateral', 'send', _check_faction_control),
-    'CLAIM_FACTION_LEADERSHIP': ActionDefinition('unilateral', 'send', _check_existing),
-    'JUSTIFY_WARGOAL': ActionDefinition('unilateral', 'send', _check_existing),
-    'ANNEX_PUPPET': ActionDefinition('unilateral', 'send', _check_subject_control),
-    'RELEASE_PUPPET': ActionDefinition('unilateral', 'send', _check_subject_control),
-    'TAKE_PUPPETS': ActionDefinition('unilateral', 'send', _check_subject_control),
-    'CANCEL_MILITARY_ACCESS': ActionDefinition('unilateral', 'send', _check_existing),
-    'REVOKE_MILITARY_ACCESS': ActionDefinition('unilateral', 'send', _check_existing),
-    'FORWARD_MESSAGE': ActionDefinition('unilateral', 'send', _check_existing),
-    'RECALL_VOLUNTEERS': ActionDefinition('unilateral', 'send', _check_existing),
-    'SEND_HOME_VOLUNTEERS': ActionDefinition('unilateral', 'send', _check_existing),
-    'GUARANTEE': ActionDefinition('unilateral', 'send', _check_guarantee),
-    'REVOKE_GUARANTEE': ActionDefinition('unilateral', 'send', _check_existing),
-    'WITHDRAW_MILITARY_ATTACHE': ActionDefinition('unilateral', 'send', _check_existing),
-    'REVOKE_MILITARY_ATTACHE': ActionDefinition('unilateral', 'send', _check_existing),
-    'JOIN_WARS': ActionDefinition('bilateral', 'reply', _check_join_wars),
-    'FACTION_INVITE': ActionDefinition('bilateral', 'reply', _check_faction_invite),
-    'JOIN_FACTION_REQ': ActionDefinition('bilateral', 'reply', _check_join_faction_req),
-    'CEASEFIRE': ActionDefinition('bilateral', 'reply', _check_ceasefire),
-    'CALL_TO_ARMS': ActionDefinition('bilateral', 'reply', _check_join_wars),
-    'CREATE_FACTION': ActionDefinition('bilateral', 'reply', _check_create_faction),
-    'PEACE_TREATY': ActionDefinition('bilateral', 'reply', _check_ceasefire),
-    'TRADE': ActionDefinition('bilateral', 'reply', _check_existing),
-    'REQ_MILITARY_ACCESS': ActionDefinition('bilateral', 'reply', _check_req_military_access),
-    'SEND_MILITARY_ATTACHE': ActionDefinition('bilateral', 'reply', _check_send_military_attache),
-    'SEND_VOLUNTEERS': ActionDefinition('bilateral', 'reply', _check_existing),
+    "WAR_DECLARATION": ActionDefinition(
+        "unilateral", "send", _check_war_declaration,
+        lite_response="BETRAYAL",
+    ),
+    "BREAK_ALLIANCE": ActionDefinition(
+        "unilateral", "send", _check_existing,
+        announcement=("BREAK_ALLIANCE", "We have broken our alliance."),
+        lite_response="ALLIANCE_BROKEN",
+    ),
+    "KICK_FACTION_MEMBER": ActionDefinition(
+        "unilateral", "send", _check_faction_control,
+        announcement=("KICKED_FROM_FACTION", "We will not forget being expelled from the alliance."),
+        lite_response="KICKED_FROM_FACTION",
+    ),
+    "LEAVE_FACTION": ActionDefinition(
+        "unilateral", "send", _check_leave_faction,
+        announcement=("FACTION_ABANDONED", "We will not forget your abandonment."),
+        lite_response="FACTION_ABANDONED",
+    ),
+    "DISBAND_FACTION": ActionDefinition(
+        "unilateral", "send", _check_faction_control,
+        announcement=("FACTION_DISBANDED", "It is a shame to see our alliance broken."),
+        lite_response="FACTION_DISBANDED",
+    ),
+    "CLAIM_FACTION_LEADERSHIP": ActionDefinition(
+        "unilateral", "send", _check_existing,
+        announcement=("FACTION_LEADERSHIP_TAKEN", "The pact needs a stronger hand at its head. It will be ours."),
+    ),
+    "JUSTIFY_WARGOAL": ActionDefinition("unilateral", "send", _check_existing),
+    "ANNEX_PUPPET": ActionDefinition("unilateral", "send", _check_subject_control),
+    "RELEASE_PUPPET": ActionDefinition("unilateral", "send", _check_subject_control),
+    "TAKE_PUPPETS": ActionDefinition("unilateral", "send", _check_subject_control),
+    "CANCEL_MILITARY_ACCESS": ActionDefinition(
+        "unilateral", "send", _check_existing,
+        announcement="We no longer require military access through your territory.",
+    ),
+    "REVOKE_MILITARY_ACCESS": ActionDefinition(
+        "unilateral", "send", _check_existing,
+        announcement="Your military access through our territory has been revoked.",
+    ),
+    "FORWARD_MESSAGE": ActionDefinition("unilateral", "send", _check_existing),
+    "RECALL_VOLUNTEERS": ActionDefinition(
+        "unilateral", "send", _check_existing,
+        announcement="We are recalling our volunteer divisions.",
+    ),
+    "SEND_HOME_VOLUNTEERS": ActionDefinition(
+        "unilateral", "send", _check_existing,
+        announcement="Your volunteer divisions are being sent home.",
+    ),
+    "GUARANTEE": ActionDefinition("unilateral", "send", _check_guarantee),
+    "REVOKE_GUARANTEE": ActionDefinition("unilateral", "send", _check_existing),
+    "WITHDRAW_MILITARY_ATTACHE": ActionDefinition(
+        "unilateral", "send", _check_existing,
+        announcement="We are withdrawing our military attaché.",
+    ),
+    "REVOKE_MILITARY_ATTACHE": ActionDefinition(
+        "unilateral", "send", _check_existing,
+        announcement="Your military attaché has been revoked.",
+    ),
+    "JOIN_WARS": ActionDefinition(
+        "bilateral", "reply", _check_join_wars,
+        announcement=("REQUEST_JOIN_WARS", "We request permission to join your ongoing wars."),
+        lite_response="ACCEPTED_HELP",
+    ),
+    "FACTION_INVITE": ActionDefinition(
+        "bilateral", "reply", _check_faction_invite,
+        announcement="We invite your nation to join our faction.",
+        cancelled_by_war=True,
+    ),
+    "JOIN_FACTION_REQ": ActionDefinition(
+        "bilateral", "reply", _check_join_faction_req,
+        announcement="We formally request to join your faction.",
+        cancelled_by_war=True,
+    ),
+    "CEASEFIRE": ActionDefinition(
+        "bilateral", "reply", _check_ceasefire,
+        announcement="We offer terms for a ceasefire.",
+        cancelled_by_war=True,
+    ),
+    "CALL_TO_ARMS": ActionDefinition(
+        "bilateral", "reply", _check_join_wars,
+        announcement="We request your aid in our ongoing conflicts!",
+        lite_response="ANSWERED_CALL",
+    ),
+    "CREATE_FACTION": ActionDefinition(
+        "bilateral", "reply", _check_create_faction,
+        announcement="We propose establishing a new faction together.",
+        cancelled_by_war=True,
+    ),
+    "PEACE_TREATY": ActionDefinition(
+        "bilateral", "reply", _check_ceasefire,
+        announcement="We propose terms to end this war.",
+        cancelled_by_war=True,
+    ),
+    "TRADE": ActionDefinition(
+        "bilateral", "reply", _check_existing,
+        announcement="We propose a trade agreement.",
+    ),
+    "REQ_MILITARY_ACCESS": ActionDefinition(
+        "bilateral", "reply", _check_req_military_access,
+        announcement="We formally request military access to move our troops through your territory.",
+    ),
+    "SEND_MILITARY_ATTACHE": ActionDefinition(
+        "bilateral", "reply", _check_send_military_attache,
+        announcement="We request to send a military attaché to observe your war.",
+    ),
+    "SEND_VOLUNTEERS": ActionDefinition(
+        "bilateral", "reply", _check_existing,
+        announcement="We offer volunteer divisions for your war.",
+    ),
 }
 
 UNILATERAL_ACTIONS = [action for action, definition in ACTION_DEFINITIONS.items() if definition.category == "unilateral"]
 BILATERAL_ACTIONS = [action for action, definition in ACTION_DEFINITIONS.items() if definition.category == "bilateral"]
+WAR_CANCELLED_ACTIONS = [action for action, definition in ACTION_DEFINITIONS.items() if definition.cancelled_by_war]
+LITE_RESPONSE_KEYS = {action: definition.lite_response for action, definition in ACTION_DEFINITIONS.items()
+                      if definition.lite_response}
 
 
 def availability(context, sender, target, action, *, phase="draft"):

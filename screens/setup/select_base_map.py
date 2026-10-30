@@ -1,12 +1,11 @@
 import os
 import pygame
-from ui import dialogs as confirm_dialog
+from ui import dialogs
 from ui.navigation.game_state import FolderListState
 from ui.widgets.ui_elements import Button, make_back_button
 import data.constants as c
 from data import queries
-from ui.panels import turn_progress as loading_screen
-
+from ui.panels import turn_progress
 class Select_Base_Map(FolderListState):
     back_state = "MENU"
 
@@ -159,7 +158,7 @@ class Select_Base_Map(FolderListState):
                 queries.refresh_map_directories(self, [c.BASE_MAPS_DIR],
                                                 success_message="Synced base maps successfully.")
 
-        confirm_dialog.ask_yes_no(
+        dialogs.ask_yes_no(
             "Confirm Data Refresh",
             "Are you sure you want to refresh base map data?\nThis process may take a while.",
             on_confirm
@@ -219,5 +218,5 @@ class Select_Base_Map(FolderListState):
 
         # --- Draw Progress Bar Overlay ---
         if self.is_refreshing:
-            loading_screen.draw_simple_refresh_bar(surface, self.refresh_status,
+            turn_progress.draw_simple_refresh_bar(surface, self.refresh_status,
                                                    self.refresh_completed, self.refresh_total)

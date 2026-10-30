@@ -16,7 +16,7 @@ import pygame
 
 import data.constants as c
 from tests import app_harness
-from ui import dialogs as confirm_dialog
+from ui import dialogs
 from ui.navigation import modal_stack
 
 
@@ -55,7 +55,7 @@ class DialogTests(unittest.TestCase):
     # -- ask_yes_no ------------------------------------------------------
 
     def test_yes_no_confirms(self):
-        confirm_dialog.ask_yes_no("T", "Sure?", self.answers.append)
+        dialogs.ask_yes_no("T", "Sure?", self.answers.append)
         modal = modal_stack.active()
         modal.handle_events([click(modal.yes_rect.center)])
         self.settle()
@@ -63,7 +63,7 @@ class DialogTests(unittest.TestCase):
         self.assertTrue(modal_stack.is_empty())
 
     def test_yes_no_cancels(self):
-        confirm_dialog.ask_yes_no("T", "Sure?", self.answers.append)
+        dialogs.ask_yes_no("T", "Sure?", self.answers.append)
         modal = modal_stack.active()
         modal.handle_events([click(modal.no_rect.center)])
         self.settle()
@@ -74,7 +74,7 @@ class DialogTests(unittest.TestCase):
                             (pygame.K_RETURN, True), (pygame.K_ESCAPE, False)):
             with self.subTest(key=k):
                 self.answers.clear()
-                confirm_dialog.ask_yes_no("T", "Sure?", self.answers.append)
+                dialogs.ask_yes_no("T", "Sure?", self.answers.append)
                 modal_stack.active().handle_events([key(k)])
                 self.settle()
                 self.assertEqual(self.answers, [expected])
@@ -83,7 +83,7 @@ class DialogTests(unittest.TestCase):
         for rectangle, expected in (("yes_rect", True), ("no_rect", False), ("back_rect", None)):
             with self.subTest(rectangle=rectangle):
                 self.answers.clear()
-                confirm_dialog.ask_yes_no("T", "Save, discard, or return?", self.answers.append,
+                dialogs.ask_yes_no("T", "Save, discard, or return?", self.answers.append,
                                           yes_label="Save", no_label="Cancel", back_label="Go back")
                 modal = modal_stack.active()
                 modal.handle_events([click(getattr(modal, rectangle).center)])
@@ -95,7 +95,7 @@ class DialogTests(unittest.TestCase):
                                        (pygame.K_ESCAPE, None), (pygame.K_g, None), (pygame.K_F8, None)):
             with self.subTest(key=keyboard_key), mock.patch("ui.dialogs.yes_no._back_key", return_value=pygame.K_F8):
                 self.answers.clear()
-                confirm_dialog.ask_yes_no("T", "Save?", self.answers.append, back_label="Go back")
+                dialogs.ask_yes_no("T", "Save?", self.answers.append, back_label="Go back")
                 modal_stack.active().handle_events([key(keyboard_key)])
                 self.settle()
                 self.assertEqual(self.answers, [expected])
@@ -104,21 +104,21 @@ class DialogTests(unittest.TestCase):
         from ui.dialogs import yes_no
         with mock.patch.object(pygame.display, "get_surface", return_value=None), \
                 mock.patch.object(yes_no, "_run_blocking", return_value=None) as run:
-            confirm_dialog.ask_yes_no("T", "Save?", self.answers.append, back_label="Go back")
+            dialogs.ask_yes_no("T", "Save?", self.answers.append, back_label="Go back")
         self.assertIsNone(run.call_args.kwargs["default_result"])
         self.assertEqual(self.answers, [None])
 
     # -- ask_string / ask_integer ---------------------------------------
 
     def test_ask_string_returns_typed_text(self):
-        confirm_dialog.ask_string("T", "Name?", self.answers.append)
+        dialogs.ask_string("T", "Name?", self.answers.append)
         modal = modal_stack.active()
         modal.handle_events([typed("a"), typed("b"), key(pygame.K_RETURN)])
         self.settle()
         self.assertEqual(self.answers, ["ab"])
 
     def test_ask_string_backspace(self):
-        confirm_dialog.ask_string("T", "Name?", self.answers.append)
+        dialogs.ask_string("T", "Name?", self.answers.append)
         modal = modal_stack.active()
         modal.handle_events([typed("a"), typed("b"), key(pygame.K_BACKSPACE),
                              key(pygame.K_RETURN)])
@@ -126,14 +126,14 @@ class DialogTests(unittest.TestCase):
         self.assertEqual(self.answers, ["a"])
 
     def test_text_input_clear_control_erases_the_current_value(self):
-        confirm_dialog.ask_string("T", "Name?", self.answers.append, initial="wrong invite")
+        dialogs.ask_string("T", "Name?", self.answers.append, initial="wrong invite")
         modal = modal_stack.active()
         modal.handle_events([click(modal.clear_rect.center), typed("r"), key(pygame.K_RETURN)])
         self.settle()
         self.assertEqual(self.answers, ["r"])
 
     def test_ask_string_accepts_clipboard_paste(self):
-        confirm_dialog.ask_string("T", "Name?", self.answers.append)
+        dialogs.ask_string("T", "Name?", self.answers.append)
         modal = modal_stack.active()
         paste = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_v, unicode="", mod=pygame.KMOD_CTRL)
         with mock.patch("ui.widgets.ui_elements._clipboard_text", return_value="Pasted name"):
@@ -142,7 +142,7 @@ class DialogTests(unittest.TestCase):
         self.assertEqual(self.answers, ["Pasted name"])
 
     def test_ask_string_accepts_macos_command_v_paste(self):
-        confirm_dialog.ask_string("T", "Name?", self.answers.append)
+        dialogs.ask_string("T", "Name?", self.answers.append)
         modal = modal_stack.active()
         paste = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_v, unicode="", mod=pygame.KMOD_GUI)
         with mock.patch("ui.widgets.ui_elements._clipboard_text", return_value="Pasted on Mac"):
@@ -169,13 +169,13 @@ class DialogTests(unittest.TestCase):
         )
 
     def test_ask_string_cancel_yields_none(self):
-        confirm_dialog.ask_string("T", "Name?", self.answers.append)
+        dialogs.ask_string("T", "Name?", self.answers.append)
         modal_stack.active().handle_events([key(pygame.K_ESCAPE)])
         self.settle()
         self.assertEqual(self.answers, [None])
 
     def test_ask_integer_accepts_digits(self):
-        confirm_dialog.ask_integer("T", "How many?", self.answers.append)
+        dialogs.ask_integer("T", "How many?", self.answers.append)
         modal = modal_stack.active()
         modal.handle_events([typed("4"), typed("2"), key(pygame.K_RETURN)])
         self.settle()
@@ -183,7 +183,7 @@ class DialogTests(unittest.TestCase):
 
     def test_ask_integer_rejects_out_of_range(self):
         """A rejected value must keep the dialog open with an error, not resolve."""
-        confirm_dialog.ask_integer("T", "1-10?", self.answers.append, minvalue=1, maxvalue=10)
+        dialogs.ask_integer("T", "1-10?", self.answers.append, minvalue=1, maxvalue=10)
         modal = modal_stack.active()
         modal.handle_events([typed("9"), typed("9"), key(pygame.K_RETURN)])
         self.assertFalse(modal._resolved)
@@ -194,7 +194,7 @@ class DialogTests(unittest.TestCase):
 
     def test_show_message_closes_without_a_result(self):
         calls = []
-        confirm_dialog.show_message("T", "Done.", on_result=lambda: calls.append(True))
+        dialogs.show_message("T", "Done.", on_result=lambda: calls.append(True))
         modal = modal_stack.active()
         modal.handle_events([click(modal.ok_rect.center)])
         self.settle()
@@ -204,13 +204,13 @@ class DialogTests(unittest.TestCase):
     def test_message_kinds_all_render(self):
         for kind in ("info", "success", "warning", "error"):
             with self.subTest(kind=kind):
-                confirm_dialog.show_message("T", "Body text.", kind=kind)
+                dialogs.show_message("T", "Body text.", kind=kind)
                 modal = modal_stack.active()
                 modal.draw(self.surface)
                 modal_stack.pop()
 
     def test_show_message_with_no_callback(self):
-        confirm_dialog.show_message("T", "Body.")
+        dialogs.show_message("T", "Body.")
         modal = modal_stack.active()
         modal.handle_events([key(pygame.K_RETURN)])
         self.settle()
@@ -220,7 +220,7 @@ class DialogTests(unittest.TestCase):
 
     def test_person_info_renders_links(self):
         links = [{"text": "Site", "url": "https://example.invalid"}, {"text": "No link"}]
-        confirm_dialog.show_person_info("Name", "Some blurb.", links)
+        dialogs.show_person_info("Name", "Some blurb.", links)
         modal = modal_stack.active()
         self.assertEqual(len(modal.link_rects), 2)
         modal.draw(self.surface)
@@ -229,7 +229,7 @@ class DialogTests(unittest.TestCase):
         self.assertTrue(modal_stack.is_empty())
 
     def test_person_info_without_links_or_text(self):
-        confirm_dialog.show_person_info("Name", "", [])
+        dialogs.show_person_info("Name", "", [])
         modal_stack.active().draw(self.surface)
         modal_stack.pop()
 
@@ -316,7 +316,7 @@ class DialogTests(unittest.TestCase):
     def test_credit_images_load_once_before_drawing(self):
         images = self.credited_images()
         with mock.patch.object(pygame.image, "load", wraps=pygame.image.load) as load:
-            confirm_dialog.show_person_info("Artist", "Art", images=images)
+            dialogs.show_person_info("Artist", "Art", images=images)
             modal = modal_stack.active()
             self.assertEqual(load.call_count, len({image["path"] for image in images}))
             modal.draw(self.surface)
@@ -413,7 +413,7 @@ class DialogTests(unittest.TestCase):
         self.assertLess(modal.scroll_y, previous)
 
     def test_credit_scrollbar_is_hidden_when_all_images_fit(self):
-        confirm_dialog.show_person_info("Artist", "Art", images=self.credited_images())
+        dialogs.show_person_info("Artist", "Art", images=self.credited_images())
         modal = modal_stack.active()
         self.assertEqual(modal.max_scroll, 0)
         self.assertIsNone(modal.scroll_track_rect)

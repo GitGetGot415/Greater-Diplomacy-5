@@ -3,9 +3,7 @@ from ui.widgets.ui_elements import Button, make_back_button
 import data.constants as c
 from data import queries
 
-from ui import dialogs as confirm_dialog
-
-
+from ui import dialogs
 class Multiplayer_Host(GameState):
     back_state = "MULTIPLAYER_HUB"
 
@@ -39,7 +37,7 @@ class Multiplayer_Host(GameState):
                 self.selected_tournament_key = key
                 self.go_to("MAP")
 
-            confirm_dialog.ask_string("Master Key", "Enter your Master Key:", after_key)
+            dialogs.ask_string("Master Key", "Enter your Master Key:", after_key)
 
         queries.open_file_browser(self, "Select Tournament File", c.TOURNAMENT_SAVES_DIR,
                                   extensions=[".gd5tour"], on_result=after_file)

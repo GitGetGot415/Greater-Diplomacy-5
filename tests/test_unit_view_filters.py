@@ -1,12 +1,9 @@
 """Map-only unit filters share classification, fog and rendered hitboxes."""
-import os
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 
 import pygame
 
@@ -15,7 +12,7 @@ from data import queries
 from ui.rendering import overlay_renderer, map_renderer
 from screens.game.map import Map, update_button_states
 from tests import app_harness
-from screens.game import map_input as event_handler
+from screens.game import map_input
 from ui.bars import ui_bars
 from ui.dialogs.message_box import _NavigationIntroPopup
 from ui.information import tooltip
@@ -166,7 +163,7 @@ class UnitViewFilterTests(unittest.TestCase):
                 size = overlay_renderer._army_emblem_size(group["rect"].height)
                 badge_center = (group["rect"].right + overlay_renderer.AIR_MISSION_GAP + size // 2,
                                 group["rect"].centery)
-                self.assertIsNone(event_handler._unit_stack_at(self.game, badge_center))
+                self.assertIsNone(map_input._unit_stack_at(self.game, badge_center))
                 self.assertTrue(all(not box["rect"].collidepoint(badge_center)
                                     for box in self.game.unit_hover_hitboxes))
 
@@ -467,7 +464,7 @@ class UnitViewControlTests(unittest.TestCase):
         self.assertEqual(tuple(game.unit_view_buttons), queries.UNIT_VIEW_FILTERS)
         self.assertEqual([button.is_selected for button in buttons], [False, False, False, True])
         bar = ui_bars.map_unit_view_bar_rect(game)
-        self.assertTrue(event_handler.map_ui_bar_at_position(game, bar.center))
+        self.assertTrue(map_input.map_ui_bar_at_position(game, bar.center))
         for view_filter, button in game.unit_view_buttons.items():
             game.selected_unit_ids.add("old selection")
             game.army_group_transition_states["old"] = {}
@@ -497,7 +494,7 @@ class UnitViewControlTests(unittest.TestCase):
             self.assertEqual([button.visible for button in game.unit_view_buttons.values()],
                              [mode == "UNITS"] * len(queries.UNIT_VIEW_FILTERS))
             self.assertEqual(ui_bars.map_unit_view_bar_rect(game) is not None, mode == "UNITS")
-            self.assertEqual(event_handler.map_ui_bar_at_position(
+            self.assertEqual(map_input.map_ui_bar_at_position(
                 game, game.unit_view_bar_rect.center), mode == "UNITS")
 
     def test_changing_unit_filter_does_not_switch_or_announce_a_map_view(self):

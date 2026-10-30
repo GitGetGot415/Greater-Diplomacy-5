@@ -18,13 +18,8 @@ it also threw away every capturer whose war is with the tile's *new* owner.
 Both claims are read now, which is what these tests pin.
 """
 
-import os
-import sys
 import unittest
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from tests.combat_fixtures import StubBattleMap
 

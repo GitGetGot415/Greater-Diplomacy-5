@@ -5,7 +5,7 @@ import data.constants as c
 from data import queries
 from ui.navigation.game_state import MapOverlayScreen
 from ui.widgets.ui_elements import Button, TextField, make_back_button
-from ui import dialogs as confirm_dialog
+from ui import dialogs
 from ui.bars import ui_bars
 from ui.navigation.screen_runner import _run_pygame_sub_screen
 from ui.rendering.font_manager import fonts
@@ -261,7 +261,7 @@ class Research_List_Screen(MapOverlayScreen):
                 self.map_screen.show_feedback("Force Time-Appropriate Research: OFF")
                 self.refresh_ui()
 
-            confirm_dialog.ask_yes_no("Force Time-Appropriate Research", off_msg, on_confirm_off)
+            dialogs.ask_yes_no("Force Time-Appropriate Research", off_msg, on_confirm_off)
             return
 
         current_year = getattr(self.map_screen.time_manager, "year", c.START_YEAR)
@@ -283,7 +283,7 @@ class Research_List_Screen(MapOverlayScreen):
             self.map_screen.show_feedback(f"Force Time-Appropriate Research: ON ({current_year})")
             self.refresh_ui()
 
-        confirm_dialog.ask_yes_no("Force Time-Appropriate Research", msg, on_confirm)
+        dialogs.ask_yes_no("Force Time-Appropriate Research", msg, on_confirm)
 
     def draw_content(self, surface):
         p = self.panel_rect

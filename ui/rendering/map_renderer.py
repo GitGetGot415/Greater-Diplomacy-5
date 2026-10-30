@@ -1,6 +1,6 @@
 import pygame
 from ui.rendering import hover_renderer, province_select, overlay_renderer, country_names
-from ui.panels import turn_progress as loading_screen
+from ui.panels import turn_progress
 from ui.panels import minimap
 from data import queries
 from map_logic.diplomacy import faction_leadership
@@ -72,7 +72,7 @@ def draw_map_screen(map_screen, surface):
     # --- MULTI-TURN RENDER SKIP OPTIMIZATION ---
     if map_screen.multi_turns_total > 0 and map_screen.multi_turns_completed < map_screen.multi_turns_total:
         surface.fill((10, 10, 15))
-        loading_screen.draw_turn_loading_screen(map_screen, surface)
+        turn_progress.draw_turn_loading_screen(map_screen, surface)
         return
         
     # --- LAYER 1: THE BASE MAP ---
@@ -178,9 +178,9 @@ def draw_map_screen(map_screen, surface):
     # By short-circuiting the render loop here, we save massive amounts of CPU time.
     if map_screen.ai_is_thinking or map_screen.is_refreshing or map_screen.is_saving:
         if map_screen.is_saving:
-            loading_screen.draw_simple_refresh_bar(surface, map_screen.loading_status_text, map_screen.save_progress_completed, map_screen.save_progress_total)
+            turn_progress.draw_simple_refresh_bar(surface, map_screen.loading_status_text, map_screen.save_progress_completed, map_screen.save_progress_total)
         else:
-            loading_screen.draw_turn_loading_screen(map_screen, surface)
+            turn_progress.draw_turn_loading_screen(map_screen, surface)
         ui_bars.draw_ui_bars(map_screen, surface)
         if not map_screen.selection_mode:
             flag_renderer.draw_flag(map_screen, surface)

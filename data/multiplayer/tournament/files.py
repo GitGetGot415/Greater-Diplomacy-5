@@ -54,8 +54,7 @@ def run_with_progress(jobs, worker, caption, on_result):
     identical copy of this loop, down to the pygame.event.pump() that keeps the
     window responsive while the pool works.
     """
-    from ui.panels import turn_progress as loading_screen
-
+    from ui.panels import turn_progress 
     surface = pygame.display.get_surface()
     total = len(jobs)
     completed = 0
@@ -69,7 +68,7 @@ def run_with_progress(jobs, worker, caption, on_result):
                 on_result(result)
             completed += 1
             if surface and total > 0:
-                loading_screen.draw_simple_refresh_bar(surface, caption, completed, total)
+                turn_progress.draw_simple_refresh_bar(surface, caption, completed, total)
                 pygame.display.flip()
 
 

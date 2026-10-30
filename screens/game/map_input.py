@@ -1,6 +1,6 @@
 import pygame
 from ui.rendering import map_utils, overlay_renderer
-from map_logic.territory import ownership as edit_province_ownership
+from map_logic.territory import ownership
 import data.constants as c
 from ui.camera import camera_handler
 from screens.setup import player_setup
@@ -64,7 +64,7 @@ def _unit_stack_at(map_screen, position):
     hitboxes remain owned-only.  This lets the UI highlight what the player is
     pointing at without granting interaction with hidden or foreign units.
     """
-    for stack in reversed(getattr(map_screen, "unit_hover_hitboxes", [])):
+    for stack in reversed(map_screen.unit_hover_hitboxes):
         if stack["rect"].collidepoint(position):
             return stack
     return None
@@ -141,7 +141,7 @@ def resolve_map_mouse_gesture_conflict(map_screen, event):
     if event.type != pygame.MOUSEBUTTONDOWN:
         return
 
-    if event.button == 2 and getattr(map_screen, "unit_selection_drag", None):
+    if event.button == 2 and map_screen.unit_selection_drag:
         map_screen.unit_selection_drag = None
         map_screen._ignore_left_until_release = True
     elif event.button == 1:
@@ -149,7 +149,7 @@ def resolve_map_mouse_gesture_conflict(map_screen, event):
         if camera and getattr(camera, "_middle_drag_last_pos", None) is not None:
             camera.cancel_middle_drag()
             map_screen._ignore_left_until_release = True
-    elif event.button == 3 and getattr(map_screen, "unit_selection_drag", None):
+    elif event.button == 3 and map_screen.unit_selection_drag:
         map_screen.unit_selection_drag = None
         map_screen._ignore_right_until_release = True
 
@@ -178,7 +178,7 @@ def _handle_map_unit_selection(map_screen, event, on_ui):
             mouse_button_has_action(event.button, "select_units")
             or mouse_button_has_action(event.button, "box_select_units"))):
         clicked_stack = next((stack for stack in reversed(
-            getattr(map_screen, "unit_stack_hitboxes", []))
+            map_screen.unit_stack_hitboxes)
             if stack["rect"].collidepoint(event.pos)), None)
         # Keep combat bubbles as their own interaction. Everywhere else, defer
         # the primary click until release so a box can begin on either a unit
@@ -226,7 +226,7 @@ def _handle_map_unit_selection(map_screen, event, on_ui):
         if not drag["box_select_units"]:
             return True
         selected, first_province = [], None
-        for stack in getattr(map_screen, "unit_stack_hitboxes", []):
+        for stack in map_screen.unit_stack_hitboxes:
             if rect.colliderect(stack["rect"]):
                 selected.extend(stack["units"])
                 first_province = first_province or stack["province"]
@@ -326,7 +326,7 @@ def handle_map_events(map_screen, event):
     if _panels_are_live(map_screen):
         if any((r := _panel_rect(map_screen, name)) and r.collidepoint(mx, my) for name in MAP_PANELS):
             on_ui = True
-        action_rect = getattr(map_screen, "country_actions_scroll_rect", None)
+        action_rect = map_screen.country_actions_scroll_rect
         if action_rect and action_rect.collidepoint(mx, my):
             on_ui = True
 
@@ -340,10 +340,10 @@ def handle_map_events(map_screen, event):
     # Country-action buttons have their own short scroll pane. It is separate
     # from the information panels because its buttons are normal map elements,
     # not text rendered by the panel itself.
-    action_rect = getattr(map_screen, "country_actions_scroll_rect", None)
+    action_rect = map_screen.country_actions_scroll_rect
     if (event.type == pygame.MOUSEWHEEL and _panels_are_live(map_screen)
             and action_rect and action_rect.collidepoint(mx, my)):
-        maximum = getattr(map_screen, "country_actions_scroll_max", 0)
+        maximum = map_screen.country_actions_scroll_max
         map_screen.country_actions_scroll_y = max(
             0, min(map_screen.country_actions_scroll_y - event.y * c.SCROLL_STEP,
                    maximum))
@@ -357,7 +357,7 @@ def handle_map_events(map_screen, event):
                 limit_attr="country_actions_scroll_max",
                 rect_attr="country_actions_scroll_rect",
                 drag_attr="country_actions_drag_state", lo=0,
-                hi=getattr(map_screen, "country_actions_scroll_max", 0),
+                hi=map_screen.country_actions_scroll_max,
                 invert=True, refresh=False):
             return
 
@@ -490,7 +490,7 @@ def handle_map_events(map_screen, event):
         if left_pressed:
             if map_screen.hovered_province:
                 if map_screen.editor_mode in ("NATION", "CORE"):
-                    editor_layers.update(edit_province_ownership.apply_editor_territory_brush(
+                    editor_layers.update(ownership.apply_editor_territory_brush(
                         map_screen, map_screen.hovered_province))
                     editor_changed = bool(editor_layers)
 
@@ -501,13 +501,13 @@ def handle_map_events(map_screen, event):
                             province_id = map_screen.hovered_province["id"]
                             if any(province_id in data.get("claims", [])
                                    for data in map_screen.nation_data.values()):
-                                edit_province_ownership.clear_claims(map_screen, map_screen.hovered_province)
+                                ownership.clear_claims(map_screen, map_screen.hovered_province)
                                 editor_changed = True
                         else:
                             claims = map_screen.nation_data.setdefault(
                                 map_screen.brush_nation, {}).setdefault("claims", [])
                             if map_screen.hovered_province["id"] not in claims:
-                                edit_province_ownership.add_claim(map_screen, map_screen.hovered_province, map_screen.brush_nation)
+                                ownership.add_claim(map_screen, map_screen.hovered_province, map_screen.brush_nation)
                                 editor_changed = True
 
                 # --- BUILDING MODE ---
@@ -575,7 +575,7 @@ def handle_map_events(map_screen, event):
                 if map_screen.hovered_province.get("owner") not in c.WATER_NATIONS:
 
                     if map_screen.editor_mode == "CORE":
-                        changed_layers = edit_province_ownership.apply_editor_territory_brush(
+                        changed_layers = ownership.apply_editor_territory_brush(
                             map_screen, map_screen.hovered_province, remove=True)
                         editor_layers.update(changed_layers)
                         editor_changed = editor_changed or bool(changed_layers)
@@ -583,7 +583,7 @@ def handle_map_events(map_screen, event):
                         claims = map_screen.nation_data.get(
                             map_screen.brush_nation, {}).get("claims", [])
                         if map_screen.hovered_province["id"] in claims:
-                            edit_province_ownership.remove_claim(map_screen, map_screen.hovered_province, map_screen.brush_nation)
+                            ownership.remove_claim(map_screen, map_screen.hovered_province, map_screen.brush_nation)
                             editor_changed = True
                     else:
                         map_screen.brush_nation = map_screen.hovered_province.get("owner", "Unclaimed")

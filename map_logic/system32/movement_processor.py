@@ -7,8 +7,7 @@ from collections import deque
 import data.constants as c
 from data import queries
 from map_logic.system32 import combat_processor
-from map_logic.territory import ownership as edit_province_ownership
-
+from map_logic.territory import ownership
 from map_logic.diplomacy.diplomacy_events import log_global_event
 
 
@@ -407,7 +406,7 @@ def process_movement(map_screen):
                             capturer = combat_owner
                             # faction core transfer stuff
                             true_owner = queries.get_faction_core_transfer_target(capturer, target_prov, world_state.nation_data)
-                            edit_province_ownership.conquer_province(map_screen, target_prov, true_owner)
+                            ownership.conquer_province(map_screen, target_prov, true_owner)
 
                 # Stop if an enemy was present
                 if defenders:

@@ -1119,6 +1119,48 @@ def _try_bombard(map_screen, ai_name, unit, prov):
     return True
 
 
+def _extend_fast_unit_path(world_state, unit, first_step, start_id, is_convoy, unsafe_waters, pressure, claim, can_push_into):
+    """Add further steps for a unit faster than one tile, using the same movement rules as its first step."""
+    speed = unit.get("speed", 1)
+    if speed <= 1:
+        return
+    curr_node = first_step
+    for _ in range(speed - 1):
+        curr_prov_data = world_state.id_to_province.get(curr_node)
+        if not curr_prov_data: break
+
+        next_options = []
+        for n_id in curr_prov_data.get("neighbors", []):
+            n_prov = world_state.id_to_province.get(n_id)
+            if not n_prov: continue
+
+            # Prevent backtracking
+            if n_id in unit["order"]["path"] or n_id == start_id:
+                continue
+
+            # Obey movement rules using constants
+            if is_convoy:
+                if not queries.can_convoy_enter(curr_prov_data, n_prov) or n_id in unsafe_waters:
+                    continue
+            else:
+                if queries.is_water_province(n_prov):
+                    continue
+
+            # Check if it's a valid tile to push into
+            if can_push_into(n_prov.get("owner", "Unclaimed")):
+                next_options.append(n_id)
+
+        if next_options:
+            # Pick the adjacent tile with the least attackers to spread the advance
+            next_step = min(next_options, key=pressure)
+            unit["order"]["path"].append(next_step)
+            claim(next_step)
+            curr_node = next_step
+        else:
+            # Reached a dead end (e.g. hit an ocean or a claimed or friendly border)
+            break
+
+
 def _assign_unit_orders(map_screen, ai_name, units_info, ctx, allowed_prov_ids, water_ids, neighbor_ids):
     """Walks every one of this nation's units and assigns it a MOVE/CONVERT
     order: retreat from a lost battle, hold a defensive line, push into
@@ -1250,48 +1292,12 @@ def _assign_unit_orders(map_screen, ai_name, units_info, ctx, allowed_prov_ids, 
         if adjacent_unclaimed and not is_naval_combatant:
             best_adj = min(adjacent_unclaimed, key=pressure)
 
-            speed = unit.get("speed", 1)
             unit["order"]["path"] = [best_adj]
 
             # Let fast units pathfind deeper into unclaimed territory!
-            if speed > 1:
-                curr_node = best_adj
-                for _ in range(speed - 1):
-                    curr_prov_data = world_state.id_to_province.get(curr_node)
-                    if not curr_prov_data: break
-
-                    next_options = []
-                    for n_id in curr_prov_data.get("neighbors", []):
-                        n_prov = world_state.id_to_province.get(n_id)
-                        if not n_prov: continue
-
-                        # Prevent backtracking
-                        if n_id in unit["order"]["path"] or n_id == curr_id:
-                            continue
-
-                        # Obey movement rules using constants
-                        if is_convoy:
-                            if not queries.can_convoy_enter(curr_prov_data, n_prov) or n_id in unsafe_waters:
-                                continue
-                        else:
-                            if queries.is_water_province(n_prov):
-                                continue
-
-                        # Check if it's a valid tile to push into
-                        n_owner = n_prov.get("owner", "Unclaimed")
-                        if n_owner in c.UNOWNED_LAND_OWNERS:
-                            next_options.append(n_id)
-
-                    if next_options:
-                        # Pick the adjacent unclaimed tile with the least attackers to spread the expansion
-                        next_step = min(next_options, key=pressure)
-                        unit["order"]["path"].append(next_step)
-                        claim(next_step)
-                        curr_node = next_step
-                    else:
-                        # Reached a dead end (e.g. hit an ocean or claimed border)
-                        break
-            # -----------------------------------------------------------------------
+            _extend_fast_unit_path(
+                world_state, unit, best_adj, curr_id, is_convoy, unsafe_waters, pressure, claim,
+                lambda owner: owner in c.UNOWNED_LAND_OWNERS)
 
             claim(best_adj, from_tile=curr_id)
             continue
@@ -1315,47 +1321,13 @@ def _assign_unit_orders(map_screen, ai_name, units_info, ctx, allowed_prov_ids, 
                 # Pick the adjacent enemy with the least attackers currently assigned
                 best_adj = min(adjacent_targets, key=pressure)
 
-                speed = unit.get("speed", 1)
                 unit["order"]["path"] = [best_adj]
 
                 # Let fast units pathfind deeper from the border!
-                if speed > 1:
-                    curr_node = best_adj
-                    for _ in range(speed - 1):
-                        curr_prov_data = world_state.id_to_province.get(curr_node)
-                        if not curr_prov_data: break
-
-                        next_options = []
-                        for n_id in curr_prov_data.get("neighbors", []):
-                            n_prov = world_state.id_to_province.get(n_id)
-                            if not n_prov: continue
-
-                            # Prevent backtracking
-                            if n_id in unit["order"]["path"] or n_id == curr_id:
-                                continue
-
-                            # Obey movement rules using your constants/queries
-                            if is_convoy:
-                                if not queries.can_convoy_enter(curr_prov_data, n_prov) or n_id in unsafe_waters:
-                                    continue
-                            else:
-                                if queries.is_water_province(n_prov):
-                                    continue
-
-                            # Check if it's a valid tile to push into
-                            n_owner = n_prov.get("owner", "Unclaimed")
-                            if queries.is_hostile_territory(ai_name, n_owner, world_state.nation_data) or n_owner in c.UNOWNED_LAND_OWNERS:
-                                next_options.append(n_id)
-
-                        if next_options:
-                            # Pick the adjacent hostile tile with the least attackers to spread the invasion
-                            next_step = min(next_options, key=pressure)
-                            unit["order"]["path"].append(next_step)
-                            claim(next_step)
-                            curr_node = next_step
-                        else:
-                            # Reached a dead end (e.g. hit an ocean or friendly border)
-                            break
+                _extend_fast_unit_path(
+                    world_state, unit, best_adj, curr_id, is_convoy, unsafe_waters, pressure, claim,
+                    lambda owner: (queries.is_hostile_territory(ai_name, owner, world_state.nation_data)
+                                   or owner in c.UNOWNED_LAND_OWNERS))
 
                 claim(best_adj, from_tile=curr_id)
                 continue

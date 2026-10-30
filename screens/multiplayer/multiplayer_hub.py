@@ -3,9 +3,7 @@ from ui.widgets.ui_elements import Button, make_back_button
 import data.constants as c
 from data import queries
 
-from ui import dialogs as confirm_dialog
-
-
+from ui import dialogs
 class Multiplayer_Hub(GameState):
     back_state = "MULTIPLAYER_MENU"
 
@@ -34,7 +32,7 @@ class Multiplayer_Hub(GameState):
             "Tournament Spectator: Use 'Join Game' and enter 'Spectator' as the key. "
             "This read-only view has no territory or vision, so it follows the tournament's Lite, Normal, or Extreme fog setting."
         )
-        confirm_dialog.show_info("Tournament Help", help_text)
+        dialogs.show_info("Tournament Help", help_text)
 
     def host_game(self):
         self.go_to("MULTIPLAYER_HOST")

@@ -10,3 +10,4 @@ def configure_test_audio():
 
 # Covers focused `python -m unittest tests.test_*` runs as well as discovery.
 configure_test_audio()
+os.environ.setdefault("SDL_VIDEODRIVER", "dummy")

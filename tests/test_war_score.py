@@ -10,13 +10,8 @@ The two properties that matter are that the two sides' scores always sum to one
 homeland can only ever help.
 """
 
-import os
-import sys
 import unittest
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from map_logic.diplomacy import war_score
 from tests.stub_map_screen import StubMapScreen

@@ -3,7 +3,6 @@ GUIDE INDEX
 
 documentation/general_info.txt: storage, scenario settings, state ownership, build policy, and project files.
 documentation/code_layout.md: directory responsibilities and task-to-code references.
-documentation/source_layout_changes.md: previous and current source paths.
 documentation/non_llm_ai.txt: rule-based AI and shared combat rules.
 documentation/player_controls.txt: player and editor controls, mode permissions, reports, map display, and army groups.
 documentation/ai_movement.txt: AI unit orders, movement caches, aircraft missions, attack checks, rotation, and movement tuning.

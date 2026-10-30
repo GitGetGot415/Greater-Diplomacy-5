@@ -4,8 +4,7 @@ from ui.navigation.game_state import GameState
 from ui.widgets.ui_elements import Button, make_back_button
 import data.constants as c
 from data import queries
-from ui.panels import turn_progress as loading_screen
-
+from ui.panels import turn_progress
 from screens.setup.scenario_settings import Scenario_Settings
 from screens.editors.historical_leaders_editor import open_historical_leaders_editor
 from ui.dialogs.checkbox_list_screen import CheckboxItem
@@ -116,7 +115,7 @@ class New_Game(GameState):
 
         # --- Draw Progress Bar Overlay ---
         if self.is_refreshing:
-            loading_screen.draw_simple_refresh_bar(surface, self.refresh_status, self.refresh_completed, self.refresh_total)
+            turn_progress.draw_simple_refresh_bar(surface, self.refresh_status, self.refresh_completed, self.refresh_total)
 
     def scenario_settings(self):
         Scenario_Settings.back_state = "NEW_GAME"

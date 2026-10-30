@@ -618,8 +618,8 @@ def _armies(map_screen, orders_screen=None):
     armies = queries.get_armies(map_screen.player_country, map_screen.nation_data,
                                map_screen.map_data)
     # Test doubles may omit cached presentation data. Real maps prepare it at state changes.
-    unassigned = getattr(map_screen, "unassigned_army_card", None)
-    cache_country = getattr(map_screen, "unassigned_army_country", None)
+    unassigned = map_screen.unassigned_army_card
+    cache_country = map_screen.unassigned_army_country
     return ([unassigned] + armies
             if c.SHOW_UNCLAIMED and cache_country == map_screen.player_country
             and unassigned and unassigned["unit_ids"]

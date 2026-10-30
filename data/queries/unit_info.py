@@ -42,21 +42,6 @@ def get_unit_range_defaults(unit_library=None):
     return defaults
 
 
-def refresh_unit_range_overrides(settings):
-    """Restore library ranges and apply updated lobby settings without changing other stats."""
-    with open(c.UNIT_DATA_PATH, encoding="utf-8") as handle:
-        source = json.load(handle)
-    apply_unit_range_overrides(source, settings)
-    for name, stats in queries.get_unit_library().items():
-        if name not in source:
-            continue
-        for key in ("bombard_range", "air_range_px"):
-            if key in source[name]:
-                stats[key] = source[name][key]
-            else:
-                stats.pop(key, None)
-
-
 def _unit_range_level(name, *, context=None):
     """Return the numbered family level, or one for an unnumbered unit."""
     return max(1, get_unit_research_requirement(name, context=context)[1])

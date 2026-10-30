@@ -1,7 +1,7 @@
 import pygame
 import os
 from data import queries
-from ui.widgets import ui_elements 
+from ui.widgets import ui_elements
 from ui.navigation.game_state import GameState, ScreenLayer
 from ui.bars import ui_bars
 from ui.widgets.scroll_panes import ScrollPanes
@@ -10,9 +10,7 @@ from ui.rendering.font_manager import fonts
 import data.constants as c
 from beepbox_audio import source_seconds_from_timeline, timeline_seconds_from_source
 
-from ui import dialogs as confirm_dialog
-
-
+from ui import dialogs
 # ==========================================
 # LAYOUT
 # ==========================================
@@ -714,7 +712,7 @@ class Music_Player(ScrollPanes, GameState):
     def show_timeline_and_queue_help(self):
         """Explain pitch timeline options and random-song exclusions."""
 
-        confirm_dialog.show_info(
+        dialogs.show_info(
             "Music Player Help",
             "Static keeps the displayed song length and your current progress "
             "position unchanged when you adjust pitch. Higher pitch moves the "

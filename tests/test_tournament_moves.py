@@ -8,20 +8,16 @@ commands rather than relying on that one record to describe the whole world.
 import json
 import copy
 import os
-import sys
 import tempfile
 import unittest
 from unittest import mock
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import data.constants as c
 from tests.stub_map_screen import fill_state_defaults, map_double, synchronous_progress
-from tests.research_fixtures import factory_research_cases
+from tests.research_fixtures import research_lock_cases
 from data import queries
-from data.multiplayer.tournament import files as multiplayer_io
+from data.multiplayer.tournament import files as tournament_files
 
 
 class Time:
@@ -95,16 +91,16 @@ class TournamentMoveTests(unittest.TestCase):
         path = os.path.join(directory, file_name)
         payload = {
             "country_id": country_id,
-            "hash": multiplayer_io.hash_key(self.keys[country_id]),
-            "data": multiplayer_io.encrypt_dict(player_data, self.keys[country_id]),
+            "hash": tournament_files.hash_key(self.keys[country_id]),
+            "data": tournament_files.encrypt_dict(player_data, self.keys[country_id]),
         }
         with open(path, "w") as file:
             json.dump(payload, file)
         return path
 
     def import_moves(self, host, paths, **options):
-        with mock.patch.object(multiplayer_io, "run_with_progress", synchronous_progress):
-            return multiplayer_io.load_move_files(host, paths, self.keys, **options)
+        with mock.patch.object(tournament_files, "run_with_progress", synchronous_progress):
+            return tournament_files.load_move_files(host, paths, self.keys, **options)
 
     def player_data(self, country_id, host, **extra):
         result = {
@@ -126,7 +122,7 @@ class TournamentMoveTests(unittest.TestCase):
 
     def test_factory_output_research_intents_require_host_prerequisites_and_current_turn(self):
         tree = queries.get_tech_tree()
-        cases = factory_research_cases(tree)
+        cases = research_lock_cases(tree)
         for tech, locked, unlocked in cases:
             for mode in ("valid", "locked", "malformed", "stale", "wrong_key"):
                 with self.subTest(tech=tech, mode=mode), tempfile.TemporaryDirectory() as directory:
@@ -142,7 +138,7 @@ class TournamentMoveTests(unittest.TestCase):
                     if mode == "wrong_key":
                         with open(path) as file:
                             payload = json.load(file)
-                        payload["hash"] = multiplayer_io.hash_key(self.keys["Member"])
+                        payload["hash"] = tournament_files.hash_key(self.keys["Member"])
                         with open(path, "w") as file:
                             json.dump(payload, file)
                     result = self.import_moves(host, [path])
@@ -313,7 +309,7 @@ class TournamentMoveTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             payloads = ["{", "[]", json.dumps({"country_id": []}),
                         json.dumps({"country_id": "Leader", "hash": "wrong"}),
-                        json.dumps({"country_id": "Leader", "hash": multiplayer_io.hash_key(self.keys["Leader"]),
+                        json.dumps({"country_id": "Leader", "hash": tournament_files.hash_key(self.keys["Leader"]),
                                     "data": "broken"})]
             paths = [os.path.join(directory, "missing.gd5move")]
             for index, payload in enumerate(payloads):
@@ -418,7 +414,7 @@ class TournamentMoveTests(unittest.TestCase):
                     self.assertEqual(host.map_data["home"]["building_queue"][0]["turns_remaining"], 8)
 
     def test_host_ui_reviews_each_file_and_waits_for_acceptance(self):
-        from ui import dialogs as confirm_dialog
+        from ui import dialogs 
         from ui.panels import multiplayer_host_panel
 
         for choice in (False, True):
@@ -433,9 +429,9 @@ class TournamentMoveTests(unittest.TestCase):
                 missing_path = os.path.join(directory, "missing.gd5move")
                 completed = mock.Mock()
                 with mock.patch.object(queries, "open_file_browser") as browser, \
-                        mock.patch.object(confirm_dialog, "show_message") as message, \
-                        mock.patch.object(confirm_dialog, "ask_yes_no") as ask, \
-                        mock.patch.object(multiplayer_io, "run_with_progress", synchronous_progress):
+                        mock.patch.object(dialogs, "show_message") as message, \
+                        mock.patch.object(dialogs, "ask_yes_no") as ask, \
+                        mock.patch.object(tournament_files, "run_with_progress", synchronous_progress):
                     multiplayer_host_panel.load_multiplayer_moves(host, completed)
                     browser.call_args.kwargs["on_result"]([missing_path, move_path])
                     self.assertIn("missing.gd5move", message.call_args.args[1])
@@ -452,7 +448,7 @@ class TournamentMoveTests(unittest.TestCase):
                 self.assertEqual(host.refresh_all_maps.call_count, int(choice))
 
     def test_host_ui_rechecks_turn_and_permissions_after_confirmation(self):
-        from ui import dialogs as confirm_dialog
+        from ui import dialogs 
         from ui.panels import multiplayer_host_panel
 
         for change in ("turn", "permission"):
@@ -466,9 +462,9 @@ class TournamentMoveTests(unittest.TestCase):
                 path = self.write_move(directory, "stats.gd5move", "Leader", move)
                 completed = mock.Mock()
                 with mock.patch.object(queries, "open_file_browser") as browser, \
-                        mock.patch.object(confirm_dialog, "show_message") as message, \
-                        mock.patch.object(confirm_dialog, "ask_yes_no") as ask, \
-                        mock.patch.object(multiplayer_io, "run_with_progress", synchronous_progress):
+                        mock.patch.object(dialogs, "show_message") as message, \
+                        mock.patch.object(dialogs, "ask_yes_no") as ask, \
+                        mock.patch.object(tournament_files, "run_with_progress", synchronous_progress):
                     multiplayer_host_panel.load_multiplayer_moves(host, completed)
                     browser.call_args.kwargs["on_result"]([path])
                     message.call_args.kwargs["on_result"]()
@@ -646,7 +642,7 @@ class TournamentMoveTests(unittest.TestCase):
                 self.assertEqual(host.nation_data, before)
 
     def test_host_ui_converts_an_older_move_only_after_approval(self):
-        from ui import dialogs as confirm_dialog
+        from ui import dialogs 
         from ui.panels import multiplayer_host_panel
 
         for choice in (False, True):
@@ -659,9 +655,9 @@ class TournamentMoveTests(unittest.TestCase):
                 path = self.write_move(directory, "older.gd5move", "Leader", self.previous_release_move("Leader", host))
                 completed = mock.Mock()
                 with mock.patch.object(queries, "open_file_browser") as browser, \
-                        mock.patch.object(confirm_dialog, "show_message") as message, \
-                        mock.patch.object(confirm_dialog, "ask_yes_no") as ask, \
-                        mock.patch.object(multiplayer_io, "run_with_progress", synchronous_progress):
+                        mock.patch.object(dialogs, "show_message") as message, \
+                        mock.patch.object(dialogs, "ask_yes_no") as ask, \
+                        mock.patch.object(tournament_files, "run_with_progress", synchronous_progress):
                     multiplayer_host_panel.load_multiplayer_moves(host, completed)
                     browser.call_args.kwargs["on_result"]([path])
                     message.call_args.kwargs["on_result"]()
@@ -675,7 +671,7 @@ class TournamentMoveTests(unittest.TestCase):
         host = Host()
         host.map_data = {"1": {"owner": "Leader"}}
 
-        active = multiplayer_io.active_owners_of(host)
+        active = tournament_files.active_owners_of(host)
 
         self.assertIn("Leader", active)
         self.assertIn("Member", active)
@@ -808,11 +804,11 @@ class TournamentMoveTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as directory:
             path = os.path.join(directory, "out.gd5move")
-            multiplayer_io.export_move_file(host, path, self.keys["Leader"])
+            tournament_files.export_move_file(host, path, self.keys["Leader"])
             with open(path, "r") as file:
                 payload = json.load(file)
 
-        data = multiplayer_io.decrypt_dict(payload["data"], self.keys["Leader"])
+        data = tournament_files.decrypt_dict(payload["data"], self.keys["Leader"])
         self.assertEqual(data["tournament_session"], "test-session")
         self.assertEqual(data["tournament_turn"], 4)
         self.assertEqual(data["game_version"], c.GAME_VERSION)
@@ -833,11 +829,11 @@ class TournamentMoveTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as directory:
             path = os.path.join(directory, "out.gd5move")
-            multiplayer_io.export_move_file(host, path, self.keys["Leader"])
+            tournament_files.export_move_file(host, path, self.keys["Leader"])
             with open(path, "r") as file:
                 payload = json.load(file)
 
-        data = multiplayer_io.decrypt_dict(payload["data"], self.keys["Leader"])
+        data = tournament_files.decrypt_dict(payload["data"], self.keys["Leader"])
         self.assertTrue(data["unit_snapshot"])
         self.assertEqual(data["puppet_siphon_updates"], [{
             "country_id": "Subject",
@@ -915,10 +911,10 @@ class TournamentMoveTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as directory:
             tour_path = os.path.join(directory, "turn.gd5tour")
-            with mock.patch.object(multiplayer_io.c, "TOURNAMENT_SAVES_DIR", directory), \
-                    mock.patch.object(multiplayer_io, "run_with_progress", synchronous_progress):
-                multiplayer_io.export_tournament(host, tour_path, "host-key", self.keys)
-                loaded = multiplayer_io.load_tournament(tour_path, "host-key")
+            with mock.patch.object(tournament_files.c, "TOURNAMENT_SAVES_DIR", directory), \
+                    mock.patch.object(tournament_files, "run_with_progress", synchronous_progress):
+                tournament_files.export_tournament(host, tour_path, "host-key", self.keys)
+                loaded = tournament_files.load_tournament(tour_path, "host-key")
 
             self.assertTrue(loaded[0])
             self.assertEqual(loaded[1], "HOST")
@@ -927,8 +923,8 @@ class TournamentMoveTests(unittest.TestCase):
             malformed_path = os.path.join(directory, "malformed.gd5tour")
             with open(malformed_path, "w") as file:
                 json.dump({"verification_table": {
-                    multiplayer_io.hash_key("host-key"): []}}, file)
-            malformed = multiplayer_io.load_tournament(malformed_path, "host-key")
+                    tournament_files.hash_key("host-key"): []}}, file)
+            malformed = tournament_files.load_tournament(malformed_path, "host-key")
 
         self.assertFalse(malformed[0])
         self.assertEqual(malformed[-1], "Invalid key")
@@ -950,29 +946,29 @@ class TournamentMoveTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as directory:
             tour_path = os.path.join(directory, "turn.gd5tour")
-            with mock.patch.object(multiplayer_io.c, "TOURNAMENT_SAVES_DIR", directory), \
-                    mock.patch.object(multiplayer_io, "run_with_progress", synchronous_progress):
-                multiplayer_io.export_tournament(host, tour_path, "host-key", self.keys)
+            with mock.patch.object(tournament_files.c, "TOURNAMENT_SAVES_DIR", directory), \
+                    mock.patch.object(tournament_files, "run_with_progress", synchronous_progress):
+                tournament_files.export_tournament(host, tour_path, "host-key", self.keys)
                 with open(tour_path, "r") as file:
                     payload = json.load(file)
-                loaded = multiplayer_io.load_tournament(tour_path, "Spectator")
+                loaded = tournament_files.load_tournament(tour_path, "Spectator")
 
         self.assertTrue(loaded[0])
         self.assertEqual(loaded[1], c.TOURNAMENT_SPECTATOR_ROLE)
         self.assertIsNone(loaded[2])
         self.assertEqual(loaded[4], {})
         spectator_entry = payload["verification_table"][
-            multiplayer_io.hash_key(c.TOURNAMENT_SPECTATOR_KEY)]
-        self.assertNotIn("sk", multiplayer_io.decrypt_dict(
+            tournament_files.hash_key(c.TOURNAMENT_SPECTATOR_KEY)]
+        self.assertNotIn("sk", tournament_files.decrypt_dict(
             spectator_entry["enc_session"], c.TOURNAMENT_SPECTATOR_KEY))
-        spectator_save = multiplayer_io.decrypt_dict(
+        spectator_save = tournament_files.decrypt_dict(
             payload["spectator_game_data"], c.TOURNAMENT_SPECTATOR_KEY)
         self.assertEqual(spectator_save["nation_data"]["Leader"]["materials"], 0)
         self.assertNotIn("order", spectator_save["provinces"]["P1"]["units"][0])
 
         spectator_map = Host()
         spectator_map.map_data = host.map_data
-        multiplayer_io.strip_sensitive_data_for_tournament_spectator(spectator_map)
+        tournament_files.strip_sensitive_data_for_tournament_spectator(spectator_map)
         self.assertEqual(spectator_map.player_country, c.TOURNAMENT_SPECTATOR)
         self.assertEqual(spectator_map.active_players, [c.TOURNAMENT_SPECTATOR])
         self.assertEqual(spectator_map.nation_data["Leader"]["inbox"], [])
@@ -982,24 +978,24 @@ class TournamentMoveTests(unittest.TestCase):
             player_country=c.TOURNAMENT_SPECTATOR,
             map_data={}, nation_data=spectator_map.nation_data,
             id_to_province={})
-        self.assertEqual(multiplayer_io.queries.get_visible_provinces(visibility_screen),
+        self.assertEqual(tournament_files.queries.get_visible_provinces(visibility_screen),
                          (set(), set()))
-        self.assertFalse(multiplayer_io.queries.is_unit_visible_to(
+        self.assertFalse(tournament_files.queries.is_unit_visible_to(
             {"type": "Submarine"}, c.TOURNAMENT_SPECTATOR, {}, spectator_map.nation_data))
 
     def test_spectator_is_reserved_and_cannot_be_a_master_key(self):
         host = Host()
         with tempfile.TemporaryDirectory() as directory, \
                 self.assertRaisesRegex(ValueError, "reserved"):
-            multiplayer_io.export_tournament(
+            tournament_files.export_tournament(
                 host, os.path.join(directory, "turn.gd5tour"), "  spectator  ", self.keys)
 
     def test_decrypt_rejects_bad_input_without_hiding_internal_errors(self):
-        self.assertIsNone(multiplayer_io.decrypt_dict("not an encrypted payload", "key"))
-        with mock.patch.object(multiplayer_io, "generate_fernet_key_from_password",
+        self.assertIsNone(tournament_files.decrypt_dict("not an encrypted payload", "key"))
+        with mock.patch.object(tournament_files, "generate_fernet_key_from_password",
                                side_effect=RuntimeError("broken implementation")):
             with self.assertRaisesRegex(RuntimeError, "broken implementation"):
-                multiplayer_io.decrypt_dict("YWJjZA==:token", "key")
+                tournament_files.decrypt_dict("YWJjZA==:token", "key")
 
 
 if __name__ == "__main__":

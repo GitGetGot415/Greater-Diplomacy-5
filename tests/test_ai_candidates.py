@@ -7,13 +7,8 @@ legal: phase 4 hands this list to a language model to choose from, and the only
 reason that is safe is that a candidate which should not exist never gets made.
 """
 
-import os
-import sys
 import unittest
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import data.constants as c
 from map_logic.ai import ai_candidates as ac, ai_diplomacy, ai_world

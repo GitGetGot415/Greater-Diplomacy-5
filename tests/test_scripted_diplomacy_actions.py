@@ -1,9 +1,12 @@
 """Scripted-event coverage for the expanded diplomacy actions."""
 
+from types import SimpleNamespace
 import unittest
+from unittest.mock import patch
 
 from tests.stub_map_screen import StubMapScreen
-from map_logic.ai.ai_diplomacy import process_scripted_events
+from map_logic.ai import scripted_events
+from map_logic.ai.scripted_events import process_scripted_events
 from map_logic.diplomacy import diplomacy_messages, guarantees, military_attaches, volunteers
 
 
@@ -179,6 +182,70 @@ class ScriptedDiplomacyActionTests(unittest.TestCase):
         self.assertEqual(home["units"], [])
         self.assertEqual(self.game.nation_data["A"].get("claim_queue", []), [])
         self.assertEqual(self.game.nation_data["A"]["pending_diplomacy"], {})
+
+
+class ScriptedConditionRuleTests(unittest.TestCase):
+    def run_state(self, *, turn=5, variables=(), preview=None):
+        world = SimpleNamespace(script_variables=list(variables), nation_data={}, map_data={}, id_to_province={})
+        return scripted_events.EventRun(None, world, {"A"}, [], turn, preview)
+
+    def met(self, run, *conditions):
+        return scripted_events._conditions_met(run, "A", list(conditions))
+
+    def test_editor_choices_all_have_rules(self):
+        self.assertEqual(set(scripted_events.COND_TYPES), set(scripted_events.CONDITIONS))
+        for action in scripted_events.ACT_TYPES:
+            with self.subTest(action=action):
+                self.assertTrue(action in scripted_events.ACTIONS
+                                or action in scripted_events._SCRIPTED_REQUEST_ACTIONS
+                                or action in scripted_events._SCRIPTED_RESPONSE_ACTIONS
+                                or action in scripted_events._GENERIC_RESPONSE_VERDICTS
+                                or action in ("Offer Volunteer Divisions", "Send Custom Message"))
+
+    def test_turn_number_comparisons_and_ranges(self):
+        run = self.run_state(turn=5)
+        for op, value, expected in (("==", "5", True), (">", "5", False), (">=", "5", True),
+                                    ("BETWEEN (INC)", "5,6", True), ("BETWEEN (EXC)", "5,6", False),
+                                    ("BETWEEN (INC)", "5", False), ("==", "text", False),
+                                    # The editor does not offer this operator for turns.
+                                    ("!=", "4", False)):
+            with self.subTest(op=op, value=value):
+                self.assertIs(self.met(run, {"type": "Turn Number", "operator": op, "value": value}), expected)
+
+    def test_numeric_variable_truncates_and_rejects_comma_ranges(self):
+        run = self.run_state(variables=[{"name": "n", "type": "int", "value": "3.9"}])
+        condition = {"type": "Variable", "variable": "n"}
+        self.assertTrue(self.met(run, dict(condition, operator="==", value="3")))
+        self.assertTrue(self.met(run, dict(condition, operator="!=", value="4")))
+        # Existing behavior: a comma-separated value fails its single-number parse.
+        self.assertFalse(self.met(run, dict(condition, operator="BETWEEN (INC)", value="1,5")))
+
+    def test_string_and_missing_variables_compare_as_text(self):
+        run = self.run_state(variables=[{"name": "s", "type": "string", "value": "yes"}])
+        self.assertTrue(self.met(run, {"type": "Variable", "variable": "s", "operator": "==", "value": "yes"}))
+        self.assertTrue(self.met(run, {"type": "Variable", "variable": "s", "operator": "!=", "value": "no"}))
+        self.assertFalse(self.met(run, {"type": "Variable", "variable": "s", "operator": ">", "value": "a"}))
+        self.assertTrue(self.met(run, {"type": "Variable", "variable": "missing", "operator": "==", "value": "0"}))
+
+    def test_every_random_condition_draws_and_a_preview_draws_none(self):
+        always_false = {"type": "False"}
+        rolled = {"type": "Random (0.00 - 1.00)", "operator": "<", "value": "1", "chain": "AND"}
+        with patch.object(scripted_events.random, "random", return_value=0.5) as draw:
+            self.assertFalse(self.met(self.run_state(), always_false, rolled, rolled))
+            self.assertEqual(draw.call_count, 2)
+            draw.reset_mock()
+            self.assertIsNone(self.met(self.run_state(preview=("A", "B", "TRADE")), rolled))
+            draw.assert_not_called()
+
+    def test_chains_combine_known_and_unknown_results(self):
+        chain = scripted_events._chain_condition_result
+        for previous, current, name, expected in (
+                (True, False, "AND", False), (True, True, "NAND", False), (False, True, "OR", True),
+                (False, False, "NOR", True), (True, True, "XOR", False), (True, None, "AND", None),
+                (False, None, "AND", False), (True, None, "OR", True), (None, True, "XOR", None),
+                (True, False, "unknown", True)):
+            with self.subTest(previous=previous, current=current, chain=name):
+                self.assertIs(chain(previous, current, name), expected)
 
 
 if __name__ == "__main__":

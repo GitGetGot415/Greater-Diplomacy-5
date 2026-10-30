@@ -40,7 +40,6 @@ from types import SimpleNamespace
 
 import data.constants as c
 from data import queries
-from data.state_access import world_for
 
 from data.runtime_rules import ActiveLibrary
 from map_logic.system32 import combat_rules
@@ -224,11 +223,6 @@ def unit_pain(stats, prices):
 # ----------------------------------------------------------------------------
 # Candidate set
 # ----------------------------------------------------------------------------
-
-def _tier_of(unit_name):
-    """Sort key for 'which tier of this family is this', years and numerals alike."""
-    return queries.get_unit_tier(unit_name)
-
 
 #: Memo for buildable_units, keyed on the research that produced the answer.
 #: Scanning the 602-entry library is regex-heavy and was 89% of the whole

@@ -71,6 +71,9 @@ def get_config(path=CONFIG_PATH):
             _positive(value, "layout.row_y")
         for field in ("default_row_y", "row_center_offset", "pixels_per_year", "modal_icon_box"):
             _positive(layout[field], f"layout.{field}")
+        for tech_key, settings in config.get("technologies", {}).items():
+            if settings.get("row", 1) not in range(1, len(layout["row_y"]) + 1):
+                raise ValueError(f"{tech_key} row must name a position in layout.row_y.")
         for style in config.get("styles", {}).values():
             _positive(style.get("button_scale", 1.0), "style.button_scale")
             for scale in style.get("icon_scales", {}).values():
@@ -83,6 +86,14 @@ def get_config(path=CONFIG_PATH):
     return config
 
 
+def technology_row_y(tech_key):
+    """Return the screen row for a technology. Technologies without a row use the default row."""
+    config = get_config()
+    layout = config["layout"]
+    row = config.get("technologies", {}).get(tech_key, {}).get("row")
+    return layout["default_row_y"] if row is None else layout["row_y"][row - 1]
+
+
 def node_settings(tech_key, category, level, *, large_icon=False):
     """Apply defaults, category, technology, then exact-level settings."""
     config = get_config()
@@ -91,6 +102,6 @@ def node_settings(tech_key, category, level, *, large_icon=False):
         settings["icon_scale"] = settings["large_icon_scale"]
     settings.update(config.get("categories", {}).get(category, {}))
     technology = config.get("technologies", {}).get(tech_key, {})
-    settings.update({key: value for key, value in technology.items() if key != "levels"})
+    settings.update({key: value for key, value in technology.items() if key not in ("levels", "row")})
     settings.update(technology.get("levels", {}).get(str(level), {}))
     return settings

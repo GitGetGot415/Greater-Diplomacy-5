@@ -11,7 +11,7 @@ from unittest.mock import patch
 from data import migrations, queries
 from data.game_state import WorldState
 from data.state_access import BackendState
-from data.multiplayer.tournament import files as multiplayer_io
+from data.multiplayer.tournament import files as tournament_files
 from data.multiplayer.realtime.session import MapRealtimeDriver, apply_authoritative_snapshot
 from map_logic.actions import unit_actions
 from map_logic.actions.player_actions import PlayerActions, collect_map_commands
@@ -188,10 +188,10 @@ class SharedActionTests(unittest.TestCase):
         PlayerActions(realtime).apply_drafts({"A": commands})
         with tempfile.TemporaryDirectory() as directory:
             move = str(Path(directory, "fixture.gd5move"))
-            multiplayer_io.export_move_file(local, move, "fixture-key")
-            with patch.object(multiplayer_io, "run_with_progress", synchronous_progress):
+            tournament_files.export_move_file(local, move, "fixture-key")
+            with patch.object(tournament_files, "run_with_progress", synchronous_progress):
                 for _ in range(2):
-                    summary = multiplayer_io.load_move_files(tournament, [move], {"A": "fixture-key"})
+                    summary = tournament_files.load_move_files(tournament, [move], {"A": "fixture-key"})
                     self.assertEqual(summary["loaded"], 1, summary)
         for other in (realtime, tournament):
             for key in ("materials", "manpower", "fuel"):

@@ -5,7 +5,7 @@ import data.constants as c
 from data import queries
 from ui.navigation.game_state import MapOverlayScreen
 from ui.widgets.ui_elements import Button, TextField, make_back_button
-from ui import dialogs as confirm_dialog
+from ui import dialogs
 from ui.rendering.font_manager import fonts
 
 # ==========================================
@@ -132,7 +132,7 @@ class Resource_Brush_Screen(MapOverlayScreen):
         try:
             amt = int(self.amount_field.text)
         except ValueError:
-            confirm_dialog.show_error("Error", "Amount must be a whole number.")
+            dialogs.show_error("Error", "Amount must be a whole number.")
             return
 
         self.map_screen.brush_resource_type = self.selected_resource
@@ -273,13 +273,13 @@ class Clear_Map_Screen(MapOverlayScreen):
         r_val = self.selected_resource_type
 
         if self.needs_country() and not c_val:
-            confirm_dialog.show_error("Error", "Please select a country.")
+            dialogs.show_error("Error", "Please select a country.")
             return
         if self.needs_unit_type() and not u_val:
-            confirm_dialog.show_error("Error", "Please select a unit type.")
+            dialogs.show_error("Error", "Please select a unit type.")
             return
         if self.needs_resource_type() and not r_val:
-            confirm_dialog.show_error("Error", "Please select a resource type.")
+            dialogs.show_error("Error", "Please select a resource type.")
             return
 
         msg = f"Are you sure you want to clear:\n{opt}"
@@ -329,7 +329,7 @@ class Clear_Map_Screen(MapOverlayScreen):
             self.map_screen.show_feedback("Map cleared according to criteria.")
             self.done = True
 
-        confirm_dialog.ask_yes_no("Confirm Clear", msg, on_confirm)
+        dialogs.ask_yes_no("Confirm Clear", msg, on_confirm)
 
     def draw_content(self, surface):
         self.draw_panel(surface)

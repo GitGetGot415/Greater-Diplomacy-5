@@ -104,22 +104,6 @@ def select_claim_brush(map_screen):
     _select_brush(map_screen, "CLAIM", "brush_nation", _paintable_nations(map_screen),
                   "Select Claim Nation", "Select Nation to Add Claims:", "Claim Brush")
 
-def open_editor_claims(map_screen):
-    """Opens a full-screen sortable table listing every claim on the map."""
-    rows = []
-    for c_name in sorted(map_screen.nation_data.keys()):
-        claims = map_screen.nation_data[c_name].get("claims", [])
-        if claims:
-            rows.append({"country": queries.get_country_display_name(c_name, map_screen.nation_data),
-                         "claims": ", ".join(map(str, claims))})
-
-    columns = [
-        TableColumn("country", "Country", 180, align="left"),
-        TableColumn("claims", "Claimed Provinces", 700, align="left"),
-    ]
-    _launch_table(map_screen, "Global Claims Overview", columns, rows,
-                  empty_message="No claims on the map.")
-
 def select_building_brush(map_screen):
     """Opens a selection window for building types and sets mode to BUILDING."""
     bldg_lib = queries.get_building_library(map_screen)

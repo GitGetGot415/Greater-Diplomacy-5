@@ -11,14 +11,9 @@ Nothing here touches the network. The guard in setUp makes that a hard failure
 rather than a slow test.
 """
 
-import os
-import sys
 import unittest
 from unittest import mock
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import data.constants as c
 from data import queries

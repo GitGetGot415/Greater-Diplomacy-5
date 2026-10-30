@@ -11,7 +11,7 @@ from ui.rendering import symbol_loader
 from ui.rendering import overlay_renderer
 from ui.bars import ui_bars, resource_hud, view_mode_buttons
 from ui.panels import army_panel, map_top_right_layout
-from screens.game import map_input as event_handler
+from screens.game import map_input
 from screens.game import battle_screen
 from ui.navigation.modal_screen import ModalScreen
 
@@ -384,13 +384,13 @@ class Orders_Screen(GameState):
         """Q. Same as clicking the Units button in the view-mode row; also
         jumps screens when the Keybinds screen's per-key toggle is on -- see
         screens.game.map_input.handle_view_mode_keybind."""
-        event_handler.handle_view_mode_keybind(self.map_screen, "UNITS", "ORDERS", origin=self)
+        map_input.handle_view_mode_keybind(self.map_screen, "UNITS", "ORDERS", origin=self)
 
     def handle_economy_key(self):
         """W. Same as clicking the Economy button in the view-mode row; also
         jumps screens when the Keybinds screen's per-key toggle is on -- see
         screens.game.map_input.handle_view_mode_keybind."""
-        event_handler.handle_view_mode_keybind(self.map_screen, "ECONOMY", "ECONOMY", origin=self)
+        map_input.handle_view_mode_keybind(self.map_screen, "ECONOMY", "ECONOMY", origin=self)
 
     def handle_clear_orders_key(self):
         """Runs the same action as the Clear Orders button.
@@ -520,9 +520,6 @@ class Orders_Screen(GameState):
                 if launch_by_base[launch_key]:
                     candidates.append((unit, province))
         return candidates
-
-    def _repair_costs(self, unit):
-        return unit_actions.repair_costs(self.map_screen, unit, self.unit_library)
 
     def _selected_units_with_order(self, order_type, records=None):
         """Selected commandable units currently carrying one named order."""
@@ -1017,7 +1014,7 @@ class Orders_Screen(GameState):
         if not self._air_range_records:
             return
         on_ui = (self.panel_rect.collidepoint(position)
-                 or event_handler.map_ui_bar_at_position(self.map_screen, position))
+                 or map_input.map_ui_bar_at_position(self.map_screen, position))
         destination = None if on_ui else queries.get_clicked_province(position, self.map_screen)
         # Empty map space and UI retain the last territory's range preview.
         if destination is not None and destination is not self._air_range_hover_target:
@@ -1037,7 +1034,7 @@ class Orders_Screen(GameState):
             self.read_only = (self.map_screen.realtime_session.phase != "TURN" or not player
                               or player.submitted or player.eliminated)
         self.view_mode_buttons = view_mode_buttons.build(
-            lambda mode: event_handler.navigate_view_mode(self.map_screen, mode, origin=self))
+            lambda mode: map_input.navigate_view_mode(self.map_screen, mode, origin=self))
         view_mode_buttons.sync_highlight(self.view_mode_buttons, self.map_screen.secondary_mode)
 
         # Keep the command box no taller than its current roster requires.
@@ -1759,7 +1756,7 @@ class Orders_Screen(GameState):
             super().handle_events([event])
 
     def additional_events(self, event):
-        event_handler.resolve_map_mouse_gesture_conflict(self.map_screen, event)
+        map_input.resolve_map_mouse_gesture_conflict(self.map_screen, event)
         if getattr(self.map_screen, "_ignore_left_until_release", False):
             if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
                 self.map_screen._ignore_left_until_release = False
@@ -1789,11 +1786,11 @@ class Orders_Screen(GameState):
         panel_rect = self.panel_rect
         event_pos = getattr(event, "pos", (mx, my))
         on_ui = (panel_rect.collidepoint(event_pos)
-                 or event_handler.map_ui_bar_at_position(self.map_screen, event_pos))
+                 or map_input.map_ui_bar_at_position(self.map_screen, event_pos))
 
         # Exclude Orders turns a map-pan binding into main-map-only panning,
         # leaving that button free for the normal Orders move gesture.
-        pan_buttons = event_handler.mouse_buttons_for_map_panning(in_orders=True)
+        pan_buttons = map_input.mouse_buttons_for_map_panning(in_orders=True)
         # ``camera`` is optional only for lightweight Orders test doubles;
         # every playable map supplies it.
         camera = getattr(self.map_screen, "camera", None)
@@ -1801,7 +1798,7 @@ class Orders_Screen(GameState):
             camera.handle_input(event, self.map_screen, on_ui, pan_buttons=pan_buttons)
             if (event.type == pygame.MOUSEBUTTONUP
                     and camera.finish_pan_drag(event.button)
-                    and event_handler.mouse_button_has_action(event.button, "issue_orders")):
+                    and map_input.mouse_button_has_action(event.button, "issue_orders")):
                 return
 
         if camera is not None and event.type in (
@@ -1836,7 +1833,7 @@ class Orders_Screen(GameState):
         # a right-click cannot fall through to full-range air repositioning.
         if (event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP)
                 and self.bombarding_unit_index is not None
-                and event_handler.mouse_button_has_action(event.button, "issue_orders")):
+                and map_input.mouse_button_has_action(event.button, "issue_orders")):
             self.map_screen.unit_selection_drag = None
             if event.type == pygame.MOUSEBUTTONUP and not on_ui:
                 destination = queries.get_clicked_province(event.pos, self.map_screen)
@@ -1849,8 +1846,8 @@ class Orders_Screen(GameState):
         # stack toggles it; an actual left-drag box-selects stacks, matching
         # the map screen and HOI4's primary selection gesture.
         if (event.type == pygame.MOUSEBUTTONDOWN and not on_ui
-                and (event_handler.mouse_button_has_action(event.button, "select_units")
-                     or event_handler.mouse_button_has_action(event.button, "box_select_units"))):
+                and (map_input.mouse_button_has_action(event.button, "select_units")
+                     or map_input.mouse_button_has_action(event.button, "box_select_units"))):
             clicked_stack = next((stack for stack in reversed(
                 getattr(self.map_screen, "unit_stack_hitboxes", []))
                 if stack["rect"].collidepoint(event.pos)), None)
@@ -1861,9 +1858,9 @@ class Orders_Screen(GameState):
                 "additive": bool(pygame.key.get_mods() & pygame.KMOD_SHIFT),
                 "stack": clicked_stack,
                 "button": event.button,
-                "select_units": event_handler.mouse_button_has_action(
+                "select_units": map_input.mouse_button_has_action(
                     event.button, "select_units"),
-                "box_select_units": event_handler.mouse_button_has_action(
+                "box_select_units": map_input.mouse_button_has_action(
                     event.button, "box_select_units"),
             }
             return
@@ -1891,7 +1888,7 @@ class Orders_Screen(GameState):
                     # returns to the clicked province's menu. Do not let the
                     # ordinary Map view-mode navigation run here: this handoff
                     # is explicitly back to the province inspector.
-                    if event_handler._select_map_province(
+                    if map_input._select_map_province(
                             self.map_screen, event.pos, navigate=False):
                         self.return_to_province_menu = True
                         self.entered_from_combat_bubble = False
@@ -1916,11 +1913,11 @@ class Orders_Screen(GameState):
             return
 
         if (event.type == pygame.MOUSEBUTTONDOWN
-                and event_handler.mouse_button_has_action(event.button, "issue_orders")):
+                and map_input.mouse_button_has_action(event.button, "issue_orders")):
             return
 
         if (event.type == pygame.MOUSEBUTTONUP
-                and event_handler.mouse_button_has_action(event.button, "issue_orders")):
+                and map_input.mouse_button_has_action(event.button, "issue_orders")):
             if not on_ui and not self.read_only:
                 destination = queries.get_clicked_province(event.pos, self.map_screen)
                 if destination and self.map_screen.selected_unit_records():
@@ -1932,7 +1929,7 @@ class Orders_Screen(GameState):
 
         # --- Dynamic Map Hover Update ---
         if event.type == pygame.MOUSEMOTION:
-            self.map_screen.hovered_unit_stack = event_handler._unit_stack_at(
+            self.map_screen.hovered_unit_stack = map_input._unit_stack_at(
                 self.map_screen, event.pos)
             self.map_screen.hovered_province = (
                 None if self.map_screen.hovered_unit_stack

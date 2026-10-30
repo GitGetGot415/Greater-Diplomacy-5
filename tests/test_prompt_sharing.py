@@ -14,12 +14,8 @@ puts a nation's name back at the top would silently undo it. Hence this file.
 
 import inspect
 import os
-import sys
 import unittest
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from map_logic.ai import ai_candidates as ac, ai_director, ai_evaluation, ai_prompts
 

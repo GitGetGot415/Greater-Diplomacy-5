@@ -178,7 +178,6 @@ from data.queries.countries import (
 )
 from data.queries.unit_info import (
     get_unit_range_defaults,
-    refresh_unit_range_overrides,
     _unit_range_level,
     get_unit_range_overrides,
     scenario_has_unit_stat_customizations,
@@ -210,7 +209,6 @@ from data.queries.unit_info import (
     classify_unit_group,
     AI_FORCE_INFANTRY,
     AI_FORCE_TANKS,
-    AI_FORCE_NAVY,
     is_ai_tank,
     ai_force_category,
     get_formatted_division_name,
@@ -258,7 +256,6 @@ from data.queries.combat_state import (
     COMBAT_LOCATION_DEFENSE,
     COMBAT_LOCATION_OFFENSE,
     COMBAT_LOCATION_GENERIC,
-    COMBAT_LOCATION_UNKNOWN,
 )
 from data.queries.movement_access import (
     needs_military_access_request,
@@ -390,13 +387,11 @@ from data.queries.economy import (
     deduct_resources,
     refund_queue_item,
     can_afford,
-    execute_trade_transfer,
     cancel_trade_escrow,
     get_conscription_damage_bonus,
     get_country_damage_multiplier,
     get_siphon_rates,
     get_building_output_modifiers,
-    get_building_output_multipliers,
     get_building_output,
     get_province_building_output,
     calculate_all_economies,
@@ -404,7 +399,6 @@ from data.queries.economy import (
     format_number,
     get_resource_hud_strings,
     get_economy_projections,
-    get_minimum_tank_count,
 )
 from data.queries.forts import (
     get_fort_level,

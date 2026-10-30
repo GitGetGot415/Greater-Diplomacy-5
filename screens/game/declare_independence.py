@@ -8,7 +8,7 @@ from ui.rendering.font_manager import fonts
 from data import queries
 from map_logic.system32 import turn_manager
 
-from map_logic.territory import ownership as edit_province_ownership
+from map_logic.territory import ownership
 from map_logic.diplomacy.diplomacy_events import log_global_event
 
 
@@ -144,10 +144,10 @@ class Declare_Independence_Screen(MapOverlayScreen):
                 break
                 
         if unit_prov:
-            edit_province_ownership.conquer_province(self.map_screen, unit_prov, new_tag)
-            edit_province_ownership.add_core(self.map_screen, unit_prov, new_tag)
+            ownership.conquer_province(self.map_screen, unit_prov, new_tag)
+            ownership.add_core(self.map_screen, unit_prov, new_tag)
             if old_tag not in c.UNPLAYABLE_NATIONS:
-                edit_province_ownership.add_claim(self.map_screen, unit_prov, old_tag)
+                ownership.add_claim(self.map_screen, unit_prov, old_tag)
                 
             if self.selected_core:
                 for prov in self.map_screen.map_data.values():

@@ -6,18 +6,13 @@ inbox showed "We propose an exchange to the benefit of us both" above an Accept
 button and nothing else.
 
 The direction is the part worth pinning: keys are written from the PROPOSER's
-point of view, the same way queries.execute_trade_transfer reads them, so the
+point of view, so the
 receiving side sees them inverted. Rendering that backwards would talk a player
 into accepting the opposite of what they thought.
 """
 
-import os
-import sys
 import unittest
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from map_logic.diplomacy import diplomacy_messages as dm
 

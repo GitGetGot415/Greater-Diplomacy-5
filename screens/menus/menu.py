@@ -15,9 +15,7 @@ from data.platform import IS_WEB
 from ui.rendering.font_manager import fonts
 
 from ui.dialogs.character_select_screen import CHARACTERS_DIR
-from ui import dialogs as confirm_dialog
-
-
+from ui import dialogs
 def _ease_out_expo(t):
     """Fast start that eases into the resting position: 1 - 2^-10t."""
     if t <= 0:
@@ -369,7 +367,7 @@ class Menu(GameState):
 
     def confirm_exit(self):
 
-        confirm_dialog.ask_yes_no(
+        dialogs.ask_yes_no(
             "Exit Game",
             "Are you sure you want to exit the game?",
             self._exit_game,

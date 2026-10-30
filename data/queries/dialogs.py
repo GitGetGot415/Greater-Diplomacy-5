@@ -34,8 +34,8 @@ def refresh_map_directories(screen, dirs_to_check, success_message="Data refresh
                 total_maps += 1
     
     if total_maps == 0:
-        from ui import dialogs as confirm_dialog
-        confirm_dialog.show_info("Data Refresh", "No maps found to refresh.")
+        from ui import dialogs 
+        dialogs.show_info("Data Refresh", "No maps found to refresh.")
         return
 
     # Setup screen state for UI
@@ -228,8 +228,8 @@ def open_file_browser(game_state, title, start_dir=None, mode="open_file", exten
             # There's no native browser equivalent of "pick a folder on my
             # real disk" (a browser sandbox has no notion of an arbitrary
             # host path) -- not supported on web.
-            from ui import dialogs as confirm_dialog
-            confirm_dialog.show_error("Not Available", "Choosing a folder isn't supported in the browser build.", tk_parent=tk_parent)
+            from ui import dialogs 
+            dialogs.show_error("Not Available", "Choosing a folder isn't supported in the browser build.", tk_parent=tk_parent)
             _on_result(None)
             return
         pick_upload_file(_on_result, extensions=extensions, multiple=(mode == "open_files"))

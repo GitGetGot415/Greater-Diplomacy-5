@@ -1,7 +1,7 @@
 import os
 import json
 import pygame
-from ui import dialogs as confirm_dialog
+from ui import dialogs
 from data import queries
 from data.map import history_io
 from ui.navigation.game_state import FolderListState
@@ -82,7 +82,7 @@ class Load_Game(FolderListState):
         if not history_data:
             has_file = any(os.path.exists(os.path.join(save_dir, name))
                            for name in (history_io.GZ_NAME, history_io.PLAIN_NAME))
-            confirm_dialog.show_info("No History", "History file is empty." if has_file
+            dialogs.show_info("No History", "History file is empty." if has_file
                                      else "No history available for this save.")
             return
 
@@ -104,7 +104,7 @@ class Load_Game(FolderListState):
     def load_specific_save(self, folder_name, history_turn=None):
         message = newer_version_message(os.path.join(self.managed_dir, folder_name))
         if message:
-            confirm_dialog.show_info("Update Required", message)
+            dialogs.show_info("Update Required", message)
             return
         self.selected_save_path = os.path.join(self.managed_dir, folder_name)
         self.selected_history_turn = history_turn

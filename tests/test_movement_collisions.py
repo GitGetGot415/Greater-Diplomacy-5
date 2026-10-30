@@ -22,13 +22,8 @@ Both are exercised directly against movement_processor.process_movement with
 a hand-built map, isolated from the rest of turn resolution.
 """
 
-import os
-import sys
 import unittest
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from tests.combat_fixtures import StubBattleMap
 

@@ -9,14 +9,9 @@ raising in the middle of a turn.
 """
 
 import copy
-import os
-import sys
 import unittest
 from unittest import mock
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import pygame
 
@@ -911,8 +906,7 @@ class ButtonSwapTests(BattleScreenTestCase):
         self.assertIs(self.map.selected_province, self.province)
 
     def test_preemptive_fighting_tile_enters_orders_before_battle(self):
-        from screens.game import map_input as event_handler
-
+        from screens.game import map_input 
         old_navigation = c.MAP_NAVIGATION_MODE
         old_done = self.map.done
         old_next_state = self.map.next_state
@@ -925,8 +919,8 @@ class ButtonSwapTests(BattleScreenTestCase):
         c.MAP_NAVIGATION_MODE = "PREEMPTIVE"
         self.map.done = False
         self.map.next_state = None
-        with mock.patch.object(event_handler, "_resync_view_mode_row"):
-            event_handler.navigate_view_mode(self.map, "UNITS")
+        with mock.patch.object(map_input, "_resync_view_mode_row"):
+            map_input.navigate_view_mode(self.map, "UNITS")
 
         self.assertTrue(self.map.done)
         self.assertEqual(self.map.next_state, "ORDERS")

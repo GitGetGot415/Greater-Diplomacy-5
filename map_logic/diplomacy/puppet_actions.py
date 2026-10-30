@@ -9,7 +9,7 @@ war_actions.py and faction_actions.py.
 
 from data.state_access import world_for, session_for
 import copy
-from map_logic.territory import ownership as edit_province_ownership
+from map_logic.territory import ownership
 from data import queries
 from map_logic.diplomacy.diplomacy_events import log_global_event
 from map_logic.diplomacy.war_actions import sever_military_access, link_war, remove_enemy, finalize_neutral
@@ -186,7 +186,7 @@ def finalize_annexation(map_data, nation_data, master, puppet, map_screen, *, fo
     # Transfer all territory and units
     for prov in map_data.values():
         if prov.get("owner") == puppet:
-            edit_province_ownership.conquer_province(
+            ownership.conquer_province(
                 map_screen, prov, master, refresh_visuals=not force,
                 check_landless=not force, apply_capture_rules=not force)
         for unit in prov.get("units", []):
@@ -278,7 +278,7 @@ def finalize_spectator_country_removal(map_screen, country, annexer=None):
     else:
         for province in map_data.values():
             if province.get("owner") == country:
-                edit_province_ownership.conquer_province(
+                ownership.conquer_province(
                     map_screen, province, "Unclaimed", refresh_visuals=False,
                     check_landless=False, apply_capture_rules=False)
                 province["unit_queue"] = []
@@ -462,7 +462,7 @@ def finalize_create_puppet(map_data, nation_data, master, core_nation, map_scree
 
             if prov["id"] in territory_ids:
                 nation_data[new_id]["spawned_territories"].append(prov["id"])
-                edit_province_ownership.conquer_province(map_screen, prov, new_id)
+                ownership.conquer_province(map_screen, prov, new_id)
 
     log_global_event(nation_data, f"{master_name} has formed {new_name}.")
     return new_id

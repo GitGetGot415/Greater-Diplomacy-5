@@ -196,7 +196,7 @@ class SubjectTests(unittest.TestCase):
             self.assertEqual(self.map.nation_data[target]["research"], {})
 
     def test_exit_popup_save_preserves_live_references_and_other_fields(self):
-        from ui import dialogs as confirm_dialog
+        from ui import dialogs 
         target = self.others()[0]
         country = self.map.nation_data[target]
         research, queue, progress = country["research"], country["research_queue"], country["research_progress"]
@@ -204,7 +204,7 @@ class SubjectTests(unittest.TestCase):
         self.screen.toggle_editor_tech("test_research", 1)
         self.assertEqual(research, {})
         country["test_unrelated_field"] = "preserved"
-        with patch.object(confirm_dialog, "ask_yes_no") as ask:
+        with patch.object(dialogs, "ask_yes_no") as ask:
             next(button for button in self.screen.elements if getattr(button, "text", "") == "Exit").callback()
             ask.assert_called_once()
             self.assertFalse(self.screen.done)
@@ -219,7 +219,7 @@ class SubjectTests(unittest.TestCase):
         self.assertIsNone(self.screen.spectator_draft)
 
     def test_exit_and_back_key_popup_discard_all_draft_changes(self):
-        from ui import dialogs as confirm_dialog
+        from ui import dialogs 
         target = self.others()[0]
         before = deepcopy(self.map.nation_data[target])
         for exit_method in ("Exit", "back"):
@@ -227,7 +227,7 @@ class SubjectTests(unittest.TestCase):
                 self.spectate(target, "EDIT")
                 self.screen.toggle_editor_tech("test_research", 1)
                 self.screen.set_category("COMPLETED")
-                with patch.object(confirm_dialog, "ask_yes_no") as ask:
+                with patch.object(dialogs, "ask_yes_no") as ask:
                     if exit_method == "Exit":
                         next(button for button in self.screen.elements if getattr(button, "text", "") == "Exit").callback()
                     else:
@@ -242,11 +242,11 @@ class SubjectTests(unittest.TestCase):
                 self.assertEqual(self.map.nation_data[target], before)
 
     def test_exit_prompt_blocks_duplicate_prompts_and_edits_until_answered(self):
-        from ui import dialogs as confirm_dialog
+        from ui import dialogs 
         target = self.others()[0]
         self.spectate(target, "EDIT")
         before = deepcopy(self.screen.spectator_draft)
-        with patch.object(confirm_dialog, "ask_yes_no") as ask:
+        with patch.object(dialogs, "ask_yes_no") as ask:
             self.screen.exit_screen()  # An Edit session offers the choice even without changes.
             self.screen.handle_back_key()
             self.screen.toggle_editor_tech("test_research", 1)
@@ -258,7 +258,7 @@ class SubjectTests(unittest.TestCase):
         self.assertTrue(self.screen.done)
 
     def test_go_back_preserves_draft_and_view_and_allows_further_editing(self):
-        from ui import dialogs as confirm_dialog
+        from ui import dialogs 
         target = self.others()[0]
         self.spectate(target, "EDIT")
         self.screen.toggle_editor_tech("test_research", 1)
@@ -266,7 +266,7 @@ class SubjectTests(unittest.TestCase):
         draft = self.screen.spectator_draft
         before = deepcopy(draft)
         view = (self.screen.current_category, self.screen.scroll_x, self.screen.target_scroll_x)
-        with patch.object(confirm_dialog, "ask_yes_no") as ask:
+        with patch.object(dialogs, "ask_yes_no") as ask:
             self.screen.exit_screen()
             callback = ask.call_args.args[2]
             callback(None)
@@ -286,11 +286,11 @@ class SubjectTests(unittest.TestCase):
         self.assertTrue(self.screen.done)
 
     def test_old_exit_callback_cannot_save_a_reopened_edit(self):
-        from ui import dialogs as confirm_dialog
+        from ui import dialogs 
         target = self.others()[0]
         self.spectate(target, "EDIT")
         self.screen.toggle_editor_tech("test_research", 1)
-        with patch.object(confirm_dialog, "ask_yes_no") as ask:
+        with patch.object(dialogs, "ask_yes_no") as ask:
             self.screen.exit_screen()
             callback = ask.call_args.args[2]
         self.spectate(target, "EDIT")
@@ -323,11 +323,11 @@ class SubjectTests(unittest.TestCase):
         self.assertEqual(self.map.nation_data[target]["research"], {})
 
     def test_popup_save_rechecks_permission_and_leaves_draft_open_on_failure(self):
-        from ui import dialogs as confirm_dialog
+        from ui import dialogs 
         target = self.others()[0]
         self.spectate(target, "EDIT")
         self.screen.toggle_editor_tech("test_research", 1)
-        with patch.object(confirm_dialog, "ask_yes_no") as ask:
+        with patch.object(dialogs, "ask_yes_no") as ask:
             self.screen.exit_screen()
             with patch.object(c, "SPECTATOR_CAN_EDIT_RESEARCH", False):
                 ask.call_args.args[2](True)
@@ -339,9 +339,9 @@ class SubjectTests(unittest.TestCase):
         self.assertTrue(self.screen.done)
 
     def test_view_and_player_exit_do_not_open_save_popup(self):
-        from ui import dialogs as confirm_dialog
+        from ui import dialogs 
         target = self.others()[0]
-        with patch.object(confirm_dialog, "ask_yes_no") as ask:
+        with patch.object(dialogs, "ask_yes_no") as ask:
             self.spectate(target)
             self.screen.exit_screen()
             self.assertTrue(self.screen.done)
@@ -353,14 +353,14 @@ class SubjectTests(unittest.TestCase):
             ask.assert_not_called()
 
     def test_progress_warning_no_preserves_draft_and_yes_discards_only_draft_progress(self):
-        from ui import dialogs as confirm_dialog
+        from ui import dialogs 
         target = self.others()[0]
         country = self.map.nation_data[target]
         country.update(research_queue=[{"tech_name": "test_research", "points_remaining": 40}],
                        research_progress={"test_research": 30}, current_research="test_research")
         before = deepcopy(country)
         self.spectate(target, "EDIT")
-        with patch.object(confirm_dialog, "ask_yes_no") as ask:
+        with patch.object(dialogs, "ask_yes_no") as ask:
             self.screen.toggle_editor_tech("test_research", 1)
             ask.assert_called_once()
             self.assertIn(queries.get_tech_display_name("test_research"), ask.call_args.args[1])
@@ -377,18 +377,18 @@ class SubjectTests(unittest.TestCase):
         self.assertIsNone(self.screen.subject_data["current_research"])
         self.screen.toggle_editor_tech("test_research", 1)  # Reversing a tech click cannot restore progress.
         self.assertEqual(self.screen.subject_data["research_queue"], [])
-        with patch.object(confirm_dialog, "ask_yes_no") as ask:
+        with patch.object(dialogs, "ask_yes_no") as ask:
             self.screen.exit_screen()
             ask.call_args.args[2](False)
         self.assertEqual(country, before)
 
     def test_paused_progress_requires_warning_and_is_cleared_on_confirm(self):
-        from ui import dialogs as confirm_dialog
+        from ui import dialogs 
         target = self.others()[0]
         country = self.map.nation_data[target]
         country["research_progress"] = {"test_research": 40}
         self.spectate(target, "EDIT")
-        with patch.object(confirm_dialog, "ask_yes_no") as ask:
+        with patch.object(dialogs, "ask_yes_no") as ask:
             self.screen.toggle_editor_tech("test_research", 1)
             ask.assert_called_once()
             ask.call_args.args[2](True)
@@ -398,12 +398,12 @@ class SubjectTests(unittest.TestCase):
         self.assertEqual(country["research"], {"test_research": 1})
 
     def test_warning_callbacks_cannot_change_a_cancelled_or_reopened_edit(self):
-        from ui import dialogs as confirm_dialog
+        from ui import dialogs 
         target = self.others()[0]
         self.map.nation_data[target]["research_progress"] = {"test_research": 40}
         before = deepcopy(self.map.nation_data[target])
         self.spectate(target, "EDIT")
-        with patch.object(confirm_dialog, "ask_yes_no") as ask:
+        with patch.object(dialogs, "ask_yes_no") as ask:
             self.screen.toggle_editor_tech("test_research", 1)
             callback = ask.call_args.args[2]
             callback(False)

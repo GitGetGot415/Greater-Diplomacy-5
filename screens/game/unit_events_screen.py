@@ -7,9 +7,7 @@ from ui.widgets import flag_icons, text_utils
 from ui.widgets.table_screen import TableColumn, TableScreen
 from ui.widgets.ui_elements import Button
 
-from ui import dialogs as confirm_dialog
-
-
+from ui import dialogs
 BACKGROUND_COLOR = (80, 60, 40)
 ROW_COLOR = (48, 35, 25)
 TABLE_MARGIN = 25
@@ -109,7 +107,7 @@ class UnitEventsScreen(TableScreen):
 
     def show_event(self, row):
         amount = f"\nHealth: {row['amount']:.2f}" if row["amount"] else ""
-        confirm_dialog.show_info(row["event_label"],
+        dialogs.show_info(row["event_label"],
             f"{row['unit_name']}\nTile: {row['tile_id']}{amount}\n{row['details']}",
             inline_parts=[(row["unit_name"], self.flags[row["owner"]]),
                           (f"\nTile: {row['tile_id']}{amount}\n", None)] + self.detail_inline_parts(row))

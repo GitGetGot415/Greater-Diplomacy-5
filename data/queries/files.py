@@ -17,13 +17,12 @@ def export_with_overwrite_confirmation(file_path, export, parent=None):
     if not os.path.exists(file_path):
         return export()
 
-    from ui import dialogs as confirm_dialog
-
+    from ui import dialogs 
     def after_choice(overwrite):
         if overwrite:
             export()
 
-    confirm_dialog.ask_yes_no(
+    dialogs.ask_yes_no(
         "Overwrite existing file?",
         f"{os.path.basename(file_path)} already exists in:\n{os.path.dirname(file_path) or '.'}\n\n"
         "Overwrite this file?",
@@ -43,7 +42,7 @@ def _export_to_downloads(file_name, produce, parent=None):
     zipped folder and copying one file -- the destination, the web/desktop
     split and the success/error dialogs were written out twice, identically.
     """
-    from ui import dialogs as confirm_dialog
+    from ui import dialogs 
     dest_path = file_name if queries.IS_WEB else os.path.join(queries.downloads_dir(), file_name)
 
     def export():
@@ -52,12 +51,12 @@ def _export_to_downloads(file_name, produce, parent=None):
 
             if queries.IS_WEB:
                 queries.download_file(dest_path)
-                confirm_dialog.show_success("Export Success", f"{file_name} downloaded.", tk_parent=parent)
+                dialogs.show_success("Export Success", f"{file_name} downloaded.", tk_parent=parent)
             else:
-                confirm_dialog.show_success("Export Success", f"Exported to Downloads as {file_name}", tk_parent=parent)
+                dialogs.show_success("Export Success", f"Exported to Downloads as {file_name}", tk_parent=parent)
             return dest_path
         except (OSError, ValueError, zipfile.BadZipFile, zipfile.LargeZipFile) as e:
-            confirm_dialog.show_error("Export Error", str(e), tk_parent=parent)
+            dialogs.show_error("Export Error", str(e), tk_parent=parent)
             return None
 
     return export_with_overwrite_confirmation(dest_path, export, parent)
@@ -117,8 +116,7 @@ def import_json_file(game_state, title, on_loaded):
     the caller -- different JSON files have different schemas, this just
     covers the shared "pick a file, parse it, report a read error" part.
     """
-    from ui import dialogs as confirm_dialog
-
+    from ui import dialogs 
     def _after_pick(file_path):
         if not file_path:
             return
@@ -126,7 +124,7 @@ def import_json_file(game_state, title, on_loaded):
             with open(file_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
         except Exception as e:
-            confirm_dialog.show_error("Import Error", f"Couldn't read that file as JSON: {e}")
+            dialogs.show_error("Import Error", f"Couldn't read that file as JSON: {e}")
             return
         on_loaded(data)
 
@@ -140,8 +138,7 @@ def import_zip_to_dir(game_state, target_parent_dir, on_success=None):
     Shared by the save and scenario import buttons; both used to open their own
     transient Tk root and duplicate the "_imported" collision suffix logic.
     """
-    from ui import dialogs as confirm_dialog
-
+    from ui import dialogs 
     def _after_pick(file_path):
         if not file_path:
             return
@@ -153,11 +150,11 @@ def import_zip_to_dir(game_state, target_parent_dir, on_success=None):
             # Web only: mirror the imported save into IndexedDB (no-op unless
             # target_parent_dir is one of the persisted directories).
             sync_persisted_dir(target_parent_dir)
-            confirm_dialog.show_success("Import Success", "Imported successfully.")
+            dialogs.show_success("Import Success", "Imported successfully.")
             if on_success:
                 on_success()
         except Exception as e:
-            confirm_dialog.show_error("Import Error", str(e))
+            dialogs.show_error("Import Error", str(e))
 
     queries.open_file_browser(game_state, "Select Zip File", queries.downloads_dir(),
                       extensions=[".zip"], on_result=_after_pick)
@@ -179,8 +176,7 @@ def import_mod_file(game_state, on_success=None):
     screen. Even then it doesn't take effect until the game is restarted -- Python only imports a module once per process, so
     anything already running has already loaded the unmodded version.
     """
-    from ui import dialogs as confirm_dialog
-
+    from ui import dialogs 
     def _do_copy(file_path):
         target_name = os.path.basename(file_path)
         os.makedirs(c.MODS_DIR, exist_ok=True)
@@ -191,12 +187,12 @@ def import_mod_file(game_state, on_success=None):
         try:
             shutil.copy2(file_path, dest)
             sync_persisted_dir(c.MODS_DIR)
-            confirm_dialog.show_success("Import Success",
+            dialogs.show_success("Import Success",
                 "Mod imported. It is off for now. Turn it on in the Mods screen, then restart the game.")
             if on_success:
                 on_success()
         except Exception as e:
-            confirm_dialog.show_error("Import Error", str(e))
+            dialogs.show_error("Import Error", str(e))
 
     def _after_pick(file_path):
         if not file_path:
@@ -209,7 +205,7 @@ def import_mod_file(game_state, on_success=None):
                             "access, see the Mods screen to change that) -- but "
                             "sandboxing is a best-effort guard, not a hard "
                             "security boundary.")
-        confirm_dialog.ask_yes_no(
+        dialogs.ask_yes_no(
             "Install Mod?",
             "This mod replaces part of the game's own code. "
             f"{sandbox_note}\n\n"
@@ -230,7 +226,7 @@ def import_character_portrait(game_state, on_success=None):
     on_success, if given, is called with the new portrait's path relative to
     CHARACTERS_DIR (e.g. "Custom/photo.png").
     """
-    from ui import dialogs as confirm_dialog
+    from ui import dialogs 
     from ui.dialogs.character_select_screen import CHARACTERS_DIR, CUSTOM_SUBDIR, IMAGE_EXTENSIONS
 
     custom_dir = os.path.join(CHARACTERS_DIR, CUSTOM_SUBDIR)
@@ -250,7 +246,7 @@ def import_character_portrait(game_state, on_success=None):
             if on_success:
                 on_success(f"{CUSTOM_SUBDIR}/{os.path.basename(dest)}")
         except Exception as e:
-            confirm_dialog.show_error("Import Error", str(e))
+            dialogs.show_error("Import Error", str(e))
 
     queries.open_file_browser(game_state, "Select a Portrait Image", queries.downloads_dir(),
                       extensions=list(IMAGE_EXTENSIONS), on_result=_after_pick)

@@ -39,7 +39,7 @@ from ui.bars import ui_bars
 from ui.navigation.screen_runner import _run_pygame_sub_screen
 from ui.widgets.ui_elements import Button, draw_text_box, process_text_input
 
-from map_logic.ai.ai_diplomacy import scripted_event_response_preview
+from map_logic.ai.scripted_events import scripted_event_response_preview
 
 
 #: Which side of the table a picked province belongs to.

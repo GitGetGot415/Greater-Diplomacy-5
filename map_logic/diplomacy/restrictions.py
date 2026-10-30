@@ -29,10 +29,6 @@ def can_raise_units(nation, nation_data):
     return turns_left(nation, nation_data, "demilitarized") <= 0
 
 
-def is_demilitarized(nation, nation_data):
-    return not can_raise_units(nation, nation_data)
-
-
 def tick(data):
     """Ages one nation's restrictions down a turn, clearing the spent ones.
 

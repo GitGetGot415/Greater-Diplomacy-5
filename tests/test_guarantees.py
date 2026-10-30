@@ -1,13 +1,9 @@
 """Guarantees are unilateral, defensive, and short-lived when war begins."""
 
-import os
-import sys
 import unittest
 from collections import defaultdict
 from unittest.mock import patch
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from map_logic.diplomacy import guarantees
 from map_logic.diplomacy import diplomacy_logic

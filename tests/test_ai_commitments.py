@@ -9,13 +9,8 @@ The model is never trusted for state. validate_terms is the boundary, and it is
 tested against exactly the sort of thing a model actually says.
 """
 
-import os
-import sys
 import unittest
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import data.constants as c
 from data import queries

@@ -11,8 +11,6 @@ import tempfile
 import unittest
 from unittest import mock
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 
 from data import constants as c, migrations, queries
 from data.map import history_io, load_map

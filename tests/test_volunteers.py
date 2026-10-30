@@ -1,11 +1,8 @@
 """Volunteer offers, travel, returns, and host-side military behaviour."""
 
-import os
-import sys
 import unittest
 from types import SimpleNamespace
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from tests.stub_map_screen import StubMapScreen, bare_orders_screen
 from data import queries

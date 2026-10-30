@@ -6,8 +6,7 @@ import data.constants as c
 from data import queries
 from ui.rendering.font_manager import fonts
 from ui.bars import ui_bars
-from ui import dialogs as confirm_dialog
-
+from ui import dialogs
 from map_logic.ai import ai_handler
 from screens.menus.keybinds import default_keybinds
 
@@ -135,7 +134,7 @@ def render_settings_buttons(settings_screen):
     ]
     settings_screen.elements.extend(
         make_info_button(SETTINGS_INFO_X, y,
-                         lambda heading=title, body=text: confirm_dialog.show_info(heading, body),
+                         lambda heading=title, body=text: dialogs.show_info(heading, body),
                          y_offset=SETTINGS_INFO_Y_NUDGE)
         for y, title, text in SETTINGS_INFO_ROWS
     )

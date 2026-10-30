@@ -11,13 +11,8 @@ once read it, so it bought fuel units without limit and the disband pass then
 paid the bill one unit per turn.
 """
 
-import os
-import sys
 import unittest
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import data.constants as c
 from tests.stub_map_screen import fill_state_defaults

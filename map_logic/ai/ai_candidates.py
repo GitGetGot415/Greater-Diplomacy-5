@@ -262,17 +262,5 @@ def resource_offer(world, nation, partner, scenario_settings=None):
     return {f"give_{give}": give_amount, f"take_{take}": take_amount}
 
 
-def sole_target_of(nation_data, nation, action):
-    """Whether this nation already has a proposal of `action` out to anyone.
-
-    Some actions only make sense one at a time -- asking three separate leaders
-    to let you into their faction reads as desperation and used to happen.
-    """
-    for info in (nation_data.get(nation, {}).get("pending_diplomacy") or {}).values():
-        if isinstance(info, dict) and info.get("action") == action:
-            return True
-    return False
-
-
 def not_on_cooldown(nation_data, nation, target, action):
     return not queries.is_ai_diplo_on_cooldown(nation, target, action, nation_data)

@@ -10,9 +10,7 @@ from data import queries
 
 from map_logic.diplomacy import player_diplomacy_actions
 from ui.rendering import country_names
-from screens.game import map_input as event_handler
-
-
+from screens.game import map_input
 # The roster deliberately ends above the action buttons.  Its content can grow
 # freely; this fixed viewport, rather than a growing sequence of row positions,
 # is what keeps a large faction usable at every screen height.
@@ -374,6 +372,6 @@ class Faction_Territories_Screen(GameState):
             position = getattr(event, "pos", None)
             if position is None:
                 position = pygame.mouse.get_pos()
-            on_ui = event_handler.map_ui_bar_at_position(self.map_screen, position)
+            on_ui = map_input.map_ui_bar_at_position(self.map_screen, position)
             self.map_screen.camera.handle_input(event, self.map_screen, on_ui)
 

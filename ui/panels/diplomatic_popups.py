@@ -199,7 +199,7 @@ def is_spent(map_screen, popup):
 
 def close_spent_popups(map_screen):
     """Drops every popup that has been read or answered. Called each frame."""
-    popups = getattr(map_screen, 'diplomatic_popups', None)
+    popups = map_screen.diplomatic_popups
     if not popups:
         return
     map_screen.diplomatic_popups = [p for p in popups if not is_spent(map_screen, p)]

@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 from data import queries
 from data import constants as c
-from data.multiplayer.tournament import files as multiplayer_io
+from data.multiplayer.tournament import files as tournament_files
 from data.multiplayer.realtime.session import MapRealtimeDriver, RealtimeError, collect_map_commands
 from map_logic.ai import ai_movement
 from map_logic.ai import ai_unit_eval
@@ -682,17 +682,17 @@ class TransportTests(unittest.TestCase):
     def import_client(self, client, transform=None):
         with tempfile.TemporaryDirectory() as directory:
             path = os.path.join(directory, "transport.gd5move")
-            multiplayer_io.export_move_file(client, path, "key")
+            tournament_files.export_move_file(client, path, "key")
             if transform:
                 with open(path) as handle:
                     payload = json.load(handle)
-                data = multiplayer_io.decrypt_dict(payload["data"], "key")
+                data = tournament_files.decrypt_dict(payload["data"], "key")
                 transform(data)
-                payload["data"] = multiplayer_io.encrypt_dict(data, "key")
+                payload["data"] = tournament_files.encrypt_dict(data, "key")
                 with open(path, "w") as handle:
                     json.dump(payload, handle)
-            with patch.object(multiplayer_io, "run_with_progress", synchronous_progress):
-                return multiplayer_io.load_move_files(self.game, [path], {"A": "key"})
+            with patch.object(tournament_files, "run_with_progress", synchronous_progress):
+                return tournament_files.load_move_files(self.game, [path], {"A": "key"})
 
     def test_tournament_load_and_release_use_commands_preserve_stats_and_orders(self):
         client = deepcopy(self.game)

@@ -1,19 +1,12 @@
-import os
-import sys
 import unittest
 from unittest import mock
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import pygame
 
 import data.constants as c
 from screens.menus.mouse_settings import Mouse_Settings, mouse_control_warnings
-from screens.game import map_input as event_handler
-
-
+from screens.game import map_input
 class MouseSettingsTests(unittest.TestCase):
     def setUp(self):
         pygame.init()
@@ -84,8 +77,8 @@ class MouseSettingsTests(unittest.TestCase):
         actions = c.default_mouse_button_actions()
         actions["middle"]["issue_orders"] = True
         c.apply_runtime_settings({"mouse_button_actions": actions})
-        self.assertTrue(event_handler.mouse_button_has_action(2, "issue_orders"))
-        self.assertIn(2, event_handler.mouse_buttons_with_actions("pan_map"))
+        self.assertTrue(map_input.mouse_button_has_action(2, "issue_orders"))
+        self.assertIn(2, map_input.mouse_buttons_with_actions("pan_map"))
 
 
 if __name__ == "__main__":

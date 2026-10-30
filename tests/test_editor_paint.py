@@ -13,9 +13,7 @@ from map_logic.territory import ownership as ownership
 from screens.game import map as map_module
 from tests import app_harness
 from ui.panels import diplomatic_popups
-from screens.game import map_input as event_handler
-
-
+from screens.game import map_input
 def sample_editor():
     provinces = [
         {"id": 1, "owner": "A", "cores": ["A", "B"], "neighbors": [2, 4, 99]},
@@ -162,11 +160,11 @@ class EditorPaintInputTests(unittest.TestCase):
     def send(self, province_id, event_type, button=1, held=(False, False, False), on_ui=False):
         position = (map_module.EDITOR_SELECTION_TOOL_X, c.BOTTOM_BAR_UI_CENTER_Y) if on_ui else (600, 300)
         event = pygame.event.Event(event_type, pos=position, button=button)
-        with mock.patch.object(event_handler.queries, "get_clicked_province", return_value=self.provinces[province_id]), \
-                mock.patch.object(event_handler.map_utils, "create_glow_surface", return_value=(None, None)), \
+        with mock.patch.object(map_input.queries, "get_clicked_province", return_value=self.provinces[province_id]), \
+                mock.patch.object(map_input.map_utils, "create_glow_surface", return_value=(None, None)), \
                 mock.patch.object(diplomatic_popups, "handle_events", return_value=False), \
                 mock.patch("pygame.mouse.get_pressed", return_value=held):
-            event_handler.handle_map_events(self.game, event)
+            map_input.handle_map_events(self.game, event)
 
     def test_fill_runs_on_click_without_requiring_polled_mouse_state(self):
         self.send(1, pygame.MOUSEBUTTONDOWN)

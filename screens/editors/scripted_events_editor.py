@@ -15,8 +15,11 @@ from ui.navigation.game_state import GameState
 import data.constants as c
 from data import queries
 from map_logic.system32.time_handler import TimeHandler
+from map_logic.ai.scripted_events import (ACT_TYPES, CHAIN_OPS, COND_TYPES, EDIT_ACTIONS, NUMERIC_OPS,
+                                          SELF_NUMERIC_CONDITION_TYPES, SELF_OR_TARGET_TYPES,
+                                          TARGET_LIST_TYPES, TURN_OPS, VAR_MATH_OPS)
 from ui.rendering.font_manager import fonts
-from ui import dialogs as confirm_dialog
+from ui import dialogs
 from ui.bars import ui_bars
 from ui.navigation.modal_screen import ModalScreen
 from ui.widgets.table_screen import truncate
@@ -29,59 +32,17 @@ from ui.navigation import screen_runner
 # OPTION LISTS
 # ==========================================
 
-COND_TYPES = [
-    "Turn Number", "Variable", "At War With", "Is At War", "In Faction With",
-    "Not In Faction With", "Is In Faction", "Not In Faction", "Is Faction Leader", "Has Truce With",
-    "At Peace With", "Is At Peace", "Random (0.00 - 1.00)", "Received Action",
-    "Country Exists", "Country Doesn't Exist", "Occupying Core Of",
-    "Occupying All Cores Of", "Occupying Claims Of", "Occupying All Claims",
-    "Occupying Tile", "Is AI Controlled", "Is Player Controlled", "Bordering",
-    "Not Bordering", "Guaranteeing", "Not Guaranteeing", "Has Military Attaché",
-    "Doesn't Have Military Attaché", "Has Military Access Through",
-    "Doesn't Have Military Access Through", "Grants Military Access To",
-    "Doesn't Grant Military Access To", "Volunteer Divisions Sent",
-    "Volunteer Capacity Remaining", "True", "False",
-]
-
 # Longest condition/action summary shown on an event row before ellipsising.
 SUMMARY_MAX_CHARS = 40
 
-CHAIN_OPS = ["AND", "OR", "XOR", "NOR", "NAND"]
-NUMERIC_OPS = ["==", "!=", ">", "<", ">=", "<=", "BETWEEN (INC)", "BETWEEN (EXC)"]
-TURN_OPS = ["==", ">", "<", ">=", "<=", "BETWEEN (INC)", "BETWEEN (EXC)"]
 RECEIVED_ACTIONS = ["WAR_DECLARATION", "JOIN_WARS", "CALL_TO_ARMS", "CREATE_FACTION",
                     "FACTION_INVITE", "JOIN_FACTION_REQ", "TRADE", "CEASEFIRE",
                     "REQ_MILITARY_ACCESS", "SEND_MILITARY_ATTACHE", "SEND_VOLUNTEERS"]
 TRIGGER_TYPES = ["AI Only", "Player Only", "Both"]
 
-# Condition types whose value is a comma-separated list of nation IDs.
-TARGET_LIST_TYPES = ["At War With", "In Faction With", "Not In Faction With", "Has Truce With",
-                     "At Peace With", "Country Exists", "Country Doesn't Exist",
-                     "Occupying Claims Of", "Occupying All Claims", "Guaranteeing",
-                     "Not Guaranteeing", "Has Military Attaché", "Doesn't Have Military Attaché",
-                     "Has Military Access Through", "Doesn't Have Military Access Through",
-                     "Grants Military Access To", "Doesn't Grant Military Access To"]
-# These quantities always describe the country that owns the event.
-SELF_NUMERIC_CONDITION_TYPES = ["Volunteer Divisions Sent", "Volunteer Capacity Remaining"]
-# Condition types that take a single nation ID, or blank to mean the event's owner.
-SELF_OR_TARGET_TYPES = ["Is AI Controlled", "Is Player Controlled", "Is At War",
-                        "Is At Peace", "Is In Faction", "Not In Faction", "Is Faction Leader"]
-
-EDIT_ACTIONS = ["Edit Name", "Edit Leader Name", "Edit Leader Title",
-                "Edit Color", "Edit Flag", "Edit Portrait"]
-ACT_TYPES = ["Declare War", "Join Faction", "Create Faction", "Invite to Faction",
-             "Accept Proposal", "Reject Proposal", "Send Ceasefire", "Send Custom Message",
-             "Queue Claims", "Revoke Claims", "Revoke All Claims", "Give Territory",
-             "Spawn Unit", "Set Variable", "Guarantee Independence",
-             "Send Military Attaché", "Request Military Access",
-             "Offer Volunteer Divisions", "Accept Military Attaché",
-             "Reject Military Attaché", "Accept Military Access",
-             "Reject Military Access", "Accept Volunteer Divisions",
-             "Reject Volunteer Divisions"] + EDIT_ACTIONS
 # Actions that only write a plain text value onto the event's owner.
 TEXT_ONLY_ACTIONS = ["Edit Name", "Edit Leader Name", "Edit Leader Title",
                      "Queue Claims", "Revoke Claims"]
-VAR_MATH_OPS = ["Set", "Add", "Subtract", "Multiply", "Divide"]
 
 VAR_TYPES = ["int", "double", "string"]
 
@@ -177,7 +138,7 @@ class _HelpScreen(_ModalScreen):
         font = fonts.get("normal")
         self.lines = []
         for raw in HELP_TEXT.split("\n"):
-            self.lines.extend(confirm_dialog._wrap_text(raw, font, p.width - 2 * self.PAD - 30) or [""])
+            self.lines.extend(dialogs._wrap_text(raw, font, p.width - 2 * self.PAD - 30) or [""])
         self.refresh_ui()
 
     def refresh_ui(self):
@@ -277,7 +238,7 @@ class _VariablesScreen(_ModalScreen):
         if not name:
             return
         if any(v["name"] == name for v in self.variables):
-            confirm_dialog.show_error("Error", "Variable name must be unique.")
+            dialogs.show_error("Error", "Variable name must be unique.")
             return
         self.variables.append({"name": name, "type": self.var_type, "value": self.value_field.text})
         self.refresh_ui()
@@ -295,7 +256,7 @@ class _VariablesScreen(_ModalScreen):
         if old["name"] != new_name:
             for i, v in enumerate(self.variables):
                 if v["name"] == new_name and i != idx:
-                    confirm_dialog.show_error("Error", "Variable name must be unique.")
+                    dialogs.show_error("Error", "Variable name must be unique.")
                     return
 
         usage = self._usage(old["name"])
@@ -349,14 +310,14 @@ class _VariablesScreen(_ModalScreen):
             msg = (f"Changing to string will force all non-equals conditionals to '==' and "
                    f"non-set actions to 'Set'.\nCountries using: {', '.join(self._nations_used(usage))}\n"
                    f"Events affected: {len(usage)}\nProceed?")
-            confirm_dialog.ask_yes_no("Warning", msg, _coerce_to_string)
+            dialogs.ask_yes_no("Warning", msg, _coerce_to_string)
             return
 
         if old["type"] == "string" and new_type in ("int", "double") and usage:
             msg = (f"Changing to int/double will reset non-numerical condition/action values to '0'.\n"
                    f"Countries using: {', '.join(self._nations_used(usage))}\n"
                    f"Events affected: {len(usage)}\nProceed?")
-            confirm_dialog.ask_yes_no("Warning", msg, _coerce_to_numeric)
+            dialogs.ask_yes_no("Warning", msg, _coerce_to_numeric)
             return
 
         _finish_rename_and_save()
@@ -385,7 +346,7 @@ class _VariablesScreen(_ModalScreen):
                         self.map_ref.nation_data[nat]["scripted_events"].remove(ev)
                 _finish()
 
-            confirm_dialog.ask_yes_no("Warning", msg, on_confirm)
+            dialogs.ask_yes_no("Warning", msg, on_confirm)
             return
 
         _finish()
@@ -632,7 +593,7 @@ class _EventEditScreen(_ModalScreen):
                     size = c.PORTRAIT_SIZE if row.type == "Edit Portrait" else c.FLAG_SIZE
                     row.field.text = queries.encode_surf_to_b64(pygame.transform.scale(img, size))
                 except Exception as e:
-                    confirm_dialog.show_error("Error", f"Could not load image: {e}")
+                    dialogs.show_error("Error", f"Could not load image: {e}")
             self.refresh_ui()
 
         queries.open_file_browser(self.map_screen, "Select Image", c.ASSETS_DIR,
@@ -1017,7 +978,7 @@ class Scripted_Events_Editor_Screen(_ModalScreen):
 
     def open_event(self, event_idx=None):
         if not self.target:
-            confirm_dialog.show_warning("Warning", "Select a nation first.")
+            dialogs.show_warning("Warning", "Select a nation first.")
             return
         _run(_EventEditScreen(self.map_screen, self.map_ref, self.target, event_idx))
         self.refresh_ui()

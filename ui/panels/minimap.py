@@ -25,10 +25,10 @@ def minimap_rect(map_screen, screen_width, screen_height):
 
 def _map_image(map_screen, size, ocean_color):
     """Return a cached miniaturized active map layer, refreshing on layer changes."""
-    source = getattr(map_screen, "active_map", None)
+    source = map_screen.active_map
     if source is None:
         return None
-    fog = getattr(map_screen, "fog_map", None)
+    fog = map_screen.fog_map
     key = (id(source), source.get_size(), id(fog),
            fog.get_size() if fog is not None else None,
            tuple(size), tuple(ocean_color))

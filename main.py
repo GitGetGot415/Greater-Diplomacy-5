@@ -412,6 +412,35 @@ class Controller:
         }
         self.active_state = self.states["MENU"]
 
+    def _enter_realtime_map(self, realtime_map, session, player_id, country_id, after_layers=None):
+        """Make a loaded map the active real-time board for one player."""
+        realtime_map.selection_mode = False
+        realtime_map.pending_selection = None
+        realtime_map.show_player_ready_screen = False
+        realtime_map.realtime_multiplayer = True
+        realtime_map.realtime_session = session
+        realtime_map.realtime_player_id = player_id
+        realtime_map.player_country = country_id
+        realtime_map.active_players = [p.country_id for p in session.players.values() if p.country_id]
+        realtime_map.set_play_view_defaults()
+        # Map construction initially suppresses fog while scenario country
+        # selection is active. Rebuild the player-dependent layers immediately
+        # instead of waiting for the first processed turn to do it.
+        realtime_map.refresh_map_layers("relations", "faction_territories", "fog")
+        if after_layers:
+            after_layers()
+        self.states["MAP"] = realtime_map
+        from screens.game.map import render_buttons
+        render_buttons(realtime_map)
+
+    @staticmethod
+    def _apply_initial_snapshot(realtime_map, view):
+        from data.multiplayer.realtime.session import apply_authoritative_snapshot
+        if view.snapshot:
+            apply_authoritative_snapshot(realtime_map, view.snapshot)
+            realtime_map._realtime_snapshot_turn = view.turn_number
+            realtime_map._realtime_snapshot_phase = view.phase
+
     def flip_state(self):
         """Unified flip_state logic"""
         previous_state = self.active_state
@@ -468,31 +497,15 @@ class Controller:
                                    num_players=len(previous_state.selected_realtime_session.players))
                 session = previous_state.selected_realtime_session
                 host_player = session.players[previous_state.selected_realtime_player_id]
-                # Scenario loading supplies the finalized map, but the host
-                # selected a country in the lobby already.  Do not re-enter
-                # the ordinary single-player country-selection flow.
-                realtime_map.selection_mode = False
-                realtime_map.pending_selection = None
-                realtime_map.show_player_ready_screen = False
-                realtime_map.realtime_multiplayer = True
-                realtime_map.realtime_session = session
                 realtime_map.realtime_server = previous_state.selected_realtime_server
                 realtime_map.realtime_server_map = previous_state.selected_realtime_server_map
                 realtime_map.realtime_port_mapping = previous_state.selected_realtime_port_mapping
                 realtime_map.realtime_temporary_relay = previous_state.selected_realtime_temporary_relay
                 realtime_map.realtime_relay_token = previous_state.selected_realtime_relay_token
-                realtime_map.realtime_player_id = host_player.player_id
-                realtime_map.player_country = host_player.country_id
-                realtime_map.active_players = [p.country_id for p in session.players.values() if p.country_id]
-                realtime_map.set_play_view_defaults()
-                # Map construction initially suppresses fog while scenario
-                # country selection is active.  We disabled that mode above,
-                # so rebuild the player-dependent layers immediately instead
-                # of waiting for the first processed turn to do it for us.
-                realtime_map.refresh_map_layers("relations", "faction_territories", "fog")
-                self.states["MAP"] = realtime_map
-                from screens.game.map import render_buttons
-                render_buttons(realtime_map)
+                # Scenario loading supplies the finalized map, but the host
+                # selected a country in the lobby already.  Do not re-enter
+                # the ordinary single-player country-selection flow.
+                self._enter_realtime_map(realtime_map, session, host_player.player_id, host_player.country_id)
             elif hasattr(previous_state, "selected_realtime_client"):
                 view = previous_state.selected_realtime_view
                 from data.multiplayer.realtime.session import materialize_map_bundle
@@ -503,27 +516,11 @@ class Controller:
                 finally:
                     shutil.rmtree(bundle_path, ignore_errors=True)
                 me = view.players[view.player_id]
-                realtime_map.selection_mode = False
-                realtime_map.pending_selection = None
-                realtime_map.show_player_ready_screen = False
-                realtime_map.realtime_multiplayer = True
-                realtime_map.realtime_session = view
                 realtime_map.realtime_client = previous_state.selected_realtime_client
-                realtime_map.realtime_player_id = view.player_id
-                realtime_map.player_country = me.country_id
-                realtime_map.active_players = [p.country_id for p in view.players.values() if p.country_id]
-                realtime_map.set_play_view_defaults()
                 # The map was loaded before the remote player's country was
-                # known; initialize that player's visibility immediately.
-                realtime_map.refresh_map_layers("relations", "faction_territories", "fog")
-                from data.multiplayer.realtime.session import apply_authoritative_snapshot
-                if view.snapshot:
-                    apply_authoritative_snapshot(realtime_map, view.snapshot)
-                    realtime_map._realtime_snapshot_turn = view.turn_number
-                    realtime_map._realtime_snapshot_phase = view.phase
-                self.states["MAP"] = realtime_map
-                from screens.game.map import render_buttons
-                render_buttons(realtime_map)
+                # known; the shared entry initializes that player's visibility.
+                self._enter_realtime_map(realtime_map, view, view.player_id, me.country_id,
+                                         lambda: self._apply_initial_snapshot(realtime_map, view))
             elif previous_state == self.states["RANDOM_SETUP"]:
                 self.states["MAP"] = Map(is_scenario=True, is_random=True, random_settings=previous_state.random_settings, num_players=self.num_players)
 
@@ -531,8 +528,8 @@ class Controller:
                 path = previous_state.selected_tournament_path
                 key = previous_state.selected_tournament_key
 
-                from data.multiplayer.tournament import files as multiplayer_io
-                res = multiplayer_io.load_tournament(path, key)
+                from data.multiplayer.tournament import files as tournament_files
+                res = tournament_files.load_tournament(path, key)
                 if len(res) >= 8:
                     success, role, cid, temp_dir, keys_dict, msg, session_key, ver_table = res[:8]
                 else:
@@ -561,9 +558,9 @@ class Controller:
                         self.states["MAP"].multiplayer_keys_dict = keys_dict
                     elif role == "PLAYER":
                         self.states["MAP"].multiplayer_player_key = key
-                        multiplayer_io.strip_sensitive_data_for_player(self.states["MAP"], cid)
+                        tournament_files.strip_sensitive_data_for_player(self.states["MAP"], cid)
                     elif role == c.TOURNAMENT_SPECTATOR_ROLE:
-                        multiplayer_io.strip_sensitive_data_for_tournament_spectator(
+                        tournament_files.strip_sensitive_data_for_tournament_spectator(
                             self.states["MAP"])
 
                     shutil.rmtree(temp_dir, ignore_errors=True)
@@ -575,8 +572,8 @@ class Controller:
                     print(f"Failed to load tournament: {msg}")
 
                     # Show popup to user
-                    from ui import dialogs as confirm_dialog
-                    confirm_dialog.show_error("Load Failed", msg)
+                    from ui import dialogs 
+                    dialogs.show_error("Load Failed", msg)
 
                     # Abort transition
                     self.active_state.done = False

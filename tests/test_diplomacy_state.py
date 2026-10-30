@@ -7,13 +7,8 @@ ones that used to differ between copies: a nation that has never been given the
 key at all, and a list that is already in the state being asked for.
 """
 
-import os
-import sys
 import unittest
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from map_logic.diplomacy import diplomacy_agreements as agreements
 from map_logic.system32 import combat_rules

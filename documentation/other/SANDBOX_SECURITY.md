@@ -64,7 +64,7 @@ The closure-captured `sandboxed_dict_ids` set itself is not reachable from any m
 
 The hook checks whether the **direct** caller of a blocked event is CPython's own import machinery (`_frozen_importlib`, `_frozen_importlib_external`, or anything under `importlib.`). If so, the hook returns early without walking the stack.
 
-This carve-out is necessary, not a hole: a sandboxed mod doing `import data.io_helpers` triggers the import system to read `data/io_helpers.py` from disk, which fires the `open` audit event. Without the carve-out, the strict stack walk would find the mod's frame underneath the import machinery's and block — which would break every `import` statement a sandboxed mod issues.
+This carve-out is necessary, not a hole: a sandboxed mod doing `import data.io.json_io` triggers the import system to read `data/io/json_io.py` from disk, which fires the `open` audit event. Without the carve-out, the strict stack walk would find the mod's frame underneath the import machinery's and block — which would break every `import` statement a sandboxed mod issues.
 
 The carve-out applies only when the *direct* caller is importlib. If the mod calls a game function that does file I/O, the direct caller is the game function (not importlib), and the stack walk still finds the mod's frame. The bypass via "hop through a game function" remains closed.
 

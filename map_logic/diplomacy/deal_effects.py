@@ -17,8 +17,7 @@ from data.state_access import world_for, session_for
 import data.constants as c
 from map_logic.diplomacy import deal as deal_mod
 from map_logic.diplomacy.diplomacy_events import log_global_event
-from map_logic.territory import ownership as edit_province_ownership
-
+from map_logic.territory import ownership
 from data import queries
 from map_logic.system32 import movement_processor
 from map_logic.diplomacy import reach as reach_mod
@@ -241,7 +240,7 @@ def execute(map_screen, deal, escrowed=None):
     for prov_id, receiver in transfers.items():
         prov = by_id.get(int(prov_id))
         if prov is not None and prov.get("owner") != receiver:
-            edit_province_ownership.conquer_province(map_screen, prov, receiver)
+            ownership.conquer_province(map_screen, prov, receiver)
             # The land, and only the land. See _hand_over_the_land_only.
             _hand_over_the_land_only(map_screen, prov, prov.get("owner"))
 
@@ -375,7 +374,7 @@ def restore_occupied(map_screen, deal, ceded):
         if was is None or was == prov.get("owner"):
             continue
 
-        edit_province_ownership.conquer_province(map_screen, prov, was)
+        ownership.conquer_province(map_screen, prov, was)
         returned += 1
 
     if returned:

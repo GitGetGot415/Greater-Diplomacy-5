@@ -10,13 +10,8 @@ have never carried (they use order_type + item_name), so a cancelled building
 queue silently refunded nothing.
 """
 
-import os
-import sys
 import unittest
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from data import queries
 from map_logic.ai import automation_logic

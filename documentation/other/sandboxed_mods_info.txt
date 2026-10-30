@@ -2,4 +2,4 @@ SANDBOXED MODS
 ==============
 
 Read documentation/other/SANDBOX_SECURITY.md for the sandbox rules and limitations.
-Use documentation/source_layout_changes.md to update source-replacement mod targets after file moves.
+Use documentation/code_layout.md to find current source-replacement mod targets.

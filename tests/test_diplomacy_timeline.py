@@ -13,14 +13,11 @@ Terminal", via run_tests.py in the repo root, or with
 `python -m unittest discover -s tests -t .`.
 """
 
-import os
-import sys
 import unittest
 from types import SimpleNamespace
 
 # Running this file directly puts tests/ on the path rather than the repo root,
 # so put the root back before importing anything from the game.
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from tests.stub_map_screen import StubMapScreen
 

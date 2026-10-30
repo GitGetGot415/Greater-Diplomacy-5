@@ -9,12 +9,10 @@ from copy import deepcopy
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock, patch
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 import pygame
 from data import migrations, queries
 import data.constants as c
-from data.multiplayer.tournament import files as multiplayer_io
+from data.multiplayer.tournament import files as tournament_files
 from data.multiplayer.realtime.session import (
     MapRealtimeDriver,
     RealtimeError,
@@ -734,7 +732,7 @@ class AirIntegrationTests(unittest.TestCase):
                 defender.update(attack=0, defense=0, health=100000, max_health=100000)
                 order = {"type": "AIR_ATTACK", "target_id": 2}
                 if mode == "tournament":
-                    _live, drafts = multiplayer_io._validate_aircraft_orders(self.game, "A",
+                    _live, drafts = tournament_files._validate_aircraft_orders(self.game, "A",
                         {"aircraft_orders": [{"unit_id": unit["unit_id"], "order": order} for unit in aircraft]}, {})
                     for unit, canonical, _name in drafts:
                         unit["order"] = canonical
@@ -759,7 +757,7 @@ class AirIntegrationTests(unittest.TestCase):
         command = {"type": "unit_order", "province_id": self.base["id"], "unit_index": 0,
                    "unit_id": self.plane["unit_id"], "order": order}
         self.assertEqual(MapRealtimeDriver(self.game).validate_draft("A", [command])[0]["order"], canonical)
-        _live, drafts = multiplayer_io._validate_aircraft_orders(self.game, "A",
+        _live, drafts = tournament_files._validate_aircraft_orders(self.game, "A",
             {"aircraft_orders": [{"unit_id": self.plane["unit_id"], "order": order}]}, {})
         self.assertEqual(drafts[0][1], canonical)
         self.plane["order"] = canonical
@@ -927,15 +925,15 @@ class AirIntegrationTests(unittest.TestCase):
         self.plane["order"] = {"type": "AIR_ATTACK", "base_id": 1, "target_id": 2}
         with tempfile.TemporaryDirectory() as directory:
             path = os.path.join(directory, "air.gd5move")
-            multiplayer_io.export_move_file(self.game, path, "player-key")
+            tournament_files.export_move_file(self.game, path, "player-key")
             with open(path) as f:
-                data = multiplayer_io.decrypt_dict(json.load(f)["data"], "player-key")
+                data = tournament_files.decrypt_dict(json.load(f)["data"], "player-key")
             self.assertEqual(len(data["aircraft_orders"]), 1)
             self.assertFalse(any(update.get("units") for update in data["provinces"].values()))
             self.plane["order"] = {}
             health = self.plane["health"]
-            with patch.object(multiplayer_io, "run_with_progress", synchronous_progress):
-                result = multiplayer_io.load_move_files(self.game, [path, path], {"A": "player-key"})
+            with patch.object(tournament_files, "run_with_progress", synchronous_progress):
+                result = tournament_files.load_move_files(self.game, [path, path], {"A": "player-key"})
             self.assertEqual(result["loaded"], 1)
             self.assertEqual(result["rejected"], 1)
             self.assertEqual(self.plane["health"], health)
@@ -957,13 +955,13 @@ class AirIntegrationTests(unittest.TestCase):
                [dict(valid, order={"type": ["AIR_ATTACK"]})])
         for commands in bad:
             with self.subTest(commands=commands), self.assertRaises(ValueError):
-                multiplayer_io._validate_aircraft_orders(self.game, "A", {"aircraft_orders": commands}, {})
+                tournament_files._validate_aircraft_orders(self.game, "A", {"aircraft_orders": commands}, {})
 
     def test_tournament_snapshot_cannot_change_aircraft_health_or_location(self):
         # Every v46 and later move sends aircraft orders. Snapshot stats and positions are ignored.
         submitted = dict(self.plane, health=1, attack=100000)
         order = {"unit_id": self.plane["unit_id"], "order": {"type": "AIR_ATTACK", "target_id": 2}}
-        live, drafts = multiplayer_io._validate_aircraft_orders(self.game, "A", {"aircraft_orders": [order]},
+        live, drafts = tournament_files._validate_aircraft_orders(self.game, "A", {"aircraft_orders": [order]},
             {self.target["json_key"]: {"units": [submitted]}})
         self.assertIn(self.plane["unit_id"], live)
         self.assertIs(drafts[0][0], self.plane)
@@ -984,11 +982,11 @@ class AirIntegrationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path = os.path.join(directory, "stale.gd5move")
             self.plane["order"] = {"type": "AIR_ATTACK", "base_id": 1, "target_id": 2}
-            multiplayer_io.export_move_file(self.game, path, "player-key")
+            tournament_files.export_move_file(self.game, path, "player-key")
             self.game.time_manager.total_turns += 1
             self.plane["order"] = {}
-            with patch.object(multiplayer_io, "run_with_progress", synchronous_progress):
-                result = multiplayer_io.load_move_files(self.game, [path], {"A": "player-key"})
+            with patch.object(tournament_files, "run_with_progress", synchronous_progress):
+                result = tournament_files.load_move_files(self.game, [path], {"A": "player-key"})
             self.assertEqual(result["rejected"], 1)
             self.assertEqual(self.plane["order"], {})
 
@@ -1082,7 +1080,7 @@ class AirGroundTransportTests(unittest.TestCase):
                 command = {"type": "unit_order", "province_id": 1, "unit_index": 0,
                            "unit_id": unit["unit_id"], "order": order}
                 self.assertEqual(driver.validate_draft("A", [command])[0]["order"], order)
-                live, drafts = multiplayer_io._validate_aircraft_orders(self.game, "A",
+                live, drafts = tournament_files._validate_aircraft_orders(self.game, "A",
                     {"aircraft_orders": [{"unit_id": unit["unit_id"], "order": order}]}, {})
                 self.assertIn(unit["unit_id"], live)
                 self.assertEqual(drafts[0][1], order)
@@ -1090,7 +1088,7 @@ class AirGroundTransportTests(unittest.TestCase):
                 with self.assertRaises(RealtimeError):
                     driver.validate_draft("A", [dict(command, order=bad)])
                 with self.assertRaises(ValueError):
-                    multiplayer_io._validate_aircraft_orders(self.game, "A",
+                    tournament_files._validate_aircraft_orders(self.game, "A",
                         {"aircraft_orders": [{"unit_id": unit["unit_id"], "order": bad}]}, {})
                 with self.assertRaises(ValueError):
                     queries.load_transport(unit, "Truck")
@@ -1161,7 +1159,7 @@ class AirGroundTransportTests(unittest.TestCase):
                 command = {"type": "unit_order", "province_id": 1, "unit_index": 0,
                            "unit_id": unit["unit_id"], "order": unit["order"]}
                 self.assertEqual(MapRealtimeDriver(self.game).validate_draft("A", [command])[0]["order"], unit["order"])
-                _, drafts = multiplayer_io._validate_aircraft_orders(self.game, "A",
+                _, drafts = tournament_files._validate_aircraft_orders(self.game, "A",
                     {"aircraft_orders": [{"unit_id": unit["unit_id"], "order": unit["order"]}]}, {})
                 self.assertEqual(drafts[0][1], unit["order"])
                 self.assertFalse(queries.can_unit_move_step(unit, self.base, self.sea, self.game.nation_data))
@@ -1498,7 +1496,7 @@ class AirMissionSelectionTests(unittest.TestCase):
                 command = {"type": "unit_order", "province_id": 1, "unit_index": 0,
                            "unit_id": self.unit["unit_id"], "order": order}
                 self.assertEqual(MapRealtimeDriver(self.game).validate_draft("A", [command])[0]["order"], order)
-                _, drafts = multiplayer_io._validate_aircraft_orders(self.game, "A",
+                _, drafts = tournament_files._validate_aircraft_orders(self.game, "A",
                     {"aircraft_orders": [{"unit_id": self.unit["unit_id"], "order": order}]}, {})
                 self.assertEqual(drafts[0][1], order)
 
@@ -1518,7 +1516,7 @@ class AirMissionSelectionTests(unittest.TestCase):
         with self.assertRaises(RealtimeError):
             MapRealtimeDriver(self.game).validate_draft("A", [command])
         with self.assertRaises(ValueError):
-            multiplayer_io._validate_aircraft_orders(self.game, "A",
+            tournament_files._validate_aircraft_orders(self.game, "A",
                 {"aircraft_orders": [{"unit_id": self.unit["unit_id"], "order": order}]}, {})
         self.unit["order"] = dict(order, turns_left=1)
         movement_processor.process_upgrades(self.game)
@@ -1570,7 +1568,7 @@ class AirMissionSelectionTests(unittest.TestCase):
                 command = {"type": "unit_order", "province_id": 1, "unit_index": 0,
                            "unit_id": self.unit["unit_id"], "order": self.unit["order"]}
                 self.assertEqual(MapRealtimeDriver(self.game).validate_draft("A", [command])[0]["order"]["target_type"], target)
-                _, drafts = multiplayer_io._validate_aircraft_orders(self.game, "A",
+                _, drafts = tournament_files._validate_aircraft_orders(self.game, "A",
                     {"aircraft_orders": [{"unit_id": self.unit["unit_id"], "order": self.unit["order"]}]}, {})
                 self.assertEqual(drafts[0][1]["target_type"], target)
                 self.unit["order"] = {}
@@ -1804,7 +1802,7 @@ class GroupAirMissionSelectionTests(unittest.TestCase):
         self.assertEqual([c["order"] for c in MapRealtimeDriver(self.game).validate_draft("A", commands)],
                          [c["order"] for c in commands])
         tournament = [{"unit_id": c["unit_id"], "order": c["order"]} for c in commands]
-        _, drafts = multiplayer_io._validate_aircraft_orders(self.game, "A", {"aircraft_orders": tournament}, {})
+        _, drafts = tournament_files._validate_aircraft_orders(self.game, "A", {"aircraft_orders": tournament}, {})
         self.assertEqual([d[1] for d in drafts], [c["order"] for c in commands])
         for bad in (dict(commands[1], order={"type": "AIR_PATROL", "priority": []}),
                     dict(commands[1], order={"type": "AIR_PATROL", "base_id": self.base["id"]}),
@@ -1813,12 +1811,12 @@ class GroupAirMissionSelectionTests(unittest.TestCase):
                 with self.assertRaises(RealtimeError):
                     MapRealtimeDriver(self.game).validate_draft("A", [bad])
                 with self.assertRaises(ValueError):
-                    multiplayer_io._validate_aircraft_orders(self.game, "A",
+                    tournament_files._validate_aircraft_orders(self.game, "A",
                         {"aircraft_orders": [{"unit_id": bad["unit_id"], "order": bad["order"]}]}, {})
         with self.assertRaises(RealtimeError):
             MapRealtimeDriver(self.game).validate_draft("B", commands)
         with self.assertRaises(ValueError):
-            multiplayer_io._validate_aircraft_orders(self.game, "B", {"aircraft_orders": tournament}, {})
+            tournament_files._validate_aircraft_orders(self.game, "B", {"aircraft_orders": tournament}, {})
 
 
 class AirAppSmokeTests(unittest.TestCase):
@@ -2005,14 +2003,14 @@ class AirAppSmokeTests(unittest.TestCase):
             command = {"type": "unit_order", "province_id": base["id"], "unit_index": 0,
                        "unit_id": fighter["unit_id"], "order": dict(fighter["order"])}
             self.assertEqual(MapRealtimeDriver(loaded).validate_draft("A", [command])[0]["order"], fighter["order"])
-            _, drafts = multiplayer_io._validate_aircraft_orders(loaded, "A", {"aircraft_orders": [
+            _, drafts = tournament_files._validate_aircraft_orders(loaded, "A", {"aircraft_orders": [
                 {"unit_id": fighter["unit_id"], "order": command["order"]}]}, {})
             self.assertEqual(drafts[0][1], fighter["order"])
             invalid = dict(command, order={"type": "AIR_ATTACK", "target_id": outside["id"]})
             with self.assertRaises(RealtimeError):
                 MapRealtimeDriver(loaded).validate_draft("A", [invalid])
             with self.assertRaises(ValueError):
-                multiplayer_io._validate_aircraft_orders(loaded, "A", {"aircraft_orders": [
+                tournament_files._validate_aircraft_orders(loaded, "A", {"aircraft_orders": [
                     {"unit_id": fighter["unit_id"], "order": invalid["order"]}]}, {})
             screen.exit_screen.assert_not_called()
 
@@ -2534,20 +2532,20 @@ class AirAppSmokeTests(unittest.TestCase):
             game.raw_json_data = {p["json_key"]: dict(p) for p in game.map_data.values()}
             archive = os.path.join(directory, "air.gd5tour")
             with patch.object(c, "TOURNAMENT_SAVES_DIR", directory), \
-                    patch.object(multiplayer_io, "run_with_progress", synchronous_progress):
-                multiplayer_io.export_tournament(game, archive, "host-key", {"A": "a-key", "B": "b-key"})
+                    patch.object(tournament_files, "run_with_progress", synchronous_progress):
+                tournament_files.export_tournament(game, archive, "host-key", {"A": "a-key", "B": "b-key"})
                 with open(archive) as handle:
                     payload = json.load(handle)
-                entry = payload["verification_table"][multiplayer_io.hash_key("a-key")]
-                context = multiplayer_io.decrypt_dict(entry["enc_session"], "a-key")["sk"]
+                entry = payload["verification_table"][tournament_files.hash_key("a-key")]
+                context = tournament_files.decrypt_dict(entry["enc_session"], "a-key")["sk"]
                 self.assertEqual(context, game.multiplayer_session_key)
-                self.assertIsInstance(multiplayer_io.decrypt_dict(payload["game_data"], context), dict)
+                self.assertIsInstance(tournament_files.decrypt_dict(payload["game_data"], context), dict)
                 self.assertNotIn("player_game_data", payload)
-                result = multiplayer_io.load_tournament(archive, "a-key")
+                result = tournament_files.load_tournament(archive, "a-key")
                 self.assertTrue(result[0])
                 loaded = Map(load_path=result[3], skip_initial_income=True)
                 self.assertEqual(loaded.id_to_province[3]["units"][0]["unit_id"], hidden["unit_id"])
-                multiplayer_io.strip_sensitive_data_for_player(loaded, "A")
+                tournament_files.strip_sensitive_data_for_player(loaded, "A")
                 visible, _partial = queries.get_visible_provinces(loaded)
                 self.assertNotIn(3, visible)
                 self.assertEqual(loaded.id_to_province[1]["units"][0]["unit_id"], fighter["unit_id"])
@@ -2580,7 +2578,7 @@ class AirAppSmokeTests(unittest.TestCase):
             self.assertTrue(queries.is_air_unit(aircraft))
 
     def test_editor_air_brush_requires_land(self):
-        from screens.game import map_input as event_handler
+        from screens.game import map_input 
         with tempfile.TemporaryDirectory() as directory:
             _original, _fighter, _rocket, path = self.make_runtime_save(directory)
             loaded = Map(load_path=path, force_editor=True, skip_initial_income=True)
@@ -2594,7 +2592,7 @@ class AirAppSmokeTests(unittest.TestCase):
                     base["terrain"] = terrain
                     before = len(base["units"])
                     with patch.object(queries, "get_clicked_province", return_value=base):
-                        event_handler.handle_map_events(loaded, event)
+                        map_input.handle_map_events(loaded, event)
                     self.assertEqual(len(base["units"]), before + int(allowed))
 
 

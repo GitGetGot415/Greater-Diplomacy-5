@@ -360,7 +360,7 @@ class EditorResearchTreeTests(unittest.TestCase):
             self.assertEqual(self.map.nation_data[self.country]["research"], {"root": 2, "branch": 0, "tip": 0})
 
     def test_spectator_warns_when_prerequisite_removal_invalidates_a_project(self):
-        from ui import dialogs as confirm_dialog
+        from ui import dialogs 
         country = self.map.nation_data[self.country]
         country.update(research={"root": 2, "branch": 2, "tip": 1},
                        research_queue=[{"tech_name": "tip", "points_remaining": 40}])
@@ -369,7 +369,7 @@ class EditorResearchTreeTests(unittest.TestCase):
                 patch.object(self.map, "viewing_research_country", self.country, create=True), \
                 patch.object(self.map, "viewing_research_mode", "EDIT", create=True):
             self.screen.start_research(self.map)
-            with patch.object(confirm_dialog, "ask_yes_no") as ask:
+            with patch.object(dialogs, "ask_yes_no") as ask:
                 self.node("branch", 1).callback()
                 ask.assert_called_once()
                 self.assertIn(queries.get_tech_display_name("tip"), ask.call_args.args[1])
@@ -381,7 +381,7 @@ class EditorResearchTreeTests(unittest.TestCase):
             self.assertEqual(country["research"], {"root": 2, "branch": 0, "tip": 0})
 
     def test_spectator_preserves_progress_when_an_alternative_prerequisite_remains(self):
-        from ui import dialogs as confirm_dialog
+        from ui import dialogs 
         country = self.map.nation_data[self.country]
         country.update(research={"root": 1, "left": 2, "right": 1},
                        research_queue=[{"tech_name": "choice", "points_remaining": 40}])
@@ -390,7 +390,7 @@ class EditorResearchTreeTests(unittest.TestCase):
                 patch.object(self.map, "viewing_research_mode", "EDIT", create=True):
             self.screen.start_research(self.map)
             self.screen.set_category(self.tree["left"]["category"])
-            with patch.object(confirm_dialog, "ask_yes_no") as ask:
+            with patch.object(dialogs, "ask_yes_no") as ask:
                 self.node("left", 2).callback()
                 ask.assert_not_called()
             self.screen.confirm_research_edit()

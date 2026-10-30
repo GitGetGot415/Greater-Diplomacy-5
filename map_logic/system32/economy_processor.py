@@ -5,9 +5,7 @@ import data.constants as c
 from data import queries
 
 from data.io import country_io
-from map_logic.territory import ownership as edit_province_ownership
-
-
+from map_logic.territory import ownership
 def process_economy(map_screen):
     """Calculates income, applies building yields, and deducts unit upkeep."""
     world_state = world_for(map_screen)
@@ -173,7 +171,7 @@ def process_queues(map_screen):
                                         or queries.get_unit_for_family_year(unit_library, "Militia", c.DEFAULT_EQUIPMENT_YEAR, context=map_screen))
                         
                         # Transfer ownership
-                        edit_province_ownership.conquer_province(map_screen, target_prov, reb_id)
+                        ownership.conquer_province(map_screen, target_prov, reb_id)
                         target_prov["_turn_start_owner"] = reb_id
                         
                         # Spawn militia

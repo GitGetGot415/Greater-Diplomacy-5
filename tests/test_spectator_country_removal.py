@@ -11,11 +11,11 @@ import data.constants as c
 from data import queries
 from map_logic.diplomacy import puppet_actions, volunteers, faction_leadership
 from map_logic.system32 import turn_processor
-from map_logic.territory import ownership as edit_province_ownership
+from map_logic.territory import ownership
 from tests import app_harness
 from tests.stub_map_screen import sample_map_screen
-from screens.game import spectator_controls as spectator_menus
-from ui import dialogs as confirm_dialog
+from screens.game import spectator_controls
+from ui import dialogs
 from ui.navigation import modal_stack
 
 
@@ -199,11 +199,11 @@ class SpectatorRemovalControlTests(unittest.TestCase):
 
     def setUp(self):
         self.game = game()
-        self.enterContext(mock.patch.object(spectator_menus, "_refresh_country_removal"))
+        self.enterContext(mock.patch.object(spectator_controls, "_refresh_country_removal"))
 
     def test_annex_picker_uses_selected_source_and_display_names(self):
         with mock.patch.object(queries, "open_listbox_selector") as picker:
-            spectator_menus.spec_annex_country(self.game)
+            spectator_controls.spec_annex_country(self.game)
         items = picker.call_args.args[3]
         self.assertIn(("Target Display", "Target"), items)
         self.assertNotIn(("Source Display", "Source"), items)
@@ -212,8 +212,8 @@ class SpectatorRemovalControlTests(unittest.TestCase):
 
     def test_delete_waits_for_confirmation_and_cancel_preserves_state(self):
         self.game.selected_province = self.game.map_data["2"]
-        with mock.patch.object(confirm_dialog, "ask_yes_no") as ask:
-            spectator_menus.spec_delete_country(self.game)
+        with mock.patch.object(dialogs, "ask_yes_no") as ask:
+            spectator_controls.spec_delete_country(self.game)
         before = copy.deepcopy((self.game.nation_data, self.game.map_data))
         self.assertIn("Target Display", ask.call_args.args[1])
         callback = ask.call_args.kwargs["on_result"]
@@ -223,8 +223,8 @@ class SpectatorRemovalControlTests(unittest.TestCase):
         self.assertNotIn("Target", self.game.nation_data)
 
     def test_stale_selection_or_permission_cancels_annex_and_delete_callbacks(self):
-        for menu, tool, target in ((spectator_menus.spec_annex_country, queries, "open_listbox_selector"),
-                                   (spectator_menus.spec_delete_country, confirm_dialog, "ask_yes_no")):
+        for menu, tool, target in ((spectator_controls.spec_annex_country, queries, "open_listbox_selector"),
+                                   (spectator_controls.spec_delete_country, dialogs, "ask_yes_no")):
             for change in ("selection", "permissions"):
                 self.game = game()
                 with mock.patch.object(tool, target) as launch:
@@ -242,7 +242,7 @@ class SpectatorRemovalControlTests(unittest.TestCase):
 
     def test_confirmation_escape_cancels_deletion(self):
         with mock.patch.object(modal_stack, "_stack", []):
-            spectator_menus.spec_delete_country(self.game)
+            spectator_controls.spec_delete_country(self.game)
             modal_stack.active().handle_events([pygame.event.Event(pygame.KEYDOWN, key=pygame.K_ESCAPE)])
             modal_stack.active().update()
             self.assertTrue(modal_stack.is_empty())
@@ -251,7 +251,7 @@ class SpectatorRemovalControlTests(unittest.TestCase):
     def test_confirmation_delete_button_applies_removal(self):
         self.game.selected_province = self.game.map_data["2"]
         with mock.patch.object(modal_stack, "_stack", []):
-            spectator_menus.spec_delete_country(self.game)
+            spectator_controls.spec_delete_country(self.game)
             modal = modal_stack.active()
             modal.handle_events([pygame.event.Event(pygame.MOUSEBUTTONDOWN,
                                                     pos=modal.yes_rect.center, button=1)])
@@ -288,7 +288,7 @@ class SpectatorRemovalButtonTests(unittest.TestCase):
                                 (self.game.btn_spec_delete, "spec_delete_country")):
             self.assertTrue(button.visible)
             self.assertFalse(button.disabled)
-            with mock.patch.object(spectator_menus, handler) as action:
+            with mock.patch.object(spectator_controls, handler) as action:
                 button.callback()
             action.assert_called_once_with(self.game)
 

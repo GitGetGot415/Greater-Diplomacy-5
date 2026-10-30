@@ -7,7 +7,7 @@ from data import queries
 import data.constants as c
 from ui.rendering import symbol_loader
 from ui.rendering.font_manager import fonts
-from ui import dialogs as confirm_dialog
+from ui import dialogs
 from ui.bars import ui_bars
 from ui.navigation.modal_screen import ModalScreen
 from ui.widgets.ui_elements import Button, TextField, make_back_button
@@ -66,7 +66,7 @@ class UnitStatsEditorScreen(ModalScreen):
                 except ValueError:
                     value = None
                 if value is None or value < minimum:
-                    confirm_dialog.show_warning(
+                    dialogs.show_warning(
                         "Invalid Range", f"{family}: enter a whole number of at least {minimum}.")
                     return
                 draft[family][key] = value
@@ -76,7 +76,7 @@ class UnitStatsEditorScreen(ModalScreen):
         if self.persist:
             queries.save_scenario_settings(
                 self.target_settings if self.target_settings is not None else {"unit_range_overrides": overrides})
-        confirm_dialog.show_success("Saved", "Successfully saved unit ranges to scenario settings.")
+        dialogs.show_success("Saved", "Successfully saved unit ranges to scenario settings.")
         self.exit_screen()
 
     def reset_to_defaults(self):
@@ -89,7 +89,7 @@ class UnitStatsEditorScreen(ModalScreen):
             self.elements = []
             self.save_all()
 
-        confirm_dialog.ask_yes_no(
+        dialogs.ask_yes_no(
             "Confirm Reset", "Reset all unit ranges to defaults for this scenario?", on_confirm)
 
     def refresh_ui(self):

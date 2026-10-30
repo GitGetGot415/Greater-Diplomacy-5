@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from data.state_access import world_for, session_for
 from map_logic.ai import ai_commitments, ai_evaluation, ai_llm_runner, ai_prompts
 import data.constants as c
@@ -20,10 +21,10 @@ from map_logic.diplomacy.diplomacy_agreements import (
     why_an_ai_may_not_leave
 )
 
-from map_logic.diplomacy.action_definitions import availability
+from map_logic.diplomacy.action_definitions import LITE_RESPONSE_KEYS, WAR_CANCELLED_ACTIONS, availability
 from map_logic.ai import ai_handler, ai_world
 from map_logic.diplomacy import deal as deal_mod, deal_effects
-from map_logic.territory import ownership as edit_province_ownership
+from map_logic.territory import ownership
 from map_logic.diplomacy.puppet_actions import finalize_create_puppet
 
 
@@ -231,10 +232,6 @@ def _flush_queued_ai_actions(map_screen):
             data["queued_ai_actions"] = []
 
 
-#: Proposals that a simultaneous declaration of war makes moot.
-_WAR_CANCELS = ["FACTION_INVITE", "CEASEFIRE", "JOIN_FACTION_REQ", "PEACE_TREATY", "CREATE_FACTION"]
-
-
 def _resolve_cross_action(map_screen, nation_a, nation_b, a_data, b_data, msg_key):
     """Helper to cleanly resolve contradictory simultaneous requests and strip them from the queue."""
     msg = ai_prompts.AI_FALLBACK_RESPONSES[msg_key]
@@ -248,7 +245,7 @@ def _war_cancels_response(map_screen, declarer, victim):
     """A declaration of war voids any answer the victim had queued for the declarer."""
     world_state = world_for(map_screen)
     resp = get_response(world_state.nation_data, victim, declarer)
-    if not resp or resp.get("action") not in _WAR_CANCELS:
+    if not resp or resp.get("action") not in WAR_CANCELLED_ACTIONS:
         return
     action_name = resp.get("action", "").split('_')[0].lower()
     msg = ai_prompts.AI_FALLBACK_RESPONSES["CROSS_WAR_DECLARATION"].format(action=action_name)
@@ -315,13 +312,13 @@ def _resolve_simultaneous_clashes(map_screen):
                     log_global_event(world_state.nation_data, f"{nation_a} and {nation_b} have united their factions!")
                 _resolve_cross_action(map_screen, nation_a, nation_b, a_data, b_data, "CROSS_FACTION_JOIN")
 
-            elif a_action == "WAR_DECLARATION" and b_action in _WAR_CANCELS:
+            elif a_action == "WAR_DECLARATION" and b_action in WAR_CANCELLED_ACTIONS:
                 action_name = b_action.split('_')[0].lower()
                 msg = ai_prompts.AI_FALLBACK_RESPONSES["CROSS_WAR_DECLARATION"].format(action=action_name)
                 send_message(map_screen, nation_a, nation_b, msg, "DIPLOMACY")
                 lifecycle.remove_request(b_data, nation_a)
 
-            elif b_action == "WAR_DECLARATION" and a_action in _WAR_CANCELS:
+            elif b_action == "WAR_DECLARATION" and a_action in WAR_CANCELLED_ACTIONS:
                 action_name = a_action.split('_')[0].lower()
                 msg = ai_prompts.AI_FALLBACK_RESPONSES["CROSS_WAR_DECLARATION"].format(action=action_name)
                 send_message(map_screen, nation_b, nation_a, msg, "DIPLOMACY")
@@ -434,12 +431,7 @@ def _get_fallback_ai_result(task, nation_data=None, world=None, map_data=None,
     if action == "CUSTOM_MSG":
         key, default = "AI_OFF_MESSAGE", "Message received."
     elif action in c.UNILATERAL_ACTIONS:
-        fallback_map = {
-            "WAR_DECLARATION": "BETRAYAL", "LEAVE_FACTION": "FACTION_ABANDONED",
-            "DISBAND_FACTION": "FACTION_DISBANDED", "JOIN_WARS": "ACCEPTED_HELP",
-            "BREAK_ALLIANCE": "ALLIANCE_BROKEN", "KICK_FACTION_MEMBER": "KICKED_FROM_FACTION"
-        }
-        key, default = fallback_map.get(action, "GENERIC_MESSAGE"), "Message received."
+        key, default = LITE_RESPONSE_KEYS.get(action, "GENERIC_MESSAGE"), "Message received."
     else:
         return ai_evaluation.canned_verdict_reply(
             nation_data or {}, map_data or {}, task.get("target"), task.get("sender"),
@@ -905,6 +897,312 @@ def _process_queued_responses(map_screen):
             lifecycle.remove_response(responses, sender)
 
 
+@dataclass(frozen=True)
+class _OutgoingAction:
+    """One pending action that is due this turn, as Pass 1 hands it to its handler."""
+    map_screen: object
+    world: object
+    session: object
+    country: str
+    target: str
+    action: str
+    info: dict
+    custom_msg: str
+    wrote_it: bool
+    leadership_winners: dict
+
+
+def _announce(send, recipient=None, **details):
+    send_treaty_message(send.map_screen, send.country, recipient or send.target, send.action,
+                        send.custom_msg, llm=send.wrote_it, **details)
+
+
+def _announced_change(send, changed, event, message, failure):
+    """Report a one-sided change that the action's owner has already tried to apply."""
+    if changed:
+        log_global_event(send.world.nation_data, event)
+        send_message(send.map_screen, send.country, send.target, message, "DIPLOMACY",
+                     extra={"action": send.action}, llm=send.wrote_it)
+    elif send.country == send.session.player_country:
+        send.map_screen.show_feedback(failure)
+    return True
+
+
+def _send_justify_wargoal(send):
+    world = send.world
+    prov_ids = [int(x) for x in send.custom_msg.split(",") if x]
+
+    # Remove old claims that are currently owned by the target to allow unclaiming
+    current_claims = world.nation_data[send.country].get("claims", [])
+    new_claims = []
+    for cid in current_claims:
+        prov = world.id_to_province.get(cid)
+        if prov and prov.get("owner") == send.target:
+            continue # Drop it so it can be overwritten
+        new_claims.append(cid)
+
+    new_claims.extend(prov_ids)
+    world.nation_data[send.country]["claims"] = list(set(new_claims))
+
+    world.nation_data[send.country].setdefault("wargoals", {})[send.target] = {"type": c.WARGOAL_TAKE_CLAIMS}
+    log_global_event(world.nation_data, f"{send.country} has justified a wargoal against {send.target}.")
+    if send.country == send.session.player_country:
+        send.map_screen.show_feedback(f"Wargoal Justification Complete against {send.target}!")
+    return True
+
+
+def _send_war_declaration(send):
+    world = send.world
+    # Store active wargoal in war data
+    world.nation_data[send.country].setdefault("wargoals", {})[send.target] = {"type": send.custom_msg}
+    log_global_event(world.nation_data, f"WAR DECLARED: {send.country} has declared war on {send.target}!")
+    # `custom_msg` is the wargoal here, not anything anyone said,
+    # so the words come off `prose` -- which is where they had to
+    # go once the wargoal took the message field. This line used
+    # to be a hardcoded sentence that ignored the model and the
+    # canned table alike, so at ABSOLUTE every war in the game
+    # was declared in exactly the same words.
+    words = send.info.get("prose") or "We have declared war!"
+    goal = f" Goal: {send.custom_msg}" if send.custom_msg else ""
+    declaration_message = send_message(
+        send.map_screen, send.country, send.target, f"{words}{goal}",
+        "DIPLOMACY", extra={"action": send.action}, llm=send.wrote_it)
+    _forward_war_declaration_to_masters(
+        send.map_screen, send.target, send.country, declaration_message)
+    finalize_war(world.map_data, world.nation_data, send.country, send.target)
+    return True
+
+
+def _send_join_wars(send):
+    if queries.are_in_same_faction(send.country, send.target, send.world.nation_data):
+        # DO NOT execute the war join here! Just send the proposal message.
+        _announce(send)
+        return False
+    send_message(send.map_screen, send.country, send.target,
+                 ai_prompts.AI_FALLBACK_RESPONSES["REJECT_JOIN_WAR_NO_ALLIANCE"],
+                 "DIPLOMACY", extra={"action": send.action})
+    return True
+
+
+def _send_announcement(send):
+    _announce(send)
+    return False
+
+
+def _send_volunteer_offer(send):
+    # The mission was validated and escrowed by the picker;
+    # tick() cancels a stale mission before this pass. Keep the
+    # normal bilateral delivery fallback for old saves/tests
+    # containing an action without its mission record.
+    _announce(send, parameters=send.info.get("parameters"))
+    return False
+
+
+def _send_volunteer_recall(send):
+    # A recall is unilateral, but still announced to the host.
+    # It runs at turn resolution, not on the click, so the
+    # player can undo it while it remains a same-turn draft.
+    if volunteers.recall(send.map_screen, send.country, send.target):
+        _announce(send)
+    return True
+
+
+def _send_volunteers_home(send):
+    # The host controls whether foreign volunteers may remain
+    # in its war, while the donor still owns the divisions.
+    return _announced_change(
+        send, volunteers.send_home_by_host(send.map_screen, send.country, send.target),
+        f"{send.country} has sent {send.target}'s volunteer divisions home.",
+        "Your volunteer divisions are being sent home.",
+        "That country has no volunteers assigned to you.")
+
+
+def _send_guarantee(send):
+    changed, reason = guarantees.grant(send.country, send.target, send.world.nation_data)
+    return _announced_change(send, changed,
+                             f"{send.country} now guarantees the independence of {send.target}.",
+                             "We guarantee your independence.", reason)
+
+
+def _send_guarantee_revoke(send):
+    return _announced_change(
+        send, guarantees.revoke(send.country, send.target, send.world.nation_data),
+        f"{send.country} has revoked its guarantee of {send.target}.",
+        "We are revoking our guarantee of your independence.",
+        "You do not guarantee that country.")
+
+
+def _send_attache_withdrawal(send):
+    return _announced_change(
+        send, military_attaches.withdraw(send.country, send.target, send.world.nation_data),
+        f"{send.country} has withdrawn its military attaché from {send.target}.",
+        "We are withdrawing our military attaché.",
+        "You have no military attaché there.")
+
+
+def _send_attache_revoke(send):
+    return _announced_change(
+        send, military_attaches.revoke_by_host(send.country, send.target, send.world.nation_data),
+        f"{send.country} has revoked {send.target}'s military attaché.",
+        "Your military attaché has been revoked.",
+        "That country has no military attaché with you.")
+
+
+def _send_break_alliance(send):
+    log_global_event(send.world.nation_data, f"{send.country} has broken their alliance with {send.target}.")
+    _announce(send)
+    finalize_neutral(send.world.nation_data, send.country, send.target)
+    return False
+
+
+def _send_annex_puppet(send):
+    finalize_annexation(send.world.map_data, send.world.nation_data, send.country, send.target, send.map_screen)
+    return True
+
+
+def _send_release_puppet(send):
+    finalize_release(send.world.map_data, send.world.nation_data, send.country, send.target, send.map_screen)
+    return True
+
+
+def _send_take_puppets(send):
+    finalize_take_puppets(send.world.map_data, send.world.nation_data, send.country, send.target)
+    send.map_screen.show_feedback(f"Assumed control of {send.target}'s puppets.")
+    return True
+
+
+def _send_cancel_military_access(send):
+    # We are cancelling our access to their country (target's list)
+    target_list = send.world.nation_data.get(send.target, {}).setdefault("military_access", [])
+    if send.country in target_list:
+        target_list.remove(send.country)
+    log_global_event(send.world.nation_data, f"{send.country} cancelled their military access to {send.target}.")
+    _announce(send)
+    return True
+
+
+def _send_revoke_military_access(send):
+    # We are revoking their access to our country (our list)
+    our_list = send.world.nation_data.get(send.country, {}).setdefault("military_access", [])
+    if send.target in our_list:
+        our_list.remove(send.target)
+    log_global_event(send.world.nation_data, f"{send.country} revoked {send.target}'s military access.")
+    _announce(send)
+    return True
+
+
+def _send_forward(send):
+    forward_message(send.map_screen, send.country, send.target, send.info.get("forwarded_message"),
+                    source_owner=send.info.get("forwarded_source", send.country))
+    return True
+
+
+def _send_offer(send):
+    # Nothing happens on the sender's side; the offer just travels.
+    # A trade's terms travel with it, so both sides can still
+    # read what was agreed after the offer itself is cleared.
+    # Peace reparations are promised the moment the offer leaves, the
+    # same as a trade's goods.
+    _hold_offer_escrow(send.map_screen, send.country, send.target, send.info)
+    _announce(send, parameters=send.info.get("parameters"), note=send.info.get("note", ""))
+    return False
+
+
+def _announce_to_former_faction(send, event):
+    nation_data = send.world.nation_data
+    faction = nation_data[send.country].get("faction", "")
+    send.info["cached_members"] = send.info.get(
+        "cached_members", queries.get_faction_members(faction, nation_data) if faction else [])
+    log_global_event(nation_data, event)
+    for member in send.info["cached_members"]:
+        if member != send.country:
+            _announce(send, recipient=member)
+
+
+def _send_disband_faction(send):
+    _announce_to_former_faction(send, f"The faction led by {send.country} has been disbanded.")
+    finalize_disband_faction(send.world.nation_data, send.country)
+    return False
+
+
+def _send_kick_member(send):
+    log_global_event(send.world.nation_data,
+                     f"FACTION EXPULSION: {send.country} has kicked {send.target} from the faction!")
+    _announce(send)
+    finalize_faction_kick(send.world.nation_data, send.country, send.target)
+    return False
+
+
+def _send_leave_faction(send):
+    _announce_to_former_faction(send, f"{send.country} has abandoned their faction.")
+    finalize_faction_leave(send.world.nation_data, send.country)
+    return False
+
+
+def _send_leadership_claim(send):
+    # Re-checked here rather than trusted from when the button
+    # was pressed. A claim is queued a turn ahead, and a turn is
+    # long enough to lose the army that justified it -- or the
+    # faction, if the leader disbanded it in the meantime.
+    nation_data = send.world.nation_data
+    fac = nation_data[send.country].get("faction", "")
+    old = queries.get_faction_leader(fac, nation_data) if fac else ""
+    if not faction_leadership.can_claim(send.map_screen, send.country):
+        print(f"[GUARDRAIL] {send.country} no longer has a claim on "
+              f"{fac or 'any faction'}'s leadership.")
+        return True
+    if send.leadership_winners.get(fac) != send.country:
+        print(f"[GUARDRAIL] {send.country} lost the simultaneous "
+              f"leadership contest for {fac}.")
+        return True
+    members = queries.get_faction_members(fac, nation_data)
+    log_global_event(nation_data,
+                     f"FACTION LEADERSHIP: {send.country} has taken "
+                     f"command of {fac} from {old}.")
+    faction_leadership.transfer(nation_data, old, send.country)
+    if (send.country not in send.session.active_players
+            and send.country != send.session.player_country):
+        faction_actions.rename_generic_faction_for_leader(nation_data, send.country, fac)
+    for member in members:
+        if member != send.country:
+            _announce(send, recipient=member)
+    return False
+
+
+#: Pass 1 handlers. Each returns True when its action finishes on this turn.
+_SEND_HANDLERS = {
+    "JUSTIFY_WARGOAL": _send_justify_wargoal,
+    "WAR_DECLARATION": _send_war_declaration,
+    "JOIN_WARS": _send_join_wars,
+    "CALL_TO_ARMS": _send_announcement,
+    volunteers.ACTION: _send_volunteer_offer,
+    volunteers.RECALL_ACTION: _send_volunteer_recall,
+    volunteers.SEND_HOME_ACTION: _send_volunteers_home,
+    guarantees.ACTION: _send_guarantee,
+    guarantees.REVOKE_ACTION: _send_guarantee_revoke,
+    military_attaches.WITHDRAW_ACTION: _send_attache_withdrawal,
+    military_attaches.REVOKE_ACTION: _send_attache_revoke,
+    "BREAK_ALLIANCE": _send_break_alliance,
+    "ANNEX_PUPPET": _send_annex_puppet,
+    "RELEASE_PUPPET": _send_release_puppet,
+    "TAKE_PUPPETS": _send_take_puppets,
+    "CANCEL_MILITARY_ACCESS": _send_cancel_military_access,
+    "REVOKE_MILITARY_ACCESS": _send_revoke_military_access,
+    FORWARD_ACTION: _send_forward,
+    "FACTION_INVITE": _send_offer,
+    "JOIN_FACTION_REQ": _send_offer,
+    "REQ_MILITARY_ACCESS": _send_offer,
+    "CEASEFIRE": _send_offer,
+    "CREATE_FACTION": _send_offer,
+    "TRADE": _send_offer,
+    "PEACE_TREATY": _send_offer,
+    "DISBAND_FACTION": _send_disband_faction,
+    "KICK_FACTION_MEMBER": _send_kick_member,
+    "LEAVE_FACTION": _send_leave_faction,
+    "CLAIM_FACTION_LEADERSHIP": _send_leadership_claim,
+}
+
+
 def _process_pass1_immediate_actions(map_screen):
     """PASS 1: executes every action that fires the instant it's queued (turns == 0),
     and advances everything else to turns == 1 for Pass 2 to pick up."""
@@ -971,264 +1269,20 @@ def _process_pass1_immediate_actions(map_screen):
                         map_screen.show_feedback(leadership_error)
                     continue
                 info["_processed_this_turn"] = True
-                # EXECUTE unilateral actions instantly on Turn 0
-                if action == "JUSTIFY_WARGOAL":
-                    prov_ids = [int(x) for x in custom_msg.split(",") if x]
-
-                    # Remove old claims that are currently owned by the target to allow unclaiming
-                    current_claims = world_state.nation_data[country_name].get("claims", [])
-                    new_claims = []
-                    for cid in current_claims:
-                        prov = world_state.id_to_province.get(cid)
-                        if prov and prov.get("owner") == target:
-                            continue # Drop it so it can be overwritten
-                        new_claims.append(cid)
-
-                    new_claims.extend(prov_ids)
-                    world_state.nation_data[country_name]["claims"] = list(set(new_claims))
-
-                    world_state.nation_data[country_name].setdefault("wargoals", {})[target] = {"type": c.WARGOAL_TAKE_CLAIMS}
-                    log_global_event(world_state.nation_data, f"{country_name} has justified a wargoal against {target}.")
-                    if country_name == session_state.player_country:
-                        map_screen.show_feedback(f"Wargoal Justification Complete against {target}!")
-                    actions_to_clear.append(target)
-
-                elif action == "WAR_DECLARATION":
-                    # Store active wargoal in war data
-                    world_state.nation_data[country_name].setdefault("wargoals", {})[target] = {"type": custom_msg}
-                    log_global_event(world_state.nation_data, f"WAR DECLARED: {country_name} has declared war on {target}!")
-                    # `custom_msg` is the wargoal here, not anything anyone said,
-                    # so the words come off `prose` -- which is where they had to
-                    # go once the wargoal took the message field. This line used
-                    # to be a hardcoded sentence that ignored the model and the
-                    # canned table alike, so at ABSOLUTE every war in the game
-                    # was declared in exactly the same words.
-                    words = info.get("prose") or "We have declared war!"
-                    goal = f" Goal: {custom_msg}" if custom_msg else ""
-                    declaration_message = send_message(
-                        map_screen, country_name, target, f"{words}{goal}",
-                        "DIPLOMACY", extra={"action": action}, llm=wrote_it)
-                    _forward_war_declaration_to_masters(
-                        map_screen, target, country_name, declaration_message)
-                    finalize_war(world_state.map_data, world_state.nation_data, country_name, target)
-                    actions_to_clear.append(target)
-
-                elif action == "JOIN_WARS":
-                    if not queries.are_in_same_faction(country_name, target, world_state.nation_data):
-                        send_message(map_screen, country_name, target,
-                                     ai_prompts.AI_FALLBACK_RESPONSES["REJECT_JOIN_WAR_NO_ALLIANCE"],
-                                     "DIPLOMACY", extra={"action": action})
-                        actions_to_clear.append(target)
-                    else:
-                        # DO NOT execute the war join here! Just send the proposal message.
-                        send_treaty_message(map_screen, country_name, target, action, custom_msg, llm=wrote_it)
-
-                elif action == "CALL_TO_ARMS":
-                    send_treaty_message(map_screen, country_name, target, action, custom_msg, llm=wrote_it)
-
-                elif action == volunteers.ACTION:
-                    # The mission was validated and escrowed by the picker;
-                    # tick() cancels a stale mission before this pass. Keep the
-                    # normal bilateral delivery fallback for old saves/tests
-                    # containing an action without its mission record.
-                    send_treaty_message(map_screen, country_name, target, action, custom_msg,
-                                        parameters=info.get("parameters"), llm=wrote_it)
-
-                elif action == volunteers.RECALL_ACTION:
-                    # A recall is unilateral, but still announced to the host.
-                    # It runs at turn resolution, not on the click, so the
-                    # player can undo it while it remains a same-turn draft.
-                    if volunteers.recall(map_screen, country_name, target):
-                        send_treaty_message(map_screen, country_name, target, action, custom_msg,
-                                            llm=wrote_it)
-                    actions_to_clear.append(target)
-
-                elif action == volunteers.SEND_HOME_ACTION:
-                    # The host controls whether foreign volunteers may remain
-                    # in its war, while the donor still owns the divisions.
-                    if volunteers.send_home_by_host(map_screen, country_name, target):
-                        log_global_event(world_state.nation_data,
-                                         f"{country_name} has sent {target}'s volunteer divisions home.")
-                        send_message(map_screen, country_name, target,
-                                     "Your volunteer divisions are being sent home.",
-                                     "DIPLOMACY", extra={"action": action}, llm=wrote_it)
-                    elif country_name == session_state.player_country:
-                        map_screen.show_feedback("That country has no volunteers assigned to you.")
-                    actions_to_clear.append(target)
-
-                elif action == guarantees.ACTION:
-                    changed, reason = guarantees.grant(country_name, target, world_state.nation_data)
-                    if changed:
-                        log_global_event(world_state.nation_data,
-                                         f"{country_name} now guarantees the independence of {target}.")
-                        send_message(map_screen, country_name, target,
-                                     "We guarantee your independence.", "DIPLOMACY",
-                                     extra={"action": action}, llm=wrote_it)
-                    elif country_name == session_state.player_country:
-                        map_screen.show_feedback(reason)
-                    actions_to_clear.append(target)
-
-                elif action == guarantees.REVOKE_ACTION:
-                    if guarantees.revoke(country_name, target, world_state.nation_data):
-                        log_global_event(world_state.nation_data,
-                                         f"{country_name} has revoked its guarantee of {target}.")
-                        send_message(map_screen, country_name, target,
-                                     "We are revoking our guarantee of your independence.",
-                                     "DIPLOMACY", extra={"action": action}, llm=wrote_it)
-                    elif country_name == session_state.player_country:
-                        map_screen.show_feedback("You do not guarantee that country.")
-                    actions_to_clear.append(target)
-
-                elif action == military_attaches.WITHDRAW_ACTION:
-                    if military_attaches.withdraw(country_name, target, world_state.nation_data):
-                        log_global_event(world_state.nation_data,
-                                         f"{country_name} has withdrawn its military attaché from {target}.")
-                        send_message(map_screen, country_name, target,
-                                     "We are withdrawing our military attaché.",
-                                     "DIPLOMACY", extra={"action": action}, llm=wrote_it)
-                    elif country_name == session_state.player_country:
-                        map_screen.show_feedback("You have no military attaché there.")
-                    actions_to_clear.append(target)
-
-                elif action == military_attaches.REVOKE_ACTION:
-                    if military_attaches.revoke_by_host(country_name, target,
-                                                        world_state.nation_data):
-                        log_global_event(world_state.nation_data,
-                                         f"{country_name} has revoked {target}'s military attaché.")
-                        send_message(map_screen, country_name, target,
-                                     "Your military attaché has been revoked.", "DIPLOMACY",
-                                     extra={"action": action}, llm=wrote_it)
-                    elif country_name == session_state.player_country:
-                        map_screen.show_feedback("That country has no military attaché with you.")
-                    actions_to_clear.append(target)
-
-                elif action == "BREAK_ALLIANCE":
-                    log_global_event(world_state.nation_data, f"{country_name} has broken their alliance with {target}.")
-                    send_treaty_message(map_screen, country_name, target, action, custom_msg, llm=wrote_it)
-                    finalize_neutral(world_state.nation_data, country_name, target)
-
-                elif action == "ANNEX_PUPPET":
-                    finalize_annexation(world_state.map_data, world_state.nation_data, country_name, target, map_screen)
-                    actions_to_clear.append(target)
-
-                elif action == "RELEASE_PUPPET":
-                    finalize_release(world_state.map_data, world_state.nation_data, country_name, target, map_screen)
-                    actions_to_clear.append(target)
-
-                elif action == "TAKE_PUPPETS":
-                    finalize_take_puppets(world_state.map_data, world_state.nation_data, country_name, target)
-                    map_screen.show_feedback(f"Assumed control of {target}'s puppets.")
-                    actions_to_clear.append(target)
-
-                elif action == "CANCEL_MILITARY_ACCESS":
-                    # We are cancelling our access to their country (target's list)
-                    target_list = world_state.nation_data.get(target, {}).setdefault("military_access", [])
-                    if country_name in target_list:
-                        target_list.remove(country_name)
-                    log_global_event(world_state.nation_data, f"{country_name} cancelled their military access to {target}.")
-                    send_treaty_message(map_screen, country_name, target, action, custom_msg, llm=wrote_it)
-                    actions_to_clear.append(target)
-
-                elif action == "REVOKE_MILITARY_ACCESS":
-                    # We are revoking their access to our country (our list)
-                    our_list = world_state.nation_data.get(country_name, {}).setdefault("military_access", [])
-                    if target in our_list:
-                        our_list.remove(target)
-                    log_global_event(world_state.nation_data, f"{country_name} revoked {target}'s military access.")
-                    send_treaty_message(map_screen, country_name, target, action, custom_msg, llm=wrote_it)
-                    actions_to_clear.append(target)
-
-
-                elif action == FORWARD_ACTION:
-                    original_message = info.get("forwarded_message")
-                    forward_message(
-                        map_screen, country_name, target, original_message,
-                        source_owner=info.get("forwarded_source", country_name))
-                    actions_to_clear.append(target)
-
                 # DELIVER messages to inbox on Turn 0
-                elif action.startswith("MSG:"):
+                if action.startswith("MSG:"):
                     send_message(map_screen, country_name, target, action[4:], "TEXT")
                     msg_delivered.add(target)
-
-                elif action in ("FACTION_INVITE", "JOIN_FACTION_REQ", "REQ_MILITARY_ACCESS",
-                                "CEASEFIRE", "CREATE_FACTION", "TRADE"):
-                    # Nothing happens on the sender's side; the offer just travels.
-                    # A trade's terms travel with it, so both sides can still
-                    # read what was agreed after the offer itself is cleared.
-                    _hold_offer_escrow(map_screen, country_name, target, info)
-                    send_treaty_message(map_screen, country_name, target, action, custom_msg,
-                                        parameters=info.get("parameters"), llm=wrote_it,
-                                        note=info.get("note", ""))
-
-                elif action == "PEACE_TREATY":
-                    # Reparations are promised the moment the offer leaves, the
-                    # same as a trade's goods.
-                    _hold_offer_escrow(map_screen, country_name, target, info)
-                    send_treaty_message(map_screen, country_name, target, action, custom_msg,
-                                        parameters=info.get("parameters"), llm=wrote_it,
-                                        note=info.get("note", ""))
-
-                elif action == "DISBAND_FACTION":
-                    fac = world_state.nation_data[country_name].get("faction", "")
-                    info["cached_members"] = info.get("cached_members", queries.get_faction_members(fac, world_state.nation_data) if fac else [])
-                    log_global_event(world_state.nation_data, f"The faction led by {country_name} has been disbanded.")
-                    for m in info["cached_members"]:
-                        if m != country_name:
-                            send_treaty_message(map_screen, country_name, m, action, custom_msg, llm=wrote_it)
-
-                    finalize_disband_faction(world_state.nation_data, country_name)
-
-                elif action == "KICK_FACTION_MEMBER":
-                    log_global_event(world_state.nation_data, f"FACTION EXPULSION: {country_name} has kicked {target} from the faction!")
-                    send_treaty_message(map_screen, country_name, target, action, custom_msg, llm=wrote_it)
-                    finalize_faction_kick(world_state.nation_data, country_name, target)
-
-                elif action == "LEAVE_FACTION":
-                    fac = world_state.nation_data[country_name].get("faction", "")
-                    info["cached_members"] = info.get("cached_members", queries.get_faction_members(fac, world_state.nation_data) if fac else [])
-                    log_global_event(world_state.nation_data, f"{country_name} has abandoned their faction.")
-                    for m in info["cached_members"]:
-                        if m != country_name:
-                            send_treaty_message(map_screen, country_name, m, action, custom_msg, llm=wrote_it)
-
-                    finalize_faction_leave(world_state.nation_data, country_name)
-
-                elif action == "CLAIM_FACTION_LEADERSHIP":
-                    # Re-checked here rather than trusted from when the button
-                    # was pressed. A claim is queued a turn ahead, and a turn is
-                    # long enough to lose the army that justified it -- or the
-                    # faction, if the leader disbanded it in the meantime.
-                    fac = world_state.nation_data[country_name].get("faction", "")
-                    old = queries.get_faction_leader(fac, world_state.nation_data) if fac else ""
-                    if not faction_leadership.can_claim(map_screen, country_name):
-                        print(f"[GUARDRAIL] {country_name} no longer has a claim on "
-                              f"{fac or 'any faction'}'s leadership.")
+                else:
+                    # An action added to the bilateral list without its own handler
+                    # still reaches the other side's inbox instead of silently
+                    # advancing to turns=1 with no message.
+                    handler = _SEND_HANDLERS.get(
+                        action, _send_announcement if action in c.BILATERAL_ACTIONS else None)
+                    if handler and handler(_OutgoingAction(
+                            map_screen, world_state, session_state, country_name, target, action, info,
+                            custom_msg, wrote_it, leadership_winners)):
                         actions_to_clear.append(target)
-                    elif leadership_winners.get(fac) != country_name:
-                        print(f"[GUARDRAIL] {country_name} lost the simultaneous "
-                              f"leadership contest for {fac}.")
-                        actions_to_clear.append(target)
-                    else:
-                        members = queries.get_faction_members(fac, world_state.nation_data)
-                        log_global_event(world_state.nation_data,
-                                         f"FACTION LEADERSHIP: {country_name} has taken "
-                                         f"command of {fac} from {old}.")
-                        faction_leadership.transfer(world_state.nation_data, old, country_name)
-                        if (country_name not in session_state.active_players
-                                and country_name != session_state.player_country):
-                            faction_actions.rename_generic_faction_for_leader(
-                                world_state.nation_data, country_name, fac)
-                        for m in members:
-                            if m != country_name:
-                                send_treaty_message(map_screen, country_name, m, action,
-                                                    custom_msg, llm=wrote_it)
-
-                elif action in c.BILATERAL_ACTIONS:
-                    # Catch-all so a bilateral action added to constants.py without
-                    # its own branch above still reaches the other side's inbox
-                    # instead of silently advancing to turns=1 with no message.
-                    send_treaty_message(map_screen, country_name, target, action, custom_msg, llm=wrote_it)
 
                 # Cleanup or increment
                 if target in actions_to_clear:
@@ -1478,7 +1532,7 @@ def _process_claim_queues(map_screen):
                     prov = world_state.id_to_province.get(prov_id)
                     if prov and prov.get("owner") == country_name:
                         # Return the province to the intended recipient!
-                        edit_province_ownership.conquer_province(map_screen, prov, recipient)
+                        ownership.conquer_province(map_screen, prov, recipient)
 
                         if country_name == session_state.player_country:
                             map_screen.show_feedback(f"Returned Province {prov_id} to {recipient}!")

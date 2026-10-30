@@ -5,11 +5,8 @@ the expected wrap points can be reasoned about exactly and the tests need no
 display, no font file, and no pygame init.
 """
 
-import os
-import sys
 import unittest
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from ui.widgets import text_utils
 

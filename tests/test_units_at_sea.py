@@ -17,13 +17,8 @@ anything found adrift back aboard a convoy, so the saves the old rule damaged
 heal themselves on the next turn.
 """
 
-import os
-import sys
 import unittest
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from tests.combat_fixtures import StubBattleMap
 

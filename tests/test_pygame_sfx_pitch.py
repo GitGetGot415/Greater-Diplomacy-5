@@ -1,7 +1,5 @@
-import os
 import unittest
 
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 
 import numpy as np
 import pygame

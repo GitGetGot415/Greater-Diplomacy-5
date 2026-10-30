@@ -8,9 +8,7 @@ from data import queries
 from data.multiplayer.realtime.session import MapRealtimeDriver, RealtimeError
 from map_logic.diplomacy import diplomacy_processor, faction_leadership, player_diplomacy_actions
 from tests.stub_map_screen import StubMapScreen
-from screens.game import spectator_controls as spectator_menus
-
-
+from screens.game import spectator_controls
 class FactionInvitationTests(unittest.TestCase):
     def setUp(self):
         self.game = StubMapScreen(["Leader", "Member", "Outsider"],
@@ -139,10 +137,10 @@ class FactionInvitationTests(unittest.TestCase):
     def test_spectator_cannot_invite_from_a_member_or_a_stale_picker(self):
         self.game.selected_province = self.game.home_of("Member")
         with mock.patch.object(queries, "open_listbox_selector") as selector:
-            spectator_menus.spec_invite_faction(self.game)
+            spectator_controls.spec_invite_faction(self.game)
             selector.assert_not_called()
             self.game.selected_province = self.game.home_of("Leader")
-            spectator_menus.spec_invite_faction(self.game)
+            spectator_controls.spec_invite_faction(self.game)
             callback = selector.call_args.args[-1]
             faction_leadership.transfer(self.game.nation_data, "Leader", "Member")
             callback("Outsider")

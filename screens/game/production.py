@@ -17,8 +17,7 @@ from data import queries
 from map_logic.actions import production_actions
 from map_logic.diplomacy import restrictions
 from ui.bars import resource_hud, view_mode_buttons
-from screens.game import map_input as event_handler
-
+from screens.game import map_input
 from ui.dialogs.checkbox_list_screen import CheckboxItem, SectionHeader
 
 
@@ -181,7 +180,7 @@ class Production_Screen(GameState):
         screens.game.map_input.handle_view_mode_keybind."""
         if self.map_screen.tactical_mode:
             return
-        event_handler.handle_view_mode_keybind(self.map_screen, "UNITS", "ORDERS", origin=self)
+        map_input.handle_view_mode_keybind(self.map_screen, "UNITS", "ORDERS", origin=self)
 
     def handle_economy_key(self):
         """W. Same as clicking the Economy button in the view-mode row; also
@@ -189,7 +188,7 @@ class Production_Screen(GameState):
         screens.game.map_input.handle_view_mode_keybind."""
         if self.map_screen.tactical_mode:
             return
-        event_handler.handle_view_mode_keybind(self.map_screen, "ECONOMY", "ECONOMY", origin=self)
+        map_input.handle_view_mode_keybind(self.map_screen, "ECONOMY", "ECONOMY", origin=self)
 
     def start_with_province(self, province, map_ref):
         self.target_province = province
@@ -235,7 +234,7 @@ class Production_Screen(GameState):
     def refresh_ui(self):
         self.btn_back = make_back_button(self.exit_screen)
         self.view_mode_buttons = view_mode_buttons.build(
-            lambda mode: event_handler.navigate_view_mode(self.map_screen, mode, origin=self))
+            lambda mode: map_input.navigate_view_mode(self.map_screen, mode, origin=self))
         view_mode_buttons.sync_highlight(self.view_mode_buttons, self.map_screen.secondary_mode)
         self.elements = [self.btn_back, *self.view_mode_buttons]
 

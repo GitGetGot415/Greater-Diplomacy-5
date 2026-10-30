@@ -1,11 +1,9 @@
 """Regression coverage for procedural map pixel-to-province setup."""
 
-import os
 import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 
 import numpy as np
 

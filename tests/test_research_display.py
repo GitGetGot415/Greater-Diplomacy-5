@@ -27,6 +27,22 @@ def display_config():
 
 
 class DisplayDataTests(unittest.TestCase):
+    def test_technology_row_uses_its_layout_position_or_the_default(self):
+        config = display_config()
+        config["technologies"]["sample"]["row"] = 3
+        with patch.object(research_display, "get_config", return_value=config):
+            self.assertEqual(research_display.technology_row_y("sample"), config["layout"]["row_y"][2])
+            self.assertEqual(research_display.technology_row_y("unlisted"), config["layout"]["default_row_y"])
+
+    def test_invalid_technology_row_is_rejected_with_its_name(self):
+        config = display_config()
+        config["technologies"]["sample"]["row"] = len(config["layout"]["row_y"]) + 1
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory, "display.json")
+            path.write_text(json.dumps(config), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "sample row"):
+                research_display.get_config(str(path))
+
     def test_settings_follow_precedence_without_mutating_cached_data(self):
         config = display_config()
         original = copy.deepcopy(config)

@@ -1,12 +1,8 @@
 """Regression tests for the map's hostile head-on movement preview."""
 
-import os
-import sys
 import unittest
 from types import SimpleNamespace
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from ui.rendering import overlay_renderer
 import pygame

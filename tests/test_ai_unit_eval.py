@@ -9,14 +9,10 @@ is already saturated stops winning.
 """
 
 import os
-import sys
 import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import data.constants as c
 from map_logic.ai import ai_unit_eval as ue

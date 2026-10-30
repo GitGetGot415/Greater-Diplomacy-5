@@ -15,6 +15,7 @@ from map_logic.actions import production_actions, unit_actions
 from map_logic.ai import ai_research, ai_tech_eval, ai_unit_eval
 from map_logic.system32.movement_processor import process_upgrades
 from map_logic.system32.research_processor import process_national_research
+from tests.research_fixtures import research_lock_cases
 from tests.stub_map_screen import sample_map_screen
 from tests import test_tournament_moves as tournament_harness
 
@@ -93,7 +94,7 @@ class NavalContentTests(unittest.TestCase):
                         self.assertEqual(unit[field], self.library[name][field])
 
     def test_prerequisites_and_costs_agree_for_local_and_server_research(self):
-        for tech in (*SHIPS.values(), "destroyer", "submarine"):
+        for tech in (key for key, entry in self.tree.items() if entry["category"] == "NAVY"):
             requirements = self.tree[tech]["req"]
             for prerequisite, level in requirements.items():
                 self.country["research"] = dict(requirements, **{prerequisite: level - 1})
@@ -124,100 +125,72 @@ class NavalContentTests(unittest.TestCase):
         self.assertTrue(queries.is_unit_unlocked("Carrack I", self.country["research"], self.library))
         self.assertEqual(self.province, preserved)
 
-    def test_editor_grants_and_removes_the_ship_prerequisite_chain(self):
-        granted = queries.edited_research_levels({}, "battleship", 1, True, self.tree)
-        for tech in SHIPS.values():
-            self.assertTrue(queries.check_tech_requirements(granted, self.tree[tech]["req"]))
-            self.assertGreater(granted[tech], 0)
-        removed = queries.edited_research_levels(granted, "carrack", 1, False, self.tree)
-        for tech in SHIPS.values():
-            self.assertEqual(removed[tech], 0)
-
-    def test_naval_levels_follow_their_own_research_dependencies(self):
-        final_pre_dreadnought = self.tree["pre-dreadnought"]["max_lvl"]
-        self.assertEqual(self.tree["destroyer"]["req"], {"pre-dreadnought": final_pre_dreadnought})
-        self.assertEqual(self.tree["submarine"]["req"], {"pre-dreadnought": final_pre_dreadnought})
-        final_battleship = self.tree["battleship"]["max_lvl"]
-        self.assertEqual(self.tree["aircraft_carrier"]["req"], {"battleship": final_battleship})
-        for tech, prerequisite in (("ironclad", "carrack"), ("pre-dreadnought", "ironclad"),
-                                   ("dreadnought", "pre-dreadnought"), ("battleship", "dreadnought")):
-            self.assertEqual(self.tree[tech]["req"], {prerequisite: self.tree[prerequisite]["max_lvl"]})
-        for tech, prerequisite, required in (("ironclad", "carrack", self.tree["carrack"]["max_lvl"]),
-                                             ("pre-dreadnought", "ironclad", self.tree["ironclad"]["max_lvl"]),
-                                             ("dreadnought", "pre-dreadnought", final_pre_dreadnought),
-                                             ("battleship", "dreadnought", self.tree["dreadnought"]["max_lvl"]),
-                                             ("destroyer", "pre-dreadnought", final_pre_dreadnought),
-                                             ("submarine", "pre-dreadnought", final_pre_dreadnought),
-                                             ("aircraft_carrier", "battleship", final_battleship)):
+    def test_naval_research_requirements_agree_for_local_server_and_editor_paths(self):
+        for tech, locked, unlocked in research_lock_cases(self.tree, "NAVY"):
             entry = self.tree[tech]
             for level in range(1, entry["max_lvl"] + 1):
-                self.country["research"] = {tech: level - 1, prerequisite: required - 1}
+                self.country["research"] = dict(locked, **{tech: level - 1})
                 with self.subTest(tech=tech, level=level), self.assertRaises(ValueError):
                     queries.canonical_research_selection(self.country, [tech], self.tree)
                 with self.subTest(tech=tech, level=level), self.assertRaises(RealtimeError):
                     self.driver.validate_draft("A", [{"type": "research_queue", "tech_names": [tech]}])
-                self.country["research"][prerequisite] = required
+                self.country["research"] = dict(unlocked, **{tech: level - 1})
                 local = queries.canonical_research_selection(self.country, [tech], self.tree)
                 remote = self.driver.validate_draft("A", [{"type": "research_queue", "tech_names": [tech]}])[0]
                 self.assertEqual(local["projects"][0]["tech_name"], tech)
                 self.assertEqual(remote["projects"], local["projects"])
-            granted = queries.edited_research_levels({}, tech, entry["max_lvl"], True, self.tree)
-            self.assertTrue(queries.check_tech_requirements(granted, entry["req"]))
-            removed = queries.edited_research_levels(granted, prerequisite, required, False, self.tree)
-            self.assertEqual(removed[tech], 0)
-            if tech in ("destroyer", "submarine"):
-                self.assertEqual(granted.get("dreadnought", 0), 0)
-                preserved = queries.edited_research_levels(granted, "dreadnought", 1, False, self.tree)
-                self.assertEqual(preserved[tech], granted[tech])
+            final = entry["max_lvl"]
+            granted = queries.edited_research_levels({}, tech, final, True, self.tree)
+            self.assertTrue(queries.check_tech_requirements(granted, queries.get_tech_requirements(entry, final), final))
+            for prerequisite, required in entry["req"].items():
+                if isinstance(required, int):
+                    removed = queries.edited_research_levels(granted, prerequisite, required, False, self.tree)
+                    self.assertEqual(removed[tech], 0)
 
-    def test_ai_only_offers_destroyer_and_submarine_after_the_final_pre_dreadnought_level(self):
-        final = self.tree["pre-dreadnought"]["max_lvl"]
+    def test_ai_only_offers_naval_research_after_its_requirements(self):
         self.context.world.time_manager = SimpleNamespace(year=c.END_YEAR)
-        for level in (final - 1, final):
-            self.country.update(research={"pre-dreadnought": level}, research_queue=[])
-            with patch.object(queries, "get_active_ai_nations", return_value=["A"]), \
-                    patch.object(queries, "calculate_all_economies", return_value={}), \
-                    patch.object(ai_research.ai_world, "for_screen", return_value=None), \
-                    patch.object(ai_research, "_rank_for_nation", return_value=[]) as rank:
-                ai_research.process_ai_research(self.context)
-            offered = {candidate[0] for candidate in rank.call_args.args[0]}
-            for tech in ("destroyer", "submarine"):
-                self.assertEqual(tech in offered, level == final)
+        for tech, locked, unlocked in research_lock_cases(self.tree, "NAVY"):
+            for research, expected in ((locked, False), (unlocked, True)):
+                self.country.update(research=dict(research), research_queue=[])
+                with patch.object(queries, "get_active_ai_nations", return_value=["A"]), \
+                        patch.object(queries, "calculate_all_economies", return_value={}), \
+                        patch.object(ai_research.ai_world, "for_screen", return_value=None), \
+                        patch.object(ai_research, "_rank_for_nation", return_value=[]) as rank:
+                    ai_research.process_ai_research(self.context)
+                offered = {candidate[0] for candidate in rank.call_args.args[0]} if rank.call_args else set()
+                with self.subTest(tech=tech, expected=expected):
+                    self.assertEqual(tech in offered, expected)
 
-    def test_tournament_destroyer_research_checks_host_prerequisites_identity_and_turn(self):
-        final = self.tree["pre-dreadnought"]["max_lvl"]
+    def test_tournament_naval_research_checks_host_prerequisites_identity_and_turn(self):
+        cases = research_lock_cases(self.tree, "NAVY")
+        if not cases:
+            self.skipTest("Current content has no naval research prerequisites.")
+        tech, locked, unlocked = cases[0]
         harness = tournament_harness.TournamentMoveTests()
         for mode in ("valid", "locked", "malformed", "stale", "wrong_key"):
             with self.subTest(mode=mode), tempfile.TemporaryDirectory() as directory:
                 host = tournament_harness.Host()
-                host.nation_data["Leader"]["research"] = {"pre-dreadnought": final - int(mode == "locked")}
+                host.nation_data["Leader"]["research"] = dict(locked if mode == "locked" else unlocked)
                 move = {"player_intents": [{"type": "research_queue",
-                        "tech_names": "destroyer" if mode == "malformed" else ["destroyer"]}],
+                        "tech_names": tech if mode == "malformed" else [tech]}],
                         "game_version": c.GAME_VERSION, "tournament_session": host.multiplayer_session_key,
                         "tournament_turn": host.time_manager.total_turns - int(mode == "stale")}
                 before = copy.deepcopy(host.nation_data)
-                path = harness.write_move(directory, "destroyer.gd5move", "Leader", move)
+                path = harness.write_move(directory, "research.gd5move", "Leader", move)
                 if mode == "wrong_key":
                     with open(path) as file:
                         payload = json.load(file)
-                    payload["hash"] = tournament_harness.multiplayer_io.hash_key(harness.keys["Member"])
+                    payload["hash"] = tournament_harness.tournament_files.hash_key(harness.keys["Member"])
                     with open(path, "w") as file:
                         json.dump(payload, file)
                 result = harness.import_moves(host, [path])
                 self.assertEqual(result["loaded"], int(mode == "valid"), result["rejections"])
                 if mode == "valid":
                     self.assertEqual(host.nation_data["Leader"]["research_queue"],
-                                     [queries.build_research_project("destroyer", self.tree["destroyer"]["cost"])])
+                                     [queries.build_research_project(tech, self.tree[tech]["cost"])])
                     self.assertEqual(host.nation_data["Member"], before["Member"])
                 else:
                     self.assertEqual(host.nation_data, before)
-
-    def test_time_appropriate_research_uses_each_ships_library_year(self):
-        for tech in SHIPS.values():
-            for level, year in enumerate(self.tree[tech]["years"], start=1):
-                with self.subTest(tech=tech, year=year):
-                    self.assertLess(queries.get_time_appropriate_research(year - 1)[tech], level)
-                    self.assertGreaterEqual(queries.get_time_appropriate_research(year + 1)[tech], level)
 
     def test_finishing_ship_research_unlocks_paid_coastal_production(self):
         self.context.session.player_country = "Spectator"
@@ -296,12 +269,14 @@ class NavalContentTests(unittest.TestCase):
             self.assertNotIn(name + " I", library)
             self.assertNotIn(tech, tree)
             self.assertFalse(any(stats["metadata"]["family"] == name for stats in library.values()))
-        for tech in ("destroyer", "submarine", "aircraft_carrier"):
-            self.assertTrue(queries.check_tech_requirements({}, tree[tech]["req"]))
-
+        disabled = set(SHIPS.values())
+        for tech, entry in tree.items():
+            with self.subTest(tech=tech):
+                required = {key for key, _level in queries.walk_tech_requirements(entry["req"])}
+                self.assertFalse(required & disabled)
 
 class NavalScreenTests(unittest.TestCase):
-    def test_destroyer_research_control_rechecks_the_final_pre_dreadnought_requirement(self):
+    def test_research_control_rechecks_the_requirement_when_it_is_used(self):
         from tests import app_harness
 
         controller, _ = app_harness.boot()
@@ -309,32 +284,33 @@ class NavalScreenTests(unittest.TestCase):
         nations = copy.deepcopy(game.nation_data)
         country = nations[game.player_country]
         tree = queries.get_tech_tree(game)
-        final = tree["pre-dreadnought"]["max_lvl"]
+        cases = research_lock_cases(tree, "NAVY")
+        if not cases:
+            self.skipTest("Current content has no naval research prerequisites.")
+        tech, locked, unlocked = cases[0]
         research = controller.states["RESEARCH"]
         try:
             with app_harness.patch_map(game, nation_data=nations, tactical_mode=False):
-                for complete in (False, True):
-                    country["research"] = queries.edited_research_levels(
-                        {}, "pre-dreadnought", final - int(not complete), True, tree)
+                for complete, progress in ((False, locked), (True, unlocked)):
+                    country["research"] = dict(progress)
                     country["research_queue"] = []
                     research.start_research(game)
                     research.set_category("NAVY")
                     node = next(button for button in research.elements
                                 if getattr(button, "is_tech_node", False)
-                                and button.text == research.get_display_name("destroyer", 1))
+                                and button.text == research.get_display_name(tech, progress[tech] + 1))
                     node.callback()
                     self.assertEqual(research.active_modal["status"], "AVAILABLE" if complete else "LOCKED")
-                    self.assertEqual(country["research"].get("dreadnought", 0), 0)
                     if complete:
                         button = next(button for button in research.elements
                                       if getattr(button, "text", "") == "Start Research")
-                        country["research"]["pre-dreadnought"] = final - 1
+                        country["research"] = dict(locked)
                         button.callback()
                         self.assertEqual(country["research_queue"], [])
-                        country["research"]["pre-dreadnought"] = final
-                    research.start_or_resume_research("destroyer")
+                        country["research"] = dict(unlocked)
+                    research.start_or_resume_research(tech)
                     self.assertEqual([project["tech_name"] for project in country["research_queue"]],
-                                     ["destroyer"] if complete else [])
+                                     [tech] if complete else [])
         finally:
             research.start_research(game)
 

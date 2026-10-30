@@ -312,6 +312,8 @@ Use verification appropriate to each change.
    Example: `python -m unittest tests.test_tournament_moves`.
    Focused regression tests must pass before handoff.
 3. Run `python run_tests.py` before handoff when feasible.
+   For a refactor that must not change gameplay, record `python scripts/checks/turn_digest.py --output before.json` first.
+   After the refactor, run `python scripts/checks/turn_digest.py --compare before.json`.
 4. Complete the affected-systems checklist above.
    For UI, run functional smoke checks and check appearance manually.
    Test alternative permissions and input handling.
@@ -334,6 +336,19 @@ Use verification appropriate to each change.
   Preserve exact identifiers and migration rules when they define compatibility contracts.
 - When tuning exposes an old assumption, rewrite the test around its intended rule.
   Check other tests for the same assumption, including tests that still pass.
+
+### Tuning Independence
+
+The user edits unit, building, and research data often.
+A data edit must not make a test fail, unless the test checks that JSON matches `data/generators/recipes.py`.
+
+- Do not assert a current stat, cost, year, level count, or prerequisite of real content.
+- Do not assert that a real technology requires another real technology.
+- Test a rule with an artificial fixture. Set every field that the rule reads.
+- To check real content, read the expected value from the data, for example with `research_lock_cases`.
+- Check every entry in a category. Do not name specific real units or technologies when a loop can select them.
+- When a data edit makes a test fail, rewrite the test around its rule. Do not change the data to pass the test.
+- Run `python scripts/checks/tuning_stress.py` after you add or change tests that read real content.
 
 ## Documentation
 

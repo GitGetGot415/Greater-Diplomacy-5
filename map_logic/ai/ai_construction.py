@@ -8,17 +8,6 @@ from map_logic.ai import ai_unit_eval, ai_world
 from map_logic.diplomacy import restrictions
 
 
-def _unit_costs(unit_library, unit_name):
-    """(stats, materials, manpower, fuel) for one unit type.
-
-    The purchase loop below re-reads these every time it changes its mind about
-    what to build, which it does up to three times per nation per turn.
-    """
-    stats = unit_library.get(unit_name, {})
-    return (stats, stats.get("cost_materials", 0),
-            stats.get("cost_manpower", 0), stats.get("cost_fuel", 0))
-
-
 # ============================================================================ #
 #              process_ai_economy_decisions PHASE HELPERS                      #
 # ============================================================================ #

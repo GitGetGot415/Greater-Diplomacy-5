@@ -17,14 +17,9 @@ So the reason is a template now, said one way to its author and the other way
 about them, and the numbers in it are formatted before either voice sees them.
 """
 
-import os
 import re
-import sys
 import unittest
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from map_logic.ai import ai_opinion, ai_world
 from map_logic.diplomacy import deal as deal_mod, war_actions

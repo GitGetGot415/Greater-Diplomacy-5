@@ -566,12 +566,6 @@ class TextField:
             return ch.isdigit() or (ch == "-" and not self.text)
         return ch.isprintable()
 
-    def get_int(self, default=0):
-        try:
-            return int(self.text)
-        except ValueError:
-            return default
-
     def handle_event(self, event):
         if not self.visible:
             return

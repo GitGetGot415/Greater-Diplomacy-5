@@ -654,15 +654,6 @@ class PlayerActions:
                 "custom_name": custom_name.strip() if isinstance(custom_name, str) and custom_name.strip() else None,
                 "combat_stance": stance, "lane_target": lane_target}
 
-    def _canonical_unit_order(self, country_id: str, province: dict[str, Any], unit: dict[str, Any],
-                              order: dict[str, Any] | None, *, map_ref=None) -> dict[str, Any] | None:
-        """Use the same rule as tournament's host-validated aircraft orders."""
-        try:
-            return queries.canonical_unit_order(self.map_ref if map_ref is None else map_ref,
-                                                country_id, province, unit, order)
-        except ValueError as exc:
-            raise PlayerActionError(str(exc)) from exc
-
     def _validate_queue(self, country_id: str, command: dict[str, Any]) -> dict[str, Any]:
         province = self._province(command.get("province_id"))
         if province.get("owner") != country_id:

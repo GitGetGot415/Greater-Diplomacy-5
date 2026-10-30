@@ -6,13 +6,8 @@ divergences (pane_rows not forwarding view_h, and the wheel routing by rect
 rather than by an x threshold) each get a test that would fail if reverted.
 """
 
-import os
-import sys
 import unittest
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import pygame
 

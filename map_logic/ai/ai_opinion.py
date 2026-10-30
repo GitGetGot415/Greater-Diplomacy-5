@@ -130,11 +130,6 @@ def war_desire(world, nation, target, scenario_settings=None):
     return clamp01(core - restraint)
 
 
-def wants_war(world, nation, target, scenario_settings=None):
-    """Whether desire clears the bar. The single yes/no the pass still needs."""
-    return war_desire(world, nation, target, scenario_settings) >= c.AI_WAR_DESIRE_THRESHOLD
-
-
 def peace_appetite(world, nation, enemy, scenario_settings=None):
     """How much this nation wants out of its war with `enemy`, 0..1.
 

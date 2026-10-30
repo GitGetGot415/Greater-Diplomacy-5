@@ -3,8 +3,7 @@ from ui.navigation.game_state import GameState
 from ui.widgets.ui_elements import Button, Slider, parse_pos, make_back_button, make_info_button
 import data.constants as c
 from data import queries
-from ui import dialogs as confirm_dialog
-
+from ui import dialogs
 from ui.rendering.font_manager import fonts
 from screens.editors import turn_editor
 from screens.editors import unit_stats_editor
@@ -181,7 +180,7 @@ class Scenario_Settings(GameState):
 
     def make_info_button(self, x, y, tooltip_title, tooltip_text):
         return make_info_button(x, y,
-                                lambda: confirm_dialog.show_info(tooltip_title, tooltip_text),
+                                lambda: dialogs.show_info(tooltip_title, tooltip_text),
                                 y_offset=INFO_Y_NUDGE)
 
     def refresh_ui(self):

@@ -1,7 +1,6 @@
 """Resources, costs, production output, administrative actions, and economy projections."""
 
 import data.constants as c
-import math
 import pygame
 import random
 from data.state_access import session_for, world_for
@@ -343,18 +342,6 @@ def can_afford(nation_data_block, costs_dict):
     return all(nation_data_block.get(res, 0) >= costs_dict.get(f"cost_{res}", 0) for res in c.ECON_RESOURCE_KEYS)
 
 
-def execute_trade_transfer(proposer_data, target_data, params):
-    """Executes a trade transfer between two nations, exchanging escrowed and requested resources."""
-    for res in c.TRADE_RESOURCE_KEYS:
-        # Target gains proposer's escrow
-        target_data[res] = target_data.get(res, 0) + params.get(f"give_{res}", 0)
-        # Target pays their side
-        actual_take = min(params.get(f"take_{res}", 0), target_data.get(res, 0))
-        target_data[res] -= actual_take
-        # Proposer receives their side
-        proposer_data[res] = proposer_data.get(res, 0) + actual_take
-
-
 def cancel_trade_escrow(proposer_data, params):
     """Refunds escrowed resources from a pending trade proposal."""
     for res in c.TRADE_RESOURCE_KEYS:
@@ -434,11 +421,6 @@ def get_building_output_modifiers(research, building_library=None, *, context=No
         multipliers[name] = values
         additions[name] = flat
     return modifiers
-
-
-def get_building_output_multipliers(research, building_library=None, *, context=None):
-    """Return percentage multipliers for callers that use the existing interface."""
-    return get_building_output_modifiers(research, building_library, context=context)["multipliers"]
 
 
 def get_building_output(building_name, research, building_library=None, *, context=None, multipliers=None, modifiers=None):
@@ -736,8 +718,3 @@ def get_economy_projections(target_nation, map_data, nation_data, *, context=Non
         
     return p_econ.get("total_inc"), p_econ.get("upkeep"), p_econ.get("breakdown")
 
-
-def get_minimum_tank_count(material_income):
-    """Calculates the baseline number of tanks an AI should force itself to field."""
-    count = math.ceil((material_income - c.AI_TANK_MIN_BASE_THRESHOLD) / c.AI_TANK_MIN_DIVISOR)
-    return max(0, count)

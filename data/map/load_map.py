@@ -20,9 +20,7 @@ from data.state_access import BackendState
 from map_logic.random_map import procedural_map_generator
 from map_logic.system32 import unit_events, movement_processor, economy_processor
 from map_logic.diplomacy import diplomacy_lifecycle, faction_records, faction_leadership
-from map_logic.territory import ownership as edit_province_ownership
-
-
+from map_logic.territory import ownership
 def read_save_files(load_path):
     """Read meta.json, map_data.json, and the history of one save folder.
 
@@ -450,7 +448,7 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
     # faction member falls. Do not revive that exhausted bloc on load: without
     # a member that owns land, its exiles have no path back into the world.
     if not session_state.is_editor:
-        exhausted_factions = edit_province_ownership.retire_exhausted_factions(map_screen)
+        exhausted_factions = ownership.retire_exhausted_factions(map_screen)
         if exhausted_factions:
             # Retiring a normal nation removes its diplomacy immediately; this
             # completes the other half of ordinary cleanup for former exiles.

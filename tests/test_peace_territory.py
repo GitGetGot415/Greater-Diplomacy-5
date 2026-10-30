@@ -19,13 +19,8 @@ goes back to whoever held it before the war, and anything the treaty could not
 honour says so out loud.
 """
 
-import os
-import sys
 import unittest
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from map_logic.diplomacy import deal, deal_effects, war_actions
 from tests.stub_map_screen import StubMapScreen

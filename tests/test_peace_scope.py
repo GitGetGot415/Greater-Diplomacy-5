@@ -5,13 +5,8 @@ and leave a war its bloc was still fighting, which is the state behind an AI
 sitting inside a faction while quietly ignoring one member of the enemy bloc.
 """
 
-import os
-import sys
 import unittest
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from map_logic.diplomacy import peace_scope
 from data import queries

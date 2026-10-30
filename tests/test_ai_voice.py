@@ -18,13 +18,8 @@ own diplomacy. saves/generic message despite absolute ai is almost entirely
 "We accept your proposal."
 """
 
-import os
-import sys
 import unittest
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import data.constants as c
 from map_logic.ai import ai_director, ai_prompts

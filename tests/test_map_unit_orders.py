@@ -1,14 +1,9 @@
 """Regression coverage for map-level unit routing without a live display."""
-import os
-import sys
 import unittest
 from unittest.mock import Mock, patch
 
 import pygame
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from data import queries
 import data.constants as c
@@ -17,7 +12,7 @@ from ui.camera import camera_handler
 from ui.rendering import overlay_renderer
 from screens.game.map import Map
 from screens.game.orders import _OrdersRowHitbox
-from screens.game import map_input as event_handler
+from screens.game import map_input
 from screens.setup import player_setup
 from map_logic.system32.time_handler import TimeHandler
 
@@ -510,8 +505,8 @@ class MapOrderGestureTests(unittest.TestCase):
         screen.is_content_dragging = lambda _attr: False
         screen.read_only = False
 
-        with (patch("screens.game.orders.event_handler.resolve_map_mouse_gesture_conflict"),
-              patch("screens.game.orders.event_handler.mouse_button_has_action",
+        with (patch("screens.game.orders.map_input.resolve_map_mouse_gesture_conflict"),
+              patch("screens.game.orders.map_input.mouse_button_has_action",
                     return_value=True),
               patch("screens.game.orders.pygame.mouse.get_pos",
                     return_value=(400, 300)),
@@ -542,7 +537,7 @@ class MapOrderGestureTests(unittest.TestCase):
             "show_feedback": lambda self, _message: None,
         })())
 
-        with (patch("screens.game.orders.event_handler.resolve_map_mouse_gesture_conflict"),
+        with (patch("screens.game.orders.map_input.resolve_map_mouse_gesture_conflict"),
               patch("screens.game.orders.pygame.mouse.get_pos",
                     return_value=(150, 150)),
               patch("screens.game.orders.queries.get_clicked_province",
@@ -562,8 +557,8 @@ class MapOrderGestureTests(unittest.TestCase):
         upper = {"rect": pygame.Rect(10, 10, 30, 30), "units": []}
         map_stub = fill_state_defaults(type("MapStub", (), {"unit_hover_hitboxes": [lower, upper]})())
 
-        self.assertIs(event_handler._unit_stack_at(map_stub, (20, 20)), upper)
-        self.assertIsNone(event_handler._unit_stack_at(map_stub, (100, 100)))
+        self.assertIs(map_input._unit_stack_at(map_stub, (20, 20)), upper)
+        self.assertIsNone(map_input._unit_stack_at(map_stub, (100, 100)))
 
     def test_tactical_country_selection_can_click_a_rendered_unit_box(self):
         unit = {"owner": "A", "type": "Infantry"}
@@ -578,7 +573,7 @@ class MapOrderGestureTests(unittest.TestCase):
         })())
 
         with patch("screens.game.map_input.player_setup.select_tactical_unit") as select_unit:
-            self.assertTrue(event_handler._select_tactical_unit_stack(map_stub, (15, 15)))
+            self.assertTrue(map_input._select_tactical_unit_stack(map_stub, (15, 15)))
 
         select_unit.assert_called_once_with(map_stub, origin, candidate_units=[unit])
 
@@ -598,9 +593,9 @@ class MapOrderGestureTests(unittest.TestCase):
 
         with (patch("screens.game.map_input.queries.get_clicked_province", return_value=destination),
               patch("screens.game.map_input.pygame.key.get_mods", return_value=0)):
-            self.assertTrue(event_handler._handle_map_unit_selection(
+            self.assertTrue(map_input._handle_map_unit_selection(
                 map_stub, pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(20, 20), button=3), False))
-            self.assertTrue(event_handler._handle_map_unit_selection(
+            self.assertTrue(map_input._handle_map_unit_selection(
                 map_stub, pygame.event.Event(pygame.MOUSEBUTTONUP, pos=(20, 20), button=3), False))
 
         self.assertEqual(calls, [(destination, False)])
@@ -623,11 +618,11 @@ class MapOrderGestureTests(unittest.TestCase):
         })())
 
         with patch("screens.game.map_input.pygame.key.get_mods", return_value=0):
-            self.assertTrue(event_handler._handle_map_unit_selection(
+            self.assertTrue(map_input._handle_map_unit_selection(
                 map_stub, pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(15, 15), button=1), False))
-            self.assertTrue(event_handler._handle_map_unit_selection(
+            self.assertTrue(map_input._handle_map_unit_selection(
                 map_stub, pygame.event.Event(pygame.MOUSEMOTION, pos=(75, 35)), False))
-            self.assertTrue(event_handler._handle_map_unit_selection(
+            self.assertTrue(map_input._handle_map_unit_selection(
                 map_stub, pygame.event.Event(pygame.MOUSEBUTTONUP, pos=(75, 35), button=1), False))
 
         self.assertEqual(selected, [first, second])
@@ -659,9 +654,9 @@ class MapOrderGestureTests(unittest.TestCase):
         map_stub.open_orders_for_unit_stack = lambda prov, units: opened.append((prov, units))
 
         with patch("screens.game.map_input.pygame.key.get_mods", return_value=0):
-            event_handler._handle_map_unit_selection(
+            map_input._handle_map_unit_selection(
                 map_stub, pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(15, 15), button=1), False)
-            self.assertTrue(event_handler._handle_map_unit_selection(
+            self.assertTrue(map_input._handle_map_unit_selection(
                 map_stub, pygame.event.Event(pygame.MOUSEBUTTONUP, pos=(15, 15), button=1), False))
 
         self.assertEqual([member for member, _province in map_stub.selected_unit_records()], [unit])
@@ -677,7 +672,7 @@ class MapOrderGestureTests(unittest.TestCase):
             "_ignore_right_until_release": False,
         })())
 
-        event_handler.resolve_map_mouse_gesture_conflict(
+        map_input.resolve_map_mouse_gesture_conflict(
             map_stub, pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(20, 20), button=3))
 
         self.assertIsNone(map_stub.unit_selection_drag)
@@ -689,7 +684,7 @@ class MapOrderGestureTests(unittest.TestCase):
             "_ignore_left_until_release": False,
         })())
 
-        event_handler.resolve_map_mouse_gesture_conflict(
+        map_input.resolve_map_mouse_gesture_conflict(
             map_stub, pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(20, 20), button=2))
 
         self.assertIsNone(map_stub.unit_selection_drag)
@@ -697,7 +692,7 @@ class MapOrderGestureTests(unittest.TestCase):
 
         map_stub.secondary_mode = "UNITS"
         map_stub.can_select_map_units = lambda: True
-        self.assertTrue(event_handler._handle_map_unit_selection(
+        self.assertTrue(map_input._handle_map_unit_selection(
             map_stub, pygame.event.Event(pygame.MOUSEBUTTONUP, pos=(40, 40), button=1), False))
         self.assertFalse(map_stub._ignore_left_until_release)
 
@@ -715,8 +710,8 @@ class MapOrderGestureTests(unittest.TestCase):
             "unit_stack_hitboxes": [],
         })())
 
-        with (patch("screens.game.orders.event_handler.resolve_map_mouse_gesture_conflict"),
-              patch("screens.game.orders.event_handler._select_map_province",
+        with (patch("screens.game.orders.map_input.resolve_map_mouse_gesture_conflict"),
+              patch("screens.game.orders.map_input._select_map_province",
                     return_value=True) as select_province,
               patch("screens.game.orders.pygame.key.get_mods", return_value=0),
               patch("screens.game.orders.pygame.mouse.get_pos", return_value=(5, 5))):

@@ -12,13 +12,9 @@ written out by hand on purpose: they have to fail loudly if the table moves.
 """
 
 import os
-import sys
 import unittest
 from unittest import mock
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import data.constants as c
 from tests.stub_map_screen import map_double

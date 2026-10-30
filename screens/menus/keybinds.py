@@ -3,7 +3,7 @@ from ui.navigation.game_state import GameState
 from ui.widgets.ui_elements import Button, make_back_button, make_info_button
 import data.constants as c
 from data import queries
-from ui import dialogs as confirm_dialog
+from ui import dialogs
 from ui.widgets import text_utils
 from ui.rendering.font_manager import fonts
 
@@ -135,7 +135,7 @@ class Keybinds(GameState):
                 self.elements.append(
                     make_info_button(
                         KEYBINDS_TOGGLE_INFO_X, y,
-                        lambda: confirm_dialog.show_info("Change Screen With This Keybind", TOGGLE_INFO_TEXT),
+                        lambda: dialogs.show_info("Change Screen With This Keybind", TOGGLE_INFO_TEXT),
                         y_offset=KEYBINDS_INFO_Y_NUDGE)
                 )
 

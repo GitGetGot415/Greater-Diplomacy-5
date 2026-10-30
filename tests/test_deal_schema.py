@@ -8,13 +8,8 @@ nation that is not party to it, or a province its giver does not hold -- and
 that every old shape still loads, because a save can have one travelling.
 """
 
-import os
-import sys
 import unittest
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import data.constants as c
 from map_logic.diplomacy import deal

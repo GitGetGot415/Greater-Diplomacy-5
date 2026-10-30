@@ -1,12 +1,7 @@
 """Regression coverage for cached AI and dense rendering indexes."""
 
-import os
-import sys
 import unittest
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from map_logic.ai import ai_world
 from ui.rendering.overlay_renderer import _UnitRenderIndex

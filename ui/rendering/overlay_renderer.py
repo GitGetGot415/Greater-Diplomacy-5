@@ -391,17 +391,6 @@ def _simulate_combat(sides, nation_data, province=None, max_turns=100, grounded_
     return result(None, None)
 
 
-def estimated_combat_turns(sides, nation_data, province=None, max_turns=100):
-    """Estimate future volleys until a battle has no hostile lane remaining.
-
-    This is the backwards-compatible turns-only view used by map combat
-    bubbles.  The battle screen uses :func:`estimated_combat_outcome` so it can
-    also identify which side is expected to survive.
-    """
-    return estimated_combat_outcome(
-        sides, nation_data, province=province, max_turns=max_turns)["turns"]
-
-
 def _combat_friendly_nations(map_screen):
     player = map_screen.player_country
     if player in (None, "", "Spectator", "Editor") or map_screen.is_editor:
@@ -2175,7 +2164,7 @@ def _publish_unit_stack_hitbox(map_screen, surface, rect, province, units, owner
     hover_hitbox = {"rect": pygame.Rect(rect), "province": province,
                     "units": list(units)}
     map_screen.unit_hover_hitboxes.append(hover_hitbox)
-    hovered_stack = getattr(map_screen, "hovered_unit_stack", None)
+    hovered_stack = map_screen.hovered_unit_stack
     if (hovered_stack and hovered_stack.get("province") is province
             and {id(unit) for unit in hovered_stack.get("units", [])}
             == {id(unit) for unit in units}):
@@ -2193,7 +2182,7 @@ def _publish_unit_stack_hitbox(map_screen, surface, rect, province, units, owner
                          max(2, int(2 * display_scale)), border_radius=3)
 
     # Right-drag selection is a preview, not a second selection state.
-    drag = getattr(map_screen, "unit_selection_drag", None)
+    drag = map_screen.unit_selection_drag
     if drag:
         drag_rect = pygame.Rect(
             drag["start"],

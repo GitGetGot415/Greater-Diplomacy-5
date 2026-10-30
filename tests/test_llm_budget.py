@@ -12,14 +12,9 @@ The second half is that none of this was visible. A batch that ran out of
 budget looked exactly like a batch with nothing to say.
 """
 
-import os
-import sys
 import time
 import unittest
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from map_logic.ai import ai_diplomacy, ai_llm_runner
 

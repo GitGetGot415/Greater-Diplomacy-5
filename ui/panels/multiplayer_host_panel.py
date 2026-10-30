@@ -1,12 +1,10 @@
 import os
-from data.multiplayer.tournament import files as multiplayer_io
+from data.multiplayer.tournament import files as tournament_files
 from data import queries
 import data.constants as c
 from ui.dialogs.checkbox_list_screen import CheckboxItem
 
-from ui import dialogs as confirm_dialog
-
-
+from ui import dialogs
 def show_move_rejection(map_ref, rejection, on_result=None):
     """Show the file, country, and full rejection reason in a scrollable dialog."""
 
@@ -14,7 +12,7 @@ def show_move_rejection(map_ref, rejection, on_result=None):
     cid = rejection["country_id"]
     country = queries.get_country_display_name(cid, map_ref.nation_data) if cid else "Unknown country"
     message = f"Rejected {file_name}\nCountry: {country}\n\n{rejection['reason']}"
-    confirm_dialog.show_message(
+    dialogs.show_message(
         "Tournament move rejected", message, kind="warning", on_result=on_result,
         inline_parts=[(message, None)])
 
@@ -40,7 +38,7 @@ def load_multiplayer_moves(map_ref, on_result):
             on_result(False)
             return
 
-        summary = multiplayer_io.load_move_files(
+        summary = tournament_files.load_move_files(
             map_ref, files, getattr(map_ref, 'multiplayer_keys_dict', {}))
         pending = iter(summary["rejections"])
 
@@ -81,7 +79,7 @@ def load_multiplayer_moves(map_ref, on_result):
                     if accepted and can_import():
                         overrides = accepted_overrides | {rejection["override"]}
                         # Read and validate again. The file or host turn may have changed.
-                        retry = multiplayer_io.load_move_files(
+                        retry = tournament_files.load_move_files(
                             map_ref, [rejection["file_path"]],
                             getattr(map_ref, "multiplayer_keys_dict", {}),
                             accept_stat_mismatches="stats" in overrides,
@@ -99,7 +97,7 @@ def load_multiplayer_moves(map_ref, on_result):
                                 review(again, overrides)
                                 return
                             retry_message = f"{file_name}\n\n{again['reason']}"
-                            confirm_dialog.show_message(
+                            dialogs.show_message(
                                 "Move still rejected",
                                 retry_message, kind="warning", on_result=review_next,
                                 inline_parts=[(retry_message, None)])
@@ -116,7 +114,7 @@ def load_multiplayer_moves(map_ref, on_result):
                     question = ("This move has stat mismatches. Accepting it can import incorrect values "
                                 "or unfair advantages. Accept it despite these risks?")
                     yes_label = "Accept"
-                confirm_dialog.ask_yes_no(
+                dialogs.ask_yes_no(
                     title, f"{file_name}\nCountry: {country}\n\n{question}",
                     on_result=after_choice, yes_label=yes_label, no_label="Reject")
 
@@ -146,7 +144,7 @@ def export_next_turn(map_ref):
 
     def export():
         try:
-            multiplayer_io.export_tournament(map_ref, export_path, master_key, keys_dict)
+            tournament_files.export_tournament(map_ref, export_path, master_key, keys_dict)
         except ValueError as error:
             # This also protects a tournament created by an older build before
             # the public ``Spectator`` key became reserved.

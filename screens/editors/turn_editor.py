@@ -16,7 +16,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import pygame
 import data.constants as c
 from data import queries
-from ui import dialogs as confirm_dialog
+from ui import dialogs
 from ui.bars import ui_bars
 from ui.navigation.modal_screen import ModalScreen
 from ui.widgets.ui_elements import Button, Slider, TextField, make_back_button
@@ -180,7 +180,7 @@ class TurnEditorScreen(ModalScreen):
             self.target_settings.update(self.settings)
         if self.persist:
             queries.save_scenario_settings(self.target_settings if self.target_settings is not None else self.settings)
-        confirm_dialog.show_success("Saved", "Successfully saved overrides to scenario settings.")
+        dialogs.show_success("Saved", "Successfully saved overrides to scenario settings.")
         self.exit_screen()
 
     def reset_to_defaults(self):
@@ -196,7 +196,7 @@ class TurnEditorScreen(ModalScreen):
             self.elements = []
             self.save_all()
 
-        confirm_dialog.ask_yes_no(
+        dialogs.ask_yes_no(
             "Confirm Reset",
             "Are you sure you want to clear overrides and reset to defaults? "
             "This applies to the current scenario.",
