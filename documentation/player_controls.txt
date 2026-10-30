@@ -18,7 +18,8 @@ See documentation/air_stuff.txt for aircraft controls and rules.
 BUTTON DISPLAY
 --------------
 
-Shared buttons use five shade bands and square checkerboard transitions.
+Shared buttons use shade bands and square checkerboard transitions.
+Taller buttons add shades to keep bands approximately 10 pixels high.
 Small buttons omit the checkerboard pattern. Very short buttons use fewer bands.
 The inner bevel reverses while a button is pressed under the pointer.
 Hover, selection, and disabled states keep their existing outlines and colors.

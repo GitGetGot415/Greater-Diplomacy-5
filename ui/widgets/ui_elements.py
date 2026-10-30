@@ -35,7 +35,8 @@ _pygame_sfx_pitch_cache = {
 
 UI_ICONS = {}
 
-_BUTTON_SHADE_COUNT = 5
+_BUTTON_MIN_SHADE_COUNT = 5
+_BUTTON_SHADE_HEIGHT = 10
 _BUTTON_PIXEL_SIZE = 2
 _BUTTON_HIGHLIGHT = 30
 _BUTTON_SHADOW = 50
@@ -53,7 +54,9 @@ def _button_background(size, color, pressed, border_width):
 
     light = tuple(min(255, channel + _BUTTON_HIGHLIGHT) for channel in color)
     dark = tuple(max(0, channel - _BUTTON_SHADOW) for channel in color)
-    shade_count = min(_BUTTON_SHADE_COUNT, max(1, height // _BUTTON_PIXEL_SIZE))
+    shade_count = max(_BUTTON_MIN_SHADE_COUNT,
+                      (height + _BUTTON_SHADE_HEIGHT - 1) // _BUTTON_SHADE_HEIGHT)
+    shade_count = min(shade_count, max(1, height // _BUTTON_PIXEL_SIZE))
     shades = [queries.lerp_color(light, dark, i / max(1, shade_count - 1))
               for i in range(shade_count)]
     boundaries = [0] + [

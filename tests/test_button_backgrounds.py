@@ -40,9 +40,12 @@ class ButtonBackgroundTests(unittest.TestCase):
             self.button.draw(self.surface)
         self.button.is_selected = True
         self.button.draw(self.surface)
-        self.button.rect.size = (121, 51)
+        self.button.rect.size = (121, 251)
         self.button.draw(self.surface)
         self.assertEqual(ui_elements._button_background.cache_info().misses, 7)
+        with patch.object(ui_elements.queries, "lerp_color") as interpolate:
+            self.button.draw(self.surface)
+        interpolate.assert_not_called()
 
     def test_cache_has_a_fixed_capacity(self):
         capacity = ui_elements._button_background.cache_info().maxsize
@@ -58,8 +61,9 @@ class ButtonBackgroundTests(unittest.TestCase):
         self.button.draw(self.surface)
         self.assertEqual(ui_elements._button_background.cache_info().misses, 0)
 
-    def test_small_and_empty_buttons_draw_without_errors(self):
-        for size in ((0, 50), (50, 0), (1, 1), (3, 7), (9, 9), (51, 31)):
+    def test_small_tall_and_empty_buttons_draw_without_errors(self):
+        for size in ((0, 50), (50, 0), (1, 1), (3, 7), (9, 9), (51, 31),
+                     (120, 150), (121, 251), (390, 300)):
             with self.subTest(size=size):
                 self.button.rect.size = size
                 self.button.draw(self.surface)
