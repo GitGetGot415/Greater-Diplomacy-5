@@ -415,7 +415,7 @@ NAVAL_UNIT_RECIPES = [
     (1920, 'Battleship',       6000, 3500, 600, 1,  20000, 2000, 300, 10,  500,  (2, 5, {'attack': 100}),   {}),
     (1900, 'Destroyer',        2400, 1200, 200, 1,  8000,  1000, 250, 8,   None, (64, 4, {'health': 400, 'attack': 300, 'defense': 20, 'cost_materials': 500, 'cost_fuel': 5}),                          {}),
     (1900, 'Submarine',        1200, 600,  0,   1,  6000,  1000, 150, 6,   None, (64, 4, {'health': 200, 'attack': 100, 'cost_materials': 400, 'cost_fuel': 5}),                                         {}),
-    (1930, 'Aircraft Carrier', 800,  600,  200, 1,  20000, 2000, 500, 10,  800,  (45, 5, {'health': 200, 'attack': 120, 'defense': 20, 'cost_materials': 1000, 'cost_fuel': 25, 'bombard_attack': 120}), {}),
+    (1930, 'Aircraft Carrier', 800,  600,  200, 1,  20000, 2000, 500, 10,  600,  (45, 5, {'health': 200, 'attack': 120, 'defense': 20, 'cost_materials': 1000, 'cost_fuel': 25, 'bombard_attack': 120}), {}),
 ]
 
 AIR_UNIT_RECIPES = [
