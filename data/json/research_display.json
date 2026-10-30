@@ -7,7 +7,9 @@
     "button_sizes": {
         "tech_square": [60, 60],
         "tech_square_medium": [100, 60],
+        "tech_square_carrack": [150, 120],
         "tech_square_wide": [150, 60],
+        "tech_square_very_wide": [200, 60],
         "tech_square_ultra_wide": [270, 60],
         "tech_square_railroad_gun": [270, 110],
         "tech_square_ww2_railroad_gun": [340, 120],
@@ -20,7 +22,7 @@
             "button_size": "tech_square_wide"
         },
         "NAVY": {
-            "button_size": "tech_square_wide"
+            "button_size": "tech_square_very_wide"
         },
         "AIR": {
             "button_size": "tech_square_wide"
@@ -30,7 +32,9 @@
         "aircraft_carrier": {"button_size": "tech_square_ultra_wide"},
         "battleship": {"button_size": "tech_square_ultra_wide"},
         "dreadnought": {"button_size": "tech_square_ultra_wide"},
-        "pre-dreadnought": {"button_size": "tech_square_ultra_wide"},
+        "pre-dreadnought": {"button_size": "tech_square_very_wide"},
+        "ironclad": {"button_size": "tech_square_very_wide"},
+        "carrack": {"button_size": "tech_square_carrack"},
         "submarine": {"button_size": "tech_square_ultra_wide"},
         "jet_bomber": {"button_size": "tech_square_ultra_wide"},
         "jet_transport": {"button_size": "tech_square_ultra_wide"},
