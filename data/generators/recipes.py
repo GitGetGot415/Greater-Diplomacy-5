@@ -412,10 +412,10 @@ NAVAL_UNIT_RECIPES = [
     (1860, 'Ironclad',         2000, 800,  200, 1,  6000,  1000, 100, 6,   None, (5, 4,  {'health': 200, 'attack': 50, 'defense': 20, 'cost_materials': 500, 'cost_fuel': 10}),                           {}),
     (1880, 'Pre-Dreadnought',  3000, 1200, 300, 1,  10000, 2000, 150, 8,   None, (5, 4,  {'health': 200, 'attack': 200, 'defense': 20, 'cost_materials': 1000, 'cost_fuel': 10}),                         {}),
     (1900, 'Dreadnought',      4000, 3000, 400, 1,  16000, 2000, 200, 10,  300,  (5, 4,  {'health': 400, 'attack': 100, 'defense': 40, 'cost_materials': 800, 'cost_fuel': 20, 'bombard_attack': 40}),    {}),
-    (1920, 'Battleship',       6000, 3600, 600, 1,  20000, 2000, 300, 10,  500,  (5, 4,  {'attack': 100, 'cost_materials': 1000, 'bombard_attack': 40}),   {}),
-    (1900, 'Destroyer',        2400, 1200, 200, 1,  8000,  1000, 250, 8,   None, (64, 4, {'health': 400, 'attack': 300, 'defense': 20, 'cost_materials': 500, 'cost_fuel': 5}),                          {}),
-    (1900, 'Submarine',        1200, 600,  0,   1,  6000,  1000, 150, 6,   None, (64, 4, {'health': 200, 'attack': 100, 'cost_materials': 400, 'cost_fuel': 5}),                                         {}),
-    (1920, 'Aircraft Carrier', 600,  300,  200, 1,  20000, 2000, 500, 10,  300,  (47, 5, {'health': 200, 'attack': 150, 'defense': 20, 'cost_materials': 1000, 'cost_fuel': 25, 'bombard_attack': 150}), {}),
+    (1920, 'Battleship',       6000, 3500, 600, 1,  20000, 2000, 300, 10,  500,  (6, 4,  {'attack': 100, 'cost_materials': 1000, 'cost_fuel': 20, 'bombard_attack': 40}),   {}),
+    (1900, 'Destroyer',        2400, 1200, 200, 1,  8000,  1000, 250, 8,   None, (63, 4, {'health': 400, 'attack': 300, 'defense': 20, 'cost_materials': 500, 'cost_fuel': 5}),                          {}),
+    (1900, 'Submarine',        1200, 600,  0,   1,  6000,  1000, 150, 6,   None, (63, 4, {'health': 200, 'attack': 100, 'cost_materials': 400, 'cost_fuel': 5}),                                         {}),
+    (1920, 'Aircraft Carrier', 600,  300,  200, 1,  20000, 2000, 300, 10,  300,  (47, 5, {'health': 200, 'attack': 150, 'defense': 20, 'cost_materials': 1000, 'cost_fuel': 20, 'bombard_attack': 150}), {}),
 ]
 
 AIR_UNIT_RECIPES = [
