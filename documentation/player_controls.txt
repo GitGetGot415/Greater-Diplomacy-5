@@ -28,6 +28,19 @@ ui/widgets/ui_elements.py caches backgrounds by size, color, pressed state, and 
 The cache retains at most 128 backgrounds. Moving a button reuses its background.
 This display change applies in all modes. It adds no saved fields or multiplayer commands.
 
+MAP FRAME DISPLAY
+-----------------
+
+The map's top, bottom, left, and unit-filter bars use rectangles drawn in code.
+The bars use green shade bands, square borders, and bevels from the shared button shading cache.
+The bars do not load PNG backgrounds.
+The existing panel visibility rules apply in player, spectator, tactical, editor, and multiplayer modes.
+
+The province menu keeps assets/backgrounds/Province.png and caches the resized image for each viewport size.
+Map input uses that image to block clicks under panels and permit clicks through the transparent map window.
+The moving checkerboard background keeps its flat squares.
+This display change adds no saved fields or multiplayer commands.
+
 SLIDER DISPLAY
 --------------
 

@@ -254,6 +254,19 @@ Keep tuning data in its source files:
 - Account for the web build's virtual filesystem and storage synchronization.
   This applies to saves, tournament files, imports, and user-created assets.
 
+### UI Appearance
+
+- Use the existing buttons, sliders, and scrollbars as the visual reference for new or changed UI.
+- Use a pixel-art style with rectangular shapes, square corners, solid outlines, and raised or recessed bevels.
+- Use stepped shade bands and small square dithering where space permits. Avoid smooth gradients and flat control backgrounds.
+- Keep slider and scrollbar handles free of grip lines.
+- Keep color swatches flat so they show the selected color.
+- Draw simple panels, bars, and control backgrounds in code. Reserve image assets for artwork, icons, portraits, and similar content.
+- Keep `assets/backgrounds/Province.png` for the province menu unless the user requests its replacement.
+- Reuse the shared shading and cached surfaces in `ui/widgets/ui_elements.py`.
+- Preserve hover, pressed, selected, disabled, and permission states when changing appearance.
+- Keep the moving checkerboard background's existing flat squares unless the user requests a change.
+
 ### UI and Permissions
 
 - Country IDs are storage and protocol keys.

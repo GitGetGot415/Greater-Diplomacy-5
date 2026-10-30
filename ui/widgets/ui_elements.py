@@ -92,6 +92,15 @@ def _button_background(size, color, pressed, border_width):
     return background
 
 
+def draw_pixel_panel(surface, rect, color, border_color=(20, 20, 20)):
+    """Draw a square panel with the cached button shading and bevel."""
+    if rect.width <= 0 or rect.height <= 0:
+        return
+    background = _button_background(rect.size, tuple(color[:3]), False, _BUTTON_BORDER_WIDTH)
+    surface.blit(background, rect)
+    pygame.draw.rect(surface, border_color, rect, _BUTTON_BORDER_WIDTH)
+
+
 def parse_pos(val, limit, size):
     if isinstance(val, str):
         if "centered" in val:
