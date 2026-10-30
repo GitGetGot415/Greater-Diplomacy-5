@@ -136,9 +136,9 @@ class NavalContentTests(unittest.TestCase):
     def test_destroyer_and_submarine_levels_follow_their_own_research_dependencies(self):
         final_pre_dreadnought = self.tree["pre-dreadnought"]["max_lvl"]
         self.assertEqual(self.tree["destroyer"]["req"], {"pre-dreadnought": final_pre_dreadnought})
-        self.assertEqual(self.tree["submarine"]["req"], {"dreadnought": 1})
+        self.assertEqual(self.tree["submarine"]["req"], {"pre-dreadnought": final_pre_dreadnought})
         for tech, prerequisite, required in (("destroyer", "pre-dreadnought", final_pre_dreadnought),
-                                             ("submarine", "dreadnought", 1)):
+                                             ("submarine", "pre-dreadnought", final_pre_dreadnought)):
             entry = self.tree[tech]
             for level in range(1, entry["max_lvl"] + 1):
                 self.country["research"] = {tech: level - 1, prerequisite: required - 1}
@@ -155,12 +155,11 @@ class NavalContentTests(unittest.TestCase):
             self.assertTrue(queries.check_tech_requirements(granted, entry["req"]))
             removed = queries.edited_research_levels(granted, prerequisite, required, False, self.tree)
             self.assertEqual(removed[tech], 0)
-            if tech == "destroyer":
-                self.assertEqual(granted.get("dreadnought", 0), 0)
-                preserved = queries.edited_research_levels(granted, "dreadnought", 1, False, self.tree)
-                self.assertEqual(preserved[tech], granted[tech])
+            self.assertEqual(granted.get("dreadnought", 0), 0)
+            preserved = queries.edited_research_levels(granted, "dreadnought", 1, False, self.tree)
+            self.assertEqual(preserved[tech], granted[tech])
 
-    def test_ai_only_offers_destroyer_research_after_the_final_pre_dreadnought_level(self):
+    def test_ai_only_offers_destroyer_and_submarine_after_the_final_pre_dreadnought_level(self):
         final = self.tree["pre-dreadnought"]["max_lvl"]
         self.context.world.time_manager = SimpleNamespace(year=c.END_YEAR)
         for level in (final - 1, final):
@@ -171,7 +170,8 @@ class NavalContentTests(unittest.TestCase):
                     patch.object(ai_research, "_rank_for_nation", return_value=[]) as rank:
                 ai_research.process_ai_research(self.context)
             offered = {candidate[0] for candidate in rank.call_args.args[0]}
-            self.assertEqual("destroyer" in offered, level == final)
+            for tech in ("destroyer", "submarine"):
+                self.assertEqual(tech in offered, level == final)
 
     def test_tournament_destroyer_research_checks_host_prerequisites_identity_and_turn(self):
         final = self.tree["pre-dreadnought"]["max_lvl"]

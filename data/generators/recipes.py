@@ -648,7 +648,7 @@ RESEARCH_RECIPES = [
         (unit_years("Battleship"),       "battleship",       "NAVY", 2400, {"dreadnought": 1},                                      {}),
         (unit_years("Destroyer"),        "destroyer",        "NAVY", 2400, {"pre-dreadnought": len(unit_years("Pre-Dreadnought"))}, {}),
         (unit_years("Aircraft Carrier"), "aircraft_carrier", "NAVY", 2400, {"battleship": 1},                                       {}),
-        (unit_years("Submarine"),        "submarine",        "NAVY", 2400, {"dreadnought": 1},                                      {}),
+        (unit_years("Submarine"),        "submarine",        "NAVY", 2400, {"pre-dreadnought": len(unit_years("Pre-Dreadnought"))},                                      {}),
     ],
     [
         #YEARS                                       ID                            CAT         COST  REQ                       OPTIONS
