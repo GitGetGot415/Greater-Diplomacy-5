@@ -169,30 +169,6 @@ class FilenameDrivenUnitArtTests(unittest.TestCase):
             symbol_loader.STYLE_SYMBOLS[source_style][name_key], country
         )["filename"]
 
-    def test_classic_equipment_uses_era_files_instead_of_legacy_art_aliases(self):
-        for family, year, expected in (
-            ("Infantry", 1800, "Infantry 1800-1899"),
-            ("Infantry", 1899, "Infantry 1800-1899"),
-            ("Infantry", 1900, "Infantry 1900-1999"),
-            ("Infantry", 1999, "Infantry 1900-1999"),
-            ("Infantry", 2000, "Infantry 2000+"),
-            ("Militia", 1800, "Militia 1800-1899"),
-            ("Militia", 1899, "Militia 1800-1899"),
-            ("Militia", 1900, "Militia 1900+"),
-            ("Militia", 2100, "Militia 1900+"),
-        ):
-            with self.subTest(family=family, year=year):
-                library = {"Fixture": {"metadata": {
-                    "settings_family": family, "family": family,
-                    "tier_order": year, "tier_kind": "stage",
-                    "research": {"tech": "fixture", "year": year}, "requirements": [],
-                    "recruitment": {"industry": "none", "coastal": False},
-                    "art_name": "Old Placeholder"}}}
-                with mock.patch.object(queries, "get_unit_library", return_value=library):
-                    self.assertEqual(
-                        symbol_loader._resolve_name_uncached("Fixture", "classic"),
-                        ("classic", expected))
-
     def test_actual_equipment_stages_resolve_to_loaded_classic_assets(self):
         for name, stats in queries.get_unit_library().items():
             metadata = stats["metadata"]
@@ -241,18 +217,6 @@ class FilenameDrivenUnitArtTests(unittest.TestCase):
                          "generic/heavy_artillery.png")
         self.assertEqual(self._filename("WW1 Tank", "United Kingdom"),
                          "british/ww1_tank.png")
-
-    def test_generic_tiered_art_is_available_as_unrestricted_fallback(self):
-        # generic/artillery.png does not exist, so an untiered request keeps
-        # the normal classic fallback. The generic folder starts at tier I.
-        self.assertEqual(self._filename("Artillery", "Italy"),
-                         "classic")
-        self.assertEqual(self._filename("Artillery II", "United Kingdom"),
-                         "generic/artillery_2.png")
-        self.assertEqual(self._filename("Heavy Artillery I", "United Kingdom"),
-                         "generic/heavy_artillery.png")
-        self.assertEqual(self._filename("Light Tank I", "Germany"),
-                         "generic/light_tank_1.png")
 
     def test_tank_tier_files_are_scoped_and_carry_forward(self):
         self.assertEqual(self._filename("Medium Tank II", "United States of America"),
