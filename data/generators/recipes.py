@@ -409,13 +409,13 @@ LAND_UNIT_RECIPES = [
 NAVAL_UNIT_RECIPES = [
     #YR    NAME                HP    ATK   DEF  SPD MAT    MAN   FUEL TIME BOMB  UPGRADES                                                                                                                OPTIONS
     (1800, 'Carrack',          800,  400,  0,   1,  2000,  500,  0,   4,   None, (6, 10, {'health': 40, 'attack': 20, 'cost_materials': 100}),                                                           {}),
-    (1860, 'Ironclad',         2000, 800,  200, 1,  6000,  1000, 100, 6,   None, (5, 4, {'health': 200, 'attack': 50, 'defense': 20, 'cost_materials': 500, 'cost_fuel': 10}),                           {}),
-    (1880, 'Pre-Dreadnought',  3000, 1200, 300, 1,  10000, 2000, 150, 8,   None, (5, 4, {'health': 200, 'attack': 200, 'defense': 20, 'cost_materials': 1000, 'cost_fuel': 10}),                         {}),
-    (1900, 'Dreadnought',      4000, 3000, 400, 1,  16000, 2000, 200, 10,  300,  (5, 4, {'health': 400, 'attack': 100, 'defense': 40, 'cost_materials': 800, 'cost_fuel': 20, 'bombard_attack': 40}),    {}),
-    (1920, 'Battleship',       6000, 3600, 600, 1,  20000, 2000, 300, 10,  500,  (5, 4, {'attack': 100, 'bombard_attack': 40}),   {}),
+    (1860, 'Ironclad',         2000, 800,  200, 1,  6000,  1000, 100, 6,   None, (5, 4,  {'health': 200, 'attack': 50, 'defense': 20, 'cost_materials': 500, 'cost_fuel': 10}),                           {}),
+    (1880, 'Pre-Dreadnought',  3000, 1200, 300, 1,  10000, 2000, 150, 8,   None, (5, 4,  {'health': 200, 'attack': 200, 'defense': 20, 'cost_materials': 1000, 'cost_fuel': 10}),                         {}),
+    (1900, 'Dreadnought',      4000, 3000, 400, 1,  16000, 2000, 200, 10,  300,  (5, 4,  {'health': 400, 'attack': 100, 'defense': 40, 'cost_materials': 800, 'cost_fuel': 20, 'bombard_attack': 40}),    {}),
+    (1920, 'Battleship',       6000, 3600, 600, 1,  20000, 2000, 300, 10,  500,  (5, 4,  {'attack': 100, 'cost_materials': 1000, 'bombard_attack': 40}),   {}),
     (1900, 'Destroyer',        2400, 1200, 200, 1,  8000,  1000, 250, 8,   None, (64, 4, {'health': 400, 'attack': 300, 'defense': 20, 'cost_materials': 500, 'cost_fuel': 5}),                          {}),
     (1900, 'Submarine',        1200, 600,  0,   1,  6000,  1000, 150, 6,   None, (64, 4, {'health': 200, 'attack': 100, 'cost_materials': 400, 'cost_fuel': 5}),                                         {}),
-    (1940, 'Aircraft Carrier', 1000,  850,  200, 1,  20000, 2000, 500, 10,  850,  (43, 5, {'health': 200, 'attack': 150, 'defense': 20, 'cost_materials': 1000, 'cost_fuel': 25, 'bombard_attack': 150}), {}),
+    (1920, 'Aircraft Carrier', 600,  300,  200, 1,  20000, 2000, 500, 10,  300,  (47, 5, {'health': 200, 'attack': 150, 'defense': 20, 'cost_materials': 1000, 'cost_fuel': 25, 'bombard_attack': 150}), {}),
 ]
 
 AIR_UNIT_RECIPES = [
@@ -642,13 +642,13 @@ RESEARCH_RECIPES = [
     [
         #YEARS                           ID                  CAT     COST  REQ                                                      OPTIONS
         (unit_years("Carrack"),          "carrack",          "NAVY", 600,  {},                                                      {}),
-        (unit_years("Ironclad"),         "ironclad",         "NAVY", 2400, {"carrack": len(unit_years("Carrack"))},                                          {}),
-        (unit_years("Pre-Dreadnought"),  "pre-dreadnought",  "NAVY", 2400, {"ironclad": len(unit_years("Ironclad"))},                                         {}),
-        (unit_years("Dreadnought"),      "dreadnought",      "NAVY", 2400, {"pre-dreadnought": len(unit_years("Pre-Dreadnought"))},                                  {}),
-        (unit_years("Battleship"),       "battleship",       "NAVY", 2400, {"dreadnought": len(unit_years("Dreadnought"))},                                      {}),
+        (unit_years("Ironclad"),         "ironclad",         "NAVY", 2400, {"carrack": len(unit_years("Carrack"))},                 {}),
+        (unit_years("Pre-Dreadnought"),  "pre-dreadnought",  "NAVY", 2400, {"ironclad": len(unit_years("Ironclad"))},               {}),
+        (unit_years("Dreadnought"),      "dreadnought",      "NAVY", 2400, {"pre-dreadnought": len(unit_years("Pre-Dreadnought"))}, {}),
+        (unit_years("Battleship"),       "battleship",       "NAVY", 2400, {"dreadnought": len(unit_years("Dreadnought"))},         {}),
         (unit_years("Destroyer"),        "destroyer",        "NAVY", 2400, {"pre-dreadnought": len(unit_years("Pre-Dreadnought"))}, {}),
-        (unit_years("Aircraft Carrier"), "aircraft_carrier", "NAVY", 2400, {"battleship": len(unit_years("Battleship"))},           {}),
-        (unit_years("Submarine"),        "submarine",        "NAVY", 2400, {"pre-dreadnought": len(unit_years("Pre-Dreadnought"))},                                      {}),
+        (unit_years("Aircraft Carrier"), "aircraft_carrier", "NAVY", 2400, {"dreadnought": len(unit_years("Dreadnought"))},         {}),
+        (unit_years("Submarine"),        "submarine",        "NAVY", 2400, {"pre-dreadnought": len(unit_years("Pre-Dreadnought"))}, {}),
     ],
     [
         #YEARS                                       ID                            CAT         COST  REQ                       OPTIONS
